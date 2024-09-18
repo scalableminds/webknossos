@@ -5,8 +5,6 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
-import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{
@@ -22,23 +20,14 @@ import com.scalableminds.webknossos.datastore.models.{
   WebknossosDataRequest
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.{
-  EditableMappingSegmentListResult,
-  FullMeshRequest,
-  UserAccessRequest
-}
-import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, UpdateActionGroup}
+import com.scalableminds.webknossos.datastore.services.{FullMeshRequest, UserAccessRequest}
+import com.scalableminds.webknossos.tracingstore.annotation.AnnotationTransactionService
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
-  EditableMappingService,
-  MinCutParameters,
-  NeighborsParameters
-}
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   MergedVolumeStats,
   ResolutionRestrictions,
   TSFullMeshService,
-  UpdateMappingNameVolumeAction,
   VolumeDataZipFormat,
   VolumeSegmentIndexService,
   VolumeSegmentStatisticsService,
@@ -50,9 +39,8 @@ import com.scalableminds.webknossos.tracingstore.{
   TSRemoteWebknossosClient,
   TracingStoreAccessTokenService,
   TracingStoreConfig,
-  TracingUpdatesReport
 }
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.Empty
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
@@ -369,176 +357,6 @@ class VolumeTracingController @Inject()(
         } yield Ok(agglomerateSkeletonBytes)
       }
     }
-
-  def makeMappingEditable(token: Option[String], annotationId: String, tracingId: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
-          for {
-            tracing <- tracingService.find(annotationId, tracingId)
-            tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
-            _ <- assertMappingIsNotLocked(tracing)
-            _ <- bool2Fox(tracingService.volumeBucketsAreEmpty(tracingId)) ?~> "annotation.volumeBucketsNotEmpty"
-            editableMappingInfo <- editableMappingService.create(tracingId, baseMappingName = tracingMappingName)
-            volumeUpdate = UpdateMappingNameVolumeAction(Some(tracingId),
-                                                         isEditable = Some(true),
-                                                         isLocked = Some(true),
-                                                         actionTracingId = tracingId,
-                                                         actionTimestamp = Some(System.currentTimeMillis()))
-            _ <- annotationTransactionService
-              .handleUpdateGroups( // TODO replace this route by the update action only? address editable mappings by volume tracing id?
-                annotationId,
-                List(
-                  UpdateActionGroup(tracing.version + 1,
-                                    System.currentTimeMillis(),
-                                    None,
-                                    List(volumeUpdate),
-                                    None,
-                                    None,
-                                    "dummyTransactionId",
-                                    1,
-                                    0))
-              )
-            infoJson <- editableMappingService.infoJson(tracingId = tracingId,
-                                                        editableMappingInfo = editableMappingInfo,
-                                                        version = Some(0L))
-          } yield Ok(infoJson)
-        }
-      }
-    }
-
-  private def assertMappingIsNotLocked(volumeTracing: VolumeTracing): Fox[Unit] =
-    bool2Fox(!volumeTracing.mappingIsLocked.getOrElse(false)) ?~> "annotation.mappingIsLocked"
-
-  def agglomerateGraphMinCut(token: Option[String], annotationId: String, tracingId: String): Action[MinCutParameters] =
-    Action.async(validateJson[MinCutParameters]) { implicit request =>
-      log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
-          for {
-            tracing <- tracingService.find(annotationId, tracingId)
-            _ <- bool2Fox(tracing.getHasEditableMapping) ?~> "Mapping is not editable"
-            remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-            edges <- editableMappingService.agglomerateGraphMinCut(tracingId, request.body, remoteFallbackLayer)
-          } yield Ok(Json.toJson(edges))
-        }
-      }
-    }
-
-  def agglomerateGraphNeighbors(token: Option[String],
-                                annotationId: String,
-                                tracingId: String): Action[NeighborsParameters] =
-    Action.async(validateJson[NeighborsParameters]) { implicit request =>
-      log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
-          for {
-            tracing <- tracingService.find(annotationId, tracingId)
-            _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
-            remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-            (segmentId, edges) <- editableMappingService.agglomerateGraphNeighbors(tracingId,
-                                                                                   request.body,
-                                                                                   remoteFallbackLayer)
-          } yield Ok(Json.obj("segmentId" -> segmentId, "neighbors" -> Json.toJson(edges)))
-        }
-      }
-    }
-
-  def updateEditableMapping(token: Option[String],
-                            annotationId: String,
-                            tracingId: String): Action[List[UpdateActionGroup]] =
-    Action.async(validateJson[List[UpdateActionGroup]]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
-        for {
-          tracing <- tracingService.find(annotationId, tracingId)
-          mappingName <- tracing.mappingName.toFox
-          _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
-          currentVersion <- editableMappingService.getClosestMaterializableVersionOrZero(mappingName, None)
-          _ <- bool2Fox(request.body.length == 1) ?~> "Editable mapping update request must contain exactly one update group"
-          updateGroup <- request.body.headOption.toFox
-          _ <- bool2Fox(updateGroup.version == currentVersion + 1) ?~> "version mismatch"
-          report = TracingUpdatesReport(
-            annotationId, // TODO integrate all of this into annotation update
-            timestamps = List(Instant(updateGroup.timestamp)),
-            statistics = None,
-            significantChangesCount = updateGroup.actions.length,
-            viewChangesCount = 0,
-            tokenContextForRequest.userTokenOpt
-          )
-          _ <- remoteWebknossosClient.reportTracingUpdates(report)
-          remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-          _ <- editableMappingService.update(mappingName, updateGroup, updateGroup.version, remoteFallbackLayer)
-        } yield Ok
-      }
-    }
-
-  def editableMappingInfo(token: Option[String],
-                          annotationId: String,
-                          tracingId: String,
-                          version: Option[Long]): Action[AnyContent] =
-    Action.async { implicit request =>
-      log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
-          for {
-            tracing <- tracingService.find(annotationId, tracingId)
-            _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
-            editableMappingInfo <- editableMappingService.getInfoNEW(annotationId, tracingId, version)
-            infoJson <- editableMappingService.infoJson(tracingId = tracingId,
-                                                        editableMappingInfo = editableMappingInfo,
-                                                        version = version)
-          } yield Ok(infoJson)
-        }
-      }
-    }
-
-  def editableMappingAgglomerateIdsForSegments(token: Option[String],
-                                               annotationId: String,
-                                               tracingId: String): Action[ListOfLong] =
-    Action.async(validateProto[ListOfLong]) { implicit request =>
-      log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
-          for {
-            tracing <- tracingService.find(annotationId, tracingId)
-            _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
-            remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-            (editableMappingInfo, editableMappingVersion) <- editableMappingService.getInfoAndActualVersion(
-              tracingId,
-              requestedVersion = None,
-              remoteFallbackLayer = remoteFallbackLayer)
-            relevantMapping: Map[Long, Long] <- editableMappingService.generateCombinedMappingForSegmentIds(
-              request.body.items.toSet,
-              editableMappingInfo,
-              editableMappingVersion,
-              tracingId,
-              remoteFallbackLayer)
-            agglomerateIdsSorted = relevantMapping.toSeq.sortBy(_._1).map(_._2)
-          } yield Ok(ListOfLong(agglomerateIdsSorted).toByteArray)
-        }
-      }
-    }
-
-  def editableMappingSegmentIdsForAgglomerate(token: Option[String],
-                                              annotationId: String,
-                                              tracingId: String,
-                                              agglomerateId: Long): Action[AnyContent] = Action.async {
-    implicit request =>
-      log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
-          for {
-            tracing <- tracingService.find(annotationId, tracingId)
-            mappingName <- tracing.mappingName.toFox
-            remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-            agglomerateGraphBox: Box[AgglomerateGraph] <- editableMappingService
-              .getAgglomerateGraphForId(mappingName, agglomerateId, remoteFallbackLayer)
-              .futureBox
-            segmentIds <- agglomerateGraphBox match {
-              case Full(agglomerateGraph) => Fox.successful(agglomerateGraph.segments)
-              case Empty                  => Fox.successful(List.empty)
-              case f: Failure             => f.toFox
-            }
-            agglomerateIdIsPresent = agglomerateGraphBox.isDefined
-          } yield Ok(Json.toJson(EditableMappingSegmentListResult(segmentIds.toList, agglomerateIdIsPresent)))
-        }
-      }
-  }
 
   def getSegmentVolume(token: Option[String],
                        annotationId: String,

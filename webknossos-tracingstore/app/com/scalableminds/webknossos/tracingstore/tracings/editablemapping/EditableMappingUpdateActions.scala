@@ -1,11 +1,11 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.webknossos.tracingstore.annotation.UpdateAction
+import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction}
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json._
 
-trait EditableMappingUpdateAction extends UpdateAction
+trait EditableMappingUpdateAction extends LayerUpdateAction
 
 // we switched from positions to segment ids in https://github.com/scalableminds/webknossos/pull/7742.
 // Both are now optional to support applying old update actions stored in the db.
@@ -15,6 +15,7 @@ case class SplitAgglomerateUpdateAction(agglomerateId: Long,
                                         segmentId1: Option[Long],
                                         segmentId2: Option[Long],
                                         mag: Vec3Int,
+                                        actionTracingId: String,
                                         actionTimestamp: Option[Long] = None,
                                         actionAuthorId: Option[String] = None,
                                         info: Option[String] = None)
@@ -40,6 +41,7 @@ case class MergeAgglomerateUpdateAction(agglomerateId1: Long,
                                         segmentId1: Option[Long],
                                         segmentId2: Option[Long],
                                         mag: Vec3Int,
+                                        actionTracingId: String,
                                         actionTimestamp: Option[Long] = None,
                                         actionAuthorId: Option[String] = None,
                                         info: Option[String] = None)

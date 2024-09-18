@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationProto}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
@@ -119,6 +120,8 @@ case class AnnotationWithTracings(
   def applyEditableMappingAction(a: EditableMappingUpdateAction)(
       implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
-      updater <- getEditableMappingUpdater("tracingId") // TODO editable mapping update actions need tracing id
-    } yield this // TODO
+      updater: EditableMappingUpdater <- getEditableMappingUpdater(a.actionTracingId).toFox // TODO editable mapping update actions need tracing id
+      info <- getEditableMappingInfo(a.actionTracingId).toFox
+      _ <- updater.applyOneUpdate(info, a)
+    } yield this // TODO replace info
 }

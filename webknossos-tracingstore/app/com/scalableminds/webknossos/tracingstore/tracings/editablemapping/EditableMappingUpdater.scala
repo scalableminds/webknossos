@@ -110,7 +110,7 @@ class EditableMappingUpdater(
         mappingFox
     }
 
-  private def applyOneUpdate(mapping: EditableMappingInfo, update: UpdateAction)(
+  def applyOneUpdate(mapping: EditableMappingInfo, update: UpdateAction)(
       implicit ec: ExecutionContext): Fox[EditableMappingInfo] =
     update match {
       case splitAction: SplitAgglomerateUpdateAction =>

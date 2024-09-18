@@ -281,6 +281,7 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
     else {
       for {
         updated <- updateIter(Some(annotation), updates)
+        // TODO flush editable mapping updaters
       } yield updated.withVersion(targetVersion)
     }
   }

@@ -187,6 +187,7 @@ annotation.volume.invalidLargestSegmentId=Cannot create tasks with fallback segm
 annotation.volume.resolutionRestrictionsTooTight=Task type resolution restrictions are too tight, resulting annotation has no resolutions.
 annotation.volume.resolutionsDoNotMatch=Could not merge volume annotations, as their resolutions differ. Please ensure each annotation has the same set of resolutions.
 annotation.volume.largestSegmentIdExceedsRange=The largest segment id {0} specified for the annotation layer exceeds the range of its data type {1}
+annotation.volume.noEditableMapping=This volume tracing does not have an editable mapping (not a “proofreading” annotation layer)
 annotation.notFound=Annotation could not be found
 annotation.notFound.considerLoggingIn=Annotation could not be found. If the annotation is not public, you need to log in to see it.
 annotation.invalid=Invalid annotation

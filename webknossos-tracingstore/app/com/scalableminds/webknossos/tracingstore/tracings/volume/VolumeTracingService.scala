@@ -23,11 +23,7 @@ import com.scalableminds.webknossos.datastore.models.{
   WebknossosAdHocMeshRequest
 }
 import com.scalableminds.webknossos.datastore.services._
-import com.scalableminds.webknossos.tracingstore.annotation.{
-  AnnotationWithTracings,
-  TSAnnotationService,
-  UpdateActionGroup
-}
+import com.scalableminds.webknossos.tracingstore.annotation.{TSAnnotationService, UpdateActionGroup}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
@@ -995,17 +991,15 @@ class VolumeTracingService @Inject()(
   def dummyTracing: VolumeTracing = ???
 
   def mergeEditableMappings(newTracingId: String, tracingsWithIds: List[(VolumeTracing, String)])(
-      implicit tc: TokenContext): Fox[String] =
+      implicit tc: TokenContext): Fox[Unit] =
     if (tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
       for {
         remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds)(tracingWithId =>
           remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
         remoteFallbackLayer <- remoteFallbackLayers.headOption.toFox
         _ <- bool2Fox(remoteFallbackLayers.forall(_ == remoteFallbackLayer)) ?~> "Cannot merge editable mappings based on different dataset layers"
-        editableMappingIds <- Fox.serialCombined(tracingsWithIds)(tracingWithId => tracingWithId._1.mappingName)
-        _ <- bool2Fox(editableMappingIds.length == tracingsWithIds.length) ?~> "Not all volume tracings have editable mappings"
-        newEditableMappingId <- editableMappingService.merge(newTracingId, editableMappingIds, remoteFallbackLayer)
-      } yield newEditableMappingId
+        _ <- editableMappingService.merge(newTracingId, tracingsWithIds.map(_._2), remoteFallbackLayer)
+      } yield ()
     } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.getHasEditableMapping)) {
       Fox.empty
     } else {

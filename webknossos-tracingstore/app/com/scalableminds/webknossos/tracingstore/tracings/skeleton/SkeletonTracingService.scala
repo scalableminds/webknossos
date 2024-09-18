@@ -134,6 +134,6 @@ class SkeletonTracingService @Inject()(
   def dummyTracing: SkeletonTracing = SkeletonTracingDefaults.createInstance
 
   def mergeEditableMappings(newTracingId: String, tracingsWithIds: List[(SkeletonTracing, String)])(
-      implicit tc: TokenContext): Fox[String] =
+      implicit tc: TokenContext): Fox[Unit] =
     Fox.empty
 }

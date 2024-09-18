@@ -158,11 +158,11 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
   private def findEditableMappingsForUpdates( // TODO integrate with findTracings?
                                              annotationWithTracings: AnnotationWithTracings,
                                              updates: List[UpdateAction])(implicit ec: ExecutionContext) = {
-    val editableMappingIds = annotationWithTracings.volumesIdsThatHaveEditableMapping
+    val volumeIdsWithEditableMapping = annotationWithTracings.volumesIdsThatHaveEditableMapping
     // TODO intersect with editable mapping updates?
     for {
-      editableMappingInfos <- Fox.serialCombined(editableMappingIds) { editableMappingId =>
-        tracingDataStore.editableMappingsInfo.get(editableMappingId, version = Some(annotationWithTracings.version))(
+      editableMappingInfos <- Fox.serialCombined(volumeIdsWithEditableMapping) { volumeTracingId =>
+        tracingDataStore.editableMappingsInfo.get(volumeTracingId, version = Some(annotationWithTracings.version))(
           fromProtoBytes[EditableMappingInfo])
       }
     } yield

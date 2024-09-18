@@ -112,11 +112,13 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
                                                                 newTracingId,
                                                                 newVersion = 0L,
                                                                 toCache = !persist)
-            newEditableMappingIdBox <- tracingService.mergeEditableMappings(newTracingId, tracingsWithIds).futureBox
-            newEditableMappingIdOpt <- newEditableMappingIdBox match {
-              case Full(newEditableMappingId) => Fox.successful(Some(newEditableMappingId))
-              case Empty                      => Fox.successful(None)
-              case f: Failure                 => f.toFox
+            mergeEditableMappingsResultBox <- tracingService
+              .mergeEditableMappings(newTracingId, tracingsWithIds)
+              .futureBox
+            newEditableMappingIdOpt <- mergeEditableMappingsResultBox match {
+              case Full(())   => Fox.successful(Some(newTracingId))
+              case Empty      => Fox.successful(None)
+              case f: Failure => f.toFox
             }
             mergedTracing <- Fox.box2Fox(
               tracingService.merge(tracingsWithIds.map(_._1), mergedVolumeStats, newEditableMappingIdOpt))

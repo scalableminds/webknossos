@@ -30,13 +30,13 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
   override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val bucket: BucketPosition = readInstruction.bucket
     for {
-      editableMappingId <- Fox.successful(layer.name)
+      tracingId <- Fox.successful(layer.name)
       _ <- bool2Fox(layer.doesContainBucket(bucket))
       remoteFallbackLayer <- layer.editableMappingService
         .remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.tracingId)
       // called here to ensure updates are applied
       (editableMappingInfo, editableMappingVersion) <- layer.editableMappingService.getInfoAndActualVersion(
-        editableMappingId,
+        tracingId,
         requestedVersion = None,
         remoteFallbackLayer = remoteFallbackLayer)(layer.tokenContext)
       dataRequest: WebknossosDataRequest = WebknossosDataRequest(
@@ -57,7 +57,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
         segmentIds,
         editableMappingInfo,
         editableMappingVersion,
-        editableMappingId,
+        tracingId,
         remoteFallbackLayer)(layer.tokenContext)
       mappedData: Array[Byte] <- layer.editableMappingService.mapData(unmappedDataTyped,
                                                                       relevantMapping,

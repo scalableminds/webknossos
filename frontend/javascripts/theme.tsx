@@ -11,6 +11,8 @@ import { ToastContextMountRoot } from "libs/toast";
 const ColorWKBlue = "#5660ff"; // WK ~blue/purple
 const ColorWKLinkHover = "#a8b4ff"; // slightly brighter WK Blue
 const ColorWKDarkGrey = "#1f1f1f";
+const ColorWhite = "white";
+const ColorBlack = "black";
 
 export function getSystemColorTheme(): Theme {
   // @ts-ignore
@@ -33,6 +35,7 @@ export function getAntdTheme(userTheme: Theme) {
     Layout: {
       headerBg: ColorWKDarkGrey,
       footerBg: ColorWKDarkGrey,
+      siderBg: userTheme === "dark" ? ColorBlack : ColorWhite,
     },
     Menu: {
       darkItemBg: ColorWKDarkGrey,
@@ -81,9 +84,9 @@ export default function GlobalThemeProvider({
   useEffect(() => {
     // body is outside of the ReactDOM, so we have to manually update it
     if (isDarkMode) {
-      document.body.style.backgroundColor = "black";
+      document.body.style.backgroundColor = ColorBlack;
     } else {
-      document.body.style.backgroundColor = "white";
+      document.body.style.backgroundColor = ColorWhite;
     }
   }, [isDarkMode]);
 

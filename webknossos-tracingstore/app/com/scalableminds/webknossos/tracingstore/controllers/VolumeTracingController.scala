@@ -21,7 +21,7 @@ import com.scalableminds.webknossos.datastore.models.{
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{FullMeshRequest, UserAccessRequest}
-import com.scalableminds.webknossos.tracingstore.annotation.AnnotationTransactionService
+import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
@@ -38,7 +38,7 @@ import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
   TSRemoteWebknossosClient,
   TracingStoreAccessTokenService,
-  TracingStoreConfig,
+  TracingStoreConfig
 }
 import net.liftweb.common.Empty
 import play.api.i18n.Messages
@@ -55,7 +55,7 @@ class VolumeTracingController @Inject()(
     val config: TracingStoreConfig,
     val remoteDataStoreClient: TSRemoteDatastoreClient,
     val accessTokenService: TracingStoreAccessTokenService,
-    annotationTransactionService: AnnotationTransactionService,
+    annotationService: TSAnnotationService,
     editableMappingService: EditableMappingService,
     val slackNotificationService: TSSlackNotificationService,
     val remoteWebknossosClient: TSRemoteWebknossosClient,
@@ -261,12 +261,12 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           for {
             tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound")
-            currentVersion <- tracingService.currentVersion(tracingId)
+            currentVersion <- annotationService.currentMaterializableVersion(tracingId)
             before = Instant.now
             canAddSegmentIndex <- tracingService.checkIfSegmentIndexMayBeAdded(tracingId, tracing)
             processedBucketCountOpt <- Fox.runIf(canAddSegmentIndex)(tracingService
               .addSegmentIndex(annotationId, tracingId, tracing, currentVersion, dryRun)) ?~> "addSegmentIndex.failed"
-            currentVersionNew <- tracingService.currentVersion(tracingId)
+            currentVersionNew <- annotationService.currentMaterializableVersion(tracingId)
             _ <- Fox.runIf(!dryRun)(bool2Fox(
               processedBucketCountOpt.isEmpty || currentVersionNew == currentVersion + 1L) ?~> "Version increment failed. Looks like someone edited the annotation layer in the meantime.")
             duration = Instant.since(before)

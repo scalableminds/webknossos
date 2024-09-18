@@ -60,10 +60,6 @@ trait TracingService[T <: GeneratedMessage]
 
   private val handledGroupCacheExpiry: FiniteDuration = 24 hours
 
-  def currentVersion(tracingId: String): Fox[Long]
-
-  def currentVersion(tracing: T): Long
-
   private def transactionGroupKey(tracingId: String, transactionId: String, transactionGroupIndex: Int, version: Long) =
     s"transactionGroup___${tracingId}___${transactionId}___${transactionGroupIndex}___$version"
 
@@ -125,7 +121,7 @@ trait TracingService[T <: GeneratedMessage]
       implicit tc: TokenContext): Fox[List[Option[T]]] =
     Fox.combined {
       selectors.map {
-        case Some(selector) =>
+        case Some(selector) => // TODO TracingSelector needs annotationIds too
           find("dummyAnnotationid", selector.tracingId, selector.version, useCache, applyUpdates).map(Some(_))
         case None => Fox.successful(None)
       }

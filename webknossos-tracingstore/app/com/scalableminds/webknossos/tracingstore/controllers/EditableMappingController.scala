@@ -11,7 +11,11 @@ import com.scalableminds.webknossos.datastore.services.{
   EditableMappingSegmentListResult,
   UserAccessRequest
 }
-import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, UpdateActionGroup}
+import com.scalableminds.webknossos.tracingstore.annotation.{
+  AnnotationTransactionService,
+  TSAnnotationService,
+  UpdateActionGroup
+}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingService,
   MinCutParameters,
@@ -25,6 +29,7 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import scala.concurrent.ExecutionContext
 
 class EditableMappingController @Inject()(volumeTracingService: VolumeTracingService,
+                                          annotationService: TSAnnotationService,
                                           accessTokenService: AccessTokenService,
                                           editableMappingService: EditableMappingService,
                                           annotationTransactionService: AnnotationTransactionService)(
@@ -61,9 +66,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
                                     1,
                                     0))
               )
-            infoJson <- editableMappingService.infoJson(tracingId = tracingId,
-                                                        editableMappingInfo = editableMappingInfo,
-                                                        version = Some(0L))
+            infoJson = editableMappingService.infoJson(tracingId = tracingId, editableMappingInfo = editableMappingInfo)
           } yield Ok(infoJson)
         }
       }
@@ -113,10 +116,8 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
           for {
             tracing <- volumeTracingService.find(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
-            editableMappingInfo <- editableMappingService.getInfoNEW(annotationId, tracingId, version)
-            infoJson <- editableMappingService.infoJson(tracingId = tracingId,
-                                                        editableMappingInfo = editableMappingInfo,
-                                                        version = version)
+            editableMappingInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId, version)
+            infoJson = editableMappingService.infoJson(tracingId = tracingId, editableMappingInfo = editableMappingInfo)
           } yield Ok(infoJson)
         }
       }

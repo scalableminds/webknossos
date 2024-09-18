@@ -40,9 +40,9 @@ function updateVersion(state: OxalisState, action: SetVersionNumberAction) {
       version: action.version,
     });
   } else if (action.saveQueueType === "mapping") {
-    return updateEditableMapping(state, action.tracingId, {
+    /*return updateEditableMapping(state, action.tracingId, {
       version: action.version,
-    });
+    });*/
   }
 
   return state;

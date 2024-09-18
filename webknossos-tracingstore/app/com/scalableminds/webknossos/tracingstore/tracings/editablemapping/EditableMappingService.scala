@@ -22,7 +22,7 @@ import com.scalableminds.webknossos.datastore.services.{
   AdHocMeshServiceHolder,
   BinaryDataService
 }
-import com.scalableminds.webknossos.tracingstore.annotation.{TSAnnotationService, UpdateAction, UpdateActionGroup}
+import com.scalableminds.webknossos.tracingstore.annotation.{UpdateAction, UpdateActionGroup}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FallbackDataHelper,
@@ -91,7 +91,6 @@ object NodeWithPosition {
 class EditableMappingService @Inject()(
     val tracingDataStore: TracingDataStore,
     val adHocMeshServiceHolder: AdHocMeshServiceHolder,
-    annotationService: TSAnnotationService,
     val remoteDatastoreClient: TSRemoteDatastoreClient,
     val remoteWebknossosClient: TSRemoteWebknossosClient
 )(implicit ec: ExecutionContext)
@@ -117,18 +116,13 @@ class EditableMappingService @Inject()(
   private lazy val agglomerateToGraphCache: AlfuCache[(String, Long, Long), AgglomerateGraph] =
     AlfuCache(maxCapacity = 50)
 
-  def infoJson(tracingId: String, editableMappingInfo: EditableMappingInfo, version: Option[Long]): Fox[JsObject] =
-    for {
-      version <- getClosestMaterializableVersionOrZero(tracingId, version)
-    } yield
-      Json.obj(
-        "mappingName" -> tracingId, // TODO remove?
-        "version" -> version,
-        "tracingId" -> tracingId,
-        "baseMappingName" -> editableMappingInfo.baseMappingName,
-        "largestAgglomerateId" -> editableMappingInfo.largestAgglomerateId,
-        "createdTimestamp" -> editableMappingInfo.createdTimestamp
-      )
+  def infoJson(tracingId: String, editableMappingInfo: EditableMappingInfo): JsObject =
+    Json.obj(
+      "tracingId" -> tracingId,
+      "baseMappingName" -> editableMappingInfo.baseMappingName,
+      "largestAgglomerateId" -> editableMappingInfo.largestAgglomerateId,
+      "createdTimestamp" -> editableMappingInfo.createdTimestamp
+    )
 
   def create(tracingId: String, baseMappingName: String): Fox[EditableMappingInfo] = {
     val newEditableMappingInfo = EditableMappingInfo(
@@ -192,13 +186,6 @@ class EditableMappingService @Inject()(
       }.toList)
     } yield ()
   }
-
-  def getInfoNEW(annotationId: String, tracingId: String, version: Option[Long] = None)(
-      implicit tc: TokenContext): Fox[EditableMappingInfo] =
-    for {
-      annotation <- annotationService.getWithTracings(annotationId, version, List(tracingId), List.empty)
-      tracing <- annotation.getEditableMappingInfo(tracingId)
-    } yield tracing
 
   def getInfo(tracingId: String, version: Option[Long] = None, remoteFallbackLayer: RemoteFallbackLayer)(
       implicit tc: TokenContext): Fox[EditableMappingInfo] =

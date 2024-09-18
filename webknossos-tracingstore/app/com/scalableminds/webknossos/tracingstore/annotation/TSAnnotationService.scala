@@ -137,6 +137,14 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
                                      requestedVolumeTracingIds) ?~> "applyUpdates.failed"
     } yield updated
 
+  def getEditableMappingInfo(annotationId: String, tracingId: String, version: Option[Long] = None)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[EditableMappingInfo] =
+    for {
+      annotation <- getWithTracings(annotationId, version, List(tracingId), List.empty)
+      tracing <- annotation.getEditableMappingInfo(tracingId)
+    } yield tracing
+
   private def applyPendingUpdates(annotation: AnnotationProto,
                                   annotationId: String,
                                   targetVersionOpt: Option[Long],

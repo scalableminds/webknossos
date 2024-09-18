@@ -36,11 +36,6 @@ class SkeletonTracingService @Inject()(
 
   implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
 
-  def currentVersion(tracingId: String): Fox[Long] =
-    tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
-
-  def currentVersion(tracing: SkeletonTracing): Long = tracing.version
-
   def find(annotationId: String,
            tracingId: String,
            version: Option[Long] = None,

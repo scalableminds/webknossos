@@ -96,11 +96,6 @@ class VolumeTracingService @Inject()(
   private val fallbackLayerCache: AlfuCache[(String, String, Option[String]), Option[RemoteFallbackLayer]] = AlfuCache(
     maxCapacity = 100)
 
-  override def currentVersion(tracingId: String): Fox[Long] =
-    tracingDataStore.volumes.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
-
-  override def currentVersion(tracing: VolumeTracing): Long = tracing.version
-
   override protected def updateSegmentIndex(
       segmentIndexBuffer: VolumeSegmentIndexBuffer,
       bucketPosition: BucketPosition,

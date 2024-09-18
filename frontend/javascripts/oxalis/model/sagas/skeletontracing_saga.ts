@@ -250,9 +250,7 @@ function* getAgglomerateSkeletonTracing(
   const annotation = yield* select((state) => state.tracing);
   const layerInfo = getLayerByName(dataset, layerName);
 
-  const editableMapping = annotation.mappings.find(
-    (mapping) => mapping.mappingName === mappingName,
-  );
+  const editableMapping = annotation.mappings.find((mapping) => mapping.tracingId === mappingName);
 
   try {
     let nmlProtoBuffer;

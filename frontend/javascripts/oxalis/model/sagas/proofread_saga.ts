@@ -276,13 +276,18 @@ function* createEditableMapping(): Saga<string> {
 
   const volumeTracingId = upToDateVolumeTracing.tracingId;
   const layerName = volumeTracingId;
-  const serverEditableMapping = yield* call(makeMappingEditable, tracingStoreUrl, annotationId, volumeTracingId);
+  const serverEditableMapping = yield* call(
+    makeMappingEditable,
+    tracingStoreUrl,
+    annotationId,
+    volumeTracingId,
+  );
   // The server increments the volume tracing's version by 1 when switching the mapping to an editable one
   yield* put(setVersionNumberAction(upToDateVolumeTracing.version + 1, "volume", volumeTracingId));
-  yield* put(setMappingNameAction(layerName, serverEditableMapping.mappingName, "HDF5"));
+  yield* put(setMappingNameAction(layerName, serverEditableMapping.tracingId, "HDF5"));
   yield* put(setHasEditableMappingAction());
   yield* put(initializeEditableMappingAction(serverEditableMapping));
-  return serverEditableMapping.mappingName;
+  return serverEditableMapping.tracingId;
 }
 
 function* ensureHdf5MappingIsEnabled(layerName: string): Saga<boolean> {

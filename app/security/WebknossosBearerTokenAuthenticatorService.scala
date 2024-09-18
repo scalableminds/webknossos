@@ -5,17 +5,14 @@ import play.silhouette.api.exceptions.{AuthenticatorCreationException, Authentic
 import play.silhouette.api.services.AuthenticatorService.{CreateError, InitError}
 import play.silhouette.api.util.{Clock, IDGenerator}
 import play.silhouette.impl.authenticators.BearerTokenAuthenticatorService.ID
-import play.silhouette.impl.authenticators.{
-  BearerTokenAuthenticator,
-  BearerTokenAuthenticatorService,
-  BearerTokenAuthenticatorSettings
-}
+import play.silhouette.impl.authenticators.{BearerTokenAuthenticator, BearerTokenAuthenticatorService, BearerTokenAuthenticatorSettings}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.{User, UserService}
 import TokenType.TokenType
+import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.time.Instant
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}

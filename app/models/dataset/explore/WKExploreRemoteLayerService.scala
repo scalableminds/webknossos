@@ -111,7 +111,6 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
       organization <- organizationDAO.findOne(user._organization)
       dataStore <- dataStoreDAO.findOneWithUploadsAllowed
       _ <- datasetService.assertValidDatasetName(datasetName)
-      _ <- datasetService.assertNewDatasetName(datasetName, organization._id) ?~> "dataset.name.alreadyTaken"
       client = new WKRemoteDataStoreClient(dataStore, rpc)
       userToken <- bearerTokenService.createAndInitDataStoreTokenForUser(user)
       _ <- client.addDataSource(organization._id, datasetName, dataSource, folderId, userToken)

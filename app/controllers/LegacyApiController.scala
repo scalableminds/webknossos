@@ -270,7 +270,8 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     sil.SecuredAction.async(validateJson[LegacyCreateExplorationalParameters]) { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
-        result <- annotationController.createExplorational(organizationName, datasetName)(
+        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationName)
+        result <- annotationController.createExplorational(dataset._id.toString)(
           request.withBody(replaceCreateExplorationalParameters(request)))
         adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
       } yield adaptedResult

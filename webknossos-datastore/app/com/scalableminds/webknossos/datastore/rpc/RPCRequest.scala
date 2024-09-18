@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.rpc
 
 import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.services.uploading.ReserveUploadInformation
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
 import play.api.http.{HeaderNames, Status}

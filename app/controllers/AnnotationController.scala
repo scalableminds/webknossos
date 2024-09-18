@@ -31,7 +31,7 @@ import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{URLSharing, UserAwareRequestLogging, WkEnv}
 import telemetry.SlackNotificationService
-import utils.{ObjectId, WkConf}
+import utils.{WkConf}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

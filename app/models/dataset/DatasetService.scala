@@ -19,7 +19,7 @@ import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{User, UserService}
-import net.liftweb.common.{Box, Empty, Full}
+import net.liftweb.common.{Box,  Full}
 import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
 import utils.WkConf
@@ -113,7 +113,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       organization <- organizationDAO.findOne(owningOrganization)
       organizationRootFolder <- folderDAO.findOne(organization._rootFolder)
       datasetPath <- isNewDatasetName(datasetName, organization._id).map(if (_) datasetName else newId.toString)
-      dataSource.id.path = datasetPath // Sync path with dataSource
+      adjustedDataSourceId = dataSource.id.copy(path = datasetPath) // Sync path with dataSource
+      dataSource.id =  dataSource.clone()
       dataset = Dataset(
         newId,
         dataStore.name,

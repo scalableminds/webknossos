@@ -4,6 +4,7 @@ import org.apache.pekko.http.scaladsl.model.Uri
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
+import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayerLike}
 import models.annotation.AnnotationDAO
@@ -13,7 +14,7 @@ import models.shortlinks.ShortLinkDAO
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.Full
 import security.URLSharing
-import utils.{ObjectId, WkConf}
+import utils.{WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
 

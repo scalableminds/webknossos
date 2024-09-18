@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.explore.{
@@ -447,12 +446,12 @@ class DataSourceController @Inject()(
             ),
             urlOrHeaderToken(token, request)
           ) ?~> "dataset.upload.validation.failed"
+          datasourceId = DataSourceId(reservedInfo.path, organizationId)
           _ <- dataSourceService.updateDataSource(
-            request.body.copy(id = DataSourceId(reservedInfo.path, organizationId)),
+            request.body.copy(id = datasourceId),
             expectExisting = false)
-          parsedUploadId <- ObjectId.fromString(reservedInfo.uploadId) ?~> "reportUpload.failed"
           _ <- remoteWebknossosClient.reportUpload(
-            parsedUploadId,
+            datasourceId,
             0L,
             needsConversion = false,
             viaAddRoute = true,

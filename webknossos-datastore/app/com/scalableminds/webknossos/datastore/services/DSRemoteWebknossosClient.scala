@@ -4,14 +4,13 @@ import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
-import com.scalableminds.webknossos.datastore.models.datasource.{DatasetIdWithPath, DataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.ReserveUploadInformation
@@ -79,7 +78,7 @@ class DSRemoteWebknossosClient @Inject()(
         .getWithJsonResponse[List[UnfinishedUpload]]
     } yield unfinishedUploads
 
-  def reportUpload(datasetId: ObjectId,
+  def reportUpload(dataSourceId: DataSourceId,
                    datasetSizeBytes: Long,
                    needsConversion: Boolean,
                    viaAddRoute: Boolean,
@@ -87,7 +86,8 @@ class DSRemoteWebknossosClient @Inject()(
     for {
       _ <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
         .addQueryString("key" -> dataStoreKey)
-        .addQueryString("datasetId" -> datasetId.toString)
+        .addQueryString("datasetPath" -> dataSourceId.path)
+        .addQueryString("organizationId" -> dataSourceId.organizationId)
         .addQueryString("needsConversion" -> needsConversion.toString)
         .addQueryString("viaAddRoute" -> viaAddRoute.toString)
         .addQueryString("datasetSizeBytes" -> datasetSizeBytes.toString)
@@ -166,13 +166,4 @@ class DSRemoteWebknossosClient @Inject()(
           .silent
           .getWithJsonResponse[DataVaultCredential]
     )
-
-  def resolveDatasetNameToId(organizationId: String, datasetName: String): Fox[DatasetIdWithPath] =
-    for {
-      datasetIdWithPath <- rpc(
-        s"$webknossosUri/api/datastores/$dataStoreName/:$organizationId/:$datasetName/getDatasetId")
-        .addQueryString("key" -> dataStoreKey)
-        .silent
-        .getWithJsonResponse[DatasetIdWithPath]
-    } yield datasetIdWithPath
 }

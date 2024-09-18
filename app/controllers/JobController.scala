@@ -164,7 +164,7 @@ class JobController @Inject()(
       } yield Ok(js)
     }
 
-  def runComputeSegmentIndexFileJob(datasetId: String, layerName: String, ): Action[AnyContent] =
+  def runComputeSegmentIndexFileJob(datasetId: String, layerName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         parsedDatasetId <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
@@ -245,19 +245,19 @@ class JobController @Inject()(
       }
     }
 
-  def runInferMitochondriaJob(organizationId: String,
-                              datasetNameAndId: String,
+  def runInferMitochondriaJob(datasetId: String,
                               layerName: String,
                               bbox: String,
                               newDatasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          organization <- organizationDAO.findOne(organizationId) ?~> Messages("organization.notFound", organizationId)
-          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferMitochondria.notAllowed.organization" ~> FORBIDDEN
-          dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetNameAndId, organization._id) ?~> Messages(
+          parsedDatasetId <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(parsedDatasetId) ?~> Messages(
             "dataset.notFound",
-            datasetNameAndId) ~> NOT_FOUND
+            datasetId) ~> NOT_FOUND
+          organization <- organizationDAO.findOne(dataset._organization) ?~> Messages("organization.notFound", dataset._organization)
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferMitochondria.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
@@ -265,7 +265,7 @@ class JobController @Inject()(
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           command = JobCommand.infer_mitochondria
           commandArgs = Json.obj(
-            "organization_name" -> organizationId,
+            "organization_name" -> dataset._organization,
             "dataset_name" -> dataset.name, // TODOM: Adjust worker to use correct dataset
             "dataset_path" -> dataset.path, // TODOM: Adjust worker to use correct dataset
             "new_dataset_name" -> newDatasetName,

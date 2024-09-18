@@ -64,24 +64,25 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
 
   val dataBaseDir: Path = datasetSymlinkService.dataBaseDir
 
-  private def uploadDirectory(organizationId: String, name: String): Path =
-    dataBaseDir.resolve(organizationId).resolve(name)
+  private def uploadDirectory(organizationId: String, datasetPath: String): Path =
+    dataBaseDir.resolve(organizationId).resolve(datasetPath)
 
   def composeDataset(composeRequest: ComposeRequest, userToken: Option[String]): Fox[DataSource] =
     for {
       _ <- dataSourceService.assertDataDirWritable(composeRequest.organizationId)
       reserveUploadInfo = ReserveUploadInformation("",
                                                    composeRequest.newDatasetName,
+                                                   "", // filled by core backend
                                                    composeRequest.organizationId,
                                                    1,
                                                    None,
                                                    None,
                                                    List(),
                                                    Some(composeRequest.targetFolderId))
-      _ <- remoteWebknossosClient.reserveDataSourceUpload(reserveUploadInfo, userToken) ?~> "Failed to reserve upload."
-      directory = uploadDirectory(composeRequest.organizationId, composeRequest.newDatasetName)
+      reservedInfo <- remoteWebknossosClient.reserveDataSourceUpload(reserveUploadInfo, userToken) ?~> "Failed to reserve upload."
+      directory = uploadDirectory(reservedInfo.organization, reservedInfo.path)
       _ = PathUtils.ensureDirectory(directory)
-      dataSource <- createDatasource(composeRequest, composeRequest.organizationId)
+      dataSource <- createDatasource(composeRequest, reservedInfo.path, reservedInfo.organization, directory)
       properties = Json.toJson(dataSource).toString().getBytes(StandardCharsets.UTF_8)
       _ = Files.write(directory.resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON), properties)
     } yield dataSource
@@ -139,12 +140,11 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
       }
     } yield editedLayer
 
-  private def createDatasource(composeRequest: ComposeRequest, organizationId: String): Fox[DataSource] = {
-    val uploadDir = uploadDirectory(organizationId, composeRequest.newDatasetName)
+  private def createDatasource(composeRequest: ComposeRequest, datasetPath: String, organizationId: String, uploadDir: Path): Fox[DataSource] = {
     for {
       layers <- Fox.serialCombined(composeRequest.layers.toList)(getLayerFromComposeLayer(_, uploadDir))
       dataSource = GenericDataSource(
-        DataSourceId(composeRequest.newDatasetName, organizationId),
+        DataSourceId(datasetPath, organizationId),
         layers,
         composeRequest.voxelSize,
         None

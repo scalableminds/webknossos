@@ -265,7 +265,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     val meshFilePath =
       dataBaseDir
         .resolve(organizationId)
-        .resolve(datasetName)
+        .resolve(datasetPath)
         .resolve(dataLayerName)
         .resolve(meshesDir)
         .resolve(s"$meshFileName.$hdf5FileExtension")

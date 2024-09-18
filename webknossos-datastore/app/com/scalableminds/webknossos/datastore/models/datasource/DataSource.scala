@@ -2,11 +2,9 @@ package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.requestparsing.{DatasetURIParser, ObjectId}
-import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.GenericInboxDataSource
-import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json._
 
 package object datasource {
@@ -46,14 +44,6 @@ package object datasource {
         case None          => DataSourceId(datasetIdOrName, organizationId)
       }
     }
-  }
-
-  case class DatasetIdWithPath(id: ObjectId, path: String) {
-    override def toString: String = s"DatasetIdWithPath($id, $path)"
-  }
-
-  object DatasetIdWithPath {
-    implicit val datasetIdWithPathFormat: Format[DatasetIdWithPath] = Json.format[DatasetIdWithPath]
   }
 
   object DatasetViewConfiguration {

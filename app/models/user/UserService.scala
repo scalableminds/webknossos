@@ -24,7 +24,7 @@ import play.silhouette.api.util.PasswordInfo
 import play.silhouette.impl.providers.CredentialsProvider
 import security.{PasswordHasher, TokenDAO}
 import utils.sql.SqlEscaping
-import utils.{ObjectId, WkConf}
+import utils.{WkConf}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}

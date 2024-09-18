@@ -408,14 +408,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       case (None, Some(datasetName)) => findOneByPathAndOrganization(datasetName, organizationId)
     }
 
-  private def getWhereClauseForDatasetIdOrName(datasetIdOrName: String): SqlToken = {
-    val (maybeId, maybeDatasetName) = getDatasetIdOrNameFromURIPath(datasetIdOrName)
-    maybeId match {
-      case Some(id) => q"_id = $id"
-      case None     => q"name = $maybeDatasetName"
-    }
-  }
-
   def findOneByPathAndOrganization(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
     for {
       accessQuery <- readAccessQuery

@@ -5,7 +5,7 @@ import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
-import com.scalableminds.webknossos.datastore.models.datasource.{DatasetIdWithPath, DataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
 import com.scalableminds.webknossos.datastore.services.uploading.{LinkedLayerIdentifier, ReserveUploadInformation}
@@ -58,7 +58,6 @@ class WKRemoteDataStoreController @Inject()(
 
   val bearerTokenService: WebknossosBearerTokenAuthenticatorService =
     wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
-
 
   def reserveDatasetUpload(name: String, key: String, token: String): Action[ReserveUploadInformation] =
     Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
@@ -130,20 +129,20 @@ class WKRemoteDataStoreController @Inject()(
   def reportDatasetUpload(name: String,
                           key: String,
                           token: String,
-                          datasetId: String,
+                          datasetPath: String,
+                          organizationId: String,
                           datasetSizeBytes: Long,
                           needsConversion: Boolean,
                           viaAddRoute: Boolean): Action[AnyContent] =
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         for {
-          parsedDatasetId <- ObjectId.fromString(datasetId) ?~> "Could not parse dataset id"
           user <- bearerTokenService.userForToken(token)
-          dataset <- datasetDAO.findOne(parsedDatasetId)(GlobalAccessContext) ?~> Messages(
+          dataset <- datasetDAO.findOneByPathAndOrganization(datasetPath, organizationId)(GlobalAccessContext) ?~> Messages(
             "dataset.notFound",
-            datasetId) ~> NOT_FOUND
+            datasetPath) ~> NOT_FOUND
           _ <- Fox.runIf(!needsConversion && !viaAddRoute)(usedStorageService.refreshStorageReportForDataset(dataset))
-          _ <- Fox.runIf(!needsConversion)(logUploadToSlack(user, parsedDatasetId, viaAddRoute))
+          _ <- Fox.runIf(!needsConversion)(logUploadToSlack(user, dataset._id, viaAddRoute))
           _ = analyticsService.track(UploadDatasetEvent(user, dataset, dataStore, datasetSizeBytes))
           _ = if (!needsConversion) mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
         } yield Ok

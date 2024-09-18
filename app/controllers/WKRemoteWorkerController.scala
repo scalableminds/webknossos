@@ -1,6 +1,7 @@
 package controllers
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.tools.Fox
 import models.aimodels.AiInferenceDAO
 import models.dataset.DatasetDAO
@@ -12,7 +13,7 @@ import models.voxelytics.VoxelyticsDAO
 import net.liftweb.common.{Empty, Failure, Full}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import utils.{ObjectId, WkConf}
+import utils.{WkConf}
 
 import scala.concurrent.ExecutionContext
 

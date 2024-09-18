@@ -2,6 +2,7 @@ package controllers
 
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.AccessMode.AccessMode
@@ -23,7 +24,7 @@ import net.liftweb.common.{Box, Full}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import security.{RandomIDGenerator, URLSharing, WkEnv, WkSilhouetteEnvironment}
-import utils.{ObjectId, WkConf}
+import utils.{WkConf}
 
 import scala.concurrent.ExecutionContext
 

@@ -35,7 +35,7 @@ import net.liftweb.common.{Box, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
-import utils.{ObjectId, WkConf}
+import utils.{WkConf}
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 import javax.inject.Inject

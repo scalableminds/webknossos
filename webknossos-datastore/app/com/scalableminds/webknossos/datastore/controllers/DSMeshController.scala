@@ -28,7 +28,7 @@ class DSMeshController @Inject()(
                     datasetName: String,
                     dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         for {
           meshFiles <- meshFileService.exploreMeshFiles(organizationId, datasetName, dataLayerName)
         } yield Ok(Json.toJson(meshFiles))
@@ -48,7 +48,7 @@ class DSMeshController @Inject()(
                                targetMappingName: Option[String],
                                editableMappingTracingId: Option[String]): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         for {
           _ <- Fox.successful(())
           mappingNameForMeshFile = meshFileService.mappingNameForMeshFile(organizationId,
@@ -79,7 +79,7 @@ class DSMeshController @Inject()(
                     datasetName: String,
                     dataLayerName: String): Action[MeshChunkDataRequestList] =
     Action.async(validateJson[MeshChunkDataRequestList]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         for {
           (data, encoding) <- meshFileService.readMeshChunk(organizationId, datasetName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
         } yield {
@@ -95,7 +95,7 @@ class DSMeshController @Inject()(
                       datasetName: String,
                       dataLayerName: String): Action[FullMeshRequest] =
     Action.async(validateJson[FullMeshRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         for {
           data: Array[Byte] <- fullMeshService.loadFor(organizationId, datasetName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
 

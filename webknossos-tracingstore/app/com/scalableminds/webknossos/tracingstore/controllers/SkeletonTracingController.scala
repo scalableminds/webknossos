@@ -38,7 +38,7 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
   def mergedFromContents(token: Option[String], persist: Boolean): Action[SkeletonTracings] =
     Action.async(validateProto[SkeletonTracings]) { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           val tracings: List[Option[SkeletonTracing]] = request.body
           for {
             mergedTracing <- Fox.box2Fox(tracingService.merge(tracings.flatten, MergedVolumeStats.empty(), Empty))
@@ -59,7 +59,7 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
                 boundingBox: Option[String]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
             tracing <- tracingService.find(annotationId, tracingId, version, applyUpdates = true) ?~> Messages(
               "tracing.notFound")

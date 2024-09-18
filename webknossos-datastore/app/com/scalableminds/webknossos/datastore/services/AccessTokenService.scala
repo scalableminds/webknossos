@@ -67,14 +67,14 @@ trait AccessTokenService {
   private lazy val accessAnswersCache: AlfuCache[(UserAccessRequest, Option[String]), UserAccessAnswer] =
     AlfuCache(timeToLive = AccessExpiration, timeToIdle = AccessExpiration)
 
-  def validateAccessForSyncBlock(accessRequest: UserAccessRequest)(block: => Result)(implicit ec: ExecutionContext,
-                                                                                     tc: TokenContext): Fox[Result] =
-    validateAccess(accessRequest) {
+  def validateAccessFromTokenContextForSyncBlock(accessRequest: UserAccessRequest)(
+      block: => Result)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Result] =
+    validateAccessFromTokenContext(accessRequest) {
       Future.successful(block)
     }
 
-  def validateAccess(accessRequest: UserAccessRequest)(block: => Future[Result])(implicit ec: ExecutionContext,
-                                                                                 tc: TokenContext): Fox[Result] =
+  def validateAccessFromTokenContext(accessRequest: UserAccessRequest)(
+      block: => Future[Result])(implicit ec: ExecutionContext, tc: TokenContext): Fox[Result] =
     for {
       userAccessAnswer <- hasUserAccess(accessRequest) ?~> "Failed to check data access, token may be expired, consider reloading."
       result <- executeBlockOnPositiveAnswer(userAccessAnswer, block)

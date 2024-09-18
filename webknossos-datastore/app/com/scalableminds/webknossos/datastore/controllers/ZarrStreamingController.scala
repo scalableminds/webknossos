@@ -56,7 +56,7 @@ class ZarrStreamingController @Inject()(
       datasetName: String,
       dataLayerName: String = "",
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetName,
@@ -73,7 +73,7 @@ class ZarrStreamingController @Inject()(
       datasetName: String,
       dataLayerName: String = "",
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetName,
@@ -151,7 +151,7 @@ class ZarrStreamingController @Inject()(
       datasetName: String,
       zarrVersion: Int,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       for {
         dataSource <- dataSourceRepository.findUsable(DataSourceId(datasetName, organizationId)).toFox ~> NOT_FOUND
         dataLayers = dataSource.dataLayers
@@ -232,7 +232,7 @@ class ZarrStreamingController @Inject()(
       mag: String,
       coordinates: String,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       rawZarrCube(organizationId, datasetName, dataLayerName, mag, coordinates)
     }
   }
@@ -298,7 +298,7 @@ class ZarrStreamingController @Inject()(
                     dataLayerName: String,
                     mag: String,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       zArray(organizationId, datasetName, dataLayerName, mag)
     }
   }
@@ -319,7 +319,7 @@ class ZarrStreamingController @Inject()(
                             dataLayerName: String,
                             mag: String,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       zarrJsonForMag(organizationId, datasetName, dataLayerName, mag)
     }
   }
@@ -389,7 +389,7 @@ class ZarrStreamingController @Inject()(
                                         mag: String,
                                         zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         dataLayerMagFolderContents(organizationId, datasetName, dataLayerName, mag, zarrVersion)
       }
     }
@@ -450,7 +450,7 @@ class ZarrStreamingController @Inject()(
                                      datasetName: String,
                                      dataLayerName: String,
                                      zarrVersion: Int): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       dataLayerFolderContents(organizationId, datasetName, dataLayerName, zarrVersion)
     }
   }
@@ -507,7 +507,7 @@ class ZarrStreamingController @Inject()(
                                       datasetName: String,
                                       zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         for {
           dataSource <- dataSourceRepository.findUsable(DataSourceId(datasetName, organizationId)).toFox ?~> Messages(
             "dataSource.notFound") ~> NOT_FOUND
@@ -554,7 +554,7 @@ class ZarrStreamingController @Inject()(
                     organizationId: String,
                     datasetName: String,
                     dataLayerName: String = ""): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccessForSyncBlock(
+    accessTokenService.validateAccessFromTokenContextForSyncBlock(
       UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       Ok(zGroupJson)
     }

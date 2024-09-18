@@ -50,6 +50,11 @@ case class AnnotationWithTracings(
       (info, _) <- editableMappingsByTracingId.get(tracingId)
     } yield info
 
+  def getEditableMappingUpdater(tracingId: String): Option[EditableMappingUpdater] =
+    for {
+      (_, updater) <- editableMappingsByTracingId.get(tracingId)
+    } yield updater
+
   def version: Long = annotation.version
 
   def addTracing(a: AddLayerAnnotationUpdateAction): AnnotationWithTracings =
@@ -113,5 +118,7 @@ case class AnnotationWithTracings(
 
   def applyEditableMappingAction(a: EditableMappingUpdateAction)(
       implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
-    Fox.failure("not implemented yet") // TODO
+    for {
+      updater <- getEditableMappingUpdater("tracingId") // TODO editable mapping update actions need tracing id
+    } yield this // TODO
 }

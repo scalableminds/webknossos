@@ -62,7 +62,7 @@ class VolumeTracingZarrStreamingController @Inject()(
                                  tracingId: String,
                                  zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
           existingMags = tracing.resolutions.map(vec3IntFromProto)
@@ -84,7 +84,7 @@ class VolumeTracingZarrStreamingController @Inject()(
                                      tracingId: String,
                                      zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
           existingMags = tracing.resolutions.map(vec3IntFromProto(_).toMagLiteral(allowScalar = true))
@@ -101,7 +101,7 @@ class VolumeTracingZarrStreamingController @Inject()(
                                     mag: String,
                                     zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
@@ -125,7 +125,7 @@ class VolumeTracingZarrStreamingController @Inject()(
                                         mag: String,
                                         zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
           existingMags = tracing.resolutions.map(vec3IntFromProto)
@@ -138,7 +138,7 @@ class VolumeTracingZarrStreamingController @Inject()(
 
   def zArray(token: Option[String], annotationId: String, tracingId: String, mag: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
           existingMags = tracing.resolutions.map(vec3IntFromProto)
@@ -172,7 +172,7 @@ class VolumeTracingZarrStreamingController @Inject()(
 
   def zarrJsonForMag(token: Option[String], annotationId: String, tracingId: String, mag: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
@@ -218,7 +218,7 @@ class VolumeTracingZarrStreamingController @Inject()(
 
   def zGroup(token: Option[String], annotationId: String, tracingId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         Future(Ok(Json.toJson(NgffGroupHeader(zarr_format = 2))))
       }
   }
@@ -233,7 +233,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       annotationId: String,
       tracingId: String,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
       for {
         tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
@@ -251,7 +251,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       annotationId: String,
       tracingId: String,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
       for {
         tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
@@ -272,7 +272,7 @@ class VolumeTracingZarrStreamingController @Inject()(
                  tracingName: Option[String],
                  zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
@@ -297,7 +297,7 @@ class VolumeTracingZarrStreamingController @Inject()(
                   coordinates: String): Action[AnyContent] =
     Action.async { implicit request =>
       {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 

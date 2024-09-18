@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingService,
   EditableMappingUpdateAction,
@@ -24,8 +25,16 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   BucketMutatingVolumeUpdateAction,
   VolumeUpdateAction
 }
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
-import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingUpdatesReport}
+import com.scalableminds.webknossos.tracingstore.tracings.{
+  KeyValueStoreImplicits,
+  RemoteFallbackLayer,
+  TracingDataStore
+}
+import com.scalableminds.webknossos.tracingstore.{
+  TSRemoteDatastoreClient,
+  TSRemoteWebknossosClient,
+  TracingUpdatesReport
+}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Full}
 import play.api.libs.json.{JsObject, JsValue, Json}
@@ -34,6 +43,8 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosClient,
+                                    editableMappingService: EditableMappingService,
+                                    remoteDatastoreClient: TSRemoteDatastoreClient,
                                     tracingDataStore: TracingDataStore)
     extends KeyValueStoreImplicits
     with LazyLogging {
@@ -159,13 +170,18 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
                                                        updates,
                                                        requestedSkeletonTracingIds,
                                                        requestedVolumeTracingIds) ?~> "findTracingsForUpdates.failed"
-      annotationWithTracingsAndMappings <- findEditableMappingsForUpdates(annotationWithTracings, updates)
+      annotationWithTracingsAndMappings <- findEditableMappingsForUpdates(annotationWithTracings,
+                                                                          updates,
+                                                                          annotation.version,
+                                                                          targetVersion)
       updated <- applyUpdates(annotationWithTracingsAndMappings, annotationId, updates, targetVersion) ?~> "applyUpdates.inner.failed"
     } yield updated
 
   private def findEditableMappingsForUpdates( // TODO integrate with findTracings?
                                              annotationWithTracings: AnnotationWithTracings,
-                                             updates: List[UpdateAction])(implicit ec: ExecutionContext) = {
+                                             updates: List[UpdateAction],
+                                             currentMaterializedVersion: Long,
+                                             targetVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext) = {
     val volumeIdsWithEditableMapping = annotationWithTracings.volumesIdsThatHaveEditableMapping
     // TODO intersect with editable mapping updates?
     for {
@@ -176,11 +192,36 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
     } yield
       annotationWithTracings.copy(
         editableMappingsByTracingId = editableMappingInfos
-          .map(keyValuePair => (keyValuePair.key, (keyValuePair.value, editableMappingUpdaterFor(keyValuePair.value))))
+          .map(
+            keyValuePair =>
+              (keyValuePair.key,
+               (keyValuePair.value,
+                editableMappingUpdaterFor(keyValuePair.key,
+                                          keyValuePair.value,
+                                          currentMaterializedVersion,
+                                          targetVersion))))
           .toMap)
   }
 
-  def editableMappingUpdaterFor(editableMappingInfo: EditableMappingInfo): EditableMappingUpdater = ??? // TODO
+  private def editableMappingUpdaterFor(tracingId: String,
+                                        editableMappingInfo: EditableMappingInfo,
+                                        currentMaterializedVersion: Long,
+                                        targetVersion: Long)(implicit tc: TokenContext): EditableMappingUpdater = {
+    val remoteFallbackLayer
+      : RemoteFallbackLayer = RemoteFallbackLayer("todo", "todo", "todo", ElementClassProto.uint8) // TODO
+    new EditableMappingUpdater(
+      tracingId,
+      editableMappingInfo.baseMappingName,
+      currentMaterializedVersion,
+      targetVersion,
+      remoteFallbackLayer,
+      tc,
+      remoteDatastoreClient,
+      editableMappingService,
+      tracingDataStore,
+      relyOnAgglomerateIds = false // TODO
+    )
+  }
 
   private def findTracingsForUpdates(
       annotation: AnnotationProto,
@@ -217,11 +258,10 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
     } yield AnnotationWithTracings(annotation, skeletonTracingsMap ++ volumeTracingsMap, editableMappingsMap)
   }
 
-  private def applyUpdates(
-      annotation: AnnotationWithTracings,
-      annotationId: String,
-      updates: List[UpdateAction],
-      targetVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] = {
+  private def applyUpdates(annotation: AnnotationWithTracings,
+                           annotationId: String,
+                           updates: List[UpdateAction],
+                           targetVersion: Long)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] = {
 
     def updateIter(annotationWithTracingsFox: Fox[AnnotationWithTracings],
                    remainingUpdates: List[UpdateAction]): Fox[AnnotationWithTracings] =

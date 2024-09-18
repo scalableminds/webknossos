@@ -271,6 +271,7 @@ class VolumeTracingService @Inject()(
       bool2Fox(mag.isIsotropic)
     }
 
+  /*
   // TODO
   private def revertToVolumeVersion(annotationId: String,
                                     tracingId: String,
@@ -332,6 +333,7 @@ class VolumeTracingService @Inject()(
       _ <- segmentIndexBuffer.flush()
     } yield sourceTracing
   }
+   */
 
   def initializeWithDataMultiple(annotationId: String, tracingId: String, tracing: VolumeTracing, initialData: File)(
       implicit mp: MessagesProvider,

@@ -40,7 +40,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
   def makeMappingEditable(token: Option[String], annotationId: String, tracingId: String): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             tracing <- volumeTracingService.find(annotationId, tracingId)
             tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
@@ -112,7 +112,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
                           version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             tracing <- volumeTracingService.find(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
@@ -128,7 +128,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
                                tracingId: String,
                                agglomerateId: Long): Action[AnyContent] = Action.async { implicit request =>
     log() {
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           tracing <- volumeTracingService.find(annotationId, tracingId)
           _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
@@ -150,7 +150,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
   def agglomerateIdsForSegments(token: Option[String], annotationId: String, tracingId: String): Action[ListOfLong] =
     Action.async(validateProto[ListOfLong]) { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             tracing <- volumeTracingService.find(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
@@ -174,7 +174,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
   def agglomerateGraphMinCut(token: Option[String], annotationId: String, tracingId: String): Action[MinCutParameters] =
     Action.async(validateJson[MinCutParameters]) { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             tracing <- volumeTracingService.find(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
@@ -190,7 +190,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
                                 tracingId: String): Action[NeighborsParameters] =
     Action.async(validateJson[NeighborsParameters]) { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             tracing <- volumeTracingService.find(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)

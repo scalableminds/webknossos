@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.datasource.LegacyDataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
@@ -21,14 +21,14 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
                                               dataStoreConfig: DataStoreConfig,
                                               dataVaultService: DataVaultService) {
 
-  def vaultPathFor(baseDir: Path, datasetId: LegacyDataSourceId, layerName: String, magLocator: MagLocator)(
+  def vaultPathFor(baseDir: Path, datasetId: DataSourceId, layerName: String, magLocator: MagLocator)(
       implicit ec: ExecutionContext): Fox[VaultPath] =
     for {
       remoteSourceDescriptor <- remoteSourceDescriptorFor(baseDir, datasetId, layerName, magLocator)
       vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor)
     } yield vaultPath
 
-  def removeVaultFromCache(baseDir: Path, datasetId: LegacyDataSourceId, layerName: String, magLocator: MagLocator)(
+  def removeVaultFromCache(baseDir: Path, datasetId: DataSourceId, layerName: String, magLocator: MagLocator)(
       implicit ec: ExecutionContext): Fox[Unit] =
     for {
       remoteSource <- remoteSourceDescriptorFor(baseDir, datasetId, layerName, magLocator)
@@ -37,7 +37,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
 
   private def remoteSourceDescriptorFor(
                                          baseDir: Path,
-                                         datasetId: LegacyDataSourceId,
+                                         datasetId: DataSourceId,
                                          layerName: String,
                                          magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[RemoteSourceDescriptor] =
     for {
@@ -47,10 +47,10 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
     } yield remoteSource
 
   private def uriForMagLocator(baseDir: Path,
-                               dataSourceId: LegacyDataSourceId,
+                               dataSourceId: DataSourceId,
                                layerName: String,
                                magLocator: MagLocator): Box[URI] = tryo {
-    val localDatasetDir = baseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
+    val localDatasetDir = baseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.path)
     val localLayerDir = localDatasetDir.resolve(layerName)
     magLocator.path match {
       case Some(magLocatorPath) =>

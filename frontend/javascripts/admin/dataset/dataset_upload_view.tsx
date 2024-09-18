@@ -320,6 +320,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       uploadId,
       organization: datasetId.owningOrganization,
       name: datasetId.name,
+      path: datasetId.name,
       totalFileCount: formValues.zipFile.length,
       filePaths: filePaths,
       layersToLink: [],

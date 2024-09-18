@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.datareaders.wkw.WKWArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.datasource.{DataFormat, DataLayer, LegacyDataSourceId, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataFormat, DataLayer, DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
@@ -22,7 +22,7 @@ import ucar.ma2.{Array => MultiArray}
 import scala.concurrent.ExecutionContext
 
 class DatasetArrayBucketProvider(dataLayer: DataLayer,
-                                 dataSourceId: LegacyDataSourceId,
+                                 dataSourceId: DataSourceId,
                                  remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                                  sharedChunkContentsCacheOpt: Option[AlfuCache[String, MultiArray]])
     extends BucketProvider

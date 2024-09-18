@@ -8,7 +8,7 @@ package object inbox {
 
   trait GenericInboxDataSource[+T <: DataLayerLike] {
 
-    def id: LegacyDataSourceId
+    def id: DataSourceId
 
     def toUsable: Option[GenericDataSource[T]]
 
@@ -35,7 +35,7 @@ package object inbox {
       }
   }
 
-  case class UnusableDataSource[+T <: DataLayerLike](id: LegacyDataSourceId,
+  case class UnusableDataSource[+T <: DataLayerLike](id: DataSourceId,
                                                      status: String,
                                                      scale: Option[VoxelSize] = None,
                                                      existingDataSourceProperties: Option[JsValue] = None)

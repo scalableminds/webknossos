@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
-import com.scalableminds.webknossos.datastore.models.datasource.{DatasetIdWithPath, LegacyDataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.{DatasetIdWithPath, DataSourceId}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.ReserveUploadInformation
@@ -79,7 +79,7 @@ class DSRemoteWebknossosClient @Inject()(
         .getWithJsonResponse[List[UnfinishedUpload]]
     } yield unfinishedUploads
 
-  def reportUpload(dataSourceId: LegacyDataSourceId,
+  def reportUpload(datasetId: ObjectId,
                    datasetSizeBytes: Long,
                    needsConversion: Boolean,
                    viaAddRoute: Boolean,
@@ -87,7 +87,7 @@ class DSRemoteWebknossosClient @Inject()(
     for {
       _ <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
         .addQueryString("key" -> dataStoreKey)
-        .addQueryString("datasetName" -> dataSourceId.name)
+        .addQueryString("datasetId" -> datasetId.toString)
         .addQueryString("needsConversion" -> needsConversion.toString)
         .addQueryString("viaAddRoute" -> viaAddRoute.toString)
         .addQueryString("datasetSizeBytes" -> datasetSizeBytes.toString)
@@ -101,16 +101,17 @@ class DSRemoteWebknossosClient @Inject()(
       .silent
       .put(dataSources)
 
-  def reserveDataSourceUpload(info: ReserveUploadInformation, userTokenOpt: Option[String]): Fox[Unit] =
+  def reserveDataSourceUpload(info: ReserveUploadInformation,
+                              userTokenOpt: Option[String]): Fox[ReserveUploadInformation] =
     for {
       userToken <- option2Fox(userTokenOpt) ?~> "reserveUpload.noUserToken"
-      _ <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveUpload")
+      reserveUploadInfo <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("token" -> userToken)
-        .post(info)
-    } yield ()
+        .postWithJsonResponse[ReserveUploadInformation, ReserveUploadInformation](info)
+    } yield reserveUploadInfo
 
-  def deleteDataSource(id: LegacyDataSourceId): Fox[_] =
+  def deleteDataSource(id: DataSourceId): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset").addQueryString("key" -> dataStoreKey).post(id)
 
   def getJobExportProperties(jobId: String): Fox[JobExportProperties] =
@@ -168,7 +169,8 @@ class DSRemoteWebknossosClient @Inject()(
 
   def resolveDatasetNameToId(organizationId: String, datasetName: String): Fox[DatasetIdWithPath] =
     for {
-      datasetIdWithPath <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/:$organizationId/:$datasetName/getDatasetId")
+      datasetIdWithPath <- rpc(
+        s"$webknossosUri/api/datastores/$dataStoreName/:$organizationId/:$datasetName/getDatasetId")
         .addQueryString("key" -> dataStoreKey)
         .silent
         .getWithJsonResponse[DatasetIdWithPath]

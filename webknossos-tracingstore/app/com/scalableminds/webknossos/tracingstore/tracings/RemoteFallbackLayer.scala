@@ -7,20 +7,20 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, LegacyDataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, DataSourceId}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.FallbackDataKey
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 
 import scala.concurrent.ExecutionContext
 
 case class RemoteFallbackLayer(organizationId: String,
-                               datasetName: String,
+                               datasetPath: String,
                                layerName: String,
                                elementClass: ElementClassProto)
 
 object RemoteFallbackLayer extends ProtoGeometryImplicits {
-  def fromDataLayerAndDataSource(dataLayer: DataLayerLike, dataSource: LegacyDataSourceId): RemoteFallbackLayer =
-    RemoteFallbackLayer(dataSource.team, dataSource.name, dataLayer.name, dataLayer.elementClass)
+  def fromDataLayerAndDataSource(dataLayer: DataLayerLike, dataSource: DataSourceId): RemoteFallbackLayer =
+    RemoteFallbackLayer(dataSource.organizationId, dataSource.path, dataLayer.name, dataLayer.elementClass)
 }
 trait FallbackDataHelper {
   def remoteDatastoreClient: TSRemoteDatastoreClient
@@ -34,7 +34,7 @@ trait FallbackDataHelper {
     for {
       layerName <- tracing.fallbackLayer.toFox ?~> "This feature is only defined on volume annotations with fallback segmentation layer."
       datasetId <- remoteWebknossosClient.getDataSourceIdForTracing(tracingId)
-    } yield RemoteFallbackLayer(datasetId.team, datasetId.name, layerName, tracing.elementClass)
+    } yield RemoteFallbackLayer(datasetId.organizationId, datasetId.path, layerName, tracing.elementClass)
 
   def getFallbackDataFromDatastore(
       remoteFallbackLayer: RemoteFallbackLayer,

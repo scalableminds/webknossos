@@ -20,7 +20,7 @@ trait WKWLayer extends DataLayer {
   val dataFormat: DataFormat.Value = DataFormat.wkw
 
   override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                              dataSourceId: LegacyDataSourceId,
+                              dataSourceId: DataSourceId,
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     new DatasetArrayBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 

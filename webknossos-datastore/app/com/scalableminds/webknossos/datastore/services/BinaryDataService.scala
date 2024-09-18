@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.DatasetDeleter
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, LegacyDataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, DataSourceId}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
@@ -87,7 +87,7 @@ class BinaryDataService(val dataBaseDir: Path,
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
       // dataSource is null and unused for volume tracings. Insert dummy DataSourceId (also unused in that case)
-      val dataSourceId = if (request.dataSource != null) request.dataSource.id else LegacyDataSourceId("", "")
+      val dataSourceId = if (request.dataSource != null) request.dataSource.id else DataSourceId("", "")
       val bucketProvider =
         bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.bucketProviderCacheKey))(_ =>
           request.dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
@@ -98,11 +98,11 @@ class BinaryDataService(val dataBaseDir: Path,
             s"Caught internal error: $msg while loading a bucket for layer ${request.dataLayer.name} of dataset ${request.dataSource.id}")
           Fox.failure(e.getMessage)
         case f: Failure =>
-          if (datasetErrorLoggingService.exists(_.shouldLog(request.dataSource.id.team, request.dataSource.id.name))) {
+          if (datasetErrorLoggingService.exists(_.shouldLog(request.dataSource.id.organizationId, request.dataSource.id.path))) {
             logger.error(
-              s"Bucket loading for layer ${request.dataLayer.name} of dataset ${request.dataSource.id.team}/${request.dataSource.id.name} at ${readInstruction.bucket} failed: ${Fox
+              s"Bucket loading for layer ${request.dataLayer.name} of dataset ${request.dataSource.id.organizationId}/${request.dataSource.id.path} at ${readInstruction.bucket} failed: ${Fox
                 .failureChainAsString(f, includeStackTraces = true)}")
-            datasetErrorLoggingService.foreach(_.registerLogged(request.dataSource.id.team, request.dataSource.id.name))
+            datasetErrorLoggingService.foreach(_.registerLogged(request.dataSource.id.organizationId, request.dataSource.id.path))
           }
           f.toFox
         case Full(data) =>
@@ -175,14 +175,14 @@ class BinaryDataService(val dataBaseDir: Path,
   }
 
   def clearCache(organizationId: String, datasetName: String, layerName: Option[String]): (Int, Int, Int) = {
-    val dataSourceId = LegacyDataSourceId(datasetName, organizationId)
+    val dataSourceId = DataSourceId(datasetName, organizationId)
 
     def agglomerateFileMatchPredicate(agglomerateKey: AgglomerateFileKey) =
       agglomerateKey.datasetName == datasetName && agglomerateKey.organizationId == organizationId && layerName.forall(
         _ == agglomerateKey.layerName)
 
-    def bucketProviderPredicate(key: (LegacyDataSourceId, String)): Boolean =
-      key._1 == LegacyDataSourceId(datasetName, organizationId) && layerName.forall(_ == key._2)
+    def bucketProviderPredicate(key: (DataSourceId, String)): Boolean =
+      key._1 == DataSourceId(datasetName, organizationId) && layerName.forall(_ == key._2)
 
     val closedAgglomerateFileHandleCount =
       agglomerateServiceOpt.map(_.agglomerateFileCache.clear(agglomerateFileMatchPredicate)).getOrElse(0)

@@ -3,7 +3,7 @@ package controllers
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.datasource.LegacyDataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.AccessMode.AccessMode
 import com.scalableminds.webknossos.datastore.services.{
   AccessMode,
@@ -97,23 +97,23 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
           case AccessResourceType.datasource =>
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(sharingTokenAccessCtx)
           case AccessResourceType.tracing =>
-            handleTracingAccess(accessRequest.resourceId.name, accessRequest.mode, userBox, token)
+            handleTracingAccess(accessRequest.resourceId.path, accessRequest.mode, userBox, token)
           case AccessResourceType.jobExport =>
-            handleJobExportAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)
+            handleJobExportAccess(accessRequest.resourceId.path, accessRequest.mode, userBox)
           case _ =>
             Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
         }
       } yield Ok(Json.toJson(answer))
     }
 
-  private def handleDataSourceAccess(dataSourceId: LegacyDataSourceId, mode: AccessMode, userBox: Box[User])(
+  private def handleDataSourceAccess(dataSourceId: DataSourceId, mode: AccessMode, userBox: Box[User])(
       implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
     // Write access is explicitly handled here depending on userBox,
     // Read access is ensured in findOneBySourceName, depending on the implicit DBAccessContext (to allow sharingTokens)
 
     def tryRead: Fox[UserAccessAnswer] =
       for {
-        dataSourceBox <- datasetDAO.findOneByNameAndOrganization(dataSourceId.name, dataSourceId.team).futureBox
+        dataSourceBox <- datasetDAO.findOneByPathAndOrganization(dataSourceId.path, dataSourceId.organizationId).futureBox
       } yield
         dataSourceBox match {
           case Full(_) => UserAccessAnswer(granted = true)
@@ -122,7 +122,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
 
     def tryWrite: Fox[UserAccessAnswer] =
       for {
-        dataset <- datasetDAO.findOneByNameAndOrganization(dataSourceId.name, dataSourceId.team) ?~> "datasource.notFound"
+        dataset <- datasetDAO.findOneByPathAndOrganization(dataSourceId.path, dataSourceId.organizationId) ?~> "datasource.notFound"
         user <- userBox.toFox ?~> "auth.token.noUser"
         isAllowed <- datasetService.isEditableBy(dataset, Some(user))
       } yield UserAccessAnswer(isAllowed)
@@ -132,9 +132,9 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
         case Full(user) =>
           for {
             // if dataSourceId is empty, the request asks if the user may administrate in *any* (i.e. their own) organization
-            relevantOrganization <- if (dataSourceId.team.isEmpty)
+            relevantOrganization <- if (dataSourceId.organizationId.isEmpty)
               Fox.successful(user._organization)
-            else organizationDAO.findOne(dataSourceId.team).map(_._id)
+            else organizationDAO.findOne(dataSourceId.organizationId).map(_._id)
             isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, relevantOrganization)
           } yield UserAccessAnswer(isTeamManagerOrAdmin || user.isDatasetManager)
         case _ => Fox.successful(UserAccessAnswer(granted = false, Some("invalid access token")))
@@ -143,7 +143,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     def tryDelete: Fox[UserAccessAnswer] =
       for {
         _ <- bool2Fox(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
-        dataset <- datasetDAO.findOneByNameAndOrganization(dataSourceId.name, dataSourceId.team)(GlobalAccessContext) ?~> "datasource.notFound"
+        dataset <- datasetDAO.findOneByPathAndOrganization(dataSourceId.path, dataSourceId.organizationId)(GlobalAccessContext) ?~> "datasource.notFound"
         user <- userBox.toFox ?~> "auth.token.noUser"
       } yield UserAccessAnswer(user._organization == dataset._organization && user.isAdmin)
 

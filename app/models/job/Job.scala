@@ -51,6 +51,8 @@ case class Job(
 
   def datasetName: Option[String] = argAsStringOpt("dataset_name")
 
+  def datasetId: Option[String] = argAsStringOpt("dataset_id")
+
   private def argAsStringOpt(key: String) = (commandArgs \ key).toOption.flatMap(_.asOpt[String])
 
   def resultLink(organizationId: String): Option[String] =
@@ -58,15 +60,15 @@ case class Job(
     else {
       command match {
         case JobCommand.convert_to_wkw | JobCommand.compute_mesh_file =>
-          datasetName.map { dsName =>
-            s"/datasets/$organizationId/$dsName/view"
+          datasetId.map { datasetId =>
+            s"/datasets/$datasetId/view" // TODO: Adjust worker
           }
         case JobCommand.export_tiff | JobCommand.render_animation =>
           Some(s"/api/jobs/${this._id}/export")
         case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation |
             JobCommand.infer_with_model | JobCommand.infer_mitochondria | JobCommand.align_sections =>
-          returnValue.map { resultDatasetName =>
-            s"/datasets/$organizationId/$resultDatasetName/view"
+          returnValue.map { resultDatasetId => // TODO: Adjust worker
+            s"/datasets/$resultDatasetId/view"
           }
         case _ => None
       }

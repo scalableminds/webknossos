@@ -4,8 +4,15 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.models.datasource.{GenericDataSource, LegacyDataSourceId, DataLayerLike => DataLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
+  UnusableDataSource,
+  InboxDataSourceLike => InboxDataSource
+}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  GenericDataSource,
+  DataSourceId,
+  DataLayerLike => DataLayer
+}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
@@ -56,12 +63,19 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
     } yield ()
 
-  def assertNewDatasetName(name: String, organizationId: String): Fox[Unit] =
-    datasetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
+  def isNewDatasetName(name: String, organizationId: String): Fox[Boolean] =
+    datasetDAO
+      .findOneByPathAndOrganization(name, organizationId)(GlobalAccessContext)
+      .futureBox
+      .flatMap {
+        case Full(_) => Fox.successful(false)
+        case _       => Fox.successful(true)
+      }
+      .toFox
 
   def createPreliminaryDataset(datasetName: String, organizationId: String, dataStore: DataStore): Fox[Dataset] = {
-    val unreportedDatasource = UnusableDataSource(LegacyDataSourceId(datasetName, organizationId), notYetUploadedStatus)
-    createDataset(dataStore, organizationId, unreportedDatasource)
+    val unreportedDatasource = UnusableDataSource(DataSourceId(datasetName, organizationId), notYetUploadedStatus)
+    createDataset(dataStore, organizationId, datasetName, unreportedDatasource)
   }
 
   def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: String)(
@@ -79,6 +93,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   private def createDataset(
       dataStore: DataStore,
       owningOrganization: String,
+      datasetName: String,
       dataSource: InboxDataSource,
       publication: Option[ObjectId] = None
   ): Fox[Dataset] = {
@@ -97,11 +112,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     for {
       organization <- organizationDAO.findOne(owningOrganization)
       organizationRootFolder <- folderDAO.findOne(organization._rootFolder)
-      isNewDatasetName <- assertNewDatasetName(dataSource.id.name, organization._id).futureBox.map {
-        case Empty => true
-        case _     => false
-      }
-      datasetPath = if (isNewDatasetName) dataSource.id.name else newId.toString
+      datasetPath <- isNewDatasetName(datasetName, organization._id).map(if (_) datasetName else newId.toString)
+      dataSource.id.path = datasetPath // Sync path with dataSource
       dataset = Dataset(
         newId,
         dataStore.name,
@@ -116,7 +128,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         path = datasetPath,
         isPublic = false,
         isUsable = dataSource.isUsable,
-        name = dataSource.id.name,
+        name = dataSource.id.path,
         voxelSize = dataSource.voxelSizeOpt,
         sharingToken = None,
         status = dataSource.statusOpt.getOrElse(""),
@@ -132,7 +144,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(
       implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
 
-    val groupedByOrga = dataSources.groupBy(_.id.team).toList
+    val groupedByOrga = dataSources.groupBy(_.id.organizationId).toList
     Fox
       .serialCombined(groupedByOrga) { orgaTuple: (String, List[InboxDataSource]) =>
         organizationDAO
@@ -145,10 +157,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
               Fox.successful(List.empty)
             case Full(organization) =>
               for {
-                foundDatasets <- datasetDAO.findAllByNamesAndOrganization(orgaTuple._2.map(_.id.name), organization._id)
-                foundDatasetsByName = foundDatasets.groupBy(_.name)
+                foundDatasets <- datasetDAO.findAllByPathsAndOrganization(orgaTuple._2.map(_.id.path), organization._id)
+                foundDatasetsByPath = foundDatasets.groupBy(_.path)
                 existingIds <- Fox.serialCombined(orgaTuple._2)(dataSource =>
-                  updateDataSource(dataStore, dataSource, foundDatasetsByName))
+                  updateDataSource(dataStore, dataSource, foundDatasetsByPath))
               } yield existingIds.flatten
             case _ =>
               logger.info(
@@ -163,16 +175,20 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   private def updateDataSource(
       dataStore: DataStore,
       dataSource: InboxDataSource,
-      foundDatasets: Map[String, List[Dataset]]
+      foundDatasetsByPath: Map[String, List[Dataset]]
   )(implicit ctx: DBAccessContext): Fox[Option[ObjectId]] = {
-    val foundDatasetOpt = foundDatasets.get(dataSource.id.name).flatMap(_.headOption)
+    val foundDatasetOpt = foundDatasetsByPath.get(dataSource.id.path).flatMap(_.headOption)
     foundDatasetOpt match {
       case Some(foundDataset) if foundDataset._dataStore == dataStore.name =>
         updateKnownDataSource(foundDataset, dataSource, dataStore).toFox.map(Some(_))
       case Some(foundDataset) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
         updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore)
       case _ =>
-        insertNewDataset(dataSource, dataStore).toFox.map(Some(_))
+        val maybeParsedDatasetPath = ObjectId.fromStringSync(dataSource.id.path)
+        // Avoid using the path as name in case it is an ObjectId.
+        val newDatasetName = maybeParsedDatasetPath.map(_ => "Newly Discovered Dataset").getOrElse(dataSource.id.path)
+        insertNewDataset(dataSource, newDatasetName, dataStore).toFox
+          .map(Some(_)) // TODO: Discuss how to better handle this case
     }
   }
 
@@ -217,9 +233,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       }
     }).flatten.futureBox
 
-  private def insertNewDataset(dataSource: InboxDataSource, dataStore: DataStore) =
+  private def insertNewDataset(dataSource: InboxDataSource, datasetName: String, dataStore: DataStore) =
     publicationForFirstDataset.flatMap { publicationId: Option[ObjectId] =>
-      createDataset(dataStore, dataSource.id.team, dataSource, publicationId).map(_._id)
+      createDataset(dataStore, dataSource.id.organizationId, datasetName, dataSource, publicationId).map(_._id)
     }.futureBox
 
   private def publicationForFirstDataset: Fox[Option[ObjectId]] =
@@ -255,7 +271,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound"
       }
       dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
-      dataSourceId = LegacyDataSourceId(dataset.name, organization._id)
+      dataSourceId = DataSourceId(dataset.name, organization._id)
     } yield {
       if (dataset.isUsable)
         for {

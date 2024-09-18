@@ -5,7 +5,7 @@ import com.google.inject.name.Named
 import com.scalableminds.util.requestparsing.{DatasetURIParser, ObjectId}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, LegacyDataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.pekko.actor.ActorSystem
@@ -19,13 +19,13 @@ class DatasetIdRepository @Inject()(
     remoteWebknossosClient: DSRemoteWebknossosClient,
     @Named("webknossos-datastore") val system: ActorSystem
 )(implicit ec: ExecutionContext)
-    extends TemporaryStore[LegacyDataSourceId, ObjectId](system)
+    extends TemporaryStore[DataSourceId, ObjectId](system)
     with LazyLogging
     with FoxImplicits
     with DatasetURIParser {
 
   def getDatasetIdFromIdOrName(datasetIdOrName: String, organizationId: String): Fox[ObjectId] = {
-    val dataSourceId = LegacyDataSourceId(datasetIdOrName, organizationId)
+    val dataSourceId = DataSourceId(datasetIdOrName, organizationId)
     find(dataSourceId) match {
       case Some(datasetId) => Fox.successful(datasetId)
       case None =>

@@ -4,7 +4,7 @@ import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, DatasetArray, DatasetHeader}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.datasource.LegacyDataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Fox.box2Fox
@@ -16,7 +16,7 @@ import scala.concurrent.ExecutionContext
 object N5Array extends LazyLogging {
 
   def open(path: VaultPath,
-           dataSourceId: LegacyDataSourceId,
+           dataSourceId: DataSourceId,
            layerName: String,
            axisOrderOpt: Option[AxisOrder],
            channelIndex: Option[Int],
@@ -40,7 +40,7 @@ object N5Array extends LazyLogging {
 }
 
 class N5Array(vaultPath: VaultPath,
-              dataSourceId: LegacyDataSourceId,
+              dataSourceId: DataSourceId,
               layerName: String,
               header: DatasetHeader,
               axisOrder: AxisOrder,

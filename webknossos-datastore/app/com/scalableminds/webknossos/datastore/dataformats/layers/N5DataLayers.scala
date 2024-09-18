@@ -14,7 +14,7 @@ trait N5Layer extends DataLayerWithMagLocators {
   val dataFormat: DataFormat.Value = DataFormat.n5
 
   def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                     dataSourceId: LegacyDataSourceId,
+                     dataSourceId: DataSourceId,
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]) =
     new DatasetArrayBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 

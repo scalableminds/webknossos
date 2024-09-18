@@ -74,7 +74,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     for {
       taskTypeIdValidated <- ObjectId.fromString(taskParameters.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-      dataset <- datasetDAO.findOneByNameAndOrganization(taskParameters.dataSet, organizationId)
+      dataset <- datasetDAO.findOneByPathAndOrganization(taskParameters.dataSet, organizationId)
       baseAnnotationIdValidated <- ObjectId.fromString(baseAnnotation.baseId)
       annotation <- resolveBaseAnnotationId(baseAnnotationIdValidated)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
@@ -234,7 +234,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   private def addVolumeFallbackBoundingBox(volume: VolumeTracing, organizationId: String): Fox[VolumeTracing] =
     if (volume.boundingBox.isEmpty) {
       for {
-        dataset <- datasetDAO.findOneByNameAndOrganization(volume.datasetName, organizationId)(GlobalAccessContext)
+        dataset <- datasetDAO.findOneByPathAndOrganization(volume.datasetName, organizationId)(GlobalAccessContext)
         dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
       } yield volume.copy(boundingBox = dataSource.boundingBox)
     } else Fox.successful(volume)
@@ -387,7 +387,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         _ <- assertEachHasEitherSkeletonOrVolume(fullTasks) ?~> "task.create.needsEitherSkeletonOrVolume"
         firstDatasetName <- fullTasks.headOption.map(_._1.dataSet).toFox
         _ <- assertAllOnSameDataset(fullTasks, firstDatasetName)
-        dataset <- datasetDAO.findOneByNameAndOrganization(firstDatasetName, requestingUser._organization) ?~> Messages(
+        dataset <- datasetDAO.findOneByPathAndOrganization(firstDatasetName, requestingUser._organization) ?~> Messages(
           "dataset.notFound",
           firstDatasetName)
         _ = if (fullTasks.exists(task => task._1.baseAnnotation.isDefined))

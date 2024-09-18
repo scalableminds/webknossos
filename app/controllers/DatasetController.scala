@@ -306,7 +306,7 @@ class DatasetController @Inject()(userService: UserService,
   def resolveDatasetNameToId(organizationId: String, datasetName: String): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
-        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId) ?~> notFoundMessage(datasetName) ~> NOT_FOUND
+        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId) ?~> notFoundMessage(datasetName) ~> NOT_FOUND
       } yield Ok(Json.obj("datasetId" -> dataset._id))
     }
 
@@ -325,12 +325,12 @@ class DatasetController @Inject()(userService: UserService,
     }
 
   // Note that there exists also updatePartial (which will only expect the changed fields)
-  def update(datasetNameAndId: String): Action[JsValue] =
+  def update(datasetId: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyUsing(datasetPublicReads) {
         case (description, displayName, sortingKey, isPublic, tags, metadata, folderId) =>
           for {
-            parsedDatasetId <- ObjectId.fromString(datasetNameAndId) ?~> "Invalid dataset id" ~> NOT_FOUND
+            parsedDatasetId <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
             dataset <- datasetDAO.findOne(parsedDatasetId) ?~> notFoundMessage(parsedDatasetId.toString) ~> NOT_FOUND
             maybeUpdatedMetadata = metadata.getOrElse(dataset.metadata)
             _ <- assertNoDuplicateMetadataKeys(maybeUpdatedMetadata)
@@ -416,7 +416,7 @@ class DatasetController @Inject()(userService: UserService,
   def getDatasetIdFromNameAndOrganization(datasetName: String, organizationId: String): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
-        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId) ?~> notFoundMessage(datasetName) ~> NOT_FOUND
+        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId) ?~> notFoundMessage(datasetName) ~> NOT_FOUND
       } yield
         Ok(
           Json.obj("id" -> dataset._id,

@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   Category,
   CoordinateTransformation,
   CoordinateTransformationType,
-  LegacyDataSourceId,
+  DataSourceId,
   ElementClass,
   ThinPlateSplineCorrespondences,
   DataLayerLike => DataLayer
@@ -81,7 +81,7 @@ case class DatasetCompactInfo(
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
 ) {
-  def dataSourceId = new LegacyDataSourceId(name, owningOrganization)
+  def dataSourceId = new DataSourceId(path, owningOrganization)
 }
 
 object DatasetCompactInfo {
@@ -405,7 +405,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       implicit ctx: DBAccessContext): Fox[Dataset] =
     getDatasetIdOrNameFromURIPath(idAndName) match {
       case (Some(validId), None)     => findOneByIdAndOrganization(validId, organizationId)
-      case (None, Some(datasetName)) => findOneByNameAndOrganization(datasetName, organizationId)
+      case (None, Some(datasetName)) => findOneByPathAndOrganization(datasetName, organizationId)
     }
 
   private def getWhereClauseForDatasetIdOrName(datasetIdOrName: String): SqlToken = {
@@ -416,7 +416,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     }
   }
 
-  def findOneByNameAndOrganization(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
+  def findOneByPathAndOrganization(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
@@ -440,13 +440,13 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       parsed <- parseFirst(r, s"$organizationId/$id")
     } yield parsed
 
-  def findAllByNamesAndOrganization(names: List[String], organizationId: String)(
+  def findAllByPathsAndOrganization(names: List[String], organizationId: String)(
       implicit ctx: DBAccessContext): Fox[List[Dataset]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
                    FROM $existingCollectionName
-                   WHERE name IN ${SqlToken.tupleFromList(names)}
+                   WHERE path IN ${SqlToken.tupleFromList(names)}
                    AND _organization = $organizationId
                    AND $accessQuery""".as[DatasetsRow]).map(_.toList)
       parsed <- parseAll(r)
@@ -610,7 +610,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                                             source: InboxDataSource,
                                             isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      organization <- organizationDAO.findOne(source.id.team)
+      organization <- organizationDAO.findOne(source.id.organizationId)
       defaultViewConfiguration: Option[JsValue] = source.defaultViewConfiguration.map(Json.toJson(_))
       _ <- run(q"""UPDATE webknossos.datasets
                    SET

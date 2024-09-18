@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.JsonHelper.bool2Box
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{MortonEncoding, WKWDataFormatHelper, WKWHeader}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkUtils, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, LegacyDataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
 import ucar.ma2.{Array => MultiArray}
@@ -19,7 +19,7 @@ import scala.concurrent.ExecutionContext
 
 object WKWArray extends WKWDataFormatHelper {
   def open(path: VaultPath,
-           dataSourceId: LegacyDataSourceId,
+           dataSourceId: DataSourceId,
            layerName: String,
            sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[WKWArray] =
     for {
@@ -38,7 +38,7 @@ object WKWArray extends WKWDataFormatHelper {
 }
 
 class WKWArray(vaultPath: VaultPath,
-               dataSourceId: LegacyDataSourceId,
+               dataSourceId: DataSourceId,
                layerName: String,
                header: WKWHeader,
                axisOrder: AxisOrder,

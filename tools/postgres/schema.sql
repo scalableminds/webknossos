@@ -128,7 +128,7 @@ CREATE TABLE webknossos.datasets(
   tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  UNIQUE (name, _organization),
+  UNIQUE (path, _organization),
   CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object'),
   CONSTRAINT adminViewConfigurationIsJsonObject CHECK(jsonb_typeof(adminViewConfiguration) = 'object'),
   CONSTRAINT metadataIsJsonArray CHECK(jsonb_typeof(metadata) = 'array')

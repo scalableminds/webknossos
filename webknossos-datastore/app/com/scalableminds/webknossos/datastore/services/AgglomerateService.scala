@@ -29,6 +29,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   private val dataBaseDir = Paths.get(config.Datastore.baseFolder)
   private val cumsumFileName = "cumsum.json"
 
+  // TODO: Also rename datasetName to datasetPath
+
   lazy val agglomerateFileCache = new AgglomerateFileCache(config.Datastore.Cache.AgglomerateFile.maxFileHandleEntries)
 
   def exploreAgglomerates(organizationId: String, datasetName: String, dataLayerName: String): Set[String] = {
@@ -136,7 +138,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   }
 
   def generateSkeleton(organizationId: String,
-                       datasetName: String,
+                       datasetPath: String,
                        dataLayerName: String,
                        mappingName: String,
                        agglomerateId: Long): Box[SkeletonTracing] =
@@ -145,7 +147,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
       val hdfFile =
         dataBaseDir
           .resolve(organizationId)
-          .resolve(datasetName)
+          .resolve(datasetPath)
           .resolve(dataLayerName)
           .resolve(agglomerateDir)
           .resolve(s"$mappingName.$agglomerateFileExtension")

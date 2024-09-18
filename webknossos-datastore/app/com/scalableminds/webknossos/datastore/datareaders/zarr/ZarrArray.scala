@@ -6,7 +6,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray, DatasetHeader}
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.datasource.LegacyDataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
@@ -15,7 +15,7 @@ import scala.concurrent.ExecutionContext
 
 object ZarrArray extends LazyLogging {
   def open(path: VaultPath,
-           dataSourceId: LegacyDataSourceId,
+           dataSourceId: DataSourceId,
            layerName: String,
            axisOrderOpt: Option[AxisOrder],
            channelIndex: Option[Int],
@@ -42,7 +42,7 @@ object ZarrArray extends LazyLogging {
 }
 
 class ZarrArray(vaultPath: VaultPath,
-                dataSourceId: LegacyDataSourceId,
+                dataSourceId: DataSourceId,
                 layerName: String,
                 header: DatasetHeader,
                 axisOrder: AxisOrder,

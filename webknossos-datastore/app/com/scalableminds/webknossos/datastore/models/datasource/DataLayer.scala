@@ -198,7 +198,7 @@ trait DataLayer extends DataLayerLike {
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int
 
   def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                     dataSourceId: LegacyDataSourceId,
+                     dataSourceId: DataSourceId,
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider
 
   def bucketProviderCacheKey: String = this.name

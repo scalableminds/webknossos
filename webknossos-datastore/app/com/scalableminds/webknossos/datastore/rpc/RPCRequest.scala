@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.rpc
 
 import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.services.uploading.ReserveUploadInformation
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
 import play.api.http.{HeaderNames, Status}
@@ -124,6 +125,12 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     request =
       request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
     performRequest
+  }
+
+  def postWithJsonResponse[TW: Writes, TR: Reads](body: TW = Json.obj()): Fox[TR] = {
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
+    parseJsonResponse(performRequest)
   }
 
   def put[T: Writes](body: T = Json.obj()): Fox[WSResponse] = {

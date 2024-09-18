@@ -153,7 +153,7 @@ class JobService @Inject()(wkConf: WkConf,
       for {
         datasetName <- commandArgs.get("dataset_name").map(_.as[String]).toFox
         organizationId <- commandArgs.get("organization_name").map(_.as[String]).toFox
-        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(GlobalAccessContext)
+        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId)(GlobalAccessContext)
         _ <- datasetDAO.deleteDataset(dataset._id)
       } yield ()
     } else Fox.successful(())

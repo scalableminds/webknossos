@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.datasource.{LegacyDataSourceId, DataSourceLike}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, DataSourceLike}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{
   AccessTokenService,
@@ -41,7 +41,7 @@ class TSRemoteWebknossosClient @Inject()(
 
   private val webknossosUri: String = config.Tracingstore.WebKnossos.uri
 
-  private lazy val dataSourceIdByTracingIdCache: AlfuCache[String, LegacyDataSourceId] = AlfuCache()
+  private lazy val dataSourceIdByTracingIdCache: AlfuCache[String, DataSourceId] = AlfuCache()
 
   def reportTracingUpdates(tracingUpdatesReport: TracingUpdatesReport): Fox[WSResponse] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/handleTracingUpdateReport")
@@ -55,21 +55,21 @@ class TSRemoteWebknossosClient @Inject()(
       .addQueryString("key" -> tracingStoreKey)
       .getWithJsonResponse[DataSourceLike]
 
-  def getDataStoreUriForDataSource(organizationId: String, datasetName: String): Fox[String] =
-    rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/dataStoreUri/$datasetName")
+  def getDataStoreUriForDataSource(organizationId: String, datasetPath: String): Fox[String] =
+    rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/dataStoreUri/$datasetPath")
       .addQueryString("organizationId" -> organizationId)
       .addQueryString("key" -> tracingStoreKey)
       .silent
       .getWithJsonResponse[String]
 
-  def getDataSourceIdForTracing(tracingId: String)(implicit ec: ExecutionContext): Fox[LegacyDataSourceId] =
+  def getDataSourceIdForTracing(tracingId: String)(implicit ec: ExecutionContext): Fox[DataSourceId] =
     dataSourceIdByTracingIdCache.getOrLoad(
       tracingId,
       tracingId =>
         rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/dataSourceId")
           .addQueryString("tracingId" -> tracingId)
           .addQueryString("key" -> tracingStoreKey)
-          .getWithJsonResponse[LegacyDataSourceId]
+          .getWithJsonResponse[DataSourceId]
     )
 
   override def requestUserAccess(token: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =

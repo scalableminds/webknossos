@@ -2,32 +2,48 @@ package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.requestparsing.{DatasetURIParser, ObjectId}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader
+import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.GenericInboxDataSource
+import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json._
 
 package object datasource {
 
   // here team is not (yet) renamed to organization to avoid migrating all jsons
-  case class LegacyDataSourceId(name: String, team: String) extends DatasetURIParser {
-    override def toString: String = s"DataSourceId($team/$name)"
+  case class DataSourceId(path: String, organizationId: String) extends DatasetURIParser {
+    override def toString: String = s"DataSourceId($organizationId/$path)"
   }
 
-  object LegacyDataSourceId extends DatasetURIParser {
-    implicit val dataSourceIdFormat: Format[LegacyDataSourceId] = Json.format[LegacyDataSourceId]
+  object DataSourceId extends JsonImplicits with DatasetURIParser {
+    implicit object DataSourceIdFormat extends Format[DataSourceId] {
+      override def reads(json: JsValue): JsResult[DataSourceId] =
+        (json \ "path").validate[String] flatMap { path =>
+          (json \ "organization").validate[String].map { org =>
+            DataSourceId(path, org)
+          }
+        }
 
-    def fromDatasetNameAndIdAndOrganizationId(datasetNameAndId: String, organizationId: String): LegacyDataSourceId = {
+      override def writes(datasetId: DataSourceId): JsValue =
+        Json.obj(
+          "name" -> datasetId.path,
+          "team" -> datasetId.organizationId,
+        )
+    }
+
+    def fromDatasetNameAndIdAndOrganizationId(datasetNameAndId: String, organizationId: String): DataSourceId = {
       val (maybeId, maybeDatasetName) = getDatasetIdOrNameFromURIPath(datasetNameAndId)
       maybeId match {
-        case Some(validId) => LegacyDataSourceId(validId.toString, organizationId)
-        case None          => LegacyDataSourceId(maybeDatasetName.getOrElse(datasetNameAndId), organizationId)
+        case Some(validId) => DataSourceId(validId.toString, organizationId)
+        case None          => DataSourceId(maybeDatasetName.getOrElse(datasetNameAndId), organizationId)
       }
     }
-    def fromDatasetIdOrNameAndOrganizationId(datasetIdOrName: String, organizationId: String): LegacyDataSourceId = {
+    def fromDatasetIdOrNameAndOrganizationId(datasetIdOrName: String, organizationId: String): DataSourceId = {
       val parsedId = ObjectId.fromStringSync(datasetIdOrName)
       parsedId match {
-        case Some(validId) => LegacyDataSourceId(validId.toString, organizationId)
-        case None          => LegacyDataSourceId(datasetIdOrName, organizationId)
+        case Some(validId) => DataSourceId(validId.toString, organizationId)
+        case None          => DataSourceId(datasetIdOrName, organizationId)
       }
     }
   }
@@ -45,7 +61,7 @@ package object datasource {
     implicit val jsonFormat: Format[DatasetViewConfiguration] = Format.of[DatasetViewConfiguration]
   }
 
-  case class GenericDataSource[+T <: DataLayerLike](id: LegacyDataSourceId,
+  case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId,
                                                     dataLayers: List[T],
                                                     scale: VoxelSize,
                                                     defaultViewConfiguration: Option[DatasetViewConfiguration] = None)

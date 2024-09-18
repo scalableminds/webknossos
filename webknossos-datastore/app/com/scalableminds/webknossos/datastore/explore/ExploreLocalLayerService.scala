@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerWithMagLocators,
   DataSource,
-  LegacyDataSourceId,
+  DataSourceId,
   DataSourceWithMagLocators,
   GenericDataSource
 }
@@ -26,7 +26,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
     extends ExploreLayerUtils
     with FoxImplicits {
 
-  def exploreLocal(path: Path, dataSourceId: LegacyDataSourceId, layerDirectory: String = "")(
+  def exploreLocal(path: Path, dataSourceId: DataSourceId, layerDirectory: String = "")(
       implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
     for {
       _ <- Fox.successful(())
@@ -40,7 +40,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       dataSource <- Fox.firstSuccess(explored) ?~> "Could not explore local data source"
     } yield dataSource
 
-  private def exploreLocalZarrArray(path: Path, dataSourceId: LegacyDataSourceId, layerDirectory: String)(
+  private def exploreLocalZarrArray(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(
       implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
     for {
       magDirectories <- tryo(Files.list(path.resolve(layerDirectory)).iterator().asScala.toList).toFox ?~> s"Could not resolve color directory as child of $path"
@@ -57,28 +57,28 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       dataSource = new DataSourceWithMagLocators(dataSourceId, relativeLayers, voxelSize)
     } yield dataSource
 
-  private def exploreLocalNgffArray(path: Path, dataSourceId: LegacyDataSourceId)(
+  private def exploreLocalNgffArray(path: Path, dataSourceId: DataSourceId)(
       implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
     exploreLocalLayer(
       layers => layers.map(selectLastTwoDirectories),
       new NgffExplorer
     )(path, dataSourceId, "")
 
-  private def exploreLocalNeuroglancerPrecomputed(path: Path, dataSourceId: LegacyDataSourceId, layerDirectory: String)(
+  private def exploreLocalNeuroglancerPrecomputed(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(
       implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
     exploreLocalLayer(
       layers => layers.map(selectLastDirectory),
       new PrecomputedExplorer
     )(path, dataSourceId, layerDirectory)
 
-  private def exploreLocalN5Multiscales(path: Path, dataSourceId: LegacyDataSourceId, layerDirectory: String)(
+  private def exploreLocalN5Multiscales(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(
       implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
     exploreLocalLayer(
       layers => layers.map(selectLastDirectory),
       new N5MultiscalesExplorer
     )(path, dataSourceId, layerDirectory)
 
-  private def exploreLocalN5Array(path: Path, dataSourceId: LegacyDataSourceId)(
+  private def exploreLocalN5Array(path: Path, dataSourceId: DataSourceId)(
       implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
     for {
       _ <- Fox.successful(())
@@ -111,7 +111,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
 
   private def exploreLocalLayer(
       makeLayersRelative: List[DataLayerWithMagLocators] => List[DataLayerWithMagLocators],
-      explorer: RemoteLayerExplorer)(path: Path, dataSourceId: LegacyDataSourceId, layerDirectory: String)(
+      explorer: RemoteLayerExplorer)(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(
       implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
     for {
       fullPath <- Fox.successful(path.resolve(layerDirectory))

@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.LegacyDataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.tracingstore.TracingUpdatesReport
 
 import javax.inject.Inject
@@ -109,7 +109,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
           dataset <- datasetDAO.findOne(annotation._dataset)
           organization <- organizationDAO.findOne(dataset._organization)
-        } yield Ok(Json.toJson(LegacyDataSourceId(dataset.name, organization._id)))
+        } yield Ok(Json.toJson(DataSourceId(dataset.name, organization._id)))
       }
     }
 
@@ -124,7 +124,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           organizationIdWithFallback <- Fox.fillOption(organizationId) {
             datasetDAO.getOrganizationIdForDataset(datasetPath)(GlobalAccessContext)
           } ?~> Messages("dataset.noAccess", datasetPath) ~> FORBIDDEN
-          dataset <- datasetDAO.findOneByNameAndOrganization(datasetPath, organizationIdWithFallback) ?~> Messages(
+          dataset <- datasetDAO.findOneByPathAndOrganization(datasetPath, organizationIdWithFallback) ?~> Messages(
             "dataset.noAccess",
             datasetPath) ~> FORBIDDEN
           dataStore <- datasetService.dataStoreFor(dataset)

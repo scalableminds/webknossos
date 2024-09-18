@@ -135,7 +135,7 @@ class AnnotationService @Inject()(
       remoteDatastoreClient = new WKRemoteDataStoreClient(datasetDataStore, rpc)
       fallbackLayerHasSegmentIndex <- fallbackLayer match {
         case Some(layer) =>
-          remoteDatastoreClient.hasSegmentIndexFile(datasetOrganizationId, dataSource.id.name, layer.name)
+          remoteDatastoreClient.hasSegmentIndexFile(datasetOrganizationId, dataSource.id.path, layer.name)
         case None => Fox.successful(false)
       }
     } yield
@@ -143,7 +143,7 @@ class AnnotationService @Inject()(
         None,
         boundingBoxToProto(boundingBox.getOrElse(dataSource.boundingBox)),
         System.currentTimeMillis(),
-        dataSource.id.name,
+        dataSource.id.path,
         vec3IntToProto(startPosition.getOrElse(dataSource.center)),
         vec3DoubleToProto(startRotation.getOrElse(vec3DoubleFromProto(VolumeTracingDefaults.editRotation))),
         elementClassToProto(
@@ -371,7 +371,7 @@ class AnnotationService @Inject()(
       dataset <- datasetDAO.findOne(datasetId) ?~> "dataset.noAccessById"
       dataSource <- datasetService.dataSourceFor(dataset)
       datasetOrganization <- organizationDAO.findOne(dataset._organization)
-      usableDataSource <- dataSource.toUsable ?~> Messages("dataset.notImported", dataSource.id.name)
+      usableDataSource <- dataSource.toUsable ?~> Messages("dataset.notImported", dataSource.id.path)
       annotationLayers <- createTracingsForExplorational(dataset,
                                                          usableDataSource,
                                                          annotationLayerParameters,
@@ -540,7 +540,7 @@ class AnnotationService @Inject()(
                                                                               m: MessagesProvider): Fox[VolumeTracing] =
     for {
       organization <- organizationDAO.findOne(organizationId)
-      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId) ?~> Messages("dataset.notFound",
+      dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId) ?~> Messages("dataset.notFound",
                                                                                                    datasetName)
       dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)
@@ -933,7 +933,7 @@ class AnnotationService @Inject()(
       annotationSource = AnnotationSource(
         id = annotation.id,
         annotationLayers = annotation.annotationLayers,
-        datasetName = dataset.name,
+        datasetPath = dataset.path,
         organizationId = organization._id,
         dataStoreUrl = dataStore.publicUrl,
         tracingStoreUrl = tracingStore.publicUrl,

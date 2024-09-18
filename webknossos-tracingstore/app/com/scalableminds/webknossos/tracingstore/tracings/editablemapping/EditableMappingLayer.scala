@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   CoordinateTransformation,
   DataFormat,
   DataLayer,
-  LegacyDataSourceId,
+  DataSourceId,
   ElementClass,
   SegmentationLayer
 }
@@ -86,7 +86,7 @@ case class EditableMappingLayer(name: String,
   override def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = DataLayer.bucketLength
 
   override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                              dataSourceId: LegacyDataSourceId,
+                              dataSourceId: DataSourceId,
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     new EditableMappingBucketProvider(layer = this)
 

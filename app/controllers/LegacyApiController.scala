@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
-import models.dataset.DatasetService
+import models.dataset.{DatasetDAO, DatasetService}
 import models.organization.OrganizationDAO
 
 import javax.inject.Inject
@@ -38,6 +38,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                     organizationDAO: OrganizationDAO,
                                     datasetService: DatasetService,
                                     taskDAO: TaskDAO,
+                                    datasetDAO: DatasetDAO,
                                     taskService: TaskService,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
@@ -92,7 +93,8 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   def readDatasetV6(organizationName: String, datasetName: String, sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
-        result <- datasetController.read(organizationName, datasetName, sharingToken)(request)
+        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationName)
+        result <- datasetController.read(dataset._id.toString, sharingToken)(request)
         adaptedResult <- replaceInResult(replaceVoxelSize)(result)
       } yield adaptedResult
     }
@@ -103,8 +105,42 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
         organization <- organizationDAO.findOne(organizationName) // the old organizationName is now the organization id
         _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
         _ <- datasetService.assertValidDatasetName(datasetName)
-        _ <- datasetService.assertNewDatasetName(datasetName, organization._id) ?~> "dataset.name.alreadyTaken"
       } yield Ok
+    }
+
+  def updateDatasetV8(organizationId: String, datasetName: String): Action[JsValue] =
+    sil.SecuredAction.async(parse.json) { implicit request =>
+      for {
+        _ <- Fox.successful(logVersioned(request))
+        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId)
+        result <- datasetController.update(dataset._id.toString)(request)
+      } yield result
+    }
+
+  def getDatasetSharingTokenV8(organizationId: String, datasetName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- Fox.successful(logVersioned(request))
+        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId)
+        sharingToken <- datasetController.getSharingToken(dataset._id.toString)(request)
+      } yield sharingToken
+    }
+
+  def updateDatasetTeamsV8(organizationId: String, datasetName: String): Action[List[ObjectId]] =
+    sil.SecuredAction.async(validateJson[List[ObjectId]]) { implicit request =>
+      for {
+        _ <- Fox.successful(logVersioned(request))
+        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId)
+        result <- datasetController.updateTeams(dataset._id.toString)(request)
+      } yield result
+    }
+
+  def readDatasetV8(organizationId: String, datasetName: String, sharingToken: Option[String]): Action[AnyContent] =
+    sil.UserAwareAction.async { implicit request =>
+      for {
+        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId)
+        result <- datasetController.read(dataset._id.toString, sharingToken)(request)
+      } yield result
     }
 
   /* to provide v4

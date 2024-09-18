@@ -39,10 +39,10 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
 
   private lazy val fileHandleCache = new Hdf5FileCache(10)
 
-  def getSegmentIndexFile(organizationId: String, datasetName: String, dataLayerName: String): Box[Path] =
+  def getSegmentIndexFile(organizationId: String, datasetPath: String, dataLayerName: String): Box[Path] =
     for {
       _ <- Full("")
-      layerDir = dataBaseDir.resolve(organizationId).resolve(datasetName).resolve(dataLayerName)
+      layerDir = dataBaseDir.resolve(organizationId).resolve(datasetPath).resolve(dataLayerName)
       segmentIndexDir = layerDir.resolve(this.segmentIndexDir)
       files <- PathUtils.listFiles(segmentIndexDir, silent = true, PathUtils.fileExtensionFilter(hdf5FileExtension))
       file <- files.headOption
@@ -53,11 +53,11 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
     * The bucket positions are the top left corners of the buckets that contain the segment in the file mag.
     */
   def readSegmentIndex(organizationId: String,
-                       datasetName: String,
+                       datasetPath: String,
                        dataLayerName: String,
                        segmentId: Long): Fox[Array[Vec3Int]] =
     for {
-      segmentIndexPath <- getSegmentIndexFile(organizationId, datasetName, dataLayerName).toFox
+      segmentIndexPath <- getSegmentIndexFile(organizationId, datasetPath, dataLayerName).toFox
       segmentIndex = fileHandleCache.withCache(segmentIndexPath)(CachedHdf5File.fromPath)
       hashFunction = getHashFunction(segmentIndex.reader.string().getAttr("/", "hash_function"))
       nBuckets = segmentIndex.reader.uint64().getAttr("/", "n_hash_buckets")
@@ -76,9 +76,9 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
         case None           => Array.empty
       }
 
-  def readFileMag(organizationId: String, datasetName: String, dataLayerName: String): Fox[Vec3Int] =
+  def readFileMag(organizationId: String, datasetPath: String, dataLayerName: String): Fox[Vec3Int] =
     for {
-      segmentIndexPath <- getSegmentIndexFile(organizationId, datasetName, dataLayerName).toFox
+      segmentIndexPath <- getSegmentIndexFile(organizationId, datasetPath, dataLayerName).toFox
       segmentIndex = fileHandleCache.withCache(segmentIndexPath)(CachedHdf5File.fromPath)
       mag <- Vec3Int.fromArray(segmentIndex.reader.uint64().getArrayAttr("/", "mag").map(_.toInt)).toFox
     } yield mag
@@ -116,7 +116,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       .distinct
 
   def getSegmentVolume(organizationId: String,
-                       datasetName: String,
+                       datasetPath: String,
                        dataLayerName: String,
                        segmentId: Long,
                        mag: Vec3Int,
@@ -125,12 +125,12 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       segmentId,
       mag,
       None, // see #7556
-      getBucketPositions(organizationId, datasetName, dataLayerName, mappingName),
-      getTypedDataForBucketPosition(organizationId, datasetName, dataLayerName, mappingName)
+      getBucketPositions(organizationId, datasetPath, dataLayerName, mappingName),
+      getTypedDataForBucketPosition(organizationId, datasetPath, dataLayerName, mappingName)
     )
 
   def getSegmentBoundingBox(organizationId: String,
-                            datasetName: String,
+                            datasetPath: String,
                             dataLayerName: String,
                             segmentId: Long,
                             mag: Vec3Int,
@@ -141,16 +141,16 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
         segmentId,
         mag,
         None, // see #7556
-        getBucketPositions(organizationId, datasetName, dataLayerName, mappingName),
-        getTypedDataForBucketPosition(organizationId, datasetName, dataLayerName, mappingName)
+        getBucketPositions(organizationId, datasetPath, dataLayerName, mappingName),
+        getTypedDataForBucketPosition(organizationId, datasetPath, dataLayerName, mappingName)
       )
     } yield bb
 
-  def assertSegmentIndexFileExists(organizationId: String, datasetName: String, dataLayerName: String): Fox[Path] =
-    Fox.box2Fox(getSegmentIndexFile(organizationId, datasetName, dataLayerName)) ?~> "segmentIndexFile.notFound"
+  def assertSegmentIndexFileExists(organizationId: String, datasetPath: String, dataLayerName: String): Fox[Path] =
+    Fox.box2Fox(getSegmentIndexFile(organizationId, datasetPath, dataLayerName)) ?~> "segmentIndexFile.notFound"
 
   private def getTypedDataForBucketPosition(organizationId: String,
-                                            datasetName: String,
+                                            datasetPath: String,
                                             dataLayerName: String,
                                             mappingName: Option[String])(
       bucketPosition: Vec3Int,
@@ -159,7 +159,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
     for {
       // Additional coordinates parameter ignored, see #7556
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                datasetName,
+                                                                                datasetPath,
                                                                                 dataLayerName)
       data <- getDataForBucketPositions(dataSource, dataLayer, mag, Seq(bucketPosition * mag), mappingName)
       dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, dataLayer.elementClass)
@@ -167,33 +167,33 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
 
   private def getBucketPositions(
       organizationId: String,
-      datasetName: String,
+      datasetPath: String,
       dataLayerName: String,
       mappingName: Option[String])(segmentOrAgglomerateId: Long, mag: Vec3Int): Fox[ListOfVec3IntProto] =
     for {
       segmentIds <- getSegmentIdsForAgglomerateIdIfNeeded(organizationId,
-                                                          datasetName,
+                                                          datasetPath,
                                                           dataLayerName,
                                                           segmentOrAgglomerateId,
                                                           mappingName)
       positionsPerSegment <- Fox.serialCombined(segmentIds)(segmentId =>
-        getBucketPositions(organizationId, datasetName, dataLayerName, segmentId, mag))
+        getBucketPositions(organizationId, datasetPath, dataLayerName, segmentId, mag))
       positionsCollected = positionsPerSegment.flatten.distinct
     } yield ListOfVec3IntProto.of(positionsCollected.map(vec3IntToProto))
 
   private def getBucketPositions(organizationId: String,
-                                 datasetName: String,
+                                 datasetPath: String,
                                  dataLayerName: String,
                                  segmentId: Long,
                                  mag: Vec3Int): Fox[Array[Vec3Int]] =
     for {
-      fileMag <- readFileMag(organizationId, datasetName, dataLayerName)
-      bucketPositionsInFileMag <- readSegmentIndex(organizationId, datasetName, dataLayerName, segmentId)
+      fileMag <- readFileMag(organizationId, datasetPath, dataLayerName)
+      bucketPositionsInFileMag <- readSegmentIndex(organizationId, datasetPath, dataLayerName, segmentId)
       bucketPositions = bucketPositionsInFileMag.map(_ / (mag / fileMag))
     } yield bucketPositions
 
   private def getSegmentIdsForAgglomerateIdIfNeeded(organizationId: String,
-                                                    datasetName: String,
+                                                    datasetPath: String,
                                                     dataLayerName: String,
                                                     segmentOrAgglomerateId: Long,
                                                     mappingNameOpt: Option[String]): Fox[List[Long]] =
@@ -204,7 +204,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
           agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
           agglomerateFileKey = AgglomerateFileKey(
             organizationId,
-            datasetName,
+            datasetPath,
             dataLayerName,
             mappingName
           )

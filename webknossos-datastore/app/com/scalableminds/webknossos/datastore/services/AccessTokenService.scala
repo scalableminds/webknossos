@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.datasource.LegacyDataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.Result
 import play.api.mvc.Results.Forbidden
@@ -25,31 +25,31 @@ object AccessResourceType extends ExtendedEnumeration {
 case class UserAccessAnswer(granted: Boolean, msg: Option[String] = None)
 object UserAccessAnswer { implicit val jsonFormat: OFormat[UserAccessAnswer] = Json.format[UserAccessAnswer] }
 
-case class UserAccessRequest(resourceId: LegacyDataSourceId, resourceType: AccessResourceType.Value, mode: AccessMode.Value)
+case class UserAccessRequest(resourceId: DataSourceId, resourceType: AccessResourceType.Value, mode: AccessMode.Value)
 object UserAccessRequest {
   implicit val jsonFormat: OFormat[UserAccessRequest] = Json.format[UserAccessRequest]
 
-  def deleteDataSource(dataSourceId: LegacyDataSourceId): UserAccessRequest =
+  def deleteDataSource(dataSourceId: DataSourceId): UserAccessRequest =
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.delete)
   def administrateDataSources: UserAccessRequest =
-    UserAccessRequest(LegacyDataSourceId("", ""), AccessResourceType.datasource, AccessMode.administrate)
+    UserAccessRequest(DataSourceId("", ""), AccessResourceType.datasource, AccessMode.administrate)
   def administrateDataSources(organizationId: String): UserAccessRequest =
-    UserAccessRequest(LegacyDataSourceId("", organizationId), AccessResourceType.datasource, AccessMode.administrate)
-  def readDataSources(dataSourceId: LegacyDataSourceId): UserAccessRequest =
+    UserAccessRequest(DataSourceId("", organizationId), AccessResourceType.datasource, AccessMode.administrate)
+  def readDataSources(dataSourceId: DataSourceId): UserAccessRequest =
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.read)
-  def writeDataSource(dataSourceId: LegacyDataSourceId): UserAccessRequest =
+  def writeDataSource(dataSourceId: DataSourceId): UserAccessRequest =
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.write)
 
   def readTracing(tracingId: String): UserAccessRequest =
-    UserAccessRequest(LegacyDataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.read)
+    UserAccessRequest(DataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.read)
   def writeTracing(tracingId: String): UserAccessRequest =
-    UserAccessRequest(LegacyDataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.write)
+    UserAccessRequest(DataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.write)
 
   def downloadJobExport(jobId: String): UserAccessRequest =
-    UserAccessRequest(LegacyDataSourceId(jobId, ""), AccessResourceType.jobExport, AccessMode.read)
+    UserAccessRequest(DataSourceId(jobId, ""), AccessResourceType.jobExport, AccessMode.read)
 
   def webknossos: UserAccessRequest =
-    UserAccessRequest(LegacyDataSourceId("webknossos", ""), AccessResourceType.webknossos, AccessMode.administrate)
+    UserAccessRequest(DataSourceId("webknossos", ""), AccessResourceType.webknossos, AccessMode.administrate)
 }
 
 trait AccessTokenService {

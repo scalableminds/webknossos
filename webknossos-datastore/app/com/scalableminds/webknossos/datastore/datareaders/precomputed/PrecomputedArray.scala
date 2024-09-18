@@ -5,7 +5,7 @@ import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.datasource.LegacyDataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
@@ -21,7 +21,7 @@ import ucar.ma2.{Array => MultiArray}
 object PrecomputedArray extends LazyLogging {
   def open(
             magPath: VaultPath,
-            dataSourceId: LegacyDataSourceId,
+            dataSourceId: DataSourceId,
             layerName: String,
             axisOrderOpt: Option[AxisOrder],
             channelIndex: Option[Int],
@@ -49,7 +49,7 @@ object PrecomputedArray extends LazyLogging {
 }
 
 class PrecomputedArray(vaultPath: VaultPath,
-                       dataSourceId: LegacyDataSourceId,
+                       dataSourceId: DataSourceId,
                        layerName: String,
                        header: PrecomputedScaleHeader,
                        axisOrder: AxisOrder,

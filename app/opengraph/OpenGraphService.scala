@@ -111,7 +111,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
                                                      datasetName: String,
                                                      token: Option[String])(implicit ctx: DBAccessContext) =
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
+      dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId)
       layers <- datasetLayerDAO.findAllForDataset(dataset._id)
       layerOpt = layers.find(_.category == Category.color)
       organization <- organizationDAO.findOne(dataset._organization)

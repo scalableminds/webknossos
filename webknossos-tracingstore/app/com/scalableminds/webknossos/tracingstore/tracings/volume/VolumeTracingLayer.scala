@@ -108,7 +108,7 @@ case class VolumeTracingLayer(
       new VolumeTracingBucketProvider(this)
 
   override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                              dataSourceId: LegacyDataSourceId,
+                              dataSourceId: DataSourceId,
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     volumeBucketProvider
 

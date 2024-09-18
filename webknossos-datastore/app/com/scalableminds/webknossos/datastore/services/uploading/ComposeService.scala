@@ -89,7 +89,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
   private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer, uploadDir: Path): Fox[DataLayer] =
     for {
       dataSourceId <- Fox.successful(
-        LegacyDataSourceId(composeLayer.datasetId.name, composeLayer.datasetId.owningOrganization))
+        DataSourceId(composeLayer.datasetId.name, composeLayer.datasetId.owningOrganization))
       dataSource <- Fox.option2Fox(dataSourceRepository.find(dataSourceId))
       ds <- Fox.option2Fox(dataSource.toUsable)
       layer <- Fox.option2Fox(ds.dataLayers.find(_.name == composeLayer.sourceName))
@@ -144,7 +144,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
     for {
       layers <- Fox.serialCombined(composeRequest.layers.toList)(getLayerFromComposeLayer(_, uploadDir))
       dataSource = GenericDataSource(
-        LegacyDataSourceId(composeRequest.newDatasetName, organizationId),
+        DataSourceId(composeRequest.newDatasetName, organizationId),
         layers,
         composeRequest.voxelSize,
         None
@@ -153,8 +153,8 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield dataSource
   }
 
-  private def isLayerRemote(dataSourceId: LegacyDataSourceId, layerName: String) = {
-    val layerPath = dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name).resolve(layerName)
+  private def isLayerRemote(dataSourceId: DataSourceId, layerName: String) = {
+    val layerPath = dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.path).resolve(layerName)
     !Files.exists(layerPath)
   }
 }

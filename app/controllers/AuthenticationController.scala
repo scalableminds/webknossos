@@ -8,6 +8,7 @@ import play.silhouette.api.util.{Credentials, PasswordInfo}
 import play.silhouette.api.{LoginInfo, Silhouette}
 import play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
@@ -26,16 +27,8 @@ import play.api.data.validation.Constraints._
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, Cookie, PlayBodyParsers, Request, Result}
-import security.{
-  CombinedAuthenticator,
-  OpenIdConnectClient,
-  OpenIdConnectUserInfo,
-  PasswordHasher,
-  TokenType,
-  WkEnv,
-  WkSilhouetteEnvironment
-}
-import utils.{ObjectId, WkConf}
+import security.{CombinedAuthenticator, OpenIdConnectClient, OpenIdConnectUserInfo, PasswordHasher, TokenType, WkEnv, WkSilhouetteEnvironment}
+import utils.WkConf
 
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -261,7 +254,7 @@ class AuthenticationController @Inject()(
       case (Some(organizationId), Some(datasetName), None, None) =>
         for {
           organization <- organizationDAO.findOne(organizationId)
-          _ <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id)
+          _ <- datasetDAO.findOneByPathAndOrganization(datasetName, organization._id)
         } yield organization
       case (None, None, Some(annotationId), None) =>
         for {
@@ -314,7 +307,7 @@ class AuthenticationController @Inject()(
   }
 
   private def canAccessDataset(ctx: DBAccessContext, organizationId: String, datasetName: String): Fox[Boolean] = {
-    val foundFox = datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(ctx)
+    val foundFox = datasetDAO.findOneByPathAndOrganization(datasetName, organizationId)(ctx)
     foundFox.futureBox.map(_.isDefined)
   }
 

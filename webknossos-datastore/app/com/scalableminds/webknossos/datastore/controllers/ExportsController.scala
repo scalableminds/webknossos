@@ -35,7 +35,7 @@ class ExportsController @Inject()(webknossosClient: DSRemoteWebknossosClient,
 
   override def allowRemoteOrigin: Boolean = true
 
-  def download(token: Option[String], jobId: String): Action[AnyContent] = Action.async { implicit request =>
+  def download(jobId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.downloadJobExport(jobId)) {
       for {
         exportProperties <- webknossosClient.getJobExportProperties(jobId)

@@ -35,7 +35,7 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
   implicit def unpackMultiple(tracings: SkeletonTracings): List[Option[SkeletonTracing]] =
     tracings.tracings.toList.map(_.tracing)
 
-  def mergedFromContents(token: Option[String], persist: Boolean): Action[SkeletonTracings] =
+  def mergedFromContents(persist: Boolean): Action[SkeletonTracings] =
     Action.async(validateProto[SkeletonTracings]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -49,8 +49,7 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
       }
     }
 
-  def duplicate(token: Option[String],
-                annotationId: String,
+  def duplicate(annotationId: String,
                 tracingId: String,
                 version: Option[Long],
                 fromTask: Option[Boolean],

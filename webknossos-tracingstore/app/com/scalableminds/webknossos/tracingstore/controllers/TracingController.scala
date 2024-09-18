@@ -41,7 +41,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
 
   override def allowRemoteOrigin: Boolean = true
 
-  def save(token: Option[String]): Action[T] = Action.async(validateProto[T]) { implicit request =>
+  def save(): Action[T] = Action.async(validateProto[T]) { implicit request =>
     log() {
       logTime(slackNotificationService.noticeSlowRequest) {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -54,7 +54,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     }
   }
 
-  def saveMultiple(token: Option[String]): Action[Ts] = Action.async(validateProto[Ts]) { implicit request =>
+  def saveMultiple(): Action[Ts] = Action.async(validateProto[Ts]) { implicit request =>
     log() {
       logTime(slackNotificationService.noticeSlowRequest) {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -70,7 +70,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     }
   }
 
-  def get(token: Option[String], annotationId: String, tracingId: String, version: Option[Long]): Action[AnyContent] =
+  def get(annotationId: String, tracingId: String, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
@@ -82,7 +82,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       }
     }
 
-  def getMultiple(token: Option[String]): Action[List[Option[TracingSelector]]] =
+  def getMultiple: Action[List[Option[TracingSelector]]] =
     Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -95,7 +95,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       }
     }
 
-  def mergedFromIds(token: Option[String], persist: Boolean): Action[List[Option[TracingSelector]]] =
+  def mergedFromIds(persist: Boolean): Action[List[Option[TracingSelector]]] =
     Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {

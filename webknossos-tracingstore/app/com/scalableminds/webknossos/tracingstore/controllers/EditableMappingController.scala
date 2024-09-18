@@ -37,7 +37,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
     bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  def makeMappingEditable(token: Option[String], annotationId: String, tracingId: String): Action[AnyContent] =
+  def makeMappingEditable(annotationId: String, tracingId: String): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
@@ -77,7 +77,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
 
   /*// TODO integrate all of this into annotation update
 
-  def updateEditableMapping(token: Option[String],
+  def updateEditableMapping(
                             annotationId: String,
                             tracingId: String): Action[List[UpdateActionGroup]] =
     Action.async(validateJson[List[UpdateActionGroup]]) { implicit request =>
@@ -106,10 +106,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
     }
    */
 
-  def editableMappingInfo(token: Option[String],
-                          annotationId: String,
-                          tracingId: String,
-                          version: Option[Long]): Action[AnyContent] =
+  def editableMappingInfo(annotationId: String, tracingId: String, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
@@ -123,31 +120,29 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
       }
     }
 
-  def segmentIdsForAgglomerate(token: Option[String],
-                               annotationId: String,
-                               tracingId: String,
-                               agglomerateId: Long): Action[AnyContent] = Action.async { implicit request =>
-    log() {
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
-        for {
-          tracing <- volumeTracingService.find(annotationId, tracingId)
-          _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
-          remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-          agglomerateGraphBox: Box[AgglomerateGraph] <- editableMappingService
-            .getAgglomerateGraphForId(tracingId, agglomerateId, remoteFallbackLayer)
-            .futureBox
-          segmentIds <- agglomerateGraphBox match {
-            case Full(agglomerateGraph) => Fox.successful(agglomerateGraph.segments)
-            case Empty                  => Fox.successful(List.empty)
-            case f: Failure             => f.toFox
-          }
-          agglomerateIdIsPresent = agglomerateGraphBox.isDefined
-        } yield Ok(Json.toJson(EditableMappingSegmentListResult(segmentIds.toList, agglomerateIdIsPresent)))
+  def segmentIdsForAgglomerate(annotationId: String, tracingId: String, agglomerateId: Long): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+          for {
+            tracing <- volumeTracingService.find(annotationId, tracingId)
+            _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
+            remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
+            agglomerateGraphBox: Box[AgglomerateGraph] <- editableMappingService
+              .getAgglomerateGraphForId(tracingId, agglomerateId, remoteFallbackLayer)
+              .futureBox
+            segmentIds <- agglomerateGraphBox match {
+              case Full(agglomerateGraph) => Fox.successful(agglomerateGraph.segments)
+              case Empty                  => Fox.successful(List.empty)
+              case f: Failure             => f.toFox
+            }
+            agglomerateIdIsPresent = agglomerateGraphBox.isDefined
+          } yield Ok(Json.toJson(EditableMappingSegmentListResult(segmentIds.toList, agglomerateIdIsPresent)))
+        }
       }
     }
-  }
 
-  def agglomerateIdsForSegments(token: Option[String], annotationId: String, tracingId: String): Action[ListOfLong] =
+  def agglomerateIdsForSegments(annotationId: String, tracingId: String): Action[ListOfLong] =
     Action.async(validateProto[ListOfLong]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
@@ -171,7 +166,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
       }
     }
 
-  def agglomerateGraphMinCut(token: Option[String], annotationId: String, tracingId: String): Action[MinCutParameters] =
+  def agglomerateGraphMinCut(annotationId: String, tracingId: String): Action[MinCutParameters] =
     Action.async(validateJson[MinCutParameters]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
@@ -185,9 +180,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
       }
     }
 
-  def agglomerateGraphNeighbors(token: Option[String],
-                                annotationId: String,
-                                tracingId: String): Action[NeighborsParameters] =
+  def agglomerateGraphNeighbors(annotationId: String, tracingId: String): Action[NeighborsParameters] =
     Action.async(validateJson[NeighborsParameters]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {

@@ -57,10 +57,7 @@ class VolumeTracingZarrStreamingController @Inject()(
 
   override def defaultErrorCode: Int = NOT_FOUND
 
-  def volumeTracingFolderContent(token: Option[String],
-                                 annotationId: String,
-                                 tracingId: String,
-                                 zarrVersion: Int): Action[AnyContent] =
+  def volumeTracingFolderContent(annotationId: String, tracingId: String, zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
@@ -79,10 +76,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
     }
 
-  def volumeTracingFolderContentJson(token: Option[String],
-                                     annotationId: String,
-                                     tracingId: String,
-                                     zarrVersion: Int): Action[AnyContent] =
+  def volumeTracingFolderContentJson(annotationId: String, tracingId: String, zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
@@ -95,8 +89,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
     }
 
-  def volumeTracingMagFolderContent(token: Option[String],
-                                    annotationId: String,
+  def volumeTracingMagFolderContent(annotationId: String,
                                     tracingId: String,
                                     mag: String,
                                     zarrVersion: Int): Action[AnyContent] =
@@ -119,8 +112,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
     }
 
-  def volumeTracingMagFolderContentJson(token: Option[String],
-                                        annotationId: String,
+  def volumeTracingMagFolderContentJson(annotationId: String,
                                         tracingId: String,
                                         mag: String,
                                         zarrVersion: Int): Action[AnyContent] =
@@ -136,7 +128,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
     }
 
-  def zArray(token: Option[String], annotationId: String, tracingId: String, mag: String): Action[AnyContent] =
+  def zArray(annotationId: String, tracingId: String, mag: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
@@ -170,7 +162,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
     }
 
-  def zarrJsonForMag(token: Option[String], annotationId: String, tracingId: String, mag: String): Action[AnyContent] =
+  def zarrJsonForMag(annotationId: String, tracingId: String, mag: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
@@ -216,11 +208,10 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
     }
 
-  def zGroup(token: Option[String], annotationId: String, tracingId: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
-        Future(Ok(Json.toJson(NgffGroupHeader(zarr_format = 2))))
-      }
+  def zGroup(annotationId: String, tracingId: String): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+      Future(Ok(Json.toJson(NgffGroupHeader(zarr_format = 2))))
+    }
   }
 
   /**
@@ -229,7 +220,6 @@ class VolumeTracingZarrStreamingController @Inject()(
     * Used by zarr-streaming.
     */
   def zAttrs(
-      token: Option[String],
       annotationId: String,
       tracingId: String,
   ): Action[AnyContent] = Action.async { implicit request =>
@@ -247,7 +237,6 @@ class VolumeTracingZarrStreamingController @Inject()(
   }
 
   def zarrJson(
-      token: Option[String],
       annotationId: String,
       tracingId: String,
   ): Action[AnyContent] = Action.async { implicit request =>
@@ -266,8 +255,7 @@ class VolumeTracingZarrStreamingController @Inject()(
     }
   }
 
-  def zarrSource(token: Option[String],
-                 annotationId: String,
+  def zarrSource(annotationId: String,
                  tracingId: String,
                  tracingName: Option[String],
                  zarrVersion: Int): Action[AnyContent] =
@@ -290,11 +278,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
     }
 
-  def rawZarrCube(token: Option[String],
-                  annotationId: String,
-                  tracingId: String,
-                  mag: String,
-                  coordinates: String): Action[AnyContent] =
+  def rawZarrCube(annotationId: String, tracingId: String, mag: String, coordinates: String): Action[AnyContent] =
     Action.async { implicit request =>
       {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {

@@ -26,7 +26,7 @@ class TSAnnotationController @Inject()(
     extends Controller
     with KeyValueStoreImplicits {
 
-  def save(token: Option[String], annotationId: String): Action[AnnotationProto] =
+  def save(annotationId: String): Action[AnnotationProto] =
     Action.async(validateProto[AnnotationProto]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -39,7 +39,7 @@ class TSAnnotationController @Inject()(
       }
     }
 
-  def update(token: Option[String], annotationId: String): Action[List[UpdateActionGroup]] =
+  def update(annotationId: String): Action[List[UpdateActionGroup]] =
     Action.async(validateJson[List[UpdateActionGroup]]) { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
@@ -52,8 +52,7 @@ class TSAnnotationController @Inject()(
       }
     }
 
-  def updateActionLog(token: Option[String],
-                      annotationId: String,
+  def updateActionLog(annotationId: String,
                       newestVersion: Option[Long] = None,
                       oldestVersion: Option[Long] = None): Action[AnyContent] = Action.async { implicit request =>
     log() {
@@ -65,29 +64,27 @@ class TSAnnotationController @Inject()(
     }
   }
 
-  def newestVersion(token: Option[String], annotationId: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      log() {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
-          for {
-            newestVersion <- annotationService.currentMaterializableVersion(annotationId)
-          } yield JsonOk(Json.obj("version" -> newestVersion))
-        }
+  def newestVersion(annotationId: String): Action[AnyContent] = Action.async { implicit request =>
+    log() {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
+        for {
+          newestVersion <- annotationService.currentMaterializableVersion(annotationId)
+        } yield JsonOk(Json.obj("version" -> newestVersion))
       }
+    }
   }
 
-  def updateActionStatistics(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      log() {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
-          for {
-            statistics <- annotationService.updateActionStatistics(tracingId)
-          } yield Ok(statistics)
-        }
+  def updateActionStatistics(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
+    log() {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+        for {
+          statistics <- annotationService.updateActionStatistics(tracingId)
+        } yield Ok(statistics)
       }
+    }
   }
 
-  def get(token: Option[String], annotationId: String, version: Option[Long]): Action[AnyContent] =
+  def get(annotationId: String, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {

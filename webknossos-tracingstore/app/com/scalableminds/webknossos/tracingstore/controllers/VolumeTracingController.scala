@@ -78,8 +78,7 @@ class VolumeTracingController @Inject()(
   implicit def unpackMultiple(tracings: VolumeTracings): List[Option[VolumeTracing]] =
     tracings.tracings.toList.map(_.tracing)
 
-  def initialData(token: Option[String],
-                  annotationId: String,
+  def initialData(annotationId: String,
                   tracingId: String,
                   minResolution: Option[Int],
                   maxResolution: Option[Int]): Action[AnyContent] =
@@ -101,7 +100,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def mergedFromContents(token: Option[String], persist: Boolean): Action[VolumeTracings] =
+  def mergedFromContents(persist: Boolean): Action[VolumeTracings] =
     Action.async(validateProto[VolumeTracings]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -120,7 +119,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def initialDataMultiple(token: Option[String], annotationId: String, tracingId: String): Action[AnyContent] =
+  def initialDataMultiple(annotationId: String, tracingId: String): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
@@ -138,8 +137,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def allDataZip(token: Option[String],
-                 annotationId: String,
+  def allDataZip(annotationId: String,
                  tracingId: String,
                  volumeDataZipFormat: String,
                  version: Option[Long],
@@ -166,7 +164,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def data(token: Option[String], annotationId: String, tracingId: String): Action[List[WebknossosDataRequest]] =
+  def data(annotationId: String, tracingId: String): Action[List[WebknossosDataRequest]] =
     Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
@@ -186,8 +184,7 @@ class VolumeTracingController @Inject()(
   private def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
 
-  def duplicate(token: Option[String],
-                annotationId: String,
+  def duplicate(annotationId: String,
                 tracingId: String,
                 fromTask: Option[Boolean],
                 minResolution: Option[Int],
@@ -232,9 +229,7 @@ class VolumeTracingController @Inject()(
     }
   }
 
-  def importVolumeData(token: Option[String],
-                       annotationId: String,
-                       tracingId: String): Action[MultipartFormData[TemporaryFile]] =
+  def importVolumeData(annotationId: String, tracingId: String): Action[MultipartFormData[TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeTracing(tracingId)) {
@@ -252,10 +247,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def addSegmentIndex(token: Option[String],
-                      annotationId: String,
-                      tracingId: String,
-                      dryRun: Boolean): Action[AnyContent] =
+  def addSegmentIndex(annotationId: String, tracingId: String, dryRun: Boolean): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -279,8 +271,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def updateActionLog(token: Option[String],
-                      tracingId: String,
+  def updateActionLog(tracingId: String,
                       newestVersion: Option[Long] = None,
                       oldestVersion: Option[Long] = None): Action[AnyContent] = Action.async { implicit request =>
     log() {
@@ -292,9 +283,7 @@ class VolumeTracingController @Inject()(
     }
   }
 
-  def requestAdHocMesh(token: Option[String],
-                       annotationId: String,
-                       tracingId: String): Action[WebknossosAdHocMeshRequest] =
+  def requestAdHocMesh(annotationId: String, tracingId: String): Action[WebknossosAdHocMeshRequest] =
     Action.async(validateJson[WebknossosAdHocMeshRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
@@ -314,7 +303,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def loadFullMeshStl(token: Option[String], annotationId: String, tracingId: String): Action[FullMeshRequest] =
+  def loadFullMeshStl(annotationId: String, tracingId: String): Action[FullMeshRequest] =
     Action.async(validateJson[FullMeshRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
@@ -329,21 +318,17 @@ class VolumeTracingController @Inject()(
   private def formatNeighborList(neighbors: List[Int]): String =
     "[" + neighbors.mkString(", ") + "]"
 
-  def findData(token: Option[String], annotationId: String, tracingId: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
-        for {
-          positionOpt <- tracingService.findData(annotationId, tracingId)
-        } yield {
-          Ok(Json.obj("position" -> positionOpt, "resolution" -> positionOpt.map(_ => Vec3Int.ones)))
-        }
+  def findData(annotationId: String, tracingId: String): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+      for {
+        positionOpt <- tracingService.findData(annotationId, tracingId)
+      } yield {
+        Ok(Json.obj("position" -> positionOpt, "resolution" -> positionOpt.map(_ => Vec3Int.ones)))
       }
+    }
   }
 
-  def agglomerateSkeleton(token: Option[String],
-                          annotationId: String,
-                          tracingId: String,
-                          agglomerateId: Long): Action[AnyContent] =
+  def agglomerateSkeleton(annotationId: String, tracingId: String, agglomerateId: Long): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
@@ -358,9 +343,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def getSegmentVolume(token: Option[String],
-                       annotationId: String,
-                       tracingId: String): Action[SegmentStatisticsParameters] =
+  def getSegmentVolume(annotationId: String, tracingId: String): Action[SegmentStatisticsParameters] =
     Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
@@ -378,9 +361,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def getSegmentBoundingBox(token: Option[String],
-                            annotationId: String,
-                            tracingId: String): Action[SegmentStatisticsParameters] =
+  def getSegmentBoundingBox(annotationId: String, tracingId: String): Action[SegmentStatisticsParameters] =
     Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
@@ -398,10 +379,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def getSegmentIndex(token: Option[String],
-                      annotationId: String,
-                      tracingId: String,
-                      segmentId: Long): Action[GetSegmentIndexParameters] =
+  def getSegmentIndex(annotationId: String, tracingId: String, segmentId: Long): Action[GetSegmentIndexParameters] =
     Action.async(validateJson[GetSegmentIndexParameters]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {

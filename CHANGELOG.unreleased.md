@@ -12,8 +12,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 - It is now possible to focus a bounding box in the bounding box tab by clicking its edges in a viewport or via a newly added context menu entry. [#8054](https://github.com/scalableminds/webknossos/pull/8054)
-### Added
 - Added an assertion to the backend to ensure unique keys in the metadata info of datasets and folders. [#8068](https://github.com/scalableminds/webknossos/issues/8068)
+- The feature to register all segments within a bounding box takes the current magnification into consideration, e.g. for calculating a volume limit for a bounding box. [#8082](https://github.com/scalableminds/webknossos/pull/8082)
 
 ### Changed
 - Clicking on a bounding box within the bounding box tab centers it within the viewports and focusses it in the list. [#8049](https://github.com/scalableminds/webknossos/pull/8049)

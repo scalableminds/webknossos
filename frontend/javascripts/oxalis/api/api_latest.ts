@@ -674,7 +674,6 @@ class TracingApi {
       Math.ceil(shape[0] / currentMag[0]) *
       Math.ceil(shape[1] / currentMag[1]) *
       Math.ceil(shape[2] / currentMag[2]);
-    console.log("volume: ", volume); // TODO_c
     if (volume > maximumVolume) {
       Toast.error(
         `The volume of the bounding box exceeds ${maximumVolume} Vx, please make it smaller.`,
@@ -711,7 +710,6 @@ class TracingApi {
     }
 
     const segmentIdCount = Array.from(segmentIdToPosition.entries()).length;
-    console.log("segment count: ", segmentIdCount); // TODO_c
     const halfMaxNoSegments = maximumSegmentCount / 2;
     if (segmentIdCount > maximumSegmentCount) {
       Toast.error(

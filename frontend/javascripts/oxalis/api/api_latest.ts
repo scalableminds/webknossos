@@ -670,7 +670,6 @@ class TracingApi {
     }
 
     const currentMag = getCurrentResolution(state, segmentationLayerName);
-    const magIndex = getActiveMagIndexForLayer(state, segmentationLayerName);
     if (currentMag == null) {
       Toast.error("No mag could not be found.");
       return;
@@ -691,6 +690,7 @@ class TracingApi {
       );
     }
 
+    const magIndex = getActiveMagIndexForLayer(state, segmentationLayerName);
     const data = await api.data.getDataForBoundingBox(
       segmentationLayerName,
       {

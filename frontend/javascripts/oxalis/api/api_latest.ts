@@ -664,11 +664,17 @@ class TracingApi {
     const shape = Utils.computeShapeFromBoundingBox({ min, max });
 
     const segmentationLayerName = api.data.getVisibleSegmentationLayerName();
-    if (segmentationLayerName == null) return;
+    if (segmentationLayerName == null) {
+      Toast.error("The current segmentation layer could not be found.");
+      return;
+    }
 
     const currentMag = getCurrentResolution(state, segmentationLayerName);
     const magIndex = getActiveMagIndexForLayer(state, segmentationLayerName);
-    if (currentMag == null) return;
+    if (currentMag == null) {
+      Toast.error("No mag could not be found.");
+      return;
+    }
 
     const volume =
       Math.ceil(shape[0] / currentMag[0]) *

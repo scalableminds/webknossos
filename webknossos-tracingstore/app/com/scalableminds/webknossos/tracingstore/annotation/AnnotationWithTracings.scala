@@ -59,54 +59,38 @@ case class AnnotationWithTracings(
   def version: Long = annotation.version
 
   def addTracing(a: AddLayerAnnotationUpdateAction): AnnotationWithTracings =
-    AnnotationWithTracings(
-      annotation.copy(
+    this.copy(
+      annotation = annotation.copy(
         layers = annotation.layers :+ AnnotationLayerProto(
           a.tracingId,
           a.layerParameters.name.getOrElse(AnnotationLayer.defaultNameForType(a.layerParameters.typ)),
           `type` = AnnotationLayerType.toProto(a.layerParameters.typ)
-        )),
-      tracingsById,
-      editableMappingsByTracingId
+        ))
     )
 
   def deleteTracing(a: DeleteLayerAnnotationUpdateAction): AnnotationWithTracings =
-    AnnotationWithTracings(annotation.copy(layers = annotation.layers.filter(_.tracingId != a.tracingId)),
-                           tracingsById,
-                           editableMappingsByTracingId)
+    this.copy(annotation = annotation.copy(layers = annotation.layers.filter(_.tracingId != a.tracingId)))
 
   def updateLayerMetadata(a: UpdateLayerMetadataAnnotationUpdateAction): AnnotationWithTracings =
-    AnnotationWithTracings(annotation.copy(layers = annotation.layers.map(l =>
-                             if (l.tracingId == a.tracingId) l.copy(name = a.layerName) else l)),
-                           tracingsById,
-                           editableMappingsByTracingId)
+    this.copy(annotation = annotation.copy(layers = annotation.layers.map(l =>
+      if (l.tracingId == a.tracingId) l.copy(name = a.layerName) else l)))
 
   def updateMetadata(a: UpdateMetadataAnnotationUpdateAction): AnnotationWithTracings =
-    AnnotationWithTracings(annotation.copy(name = a.name, description = a.description),
-                           tracingsById,
-                           editableMappingsByTracingId)
-
-  def incrementVersion: AnnotationWithTracings =
-    AnnotationWithTracings(annotation.copy(version = annotation.version + 1L),
-                           tracingsById,
-                           editableMappingsByTracingId)
+    this.copy(annotation = annotation.copy(name = a.name, description = a.description))
 
   def withVersion(newVersion: Long): AnnotationWithTracings = {
     val tracingsUpdated = tracingsById.view.mapValues {
       case Left(t: SkeletonTracing) => Left(t.withVersion(newVersion))
       case Right(t: VolumeTracing)  => Right(t.withVersion(newVersion))
     }
-    AnnotationWithTracings(annotation.copy(version = newVersion), tracingsUpdated.toMap, editableMappingsByTracingId)
+    this.copy(annotation = annotation.copy(version = newVersion), tracingsById = tracingsUpdated.toMap)
   }
 
   def applySkeletonAction(a: SkeletonUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
       skeletonTracing <- getSkeleton(a.actionTracingId)
       updated = a.applyOn(skeletonTracing)
-    } yield
-      AnnotationWithTracings(annotation,
-                             tracingsById.updated(a.actionTracingId, Left(updated)),
-                             editableMappingsByTracingId)
+    } yield this.copy(tracingsById = tracingsById.updated(a.actionTracingId, Left(updated)))
 
   def applyVolumeAction(a: ApplyableVolumeUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
@@ -122,6 +106,8 @@ case class AnnotationWithTracings(
     for {
       updater: EditableMappingUpdater <- getEditableMappingUpdater(a.actionTracingId).toFox // TODO editable mapping update actions need tracing id
       info <- getEditableMappingInfo(a.actionTracingId).toFox
-      _ <- updater.applyOneUpdate(info, a)
-    } yield this // TODO replace info
+      updated <- updater.applyOneUpdate(info, a)
+    } yield
+      this.copy(
+        editableMappingsByTracingId = editableMappingsByTracingId.updated(a.actionTracingId, (updated, updater)))
 }

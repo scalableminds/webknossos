@@ -397,6 +397,8 @@ type UserBoundingBoxInputProps = {
   isLockedByOwner: boolean;
   isOwner: boolean;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
+  onOpenContextMenu: (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => void;
+  onHideContextMenu?: () => void;
 };
 type State = {
   isEditing: boolean;
@@ -491,7 +493,14 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
     api.tracing
       .registerSegmentsForBoundingBox(min, max, name)
       .catch((error) => Toast.error(error.message));
+    this.maybeCloseContextMenu();
   }
+
+  maybeCloseContextMenu = () => {
+    if (this.props.onHideContextMenu) {
+      this.props.onHideContextMenu();
+    }
+  };
 
   render() {
     const { name } = this.state;
@@ -505,6 +514,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
       disabled,
       isLockedByOwner,
       isOwner,
+      onOpenContextMenu,
     } = this.props;
     const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
     const marginRightStyle = {
@@ -576,17 +586,14 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
         },
       ];
 
-      return (
-        <div onClick={(e) => e.stopPropagation()}>
-          <Dropdown menu={{ items }}>
-            <EllipsisOutlined style={marginLeftStyle} />
-          </Dropdown>
-        </div>
-      );
+      return { items };
     };
 
     return (
-      <div>
+      <div
+        onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+        onClick={this.props.onHideContextMenu}
+      >
         <Row
           style={{
             marginTop: 10,
@@ -626,7 +633,14 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
               </span>
             </FastTooltip>
           </Col>
-          <Col span={2}>{getContextMenu()}</Col>
+          <Col span={2}>
+            <div
+              onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+              onClick={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+            >
+              <EllipsisOutlined style={marginLeftStyle} />
+            </div>
+          </Col>
         </Row>
         <Row
           style={{

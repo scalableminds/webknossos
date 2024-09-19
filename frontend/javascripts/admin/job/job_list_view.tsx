@@ -23,6 +23,7 @@ import FormattedDate from "components/formatted_date";
 import { AsyncLink } from "components/async_clickables";
 import { useEffect, useState } from "react";
 import { useInterval } from "libs/react_helpers";
+import { formatWkLibsNdBBox } from "libs/format_utils";
 
 // Unfortunately, the twoToneColor (nor the style) prop don't support
 // CSS variables.
@@ -129,7 +130,7 @@ function JobListView() {
       return (
         <span>
           Tiff export of layer {layerLabel} from {labelToAnnotationOrDataset} (Bounding Box{" "}
-          {job.boundingBox})
+          {job.ndBoundingBox ? formatWkLibsNdBBox(job.ndBoundingBox) : job.boundingBox})
         </span>
       );
     } else if (job.type === APIJobType.RENDER_ANIMATION && job.organizationId && job.datasetName) {

@@ -602,12 +602,16 @@ img.keyboard-mouse-icon:first-child {
   z-index: 110;
 }
 
-.segment-list-context-menu-overlay {
+.segment-list-context-menu-overlay,.bbox-list-context-menu-overlay {
   // The parent has a padding of 10px on all sides which we need to subtract here.
   width: calc(100% - 20px) !important;
   height: calc(100% - 20px) !important;
 }
 
+.tree-list-context-menu-overlay{
+  width: calc(100% - 20px) !important;
+  height: calc(100% - var(--navbar-height) - var(--footer-height) - 30px) !important;
+}
 
 #main-tooltip {
   max-width: 250px;

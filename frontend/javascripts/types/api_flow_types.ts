@@ -694,6 +694,11 @@ export enum APIJobType {
   INFER_MITOCHONDRIA = "infer_mitochondria",
 }
 
+export type WkLibsNdBoundingBox = BoundingBoxObject & {
+  axisOrder: { string: number };
+  additionalAxes: Array<AdditionalAxis>;
+};
+
 export type APIJob = {
   readonly id: string;
   readonly datasetName: string | null | undefined;
@@ -705,6 +710,7 @@ export type APIJob = {
   readonly annotationType: string | null | undefined;
   readonly organizationId: string | null | undefined;
   readonly boundingBox: string | null | undefined;
+  readonly ndBoundingBox: WkLibsNdBoundingBox | null | undefined;
   readonly mergeSegments: boolean | null | undefined;
   readonly type: APIJobType;
   readonly state: APIEffectiveJobState;

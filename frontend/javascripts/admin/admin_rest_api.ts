@@ -1619,7 +1619,7 @@ export function makeMappingEditable(
 ): Promise<ServerEditableMapping> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${annotationId}/${tracingId}/makeMappingEditable?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${annotationId}/${tracingId}/makeMappingEditable?token=${token}`,
       {
         method: "POST",
       },
@@ -2310,6 +2310,7 @@ type MinCutTargetEdge = {
 };
 export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
+  annotationId: string,
   tracingId: string,
   segmentsInfo: {
     segmentId1: NumberLike;
@@ -2321,7 +2322,7 @@ export async function getEdgesForAgglomerateMinCut(
 ): Promise<Array<MinCutTargetEdge>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphMinCut?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${annotationId}/${tracingId}/agglomerateGraphMinCut?token=${token}`,
       {
         data: {
           ...segmentsInfo,
@@ -2343,6 +2344,7 @@ export type NeighborInfo = {
 export async function getNeighborsForAgglomerateNode(
   tracingStoreUrl: string,
   tracingId: string,
+  annotationId: string,
   segmentInfo: {
     segmentId: NumberLike;
     mag: Vector3;
@@ -2352,7 +2354,7 @@ export async function getNeighborsForAgglomerateNode(
 ): Promise<NeighborInfo> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${annotationId}/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
       {
         data: {
           ...segmentInfo,

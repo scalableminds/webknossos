@@ -284,10 +284,10 @@ function* createEditableMapping(): Saga<string> {
   );
   // The server increments the volume tracing's version by 1 when switching the mapping to an editable one
   yield* put(setVersionNumberAction(upToDateVolumeTracing.version + 1, "volume", volumeTracingId));
-  yield* put(setMappingNameAction(layerName, serverEditableMapping.tracingId, "HDF5"));
+  yield* put(setMappingNameAction(layerName, volumeTracingId, "HDF5"));
   yield* put(setHasEditableMappingAction());
   yield* put(initializeEditableMappingAction(serverEditableMapping));
-  return serverEditableMapping.tracingId;
+  return volumeTracingId;
 }
 
 function* ensureHdf5MappingIsEnabled(layerName: string): Saga<boolean> {
@@ -546,6 +546,7 @@ function* performMinCut(
   }
 
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
+  const annotationId = yield* select((state) => state.tracing.annotationId);
   const segmentsInfo = {
     segmentId1: sourceSegmentId,
     segmentId2: targetSegmentId,
@@ -557,6 +558,7 @@ function* performMinCut(
   const edgesToRemove = yield* call(
     getEdgesForAgglomerateMinCut,
     tracingStoreUrl,
+    annotationId,
     volumeTracingId,
     segmentsInfo,
   );
@@ -607,6 +609,7 @@ function* performCutFromNeighbors(
   { didCancel: false; neighborInfo: NeighborInfo } | { didCancel: true; neighborInfo?: null }
 > {
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
+  const annotationId = yield* select((state) => state.tracing.annotationId);
   const segmentsInfo = {
     segmentId,
     mag: agglomerateFileMag,
@@ -617,6 +620,7 @@ function* performCutFromNeighbors(
   const neighborInfo = yield* call(
     getNeighborsForAgglomerateNode,
     tracingStoreUrl,
+    annotationId,
     volumeTracingId,
     segmentsInfo,
   );

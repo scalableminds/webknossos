@@ -581,12 +581,14 @@ class EditableMappingService @Inject()(
       }
     } yield agglomerateGraph
 
-  def agglomerateGraphMinCut(tracingId: String, parameters: MinCutParameters, remoteFallbackLayer: RemoteFallbackLayer)(
-      implicit tc: TokenContext): Fox[List[EdgeWithPositions]] =
+  def agglomerateGraphMinCut(
+      tracingId: String,
+      editableMappingInfo: EditableMappingInfo,
+      parameters: MinCutParameters,
+      remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[List[EdgeWithPositions]] =
     for {
       // called here to ensure updates are applied
-      mapping <- getInfo(tracingId, version = None, remoteFallbackLayer)
-      agglomerateGraph <- getAgglomerateGraphForIdWithFallback(mapping,
+      agglomerateGraph <- getAgglomerateGraphForIdWithFallback(editableMappingInfo,
                                                                tracingId,
                                                                None,
                                                                parameters.agglomerateId,

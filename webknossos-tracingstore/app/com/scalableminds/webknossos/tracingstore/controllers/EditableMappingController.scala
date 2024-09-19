@@ -6,11 +6,8 @@ import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.controllers.Controller
-import com.scalableminds.webknossos.datastore.services.{
-  AccessTokenService,
-  EditableMappingSegmentListResult,
-  UserAccessRequest
-}
+import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
+import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
 import com.scalableminds.webknossos.tracingstore.annotation.{
   AnnotationTransactionService,
   TSAnnotationService,
@@ -30,7 +27,7 @@ import scala.concurrent.ExecutionContext
 
 class EditableMappingController @Inject()(volumeTracingService: VolumeTracingService,
                                           annotationService: TSAnnotationService,
-                                          accessTokenService: AccessTokenService,
+                                          accessTokenService: TracingStoreAccessTokenService,
                                           editableMappingService: EditableMappingService,
                                           annotationTransactionService: AnnotationTransactionService)(
     implicit ec: ExecutionContext,
@@ -174,7 +171,11 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
             tracing <- volumeTracingService.find(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-            edges <- editableMappingService.agglomerateGraphMinCut(tracingId, request.body, remoteFallbackLayer)
+            editableMappingInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId)
+            edges <- editableMappingService.agglomerateGraphMinCut(tracingId,
+                                                                   editableMappingInfo,
+                                                                   request.body,
+                                                                   remoteFallbackLayer)
           } yield Ok(Json.toJson(edges))
         }
       }

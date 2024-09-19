@@ -11,6 +11,7 @@ import play.api.libs.ws._
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import java.io.File
+import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -203,7 +204,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
           Full(result)
         } else {
           val errorMsg = s"Unsuccessful WS request to $url (ID: $id)." +
-            s"Status: ${result.status}. Response: ${result.bodyAsBytes.map(_.toChar).mkString.take(2000)}"
+            s"Status: ${result.status}. Response: ${new String(result.bodyAsBytes.toArray, StandardCharsets.UTF_8).take(2000)}"
           logger.error(errorMsg)
           Failure(errorMsg.take(400))
         }

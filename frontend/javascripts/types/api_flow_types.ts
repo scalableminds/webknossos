@@ -98,7 +98,8 @@ export type APIDataLayer = APIColorLayer | APISegmentationLayer;
 export type APISkeletonLayer = { category: "skeleton" };
 
 export type LayerLink = {
-  datasetId: APIDatasetId;
+  datasetId: string;
+  datasetName: string;
   sourceName: string;
   newName: string;
   transformations: CoordinateTransformation[];
@@ -165,11 +166,8 @@ export type APIPublication = {
 };
 export type MutableAPIDatasetId = {
   owningOrganization: string;
-  name: string;
+  path: string;
 };
-export function areDatasetsIdentical(a: APIDatasetId, b: APIDatasetId) {
-  return a.owningOrganization === b.owningOrganization && a.name === b.name;
-}
 export type APIDatasetId = Readonly<MutableAPIDatasetId>;
 
 export enum APIMetadataEnum {
@@ -186,6 +184,8 @@ export type APIMetadata = {
 export type APIMetadataEntries = APIMetadata[];
 
 type MutableAPIDatasetBase = MutableAPIDatasetId & {
+  readonly id: string; // Should never be changed.
+  name: string;
   isUnreported: boolean;
   folderId: string;
   allowedTeams: Array<APITeam>;

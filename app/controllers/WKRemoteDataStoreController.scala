@@ -82,6 +82,7 @@ class WKRemoteDataStoreController @Inject()(
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))
           uploadInfo.path = dataset.path // Update path according to the newly created dataset.
+          uploadInfo.newDatasetId = dataset._id.toString // Update newDatasetId according to the newly created dataset.
         } yield Ok(Json.toJson(uploadInfo))
       }
     }
@@ -145,7 +146,7 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.runIf(!needsConversion)(logUploadToSlack(user, dataset._id, viaAddRoute))
           _ = analyticsService.track(UploadDatasetEvent(user, dataset, dataStore, datasetSizeBytes))
           _ = if (!needsConversion) mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
-        } yield Ok
+        } yield Ok(Json.toJson("id" -> dataset._id))
       }
     }
 

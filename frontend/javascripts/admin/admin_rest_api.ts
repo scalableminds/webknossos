@@ -779,18 +779,18 @@ export async function getAnnotationCompoundInformation(
 }
 
 export function getEmptySandboxAnnotationInformation(
-  datasetId: APIDatasetId,
+  datasetId: string,
   tracingType: TracingType,
   sharingToken?: string | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
-  const infoUrl = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/sandbox/${tracingType}${sharingTokenSuffix}`;
+  const infoUrl = `/api/datasets/${datasetId}/sandbox/${tracingType}${sharingTokenSuffix}`;
   return Request.receiveJSON(infoUrl, options);
 }
 
 export function createExplorational(
-  datasetId: APIDatasetId,
+  datasetId: string,
   typ: TracingType,
   autoFallbackLayer: boolean,
   fallbackLayerName?: string | null | undefined,
@@ -798,7 +798,7 @@ export function createExplorational(
   resolutionRestrictions?: APIResolutionRestrictions | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
-  const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
+  const url = `/api/datasets/${datasetId}/createExplorational`;
   let layers: Array<AnnotationLayerCreateDescriptor> = [];
 
   if (typ === "skeleton") {
@@ -961,13 +961,13 @@ export function getNewestVersionForTracing(
 
 export function hasSegmentIndexInDataStore(
   dataStoreUrl: string,
-  dataSetName: string,
+  datasetPath: string,
   dataLayerName: string,
   organizationId: string,
 ) {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${dataStoreUrl}/data/datasets/${organizationId}/${dataSetName}/layers/${dataLayerName}/hasSegmentIndex?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${organizationId}/${datasetPath}/layers/${dataLayerName}/hasSegmentIndex?token=${token}`,
     ),
   );
 }
@@ -1125,19 +1125,19 @@ export async function getDatasets(
 export function readDatasetDatasource(dataset: APIDataset): Promise<APIDataSource> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/readInboxDataSource?token=${token}`,
+      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.path}/readInboxDataSource?token=${token}`,
     ),
   );
 }
 
 export async function updateDatasetDatasource(
-  datasetName: string,
+  datasetPath: string,
   dataStoreUrl: string,
   datasource: APIDataSource,
 ): Promise<void> {
   await doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasource.id.team}/${datasetName}?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${datasource.id.team}/${datasetPath}?token=${token}`,
       {
         data: datasource,
       },
@@ -1152,15 +1152,12 @@ export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIData
 }
 
 export function getDataset(
-  datasetId: APIDatasetId,
+  datasetId: string,
   sharingToken?: string | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIDataset> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
-  return Request.receiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}${sharingTokenSuffix}`,
-    options,
-  );
+  return Request.receiveJSON(`/api/datasets/${datasetId}${sharingTokenSuffix}`, options);
 }
 
 export type DatasetUpdater = {
@@ -1174,16 +1171,13 @@ export type DatasetUpdater = {
 };
 
 export function updateDatasetPartial(
-  datasetId: APIDatasetId,
+  datasetId: string,
   updater: DatasetUpdater,
 ): Promise<APIDataset> {
-  return Request.sendJSONReceiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/updatePartial`,
-    {
-      method: "PATCH",
-      data: updater,
-    },
-  );
+  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/updatePartial`, {
+    method: "PATCH",
+    data: updater,
+  });
 }
 
 export async function getDatasetViewConfiguration(
@@ -1249,7 +1243,10 @@ type DatasetCompositionArgs = {
   layers: LayerLink[];
 };
 
-export function createDatasetComposition(datastoreUrl: string, payload: DatasetCompositionArgs) {
+export function createDatasetComposition(
+  datastoreUrl: string,
+  payload: DatasetCompositionArgs,
+): Promise<NewDatasetReply> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${datastoreUrl}/data/datasets/compose?token=${token}`, {
       data: payload,
@@ -1289,8 +1286,10 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
 }
 type ReserveUploadInformation = {
   uploadId: string;
-  organization: string;
   name: string;
+  path: string;
+  newDatasetId: string;
+  organization: string;
   totalFileCount: number;
   filePaths: Array<string>;
   initialTeams: Array<string>;
@@ -1339,10 +1338,14 @@ export function getUnfinishedUploads(
   });
 }
 
+type NewDatasetReply = {
+  newDatasetId: string;
+};
+
 export function finishDatasetUpload(
   datastoreHost: string,
   uploadInformation: ArbitraryObject,
-): Promise<void> {
+): Promise<NewDatasetReply> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`/data/datasets/finishUpload?token=${token}`, {
       data: uploadInformation,
@@ -1407,7 +1410,7 @@ export async function storeRemoteDataset(
   organizationId: string,
   datasource: string,
   folderId: string | null,
-): Promise<void> {
+): Promise<NewDatasetReply> {
   return doWithToken((token) => {
     const params = new URLSearchParams();
     params.append("token", token);
@@ -1426,16 +1429,12 @@ export async function storeRemoteDataset(
 }
 
 // Returns void if the name is valid. Otherwise, a string is returned which denotes the reason.
-export async function isDatasetNameValid(
-  datasetId: APIDatasetId,
-): Promise<string | null | undefined> {
-  if (datasetId.name === "") {
+export async function isDatasetNameValid(datasetName: string): Promise<string | null | undefined> {
+  if (datasetName === "") {
     return "The dataset name must not be empty.";
   }
 
-  const response = await Request.receiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/isValidNewName`,
-  );
+  const response = await Request.receiveJSON(`/api/datasets/${datasetName}/isValidNewName`);
   if (response.isValid) {
     return null;
   } else {

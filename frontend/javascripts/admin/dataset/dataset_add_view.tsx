@@ -33,24 +33,21 @@ const addTypeToVerb: Record<DatasetAddType, string> = {
 
 function DatasetAddView({ history }: RouteComponentProps) {
   const datastores = useFetch<APIDataStore[]>(getDatastores, [], []);
-  const [datasetName, setDatasetName] = useState("");
-  const [organization, setOrganization] = useState("");
+  const [datasetId, setDatasetId] = useState("");
   const [datasetNeedsConversion, setDatasetNeedsConversion] = useState(false);
   const [datasetAddType, setImportType] = useState<DatasetAddType>(DatasetAddType.UPLOAD);
 
   const handleDatasetAdded = async (
     datasetAddType: DatasetAddType,
-    datasetOrganization: string,
-    uploadedDatasetName: string,
+    datasetId: string,
     needsConversion: boolean | null | undefined,
   ): Promise<void> => {
-    setOrganization(datasetOrganization);
-    setDatasetName(uploadedDatasetName);
+    setDatasetId(datasetId);
     setImportType(datasetAddType);
     if (needsConversion != null) setDatasetNeedsConversion(needsConversion);
   };
 
-  const showAfterUploadContent = datasetName !== "";
+  const showAfterUploadContent = datasetId !== "";
 
   const getAfterUploadModalContent = () => {
     if (!showAfterUploadContent) {
@@ -60,9 +57,8 @@ function DatasetAddView({ history }: RouteComponentProps) {
     return getPostUploadModal(
       datasetNeedsConversion,
       datasetAddType,
-      organization,
-      datasetName,
-      setDatasetName,
+      datasetId,
+      setDatasetId,
       history,
     );
   };
@@ -265,9 +261,8 @@ export default connector(withRouter(DatasetAddView));
 const getPostUploadModal = (
   datasetNeedsConversion: boolean,
   datasetAddType: DatasetAddType,
-  organization: string,
-  datasetName: string,
-  setDatasetName: (arg0: string) => void,
+  datasetId: string,
+  setDatasetId: (arg0: string) => void,
   history: History<unknown>,
 ) => {
   return (
@@ -286,8 +281,8 @@ const getPostUploadModal = (
           display: "none",
         },
       }}
-      onCancel={() => setDatasetName("")}
-      onOk={() => setDatasetName("")}
+      onCancel={() => setDatasetId("")}
+      onOk={() => setDatasetId("")}
       width={580}
     >
       <div
@@ -321,15 +316,10 @@ const getPostUploadModal = (
               </React.Fragment>
             ) : (
               <React.Fragment>
-                <Button
-                  type="primary"
-                  onClick={() => history.push(`/datasets/${organization}/${datasetName}/view`)}
-                >
+                <Button type="primary" onClick={() => history.push(`/datasets/${datasetId}/view`)}>
                   View the Dataset
                 </Button>
-                <Button
-                  onClick={() => history.push(`/datasets/${organization}/${datasetName}/edit`)}
-                >
+                <Button onClick={() => history.push(`/datasets/${datasetId}/edit`)}>
                   Go to Dataset Settings
                 </Button>
                 <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>

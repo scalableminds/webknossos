@@ -56,7 +56,7 @@ export function getMeshfileChunksForSegment(
       params.append("editableMappingTracingId", editableMappingTracingId);
     }
     return Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes/chunks?${params}`,
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.path}/layers/${layerName}/meshes/chunks?${params}`,
       {
         data: {
           meshFile,
@@ -86,7 +86,7 @@ export function getMeshfileChunkData(
 ): Promise<ArrayBuffer[]> {
   return doWithToken(async (token) => {
     const dracoDataChunks = await Request.sendJSONReceiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes/chunks/data?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.path}/layers/${layerName}/meshes/chunks/data?token=${token}`,
       {
         data: batchDescription,
         useWebworkerForArrayBuffer: true,

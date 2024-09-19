@@ -32,6 +32,7 @@ case class ReserveUploadInformation(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
     name: String, // dataset name
     path: String, // dataset path
+    newDatasetId: String,
     organization: String,
     totalFileCount: Long,
     filePaths: Option[List[String]],

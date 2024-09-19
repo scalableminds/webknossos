@@ -127,6 +127,7 @@ class DataSourceController @Inject()(
               "aManualUpload",
               request.body.datasetName,
               request.body.datasetPath,
+              "newDatasetIdSetByCoreBackend",
               request.body.organization,
               0,
               List.empty,
@@ -217,14 +218,13 @@ class DataSourceController @Inject()(
                                                       urlOrHeaderToken(token, request)) {
             for {
               (dataSourceId, datasetSizeBytes) <- uploadService.finishUpload(request.body) ?~> "finishUpload.failed"
-              // TODO: Store dataset id from upload information in redis and use it here to report the upload
-              _ <- remoteWebknossosClient.reportUpload(
+              uploadedDatasetIdJson <- remoteWebknossosClient.reportUpload(
                 dataSourceId,
                 datasetSizeBytes,
                 request.body.needsConversion.getOrElse(false),
                 viaAddRoute = false,
                 userToken = urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
-            } yield Ok
+            } yield Ok(Json.toJson("newDatasetId" -> uploadedDatasetIdJson))
           }
         } yield result
       }
@@ -437,6 +437,7 @@ class DataSourceController @Inject()(
               uploadId = "", // Set by core backend
               name = datasetName,
               path = "", // Set by core backend
+              newDatasetId = "", // Set by core backend
               organization = organizationId,
               totalFileCount = 1,
               filePaths = None,
@@ -450,13 +451,13 @@ class DataSourceController @Inject()(
           _ <- dataSourceService.updateDataSource(
             request.body.copy(id = datasourceId),
             expectExisting = false)
-          _ <- remoteWebknossosClient.reportUpload(
+          uploadedDatasetId <- remoteWebknossosClient.reportUpload(
             datasourceId,
             0L,
             needsConversion = false,
             viaAddRoute = true,
             userToken = urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
-        } yield Ok
+        } yield Ok(Json.toJson("newDatasetId" -> uploadedDatasetId))
       }
     }
 
@@ -544,9 +545,9 @@ class DataSourceController @Inject()(
               accessTokenService.assertUserAccess(
                 UserAccessRequest.readDataSources(DataSourceId(id.name, id.owningOrganization)),
                 userToken))
-          dataSource <- composeService.composeDataset(request.body, userToken)
+          (dataSource, newDatasetId) <- composeService.composeDataset(request.body, userToken)
           _ <- dataSourceRepository.updateDataSource(dataSource)
-        } yield Ok
+        } yield Ok(Json.toJson("newDatasetId" -> newDatasetId))
       }
     }
 

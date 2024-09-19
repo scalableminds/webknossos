@@ -48,7 +48,7 @@ import { defaultContext } from "@tanstack/react-query";
 const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";
 type OwnProps = {
-  datasetId: APIDatasetId;
+  datasetId: string;
   isEditingMode: boolean;
   onComplete: () => void;
   onCancel: () => void;

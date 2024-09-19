@@ -82,7 +82,7 @@ const logRetryToAnalytics = _.throttle((datasetName: string) => {
 type OwnProps = {
   datastores: Array<APIDataStore>;
   withoutCard?: boolean;
-  onUploaded: (arg0: string, arg1: string, arg2: boolean) => Promise<void> | void;
+  onUploaded: (arg0: string, arg2: boolean) => Promise<void> | void;
 };
 type StateProps = {
   activeUser: APIUser | null | undefined;
@@ -303,7 +303,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     // @ts-ignore
     window.onbeforeunload = beforeUnload;
     const datasetId: APIDatasetId = {
-      name: formValues.name,
+      path: formValues.name,
       owningOrganization: activeUser.organization,
     };
 
@@ -314,13 +314,13 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
     const uploadId = unfinishedUploadToContinue
       ? unfinishedUploadToContinue.uploadId
-      : `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${datasetId.name}__${getRandomString()}`;
+      : `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${datasetId.path}__${getRandomString()}`;
     const filePaths = formValues.zipFile.map((file) => file.path || "");
     const reserveUploadInformation = {
       uploadId,
+      name: formValues.name,
+      path: datasetId.path,
       organization: datasetId.owningOrganization,
-      name: datasetId.name,
-      path: datasetId.name,
       totalFileCount: formValues.zipFile.length,
       filePaths: filePaths,
       layersToLink: [],
@@ -350,7 +350,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         isFinishing: true,
       });
       finishDatasetUpload(datastoreUrl, uploadInfo).then(
-        async () => {
+        async ({ uploadedDatasetId }) => {
           trackAction("Upload dataset");
           Toast.success(messages["dataset.upload_success"]);
           let maybeError;
@@ -404,11 +404,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               name: "",
               zipFile: [],
             });
-            this.props.onUploaded(
-              activeUser.organization,
-              formValues.name,
-              this.state.needsConversion,
-            );
+            this.props.onUploaded(uploadedDatasetId, this.state.needsConversion);
           }
         },
         (error) => {

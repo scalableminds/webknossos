@@ -675,7 +675,7 @@ class TracingApi {
     const theoreticalMagIndex = getActiveMagIndexForLayer(state, segmentationLayerName);
     const existingMagIndex = resolutionInfo.getIndexOrClosestHigherIndex(theoreticalMagIndex);
     if (existingMagIndex == null) {
-      throw new Error("The index of the current mag could be found.");
+      throw new Error("The index of the current mag could not be found.");
     }
     const currentMag = resolutionInfo.getResolutionByIndex(existingMagIndex);
     if (currentMag == null) {
@@ -738,6 +738,9 @@ class TracingApi {
     } catch (_e) {
       console.info(
         `Volume tracing could not be found for the currently visible segmentation layer, registering segments for ${bbName} within root group.`,
+      );
+      Toast.warning(
+        "The current segmentation layer is not editable and the segment list will not be persisted across page reloads. You can make it editable by clicking on the lock symbol to the right of the layer name.",
       );
     }
     const updateSegmentActions: BatchableUpdateSegmentAction[] = [];

@@ -12,6 +12,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 - It is now possible to focus a bounding box in the bounding box tab by clicking its edges in a viewport or via a newly added context menu entry. [#8054](https://github.com/scalableminds/webknossos/pull/8054)
+- Added the option to export nd datasets as ome tiff or tiff stack. Previously, this was only possible for 3d datasets. [#7971](https://github.com/scalableminds/webknossos/pull/7971)
 - Added an assertion to the backend to ensure unique keys in the metadata info of datasets and folders. [#8068](https://github.com/scalableminds/webknossos/issues/8068)
 
 ### Changed

@@ -173,12 +173,6 @@ class ThumbnailCachingService @Inject()(datasetDAO: DatasetDAO, thumbnailDAO: Th
         } yield fromDbOrNew
     )
 
-  def removeFromCache(organizationId: String, datasetNameAndId: String): Fox[Unit] =
-    for {
-      dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetNameAndId, organizationId)(GlobalAccessContext)
-      _ <- removeFromCache(dataset._id)
-    } yield ()
-
   def removeFromCache(datasetId: ObjectId): Fox[Unit] = {
     inMemoryThumbnailCache.clear(keyTuple => keyTuple._1 == datasetId)
     thumbnailDAO.removeAllForDataset(datasetId)

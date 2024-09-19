@@ -113,8 +113,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       organization <- organizationDAO.findOne(owningOrganization)
       organizationRootFolder <- folderDAO.findOne(organization._rootFolder)
       datasetPath <- isNewDatasetName(datasetName, organization._id).map(if (_) datasetName else newId.toString)
-      adjustedDataSourceId = dataSource.id.copy(path = datasetPath) // Sync path with dataSource
-      dataSource.id =  dataSource.clone()
+      newDataSource = dataSource.withUpdatedId(dataSource.id.copy(path = datasetPath)) // Sync path with dataSource
       dataset = Dataset(
         newId,
         dataStore.name,
@@ -123,21 +122,21 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         None,
         organizationRootFolder._id,
         dataSourceHash,
-        dataSource.defaultViewConfiguration,
+        newDataSource.defaultViewConfiguration,
         adminViewConfiguration = None,
         description = None,
         path = datasetPath,
         isPublic = false,
-        isUsable = dataSource.isUsable,
-        name = dataSource.id.path,
-        voxelSize = dataSource.voxelSizeOpt,
+        isUsable = newDataSource.isUsable,
+        name = newDataSource.id.path,
+        voxelSize = newDataSource.voxelSizeOpt,
         sharingToken = None,
-        status = dataSource.statusOpt.getOrElse(""),
+        status = newDataSource.statusOpt.getOrElse(""),
         logoUrl = None,
         metadata = metadata
       )
       _ <- datasetDAO.insertOne(dataset)
-      _ <- datasetDataLayerDAO.updateLayers(newId, dataSource)
+      _ <- datasetDataLayerDAO.updateLayers(newId, newDataSource)
       _ <- teamDAO.updateAllowedTeamsForDataset(newId, List())
     } yield dataset
   }

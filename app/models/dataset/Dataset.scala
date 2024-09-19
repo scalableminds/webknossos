@@ -401,13 +401,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       r <- rList.headOption
     } yield r
 
-  def findOneByIdOrNameAndOrganization(idAndName: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[Dataset] =
-    getDatasetIdOrNameFromURIPath(idAndName) match {
-      case (Some(validId), None)     => findOneByIdAndOrganization(validId, organizationId)
-      case (None, Some(datasetName)) => findOneByPathAndOrganization(datasetName, organizationId)
-    }
-
   def findOneByPathAndOrganization(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
     for {
       accessQuery <- readAccessQuery
@@ -418,18 +411,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                    AND $accessQuery
                    LIMIT 1""".as[DatasetsRow])
       parsed <- parseFirst(r, s"$organizationId/$name")
-    } yield parsed
-
-  private def findOneByIdAndOrganization(id: ObjectId, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[Dataset] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"""SELECT $columns
-                   FROM $existingCollectionName
-                   WHERE _id = $id
-                   AND _organization = $organizationId
-                   AND $accessQuery""".as[DatasetsRow])
-      parsed <- parseFirst(r, s"$organizationId/$id")
     } yield parsed
 
   def findAllByPathsAndOrganization(names: List[String], organizationId: String)(

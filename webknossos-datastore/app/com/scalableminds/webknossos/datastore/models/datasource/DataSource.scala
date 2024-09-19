@@ -79,6 +79,8 @@ package object datasource {
     def additionalAxesUnion: Option[Seq[AdditionalAxis]] =
       AdditionalAxis.merge(dataLayers.map(_.additionalAxes))
 
+    def withUpdatedId(newId: DataSourceId): GenericDataSource[T] = copy(id = newId)
+
   }
 
   object GenericDataSource {

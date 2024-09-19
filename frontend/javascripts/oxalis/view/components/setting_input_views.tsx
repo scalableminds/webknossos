@@ -31,6 +31,8 @@ import type { OxalisState } from "oxalis/store";
 import type { APISegmentationLayer } from "types/api_flow_types";
 import { api } from "oxalis/singletons";
 import FastTooltip from "components/fast_tooltip";
+import Toast from "libs/toast";
+import { handleGenericError } from "libs/error_handling";
 
 const ROW_GUTTER = 1;
 
@@ -486,7 +488,9 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
   onRegisterSegmentsForBB(value: Vector6, name: string): void {
     const min: Vector3 = [value[0], value[1], value[2]];
     const max: Vector3 = [value[0] + value[3], value[1] + value[4], value[2] + value[5]];
-    api.tracing.registerSegmentsForBoundingBox(min, max, name);
+    api.tracing
+      .registerSegmentsForBoundingBox(min, max, name)
+      .catch((error) => Toast.error(error.message));
   }
 
   render() {

@@ -665,14 +665,14 @@ class TracingApi {
 
     const segmentationLayerName = api.data.getVisibleSegmentationLayerName();
     if (segmentationLayerName == null) {
-      Toast.error("The current segmentation layer could not be found.");
-      return;
+      throw new Error(
+        "No segmentation layer is currently visible. Enable the one you want to register segments for.",
+      );
     }
 
     const currentMag = getCurrentResolution(state, segmentationLayerName);
     if (currentMag == null) {
-      Toast.error("No mag could not be found.");
-      return;
+      throw new Error("No mag could be found.");
     }
 
     const volume =
@@ -680,10 +680,9 @@ class TracingApi {
       Math.ceil(shape[1] / currentMag[1]) *
       Math.ceil(shape[2] / currentMag[2]);
     if (volume > maximumVolume) {
-      Toast.error(
-        `The volume of the bounding box exceeds ${maximumVolume} Vx, please make it smaller.`,
+      throw new Error(
+        `The volume of the bounding box exceeds ${maximumVolume} vx, please make it smaller. Currently, the bounding box has a volume of ${volume} vx in the active resolution (${currentMag.join("-")}).`,
       );
-      return;
     } else if (volume > maximumVolume / 8) {
       Toast.warning(
         "The volume of the bounding box is very large, registering all segments might take a while.",
@@ -718,10 +717,9 @@ class TracingApi {
     const segmentIdCount = Array.from(segmentIdToPosition.entries()).length;
     const halfMaxNoSegments = maximumSegmentCount / 2;
     if (segmentIdCount > maximumSegmentCount) {
-      Toast.error(
+      throw new Error(
         `The given bounding box contains ${segmentIdCount} segments, but only ${maximumSegmentCount} segments can be registered at once. Please reduce the size of the bounding box.`,
       );
-      return;
     } else if (segmentIdCount > halfMaxNoSegments) {
       Toast.warning(
         `The bounding box contains more than ${halfMaxNoSegments} segments. Registering all segments might take a while.`,

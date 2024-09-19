@@ -91,7 +91,6 @@ import {
   getPosition,
   getActiveMagIndexForLayer,
   getRotation,
-  getCurrentResolution,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   loadAdHocMeshAction,
@@ -670,7 +669,15 @@ class TracingApi {
       );
     }
 
-    const currentMag = getCurrentResolution(state, segmentationLayerName);
+    const resolutionInfo = getResolutionInfo(
+      getLayerByName(state.dataset, segmentationLayerName).resolutions,
+    );
+    const theoreticalMagIndex = getActiveMagIndexForLayer(state, segmentationLayerName);
+    const existingMagIndex = resolutionInfo.getIndexOrClosestHigherIndex(theoreticalMagIndex);
+    if (existingMagIndex == null) {
+      throw new Error("The index of the current mag could be found.");
+    }
+    const currentMag = resolutionInfo.getResolutionByIndex(existingMagIndex);
     if (currentMag == null) {
       throw new Error("No mag could be found.");
     }
@@ -689,14 +696,13 @@ class TracingApi {
       );
     }
 
-    const magIndex = getActiveMagIndexForLayer(state, segmentationLayerName);
     const data = await api.data.getDataForBoundingBox(
       segmentationLayerName,
       {
         min,
         max,
       },
-      magIndex,
+      existingMagIndex,
     );
     const [dx, dy, dz] = currentMag;
 

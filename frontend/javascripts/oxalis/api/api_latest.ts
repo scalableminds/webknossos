@@ -732,11 +732,14 @@ class TracingApi {
       );
     }
 
-    const groupId = api.tracing.createSegmentGroup(
-      `Segments for ${bbName}`,
-      -1,
-      segmentationLayerName,
-    );
+    let groupId = MISSING_GROUP_ID;
+    try {
+      groupId = api.tracing.createSegmentGroup(`Segments for ${bbName}`, -1, segmentationLayerName);
+    } catch (_e) {
+      console.info(
+        `Volume tracing could not be found for the currently visible segmentation layer, registering segments for ${bbName} within root group.`,
+      );
+    }
     const updateSegmentActions: BatchableUpdateSegmentAction[] = [];
     for (const [segmentId, position] of segmentIdToPosition.entries()) {
       api.tracing.registerSegment(segmentId, position, undefined, segmentationLayerName);

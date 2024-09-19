@@ -245,7 +245,7 @@ object Zarr3ArrayHeader extends JsonImplicits {
         "codecs" -> zarrArrayHeader.codecs.map { codec: CodecConfiguration =>
           val configurationJson = if (codec.includeConfiguration) Json.obj("configuration" -> codec) else Json.obj()
           Json.obj("name" -> codec.name) ++ configurationJson
-        }.map(JsonHelper.removeGeneratedTypeFieldFromJson),
+        }.map(JsonHelper.removeGeneratedTypeFieldFromJsonRecursively),
         "storage_transformers" -> zarrArrayHeader.storage_transformers,
         "dimension_names" -> zarrArrayHeader.dimension_names
       )

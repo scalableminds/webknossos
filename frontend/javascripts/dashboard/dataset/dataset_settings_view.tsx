@@ -15,12 +15,11 @@ import type {
   APIDataSource,
   APIDataset,
   MutableAPIDataset,
-  APIDatasetId,
   APIMessage,
 } from "types/api_flow_types";
 import { Unicode } from "oxalis/constants";
 import type { DatasetConfiguration, OxalisState } from "oxalis/store";
-import { diffObjects, jsonStringify } from "libs/utils";
+import { diffObjects, jsonStringify, maybe } from "libs/utils";
 import {
   getDataset,
   getDatasetDefaultConfiguration,
@@ -183,7 +182,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       form.setFieldsValue({
         dataSourceJson: jsonStringify(dataSource),
         dataset: {
-          name: dataset.name || undefined,
+          name: dataset.name,
           isPublic: dataset.isPublic || false,
           description: dataset.description || undefined,
           allowedTeams: dataset.allowedTeams || [],
@@ -367,14 +366,14 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     const dataSource = JSON.parse(formValues.dataSourceJson);
 
     if (dataset != null && this.didDatasourceChange(dataSource)) {
-      await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
+      await updateDatasetDatasource(this.props.datasetId, dataset.dataStore.url, dataSource);
       this.setState({
         savedDataSourceOnServer: dataSource,
       });
     }
 
     const verb = this.props.isEditingMode ? "updated" : "imported";
-    Toast.success(`Successfully ${verb} ${this.props.datasetId.name}.`);
+    Toast.success(`Successfully ${verb} ${dataset?.name || this.props.datasetId}.`);
     this.setState({
       hasUnsavedChanges: false,
     });
@@ -477,17 +476,20 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
 
   render() {
     const form = this.formRef.current;
+    const { dataset } = this.state;
+
+    const maybeStoredDatasetName = dataset?.name || this.props.datasetId;
+    const maybeDataSourceId = {
+      owningOrganization: dataset?.owningOrganization || "",
+      path: dataset?.path || "",
+    };
 
     const { isUserAdmin } = this.props;
     const titleString = this.props.isEditingMode ? "Settings for" : "Import";
     const datasetLinkOrName = this.props.isEditingMode ? (
-      <Link
-        to={`/datasets/${this.props.datasetId.owningOrganization}/${this.props.datasetId.name}`}
-      >
-        {this.props.datasetId.name}
-      </Link>
+      <Link to={`/datasets/${this.props.datasetId}`}>{maybeStoredDatasetName}</Link>
     ) : (
-      this.props.datasetId.name
+      maybeStoredDatasetName
     );
     const confirmString =
       this.props.isEditingMode ||
@@ -521,7 +523,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
               <DatasetSettingsDataTab
                 key="SimpleAdvancedDataForm"
                 dataset={this.state.dataset}
-                allowRenamingDataset={false}
                 form={form}
                 activeDataSourceEditMode={this.state.activeDataSourceEditMode}
                 onChange={(activeEditMode) => {
@@ -576,7 +577,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         children: (
           <Hideable hidden={this.state.activeTabKey !== "defaultConfig"}>
             <DatasetSettingsViewConfigTab
-              datasetId={this.props.datasetId}
+              dataSourceId={maybeDataSourceId}
               dataStoreURL={this.state.dataset?.dataStore.url}
             />
           </Hideable>

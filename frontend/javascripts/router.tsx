@@ -50,7 +50,7 @@ import { trackAction } from "oxalis/model/helpers/analytics";
 import type { OxalisState } from "oxalis/store";
 import HelpButton from "oxalis/view/help_modal";
 import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
-import React from "react";
+import React, { useEffect } from "react";
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import { type ContextRouter, Link, type RouteProps } from "react-router-dom";
@@ -70,6 +70,7 @@ import loadable from "libs/lazy_loader";
 import type { EmptyObject } from "types/globals";
 import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import AiModelListView from "admin/voxelytics/ai_model_list_view";
+import BrainSpinner from "components/brain_spinner";
 
 const { Content } = Layout;
 
@@ -175,8 +176,7 @@ class ReactRouter extends React.Component<Props> {
           initialCommandType={{
             type: ControlModeEnum.SANDBOX,
             tracingType,
-            name: match.params.datasetName || "",
-            owningOrganization: match.params.organizationId || "",
+            datasetId: match.params.datasetId || "",
           }}
         />
       );
@@ -185,13 +185,25 @@ class ReactRouter extends React.Component<Props> {
     return <h3>Invalid annotation URL.</h3>;
   };
 
-  tracingViewMode = ({ match }: ContextRouter) => (
+  tracingViewModeLegacy = ({ match }: ContextRouter) => {
+    useEffect(() => {
+      const organizationId = match.params.organizationId || "";
+      const datasetName = match.params.datasetName || "";
+      organizationId/:datasetName
+    },[]);
+    return (
+      <BrainSpinner />
+    );
+  };
+
+  tracingViewMode = (
+    { match }: ContextRouter, // TODO: Implement legacy resolution
+  ) => (
     <TracingLayoutView
       initialMaybeCompoundType={null}
       initialCommandType={{
         type: ControlModeEnum.VIEW,
-        name: match.params.datasetName || "",
-        owningOrganization: match.params.organizationId || "",
+        datasetId: match.params.datasetId || "",
       }}
     />
   );
@@ -444,15 +456,12 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:organizationId/:datasetName/edit"
+                path="/datasets/:datasetId/edit"
                 requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <DatasetSettingsView
                     isEditingMode
-                    datasetId={{
-                      name: match.params.datasetName || "",
-                      owningOrganization: match.params.organizationId || "",
-                    }}
+                    datasetId={match.params.datasetId || ""}
                     onComplete={() => window.history.back()}
                     onCancel={() => window.history.back()}
                   />
@@ -603,10 +612,12 @@ class ReactRouter extends React.Component<Props> {
                   return <FinishResetPasswordView resetToken={params.token} />;
                 }}
               />
+              {/*legacy view mode route */}
               <Route
                 path="/datasets/:organizationId/:datasetName/view"
-                render={this.tracingViewMode}
+                render={this.tracingViewModeLegacy}
               />
+              <Route path="/datasets/:datasetId/view" render={this.tracingViewMode} />
               <RouteWithErrorBoundary
                 path="/datasets/:id/view"
                 render={({ match, location }: ContextRouter) => (
@@ -620,7 +631,7 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <RouteWithErrorBoundary
-                path="/datasets/:organizationId/:datasetName/sandbox/:type"
+                path="/datasets/:datasetId/sandbox/:type"
                 render={this.tracingSandbox}
               />
               <SecuredRouteWithErrorBoundary
@@ -683,7 +694,9 @@ class ReactRouter extends React.Component<Props> {
                 // Note that this route has to be beneath all others sharing the same prefix,
                 // to avoid url mismatching
               }
-              <Route path="/datasets/:organizationId/:datasetName" render={this.tracingViewMode} />
+              {/*legacy view mode route */}
+              <Route path="/datasets/:organizationId/:datasetName" render={this.tracingViewModeLegacy} />
+              <Route path="/datasets/:datasetId" render={this.tracingViewMode} />
               <RouteWithErrorBoundary
                 path="/publications/:id"
                 render={({ match }: ContextRouter) => (

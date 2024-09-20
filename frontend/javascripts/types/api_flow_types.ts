@@ -164,11 +164,11 @@ export type APIPublication = {
   readonly datasets: Array<APIDataset>;
   readonly annotations: Array<APIPublicationAnnotation>;
 };
-export type MutableAPIDatasetId = {
+export type MutableAPIDataSourceId = {
   owningOrganization: string;
   path: string;
 };
-export type APIDatasetId = Readonly<MutableAPIDatasetId>;
+export type APIDataSourceId = Readonly<MutableAPIDataSourceId>;
 
 export enum APIMetadataEnum {
   STRING = "string",
@@ -183,7 +183,7 @@ export type APIMetadata = {
 };
 export type APIMetadataEntries = APIMetadata[];
 
-type MutableAPIDatasetBase = MutableAPIDatasetId & {
+type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   readonly id: string; // Should never be changed.
   name: string;
   isUnreported: boolean;

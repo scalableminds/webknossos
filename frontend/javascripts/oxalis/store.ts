@@ -9,7 +9,7 @@ import type {
   APIDataLayer,
   APIDataStore,
   APIDataset,
-  APIDatasetId,
+  APIDataSourceId,
   APIHistogramData,
   APIRestrictions,
   APIScript,
@@ -272,18 +272,23 @@ export type HybridTracing = Annotation & {
   readonly mappings: Array<EditableMapping>;
 };
 export type Tracing = HybridTracing;
+export type LegacyViewCommand = APIDataSourceId & {
+  readonly type: typeof ControlModeEnum.VIEW;
+};
 export type TraceOrViewCommand =
-  | (APIDatasetId & {
+  | {
+      readonly datasetId: string;
       readonly type: typeof ControlModeEnum.VIEW;
-    })
+    }
   | {
       readonly type: typeof ControlModeEnum.TRACE;
       readonly annotationId: string;
     }
-  | (APIDatasetId & {
+  | {
+      readonly datasetId: string;
       readonly type: typeof ControlModeEnum.SANDBOX;
       readonly tracingType: TracingType;
-    });
+    };
 export type DatasetLayerConfiguration = {
   readonly color: Vector3;
   readonly brightness?: number;

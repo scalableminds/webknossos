@@ -2,7 +2,7 @@ import { InfoCircleOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Modal, Radio, Button, Tooltip, Slider, Spin } from "antd";
 import React, { useEffect, useState } from "react";
-import type { APIDataset, APIDatasetId, APISegmentationLayer } from "types/api_flow_types";
+import type { APIDataset, APIDataSourceId, APISegmentationLayer } from "types/api_flow_types";
 import {
   doesSupportVolumeWithFallback,
   getSomeResolutionInfoForDataset,
@@ -15,7 +15,7 @@ import { useFetch } from "libs/react_helpers";
 import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 
 type Props = {
-  datasetId: APIDatasetId;
+  datasetId: APIDataSourceId;
   onClose: () => void;
 };
 type RestrictResolutionSliderProps = {

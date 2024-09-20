@@ -1,7 +1,7 @@
 import _ from "lodash";
 import type {
   APIAnnotation,
-  APIDatasetId,
+  APIDataSourceId,
   APIDataset,
   MutableAPIDataset,
   APIDataLayer,
@@ -125,7 +125,7 @@ export async function initialize(
 > {
   Store.dispatch(setControlModeAction(initialCommandType.type));
   let annotation: APIAnnotation | null | undefined;
-  let datasetId: APIDatasetId;
+  let datasetId: APIDataSourceId;
 
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
@@ -236,7 +236,7 @@ export async function initialize(
 
 async function fetchParallel(
   annotation: APIAnnotation | null | undefined,
-  datasetId: APIDatasetId,
+  datasetId: APIDataSourceId,
   versions?: Versions,
 ): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>]> {
   return Promise.all([

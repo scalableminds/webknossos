@@ -1,4 +1,4 @@
-import { getDataset } from "admin/admin_rest_api";
+import { getDataset, getDatasetLegacy } from "admin/admin_rest_api";
 import type { UploadFile } from "antd";
 import Toast from "libs/toast";
 import type { Vector3 } from "oxalis/constants";
@@ -30,24 +30,19 @@ export type WizardComponentProps = {
   onAdded: (datasetId: string, needsConversion?: boolean | null | undefined) => Promise<void>;
 };
 
-export async function tryToFetchDatasetsByName(
+export async function tryToFetchDatasetsByNameOrId(
   names: string[],
+  ids: string[],
   userErrorMessage: string,
 ): Promise<APIDataset[] | null> {
   const { activeUser } = Store.getState();
   try {
-    const datasets = await Promise.all(
-      names.map((name) =>
-        getDataset(
-          {
-            owningOrganization: activeUser?.organization || "",
-            name: name,
-          },
-          null,
-          { showErrorToast: false },
-        ),
+    const datasets = await Promise.all([
+      ...names.map((name) =>
+        getDatasetLegacy(activeUser?.organization || "", name, null, { showErrorToast: false }),
       ),
-    );
+      ...ids.map((id) => getDataset(id, null, { showErrorToast: false })),
+    ]);
     return datasets;
   } catch (exception) {
     Toast.warning(userErrorMessage);

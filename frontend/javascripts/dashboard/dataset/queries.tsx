@@ -18,7 +18,7 @@ import {
 import Toast from "libs/toast";
 import React, { useEffect, useRef } from "react";
 import {
-  type APIDatasetId,
+  type APIDataSourceId,
   type APIDatasetCompact,
   type FlatFolderTreeItem,
   type Folder,
@@ -57,7 +57,7 @@ export function useFolderQuery(folderId: string | null) {
   );
 }
 
-export function useDatasetQuery(datasetId: APIDatasetId) {
+export function useDatasetQuery(datasetId: APIDataSourceId) {
   const queryKey = ["datasetById", datasetId];
   return useQuery(
     queryKey,
@@ -395,7 +395,7 @@ export function useUpdateDatasetMutation(folderId: string | null) {
   const mutationKey = ["datasetsByFolder", folderId];
 
   return useMutation(
-    (params: [APIDatasetId, DatasetUpdater] | APIDatasetId) => {
+    (params: [APIDataSourceId, DatasetUpdater] | APIDataSourceId) => {
       // If a APIDatasetId is provided, simply refetch the dataset
       // without any mutation so that it gets reloaded effectively.
       if ("owningOrganization" in params) {

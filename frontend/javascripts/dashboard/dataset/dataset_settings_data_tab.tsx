@@ -60,13 +60,11 @@ export const syncDataSourceFields = (
 };
 
 export default function DatasetSettingsDataTab({
-  allowRenamingDataset,
   form,
   activeDataSourceEditMode,
   onChange,
   dataset,
 }: {
-  allowRenamingDataset: boolean;
   form: FormInstance;
   activeDataSourceEditMode: "simple" | "advanced";
   onChange: (arg0: "simple" | "advanced") => void;
@@ -113,12 +111,7 @@ export default function DatasetSettingsDataTab({
 
       <Hideable hidden={activeDataSourceEditMode !== "simple"}>
         <RetryingErrorBoundary>
-          <SimpleDatasetForm
-            dataset={dataset}
-            allowRenamingDataset={allowRenamingDataset}
-            form={form}
-            dataSource={dataSource}
-          />
+          <SimpleDatasetForm dataset={dataset} form={form} dataSource={dataSource} />
         </RetryingErrorBoundary>
       </Hideable>
 
@@ -145,12 +138,10 @@ export default function DatasetSettingsDataTab({
 }
 
 function SimpleDatasetForm({
-  allowRenamingDataset,
   dataSource,
   form,
   dataset,
 }: {
-  allowRenamingDataset: boolean;
   dataSource: Record<string, any>;
   form: FormInstance;
   dataset: APIDataset | null | undefined;
@@ -190,15 +181,13 @@ function SimpleDatasetForm({
             <Row gutter={48}>
               <Col span={24} xl={12}>
                 <FormItemWithInfo
-                  name={["dataSource", "id", "name"]}
+                  name={["dataset", "name"]} // TODO: This change needs to be double checked.
                   label="Name"
                   info="The name of the dataset"
                   validateFirst
-                  rules={getDatasetNameRules(activeUser, allowRenamingDataset)}
+                  rules={getDatasetNameRules(activeUser)}
                 >
                   <Input
-                    // Renaming an existing DS is not supported right now
-                    disabled={!allowRenamingDataset}
                     style={{
                       width: 408,
                     }}

@@ -11,7 +11,7 @@ import {
 import window from "libs/window";
 import { Link, type LinkProps } from "react-router-dom";
 import type * as React from "react";
-import type { APIDatasetId, APIDataset, APIDatasetCompact } from "types/api_flow_types";
+import type { APIDataSourceId, APIDataset, APIDatasetCompact } from "types/api_flow_types";
 import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -86,7 +86,7 @@ function NewAnnotationLink({
 
 type Props = {
   dataset: APIDatasetCompact;
-  reloadDataset: (arg0: APIDatasetId) => Promise<void>;
+  reloadDataset: (arg0: APIDataSourceId) => Promise<void>;
 };
 
 function LinkWithDisabled({
@@ -283,7 +283,7 @@ function DatasetActionView(props: Props) {
 }
 const onClearCache = async (
   dataset: APIDataset,
-  reloadDataset: (arg0: APIDatasetId) => Promise<void>,
+  reloadDataset: (arg0: APIDataSourceId) => Promise<void>,
 ) => {
   await clearCache(dataset);
   await reloadDataset(dataset);
@@ -299,7 +299,7 @@ export function getDatasetActionContextMenu({
   datasets,
   hideContextMenu,
 }: {
-  reloadDataset: (arg0: APIDatasetId) => Promise<void>;
+  reloadDataset: (arg0: APIDataSourceId) => Promise<void>;
   datasets: APIDatasetCompact[];
   hideContextMenu: () => void;
 }): MenuProps {

@@ -8,7 +8,7 @@ import { diceCoefficient as dice } from "dice-coefficient";
 import type { OxalisState } from "oxalis/store";
 import type {
   APIDatasetCompact,
-  APIDatasetId,
+  APIDataSourceId,
   APIMaybeUnimportedDataset,
   FolderItem,
 } from "types/api_flow_types";
@@ -57,8 +57,8 @@ type Props = {
   isUserAdmin: boolean;
   isUserDatasetManager: boolean;
   datasetFilteringMode: DatasetFilteringMode;
-  reloadDataset: (arg0: APIDatasetId) => Promise<void>;
-  updateDataset: (id: APIDatasetId, updater: DatasetUpdater) => void;
+  reloadDataset: (arg0: APIDataSourceId) => Promise<void>;
+  updateDataset: (id: APIDataSourceId, updater: DatasetUpdater) => void;
   addTagToSearch: (tag: string) => void;
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
@@ -433,7 +433,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
     });
   };
 
-  reloadSingleDataset = (datasetId: APIDatasetId): Promise<void> =>
+  reloadSingleDataset = (datasetId: APIDataSourceId): Promise<void> =>
     this.props.reloadDataset(datasetId);
 
   getFilteredDatasets() {
@@ -762,7 +762,7 @@ export function DatasetTags({
 }: {
   dataset: APIDatasetCompact;
   onClickTag?: (t: string) => void;
-  updateDataset: (id: APIDatasetId, updater: DatasetUpdater) => void;
+  updateDataset: (id: APIDataSourceId, updater: DatasetUpdater) => void;
 }) {
   const editTagFromDataset = (
     shouldAddTag: boolean,

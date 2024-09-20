@@ -125,7 +125,7 @@ export async function initialize(
 > {
   Store.dispatch(setControlModeAction(initialCommandType.type));
   let annotation: APIAnnotation | null | undefined;
-  let datasetId: APIDataSourceId;
+  let datasetId: APIDataset["id"];
 
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
@@ -133,10 +133,7 @@ export async function initialize(
       initialMaybeCompoundType != null
         ? await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType)
         : await getAnnotationInformation(annotationId);
-    datasetId = {
-      name: annotation.dataSetName,
-      owningOrganization: annotation.organization,
-    };
+    datasetId = annotation.datasetId;
 
     if (!annotation.restrictions.allowAccess) {
       Toast.error(messages["tracing.no_access"]);
@@ -148,22 +145,14 @@ export async function initialize(
     });
     Store.dispatch(setTaskAction(annotation.task));
   } else if (initialCommandType.type === ControlModeEnum.SANDBOX) {
-    const { name, owningOrganization } = initialCommandType;
-    datasetId = {
-      name,
-      owningOrganization,
-    };
+    datasetId = initialCommandType.datasetId;
     annotation = await getEmptySandboxAnnotationInformation(
       datasetId,
       initialCommandType.tracingType,
       getSharingTokenFromUrlParameters(),
     );
   } else {
-    const { name, owningOrganization } = initialCommandType;
-    datasetId = {
-      name,
-      owningOrganization,
-    };
+    datasetId = initialCommandType.datasetId;
   }
 
   const [dataset, initialUserSettings, serverTracings] = await fetchParallel(
@@ -236,7 +225,7 @@ export async function initialize(
 
 async function fetchParallel(
   annotation: APIAnnotation | null | undefined,
-  datasetId: APIDataSourceId,
+  datasetId: APIDataset["id"],
   versions?: Versions,
 ): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>]> {
   return Promise.all([

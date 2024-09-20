@@ -1,4 +1,4 @@
-import Request from "libs/request";
+import Request, { type RequestOptions } from "libs/request";
 
 export async function getOrganizationForDataset(datasetName: string): Promise<string> {
   const { organizationId } = await Request.receiveJSON(
@@ -10,9 +10,13 @@ export async function getOrganizationForDataset(datasetName: string): Promise<st
 export async function getDatasetIdFromNameAndOrganization(
   datasetName: string,
   organizationId: string,
+  sharingToken?: string | null | undefined,
+  options: RequestOptions = {},
 ): Promise<string> {
+  const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
   const { id: datasetId } = await Request.receiveJSON(
-    `/api/datasets/disambiguate/${organizationId}/${datasetName}/toId`,
+    `/api/datasets/disambiguate/${organizationId}/${datasetName}/toId${sharingTokenSuffix}`,
+    options,
   );
   return datasetId;
 }

@@ -121,6 +121,7 @@ const defaultState: OxalisState = {
   },
   task: null,
   dataset: {
+    id: "dummy-dataset-id",
     name: "Loading",
     folderId: "dummy-folder-id",
     isUnreported: false,

@@ -90,12 +90,7 @@ function getMaybeSelectMessage(datasetCount: number) {
 
 function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompact }) {
   const context = useDatasetCollectionContext();
-  // exactDatasetId is needed to prevent refetching when some dataset property of selectedDataset was changed.
-  const exactDatasetId = {
-    owningOrganization: selectedDataset.owningOrganization,
-    name: selectedDataset.name,
-  };
-  const { data: fullDataset, isFetching } = useDatasetQuery(exactDatasetId);
+  const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset.id);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const { data: owningOrganization } = useQuery(
     ["organizations", selectedDataset.owningOrganization],

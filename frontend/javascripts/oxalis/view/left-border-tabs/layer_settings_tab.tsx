@@ -524,11 +524,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     if (!(this.props.isSuperUser && isSegmentation)) return <></>;
 
     const triggerComputeSegmentIndexFileJob = async () => {
-      await startComputeSegmentIndexFileJob(
-        this.props.dataset.owningOrganization,
-        this.props.dataset.name,
-        layerName,
-      );
+      await startComputeSegmentIndexFileJob(this.props.dataset.id, layerName);
       Toast.info(
         <React.Fragment>
           Started a job for computating a segment index file.
@@ -1401,7 +1397,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             ...completeDatasetConfiguration,
             layers: updatedLayers,
           };
-          await updateDatasetDefaultConfiguration(dataset, updatedConfiguration);
+          await updateDatasetDefaultConfiguration(dataset.id, updatedConfiguration);
           Toast.success("Successfully saved the current view configuration as default.");
         } catch (error) {
           Toast.error(

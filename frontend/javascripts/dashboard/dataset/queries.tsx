@@ -16,9 +16,8 @@ import {
   updateFolder,
 } from "admin/api/folders";
 import Toast from "libs/toast";
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
-  type APIDataSourceId,
   type APIDatasetCompact,
   type FlatFolderTreeItem,
   type Folder,
@@ -57,7 +56,7 @@ export function useFolderQuery(folderId: string | null) {
   );
 }
 
-export function useDatasetQuery(datasetId: APIDataSourceId) {
+export function useDatasetQuery(datasetId: APIDataset["id"]) {
   const queryKey = ["datasetById", datasetId];
   return useQuery(
     queryKey,
@@ -395,15 +394,15 @@ export function useUpdateDatasetMutation(folderId: string | null) {
   const mutationKey = ["datasetsByFolder", folderId];
 
   return useMutation(
-    (params: [APIDataSourceId, DatasetUpdater] | APIDataSourceId) => {
+    (params: [APIDataset["id"], DatasetUpdater] | APIDataset["id"]) => {
       // If a APIDatasetId is provided, simply refetch the dataset
       // without any mutation so that it gets reloaded effectively.
-      if ("owningOrganization" in params) {
-        const datasetId = params;
-        return getDataset(datasetId);
+      if (Array.isArray(params)) {
+        const [id, updater] = params;
+        return updateDatasetPartial(id, updater);
       }
-      const [id, updater] = params;
-      return updateDatasetPartial(id, updater);
+      const datasetId = params;
+      return getDataset(datasetId);
     },
     {
       mutationKey,
@@ -421,12 +420,8 @@ export function useUpdateDatasetMutation(folderId: string | null) {
             })
             .filter((dataset: APIDatasetCompact) => dataset.folderId === folderId),
         );
-        const updatedDatasetId = {
-          name: updatedDataset.name,
-          owningOrganization: updatedDataset.owningOrganization,
-        };
         // Also update the cached dataset under the key "datasetById".
-        queryClient.setQueryData(["datasetById", updatedDatasetId], updatedDataset);
+        queryClient.setQueryData(["datasetById", updatedDataset.id], updatedDataset);
         const targetFolderId = updatedDataset.folderId;
         if (targetFolderId !== folderId) {
           // The dataset was moved to another folder. Add the dataset to that target folder
@@ -561,7 +556,7 @@ function getUnobtrusivelyUpdatedDatasets(
    * lastUsedByUser property, as this would change the ordering when the default sorting is used.
    */
 
-  const idFn = (dataset: APIDatasetCompact) => `${dataset.owningOrganization}#${dataset.name}`;
+  const idFn = (dataset: APIDatasetCompact) => dataset.id;
 
   const newDatasetsById = _.keyBy(newDatasets, idFn);
   return oldDatasets.map((oldDataset) => {

@@ -156,6 +156,7 @@ export const tracing: ServerSkeletonTracing = {
 };
 export const annotation: APIAnnotation = {
   description: "",
+  datasetId: "id", // TODO: check whether this is correct.
   state: "Active",
   id: "598b52293c00009906f043e7",
   visibility: "Internal",

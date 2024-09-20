@@ -104,6 +104,7 @@ import type BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { ArbitraryObject } from "types/globals";
 import { assertResponseLimit } from "./api/api_utils";
 import type { AnnotationTypeFilterEnum } from "admin/statistic/project_and_annotation_type_dropdown";
+import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
 
 export * from "./api/token";
 export * from "./api/jobs";
@@ -1160,17 +1161,19 @@ export function getDataset(
   return Request.receiveJSON(`/api/datasets/${datasetId}${sharingTokenSuffix}`, options);
 }
 
-export function getDatasetLegacy(
+export async function getDatasetLegacy(
   datasetOrga: string,
   datasetPath: string,
   sharingToken?: string | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIDataset> {
-  const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
-  return Request.receiveJSON(
-    `/api/datasets/${datasetOrga}/${datasetPath}${sharingTokenSuffix}`,
+  const datasetId = await getDatasetIdFromNameAndOrganization(
+    datasetPath,
+    datasetOrga,
+    sharingToken,
     options,
   );
+  return getDataset(datasetId, sharingToken, options);
 }
 
 export type DatasetUpdater = {
@@ -1236,8 +1239,8 @@ export function updateDatasetDefaultConfiguration(
   });
 }
 
-export function getDatasetAccessList(datasetId: string): Promise<Array<APIUser>> {
-  return Request.receiveJSON(`/api/datasets/${datasetId}/accessList`);
+export function getDatasetAccessList(dataset: APIDataset): Promise<Array<APIUser>> {
+  return Request.receiveJSON(`/api/datasets/${dataset.id}/accessList`);
 }
 
 type DatasetCompositionArgs = {
@@ -1468,12 +1471,12 @@ export async function triggerDatasetCheck(datastoreHost: string): Promise<void> 
 
 export async function triggerDatasetClearCache(
   datastoreHost: string,
-  datasetId: APIDataSourceId,
+  dataSourceId: APIDataSourceId,
   layerName?: string,
 ): Promise<void> {
   await doWithToken((token) =>
     Request.triggerRequest(
-      `/data/triggers/reload/${datasetId.owningOrganization}/${datasetId.path}?token=${token}${
+      `/data/triggers/reload/${dataSourceId.owningOrganization}/${dataSourceId.path}?token=${token}${
         layerName ? `&layerName=${layerName}` : ""
       }`,
       {
@@ -1486,11 +1489,11 @@ export async function triggerDatasetClearCache(
 
 export async function deleteDatasetOnDisk(
   datastoreHost: string,
-  datasetId: APIDataSourceId,
+  dataSourceId: APIDataSourceId,
 ): Promise<void> {
   await doWithToken((token) =>
     Request.triggerRequest(
-      `/data/datasets/${datasetId.owningOrganization}/${datasetId.path}/deleteOnDisk?token=${token}`,
+      `/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.path}/deleteOnDisk?token=${token}`,
       {
         host: datastoreHost,
         method: "DELETE",
@@ -1505,14 +1508,10 @@ export async function triggerDatasetClearThumbnailCache(datasetId: string): Prom
   });
 }
 
-export async function clearCache(
-  dataset: APIMaybeUnimportedDataset,
-  datasetId: string,
-  layerName?: string,
-) {
+export async function clearCache(dataset: APIMaybeUnimportedDataset, layerName?: string) {
   return Promise.all([
     triggerDatasetClearCache(dataset.dataStore.url, dataset, layerName),
-    triggerDatasetClearThumbnailCache(datasetId),
+    triggerDatasetClearThumbnailCache(dataset.id),
   ]);
 }
 
@@ -1535,7 +1534,7 @@ export async function revokeDatasetSharingToken(datasetId: string): Promise<void
 
 export async function findDataPositionForLayer(
   datastoreUrl: string,
-  datasetId: APIDataSourceId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
 ): Promise<{
   position: Vector3 | null | undefined;
@@ -1543,7 +1542,7 @@ export async function findDataPositionForLayer(
 }> {
   const { position, resolution } = await doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.path}/layers/${layerName}/findData?token=${token}`,
+      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.path}/layers/${layerName}/findData?token=${token}`,
     ),
   );
   return {
@@ -1570,12 +1569,12 @@ export async function findDataPositionForVolumeTracing(
 
 export async function getHistogramForLayer(
   datastoreUrl: string,
-  datasetId: APIDataSourceId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
 ): Promise<APIHistogramData> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.path}/layers/${layerName}/histogram?token=${token}`,
+      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.path}/layers/${layerName}/histogram?token=${token}`,
       { showErrorToast: false },
     ),
   );
@@ -1583,25 +1582,25 @@ export async function getHistogramForLayer(
 
 export async function getMappingsForDatasetLayer(
   datastoreUrl: string,
-  datasetId: APIDataSourceId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
 ): Promise<Array<string>> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.path}/layers/${layerName}/mappings?token=${token}`,
+      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.path}/layers/${layerName}/mappings?token=${token}`,
     ),
   );
 }
 
 export function fetchMapping(
   datastoreUrl: string,
-  datasetId: APIDataSourceId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   mappingName: string,
 ): Promise<APIMapping> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.path}/layers/${layerName}/mappings/${mappingName}?token=${token}`,
+      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.path}/layers/${layerName}/mappings/${mappingName}?token=${token}`,
     ),
   );
 }
@@ -1631,7 +1630,7 @@ export function getEditableMappingInfo(
 
 export function getPositionForSegmentInAgglomerate(
   datastoreUrl: string,
-  datasetId: APIDataSourceId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   mappingName: string,
   segmentId: number,
@@ -1642,8 +1641,8 @@ export function getPositionForSegmentInAgglomerate(
       segmentId: `${segmentId}`,
     });
     const position = await Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
-        datasetId.path
+      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${
+        dataSourceId.path
       }/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${urlParams.toString()}`,
     );
     return position;
@@ -1652,12 +1651,12 @@ export function getPositionForSegmentInAgglomerate(
 
 export async function getAgglomeratesForDatasetLayer(
   datastoreUrl: string,
-  datasetId: APIDataSourceId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
 ): Promise<Array<string>> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.path}/layers/${layerName}/agglomerates?token=${token}`,
+      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.path}/layers/${layerName}/agglomerates?token=${token}`,
     ),
   );
 }
@@ -1882,7 +1881,7 @@ export async function isDatasetAccessibleBySwitching(
     );
   } else {
     return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?organizationId=${commandType.owningOrganization}&datasetName=${commandType.name}`,
+      `/api/auth/accessibleBySwitching?datasetId=${commandType.datasetId}`,
       {
         showErrorToast: false,
       },
@@ -2063,14 +2062,14 @@ export function getBucketPositionsForAdHocMesh(
 
 export function getAgglomerateSkeleton(
   dataStoreUrl: string,
-  datasetId: APIDataSourceId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   mappingId: string,
   agglomerateId: number,
 ): Promise<ArrayBuffer> {
   return doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`, // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.path}/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`, // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
@@ -2083,7 +2082,7 @@ export function getAgglomerateSkeleton(
 
 export async function getAgglomeratesForSegmentsFromDatastore<T extends number | bigint>(
   dataStoreUrl: string,
-  datasetId: APIDataSourceId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   mappingId: string,
   segmentIds: Array<T>,
@@ -2091,7 +2090,7 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.path}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?token=${token}`,
       {
         method: "POST",
         body: segmentIdBuffer,
@@ -2162,12 +2161,12 @@ export function getEditableAgglomerateSkeleton(
 
 export async function getMeshfilesForDatasetLayer(
   dataStoreUrl: string,
-  datasetId: APIDataSourceId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
 ): Promise<Array<APIMeshFile>> {
   const meshFiles: Array<APIMeshFile> = await doWithToken((token) =>
     Request.receiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.path}/layers/${layerName}/meshes?token=${token}`,
     ),
   );
 
@@ -2183,19 +2182,19 @@ export async function getMeshfilesForDatasetLayer(
 // ### Connectomes
 export function getConnectomeFilesForDatasetLayer(
   dataStoreUrl: string,
-  datasetId: APIDataSourceId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
 ): Promise<Array<APIConnectomeFile>> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/connectomes?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.path}/layers/${layerName}/connectomes?token=${token}`,
     ),
   );
 }
 
 export function getSynapsesOfAgglomerates(
   dataStoreUrl: string,
-  datasetId: APIDataSourceId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   connectomeFile: string,
   agglomerateIds: Array<number>,
@@ -2207,7 +2206,7 @@ export function getSynapsesOfAgglomerates(
 > {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/connectomes/synapses?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.path}/layers/${layerName}/connectomes/synapses?token=${token}`,
       {
         data: {
           connectomeFile,
@@ -2220,7 +2219,7 @@ export function getSynapsesOfAgglomerates(
 
 function getSynapseSourcesOrDestinations(
   dataStoreUrl: string,
-  datasetId: APIDataSourceId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   connectomeFile: string,
   synapseIds: Array<number>,
@@ -2228,7 +2227,7 @@ function getSynapseSourcesOrDestinations(
 ): Promise<Array<number>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/connectomes/synapses/${srcOrDst}?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.path}/layers/${layerName}/connectomes/synapses/${srcOrDst}?token=${token}`,
       {
         data: {
           connectomeFile,
@@ -2251,14 +2250,14 @@ export function getSynapseDestinations(...args: any): Promise<Array<number>> {
 
 export function getSynapsePositions(
   dataStoreUrl: string,
-  datasetId: APIDataSourceId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   connectomeFile: string,
   synapseIds: Array<number>,
 ): Promise<Array<Vector3>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/connectomes/synapses/positions?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.path}/layers/${layerName}/connectomes/synapses/positions?token=${token}`,
       {
         data: {
           connectomeFile,
@@ -2271,7 +2270,7 @@ export function getSynapsePositions(
 
 export function getSynapseTypes(
   dataStoreUrl: string,
-  datasetId: APIDataSourceId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   connectomeFile: string,
   synapseIds: Array<number>,
@@ -2281,7 +2280,7 @@ export function getSynapseTypes(
 }> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/connectomes/synapses/types?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.path}/layers/${layerName}/connectomes/synapses/types?token=${token}`,
       {
         data: {
           connectomeFile,
@@ -2387,7 +2386,7 @@ export async function getSamMask(
   const { type: interactionType, ...promptWithoutType } = prompt;
 
   const buffer = await Request.sendJSONReceiveArraybuffer(
-    `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingMask?${params}`,
+    `/api/datasets/${dataset.id}/layers/${layerName}/segmentAnythingMask?${params}`,
     {
       data: {
         mag,

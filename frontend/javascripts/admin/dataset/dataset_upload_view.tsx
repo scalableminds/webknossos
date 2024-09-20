@@ -362,8 +362,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               }
 
               await startConvertToWkwJob(
-                newDatasetName, // TODO: likely needs dataset id / path to identify the dataset correctly.
-                activeUser.organization,
+                newDatasetId,
                 formValues.voxelSizeFactor,
                 formValues.voxelSizeUnit,
               );

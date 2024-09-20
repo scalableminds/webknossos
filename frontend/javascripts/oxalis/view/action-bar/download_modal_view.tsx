@@ -364,8 +364,7 @@ function _DownloadModalView({
       await Model.ensureSavedState();
       await startJob(async () => {
         const job = await startExportTiffJob(
-          dataset.name,
-          dataset.owningOrganization,
+          dataset.id,
           computeArrayFromBoundingBox(selectedBoundingBox.boundingBox),
           selectedLayerInfos.layerName,
           mag.join("-"),

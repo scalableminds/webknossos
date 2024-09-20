@@ -31,10 +31,10 @@ export type DatasetCollectionContextValue = {
   checkDatasets: () => Promise<void>;
   fetchDatasets: () => void;
   reloadDataset: (
-    datasetId: APIDataSourceId,
+    datasetId: APIDataset["id"],
     datasetsToUpdate?: Array<APIDatasetCompact>,
   ) => Promise<void>;
-  updateCachedDataset: (id: APIDataSourceId, updater: DatasetUpdater) => Promise<APIDataset>;
+  updateCachedDataset: (id: APIDataset["id"], updater: DatasetUpdater) => Promise<APIDataset>;
   activeFolderId: string | null;
   setActiveFolderId: (id: string | null) => void;
   mostRecentlyUsedActiveFolderId: string | null;
@@ -157,11 +157,11 @@ export default function DatasetCollectionContextProvider({
     datasetSearchQuery.refetch();
   }
 
-  async function reloadDataset(datasetId: APIDataSourceId) {
+  async function reloadDataset(datasetId: APIDataset["id"]) {
     await updateDatasetMutation.mutateAsync(datasetId);
   }
 
-  async function updateCachedDataset(id: APIDataSourceId, updater: DatasetUpdater) {
+  async function updateCachedDataset(id: APIDataset["id"], updater: DatasetUpdater) {
     return await updateDatasetMutation.mutateAsync([id, updater]);
   }
 

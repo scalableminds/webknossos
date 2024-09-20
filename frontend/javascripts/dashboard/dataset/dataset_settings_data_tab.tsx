@@ -336,11 +336,7 @@ function SimpleLayerForm({
   const startJobFn =
     dataset != null
       ? async () => {
-          const job = await startFindLargestSegmentIdJob(
-            dataset.name,
-            dataset.owningOrganization,
-            layer.name,
-          );
+          const job = await startFindLargestSegmentIdJob(dataset.id, layer.name);
           Toast.info(
             "A job was scheduled to compute the largest segment ID. It will be automatically updated for the dataset. You may close this tab now.",
           );

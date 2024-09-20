@@ -69,7 +69,7 @@ function getExtendedDetails(item: PublicationItem): ExtendedDatasetDetails {
 function getUrl(item: PublicationItem): string {
   return item.type === PublicationItemType.ANNOTATION
     ? `/annotations/${item.annotation.id}`
-    : `/datasets/${item.dataset.owningOrganization}/${item.dataset.name}`;
+    : `/datasets/${item.dataset.id}`;
 }
 
 function ThumbnailOverlay({ details }: { details: ExtendedDatasetDetails }) {

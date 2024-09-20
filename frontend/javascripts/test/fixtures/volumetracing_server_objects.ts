@@ -67,6 +67,7 @@ export const tracing: ServerVolumeTracing = {
   ],
 };
 export const annotation: APIAnnotation = {
+  datasetId: "id",
   description: "",
   state: "Active",
   id: "598b52293c00009906f043e7",

@@ -20,10 +20,7 @@ import * as api from "admin/admin_rest_api";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
 import test from "ava";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
-const datasetId = {
-  name: "confocal-multi_knossos",
-  owningOrganization: "Organization_X",
-};
+const datasetId = "id";
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
 });

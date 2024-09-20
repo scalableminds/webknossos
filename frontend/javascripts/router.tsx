@@ -186,7 +186,7 @@ class ReactRouter extends React.Component<Props> {
   tracingViewModeLegacy = ({ match, location }: ContextRouter) => (
     <AsyncRedirect
       redirectTo={async () => {
-        const datasetName = match.params.id || "";
+        const datasetName = match.params.datasetName || "";
         const organizationId = match.params.organizationId || "";
         const datasetId = await getDatasetIdFromNameAndOrganization(datasetName, organizationId);
         return `/datasets/${datasetId}/view${location.search}${location.hash}`;
@@ -614,18 +614,6 @@ class ReactRouter extends React.Component<Props> {
                 render={this.tracingViewModeLegacy}
               />
               <Route path="/datasets/:datasetId/view" render={this.tracingViewMode} />
-              <RouteWithErrorBoundary
-                path="/datasets/:id/view"
-                render={({ match, location }: ContextRouter) => (
-                  <AsyncRedirect
-                    redirectTo={async () => {
-                      const datasetName = match.params.id || "";
-                      const organizationId = await getOrganizationForDataset(datasetName);
-                      return `/datasets/${organizationId}/${datasetName}/view${location.search}${location.hash}`;
-                    }}
-                  />
-                )}
-              />
               {/*maybe this also needs a legacy route?*/}
               <RouteWithErrorBoundary
                 path="/datasets/:datasetId/sandbox/:type"

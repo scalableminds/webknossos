@@ -47,7 +47,7 @@ export function getVolumeRequestUrl(
   visibleSegmentationLayer: APISegmentationLayer | APIDataLayer,
 ) {
   if (tracing == null || tracingId == null) {
-    return `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${visibleSegmentationLayer.name}`;
+    return `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.path}/layers/${visibleSegmentationLayer.name}`;
   } else {
     const tracingStoreHost = tracing?.tracingStore.url;
     return `${tracingStoreHost}/tracings/volume/${tracingId}`;

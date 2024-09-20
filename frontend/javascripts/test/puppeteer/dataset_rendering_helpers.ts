@@ -10,7 +10,7 @@ import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
 import type { RequestOptions } from "libs/request";
 import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
-import type { APIDataSourceId } from "../../types/api_flow_types";
+import type { APIDataset, APIDataSourceId } from "../../types/api_flow_types";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
 import puppeteer from "puppeteer";
 import { sleep } from "libs/utils";
@@ -39,7 +39,7 @@ function getDefaultRequestOptions(baseUrl: string): RequestOptions {
 export async function screenshotDataset(
   page: Page,
   baseUrl: string,
-  datasetId: APIDataSourceId,
+  datasetId: APIDataset["id"],
   optionalViewOverride?: string | null | undefined,
   optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
 ): Promise<Screenshot> {
@@ -57,7 +57,7 @@ export async function screenshotDataset(
 export async function screenshotAnnotation(
   page: Page,
   baseUrl: string,
-  datasetId: APIDataSourceId,
+  datasetId: APIDataset["id"],
   fallbackLayerName: string | null,
   optionalViewOverride?: string | null | undefined,
   optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
@@ -76,7 +76,7 @@ export async function screenshotAnnotation(
 async function _screenshotAnnotationHelper(
   page: Page,
   baseUrl: string,
-  datasetId: APIDataSourceId,
+  datasetId: APIDataset["id"],
   typ: "skeleton" | "volume" | "hybrid",
   fallbackLayerName: string | null,
   optionalViewOverride?: string | null | undefined,
@@ -104,10 +104,10 @@ async function _screenshotAnnotationHelper(
 export async function screenshotDatasetView(
   page: Page,
   baseUrl: string,
-  datasetId: APIDataSourceId,
+  datasetId: APIDataset["id"],
   optionalViewOverride?: string | null | undefined,
 ): Promise<Screenshot> {
-  const url = `${baseUrl}/datasets/${datasetId.owningOrganization}/${datasetId.name}`;
+  const url = `${baseUrl}/datasets/${datasetId}`;
 
   await openDatasetView(page, url, optionalViewOverride);
   return screenshotTracingView(page);
@@ -116,7 +116,7 @@ export async function screenshotDatasetView(
 export async function screenshotDatasetWithMapping(
   page: Page,
   baseUrl: string,
-  datasetId: APIDataSourceId,
+  datasetId: APIDataset["id"],
   mappingName: string,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
@@ -139,7 +139,7 @@ export async function screenshotDatasetWithMapping(
 export async function screenshotDatasetWithMappingLink(
   page: Page,
   baseUrl: string,
-  datasetId: APIDataSourceId,
+  datasetId: APIDataset["id"],
   optionalViewOverride: string | null | undefined,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
@@ -159,7 +159,7 @@ export async function screenshotDatasetWithMappingLink(
 export async function screenshotSandboxWithMappingLink(
   page: Page,
   baseUrl: string,
-  datasetId: APIDataSourceId,
+  datasetId: APIDataset["id"],
   optionalViewOverride: string | null | undefined,
 ): Promise<Screenshot> {
   await openSandboxView(page, baseUrl, datasetId, optionalViewOverride);
@@ -265,14 +265,11 @@ async function openDatasetView(
 async function openSandboxView(
   page: Page,
   baseUrl: string,
-  datasetId: APIDataSourceId,
+  datasetId: APIDataset["id"],
   optionalViewOverride: string | null | undefined,
 ) {
   const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
-  const url = urljoin(
-    baseUrl,
-    `/datasets/${datasetId.owningOrganization}/${datasetId.name}/sandbox/skeleton${urlSlug}`,
-  );
+  const url = urljoin(baseUrl, `/datasets/${datasetId}/sandbox/skeleton${urlSlug}`);
   console.log(`Opening sandbox annotation view at ${url}`);
   await page.goto(url, {
     timeout: 0,

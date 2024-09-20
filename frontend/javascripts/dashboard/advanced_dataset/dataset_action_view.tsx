@@ -47,7 +47,7 @@ function NewAnnotationLink({
   return (
     <div>
       <LinkWithDisabled
-        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/createExplorative/hybrid?autoFallbackLayer=true`}
+        to={`/datasets/${dataset.id}/createExplorative/hybrid?autoFallbackLayer=true`}
         style={{
           display: "inline-block",
         }}
@@ -78,7 +78,7 @@ function NewAnnotationLink({
         />
       </a>
       {isCreateExplorativeModalVisible ? (
-        <CreateExplorativeModal datasetId={dataset} onClose={onCloseCreateExplorativeModal} />
+        <CreateExplorativeModal datasetId={dataset.id} onClose={onCloseCreateExplorativeModal} />
       ) : null}
     </div>
   );
@@ -86,7 +86,7 @@ function NewAnnotationLink({
 
 type Props = {
   dataset: APIDatasetCompact;
-  reloadDataset: (arg0: APIDataSourceId) => Promise<void>;
+  reloadDataset: (arg0: APIDataset["id"]) => Promise<void>;
 };
 
 function LinkWithDisabled({
@@ -126,9 +126,9 @@ function DatasetActionView(props: Props) {
 
   const onClearCache = async (compactDataset: APIDatasetCompact) => {
     setIsReloading(true);
-    const dataset = await getDataset(compactDataset);
+    const dataset = await getDataset(compactDataset.id);
     await clearCache(dataset);
-    await props.reloadDataset(dataset);
+    await props.reloadDataset(dataset.id);
     Toast.success(
       messages["dataset.clear_cache_success"]({
         datasetName: dataset.name,
@@ -138,7 +138,7 @@ function DatasetActionView(props: Props) {
   };
 
   const onDeleteDataset = async () => {
-    const dataset = await getDataset(props.dataset);
+    const dataset = await getDataset(props.dataset.id);
 
     const deleteDataset = await confirmAsync({
       title: "Danger Zone",
@@ -176,10 +176,7 @@ function DatasetActionView(props: Props) {
         if (oldItems == null) {
           return oldItems;
         }
-        return oldItems.filter(
-          (item) =>
-            item.name !== dataset.name || item.owningOrganization !== dataset.owningOrganization,
-        );
+        return oldItems.filter((item) => item.id !== dataset.id);
       },
     );
     queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
@@ -204,7 +201,7 @@ function DatasetActionView(props: Props) {
   const datasetSettingsLink = (
     <>
       <LinkWithDisabled
-        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
+        to={`/datasets/${dataset.id}/edit`}
         title="Open Dataset Settings"
         disabled={isReloading}
       >
@@ -215,7 +212,7 @@ function DatasetActionView(props: Props) {
   );
   const brokenDatasetActions = (
     <div className="dataset-table-actions">
-      <Link to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}>
+      <Link to={`/datasets/${dataset.id}/edit`}>
         <SettingOutlined className="icon-margin-right" />
         Settings
       </Link>
@@ -261,7 +258,7 @@ function DatasetActionView(props: Props) {
         onCloseCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(false)}
       />
       <LinkWithDisabled
-        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
+        to={`/datasets/${dataset.id}/view`}
         title="View Dataset"
         disabled={isReloading}
       >
@@ -283,10 +280,10 @@ function DatasetActionView(props: Props) {
 }
 const onClearCache = async (
   dataset: APIDataset,
-  reloadDataset: (arg0: APIDataSourceId) => Promise<void>,
+  reloadDataset: (arg0: APIDataset["id"]) => Promise<void>,
 ) => {
   await clearCache(dataset);
-  await reloadDataset(dataset);
+  await reloadDataset(dataset.id);
   Toast.success(
     messages["dataset.clear_cache_success"]({
       datasetName: dataset.name,
@@ -299,7 +296,7 @@ export function getDatasetActionContextMenu({
   datasets,
   hideContextMenu,
 }: {
-  reloadDataset: (arg0: APIDataSourceId) => Promise<void>;
+  reloadDataset: (arg0: APIDataset["id"]) => Promise<void>;
   datasets: APIDatasetCompact[];
   hideContextMenu: () => void;
 }): MenuProps {
@@ -320,7 +317,7 @@ export function getDatasetActionContextMenu({
             key: "view",
             label: "View",
             onClick: () => {
-              window.location.href = `/datasets/${dataset.owningOrganization}/${dataset.name}/view`;
+              window.location.href = `/datasets/${dataset.id}/view`;
             },
           }
         : null,
@@ -329,7 +326,7 @@ export function getDatasetActionContextMenu({
             key: "edit",
             label: "Open Settings",
             onClick: () => {
-              window.location.href = `/datasets/${dataset.owningOrganization}/${dataset.name}/edit`;
+              window.location.href = `/datasets/${dataset.id}/edit`;
             },
           }
         : null,
@@ -338,7 +335,7 @@ export function getDatasetActionContextMenu({
         key: "reload",
         label: "Reload",
         onClick: async () => {
-          const fullDataset = await getDataset(dataset);
+          const fullDataset = await getDataset(dataset.id);
           return dataset.isActive ? onClearCache(fullDataset, reloadDataset) : null;
         },
       },

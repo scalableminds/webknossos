@@ -15,7 +15,7 @@ import { useFetch } from "libs/react_helpers";
 import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 
 type Props = {
-  datasetId: APIDataSourceId;
+  datasetId: APIDataset["id"];
   onClose: () => void;
 };
 type RestrictResolutionSliderProps = {
@@ -242,9 +242,7 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
           }}
         >
           <Link
-            to={`/datasets/${dataset.owningOrganization}/${
-              dataset.name
-            }/createExplorative/${annotationType}/?minRes=${Math.max(
+            to={`/datasets/${dataset.id}/createExplorative/${annotationType}/?minRes=${Math.max(
               ...resolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex),
             )}&maxRes=${Math.max(
               ...resolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex),
@@ -262,7 +260,7 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
 
   return (
     <Modal
-      title={`Create New Annotation for Dataset “${datasetId.name}”`}
+      title={`Create New Annotation for Dataset “${dataset?.name || datasetId}”`}
       open
       width={500}
       footer={null}

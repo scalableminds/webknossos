@@ -112,6 +112,10 @@ function JobListView() {
   }
 
   function renderDescription(__: any, job: APIJob) {
+    const linkToDataset =
+      job.datasetId != null
+        ? `/datasets/${job.datasetId}/view` // prefer updated link over legacy link.
+        : `/datasets/${job.organizationId || ""}/${job.datasetName || ""}/view`;
     if (job.type === APIJobType.CONVERT_TO_WKW && job.datasetName) {
       return <span>{`Conversion to WKW of ${job.datasetName}`}</span>;
     } else if (job.type === APIJobType.EXPORT_TIFF && job.organizationId && job.datasetName) {
@@ -121,9 +125,7 @@ function JobListView() {
             annotation of dataset {job.datasetName}
           </Link>
         ) : (
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            dataset {job.datasetName}
-          </Link>
+          <Link to={linkToDataset}>dataset {job.datasetName}</Link>
         );
       const layerLabel = job.annotationLayerName || job.layerName;
       return (
@@ -136,18 +138,13 @@ function JobListView() {
       return (
         <span>
           Animation rendering for layer {job.layerName} of dataset{" "}
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>
+          <Link to={linkToDataset}>{job.datasetName}</Link>
         </span>
       );
     } else if (job.type === APIJobType.COMPUTE_MESH_FILE && job.organizationId && job.datasetName) {
       return (
         <span>
-          Mesh file computation for{" "}
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          Mesh file computation for <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
@@ -157,10 +154,7 @@ function JobListView() {
     ) {
       return (
         <span>
-          Segment index file computation for{" "}
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          Segment index file computation for <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
@@ -172,9 +166,7 @@ function JobListView() {
       return (
         <span>
           Largest segment id detection for layer {job.layerName} of{" "}
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
@@ -186,9 +178,7 @@ function JobListView() {
       return (
         <span>
           Nuclei inferral for layer {job.layerName} of{" "}
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
@@ -200,9 +190,7 @@ function JobListView() {
       return (
         <span>
           Neuron inferral for layer {job.layerName} of{" "}
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
@@ -214,9 +202,7 @@ function JobListView() {
       return (
         <span>
           Mitochondria inferral for layer {job.layerName} of{" "}
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
@@ -228,9 +214,7 @@ function JobListView() {
       return (
         <span>
           Aligned sections for layer {job.layerName} of{" "}
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
@@ -241,9 +225,7 @@ function JobListView() {
       return (
         <span>
           Materialize annotation for {job.layerName ? ` layer ${job.layerName} of ` : " "}
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>
+          <Link to={linkToDataset}>{job.datasetName}</Link>
           {job.mergeSegments
             ? ". This includes merging the segments that were merged via merger mode."
             : null}

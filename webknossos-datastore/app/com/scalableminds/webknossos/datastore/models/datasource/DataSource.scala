@@ -17,9 +17,9 @@ package object datasource {
   object DataSourceId extends JsonImplicits with DatasetURIParser {
     implicit object DataSourceIdFormat extends Format[DataSourceId] {
       override def reads(json: JsValue): JsResult[DataSourceId] =
-        (json \ "path").validate[String] flatMap { path =>
-          (json \ "organization").validate[String].map { org =>
-            DataSourceId(path, org)
+        (json \ "name").validate[String] flatMap { nameRenamedToPath =>
+          (json \ "team").validate[String].map { teamRenamedToOrganization =>
+            DataSourceId(nameRenamedToPath, teamRenamedToOrganization)
           }
         }
 

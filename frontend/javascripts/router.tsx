@@ -1,9 +1,4 @@
-import {
-  createExplorational,
-  getAnnotationInformation,
-  getOrganizationForDataset,
-  getShortLink,
-} from "admin/admin_rest_api";
+import { createExplorational, getAnnotationInformation, getShortLink } from "admin/admin_rest_api";
 import AcceptInviteView from "admin/auth/accept_invite_view";
 import AuthTokenView from "admin/auth/auth_token_view";
 import ChangePasswordView from "admin/auth/change_password_view";
@@ -70,7 +65,10 @@ import loadable from "libs/lazy_loader";
 import type { EmptyObject } from "types/globals";
 import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import AiModelListView from "admin/voxelytics/ai_model_list_view";
-import BrainSpinner from "components/brain_spinner";
+import {
+  getDatasetIdFromNameAndOrganization,
+  getOrganizationForDataset,
+} from "admin/api/disambiguate_legacy_routes";
 
 const { Content } = Layout;
 
@@ -185,20 +183,18 @@ class ReactRouter extends React.Component<Props> {
     return <h3>Invalid annotation URL.</h3>;
   };
 
-  tracingViewModeLegacy = ({ match }: ContextRouter) => {
-    useEffect(() => {
-      const organizationId = match.params.organizationId || "";
-      const datasetName = match.params.datasetName || "";
-      organizationId/:datasetName
-    },[]);
-    return (
-      <BrainSpinner />
-    );
-  };
+  tracingViewModeLegacy = ({ match, location }: ContextRouter) => (
+    <AsyncRedirect
+      redirectTo={async () => {
+        const datasetName = match.params.id || "";
+        const organizationId = match.params.organizationId || "";
+        const datasetId = await getDatasetIdFromNameAndOrganization(datasetName, organizationId);
+        return `/datasets/${datasetId}/view${location.search}${location.hash}`;
+      }}
+    />
+  );
 
-  tracingViewMode = (
-    { match }: ContextRouter, // TODO: Implement legacy resolution
-  ) => (
+  tracingViewMode = ({ match }: ContextRouter) => (
     <TracingLayoutView
       initialMaybeCompoundType={null}
       initialCommandType={{
@@ -613,7 +609,7 @@ class ReactRouter extends React.Component<Props> {
                 }}
               />
               {/*legacy view mode route */}
-              <Route
+              <RouteWithErrorBoundary
                 path="/datasets/:organizationId/:datasetName/view"
                 render={this.tracingViewModeLegacy}
               />
@@ -630,30 +626,24 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
+              {/*maybe this also needs a legacy route?*/}
               <RouteWithErrorBoundary
                 path="/datasets/:datasetId/sandbox/:type"
                 render={this.tracingSandbox}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:organizationId/:datasetName/createExplorative/:type"
+                path="/datasets/:datasetId/createExplorative/:type"
                 render={({ match }: ContextRouter) => (
                   <AsyncRedirect
                     pushToHistory={false}
                     redirectTo={async () => {
-                      if (
-                        !match.params.organizationId ||
-                        !match.params.datasetName ||
-                        !match.params.type
-                      ) {
+                      if (!match.params.datasetId || !match.params.type) {
                         // Typehint for TS
                         throw new Error("Invalid URL");
                       }
 
-                      const dataset = {
-                        owningOrganization: match.params.organizationId,
-                        name: match.params.datasetName,
-                      };
+                      const datasetId = match.params.datasetId;
                       const type =
                         coalesce(TracingTypeEnum, match.params.type) || TracingTypeEnum.skeleton;
                       const getParams = Utils.getUrlParamsObjectFromString(location.search);
@@ -677,7 +667,7 @@ class ReactRouter extends React.Component<Props> {
                       }
 
                       const annotation = await createExplorational(
-                        dataset,
+                        datasetId,
                         type,
                         !!autoFallbackLayer,
                         fallbackLayerName,
@@ -695,7 +685,10 @@ class ReactRouter extends React.Component<Props> {
                 // to avoid url mismatching
               }
               {/*legacy view mode route */}
-              <Route path="/datasets/:organizationId/:datasetName" render={this.tracingViewModeLegacy} />
+              <RouteWithErrorBoundary
+                path="/datasets/:organizationId/:datasetName"
+                render={this.tracingViewModeLegacy}
+              />
               <Route path="/datasets/:datasetId" render={this.tracingViewMode} />
               <RouteWithErrorBoundary
                 path="/publications/:id"

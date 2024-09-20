@@ -1236,10 +1236,8 @@ export function updateDatasetDefaultConfiguration(
   });
 }
 
-export function getDatasetAccessList(datasetId: APIDataSourceId): Promise<Array<APIUser>> {
-  return Request.receiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/accessList`,
-  );
+export function getDatasetAccessList(datasetId: string): Promise<Array<APIUser>> {
+  return Request.receiveJSON(`/api/datasets/${datasetId}/accessList`);
 }
 
 type DatasetCompositionArgs = {
@@ -1501,19 +1499,20 @@ export async function deleteDatasetOnDisk(
   );
 }
 
-export async function triggerDatasetClearThumbnailCache(datasetId: APIDataSourceId): Promise<void> {
-  await Request.triggerRequest(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/clearThumbnailCache`,
-    {
-      method: "PUT",
-    },
-  );
+export async function triggerDatasetClearThumbnailCache(datasetId: string): Promise<void> {
+  await Request.triggerRequest(`/api/datasets/${datasetId}/clearThumbnailCache`, {
+    method: "PUT",
+  });
 }
 
-export async function clearCache(dataset: APIMaybeUnimportedDataset, layerName?: string) {
+export async function clearCache(
+  dataset: APIMaybeUnimportedDataset,
+  datasetId: string,
+  layerName?: string,
+) {
   return Promise.all([
     triggerDatasetClearCache(dataset.dataStore.url, dataset, layerName),
-    triggerDatasetClearThumbnailCache(dataset),
+    triggerDatasetClearThumbnailCache(datasetId),
   ]);
 }
 
@@ -1534,13 +1533,6 @@ export async function revokeDatasetSharingToken(datasetId: string): Promise<void
   });
 }
 
-export async function getOrganizationForDataset(datasetName: string): Promise<string> {
-  const { organizationId } = await Request.receiveJSON(
-    `/api/datasets/disambiguate/${datasetName}/toNew`,
-  );
-  return organizationId;
-}
-
 export async function findDataPositionForLayer(
   datastoreUrl: string,
   datasetId: APIDataSourceId,
@@ -1551,7 +1543,7 @@ export async function findDataPositionForLayer(
 }> {
   const { position, resolution } = await doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/findData?token=${token}`,
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.path}/layers/${layerName}/findData?token=${token}`,
     ),
   );
   return {
@@ -1583,7 +1575,7 @@ export async function getHistogramForLayer(
 ): Promise<APIHistogramData> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/histogram?token=${token}`,
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.path}/layers/${layerName}/histogram?token=${token}`,
       { showErrorToast: false },
     ),
   );
@@ -1596,7 +1588,7 @@ export async function getMappingsForDatasetLayer(
 ): Promise<Array<string>> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/mappings?token=${token}`,
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.path}/layers/${layerName}/mappings?token=${token}`,
     ),
   );
 }
@@ -1609,7 +1601,7 @@ export function fetchMapping(
 ): Promise<APIMapping> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/mappings/${mappingName}?token=${token}`,
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.path}/layers/${layerName}/mappings/${mappingName}?token=${token}`,
     ),
   );
 }
@@ -1651,7 +1643,7 @@ export function getPositionForSegmentInAgglomerate(
     });
     const position = await Request.receiveJSON(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
-        datasetId.name
+        datasetId.path
       }/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${urlParams.toString()}`,
     );
     return position;
@@ -1665,7 +1657,7 @@ export async function getAgglomeratesForDatasetLayer(
 ): Promise<Array<string>> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates?token=${token}`,
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.path}/layers/${layerName}/agglomerates?token=${token}`,
     ),
   );
 }

@@ -306,7 +306,7 @@ case class UpdateSegmentVolumeAction(id: Long,
         color = colorOptToProto(color),
         groupId = groupId,
         anchorPositionAdditionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates),
-        metadata = MetadataEntry.toProtoMultiple(metadata)
+        metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
       )
     tracing.withSegments(mapSegments(tracing, id, segmentTransform))
   }

@@ -12,8 +12,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 - It is now possible to focus a bounding box in the bounding box tab by clicking its edges in a viewport or via a newly added context menu entry. [#8054](https://github.com/scalableminds/webknossos/pull/8054)
-### Added
 - Added an assertion to the backend to ensure unique keys in the metadata info of datasets and folders. [#8068](https://github.com/scalableminds/webknossos/issues/8068)
+- It is now possible to add metadata in annotations to Trees and Segments. [#7875](https://github.com/scalableminds/webknossos/pull/7875)
 
 ### Changed
 - Clicking on a bounding box within the bounding box tab centers it within the viewports and focusses it in the list. [#8049](https://github.com/scalableminds/webknossos/pull/8049)

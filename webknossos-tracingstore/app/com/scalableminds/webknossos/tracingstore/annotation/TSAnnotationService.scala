@@ -29,7 +29,8 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
   RemoteFallbackLayer,
-  TracingDataStore
+  TracingDataStore,
+  VersionedKeyValuePair
 }
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
@@ -81,8 +82,11 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
       } yield updateActionGroups.reverse.flatten
     }
 
-  private def applyUpdate(annotationWithTracings: AnnotationWithTracings, updateAction: UpdateAction)(
-      implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+  private def applyUpdate(
+      annotationWithTracings: AnnotationWithTracings,
+      updateAction: UpdateAction,
+      targetVersion: Long // Note: this is not the target version of this one update, but of all pending
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
       updated <- updateAction match {
         case a: AddLayerAnnotationUpdateAction =>
@@ -96,16 +100,16 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
         case a: SkeletonUpdateAction =>
           annotationWithTracings.applySkeletonAction(a) ?~> "applySkeletonAction.failed"
         case a: UpdateMappingNameVolumeAction if a.isEditable.contains(true) =>
-
-        TODO in case mapping is made editable, add it to the AnnotationWithTracings object here
-
+          for {
+            withNewEditableMapping <- addEditableMapping(annotationWithTracings, a, targetVersion)
+            withApplyedVolumeAction <- withNewEditableMapping.applyVolumeAction(a)
+          } yield withApplyedVolumeAction
         case a: ApplyableVolumeUpdateAction =>
           annotationWithTracings.applyVolumeAction(a)
         case a: EditableMappingUpdateAction =>
           annotationWithTracings.applyEditableMappingAction(a)
         case _: BucketMutatingVolumeUpdateAction =>
           Fox.successful(annotationWithTracings) // No-op, as bucket-mutating actions are performed eagerly, so not here.
-        // Note: UpdateBucketVolumeActions are not handled here, but instead eagerly on saving.
         case _ => Fox.failure(s"Received unsupported AnnotationUpdateAction action ${Json.toJson(updateAction)}")
       }
     } yield updated
@@ -160,6 +164,18 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
       tracing <- annotation.getEditableMappingInfo(tracingId) ?~> "getEditableMapping.failed"
     } yield tracing
 
+  // move the functions that construct the AnnotationWithTracigns elsewhere?
+  private def addEditableMapping(annotationWithTracings: AnnotationWithTracings,
+                                 action: UpdateMappingNameVolumeAction,
+                                 targetVersion: Long)(implicit tc: TokenContext): Fox[AnnotationWithTracings] =
+    for {
+      editableMappingInfo <- getEditableMappingInfoFromStore(action.actionTracingId, annotationWithTracings.version)
+      updater = editableMappingUpdaterFor(action.actionTracingId,
+                                          editableMappingInfo.value,
+                                          annotationWithTracings.version,
+                                          targetVersion)
+    } yield annotationWithTracings.addEditableMapping(action.actionTracingId, editableMappingInfo.value, updater)
+
   private def applyPendingUpdates(annotation: AnnotationProto,
                                   annotationId: String,
                                   targetVersionOpt: Option[Long],
@@ -191,8 +207,7 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
     // TODO intersect with editable mapping updates?
     for {
       editableMappingInfos <- Fox.serialCombined(volumeIdsWithEditableMapping) { volumeTracingId =>
-        tracingDataStore.editableMappingsInfo.get(volumeTracingId, version = Some(annotationWithTracings.version))(
-          fromProtoBytes[EditableMappingInfo])
+        getEditableMappingInfoFromStore(volumeTracingId, annotationWithTracings.version)
       }
     } yield
       annotationWithTracings.copy(
@@ -207,6 +222,11 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
                                           targetVersion))))
           .toMap)
   }
+
+  private def getEditableMappingInfoFromStore(volumeTracingId: String,
+                                              version: Long): Fox[VersionedKeyValuePair[EditableMappingInfo]] =
+    tracingDataStore.editableMappingsInfo.get(volumeTracingId, version = Some(version))(
+      fromProtoBytes[EditableMappingInfo])
 
   private def editableMappingUpdaterFor(tracingId: String,
                                         editableMappingInfo: EditableMappingInfo,
@@ -262,10 +282,11 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
     } yield AnnotationWithTracings(annotation, skeletonTracingsMap ++ volumeTracingsMap, Map.empty)
   }
 
-  private def applyUpdates(annotation: AnnotationWithTracings,
-                           annotationId: String,
-                           updates: List[UpdateAction],
-                           targetVersion: Long)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] = {
+  private def applyUpdates(
+      annotation: AnnotationWithTracings,
+      annotationId: String,
+      updates: List[UpdateAction],
+      targetVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] = {
 
     def updateIter(annotationWithTracingsFox: Fox[AnnotationWithTracings],
                    remainingUpdates: List[UpdateAction]): Fox[AnnotationWithTracings] =
@@ -276,7 +297,7 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
             case List() => Fox.successful(annotationWithTracings)
             case RevertToVersionUpdateAction(sourceVersion, _, _, _) :: tail =>
               ???
-            case update :: tail => updateIter(applyUpdate(annotationWithTracings, update), tail)
+            case update :: tail => updateIter(applyUpdate(annotationWithTracings, update, targetVersion), tail)
           }
         case _ => annotationWithTracingsFox
       }

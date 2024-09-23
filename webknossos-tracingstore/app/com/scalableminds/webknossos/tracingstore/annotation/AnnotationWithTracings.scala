@@ -12,7 +12,10 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingUpdater
 }
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.SkeletonUpdateAction
-import com.scalableminds.webknossos.tracingstore.tracings.volume.ApplyableVolumeUpdateAction
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{
+  ApplyableVolumeUpdateAction,
+  UpdateMappingNameVolumeAction
+}
 import net.liftweb.common.{Box, Failure, Full}
 
 import scala.concurrent.ExecutionContext
@@ -85,6 +88,12 @@ case class AnnotationWithTracings(
     }
     this.copy(annotation = annotation.copy(version = newVersion), tracingsById = tracingsUpdated.toMap)
   }
+
+  def addEditableMapping(volumeTracingId: String,
+                         editableMappingInfo: EditableMappingInfo,
+                         updater: EditableMappingUpdater): AnnotationWithTracings =
+    this.copy(editableMappingsByTracingId =
+      editableMappingsByTracingId.updated(volumeTracingId, (editableMappingInfo, updater)))
 
   def applySkeletonAction(a: SkeletonUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {

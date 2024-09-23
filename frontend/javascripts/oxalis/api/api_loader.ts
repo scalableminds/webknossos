@@ -2,7 +2,6 @@
 import type { OxalisModel } from "oxalis/model";
 import app from "app";
 import createApiLatest, { type ApiInterface } from "./api_latest";
-import createApiV2 from "./api_v2";
 import WkDev from "./wk_dev";
 const latestVersion = 3;
 
@@ -39,9 +38,9 @@ class ApiLoader {
     if (!process.env.IS_TESTING) {
       if (version !== latestVersion) {
         console.warn(`
-          Attention! You requested api version: ${version} which is
-          deprecated. The latest version is ${latestVersion}. Please upgrade your
-          script to the latest API as soon as possible.
+          Attention! You requested api version ${version} which is
+          deprecated and not supported anymore. The latest version is ${latestVersion}.
+          Please upgrade your script to the latest API.
         `);
       } else {
         console.log("Requested api version:", version, "which is the latest version.");
@@ -49,10 +48,7 @@ class ApiLoader {
     }
 
     return this.readyPromise.then(() => {
-      if (version === 2) {
-        // @ts-ignore The old API does not support all entries from the newest api.
-        this.apiInterface = createApiV2(this.model);
-      } else if (version === latestVersion) {
+      if (version === latestVersion) {
         this.apiInterface = createApiLatest(this.model);
       } else {
         throw new Error("You requested an API version which does not exist.");

@@ -40,17 +40,13 @@ import { pluralize } from "libs/utils";
 import _, { isNumber } from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import { EMPTY_OBJECT, MappingStatusEnum } from "oxalis/constants";
-import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import {
   getMappingInfo,
   getMaybeSegmentIndexAvailability,
   getResolutionInfoOfVisibleSegmentationLayer,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import {
-  getAdditionalCoordinatesAsString,
-  getPosition,
-} from "oxalis/model/accessors/flycam_accessor";
+import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import {
   getActiveSegmentationTracing,
   getMeshesForCurrentAdditionalCoordinates,

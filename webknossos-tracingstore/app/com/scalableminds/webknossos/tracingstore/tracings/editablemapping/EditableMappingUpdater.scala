@@ -70,8 +70,7 @@ class EditableMappingUpdater(
       _ <- Fox.serialCombined(agglomerateToGraphBuffer.keys.toList)(flushAgglomerateGraph)
     } yield ()
 
-  private def flushUpdatedInfoToFossil(updatedEditableMappingInfo: EditableMappingInfo)(
-      implicit ec: ExecutionContext): Fox[Unit] =
+  private def flushUpdatedInfoToFossil(updatedEditableMappingInfo: EditableMappingInfo): Fox[Unit] =
     for {
       _ <- tracingDataStore.editableMappingsInfo.put(tracingId, newVersion, updatedEditableMappingInfo)
     } yield ()

@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
-import java.util.Base64
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto

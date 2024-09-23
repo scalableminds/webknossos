@@ -12,10 +12,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingUpdater
 }
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.SkeletonUpdateAction
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  ApplyableVolumeUpdateAction,
-  UpdateMappingNameVolumeAction
-}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.ApplyableVolumeUpdateAction
 import net.liftweb.common.{Box, Failure, Full}
 
 import scala.concurrent.ExecutionContext

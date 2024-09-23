@@ -545,11 +545,10 @@ class EditableMappingService @Inject()(
       result <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
     } yield result
 
-  def getAgglomerateGraphForId(
-      tracingId: String,
-      version: Long,
-      agglomerateId: Long,
-      remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[AgglomerateGraph] =
+  def getAgglomerateGraphForId(tracingId: String,
+                               version: Long,
+                               agglomerateId: Long,
+                               remoteFallbackLayer: RemoteFallbackLayer): Fox[AgglomerateGraph] =
     for {
       agglomerateGraph <- agglomerateToGraphCache.getOrLoad(
         (tracingId, agglomerateId, version),

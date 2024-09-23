@@ -27,7 +27,6 @@ POST        /volume/:annotationId/:tracingId/segmentIndex/:segmentId          @c
 POST        /volume/:annotationId/:tracingId/importVolumeData                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.importVolumeData(annotationId: String, tracingId: String)
 POST        /volume/:annotationId/:tracingId/addSegmentIndex                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.addSegmentIndex(annotationId: String, tracingId: String, dryRun: Boolean)
 GET         /volume/:annotationId/:tracingId/findData                         @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.findData(annotationId: String, tracingId: String)
-GET         /volume/:annotationId/:tracingId/agglomerateSkeleton/:agglomerateId     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.agglomerateSkeleton(annotationId: String, tracingId: String, agglomerateId: Long)
 POST        /volume/:annotationId/:tracingId/segmentStatistics/volume         @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentVolume(annotationId: String, tracingId: String)
 POST        /volume/:annotationId/:tracingId/segmentStatistics/boundingBox    @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentBoundingBox(annotationId: String, tracingId: String)
 POST        /volume/getMultiple                                               @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getMultiple
@@ -41,6 +40,8 @@ GET         /mapping/:annotationId/:tracingId/segmentsForAgglomerate          @c
 POST        /mapping/:annotationId/:tracingId/agglomeratesForSegments         @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateIdsForSegments(annotationId: String, tracingId: String)
 POST        /mapping/:annotationId/:tracingId/agglomerateGraphMinCut          @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateGraphMinCut(annotationId: String, tracingId: String)
 POST        /mapping/:annotationId/:tracingId/agglomerateGraphNeighbors       @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateGraphNeighbors(annotationId: String, tracingId: String)
+# TODO rename
+GET         /volume/:annotationId/:tracingId/agglomerateSkeleton/:agglomerateId     @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateSkeleton(annotationId: String, tracingId: String, agglomerateId: Long)
 
 # Zarr endpoints for volume annotations
 # Zarr version 2

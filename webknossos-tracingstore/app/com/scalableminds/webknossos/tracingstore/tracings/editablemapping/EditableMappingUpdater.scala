@@ -235,9 +235,11 @@ class EditableMappingUpdater(
     val key = agglomerateGraphKey(tracingId, agglomerateId)
     val fromBufferOpt = getFromAgglomerateToGraphBuffer(key)
     fromBufferOpt.map(Fox.successful(_)).getOrElse {
-      editableMappingService
-        .getAgglomerateGraphForIdWithFallback(mapping, tracingId, Some(oldVersion), agglomerateId, remoteFallbackLayer,
-        )(tokenContext)
+      editableMappingService.getAgglomerateGraphForIdWithFallback(mapping,
+                                                                  tracingId,
+                                                                  oldVersion,
+                                                                  agglomerateId,
+                                                                  remoteFallbackLayer)(tokenContext)
     }
   }
 
@@ -441,10 +443,8 @@ class EditableMappingUpdater(
             for {
               agglomerateId <- agglomerateIdFromAgglomerateGraphKey(graphKey)
               _ <- editableMappingService
-                .getAgglomerateGraphForId(tracingId,
-                                          agglomerateId,
-                                          remoteFallbackLayer,
-                                          Some(revertAction.sourceVersion))(tokenContext)
+                .getAgglomerateGraphForId(tracingId, revertAction.sourceVersion, agglomerateId, remoteFallbackLayer)(
+                  tokenContext)
                 .futureBox
                 .map {
                   case Full(graphData) => agglomerateToGraphBuffer.put(graphKey, (graphData, false))

@@ -54,7 +54,7 @@ case class AnnotationWithTracings(
       (info, _) <- editableMappingsByTracingId.get(tracingId)
     } yield info
 
-  def getEditableMappingUpdater(tracingId: String): Option[EditableMappingUpdater] =
+  private def getEditableMappingUpdater(tracingId: String): Option[EditableMappingUpdater] =
     for {
       (_, updater) <- editableMappingsByTracingId.get(tracingId)
     } yield updater

@@ -126,7 +126,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             agglomerateGraphBox: Box[AgglomerateGraph] <- editableMappingService
-              .getAgglomerateGraphForId(tracingId, agglomerateId, remoteFallbackLayer)
+              .getAgglomerateGraphForId(tracingId, tracing.version, agglomerateId, remoteFallbackLayer)
               .futureBox
             segmentIds <- agglomerateGraphBox match {
               case Full(agglomerateGraph) => Fox.successful(agglomerateGraph.segments)
@@ -170,6 +170,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             editableMappingInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId)
             edges <- editableMappingService.agglomerateGraphMinCut(tracingId,
+                                                                   tracing.version,
                                                                    editableMappingInfo,
                                                                    request.body,
                                                                    remoteFallbackLayer)
@@ -187,10 +188,28 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             (segmentId, edges) <- editableMappingService.agglomerateGraphNeighbors(tracingId,
+                                                                                   tracing.version,
                                                                                    request.body,
                                                                                    remoteFallbackLayer)
           } yield Ok(Json.obj("segmentId" -> segmentId, "neighbors" -> Json.toJson(edges)))
         }
+      }
+    }
+
+  def agglomerateSkeleton(annotationId: String, tracingId: String, agglomerateId: Long): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+        for {
+          tracing <- volumeTracingService.find(annotationId, tracingId)
+          _ <- bool2Fox(tracing.getHasEditableMapping) ?~> "Cannot query agglomerate skeleton for volume annotation"
+          editableMappingInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId)
+          remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
+          agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(tracingId,
+                                                                                                tracing.version,
+                                                                                                editableMappingInfo,
+                                                                                                remoteFallbackLayer,
+                                                                                                agglomerateId)
+        } yield Ok(agglomerateSkeletonBytes)
       }
     }
 }

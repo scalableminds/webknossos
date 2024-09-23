@@ -328,21 +328,6 @@ class VolumeTracingController @Inject()(
     }
   }
 
-  def agglomerateSkeleton(annotationId: String, tracingId: String, agglomerateId: Long): Action[AnyContent] =
-    Action.async { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
-        for {
-          tracing <- tracingService.find(annotationId, tracingId)
-          _ <- bool2Fox(tracing.getHasEditableMapping) ?~> "Cannot query agglomerate skeleton for volume annotation"
-          mappingName <- tracing.mappingName ?~> "annotation.agglomerateSkeleton.noMappingSet"
-          remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-          agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(mappingName,
-                                                                                                remoteFallbackLayer,
-                                                                                                agglomerateId)
-        } yield Ok(agglomerateSkeletonBytes)
-      }
-    }
-
   def getSegmentVolume(annotationId: String, tracingId: String): Action[SegmentStatisticsParameters] =
     Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {

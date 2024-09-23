@@ -416,12 +416,12 @@ class EditableMappingService @Inject()(
     } yield editableMappingForSegmentIds ++ baseMappingSubset
 
   def getAgglomerateSkeletonWithFallback(tracingId: String,
+                                         version: Long,
+                                         editableMappingInfo: EditableMappingInfo,
                                          remoteFallbackLayer: RemoteFallbackLayer,
                                          agglomerateId: Long)(implicit tc: TokenContext): Fox[Array[Byte]] =
     for {
-      // called here to ensure updates are applied
-      editableMappingInfo <- getInfo(tracingId, version = None, remoteFallbackLayer)
-      agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, agglomerateId, remoteFallbackLayer).futureBox
+      agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId, remoteFallbackLayer).futureBox
       skeletonBytes <- agglomerateGraphBox match {
         case Full(agglomerateGraph) =>
           Fox.successful(agglomerateGraphToSkeleton(tracingId, agglomerateGraph, remoteFallbackLayer, agglomerateId))
@@ -546,19 +546,17 @@ class EditableMappingService @Inject()(
     } yield result
 
   def getAgglomerateGraphForId(
-      mappingId: String,
+      tracingId: String,
+      version: Long,
       agglomerateId: Long,
-      remoteFallbackLayer: RemoteFallbackLayer,
-      requestedVersion: Option[Long] = None)(implicit tc: TokenContext): Fox[AgglomerateGraph] =
+      remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[AgglomerateGraph] =
     for {
-      // called here to ensure updates are applied
-      (_, version) <- getInfoAndActualVersion(mappingId, requestedVersion, remoteFallbackLayer)
       agglomerateGraph <- agglomerateToGraphCache.getOrLoad(
-        (mappingId, agglomerateId, version),
+        (tracingId, agglomerateId, version),
         _ =>
           for {
             graphBytes: VersionedKeyValuePair[Array[Byte]] <- tracingDataStore.editableMappingsAgglomerateToGraph
-              .get(agglomerateGraphKey(mappingId, agglomerateId), Some(version), mayBeEmpty = Some(true))
+              .get(agglomerateGraphKey(tracingId, agglomerateId), Some(version), mayBeEmpty = Some(true))
             graphParsed <- if (isRevertedElement(graphBytes.value)) Fox.empty
             else fromProtoBytes[AgglomerateGraph](graphBytes.value).toFox
           } yield graphParsed
@@ -568,11 +566,11 @@ class EditableMappingService @Inject()(
   def getAgglomerateGraphForIdWithFallback(
       mapping: EditableMappingInfo,
       tracingId: String,
-      version: Option[Long],
+      version: Long,
       agglomerateId: Long,
       remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[AgglomerateGraph] =
     for {
-      agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, agglomerateId, remoteFallbackLayer, version).futureBox
+      agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId, remoteFallbackLayer).futureBox
       agglomerateGraph <- agglomerateGraphBox match {
         case Full(agglomerateGraph) => Fox.successful(agglomerateGraph)
         case Empty =>
@@ -583,6 +581,7 @@ class EditableMappingService @Inject()(
 
   def agglomerateGraphMinCut(
       tracingId: String,
+      version: Long,
       editableMappingInfo: EditableMappingInfo,
       parameters: MinCutParameters,
       remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[List[EdgeWithPositions]] =
@@ -590,9 +589,9 @@ class EditableMappingService @Inject()(
       // called here to ensure updates are applied
       agglomerateGraph <- getAgglomerateGraphForIdWithFallback(editableMappingInfo,
                                                                tracingId,
-                                                               None,
+                                                               version,
                                                                parameters.agglomerateId,
-                                                               remoteFallbackLayer)
+                                                               remoteFallbackLayer) ?~> "getAgglomerateGraph.failed"
       edgesToCut <- minCut(agglomerateGraph, parameters.segmentId1, parameters.segmentId2) ?~> "Could not calculate min-cut on agglomerate graph."
       edgesWithPositions = annotateEdgesWithPositions(edgesToCut, agglomerateGraph)
     } yield edgesWithPositions
@@ -651,6 +650,7 @@ class EditableMappingService @Inject()(
 
   def agglomerateGraphNeighbors(
       tracingId: String,
+      version: Long,
       parameters: NeighborsParameters,
       remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[(Long, Seq[NodeWithPosition])] =
     for {
@@ -658,7 +658,7 @@ class EditableMappingService @Inject()(
       mapping <- getInfo(tracingId, version = None, remoteFallbackLayer)
       agglomerateGraph <- getAgglomerateGraphForIdWithFallback(mapping,
                                                                tracingId,
-                                                               None,
+                                                               version,
                                                                parameters.agglomerateId,
                                                                remoteFallbackLayer)
       neighborNodes = neighbors(agglomerateGraph, parameters.segmentId)

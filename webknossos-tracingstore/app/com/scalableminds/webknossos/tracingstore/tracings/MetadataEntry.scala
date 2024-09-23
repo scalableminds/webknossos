@@ -31,6 +31,9 @@ object MetadataEntry {
   def toProtoMultiple(propertiesOpt: Option[Seq[MetadataEntry]]): Seq[MetadataEntryProto] =
     propertiesOpt.map(_.map(_.toProto)).getOrElse(Seq.empty)
 
+  def deduplicate(propertiesOpt: Option[Seq[MetadataEntry]]): Option[Seq[MetadataEntry]] =
+    propertiesOpt.map(properties => properties.distinctBy(_.key))
+
   implicit val jsonFormat: OFormat[MetadataEntry] =
     Json.using[WithDefaultValues].format[MetadataEntry]
 }

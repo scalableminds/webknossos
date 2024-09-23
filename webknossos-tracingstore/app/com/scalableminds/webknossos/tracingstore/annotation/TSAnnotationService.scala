@@ -45,9 +45,9 @@ import play.api.libs.json.{JsObject, JsValue, Json}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosClient,
+class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknossosClient,
                                     editableMappingService: EditableMappingService,
-                                    remoteDatastoreClient: TSRemoteDatastoreClient,
+                                    val remoteDatastoreClient: TSRemoteDatastoreClient,
                                     tracingDataStore: TracingDataStore)
     extends KeyValueStoreImplicits
     with FallbackDataHelper
@@ -207,27 +207,22 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
                                              updates: List[UpdateAction],
                                              currentMaterializedVersion: Long,
                                              targetVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext) = {
-    val volumeIdsWithEditableMapping = annotationWithTracings.volumesIdsThatHaveEditableMapping
-    logger.info(s"fetching editable mappings ${volumeIdsWithEditableMapping.mkString(",")}")
+    val volumeWithEditableMapping = annotationWithTracings.volumesThatHaveEditableMapping
+    logger.info(s"fetching editable mappings ${volumeWithEditableMapping.map(_._2).mkString(",")}")
     // TODO intersect with editable mapping updates?
     for {
-      editableMappingInfos <- Fox.serialCombined(volumeIdsWithEditableMapping) { volumeTracingId =>
-        getEditableMappingInfoFromStore(volumeTracingId, annotationWithTracings.version)
+      idInfoUpdaterTuples <- Fox.serialCombined(volumeWithEditableMapping) {
+        case (volumeTracing, volumeTracingId) =>
+          for {
+            editableMappingInfo <- getEditableMappingInfoFromStore(volumeTracingId, annotationWithTracings.version)
+            updater <- editableMappingUpdaterFor(volumeTracingId,
+                                                 volumeTracing,
+                                                 editableMappingInfo.value,
+                                                 currentMaterializedVersion,
+                                                 targetVersion)
+          } yield (editableMappingInfo.key, (editableMappingInfo.value, updater))
       }
-    } yield
-      annotationWithTracings.copy(
-        editableMappingsByTracingId = editableMappingInfos
-          .map(
-            keyValuePair =>
-              (keyValuePair.key,
-               (keyValuePair.value,
-                // TODO this returns Fox now
-                editableMappingUpdaterFor(keyValuePair.key,
-                                          // TODO fetch volume tracing
-                                          keyValuePair.value,
-                                          currentMaterializedVersion,
-                                          targetVersion))))
-          .toMap)
+    } yield annotationWithTracings.copy(editableMappingsByTracingId = idInfoUpdaterTuples.toMap)
   }
 
   private def getEditableMappingInfoFromStore(volumeTracingId: String,

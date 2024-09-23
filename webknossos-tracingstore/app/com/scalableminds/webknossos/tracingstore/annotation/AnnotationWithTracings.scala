@@ -43,9 +43,9 @@ case class AnnotationWithTracings(
       }
     } yield volumeTracing
 
-  def volumesIdsThatHaveEditableMapping: List[String] =
+  def volumesThatHaveEditableMapping: List[(VolumeTracing, String)] =
     tracingsById.view.flatMap {
-      case (id, Right(vt: VolumeTracing)) if vt.getHasEditableMapping => Some(id)
+      case (id, Right(vt: VolumeTracing)) if vt.getHasEditableMapping => Some((vt, id))
       case _                                                          => None
     }.toList
 

@@ -319,7 +319,7 @@ export function startAlignSectionsJob(
 
 type AiModelCategory = "em_neurons" | "em_nuclei";
 
-export type AiModelTrainingAnnotationSpecification = {
+type AiModelTrainingAnnotationSpecification = {
   annotationId: string;
   colorLayerName: string;
   segmentationLayerName: string;

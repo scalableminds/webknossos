@@ -1,5 +1,5 @@
 import _ from "lodash";
-import React, { useState } from "react";
+import { useState } from "react";
 import { PlusOutlined, SyncOutlined } from "@ant-design/icons";
 import { Table, Button, Modal, Space } from "antd";
 import { getAiModels, getTracingForAnnotationType } from "admin/admin_rest_api";
@@ -17,7 +17,6 @@ import {
   getResolutionInfo,
   getSegmentationLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
-import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
 import type { Vector3 } from "oxalis/constants";
 import type { Key } from "react";
 
@@ -115,13 +114,12 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
 
   const getMagForSegmentationLayer = async (annotationId: string, layerName: string) => {
     // The layer name is a human-readable one. It can either belong to an annotationLayer
-    // (threfore, also to a volume tracing) or to the actual dataset.
+    // (therefore, also to a volume tracing) or to the actual dataset.
     // Both are checked below. This won't be ambiguous because annotationLayers must not
     // have names that dataset layers already have.
 
     const annotationWithDataset = annotationsWithDatasets.find(({ annotation }) => {
-      const currentAnnotationId = annotation.id;
-      return annotationId === currentAnnotationId;
+      return annotation.id === annotationId;
     });
     if (annotationWithDataset == null) {
       throw new Error("Cannot find annotation for specified id.");

@@ -1,8 +1,5 @@
 import { Form, Select } from "antd";
-import { getReadableNameOfVolumeLayer } from "oxalis/model/accessors/volumetracing_accessor";
-import type { HybridTracing } from "oxalis/store";
 import type React from "react";
-import type { APIAnnotation, APIDataLayer } from "types/api_flow_types";
 
 type LayerSelectionProps<L extends { name: string }> = {
   name: string | Array<string | number>;

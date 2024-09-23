@@ -14,15 +14,16 @@ import {
 } from "antd";
 import { useSelector } from "react-redux";
 import type { HybridTracing, OxalisState, UserBoundingBox } from "oxalis/store";
-import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
+import {
+  getUserBoundingBoxesFromState,
+  maybeGetSomeTracing,
+} from "oxalis/model/accessors/tracing_accessor";
 import {
   getColorLayers,
   getResolutionInfo,
-  getSegmentationLayerByName,
   getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
-  AiModelTrainingAnnotationSpecification,
   getAnnotationInformation,
   getDataset,
   getTracingForAnnotationType,
@@ -31,29 +32,19 @@ import {
 import { LayerSelection, LayerSelectionFormItem } from "components/layer_selection";
 import Toast from "libs/toast";
 import { Model } from "oxalis/singletons";
-import {
-  getReadableNameForLayerName,
-  getReadableNameOfVolumeLayer,
-  getSegmentationLayerByHumanReadableName,
-} from "oxalis/model/accessors/volumetracing_accessor";
+import { getSegmentationLayerByHumanReadableName } from "oxalis/model/accessors/volumetracing_accessor";
 import _ from "lodash";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
-import type {
-  AnnotationLayerDescriptor,
-  APIAnnotation,
-  APIDataset,
-  APISegmentationLayer,
-  ServerVolumeTracing,
-} from "types/api_flow_types";
+import type { APIAnnotation, APIDataset, ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;
 
-export type AnnotationWithDataset<GenericAnnotation> = {
-  annotation: GenericAnnotation;
+export type AnnotationWithDataset = {
+  annotation: HybridTracing;
   dataset: APIDataset;
 };
 
@@ -124,9 +115,6 @@ const AiModelCommentFormItem = () => (
 export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void }) {
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const userBoundingBoxes = useSelector((state: OxalisState) =>
-    getUserBoundingBoxesFromState(state),
-  );
 
   const getMagForSegmentationLayer = async (_annotationId: string, layerName: string) => {
     const segmentationLayer = getSegmentationLayerByHumanReadableName(dataset, tracing, layerName);
@@ -139,25 +127,22 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
       ensureSavedState={() => Model.ensureSavedState()}
       onClose={onClose}
       annotationsWithDatasets={[{ annotation: tracing, dataset }]}
-      userBoundingBoxes={userBoundingBoxes}
     />
   );
 }
 
-export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | HybridTracing>({
+export function TrainAiModelTab({
   getMagForSegmentationLayer,
   onClose,
   ensureSavedState,
-  annotationsWithDatasets,
-  userBoundingBoxes,
+  annotationsWithDatasets: annotationsWithDatasetsAndBBoxes,
   onAddAnnotationsWithDatasets,
 }: {
   getMagForSegmentationLayer: (annotationId: string, layerName: string) => Promise<Vector3>;
   onClose: () => void;
   ensureSavedState?: (() => Promise<void>) | null;
-  annotationsWithDatasets: Array<AnnotationWithDataset<GenericAnnotation>>;
-  userBoundingBoxes?: UserBoundingBox[];
-  onAddAnnotationsWithDatasets?: (newItems: Array<AnnotationWithDataset<APIAnnotation>>) => void;
+  annotationsWithDatasets: Array<AnnotationWithDataset>;
+  onAddAnnotationsWithDatasets?: (newItems: Array<AnnotationWithDataset>) => void;
 }) {
   const [form] = Form.useForm();
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
@@ -201,7 +186,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
     onClose();
   };
 
-  if (annotationsWithDatasets.length === 0 && onAddAnnotationsWithDatasets != null) {
+  if (annotationsWithDatasetsAndBBoxes.length === 0 && onAddAnnotationsWithDatasets != null) {
     return (
       <Form form={form} layout="vertical">
         <AnnotationsCsvInput onAdd={onAddAnnotationsWithDatasets} />
@@ -213,11 +198,21 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
     modelCategory: AiModelCategory.EM_NEURONS,
   };
 
+  const userBoundingBoxes = annotationsWithDatasetsAndBBoxes
+    .flatMap(({ annotation }) => maybeGetSomeTracing(annotation)?.userBoundingBoxes)
+    .filter((bboxes) => bboxes != null);
+
   const bboxesVoxelCount = _.sum(
     (userBoundingBoxes || []).map((bbox) => new BoundingBox(bbox.boundingBox).getVolume()),
   );
 
-  const { valid, reason } = areBoundingBoxesValid(userBoundingBoxes);
+  const { areSomeAnnotationsInvalid, invalidAnnotationsReason } = areAllAnnotationsInvalid(
+    annotationsWithDatasetsAndBBoxes,
+  );
+  const { areSomeBBoxesInvalid, invalidBBoxesReason } = areBoundingBoxesInvalid(userBoundingBoxes);
+  const invalidReasons = [invalidAnnotationsReason, invalidBBoxesReason]
+    .filter((reason) => reason)
+    .join("\n");
 
   return (
     <Form
@@ -230,7 +225,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
       <AiModelNameFormItem />
       <AiModelCategoryFormItem />
 
-      {annotationsWithDatasets.map(({ annotation, dataset }, idx) => {
+      {annotationsWithDatasetsAndBBoxes.map(({ annotation, dataset }, idx) => {
         const segmentationLayerNames = _.uniq([
           // Only consider the layers that are not volume layers (these don't have a tracing id).
           // Add actual volume layers below.
@@ -248,13 +243,15 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
           }),
         );
 
-        const fixedSelectedLayer = segmentationLayers.length === 1 ? segmentationLayers[0] : null;
+        const fixedSelectedSegmentationLayer =
+          segmentationLayers.length === 1 ? segmentationLayers[0] : null;
 
         // Remove uint24 color layers because they cannot be trained on currently
         const colorLayers = getColorLayers(dataset).filter(
           (layer) => layer.elementClass !== "uint24",
         );
-        const annotationId = "id" in annotation ? annotation.id : annotation.annotationId;
+        const fixedSelectedColorLayer = colorLayers.length === 1 ? colorLayers[0] : null;
+        const { annotationId } = annotation;
         return (
           <Row key={annotationId} gutter={8}>
             <Col span={8}>
@@ -283,7 +280,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                 <LayerSelection
                   layers={colorLayers}
                   getReadableNameForLayer={(layer) => layer.name}
-                  fixedLayerName={colorLayers.length === 1 ? colorLayers[0].name : undefined}
+                  fixedLayerName={fixedSelectedColorLayer?.name || undefined}
                   style={{ width: "100%" }}
                 />
               </FormItem>
@@ -296,8 +293,8 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                 getReadableNameForLayer={(layer) => {
                   return layer.name;
                 }}
-                fixedLayerName={fixedSelectedLayer?.name || undefined}
-                label="Groundtruth Layer"
+                fixedLayerName={fixedSelectedSegmentationLayer?.name || undefined}
+                label="Ground Truth Layer"
               />
             </Col>
           </Row>
@@ -311,14 +308,14 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
       />
 
       {userBoundingBoxes != null ? (
-        <FormItem hasFeedback name="dummy" label="Training Data">
+        <FormItem hasFeedback label="Training Data">
           <div>
             {userBoundingBoxes.length} bounding boxes ({formatVoxels(bboxesVoxelCount)})
           </div>
         </FormItem>
       ) : null}
       <FormItem>
-        <Tooltip title={reason}>
+        <Tooltip title={invalidReasons}>
           <Button
             size="large"
             type="primary"
@@ -326,7 +323,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
             style={{
               width: "100%",
             }}
-            disabled={!valid}
+            disabled={areSomeBBoxesInvalid || areSomeAnnotationsInvalid}
           >
             Start Training
           </Button>
@@ -369,35 +366,69 @@ export function CollapsibleWorkflowYamlEditor({
   );
 }
 
-function areBoundingBoxesValid(userBoundingBoxes: UserBoundingBox[] | undefined): {
-  valid: boolean;
-  reason: string | null;
+function areAllAnnotationsInvalid(annotationsWithDatasets: Array<AnnotationWithDataset>): {
+  areSomeAnnotationsInvalid: boolean;
+  invalidAnnotationsReason: string | null;
+} {
+  if (annotationsWithDatasets.length === 0) {
+    return {
+      areSomeAnnotationsInvalid: false,
+      invalidAnnotationsReason: "At least one annotation must be defined.",
+    };
+  }
+  const annotationsWithoutABoundingBox = annotationsWithDatasets.filter(
+    ({ userBoundingBoxes }) => userBoundingBoxes.length === 0,
+  );
+  if (annotationsWithoutABoundingBox.length > 0) {
+    const annotationIds = annotationsWithoutABoundingBox.map(({ annotation }) =>
+      "id" in annotation ? annotation.id : annotation.annotationId,
+    );
+    return {
+      areSomeAnnotationsInvalid: false,
+      invalidAnnotationsReason: `All annotations must have at least one bounding box. Annotations without bounding boxes are: ${annotationIds.join(", ")}`,
+    };
+  }
+  return { areSomeAnnotationsInvalid: true, invalidAnnotationsReason: null };
+}
+
+function areBoundingBoxesInvalid(userBoundingBoxes: UserBoundingBox[] | undefined): {
+  areSomeBBoxesInvalid: boolean;
+  invalidBBoxesReason: string | null;
 } {
   if (userBoundingBoxes == null) {
-    return { valid: true, reason: null };
+    return { areSomeBBoxesInvalid: true, invalidBBoxesReason: null };
   }
   if (userBoundingBoxes.length === 0) {
-    return { valid: false, reason: "At least one bounding box must be defined." };
+    return {
+      areSomeBBoxesInvalid: false,
+      invalidBBoxesReason: "At least one bounding box must be defined.",
+    };
   }
   const getSize = (bbox: UserBoundingBox) => V3.sub(bbox.boundingBox.max, bbox.boundingBox.min);
 
   const size = getSize(userBoundingBoxes[0]);
   // width must equal height
   if (size[0] !== size[1]) {
-    return { valid: false, reason: "The bounding box width must equal its height." };
+    return {
+      areSomeBBoxesInvalid: false,
+      invalidBBoxesReason: "The bounding box width must equal its height.",
+    };
   }
   // all bounding boxes must have the same size
   const areSizesIdentical = userBoundingBoxes.every((bbox) => V3.isEqual(getSize(bbox), size));
   if (areSizesIdentical) {
-    return { valid: true, reason: "" };
+    return { areSomeBBoxesInvalid: true, invalidBBoxesReason: null };
   }
-  return { valid: false, reason: "All bounding boxes must have the same size." };
+  return {
+    areSomeBBoxesInvalid: false,
+    invalidBBoxesReason: "All bounding boxes must have the same size.",
+  };
 }
 
 function AnnotationsCsvInput({
   onAdd,
 }: {
-  onAdd: (newItems: Array<AnnotationWithDataset<APIAnnotation>>) => void;
+  onAdd: (newItems: Array<AnnotationWithDataset>) => void;
 }) {
   const [value, setValue] = useState("");
   const onClickAdd = async () => {
@@ -427,12 +458,13 @@ function AnnotationsCsvInput({
 
         const volumeTracings: ServerVolumeTracing[] = await Promise.all(
           annotation.annotationLayers
-            .filter((layer) => layer.typ === "Skeleton")
+            .filter((layer) => layer.typ === "Volume")
             .map(
               (layer) =>
                 getTracingForAnnotationType(annotation, layer) as Promise<ServerVolumeTracing>,
             ),
         );
+        console.log(volumeTracings); // TODOM remove
 
         return {
           annotation,

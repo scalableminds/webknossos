@@ -27,6 +27,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeUpdateAction
 }
 import com.scalableminds.webknossos.tracingstore.tracings.{
+  FallbackDataHelper,
   KeyValueStoreImplicits,
   RemoteFallbackLayer,
   TracingDataStore,
@@ -49,6 +50,7 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
                                     remoteDatastoreClient: TSRemoteDatastoreClient,
                                     tracingDataStore: TracingDataStore)
     extends KeyValueStoreImplicits
+    with FallbackDataHelper
     with LazyLogging {
 
   def reportUpdates(annotationId: String, updateGroups: List[UpdateActionGroup])(implicit tc: TokenContext): Fox[Unit] =
@@ -165,15 +167,18 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
     } yield tracing
 
   // move the functions that construct the AnnotationWithTracigns elsewhere?
-  private def addEditableMapping(annotationWithTracings: AnnotationWithTracings,
-                                 action: UpdateMappingNameVolumeAction,
-                                 targetVersion: Long)(implicit tc: TokenContext): Fox[AnnotationWithTracings] =
+  private def addEditableMapping(
+      annotationWithTracings: AnnotationWithTracings,
+      action: UpdateMappingNameVolumeAction,
+      targetVersion: Long)(implicit tc: TokenContext, ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
       editableMappingInfo <- getEditableMappingInfoFromStore(action.actionTracingId, annotationWithTracings.version)
-      updater = editableMappingUpdaterFor(action.actionTracingId,
-                                          editableMappingInfo.value,
-                                          annotationWithTracings.version,
-                                          targetVersion)
+      volumeTracing <- annotationWithTracings.getVolume(action.actionTracingId).toFox
+      updater <- editableMappingUpdaterFor(action.actionTracingId,
+                                           volumeTracing,
+                                           editableMappingInfo.value,
+                                           annotationWithTracings.version,
+                                           targetVersion)
     } yield annotationWithTracings.addEditableMapping(action.actionTracingId, editableMappingInfo.value, updater)
 
   private def applyPendingUpdates(annotation: AnnotationProto,
@@ -216,7 +221,9 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
             keyValuePair =>
               (keyValuePair.key,
                (keyValuePair.value,
+                // TODO this returns Fox now
                 editableMappingUpdaterFor(keyValuePair.key,
+                                          // TODO fetch volume tracing
                                           keyValuePair.value,
                                           currentMaterializedVersion,
                                           targetVersion))))
@@ -228,25 +235,27 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
     tracingDataStore.editableMappingsInfo.get(volumeTracingId, version = Some(version))(
       fromProtoBytes[EditableMappingInfo])
 
-  private def editableMappingUpdaterFor(tracingId: String,
-                                        editableMappingInfo: EditableMappingInfo,
-                                        currentMaterializedVersion: Long,
-                                        targetVersion: Long)(implicit tc: TokenContext): EditableMappingUpdater = {
-    val remoteFallbackLayer
-      : RemoteFallbackLayer = RemoteFallbackLayer("todo", "todo", "todo", ElementClassProto.uint8) // TODO
-    new EditableMappingUpdater(
-      tracingId,
-      editableMappingInfo.baseMappingName,
-      currentMaterializedVersion,
-      targetVersion,
-      remoteFallbackLayer,
-      tc,
-      remoteDatastoreClient,
-      editableMappingService,
-      tracingDataStore,
-      relyOnAgglomerateIds = false // TODO
-    )
-  }
+  private def editableMappingUpdaterFor(
+      tracingId: String,
+      volumeTracing: VolumeTracing,
+      editableMappingInfo: EditableMappingInfo,
+      currentMaterializedVersion: Long,
+      targetVersion: Long)(implicit tc: TokenContext, ec: ExecutionContext): Fox[EditableMappingUpdater] =
+    for {
+      remoteFallbackLayer <- remoteFallbackLayerFromVolumeTracing(volumeTracing, tracingId)
+    } yield
+      new EditableMappingUpdater(
+        tracingId,
+        editableMappingInfo.baseMappingName,
+        currentMaterializedVersion,
+        targetVersion,
+        remoteFallbackLayer,
+        tc,
+        remoteDatastoreClient,
+        editableMappingService,
+        tracingDataStore,
+        relyOnAgglomerateIds = false // TODO should we?
+      )
 
   private def findTracingsForUpdates(
       annotation: AnnotationProto,

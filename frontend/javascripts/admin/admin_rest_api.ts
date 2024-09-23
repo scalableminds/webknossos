@@ -2122,6 +2122,7 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
 
 export async function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
   tracingStoreUrl: string,
+  annotationId: string,
   tracingId: string,
   segmentIds: Array<T>,
 ): Promise<Mapping> {
@@ -2131,7 +2132,7 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   );
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${annotationId}/${tracingId}/agglomeratesForSegments?token=${token}`,
       {
         method: "POST",
         body: segmentIdBuffer,

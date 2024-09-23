@@ -147,14 +147,11 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
             tracing <- volumeTracingService.find(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-            (editableMappingInfo, editableMappingVersion) <- editableMappingService.getInfoAndActualVersion(
-              tracingId,
-              requestedVersion = None,
-              remoteFallbackLayer = remoteFallbackLayer)
+            editableMappingInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId, version = None)
             relevantMapping: Map[Long, Long] <- editableMappingService.generateCombinedMappingForSegmentIds(
               request.body.items.toSet,
               editableMappingInfo,
-              editableMappingVersion,
+              tracing.version,
               tracingId,
               remoteFallbackLayer)
             agglomerateIdsSorted = relevantMapping.toSeq.sortBy(_._1).map(_._2)

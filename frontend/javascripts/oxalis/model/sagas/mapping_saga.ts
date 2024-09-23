@@ -455,6 +455,7 @@ function* updateLocalHdf5Mapping(
       ? yield* call(
           getAgglomeratesForSegmentsFromTracingstore,
           annotation.tracingStore.url,
+          annotation.annotationId,
           editableMapping.tracingId,
           Array.from(newSegmentIds),
         )

@@ -160,7 +160,7 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[EditableMappingInfo] =
     for {
-      annotation <- getWithTracings(annotationId, version, List.empty, List(tracingId))
+      annotation <- getWithTracings(annotationId, version, List.empty, List(tracingId)) ?~> "getWithTracings.failed"
       tracing <- annotation.getEditableMappingInfo(tracingId) ?~> "getEditableMapping.failed"
     } yield tracing
 

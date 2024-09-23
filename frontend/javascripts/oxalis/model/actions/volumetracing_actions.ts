@@ -7,8 +7,7 @@ import type { Dispatch } from "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 import type { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import { batchActions } from "redux-batched-actions";
-import type { AdditionalCoordinate, MetadataEntryProto } from "types/api_flow_types";
-import _ from "lodash";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
@@ -241,7 +240,6 @@ export const updateSegmentAction = (
   if (segmentId == null) {
     throw new Error("Segment ID must not be null.");
   }
-
   return {
     type: "UPDATE_SEGMENT",
     // TODO: Proper 64 bit support (#6921)

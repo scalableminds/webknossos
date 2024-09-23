@@ -265,7 +265,7 @@ case class CreateSegmentVolumeAction(id: Long,
         colorOptToProto(color),
         groupId,
         AdditionalCoordinate.toProto(additionalCoordinates),
-        metadata = MetadataEntry.toProtoMultiple(metadata)
+        metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
       )
     tracing.addSegments(newSegment)
   }

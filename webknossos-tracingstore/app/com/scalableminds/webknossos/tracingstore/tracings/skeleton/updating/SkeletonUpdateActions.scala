@@ -221,8 +221,7 @@ case class CreateNodeSkeletonAction(id: Int,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None,
-                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
-                                    metadata: Option[Seq[MetadataEntry]] = None)
+                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper
     with ProtoGeometryImplicits {
@@ -238,8 +237,7 @@ case class CreateNodeSkeletonAction(id: Int,
       bitDepth getOrElse NodeDefaults.bitDepth,
       interpolation getOrElse NodeDefaults.interpolation,
       createdTimestamp = timestamp,
-      additionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates),
-      metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
+      additionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates)
     )
 
     def treeTransform(tree: Tree) = tree.withNodes(newNode +: tree.nodes)
@@ -267,8 +265,7 @@ case class UpdateNodeSkeletonAction(id: Int,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None,
-                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
-                                    metadata: Option[Seq[MetadataEntry]] = None)
+                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper
     with ProtoGeometryImplicits {
@@ -285,8 +282,7 @@ case class UpdateNodeSkeletonAction(id: Int,
       bitDepth getOrElse NodeDefaults.bitDepth,
       interpolation getOrElse NodeDefaults.interpolation,
       createdTimestamp = timestamp,
-      additionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates),
-      metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
+      additionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates)
     )
 
     def treeTransform(tree: Tree) =
@@ -604,7 +600,8 @@ object SkeletonUpdateAction {
       }
     }
 
-    def deserialize[T](json: JsValue, shouldTransformPositions: Boolean = false)(implicit tjs: Reads[T]): JsResult[T] =
+    private def deserialize[T](json: JsValue, shouldTransformPositions: Boolean = false)(
+        implicit tjs: Reads[T]): JsResult[T] =
       if (shouldTransformPositions)
         json.transform(positionTransform).get.validate[T]
       else

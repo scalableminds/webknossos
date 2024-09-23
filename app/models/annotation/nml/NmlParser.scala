@@ -545,7 +545,6 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       val bitDepth = parseBitDepth(node)
       val interpolation = parseInterpolation(node)
       val rotation = parseRotationForNode(node).getOrElse(NodeDefaults.rotation)
-      val metadata = parseMetadata(node \ "metadata" \ "metadataEntry")
       Node(id,
            position,
            rotation,
@@ -555,8 +554,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
            bitDepth,
            interpolation,
            timestamp,
-           additionalCoordinates,
-           metadata = metadata)
+           additionalCoordinates)
     }
   }
 

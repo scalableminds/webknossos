@@ -364,8 +364,6 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         writer.writeAttribute("interpolation", n.interpolation.toString)
         writer.writeAttribute("time", n.createdTimestamp.toString)
         n.additionalCoordinates.foreach(writeAdditionalCoordinateValue)
-        if (n.metadata.nonEmpty)
-          Xml.withinElementSync("metadata")(n.metadata.foreach(writeMetadataEntry))
       }
     }
 

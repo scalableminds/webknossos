@@ -67,7 +67,10 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         name = "updated tree",
         branchPoints = List(UpdateActionBranchPoint(0, Dummies.timestamp)),
         comments = List[UpdateActionComment](),
-        groupId = None
+        groupId = None,
+        metadata = Some(
+          List(MetadataEntry("myKey", numberValue = Some(5.0)),
+               MetadataEntry("anotherKey", stringListValue = Some(Seq("hello", "there")))))
       )
       val result = applyUpdateAction(updateTreeAction)
 
@@ -77,6 +80,9 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       assert(tree.createdTimestamp == Dummies.timestamp)
       assert(tree.comments == updateTreeAction.comments)
       assert(tree.name == updateTreeAction.name)
+      assert(
+        tree.metadata == List(MetadataEntryProto("myKey", numberValue = Some(5.0)),
+                              MetadataEntryProto("anotherKey", stringListValue = Seq("hello", "there"))))
     }
   }
 
@@ -168,10 +174,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
 
   "UpdateNodeSkeletonAction" should {
     "update the specified node" in {
-      val newNode = Dummies
-        .createDummyNode(1)
-        .copy(metadata = List(MetadataEntryProto("myKey", numberValue = Some(5.0)),
-                              MetadataEntryProto("anotherKey", stringListValue = Seq("hello", "there"))))
+      val newNode = Dummies.createDummyNode(1)
       val updateNodeSkeletonAction = new UpdateNodeSkeletonAction(
         newNode.id,
         Vec3Int(newNode.position.x, newNode.position.y, newNode.position.z),
@@ -183,10 +186,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         Option(newNode.interpolation),
         treeId = 1,
         Dummies.timestamp,
-        None,
-        metadata = Some(
-          List(MetadataEntry("myKey", numberValue = Some(5.0)),
-               MetadataEntry("anotherKey", stringListValue = Some(Seq("hello", "there")))))
+        None
       )
       val result = applyUpdateAction(updateNodeSkeletonAction)
       assert(result.trees.length == Dummies.skeletonTracing.trees.length)

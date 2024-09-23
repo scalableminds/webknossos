@@ -8,5 +8,5 @@ message MetadataEntryProto {
   optional string stringValue = 2;
   optional bool boolValue = 3;
   optional double numberValue = 4;
-  repeated string stringListValue = 6;
+  repeated string stringListValue = 5;
 }

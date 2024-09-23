@@ -217,7 +217,6 @@ function TimeTrackingOverview() {
           </Table.Summary.Cell>
           <Table.Summary.Cell index={2}> {totalNumberOfTasksAndAnnotations} </Table.Summary.Cell>
           <Table.Summary.Cell index={3}>
-            {" "}
             {formatMilliseconds(totalTimeMs / totalNumberOfTasksAndAnnotations)}
           </Table.Summary.Cell>
           <Table.Summary.Cell index={4}> {formatMilliseconds(totalTimeMs)}</Table.Summary.Cell>

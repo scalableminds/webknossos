@@ -394,6 +394,7 @@ function getMeshItems(
   maybeUnmappedSegmentId: number | null | undefined,
   visibleSegmentationLayer: APIDataLayer | null | undefined,
   voxelSizeFactor: Vector3,
+  meshFileMapping: string | null | undefined,
 ): MenuItemType[] {
   if (
     clickedMeshId == null ||
@@ -422,7 +423,8 @@ function getMeshItems(
             !isProofreadingActive ||
             activeSegmentMissing ||
             clickedMeshId === activeCellId ||
-            maybeUnmappedSegmentId == null,
+            maybeUnmappedSegmentId == null ||
+            meshFileMapping != null,
           onClick: () => {
             if (maybeUnmappedSegmentId == null) {
               // Should not happen due to the disabled property.
@@ -437,9 +439,11 @@ function getMeshItems(
                   ? "Cannot merge because the proofreading tool is not active."
                   : maybeUnmappedSegmentId == null
                     ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
-                    : activeSegmentMissing
-                      ? "Select a segment first."
-                      : null
+                    : meshFileMapping != null
+                      ? "This mesh was created for a mapping. Please use a meshfile that is based on an oversegmentation."
+                      : activeSegmentMissing
+                        ? "Select a segment first."
+                        : null
               }
             >
               Merge with active segment
@@ -454,7 +458,8 @@ function getMeshItems(
             clickedMeshId !== activeCellId ||
             maybeUnmappedSegmentId == null ||
             activeUnmappedSegmentId == null ||
-            maybeUnmappedSegmentId === activeUnmappedSegmentId,
+            maybeUnmappedSegmentId === activeUnmappedSegmentId ||
+            meshFileMapping != null,
           onClick: () => {
             if (maybeUnmappedSegmentId == null) {
               // Should not happen due to the disabled property.
@@ -471,9 +476,11 @@ function getMeshItems(
                   ? "Cannot split because the proofreading tool is not active."
                   : maybeUnmappedSegmentId == null
                     ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
-                    : activeSegmentMissing
-                      ? "Select a segment first."
-                      : null
+                    : meshFileMapping != null
+                      ? "This mesh was created for a mapping. Please use a meshfile that is based on an oversegmentation."
+                      : activeSegmentMissing
+                        ? "Select a segment first."
+                        : null
               }
             >
               Split from active segment
@@ -482,7 +489,7 @@ function getMeshItems(
         },
         {
           key: "split-from-all-neighbors",
-          disabled: maybeUnmappedSegmentId == null,
+          disabled: maybeUnmappedSegmentId == null || meshFileMapping != null,
           onClick: () => {
             if (maybeUnmappedSegmentId == null) {
               // Should not happen due to the disabled property.
@@ -499,7 +506,9 @@ function getMeshItems(
                   ? "Cannot split because the proofreading tool is not active."
                   : maybeUnmappedSegmentId == null
                     ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
-                    : null
+                    : meshFileMapping != null
+                      ? "This mesh was created for a mapping. Please use a meshfile that is based on an oversegmentation."
+                      : null
               }
             >
               Split from all neighboring segments
@@ -576,6 +585,7 @@ function getNodeContextMenuOptions({
   volumeTracing,
   infoRows,
   allowUpdate,
+  currentMeshFile,
 }: NodeContextMenuOptionsProps): ItemType[] {
   const state = Store.getState();
   const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
@@ -617,6 +627,7 @@ function getNodeContextMenuOptions({
     maybeUnmappedSegmentId,
     visibleSegmentationLayer,
     voxelSize.factor,
+    currentMeshFile?.mappingName,
   );
 
   const menuItems: ItemType[] = [
@@ -1251,6 +1262,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     maybeUnmappedSegmentId,
     visibleSegmentationLayer,
     voxelSize.factor,
+    currentMeshFile?.mappingName,
   );
 
   if (isSkeletonToolActive) {

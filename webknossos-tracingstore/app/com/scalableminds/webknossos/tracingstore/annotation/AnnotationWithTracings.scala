@@ -119,4 +119,12 @@ case class AnnotationWithTracings(
     } yield
       this.copy(
         editableMappingsByTracingId = editableMappingsByTracingId.updated(a.actionTracingId, (updated, updater)))
+
+  def flushBufferedUpdates()(implicit ec: ExecutionContext): Fox[Unit] = {
+    val updaters = editableMappingsByTracingId.values.map(_._2).toList
+    for {
+      _ <- Fox.serialCombined(updaters)(updater => updater.flushBuffersToFossil())
+    } yield ()
+  }
+
 }

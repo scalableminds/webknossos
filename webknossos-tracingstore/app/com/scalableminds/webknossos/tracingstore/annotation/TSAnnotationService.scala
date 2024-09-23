@@ -310,7 +310,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     else {
       for {
         updated <- updateIter(Some(annotation), updates)
-        // TODO flush editable mapping updaters
+        _ <- updated.flushBufferedUpdates()
+        // todo: save materialized tracings + editable mapping info
       } yield updated.withVersion(targetVersion)
     }
   }

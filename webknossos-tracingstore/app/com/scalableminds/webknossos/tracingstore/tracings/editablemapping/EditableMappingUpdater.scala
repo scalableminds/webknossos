@@ -60,13 +60,19 @@ class EditableMappingUpdater(
                           dry: Boolean = false)(implicit ec: ExecutionContext): Fox[EditableMappingInfo] =
     for {
       updatedEditableMappingInfo: EditableMappingInfo <- updateIter(Some(existingEditabeMappingInfo), updates)
-      _ <- Fox.runIf(!dry)(flushToFossil(updatedEditableMappingInfo))
+      _ <- Fox.runIf(!dry)(flushBuffersToFossil())
+      _ <- Fox.runIf(!dry)(flushUpdatedInfoToFossil(updatedEditableMappingInfo))
     } yield updatedEditableMappingInfo
 
-  private def flushToFossil(updatedEditableMappingInfo: EditableMappingInfo)(implicit ec: ExecutionContext): Fox[Unit] =
+  def flushBuffersToFossil()(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- Fox.serialCombined(segmentToAgglomerateBuffer.keys.toList)(flushSegmentToAgglomerateChunk)
       _ <- Fox.serialCombined(agglomerateToGraphBuffer.keys.toList)(flushAgglomerateGraph)
+    } yield ()
+
+  private def flushUpdatedInfoToFossil(updatedEditableMappingInfo: EditableMappingInfo)(
+      implicit ec: ExecutionContext): Fox[Unit] =
+    for {
       _ <- tracingDataStore.editableMappingsInfo.put(tracingId, newVersion, updatedEditableMappingInfo)
     } yield ()
 

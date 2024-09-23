@@ -62,15 +62,19 @@ object ZarrHeader extends JsonImplicits {
     // data request method always decompresses before sending
     val compressor = None
 
-    val shape = Array(
-      channels,
+    val additionalAxesShapeEntries =
+      dataLayer.additionalAxes.map(axes => axes.map(_.bounds(1)).toArray).getOrElse(Array.empty)
+    val additionalAxesChunksEntries =
+      dataLayer.additionalAxes.map(axes => axes.map(_ => 1).toArray).getOrElse(Array.empty)
+
+    val shape = Array(channels) ++ additionalAxesShapeEntries ++ Array(
       // Zarr can't handle data sets that don't start at 0, so we extend the shape to include "true" coords
       (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / mag.x,
       (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / mag.y,
       (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / mag.z
     )
 
-    val chunks = Array(channels, cubeLength, cubeLength, cubeLength)
+    val chunks = Array(channels) ++ additionalAxesChunksEntries ++ Array(cubeLength, cubeLength, cubeLength)
 
     ZarrHeader(zarr_format = 2,
                shape = shape,

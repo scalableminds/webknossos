@@ -12,9 +12,9 @@ import {
   InputNumber,
   Input,
   Select,
-  Typography,
   Dropdown,
   Button,
+  Tag,
 } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import {
@@ -81,20 +81,22 @@ const EmptyMetadataPlaceholder: React.FC<EmptyMetadataPlaceholderProps> = ({
   addNewEntryMenuItems,
 }) => {
   return (
-    <div className="flex-center-child empty-metadata-placeholder">
-      <img
-        src="/assets/images/metadata-teaser.svg"
-        alt="Metadata preview"
-        style={{ width: "60%", marginBottom: 16 }}
-      />
-      <span style={{ marginTop: 10 }}>
-        <Dropdown menu={addNewEntryMenuItems} placement="bottom" trigger={["click"]} autoFocus>
-          <Button icon={<PlusOutlined style={{ marginLeft: -2 }} />}>
-            Add First Metadata Entry
-          </Button>
-        </Dropdown>
-      </span>
-    </div>
+    <Tag>
+      <div className="flex-center-child empty-metadata-placeholder">
+        <img
+          src="/assets/images/metadata-teaser.svg"
+          alt="Metadata preview"
+          style={{ width: "60%", marginBottom: 16 }}
+        />
+        <span style={{ marginTop: 10 }}>
+          <Dropdown menu={addNewEntryMenuItems} placement="bottom" trigger={["click"]} autoFocus>
+            <Button icon={<PlusOutlined style={{ marginLeft: -2 }} />}>
+              Add First Metadata Entry
+            </Button>
+          </Dropdown>
+        </span>
+      </div>
+    </Tag>
   );
 };
 

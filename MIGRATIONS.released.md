@@ -6,6 +6,14 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [24.10.0](https://github.com/scalableminds/webknossos/releases/tag/24.10.0) - 2024-09-24
+[Commits](https://github.com/scalableminds/webknossos/compare/24.08.1...24.10.0)
+
+- For self-hosted versions of WEBKNOSSOS, you can choose whether switching to webknossos.org will be recommended to you, e.g. when uploading a dataset. To configure this, change `recommendWkorgInstance` in your `application.conf`.
+
+### Postgres Evolutions:
+
+
 ## [24.08.1](https://github.com/scalableminds/webknossos/releases/tag/24.08.1) - 2024-09-03
 [Commits](https://github.com/scalableminds/webknossos/compare/24.08.0...24.08.1)
 

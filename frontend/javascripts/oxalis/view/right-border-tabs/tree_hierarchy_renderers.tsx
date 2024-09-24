@@ -5,6 +5,7 @@ import {
   FolderOutlined,
   PlusOutlined,
   ShrinkOutlined,
+  TagsOutlined,
 } from "@ant-design/icons";
 import { type MenuProps, notification } from "antd";
 import _ from "lodash";
@@ -93,6 +94,14 @@ export function renderTreeNode(
     >
       <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
       {`(${tree.nodes.size()}) `} {maybeProofreadingIcon} {tree.name}
+      {(tree.metadata || []).length > 0 ? (
+        <FastTooltip
+          className="deemphasized icon-margin-left"
+          title="This tree has assigned metadata properties."
+        >
+          <TagsOutlined />
+        </FastTooltip>
+      ) : null}
     </div>
   );
 }

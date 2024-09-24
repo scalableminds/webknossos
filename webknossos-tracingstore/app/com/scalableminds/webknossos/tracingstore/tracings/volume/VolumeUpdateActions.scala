@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.geometry
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.VolumeUpdateAction
-import com.scalableminds.webknossos.tracingstore.tracings.{NamedBoundingBox, UpdateAction}
+import com.scalableminds.webknossos.tracingstore.tracings.{NamedBoundingBox, UpdateAction, MetadataEntry}
 import play.api.libs.json._
 
 trait VolumeUpdateActionHelper {
@@ -242,7 +242,8 @@ case class CreateSegmentVolumeAction(id: Long,
                                      creationTime: Option[Long],
                                      actionTimestamp: Option[Long] = None,
                                      actionAuthorId: Option[String] = None,
-                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
+                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+                                     metadata: Option[Seq[MetadataEntry]] = None)
     extends ApplyableVolumeAction
     with ProtoGeometryImplicits {
 
@@ -256,13 +257,16 @@ case class CreateSegmentVolumeAction(id: Long,
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     val newSegment =
-      Segment(id,
-              anchorPosition.map(vec3IntToProto),
-              name,
-              creationTime,
-              colorOptToProto(color),
-              groupId,
-              AdditionalCoordinate.toProto(additionalCoordinates))
+      Segment(
+        id,
+        anchorPosition.map(vec3IntToProto),
+        name,
+        creationTime,
+        colorOptToProto(color),
+        groupId,
+        AdditionalCoordinate.toProto(additionalCoordinates),
+        metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
+      )
     tracing.addSegments(newSegment)
   }
 }
@@ -279,7 +283,8 @@ case class UpdateSegmentVolumeAction(id: Long,
                                      groupId: Option[Int],
                                      actionTimestamp: Option[Long] = None,
                                      actionAuthorId: Option[String] = None,
-                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
+                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+                                     metadata: Option[Seq[MetadataEntry]] = None)
     extends ApplyableVolumeAction
     with ProtoGeometryImplicits
     with VolumeUpdateActionHelper {
@@ -300,7 +305,8 @@ case class UpdateSegmentVolumeAction(id: Long,
         creationTime = creationTime,
         color = colorOptToProto(color),
         groupId = groupId,
-        anchorPositionAdditionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates)
+        anchorPositionAdditionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates),
+        metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
       )
     tracing.withSegments(mapSegments(tracing, id, segmentTransform))
   }

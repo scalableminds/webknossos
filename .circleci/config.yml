@@ -304,8 +304,6 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - nightly
-      - wkorg_nightly
   circleci_nightly:
     jobs:
       - nightly

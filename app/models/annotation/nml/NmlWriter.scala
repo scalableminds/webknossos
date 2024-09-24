@@ -5,6 +5,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup}
 import com.scalableminds.webknossos.datastore.geometry._
 import com.scalableminds.webknossos.datastore.models.VoxelSize
@@ -274,13 +275,13 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           if (skipVolumeData) {
             writer.writeComment(f"Note that volume data was omitted when downloading this annotation.")
           }
-          writeVolumeSegmentMetadata(volumeTracing.segments)
+          writeVolumeSegmentInfos(volumeTracing.segments)
           Xml.withinElementSync("groups")(writeSegmentGroupsAsXml(volumeTracing.segmentGroups))
         case _ => ()
       }
     }
 
-  private def writeVolumeSegmentMetadata(segments: Seq[Segment])(implicit writer: XMLStreamWriter): Unit =
+  private def writeVolumeSegmentInfos(segments: Seq[Segment])(implicit writer: XMLStreamWriter): Unit =
     Xml.withinElementSync("segments") {
       segments.foreach { s =>
         Xml.withinElementSync("segment") {
@@ -299,7 +300,27 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           }
           s.color.foreach(_ => writeColor(s.color))
           s.groupId.foreach(groupId => writer.writeAttribute("groupId", groupId.toString))
+          if (s.metadata.nonEmpty)
+            Xml.withinElementSync("metadata")(s.metadata.foreach(writeMetadataEntry))
         }
+      }
+    }
+
+  private def writeMetadataEntry(p: MetadataEntryProto)(implicit writer: XMLStreamWriter): Unit =
+    Xml.withinElementSync("metadataEntry") {
+      writer.writeAttribute("key", p.key)
+      p.stringValue.foreach { v =>
+        writer.writeAttribute("stringValue", v)
+      }
+      p.boolValue.foreach { v =>
+        writer.writeAttribute("boolValue", v.toString)
+      }
+      p.numberValue.foreach { v =>
+        writer.writeAttribute("numberValue", v.toString)
+      }
+      p.stringListValue.zipWithIndex.foreach {
+        case (v, index) =>
+          writer.writeAttribute(s"stringListValue-$index", v)
       }
     }
 
@@ -321,6 +342,8 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         t.`type`.foreach(t => writer.writeAttribute("type", t.toString))
         Xml.withinElementSync("nodes")(writeNodesAsXml(t.nodes.sortBy(_.id)))
         Xml.withinElementSync("edges")(writeEdgesAsXml(t.edges))
+        if (t.metadata.nonEmpty)
+          Xml.withinElementSync("metadata")(t.metadata.foreach(writeMetadataEntry))
       }
     }
 

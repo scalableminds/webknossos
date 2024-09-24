@@ -785,22 +785,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     };
   }
 
-  getSelectedTreesAlert = () =>
-    this.state.selectedTreeIds.length > 1 ? (
-      <Alert
-        type="info"
-        message={
-          <React.Fragment>
-            {this.state.selectedTreeIds.length}{" "}
-            {Utils.pluralize("Tree", this.state.selectedTreeIds.length)} selected.{" "}
-            <Button type="dashed" size="small" onClick={this.deselectAllTrees}>
-              Clear Selection
-            </Button>
-          </React.Fragment>
-        }
-      />
-    ) : null;
-
   handleMeasureAllSkeletonsLength = () => {
     const { unit } = Store.getState().dataset.dataSource.scale;
     const [totalLengthNm, totalLengthVx] = api.tracing.measureAllTrees();
@@ -970,7 +954,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                       padding: 0,
                     }}
                   >
-                    <div className="tree-hierarchy-header">{this.getSelectedTreesAlert()}</div>
                     {this.getTreesComponents(orderAttribute)}
                   </ul>
                 )}

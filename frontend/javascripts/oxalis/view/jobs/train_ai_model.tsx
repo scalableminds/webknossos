@@ -43,6 +43,13 @@ import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reduc
 const { TextArea } = Input;
 const FormItem = Form.Item;
 
+// This type is used for GenericAnnotation = HybridTracing | APIAnnotation as in case of multi annotation training,
+// only the APIAnnotations of the given annotations to train on are loaded from the backend.
+// Thus, the code needs to handle both HybridTracing | APIAnnotation where APIAnnotation is missing some information.
+// Therefore, volumeTracings with the matching volumeTracingResolutions are needed to get more details on each volume annotation layer and its resolutions.
+// The userBoundingBoxes are needed for checking for equal bounding box sizes. As training on fallback data is supported and an annotation is not required to have VolumeTracings,
+// it is necessary to save userBoundingBoxes separately and not load them from volumeTracings entries to support skeleton only annotations.
+// Note that a copy the userBoundingBoxes is included in each volume and skeleton tracing of an annotation. Thus, it doesn't matter from which the userBoundingBoxes are taken.
 export type AnnotationInfoForAIJob<GenericAnnotation> = {
   annotation: GenericAnnotation;
   dataset: APIDataset;
@@ -217,8 +224,9 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
   );
 
   const { areSomeAnnotationsInvalid, invalidAnnotationsReason } =
-    areAllAnnotationsInvalid(annotationInfos);
-  const { areSomeBBoxesInvalid, invalidBBoxesReason } = areBoundingBoxesInvalid(userBoundingBoxes);
+    areInvalidAnnotationsIncluded(annotationInfos);
+  const { areSomeBBoxesInvalid, invalidBBoxesReason } =
+    areInvalidBoundingBoxesIncluded(userBoundingBoxes);
   const invalidReasons = [invalidAnnotationsReason, invalidBBoxesReason]
     .filter((reason) => reason)
     .join("\n");
@@ -234,12 +242,14 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
       <AiModelNameFormItem />
       <AiModelCategoryFormItem />
 
-      {annotationInfos.map(({ annotation, dataset }, idx) => {
+      {annotationInfos.map(({ annotation, dataset, volumeTracings }, idx) => {
         const segmentationLayerNames = _.uniq([
-          // Only consider the layers that are not volume layers (these don't have a tracing id).
+          // Only consider the layers that are not volume layers (these aren't a fallback layer in one of the volume tracings).
           // Add actual volume layers below.
           ...getSegmentationLayers(dataset)
-            .filter((layer) => layer.tracingId == null)
+            .filter(
+              (layer) => !volumeTracings.find((tracing) => tracing.fallbackLayer === layer.name),
+            )
             .map((layer) => layer.name),
           // Add volume layers here.
           ...annotation.annotationLayers
@@ -375,7 +385,7 @@ export function CollapsibleWorkflowYamlEditor({
   );
 }
 
-function areAllAnnotationsInvalid<T extends HybridTracing | APIAnnotation>(
+function areInvalidAnnotationsIncluded<T extends HybridTracing | APIAnnotation>(
   annotationsWithDatasets: Array<AnnotationInfoForAIJob<T>>,
 ): {
   areSomeAnnotationsInvalid: boolean;
@@ -404,7 +414,7 @@ function areAllAnnotationsInvalid<T extends HybridTracing | APIAnnotation>(
   return { areSomeAnnotationsInvalid: false, invalidAnnotationsReason: null };
 }
 
-function areBoundingBoxesInvalid(userBoundingBoxes: UserBoundingBox[]): {
+function areInvalidBoundingBoxesIncluded(userBoundingBoxes: UserBoundingBox[]): {
   areSomeBBoxesInvalid: boolean;
   invalidBBoxesReason: string | null;
 } {
@@ -476,10 +486,10 @@ function AnnotationsCsvInput({
                 getTracingForAnnotationType(annotation, layer) as Promise<ServerVolumeTracing>,
             ),
         );
-        // TODO: make bboxs a member again
         const volumeTracings = volumeServerTracings.map((tracing) =>
           serverVolumeToClientVolumeTracing(tracing),
         );
+        // A copy of the user bounding boxes of an annotation is saved in every tracing. In case no volume tracing exists, the skeleton tracing is checked.
         let userBoundingBoxes = volumeTracings[0]?.userBoundingBoxes;
         if (!userBoundingBoxes) {
           const skeletonLayer = annotation.annotationLayers.find(
@@ -491,11 +501,11 @@ function AnnotationsCsvInput({
               skeletonTracing.userBoundingBoxes,
             );
           } else {
-            new Error(`Annotation ${annotation.id} has neither a volume nor a skeleton layer`);
+            throw new Error(
+              `Annotation ${annotation.id} has neither a volume nor a skeleton layer`,
+            );
           }
         }
-
-        console.log(volumeTracings); // TODOM remove
 
         return {
           annotation,

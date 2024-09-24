@@ -17,13 +17,13 @@ process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
 });
 const BASE_PATH = path.join(__dirname, "../../../../frontend/javascripts/test/screenshots-wkorg");
-const URL = "https://webknossos.org";
+const URL = "https://fixscreenshottests.webknossos.xyz";
 
 console.log(`[Info] Executing tests on URL ${URL}.`);
 setupBeforeEachAndAfterEach();
 
 const demoDatasetName = "l4dense_motta_et_al_demo";
-const owningOrganization = "scalable_minds";
+const owningOrganization = "sample_organization";
 
 const viewOverrides: Record<string, string> = {
   l4dense_motta_et_al_demo: encodeUrlHash(

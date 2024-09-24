@@ -1,14 +1,12 @@
 import {
   Row,
   Col,
-  Slider,
   InputNumber,
   Switch,
   Input,
   Select,
   Popover,
   type PopoverProps,
-  Dropdown,
   type MenuProps,
 } from "antd";
 import {
@@ -32,7 +30,7 @@ import type { APISegmentationLayer } from "types/api_flow_types";
 import { api } from "oxalis/singletons";
 import FastTooltip from "components/fast_tooltip";
 import Toast from "libs/toast";
-import { handleGenericError } from "libs/error_handling";
+import { Slider } from "components/slider";
 
 const ROW_GUTTER = 1;
 
@@ -74,6 +72,8 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
 
   isValueValid = (_value: number | null) =>
     _.isNumber(_value) && _value >= this.props.min && _value <= this.props.max;
+
+  range = this.props.max - this.props.min;
 
   render() {
     const { value: originalValue, label, max, min, step, onChange, disabled } = this.props;

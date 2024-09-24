@@ -1,5 +1,5 @@
 import type { Dispatch } from "redux";
-import { Alert, Slider, Row, Col, InputNumber, Spin } from "antd";
+import { Alert, Row, Col, InputNumber, Spin } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 import * as _ from "lodash";
@@ -10,6 +10,7 @@ import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions"
 import type { DatasetLayerConfiguration } from "oxalis/store";
 import { CloseOutlined } from "@ant-design/icons";
 import FastTooltip from "components/fast_tooltip";
+import { RangeSlider } from "components/slider";
 
 type OwnProps = {
   data: APIHistogramData | null | undefined;
@@ -270,7 +271,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     return (
       <Spin spinning={data === undefined}>
         <canvas ref={this.onCanvasRefChange} width={canvasWidth} height={canvasHeight} />
-        <Slider
+        <RangeSlider
           range
           value={[intensityRangeMin, intensityRangeMax]}
           min={minRange}

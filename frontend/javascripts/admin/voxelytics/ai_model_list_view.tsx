@@ -153,6 +153,7 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
       }
       onCancel={onClose}
       footer={null}
+      maskClosable={false}
     >
       <TrainAiModelTab
         getMagForSegmentationLayer={getMagForSegmentationLayer}

@@ -536,7 +536,7 @@ function AnnotationsCsvInput({
       >
         <TextArea
           className="input-monospace"
-          placeholder="annotationUrlOrId[, colorLayerName, volumeLayerId]"
+          placeholder="annotationUrlOrId"
           autoSize={{
             minRows: 6,
           }}

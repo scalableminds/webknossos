@@ -12,10 +12,7 @@ import { JobState } from "admin/job/job_list_view";
 import { Link } from "react-router-dom";
 import { useGuardedFetch } from "libs/react_helpers";
 import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
-import {
-  type AnnotationWithDatasetAndVolumes,
-  TrainAiModelTab,
-} from "oxalis/view/jobs/train_ai_model";
+import { type AnnotationInfoForAIJob, TrainAiModelTab } from "oxalis/view/jobs/train_ai_model";
 import {
   getResolutionInfo,
   getSegmentationLayerByName,
@@ -111,19 +108,17 @@ export default function AiModelListView() {
 }
 
 function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
-  const [annotationsWithDatasetsAndVolumes, setAnnotationsWithDatasetsAndVolumes] = useState<
-    AnnotationWithDatasetAndVolumes<APIAnnotation>[]
+  const [annotationInfosForAiJob, setAnnotationInfosForAiJob] = useState<
+    AnnotationInfoForAIJob<APIAnnotation>[]
   >([]);
 
   const getMagForSegmentationLayer = async (annotationId: string, layerName: string) => {
-    // TODO: Maybe move extraction of getMagForSegmentationLayer ahead and make it part of AnnotationWithDatasetAndVolumes
-    // TODO: Improve
     // The layer name is a human-readable one. It can either belong to an annotationLayer
     // (therefore, also to a volume tracing) or to the actual dataset.
     // Both are checked below. This won't be ambiguous because annotationLayers must not
     // have names that dataset layers already have.
 
-    const annotationWithDataset = annotationsWithDatasetsAndVolumes.find(({ annotation }) => {
+    const annotationWithDataset = annotationInfosForAiJob.find(({ annotation }) => {
       return annotation.id === annotationId;
     });
     if (annotationWithDataset == null) {
@@ -134,7 +129,6 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
 
     let annotationLayer = annotation.annotationLayers.find((l) => l.name === layerName);
     if (annotationLayer != null) {
-      annotationLayer;
       const volumeTracingIndex = volumeTracings.findIndex(
         (tracing) => tracing.tracingId === annotationLayer.tracingId,
       );
@@ -163,9 +157,9 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
       <TrainAiModelTab
         getMagForSegmentationLayer={getMagForSegmentationLayer}
         onClose={onClose}
-        annotationsWithDatasets={annotationsWithDatasetsAndVolumes}
-        onAddAnnotationsWithDatasets={(newItems) => {
-          setAnnotationsWithDatasetsAndVolumes([...annotationsWithDatasetsAndVolumes, ...newItems]);
+        annotationInfos={annotationInfosForAiJob}
+        onAddAnnotationsInfos={(newItems) => {
+          setAnnotationInfosForAiJob([...annotationInfosForAiJob, ...newItems]);
         }}
       />
     </Modal>

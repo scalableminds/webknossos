@@ -14,11 +14,7 @@ import {
 } from "antd";
 import { useSelector } from "react-redux";
 import type { HybridTracing, OxalisState, UserBoundingBox, VolumeTracing } from "oxalis/store";
-import {
-  getSomeTracing,
-  getUserBoundingBoxesFromState,
-  maybeGetSomeTracing,
-} from "oxalis/model/accessors/tracing_accessor";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getColorLayers,
   getResolutionInfo,
@@ -42,13 +38,12 @@ import { V3 } from "libs/mjs";
 import type { APIAnnotation, APIDataset, ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
-import errorHandling, { handleGenericError } from "libs/error_handling";
 import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reducers/reducer_helpers";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;
 
-export type AnnotationWithDatasetAndVolumes<GenericAnnotation> = {
+export type AnnotationInfoForAIJob<GenericAnnotation> = {
   annotation: GenericAnnotation;
   dataset: APIDataset;
   volumeTracings: VolumeTracing[];
@@ -135,7 +130,7 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
       getMagForSegmentationLayer={getMagForSegmentationLayer}
       ensureSavedState={() => Model.ensureSavedState()}
       onClose={onClose}
-      annotationsWithDatasets={[
+      annotationInfos={[
         {
           annotation: tracing,
           dataset,
@@ -152,16 +147,14 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
   getMagForSegmentationLayer,
   onClose,
   ensureSavedState,
-  annotationsWithDatasets: annotationsWithDatasetsAndBBoxes,
-  onAddAnnotationsWithDatasets,
+  annotationInfos,
+  onAddAnnotationsInfos,
 }: {
   getMagForSegmentationLayer: (annotationId: string, layerName: string) => Promise<Vector3>;
   onClose: () => void;
   ensureSavedState?: (() => Promise<void>) | null;
-  annotationsWithDatasets: Array<AnnotationWithDatasetAndVolumes<GenericAnnotation>>;
-  onAddAnnotationsWithDatasets?: (
-    newItems: Array<AnnotationWithDatasetAndVolumes<APIAnnotation>>,
-  ) => void;
+  annotationInfos: Array<AnnotationInfoForAIJob<GenericAnnotation>>;
+  onAddAnnotationsInfos?: (newItems: Array<AnnotationInfoForAIJob<APIAnnotation>>) => void;
 }) {
   const [form] = Form.useForm();
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
@@ -205,10 +198,10 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
     onClose();
   };
 
-  if (annotationsWithDatasetsAndBBoxes.length === 0 && onAddAnnotationsWithDatasets != null) {
+  if (annotationInfos.length === 0 && onAddAnnotationsInfos != null) {
     return (
       <Form form={form} layout="vertical">
-        <AnnotationsCsvInput onAdd={onAddAnnotationsWithDatasets} />
+        <AnnotationsCsvInput onAdd={onAddAnnotationsInfos} />
       </Form>
     );
   }
@@ -217,17 +210,14 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
     modelCategory: AiModelCategory.EM_NEURONS,
   };
 
-  const userBoundingBoxes = annotationsWithDatasetsAndBBoxes.flatMap(
-    ({ userBoundingBoxes }) => userBoundingBoxes,
-  );
+  const userBoundingBoxes = annotationInfos.flatMap(({ userBoundingBoxes }) => userBoundingBoxes);
 
   const bboxesVoxelCount = _.sum(
     (userBoundingBoxes || []).map((bbox) => new BoundingBox(bbox.boundingBox).getVolume()),
   );
 
-  const { areSomeAnnotationsInvalid, invalidAnnotationsReason } = areAllAnnotationsInvalid(
-    annotationsWithDatasetsAndBBoxes,
-  );
+  const { areSomeAnnotationsInvalid, invalidAnnotationsReason } =
+    areAllAnnotationsInvalid(annotationInfos);
   const { areSomeBBoxesInvalid, invalidBBoxesReason } = areBoundingBoxesInvalid(userBoundingBoxes);
   const invalidReasons = [invalidAnnotationsReason, invalidBBoxesReason]
     .filter((reason) => reason)
@@ -244,7 +234,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
       <AiModelNameFormItem />
       <AiModelCategoryFormItem />
 
-      {annotationsWithDatasetsAndBBoxes.map(({ annotation, dataset }, idx) => {
+      {annotationInfos.map(({ annotation, dataset }, idx) => {
         const segmentationLayerNames = _.uniq([
           // Only consider the layers that are not volume layers (these don't have a tracing id).
           // Add actual volume layers below.
@@ -386,7 +376,7 @@ export function CollapsibleWorkflowYamlEditor({
 }
 
 function areAllAnnotationsInvalid<T extends HybridTracing | APIAnnotation>(
-  annotationsWithDatasets: Array<AnnotationWithDatasetAndVolumes<T>>,
+  annotationsWithDatasets: Array<AnnotationInfoForAIJob<T>>,
 ): {
   areSomeAnnotationsInvalid: boolean;
   invalidAnnotationsReason: string | null;
@@ -448,7 +438,7 @@ function areBoundingBoxesInvalid(userBoundingBoxes: UserBoundingBox[]): {
 function AnnotationsCsvInput({
   onAdd,
 }: {
-  onAdd: (newItems: Array<AnnotationWithDatasetAndVolumes<APIAnnotation>>) => void;
+  onAdd: (newItems: Array<AnnotationInfoForAIJob<APIAnnotation>>) => void;
 }) {
   const [value, setValue] = useState("");
   const onClickAdd = async () => {

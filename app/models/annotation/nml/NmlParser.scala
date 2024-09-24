@@ -4,6 +4,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
 import com.scalableminds.util.tools.JsonHelper.bool2Box
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry.{
   AdditionalAxisProto,
@@ -210,6 +211,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         case _                           => None
       }
       val anchorPositionAdditionalCoordinates = parseAdditionalCoordinateValues(node)
+      val metadata = parseMetadata(node \ "metadata" \ "metadataEntry")
       Segment(
         segmentId = getSingleAttribute(node, "id").toLong,
         anchorPosition = anchorPosition,
@@ -217,9 +219,37 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         creationTime = getSingleAttributeOpt(node, "created").flatMap(_.toLongOpt),
         color = parseColorOpt(node),
         groupId = getSingleAttribute(node, "groupId").toIntOpt,
-        anchorPositionAdditionalCoordinates = anchorPositionAdditionalCoordinates
+        anchorPositionAdditionalCoordinates = anchorPositionAdditionalCoordinates,
+        metadata = metadata
       )
     })
+
+  private def parseMetadata(metadataEntryNodes: NodeSeq): Seq[MetadataEntryProto] =
+    metadataEntryNodes.map(node => {
+      MetadataEntryProto(
+        getSingleAttribute(node, "key"),
+        getSingleAttributeOpt(node, "stringValue"),
+        getSingleAttributeOpt(node, "boolValue").flatMap(_.toBooleanOpt),
+        getSingleAttributeOpt(node, "numberValue").flatMap(_.toDoubleOpt),
+        parseStringListValue(node)
+      )
+    })
+
+  private def parseStringListValue(node: XMLNode): Seq[String] = {
+    val regex = "^stringListValue-(\\d+)".r
+    val valuesWithIndex: Seq[(Int, String)] = node.attributes.flatMap {
+      case attribute: Attribute =>
+        attribute.key match {
+          case regex(indexStr) =>
+            indexStr.toIntOpt.map { index =>
+              (index, attribute.value.toString)
+            }
+          case _ => None
+        }
+      case _ => None
+    }.toSeq
+    valuesWithIndex.sortBy(_._1).map(_._2)
+  }
 
   private def parseTrees(treeNodes: NodeSeq,
                          branchPoints: Map[Int, List[BranchPoint]],
@@ -414,6 +444,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       nodeIds = nodes.map(_.id)
       treeBranchPoints = nodeIds.flatMap(nodeId => branchPoints.getOrElse(nodeId, List()))
       treeComments = nodeIds.flatMap(nodeId => comments.getOrElse(nodeId, List()))
+      metadata = parseMetadata(tree \ "metadata" \ "metadataEntry")
       createdTimestamp = if (nodes.isEmpty) System.currentTimeMillis()
       else nodes.minBy(_.createdTimestamp).createdTimestamp
     } yield
@@ -427,7 +458,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
            createdTimestamp,
            groupId,
            isVisible,
-           treeType)
+           treeType,
+           metadata = metadata)
   }
 
   private def parseComments(comments: NodeSeq)(implicit m: MessagesProvider): Box[List[Comment]] =

@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/24.10.0...HEAD)
 
 ### Added
+- It is now possible to add metadata in annotations to Trees and Segments. [#7875](https://github.com/scalableminds/webknossos/pull/7875)
 
 ### Changed
 

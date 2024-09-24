@@ -24,6 +24,7 @@ import type {
   ServerSkeletonTracingTree,
   ServerNode,
   ServerBranchPoint,
+  MetadataEntryProto,
 } from "types/api_flow_types";
 import {
   getSkeletonTracing,
@@ -361,6 +362,7 @@ function splitTreeByNodes(
             groupId: activeTree.groupId,
             type: activeTree.type,
             edgesAreVisible: true,
+            metadata: activeTree.metadata,
           };
         } else {
           const immutableNewTree = createTree(
@@ -484,6 +486,7 @@ export function createTree(
   name?: string,
   type: TreeType = TreeTypeEnum.DEFAULT,
   edgesAreVisible: boolean = true,
+  metadata: MetadataEntryProto[] = [],
 ): Maybe<Tree> {
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     // Create a new tree id and name
@@ -513,6 +516,7 @@ export function createTree(
       groupId,
       type,
       edgesAreVisible,
+      metadata,
     };
     return Maybe.Just(tree);
   });
@@ -850,6 +854,7 @@ export function createMutableTreeMapFromTreeArray(
         groupId: tree.groupId,
         type: tree.type != null ? tree.type : TreeTypeEnum.DEFAULT,
         edgesAreVisible: tree.edgesAreVisible != null ? tree.edgesAreVisible : true,
+        metadata: tree.metadata,
       }),
     ),
     "treeId",

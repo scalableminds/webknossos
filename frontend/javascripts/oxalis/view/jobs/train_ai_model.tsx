@@ -13,8 +13,9 @@ import {
   type FormInstance,
 } from "antd";
 import { useSelector } from "react-redux";
-import type { HybridTracing, OxalisState, UserBoundingBox } from "oxalis/store";
+import type { HybridTracing, OxalisState, UserBoundingBox, VolumeTracing } from "oxalis/store";
 import {
+  getSomeTracing,
   getUserBoundingBoxesFromState,
   maybeGetSomeTracing,
 } from "oxalis/model/accessors/tracing_accessor";
@@ -36,16 +37,23 @@ import { getSegmentationLayerByHumanReadableName } from "oxalis/model/accessors/
 import _ from "lodash";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { formatVoxels } from "libs/format_utils";
+import * as Utils from "libs/utils";
 import { V3 } from "libs/mjs";
 import type { APIAnnotation, APIDataset, ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
+import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
+import errorHandling, { handleGenericError } from "libs/error_handling";
+import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reducers/reducer_helpers";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;
 
-export type AnnotationWithDataset = {
-  annotation: HybridTracing;
+export type AnnotationWithDatasetAndVolumes<GenericAnnotation> = {
+  annotation: GenericAnnotation;
   dataset: APIDataset;
+  volumeTracings: VolumeTracing[];
+  userBoundingBoxes: UserBoundingBox[];
+  volumeTracingResolutions: Vector3[][];
 };
 
 enum AiModelCategory {
@@ -120,18 +128,27 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
     const segmentationLayer = getSegmentationLayerByHumanReadableName(dataset, tracing, layerName);
     return getResolutionInfo(segmentationLayer.resolutions).getFinestResolution();
   };
+  const userBoundingBoxes = getSomeTracing(tracing).userBoundingBoxes;
 
   return (
     <TrainAiModelTab
       getMagForSegmentationLayer={getMagForSegmentationLayer}
       ensureSavedState={() => Model.ensureSavedState()}
       onClose={onClose}
-      annotationsWithDatasets={[{ annotation: tracing, dataset }]}
+      annotationsWithDatasets={[
+        {
+          annotation: tracing,
+          dataset,
+          volumeTracings: tracing.volumes,
+          volumeTracingResolutions: [],
+          userBoundingBoxes,
+        },
+      ]}
     />
   );
 }
 
-export function TrainAiModelTab({
+export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | HybridTracing>({
   getMagForSegmentationLayer,
   onClose,
   ensureSavedState,
@@ -141,8 +158,10 @@ export function TrainAiModelTab({
   getMagForSegmentationLayer: (annotationId: string, layerName: string) => Promise<Vector3>;
   onClose: () => void;
   ensureSavedState?: (() => Promise<void>) | null;
-  annotationsWithDatasets: Array<AnnotationWithDataset>;
-  onAddAnnotationsWithDatasets?: (newItems: Array<AnnotationWithDataset>) => void;
+  annotationsWithDatasets: Array<AnnotationWithDatasetAndVolumes<GenericAnnotation>>;
+  onAddAnnotationsWithDatasets?: (
+    newItems: Array<AnnotationWithDatasetAndVolumes<APIAnnotation>>,
+  ) => void;
 }) {
   const [form] = Form.useForm();
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
@@ -198,9 +217,9 @@ export function TrainAiModelTab({
     modelCategory: AiModelCategory.EM_NEURONS,
   };
 
-  const userBoundingBoxes = annotationsWithDatasetsAndBBoxes
-    .flatMap(({ annotation }) => maybeGetSomeTracing(annotation)?.userBoundingBoxes)
-    .filter((bboxes) => bboxes != null);
+  const userBoundingBoxes = annotationsWithDatasetsAndBBoxes.flatMap(
+    ({ userBoundingBoxes }) => userBoundingBoxes,
+  );
 
   const bboxesVoxelCount = _.sum(
     (userBoundingBoxes || []).map((bbox) => new BoundingBox(bbox.boundingBox).getVolume()),
@@ -251,7 +270,7 @@ export function TrainAiModelTab({
           (layer) => layer.elementClass !== "uint24",
         );
         const fixedSelectedColorLayer = colorLayers.length === 1 ? colorLayers[0] : null;
-        const { annotationId } = annotation;
+        const annotationId = "id" in annotation ? annotation.id : annotation.annotationId;
         return (
           <Row key={annotationId} gutter={8}>
             <Col span={8}>
@@ -366,41 +385,42 @@ export function CollapsibleWorkflowYamlEditor({
   );
 }
 
-function areAllAnnotationsInvalid(annotationsWithDatasets: Array<AnnotationWithDataset>): {
+function areAllAnnotationsInvalid<T extends HybridTracing | APIAnnotation>(
+  annotationsWithDatasets: Array<AnnotationWithDatasetAndVolumes<T>>,
+): {
   areSomeAnnotationsInvalid: boolean;
   invalidAnnotationsReason: string | null;
 } {
   if (annotationsWithDatasets.length === 0) {
     return {
-      areSomeAnnotationsInvalid: false,
+      areSomeAnnotationsInvalid: true,
       invalidAnnotationsReason: "At least one annotation must be defined.",
     };
   }
-  const annotationsWithoutABoundingBox = annotationsWithDatasets.filter(
-    ({ userBoundingBoxes }) => userBoundingBoxes.length === 0,
+  const annotationsWithoutBoundingBoxes = annotationsWithDatasets.filter(
+    ({ userBoundingBoxes }) => {
+      return userBoundingBoxes.length === 0;
+    },
   );
-  if (annotationsWithoutABoundingBox.length > 0) {
-    const annotationIds = annotationsWithoutABoundingBox.map(({ annotation }) =>
+  if (annotationsWithoutBoundingBoxes.length > 0) {
+    const annotationIds = annotationsWithoutBoundingBoxes.map(({ annotation }) =>
       "id" in annotation ? annotation.id : annotation.annotationId,
     );
     return {
-      areSomeAnnotationsInvalid: false,
+      areSomeAnnotationsInvalid: true,
       invalidAnnotationsReason: `All annotations must have at least one bounding box. Annotations without bounding boxes are: ${annotationIds.join(", ")}`,
     };
   }
-  return { areSomeAnnotationsInvalid: true, invalidAnnotationsReason: null };
+  return { areSomeAnnotationsInvalid: false, invalidAnnotationsReason: null };
 }
 
-function areBoundingBoxesInvalid(userBoundingBoxes: UserBoundingBox[] | undefined): {
+function areBoundingBoxesInvalid(userBoundingBoxes: UserBoundingBox[]): {
   areSomeBBoxesInvalid: boolean;
   invalidBBoxesReason: string | null;
 } {
-  if (userBoundingBoxes == null) {
-    return { areSomeBBoxesInvalid: true, invalidBBoxesReason: null };
-  }
   if (userBoundingBoxes.length === 0) {
     return {
-      areSomeBBoxesInvalid: false,
+      areSomeBBoxesInvalid: true,
       invalidBBoxesReason: "At least one bounding box must be defined.",
     };
   }
@@ -410,17 +430,17 @@ function areBoundingBoxesInvalid(userBoundingBoxes: UserBoundingBox[] | undefine
   // width must equal height
   if (size[0] !== size[1]) {
     return {
-      areSomeBBoxesInvalid: false,
+      areSomeBBoxesInvalid: true,
       invalidBBoxesReason: "The bounding box width must equal its height.",
     };
   }
   // all bounding boxes must have the same size
   const areSizesIdentical = userBoundingBoxes.every((bbox) => V3.isEqual(getSize(bbox), size));
   if (areSizesIdentical) {
-    return { areSomeBBoxesInvalid: true, invalidBBoxesReason: null };
+    return { areSomeBBoxesInvalid: false, invalidBBoxesReason: null };
   }
   return {
-    areSomeBBoxesInvalid: false,
+    areSomeBBoxesInvalid: true,
     invalidBBoxesReason: "All bounding boxes must have the same size.",
   };
 }
@@ -428,7 +448,7 @@ function areBoundingBoxesInvalid(userBoundingBoxes: UserBoundingBox[] | undefine
 function AnnotationsCsvInput({
   onAdd,
 }: {
-  onAdd: (newItems: Array<AnnotationWithDataset>) => void;
+  onAdd: (newItems: Array<AnnotationWithDatasetAndVolumes<APIAnnotation>>) => void;
 }) {
   const [value, setValue] = useState("");
   const onClickAdd = async () => {
@@ -456,7 +476,7 @@ function AnnotationsCsvInput({
           name: annotation.dataSetName,
         });
 
-        const volumeTracings: ServerVolumeTracing[] = await Promise.all(
+        const volumeServerTracings: ServerVolumeTracing[] = await Promise.all(
           annotation.annotationLayers
             .filter((layer) => layer.typ === "Volume")
             .map(
@@ -464,12 +484,35 @@ function AnnotationsCsvInput({
                 getTracingForAnnotationType(annotation, layer) as Promise<ServerVolumeTracing>,
             ),
         );
+        // TODO: make bboxs a member again
+        const volumeTracings = volumeServerTracings.map((tracing) =>
+          serverVolumeToClientVolumeTracing(tracing),
+        );
+        let userBoundingBoxes = volumeTracings[0]?.userBoundingBoxes;
+        if (!userBoundingBoxes) {
+          const skeletonLayer = annotation.annotationLayers.find(
+            (layer) => layer.typ === "Skeleton",
+          );
+          if (skeletonLayer) {
+            const skeletonTracing = await getTracingForAnnotationType(annotation, skeletonLayer);
+            userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(
+              skeletonTracing.userBoundingBoxes,
+            );
+          } else {
+            new Error(`Annotation ${annotation.id} has neither a volume nor a skeleton layer`);
+          }
+        }
+
         console.log(volumeTracings); // TODOM remove
 
         return {
           annotation,
           dataset,
           volumeTracings,
+          volumeTracingResolutions: volumeServerTracings.map(({ resolutions }) =>
+            resolutions ? resolutions.map(Utils.point3ToVector3) : ([[1, 1, 1]] as Vector3[]),
+          ),
+          userBoundingBoxes: userBoundingBoxes || [],
         };
       }),
     );

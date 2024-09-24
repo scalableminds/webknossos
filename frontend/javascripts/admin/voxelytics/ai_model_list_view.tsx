@@ -12,7 +12,10 @@ import { JobState } from "admin/job/job_list_view";
 import { Link } from "react-router-dom";
 import { useGuardedFetch } from "libs/react_helpers";
 import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
-import { type AnnotationWithDataset, TrainAiModelTab } from "oxalis/view/jobs/train_ai_model";
+import {
+  type AnnotationWithDatasetAndVolumes,
+  TrainAiModelTab,
+} from "oxalis/view/jobs/train_ai_model";
 import {
   getResolutionInfo,
   getSegmentationLayerByName,
@@ -108,35 +111,35 @@ export default function AiModelListView() {
 }
 
 function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
-  const [annotationsWithDatasets, setAnnotationsWithDatasets] = useState<
-    AnnotationWithDataset<APIAnnotation>[]
+  const [annotationsWithDatasetsAndVolumes, setAnnotationsWithDatasetsAndVolumes] = useState<
+    AnnotationWithDatasetAndVolumes<APIAnnotation>[]
   >([]);
 
   const getMagForSegmentationLayer = async (annotationId: string, layerName: string) => {
+    // TODO: Maybe move extraction of getMagForSegmentationLayer ahead and make it part of AnnotationWithDatasetAndVolumes
+    // TODO: Improve
     // The layer name is a human-readable one. It can either belong to an annotationLayer
     // (therefore, also to a volume tracing) or to the actual dataset.
     // Both are checked below. This won't be ambiguous because annotationLayers must not
     // have names that dataset layers already have.
 
-    const annotationWithDataset = annotationsWithDatasets.find(({ annotation }) => {
+    const annotationWithDataset = annotationsWithDatasetsAndVolumes.find(({ annotation }) => {
       return annotation.id === annotationId;
     });
     if (annotationWithDataset == null) {
       throw new Error("Cannot find annotation for specified id.");
     }
 
-    const { annotation, dataset } = annotationWithDataset;
+    const { annotation, dataset, volumeTracings, volumeTracingResolutions } = annotationWithDataset;
 
     let annotationLayer = annotation.annotationLayers.find((l) => l.name === layerName);
-
     if (annotationLayer != null) {
-      const volumeTracing = (await getTracingForAnnotationType(
-        annotation,
-        annotationLayer,
-      )) as ServerVolumeTracing;
-      const resolutions: Vector3[] = volumeTracing.resolutions?.map(({ x, y, z }) => [x, y, z]) || [
-        [1, 1, 1],
-      ];
+      annotationLayer;
+      const volumeTracingIndex = volumeTracings.findIndex(
+        (tracing) => tracing.tracingId === annotationLayer.tracingId,
+      );
+      const resolutions =
+        volumeTracingResolutions[volumeTracingIndex] || ([[1, 1, 1]] as Vector3[]);
       return getResolutionInfo(resolutions).getFinestResolution();
     } else {
       const segmentationLayer = getSegmentationLayerByName(dataset, layerName);
@@ -160,9 +163,9 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
       <TrainAiModelTab
         getMagForSegmentationLayer={getMagForSegmentationLayer}
         onClose={onClose}
-        annotationsWithDatasets={annotationsWithDatasets}
+        annotationsWithDatasets={annotationsWithDatasetsAndVolumes}
         onAddAnnotationsWithDatasets={(newItems) => {
-          setAnnotationsWithDatasets([...annotationsWithDatasets, ...newItems]);
+          setAnnotationsWithDatasetsAndVolumes([...annotationsWithDatasetsAndVolumes, ...newItems]);
         }}
       />
     </Modal>

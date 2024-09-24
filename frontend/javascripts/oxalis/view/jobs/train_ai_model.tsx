@@ -491,7 +491,7 @@ function AnnotationsCsvInput({
               skeletonTracing.userBoundingBoxes,
             );
           } else {
-            new Error(`Annotation ${annotation.id} has neither a volume nor a skeleton layer`);
+            throw new Error(`Annotation ${annotation.id} has neither a volume nor a skeleton layer`);
           }
         }
 

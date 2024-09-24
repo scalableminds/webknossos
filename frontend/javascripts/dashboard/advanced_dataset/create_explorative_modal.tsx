@@ -13,7 +13,7 @@ import {
 import { getDataset } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
-import { RangeSlider, Slider } from "components/slider";
+import { Slider } from "components/slider";
 
 type Props = {
   datasetId: APIDatasetId;
@@ -140,7 +140,7 @@ export function RestrictResolutionSlider({
         >
           {resolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex).join("-")}
         </div>
-        <RangeSlider
+        <Slider
           tooltip={{ open: false }}
           onChange={(value) => setResolutionIndices(value)}
           range

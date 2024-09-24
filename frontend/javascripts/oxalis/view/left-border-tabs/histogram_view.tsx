@@ -10,7 +10,7 @@ import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions"
 import type { DatasetLayerConfiguration } from "oxalis/store";
 import { CloseOutlined } from "@ant-design/icons";
 import FastTooltip from "components/fast_tooltip";
-import { RangeSlider } from "components/slider";
+import { Slider } from "components/slider";
 
 type OwnProps = {
   data: APIHistogramData | null | undefined;
@@ -271,7 +271,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     return (
       <Spin spinning={data === undefined}>
         <canvas ref={this.onCanvasRefChange} width={canvasWidth} height={canvasHeight} />
-        <RangeSlider
+        <Slider
           range
           value={[intensityRangeMin, intensityRangeMax]}
           min={minRange}

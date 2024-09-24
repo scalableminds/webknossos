@@ -1,41 +1,33 @@
 import { Slider as AntdSlider, type SliderSingleProps } from "antd";
 import type { SliderRangeProps } from "antd/lib/slider";
+import type { WheelEventHandler } from "react";
 
-export function Slider(props: SliderSingleProps) {
-  const { min, max, onChange, value } = props;
-  if (onChange == null || value == null) return null;
-  const minNotNull = min || 0;
-  const maxNotNull = max || 0;
-  const range = maxNotNull - minNotNull;
-  return (
-    <div
-      onWheel={(event) => {
-        const newValue = Math.round(value - (event.deltaY / Math.abs(event.deltaY)) * 0.02 * range);
-        console.log(event, newValue);
-        if (newValue < minNotNull) onChange(minNotNull);
-        else if (newValue > maxNotNull) onChange(maxNotNull);
-        else onChange(newValue);
-      }}
-    >
-      <AntdSlider {...props} />
-    </div>
-  );
-}
+const getDiffPerSliderStep = (deltaY: number, sliderRange: number, factor: number = 0.02) =>
+  (deltaY / Math.abs(deltaY)) * factor * sliderRange;
 
-export function RangeSlider(props: SliderRangeProps) {
-  const { min, max, onChange, value } = props;
-  if (onChange == null || value == null) return null;
-  const minNotNull = min || 0;
-  const maxNotNull = max || 0;
-  const range = maxNotNull - minNotNull;
+export function Slider(props: SliderSingleProps | SliderRangeProps) {
+  const { min, max, onChange, value, range } = props;
+  if (min == null || max == null || onChange == null || value == null)
+    return <AntdSlider {...props} />;
+  const sliderRange = max - min;
+  let handleWheelEvent: WheelEventHandler<HTMLDivElement> = () => {};
+  if (range === false || range == null) {
+    handleWheelEvent = (event) => {
+      const newValue = Math.round(value - getDiffPerSliderStep(event.deltaY, sliderRange));
+      if (newValue < min) onChange(min);
+      else if (newValue > max) onChange(max);
+      else onChange(newValue);
+    };
+  } else if (range === true || typeof range === "object") {
+    handleWheelEvent = (event) => {
+      const newValue = value.map((el) =>
+        Math.round(el - getDiffPerSliderStep(event.deltaY, sliderRange)),
+      );
+      if (newValue[0] > min && newValue[1] < max) onChange(newValue);
+    };
+  }
   return (
-    <div
-      onWheel={(event) => {
-        const diff = (event.deltaY / Math.abs(event.deltaY)) * 0.02 * range;
-        const newValue = value.map((el) => Math.round(el - diff));
-        if (newValue[0] > minNotNull && newValue[1] < maxNotNull) onChange(newValue);
-      }}
-    >
+    <div onWheel={handleWheelEvent}>
       <AntdSlider {...props} />
     </div>
   );

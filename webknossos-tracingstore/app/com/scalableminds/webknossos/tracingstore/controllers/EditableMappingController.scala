@@ -187,7 +187,9 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
             tracing <- volumeTracingService.find(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
+            editableMappingInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId)
             (segmentId, edges) <- editableMappingService.agglomerateGraphNeighbors(tracingId,
+                                                                                   editableMappingInfo,
                                                                                    tracing.version,
                                                                                    request.body,
                                                                                    remoteFallbackLayer)

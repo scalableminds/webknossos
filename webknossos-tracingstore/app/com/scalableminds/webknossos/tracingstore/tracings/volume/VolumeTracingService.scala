@@ -995,7 +995,7 @@ class VolumeTracingService @Inject()(
           remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
         remoteFallbackLayer <- remoteFallbackLayers.headOption.toFox
         _ <- bool2Fox(remoteFallbackLayers.forall(_ == remoteFallbackLayer)) ?~> "Cannot merge editable mappings based on different dataset layers"
-        _ <- editableMappingService.merge(newTracingId, tracingsWithIds.map(_._2), remoteFallbackLayer)
+        // TODO_ <- editableMappingService.merge(newTracingId, tracingsWithIds.map(_._2), remoteFallbackLayer)
       } yield ()
     } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.getHasEditableMapping)) {
       Fox.empty

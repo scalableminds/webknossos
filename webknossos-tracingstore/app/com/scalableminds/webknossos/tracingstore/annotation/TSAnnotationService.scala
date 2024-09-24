@@ -82,7 +82,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       } yield updateActionGroups.reverse.flatten
     }
 
+  // TODO option to dry apply?
   private def applyUpdate(
+      annotationId: String,
       annotationWithTracings: AnnotationWithTracings,
       updateAction: UpdateAction,
       targetVersion: Long // Note: this is not the target version of this one update, but of all pending
@@ -101,7 +103,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           annotationWithTracings.applySkeletonAction(a) ?~> "applySkeletonAction.failed"
         case a: UpdateMappingNameVolumeAction if a.isEditable.contains(true) =>
           for {
-            withNewEditableMapping <- addEditableMapping(annotationWithTracings, a, targetVersion)
+            withNewEditableMapping <- addEditableMapping(annotationId, annotationWithTracings, a, targetVersion)
             withApplyedVolumeAction <- withNewEditableMapping.applyVolumeAction(a)
           } yield withApplyedVolumeAction
         case a: ApplyableVolumeUpdateAction =>
@@ -166,13 +168,15 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
 
   // move the functions that construct the AnnotationWithTracigns elsewhere?
   private def addEditableMapping(
+      annotationId: String,
       annotationWithTracings: AnnotationWithTracings,
       action: UpdateMappingNameVolumeAction,
       targetVersion: Long)(implicit tc: TokenContext, ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
       editableMappingInfo <- getEditableMappingInfoFromStore(action.actionTracingId, annotationWithTracings.version)
       volumeTracing <- annotationWithTracings.getVolume(action.actionTracingId).toFox
-      updater <- editableMappingUpdaterFor(action.actionTracingId,
+      updater <- editableMappingUpdaterFor(annotationId,
+                                           action.actionTracingId,
                                            volumeTracing,
                                            editableMappingInfo.value,
                                            annotationWithTracings.version,
@@ -193,7 +197,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                                        updates,
                                                        requestedSkeletonTracingIds,
                                                        requestedVolumeTracingIds) ?~> "findTracingsForUpdates.failed"
-      annotationWithTracingsAndMappings <- findEditableMappingsForUpdates(annotationWithTracings,
+      annotationWithTracingsAndMappings <- findEditableMappingsForUpdates(annotationId,
+                                                                          annotationWithTracings,
                                                                           updates,
                                                                           annotation.version,
                                                                           targetVersion)
@@ -201,6 +206,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     } yield updated
 
   private def findEditableMappingsForUpdates( // TODO integrate with findTracings?
+                                             annotationId: String,
                                              annotationWithTracings: AnnotationWithTracings,
                                              updates: List[UpdateAction],
                                              currentMaterializedVersion: Long,
@@ -213,7 +219,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         case (volumeTracing, volumeTracingId) =>
           for {
             editableMappingInfo <- getEditableMappingInfoFromStore(volumeTracingId, annotationWithTracings.version)
-            updater <- editableMappingUpdaterFor(volumeTracingId,
+            updater <- editableMappingUpdaterFor(annotationId,
+                                                 volumeTracingId,
                                                  volumeTracing,
                                                  editableMappingInfo.value,
                                                  currentMaterializedVersion,
@@ -229,6 +236,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       fromProtoBytes[EditableMappingInfo])
 
   private def editableMappingUpdaterFor(
+      annotationId: String,
       tracingId: String,
       volumeTracing: VolumeTracing,
       editableMappingInfo: EditableMappingInfo,
@@ -238,6 +246,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       remoteFallbackLayer <- remoteFallbackLayerFromVolumeTracing(volumeTracing, tracingId)
     } yield
       new EditableMappingUpdater(
+        annotationId,
         tracingId,
         editableMappingInfo.baseMappingName,
         currentMaterializedVersion,
@@ -246,6 +255,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         tc,
         remoteDatastoreClient,
         editableMappingService,
+        this,
         tracingDataStore,
         relyOnAgglomerateIds = false // TODO should we?
       )
@@ -299,7 +309,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
             case List() => Fox.successful(annotationWithTracings)
             case RevertToVersionUpdateAction(sourceVersion, _, _, _) :: tail =>
               ???
-            case update :: tail => updateIter(applyUpdate(annotationWithTracings, update, targetVersion), tail)
+            case update :: tail =>
+              updateIter(applyUpdate(annotationId, annotationWithTracings, update, targetVersion), tail)
           }
         case _ => annotationWithTracingsFox
       }

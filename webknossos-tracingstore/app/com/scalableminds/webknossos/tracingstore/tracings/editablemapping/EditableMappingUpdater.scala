@@ -10,7 +10,11 @@ import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.{
   SegmentToAgglomerateChunkProto
 }
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
-import com.scalableminds.webknossos.tracingstore.annotation.{RevertToVersionUpdateAction, UpdateAction}
+import com.scalableminds.webknossos.tracingstore.annotation.{
+  RevertToVersionUpdateAction,
+  TSAnnotationService,
+  UpdateAction
+}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
@@ -32,6 +36,7 @@ import scala.jdk.CollectionConverters.CollectionHasAsScala
 // this results in only one version increment in the db per update group
 
 class EditableMappingUpdater(
+    annotationId: String,
     tracingId: String,
     baseMappingName: String,
     oldVersion: Long,
@@ -40,6 +45,7 @@ class EditableMappingUpdater(
     tokenContext: TokenContext,
     remoteDatastoreClient: TSRemoteDatastoreClient,
     editableMappingService: EditableMappingService,
+    annotationService: TSAnnotationService,
     tracingDataStore: TracingDataStore,
     relyOnAgglomerateIds: Boolean // False during merge and in case of multiple actions. Then, look up all agglomerate ids at positions
 ) extends KeyValueStoreImplicits
@@ -418,7 +424,8 @@ class EditableMappingUpdater(
       implicit ec: ExecutionContext): Fox[EditableMappingInfo] =
     for {
       _ <- bool2Fox(revertAction.sourceVersion <= oldVersion) ?~> "trying to revert editable mapping to a version not yet present in the database"
-      oldInfo <- editableMappingService.getInfo(tracingId, Some(revertAction.sourceVersion), remoteFallbackLayer)(
+      oldInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId, Some(revertAction.sourceVersion))(
+        ec,
         tokenContext)
       _ = segmentToAgglomerateBuffer.clear()
       _ = agglomerateToGraphBuffer.clear()

@@ -207,8 +207,9 @@ class VolumeTracingController @Inject()(
             remoteFallbackLayerOpt <- Fox.runIf(tracing.getHasEditableMapping)(
               tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId))
             newTracingId = tracingService.generateTracingId
-            _ <- Fox.runIf(tracing.getHasEditableMapping)(
-              editableMappingService.duplicate(tracingId, newTracingId, version = None, remoteFallbackLayerOpt))
+            // TODO
+            /*_ <- Fox.runIf(tracing.getHasEditableMapping)(
+              editableMappingService.duplicate(tracingId, newTracingId, version = None, remoteFallbackLayerOpt))*/
             (newId, newTracing) <- tracingService.duplicate(
               annotationId,
               tracingId,

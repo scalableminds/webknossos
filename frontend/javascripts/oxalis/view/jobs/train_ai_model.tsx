@@ -444,9 +444,11 @@ function AnnotationsCsvInput({
   const onClickAdd = async () => {
     const newItems = [];
 
-    const lines = value.split("\n");
-    for (const line of lines) {
-      const [annotationUrlOrId] = line.trim().split(",");
+    const lines = value
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line !== "");
+    for (const annotationUrlOrId of lines) {
       if (annotationUrlOrId.includes("/")) {
         newItems.push({
           annotationId: annotationUrlOrId.split("/").at(-1) as string,

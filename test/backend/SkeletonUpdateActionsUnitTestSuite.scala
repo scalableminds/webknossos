@@ -1,7 +1,9 @@
 package backend
 
-import com.scalableminds.util.geometry.{Vec3Int, Vec3Double}
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
+import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
 import org.scalatestplus.play._
 
@@ -67,6 +69,9 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         branchPoints = List(UpdateActionBranchPoint(0, Dummies.timestamp)),
         comments = List[UpdateActionComment](),
         groupId = None,
+        metadata = Some(
+          List(MetadataEntry("myKey", numberValue = Some(5.0)),
+               MetadataEntry("anotherKey", stringListValue = Some(Seq("hello", "there"))))),
         actionTracingId = Dummies.tracingId
       )
       val result = applyUpdateAction(updateTreeAction)
@@ -77,6 +82,9 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       assert(tree.createdTimestamp == Dummies.timestamp)
       assert(tree.comments == updateTreeAction.comments)
       assert(tree.name == updateTreeAction.name)
+      assert(
+        tree.metadata == List(MetadataEntryProto("myKey", numberValue = Some(5.0)),
+                              MetadataEntryProto("anotherKey", stringListValue = Seq("hello", "there"))))
     }
   }
 
@@ -212,7 +220,6 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         Option(newNode.interpolation),
         treeId = 1,
         Dummies.timestamp,
-        None,
         actionTracingId = Dummies.tracingId
       )
       val deleteNodeSkeletonAction =

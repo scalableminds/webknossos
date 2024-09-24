@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction}
-import com.scalableminds.webknossos.tracingstore.tracings.NamedBoundingBox
+import com.scalableminds.webknossos.tracingstore.tracings.{NamedBoundingBox, MetadataEntry}
 import play.api.libs.json._
 
 trait VolumeUpdateActionHelper {
@@ -197,6 +197,7 @@ case class CreateSegmentVolumeAction(id: Long,
                                      groupId: Option[Int],
                                      creationTime: Option[Long],
                                      additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+                                     metadata: Option[Seq[MetadataEntry]] = None,
                                      actionTracingId: String,
                                      actionTimestamp: Option[Long] = None,
                                      actionAuthorId: Option[String] = None,
@@ -212,13 +213,16 @@ case class CreateSegmentVolumeAction(id: Long,
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     val newSegment =
-      Segment(id,
-              anchorPosition.map(vec3IntToProto),
-              name,
-              creationTime,
-              colorOptToProto(color),
-              groupId,
-              AdditionalCoordinate.toProto(additionalCoordinates))
+      Segment(
+        id,
+        anchorPosition.map(vec3IntToProto),
+        name,
+        creationTime,
+        colorOptToProto(color),
+        groupId,
+        AdditionalCoordinate.toProto(additionalCoordinates),
+        metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
+      )
     tracing.addSegments(newSegment)
   }
 }
@@ -230,6 +234,7 @@ case class UpdateSegmentVolumeAction(id: Long,
                                      creationTime: Option[Long],
                                      groupId: Option[Int],
                                      additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+                                     metadata: Option[Seq[MetadataEntry]] = None,
                                      actionTracingId: String,
                                      actionTimestamp: Option[Long] = None,
                                      actionAuthorId: Option[String] = None,
@@ -252,7 +257,8 @@ case class UpdateSegmentVolumeAction(id: Long,
         creationTime = creationTime,
         color = colorOptToProto(color),
         groupId = groupId,
-        anchorPositionAdditionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates)
+        anchorPositionAdditionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates),
+        metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
       )
     tracing.withSegments(mapSegments(tracing, id, segmentTransform))
   }

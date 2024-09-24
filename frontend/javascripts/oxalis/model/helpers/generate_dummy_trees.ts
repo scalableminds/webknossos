@@ -3,9 +3,7 @@ import type { ServerSkeletonTracingTree } from "types/api_flow_types"; // This i
 
 // Since the server cannot handle such big tracings at the moment, we'll
 // use this code to test the front-end performance.
-// By default, this code is not used, but can be used similar to:
-// tracing.trees = generateDummyTrees(1, 1000000);
-// in model.js
+// Prefer WkDev.createManyTrees for interactive tests.
 
 export default function generateDummyTrees(
   treeCount: number,
@@ -67,6 +65,7 @@ export default function generateDummyTrees(
       name: "explorative_2017-10-09_SCM_Boy_023",
       createdTimestamp: 1507550576213,
       isVisible: true,
+      metadata: [],
     };
   }
 

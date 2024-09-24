@@ -95,8 +95,7 @@ class InputComponent extends React.PureComponent<InputProps, InputComponentState
     }
   };
 
-  blurYourself = () =>
-    document.activeElement ? (document.activeElement as HTMLElement).blur() : null;
+  blurYourself = () => (document.activeElement as HTMLElement | null)?.blur();
 
   blurOnEscape = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {

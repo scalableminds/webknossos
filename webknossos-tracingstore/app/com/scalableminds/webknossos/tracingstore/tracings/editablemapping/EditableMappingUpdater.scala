@@ -448,8 +448,7 @@ class EditableMappingUpdater(
             for {
               agglomerateId <- agglomerateIdFromAgglomerateGraphKey(graphKey)
               _ <- editableMappingService
-                .getAgglomerateGraphForId(tracingId, revertAction.sourceVersion, agglomerateId, remoteFallbackLayer)(
-                  tokenContext)
+                .getAgglomerateGraphForId(tracingId, revertAction.sourceVersion, agglomerateId, remoteFallbackLayer)
                 .futureBox
                 .map {
                   case Full(graphData) => agglomerateToGraphBuffer.put(graphKey, (graphData, false))

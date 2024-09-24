@@ -225,88 +225,10 @@ pre.dataset-import-folder-structure-hint {
   vertical-align: top;
 }
 
-.metadata-table-wrapper {
-  border: var(--ant-line-width) var(--ant-line-type) var(--ant-color-border);
-  color: var(--ant-tag-default-color);
-  background: var(--ant-tag-default-bg);
-  border-radius: var(--ant-border-radius-sm);
-  padding: 2px;
-  .metadata-table {
-    color: var(--ant-tag-default-color);
-    background: var(--ant-tag-default-bg);
-    border-collapse: collapse; /* Ensure border-collapse is set to separate */
-    table-layout: fixed;
-
-    tr td {
-      padding-top: 4px;
-      padding-bottom: 4px;
-    }
-    tbody tr td:last-child {
-      padding: 0px;
-    }
-
-    tr {
-      // A pseudo element is created to add a horizontal line between the rows. It does not stretch the entire width of the table.
-      position: relative;
-      &:not(:last-child)::after {
-        content: "";
-        position: absolute;
-        left: 8px;
-        right: 8px;
-        top: 0;
-        height: var(--ant-line-width);
-        background-color: var(--ant-color-border);
-      }
-    }
-
-    .transparent-input {
-      background: transparent;
-      border-color: transparent;
-      .ant-select-selector {
-        border-color: transparent;
-      }
-    }
-
-    th {
-      padding: 4px !important;
-      padding-left: 9px !important;
-      font-weight: normal;
-      text-align: left;
-    }
-    .ant-table-cell {
-      padding: 4px 4px 4px 0px !important;
-    }
-
-    thead tr th:first-child,
-    tbody tr td:first-child,
-    thead tr th:nth-child(3),
-    tbody tr td:nth-child(3) {
-      .ant-input-number,
-      .ant-select,
-      input {
-        width: 114.5px;
-      }
-      // Due to the border around the input elements, the width of the td has to be increased by 2px.
-      width: 116.5px;
-    }
-    tbody tr td:first-child,
-    tbody tr td:nth-child(3) {
-      vertical-align: top;
-    }
-    thead tr th:nth-child(2),
-    tbody tr td:nth-child(2) {
-      width: 5px;
-      // Center the :
-      text-align: center;
-      vertical-align: top;
-    }
-    thead tr th:nth-child(4),
-    tbody tr td:nth-child(4) {
-      width: 20px;
-      vertical-align: top;
-    }
+.dashboard-metadata-table-wrapper {
+  th {
+    font-weight: bold !important;
   }
-
   .empty-metadata-placeholder {
     padding: 16px;
     text-align: center;

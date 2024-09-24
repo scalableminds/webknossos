@@ -23,6 +23,7 @@ case class CreateTreeSkeletonAction(id: Int,
                                     isVisible: Option[Boolean],
                                     `type`: Option[TreeType] = None,
                                     edgesAreVisible: Option[Boolean],
+                                    metadata: Option[Seq[MetadataEntry]] = None,
                                     actionTracingId: String,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
@@ -42,7 +43,8 @@ case class CreateTreeSkeletonAction(id: Int,
       groupId,
       isVisible,
       `type`.map(TreeType.toProto),
-      edgesAreVisible
+      edgesAreVisible,
+      metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
     )
     tracing.withTrees(newTree +: tracing.trees)
   }
@@ -80,6 +82,7 @@ case class UpdateTreeSkeletonAction(id: Int,
                                     comments: List[UpdateActionComment],
                                     groupId: Option[Int],
                                     `type`: Option[TreeType] = None,
+                                    metadata: Option[Seq[MetadataEntry]] = None,
                                     actionTracingId: String,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
@@ -95,7 +98,8 @@ case class UpdateTreeSkeletonAction(id: Int,
         comments = comments.map(convertComment),
         name = name,
         groupId = groupId,
-        `type` = `type`.map(TreeType.toProto)
+        `type` = `type`.map(TreeType.toProto),
+        metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
       )
 
     tracing.withTrees(mapTrees(tracing, id, treeTransform))

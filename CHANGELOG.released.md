@@ -22,7 +22,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 - For self-hosted versions, the text in the dataset upload view was updated to recommend switching to webknossos.org. [#7996](https://github.com/scalableminds/webknossos/pull/7996)
 - Updated frontend package management to yarn version 4. [8061](https://github.com/scalableminds/webknossos/pull/8061)
-- Updated React to version 18. Updated many peer dependencies inlcuding Redux, React-Router, antd, and FlexLayout. [#8048](https://github.com/scalableminds/webknossos/pull/8048)
+- Updated React to version 18. Updated many peer dependencies including Redux, React-Router, antd, and FlexLayout. [#8048](https://github.com/scalableminds/webknossos/pull/8048)
 - Improved the performance of context menus in the bounding box tab. [#8059](https://github.com/scalableminds/webknossos/pull/8059)
 
 ### Fixed

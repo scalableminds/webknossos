@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(120);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(121);
 COMMIT TRANSACTION;
 
 
@@ -741,7 +741,7 @@ CREATE INDEX ON webknossos.annotations(typ, state, isDeleted);
 CREATE INDEX ON webknossos.annotations(_user, _task, isDeleted);
 CREATE INDEX ON webknossos.annotations(_task, typ, isDeleted);
 CREATE INDEX ON webknossos.annotations(typ, isDeleted);
-CREATE INDEX ON webknossos.datasets(name);
+CREATE INDEX ON webknossos.datasets(path);
 CREATE INDEX ON webknossos.datasets(_folder);
 CREATE INDEX ON webknossos.tasks(_project);
 CREATE INDEX ON webknossos.tasks(isDeleted);

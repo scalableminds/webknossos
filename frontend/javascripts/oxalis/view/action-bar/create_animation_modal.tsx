@@ -94,7 +94,6 @@ export default function CreateAnimationModalWrapper(props: Props) {
 function CreateAnimationModal(props: Props) {
   const { isOpen, onClose } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
 
   const colorLayers = getColorLayers(dataset);
@@ -403,7 +402,7 @@ function CreateAnimationModal(props: Props) {
               layers={colorLayers}
               value={selectedColorLayerName}
               onChange={setSelectedColorLayerName}
-              tracing={tracing}
+              getReadableNameForLayer={(layer) => layer.name}
               style={{ width: "100%" }}
             />
           </Col>

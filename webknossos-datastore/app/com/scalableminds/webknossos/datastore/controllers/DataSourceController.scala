@@ -216,7 +216,8 @@ class DataSourceController @Inject()(
           result <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId),
                                                       urlOrHeaderToken(token, request)) {
             for {
-              (dataSourceId, datasetSizeBytes) <- uploadService.finishUpload(request.body) ?~> "finishUpload.failed"
+              (dataSourceId, datasetSizeBytes) <- uploadService
+                .finishUpload(request.body) ?~> "dataset.upload.finishFailed"
               _ <- remoteWebknossosClient.reportUpload(
                 dataSourceId,
                 datasetSizeBytes,

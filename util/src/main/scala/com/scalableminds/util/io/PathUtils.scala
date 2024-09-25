@@ -38,8 +38,12 @@ trait PathUtils extends LazyLogging {
   def isTheSame(p1: Path, p2: Path): Boolean =
     p1.toAbsolutePath.compareTo(p2.toAbsolutePath) == 0
 
-  def commonPrefix(p1: Path, p2: Path): Path =
-    Paths.get(p1.iterator.asScala.zip(p2.iterator.asScala).takeWhile(Function.tupled(_ == _)).map(_._1).mkString("/"))
+  def commonPrefix(p1: Path, p2: Path): Path = {
+    val elements = p1.iterator.asScala.zip(p2.iterator.asScala).takeWhile(Function.tupled(_ == _)).map(_._1)
+    val joined = elements.mkString("/")
+    val absoluteIfNeeded = if (p1.startsWith("/")) f"/$joined" else joined
+    Paths.get(absoluteIfNeeded)
+  }
 
   def commonPrefix(ps: List[Path]): Path =
     ps.reduce(commonPrefix)

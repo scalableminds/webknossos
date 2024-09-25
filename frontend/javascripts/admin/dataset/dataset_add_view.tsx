@@ -303,7 +303,7 @@ const getPostUploadModal = (
         }}
       >
         The dataset was {addTypeToVerb[datasetAddType]} successfully
-        {datasetNeedsConversion ? " and a conversion job was started." : null}.
+        {datasetNeedsConversion ? " and a conversion job was started" : null}.
         <br />
         <div
           style={{

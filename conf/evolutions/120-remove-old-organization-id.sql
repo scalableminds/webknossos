@@ -144,7 +144,7 @@ ALTER TABLE webknossos.organizations DROP CONSTRAINT organizations_name_key;
 
 
 
--- Readd Foreign Key Constraints
+-- Re-add Foreign Key Constraints
 ALTER TABLE webknossos.datasets ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE;
 ALTER TABLE webknossos.teams ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE;
 ALTER TABLE webknossos.users ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE;

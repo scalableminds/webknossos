@@ -336,7 +336,7 @@ class VolumeTracingController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           tracing <- tracingService.find(annotationId, tracingId)
-          mappingName <- tracingService.baseMappingName(tracing)
+          mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
           segmentVolumes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
             volumeSegmentStatisticsService.getSegmentVolume(annotationId,
                                                             tracingId,
@@ -354,7 +354,7 @@ class VolumeTracingController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           tracing <- tracingService.find(annotationId, tracingId)
-          mappingName <- tracingService.baseMappingName(tracing)
+          mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
           segmentBoundingBoxes: List[BoundingBox] <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
             volumeSegmentStatisticsService.getSegmentBoundingBox(annotationId,
                                                                  tracingId,
@@ -373,7 +373,7 @@ class VolumeTracingController @Inject()(
         for {
           fallbackLayer <- tracingService.getFallbackLayer(annotationId, tracingId)
           tracing <- tracingService.find(annotationId, tracingId)
-          mappingName <- tracingService.baseMappingName(tracing)
+          mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
           _ <- bool2Fox(DataLayer.bucketSize <= request.body.cubeSize) ?~> "cubeSize must be at least one bucket (32³)"
           bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
             .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(

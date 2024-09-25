@@ -42,16 +42,18 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     for {
       tracing <- volumeTracingService.find(annotationId, tracingId) ?~> "tracing.notFound"
       data <- if (fullMeshRequest.meshFileName.isDefined)
-        loadFullMeshFromMeshfile(tracing, tracingId, fullMeshRequest)
-      else loadFullMeshFromAdHoc(tracing, annotationId, tracingId, fullMeshRequest)
+        loadFullMeshFromMeshfile(annotationId, tracingId, tracing, fullMeshRequest)
+      else loadFullMeshFromAdHoc(annotationId, tracingId, tracing, fullMeshRequest)
     } yield data
 
-  private def loadFullMeshFromMeshfile(tracing: VolumeTracing, tracingId: String, fullMeshRequest: FullMeshRequest)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[Array[Byte]] =
+  private def loadFullMeshFromMeshfile(
+      annotationId: String,
+      tracingId: String,
+      tracing: VolumeTracing,
+      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       remoteFallbackLayer <- remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-      baseMappingName <- volumeTracingService.baseMappingName(tracing)
+      baseMappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
       fullMeshRequestAdapted = if (tracing.getHasEditableMapping)
         fullMeshRequest.copy(mappingName = baseMappingName,
                              editableMappingTracingId = Some(tracingId),
@@ -61,9 +63,9 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     } yield array
 
   private def loadFullMeshFromAdHoc(
-      tracing: VolumeTracing,
       annotationId: String,
       tracingId: String,
+      tracing: VolumeTracing,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
@@ -71,7 +73,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       before = Instant.now
       voxelSize <- remoteDatastoreClient.voxelSizeForTracingWithCache(tracingId) ?~> "voxelSize.failedToFetch"
       verticesForChunks <- if (tracing.hasSegmentIndex.getOrElse(false))
-        getAllAdHocChunksWithSegmentIndex(annotationId, tracing, tracingId, mag, voxelSize, fullMeshRequest)
+        getAllAdHocChunksWithSegmentIndex(annotationId, tracingId, tracing, mag, voxelSize, fullMeshRequest)
       else
         getAllAdHocChunksWithNeighborLogic(
           tracing,
@@ -90,14 +92,14 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
 
   private def getAllAdHocChunksWithSegmentIndex(
       annotationId: String,
-      tracing: VolumeTracing,
       tracingId: String,
+      tracing: VolumeTracing,
       mag: Vec3Int,
       voxelSize: VoxelSize,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] =
     for {
       fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracingId)
-      mappingName <- volumeTracingService.baseMappingName(tracing)
+      mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
       bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
         .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
           fallbackLayer,

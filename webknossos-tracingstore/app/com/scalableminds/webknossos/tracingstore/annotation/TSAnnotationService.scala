@@ -384,4 +384,13 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       annotationService = this,
       editableMappingService = editableMappingService
     )
+
+  def baseMappingName(annotationId: String, tracingId: String, tracing: VolumeTracing)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[Option[String]] =
+    if (tracing.getHasEditableMapping)
+      for {
+        editableMappingInfo <- getEditableMappingInfo(annotationId, tracingId)
+      } yield Some(editableMappingInfo.baseMappingName)
+    else Fox.successful(tracing.mappingName)
 }

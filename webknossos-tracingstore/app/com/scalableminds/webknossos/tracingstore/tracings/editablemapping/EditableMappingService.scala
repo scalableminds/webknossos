@@ -195,6 +195,7 @@ class EditableMappingService @Inject()(
     bool2Fox(tracing.getHasEditableMapping) ?~> "annotation.volume.noEditableMapping"
 
   def getBaseMappingName(tracingId: String): Fox[Option[String]] =
+    // TODO
     Fox.successful(None)
 
   def findSegmentIdAtPositionIfNeeded(remoteFallbackLayer: RemoteFallbackLayer,

@@ -51,7 +51,10 @@ import { isBoundingBoxExportable } from "./download_modal_view";
 import features from "features";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { TrainAiModelTab, CollapsibleWorkflowYamlEditor } from "../jobs/train_ai_model";
+import {
+  CollapsibleWorkflowYamlEditor,
+  TrainAiModelFromAnnotationTab,
+} from "../jobs/train_ai_model";
 import { LayerSelectionFormItem } from "components/layer_selection";
 import { useGuardedFetch } from "libs/react_helpers";
 import _ from "lodash";
@@ -291,7 +294,7 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
       ? {
           label: "Train a model",
           key: "trainModel",
-          children: <TrainAiModelTab onClose={onClose} />,
+          children: <TrainAiModelFromAnnotationTab onClose={onClose} />,
         }
       : null,
     {
@@ -627,11 +630,14 @@ function StartJobForm(props: StartJobFormProps) {
         initialName={`${dataset.name}_${props.suggestedDatasetSuffix}`}
       />
       <LayerSelectionFormItem
+        name="layerName"
         chooseSegmentationLayer={chooseSegmentationLayer}
         label={chooseSegmentationLayer ? "Segmentation Layer" : "Image data layer"}
         layers={layers}
         fixedLayerName={fixedSelectedLayer?.name}
-        tracing={tracing}
+        getReadableNameForLayer={(layer) =>
+          getReadableNameOfVolumeLayer(layer, tracing) || layer.name
+        }
       />
       <BoundingBoxSelectionFormItem
         isBoundingBoxConfigurable={isBoundingBoxConfigurable}

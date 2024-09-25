@@ -11,10 +11,8 @@ ALTER TABLE webknossos.datasets ALTER COLUMN name SET NOT NULL;
 
 ALTER TABLE webknossos.datasets DROP CONSTRAINT IF EXISTS datasets_name__organization_key;
 ALTER TABLE webknossos.datasets ADD CONSTRAINT datasets_path__organization_key UNIQUE(path, _organization);
--- TODO
--- CREATE INDEX ON webknossos.datasets(name);
--- DROP INDEX datasets_name_idx;
--- CREATE INDEX ON webknossos.datasets(path);
+DROP INDEX webknossos.datasets_name_idx;
+CREATE INDEX ON webknossos.datasets(path);
 
 CREATE VIEW webknossos.datasets_ AS SELECT * FROM webknossos.datasets WHERE NOT isDeleted;
 

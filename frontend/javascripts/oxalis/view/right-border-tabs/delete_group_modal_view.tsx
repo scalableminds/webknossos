@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Modal, Button } from "antd";
 import messages from "messages";
 

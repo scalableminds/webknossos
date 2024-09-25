@@ -1,5 +1,5 @@
 import { Spin } from "antd";
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useFetch } from "libs/react_helpers";
 import { requestVerificationMail, verifyEmail } from "admin/admin_rest_api";
 import Toast from "libs/toast";

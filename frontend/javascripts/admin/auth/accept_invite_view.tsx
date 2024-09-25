@@ -2,7 +2,7 @@ import { Button, Result, Layout, Spin } from "antd";
 import { GiftTwoTone } from "@ant-design/icons";
 import { useHistory } from "react-router-dom";
 import { AsyncButton } from "components/async_clickables";
-import React, { useState } from "react";
+import { useState } from "react";
 import AuthenticationModal from "admin/auth/authentication_modal";
 import { useFetch } from "libs/react_helpers";
 import {

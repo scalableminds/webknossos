@@ -6,7 +6,6 @@ import { useFetch } from "libs/react_helpers";
 import { LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
 import { getMappingInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import type { OxalisState, Segment } from "oxalis/store";
-import React from "react";
 import {
   type SegmentHierarchyNode,
   type SegmentHierarchyGroup,

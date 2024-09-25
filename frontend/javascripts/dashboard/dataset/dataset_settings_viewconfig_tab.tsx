@@ -14,7 +14,7 @@ import {
   Slider,
   Divider,
 } from "antd";
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Vector3Input } from "libs/vector_input";
 import { validateLayerViewConfigurationObjectJSON, syncValidator } from "types/validation";
 import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";

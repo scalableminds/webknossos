@@ -8,7 +8,6 @@ import { SoftError } from "libs/utils";
 import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
-import React from "react";
 import {
   tryToFetchDatasetsByName,
   type WizardComponentProps,

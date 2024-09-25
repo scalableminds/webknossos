@@ -8,7 +8,6 @@ import {
   Select,
   Popover,
   type PopoverProps,
-  Dropdown,
   type MenuProps,
 } from "antd";
 import {
@@ -32,7 +31,6 @@ import type { APISegmentationLayer } from "types/api_flow_types";
 import { api } from "oxalis/singletons";
 import FastTooltip from "components/fast_tooltip";
 import Toast from "libs/toast";
-import { handleGenericError } from "libs/error_handling";
 
 const ROW_GUTTER = 1;
 

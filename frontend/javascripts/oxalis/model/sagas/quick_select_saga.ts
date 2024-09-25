@@ -1,4 +1,3 @@
-import _ from "lodash";
 import ErrorHandling from "libs/error_handling";
 
 import { type Saga, select } from "oxalis/model/sagas/effect-generators";

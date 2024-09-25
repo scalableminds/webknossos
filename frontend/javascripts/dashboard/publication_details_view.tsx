@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Layout, Spin, Tooltip } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { getPublication } from "admin/admin_rest_api";

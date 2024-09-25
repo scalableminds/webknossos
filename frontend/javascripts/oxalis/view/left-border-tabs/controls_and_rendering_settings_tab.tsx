@@ -30,6 +30,7 @@ import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { PricingEnforcedSwitchSetting } from "components/pricing_enforcers";
 import type { ArrayElement } from "types/globals";
 import FastTooltip from "components/fast_tooltip";
+import defaultState from "oxalis/default_state";
 
 type ControlsAndRenderingSettingsTabProps = {
   activeUser: APIUser | null | undefined;
@@ -92,7 +93,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               min={this.props.validZoomRange[0]}
               max={this.props.validZoomRange[1]}
               value={this.props.zoomStep}
-              onChange={this.props.onChangeZoomStep}
+              onChange={this.props.onChangeZoomStep} //TODO_c
             />
             <NumberSliderSetting
               label={
@@ -105,6 +106,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               step={0.001}
               value={this.props.userConfiguration.mouseRotateValue}
               onChange={this.onChangeUser.mouseRotateValue}
+              defaultValue={defaultState.userConfiguration.mouseRotateValue}
             />
             <NumberSliderSetting
               label={
@@ -117,6 +119,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               step={0.001}
               value={this.props.userConfiguration.rotateValue}
               onChange={this.onChangeUser.rotateValue}
+              defaultValue={defaultState.userConfiguration.rotateValue}
             />
             <NumberSliderSetting
               label={
@@ -129,6 +132,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               step={0.01}
               value={this.props.userConfiguration.crosshairSize}
               onChange={this.onChangeUser.crosshairSize}
+              defaultValue={defaultState.userConfiguration.crosshairSize}
             />
             <NumberSliderSetting
               label={
@@ -141,6 +145,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               step={1}
               value={this.props.userConfiguration.sphericalCapRadius}
               onChange={this.onChangeUser.sphericalCapRadius}
+              defaultValue={defaultState.userConfiguration.sphericalCapRadius}
             />
             <SwitchSetting
               label={
@@ -166,7 +171,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               min={this.props.validZoomRange[0]}
               max={this.props.validZoomRange[1]}
               value={this.props.zoomStep}
-              onChange={this.props.onChangeZoomStep}
+              onChange={this.props.onChangeZoomStep} //TODO_c
             />
             <SwitchSetting
               label={
@@ -241,6 +246,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         step={10}
         value={this.props.userConfiguration.moveValue3d}
         onChange={this.onChangeUser.moveValue3d}
+        defaultValue={defaultState.userConfiguration.moveValue3d}
       />
     ) : (
       <NumberSliderSetting
@@ -252,6 +258,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         step={10}
         value={this.props.userConfiguration.moveValue}
         onChange={this.onChangeUser.moveValue}
+        defaultValue={defaultState.userConfiguration.moveValue}
       />
     );
 
@@ -271,6 +278,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               max={userSettings.keyboardDelay.maximum}
               value={this.props.userConfiguration.keyboardDelay}
               onChange={this.onChangeUser.keyboardDelay}
+              defaultValue={defaultState.userConfiguration.keyboardDelay}
             />
             {moveValueSetting}
             <SwitchSetting

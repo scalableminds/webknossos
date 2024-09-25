@@ -31,6 +31,7 @@ import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataFormat, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
+import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.webknossos.tracingstore.{
@@ -48,6 +49,7 @@ class VolumeTracingZarrStreamingController @Inject()(
     tracingService: VolumeTracingService,
     accessTokenService: TracingStoreAccessTokenService,
     editableMappingService: EditableMappingService,
+    annotationService: TSAnnotationService,
     remoteDataStoreClient: TSRemoteDatastoreClient,
     remoteWebknossosClient: TSRemoteWebknossosClient)(implicit ec: ExecutionContext)
     extends ExtendedController
@@ -303,9 +305,10 @@ class VolumeTracingZarrStreamingController @Inject()(
               version = None,
               additionalCoordinates = additionalCoordinates
             )
-            (data, missingBucketIndices) <- if (tracing.getHasEditableMapping)
-              editableMappingService.volumeData(tracing, tracingId, List(wkRequest))
-            else tracingService.data(tracingId, tracing, List(wkRequest))
+            (data, missingBucketIndices) <- if (tracing.getHasEditableMapping) {
+              val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
+              editableMappingService.volumeData(mappingLayer, List(wkRequest))
+            } else tracingService.data(tracingId, tracing, List(wkRequest))
             dataWithFallback <- getFallbackLayerDataIfEmpty(tracing,
                                                             tracingId,
                                                             data,

@@ -661,24 +661,22 @@ class VolumeTracingService @Inject()(
   def volumeBucketsAreEmpty(tracingId: String): Boolean =
     volumeDataStore.getMultipleKeys(None, Some(tracingId), limit = Some(1))(toBox).isEmpty
 
-  def createAdHocMesh(annotationId: String, tracingId: String, request: WebknossosAdHocMeshRequest)(
-      implicit tc: TokenContext): Fox[(Array[Float], List[Int])] =
-    for {
-      tracing <- find(annotationId: String, tracingId) ?~> "tracing.notFound"
-      segmentationLayer = volumeTracingLayer(tracingId, tracing, includeFallbackDataIfAvailable = true)
-      adHocMeshRequest = AdHocMeshRequest(
-        None,
-        segmentationLayer,
-        request.cuboid(segmentationLayer),
-        request.segmentId,
-        request.voxelSizeFactorInUnit,
-        None,
-        None,
-        request.additionalCoordinates,
-        request.findNeighbors
-      )
-      result <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
-    } yield result
+  def createAdHocMesh(tracingId: String, tracing: VolumeTracing, request: WebknossosAdHocMeshRequest)(
+      implicit tc: TokenContext): Fox[(Array[Float], List[Int])] = {
+    val volumeLayer = volumeTracingLayer(tracingId, tracing, includeFallbackDataIfAvailable = true)
+    val adHocMeshRequest = AdHocMeshRequest(
+      None,
+      volumeLayer,
+      request.cuboid(volumeLayer),
+      request.segmentId,
+      request.voxelSizeFactorInUnit,
+      None,
+      None,
+      request.additionalCoordinates,
+      request.findNeighbors
+    )
+    adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
+  }
 
   def findData(annotationId: String, tracingId: String)(implicit tc: TokenContext): Fox[Option[Vec3Int]] =
     for {

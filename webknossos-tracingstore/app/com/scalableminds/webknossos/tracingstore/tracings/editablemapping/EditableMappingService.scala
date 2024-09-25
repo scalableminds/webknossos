@@ -217,13 +217,14 @@ class EditableMappingService @Inject()(
       voxelAsLong <- voxelAsLongArray.headOption
     } yield voxelAsLong
 
-  def volumeData(tracing: VolumeTracing, tracingId: String, dataRequests: DataRequestCollection)(
-      implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
-
-    val dataLayer = editableMappingLayer(tracingId, tracing, tracingId)
-    val requests = dataRequests.map(r =>
-      DataServiceDataRequest(null, dataLayer, r.cuboid(dataLayer), r.settings.copy(appliedAgglomerate = None)))
-
+  def volumeData(editableMappingLayer: EditableMappingLayer,
+                 dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] = {
+    val requests = dataRequests.map(
+      r =>
+        DataServiceDataRequest(null,
+                               editableMappingLayer,
+                               r.cuboid(editableMappingLayer),
+                               r.settings.copy(appliedAgglomerate = None)))
     binaryDataService.handleDataRequests(requests)
   }
 
@@ -393,37 +394,20 @@ class EditableMappingService @Inject()(
       bytes = UnsignedIntegerArray.toByteArray(unsignedIntArray, elementClass)
     } yield bytes
 
-  private def editableMappingLayer(mappingName: String, tracing: VolumeTracing, tracingId: String)(
-      implicit tc: TokenContext): EditableMappingLayer =
-    EditableMappingLayer(
-      mappingName,
-      tracing.boundingBox,
-      resolutions = tracing.resolutions.map(vec3IntFromProto).toList,
-      largestSegmentId = Some(0L),
-      elementClass = tracing.elementClass,
-      tc,
-      tracing = tracing,
-      tracingId = tracingId,
-      editableMappingService = this
+  def createAdHocMesh(editableMappingLayer: EditableMappingLayer,
+                      request: WebknossosAdHocMeshRequest): Fox[(Array[Float], List[Int])] = {
+    val adHocMeshRequest = AdHocMeshRequest(
+      dataSource = None,
+      dataLayer = editableMappingLayer,
+      cuboid = request.cuboid(editableMappingLayer),
+      segmentId = request.segmentId,
+      voxelSizeFactor = request.voxelSizeFactorInUnit,
+      mapping = None,
+      mappingType = None,
+      findNeighbors = request.findNeighbors
     )
-
-  def createAdHocMesh(tracing: VolumeTracing, tracingId: String, request: WebknossosAdHocMeshRequest)(
-      implicit tc: TokenContext): Fox[(Array[Float], List[Int])] =
-    for {
-      mappingName <- tracing.mappingName.toFox
-      segmentationLayer = editableMappingLayer(mappingName, tracing, tracingId)
-      adHocMeshRequest = AdHocMeshRequest(
-        dataSource = None,
-        dataLayer = segmentationLayer,
-        cuboid = request.cuboid(segmentationLayer),
-        segmentId = request.segmentId,
-        voxelSizeFactor = request.voxelSizeFactorInUnit,
-        mapping = None,
-        mappingType = None,
-        findNeighbors = request.findNeighbors
-      )
-      result <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
-    } yield result
+    adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
+  }
 
   def getAgglomerateGraphForId(tracingId: String,
                                version: Long,

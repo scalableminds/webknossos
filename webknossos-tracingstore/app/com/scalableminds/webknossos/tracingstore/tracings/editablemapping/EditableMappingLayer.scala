@@ -22,6 +22,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
+import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 
 import scala.concurrent.ExecutionContext
 
@@ -35,10 +36,9 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       remoteFallbackLayer <- layer.editableMappingService
         .remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.tracingId)
       // called here to ensure updates are applied
-      (editableMappingInfo, editableMappingVersion) <- layer.editableMappingService.getInfoAndActualVersion(
-        tracingId,
-        requestedVersion = None,
-        remoteFallbackLayer = remoteFallbackLayer)(layer.tokenContext)
+      editableMappingInfo <- layer.annotationService.getEditableMappingInfo(layer.annotationId,
+                                                                            tracingId,
+                                                                            Some(layer.version))(ec, layer.tokenContext)
       dataRequest: WebknossosDataRequest = WebknossosDataRequest(
         position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
         mag = bucket.mag,
@@ -56,7 +56,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       relevantMapping <- layer.editableMappingService.generateCombinedMappingForSegmentIds(
         segmentIds,
         editableMappingInfo,
-        editableMappingVersion,
+        layer.version,
         tracingId,
         remoteFallbackLayer)(layer.tokenContext)
       mappedData: Array[Byte] <- layer.editableMappingService.mapData(unmappedDataTyped,
@@ -73,7 +73,9 @@ case class EditableMappingLayer(name: String,
                                 elementClass: ElementClass.Value,
                                 tokenContext: TokenContext,
                                 tracing: VolumeTracing,
+                                annotationId: String,
                                 tracingId: String,
+                                annotationService: TSAnnotationService,
                                 editableMappingService: EditableMappingService)
     extends SegmentationLayer {
   override val mags: List[MagLocator] = List.empty // MagLocators do not apply for annotation layers
@@ -98,4 +100,6 @@ case class EditableMappingLayer(name: String,
   override def adminViewConfiguration: Option[LayerViewConfiguration] = None
 
   override def additionalAxes: Option[Seq[AdditionalAxis]] = None
+
+  def version: Long = tracing.version
 }

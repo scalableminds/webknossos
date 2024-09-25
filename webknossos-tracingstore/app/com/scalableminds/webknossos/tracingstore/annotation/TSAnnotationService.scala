@@ -8,7 +8,9 @@ import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
+  EditableMappingLayer,
   EditableMappingService,
   EditableMappingUpdateAction,
   EditableMappingUpdater
@@ -49,6 +51,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                     tracingDataStore: TracingDataStore)
     extends KeyValueStoreImplicits
     with FallbackDataHelper
+    with ProtoGeometryImplicits
     with LazyLogging {
 
   def reportUpdates(annotationId: String, updateGroups: List[UpdateActionGroup])(implicit tc: TokenContext): Fox[Unit] =
@@ -365,4 +368,20 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         }
       )
     }
+
+  def editableMappingLayer(annotationId: String, tracingId: String, tracing: VolumeTracing)(
+      implicit tc: TokenContext): EditableMappingLayer =
+    EditableMappingLayer(
+      tracingId,
+      tracing.boundingBox,
+      resolutions = tracing.resolutions.map(vec3IntFromProto).toList,
+      largestSegmentId = Some(0L),
+      elementClass = tracing.elementClass,
+      tc,
+      tracing = tracing,
+      annotationId = annotationId,
+      tracingId = tracingId,
+      annotationService = this,
+      editableMappingService = editableMappingService
+    )
 }

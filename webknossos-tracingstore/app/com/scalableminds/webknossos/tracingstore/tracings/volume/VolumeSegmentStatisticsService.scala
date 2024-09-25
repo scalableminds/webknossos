@@ -10,12 +10,14 @@ import com.scalableminds.webknossos.datastore.models.{UnsignedInteger, UnsignedI
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
+import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTracingService,
+                                               annotationService: TSAnnotationService,
                                                volumeSegmentIndexService: VolumeSegmentIndexService,
                                                editableMappingService: EditableMappingService)
     extends ProtoGeometryImplicits
@@ -59,7 +61,12 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit tc: TokenContext) =
     for {
       tracing <- volumeTracingService.find(annotationId, tracingId) ?~> "tracing.notFound"
-      bucketData <- getVolumeDataForPositions(tracing, tracingId, mag, Seq(bucketPosition), additionalCoordinates)
+      bucketData <- getVolumeDataForPositions(annotationId,
+                                              tracingId,
+                                              tracing,
+                                              mag,
+                                              Seq(bucketPosition),
+                                              additionalCoordinates)
       dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(
         bucketData,
         elementClassFromProto(tracing.elementClass))
@@ -89,11 +96,13 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
         )
     } yield allBucketPositions
 
-  private def getVolumeDataForPositions(tracing: VolumeTracing,
-                                        tracingId: String,
-                                        mag: Vec3Int,
-                                        bucketPositions: Seq[Vec3Int],
-                                        additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit tc: TokenContext): Fox[Array[Byte]] = {
+  private def getVolumeDataForPositions(
+      annotationId: String,
+      tracingId: String,
+      tracing: VolumeTracing,
+      mag: Vec3Int,
+      bucketPositions: Seq[Vec3Int],
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit tc: TokenContext): Fox[Array[Byte]] = {
 
     val dataRequests = bucketPositions.map { position =>
       WebknossosDataRequest(
@@ -107,9 +116,10 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       )
     }.toList
     for {
-      (data, _) <- if (tracing.getHasEditableMapping)
-        editableMappingService.volumeData(tracing, tracingId, dataRequests)
-      else volumeTracingService.data(tracingId, tracing, dataRequests, includeFallbackDataIfAvailable = true)
+      (data, _) <- if (tracing.getHasEditableMapping) {
+        val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
+        editableMappingService.volumeData(mappingLayer, dataRequests)
+      } else volumeTracingService.data(tracingId, tracing, dataRequests, includeFallbackDataIfAvailable = true)
     } yield data
   }
 

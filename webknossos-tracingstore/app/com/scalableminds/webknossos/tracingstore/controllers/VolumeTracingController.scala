@@ -170,9 +170,10 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound")
-            (data, indices) <- if (tracing.getHasEditableMapping)
-              editableMappingService.volumeData(tracing, tracingId, request.body)
-            else tracingService.data(tracingId, tracing, request.body)
+            (data, indices) <- if (tracing.getHasEditableMapping) {
+              val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
+              editableMappingService.volumeData(mappingLayer, request.body)
+            } else tracingService.data(tracingId, tracing, request.body)
           } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
         }
       }
@@ -292,9 +293,10 @@ class VolumeTracingController @Inject()(
           // consecutive 3D points (i.e., nine floats) form a triangle.
           // There are no shared vertices between triangles.
           tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound")
-          (vertices, neighbors) <- if (tracing.getHasEditableMapping)
-            editableMappingService.createAdHocMesh(tracing, tracingId, request.body)
-          else tracingService.createAdHocMesh(annotationId, tracingId, request.body)
+          (vertices: Array[Float], neighbors: List[Int]) <- if (tracing.getHasEditableMapping) {
+            val editableMappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
+            editableMappingService.createAdHocMesh(editableMappingLayer, request.body)
+          } else tracingService.createAdHocMesh(tracingId, tracing, request.body)
         } yield {
           // We need four bytes for each float
           val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)

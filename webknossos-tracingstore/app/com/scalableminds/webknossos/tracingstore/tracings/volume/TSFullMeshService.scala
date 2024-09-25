@@ -16,6 +16,7 @@ import com.scalableminds.webknossos.datastore.models.{
   WebknossosAdHocMeshRequest
 }
 import com.scalableminds.webknossos.datastore.services.{FullMeshHelper, FullMeshRequest}
+import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.FallbackDataHelper
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
@@ -26,6 +27,7 @@ import scala.concurrent.ExecutionContext
 
 class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
                                   editableMappingService: EditableMappingService,
+                                  annotationService: TSAnnotationService,
                                   volumeSegmentIndexService: VolumeSegmentIndexService,
                                   val remoteDatastoreClient: TSRemoteDatastoreClient,
                                   val remoteWebknossosClient: TSRemoteWebknossosClient)
@@ -177,7 +179,8 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
                                      adHocMeshRequest: WebknossosAdHocMeshRequest,
                                      annotationId: String,
                                      tracingId: String)(implicit tc: TokenContext): Fox[(Array[Float], List[Int])] =
-    if (tracing.getHasEditableMapping)
-      editableMappingService.createAdHocMesh(tracing, tracingId, adHocMeshRequest)
-    else volumeTracingService.createAdHocMesh(annotationId, tracingId, adHocMeshRequest)
+    if (tracing.getHasEditableMapping) {
+      val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
+      editableMappingService.createAdHocMesh(mappingLayer, adHocMeshRequest)
+    } else volumeTracingService.createAdHocMesh(tracingId, tracing, adHocMeshRequest)
 }

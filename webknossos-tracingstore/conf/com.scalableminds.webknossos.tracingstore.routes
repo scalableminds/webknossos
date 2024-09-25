@@ -36,7 +36,7 @@ POST        /volume/mergedFromContents                                        @c
 # Editable Mappings
 POST        /mapping/:annotationId/:tracingId/makeMappingEditable             @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.makeMappingEditable(annotationId: String, tracingId: String)
 GET         /mapping/:annotationId/:tracingId/info                            @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.editableMappingInfo(annotationId: String, tracingId: String, version: Option[Long])
-GET         /mapping/:annotationId/:tracingId/segmentsForAgglomerate          @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.segmentIdsForAgglomerate(annotationId: String, tracingId: String, agglomerateId: Long)
+GET         /mapping/:tracingId/segmentsForAgglomerate          @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.segmentIdsForAgglomerate(tracingId: String, agglomerateId: Long)
 POST        /mapping/:annotationId/:tracingId/agglomeratesForSegments         @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateIdsForSegments(annotationId: String, tracingId: String)
 POST        /mapping/:annotationId/:tracingId/agglomerateGraphMinCut          @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateGraphMinCut(annotationId: String, tracingId: String)
 POST        /mapping/:annotationId/:tracingId/agglomerateGraphNeighbors       @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateGraphNeighbors(annotationId: String, tracingId: String)

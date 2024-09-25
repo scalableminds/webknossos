@@ -19,6 +19,7 @@ import play.api.libs.json.{JsObject, Json, OFormat}
 import play.api.libs.ws.WSResponse
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
 
 case class TracingUpdatesReport(annotationId: String,
                                 // TODO stats per tracing id?
@@ -44,6 +45,7 @@ class TSRemoteWebknossosClient @Inject()(
   private val webknossosUri: String = config.Tracingstore.WebKnossos.uri
 
   private lazy val dataSourceIdByTracingIdCache: AlfuCache[String, DataSourceId] = AlfuCache()
+  private lazy val annotationIdByTracingIdCache: AlfuCache[String, String] = AlfuCache(timeToLive = 5 minutes)
 
   def reportTracingUpdates(tracingUpdatesReport: TracingUpdatesReport): Fox[WSResponse] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/handleTracingUpdateReport")
@@ -72,6 +74,17 @@ class TSRemoteWebknossosClient @Inject()(
           .addQueryString("tracingId" -> tracingId)
           .addQueryString("key" -> tracingStoreKey)
           .getWithJsonResponse[DataSourceId]
+    )
+
+  // TODO what about temporary/compound tracings?
+  def getAnnotationIdForTracing(tracingId: String)(implicit ec: ExecutionContext): Fox[String] =
+    annotationIdByTracingIdCache.getOrLoad(
+      tracingId,
+      tracingId =>
+        rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/annotationId")
+          .addQueryString("tracingId" -> tracingId)
+          .addQueryString("key" -> tracingStoreKey)
+          .getWithJsonResponse[String]
     )
 
   override def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer] =

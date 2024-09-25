@@ -125,6 +125,7 @@ POST          /tracingstores/:name/validateUserAccess                           
 PUT           /tracingstores/:name                                                              controllers.TracingStoreController.update(name: String)
 GET           /tracingstores/:name/dataSource                                                   controllers.WKRemoteTracingStoreController.dataSourceForTracing(name: String, key: String, tracingId: String)
 GET           /tracingstores/:name/dataSourceId                                                 controllers.WKRemoteTracingStoreController.dataSourceIdForTracing(name: String, key: String, tracingId: String)
+GET           /tracingstores/:name/annotationId                                                 controllers.WKRemoteTracingStoreController.annotationIdForTracing(name: String, key: String, tracingId: String)
 GET           /tracingstores/:name/dataStoreUri/:datasetName                                    controllers.WKRemoteTracingStoreController.dataStoreUriForDataset(name: String, key: String, organizationId: Option[String], datasetName: String)
 
 # User access tokens for datastore authentication

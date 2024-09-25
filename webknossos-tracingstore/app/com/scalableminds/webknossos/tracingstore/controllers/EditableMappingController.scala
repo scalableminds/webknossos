@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
-import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
+import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
 import com.scalableminds.webknossos.tracingstore.annotation.{
   AnnotationTransactionService,
   TSAnnotationService,
@@ -27,6 +27,7 @@ import scala.concurrent.ExecutionContext
 
 class EditableMappingController @Inject()(volumeTracingService: VolumeTracingService,
                                           annotationService: TSAnnotationService,
+                                          remoteWebknossosClient: TSRemoteWebknossosClient,
                                           accessTokenService: TracingStoreAccessTokenService,
                                           editableMappingService: EditableMappingService,
                                           annotationTransactionService: AnnotationTransactionService)(
@@ -117,11 +118,12 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
       }
     }
 
-  def segmentIdsForAgglomerate(annotationId: String, tracingId: String, agglomerateId: Long): Action[AnyContent] =
+  def segmentIdsForAgglomerate(tracingId: String, agglomerateId: Long): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- volumeTracingService.find(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)

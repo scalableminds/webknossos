@@ -114,6 +114,16 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
       }
     }
 
+  def annotationIdForTracing(name: String, key: String, tracingId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      tracingStoreService.validateAccess(name, key) { _ =>
+        implicit val ctx: DBAccessContext = GlobalAccessContext
+        for {
+          annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
+        } yield Ok(Json.toJson(annotation._id))
+      }
+    }
+
   def dataStoreUriForDataset(name: String,
                              key: String,
                              organizationId: Option[String],

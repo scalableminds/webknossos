@@ -44,6 +44,7 @@ import { useEffectOnlyOnce } from "libs/react_hooks";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
 import { useLifecycle } from "beautiful-react-hooks";
 import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
+import { confirmAsync } from "dashboard/dataset/helper_components";
 
 const commentTabId = "commentTabId";
 enum SortByEnum {
@@ -100,7 +101,7 @@ function CommentTabView(props: Props) {
 
   const [isSortedAscending, setIsSortedAscending] = useState(true);
   const [sortBy, setSortBy] = useState(SortByEnum.NAME);
-  const [collapsedTreeIds, setCollapsedTreeIds] = useState<React.Key[]>([]);
+  const [expandedTreeIds, setExpandedTreeIds] = useState<React.Key[]>([]);
   const [highlightedNodeIds, setHighlightedNodeIds] = useState<React.Key[]>([]);
   const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState(false);
   const [isVisibleInDom, setIsVisibleInDom] = useState(true);
@@ -124,7 +125,7 @@ function CommentTabView(props: Props) {
   useEffectOnlyOnce(() => {
     // expand all trees by default
     const defaultCollapsedTreeIds = getData().map((tree) => tree.treeId.toString());
-    setCollapsedTreeIds(defaultCollapsedTreeIds);
+    setExpandedTreeIds(defaultCollapsedTreeIds);
   });
 
   useLifecycle(
@@ -242,7 +243,7 @@ function CommentTabView(props: Props) {
 
       // make sure that the skeleton tree node is expanded
       if (props.skeletonTracing.activeTreeId)
-        setCollapsedTreeIds([...collapsedTreeIds, props.skeletonTracing.activeTreeId.toString()]);
+        setExpandedTreeIds([...expandedTreeIds, props.skeletonTracing.activeTreeId.toString()]);
     } else {
       deleteComment();
     }
@@ -257,14 +258,14 @@ function CommentTabView(props: Props) {
   }
 
   function toggleExpandAllTrees() {
-    setCollapsedTreeIds((prevState) => {
+    setExpandedTreeIds((prevState) => {
       const shouldBeCollapsed = !_.isEmpty(prevState);
       return shouldBeCollapsed ? [] : getData().map((tree) => tree.treeId.toString());
     });
   }
 
   function onExpand(expandedKeys: React.Key[]) {
-    setCollapsedTreeIds(expandedKeys);
+    setExpandedTreeIds(expandedKeys);
   }
 
   function onSelect(
@@ -396,7 +397,7 @@ function CommentTabView(props: Props) {
             <AntdTree
               key={commentListId}
               treeData={treeData}
-              expandedKeys={collapsedTreeIds}
+              expandedKeys={expandedTreeIds}
               selectedKeys={highlightedNodeIds}
               onExpand={onExpand}
               // @ts-ignore
@@ -449,8 +450,15 @@ function CommentTabView(props: Props) {
               {renderMarkdownModal()}
               <Space.Compact className="compact-items compact-icons">
                 <AdvancedSearchPopover
-                  onSelect={(comment) => setActiveNode(comment.nodeId)}
-                  data={_.flatMap(props.skeletonTracing.trees, (tree) => tree.comments)}
+                  onSelect={(comment) => {
+                    setActiveNode(comment.nodeId);
+
+                    const tree = getData().find((tree) => tree.nodes.has(comment.nodeId));
+                    if (tree) {
+                      setExpandedTreeIds(_.uniq([...expandedTreeIds, tree.treeId.toString()]));
+                    }
+                  }}
+                  data={_.flatMap(getData(), (tree) => tree.comments)}
                   searchKey="content"
                   targetId={commentListId}
                 >

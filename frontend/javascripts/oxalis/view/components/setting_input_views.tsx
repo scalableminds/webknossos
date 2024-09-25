@@ -73,8 +73,6 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
   isValueValid = (_value: number | null) =>
     _.isNumber(_value) && _value >= this.props.min && _value <= this.props.max;
 
-  range = this.props.max - this.props.min;
-
   render() {
     const { value: originalValue, label, max, min, step, onChange, disabled } = this.props;
     // Validate the provided value. If it's not valid, fallback to the midpoint between min and max.

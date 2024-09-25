@@ -31,6 +31,24 @@ case class AnnotationWithTracings(
       }
     } yield skeletonTracing
 
+  def getVolumes: List[(String, VolumeTracing)] =
+    tracingsById.view.flatMap {
+      case (id, Right(vt: VolumeTracing)) => Some(id, vt)
+      case _                              => None
+    }.toList
+
+  def getSkeletons: List[(String, SkeletonTracing)] =
+    tracingsById.view.flatMap {
+      case (id, Left(st: SkeletonTracing)) => Some(id, st)
+      case _                               => None
+    }.toList
+
+  def getEditableMappingsInfo: List[(String, EditableMappingInfo)] =
+    editableMappingsByTracingId.view.flatMap {
+      case (id, (info: EditableMappingInfo, _)) => Some(id, info)
+      case _                                    => None
+    }.toList
+
   def getVolume(tracingId: String): Box[VolumeTracing] =
     for {
       tracingEither <- tracingsById.get(tracingId)

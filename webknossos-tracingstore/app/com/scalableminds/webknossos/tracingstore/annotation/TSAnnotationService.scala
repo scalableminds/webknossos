@@ -322,11 +322,35 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     else {
       for {
         updated <- updateIter(Some(annotation), updates)
-        _ <- updated.flushBufferedUpdates()
-        // todo: save materialized tracings + editable mapping info
-      } yield updated.withVersion(targetVersion)
+        updatedWithNewVerson = updated.withVersion(targetVersion)
+        _ <- updatedWithNewVerson.flushBufferedUpdates()
+        _ <- flushUpdatedTracings(updatedWithNewVerson)
+        _ <- flushAnnotationInfo(annotationId, updatedWithNewVerson)
+      } yield updatedWithNewVerson
     }
   }
+
+  private def flushUpdatedTracings(annotationWithTracings: AnnotationWithTracings)(implicit ec: ExecutionContext) =
+    // TODO skip some flushes to save disk space (e.g. skeletons only nth version, or only if requested?)
+    for {
+      _ <- Fox.serialCombined(annotationWithTracings.getVolumes) {
+        case (volumeTracingId, volumeTracing) =>
+          tracingDataStore.volumes.put(volumeTracingId, volumeTracing.version, volumeTracing)
+      }
+      _ <- Fox.serialCombined(annotationWithTracings.getSkeletons) {
+        case (skeletonTracingId, skeletonTracing: SkeletonTracing) =>
+          tracingDataStore.skeletons.put(skeletonTracingId, skeletonTracing.version, skeletonTracing)
+      }
+      _ <- Fox.serialCombined(annotationWithTracings.getEditableMappingsInfo) {
+        case (volumeTracingId, editableMappingInfo) =>
+          tracingDataStore.editableMappingsInfo.put(volumeTracingId,
+                                                    annotationWithTracings.version,
+                                                    editableMappingInfo)
+      }
+    } yield ()
+
+  private def flushAnnotationInfo(annotationId: String, annotationWithTracings: AnnotationWithTracings) =
+    tracingDataStore.annotations.put(annotationId, annotationWithTracings.version, annotationWithTracings.annotation)
 
   private def determineTargetVersion(annotation: AnnotationProto,
                                      annotationId: String,

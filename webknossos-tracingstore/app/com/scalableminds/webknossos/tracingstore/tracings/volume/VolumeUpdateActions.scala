@@ -269,8 +269,7 @@ case class DeleteSegmentVolumeAction(id: Long,
                                      actionTimestamp: Option[Long] = None,
                                      actionAuthorId: Option[String] = None,
                                      info: Option[String] = None)
-    extends BucketMutatingVolumeUpdateAction
-    with ApplyableVolumeUpdateAction {
+    extends ApplyableVolumeUpdateAction {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
@@ -288,7 +287,7 @@ case class DeleteSegmentDataVolumeAction(id: Long,
                                          actionTimestamp: Option[Long] = None,
                                          actionAuthorId: Option[String] = None,
                                          info: Option[String] = None)
-    extends VolumeUpdateAction {
+    extends BucketMutatingVolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)

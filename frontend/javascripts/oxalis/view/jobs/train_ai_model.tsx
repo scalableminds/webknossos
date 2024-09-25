@@ -49,7 +49,7 @@ const FormItem = Form.Item;
 // Therefore, volumeTracings with the matching volumeTracingResolutions are needed to get more details on each volume annotation layer and its resolutions.
 // The userBoundingBoxes are needed for checking for equal bounding box sizes. As training on fallback data is supported and an annotation is not required to have VolumeTracings,
 // it is necessary to save userBoundingBoxes separately and not load them from volumeTracings entries to support skeleton only annotations.
-// Note that a copy the userBoundingBoxes is included in each volume and skeleton tracing of an annotation. Thus, it doesn't matter from which the userBoundingBoxes are taken.
+// Note that a copy of the userBoundingBoxes is included in each volume and skeleton tracing of an annotation. Thus, it doesn't matter from which the userBoundingBoxes are taken.
 export type AnnotationInfoForAIJob<GenericAnnotation> = {
   annotation: GenericAnnotation;
   dataset: APIDataset;

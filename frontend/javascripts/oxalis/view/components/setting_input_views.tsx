@@ -55,6 +55,7 @@ type NumberSliderSettingProps = {
   step: number;
   disabled: boolean;
   spans: Vector3;
+  defaultValue?: number;
 };
 export class NumberSliderSetting extends React.PureComponent<NumberSliderSettingProps> {
   static defaultProps = {
@@ -74,7 +75,16 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
     _.isNumber(_value) && _value >= this.props.min && _value <= this.props.max;
 
   render() {
-    const { value: originalValue, label, max, min, step, onChange, disabled } = this.props;
+    const {
+      value: originalValue,
+      label,
+      max,
+      min,
+      step,
+      onChange,
+      disabled,
+      defaultValue,
+    } = this.props;
     // Validate the provided value. If it's not valid, fallback to the midpoint between min and max.
     // This check guards against broken settings which could be introduced before this component
     // checked more thoroughly against invalid values.
@@ -92,6 +102,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
             value={value}
             step={step}
             disabled={disabled}
+            defaultValue={defaultValue}
           />
         </Col>
         <Col span={this.props.spans[2]}>
@@ -124,6 +135,7 @@ type LogSliderSettingProps = {
   disabled?: boolean;
   spans: Vector3;
   precision?: number;
+  defaultValue?: number;
 };
 
 const LOG_SLIDER_MIN = -100;
@@ -180,7 +192,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   };
 
   render() {
-    const { label, roundTo, value, min, max, disabled } = this.props;
+    const { label, roundTo, value, min, max, disabled, defaultValue } = this.props;
     return (
       <Row align="middle" gutter={ROW_GUTTER}>
         <Col span={this.props.spans[0]}>
@@ -194,6 +206,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
             onChange={this.onChangeSlider}
             value={this.getSliderValue()}
             disabled={disabled}
+            defaultValue={defaultValue}
           />
         </Col>
         <Col span={this.props.spans[2]}>

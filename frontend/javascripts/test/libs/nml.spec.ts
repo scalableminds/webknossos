@@ -93,6 +93,7 @@ const initialSkeletonTracing: SkeletonTracing = {
       groupId: 3,
       type: TreeTypeEnum.DEFAULT,
       edgesAreVisible: true,
+      metadata: [],
     },
     "2": {
       treeId: 2,
@@ -120,6 +121,7 @@ const initialSkeletonTracing: SkeletonTracing = {
       groupId: 2,
       type: TreeTypeEnum.DEFAULT,
       edgesAreVisible: true,
+      metadata: [],
     },
   },
   treeGroups: [
@@ -449,6 +451,71 @@ test("NML serializer should produce correct NMLs with additional coordinates", (
   );
   t.snapshot(serializedNml);
 });
+
+test("NML serializer should produce correct NMLs with metadata for trees", async (t) => {
+  const properties = [
+    {
+      key: "key of string",
+      stringValue: "string value",
+    },
+    {
+      key: "key of true",
+      boolValue: true,
+    },
+    {
+      key: "key of false",
+      boolValue: false,
+    },
+    {
+      key: "key of number",
+      numberValue: 1234,
+    },
+    {
+      key: "key of string list",
+      stringListValue: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"],
+    },
+  ];
+  const state = update(initialState, {
+    tracing: {
+      skeleton: {
+        trees: {
+          "1": {
+            metadata: {
+              $set: properties,
+            },
+          },
+        },
+      },
+    },
+  });
+  const serializedNml = serializeToNml(
+    state,
+    state.tracing,
+    enforceSkeletonTracing(state.tracing),
+    BUILD_INFO,
+    false,
+  );
+
+  t.true(
+    serializedNml.includes('<metadataEntry key="key of string" stringValue="string value" />'),
+  );
+
+  t.true(serializedNml.includes('<metadataEntry key="key of true" boolValue="true" />'));
+  t.true(serializedNml.includes('<metadataEntry key="key of false" boolValue="false" />'));
+  t.true(serializedNml.includes('<metadataEntry key="key of number" numberValue="1234" />'));
+  t.true(
+    serializedNml.includes(
+      '<metadataEntry key="key of string list" stringListValue-0="1" stringListValue-1="2" stringListValue-2="3" stringListValue-3="4" stringListValue-4="5" stringListValue-5="6" stringListValue-6="7" stringListValue-7="8" stringListValue-8="9" stringListValue-9="10" stringListValue-10="11" />',
+    ),
+  );
+
+  const { trees } = await parseNml(serializedNml);
+  if (state.tracing.skeleton == null) {
+    throw new Error("Unexpected null for skeleton");
+  }
+  t.deepEqual(state.tracing.skeleton.trees[1], trees[1]);
+});
+
 test("NML serializer should escape special characters and multilines", (t) => {
   const state = update(initialState, {
     tracing: {

@@ -1,19 +1,20 @@
 import { Modal } from "antd";
-import React, { type Key } from "react";
-import type { ServerSkeletonTracing } from "types/api_flow_types";
-import type { Vector3, TreeType } from "oxalis/constants";
+import renderIndependently from "libs/render_independently";
+import _ from "lodash";
+import messages from "messages";
+import type { TreeType, Vector3 } from "oxalis/constants";
 import {
   enforceSkeletonTracing,
   getNodeAndTree,
   getTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import RemoveTreeModal from "oxalis/view/remove_tree_modal";
-import type { OxalisState, SkeletonTracing, TreeGroup, MutableTreeMap } from "oxalis/store";
-import Store from "oxalis/store";
-import messages from "messages";
-import renderIndependently from "libs/render_independently";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
+import type { MutableTreeMap, OxalisState, SkeletonTracing, TreeGroup } from "oxalis/store";
+import Store from "oxalis/store";
+import RemoveTreeModal from "oxalis/view/remove_tree_modal";
+import type { Key } from "react";
 import { batchActions } from "redux-batched-actions";
+import type { ServerSkeletonTracing, MetadataEntryProto } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
@@ -46,6 +47,7 @@ type SetActiveTreeGroupAction = ReturnType<typeof setActiveTreeGroupAction>;
 type DeselectActiveTreeGroupAction = ReturnType<typeof deselectActiveTreeGroupAction>;
 export type MergeTreesAction = ReturnType<typeof mergeTreesAction>;
 type SetTreeNameAction = ReturnType<typeof setTreeNameAction>;
+type SetTreeMetadataAction = ReturnType<typeof setTreeMetadataAction>;
 type SelectNextTreeAction = ReturnType<typeof selectNextTreeAction>;
 type SetTreeColorIndexAction = ReturnType<typeof setTreeColorIndexAction>;
 type ShuffleTreeColorAction = ReturnType<typeof shuffleTreeColorAction>;
@@ -97,6 +99,7 @@ export type SkeletonTracingAction =
   | DeselectActiveTreeAction
   | MergeTreesAction
   | SetTreeNameAction
+  | SetTreeMetadataAction
   | SelectNextTreeAction
   | SetTreeColorAction
   | SetTreeTypeAction
@@ -138,6 +141,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "SET_ACTIVE_TREE",
   "SET_ACTIVE_TREE_BY_NAME",
   "SET_TREE_NAME",
+  "SET_TREE_METADATA",
   "MERGE_TREES",
   "SELECT_NEXT_TREE",
   "SHUFFLE_TREE_COLOR",
@@ -419,6 +423,16 @@ export const setTreeNameAction = (
   ({
     type: "SET_TREE_NAME",
     name,
+    treeId,
+  }) as const;
+
+export const setTreeMetadataAction = (
+  metadata: MetadataEntryProto[],
+  treeId?: number | null | undefined,
+) =>
+  ({
+    type: "SET_TREE_METADATA",
+    metadata,
     treeId,
   }) as const;
 

@@ -24,6 +24,7 @@ export type EditableTextLabelProp = {
   disableEditing?: boolean;
   onContextMenu?: () => void;
   width?: string | number;
+  iconClassName?: string;
   isInvalid?: boolean | null | undefined;
   trimValue?: boolean | null | undefined;
   onRenameStart?: (() => void) | undefined;
@@ -190,7 +191,9 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
           {this.props.disableEditing ? null : (
             <FastTooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
               <EditOutlined
-                className={this.props.markdown ? "flex-item" : undefined}
+                className={
+                  this.props.iconClassName + " " + (this.props.markdown ? "flex-item" : "")
+                }
                 style={{
                   ...iconStyle,
                   marginLeft: 5,

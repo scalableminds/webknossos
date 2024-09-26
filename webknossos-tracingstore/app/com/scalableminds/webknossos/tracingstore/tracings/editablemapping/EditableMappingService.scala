@@ -107,8 +107,8 @@ class EditableMappingService @Inject()(
   adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
   private val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService
 
-  // TODO
-  private lazy val materializedInfoCache: AlfuCache[(String, Long), EditableMappingInfo] = AlfuCache(maxCapacity = 100)
+  // TODO cache materialized stuff again, for e.g. faster bucket loading
+  // private lazy val materializedInfoCache: AlfuCache[(String, Long), EditableMappingInfo] = AlfuCache(maxCapacity = 100)
 
   private lazy val segmentToAgglomerateChunkCache: AlfuCache[(String, Long, Long), Seq[(Long, Long)]] =
     AlfuCache()
@@ -298,7 +298,7 @@ class EditableMappingService @Inject()(
                                          remoteFallbackLayer: RemoteFallbackLayer,
                                          agglomerateId: Long)(implicit tc: TokenContext): Fox[Array[Byte]] =
     for {
-      agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId, remoteFallbackLayer).futureBox
+      agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId).futureBox
       skeletonBytes <- agglomerateGraphBox match {
         case Full(agglomerateGraph) =>
           Fox.successful(agglomerateGraphToSkeleton(tracingId, agglomerateGraph, remoteFallbackLayer, agglomerateId))
@@ -405,10 +405,7 @@ class EditableMappingService @Inject()(
     adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
   }
 
-  def getAgglomerateGraphForId(tracingId: String,
-                               version: Long,
-                               agglomerateId: Long,
-                               remoteFallbackLayer: RemoteFallbackLayer): Fox[AgglomerateGraph] =
+  def getAgglomerateGraphForId(tracingId: String, version: Long, agglomerateId: Long): Fox[AgglomerateGraph] =
     for {
       agglomerateGraph <- agglomerateToGraphCache.getOrLoad(
         (tracingId, agglomerateId, version),
@@ -429,7 +426,7 @@ class EditableMappingService @Inject()(
       agglomerateId: Long,
       remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[AgglomerateGraph] =
     for {
-      agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId, remoteFallbackLayer).futureBox
+      agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId).futureBox
       agglomerateGraph <- agglomerateGraphBox match {
         case Full(agglomerateGraph) => Fox.successful(agglomerateGraph)
         case Empty =>

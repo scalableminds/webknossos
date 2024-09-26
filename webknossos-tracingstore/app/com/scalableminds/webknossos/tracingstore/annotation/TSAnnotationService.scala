@@ -78,11 +78,12 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     if (desiredVersion == existingVersion) Fox.successful(List())
     else {
       for {
-        updateActionGroups <- tracingDataStore.annotationUpdates.getMultipleVersions(
+        updateActionGroupsWithVersions <- tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
           annotationId,
           Some(desiredVersion),
           Some(existingVersion + 1))(fromJsonBytes[List[UpdateAction]])
-      } yield updateActionGroups.reverse.flatten
+        updateActionGroupsWithVersionsIroned = ironOutReversionFolds(updateActionGroupsWithVersions)
+      } yield updateActionGroupsWithVersionsIroned
     }
 
   // TODO option to dry apply?
@@ -113,11 +114,21 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           annotationWithTracings.applyVolumeAction(a)
         case a: EditableMappingUpdateAction =>
           annotationWithTracings.applyEditableMappingAction(a)
+        case a: RevertToVersionUpdateAction =>
+          revertToVersion(annotationId, annotationWithTracings, a)
         case _: BucketMutatingVolumeUpdateAction =>
           Fox.successful(annotationWithTracings) // No-op, as bucket-mutating actions are performed eagerly, so not here.
         case _ => Fox.failure(s"Received unsupported AnnotationUpdateAction action ${Json.toJson(updateAction)}")
       }
     } yield updated
+
+  private def revertToVersion(
+      annotationId: String,
+      annotationWithTracings: AnnotationWithTracings,
+      revertAction: RevertToVersionUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+    // Note: works only after “ironing out” the update action groups
+    // TODO: read old annotationProto, tracing, buckets, segment indeces
+    Fox.successful(annotationWithTracings)
 
   def createTracing(a: AddLayerAnnotationUpdateAction)(
       implicit ec: ExecutionContext): Fox[Either[SkeletonTracing, VolumeTracing]] =
@@ -315,8 +326,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         case Full(annotationWithTracings) =>
           remainingUpdates match {
             case List() => Fox.successful(annotationWithTracings)
-            case RevertToVersionUpdateAction(sourceVersion, _, _, _) :: tail =>
-              ???
             case update :: tail =>
               updateIter(applyUpdate(annotationId, annotationWithTracings, update, targetVersion), tail)
           }
@@ -334,6 +343,11 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       } yield updatedWithNewVerson
     }
   }
+
+  private def ironOutReversionFolds(
+      updateActionGroupsWithVersions: List[(Long, List[UpdateAction])]): List[UpdateAction] =
+    // TODO: if the source version is in the current update list, it needs to be ironed out. in case of overlaps, iron out from the back.
+    updateActionGroupsWithVersions.flatMap(_._2)
 
   private def flushUpdatedTracings(annotationWithTracings: AnnotationWithTracings)(implicit ec: ExecutionContext) =
     // TODO skip some flushes to save disk space (e.g. skeletons only nth version, or only if requested?)

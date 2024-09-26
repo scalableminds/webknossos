@@ -8,7 +8,6 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
-import com.scalableminds.webknossos.datastore.services.RemoteWebknossosClient
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreRedisStore}
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings._

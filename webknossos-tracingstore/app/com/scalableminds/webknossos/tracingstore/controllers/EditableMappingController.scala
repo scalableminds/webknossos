@@ -128,9 +128,8 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- volumeTracingService.find(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
-            remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             agglomerateGraphBox: Box[AgglomerateGraph] <- editableMappingService
-              .getAgglomerateGraphForId(tracingId, tracing.version, agglomerateId, remoteFallbackLayer)
+              .getAgglomerateGraphForId(tracingId, tracing.version, agglomerateId)
               .futureBox
             segmentIds <- agglomerateGraphBox match {
               case Full(agglomerateGraph) => Fox.successful(agglomerateGraph.segments)

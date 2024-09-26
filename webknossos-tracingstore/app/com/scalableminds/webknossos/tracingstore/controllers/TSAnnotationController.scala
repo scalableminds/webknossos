@@ -58,7 +58,8 @@ class TSAnnotationController @Inject()(
     log() {
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
         for {
-          updateLog <- annotationService.updateActionLog(annotationId, newestVersion, oldestVersion)
+          newestMaterializableVersion <- annotationService.currentMaterializableVersion(annotationId)
+          updateLog <- annotationService.updateActionLog(annotationId, newestVersion.getOrElse(newestMaterializableVersion), oldestVersion.getOrElse(0))
         } yield Ok(updateLog)
       }
     }

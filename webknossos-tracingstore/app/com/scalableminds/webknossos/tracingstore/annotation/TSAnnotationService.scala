@@ -124,20 +124,25 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     Fox.failure("not implemented")
   // TODO create tracing object (ask wk for needed parameters e.g. fallback layer info?)
 
-  def updateActionLog(annotationId: String, newestVersion: Option[Long], oldestVersion: Option[Long]): Fox[JsValue] = {
+  def updateActionLog(annotationId: String, newestVersion: Long, oldestVersion: Long)(
+      implicit ec: ExecutionContext): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[UpdateAction])): JsObject =
       Json.obj(
         "version" -> tuple._1,
         "value" -> Json.toJson(tuple._2)
       )
 
+    val batchRanges = batchRangeInclusive(oldestVersion, newestVersion, batchSize = 100)
     for {
-      updateActionGroups <- tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
-        annotationId,
-        newestVersion,
-        oldestVersion)(fromJsonBytes[List[UpdateAction]])
-      updateActionGroupsJs = updateActionGroups.map(versionedTupleToJson)
-    } yield Json.toJson(updateActionGroupsJs)
+      updateActionBatches <- Fox.serialCombined(batchRanges.toList) { batchRange =>
+        val batchFrom = batchRange._1
+        val batchTo = batchRange._2
+        tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
+          annotationId,
+          Some(batchTo),
+          Some(batchFrom))(fromJsonBytes[List[UpdateAction]])
+      }
+    } yield Json.toJson(updateActionBatches.flatten.map(versionedTupleToJson))
   }
 
   def get(annotationId: String, version: Option[Long])(implicit ec: ExecutionContext,
@@ -417,4 +422,12 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         editableMappingInfo <- getEditableMappingInfo(annotationId, tracingId)
       } yield Some(editableMappingInfo.baseMappingName)
     else Fox.successful(tracing.mappingName)
+
+  private def batchRangeInclusive(from: Long, to: Long, batchSize: Long): Seq[(Long, Long)] =
+    (0L to ((to - from) / batchSize)).map { batchIndex =>
+      val batchFrom = batchIndex * batchSize + from
+      val batchTo = Math.min(to, (batchIndex + 1) * batchSize + from - 1)
+      (batchFrom, batchTo)
+    }
+
 }

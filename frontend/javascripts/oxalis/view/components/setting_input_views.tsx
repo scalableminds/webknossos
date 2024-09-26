@@ -56,6 +56,7 @@ type NumberSliderSettingProps = {
   disabled: boolean;
   spans: Vector3;
   defaultValue?: number;
+  wheelFactor?: number;
 };
 export class NumberSliderSetting extends React.PureComponent<NumberSliderSettingProps> {
   static defaultProps = {
@@ -84,6 +85,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
       onChange,
       disabled,
       defaultValue,
+      wheelFactor: stepSize,
     } = this.props;
     // Validate the provided value. If it's not valid, fallback to the midpoint between min and max.
     // This check guards against broken settings which could be introduced before this component
@@ -103,6 +105,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
             step={step}
             disabled={disabled}
             defaultValue={defaultValue}
+            wheelFactor={stepSize}
           />
         </Col>
         <Col span={this.props.spans[2]}>

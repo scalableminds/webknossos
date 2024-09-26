@@ -22,7 +22,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
 case class TracingUpdatesReport(annotationId: String,
-                                // TODO stats per tracing id?
+                                // TODO stats per tracing id? coordinate with frontend
                                 timestamps: List[Instant],
                                 statistics: Option[JsObject],
                                 significantChangesCount: Int,

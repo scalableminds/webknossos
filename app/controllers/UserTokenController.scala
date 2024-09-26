@@ -39,7 +39,6 @@ object RpcTokenHolder {
 
 class UserTokenController @Inject()(datasetDAO: DatasetDAO,
                                     datasetService: DatasetService,
-                                    annotationDAO: AnnotationDAO,
                                     annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
                                     userService: UserService,
                                     organizationDAO: OrganizationDAO,
@@ -184,18 +183,24 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
         case _                => Fox.successful(false)
       }
 
-    // TODO is a dummy annotation id needed?
-    for {
-      annotation <- annotationInformationProvider.provideAnnotation(annotationId, userBox)(GlobalAccessContext) ?~> "annotation.notFound"
-      annotationAccessByToken <- token.map(annotationPrivateLinkDAO.findOneByAccessToken).getOrElse(Fox.empty).futureBox
-      allowedByToken = annotationAccessByToken.exists(annotation._id == _._annotation)
-      restrictions <- annotationInformationProvider.restrictionsFor(
-        AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
-      allowedByUser <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
-      allowed = allowedByToken || allowedByUser
-    } yield {
-      if (allowed) UserAccessAnswer(granted = true)
-      else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
+    if (annotationId == ObjectId.dummyId.toString) {
+      Fox.successful(UserAccessAnswer(granted = true))
+    } else {
+      for {
+        annotation <- annotationInformationProvider.provideAnnotation(annotationId, userBox)(GlobalAccessContext) ?~> "annotation.notFound"
+        annotationAccessByToken <- token
+          .map(annotationPrivateLinkDAO.findOneByAccessToken)
+          .getOrElse(Fox.empty)
+          .futureBox
+        allowedByToken = annotationAccessByToken.exists(annotation._id == _._annotation)
+        restrictions <- annotationInformationProvider.restrictionsFor(
+          AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
+        allowedByUser <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
+        allowed = allowedByToken || allowedByUser
+      } yield {
+        if (allowed) UserAccessAnswer(granted = true)
+        else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
+      }
     }
   }
 
@@ -208,7 +213,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
         jobBox <- jobDAO.findOne(jobIdValidated)(DBAccessContext(userBox)).futureBox
         answer = jobBox match {
           case Full(_) => UserAccessAnswer(granted = true)
-          case _       => UserAccessAnswer(granted = false, Some(s"No ${mode} access to job export"))
+          case _       => UserAccessAnswer(granted = false, Some(s"No $mode access to job export"))
         }
       } yield answer
     }

@@ -211,7 +211,7 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
           resolutionInfo={resolutionInfo}
           selectedSegmentationLayer={selectedSegmentationLayer}
           resolutionIndices={userDefinedResolutionIndices}
-          setResolutionIndices={setUserDefinedResolutionIndices /* TODO_c */}
+          setResolutionIndices={setUserDefinedResolutionIndices}
         />
       ) : null;
     modalContent = (

@@ -80,6 +80,7 @@ export function AiQuickSelectControls() {
         max={MAX_DEPTH_FOR_SAM}
         step={1}
         onChange={onChangePredictionDepth}
+        defaultValue={defaultState.userConfiguration.quickSelect.predictionDepth}
       />
       <Shortcut supportInputElements keys="escape" onTrigger={closeControls} />
       <Shortcut supportInputElements keys="enter" onTrigger={closeControls} />

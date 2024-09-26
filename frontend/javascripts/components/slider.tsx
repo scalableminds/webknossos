@@ -41,7 +41,7 @@ export function Slider(props: SliderProps) {
       const newMax = Math.round(
         value[1] - getDiffPerSliderStep(event.deltaY, sliderRange, stepSize),
       );
-      if (newMin > min && newMax < max && newMax - newMin >= 1) onChange([newMin, newMax]);
+      if (newMin >= min && newMax <= max && newMax - newMin >= 1) onChange([newMin, newMax]);
     };
   }
   return (

@@ -152,6 +152,7 @@ export function RestrictResolutionSlider({
           style={{
             flexGrow: 1,
           }}
+          disableOnWheel
         />
         <div
           style={{

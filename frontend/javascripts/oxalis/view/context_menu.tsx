@@ -394,6 +394,7 @@ function getMeshItems(
   maybeUnmappedSegmentId: number | null | undefined,
   visibleSegmentationLayer: APIDataLayer | null | undefined,
   voxelSizeFactor: Vector3,
+  meshFileMappingName: string | null | undefined,
 ): MenuItemType[] {
   if (
     clickedMeshId == null ||
@@ -414,15 +415,29 @@ function getMeshItems(
   // by looking the segment id up the segments list and checking against null.
   const activeSegmentMissing = segments.getNullable(activeCellId) == null;
 
+  const getTooltip = (actionVerb: "merge" | "split", actionNeedsActiveSegment: boolean) => {
+    return !isProofreadingActive
+      ? `Cannot ${actionVerb} because the proofreading tool is not active.`
+      : maybeUnmappedSegmentId == null
+        ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
+        : meshFileMappingName != null
+          ? "This mesh was created for a mapping. Please use a meshfile that is based on unmapped oversegmentation data."
+          : actionNeedsActiveSegment && activeSegmentMissing
+            ? "Select a segment first."
+            : null;
+  };
+
+  const shouldAgglomerateSkeletonActionsBeDisabled =
+    !isProofreadingActive ||
+    activeSegmentMissing ||
+    maybeUnmappedSegmentId == null ||
+    meshFileMappingName != null;
+
   const maybeProofreadingItems: MenuItemType[] = isProofreadingActive
     ? [
         {
           key: "merge-agglomerate-skeleton",
-          disabled:
-            !isProofreadingActive ||
-            activeSegmentMissing ||
-            clickedMeshId === activeCellId ||
-            maybeUnmappedSegmentId == null,
+          disabled: shouldAgglomerateSkeletonActionsBeDisabled || clickedMeshId === activeCellId,
           onClick: () => {
             if (maybeUnmappedSegmentId == null) {
               // Should not happen due to the disabled property.
@@ -431,28 +446,14 @@ function getMeshItems(
             return Store.dispatch(proofreadMerge(null, maybeUnmappedSegmentId, clickedMeshId));
           },
           label: (
-            <FastTooltip
-              title={
-                !isProofreadingActive
-                  ? "Cannot merge because the proofreading tool is not active."
-                  : maybeUnmappedSegmentId == null
-                    ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
-                    : activeSegmentMissing
-                      ? "Select a segment first."
-                      : null
-              }
-            >
-              Merge with active segment
-            </FastTooltip>
+            <FastTooltip title={getTooltip("merge", true)}>Merge with active segment</FastTooltip>
           ),
         },
         {
           key: "min-cut-agglomerate-at-position",
           disabled:
-            !isProofreadingActive ||
-            activeSegmentMissing ||
+            shouldAgglomerateSkeletonActionsBeDisabled ||
             clickedMeshId !== activeCellId ||
-            maybeUnmappedSegmentId == null ||
             activeUnmappedSegmentId == null ||
             maybeUnmappedSegmentId === activeUnmappedSegmentId,
           onClick: () => {
@@ -465,24 +466,12 @@ function getMeshItems(
             );
           },
           label: (
-            <FastTooltip
-              title={
-                !isProofreadingActive
-                  ? "Cannot split because the proofreading tool is not active."
-                  : maybeUnmappedSegmentId == null
-                    ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
-                    : activeSegmentMissing
-                      ? "Select a segment first."
-                      : null
-              }
-            >
-              Split from active segment
-            </FastTooltip>
+            <FastTooltip title={getTooltip("split", true)}>Split from active segment</FastTooltip>
           ),
         },
         {
           key: "split-from-all-neighbors",
-          disabled: maybeUnmappedSegmentId == null,
+          disabled: maybeUnmappedSegmentId == null || meshFileMappingName != null,
           onClick: () => {
             if (maybeUnmappedSegmentId == null) {
               // Should not happen due to the disabled property.
@@ -493,15 +482,7 @@ function getMeshItems(
             );
           },
           label: (
-            <FastTooltip
-              title={
-                !isProofreadingActive
-                  ? "Cannot split because the proofreading tool is not active."
-                  : maybeUnmappedSegmentId == null
-                    ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
-                    : null
-              }
-            >
+            <FastTooltip title={getTooltip("split", false)}>
               Split from all neighboring segments
             </FastTooltip>
           ),
@@ -576,6 +557,7 @@ function getNodeContextMenuOptions({
   volumeTracing,
   infoRows,
   allowUpdate,
+  currentMeshFile,
 }: NodeContextMenuOptionsProps): ItemType[] {
   const state = Store.getState();
   const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
@@ -617,6 +599,7 @@ function getNodeContextMenuOptions({
     maybeUnmappedSegmentId,
     visibleSegmentationLayer,
     voxelSize.factor,
+    currentMeshFile?.mappingName,
   );
 
   const menuItems: ItemType[] = [
@@ -1251,6 +1234,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     maybeUnmappedSegmentId,
     visibleSegmentationLayer,
     voxelSize.factor,
+    currentMeshFile?.mappingName,
   );
 
   if (isSkeletonToolActive) {

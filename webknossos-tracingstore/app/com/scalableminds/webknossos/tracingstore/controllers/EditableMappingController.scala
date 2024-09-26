@@ -35,11 +35,12 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
     bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  def makeMappingEditable(annotationId: String, tracingId: String): Action[AnyContent] =
+  def makeMappingEditable(tracingId: String): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- volumeTracingService.find(annotationId, tracingId)
             tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
             _ <- assertMappingIsNotLocked(tracing)
@@ -104,11 +105,12 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
     }
    */
 
-  def editableMappingInfo(annotationId: String, tracingId: String, version: Option[Long]): Action[AnyContent] =
+  def editableMappingInfo(tracingId: String, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- volumeTracingService.find(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             editableMappingInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId, version)
@@ -141,11 +143,12 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
       }
     }
 
-  def agglomerateIdsForSegments(annotationId: String, tracingId: String): Action[ListOfLong] =
+  def agglomerateIdsForSegments(tracingId: String): Action[ListOfLong] =
     Action.async(validateProto[ListOfLong]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- volumeTracingService.find(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
@@ -162,11 +165,12 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
       }
     }
 
-  def agglomerateGraphMinCut(annotationId: String, tracingId: String): Action[MinCutParameters] =
+  def agglomerateGraphMinCut(tracingId: String): Action[MinCutParameters] =
     Action.async(validateJson[MinCutParameters]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- volumeTracingService.find(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
@@ -181,11 +185,12 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
       }
     }
 
-  def agglomerateGraphNeighbors(annotationId: String, tracingId: String): Action[NeighborsParameters] =
+  def agglomerateGraphNeighbors(tracingId: String): Action[NeighborsParameters] =
     Action.async(validateJson[NeighborsParameters]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- volumeTracingService.find(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
@@ -200,10 +205,11 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
       }
     }
 
-  def agglomerateSkeleton(annotationId: String, tracingId: String, agglomerateId: Long): Action[AnyContent] =
+  def agglomerateSkeleton(tracingId: String, agglomerateId: Long): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- volumeTracingService.find(annotationId, tracingId)
           _ <- bool2Fox(tracing.getHasEditableMapping) ?~> "Cannot query agglomerate skeleton for volume annotation"
           editableMappingInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId)

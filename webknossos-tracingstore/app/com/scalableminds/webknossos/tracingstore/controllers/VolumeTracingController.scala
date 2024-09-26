@@ -78,15 +78,13 @@ class VolumeTracingController @Inject()(
   implicit def unpackMultiple(tracings: VolumeTracings): List[Option[VolumeTracing]] =
     tracings.tracings.toList.map(_.tracing)
 
-  def initialData(annotationId: String,
-                  tracingId: String,
-                  minResolution: Option[Int],
-                  maxResolution: Option[Int]): Action[AnyContent] =
+  def initialData(tracingId: String, minResolution: Option[Int], maxResolution: Option[Int]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             for {
+              annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound")
               resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
@@ -119,12 +117,13 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def initialDataMultiple(annotationId: String, tracingId: String): Action[AnyContent] =
+  def initialDataMultiple(tracingId: String): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             for {
+              annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound")
               resolutions <- tracingService
@@ -137,8 +136,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def allDataZip(annotationId: String,
-                 tracingId: String,
+  def allDataZip(tracingId: String,
                  volumeDataZipFormat: String,
                  version: Option[Long],
                  voxelSizeFactor: Option[String],
@@ -147,6 +145,7 @@ class VolumeTracingController @Inject()(
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- tracingService.find(annotationId, tracingId, version) ?~> Messages("tracing.notFound")
             volumeDataZipFormatParsed <- VolumeDataZipFormat.fromString(volumeDataZipFormat).toFox
             voxelSizeFactorParsedOpt <- Fox.runOptional(voxelSizeFactor)(Vec3Double.fromUriLiteral)
@@ -164,11 +163,12 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def data(annotationId: String, tracingId: String): Action[List[WebknossosDataRequest]] =
+  def data(tracingId: String): Action[List[WebknossosDataRequest]] =
     Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound")
             (data, indices) <- if (tracing.getHasEditableMapping) {
               val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
@@ -185,8 +185,7 @@ class VolumeTracingController @Inject()(
   private def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
 
-  def duplicate(annotationId: String,
-                tracingId: String,
+  def duplicate(tracingId: String,
                 fromTask: Option[Boolean],
                 minResolution: Option[Int],
                 maxResolution: Option[Int],
@@ -198,6 +197,7 @@ class VolumeTracingController @Inject()(
       logTime(slackNotificationService.noticeSlowRequest) {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound")
             _ = logger.info(s"Duplicating volume tracing $tracingId...")
             datasetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
@@ -231,11 +231,12 @@ class VolumeTracingController @Inject()(
     }
   }
 
-  def importVolumeData(annotationId: String, tracingId: String): Action[MultipartFormData[TemporaryFile]] =
+  def importVolumeData(tracingId: String): Action[MultipartFormData[TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeTracing(tracingId)) {
           for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound")
             currentVersion <- request.body.dataParts("currentVersion").headOption.flatMap(_.toIntOpt).toFox
             zipFile <- request.body.files.headOption.map(f => new File(f.ref.path.toString)).toFox
@@ -249,11 +250,12 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def addSegmentIndex(annotationId: String, tracingId: String, dryRun: Boolean): Action[AnyContent] =
+  def addSegmentIndex(tracingId: String, dryRun: Boolean): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound")
             currentVersion <- annotationService.currentMaterializableVersion(tracingId)
             before = Instant.now
@@ -285,13 +287,14 @@ class VolumeTracingController @Inject()(
     }
   }
 
-  def requestAdHocMesh(annotationId: String, tracingId: String): Action[WebknossosAdHocMeshRequest] =
+  def requestAdHocMesh(tracingId: String): Action[WebknossosAdHocMeshRequest] =
     Action.async(validateJson[WebknossosAdHocMeshRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           // The client expects the ad-hoc mesh as a flat float-array. Three consecutive floats form a 3D point, three
           // consecutive 3D points (i.e., nine floats) form a triangle.
           // There are no shared vertices between triangles.
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- tracingService.find(annotationId, tracingId) ?~> Messages("tracing.notFound")
           (vertices: Array[Float], neighbors: List[Int]) <- if (tracing.getHasEditableMapping) {
             val editableMappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
@@ -306,10 +309,11 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def loadFullMeshStl(annotationId: String, tracingId: String): Action[FullMeshRequest] =
+  def loadFullMeshStl(tracingId: String): Action[FullMeshRequest] =
     Action.async(validateJson[FullMeshRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           data: Array[Byte] <- fullMeshService.loadFor(annotationId, tracingId, request.body) ?~> "mesh.file.loadChunk.failed"
         } yield Ok(data)
       }
@@ -321,9 +325,10 @@ class VolumeTracingController @Inject()(
   private def formatNeighborList(neighbors: List[Int]): String =
     "[" + neighbors.mkString(", ") + "]"
 
-  def findData(annotationId: String, tracingId: String): Action[AnyContent] = Action.async { implicit request =>
+  def findData(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
       for {
+        annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
         positionOpt <- tracingService.findData(annotationId, tracingId)
       } yield {
         Ok(Json.obj("position" -> positionOpt, "resolution" -> positionOpt.map(_ => Vec3Int.ones)))
@@ -331,10 +336,11 @@ class VolumeTracingController @Inject()(
     }
   }
 
-  def getSegmentVolume(annotationId: String, tracingId: String): Action[SegmentStatisticsParameters] =
+  def getSegmentVolume(tracingId: String): Action[SegmentStatisticsParameters] =
     Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- tracingService.find(annotationId, tracingId)
           mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
           segmentVolumes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
@@ -349,10 +355,11 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def getSegmentBoundingBox(annotationId: String, tracingId: String): Action[SegmentStatisticsParameters] =
+  def getSegmentBoundingBox(tracingId: String): Action[SegmentStatisticsParameters] =
     Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- tracingService.find(annotationId, tracingId)
           mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
           segmentBoundingBoxes: List[BoundingBox] <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
@@ -367,10 +374,11 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def getSegmentIndex(annotationId: String, tracingId: String, segmentId: Long): Action[GetSegmentIndexParameters] =
+  def getSegmentIndex(tracingId: String, segmentId: Long): Action[GetSegmentIndexParameters] =
     Action.async(validateJson[GetSegmentIndexParameters]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           fallbackLayer <- tracingService.getFallbackLayer(annotationId, tracingId)
           tracing <- tracingService.find(annotationId, tracingId)
           mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)

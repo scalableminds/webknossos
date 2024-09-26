@@ -50,8 +50,7 @@ export function getVolumeRequestUrl(
     return `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${visibleSegmentationLayer.name}`;
   } else {
     const tracingStoreHost = tracing?.tracingStore.url;
-    const annotationId = tracing?.annotationId;
-    return `${tracingStoreHost}/tracings/volume/${annotationId}/${tracingId}`;
+    return `${tracingStoreHost}/tracings/volume/${tracingId}`;
   }
 }
 

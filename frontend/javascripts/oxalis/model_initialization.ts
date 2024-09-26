@@ -213,7 +213,6 @@ export async function initialize(
   if (annotation != null) {
     const editableMappings = await fetchEditableMappings(
       annotation.tracingStore.url,
-      annotation.id,
       serverVolumeTracings,
     );
     initializeTracing(annotation, serverTracings, editableMappings);
@@ -249,12 +248,11 @@ async function fetchParallel(
 
 async function fetchEditableMappings(
   tracingStoreUrl: string,
-  annotationId: string,
   serverVolumeTracings: ServerVolumeTracing[],
 ): Promise<ServerEditableMapping[]> {
   const promises = serverVolumeTracings
     .filter((tracing) => tracing.hasEditableMapping)
-    .map((tracing) => getEditableMappingInfo(tracingStoreUrl, annotationId, tracing.id));
+    .map((tracing) => getEditableMappingInfo(tracingStoreUrl, tracing.id));
   return Promise.all(promises);
 }
 

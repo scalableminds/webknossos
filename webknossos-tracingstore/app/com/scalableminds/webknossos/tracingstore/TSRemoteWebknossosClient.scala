@@ -45,7 +45,8 @@ class TSRemoteWebknossosClient @Inject()(
   private val webknossosUri: String = config.Tracingstore.WebKnossos.uri
 
   private lazy val dataSourceIdByTracingIdCache: AlfuCache[String, DataSourceId] = AlfuCache()
-  private lazy val annotationIdByTracingIdCache: AlfuCache[String, String] = AlfuCache(timeToLive = 5 minutes)
+  private lazy val annotationIdByTracingIdCache: AlfuCache[String, String] =
+    AlfuCache(maxCapacity = 10000, timeToLive = 5 minutes)
 
   def reportTracingUpdates(tracingUpdatesReport: TracingUpdatesReport): Fox[WSResponse] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/handleTracingUpdateReport")
@@ -85,7 +86,7 @@ class TSRemoteWebknossosClient @Inject()(
           .addQueryString("tracingId" -> tracingId)
           .addQueryString("key" -> tracingStoreKey)
           .getWithJsonResponse[String]
-    )
+    ) ?~> "annotation.idForTracing.failed"
 
   override def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/validateUserAccess")

@@ -70,11 +70,12 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     }
   }
 
-  def get(annotationId: String, tracingId: String, version: Option[Long]): Action[AnyContent] =
+  def get(tracingId: String, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- tracingService.find(annotationId, tracingId, version, applyUpdates = true) ?~> Messages(
               "tracing.notFound")
           } yield Ok(tracing.toByteArray).as(protobufMimeType)

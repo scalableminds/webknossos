@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
+import com.scalableminds.webknossos.datastore.services.RemoteWebknossosClient
+import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreRedisStore}
 import com.scalableminds.webknossos.tracingstore.annotation.{TSAnnotationService, UpdateActionGroup}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
@@ -37,6 +38,8 @@ trait TracingService[T <: GeneratedMessage]
   def temporaryTracingStore: TemporaryTracingStore[T]
 
   def temporaryTracingIdStore: TracingStoreRedisStore
+
+  def remoteWebknossosClient: TSRemoteWebknossosClient
 
   def tracingMigrationService: TracingMigrationService[T]
 
@@ -109,8 +112,6 @@ trait TracingService[T <: GeneratedMessage]
     }
    */
 
-  def applyPendingUpdates(tracing: T, tracingId: String, targetVersion: Option[Long]): Fox[T] = Fox.successful(tracing)
-
   def find(annotationId: String,
            tracingId: String,
            version: Option[Long] = None,
@@ -121,8 +122,11 @@ trait TracingService[T <: GeneratedMessage]
       implicit tc: TokenContext): Fox[List[Option[T]]] =
     Fox.combined {
       selectors.map {
-        case Some(selector) => // TODO TracingSelector needs annotationIds too
-          find("dummyAnnotationid", selector.tracingId, selector.version, useCache, applyUpdates).map(Some(_))
+        case Some(selector) =>
+          for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(selector.tracingId)
+            tracing <- find(annotationId, selector.tracingId, selector.version, useCache, applyUpdates).map(Some(_))
+          } yield tracing
         case None => Fox.successful(None)
       }
     }

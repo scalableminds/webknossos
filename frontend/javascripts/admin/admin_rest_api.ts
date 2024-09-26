@@ -896,7 +896,7 @@ export async function getTracingForAnnotationType(
   const possibleVersionString = version != null ? `&version=${version}` : "";
   const tracingArrayBuffer = await doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${annotation.tracingStore.url}/tracings/${tracingType}/${annotation.id}/${tracingId}?token=${token}${possibleVersionString}`,
+      `${annotation.tracingStore.url}/tracings/${tracingType}/${tracingId}?token=${token}${possibleVersionString}`,
       {
         headers: {
           Accept: "application/x-protobuf",
@@ -1614,12 +1614,11 @@ export function fetchMapping(
 
 export function makeMappingEditable(
   tracingStoreUrl: string,
-  annotationId: string,
   tracingId: string,
 ): Promise<ServerEditableMapping> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${annotationId}/${tracingId}/makeMappingEditable?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/makeMappingEditable?token=${token}`,
       {
         method: "POST",
       },
@@ -1629,13 +1628,10 @@ export function makeMappingEditable(
 
 export function getEditableMappingInfo(
   tracingStoreUrl: string,
-  annotationId: string,
   tracingId: string,
 ): Promise<ServerEditableMapping> {
   return doWithToken((token) =>
-    Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${annotationId}/${tracingId}/info?token=${token}`,
-    ),
+    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}/info?token=${token}`),
   );
 }
 
@@ -2122,7 +2118,6 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
 
 export async function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
   tracingStoreUrl: string,
-  annotationId: string,
   tracingId: string,
   segmentIds: Array<T>,
 ): Promise<Mapping> {
@@ -2132,7 +2127,7 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   );
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/mapping/${annotationId}/${tracingId}/agglomeratesForSegments?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?token=${token}`,
       {
         method: "POST",
         body: segmentIdBuffer,
@@ -2311,7 +2306,6 @@ type MinCutTargetEdge = {
 };
 export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
-  annotationId: string,
   tracingId: string,
   segmentsInfo: {
     segmentId1: NumberLike;
@@ -2323,7 +2317,7 @@ export async function getEdgesForAgglomerateMinCut(
 ): Promise<Array<MinCutTargetEdge>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${annotationId}/${tracingId}/agglomerateGraphMinCut?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
       {
         data: {
           ...segmentsInfo,
@@ -2345,7 +2339,6 @@ export type NeighborInfo = {
 export async function getNeighborsForAgglomerateNode(
   tracingStoreUrl: string,
   tracingId: string,
-  annotationId: string,
   segmentInfo: {
     segmentId: NumberLike;
     mag: Vector3;
@@ -2355,7 +2348,7 @@ export async function getNeighborsForAgglomerateNode(
 ): Promise<NeighborInfo> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${annotationId}/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
       {
         data: {
           ...segmentInfo,

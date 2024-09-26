@@ -265,7 +265,6 @@ function* createEditableMapping(): Saga<string> {
    * name of the HDF5 mapping for which the editable mapping is about to be created.
    */
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
-  const annotationId = yield* select((state) => state.tracing.annotationId);
   // Save before making the mapping editable to make sure the correct mapping is activated in the backend
   yield* call([Model, Model.ensureSavedState]);
   // Get volume tracing again to make sure the version is up to date
@@ -276,12 +275,7 @@ function* createEditableMapping(): Saga<string> {
 
   const volumeTracingId = upToDateVolumeTracing.tracingId;
   const layerName = volumeTracingId;
-  const serverEditableMapping = yield* call(
-    makeMappingEditable,
-    tracingStoreUrl,
-    annotationId,
-    volumeTracingId,
-  );
+  const serverEditableMapping = yield* call(makeMappingEditable, tracingStoreUrl, volumeTracingId);
   // The server increments the volume tracing's version by 1 when switching the mapping to an editable one
   yield* put(setVersionNumberAction(upToDateVolumeTracing.version + 1, "volume", volumeTracingId));
   yield* put(setMappingNameAction(layerName, volumeTracingId, "HDF5"));
@@ -546,7 +540,6 @@ function* performMinCut(
   }
 
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
-  const annotationId = yield* select((state) => state.tracing.annotationId);
   const segmentsInfo = {
     segmentId1: sourceSegmentId,
     segmentId2: targetSegmentId,
@@ -558,7 +551,6 @@ function* performMinCut(
   const edgesToRemove = yield* call(
     getEdgesForAgglomerateMinCut,
     tracingStoreUrl,
-    annotationId,
     volumeTracingId,
     segmentsInfo,
   );
@@ -609,7 +601,6 @@ function* performCutFromNeighbors(
   { didCancel: false; neighborInfo: NeighborInfo } | { didCancel: true; neighborInfo?: null }
 > {
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
-  const annotationId = yield* select((state) => state.tracing.annotationId);
   const segmentsInfo = {
     segmentId,
     mag: agglomerateFileMag,
@@ -620,7 +611,6 @@ function* performCutFromNeighbors(
   const neighborInfo = yield* call(
     getNeighborsForAgglomerateNode,
     tracingStoreUrl,
-    annotationId,
     volumeTracingId,
     segmentsInfo,
   );
@@ -1283,13 +1273,11 @@ function* splitAgglomerateInMapping(
     .map(([segmentId, _agglomerateId]) => segmentId);
 
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
-  const annotationId = yield* select((state) => state.tracing.annotationId);
   // Ask the server to map the (split) segment ids. This creates a partial mapping
   // that only contains these ids.
   const mappingAfterSplit = yield* call(
     getAgglomeratesForSegmentsFromTracingstore,
     tracingStoreUrl,
-    annotationId,
     volumeTracingId,
     splitSegmentIds,
   );

@@ -676,7 +676,7 @@ function _DownloadModalView({
               <MagSlider
                 resolutionInfo={selectedLayerResolutionInfo}
                 value={mag}
-                onChange={setMag}
+                onChange={setMag} // TODO_c is there a default here?
               />
             </Col>
             <Col

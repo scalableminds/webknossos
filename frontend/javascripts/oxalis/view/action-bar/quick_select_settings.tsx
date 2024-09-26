@@ -180,6 +180,7 @@ export function HeuristicQuickSelectControls() {
         step={0.25} // a granular step is important so that all 256 values can be effectively targeted
         onChange={onChangeThreshold}
         disabled={!isQuickSelectActive}
+        defaultValue={defaultState.userConfiguration.quickSelect.threshold}
       />
       <NumberSliderSetting
         label="Close [vx]"
@@ -188,6 +189,7 @@ export function HeuristicQuickSelectControls() {
         max={10}
         step={1}
         onChange={onChangeCloseValue}
+        defaultValue={defaultState.userConfiguration.quickSelect.closeValue}
       />
       <NumberSliderSetting
         label="Erode [vx]"
@@ -196,6 +198,7 @@ export function HeuristicQuickSelectControls() {
         max={10}
         step={1}
         onChange={onChangeErodeValue}
+        defaultValue={defaultState.userConfiguration.quickSelect.erodeValue}
       />
       <NumberSliderSetting
         label="Dilate [vx]"
@@ -204,6 +207,7 @@ export function HeuristicQuickSelectControls() {
         max={10}
         step={1}
         onChange={onChangeDilateValue}
+        defaultValue={defaultState.userConfiguration.quickSelect.dilateValue}
       />
       <Shortcut supportInputElements keys="escape" onTrigger={onDiscard} />
       <Shortcut supportInputElements keys="enter" onTrigger={onConfirm} />

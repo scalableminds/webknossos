@@ -241,7 +241,7 @@ export default function DatasetSettingsViewConfigTab(props: {
                 info={settingsTooltips.segmentationPatternOpacity}
                 colon={false}
               >
-                <Slider min={0} max={100} step={1} />
+                <Slider min={0} max={100} step={1} /> {/*//TODO_c*/}
               </FormItemWithInfo>
             </Col>
             <Col span={8} style={{ marginRight: -12 }}>

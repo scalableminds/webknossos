@@ -90,6 +90,7 @@ export function RestrictResolutionSlider({
   resolutionIndices,
   setResolutionIndices,
 }: RestrictResolutionSliderProps) {
+  console.log("restrictresolutionslider");
   let highestResolutionIndex = resolutionInfo.getCoarsestResolutionIndex();
   let lowestResolutionIndex = resolutionInfo.getFinestResolutionIndex();
 
@@ -210,7 +211,7 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
           resolutionInfo={resolutionInfo}
           selectedSegmentationLayer={selectedSegmentationLayer}
           resolutionIndices={userDefinedResolutionIndices}
-          setResolutionIndices={setUserDefinedResolutionIndices}
+          setResolutionIndices={setUserDefinedResolutionIndices /* TODO_c */}
         />
       ) : null;
     modalContent = (

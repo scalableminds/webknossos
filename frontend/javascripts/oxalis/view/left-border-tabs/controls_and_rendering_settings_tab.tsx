@@ -171,7 +171,8 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               min={this.props.validZoomRange[0]}
               max={this.props.validZoomRange[1]}
               value={this.props.zoomStep}
-              onChange={this.props.onChangeZoomStep} //TODO_c
+              onChange={this.props.onChangeZoomStep}
+              defaultValue={defaultState.flycam.zoomStep}
             />
             <SwitchSetting
               label={

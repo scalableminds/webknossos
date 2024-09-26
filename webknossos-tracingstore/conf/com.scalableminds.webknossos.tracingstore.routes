@@ -39,8 +39,7 @@ GET         /mapping/:tracingId/segmentsForAgglomerate                          
 POST        /mapping/:tracingId/agglomeratesForSegments                             @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateIdsForSegments(tracingId: String)
 POST        /mapping/:tracingId/agglomerateGraphMinCut                              @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateGraphMinCut(tracingId: String)
 POST        /mapping/:tracingId/agglomerateGraphNeighbors                           @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateGraphNeighbors(tracingId: String)
-# TODO rename
-GET         /volume/:tracingId/agglomerateSkeleton/:agglomerateId                   @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateSkeleton(tracingId: String, agglomerateId: Long)
+GET         /mapping/:tracingId/agglomerateSkeleton/:agglomerateId                  @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateSkeleton(tracingId: String, agglomerateId: Long)
 
 # Zarr endpoints for volume annotations
 # Zarr version 2

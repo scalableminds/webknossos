@@ -87,7 +87,7 @@ class WKRemoteTracingStoreClient(
     rpc(s"${tracingStore.url}/tracings/annotation/save")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("annotationId" -> annotationId.toString)
-      .postProto[AnnotationProto](annotationProto) // TODO why didn’t the failure bubble up?
+      .postProto[AnnotationProto](annotationProto)
   }
 
   def duplicateSkeletonTracing(skeletonTracingId: String,

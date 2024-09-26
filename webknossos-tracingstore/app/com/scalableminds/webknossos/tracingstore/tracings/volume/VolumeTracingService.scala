@@ -613,24 +613,6 @@ class VolumeTracingService @Inject()(
       additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes)
     )
 
-  def updateActionLog(tracingId: String,
-                      newestVersion: Option[Long] = None,
-                      oldestVersion: Option[Long] = None): Fox[JsValue] = {
-    def versionedTupleToJson(tuple: (Long, List[CompactVolumeUpdateAction])): JsObject =
-      Json.obj(
-        "version" -> tuple._1,
-        "value" -> Json.toJson(tuple._2)
-      )
-
-    for {
-      volumeTracings <- tracingDataStore.volumeUpdates.getMultipleVersionsAsVersionValueTuple(
-        tracingId,
-        newestVersion,
-        oldestVersion)(fromJsonBytes[List[CompactVolumeUpdateAction]])
-      updateActionGroupsJs = volumeTracings.map(versionedTupleToJson)
-    } yield Json.toJson(updateActionGroupsJs)
-  }
-
   def updateResolutionList(tracingId: String,
                            tracing: VolumeTracing,
                            resolutions: Set[Vec3Int],

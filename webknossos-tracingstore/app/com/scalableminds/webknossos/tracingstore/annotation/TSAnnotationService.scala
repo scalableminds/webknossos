@@ -216,7 +216,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                              targetVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext) = {
     val volumeWithEditableMapping = annotationWithTracings.volumesThatHaveEditableMapping
     logger.info(s"fetching editable mappings ${volumeWithEditableMapping.map(_._2).mkString(",")}")
-    // TODO intersect with editable mapping updates?
+    // TODO perf optimization: intersect with editable mapping updates? unless requested
     for {
       idInfoUpdaterTuples <- Fox.serialCombined(volumeWithEditableMapping) {
         case (volumeTracing, volumeTracingId) =>
@@ -373,7 +373,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
 
   def updateActionStatistics(tracingId: String): Fox[JsObject] =
     for {
-      updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersions(tracingId)(
+      updateActionGroups <- tracingDataStore.annotationUpdates.getMultipleVersions(tracingId)(
         fromJsonBytes[List[UpdateAction]])
       updateActions = updateActionGroups.flatten
     } yield {

@@ -18,12 +18,11 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class AnnotationTransactionService @Inject()(
-    handledGroupIdStore: TracingStoreRedisStore, // TODO: instantiate here rather than with injection, give fix namespace prefix?
-    uncommittedUpdatesStore: TracingStoreRedisStore,
-    volumeTracingService: VolumeTracingService,
-    tracingDataStore: TracingDataStore,
-    annotationService: TSAnnotationService)
+class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRedisStore,
+                                             uncommittedUpdatesStore: TracingStoreRedisStore,
+                                             volumeTracingService: VolumeTracingService,
+                                             tracingDataStore: TracingDataStore,
+                                             annotationService: TSAnnotationService)
     extends KeyValueStoreImplicits
     with LazyLogging {
 

@@ -275,18 +275,6 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def updateActionLog(tracingId: String,
-                      newestVersion: Option[Long] = None,
-                      oldestVersion: Option[Long] = None): Action[AnyContent] = Action.async { implicit request =>
-    log() {
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
-        for {
-          updateLog <- tracingService.updateActionLog(tracingId, newestVersion, oldestVersion)
-        } yield Ok(updateLog)
-      }
-    }
-  }
-
   def requestAdHocMesh(tracingId: String): Action[WebknossosAdHocMeshRequest] =
     Action.async(validateJson[WebknossosAdHocMeshRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {

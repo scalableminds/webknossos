@@ -2155,7 +2155,7 @@ export function getEditableAgglomerateSkeleton(
 ): Promise<ArrayBuffer> {
   return doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {

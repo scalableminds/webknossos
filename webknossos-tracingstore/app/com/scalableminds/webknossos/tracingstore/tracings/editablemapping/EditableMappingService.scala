@@ -22,7 +22,6 @@ import com.scalableminds.webknossos.datastore.services.{
   AdHocMeshServiceHolder,
   BinaryDataService
 }
-import com.scalableminds.webknossos.tracingstore.annotation.{UpdateAction, UpdateActionGroup}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FallbackDataHelper,
@@ -155,7 +154,6 @@ class EditableMappingService @Inject()(
       }
     } yield ()
 
-   */
 
   private def duplicateSegmentToAgglomerate(sourceTracingId: String, newId: String, newVersion: Long): Fox[Unit] = {
     val iterator =
@@ -190,13 +188,10 @@ class EditableMappingService @Inject()(
       }.toList)
     } yield ()
   }
+   */
 
   def assertTracingHasEditableMapping(tracing: VolumeTracing)(implicit ec: ExecutionContext): Fox[Unit] =
     bool2Fox(tracing.getHasEditableMapping) ?~> "annotation.volume.noEditableMapping"
-
-  def getBaseMappingName(tracingId: String): Fox[Option[String]] =
-    // TODO
-    Fox.successful(None)
 
   def findSegmentIdAtPositionIfNeeded(remoteFallbackLayer: RemoteFallbackLayer,
                                       positionOpt: Option[Vec3Int],

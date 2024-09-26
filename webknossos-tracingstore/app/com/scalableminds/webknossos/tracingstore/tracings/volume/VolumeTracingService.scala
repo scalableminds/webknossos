@@ -37,8 +37,6 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files
 import play.api.libs.Files.TemporaryFileCreator
-import play.api.libs.json.{JsObject, JsValue, Json}
-
 import java.io._
 import java.nio.file.Paths
 import java.util.Base64

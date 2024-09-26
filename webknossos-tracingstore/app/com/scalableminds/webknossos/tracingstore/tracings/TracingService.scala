@@ -1,17 +1,14 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.datastore.services.RemoteWebknossosClient
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreRedisStore}
-import com.scalableminds.webknossos.tracingstore.annotation.{TSAnnotationService, UpdateActionGroup}
+import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import com.typesafe.scalalogging.LazyLogging
-import play.api.http.Status.CONFLICT
 import net.liftweb.common.Box
 import play.api.i18n.MessagesProvider
-import play.api.libs.json._
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import java.util.UUID
@@ -47,10 +44,6 @@ trait TracingService[T <: GeneratedMessage]
 
   def dummyTracing: T
 
-  val handledGroupIdStore: TracingStoreRedisStore
-
-  val uncommittedUpdatesStore: TracingStoreRedisStore
-
   implicit def tracingCompanion: GeneratedMessageCompanion[T]
 
   // this should be longer than maxCacheTime in webknossos/AnnotationStore
@@ -61,45 +54,8 @@ trait TracingService[T <: GeneratedMessage]
   // to provide useful error messages to the user if the temporary tracing is no longer present
   private val temporaryIdStoreTimeout = 10 days
 
-  private val handledGroupCacheExpiry: FiniteDuration = 24 hours
-
-  private def transactionGroupKey(tracingId: String, transactionId: String, transactionGroupIndex: Int, version: Long) =
-    s"transactionGroup___${tracingId}___${transactionId}___${transactionGroupIndex}___$version"
-
   protected def temporaryIdKey(tracingId: String) =
     s"temporaryTracingId___$tracingId"
-
-  private def patternFor(tracingId: String, transactionId: String) =
-    s"transactionGroup___${tracingId}___${transactionId}___*"
-
-  def saveUncommitted(tracingId: String,
-                      transactionId: String,
-                      transactionGroupIndex: Int,
-                      version: Long,
-                      updateGroup: UpdateActionGroup,
-                      expiry: FiniteDuration): Fox[Unit] =
-    for {
-      _ <- Fox.runIf(transactionGroupIndex > 0)(
-        Fox.assertTrue(
-          uncommittedUpdatesStore.contains(transactionGroupKey(
-            tracingId,
-            transactionId,
-            transactionGroupIndex - 1,
-            version))) ?~> s"Incorrect transaction index. Got: $transactionGroupIndex but ${transactionGroupIndex - 1} does not exist" ~> CONFLICT)
-      _ <- uncommittedUpdatesStore.insert(transactionGroupKey(tracingId, transactionId, transactionGroupIndex, version),
-                                          Json.toJson(updateGroup).toString(),
-                                          Some(expiry))
-    } yield ()
-
-  def getAllUncommittedFor(tracingId: String, transactionId: String): Fox[List[UpdateActionGroup]] =
-    for {
-      raw: Seq[String] <- uncommittedUpdatesStore.findAllConditional(patternFor(tracingId, transactionId))
-      parsed: Seq[UpdateActionGroup] = raw.flatMap(itemAsString =>
-        JsonHelper.jsResultToOpt(Json.parse(itemAsString).validate[UpdateActionGroup]))
-    } yield parsed.toList.sortBy(_.transactionGroupIndex)
-
-  def removeAllUncommittedFor(tracingId: String, transactionId: String): Fox[Unit] =
-    uncommittedUpdatesStore.removeAllConditional(patternFor(tracingId, transactionId))
 
   /* // TODO ? add this to migration?
   private def migrateTracing(tracingFox: Fox[T], tracingId: String): Fox[T] =
@@ -143,23 +99,6 @@ trait TracingService[T <: GeneratedMessage]
       tracingStore.put(id, version, tracing).map(_ => id)
     }
   }
-
-  private def handledGroupKey(tracingId: String, transactionId: String, version: Long, transactionGroupIndex: Int) =
-    s"handledGroup___${tracingId}___${transactionId}___${version}___$transactionGroupIndex"
-
-  def saveToHandledGroupIdStore(tracingId: String,
-                                transactionId: String,
-                                version: Long,
-                                transactionGroupIndex: Int): Fox[Unit] = {
-    val key = handledGroupKey(tracingId, transactionId, version, transactionGroupIndex)
-    handledGroupIdStore.insert(key, "()", Some(handledGroupCacheExpiry))
-  }
-
-  def handledGroupIdStoreContains(tracingId: String,
-                                  transactionId: String,
-                                  version: Long,
-                                  transactionGroupIndex: Int): Fox[Boolean] =
-    handledGroupIdStore.contains(handledGroupKey(tracingId, transactionId, version, transactionGroupIndex))
 
   def merge(tracings: Seq[T], mergedVolumeStats: MergedVolumeStats, newEditableMappingIdOpt: Option[String]): Box[T]
 

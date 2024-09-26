@@ -27,7 +27,7 @@ import {
   updateTreeEdgesVisibility,
   updateNode,
   updateSkeletonTracing,
-  updateUserBoundingBoxes,
+  updateUserBoundingBoxesInSkeletonTracing,
   updateTree,
   updateTreeGroups,
 } from "oxalis/model/sagas/update_actions";
@@ -636,7 +636,7 @@ export function* diffSkeletonTracing(
   }
 
   if (!_.isEqual(prevSkeletonTracing.userBoundingBoxes, skeletonTracing.userBoundingBoxes)) {
-    yield updateUserBoundingBoxes(skeletonTracing.userBoundingBoxes);
+    yield updateUserBoundingBoxesInSkeletonTracing(skeletonTracing.userBoundingBoxes);
   }
 }
 export default [

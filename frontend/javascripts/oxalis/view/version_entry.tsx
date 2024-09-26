@@ -65,7 +65,11 @@ const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Descr
     description: "Created the annotation.",
     icon: <RocketOutlined />,
   }),
-  updateUserBoundingBoxes: (): Description => ({
+  updateUserBoundingBoxesInSkeletonTracing: (): Description => ({
+    description: "Updated a bounding box.",
+    icon: <CodepenOutlined />,
+  }),
+  updateUserBoundingBoxesInVolumeTracing: (): Description => ({
     description: "Updated a bounding box.",
     icon: <CodepenOutlined />,
   }),

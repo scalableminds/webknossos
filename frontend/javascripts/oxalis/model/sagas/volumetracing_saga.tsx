@@ -95,7 +95,7 @@ import {
   deleteSegmentVolumeAction,
   removeFallbackLayer,
   updateSegmentVolumeAction,
-  updateUserBoundingBoxes,
+  updateUserBoundingBoxesInVolumeTracing,
   updateVolumeTracing,
   updateMappingName,
 } from "oxalis/model/sagas/update_actions";
@@ -700,7 +700,7 @@ export function* diffVolumeTracing(
   }
 
   if (!_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes)) {
-    yield updateUserBoundingBoxes(volumeTracing.userBoundingBoxes);
+    yield updateUserBoundingBoxesInVolumeTracing(volumeTracing.userBoundingBoxes);
   }
 
   if (prevVolumeTracing !== volumeTracing) {

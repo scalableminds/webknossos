@@ -14,6 +14,11 @@ import { NO_LOD_MESH_INDEX } from "oxalis/model/sagas/mesh_saga";
 import Store from "oxalis/store";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
+import { MeshBVH, acceleratedRaycast } from "three-mesh-bvh";
+
+// Add the raycast function. Assumes the BVH is available on
+// the `boundsTree` variable
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
 const ACTIVATED_COLOR = [0.7, 0.5, 0.1] as const;
 const HOVERED_COLOR = [0.65, 0.5, 0.1] as const;
@@ -123,7 +128,7 @@ export default class SegmentMeshController {
         {
           opacity: 1,
         },
-        500,
+        100,
       )
       .onUpdate(function onUpdate(this: { opacity: number }) {
         meshMaterial.opacity = this.opacity;
@@ -179,6 +184,7 @@ export default class SegmentMeshController {
         meshChunk.translateY(offset[1]);
         meshChunk.translateZ(offset[2]);
       }
+      meshChunk.geometry.boundsTree = new MeshBVH(meshChunk.geometry);
       return meshChunk;
     });
     const group = new THREE.Group() as SceneGroupForMeshes;

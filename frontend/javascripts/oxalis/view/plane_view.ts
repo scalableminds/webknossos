@@ -35,6 +35,7 @@ const createDirLight = (
 };
 
 const raycaster = new VisibilityAwareRaycaster();
+raycaster.firstHitOnly = true;
 let oldRaycasterHit: MeshSceneNode | null = null;
 
 class PlaneView {

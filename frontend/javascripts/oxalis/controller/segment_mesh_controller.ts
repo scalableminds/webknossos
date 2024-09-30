@@ -94,7 +94,6 @@ export default class SegmentMeshController {
       bufferGeometry as BufferGeometryWithInfo,
       segmentId,
       null,
-      null,
       NO_LOD_MESH_INDEX,
       layerName,
       additionalCoordinates,
@@ -149,7 +148,6 @@ export default class SegmentMeshController {
   addMeshFromGeometries(
     geometries: BufferGeometryWithInfo[],
     segmentId: number,
-    offset: Vector3 | null = null,
     scale: Vector3 | null = null,
     lod: number,
     layerName: string,
@@ -179,11 +177,6 @@ export default class SegmentMeshController {
     }
     const meshChunks = geometries.map((geometry) => {
       const meshChunk = this.constructMesh(segmentId, layerName, geometry);
-      if (offset) {
-        meshChunk.translateX(offset[0]);
-        meshChunk.translateY(offset[1]);
-        meshChunk.translateZ(offset[2]);
-      }
       meshChunk.geometry.boundsTree = new MeshBVH(meshChunk.geometry);
       return meshChunk;
     });
@@ -205,21 +198,12 @@ export default class SegmentMeshController {
   addMeshFromGeometry(
     geometry: BufferGeometryWithInfo,
     segmentId: number,
-    offset: Vector3 | null = null,
     scale: Vector3 | null = null,
     lod: number,
     layerName: string,
     additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   ): void {
-    this.addMeshFromGeometries(
-      [geometry],
-      segmentId,
-      offset,
-      scale,
-      lod,
-      layerName,
-      additionalCoordinates,
-    );
+    this.addMeshFromGeometries([geometry], segmentId, scale, lod, layerName, additionalCoordinates);
   }
 
   removeMeshById(segmentId: number, layerName: string): void {

@@ -51,8 +51,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .getWithBytesResponse
   }
 
-  def getLayerData(
-                   dataset: Dataset,
+  def getLayerData(dataset: Dataset,
                    layerName: String,
                    mag1BoundingBox: BoundingBox,
                    mag: Vec3Int,

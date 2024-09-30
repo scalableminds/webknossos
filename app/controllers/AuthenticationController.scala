@@ -27,7 +27,15 @@ import play.api.data.validation.Constraints._
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, Cookie, PlayBodyParsers, Request, Result}
-import security.{CombinedAuthenticator, OpenIdConnectClient, OpenIdConnectUserInfo, PasswordHasher, TokenType, WkEnv, WkSilhouetteEnvironment}
+import security.{
+  CombinedAuthenticator,
+  OpenIdConnectClient,
+  OpenIdConnectUserInfo,
+  PasswordHasher,
+  TokenType,
+  WkEnv,
+  WkSilhouetteEnvironment
+}
 import utils.WkConf
 
 import java.net.URLEncoder
@@ -235,10 +243,7 @@ class AuthenticationController @Inject()(
         selectedOrganization <- if (isSuperUser)
           accessibleBySwitchingForSuperUser(parsedDatasetId, annotationId, workflowHash)
         else
-          accessibleBySwitchingForMultiUser(request.identity._multiUser,
-            parsedDatasetId,
-                                            annotationId,
-                                            workflowHash)
+          accessibleBySwitchingForMultiUser(request.identity._multiUser, parsedDatasetId, annotationId, workflowHash)
         _ <- bool2Fox(selectedOrganization._id != request.identity._organization) // User is already in correct orga, but still could not see dataset. Assume this had a reason.
         selectedOrganizationJs <- organizationService.publicWrites(selectedOrganization)
       } yield Ok(selectedOrganizationJs)
@@ -276,12 +281,8 @@ class AuthenticationController @Inject()(
                                                 workflowHashOpt: Option[String]): Fox[Organization] =
     for {
       identities <- userDAO.findAllByMultiUser(multiUserId)
-      selectedIdentity <- Fox.find(identities)(
-        identity =>
-          canAccessDatasetOrAnnotationOrWorkflow(identity,
-            datasetIdOpt,
-                                                 annotationIdOpt,
-                                                 workflowHashOpt))
+      selectedIdentity <- Fox.find(identities)(identity =>
+        canAccessDatasetOrAnnotationOrWorkflow(identity, datasetIdOpt, annotationIdOpt, workflowHashOpt))
       selectedOrganization <- organizationDAO.findOne(selectedIdentity._organization)(GlobalAccessContext)
     } yield selectedOrganization
 

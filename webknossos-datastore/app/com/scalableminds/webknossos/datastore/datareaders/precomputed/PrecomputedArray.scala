@@ -20,13 +20,13 @@ import ucar.ma2.{Array => MultiArray}
 
 object PrecomputedArray extends LazyLogging {
   def open(
-            magPath: VaultPath,
-            dataSourceId: DataSourceId,
-            layerName: String,
-            axisOrderOpt: Option[AxisOrder],
-            channelIndex: Option[Int],
-            additionalAxes: Option[Seq[AdditionalAxis]],
-            sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[PrecomputedArray] =
+      magPath: VaultPath,
+      dataSourceId: DataSourceId,
+      layerName: String,
+      axisOrderOpt: Option[AxisOrder],
+      channelIndex: Option[Int],
+      additionalAxes: Option[Seq[AdditionalAxis]],
+      sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[PrecomputedArray] =
     for {
       headerBytes <- (magPath.parent / PrecomputedHeader.FILENAME_INFO)
         .readBytes() ?~> s"Could not read header at ${PrecomputedHeader.FILENAME_INFO}"

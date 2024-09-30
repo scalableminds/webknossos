@@ -10,15 +10,37 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.geometry.{AdditionalCoordinateProto, ColorProto, NamedBoundingBoxProto, Vec3DoubleProto, Vec3IntProto}
+import com.scalableminds.webknossos.datastore.geometry.{
+  AdditionalCoordinateProto,
+  ColorProto,
+  NamedBoundingBoxProto,
+  Vec3DoubleProto,
+  Vec3IntProto
+}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerStatistics, AnnotationLayerType, AnnotationSource, FetchedAnnotationLayer}
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass, DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.annotation.{
+  AnnotationLayer,
+  AnnotationLayerStatistics,
+  AnnotationLayerType,
+  AnnotationSource,
+  FetchedAnnotationLayer
+}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  AdditionalAxis,
+  ElementClass,
+  DataSourceLike => DataSource,
+  SegmentationLayerLike => SegmentationLayer
+}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeDataZipFormat, VolumeTracingDefaults, VolumeTracingDownsampling}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{
+  ResolutionRestrictions,
+  VolumeDataZipFormat,
+  VolumeTracingDefaults,
+  VolumeTracingDownsampling
+}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.AnnotationLayerParameters
 import models.annotation.AnnotationState._

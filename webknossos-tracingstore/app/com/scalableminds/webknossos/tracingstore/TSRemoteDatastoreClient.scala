@@ -190,7 +190,8 @@ class TSRemoteDatastoreClient @Inject()(
     for {
       dataSourceId <- remoteWebknossosClient.getDataSourceIdForTracing(tracingId)
       dataStoreUri <- dataStoreUriWithCache(dataSourceId.organizationId, dataSourceId.path)
-      result <- rpc(s"$dataStoreUri/data/datasets/${dataSourceId.organizationId}/${dataSourceId.path}/readInboxDataSource")
+      result <- rpc(
+        s"$dataStoreUri/data/datasets/${dataSourceId.organizationId}/${dataSourceId.path}/readInboxDataSource")
         .addQueryStringOptional("token", token)
         .getWithJsonResponse[InboxDataSource]
       scale <- result.voxelSizeOpt ?~> "could not determine voxel size of dataset"

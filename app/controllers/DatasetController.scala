@@ -120,11 +120,7 @@ class DatasetController @Inject()(userService: UserService,
       for {
         parsedDatasetId <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
         _ <- datasetDAO.findOne(parsedDatasetId)(ctx) ?~> notFoundMessage(datasetId) ~> NOT_FOUND // To check Access Rights
-        image <- thumbnailService.getThumbnailWithCache(parsedDatasetId,
-                                                        dataLayerName,
-                                                        w,
-                                                        h,
-                                                        mappingName)
+        image <- thumbnailService.getThumbnailWithCache(parsedDatasetId, dataLayerName, w, h, mappingName)
       } yield {
         addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")
       }

@@ -264,7 +264,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       knownUpload <- isKnownUpload(uploadId)
     } yield
       if (knownUpload) {
-        logger.info(f"Cancelling dataset upload of ${dataSourceId.organizationId}/${dataSourceId.path} with id $uploadId...")
+        logger.info(
+          f"Cancelling dataset upload of ${dataSourceId.organizationId}/${dataSourceId.path} with id $uploadId...")
         removeFromRedis(uploadId).flatMap(_ =>
           PathUtils.deleteDirectoryRecursively(uploadDirectory(dataSourceId.organizationId, uploadId)))
       } else {
@@ -281,7 +282,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       uploadDir = uploadDirectory(dataSourceId.organizationId, uploadId)
       unpackToDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
 
-      _ = logger.info(s"Finishing dataset upload of ${dataSourceId.organizationId}/${dataSourceId.path} with id $uploadId...")
+      _ = logger.info(
+        s"Finishing dataset upload of ${dataSourceId.organizationId}/${dataSourceId.path} with id $uploadId...")
       _ <- Fox.runIf(checkCompletion)(ensureAllChunksUploaded(uploadId))
       _ <- ensureDirectoryBox(unpackToDir.getParent) ?~> "dataset.import.fileAccessDenied"
       unpackResult <- unpackDataset(uploadDir, unpackToDir).futureBox
@@ -326,7 +328,9 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
           case UploadedDataSourceType.WKW => addLayerAndResolutionDirIfMissing(unpackToDir).toFox
         }
         _ <- datasetSymlinkService.addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty))
-        _ <- addLinkedLayersToDataSourceProperties(unpackToDir, dataSourceId.organizationId, layersToLink.getOrElse(List.empty))
+        _ <- addLinkedLayersToDataSourceProperties(unpackToDir,
+                                                   dataSourceId.organizationId,
+                                                   layersToLink.getOrElse(List.empty))
       } yield ()
     }
 

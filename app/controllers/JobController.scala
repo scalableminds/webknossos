@@ -186,9 +186,7 @@ class JobController @Inject()(
       } yield Ok(js)
     }
 
-  def runInferNucleiJob(datasetId: String,
-                        layerName: String,
-                        newDatasetName: String): Action[AnyContent] =
+  def runInferNucleiJob(datasetId: String, layerName: String, newDatasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -253,10 +251,9 @@ class JobController @Inject()(
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           parsedDatasetId <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
-          dataset <- datasetDAO.findOne(parsedDatasetId) ?~> Messages(
-            "dataset.notFound",
-            datasetId) ~> NOT_FOUND
-          organization <- organizationDAO.findOne(dataset._organization) ?~> Messages("organization.notFound", dataset._organization)
+          dataset <- datasetDAO.findOne(parsedDatasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          organization <- organizationDAO.findOne(dataset._organization) ?~> Messages("organization.notFound",
+                                                                                      dataset._organization)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferMitochondria.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
@@ -390,8 +387,7 @@ class JobController @Inject()(
       }
     }
 
-  def runFindLargestSegmentIdJob(datasetId: String,
-                                 layerName: String): Action[AnyContent] =
+  def runFindLargestSegmentIdJob(datasetId: String, layerName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {

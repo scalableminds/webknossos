@@ -29,7 +29,6 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   private val dataBaseDir = Paths.get(config.Datastore.baseFolder)
   private val cumsumFileName = "cumsum.json"
 
-
   lazy val agglomerateFileCache = new AgglomerateFileCache(config.Datastore.Cache.AgglomerateFile.maxFileHandleEntries)
 
   def exploreAgglomerates(organizationId: String, datasetPath: String, dataLayerName: String): Set[String] = {

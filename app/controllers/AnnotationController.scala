@@ -8,7 +8,11 @@ import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
-import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerStatistics, AnnotationLayerType}
+import com.scalableminds.webknossos.datastore.models.annotation.{
+  AnnotationLayer,
+  AnnotationLayerStatistics,
+  AnnotationLayerType
+}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
@@ -243,9 +247,7 @@ class AnnotationController @Inject()(
     sil.SecuredAction.async(validateJson[List[AnnotationLayerParameters]]) { implicit request =>
       for {
         parsedDatasetId <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
-        dataset <- datasetDAO.findOne(parsedDatasetId) ?~> Messages(
-          "dataset.notFound",
-          parsedDatasetId) ~> NOT_FOUND
+        dataset <- datasetDAO.findOne(parsedDatasetId) ?~> Messages("dataset.notFound", parsedDatasetId) ~> NOT_FOUND
         annotation <- annotationService.createExplorationalFor(
           request.identity,
           dataset._id,
@@ -257,16 +259,12 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
     }
 
-  def getSandbox(datasetId: String,
-                 typ: String,
-                 sharingToken: Option[String]): Action[AnyContent] =
+  def getSandbox(datasetId: String, typ: String, sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken) // users with dataset sharing token may also get a sandbox annotation
       for {
         parsedDatasetId <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
-        dataset <- datasetDAO.findOne(parsedDatasetId)(ctx) ?~> Messages(
-          "dataset.notFound",
-          parsedDatasetId) ~> NOT_FOUND
+        dataset <- datasetDAO.findOne(parsedDatasetId)(ctx) ?~> Messages("dataset.notFound", parsedDatasetId) ~> NOT_FOUND
         tracingType <- TracingType.fromString(typ).toFox
         _ <- bool2Fox(tracingType == TracingType.skeleton) ?~> "annotation.sandbox.skeletonOnly"
         annotation = Annotation(

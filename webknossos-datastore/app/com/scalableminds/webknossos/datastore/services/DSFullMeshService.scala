@@ -123,7 +123,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "meshFileName.needed"
       before = Instant.now
       mappingNameForMeshFile = meshFileService.mappingNameForMeshFile(organizationId,
-        datasetPath,
+                                                                      datasetPath,
                                                                       layerName,
                                                                       meshFileName)
       segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
@@ -138,7 +138,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
         token
       )
       chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForSegmentsMerged(organizationId,
-        datasetPath,
+                                                                                           datasetPath,
                                                                                            layerName,
                                                                                            meshFileName,
                                                                                            segmentIds)

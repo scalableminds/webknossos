@@ -20,10 +20,8 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
                                             datasetDAO: DatasetDAO,
                                             thumbnailCachingService: ThumbnailCachingService,
                                             datasetDataLayerDAO: DatasetLayerDAO)(implicit ec: ExecutionContext) {
-  def getDatasetViewConfigurationForUserAndDataset(
-      requestedVolumeIds: List[String],
-      user: User,
-      datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
+  def getDatasetViewConfigurationForUserAndDataset(requestedVolumeIds: List[String], user: User, datasetId: ObjectId)(
+      implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
 
       dataset <- datasetDAO.findOne(datasetId)
@@ -33,9 +31,8 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
       layerConfigurations <- getLayerConfigurations(datasetLayers, requestedVolumeIds, dataset, Some(user))
     } yield buildCompleteDatasetConfiguration(datasetViewConfiguration, layerConfigurations)
 
-  def getDatasetViewConfigurationForDataset(
-      requestedVolumeIds: List[String],
-      datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
+  def getDatasetViewConfigurationForDataset(requestedVolumeIds: List[String], datasetId: ObjectId)(
+      implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
       dataset <- datasetDAO.findOne(datasetId)
 

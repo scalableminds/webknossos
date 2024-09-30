@@ -104,7 +104,7 @@ class DSMeshController @Inject()(
         for {
           data: Array[Byte] <- fullMeshService.loadFor(token: Option[String],
                                                        organizationId,
-            datasetPath,
+                                                       datasetPath,
                                                        dataLayerName,
                                                        request.body) ?~> "mesh.file.loadChunk.failed"
 

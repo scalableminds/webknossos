@@ -7,7 +7,7 @@ trait DatasetURIParser {
     val maybeId = maybeIdStr.flatMap(ObjectId.fromStringSync)
     maybeId match {
       case Some(validId) => (Some(validId), None)
-      case None => (None, Some(datasetNameAndId))
+      case None          => (None, Some(datasetNameAndId))
     }
   }
 

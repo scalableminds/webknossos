@@ -98,11 +98,13 @@ class BinaryDataService(val dataBaseDir: Path,
             s"Caught internal error: $msg while loading a bucket for layer ${request.dataLayer.name} of dataset ${request.dataSource.id}")
           Fox.failure(e.getMessage)
         case f: Failure =>
-          if (datasetErrorLoggingService.exists(_.shouldLog(request.dataSource.id.organizationId, request.dataSource.id.path))) {
+          if (datasetErrorLoggingService.exists(
+                _.shouldLog(request.dataSource.id.organizationId, request.dataSource.id.path))) {
             logger.error(
               s"Bucket loading for layer ${request.dataLayer.name} of dataset ${request.dataSource.id.organizationId}/${request.dataSource.id.path} at ${readInstruction.bucket} failed: ${Fox
                 .failureChainAsString(f, includeStackTraces = true)}")
-            datasetErrorLoggingService.foreach(_.registerLogged(request.dataSource.id.organizationId, request.dataSource.id.path))
+            datasetErrorLoggingService.foreach(
+              _.registerLogged(request.dataSource.id.organizationId, request.dataSource.id.path))
           }
           f.toFox
         case Full(data) =>

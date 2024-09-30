@@ -34,25 +34,17 @@ const createDirLight = (
   return dirLight;
 };
 
-const MESH_HOVER_THROTTLING_DELAY = 0;
 const raycaster = new VisibilityAwareRaycaster();
 raycaster.firstHitOnly = true;
 let oldRaycasterHit: MeshSceneNode | null = null;
 
 class PlaneView {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
-  throttledPerformMeshHitTest: (
-    arg0: [number, number],
-  ) => RaycastIntersection<THREE.Object3D> | null | undefined;
   running: boolean;
   needsRerender: boolean;
   unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
-    this.throttledPerformMeshHitTest = _.throttle(
-      this.performMeshHitTest,
-      MESH_HOVER_THROTTLING_DELAY,
-    );
     this.running = false;
     const { scene } = getSceneController();
     // Initialize main THREE.js components

@@ -36,23 +36,23 @@ const createDirLight = (
 
 const raycaster = new VisibilityAwareRaycaster();
 let oldRaycasterHit: MeshSceneNode | null = null;
-const MESH_HOVER_THROTTLING_DELAY = 150;
+//const MESH_HOVER_THROTTLING_DELAY = 150;
 
 class PlaneView {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
-  throttledPerformMeshHitTest: (
-    arg0: [number, number],
-  ) => RaycastIntersection<THREE.Object3D> | null | undefined;
+  // performMeshHitTest: (
+  //   arg0: [number, number],
+  // ) => RaycastIntersection<THREE.Object3D> | null | undefined;
 
   running: boolean;
   needsRerender: boolean;
   unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
-    this.throttledPerformMeshHitTest = _.throttle(
-      this.performMeshHitTest,
-      MESH_HOVER_THROTTLING_DELAY,
-    );
+    //this.throttledPerformMeshHitTest = _.throttle(
+    //  this.performMeshHitTest,
+    //  MESH_HOVER_THROTTLING_DELAY,
+    //);
     this.running = false;
     const { scene } = getSceneController();
     // Initialize main THREE.js components

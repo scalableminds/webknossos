@@ -385,21 +385,20 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
                     datasetName: String,
                     dataLayerName: String,
                     meshChunkDataRequests: MeshChunkDataRequestList,
-  ): Fox[(Array[Byte], String)] =
+  ): Fox[(Array[Byte], String)] = {
+    val meshFilePath = dataBaseDir
+      .resolve(organizationId)
+      .resolve(datasetName)
+      .resolve(dataLayerName)
+      .resolve(meshesDir)
+      .resolve(s"${meshChunkDataRequests.meshFile}.$hdf5FileExtension")
     for {
-      before <- Instant.nowFox
-      meshFilePath = dataBaseDir
-        .resolve(organizationId)
-        .resolve(datasetName)
-        .resolve(dataLayerName)
-        .resolve(meshesDir)
-        .resolve(s"${meshChunkDataRequests.meshFile}.$hdf5FileExtension")
       resultBox <- executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
         readMeshChunkFromCachedMeshfile(cachedMeshFile, meshChunkDataRequests)
       }
       (output, encoding) <- resultBox
-      _ = Instant.logSince(before, s"readChunk total for ${meshChunkDataRequests.requests.length} ranges")
     } yield (output, encoding)
+  }
 
   private def readMeshChunkFromCachedMeshfile(
       cachedMeshFile: CachedHdf5File,

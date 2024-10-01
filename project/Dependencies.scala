@@ -89,6 +89,8 @@ object Dependencies {
     "org.playframework.silhouette" %% "play-silhouette" % silhouetteVersion,
     // Signing Cookies. import play.silhouette.crypto
     "org.playframework.silhouette" %% "play-silhouette-crypto-jca" % silhouetteVersion,
+    // WebAuthn implementation
+    "com.yubico" % "webauthn-server-core" % "2.5.3",
     // End-to-end test specs
     specs2 % Test,
     // Writing XML. import com.sun.xml.txw2

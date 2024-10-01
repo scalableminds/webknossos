@@ -49,7 +49,7 @@ export function renderToTexture(
   clearColor?: number,
 ): Uint8Array {
   const SceneController = getSceneController();
-  const { renderer, scene: defaultScene } = SceneController;
+  const { renderer, scene: defaultScene, composer } = SceneController;
   const state = Store.getState();
   scene = scene || defaultScene;
   camera = (camera || scene.getObjectByName(plane)) as
@@ -99,7 +99,7 @@ export function renderToTexture(
   }
 
   renderer.setRenderTarget(renderTarget);
-  renderer.render(scene, camera);
+  composer.render(scene, camera);
   renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
   renderer.setRenderTarget(null);
   return buffer;

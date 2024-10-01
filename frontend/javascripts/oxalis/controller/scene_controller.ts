@@ -18,6 +18,7 @@ import constants, {
   TDViewDisplayModeEnum,
 } from "oxalis/constants";
 import { getRenderer } from "oxalis/controller/renderer";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass";
 import { setSceneController } from "oxalis/controller/scene_controller_provider";
 import type ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Cube from "oxalis/geometries/cube";
@@ -47,6 +48,9 @@ import { Model } from "oxalis/singletons";
 import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import Store from "oxalis/store";
 import SegmentMeshController from "./segment_mesh_controller";
+import RenderingEffectComposer from "libs/glow_effect_rendering/rendering_effect_composer";
+import { RenderPass } from "libs/glow_effect_rendering/render_pass";
+import { OutputPass } from "libs/glow_effect_rendering/output_pass";
 
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
@@ -74,8 +78,8 @@ class SceneController {
   scene!: THREE.Scene;
   rootGroup!: THREE.Object3D;
   // Group for all meshes including a light.
-  meshesRootGroup!: THREE.Object3D;
   segmentMeshController: SegmentMeshController;
+  composer!: RenderingEffectComposer;
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -104,7 +108,6 @@ class SceneController {
     this.rootGroup = new THREE.Object3D();
     this.rootGroup.add(this.getRootNode());
 
-    this.meshesRootGroup = new THREE.Group();
     this.highlightedBBoxId = null;
     // The dimension(s) with the highest resolution will not be distorted
     this.rootGroup.scale.copy(
@@ -113,9 +116,28 @@ class SceneController {
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
     this.scene.add(this.segmentMeshController.meshesLODRootGroup);
-    this.scene.add(this.meshesRootGroup);
     this.rootGroup.add(new THREE.DirectionalLight());
     this.setupDebuggingMethods();
+
+    // Custom stuffy hacky hackathon
+    const renderScene = new RenderPass();
+
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight), // ! Adjust height & width
+      1.5,
+      0.4,
+      0.85,
+    );
+    bloomPass.threshold = 0;
+    bloomPass.strength = 1;
+    bloomPass.radius = 1;
+    const outputPass = new OutputPass();
+
+    // TODO: Better understand how RenderingEffectComposer and OutputPass works. test, why no result ends up in the renderer.
+    this.composer = new RenderingEffectComposer(this.renderer);
+    this.composer.addPass(renderScene);
+    this.composer.addPass(bloomPass);
+    this.composer.addPass(outputPass);
   }
 
   setupDebuggingMethods() {

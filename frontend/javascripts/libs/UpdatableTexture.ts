@@ -36,7 +36,7 @@ class UpdatableTexture extends THREE.Texture {
     magFilter?: THREE.TextureFilter,
     minFilter?: THREE.TextureFilter,
     anisotropy?: number,
-    encoding?: THREE.TextureEncoding,
+    colorSpace?: THREE.ColorSpace,
   ) {
     const imageData = { width, height, data: new Uint32Array(0) };
 
@@ -51,10 +51,9 @@ class UpdatableTexture extends THREE.Texture {
       format,
       type,
       anisotropy,
-      encoding,
+      colorSpace,
     );
 
-    this.magFilter = magFilter !== undefined ? magFilter : THREE.LinearFilter;
     this.minFilter = minFilter !== undefined ? minFilter : THREE.LinearMipMapLinearFilter;
     this.generateMipmaps = false;
     this.flipY = false;
@@ -68,12 +67,12 @@ class UpdatableTexture extends THREE.Texture {
     this.utils = new THREE.WebGLUtils(
       this.gl,
       this.renderer.extensions,
-      this.renderer.capabilities,
+      // this.renderer.capabilities,
     );
   }
 
   isInitialized() {
-    return this.renderer.properties.get(this).__webglTexture != null;
+    return (this.renderer.properties.get(this) as any).__webglTexture != null;
   }
 
   update(
@@ -100,7 +99,7 @@ class UpdatableTexture extends THREE.Texture {
       this.renderer.initTexture(this);
     }
     const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
-    const textureProperties = this.renderer.properties.get(this);
+    const textureProperties = this.renderer.properties.get(this) as any;
     this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);
 
     originalTexSubImage2D(

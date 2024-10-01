@@ -33,7 +33,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     return THREE.UnsignedIntType;
   }
 
-  static getTextureFormat() {
+  static getTextureFormat(): THREE.PixelFormat {
     return THREE.RGBAIntegerFormat;
   }
 

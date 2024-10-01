@@ -1,5 +1,6 @@
 import { saveAs } from "file-saver";
 import _ from "lodash";
+import type * as THREE from "three";
 import { V3 } from "libs/mjs";
 import { areVec3AlmostEqual, chunkDynamically, sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";

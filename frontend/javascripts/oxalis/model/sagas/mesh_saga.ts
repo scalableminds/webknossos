@@ -995,12 +995,12 @@ function _getLoadChunksTasks(
               // Group chunks by position and merge meshes in the same chunk to keep the number
               // of objects in the scene low for better performance. Ideally, more mesh geometries
               // would be merged, but the meshes in different chunks need to be translated differently.
+              let bufferGeometries: BufferGeometryWithInfo[] = [];
               const chunksGroupedByPosition = _.groupBy(chunksWithData, "position");
               for (const chunksForPosition of Object.values(chunksGroupedByPosition)) {
                 // All chunks in chunksForPosition have the same position
                 const position = chunksForPosition[0].position;
 
-                let bufferGeometries: BufferGeometryWithInfo[] = [];
                 for (let chunkIdx = 0; chunkIdx < chunksForPosition.length; chunkIdx++) {
                   const chunk = chunksForPosition[chunkIdx];
                   try {
@@ -1009,56 +1009,61 @@ function _getLoadChunksTasks(
                       chunk.data,
                     )) as BufferGeometryWithInfo;
                     bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
+
+                    bufferGeometry.translate(position[0], position[1], position[2]);
+
                     bufferGeometries.push(bufferGeometry);
                   } catch (error) {
                     errorsWithDetails.push({ error, chunk });
                   }
                 }
-
-                if (mergeChunks) {
-                  const geometry = mergeGeometries(bufferGeometries, true);
-
-                  // If mergeGeometries does not succeed, the method logs the error to the console and returns null
-                  if (geometry == null) continue;
-                  (geometry as BufferGeometryWithInfo).isMerged = true;
-                  bufferGeometries = [geometry as BufferGeometryWithInfo];
-                }
-
-                // Compute vertex normals to achieve smooth shading
-                bufferGeometries.forEach((geometry) => geometry.computeVertexNormals());
-
-                // Check if the mesh scale is different to all supported resolutions of the active segmentation scaled by the dataset scale and warn in the console to make debugging easier in such a case.
-                // This hint at the mesh file being computed when the dataset scale was different than currently configured.
-                const segmentationLayerResolutions = yield* select(
-                  (state) => getVisibleSegmentationLayer(state)?.resolutions,
-                );
-                const datasetScaleFactor = dataset.dataSource.scale.factor;
-                if (segmentationLayerResolutions && scale) {
-                  const doesSomeSegmResolutionMatchMeshScale = segmentationLayerResolutions.some(
-                    (res) => areVec3AlmostEqual(V3.scale3(datasetScaleFactor, res), scale),
-                  );
-                  if (!doesSomeSegmResolutionMatchMeshScale) {
-                    console.warn(
-                      `Scale of mesh ${id} is different to dataset scale. Mesh scale: ${scale}, Dataset scale: ${dataset.dataSource.scale.factor}. This might lead to unexpected rendering results.`,
-                    );
-                  }
-                }
-
-                yield* call(
-                  {
-                    context: segmentMeshController,
-                    fn: segmentMeshController.addMeshFromGeometries,
-                  },
-                  bufferGeometries,
-                  id,
-                  position,
-                  // Apply the scale from the segment info, which includes dataset scale and mag
-                  scale,
-                  lod,
-                  layerName,
-                  additionalCoordinates,
-                );
               }
+
+              if (mergeChunks) {
+                const geometry = mergeGeometries(bufferGeometries, true);
+
+                // If mergeGeometries does not succeed, the method logs the error to the console and returns null
+                if (geometry == null) {
+                  console.error("Merged geometry is null. Look at error above.");
+                  return;
+                }
+                (geometry as BufferGeometryWithInfo).isMerged = true;
+                bufferGeometries = [geometry as BufferGeometryWithInfo];
+              }
+
+              // Compute vertex normals to achieve smooth shading
+              bufferGeometries.forEach((geometry) => geometry.computeVertexNormals());
+
+              // Check if the mesh scale is different to all supported resolutions of the active segmentation scaled by the dataset scale and warn in the console to make debugging easier in such a case.
+              // This hint at the mesh file being computed when the dataset scale was different than currently configured.
+              const segmentationLayerResolutions = yield* select(
+                (state) => getVisibleSegmentationLayer(state)?.resolutions,
+              );
+              const datasetScaleFactor = dataset.dataSource.scale.factor;
+              if (segmentationLayerResolutions && scale) {
+                const doesSomeSegmResolutionMatchMeshScale = segmentationLayerResolutions.some(
+                  (res) => areVec3AlmostEqual(V3.scale3(datasetScaleFactor, res), scale),
+                );
+                if (!doesSomeSegmResolutionMatchMeshScale) {
+                  console.warn(
+                    `Scale of mesh ${id} is different to dataset scale. Mesh scale: ${scale}, Dataset scale: ${dataset.dataSource.scale.factor}. This might lead to unexpected rendering results.`,
+                  );
+                }
+              }
+
+              yield* call(
+                {
+                  context: segmentMeshController,
+                  fn: segmentMeshController.addMeshFromGeometries,
+                },
+                bufferGeometries,
+                id,
+                // Apply the scale from the segment info, which includes dataset scale and mag
+                scale,
+                lod,
+                layerName,
+                additionalCoordinates,
+              );
 
               if (errorsWithDetails.length > 0) {
                 console.warn("Errors occurred while decoding mesh chunks:", errorsWithDetails);

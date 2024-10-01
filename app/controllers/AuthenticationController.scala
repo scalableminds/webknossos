@@ -31,6 +31,9 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.DurationInt
+import scala.jdk.OptionConverters._
+import java.security.PublicKey
 
 class AuthenticationController @Inject()(
     actorSystem: ActorSystem,
@@ -52,6 +55,9 @@ class AuthenticationController @Inject()(
     openIdConnectClient: OpenIdConnectClient,
     initialDataService: InitialDataService,
     emailVerificationService: EmailVerificationService,
+    temporaryRegistrationStore: TemporaryStore[String, PublicKeyCredentialCreationOptions],
+    temporaryAssertionStore: TemporaryStore[ByteArray, AssertionRequest],
+    webauthnService: WebAuthnService,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with AuthForms
@@ -67,6 +73,14 @@ class AuthenticationController @Inject()(
     conf.WebKnossos.User.ssoKey
 
   private lazy val isOIDCEnabled = conf.Features.openIdConnectEnabled
+  private lazy val relyingParty = {
+    val identity = RelyingPartyIdentity
+      .builder()
+      .id("webknossos.local:9000") // TODO: Use host
+      .name("WebKnossos")
+      .build();
+    RelyingParty.builder().identity(identity).credentialRepository(webauthnService).build()
+  }
 
   def register: Action[AnyContent] = Action.async { implicit request =>
     signUpForm
@@ -617,6 +631,94 @@ class AuthenticationController @Inject()(
     (errors, fN, lN)
   }
 
+  def registerWebAuthnDeviceStart(): Action[AnyContent] = sil.SecuredAction { implicit request =>
+    val user = UserIdentity
+      .builder()
+      .name(request.identity._id.toString())
+      .displayName(String.format("%s %s", request.identity.firstName, request.identity.lastName))
+      .id(ByteArray.fromHex(request.identity._id.toStringHex))
+      .build();
+    val opts = StartRegistrationOptions.builder().user(user).build()
+    var registration = relyingParty.startRegistration(opts)
+    temporaryRegistrationStore.insert(request.identity._id.toString(), registration, Some(5 minutes))
+    Ok(registration.toCredentialsCreateJson())
+  }
+
+  def registerWebAuthnDeviceFinish(): Action[String] = sil.SecuredAction(validateJson[String]) { implicit request =>
+    // TODO: Proper JSON parsing
+    temporaryRegistrationStore.find(request.identity._id.toString()) match {
+      case Some(registration) =>
+        val clientCredentials = PublicKeyCredential.parseRegistrationResponseJson(request.body)
+        try {
+          val finish = FinishRegistrationOptions.builder().request(registration).response(clientCredentials).build();
+          val result = relyingParty.finishRegistration(finish);
+          webauthnService.store(
+            request.identity._id,
+            result.getKeyId(),
+            result.getPublicKeyCose(),
+            result.getSignatureCount(),
+            clientCredentials.getResponse().getAttestationObject(),
+            clientCredentials.getResponse().getClientDataJSON(),
+          )
+          Ok(Json.obj("success" -> true))
+        } catch {
+          case e: RegistrationFailedException => BadRequest(Json.obj("success" -> false, "err" -> e.getMessage()))
+        }
+      case None =>
+        BadRequest(Json.obj("success" -> false))
+    }
+  }
+
+  def authenticationWebAuthnStart(): Action[WebAuthnLogin] = Action(validateJson[WebAuthnLogin]).async {
+    implicit request =>
+      val optBuilder = AssertionRequest.builder()
+      val userFopt: Future[Option[User]] =
+        userService.userFromMultiUserEmail(request.body.email)(GlobalAccessContext).futureBox.map(_.toOption)
+      userFopt
+        .map(userOpt => userOpt.map(_._id.toStringHex).getOrElse("")) // do not fail here if there is no user for email. Fail below.
+        .flatMap { id =>
+          val opts = StartAssertionOptions.builder().username(id).build()
+          val assertion = relyingParty.startAssertion(opts)
+          temporaryAssertionStore.insert(ByteArray.fromHex(id), assertion, Some(5 minutes))
+          Future.successful(Ok(assertion.toCredentialsGetJson()))
+        }
+  }
+
+  def authenticationWebAuthnFinish(): Action[String] = Action(validateJson[String]) { implicit request =>
+    val clientCredentials = PublicKeyCredential.parseAssertionResponseJson(request.body)
+    clientCredentials
+      .getResponse()
+      .getUserHandle()
+      .asScala
+      .flatMap(userHandle => temporaryAssertionStore.find(userHandle)) match {
+      case Some(assertion) =>
+        try {
+          val opts = FinishAssertionOptions.builder().request(assertion).response(clientCredentials).build()
+          val result = relyingParty.finishAssertion(opts)
+          // TODO: Update Credential
+          Ok(Json.obj("success" -> result.isSuccess()))
+        } catch {
+          case e: AssertionFailedException => BadRequest(Json.obj("success" -> false, "err" -> e.getMessage()))
+        }
+      case None => BadRequest(Json.obj("success" -> false, "msg" -> "no user or login session"))
+    }
+  }
+
+  def listWebAuthnDevices(): Action[AnyContent] = sil.SecuredAction { implicit request =>
+    val deviceKeys = webauthnService
+      .iterate(request.identity._id)
+      .map(element => Json.obj("id" -> element.key.getId().getHex()))
+      .toList
+    Ok(JsArray(deviceKeys))
+  }
+}
+
+case class WebAuthnLogin(
+    email: String
+)
+
+object WebAuthnLogin {
+  implicit val jsonFormat: OFormat[WebAuthnLogin] = Json.format[WebAuthnLogin]
 }
 
 case class InviteParameters(
@@ -707,5 +809,4 @@ trait AuthForms {
         ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2)
       )((oldPassword, password) => ChangePasswordData(oldPassword, password._1, password._2))(changePasswordData =>
         Some(changePasswordData.oldPassword, (changePasswordData.password1, changePasswordData.password2))))
-
 }

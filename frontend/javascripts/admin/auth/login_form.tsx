@@ -139,6 +139,23 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
             </FormItem>
           )}
         </div>
+        <FormItem style={{ flexGrow: 1 }}>
+          <Button
+            type="primary"
+            style={{
+              width: "100%",
+            }}
+            onClick={async () => {
+              const opts = await requestWebAuthnLoginStart("sample@scm.io") // TODO: Read user field
+              console.log(opts)
+              const publicKeyCredential = await webauthnJson.get(opts)
+              console.log(publicKeyCredential)
+              console.log(await requestWebAuthnLoginFinish(publicKeyCredential))
+            }}
+          >
+            Continue with Device
+          </Button>
+        </FormItem>
         {hideFooter ? null : (
           <FormItem
             style={{

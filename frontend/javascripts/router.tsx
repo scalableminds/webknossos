@@ -5,6 +5,7 @@ import {
 } from "admin/admin_rest_api";
 import AcceptInviteView from "admin/auth/accept_invite_view";
 import AuthTokenView from "admin/auth/auth_token_view";
+import ManageDevicesView from "admin/auth/manage_devices_view";
 import ChangePasswordView from "admin/auth/change_password_view";
 import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
 import LoginView from "admin/auth/login_view";
@@ -616,6 +617,11 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/auth/token"
                 component={AuthTokenView}
+              />
+              <SecuredRouteWithErrorBoundary
+                isAuthenticated={isAuthenticated}
+                path="/auth/devices"
+                component={ManageDevicesView}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}

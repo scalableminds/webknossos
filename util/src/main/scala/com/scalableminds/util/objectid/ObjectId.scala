@@ -10,6 +10,7 @@ import scala.concurrent.ExecutionContext
 
 case class ObjectId(id: String) {
   override def toString: String = id
+  def toStringHex: String = id.getBytes("UTF-8").map(byte => f"$byte%02x").mkString
 }
 
 object ObjectId extends FoxImplicits {

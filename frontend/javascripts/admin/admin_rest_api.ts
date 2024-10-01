@@ -2386,3 +2386,35 @@ export function requestVerificationMail() {
     method: "POST",
   });
 }
+
+export function requestWebAuthnRegistrationStart(): any {
+  return Request.receiveJSON("/api/auth/webauthn/registration/start", {
+    method: "POST",
+  })
+}
+
+export function requestWebAuthnRegistrationFinish(key: any) {
+  return Request.sendJSONReceiveJSON("/api/auth/webauthn/registration/finish", {
+    method: "POST",
+    data: JSON.stringify(JSON.stringify(key)) // TODO: Improve Server Site
+  })
+}
+
+export function requestWebAuthnLoginStart(email: string) {
+  return Request.sendJSONReceiveJSON("/api/auth/webauthn/login/start", {
+    method: "POST",
+    data: {
+      email: email
+    }
+  })
+}
+export function requestWebAuthnLoginFinish(key: any) {
+  return Request.sendJSONReceiveJSON("/api/auth/webauthn/login/finish", {
+    method: "POST",
+    data: JSON.stringify(JSON.stringify(key)) // TODO: Improve Service Site
+  })
+}
+
+export function listWebAuthnDevices(): any {
+  return Request.receiveJSON("/api/auth/webauthn/devices")
+}

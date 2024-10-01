@@ -40,6 +40,11 @@ GET           /auth/oidc/login                                                  
 GET           /auth/oidc/callback                                                               controllers.AuthenticationController.openIdCallback()
 POST          /auth/createOrganizationWithAdmin                                                 controllers.AuthenticationController.createOrganizationWithAdmin()
 POST          /auth/createUserInOrganization/:organizationId                                    controllers.AuthenticationController.createUserInOrganization(organizationId: String)
+POST           /auth/webauthn/login/start                                                       controllers.AuthenticationController.authenticationWebAuthnStart()
+POST           /auth/webauthn/login/finish                                                      controllers.AuthenticationController.authenticationWebAuthnFinish()
+POST           /auth/webauthn/registration/start                                                controllers.AuthenticationController.registerWebAuthnDeviceStart()
+POST           /auth/webauthn/registration/finish                                               controllers.AuthenticationController.registerWebAuthnDeviceFinish()
+GET            /auth/webauthn/devices                                                           controllers.AuthenticationController.listWebAuthnDevices()
 
 # Configurations
 GET           /user/userConfiguration                                                           controllers.ConfigurationController.read()

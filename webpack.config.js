@@ -179,6 +179,7 @@ module.exports = function (env = {}) {
     devtool: env.production ? "source-map" : "eval-source-map",
     plugins,
     devServer: {
+      allowedHosts: "all",
       static: {
         directory: `${__dirname}/public`,
       },

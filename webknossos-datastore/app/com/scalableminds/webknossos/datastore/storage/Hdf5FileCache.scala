@@ -23,6 +23,7 @@ case class CachedHdf5File(reader: IHDF5Reader) extends SafeCachable with AutoClo
   lazy val float64Reader: IHDF5DoubleReader = reader.float64()
 
   lazy val nBuckets: Long = uint64Reader.getAttr("/", "n_buckets")
+  lazy val meshFormat: String = stringReader.getAttr("/", "mesh_format")
 
   val hashFunction: Long => Long = getHashFunction(stringReader.getAttr("/", "hash_function"))
 

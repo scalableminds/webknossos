@@ -11151,18 +11151,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-debounce-render@npm:^8.0.1":
-  version: 8.0.2
-  resolution: "react-debounce-render@npm:8.0.2"
-  dependencies:
-    hoist-non-react-statics: "npm:^3.3.2"
-    lodash.debounce: "npm:^4.0.8"
-  peerDependencies:
-    react: ^17.0.2
-  checksum: 10c0/54a8a636b749581d1aa0715ff52184ec59dc31b74169a47ca2b606b9c542107b8d1d166d0773d0c53493dd716d76cca3fb6c788b22c4b82efec5b2a42e7a5878
-  languageName: node
-  linkType: hard
-
 "react-dnd-html5-backend@npm:^16.0.0":
   version: 16.0.1
   resolution: "react-dnd-html5-backend@npm:16.0.1"
@@ -14009,7 +13997,6 @@ __metadata:
     puppeteer: "npm:^19.7.2"
     react: "npm:^18.3.1"
     react-colorful: "npm:^5.6.1"
-    react-debounce-render: "npm:^8.0.1"
     react-dnd: "npm:^16.0.0"
     react-dnd-html5-backend: "npm:^16.0.0"
     react-dom: "npm:^18.3.0"

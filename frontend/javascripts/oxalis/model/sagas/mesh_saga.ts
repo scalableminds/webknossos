@@ -1030,7 +1030,7 @@ function* _getLoadChunksTasks(
     }
 
     if (mergeChunks) {
-      const geometry = mergeGeometries(bufferGeometries, true);
+      const geometry = mergeGeometries(bufferGeometries, false);
 
       // If mergeGeometries does not succeed, the method logs the error to the console and returns null
       if (geometry == null) {

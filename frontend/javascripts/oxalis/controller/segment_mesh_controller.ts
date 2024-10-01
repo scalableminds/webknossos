@@ -14,7 +14,7 @@ import { NO_LOD_MESH_INDEX } from "oxalis/model/sagas/mesh_saga";
 import Store from "oxalis/store";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
-import { MeshBVH, acceleratedRaycast } from "three-mesh-bvh";
+import { MeshBVH, MeshBVHHelper, acceleratedRaycast, getBVHExtremes } from "three-mesh-bvh";
 
 // Add the raycast function. Assumes the BVH is available on
 // the `boundsTree` variable
@@ -178,11 +178,17 @@ export default class SegmentMeshController {
     const meshChunks = geometries.map((geometry) => {
       const meshChunk = this.constructMesh(segmentId, layerName, geometry);
       meshChunk.geometry.boundsTree = new MeshBVH(meshChunk.geometry);
+      console.log(getBVHExtremes(meshChunk.geometry.boundsTree));
       return meshChunk;
     });
     const group = new THREE.Group() as SceneGroupForMeshes;
     for (const meshChunk of meshChunks) {
       group.add(meshChunk);
+      if (window.DEBUG_BVH) {
+        const bvhHelper = new MeshBVHHelper(meshChunk);
+        bvhHelper.displayParents = true;
+        group.add(bvhHelper);
+      }
     }
     group.segmentId = segmentId;
     this.addMeshToMeshGroups(additionalCoordinatesString, layerName, segmentId, lod, group);

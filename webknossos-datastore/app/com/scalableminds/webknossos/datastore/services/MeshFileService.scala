@@ -137,7 +137,7 @@ case class MeshChunk(position: Vec3Float, byteOffset: Long, byteSize: Int, unmap
 object MeshChunk {
   implicit val jsonFormat: OFormat[MeshChunk] = Json.format[MeshChunk]
 }
-case class MeshLodInfo(scale: Int, vertexOffset: Vec3Float, chunkShape: Vec3Float, chunks: List[MeshChunk])
+case class MeshLodInfo(scale: Int, vertexOffset: Vec3Float, chunkShape: Vec3Float, chunks: Seq[MeshChunk])
 
 object MeshLodInfo {
   implicit val jsonFormat: OFormat[MeshLodInfo] = Json.format[MeshLodInfo]
@@ -147,34 +147,30 @@ case class MeshSegmentInfo(chunkShape: Vec3Float, gridOrigin: Vec3Float, lods: L
 object MeshSegmentInfo {
   implicit val jsonFormat: OFormat[MeshSegmentInfo] = Json.format[MeshSegmentInfo]
 }
-case class WebknossosSegmentInfo(transform: Array[Array[Double]], meshFormat: String, chunks: MeshSegmentInfo) {
-  def merge(that: WebknossosSegmentInfo): WebknossosSegmentInfo =
-    // assume that transform, meshFormat, chunkShape, gridOrigin, scale and vertexOffset are the same
-    WebknossosSegmentInfo(
-      transform,
-      meshFormat,
-      chunks = MeshSegmentInfo(
-        chunks.chunkShape,
-        chunks.gridOrigin,
-        lods = chunks.lods
-          .lazyZip(that.chunks.lods)
-          .map((lod1, lod2) => MeshLodInfo(lod1.scale, lod1.vertexOffset, lod1.chunkShape, lod1.chunks ::: lod2.chunks))
-      )
-    )
-}
+case class WebknossosSegmentInfo(transform: Array[Array[Double]], meshFormat: String, chunks: MeshSegmentInfo)
 
 object WebknossosSegmentInfo {
   implicit val jsonFormat: OFormat[WebknossosSegmentInfo] = Json.format[WebknossosSegmentInfo]
 
   def fromMeshInfosAndMetadata(chunkInfos: Seq[MeshSegmentInfo],
                                encoding: String,
-                               transform: Array[Array[Double]]): WebknossosSegmentInfo =
-    WebknossosSegmentInfo(
-      transform,
-      meshFormat = encoding,
-      chunks = chunkInfos.reduce(mergeTwoChunkInfos)
-    )
+                               transform: Array[Array[Double]]): Option[WebknossosSegmentInfo] =
+    chunkInfos.headOption.flatMap { firstChunkInfo =>
+      tryo {
+        WebknossosSegmentInfo(
+          transform,
+          meshFormat = encoding,
+          chunks = firstChunkInfo.copy(lods = chunkInfos.map(_.lods).transpose.map(mergeLod).toList)
+        )
+      }
+    }
 
+  private def mergeLod(thisLodFromAllChunks: Seq[MeshLodInfo]): MeshLodInfo = {
+    val first = thisLodFromAllChunks.head
+    first.copy(chunks = thisLodFromAllChunks.flatMap(_.chunks))
+  }
+
+  /*
   private def mergeTwoChunkInfos(chunkInfosA: MeshSegmentInfo, chunkInfosB: MeshSegmentInfo): MeshSegmentInfo =
     MeshSegmentInfo(
       chunkInfosA.chunkShape,
@@ -182,7 +178,7 @@ object WebknossosSegmentInfo {
       lods = chunkInfosA.lods
         .lazyZip(chunkInfosB.lods)
         .map((lodA, lodB) => MeshLodInfo(lodA.scale, lodA.vertexOffset, lodA.chunkShape, lodA.chunks ::: lodB.chunks))
-    )
+    )*/
 }
 
 class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
@@ -281,7 +277,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         segmentIds.mkString(","),
         meshFileName)
       beforeMerge = Instant.now
-      wkChunkInfos = WebknossosSegmentInfo.fromMeshInfosAndMetadata(meshChunksForUnmappedSegments, encoding, transform)
+      wkChunkInfos <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(meshChunksForUnmappedSegments, encoding, transform)
       _ = Instant.logSince(beforeMerge, "merge")
     } yield wkChunkInfos
 
@@ -390,20 +386,22 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
                     meshChunkDataRequests: MeshChunkDataRequestList,
   ): Fox[(Array[Byte], String)] =
     for {
+      before <- Instant.nowFox
+      meshFilePath = dataBaseDir
+        .resolve(organizationId)
+        .resolve(datasetName)
+        .resolve(dataLayerName)
+        .resolve(meshesDir)
+        .resolve(s"${meshChunkDataRequests.meshFile}.$hdf5FileExtension")
+      meshFormat <- executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
+        cachedMeshFile.stringReader.getAttr("/", "mesh_format")
+      }.toFox
       // Sort the requests by byte offset to optimize for spinning disk access
       data: List[(Array[Byte], String, Int)] <- Fox.serialCombined(
         meshChunkDataRequests.requests.zipWithIndex.sortBy(requestAndIndex => requestAndIndex._1.byteOffset).toList
       )(requestAndIndex => {
         val meshChunkDataRequest = requestAndIndex._1
-        val meshFilePath = dataBaseDir
-          .resolve(organizationId)
-          .resolve(datasetName)
-          .resolve(dataLayerName)
-          .resolve(meshesDir)
-          .resolve(s"${meshChunkDataRequests.meshFile}.$hdf5FileExtension")
-
         executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
-          val meshFormat = cachedMeshFile.stringReader.getAttr("/", "mesh_format")
           val data =
             cachedMeshFile.uint8Reader.readArrayBlockWithOffset("neuroglancer",
                                                                 meshChunkDataRequest.byteSize,
@@ -415,6 +413,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       _ <- Fox.bool2Fox(data.map(d => d._2).toSet.size == 1) ?~> "Different encodings for the same mesh chunk request found."
       encoding <- data.map(d => d._2).headOption
       output = dataSorted.flatMap(d => d._1).toArray
+      _ = Instant.logSince(before, s"readChunk total for ${meshChunkDataRequests.requests.length} ranges")
     } yield (output, encoding)
 
   def clearCache(organizationId: String, datasetName: String, layerNameOpt: Option[String]): Int = {

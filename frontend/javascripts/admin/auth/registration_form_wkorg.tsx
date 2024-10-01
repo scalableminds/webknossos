@@ -1,6 +1,6 @@
 import { Form, Input, Button, Row, Col, Checkbox } from "antd";
 import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
-import React, { useRef, memo } from "react";
+import { useRef, memo } from "react";
 import { loginUser } from "admin/admin_rest_api";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import Request from "libs/request";

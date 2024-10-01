@@ -1,5 +1,4 @@
 import Request from "libs/request";
-import _ from "lodash";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import type { APIDatasetId } from "types/api_flow_types";
 import { doWithToken } from "./token";

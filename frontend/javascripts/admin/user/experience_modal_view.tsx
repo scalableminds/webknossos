@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Modal, Tooltip, Table, InputNumber, Tag, Badge } from "antd";
 import { CloseOutlined, DeleteOutlined, RollbackOutlined } from "@ant-design/icons";
 import _ from "lodash";

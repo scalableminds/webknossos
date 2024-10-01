@@ -1,5 +1,5 @@
 import { connect } from "react-redux";
-import React, { PureComponent } from "react";
+import { PureComponent } from "react";
 import type { OxalisState } from "oxalis/store";
 import { enableMergerMode, disableMergerMode } from "oxalis/merger_mode";
 import MergerModeModalView from "oxalis/view/merger_mode_modal_view";

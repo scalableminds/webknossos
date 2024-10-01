@@ -1,5 +1,4 @@
 import { Button, Radio, type RadioChangeEvent, Space } from "antd";
-import React from "react";
 import type { WizardComponentProps } from "./common";
 
 export default function SelectImportType({

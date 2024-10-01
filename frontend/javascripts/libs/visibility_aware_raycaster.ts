@@ -24,7 +24,6 @@ export default class VisibilityAwareRaycaster extends THREE.Raycaster {
     }
 
     intersects.sort(ascSort);
-    console.log("duration:", duration);
 
     return intersects;
   }

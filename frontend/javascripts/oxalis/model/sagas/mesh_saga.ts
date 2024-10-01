@@ -4,7 +4,7 @@ import { V3 } from "libs/mjs";
 import { areVec3AlmostEqual, chunkDynamically, sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
-import { mergeBufferGeometries } from "libs/BufferGeometryUtils";
+import { mergeGeometries } from "libs/BufferGeometryUtils";
 import Deferred from "libs/async/deferred";
 import type { ActionPattern } from "redux-saga/effects";
 

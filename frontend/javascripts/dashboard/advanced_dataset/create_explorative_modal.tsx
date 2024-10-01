@@ -90,7 +90,6 @@ export function RestrictResolutionSlider({
   resolutionIndices,
   setResolutionIndices,
 }: RestrictResolutionSliderProps) {
-  console.log("restrictresolutionslider");
   let highestResolutionIndex = resolutionInfo.getCoarsestResolutionIndex();
   let lowestResolutionIndex = resolutionInfo.getFinestResolutionIndex();
 

@@ -3,6 +3,7 @@ import type { SliderRangeProps } from "antd/lib/slider";
 import type { WheelEventHandler } from "react";
 
 const DEFAULT_WHEEL_FACTOR = 0.02;
+const DEFAULT_STEP = 1;
 
 type SliderProps = (SliderSingleProps | SliderRangeProps) & {
   wheelFactor?: number;
@@ -10,24 +11,40 @@ type SliderProps = (SliderSingleProps | SliderRangeProps) & {
 };
 
 const getDiffPerSliderStep = (
-  deltaY: number,
   sliderRange: number,
   factor: number | undefined = DEFAULT_WHEEL_FACTOR,
-) => (deltaY / Math.abs(deltaY)) * (factor || DEFAULT_WHEEL_FACTOR) * sliderRange;
+  step: number | undefined | null,
+) => {
+  let stepNotNull = step || DEFAULT_STEP;
+  let result = (factor || DEFAULT_WHEEL_FACTOR) * sliderRange;
+  if (result < stepNotNull) return stepNotNull;
+  return result;
+};
+
+const getWheelStepFromEvent = (
+  step: number | undefined | null,
+  deltaY: number,
+  wheelStep: number,
+) => {
+  return (
+    (step || DEFAULT_STEP) *
+    Math.round((wheelStep * deltaY) / Math.abs(deltaY) / (step || DEFAULT_STEP))
+  );
+};
 
 export function Slider(props: SliderProps) {
-  const { min, max, onChange, value, range, defaultValue, wheelFactor, disableOnWheel } = props;
+  const { min, max, onChange, value, range, defaultValue, wheelFactor, disableOnWheel, step } =
+    props;
   if (min == null || max == null || onChange == null || value == null)
     return <AntdSlider {...props} />;
   const sliderRange = max - min;
   let handleWheelEvent: WheelEventHandler<HTMLDivElement> = () => {};
   let handleDoubleClick: React.MouseEventHandler<HTMLDivElement> = () => {};
+  const wheelStep = getDiffPerSliderStep(sliderRange, wheelFactor, step);
   if (range === false || range == null) {
     if (!disableOnWheel) {
       handleWheelEvent = (event) => {
-        const newValue = Math.round(
-          value - getDiffPerSliderStep(event.deltaY, sliderRange, wheelFactor),
-        );
+        const newValue = value - getWheelStepFromEvent(step, event.deltaY, wheelStep);
         if (newValue < min) onChange(min);
         else if (newValue > max) onChange(max);
         else onChange(newValue);

@@ -4,6 +4,7 @@ import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.time.Instant
+import com.scalableminds.util.tools.JsonHelper.bool2Box
 import com.scalableminds.util.tools.{ByteUtils, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.storage.CachedHdf5Utils.executeWithCachedHdf5
@@ -393,28 +394,35 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .resolve(dataLayerName)
         .resolve(meshesDir)
         .resolve(s"${meshChunkDataRequests.meshFile}.$hdf5FileExtension")
-      meshFormat <- executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
-        cachedMeshFile.stringReader.getAttr("/", "mesh_format")
-      }.toFox
-      // Sort the requests by byte offset to optimize for spinning disk access
-      data: List[(Array[Byte], String, Int)] <- Fox.serialCombined(
-        meshChunkDataRequests.requests.zipWithIndex.sortBy(requestAndIndex => requestAndIndex._1.byteOffset).toList
-      )(requestAndIndex => {
-        val meshChunkDataRequest = requestAndIndex._1
-        executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
-          val data =
-            cachedMeshFile.uint8Reader.readArrayBlockWithOffset("neuroglancer",
-                                                                meshChunkDataRequest.byteSize,
-                                                                meshChunkDataRequest.byteOffset)
-          (data, meshFormat, requestAndIndex._2)
-        } ?~> "mesh.file.readData.failed"
-      })
-      dataSorted = data.sortBy(d => d._3)
-      _ <- Fox.bool2Fox(data.map(d => d._2).toSet.size == 1) ?~> "Different encodings for the same mesh chunk request found."
-      encoding <- data.map(d => d._2).headOption
-      output = dataSorted.flatMap(d => d._1).toArray
+      resultBox <- executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
+        readMeshChunkFromCachedMeshfile(cachedMeshFile, meshChunkDataRequests)
+      }
+      (output, encoding) <- resultBox
       _ = Instant.logSince(before, s"readChunk total for ${meshChunkDataRequests.requests.length} ranges")
     } yield (output, encoding)
+
+  private def readMeshChunkFromCachedMeshfile(
+      cachedMeshFile: CachedHdf5File,
+      meshChunkDataRequests: MeshChunkDataRequestList): Box[(Array[Byte], String)] = {
+    val meshFormat = cachedMeshFile.meshFormat
+    // Sort the requests by byte offset to optimize for spinning disk access
+    val requestsReordered =
+      meshChunkDataRequests.requests.zipWithIndex.sortBy(requestAndIndex => requestAndIndex._1.byteOffset).toList
+    val data: List[(Array[Byte], String, Int)] = requestsReordered.map { requestAndIndex =>
+      val meshChunkDataRequest = requestAndIndex._1
+      val data =
+        cachedMeshFile.uint8Reader.readArrayBlockWithOffset("neuroglancer",
+                                                            meshChunkDataRequest.byteSize,
+                                                            meshChunkDataRequest.byteOffset)
+      (data, meshFormat, requestAndIndex._2)
+    }
+    val dataSorted = data.sortBy(d => d._3)
+    for {
+      _ <- bool2Box(data.map(d => d._2).toSet.size == 1) ?~! "Different encodings for the same mesh chunk request found."
+      encoding <- data.map(d => d._2).headOption
+      output = dataSorted.flatMap(d => d._1).toArray
+    } yield (output, encoding)
+  }
 
   def clearCache(organizationId: String, datasetName: String, layerNameOpt: Option[String]): Int = {
     val datasetPath = dataBaseDir.resolve(organizationId).resolve(datasetName)

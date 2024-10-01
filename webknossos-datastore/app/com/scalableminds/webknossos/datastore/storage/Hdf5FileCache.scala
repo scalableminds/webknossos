@@ -23,6 +23,7 @@ case class CachedHdf5File(reader: IHDF5Reader) extends SafeCachable with AutoClo
   lazy val float64Reader: IHDF5DoubleReader = reader.float64()
 
   lazy val nBuckets: Long = uint64Reader.getAttr("/", "n_buckets")
+  lazy val meshFormat: String = stringReader.getAttr("/", "mesh_format")
 
   val hashFunction: Long => Long = getHashFunction(stringReader.getAttr("/", "hash_function"))
 
@@ -66,11 +67,11 @@ class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, Cach
 object CachedHdf5Utils {
   def executeWithCachedHdf5[T](filePath: Path, meshFileCache: Hdf5FileCache)(block: CachedHdf5File => T): Box[T] =
     for {
-      _ <- if (filePath.toFile.exists()) {
+      _ <- Full(true) /*if (filePath.toFile.exists()) {
         Full(true)
       } else {
         Failure("mesh.file.open.failed")
-      }
+      }*/
       result = Using(meshFileCache.withCache(filePath)(CachedHdf5File.fromPath)) {
         block
       }
@@ -79,4 +80,5 @@ object CachedHdf5Utils {
         case scala.util.Failure(e)      => Failure(e.toString)
       }
     } yield boxedResult
+
 }

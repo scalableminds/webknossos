@@ -67,11 +67,11 @@ class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, Cach
 object CachedHdf5Utils {
   def executeWithCachedHdf5[T](filePath: Path, meshFileCache: Hdf5FileCache)(block: CachedHdf5File => T): Box[T] =
     for {
-      _ <- Full(true) /*if (filePath.toFile.exists()) {
+      _ <- if (filePath.toFile.exists()) {
         Full(true)
       } else {
         Failure("mesh.file.open.failed")
-      }*/
+      }
       result = Using(meshFileCache.withCache(filePath)(CachedHdf5File.fromPath)) {
         block
       }
@@ -80,5 +80,4 @@ object CachedHdf5Utils {
         case scala.util.Failure(e)      => Failure(e.toString)
       }
     } yield boxedResult
-
 }

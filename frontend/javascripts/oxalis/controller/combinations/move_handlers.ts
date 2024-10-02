@@ -12,7 +12,6 @@ import {
 import { setViewportAction, zoomTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
 import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
-import _ from "lodash";
 
 export function setMousePosition(position: Point2 | null | undefined): void {
   if (position != null) {

@@ -1,7 +1,7 @@
 import { Button, Dropdown, type MenuProps, Space } from "antd";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import React, { PureComponent } from "react";
+import { PureComponent } from "react";
 import {
   setViewModeAction,
   setFlightmodeRecordingAction,

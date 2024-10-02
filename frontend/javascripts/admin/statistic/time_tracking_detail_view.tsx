@@ -1,5 +1,4 @@
 import { useFetch } from "libs/react_helpers";
-import React from "react";
 import type { AnnotationTypeFilterEnum } from "./project_and_annotation_type_dropdown";
 import { getTimeTrackingForUserSummedPerAnnotation } from "admin/admin_rest_api";
 import dayjs from "dayjs";

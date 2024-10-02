@@ -1,5 +1,5 @@
 import { Modal } from "antd";
-import React, { useState } from "react";
+import { useState } from "react";
 import { AsyncButton } from "components/async_clickables";
 import type { Vector3 } from "oxalis/constants";
 import type { VolumeTracing } from "oxalis/store";

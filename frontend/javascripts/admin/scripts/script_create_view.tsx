@@ -2,7 +2,7 @@ import { Form, Input, Select, Button, Card } from "antd";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { connect } from "react-redux";
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import type { APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";

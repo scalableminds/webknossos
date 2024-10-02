@@ -1,7 +1,6 @@
 import { CopyOutlined } from "@ant-design/icons";
 import { Modal, Input, Button, Row, Col, Dropdown, Space } from "antd";
 import { useSelector } from "react-redux";
-import React from "react";
 import { makeComponentLazy } from "libs/react_helpers";
 import messages from "messages";
 import type { OxalisState } from "oxalis/store";

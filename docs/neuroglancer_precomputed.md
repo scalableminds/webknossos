@@ -28,7 +28,7 @@ WEBKNOSSOS expects the following file structure for Neuroglancer Precomputed dat
 ```
 my_dataset.precomputed             # One root folder per dataset
 ├─ info                            # Dataset [metadata in JSON format](https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/volume.md#info-json-file-specification)
-├─ scale_1                         # One subdirectory with the same name as each scale/magnification "key" value specified in the info file. Each subdirectory contains a chunked representation of the data for a single resolution.
+├─ scale_1                         # One subdirectory with the same name as each scale/magnification "key" value specified in the info file. Each subdirectory contains a chunked representation of the data for a single mag.
 │  ├─ <chunks>
 │  └─ ...
 ├─ ...                  

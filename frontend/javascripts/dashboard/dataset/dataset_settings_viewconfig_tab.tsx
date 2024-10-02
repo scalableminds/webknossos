@@ -16,11 +16,7 @@ import {
 import { useMemo, useState } from "react";
 import { Vector3Input } from "libs/vector_input";
 import { validateLayerViewConfigurationObjectJSON, syncValidator } from "types/validation";
-import {
-  defaultDatasetViewConfiguration,
-  defaultDatasetViewConfigurationWithoutNull,
-  getDefaultLayerViewConfiguration,
-} from "types/schemas/dataset_view_configuration.schema";
+import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import messages, {
   type RecommendedConfiguration,
   layerViewConfigurations,
@@ -242,7 +238,7 @@ export default function DatasetSettingsViewConfigTab(props: {
               <FormItemWithInfo
                 name={["defaultConfiguration", "segmentationPatternOpacity"]}
                 label={settings.segmentationPatternOpacity}
-                info={settingsTooltips.segmentationPatternOpacity /*TODO_c this is empty*/}
+                info={settingsTooltips.segmentationPatternOpacity}
                 colon={false}
               >
                 <Slider min={0} max={100} step={1} />

@@ -26,6 +26,7 @@ const getWheelStepFromEvent = (
   deltaY: number,
   wheelStep: number,
 ) => {
+  // Make sure that result is a multiple of step
   return (
     (step || DEFAULT_STEP) *
     Math.round((wheelStep * deltaY) / Math.abs(deltaY) / (step || DEFAULT_STEP))
@@ -33,14 +34,25 @@ const getWheelStepFromEvent = (
 };
 
 export function Slider(props: SliderProps) {
-  const { min, max, onChange, value, range, defaultValue, wheelFactor, disableOnWheel, step } =
-    props;
-  if (min == null || max == null || onChange == null || value == null)
+  const {
+    min,
+    max,
+    onChange,
+    value,
+    range,
+    defaultValue,
+    wheelFactor,
+    disableOnWheel,
+    step,
+    disabled,
+  } = props;
+  if (min == null || max == null || onChange == null || value == null || disabled)
     return <AntdSlider {...props} />;
   const sliderRange = max - min;
   let handleWheelEvent: WheelEventHandler<HTMLDivElement> = () => {};
   let handleDoubleClick: React.MouseEventHandler<HTMLDivElement> = () => {};
   const wheelStep = getDiffPerSliderStep(sliderRange, wheelFactor, step);
+  // diffentiate between single value and range slider
   if (range === false || range == null) {
     if (!disableOnWheel) {
       handleWheelEvent = (event) => {
@@ -50,7 +62,7 @@ export function Slider(props: SliderProps) {
         else onChange(newValue);
       };
     }
-    // Sadly this code is duplicated because TypeScript doesn't understand that onChange
+    // This code is duplicated because TypeScript doesn't understand that onChange
     // always takes the type of defaultValue.
     handleDoubleClick = (event) => {
       if (event.target instanceof HTMLElement) {

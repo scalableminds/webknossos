@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button, message, Select, Switch } from "antd";
 import chalk from "chalk";
 import Ansi from "ansi-to-react";

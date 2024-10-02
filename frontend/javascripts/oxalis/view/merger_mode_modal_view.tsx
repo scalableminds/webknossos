@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Modal, Button, Spin, Tooltip } from "antd";
 
 type Props = {

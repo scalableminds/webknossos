@@ -6,7 +6,6 @@ import {
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { useDispatch, useSelector } from "react-redux";
 import type { OxalisState } from "oxalis/store";
-import React from "react";
 import defaultState from "oxalis/default_state";
 import Shortcut from "libs/shortcut_component";
 import { Radio, type RadioChangeEvent } from "antd";

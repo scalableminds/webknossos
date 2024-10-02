@@ -1,4 +1,3 @@
-import React from "react";
 import { type RouteComponentProps, withRouter } from "react-router-dom";
 import { Form, Input, Button, Col, Row, Alert } from "antd";
 import { LockOutlined } from "@ant-design/icons";

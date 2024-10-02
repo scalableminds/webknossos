@@ -56,7 +56,8 @@ class DataSourceController @Inject()(
     exploreRemoteLayerService: ExploreRemoteLayerService,
     uploadService: UploadService,
     composeService: ComposeService,
-    val dsRemoteWebknossosClient: DSRemoteWebknossosClient, // duplicate?
+    meshFileService: MeshFileService,
+    val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
     val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller
@@ -217,7 +218,7 @@ class DataSourceController @Inject()(
           response <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId),
                                                         urlOrHeaderToken(token, request)) {
             for {
-              (dataSourceId, datasetSizeBytes) <- uploadService.finishUpload(request.body) ?~> "finishUpload.failed"
+              (dataSourceId, datasetSizeBytes) <- uploadService.finishUpload(request.body) ?~> "dataset.upload.finishFailed"
               uploadedDatasetIdJson <- remoteWebknossosClient.reportUpload(
                 dataSourceId,
                 datasetSizeBytes,
@@ -501,6 +502,7 @@ class DataSourceController @Inject()(
                                         urlOrHeaderToken(token, request)) {
         val (closedAgglomerateFileHandleCount, clearedBucketProviderCount, removedChunksCount) =
           binaryDataServiceHolder.binaryDataService.clearCache(organizationId, datasetPath, layerName)
+        val closedMeshFileHandleCount = meshFileService.clearCache(organizationId, datasetPath, layerName)
         val reloadedDataSource = dataSourceService.dataSourceFromDir(
           dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetPath),
           organizationId)
@@ -510,7 +512,7 @@ class DataSourceController @Inject()(
           _ = clearedVaultCacheEntriesBox match {
             case Full(clearedVaultCacheEntries) =>
               logger.info(
-                s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationId/$datasetPath: closed $closedAgglomerateFileHandleCount agglomerate file handles, removed $clearedBucketProviderCount bucketProviders, $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
+                s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationId/$datasetPath: closed $closedAgglomerateFileHandleCount agglomerate file handles and $closedMeshFileHandleCount mesh file handles, removed $clearedBucketProviderCount bucketProviders, $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
             case _ => ()
           }
           _ <- dataSourceRepository.updateDataSource(reloadedDataSource)

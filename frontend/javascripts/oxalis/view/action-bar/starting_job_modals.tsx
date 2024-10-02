@@ -51,7 +51,10 @@ import { isBoundingBoxExportable } from "./download_modal_view";
 import features from "features";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { TrainAiModelTab, CollapsibleWorkflowYamlEditor } from "../jobs/train_ai_model";
+import {
+  CollapsibleWorkflowYamlEditor,
+  TrainAiModelFromAnnotationTab,
+} from "../jobs/train_ai_model";
 import { LayerSelectionFormItem } from "components/layer_selection";
 import { useGuardedFetch } from "libs/react_helpers";
 import _ from "lodash";
@@ -291,16 +294,14 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
       ? {
           label: "Train a model",
           key: "trainModel",
-          children: <TrainAiModelTab onClose={onClose} />,
+          children: <TrainAiModelFromAnnotationTab onClose={onClose} />,
         }
       : null,
-    isSuperUser
-      ? {
-          label: "Alignment",
-          key: "alignment",
-          children: <AlignmentTab />,
-        }
-      : null,
+    {
+      label: "Alignment",
+      key: "alignment",
+      children: <AlignmentTab />,
+    },
   ]);
   return aIJobModalState !== "invisible" ? (
     <Modal
@@ -449,22 +450,24 @@ function AlignmentTab() {
   };
   return (
     <div>
-      <Space align="center">
-        <Radio.Button className="aIJobSelection" checked={true}>
-          <Card bordered={false}>
-            <Space direction="vertical" size="small">
-              <Row className="ai-job-title">Align Sections</Row>
-              <Row>
-                <img
-                  src={`/assets/images/${jobNameToImagePath.align_sections}`}
-                  alt={"Example of improved alignment of slices"}
-                  style={centerImageStyle}
-                />
-              </Row>
-            </Space>
-          </Card>
-        </Radio.Button>
-      </Space>
+      <div className="centered-items">
+        <Space align="center">
+          <Radio.Button className="aIJobSelection" checked={true}>
+            <Card bordered={false}>
+              <Space direction="vertical" size="small">
+                <Row className="ai-job-title">Align Sections</Row>
+                <Row>
+                  <img
+                    src={`/assets/images/${jobNameToImagePath.align_sections}`}
+                    alt={"Example of improved alignment of slices"}
+                    style={centerImageStyle}
+                  />
+                </Row>
+              </Space>
+            </Card>
+          </Radio.Button>
+        </Space>
+      </div>
       <AlignSectionsForm />
     </div>
   );
@@ -627,11 +630,14 @@ function StartJobForm(props: StartJobFormProps) {
         initialName={`${dataset.name}_${props.suggestedDatasetSuffix}`}
       />
       <LayerSelectionFormItem
+        name="layerName"
         chooseSegmentationLayer={chooseSegmentationLayer}
         label={chooseSegmentationLayer ? "Segmentation Layer" : "Image data layer"}
         layers={layers}
         fixedLayerName={fixedSelectedLayer?.name}
-        tracing={tracing}
+        getReadableNameForLayer={(layer) =>
+          getReadableNameOfVolumeLayer(layer, tracing) || layer.name
+        }
       />
       <BoundingBoxSelectionFormItem
         isBoundingBoxConfigurable={isBoundingBoxConfigurable}
@@ -852,10 +858,13 @@ export function AlignSectionsForm() {
       }
       description={
         <Space direction="vertical" size="middle">
-          <Row>This job will automatically align all the sections of the dataset.</Row>
+          <Row>
+            This job will automatically align all the sections of the dataset. If you want to align
+            a dataset with multiple tiles per section, please contact us.
+          </Row>
           <Row style={{ display: "grid", marginBottom: 16 }}>
             <Alert
-              message="Please note that this feature is experimental."
+              message="Please note that this feature is still experimental. Contact us if you have any problems or need alignment errors to be fixed."
               type="warning"
               showIcon
             />

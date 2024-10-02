@@ -1,4 +1,3 @@
-import React from "react";
 import {
   createPrivateLink,
   deletePrivateLink,
@@ -46,7 +45,7 @@ import { useSelector } from "react-redux";
 import { getDataLayers } from "oxalis/model/accessors/dataset_accessor";
 import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
 
-// TODO Remove explicit (error) type declaration when updateing to tanstack/query >= 5
+// TODO Remove explicit (error) type declaration when updating to tanstack/query >= 5
 // https://github.com/TanStack/query/pull/4706
 function useLinksQuery(annotationId: string) {
   return useQuery<ZarrPrivateLink[], Error>(

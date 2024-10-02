@@ -24,7 +24,7 @@ import type {
   UnitLong,
 } from "oxalis/constants";
 import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import type { EmptyObject, ValueOf } from "./globals";
+import type { EmptyObject } from "./globals";
 
 export type AdditionalCoordinate = { name: string; value: number };
 
@@ -175,13 +175,23 @@ export enum APIMetadataEnum {
   NUMBER = "number",
   STRING_ARRAY = "string[]",
 }
-type APIMetadataType = ValueOf<APIMetadataEnum>;
-export type APIMetadata = {
+// This type has to be defined redundantly to the above enum, unfortunately,
+// because the e2e tests assert that an object literal matches the type of
+// APIMetadataEntry. In that object literal, a string literal exists (e.g., "number").
+// TypeScript Enums don't typecheck against such literals by design (see
+// https://github.com/microsoft/TypeScript/issues/17690#issuecomment-337975541).
+// Therefore, we redundantly define the type of the enum here again and use that
+// in APIMetadataEntry.
+type APIMetadataType = "string" | "number" | "string[]";
+
+// Note that this differs from MetadataEntryProto, because
+// it's stored in sql and not in protobuf.
+// The type is used for datasets and folders.
+export type APIMetadataEntry = {
   type: APIMetadataType;
   key: string;
   value: string | number | string[];
 };
-export type APIMetadataEntries = APIMetadata[];
 
 type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   readonly id: string; // Should never be changed.
@@ -193,7 +203,7 @@ type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   created: number;
   dataStore: APIDataStore;
   description: string | null | undefined;
-  metadata: APIMetadataEntries | null | undefined;
+  metadata: APIMetadataEntry[] | null | undefined;
   isEditable: boolean;
   isPublic: boolean;
   path: string;
@@ -456,13 +466,13 @@ export type APITask = {
   readonly directLinks?: Array<string>;
 };
 export type AnnotationLayerDescriptor = {
-  name?: string | null | undefined;
+  name: string;
   tracingId: string;
   typ: "Skeleton" | "Volume";
   stats: TracingStats | EmptyObject;
 };
 export type EditableLayerProperties = Partial<{
-  name: string | null | undefined;
+  name: string;
 }>;
 export type APIAnnotationInfo = {
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
@@ -698,6 +708,11 @@ export enum APIJobType {
   INFER_MITOCHONDRIA = "infer_mitochondria",
 }
 
+export type WkLibsNdBoundingBox = BoundingBoxObject & {
+  axisOrder: { string: number };
+  additionalAxes: Array<AdditionalAxis>;
+};
+
 export type APIJob = {
   readonly id: string;
   readonly datasetId: string | null | undefined; // TODO: Adjust worker accordingly
@@ -710,6 +725,7 @@ export type APIJob = {
   readonly annotationType: string | null | undefined;
   readonly organizationId: string | null | undefined;
   readonly boundingBox: string | null | undefined;
+  readonly ndBoundingBox: WkLibsNdBoundingBox | null | undefined;
   readonly mergeSegments: boolean | null | undefined;
   readonly type: APIJobType;
   readonly state: APIEffectiveJobState;
@@ -784,6 +800,21 @@ export type ServerSkeletonTracingTree = {
   isVisible?: boolean;
   type?: TreeType;
   edgesAreVisible?: boolean;
+  metadata: MetadataEntryProto[];
+};
+
+// Note that this differs from APIMetadataEntry, because
+// it's internally stored as protobuf and not in sql.
+// The type is used for in-annotation entities (segments, trees etc.)
+export type MetadataEntryProto = {
+  key: string;
+  stringValue?: string;
+  boolValue?: boolean;
+  numberValue?: number;
+  // Note that the server always sends an empty array currently,
+  // because of the protobuf format. However, for consistency within
+  // JS land, we mark it as nullable here.
+  stringListValue?: string[];
 };
 type ServerSegment = {
   segmentId: number;
@@ -793,6 +824,7 @@ type ServerSegment = {
   creationTime: number | null | undefined;
   color: ColorObject | null;
   groupId: number | null | undefined;
+  metadata: MetadataEntryProto[];
 };
 export type ServerTracingBase = {
   id: string;
@@ -1086,7 +1118,7 @@ export type FlatFolderTreeItem = {
   name: string;
   id: string;
   parent: string | null;
-  metadata: APIMetadataEntries;
+  metadata: APIMetadataEntry[];
   isEditable: boolean;
 };
 
@@ -1097,7 +1129,7 @@ export type FolderItem = {
   parent: string | null | undefined;
   children: FolderItem[];
   isEditable: boolean;
-  metadata: APIMetadataEntries;
+  metadata: APIMetadataEntry[];
   // Can be set so that the antd tree component can disable
   // individual folder items.
   disabled?: boolean;
@@ -1108,7 +1140,7 @@ export type Folder = {
   id: string;
   allowedTeams: APITeam[];
   allowedTeamsCumulative: APITeam[];
-  metadata: APIMetadataEntries;
+  metadata: APIMetadataEntry[];
   isEditable: boolean;
 };
 
@@ -1116,7 +1148,7 @@ export type FolderUpdater = {
   id: string;
   name: string;
   allowedTeams: string[];
-  metadata: APIMetadataEntries;
+  metadata: APIMetadataEntry[];
 };
 
 export enum CAMERA_POSITIONS {

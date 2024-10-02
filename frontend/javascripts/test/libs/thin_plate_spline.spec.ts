@@ -1,5 +1,4 @@
 import "test/mocks/lz4";
-import _ from "lodash";
 import test from "ava";
 import TPS3D from "libs/thin_plate_spline";
 import { almostEqual, getPointsC555 } from "./transform_spec_helpers";

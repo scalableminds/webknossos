@@ -1,8 +1,7 @@
 import { getTeams, getTimeEntries, getTimeTrackingForUserSpans } from "admin/admin_rest_api";
-import { Card, Select, Spin, Button, DatePicker, type TimeRangePickerProps } from "antd";
+import { Card, Select, Spin, Button, DatePicker, type TimeRangePickerProps, Table } from "antd";
 import { useFetch } from "libs/react_helpers";
-import _ from "lodash";
-import React, { useState } from "react";
+import { useState } from "react";
 import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
@@ -198,6 +197,34 @@ function TimeTrackingOverview() {
     },
   ];
 
+  const getSummaryRow = (pageData: readonly APITimeTrackingPerUser[]) => {
+    if (pageData.length === 0) {
+      return null;
+    }
+    let totalNumberOfTasksAndAnnotations = 0;
+    let totalTimeMs = 0;
+    pageData.forEach(({ timeMillis, annotationCount }) => {
+      totalNumberOfTasksAndAnnotations += annotationCount;
+      totalTimeMs += timeMillis;
+    });
+    return (
+      <>
+        <Table.Summary.Row>
+          <Table.Summary.Cell index={0} />
+          <Table.Summary.Cell index={1}>
+            <b>Total</b>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={2}> {totalNumberOfTasksAndAnnotations} </Table.Summary.Cell>
+          <Table.Summary.Cell index={3}>
+            {formatMilliseconds(totalTimeMs / totalNumberOfTasksAndAnnotations)}
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={4}> {formatMilliseconds(totalTimeMs)}</Table.Summary.Cell>
+          <Table.Summary.Cell index={5} />
+        </Table.Summary.Row>
+      </>
+    );
+  };
+
   return (
     <Card
       title={"Annotation Time per User"}
@@ -269,6 +296,7 @@ function TimeTrackingOverview() {
           locale={{
             emptyText: renderPlaceholder(),
           }}
+          summary={getSummaryRow}
         />
       </Spin>
       <Button

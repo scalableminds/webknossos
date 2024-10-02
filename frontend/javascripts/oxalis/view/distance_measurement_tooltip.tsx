@@ -1,6 +1,5 @@
 import { useDispatch, useSelector } from "react-redux";
-import _ from "lodash";
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import type { OxalisState } from "oxalis/store";
 import {
   AnnotationToolEnum,

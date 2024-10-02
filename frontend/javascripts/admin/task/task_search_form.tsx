@@ -1,7 +1,7 @@
 import { Form, Row, Dropdown, Col, Button, Input, Select } from "antd";
 import { DownloadOutlined, DownOutlined, RetweetOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import _ from "lodash";
 import type { APIUser, APIProject, APITaskType } from "types/api_flow_types";
 import { getEditableUsers, getProjects, getTaskTypes } from "admin/admin_rest_api";

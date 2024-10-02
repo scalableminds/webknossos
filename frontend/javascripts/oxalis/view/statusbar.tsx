@@ -35,7 +35,6 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import { useInterval } from "libs/react_helpers";
-import _ from "lodash";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import FastTooltip from "components/fast_tooltip";
 import { Store } from "oxalis/singletons";

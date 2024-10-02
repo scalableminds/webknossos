@@ -118,7 +118,32 @@ export function getReadableNameByVolumeTracingId(
   tracingId: string,
 ) {
   const volumeDescriptor = getVolumeDescriptorById(annotation, tracingId);
-  return volumeDescriptor.name || "Volume";
+  return volumeDescriptor.name;
+}
+
+export function getSegmentationLayerByHumanReadableName(
+  dataset: APIDataset,
+  annotation: APIAnnotation | HybridTracing,
+  name: string,
+) {
+  try {
+    const layer = getSegmentationLayerByName(dataset, name);
+    return layer;
+  } catch {}
+
+  const layer = getVolumeTracingLayers(dataset).find((currentLayer) => {
+    if (currentLayer.tracingId == null) {
+      throw new Error("getVolumeTracingLayers must return tracing.");
+    }
+    const readableName = getReadableNameByVolumeTracingId(annotation, currentLayer.tracingId);
+    return readableName === name;
+  });
+
+  if (layer == null) {
+    throw new Error("Could not find segmentation layer with the name: " + name);
+  }
+
+  return layer;
 }
 
 export function getAllReadableLayerNames(dataset: APIDataset, tracing: Tracing) {
@@ -135,7 +160,7 @@ export function getAllReadableLayerNames(dataset: APIDataset, tracing: Tracing) 
 
 export function getReadableNameForLayerName(
   dataset: APIDataset,
-  tracing: Tracing,
+  tracing: APIAnnotation | HybridTracing,
   layerName: string,
 ): string {
   const layer = getLayerByName(dataset, layerName, true);
@@ -842,7 +867,7 @@ export const getBucketRetrievalSourceFn =
 
 export function getReadableNameOfVolumeLayer(
   layer: APIDataLayer,
-  tracing: HybridTracing,
+  tracing: APIAnnotation | HybridTracing,
 ): string | null {
   return "tracingId" in layer && layer.tracingId != null
     ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)

@@ -3,7 +3,7 @@ import { AsyncButton } from "components/async_clickables";
 import DatasetSelectionComponent, {
   type DatasetSelectionValue,
 } from "dashboard/dataset/dataset_selection_component";
-import React, { useState } from "react";
+import { useState } from "react";
 import { tryToFetchDatasetsByNameOrId, type WizardComponentProps } from "./common";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 

@@ -1,5 +1,5 @@
 import { Spin, Table, Card, Typography, Tooltip, Tag } from "antd";
-import React, { useState } from "react";
+import { useState } from "react";
 import type { APIAvailableTasksReport } from "types/api_flow_types";
 import { getAvailableTasksReport } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";

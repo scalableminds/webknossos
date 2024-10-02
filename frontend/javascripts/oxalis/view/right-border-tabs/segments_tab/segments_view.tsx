@@ -1,23 +1,21 @@
 import {
+  ArrowRightOutlined,
+  CloseOutlined,
   DeleteOutlined,
+  DownloadOutlined,
   DownOutlined,
+  ExclamationCircleOutlined,
+  ExpandAltOutlined,
+  EyeInvisibleOutlined,
+  EyeOutlined,
   LoadingOutlined,
   PlusOutlined,
   ReloadOutlined,
-  SettingOutlined,
-  ExclamationCircleOutlined,
-  ArrowRightOutlined,
-  DownloadOutlined,
   SearchOutlined,
-  EyeInvisibleOutlined,
-  EyeOutlined,
-  CloseOutlined,
+  SettingOutlined,
   ShrinkOutlined,
-  ExpandAltOutlined,
 } from "@ant-design/icons";
-import type RcTree from "rc-tree";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
-import { api } from "oxalis/singletons";
 import {
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
@@ -28,27 +26,27 @@ import {
   ConfigProvider,
   Divider,
   Empty,
-  type MenuProps,
   Modal,
   Popover,
   Select,
   Tree,
+  type MenuProps,
 } from "antd";
+import type { DataNode } from "antd/lib/tree";
+import { ChangeColorMenuItemContent } from "components/color_picker";
+import FastTooltip from "components/fast_tooltip";
 import Toast from "libs/toast";
+import { pluralize } from "libs/utils";
 import _, { isNumber } from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import { EMPTY_OBJECT, MappingStatusEnum } from "oxalis/constants";
-import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import {
   getMappingInfo,
-  getResolutionInfoOfVisibleSegmentationLayer,
   getMaybeSegmentIndexAvailability,
+  getResolutionInfoOfVisibleSegmentationLayer,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import {
-  getAdditionalCoordinatesAsString,
-  getPosition,
-} from "oxalis/model/accessors/flycam_accessor";
+import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import {
   getActiveSegmentationTracing,
   getMeshesForCurrentAdditionalCoordinates,
@@ -64,6 +62,7 @@ import {
   updateCurrentMeshFileAction,
   updateMeshVisibilityAction,
 } from "oxalis/model/actions/annotation_actions";
+import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
 import {
   setAdditionalCoordinatesAction,
   setPositionAction,
@@ -75,14 +74,15 @@ import {
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import {
   batchUpdateGroupsAndSegmentsAction,
-  removeSegmentAction,
   deleteSegmentDataAction,
+  removeSegmentAction,
   setActiveCellAction,
-  updateSegmentAction,
-  setSelectedSegmentsOrGroupAction,
   setExpandedSegmentGroupsAction,
+  setSelectedSegmentsOrGroupAction,
+  updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import { api } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
   MeshInformation,
@@ -94,19 +94,33 @@ import type {
   VolumeTracing,
 } from "oxalis/store";
 import Store from "oxalis/store";
+import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import {
-  type SegmentHierarchyNode,
-  getBaseSegmentationName,
-} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
+import {
+  getBaseSegmentationName,
+  type SegmentHierarchyNode,
+} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import type RcTree from "rc-tree";
 import React, { type Key } from "react";
 import { connect, useSelector } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { Dispatch } from "redux";
-import type { APIDataset, APIMeshFile, APISegmentationLayer, APIUser } from "types/api_flow_types";
+import type {
+  APIDataset,
+  APIMeshFile,
+  APISegmentationLayer,
+  APIUser,
+  MetadataEntryProto,
+} from "types/api_flow_types";
+import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
+import type { ValueOf } from "types/globals";
+import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
+import { ResizableSplitPane } from "../resizable_split_pane";
+import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
   createGroupToSegmentsMap,
   findParentIdForGroupId,
@@ -114,19 +128,10 @@ import {
   getGroupNodeKey,
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
-import { ChangeColorMenuItemContent } from "components/color_picker";
-import { pluralize } from "libs/utils";
-import AdvancedSearchPopover from "../advanced_search_popover";
-import ButtonComponent from "oxalis/view/components/button_component";
+import { MetadataEntryTableRows } from "../metadata_table";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
-import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
-import type { DataNode } from "antd/lib/tree";
-import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
-import type { ValueOf } from "types/globals";
-import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
-import FastTooltip from "components/fast_tooltip";
-import { ContextMenuContainer } from "../sidebar_context_menu";
-import type { ItemType } from "antd/es/menu/interface";
+import type { ItemType } from "antd/lib/menu/interface";
+import { InputWithUpdateOnBlur } from "oxalis/view/components/input_with_update_on_blur";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -144,7 +149,6 @@ type StateProps = {
   meshes: Record<number, MeshInformation>;
   dataset: APIDataset;
   mappingInfo: ActiveMappingInfo;
-  centeredSegmentId: number;
   hasVolumeTracing: boolean | undefined;
   isSegmentIndexAvailable: boolean | undefined;
   segments: SegmentMap | null | undefined;
@@ -192,7 +196,6 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     meshes: meshesForCurrentAdditionalCoordinates || EMPTY_OBJECT, // satisfy ts
     dataset: state.dataset,
     mappingInfo,
-    centeredSegmentId: getSegmentIdForPosition(getPosition(state.flycam)),
     hasVolumeTracing: state.tracing.volumes.length > 0,
     isSegmentIndexAvailable,
     segments,
@@ -1048,11 +1051,11 @@ class SegmentsView extends React.Component<Props, State> {
           Reload from Server
         </ReloadOutlined>
       </FastTooltip>
-      <Popover content={this.getPreComputeMeshesPopover} trigger="click" placement="bottom">
-        <FastTooltip title="Add a precomputed mesh file">
+      <FastTooltip title="Add a precomputed mesh file">
+        <Popover content={this.getPreComputeMeshesPopover} trigger="click" placement="bottom">
           <PlusOutlined className="icon-margin-right" />
-        </FastTooltip>
-      </Popover>
+        </Popover>
+      </FastTooltip>
       {this.state.activeMeshJobId != null ? (
         <FastTooltip title='A mesh file is currently being computed. See "Processing Jobs" for more information.'>
           <LoadingOutlined className="icon-margin-right" />
@@ -1656,7 +1659,6 @@ class SegmentsView extends React.Component<Props, State> {
         <DomVisibilityObserver targetId={segmentsTabId}>
           {(isVisibleInDom) => {
             if (!isVisibleInDom) return null;
-            const { centeredSegmentId } = this.props;
             const allSegments = this.props.segments;
             const isSegmentHierarchyEmpty = !(
               allSegments?.size() || this.props.segmentGroups.length
@@ -1699,7 +1701,6 @@ class SegmentsView extends React.Component<Props, State> {
                     hideContextMenu={this.hideContextMenu}
                     key={segment.id}
                     segment={segment}
-                    isCentered={centeredSegmentId === segment.id}
                     selectedSegmentIds={this.props.selectedIds.segments}
                     onSelectSegment={this.onSelectSegment}
                     mesh={this.props.meshes[segment.id]}
@@ -1838,51 +1839,59 @@ class SegmentsView extends React.Component<Props, State> {
                       }`}
                     />
                   ) : (
-                    /* Without the default height, height will be 0 on the first render, leading to tree virtualization being disabled.
-                    This has a major performance impact. */
-                    <AutoSizer defaultHeight={500}>
-                      {({ height, width }) => (
-                        <div
-                          style={{
-                            height,
-                            width,
-                          }}
+                    <ResizableSplitPane
+                      firstChild={
+                        <AutoSizer
+                          // Without the default height, height will be 0 on the first render, leading
+                          // to tree virtualization being disabled. This has a major performance impact.
+                          defaultHeight={500}
                         >
-                          <Tree
-                            allowDrop={this.allowDrop}
-                            onDrop={this.onDrop}
-                            onSelect={this.onSelectTreeItem}
-                            className="segments-tree"
-                            blockNode
-                            // Passing an explicit height here, makes the tree virtualized
-                            height={height} // without virtualization, pass 0 here and/or virtual={false}
-                            draggable={{
-                              icon: false,
-                              nodeDraggable: () =>
-                                // Forbid renaming when segments or groups are being renamed,
-                                // since selecting text within the editable input box would not work
-                                // otherwise (instead, the item would be dragged).
-                                this.state.renamingCounter === 0 && this.props.allowUpdate,
-                            }}
-                            multiple
-                            showLine
-                            selectedKeys={this.getSelectedItemKeys()}
-                            switcherIcon={<DownOutlined />}
-                            treeData={this.state.groupTree}
-                            titleRender={titleRender}
-                            style={{
-                              marginTop: 12,
-                              marginLeft: -26, // hide switcherIcon for root group
-                              flex: "1 1 auto",
-                              overflow: "auto", // use hidden when not using virtualization
-                            }}
-                            ref={this.tree}
-                            onExpand={this.setExpandedGroups}
-                            expandedKeys={this.state.expandedGroupKeys}
-                          />
-                        </div>
-                      )}
-                    </AutoSizer>
+                          {({ height, width }) => (
+                            <div
+                              style={{
+                                height,
+                                width,
+                                overflow: "hidden",
+                              }}
+                            >
+                              <Tree
+                                allowDrop={this.allowDrop}
+                                onDrop={this.onDrop}
+                                onSelect={this.onSelectTreeItem}
+                                className="segments-tree"
+                                blockNode
+                                // Passing an explicit height here, makes the tree virtualized
+                                height={height} // without virtualization, pass 0 here and/or virtual={false}
+                                draggable={{
+                                  icon: false,
+                                  nodeDraggable: () =>
+                                    // Forbid renaming when segments or groups are being renamed,
+                                    // since selecting text within the editable input box would not work
+                                    // otherwise (instead, the item would be dragged).
+                                    this.state.renamingCounter === 0 && this.props.allowUpdate,
+                                }}
+                                multiple
+                                showLine
+                                selectedKeys={this.getSelectedItemKeys()}
+                                switcherIcon={<DownOutlined />}
+                                treeData={this.state.groupTree}
+                                titleRender={titleRender}
+                                style={{
+                                  marginTop: 12,
+                                  marginLeft: -26, // hide switcherIcon for root group
+                                  flex: "1 1 auto",
+                                  overflow: "auto", // use hidden when not using virtualization
+                                }}
+                                ref={this.tree}
+                                onExpand={this.setExpandedGroups}
+                                expandedKeys={this.state.expandedGroupKeys}
+                              />
+                            </div>
+                          )}
+                        </AutoSizer>
+                      }
+                      secondChild={this.renderDetailsForSelection()}
+                    />
                   )}
                 </div>
                 {groupToDelete !== null ? (
@@ -1903,6 +1912,79 @@ class SegmentsView extends React.Component<Props, State> {
       </div>
     );
   }
+
+  renameActiveSegment = (newName: string) => {
+    if (this.props.visibleSegmentationLayer == null) {
+      return;
+    }
+    const { segments } = this.props.selectedIds;
+    if (segments.length !== 1) {
+      return;
+    }
+    const segment = this.props.segments?.getNullable(segments[0]);
+    if (segment == null) {
+      return;
+    }
+
+    this.props.updateSegment(
+      segment.id,
+      { name: newName },
+      this.props.visibleSegmentationLayer.name,
+      true,
+    );
+  };
+
+  renderDetailsForSelection() {
+    const { segments } = this.props.selectedIds;
+    if (segments.length === 1) {
+      const readOnly = !this.props.allowUpdate;
+      const segment = this.props.segments?.getNullable(segments[0]);
+      if (segment == null) {
+        return <>Cannot find details for selected segment.</>;
+      }
+      return (
+        <table className="metadata-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th colSpan={2}>{segment.id}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Name</td>
+              <td colSpan={2}>
+                <InputWithUpdateOnBlur
+                  value={segment.name || ""}
+                  onChange={this.renameActiveSegment}
+                />
+              </td>
+            </tr>
+            <MetadataEntryTableRows
+              item={segment}
+              setMetadata={this.setMetadata}
+              readOnly={readOnly}
+            />
+          </tbody>
+        </table>
+      );
+    }
+    return null;
+  }
+
+  setMetadata = (segment: Segment, newProperties: MetadataEntryProto[]) => {
+    if (this.props.visibleSegmentationLayer == null) {
+      return;
+    }
+    this.props.updateSegment(
+      segment.id,
+      {
+        metadata: newProperties,
+      },
+      this.props.visibleSegmentationLayer.name,
+      true,
+    );
+  };
 
   getExpandSubgroupsItem(groupId: number) {
     const children = this.getKeysOfSubGroups(groupId);

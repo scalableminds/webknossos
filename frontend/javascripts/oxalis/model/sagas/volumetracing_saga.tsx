@@ -102,7 +102,6 @@ import {
 import type VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import { Model, api } from "oxalis/singletons";
 import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
-import React from "react";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
 import {
   applyLabeledVoxelMapToAllMissingResolutions,
@@ -661,6 +660,7 @@ function* uncachedDiffSegmentLists(
       segment.name,
       segment.color,
       segment.groupId,
+      segment.metadata,
     );
   }
 
@@ -676,6 +676,7 @@ function* uncachedDiffSegmentLists(
         segment.name,
         segment.color,
         segment.groupId,
+        segment.metadata,
         segment.creationTime,
       );
     }

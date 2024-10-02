@@ -125,10 +125,10 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
       });
     }
 
-    // Don't check datastore.allowsUpdate for dataset composition
-    const datastoreToUse = props.datastores[0];
+    const uploadableDatastores = props.datastores.filter((datastore) => datastore.allowsUpload);
+    const datastoreToUse = uploadableDatastores[0];
     if (!datastoreToUse) {
-      Toast.error("Could not find datastore for creating new dataset.");
+      Toast.error("Could not find datastore that allows uploading.");
       return;
     }
 

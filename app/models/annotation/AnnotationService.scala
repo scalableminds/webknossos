@@ -392,7 +392,7 @@ class AnnotationService @Inject()(
     for {
       dataset <- datasetDAO.findOne(datasetId) ?~> "dataset.noAccessById"
       dataSource <- datasetService.dataSourceFor(dataset)
-      datasetOrganization <- organizationDAO.findOne(dataset._organization)
+      datasetOrganization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound"
       usableDataSource <- dataSource.toUsable ?~> Messages("dataset.notImported", dataSource.id.path)
       annotationLayers <- createTracingsForExplorational(dataset,
                                                          usableDataSource,

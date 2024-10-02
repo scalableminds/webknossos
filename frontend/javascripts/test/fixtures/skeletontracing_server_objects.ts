@@ -49,6 +49,7 @@ export const tracing: ServerSkeletonTracing = {
       ],
       name: "explorative_2017-08-09_SCM_Boy_002",
       isVisible: true,
+      metadata: [],
     },
     {
       treeId: 1,
@@ -116,6 +117,7 @@ export const tracing: ServerSkeletonTracing = {
       comments: [],
       isVisible: true,
       name: "explorative_2017-08-09_SCM_Boy_001",
+      metadata: [],
     },
   ],
   treeGroups: [

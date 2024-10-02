@@ -1,4 +1,3 @@
-import React from "react";
 import _ from "lodash";
 import type { Vector4 } from "oxalis/constants";
 import type {
@@ -435,6 +434,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "NML contains <node ...> tag that is not enclosed by a <thing ...> tag: Node with id",
   "nml.edge_outside_tree":
     "NML contains <edge ...> tag that is not enclosed by a <thing ...> tag: Edge",
+  "nml.metadata_entry_outside_tree":
+    "NML contains <metadataEntry ...> tag that is not enclosed by a <thing ...> tag",
   "nml.expected_attribute_missing":
     "Attribute with the following name was expected, but is missing or empty:",
   "nml.invalid_timestamp": "Attribute with the following name was expected to be a unix timestamp:",

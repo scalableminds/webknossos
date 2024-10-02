@@ -401,4 +401,10 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       output = dataSorted.flatMap(d => d._1).toArray
     } yield (output, encoding)
 
+  def clearCache(organizationId: String, datasetName: String, layerNameOpt: Option[String]): Int = {
+    val datasetPath = dataBaseDir.resolve(organizationId).resolve(datasetName)
+    val relevantPath = layerNameOpt.map(l => datasetPath.resolve(l)).getOrElse(datasetPath)
+    meshFileCache.clear(key => key.startsWith(relevantPath.toString))
+  }
+
 }

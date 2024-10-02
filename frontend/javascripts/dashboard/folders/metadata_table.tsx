@@ -1,7 +1,8 @@
 import {
-  DeleteOutlined,
+  CloseOutlined,
   FieldNumberOutlined,
   FieldStringOutlined,
+  InfoCircleOutlined,
   PlusOutlined,
   TagsOutlined,
 } from "@ant-design/icons";
@@ -11,10 +12,11 @@ import {
   InputNumber,
   Input,
   Select,
-  Typography,
   Dropdown,
   Button,
+  Tag,
 } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import {
   type DatasetCollectionContextValue,
   useDatasetCollectionContext,
@@ -22,20 +24,20 @@ import {
 import { useIsMounted, useStateWithRef } from "libs/react_hooks";
 import Toast from "libs/toast";
 import _ from "lodash";
+import { InputWithUpdateOnBlur } from "oxalis/view/components/input_with_update_on_blur";
 import type React from "react";
 import { useEffect } from "react";
 import { useState } from "react";
 import {
   type APIDataset,
   type Folder,
-  type APIMetadata,
+  type APIMetadataEntry,
   APIMetadataEnum,
 } from "types/api_flow_types";
 
-type APIMetadataWithError = APIMetadata & { error?: string | null };
-type IndexedMetadataEntries = APIMetadataWithError[];
+export type APIMetadataWithError = APIMetadataEntry & { error?: string | null };
 
-function getMetadataTypeLabel(type: APIMetadata["type"]) {
+function getMetadataTypeLabel(type: APIMetadataEntry["type"]) {
   switch (type) {
     case "string":
       return (
@@ -58,6 +60,20 @@ function getMetadataTypeLabel(type: APIMetadata["type"]) {
   }
 }
 
+export function getTypeSelectDropdownMenu(
+  addNewEntryWithType: (type: APIMetadataEntry["type"]) => void,
+): MenuProps {
+  return {
+    items: Object.values(APIMetadataEnum).map((type) => {
+      return {
+        key: type,
+        label: getMetadataTypeLabel(type as APIMetadataEntry["type"]),
+        onClick: () => addNewEntryWithType(type as APIMetadataEntry["type"]),
+      };
+    }),
+  };
+}
+
 type EmptyMetadataPlaceholderProps = {
   addNewEntryMenuItems: MenuProps;
 };
@@ -65,66 +81,89 @@ const EmptyMetadataPlaceholder: React.FC<EmptyMetadataPlaceholderProps> = ({
   addNewEntryMenuItems,
 }) => {
   return (
-    <div className="flex-center-child empty-metadata-placeholder">
-      <img
-        src="/assets/images/metadata-teaser.svg"
-        alt="Metadata preview"
-        style={{ width: "60%", marginBottom: 16 }}
-      />
-      <span style={{ marginTop: 10 }}>
-        <Dropdown menu={addNewEntryMenuItems} placement="bottom" trigger={["click"]} autoFocus>
-          <Button icon={<PlusOutlined style={{ marginLeft: -2 }} />}>
-            Add First Metadata Entry
-          </Button>
-        </Dropdown>
-      </span>
-    </div>
+    <Tag>
+      <div className="flex-center-child empty-metadata-placeholder">
+        <img
+          src="/assets/images/metadata-teaser.svg"
+          alt="Metadata preview"
+          style={{ width: "60%", marginBottom: 16 }}
+        />
+        <span style={{ marginTop: 10 }}>
+          <Dropdown menu={addNewEntryMenuItems} placement="bottom" trigger={["click"]} autoFocus>
+            <Button icon={<PlusOutlined style={{ marginLeft: -2 }} />}>
+              Add First Metadata Entry
+            </Button>
+          </Dropdown>
+        </span>
+      </div>
+    </Tag>
   );
 };
 
+export function getUsedTagsWithinMetadata(metadata: APIMetadataWithError[]) {
+  return _.uniq(
+    metadata.flatMap((entry) => (entry.type === APIMetadataEnum.STRING_ARRAY ? entry.value : [])),
+  ).map((tag) => ({ value: tag, label: tag })) as {
+    value: string;
+    label: string;
+  }[];
+}
+
 interface MetadataValueInputProps {
-  record: APIMetadataWithError;
+  entry: APIMetadataWithError;
   index: number;
-  focusedRow: number | null;
-  setFocusedRow: (row: number | null) => void;
-  updateMetadataValue: (index: number, newValue: number | string | string[]) => void;
-  isSaving: boolean;
+  focusedRow?: number | null;
+  setFocusedRow?: (row: number | null) => void;
+  updateMetadataValue: (
+    index: number,
+    newValue: number | string | string[],
+    type: APIMetadataEnum,
+  ) => void;
+  isSaving?: boolean;
+  readOnly?: boolean;
   availableStrArrayTagOptions: { value: string; label: string }[];
 }
 
-const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
-  record,
+export const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
+  entry,
   index,
   focusedRow,
   setFocusedRow,
   updateMetadataValue,
   isSaving,
+  readOnly,
   availableStrArrayTagOptions,
 }) => {
   const isFocused = index === focusedRow;
   const sharedProps = {
     className: isFocused ? undefined : "transparent-input",
-    onFocus: () => setFocusedRow(index),
-    onBlur: () => setFocusedRow(null),
-    placeholder: "Value",
+    onFocus: () => setFocusedRow?.(index),
+    onBlur: () => setFocusedRow?.(null),
     size: "small" as InputNumberProps<number>["size"],
-    disabled: isSaving,
+    disabled: isSaving || readOnly,
   };
 
-  switch (record.type) {
+  switch (entry.type) {
     case APIMetadataEnum.NUMBER:
       return (
         <InputNumber
-          value={record.value as number}
-          onChange={(newNum) => updateMetadataValue(index, newNum || 0)}
+          value={entry.value as number}
+          controls={false}
+          placeholder="Enter a number"
+          onChange={(newNum) => {
+            return updateMetadataValue(index, newNum || 0, APIMetadataEnum.NUMBER);
+          }}
           {...sharedProps}
         />
       );
     case APIMetadataEnum.STRING:
       return (
-        <Input
-          value={record.value}
-          onChange={(evt) => updateMetadataValue(index, evt.target.value)}
+        <InputWithUpdateOnBlur
+          value={entry.value as string}
+          placeholder="Enter text"
+          onChange={(newValue) =>
+            updateMetadataValue(index, newValue as string, APIMetadataEnum.STRING)
+          }
           {...sharedProps}
         />
       );
@@ -132,10 +171,12 @@ const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
       return (
         <Select
           mode="tags"
-          value={record.value as string[]}
-          onChange={(values) => updateMetadataValue(index, values)}
+          placeholder="Enter multiple entries"
+          value={entry.value as string[]}
+          onChange={(values) => updateMetadataValue(index, values, APIMetadataEnum.STRING_ARRAY)}
           options={availableStrArrayTagOptions}
           suffixIcon={null}
+          variant="filled"
           {...sharedProps}
         />
       );
@@ -146,7 +187,7 @@ const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
 
 const saveCurrentMetadata = async (
   datasetOrFolderToUpdate: APIDataset | Folder,
-  metadata: IndexedMetadataEntries,
+  metadata: APIMetadataWithError[],
   context: DatasetCollectionContextValue,
   setIsSaving: (isSaving: boolean) => void,
   setHasUnsavedChanges: (hasUnsavedChanges: boolean) => void,
@@ -227,7 +268,7 @@ export default function MetadataTable({
   datasetOrFolder,
 }: { datasetOrFolder: APIDataset | Folder }) {
   const context = useDatasetCollectionContext();
-  const [metadata, metadataRef, setMetadata] = useStateWithRef<IndexedMetadataEntries>(
+  const [metadata, metadataRef, setMetadata] = useStateWithRef<APIMetadataWithError[]>(
     datasetOrFolder?.metadata?.map((entry) => ({ ...entry, error: null })) || [],
   );
   const [focusedRow, focusedRowRef, setFocusedRow] = useStateWithRef<number | null>(null);
@@ -303,7 +344,11 @@ export default function MetadataTable({
     });
   };
 
-  const updateMetadataValue = (indexToUpdate: number, newValue: number | string | string[]) => {
+  const updateMetadataValue = (
+    indexToUpdate: number,
+    newValue: number | string | string[],
+    _type: APIMetadataEnum,
+  ) => {
     setMetadata((prev) => {
       const entry = prev[indexToUpdate];
       if (!entry) {
@@ -317,7 +362,7 @@ export default function MetadataTable({
     });
   };
 
-  const addNewEntryWithType = (type: APIMetadata["type"]) => {
+  const addNewEntryWithType = (type: APIMetadataEntry["type"]) => {
     setMetadata((prev) => {
       const indexOfNewEntry = prev.length;
       const newEntry: APIMetadataWithError = {
@@ -344,47 +389,44 @@ export default function MetadataTable({
     });
   };
 
-  const availableStrArrayTagOptions = _.uniq(
-    metadata.flatMap((entry) => (entry.type === APIMetadataEnum.STRING_ARRAY ? entry.value : [])),
-  ).map((tag) => ({ value: tag, label: tag })) as {
-    value: string;
-    label: string;
-  }[];
+  const availableStrArrayTagOptions = getUsedTagsWithinMetadata(metadata);
 
-  const getTypeSelectDropdownMenu: () => MenuProps = () => ({
-    items: Object.values(APIMetadataEnum).map((type) => {
-      return {
-        key: type,
-        label: getMetadataTypeLabel(type as APIMetadata["type"]),
-        onClick: () => addNewEntryWithType(type as APIMetadata["type"]),
-      };
-    }),
-  });
-
-  const getKeyInput = (record: APIMetadataWithError, index: number) => {
+  const getKeyInput = (entry: APIMetadataWithError, index: number) => {
     const isFocused = index === focusedRow;
     return (
       <>
-        <Input
-          className={isFocused ? undefined : "transparent-input"}
-          onFocus={() => setFocusedRow(index)}
-          onBlur={() => setFocusedRow(null)}
-          value={record.key}
-          onChange={(evt) => updateMetadataKey(index, evt.target.value)}
-          placeholder="Property"
-          size="small"
-          disabled={isSaving}
-          id={getKeyInputIdForIndex(index)}
-        />
-        {record.error != null ? (
-          <>
-            <br />
-            <Typography.Text type="warning" style={{ paddingLeft: 8, display: "inline-block" }}>
-              {record.error}
-            </Typography.Text>
-          </>
-        ) : null}
+        <FastTooltip title={entry.error} placement="left" variant="warning">
+          <Input
+            className={isFocused ? undefined : "transparent-input"}
+            onFocus={() => setFocusedRow(index)}
+            onBlur={() => setFocusedRow(null)}
+            value={entry.key}
+            onChange={(evt) => updateMetadataKey(index, evt.target.value)}
+            placeholder="Property"
+            size="small"
+            disabled={isSaving}
+            id={getKeyInputIdForIndex(index)}
+            status={entry.error != null ? "warning" : undefined}
+            // Use a span as an empty prefix, because null would lose the focus
+            // when the prefix changes.
+            prefix={entry.error != null ? <InfoCircleOutlined /> : <span />}
+          />
+        </FastTooltip>
       </>
+    );
+  };
+
+  const getValueInput = (entry: APIMetadataWithError, index: number) => {
+    return (
+      <MetadataValueInput
+        entry={entry}
+        index={index}
+        focusedRow={focusedRow}
+        setFocusedRow={setFocusedRow}
+        updateMetadataValue={updateMetadataValue}
+        isSaving={isSaving}
+        availableStrArrayTagOptions={availableStrArrayTagOptions}
+      />
     );
   };
 
@@ -394,81 +436,109 @@ export default function MetadataTable({
         type="text"
         disabled={isSaving}
         icon={
-          <DeleteOutlined
+          <CloseOutlined
             style={{
               color: "var(--ant-color-text-tertiary)",
               width: 16,
             }}
           />
         }
-        style={{ width: 16 }}
+        style={{ width: 16, height: 19 }}
         onClick={() => deleteKey(index)}
       />
     </div>
   );
 
-  const addNewEntryMenuItems = getTypeSelectDropdownMenu();
+  const addNewEntryMenuItems = getTypeSelectDropdownMenu(addNewEntryWithType);
 
   return (
     <div style={{ marginBottom: 16 }}>
       <div className="sidebar-label">Metadata</div>
-      <div className="ant-tag antd-app-theme metadata-table-wrapper">
+      <div className="ant-tag antd-app-theme dashboard-metadata-table-wrapper">
         {/* Not using AntD Table to have more control over the styling. */}
         {metadata.length > 0 ? (
-          <table className="ant-tag antd-app-theme metadata-table">
-            {/* Each row except the last row has a custom horizontal divider created via a css pseudo element. */}
-            <thead>
-              <tr>
-                <th>Property</th>
-                <th />
-                <th>Value</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {metadata.map((record, index) => (
-                <tr key={index}>
-                  <td>{getKeyInput(record, index)}</td>
-                  <td>:</td>
-                  <td>
-                    <MetadataValueInput
-                      record={record}
-                      index={index}
-                      focusedRow={focusedRow}
-                      setFocusedRow={setFocusedRow}
-                      updateMetadataValue={updateMetadataValue}
-                      isSaving={isSaving}
-                      availableStrArrayTagOptions={availableStrArrayTagOptions}
-                    />
-                  </td>
-                  <td>{getDeleteEntryButton(record, index)}</td>
-                </tr>
-              ))}
-              <tr>
-                <td colSpan={3}>
-                  <div className="flex-center-child">
-                    <Dropdown
-                      menu={addNewEntryMenuItems}
-                      placement="bottom"
-                      trigger={["click"]}
-                      autoFocus
-                    >
-                      <Button ghost size="small" style={{ border: "none" }}>
-                        <PlusOutlined
-                          size={18}
-                          style={{ color: "var(--ant-color-text-tertiary)" }}
-                        />
-                      </Button>
-                    </Dropdown>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <InnerMetadataTable
+            metadata={metadata}
+            getKeyInput={getKeyInput}
+            getValueInput={getValueInput}
+            getDeleteEntryButton={getDeleteEntryButton}
+            addNewEntryMenuItems={addNewEntryMenuItems}
+          />
         ) : (
           <EmptyMetadataPlaceholder addNewEntryMenuItems={addNewEntryMenuItems} />
         )}
       </div>
     </div>
+  );
+}
+
+export function InnerMetadataTable({
+  metadata,
+  getKeyInput,
+  getValueInput,
+  getDeleteEntryButton,
+  addNewEntryMenuItems,
+  onlyReturnRows,
+  readOnly,
+}: {
+  metadata: APIMetadataWithError[];
+  getKeyInput: (entry: APIMetadataWithError, index: number) => JSX.Element;
+  getValueInput: (entry: APIMetadataWithError, index: number) => JSX.Element;
+  getDeleteEntryButton: (_: APIMetadataWithError, index: number) => JSX.Element;
+  addNewEntryMenuItems: MenuProps;
+  onlyReturnRows?: boolean;
+  readOnly?: boolean;
+}): React.ReactElement {
+  const rows = (
+    <>
+      {metadata.map((entry, index) => (
+        <tr key={index}>
+          <td>{getKeyInput(entry, index)}</td>
+          <td>{getValueInput(entry, index)}</td>
+          <td>{getDeleteEntryButton(entry, index)}</td>
+        </tr>
+      ))}
+      {readOnly ? null : (
+        <tr>
+          <td colSpan={3}>
+            <div className="flex-center-child">
+              <FastTooltip title="Add a new metadata property">
+                <Dropdown
+                  menu={addNewEntryMenuItems}
+                  placement="bottom"
+                  trigger={["click"]}
+                  autoFocus
+                >
+                  <Button
+                    className="add-property-button"
+                    ghost
+                    size="small"
+                    style={{ border: "none" }}
+                  >
+                    <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
+                  </Button>
+                </Dropdown>
+              </FastTooltip>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+
+  if (onlyReturnRows) {
+    return rows;
+  }
+
+  return (
+    <table className="metadata-table">
+      <thead>
+        <tr>
+          <th>Property</th>
+          <th colSpan={2}>Value</th>
+        </tr>
+      </thead>
+      <tbody>{rows}</tbody>
+    </table>
   );
 }

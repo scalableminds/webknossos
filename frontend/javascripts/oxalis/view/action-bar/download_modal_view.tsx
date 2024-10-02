@@ -58,6 +58,7 @@ import { formatCountToDataAmountUnit, formatScale } from "libs/format_utils";
 import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 import { useStartAndPollJob } from "admin/job/job_hooks";
 import { LayerSelection } from "components/layer_selection";
+import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 const { Paragraph, Text } = Typography;
 
 type TabKeys = "download" | "export" | "python";
@@ -281,6 +282,9 @@ function _DownloadModalView({
   const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),
   );
+  const currentAdditionalCoordinates = useSelector(
+    (state: OxalisState) => state.flycam.additionalCoordinates,
+  );
   const typeName = isAnnotation ? "annotation" : "dataset";
   const isMergerModeEnabled = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
@@ -357,15 +361,12 @@ function _DownloadModalView({
       );
       onClose();
     } else if (activeTabKey === "export" && startJob != null) {
-      if ((selectedLayerInfos.additionalAxes || []).length > 0) {
-        Toast.warning("Exporting an n-dimensional layer is currently not supported.");
-        return;
-      }
       await Model.ensureSavedState();
       await startJob(async () => {
         const job = await startExportTiffJob(
           dataset.id,
           computeArrayFromBoundingBox(selectedBoundingBox.boundingBox),
+          currentAdditionalCoordinates,
           selectedLayerInfos.layerName,
           mag.join("-"),
           selectedLayerInfos.annotationId,
@@ -395,18 +396,6 @@ function _DownloadModalView({
           </Text>
         </Row>
       ) : null;
-    const ndVolumeWarning = isVolumeNDimensional ? (
-      <Row key="unsupported-nd">
-        <Text
-          style={{
-            margin: "0 6px 12px",
-          }}
-          type="warning"
-        >
-          Downloading/exporting n-dimensional volume data is not yet supported.
-        </Text>
-      </Row>
-    ) : null;
     const pythonTokenWarning =
       activeTabKey === "python" ? (
         <Row key="python-token-warning">
@@ -423,7 +412,7 @@ function _DownloadModalView({
         </Row>
       ) : null;
 
-    return [volumeFallbackWarning, ndVolumeWarning, pythonTokenWarning];
+    return [volumeFallbackWarning, pythonTokenWarning];
   };
 
   const handleTabChange = (key: string) => {
@@ -629,7 +618,9 @@ function _DownloadModalView({
             layers={layers}
             value={selectedLayerName}
             onChange={setSelectedLayerName}
-            tracing={tracing}
+            getReadableNameForLayer={(layer) =>
+              getReadableNameOfVolumeLayer(layer, tracing) || layer.name
+            }
             style={{ width: "100%" }}
           />
 
@@ -651,6 +642,26 @@ function _DownloadModalView({
             style={{ width: "100%" }}
           />
           {boundingBoxCompatibilityAlerts}
+          {selectedLayerInfos.additionalAxes != null && (
+            <Row>
+              <Divider
+                style={{
+                  margin: "18px 0",
+                }}
+              >
+                Additional Coordinates
+              </Divider>
+              <Text
+                style={{
+                  margin: "0 6px 12px",
+                }}
+              >
+                Your dataset has more than three dimensions. The export will only include the
+                selected bounding box at the current additional dimensions:{" "}
+                {getAdditionalCoordinatesAsString(currentAdditionalCoordinates)}
+              </Text>
+            </Row>
+          )}
 
           <Divider
             style={{

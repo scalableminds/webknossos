@@ -10,6 +10,7 @@ import type {
   AiModel,
   RenderAnimationOptions,
   APIDataset,
+  AdditionalCoordinate,
 } from "types/api_flow_types";
 import { assertResponseLimit } from "./api_utils";
 
@@ -23,6 +24,7 @@ function transformBackendJobToAPIJob(job: any): APIJob {
     layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
     annotationLayerName: job.commandArgs.annotation_layer_name,
     boundingBox: job.commandArgs.bbox,
+    ndBoundingBox: job.commandArgs.nd_bbox,
     exportFileName: job.commandArgs.export_file_name,
     tracingId: job.commandArgs.volume_tracing_id,
     annotationId: job.commandArgs.annotation_id,
@@ -99,6 +101,7 @@ export async function startFindLargestSegmentIdJob(
 export async function startExportTiffJob(
   datasetId: APIDataset["id"],
   bbox: Vector6,
+  additionalCoordinates: AdditionalCoordinate[] | null,
   layerName: string | null | undefined,
   mag: string | null | undefined,
   annotationId: string | null | undefined,
@@ -117,6 +120,9 @@ export async function startExportTiffJob(
   }
   if (annotationLayerName != null) {
     params.append("annotationLayerName", annotationLayerName);
+  }
+  if (additionalCoordinates != null) {
+    params.append("additionalCoordinates", JSON.stringify(additionalCoordinates));
   }
   return Request.receiveJSON(`/api/jobs/run/exportTiff/${datasetId}?${params}`, {
     method: "POST",

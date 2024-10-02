@@ -4,7 +4,7 @@ import play.silhouette.api.Silhouette
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
-import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService}
+import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
 import models.job._
 import models.organization.OrganizationDAO
 import models.user.MultiUserDAO
@@ -21,6 +21,9 @@ import scala.concurrent.ExecutionContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
+import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, FullAxisOrder, NDBoundingBox}
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import models.team.PricingPlan
 
 object MovieResolutionSetting extends ExtendedEnumeration {
@@ -55,13 +58,15 @@ class JobController @Inject()(
     jobService: JobService,
     workerService: WorkerService,
     workerDAO: WorkerDAO,
+    datasetLayerAdditionalAxesDAO: DatasetLayerAdditionalAxesDAO,
     wkconf: WkConf,
     multiUserDAO: MultiUserDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     slackNotificationService: SlackNotificationService,
     organizationDAO: OrganizationDAO,
     dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
-    extends Controller {
+    extends Controller
+    with Zarr3OutputHelper {
 
   def status: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
@@ -309,6 +314,7 @@ class JobController @Inject()(
 
   def runExportTiffJob(datasetId: String,
                        bbox: String,
+                       additionalCoordinates: Option[String],
                        layerName: Option[String],
                        mag: Option[String],
                        annotationLayerName: Option[String],
@@ -326,21 +332,35 @@ class JobController @Inject()(
           _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerNameLax)
           _ <- Fox.runOptional(annotationLayerName)(datasetService.assertValidLayerNameLax)
           _ <- jobService.assertBoundingBoxLimits(bbox, mag)
+          additionalAxesOpt <- Fox.runOptional(layerName)(layerName =>
+            datasetLayerAdditionalAxesDAO.findAllForDatasetAndDataLayerName(dataset._id, layerName))
+          additionalAxesOpt <- Fox.runOptional(additionalAxesOpt)(a => Fox.successful(reorderAdditionalAxes(a)))
+          rank = additionalAxesOpt.map(_.length).getOrElse(0) + 4
+          axisOrder = FullAxisOrder.fromAxisOrderAndAdditionalAxes(rank,
+                                                                   AxisOrder.cAdditionalxyz(rank),
+                                                                   additionalAxesOpt)
+          threeDBBox <- BoundingBox.fromLiteral(bbox).toFox ~> "job.invalidBoundingBox"
+          parsedAdditionalCoordinatesOpt <- Fox.runOptional(additionalCoordinates)(coords =>
+            Json.parse(coords).validate[Seq[AdditionalCoordinate]]) ~> "job.additionalCoordinates.invalid"
+          parsedAdditionalCoordinates = parsedAdditionalCoordinatesOpt.getOrElse(Seq.empty)
+          additionalAxesOfNdBBox = additionalAxesOpt.map(additionalAxes =>
+            additionalAxes.map(_.intersectWithAdditionalCoordinates(parsedAdditionalCoordinates)))
+          ndBoundingBox = NDBoundingBox(threeDBBox, additionalAxesOfNdBBox.getOrElse(Seq.empty), axisOrder)
           command = JobCommand.export_tiff
           exportFileName = if (asOmeTiff)
             s"${formatDateForFilename(new Date())}__${dataset.name}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.ome.tif"
           else
             s"${formatDateForFilename(new Date())}__${dataset.name}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
           commandArgs = Json.obj(
-            "organization_name" -> organization._id,
-            "dataset_name" -> dataset.name, // TODOM: Adjust worker to use correct dataset
             "dataset_path" -> dataset.path, // TODOM: Adjust worker to use correct dataset
-            "bbox" -> bbox,
+            "organization_name" -> organization._id,
+            "dataset_name" -> dataset.name,
+            "nd_bbox" -> ndBoundingBox.toWkLibsDict,
             "export_file_name" -> exportFileName,
             "layer_name" -> layerName,
             "mag" -> mag,
             "annotation_layer_name" -> annotationLayerName,
-            "annotation_id" -> annotationId
+            "annotation_id" -> annotationId,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunTiffExport"
           js <- jobService.publicWrites(job)

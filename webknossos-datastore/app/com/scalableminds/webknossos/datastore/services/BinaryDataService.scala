@@ -98,11 +98,13 @@ class BinaryDataService(val dataBaseDir: Path,
             s"Caught internal error: $msg while loading a bucket for layer ${request.dataLayer.name} of dataset ${request.dataSource.id}")
           Fox.failure(e.getMessage)
         case f: Failure =>
-          if (datasetErrorLoggingService.exists(_.shouldLog(request.dataSource.id.team, request.dataSource.id.name))) {
+          if (datasetErrorLoggingService.exists(
+                _.shouldLog(request.dataSource.id.organizationId, request.dataSource.id.path))) {
             logger.error(
-              s"Bucket loading for layer ${request.dataLayer.name} of dataset ${request.dataSource.id.team}/${request.dataSource.id.name} at ${readInstruction.bucket} failed: ${Fox
+              s"Bucket loading for layer ${request.dataLayer.name} of dataset ${request.dataSource.id.organizationId}/${request.dataSource.id.path} at ${readInstruction.bucket} failed: ${Fox
                 .failureChainAsString(f, includeStackTraces = true)}")
-            datasetErrorLoggingService.foreach(_.registerLogged(request.dataSource.id.team, request.dataSource.id.name))
+            datasetErrorLoggingService.foreach(
+              _.registerLogged(request.dataSource.id.organizationId, request.dataSource.id.path))
           }
           f.toFox
         case Full(data) =>
@@ -178,7 +180,7 @@ class BinaryDataService(val dataBaseDir: Path,
     val dataSourceId = DataSourceId(datasetName, organizationId)
 
     def agglomerateFileMatchPredicate(agglomerateKey: AgglomerateFileKey) =
-      agglomerateKey.datasetName == datasetName && agglomerateKey.organizationId == organizationId && layerName.forall(
+      agglomerateKey.datasetPath == datasetName && agglomerateKey.organizationId == organizationId && layerName.forall(
         _ == agglomerateKey.layerName)
 
     def bucketProviderPredicate(key: (DataSourceId, String)): Boolean =

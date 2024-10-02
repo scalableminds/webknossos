@@ -5,6 +5,7 @@ import org.apache.pekko.stream.Materializer
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
+import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
@@ -56,7 +57,7 @@ import net.liftweb.common.{Box, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
-import utils.{ObjectId, WkConf}
+import utils.{WkConf}
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 import javax.inject.Inject
@@ -156,7 +157,7 @@ class AnnotationService @Inject()(
       remoteDatastoreClient = new WKRemoteDataStoreClient(datasetDataStore, rpc)
       fallbackLayerHasSegmentIndex <- fallbackLayer match {
         case Some(layer) =>
-          remoteDatastoreClient.hasSegmentIndexFile(datasetOrganizationId, dataSource.id.name, layer.name)
+          remoteDatastoreClient.hasSegmentIndexFile(datasetOrganizationId, dataSource.id.path, layer.name)
         case None => Fox.successful(false)
       }
     } yield
@@ -164,7 +165,7 @@ class AnnotationService @Inject()(
         None,
         boundingBoxToProto(boundingBox.getOrElse(dataSource.boundingBox)),
         System.currentTimeMillis(),
-        dataSource.id.name,
+        dataSource.id.path,
         vec3IntToProto(startPosition.getOrElse(dataSource.center)),
         vec3DoubleToProto(startRotation.getOrElse(vec3DoubleFromProto(VolumeTracingDefaults.editRotation))),
         elementClassToProto(
@@ -392,7 +393,7 @@ class AnnotationService @Inject()(
       dataset <- datasetDAO.findOne(datasetId) ?~> "dataset.noAccessById"
       dataSource <- datasetService.dataSourceFor(dataset)
       datasetOrganization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      usableDataSource <- dataSource.toUsable ?~> Messages("dataset.notImported", dataSource.id.name)
+      usableDataSource <- dataSource.toUsable ?~> Messages("dataset.notImported", dataSource.id.path)
       annotationLayers <- createTracingsForExplorational(dataset,
                                                          usableDataSource,
                                                          annotationLayerParameters,
@@ -561,7 +562,7 @@ class AnnotationService @Inject()(
                                                                               m: MessagesProvider): Fox[VolumeTracing] =
     for {
       organization <- organizationDAO.findOne(organizationId)
-      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId) ?~> Messages("dataset.notFound",
+      dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId) ?~> Messages("dataset.notFound",
                                                                                                    datasetName)
       dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)
@@ -909,6 +910,7 @@ class AnnotationService @Inject()(
         "stats" -> Json.obj(), // included for legacy parsers
         "restrictions" -> restrictionsJs,
         "annotationLayers" -> Json.toJson(annotation.annotationLayers),
+        "datasetId" -> dataset._id,
         "dataSetName" -> dataset.name,
         "organization" -> organization._id,
         "dataStore" -> dataStoreJs,
@@ -954,7 +956,7 @@ class AnnotationService @Inject()(
       annotationSource = AnnotationSource(
         id = annotation.id,
         annotationLayers = annotation.annotationLayers,
-        datasetName = dataset.name,
+        datasetPath = dataset.path,
         organizationId = organization._id,
         dataStoreUrl = dataStore.publicUrl,
         tracingStoreUrl = tracingStore.publicUrl,

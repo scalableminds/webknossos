@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.services.uploading.ReserveUploadIn
 import com.scalableminds.webknossos.datastore.storage.DataVaultCredential
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{JsValue, Json, OFormat}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -66,7 +66,7 @@ class DSRemoteWebknossosClient @Inject()(
   def reportDataSource(dataSource: InboxDataSourceLike): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasource")
       .addQueryString("key" -> dataStoreKey)
-      .put(dataSource)
+      .put(dataSource) // TODO:
 
   def getUnfinishedUploadsForUser(userTokenOpt: Option[String], organizationName: String): Fox[List[UnfinishedUpload]] =
     for {
@@ -82,17 +82,19 @@ class DSRemoteWebknossosClient @Inject()(
                    datasetSizeBytes: Long,
                    needsConversion: Boolean,
                    viaAddRoute: Boolean,
-                   userToken: Option[String]): Fox[Unit] =
+                   userToken: Option[String]): Fox[String] =
     for {
-      _ <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
+      uploadedDatasetIdJson <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
         .addQueryString("key" -> dataStoreKey)
-        .addQueryString("datasetName" -> dataSourceId.name)
+        .addQueryString("datasetPath" -> dataSourceId.path)
+        .addQueryString("organizationId" -> dataSourceId.organizationId)
         .addQueryString("needsConversion" -> needsConversion.toString)
         .addQueryString("viaAddRoute" -> viaAddRoute.toString)
         .addQueryString("datasetSizeBytes" -> datasetSizeBytes.toString)
         .addQueryStringOptional("token", userToken)
-        .post()
-    } yield ()
+        .getWithJsonResponse[JsValue]
+      uploadedDatasetId <- (uploadedDatasetIdJson \ "id").validate[String].asOpt.toFox ?~> "uploadedDatasetId.invalid"
+    } yield uploadedDatasetId
 
   def reportDataSources(dataSources: List[InboxDataSourceLike]): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources")
@@ -100,14 +102,15 @@ class DSRemoteWebknossosClient @Inject()(
       .silent
       .put(dataSources)
 
-  def reserveDataSourceUpload(info: ReserveUploadInformation, userTokenOpt: Option[String]): Fox[Unit] =
+  def reserveDataSourceUpload(info: ReserveUploadInformation,
+                              userTokenOpt: Option[String]): Fox[ReserveUploadInformation] =
     for {
       userToken <- option2Fox(userTokenOpt) ?~> "reserveUpload.noUserToken"
-      _ <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveUpload")
+      reserveUploadInfo <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("token" -> userToken)
-        .post(info)
-    } yield ()
+        .postWithJsonResponse[ReserveUploadInformation, ReserveUploadInformation](info)
+    } yield reserveUploadInfo
 
   def deleteDataSource(id: DataSourceId): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset").addQueryString("key" -> dataStoreKey).post(id)

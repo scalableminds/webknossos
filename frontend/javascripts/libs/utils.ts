@@ -1239,7 +1239,7 @@ export function notEmpty<TValue>(value: TValue | null | undefined): value is TVa
 
 export function isNumberMap(x: Map<NumberLike, NumberLike>): x is Map<number, number> {
   const { value } = x.entries().next();
-  return value && typeof value[0] === "number";
+  return (value && typeof value[0] === "number") || false;
 }
 
 export function isBigInt(x: NumberLike): x is bigint {

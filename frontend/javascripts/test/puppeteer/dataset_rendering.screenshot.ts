@@ -106,19 +106,38 @@ const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
   },
 };
 
+const datasetNameToId: Record<string, string> = {};
 datasetNames.map(async (datasetName) => {
   test.serial(`it should render dataset ${datasetName} correctly`, async (t) => {
     await withRetry(
       3,
       async () => {
-        const datasetId = {
-          name: datasetName,
-          owningOrganization: "sample_organization",
-        };
+        const response = await fetch(
+          `${URL}/api/datasets/disambiguate/sample_organization/${datasetName}/toId`,
+        );
+        const { datasetId } = await response.json();
+        datasetNameToId[datasetName] = datasetId;
+        return true;
+      },
+      (condition) => {
+        t.true(
+          condition,
+          `Dataset with name: "${datasetName}" does not look the same, see ${datasetName}.diff.png for the difference and ${datasetName}.new.png for the new screenshot.`,
+        );
+      },
+    );
+  });
+});
+
+datasetNames.map(async (datasetName) => {
+  test.serial(`it should render dataset ${datasetName} correctly`, async (t) => {
+    await withRetry(
+      3,
+      async () => {
         const { screenshot, width, height } = await screenshotDataset(
           await getNewPage(t.context.browser),
           URL,
-          datasetId,
+          datasetNameToId[datasetName],
           viewOverrides[datasetName],
           datasetConfigOverrides[datasetName],
         );
@@ -153,14 +172,10 @@ annotationSpecs.map(async (annotationSpec) => {
       await withRetry(
         3,
         async () => {
-          const datasetId = {
-            name: datasetName,
-            owningOrganization: "sample_organization",
-          };
           const { screenshot, width, height } = await screenshotAnnotation(
             await getNewPage(t.context.browser),
             URL,
-            datasetId,
+            datasetNameToId[datasetName],
             fallbackLayerName,
             viewOverrides[datasetName],
             datasetConfigOverrides[datasetName],
@@ -191,14 +206,10 @@ test.serial("it should render a dataset with mappings correctly", async (t) => {
   await withRetry(
     3,
     async () => {
-      const datasetId = {
-        name: datasetName,
-        owningOrganization: "sample_organization",
-      };
       const { screenshot, width, height } = await screenshotDatasetWithMapping(
         await getNewPage(t.context.browser),
         URL,
-        datasetId,
+        datasetNameToId[datasetName],
         mappingName,
       );
       const changedPixels = await compareScreenshot(
@@ -226,14 +237,10 @@ test.serial(
     await withRetry(
       3,
       async () => {
-        const datasetId = {
-          name: datasetName,
-          owningOrganization: "sample_organization",
-        };
         const { screenshot, width, height } = await screenshotDatasetWithMappingLink(
           await getNewPage(t.context.browser),
           URL,
-          datasetId,
+          datasetNameToId[datasetName],
           viewOverride,
         );
         const changedPixels = await compareScreenshot(
@@ -262,14 +269,10 @@ test.serial(
     await withRetry(
       3,
       async () => {
-        const datasetId = {
-          name: datasetName,
-          owningOrganization: "sample_organization",
-        };
         const { screenshot, width, height } = await screenshotSandboxWithMappingLink(
           await getNewPage(t.context.browser),
           URL,
-          datasetId,
+          datasetNameToId[datasetName],
           viewOverride,
         );
         const changedPixels = await compareScreenshot(
@@ -298,14 +301,10 @@ test.serial(
     await withRetry(
       3,
       async () => {
-        const datasetId = {
-          name: datasetName,
-          owningOrganization: "sample_organization",
-        };
         const { screenshot, width, height } = await screenshotDataset(
           await getNewPage(t.context.browser),
           URL,
-          datasetId,
+          datasetNameToId[datasetName],
           viewOverride,
         );
         const changedPixels = await compareScreenshot(

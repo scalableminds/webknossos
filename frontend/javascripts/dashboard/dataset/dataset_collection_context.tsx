@@ -1,7 +1,6 @@
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type {
-  APIDatasetId,
   APIDatasetCompact,
   APIDatasetCompactWithoutStatusAndLayerNames,
   FolderItem,
@@ -31,10 +30,10 @@ export type DatasetCollectionContextValue = {
   checkDatasets: () => Promise<void>;
   fetchDatasets: () => void;
   reloadDataset: (
-    datasetId: APIDatasetId,
+    datasetId: APIDataset["id"],
     datasetsToUpdate?: Array<APIDatasetCompact>,
   ) => Promise<void>;
-  updateCachedDataset: (id: APIDatasetId, updater: DatasetUpdater) => Promise<APIDataset>;
+  updateCachedDataset: (id: APIDataset["id"], updater: DatasetUpdater) => Promise<APIDataset>;
   activeFolderId: string | null;
   setActiveFolderId: (id: string | null) => void;
   mostRecentlyUsedActiveFolderId: string | null;
@@ -157,11 +156,11 @@ export default function DatasetCollectionContextProvider({
     datasetSearchQuery.refetch();
   }
 
-  async function reloadDataset(datasetId: APIDatasetId) {
+  async function reloadDataset(datasetId: APIDataset["id"]) {
     await updateDatasetMutation.mutateAsync(datasetId);
   }
 
-  async function updateCachedDataset(id: APIDatasetId, updater: DatasetUpdater) {
+  async function updateCachedDataset(id: APIDataset["id"], updater: DatasetUpdater) {
     return await updateDatasetMutation.mutateAsync([id, updater]);
   }
 

@@ -11,7 +11,7 @@ import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.WkEnv
-import utils.ObjectId
+import com.scalableminds.util.requestparsing.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -163,11 +163,10 @@ class AiModelController @Inject()(
       for {
         _ <- userService.assertIsSuperUser(request.identity)
         organization <- organizationDAO.findOne(request.identity._organization)
-        dataset <- datasetDAO.findOneByNameAndOrganization(request.body.datasetName, organization._id)
+        dataset <- datasetDAO.findOneByPathAndOrganization(request.body.datasetName, organization._id)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         _ <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
-        _ <- datasetService.assertNewDatasetName(request.body.newDatasetName, organization._id)
         jobCommand = JobCommand.infer_with_model
         boundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
         commandArgs = Json.obj(

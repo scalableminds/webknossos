@@ -4,6 +4,7 @@ import org.apache.pekko.http.scaladsl.model.Uri
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
+import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayerLike}
 import models.annotation.AnnotationDAO
@@ -13,7 +14,7 @@ import models.shortlinks.ShortLinkDAO
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.Full
 import security.URLSharing
-import utils.{ObjectId, WkConf}
+import utils.{WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -111,13 +112,13 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
                                                      datasetName: String,
                                                      token: Option[String])(implicit ctx: DBAccessContext) =
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
+      dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId)
       layers <- datasetLayerDAO.findAllForDataset(dataset._id)
       layerOpt = layers.find(_.category == Category.color)
       organization <- organizationDAO.findOne(dataset._organization)
     } yield
       OpenGraphTags(
-        Some(s"${dataset.displayName.getOrElse(datasetName)} | WEBKNOSSOS"),
+        Some(s"${dataset.name} | WEBKNOSSOS"),
         Some("View this dataset in WEBKNOSSOS"),
         thumbnailUri(dataset, layerOpt, organization, token)
       )
@@ -136,8 +137,8 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
           layerOpt = layers.find(_.category == Category.color)
         } yield
           OpenGraphTags(
-            Some(s"${annotation.nameOpt.orElse(dataset.displayName).getOrElse(dataset.name)} | WEBKNOSSOS"),
-            Some(s"View this annotation on dataset ${dataset.displayName.getOrElse(dataset.name)} in WEBKNOSSOS"),
+            Some(s"${annotation.nameOpt.getOrElse(dataset.name)} | WEBKNOSSOS"),
+            Some(s"View this annotation on dataset ${dataset.name} in WEBKNOSSOS"),
             thumbnailUri(dataset, layerOpt, organization, token)
           )
       case _ => Fox.failure("not a matching uri")

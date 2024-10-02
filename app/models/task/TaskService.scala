@@ -1,7 +1,9 @@
 package models.task
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+
 import javax.inject.Inject
 import models.annotation.{Annotation, AnnotationDAO, AnnotationType}
 import models.dataset.DatasetDAO
@@ -10,7 +12,7 @@ import models.team.TeamDAO
 import models.user.{User, UserService}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 

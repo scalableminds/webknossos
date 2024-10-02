@@ -19,7 +19,7 @@ import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
-import utils.ObjectId
+import com.scalableminds.util.requestparsing.ObjectId
 
 import scala.concurrent.ExecutionContext
 

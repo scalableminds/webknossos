@@ -95,7 +95,7 @@ export function useDatasetSharingToken(dataset: APIDataset) {
       return;
     }
     try {
-      const sharingToken = await getDatasetSharingToken(dataset, {
+      const sharingToken = await getDatasetSharingToken(dataset.id, {
         doNotInvestigate: true,
       });
       setDatasetToken(sharingToken);

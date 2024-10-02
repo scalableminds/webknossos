@@ -189,7 +189,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     }
 
     const annotation = await createExplorational(
-      dataset,
+      dataset.id,
       "hybrid",
       false,
       fallbackLayerName,

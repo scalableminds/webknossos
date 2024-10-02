@@ -3,6 +3,7 @@ package models.job
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
@@ -15,7 +16,7 @@ import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json.{JsObject, Json}
 import security.WkSilhouetteEnvironment
 import telemetry.SlackNotificationService
-import utils.{ObjectId, WkConf}
+import utils.{WkConf}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -153,7 +154,7 @@ class JobService @Inject()(wkConf: WkConf,
       for {
         datasetName <- commandArgs.get("dataset_name").map(_.as[String]).toFox
         organizationId <- commandArgs.get("organization_name").map(_.as[String]).toFox
-        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(GlobalAccessContext)
+        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId)(GlobalAccessContext)
         _ <- datasetDAO.deleteDataset(dataset._id)
       } yield ()
     } else Fox.successful(())

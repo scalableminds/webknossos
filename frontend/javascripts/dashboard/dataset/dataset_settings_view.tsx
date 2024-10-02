@@ -19,7 +19,7 @@ import type {
 } from "types/api_flow_types";
 import { Unicode } from "oxalis/constants";
 import type { DatasetConfiguration, OxalisState } from "oxalis/store";
-import { diffObjects, jsonStringify, maybe } from "libs/utils";
+import { diffObjects, jsonStringify } from "libs/utils";
 import {
   getDataset,
   getDatasetDefaultConfiguration,

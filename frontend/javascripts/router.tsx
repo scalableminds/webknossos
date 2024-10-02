@@ -45,7 +45,7 @@ import { trackAction } from "oxalis/model/helpers/analytics";
 import type { OxalisState } from "oxalis/store";
 import HelpButton from "oxalis/view/help_modal";
 import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
-import React, { useEffect } from "react";
+import React from "react";
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import { type ContextRouter, Link, type RouteProps } from "react-router-dom";
@@ -65,10 +65,7 @@ import loadable from "libs/lazy_loader";
 import type { EmptyObject } from "types/globals";
 import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import AiModelListView from "admin/voxelytics/ai_model_list_view";
-import {
-  getDatasetIdFromNameAndOrganization,
-  getOrganizationForDataset,
-} from "admin/api/disambiguate_legacy_routes";
+import { getDatasetIdFromNameAndOrganization } from "admin/api/disambiguate_legacy_routes";
 
 const { Content } = Layout;
 

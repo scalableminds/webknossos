@@ -1,7 +1,6 @@
 import _ from "lodash";
 import type {
   APIAnnotation,
-  APIDataSourceId,
   APIDataset,
   MutableAPIDataset,
   APIDataLayer,

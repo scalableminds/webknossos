@@ -11,7 +11,7 @@ import {
 import window from "libs/window";
 import { Link, type LinkProps } from "react-router-dom";
 import type * as React from "react";
-import type { APIDataSourceId, APIDataset, APIDatasetCompact } from "types/api_flow_types";
+import type { APIDataset, APIDatasetCompact } from "types/api_flow_types";
 import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";

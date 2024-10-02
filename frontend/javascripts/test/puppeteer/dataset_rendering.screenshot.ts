@@ -15,7 +15,6 @@ import {
   WK_AUTH_TOKEN,
   checkBrowserstackCredentials,
 } from "./dataset_rendering_helpers";
-import { getDatasetIdFromNameAndOrganization } from "admin/api/disambiguate_legacy_routes";
 
 if (!WK_AUTH_TOKEN) {
   throw new Error("No WK_AUTH_TOKEN specified.");

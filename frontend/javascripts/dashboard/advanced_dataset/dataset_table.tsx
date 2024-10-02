@@ -9,7 +9,6 @@ import type { OxalisState } from "oxalis/store";
 import type {
   APIDataset,
   APIDatasetCompact,
-  APIDataSourceId,
   APIMaybeUnimportedDataset,
   FolderItem,
 } from "types/api_flow_types";

@@ -1,6 +1,6 @@
 import { Button } from "antd";
 import { useState, useEffect } from "react";
-import type { APIDataset, APIDataSourceId } from "types/api_flow_types";
+import type { APIDataset } from "types/api_flow_types";
 import { getDataset, deleteDatasetOnDisk } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";

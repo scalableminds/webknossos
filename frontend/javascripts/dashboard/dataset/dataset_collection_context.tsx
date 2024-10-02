@@ -1,7 +1,6 @@
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type {
-  APIDataSourceId,
   APIDatasetCompact,
   APIDatasetCompactWithoutStatusAndLayerNames,
   FolderItem,

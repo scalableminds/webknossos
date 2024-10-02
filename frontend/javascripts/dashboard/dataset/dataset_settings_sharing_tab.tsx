@@ -4,7 +4,7 @@ import { type RouteComponentProps, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import { Button, Input, Checkbox, Tooltip, type FormInstance, Collapse, Space } from "antd";
 import { CopyOutlined, InfoCircleOutlined, RetweetOutlined } from "@ant-design/icons";
-import type { APIDataset, APIDataSourceId, APIUser } from "types/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
 import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/admin_rest_api";
 import Toast from "libs/toast";

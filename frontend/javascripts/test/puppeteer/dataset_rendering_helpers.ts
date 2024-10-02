@@ -10,7 +10,7 @@ import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
 import type { RequestOptions } from "libs/request";
 import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
-import type { APIDataset, APIDataSourceId } from "../../types/api_flow_types";
+import type { APIDataset } from "../../types/api_flow_types";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
 import puppeteer from "puppeteer";
 import { sleep } from "libs/utils";

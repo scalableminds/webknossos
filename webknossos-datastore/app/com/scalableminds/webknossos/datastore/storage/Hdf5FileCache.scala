@@ -1,32 +1,14 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import ch.systemsx.cisd.hdf5.{
-  HDF5FactoryProvider,
-  IHDF5ByteReader,
-  IHDF5DoubleReader,
-  IHDF5LongReader,
-  IHDF5Reader,
-  IHDF5StringReader
-}
+import ch.systemsx.cisd.hdf5.{HDF5FactoryProvider, IHDF5Reader}
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
-import com.scalableminds.webknossos.datastore.services.Hdf5HashedArrayUtils
 import net.liftweb.common.{Box, Failure, Full}
 
 import java.nio.file.Path
 import scala.util.Using
 
-case class CachedHdf5File(reader: IHDF5Reader) extends SafeCachable with AutoCloseable with Hdf5HashedArrayUtils {
-  lazy val uint8Reader: IHDF5ByteReader = reader.uint8()
-  lazy val uint64Reader: IHDF5LongReader = reader.uint64()
-  lazy val stringReader: IHDF5StringReader = reader.string()
-  lazy val float64Reader: IHDF5DoubleReader = reader.float64()
-
-  lazy val nBuckets: Long = uint64Reader.getAttr("/", "n_buckets")
-  lazy val meshFormat: String = stringReader.getAttr("/", "mesh_format")
-
-  val hashFunction: Long => Long = getHashFunction(stringReader.getAttr("/", "hash_function"))
-
+case class CachedHdf5File(reader: IHDF5Reader) extends SafeCachable with AutoCloseable {
   override protected def onFinalize(): Unit = reader.close()
 
   override def close(): Unit = this.finishAccess()

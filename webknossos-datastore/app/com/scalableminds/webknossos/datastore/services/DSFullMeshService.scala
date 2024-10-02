@@ -142,7 +142,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                                                                            layerName,
                                                                                            meshFileName,
                                                                                            segmentIds)
-      allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods.head.chunks.toList
+      allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods.head.chunks
       stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { chunkRange: MeshChunk =>
         readMeshChunkAsStl(organizationId, datasetName, layerName, meshFileName, chunkRange, chunkInfos.transform)
       }

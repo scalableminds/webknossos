@@ -277,7 +277,7 @@ export function MagSlider({
         allMags.length - 1,
       )}
       onChange={(value) => onChange(allMags[value][1])}
-      disableOnWheel
+      onWheelDisabled
     />
   );
 }

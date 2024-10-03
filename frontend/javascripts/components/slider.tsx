@@ -43,7 +43,7 @@ export function Slider(props: SliderProps) {
     range,
     defaultValue,
     wheelFactor,
-    onWheelDisabled: disableOnWheel,
+    onWheelDisabled,
     step,
     disabled,
   } = props;
@@ -67,7 +67,7 @@ export function Slider(props: SliderProps) {
 
   // differentiate between single value and range slider
   if (range === false || range == null) {
-    if (!disableOnWheel) {
+    if (!onWheelDisabled) {
       handleWheelEvent = (event) => {
         const newValue = value - getWheelStepFromEvent(step, event.deltaY, wheelStep);
         const clampedNewValue = clamp(min, newValue, max);
@@ -75,7 +75,7 @@ export function Slider(props: SliderProps) {
       };
     }
   } else if (range === true || typeof range === "object") {
-    if (!disableOnWheel) {
+    if (!onWheelDisabled) {
       handleWheelEvent = (event) => {
         const diff = getWheelStepFromEvent(step, event.deltaY, wheelStep);
         const newLowerValue = Math.round(value[0] + diff);

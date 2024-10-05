@@ -81,13 +81,13 @@ export const getResolutionUnion = memoizeOne((dataset: APIDataset): Array<Vector
   const resolutionUnionDict: { [key: number]: Vector3[] } = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
-    for (const resolution of layer.resolutions) {
-      const key = maxValue(resolution);
+    for (const mag of layer.resolutions) {
+      const key = maxValue(mag);
 
       if (resolutionUnionDict[key] == null) {
-        resolutionUnionDict[key] = [resolution];
+        resolutionUnionDict[key] = [mag];
       } else {
-        resolutionUnionDict[key].push(resolution);
+        resolutionUnionDict[key].push(mag);
       }
     }
   }

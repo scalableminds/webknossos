@@ -688,7 +688,7 @@ class TracingApi {
       Math.ceil(shape[2] / currentMag[2]);
     if (volume > maximumVolume) {
       throw new Error(
-        `The volume of the bounding box exceeds ${maximumVolume} vx, please make it smaller. Currently, the bounding box has a volume of ${volume} vx in the active resolution (${currentMag.join("-")}).`,
+        `The volume of the bounding box exceeds ${maximumVolume} vx, please make it smaller. Currently, the bounding box has a volume of ${volume} vx in the active mag (${currentMag.join("-")}).`,
       );
     } else if (volume > maximumVolume / 8) {
       Toast.warning(
@@ -1512,7 +1512,7 @@ class TracingApi {
   }
 
   /**
-   * Use this method to create a complete resolution pyramid by downsampling the lowest present mag (e.g., mag 1).
+   * Use this method to create a complete mag pyramid by downsampling the lowest present mag (e.g., mag 1).
      This method will save the current changes and then reload the page after the downsampling
      has finished.
      This function can only be used for non-tasks.
@@ -1815,9 +1815,9 @@ class DataApi {
 
   /**
    * Returns raw binary data for a given layer, position and zoom level. If the zoom
-   * level is not provided, the first resolution will be used. If this
-   * resolution does not exist, the next existing resolution will be used.
-   * If the zoom level is provided and points to a not existent resolution,
+   * level is not provided, the first mag will be used. If this
+   * mag does not exist, the next existing mag will be used.
+   * If the zoom level is provided and points to a not existent mag,
    * 0 will be returned.
    *
    * @example // Return the greyscale value for a bucket
@@ -1918,7 +1918,7 @@ class DataApi {
 
     if (bucketAddresses.length > 15000) {
       console.warn(
-        "More than 15000 buckets need to be requested for the given bounding box. Consider passing a smaller bounding box or using another resolution.",
+        "More than 15000 buckets need to be requested for the given bounding box. Consider passing a smaller bounding box or using another mag.",
       );
     }
 
@@ -1945,11 +1945,11 @@ class DataApi {
       viewport,
     );
     const layer = getLayerByName(state.dataset, layerName);
-    const resolutionInfo = getResolutionInfo(layer.resolutions);
+    const magInfo = getResolutionInfo(layer.resolutions);
     if (maybeResolutionIndex == null) {
       maybeResolutionIndex = getActiveMagIndexForLayer(state, layerName);
     }
-    const zoomStep = resolutionInfo.getClosestExistingIndex(maybeResolutionIndex);
+    const zoomStep = magInfo.getClosestExistingIndex(maybeResolutionIndex);
 
     const min = dimensions.transDim(
       V3.sub([curU, curV, curW], [halfViewportExtentU, halfViewportExtentV, 0]),
@@ -1960,13 +1960,13 @@ class DataApi {
       viewport,
     );
 
-    const resolution = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
-    const resolutionUVX = dimensions.transDim(resolution, viewport);
+    const mag = magInfo.getResolutionByIndexOrThrow(zoomStep);
+    const resolutionUVX = dimensions.transDim(mag, viewport);
     const widthInVoxel = Math.ceil(halfViewportExtentU / resolutionUVX[0]);
     const heightInVoxel = Math.ceil(halfViewportExtentV / resolutionUVX[1]);
     if (widthInVoxel * heightInVoxel > 1024 ** 2) {
       throw new Error(
-        "Requested data for viewport cannot be loaded, since the amount of data is too large for the available resolution. Please zoom in further or ensure that coarser magnifications are available.",
+        "Requested data for viewport cannot be loaded, since the amount of data is too large for the available mag. Please zoom in further or ensure that coarser magnifications are available.",
       );
     }
 
@@ -2035,12 +2035,12 @@ class DataApi {
     resolutions: Array<Vector3>,
     zoomStep: number,
   ): TypedArray {
-    const resolution = resolutions[zoomStep];
+    const mag = resolutions[zoomStep];
     // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
-    // by the resolution
-    const topLeft = scaleGlobalPositionWithResolution(bbox.min, resolution);
+    // by the mag
+    const topLeft = scaleGlobalPositionWithResolution(bbox.min, mag);
     // Ceil the bounding box bottom right instead of flooring, because it is exclusive
-    const bottomRight = scaleGlobalPositionWithResolution(bbox.max, resolution, true);
+    const bottomRight = scaleGlobalPositionWithResolution(bbox.max, mag, true);
     const extent: Vector3 = V3.sub(bottomRight, topLeft);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(elementClass);
     const result = new TypedArrayClass(channelCount * extent[0] * extent[1] * extent[2]);
@@ -2103,13 +2103,13 @@ class DataApi {
     topLeft: Vector3,
     bottomRight: Vector3,
     token: string,
-    resolution?: Vector3,
+    mag?: Vector3,
   ): string {
     const { dataset } = Store.getState();
     const resolutionInfo = getResolutionInfo(getLayerByName(dataset, layerName, true).resolutions);
-    resolution = resolution || resolutionInfo.getFinestResolution();
+    mag = mag || resolutionInfo.getFinestResolution();
 
-    const magString = resolution.join("-");
+    const magString = mag.join("-");
     return (
       `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/data?mag=${magString}&` +
       `token=${token}&` +

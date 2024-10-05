@@ -506,7 +506,7 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
     const resolutions = tracing.resolutions || [];
     const tracingHasResolutionList = resolutions.length > 0;
     // Legacy tracings don't have the `tracing.resolutions` property
-    // since they were created before WK started to maintain multiple resolution
+    // since they were created before WK started to maintain multiple mags
     // in volume annotations. Therefore, this code falls back to mag (1, 1, 1) for
     // that case.
     const tracingResolutions: Vector3[] = tracingHasResolutionList

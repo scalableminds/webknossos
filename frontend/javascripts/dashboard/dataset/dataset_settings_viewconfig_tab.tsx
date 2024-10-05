@@ -203,7 +203,7 @@ export default function DatasetSettingsViewConfigTab(props: {
           <FormItemWithInfo
             name={["defaultConfiguration", "zoom"]}
             label="Zoom"
-            info="A zoom of &ldquo;1&rdquo; will display the data in its original resolution."
+            info="A zoom of &ldquo;1&rdquo; will display the data in its original magnification."
             rules={[
               {
                 validator: syncValidator(

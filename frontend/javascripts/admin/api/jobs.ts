@@ -16,6 +16,7 @@ import { assertResponseLimit } from "./api_utils";
 function transformBackendJobToAPIJob(job: any): APIJob {
   return {
     id: job.id,
+    owner: job.owner,
     type: job.command,
     datasetName: job.commandArgs.dataset_name,
     organizationId: job.commandArgs.organization_name,

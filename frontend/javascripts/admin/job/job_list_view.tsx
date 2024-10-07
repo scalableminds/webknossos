@@ -375,7 +375,7 @@ function JobListView() {
           </Tooltip>
         </a>
         <br />
-        WEBKNOSSOS will notfiy you via email when a job has finished or reload this page to track
+        WEBKNOSSOS will notify you via email when a job has finished or reload this page to track
         progress.
       </Typography.Paragraph>
       <div

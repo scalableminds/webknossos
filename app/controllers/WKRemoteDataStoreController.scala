@@ -81,9 +81,8 @@ class WKRemoteDataStoreController @Inject()(
           _ <- datasetDAO.updateFolder(dataset._id, folderId)(GlobalAccessContext)
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))
-          uploadInfo.path = dataset.path // Update path according to the newly created dataset.
-          uploadInfo.newDatasetId = dataset._id.toString // Update newDatasetId according to the newly created dataset.
-        } yield Ok(Json.toJson(uploadInfo))
+          updatedInfo = uploadInfo.copy(newDatasetId = dataset._id.toString, path = dataset.path) // Update newDatasetId and path according to the newly created dataset.
+        } yield Ok(Json.toJson(updatedInfo))
       }
     }
 

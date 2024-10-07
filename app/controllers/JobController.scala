@@ -131,8 +131,8 @@ class JobController @Inject()(
           commandArgs = Json.obj(
             "organization_name" -> organization._id,
             "organization_display_name" -> organization.name,
-            "dataset_name" -> dataset.name, // TODOM: Adjust worker to use correct dataset
-            "dataset_path" -> dataset.path, // TODOM: Adjust worker to use correct dataset
+            "dataset_name" -> dataset.name,
+            "dataset_path" -> dataset.path,
             "voxel_size_factor" -> voxelSize.factor.toUriLiteral,
             "voxel_size_unit" -> voxelSize.unit
           )
@@ -158,8 +158,8 @@ class JobController @Inject()(
         command = JobCommand.compute_mesh_file
         commandArgs = Json.obj(
           "organization_name" -> organization._id,
-          "dataset_name" -> dataset.name, // TODOM: Adjust worker to use correct dataset
-          "dataset_path" -> dataset.path, // TODOM: Adjust worker to use correct dataset
+          "dataset_name" -> dataset.name,
+          "dataset_path" -> dataset.path,
           "layer_name" -> layerName,
           "mag" -> mag,
           "agglomerate_view" -> agglomerateView
@@ -182,8 +182,8 @@ class JobController @Inject()(
         command = JobCommand.compute_segment_index_file
         commandArgs = Json.obj(
           "organization_name" -> dataset._organization,
-          "dataset_name" -> dataset.name, // TODOM: Adjust worker to use correct dataset
-          "dataset_path" -> dataset.path, // TODOM: Adjust worker to use correct dataset
+          "dataset_name" -> dataset.name,
+          "dataset_path" -> dataset.path,
           "segmentation_layer_name" -> layerName,
         )
         job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunSegmentIndexFile"
@@ -206,8 +206,8 @@ class JobController @Inject()(
           command = JobCommand.infer_nuclei
           commandArgs = Json.obj(
             "organization_name" -> dataset._organization,
-            "dataset_name" -> dataset.name, // TODOM: Adjust worker to use correct dataset
-            "dataset_path" -> dataset.path, // TODOM: Adjust worker to use correct dataset
+            "dataset_name" -> dataset.name,
+            "dataset_path" -> dataset.path,
             "layer_name" -> layerName,
             "new_dataset_name" -> newDatasetName
           )
@@ -236,8 +236,8 @@ class JobController @Inject()(
           command = JobCommand.infer_neurons
           commandArgs = Json.obj(
             "organization_name" -> organization._id,
-            "dataset_name" -> dataset.name, // TODOM: Adjust worker to use correct dataset
-            "dataset_path" -> dataset.path, // TODOM: Adjust worker to use correct dataset
+            "dataset_name" -> dataset.name,
+            "dataset_path" -> dataset.path,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
             "bbox" -> bbox,
@@ -268,8 +268,8 @@ class JobController @Inject()(
           command = JobCommand.infer_mitochondria
           commandArgs = Json.obj(
             "organization_name" -> dataset._organization,
-            "dataset_name" -> dataset.name, // TODOM: Adjust worker to use correct dataset
-            "dataset_path" -> dataset.path, // TODOM: Adjust worker to use correct dataset
+            "dataset_name" -> dataset.name,
+            "dataset_path" -> dataset.path,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
             "bbox" -> bbox,
@@ -300,8 +300,8 @@ class JobController @Inject()(
           command = JobCommand.align_sections
           commandArgs = Json.obj(
             "organization_name" -> organization._id,
-            "dataset_name" -> dataset.name, // TODOM: Adjust worker to use correct dataset
-            "dataset_path" -> dataset.path, // TODOM: Adjust worker to use correct dataset
+            "dataset_name" -> dataset.name,
+            "dataset_path" -> dataset.path,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
             "annotation_id" -> annotationId
@@ -352,7 +352,7 @@ class JobController @Inject()(
           else
             s"${formatDateForFilename(new Date())}__${dataset.name}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
           commandArgs = Json.obj(
-            "dataset_path" -> dataset.path, // TODOM: Adjust worker to use correct dataset
+            "dataset_path" -> dataset.path,
             "organization_name" -> organization._id,
             "dataset_name" -> dataset.name,
             "nd_bbox" -> ndBoundingBox.toWkLibsDict,
@@ -391,8 +391,8 @@ class JobController @Inject()(
           _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
           commandArgs = Json.obj(
             "organization_name" -> organization._id,
-            "dataset_name" -> dataset.name, // TODOM: Adjust worker to use correct dataset
-            "dataset_path" -> dataset.path, // TODOM: Adjust worker to use correct dataset
+            "dataset_name" -> dataset.name,
+            "dataset_path" -> dataset.path,
             "fallback_layer_name" -> fallbackLayerName,
             "annotation_id" -> annotationId,
             "output_segmentation_layer_name" -> outputSegmentationLayerName,
@@ -420,8 +420,8 @@ class JobController @Inject()(
           command = JobCommand.find_largest_segment_id
           commandArgs = Json.obj(
             "organization_name" -> organization._id,
-            "dataset_name" -> dataset.name, // TODOM: Adjust worker to use correct dataset
-            "dataset_path" -> dataset.path, // TODOM: Adjust worker to use correct dataset
+            "dataset_name" -> dataset.name,
+            "dataset_path" -> dataset.path,
             "layer_name" -> layerName
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunFindLargestSegmentId"
@@ -453,8 +453,8 @@ class JobController @Inject()(
           command = JobCommand.render_animation
           commandArgs = Json.obj(
             "organization_name" -> organization._id,
-            "dataset_name" -> dataset.name, // TODOM: Adjust worker to use correct dataset
-            "dataset_path" -> dataset.path, // TODOM: Adjust worker to use correct dataset
+            "dataset_name" -> dataset.name,
+            "dataset_path" -> dataset.path,
             "export_file_name" -> exportFileName,
             "layer_name" -> animationJobOptions.layerName,
             "bounding_box" -> animationJobOptions.boundingBox.toLiteral,

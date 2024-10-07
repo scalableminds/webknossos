@@ -479,7 +479,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   def updatePartial(datasetId: ObjectId, params: DatasetUpdateParameters)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val setQueries = List(
       params.description.map(d => q"description = $d"),
-      params.displayName.map(v => q"displayName = $v"),
+      params.name.map(v => q"name = $v"),
       params.sortingKey.map(v => q"sortingKey = $v"),
       params.isPublic.map(v => q"isPublic = $v"),
       params.tags.map(v => q"tags = $v"),
@@ -503,7 +503,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   def updateFields(datasetId: ObjectId,
                    description: Option[String],
-                   displayName: Option[String],
+                   name: Option[String],
                    sortingKey: Instant,
                    isPublic: Boolean,
                    tags: List[String],
@@ -511,7 +511,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                    folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val updateParameters = new DatasetUpdateParameters(
       description = Some(description),
-      displayName = Some(displayName),
+      name = Some(name),
       sortingKey = Some(sortingKey),
       isPublic = Some(isPublic),
       tags = Some(tags),

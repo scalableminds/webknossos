@@ -34,7 +34,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class DatasetUpdateParameters(
     description: Option[Option[String]] = Some(None),
-    displayName: Option[Option[String]] = Some(None),
+    name: Option[Option[String]] = Some(None),
     sortingKey: Option[Instant],
     isPublic: Option[Boolean],
     tags: Option[List[String]],
@@ -94,6 +94,7 @@ class DatasetController @Inject()(userService: UserService,
 
   private val datasetPublicReads =
     ((__ \ "description").readNullable[String] and
+      (__ \ "name").readNullable[String] and
       (__ \ "displayName").readNullable[String] and
       (__ \ "sortingKey").readNullable[Instant] and
       (__ \ "isPublic").read[Boolean] and
@@ -324,7 +325,8 @@ class DatasetController @Inject()(userService: UserService,
   def update(datasetId: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyUsing(datasetPublicReads) {
-        case (description, displayName, sortingKey, isPublic, tags, metadata, folderId) =>
+        case (description, datasetName, legacyDatasetDisplayName, sortingKey, isPublic, tags, metadata, folderId) => {
+          val name =  if(datasetName.isDefined) datasetName else legacyDatasetDisplayName
           for {
             parsedDatasetId <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
             dataset <- datasetDAO.findOne(parsedDatasetId) ?~> notFoundMessage(parsedDatasetId.toString) ~> NOT_FOUND
@@ -334,7 +336,7 @@ class DatasetController @Inject()(userService: UserService,
             _ <- datasetDAO.updateFields(
               dataset._id,
               description,
-              displayName,
+              name,
               sortingKey.getOrElse(dataset.created),
               isPublic,
               tags,
@@ -345,6 +347,7 @@ class DatasetController @Inject()(userService: UserService,
             _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
             js <- datasetService.publicWrites(updated, Some(request.identity))
           } yield Ok(Json.toJson(js))
+        }
       }
     }
 

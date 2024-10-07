@@ -142,7 +142,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                                                                            layerName,
                                                                                            meshFileName,
                                                                                            segmentIds)
-      allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods.head.chunks.toList
+      allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods.head.chunks
       stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { chunkRange: MeshChunk =>
         readMeshChunkAsStl(organizationId, datasetName, layerName, meshFileName, chunkRange, chunkInfos.transform)
       }
@@ -162,7 +162,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
         datasetName,
         layerName,
         MeshChunkDataRequestList(meshfileName, List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize)))
-      )
+      ) ?~> "mesh.file.loadChunk.failed"
       _ <- bool2Fox(encoding == "draco") ?~> s"meshfile encoding is $encoding, only draco is supported"
       scale <- tryo(Vec3Double(transform(0)(0), transform(1)(1), transform(2)(2))) ?~> "could not extract scale from meshfile transform attribute"
       stlEncodedChunk <- tryo(

@@ -136,7 +136,7 @@ case class MeshChunk(position: Vec3Float, byteOffset: Long, byteSize: Int, unmap
 object MeshChunk {
   implicit val jsonFormat: OFormat[MeshChunk] = Json.format[MeshChunk]
 }
-case class MeshLodInfo(scale: Int, vertexOffset: Vec3Float, chunkShape: Vec3Float, chunks: Seq[MeshChunk])
+case class MeshLodInfo(scale: Int, vertexOffset: Vec3Float, chunkShape: Vec3Float, chunks: List[MeshChunk])
 
 object MeshLodInfo {
   implicit val jsonFormat: OFormat[MeshLodInfo] = Json.format[MeshLodInfo]
@@ -151,7 +151,7 @@ case class WebknossosSegmentInfo(transform: Array[Array[Double]], meshFormat: St
 object WebknossosSegmentInfo {
   implicit val jsonFormat: OFormat[WebknossosSegmentInfo] = Json.format[WebknossosSegmentInfo]
 
-  def fromMeshInfosAndMetadata(chunkInfos: Seq[MeshSegmentInfo],
+  def fromMeshInfosAndMetadata(chunkInfos: List[MeshSegmentInfo],
                                encoding: String,
                                transform: Array[Array[Double]]): Option[WebknossosSegmentInfo] =
     chunkInfos.headOption.flatMap { firstChunkInfo =>
@@ -159,12 +159,12 @@ object WebknossosSegmentInfo {
         WebknossosSegmentInfo(
           transform,
           meshFormat = encoding,
-          chunks = firstChunkInfo.copy(lods = chunkInfos.map(_.lods).transpose.map(mergeLod).toList)
+          chunks = firstChunkInfo.copy(lods = chunkInfos.map(_.lods).transpose.map(mergeLod))
         )
       }
     }
 
-  private def mergeLod(thisLodFromAllChunks: Seq[MeshLodInfo]): MeshLodInfo = {
+  private def mergeLod(thisLodFromAllChunks: List[MeshLodInfo]): MeshLodInfo = {
     val first = thisLodFromAllChunks.head
     first.copy(chunks = thisLodFromAllChunks.flatMap(_.chunks))
   }
@@ -251,11 +251,12 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       .toOption
       .getOrElse(0)
 
-  def listMeshChunksForSegmentsMerged(organizationId: String,
-                                      datasetName: String,
-                                      dataLayerName: String,
-                                      meshFileName: String,
-                                      segmentIds: Seq[Long])(implicit m: MessagesProvider): Fox[WebknossosSegmentInfo] =
+  def listMeshChunksForSegmentsMerged(
+      organizationId: String,
+      datasetName: String,
+      dataLayerName: String,
+      meshFileName: String,
+      segmentIds: List[Long])(implicit m: MessagesProvider): Fox[WebknossosSegmentInfo] =
     for {
       _ <- Fox.successful(())
       meshFilePath: Path = dataBaseDir
@@ -265,9 +266,9 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .resolve(meshesDir)
         .resolve(s"$meshFileName.$hdf5FileExtension")
       (encoding, lodScaleMultiplier, transform) <- readMeshfileMetadata(meshFilePath).toFox
-      meshChunksForUnmappedSegments: Seq[MeshSegmentInfo] = listMeshChunksForSegments(meshFilePath,
-                                                                                      segmentIds,
-                                                                                      lodScaleMultiplier)
+      meshChunksForUnmappedSegments: List[MeshSegmentInfo] = listMeshChunksForSegments(meshFilePath,
+                                                                                       segmentIds,
+                                                                                       lodScaleMultiplier)
       _ <- bool2Fox(meshChunksForUnmappedSegments.nonEmpty) ?~> "zero chunks" ?~> Messages(
         "mesh.file.listChunks.failed",
         segmentIds.mkString(","),
@@ -276,18 +277,18 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     } yield wkChunkInfos
 
   private def listMeshChunksForSegments(meshFilePath: Path,
-                                        segmentIds: Seq[Long],
-                                        lodScaleMultiplier: Double): Seq[MeshSegmentInfo] =
+                                        segmentIds: List[Long],
+                                        lodScaleMultiplier: Double): List[MeshSegmentInfo] =
     meshFileCache
       .withCachedHdf5(meshFilePath) { cachedMeshFile: CachedHdf5File =>
         segmentIds.flatMap(segmentId => listMeshChunksForSegment(cachedMeshFile, segmentId, lodScaleMultiplier))
       }
       .toOption
-      .getOrElse(Seq.empty)
+      .getOrElse(List.empty)
 
   private def readMeshfileMetadata(meshFilePath: Path): Box[(String, Double, Array[Array[Double]])] =
     meshFileCache.withCachedHdf5(meshFilePath) { cachedMeshFile =>
-      val encoding = cachedMeshFile.stringReader.getAttr("/", "mesh_format")
+      val encoding = cachedMeshFile.meshFormat
       val lodScaleMultiplier = cachedMeshFile.float64Reader.getAttr("/", "lod_scale_multiplier")
       val transform = cachedMeshFile.float64Reader.getMatrixAttr("/", "transform")
       (encoding, lodScaleMultiplier, transform)
@@ -378,7 +379,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
                     datasetName: String,
                     dataLayerName: String,
                     meshChunkDataRequests: MeshChunkDataRequestList,
-  ): Fox[(Array[Byte], String)] = {
+  ): Box[(Array[Byte], String)] = {
     val meshFilePath = dataBaseDir
       .resolve(organizationId)
       .resolve(datasetName)

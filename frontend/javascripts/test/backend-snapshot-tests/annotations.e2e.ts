@@ -221,31 +221,25 @@ test("Update Metadata for Skeleton Tracing", async (t) => {
   const createTreesUpdateActions = Array.from(diffTrees({}, trees));
   const metadata = [
     {
-      "key": "city",
-      "stringValue": "springfield"
+      key: "city",
+      stringValue: "springfield",
     },
     {
-      "key": "zip",
-      "numberValue": 12345
+      key: "zip",
+      numberValue: 12345,
     },
     {
-      "key": "tags",
-      "stringListValue": [
-        "tagA",
-        "tagB"
-      ]
-    }
-  ]
+      key: "tags",
+      stringListValue: ["tagA", "tagB"],
+    },
+  ];
   trees[1] = {
     ...trees[1],
-    metadata
-  }
+    metadata,
+  };
   const updateTreeAction = UpdateActions.updateTree(trees[1]);
   const [saveQueue] = addVersionNumbers(
-    createSaveQueueFromUpdateActions(
-      [createTreesUpdateActions, [updateTreeAction]],
-      123456789,
-    ),
+    createSaveQueueFromUpdateActions([createTreesUpdateActions, [updateTreeAction]], 123456789),
     0,
   );
 

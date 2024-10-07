@@ -46,7 +46,11 @@ class SkeletonTracingService @Inject()(
       Fox.successful(dummyTracing)
     else {
       for {
-        annotation <- annotationService.getWithTracings(annotationId, version, List(tracingId), List.empty) // TODO is applyUpdates still needed?
+        annotation <- annotationService.getWithTracings(annotationId,
+                                                        version,
+                                                        List(tracingId),
+                                                        List.empty,
+                                                        requestAll = false) // TODO is applyUpdates still needed?
         tracing <- annotation.getSkeleton(tracingId)
       } yield tracing
     }

@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
-import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
+import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerTypeProto, AnnotationProto}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -52,6 +52,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     extends KeyValueStoreImplicits
     with FallbackDataHelper
     with ProtoGeometryImplicits
+    with AnnotationReversion
     with LazyLogging {
 
   def reportUpdates(annotationId: String, updateGroups: List[UpdateActionGroup])(implicit tc: TokenContext): Fox[Unit] =
@@ -122,13 +123,21 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       }
     } yield updated
 
-  private def revertToVersion(
-      annotationId: String,
-      annotationWithTracings: AnnotationWithTracings,
-      revertAction: RevertToVersionUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+  private def revertToVersion(annotationId: String,
+                              annotationWithTracings: AnnotationWithTracings,
+                              revertAction: RevertToVersionUpdateAction)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[AnnotationWithTracings] =
     // Note: works only after “ironing out” the update action groups
     // TODO: read old annotationProto, tracing, buckets, segment indeces
-    Fox.successful(annotationWithTracings)
+    for {
+      sourceAnnotation <- getWithTracings(annotationId,
+                                          Some(revertAction.sourceVersion),
+                                          List.empty,
+                                          List.empty,
+                                          requestAll = true) // TODO do we need to request the others?
+      _ <- revertDistributedElements(annotationId, sourceAnnotation, revertAction)
+    } yield sourceAnnotation
 
   def createTracing(a: AddLayerAnnotationUpdateAction)(
       implicit ec: ExecutionContext): Fox[Either[SkeletonTracing, VolumeTracing]] =
@@ -159,14 +168,15 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   def get(annotationId: String, version: Option[Long])(implicit ec: ExecutionContext,
                                                        tc: TokenContext): Fox[AnnotationProto] =
     for {
-      withTracings <- getWithTracings(annotationId, version, List.empty, List.empty)
+      withTracings <- getWithTracings(annotationId, version, List.empty, List.empty, requestAll = false)
     } yield withTracings.annotation
 
-  def getWithTracings(annotationId: String,
-                      version: Option[Long],
-                      requestedSkeletonTracingIds: List[String],
-                      requestedVolumeTracingIds: List[String])(implicit ec: ExecutionContext,
-                                                               tc: TokenContext): Fox[AnnotationWithTracings] =
+  def getWithTracings(
+      annotationId: String,
+      version: Option[Long],
+      requestedSkeletonTracingIds: List[String],
+      requestedVolumeTracingIds: List[String],
+      requestAll: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
       annotationWithVersion <- tracingDataStore.annotations.get(annotationId, version)(fromProtoBytes[AnnotationProto]) ?~> "getAnnotation.failed"
       annotation = annotationWithVersion.value
@@ -174,14 +184,15 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                      annotationId,
                                      version,
                                      requestedSkeletonTracingIds,
-                                     requestedVolumeTracingIds) ?~> "applyUpdates.failed"
+                                     requestedVolumeTracingIds,
+                                     requestAll) ?~> "applyUpdates.failed"
     } yield updated
 
   def getEditableMappingInfo(annotationId: String, tracingId: String, version: Option[Long] = None)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[EditableMappingInfo] =
     for {
-      annotation <- getWithTracings(annotationId, version, List.empty, List(tracingId)) ?~> "getWithTracings.failed"
+      annotation <- getWithTracings(annotationId, version, List.empty, List(tracingId), requestAll = false) ?~> "getWithTracings.failed"
       tracing <- annotation.getEditableMappingInfo(tracingId) ?~> "getEditableMapping.failed"
     } yield tracing
 
@@ -202,20 +213,21 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                            targetVersion)
     } yield annotationWithTracings.addEditableMapping(action.actionTracingId, editableMappingInfo.value, updater)
 
-  private def applyPendingUpdates(annotation: AnnotationProto,
-                                  annotationId: String,
-                                  targetVersionOpt: Option[Long],
-                                  requestedSkeletonTracingIds: List[String],
-                                  requestedVolumeTracingIds: List[String])(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[AnnotationWithTracings] =
+  private def applyPendingUpdates(
+      annotation: AnnotationProto,
+      annotationId: String,
+      targetVersionOpt: Option[Long],
+      requestedSkeletonTracingIds: List[String],
+      requestedVolumeTracingIds: List[String],
+      requestAll: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
       targetVersion <- determineTargetVersion(annotation, annotationId, targetVersionOpt) ?~> "determineTargetVersion.failed"
       updates <- findPendingUpdates(annotationId, annotation.version, targetVersion) ?~> "findPendingUpdates.failed"
       annotationWithTracings <- findTracingsForUpdates(annotation,
                                                        updates,
                                                        requestedSkeletonTracingIds,
-                                                       requestedVolumeTracingIds) ?~> "findTracingsForUpdates.failed"
+                                                       requestedVolumeTracingIds,
+                                                       requestAll) ?~> "findTracingsForUpdates.failed"
       annotationWithTracingsAndMappings <- findEditableMappingsForUpdates(annotationId,
                                                                           annotationWithTracings,
                                                                           updates,
@@ -283,23 +295,34 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       annotation: AnnotationProto,
       updates: List[UpdateAction],
       requestedSkeletonTracingIds: List[String],
-      requestedVolumeTracingIds: List[String])(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] = {
-    val skeletonTracingIds = (updates.flatMap {
-      case u: SkeletonUpdateAction => Some(u.actionTracingId)
-      case _                       => None
-    } ++ requestedSkeletonTracingIds).distinct
-    val volumeTracingIds = (updates.flatMap {
-      case u: VolumeUpdateAction => Some(u.actionTracingId)
-      case _                     => None
-    } ++ requestedVolumeTracingIds).distinct
+      requestedVolumeTracingIds: List[String],
+      requestAll: Boolean)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] = {
+    val skeletonTracingIds =
+      if (requestAll)
+        annotation.layers.filter(_.`type` == AnnotationLayerTypeProto.skeleton).map(_.tracingId)
+      else {
+        (updates.flatMap {
+          case u: SkeletonUpdateAction => Some(u.actionTracingId)
+          case _                       => None
+        } ++ requestedSkeletonTracingIds).distinct
+      }
+    val volumeTracingIds =
+      if (requestAll)
+        annotation.layers.filter(_.`type` == AnnotationLayerTypeProto.volume).map(_.tracingId)
+      else {
+        (updates.flatMap {
+          case u: VolumeUpdateAction => Some(u.actionTracingId)
+          case _                     => None
+        } ++ requestedVolumeTracingIds).distinct
+      }
 
     logger.info(s"fetching volumes $volumeTracingIds and skeletons $skeletonTracingIds")
     for {
-      skeletonTracings <- Fox.serialCombined(skeletonTracingIds)(
+      skeletonTracings <- Fox.serialCombined(skeletonTracingIds.toList)(
         id =>
           tracingDataStore.skeletons.get[SkeletonTracing](id, Some(annotation.version), mayBeEmpty = Some(true))(
             fromProtoBytes[SkeletonTracing]))
-      volumeTracings <- Fox.serialCombined(volumeTracingIds)(
+      volumeTracings <- Fox.serialCombined(volumeTracingIds.toList)(
         id =>
           tracingDataStore.volumes
             .get[VolumeTracing](id, Some(annotation.version), mayBeEmpty = Some(true))(fromProtoBytes[VolumeTracing]))

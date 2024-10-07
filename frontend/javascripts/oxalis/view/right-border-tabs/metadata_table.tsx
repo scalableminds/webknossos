@@ -13,7 +13,6 @@ import {
   type MetadataEntryProto,
 } from "types/api_flow_types";
 import { InputWithUpdateOnBlur } from "../components/input_with_update_on_blur";
-import _ from "lodash";
 import { memo } from "react";
 import FastTooltip from "components/fast_tooltip";
 

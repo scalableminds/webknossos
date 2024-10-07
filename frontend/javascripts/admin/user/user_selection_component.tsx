@@ -1,5 +1,4 @@
 import { Spin, Select } from "antd";
-import * as React from "react";
 import _ from "lodash";
 import { getUsers } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";

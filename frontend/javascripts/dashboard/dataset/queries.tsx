@@ -16,7 +16,7 @@ import {
   updateFolder,
 } from "admin/api/folders";
 import Toast from "libs/toast";
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
   type APIDatasetId,
   type APIDatasetCompact,

@@ -10,13 +10,12 @@ import {
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { Dropdown, Modal, type MenuProps, Tree } from "antd";
 import Toast from "libs/toast";
-import type { AntTreeNodeSelectedEvent, DataNode, DirectoryTreeProps } from "antd/lib/tree";
+import type { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import memoizeOne from "memoize-one";
 import classNames from "classnames";
 import type { FolderItem } from "types/api_flow_types";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { AntTreeNodeBaseEvent } from "antd/es/tree/Tree";
 
 const { DirectoryTree } = Tree;
 

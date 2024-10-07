@@ -4,7 +4,6 @@ import React, { useState } from "react";
 
 import { startRenderAnimationJob } from "admin/admin_rest_api";
 import Toast from "libs/toast";
-import _ from "lodash";
 import Store, { type MeshInformation, type OxalisState, type UserBoundingBox } from "oxalis/store";
 
 import {

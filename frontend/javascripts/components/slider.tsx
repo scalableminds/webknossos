@@ -14,24 +14,16 @@ type SliderProps = (SliderSingleProps | SliderRangeProps) & {
 const getDiffPerSliderStep = (
   sliderRange: number,
   factor: number = DEFAULT_WHEEL_FACTOR,
-  step: number | undefined | null,
+  step: number,
 ) => {
-  let stepNotNull = step || DEFAULT_STEP;
   let result = factor * sliderRange;
-  if (result < stepNotNull) return stepNotNull;
+  if (result < step) return step;
   return result;
 };
 
-const getWheelStepFromEvent = (
-  step: number | undefined | null,
-  deltaY: number,
-  wheelStep: number,
-) => {
+const getWheelStepFromEvent = (step: number, deltaY: number, wheelStep: number) => {
   // Make sure that result is a multiple of step
-  return (
-    (step || DEFAULT_STEP) *
-    Math.round((wheelStep * deltaY) / Math.abs(deltaY) / (step || DEFAULT_STEP))
-  );
+  return step * Math.round((wheelStep * deltaY) / Math.abs(deltaY) / step);
 };
 
 export function Slider(props: SliderProps) {
@@ -50,9 +42,10 @@ export function Slider(props: SliderProps) {
   if (min == null || max == null || onChange == null || value == null || disabled)
     return <AntdSlider {...props} />;
   const sliderRange = max - min;
+  const ensuredStep = step || DEFAULT_STEP;
   let handleWheelEvent: WheelEventHandler<HTMLDivElement> = () => {};
   let handleDoubleClick: React.MouseEventHandler<HTMLDivElement> = () => {};
-  const wheelStep = getDiffPerSliderStep(sliderRange, wheelFactor, step);
+  const wheelStep = getDiffPerSliderStep(sliderRange, wheelFactor, ensuredStep);
 
   handleDoubleClick = (event) => {
     if (
@@ -69,7 +62,7 @@ export function Slider(props: SliderProps) {
   if (range === false || range == null) {
     if (!onWheelDisabled) {
       handleWheelEvent = (event) => {
-        const newValue = value - getWheelStepFromEvent(step, event.deltaY, wheelStep);
+        const newValue = value - getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
         const clampedNewValue = clamp(min, newValue, max);
         onChange(clampedNewValue);
       };
@@ -77,7 +70,7 @@ export function Slider(props: SliderProps) {
   } else if (range === true || typeof range === "object") {
     if (!onWheelDisabled) {
       handleWheelEvent = (event) => {
-        const diff = getWheelStepFromEvent(step, event.deltaY, wheelStep);
+        const diff = getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
         const newLowerValue = Math.round(value[0] + diff);
         const newUpperValue = Math.round(value[1] - diff);
         const clampedNewLowerValue = clamp(min, newLowerValue, Math.min(newUpperValue, max));

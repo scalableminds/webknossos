@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
 }
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ApplyableVolumeUpdateAction
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure, Full}
 
 import scala.concurrent.ExecutionContext
@@ -20,7 +21,8 @@ import scala.concurrent.ExecutionContext
 case class AnnotationWithTracings(
     annotation: AnnotationProto,
     tracingsById: Map[String, Either[SkeletonTracing, VolumeTracing]],
-    editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)]) {
+    editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)])
+    extends LazyLogging {
 
   def getSkeleton(tracingId: String): Box[SkeletonTracing] =
     for {
@@ -141,5 +143,8 @@ case class AnnotationWithTracings(
       _ <- Fox.serialCombined(updaters)(updater => updater.flushBuffersToFossil())
     } yield ()
   }
+
+  def skeletonStats: String =
+    f"skeleton with ${getSkeletons.map(_._2).map(_.trees.map(_.nodes.length).sum).mkString} nodes"
 
 }

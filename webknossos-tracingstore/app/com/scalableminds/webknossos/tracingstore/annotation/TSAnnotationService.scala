@@ -131,13 +131,14 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     // Note: works only after “ironing out” the update action groups
     // TODO: read old annotationProto, tracing, buckets, segment indeces
     for {
-      sourceAnnotation <- getWithTracings(annotationId,
-                                          Some(revertAction.sourceVersion),
-                                          List.empty,
-                                          List.empty,
-                                          requestAll = true) // TODO do we need to request the others?
+      sourceAnnotation: AnnotationWithTracings <- getWithTracings(
+        annotationId,
+        Some(revertAction.sourceVersion),
+        List.empty,
+        List.empty,
+        requestAll = true) // TODO do we need to request the others?
       _ = logger.info(
-        s"reverting to suorceVersion ${revertAction.sourceVersion}. got sourceAnnotation with version ${sourceAnnotation.version}")
+        s"reverting to suorceVersion ${revertAction.sourceVersion}. got sourceAnnotation with version ${sourceAnnotation.version} with ${sourceAnnotation.skeletonStats}")
       _ <- revertDistributedElements(annotationId, sourceAnnotation, revertAction)
     } yield sourceAnnotation
 
@@ -352,6 +353,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           remainingUpdates match {
             case List() => Fox.successful(annotationWithTracings)
             case update :: tail =>
+              logger.info(
+                f"${remainingUpdates.length} remainingUpdates, current skeleton ${annotationWithTracings.skeletonStats})")
               updateIter(applyUpdate(annotationId, annotationWithTracings, update, targetVersion), tail)
           }
         case _ => annotationWithTracingsFox
@@ -362,6 +365,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       for {
         updated <- updateIter(Some(annotation), updates)
         updatedWithNewVerson = updated.withVersion(targetVersion)
+        _ = logger.info(s"flushing, with ${updated.skeletonStats}")
         _ <- updatedWithNewVerson.flushBufferedUpdates()
         _ <- flushUpdatedTracings(updatedWithNewVerson)
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVerson)
@@ -372,7 +376,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   private def ironOutReversionFolds(
       updateActionGroupsWithVersions: List[(Long, List[UpdateAction])]): List[UpdateAction] =
     // TODO: if the source version is in the current update list, it needs to be ironed out. in case of overlaps, iron out from the back.
-    updateActionGroupsWithVersions.flatMap(_._2)
+    updateActionGroupsWithVersions.reverse.flatMap(_._2)
 
   private def flushUpdatedTracings(annotationWithTracings: AnnotationWithTracings)(implicit ec: ExecutionContext) =
     // TODO skip some flushes to save disk space (e.g. skeletons only nth version, or only if requested?)

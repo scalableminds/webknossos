@@ -13,7 +13,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{
   DeleteTreeSkeletonAction,
   MergeTreeSkeletonAction,
   MoveTreeComponentSkeletonAction,
-  RevertToVersionSkeletonAction,
   UpdateNodeSkeletonAction,
   UpdateTdCameraSkeletonAction,
   UpdateTracingSkeletonAction,
@@ -112,6 +111,7 @@ object UpdateAction {
         case "deleteLayerFromAnnotation"  => deserialize[DeleteLayerAnnotationUpdateAction](jsonValue)
         case "updateLayerMetadata"        => deserialize[UpdateLayerMetadataAnnotationUpdateAction](jsonValue)
         case "updateMetadataOfAnnotation" => deserialize[UpdateMetadataAnnotationUpdateAction](jsonValue)
+        case "revertToVersion"            => deserialize[RevertToVersionUpdateAction](jsonValue)
 
         case unknownAction: String => JsError(s"Invalid update action s'$unknownAction'")
       }
@@ -153,8 +153,6 @@ object UpdateAction {
         Json.obj("name" -> "updateTreeGroups", "value" -> Json.toJson(s)(UpdateTreeGroupsSkeletonAction.jsonFormat))
       case s: UpdateTracingSkeletonAction =>
         Json.obj("name" -> "updateSkeletonTracing", "value" -> Json.toJson(s)(UpdateTracingSkeletonAction.jsonFormat))
-      case s: RevertToVersionSkeletonAction =>
-        Json.obj("name" -> "revertToVersion", "value" -> Json.toJson(s)(RevertToVersionSkeletonAction.jsonFormat))
       case s: UpdateTreeVisibilitySkeletonAction =>
         Json.obj("name" -> "updateTreeVisibility",
                  "value" -> Json.toJson(s)(UpdateTreeVisibilitySkeletonAction.jsonFormat))
@@ -220,6 +218,8 @@ object UpdateAction {
       case s: UpdateMetadataAnnotationUpdateAction =>
         Json.obj("name" -> "updateMetadataOfAnnotation",
                  "value" -> Json.toJson(s)(UpdateMetadataAnnotationUpdateAction.jsonFormat))
+      case s: RevertToVersionUpdateAction =>
+        Json.obj("name" -> "revertToVersion", "value" -> Json.toJson(s)(RevertToVersionUpdateAction.jsonFormat))
     }
   }
 }

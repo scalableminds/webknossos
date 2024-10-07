@@ -136,6 +136,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                           List.empty,
                                           List.empty,
                                           requestAll = true) // TODO do we need to request the others?
+      _ = logger.info(
+        s"reverting to suorceVersion ${revertAction.sourceVersion}. got sourceAnnotation with version ${sourceAnnotation.version}")
       _ <- revertDistributedElements(annotationId, sourceAnnotation, revertAction)
     } yield sourceAnnotation
 

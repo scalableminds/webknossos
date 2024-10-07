@@ -404,24 +404,6 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
     this.copy(actionAuthorId = authorId)
 }
 
-case class RevertToVersionSkeletonAction(sourceVersion: Long,
-                                         actionTracingId: String,
-                                         actionTimestamp: Option[Long] = None,
-                                         actionAuthorId: Option[String] = None,
-                                         info: Option[String] = None)
-    extends SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
-    throw new Exception("RevertToVersionAction applied on unversioned tracing")
-
-  override def addTimestamp(timestamp: Long): UpdateAction =
-    this.copy(actionTimestamp = Some(timestamp))
-
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-
-  override def addAuthorId(authorId: Option[String]): UpdateAction =
-    this.copy(actionAuthorId = authorId)
-}
-
 case class UpdateTreeVisibilitySkeletonAction(treeId: Int,
                                               isVisible: Boolean,
                                               actionTracingId: String,
@@ -606,9 +588,6 @@ object UpdateTreeGroupsSkeletonAction {
 }
 object UpdateTracingSkeletonAction {
   implicit val jsonFormat: OFormat[UpdateTracingSkeletonAction] = Json.format[UpdateTracingSkeletonAction]
-}
-object RevertToVersionSkeletonAction {
-  implicit val jsonFormat: OFormat[RevertToVersionSkeletonAction] = Json.format[RevertToVersionSkeletonAction]
 }
 object UpdateTreeVisibilitySkeletonAction {
   implicit val jsonFormat: OFormat[UpdateTreeVisibilitySkeletonAction] = Json.format[UpdateTreeVisibilitySkeletonAction]

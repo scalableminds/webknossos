@@ -711,6 +711,7 @@ export type WkLibsNdBoundingBox = BoundingBoxObject & {
 
 export type APIJob = {
   readonly id: string;
+  readonly owner: APIUserBase;
   readonly datasetName: string | null | undefined;
   readonly exportFileName: string | null | undefined;
   readonly layerName: string | null | undefined;

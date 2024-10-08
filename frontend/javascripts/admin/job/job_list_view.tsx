@@ -15,7 +15,7 @@ import {
   InfoCircleOutlined,
 } from "@ant-design/icons";
 import type * as React from "react";
-import { type APIJob, APIJobType } from "types/api_flow_types";
+import { type APIJob, APIJobType, type APIUserBase } from "types/api_flow_types";
 import { getJobs, cancelJob } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
@@ -375,7 +375,7 @@ function JobListView() {
           </Tooltip>
         </a>
         <br />
-        WEBKNOSSOS will notfiy you via email when a job has finished or reload this page to track
+        WEBKNOSSOS will notify you via email when a job has finished or reload this page to track
         progress.
       </Typography.Paragraph>
       <div
@@ -409,6 +409,18 @@ function JobListView() {
             render={(job) => <FormattedDate timestamp={job.createdAt} />}
             sorter={Utils.compareBy<APIJob>((job) => job.createdAt)}
             defaultSortOrder="descend"
+          />
+          <Column
+            title="Owner"
+            dataIndex="owner"
+            key="owner"
+            sorter={Utils.localeCompareBy<APIJob>((job) => job.owner.lastName)}
+            render={(owner: APIUserBase) => (
+              <>
+                <div>{owner.email ? `${owner.lastName}, ${owner.firstName}` : "-"}</div>
+                <div>{owner.email ? `(${owner.email})` : "-"}</div>
+              </>
+            )}
           />
           <Column
             title="State"

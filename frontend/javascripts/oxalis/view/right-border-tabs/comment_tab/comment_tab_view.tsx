@@ -457,7 +457,9 @@ function CommentTabView(props: Props) {
                       setExpandedTreeIds(_.uniq([...expandedTreeIds, tree.treeId.toString()]));
                     }
                   }}
-                  data={_.flatMap(getData(), (tree) => tree.comments)}
+                  data={_.flatMap(getData(), (tree) =>
+                    tree.comments.slice().sort(getCommentSorter(sortBy, isSortedAscending)),
+                  )}
                   searchKey="content"
                   targetId={commentListId}
                 >

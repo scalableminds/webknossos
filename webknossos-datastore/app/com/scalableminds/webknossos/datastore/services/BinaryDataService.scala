@@ -83,7 +83,7 @@ class BinaryDataService(val dataBaseDir: Path,
   }
 
   private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition): Fox[Array[Byte]] =
-    if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.mag)) {
+    if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsMag(bucket.mag)) {
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
       // dataSource is null and unused for volume tracings. Insert dummy DataSourceId (also unused in that case)

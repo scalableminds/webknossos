@@ -18,7 +18,7 @@ type DataLayerWKWPartial = {
   dataFormat: "wkw";
   boundingBox: BoundingBox;
   wkwResolutions: Array<{
-    resolution: number | Vector3;
+    mag: number | Vector3;
     cubeLength: number;
   }>;
 };

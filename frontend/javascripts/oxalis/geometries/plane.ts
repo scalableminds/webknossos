@@ -47,7 +47,7 @@ class Plane {
     this.displayCrosshair = true;
     this.lastScaleFactors = [-1, -1];
     // VIEWPORT_WIDTH means that the plane should be that many voxels wide in the
-    // dimension with the highest resolution. In all other dimensions, the plane
+    // dimension with the highest mag. In all other dimensions, the plane
     // is smaller in voxels, so that it is squared in nm.
     // --> scaleInfo.baseVoxel
     const baseVoxelFactors = getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale);

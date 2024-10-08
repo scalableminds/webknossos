@@ -58,7 +58,7 @@ function isValidMagnification(_rule: RuleObject, value: number | undefined) {
     return Promise.resolve();
   } else {
     return Promise.reject(
-      new Error("The resolution must be stated as a power of two (e.g., 1 or 2 or 4 or 8 ...)"),
+      new Error("The mag must be stated as a power of two (e.g., 1 or 2 or 4 or 8 ...)"),
     );
   }
 }
@@ -67,17 +67,13 @@ function isMinimumMagnifactionLargerThenMaxRule(value: number | undefined, maxMa
   if (value && value <= maxMag) {
     return Promise.resolve();
   }
-  return Promise.reject(
-    new Error("The minimum resolution needs to be smaller then the maximum mag."),
-  );
+  return Promise.reject(new Error("The minimum mag needs to be smaller then the maximum mag."));
 }
 function isMaximumMagnificationSmallerThenMinRule(value: number | undefined, minMag: number) {
   if (value && value >= minMag) {
     return Promise.resolve();
   }
-  return Promise.reject(
-    new Error("The maximum resolution needs to be larger then the minimum mag."),
-  );
+  return Promise.reject(new Error("The maximum mag needs to be larger then the minimum mag."));
 }
 
 function TaskTypeCreateView({ taskTypeId, history }: Props) {

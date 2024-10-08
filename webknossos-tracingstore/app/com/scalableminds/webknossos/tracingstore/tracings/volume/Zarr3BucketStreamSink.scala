@@ -68,7 +68,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
   }
 
   private def createVolumeDataSource(voxelSize: Option[VoxelSize]): GenericDataSource[DataLayer] = {
-    val magLocators = layer.tracing.resolutions.map { mag =>
+    val magLocators = layer.tracing.mags.map { mag =>
       MagLocator(mag = vec3IntToProto(mag), axisOrder = Some(AxisOrder.cAdditionalxyz(rank)))
     }
     GenericDataSource(

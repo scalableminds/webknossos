@@ -326,7 +326,7 @@ function _getActiveMagIndicesForLayers(state: OxalisState): { [layerName: string
     const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state, layer.name);
     const maxLogZoomStep = Math.log2(getMaxZoomStep(state.dataset));
 
-    // Linearly search for the resolution index, for which the zoomFactor
+    // Linearly search for the mag index, for which the zoomFactor
     // is acceptable.
     const zoomStep = _.findIndex(
       maximumZoomSteps,
@@ -354,7 +354,7 @@ export function getActiveMagIndexForLayer(state: OxalisState, layerName: string)
 }
 
 /*
-  Returns the resolution that is supposed to be rendered for the given layer. The return resolution
+  Returns the mag that is supposed to be rendered for the given layer. The returned mag
   is independent of the actually loaded data. If null is returned, the layer cannot be rendered,
   because no appropriate mag exists.
  */
@@ -395,8 +395,8 @@ export function getMaxZoomValueForResolution(
   // Extract the max value from the range
   const maxZoom = getValidZoomRangeForResolution(state, layerName, targetResolutionIdentifier)[1];
   if (maxZoom == null) {
-    // This should never happen as long as a valid target resolution is passed to this function.
-    throw new Error("Zoom range could not be determined for target resolution.");
+    // This should never happen as long as a valid target mag is passed to this function.
+    throw new Error("Zoom range could not be determined for target mag.");
   }
   return maxZoom;
 }
@@ -407,7 +407,7 @@ function getValidZoomRangeForResolution(
   resolutionIdentifier: number,
 ): Vector2 | [null, null] {
   const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state, layerName);
-  // maximumZoomSteps is densely defined for all resolutions starting from resolution 1,1,1.
+  // maximumZoomSteps is densely defined for all mags starting from mag 1,1,1.
   // Therefore, we can use log2 as an index.
   const targetResolutionIndex = Math.log2(resolutionIdentifier);
 
@@ -451,7 +451,7 @@ export function getValidTaskZoomRange(
     return (
       (magIdentifier == null
         ? defaultRange[idx]
-        : // If the magIdentifier is defined, but doesn't match any resolution, we default to the defaultRange values
+        : // If the magIdentifier is defined, but doesn't match any mag, we default to the defaultRange values
           getValidZoomRangeForResolution(state, firstColorLayerName, magIdentifier)[idx]) ||
       defaultRange[idx]
     );
@@ -572,7 +572,7 @@ type UnrenderableLayersInfos = {
 };
 
 /*
-  This function returns layers that cannot be rendered (since the current resolution is missing),
+  This function returns layers that cannot be rendered (since the current mag is missing),
   even though they should be rendered (since they are enabled). For each layer, this method
   additionally returns whether data of this layer can be rendered by zooming in or out.
   The function takes fallback resolutions into account if renderMissingDataBlack is disabled.
@@ -604,7 +604,7 @@ function _getUnrenderableLayerInfosForCurrentZoom(
         return true;
       }
 
-      // The current resolution is missing and fallback rendering
+      // The current mag is missing and fallback rendering
       // is activated. Thus, check whether one of the fallback
       // zoomSteps can be rendered.
       return !_.range(1, MAX_ZOOM_STEP_DIFF + 1).some((diff) => {

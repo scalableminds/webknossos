@@ -20,7 +20,7 @@ trait Zarr3Layer extends DataLayerWithMagLocators {
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 
-  def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = Int.MaxValue // Prevents the wkw-shard-specific handle caching
+  def lengthOfUnderlyingCubes(mag: Vec3Int): Int = Int.MaxValue // Prevents the wkw-shard-specific handle caching
 
   def numChannels: Option[Int] = Some(if (elementClass == ElementClass.uint24) 3 else 1)
 

@@ -326,7 +326,7 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyUsing(datasetPublicReads) {
         case (description, datasetName, legacyDatasetDisplayName, sortingKey, isPublic, tags, metadata, folderId) => {
-          val name =  if(datasetName.isDefined) datasetName else legacyDatasetDisplayName
+          val name = if (datasetName.isDefined) datasetName else legacyDatasetDisplayName
           for {
             parsedDatasetId <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
             dataset <- datasetDAO.findOne(parsedDatasetId) ?~> notFoundMessage(parsedDatasetId.toString) ~> NOT_FOUND

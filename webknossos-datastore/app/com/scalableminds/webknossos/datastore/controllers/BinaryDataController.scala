@@ -139,7 +139,7 @@ class BinaryDataController @Inject()(
                         organizationId: String,
                         datasetName: String,
                         dataLayerName: String,
-                        resolution: Int,
+                        mag: Int,
                         x: Int,
                         y: Int,
                         z: Int,
@@ -151,10 +151,7 @@ class BinaryDataController @Inject()(
                                                                                   datasetName,
                                                                                   dataLayerName) ~> NOT_FOUND
         request = DataRequest(
-          VoxelPosition(x * cubeSize * resolution,
-                        y * cubeSize * resolution,
-                        z * cubeSize * resolution,
-                        Vec3Int(resolution, resolution, resolution)),
+          VoxelPosition(x * cubeSize * mag, y * cubeSize * mag, z * cubeSize * mag, Vec3Int(mag, mag, mag)),
           cubeSize,
           cubeSize,
           cubeSize
@@ -296,11 +293,8 @@ class BinaryDataController @Inject()(
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                     datasetName,
                                                                                     dataLayerName) ~> NOT_FOUND
-          positionAndResolutionOpt <- findDataService.findPositionWithData(dataSource, dataLayer)
-        } yield
-          Ok(
-            Json.obj("position" -> positionAndResolutionOpt.map(_._1),
-                     "resolution" -> positionAndResolutionOpt.map(_._2)))
+          positionAndMagOpt <- findDataService.findPositionWithData(dataSource, dataLayer)
+        } yield Ok(Json.obj("position" -> positionAndMagOpt.map(_._1), "mag" -> positionAndMagOpt.map(_._2)))
       }
     }
 

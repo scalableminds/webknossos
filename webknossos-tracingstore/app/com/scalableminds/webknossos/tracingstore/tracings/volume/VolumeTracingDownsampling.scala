@@ -85,7 +85,7 @@ trait VolumeTracingDownsampling
     val bucketVolume = 32 * 32 * 32
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
-      _ <- bool2Fox(tracing.resolutions.nonEmpty) ?~> "Cannot downsample tracing with no resolution list"
+      _ <- bool2Fox(tracing.mags.nonEmpty) ?~> "Cannot downsample tracing with no mag list"
       sourceMag = getSourceMag(tracing)
       magsToCreate <- getMagsToCreate(tracing, oldTracingId)
       elementClass = elementClassFromProto(tracing.elementClass)
@@ -254,7 +254,7 @@ trait VolumeTracingDownsampling
     items.groupBy(i => i).view.mapValues(_.size).maxBy(_._2)._1
 
   private def getSourceMag(tracing: VolumeTracing): Vec3Int =
-    tracing.resolutions.minBy(_.maxDim)
+    tracing.mags.minBy(_.maxDim)
 
   private def getMagsToCreate(tracing: VolumeTracing, oldTracingId: String): Fox[List[Vec3Int]] =
     for {
@@ -269,32 +269,31 @@ trait VolumeTracingDownsampling
       magsForTracing = VolumeTracingDownsampling.magsForVolumeTracingByLayerName(dataSource, tracing.fallbackLayer)
     } yield magsForTracing.sortBy(_.maxDim)
 
-  protected def restrictMagList(tracing: VolumeTracing,
-                                resolutionRestrictions: ResolutionRestrictions): VolumeTracing = {
-    val tracingResolutions =
-      resolveLegacyResolutionList(tracing.resolutions)
-    val allowedResolutions = resolutionRestrictions.filterAllowed(tracingResolutions.map(vec3IntFromProto))
-    tracing.withResolutions(allowedResolutions.map(vec3IntToProto))
+  protected def restrictMagList(tracing: VolumeTracing, magRestrictions: MagRestrictions): VolumeTracing = {
+    val tracingMags =
+      resolveLegacyMagList(tracing.mags)
+    val allowedMags = magRestrictions.filterAllowed(tracingMags.map(vec3IntFromProto))
+    tracing.withMags(allowedMags.map(vec3IntToProto))
   }
 
-  protected def resolveLegacyResolutionList(resolutions: Seq[ProtoPoint3D]): Seq[ProtoPoint3D] =
-    if (resolutions.isEmpty) Seq(ProtoPoint3D(1, 1, 1)) else resolutions
+  protected def resolveLegacyMagList(mags: Seq[ProtoPoint3D]): Seq[ProtoPoint3D] =
+    if (mags.isEmpty) Seq(ProtoPoint3D(1, 1, 1)) else mags
 }
 
-object ResolutionRestrictions {
-  def empty: ResolutionRestrictions = ResolutionRestrictions(None, None)
-  implicit val jsonFormat: Format[ResolutionRestrictions] = Json.format[ResolutionRestrictions]
+object MagRestrictions {
+  def empty: MagRestrictions = MagRestrictions(None, None)
+  implicit val jsonFormat: Format[MagRestrictions] = Json.format[MagRestrictions]
 }
 
-case class ResolutionRestrictions(
+case class MagRestrictions(
     min: Option[Int],
     max: Option[Int]
 ) {
-  def filterAllowed(resolutions: Seq[Vec3Int]): Seq[Vec3Int] =
-    resolutions.filter(isAllowed)
+  def filterAllowed(mags: Seq[Vec3Int]): Seq[Vec3Int] =
+    mags.filter(isAllowed)
 
-  def isAllowed(resolution: Vec3Int): Boolean =
-    min.getOrElse(0) <= resolution.maxDim && max.getOrElse(Int.MaxValue) >= resolution.maxDim
+  def isAllowed(mag: Vec3Int): Boolean =
+    min.getOrElse(0) <= mag.maxDim && max.getOrElse(Int.MaxValue) >= mag.maxDim
 
   def isForbidden(resolution: Vec3Int): Boolean = !isAllowed(resolution)
 

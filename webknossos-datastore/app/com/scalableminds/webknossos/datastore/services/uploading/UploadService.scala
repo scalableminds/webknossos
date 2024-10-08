@@ -320,7 +320,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
           case UploadedDataSourceType.ZARR_MULTILAYER | UploadedDataSourceType.NEUROGLANCER_MULTILAYER |
               UploadedDataSourceType.N5_MULTILAYER =>
             tryExploringMultipleLayers(unpackToDir, dataSourceId, uploadedDataSourceType)
-          case UploadedDataSourceType.WKW => addLayerAndResolutionDirIfMissing(unpackToDir).toFox
+          case UploadedDataSourceType.WKW => addLayerAndMagDirIfMissing(unpackToDir).toFox
         }
         _ <- datasetSymlinkService.addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty))
         _ <- addLinkedLayersToDataSourceProperties(unpackToDir, dataSourceId.team, layersToLink.getOrElse(List.empty))
@@ -331,8 +331,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                                      dataSourceId: DataSourceId,
                                      typ: UploadedDataSourceType.Value): Fox[Unit] =
     for {
-      _ <- Fox.runIf(typ == UploadedDataSourceType.ZARR)(
-        addLayerAndResolutionDirIfMissing(path, FILENAME_DOT_ZARRAY).toFox)
+      _ <- Fox.runIf(typ == UploadedDataSourceType.ZARR)(addLayerAndMagDirIfMissing(path, FILENAME_DOT_ZARRAY).toFox)
       explored <- exploreLocalLayerService.exploreLocal(path, dataSourceId)
       _ <- exploreLocalLayerService.writeLocalDatasourceProperties(explored, path)
     } yield ()
@@ -350,7 +349,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         layerDirs
           .map(layerDir =>
             for {
-              _ <- addLayerAndResolutionDirIfMissing(layerDir).toFox
+              _ <- addLayerAndMagDirIfMissing(layerDir).toFox
               explored: DataSourceWithMagLocators <- exploreLocalLayerService
                 .exploreLocal(path, dataSourceId, layerDir.getFileName.toString)
             } yield explored)
@@ -522,8 +521,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       layerDirs = potentialLayers.filter(p => looksLikeZarrArray(p, maxDepth = 2).isDefined)
     } yield layerDirs
 
-  private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path,
-                                                headerFile: String = FILENAME_HEADER_WKW): Box[Unit] =
+  private def addLayerAndMagDirIfMissing(dataSourceDir: Path, headerFile: String = FILENAME_HEADER_WKW): Box[Unit] =
     if (Files.exists(dataSourceDir)) {
       for {
         listing: Seq[Path] <- PathUtils.listFilesRecursive(dataSourceDir,

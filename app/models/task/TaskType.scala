@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
-import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
+import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import models.annotation.{AnnotationSettings, TracingMode}
 import models.team.TeamDAO
 import play.api.libs.json._
@@ -95,7 +95,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           r.settingsSomaclickingallowed,
           r.settingsVolumeinterpolationallowed,
           r.settingsMergermode,
-          ResolutionRestrictions(r.settingsResolutionrestrictionsMin, r.settingsResolutionrestrictionsMax)
+          MagRestrictions(r.settingsResolutionrestrictionsMin, r.settingsResolutionrestrictionsMax)
         ),
         r.recommendedconfiguration.map(Json.parse),
         tracingType,
@@ -151,8 +151,8 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                            ${t.settings.somaClickingAllowed},
                            ${t.settings.volumeInterpolationAllowed},
                            ${t.settings.mergerMode},
-                           ${t.settings.resolutionRestrictions.min},
-                           ${t.settings.resolutionRestrictions.max},
+                           ${t.settings.magRestrictions.min},
+                           ${t.settings.magRestrictions.max},
                            ${t.recommendedConfiguration.map(Json.toJson(_))},
                            ${t.tracingType},
                            ${t.created}, ${t.isDeleted})
@@ -174,8 +174,8 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                      settings_somaClickingAllowed = ${t.settings.somaClickingAllowed},
                      settings_volumeInterpolationAllowed = ${t.settings.volumeInterpolationAllowed},
                      settings_mergerMode = ${t.settings.mergerMode},
-                     settings_resolutionRestrictions_min = ${t.settings.resolutionRestrictions.min},
-                     settings_resolutionRestrictions_max = ${t.settings.resolutionRestrictions.max},
+                     settings_resolutionRestrictions_min = ${t.settings.magRestrictions.min},
+                     settings_resolutionRestrictions_max = ${t.settings.magRestrictions.max},
                      recommendedConfiguration = ${t.recommendedConfiguration.map(Json.toJson(_))},
                      isDeleted = ${t.isDeleted}
                    WHERE _id = ${t._id}""".asUpdate)

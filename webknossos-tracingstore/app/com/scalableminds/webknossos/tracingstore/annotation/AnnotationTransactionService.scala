@@ -41,12 +41,12 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
   private def patternFor(annotationId: String, transactionId: String) =
     s"transactionGroup___${annotationId}___${transactionId}___*"
 
-  def saveUncommitted(annotationId: String,
-                      transactionId: String,
-                      transactionGroupIndex: Int,
-                      version: Long,
-                      updateGroup: UpdateActionGroup,
-                      expiry: FiniteDuration)(implicit ec: ExecutionContext): Fox[Unit] =
+  private def saveUncommitted(annotationId: String,
+                              transactionId: String,
+                              transactionGroupIndex: Int,
+                              version: Long,
+                              updateGroup: UpdateActionGroup,
+                              expiry: FiniteDuration)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- Fox.runIf(transactionGroupIndex > 0)(
         Fox.assertTrue(
@@ -188,8 +188,17 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
       updateActionsJson <- Fox.successful(Json.toJson(preprocessActionsForStorage(updateActionGroup)))
       _ <- tracingDataStore.annotationUpdates.put(annotationId, updateActionGroup.version, updateActionsJson)
       bucketMutatingActions = findBucketMutatingActions(updateActionGroup)
-      _ <- Fox.runIf(bucketMutatingActions.nonEmpty)(
-        volumeTracingService.applyBucketMutatingActions(annotationId, bucketMutatingActions, updateActionGroup.version))
+      actionsGrouped: Map[String, List[BucketMutatingVolumeUpdateAction]] = bucketMutatingActions.groupBy(
+        _.actionTracingId)
+      _ <- Fox.serialCombined(actionsGrouped.keys.toList) { volumeTracingId =>
+        for {
+          tracing <- annotationService.findVolume(annotationId, volumeTracingId)
+          _ <- volumeTracingService.applyBucketMutatingActions(volumeTracingId,
+                                                               tracing,
+                                                               bucketMutatingActions,
+                                                               updateActionGroup.version)
+        } yield ()
+      }
     } yield ()
 
   private def findBucketMutatingActions(updateActionGroup: UpdateActionGroup): List[BucketMutatingVolumeUpdateAction] =

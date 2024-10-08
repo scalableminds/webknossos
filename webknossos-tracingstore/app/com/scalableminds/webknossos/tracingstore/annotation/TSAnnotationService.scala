@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingUpdateAction,
   EditableMappingUpdater
 }
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{
   CreateNodeSkeletonAction,
   DeleteNodeSkeletonAction,
@@ -25,12 +26,15 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   ApplyableVolumeUpdateAction,
   BucketMutatingVolumeUpdateAction,
   UpdateMappingNameVolumeAction,
+  VolumeTracingService,
   VolumeUpdateAction
 }
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FallbackDataHelper,
   KeyValueStoreImplicits,
   TracingDataStore,
+  TracingIds,
+  TracingSelector,
   VersionedKeyValuePair
 }
 import com.scalableminds.webknossos.tracingstore.{
@@ -47,6 +51,8 @@ import scala.concurrent.ExecutionContext
 
 class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknossosClient,
                                     editableMappingService: EditableMappingService,
+                                    volumeTracingService: VolumeTracingService,
+                                    skeletonTracingService: SkeletonTracingService,
                                     val remoteDatastoreClient: TSRemoteDatastoreClient,
                                     tracingDataStore: TracingDataStore)
     extends KeyValueStoreImplicits
@@ -139,7 +145,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         requestAll = true) // TODO do we need to request the others?
       _ = logger.info(
         s"reverting to suorceVersion ${revertAction.sourceVersion}. got sourceAnnotation with version ${sourceAnnotation.version} with ${sourceAnnotation.skeletonStats}")
-      _ <- revertDistributedElements(annotationId, sourceAnnotation, revertAction)
+      // _ <- revertDistributedElements(annotationId, annotationWithTracings, sourceAnnotation, revertAction)
     } yield sourceAnnotation
 
   def createTracing(a: AddLayerAnnotationUpdateAction)(
@@ -471,6 +477,67 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       val batchFrom = batchIndex * batchSize + from
       val batchTo = Math.min(to, (batchIndex + 1) * batchSize + from - 1)
       (batchFrom, batchTo)
+    }
+
+  def findVolume(annotationId: String,
+                 tracingId: String,
+                 version: Option[Long] = None,
+                 useCache: Boolean = true,
+                 applyUpdates: Boolean = false)(implicit tc: TokenContext, ec: ExecutionContext): Fox[VolumeTracing] =
+    if (tracingId == TracingIds.dummyTracingId)
+      Fox.successful(volumeTracingService.dummyTracing)
+    else {
+      for {
+        annotation <- getWithTracings(annotationId, version, List.empty, List(tracingId), requestAll = false) // TODO is applyUpdates still needed?
+        tracing <- annotation.getVolume(tracingId)
+      } yield tracing
+    }
+
+  def findSkeleton(
+      annotationId: String,
+      tracingId: String,
+      version: Option[Long] = None,
+      useCache: Boolean = true,
+      applyUpdates: Boolean = false)(implicit tc: TokenContext, ec: ExecutionContext): Fox[SkeletonTracing] =
+    if (tracingId == TracingIds.dummyTracingId)
+      Fox.successful(skeletonTracingService.dummyTracing)
+    else {
+      for {
+        annotation <- getWithTracings(annotationId, version, List(tracingId), List.empty, requestAll = false) // TODO is applyUpdates still needed?
+        tracing <- annotation.getSkeleton(tracingId)
+      } yield tracing
+    }
+
+  def findMultipleVolumes(selectors: List[Option[TracingSelector]],
+                          useCache: Boolean = true,
+                          applyUpdates: Boolean = false)(implicit tc: TokenContext,
+                                                         ec: ExecutionContext): Fox[List[Option[VolumeTracing]]] =
+    Fox.combined {
+      selectors.map {
+        case Some(selector) =>
+          for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(selector.tracingId)
+            tracing <- findVolume(annotationId, selector.tracingId, selector.version, useCache, applyUpdates)
+              .map(Some(_))
+          } yield tracing
+        case None => Fox.successful(None)
+      }
+    }
+
+  def findMultipleSkeletons(selectors: List[Option[TracingSelector]],
+                            useCache: Boolean = true,
+                            applyUpdates: Boolean = false)(implicit tc: TokenContext,
+                                                           ec: ExecutionContext): Fox[List[Option[SkeletonTracing]]] =
+    Fox.combined {
+      selectors.map {
+        case Some(selector) =>
+          for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(selector.tracingId)
+            tracing <- findSkeleton(annotationId, selector.tracingId, selector.version, useCache, applyUpdates)
+              .map(Some(_))
+          } yield tracing
+        case None => Fox.successful(None)
+      }
     }
 
 }

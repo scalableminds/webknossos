@@ -40,7 +40,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Array[Byte]] =
     for {
-      tracing <- volumeTracingService.find(annotationId, tracingId) ?~> "tracing.notFound"
+      tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
       data <- if (fullMeshRequest.meshFileName.isDefined)
         loadFullMeshFromMeshfile(annotationId, tracingId, tracing, fullMeshRequest)
       else loadFullMeshFromAdHoc(annotationId, tracingId, tracing, fullMeshRequest)
@@ -98,7 +98,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       voxelSize: VoxelSize,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] =
     for {
-      fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracingId)
+      fallbackLayer <- volumeTracingService.getFallbackLayer(tracingId, tracing)
       mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
       bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
         .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(

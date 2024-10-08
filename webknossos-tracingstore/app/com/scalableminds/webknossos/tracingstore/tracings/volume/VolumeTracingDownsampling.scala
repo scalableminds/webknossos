@@ -82,16 +82,16 @@ trait VolumeTracingDownsampling
       annotationId: String,
       tracingId: String,
       oldTracingId: String,
-      tracing: VolumeTracing,
+      newTracing: VolumeTracing,
       dataLayer: VolumeTracingLayer,
       tracingService: VolumeTracingService)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Vec3Int]] = {
     val bucketVolume = 32 * 32 * 32
     for {
-      _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
-      _ <- bool2Fox(tracing.resolutions.nonEmpty) ?~> "Cannot downsample tracing with no resolution list"
-      sourceMag = getSourceMag(tracing)
-      magsToCreate <- getMagsToCreate(tracing, oldTracingId)
-      elementClass = elementClassFromProto(tracing.elementClass)
+      _ <- bool2Fox(newTracing.version == 0L) ?~> "Tracing has already been edited."
+      _ <- bool2Fox(newTracing.resolutions.nonEmpty) ?~> "Cannot downsample tracing with no resolution list"
+      sourceMag = getSourceMag(newTracing)
+      magsToCreate <- getMagsToCreate(newTracing, oldTracingId)
+      elementClass = elementClassFromProto(newTracing.elementClass)
       bucketDataMapMutable = new mutable.HashMap[BucketPosition, Array[Byte]]().withDefault(_ => revertedValue)
       _ = fillMapWithSourceBucketsInplace(bucketDataMapMutable, tracingId, dataLayer, sourceMag)
       originalBucketPositions = bucketDataMapMutable.keys.toList
@@ -107,28 +107,27 @@ trait VolumeTracingDownsampling
                              dataLayer)
         requiredMag
       }
-      fallbackLayer <- tracingService.getFallbackLayer(annotationId, oldTracingId) // remote wk does not know the new id yet
-      tracing <- tracingService.find(annotationId, tracingId) ?~> "tracing.notFound"
+      fallbackLayer <- tracingService.getFallbackLayer(oldTracingId, newTracing) // remote wk does not know the new id yet
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
                                                         volumeSegmentIndexClient,
-                                                        tracing.version,
+                                                        newTracing.version,
                                                         tracingService.remoteDatastoreClient,
                                                         fallbackLayer,
                                                         dataLayer.additionalAxes,
                                                         tc)
       _ <- Fox.serialCombined(updatedBucketsMutable.toList) { bucketPosition: BucketPosition =>
         for {
-          _ <- saveBucket(dataLayer, bucketPosition, bucketDataMapMutable(bucketPosition), tracing.version)
-          mappingName <- selectMappingName(tracing)
-          _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
+          _ <- saveBucket(dataLayer, bucketPosition, bucketDataMapMutable(bucketPosition), newTracing.version)
+          mappingName <- selectMappingName(newTracing)
+          _ <- Fox.runIfOptionTrue(newTracing.hasSegmentIndex)(
             updateSegmentIndex(
               segmentIndexBuffer,
               bucketPosition,
               bucketDataMapMutable(bucketPosition),
               Empty,
-              tracing.elementClass,
+              newTracing.elementClass,
               mappingName,
-              editableMappingTracingId(tracing, tracingId)
+              editableMappingTracingId(newTracing, tracingId)
             ))
         } yield ()
       }
@@ -259,14 +258,16 @@ trait VolumeTracingDownsampling
   private def getSourceMag(tracing: VolumeTracing): Vec3Int =
     tracing.resolutions.minBy(_.maxDim)
 
-  private def getMagsToCreate(tracing: VolumeTracing, oldTracingId: String): Fox[List[Vec3Int]] =
+  private def getMagsToCreate(tracing: VolumeTracing, oldTracingId: String)(
+      implicit tc: TokenContext): Fox[List[Vec3Int]] =
     for {
       requiredMags <- getRequiredMags(tracing, oldTracingId)
       sourceMag = getSourceMag(tracing)
       magsToCreate = requiredMags.filter(_.maxDim > sourceMag.maxDim)
     } yield magsToCreate
 
-  private def getRequiredMags(tracing: VolumeTracing, oldTracingId: String): Fox[List[Vec3Int]] =
+  private def getRequiredMags(tracing: VolumeTracing, oldTracingId: String)(
+      implicit tc: TokenContext): Fox[List[Vec3Int]] =
     for {
       dataSource: DataSourceLike <- tracingStoreWkRpcClient.getDataSourceForTracing(oldTracingId)
       magsForTracing = VolumeTracingDownsampling.magsForVolumeTracingByLayerName(dataSource, tracing.fallbackLayer)

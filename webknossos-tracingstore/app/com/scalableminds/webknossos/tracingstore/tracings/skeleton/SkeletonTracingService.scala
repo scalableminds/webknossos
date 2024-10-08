@@ -9,7 +9,6 @@ import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreRedisStore}
-import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import net.liftweb.common.{Box, Full}
@@ -24,7 +23,6 @@ class SkeletonTracingService @Inject()(
     val temporaryTracingIdStore: TracingStoreRedisStore,
     val remoteWebknossosClient: TSRemoteWebknossosClient,
     val uncommittedUpdatesStore: TracingStoreRedisStore,
-    val annotationService: TSAnnotationService,
     val tracingMigrationService: SkeletonTracingMigrationService)(implicit val ec: ExecutionContext)
     extends TracingService[SkeletonTracing]
     with KeyValueStoreImplicits
@@ -36,24 +34,6 @@ class SkeletonTracingService @Inject()(
   val tracingStore: FossilDBClient = tracingDataStore.skeletons
 
   implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
-
-  def find(annotationId: String,
-           tracingId: String,
-           version: Option[Long] = None,
-           useCache: Boolean = true,
-           applyUpdates: Boolean = false)(implicit tc: TokenContext): Fox[SkeletonTracing] =
-    if (tracingId == TracingIds.dummyTracingId)
-      Fox.successful(dummyTracing)
-    else {
-      for {
-        annotation <- annotationService.getWithTracings(annotationId,
-                                                        version,
-                                                        List(tracingId),
-                                                        List.empty,
-                                                        requestAll = false) // TODO is applyUpdates still needed?
-        tracing <- annotation.getSkeleton(tracingId)
-      } yield tracing
-    }
 
   def duplicate(tracing: SkeletonTracing,
                 fromTask: Boolean,

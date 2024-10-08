@@ -41,7 +41,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- volumeTracingService.find(annotationId, tracingId)
+            tracing <- annotationService.findVolume(annotationId, tracingId)
             tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
             _ <- assertMappingIsNotLocked(tracing)
             _ <- bool2Fox(volumeTracingService.volumeBucketsAreEmpty(tracingId)) ?~> "annotation.volumeBucketsNotEmpty"
@@ -82,7 +82,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
     Action.async(validateJson[List[UpdateActionGroup]]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
         for {
-          tracing <- tracingService.find(annotationId, tracingId)
+          tracing <- annotationService.findVolume(annotationId, tracingId)
           mappingName <- tracing.mappingName.toFox
           _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
           currentVersion <- editableMappingService.getClosestMaterializableVersionOrZero(mappingName, None)
@@ -111,7 +111,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- volumeTracingService.find(annotationId, tracingId)
+            tracing <- annotationService.findVolume(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             editableMappingInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId, version)
             infoJson = editableMappingService.infoJson(tracingId = tracingId, editableMappingInfo = editableMappingInfo)
@@ -126,7 +126,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- volumeTracingService.find(annotationId, tracingId)
+            tracing <- annotationService.findVolume(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             agglomerateGraphBox: Box[AgglomerateGraph] <- editableMappingService
               .getAgglomerateGraphForId(tracingId, tracing.version, agglomerateId)
@@ -148,7 +148,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- volumeTracingService.find(annotationId, tracingId)
+            tracing <- annotationService.findVolume(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             editableMappingInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId, version = None)
@@ -170,7 +170,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- volumeTracingService.find(annotationId, tracingId)
+            tracing <- annotationService.findVolume(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             editableMappingInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId)
@@ -190,7 +190,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- volumeTracingService.find(annotationId, tracingId)
+            tracing <- annotationService.findVolume(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             editableMappingInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId)
@@ -209,7 +209,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          tracing <- volumeTracingService.find(annotationId, tracingId)
+          tracing <- annotationService.findVolume(annotationId, tracingId)
           _ <- bool2Fox(tracing.getHasEditableMapping) ?~> "Cannot query agglomerate skeleton for volume annotation"
           editableMappingInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId)
           remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)

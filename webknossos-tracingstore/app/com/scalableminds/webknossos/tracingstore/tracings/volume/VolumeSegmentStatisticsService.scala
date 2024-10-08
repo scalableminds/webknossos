@@ -58,9 +58,9 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
   private def getTypedDataForBucketPosition(annotationId: String, tracingId: String)(
       bucketPosition: Vec3Int,
       mag: Vec3Int,
-      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit tc: TokenContext) =
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit tc: TokenContext, ec: ExecutionContext) =
     for {
-      tracing <- volumeTracingService.find(annotationId, tracingId) ?~> "tracing.notFound"
+      tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
       bucketData <- getVolumeDataForPositions(annotationId,
                                               tracingId,
                                               tracing,
@@ -79,8 +79,8 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       segmentId: Long,
       mag: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext) =
     for {
-      fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracingId)
-      tracing <- volumeTracingService.find(annotationId, tracingId) ?~> "tracing.notFound"
+      tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
+      fallbackLayer <- volumeTracingService.getFallbackLayer(tracingId, tracing)
       additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes)
       allBucketPositions: ListOfVec3IntProto <- volumeSegmentIndexService
         .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(

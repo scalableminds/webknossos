@@ -129,7 +129,7 @@ class JobController @Inject()(
           _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
           command = JobCommand.convert_to_wkw
           commandArgs = Json.obj(
-            "organization_name" -> organization._id,
+            "organization_id" -> organization._id,
             "organization_display_name" -> organization.name,
             "dataset_name" -> dataset.name,
             "dataset_path" -> dataset.path,
@@ -157,7 +157,7 @@ class JobController @Inject()(
         _ <- datasetService.assertValidLayerNameLax(layerName)
         command = JobCommand.compute_mesh_file
         commandArgs = Json.obj(
-          "organization_name" -> organization._id,
+          "organization_id" -> organization._id,
           "dataset_name" -> dataset.name,
           "dataset_path" -> dataset.path,
           "layer_name" -> layerName,
@@ -181,7 +181,7 @@ class JobController @Inject()(
         _ <- datasetService.assertValidLayerNameLax(layerName)
         command = JobCommand.compute_segment_index_file
         commandArgs = Json.obj(
-          "organization_name" -> dataset._organization,
+          "organization_id" -> dataset._organization,
           "dataset_name" -> dataset.name,
           "dataset_path" -> dataset.path,
           "segmentation_layer_name" -> layerName,
@@ -205,7 +205,7 @@ class JobController @Inject()(
           _ <- datasetService.assertValidLayerNameLax(layerName)
           command = JobCommand.infer_nuclei
           commandArgs = Json.obj(
-            "organization_name" -> dataset._organization,
+            "organization_id" -> dataset._organization,
             "dataset_name" -> dataset.name,
             "dataset_path" -> dataset.path,
             "layer_name" -> layerName,
@@ -235,7 +235,7 @@ class JobController @Inject()(
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           command = JobCommand.infer_neurons
           commandArgs = Json.obj(
-            "organization_name" -> organization._id,
+            "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_path" -> dataset.path,
             "new_dataset_name" -> newDatasetName,
@@ -267,7 +267,7 @@ class JobController @Inject()(
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           command = JobCommand.infer_mitochondria
           commandArgs = Json.obj(
-            "organization_name" -> dataset._organization,
+            "organization_id" -> dataset._organization,
             "dataset_name" -> dataset.name,
             "dataset_path" -> dataset.path,
             "new_dataset_name" -> newDatasetName,
@@ -299,7 +299,7 @@ class JobController @Inject()(
           _ <- bool2Fox(multiUser.isSuperUser) ?~> "job.alignSections.notAllowed.onlySuperUsers"
           command = JobCommand.align_sections
           commandArgs = Json.obj(
-            "organization_name" -> organization._id,
+            "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_path" -> dataset.path,
             "new_dataset_name" -> newDatasetName,
@@ -353,7 +353,7 @@ class JobController @Inject()(
             s"${formatDateForFilename(new Date())}__${dataset.name}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
           commandArgs = Json.obj(
             "dataset_path" -> dataset.path,
-            "organization_name" -> organization._id,
+            "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "nd_bbox" -> ndBoundingBox.toWkLibsDict,
             "export_file_name" -> exportFileName,
@@ -390,7 +390,7 @@ class JobController @Inject()(
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
           commandArgs = Json.obj(
-            "organization_name" -> organization._id,
+            "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_path" -> dataset.path,
             "fallback_layer_name" -> fallbackLayerName,
@@ -419,7 +419,7 @@ class JobController @Inject()(
           _ <- datasetService.assertValidLayerNameLax(layerName)
           command = JobCommand.find_largest_segment_id
           commandArgs = Json.obj(
-            "organization_name" -> organization._id,
+            "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_path" -> dataset.path,
             "layer_name" -> layerName
@@ -452,7 +452,7 @@ class JobController @Inject()(
           exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${dataset.name}__$layerName.mp4"
           command = JobCommand.render_animation
           commandArgs = Json.obj(
-            "organization_name" -> organization._id,
+            "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_path" -> dataset.path,
             "export_file_name" -> exportFileName,

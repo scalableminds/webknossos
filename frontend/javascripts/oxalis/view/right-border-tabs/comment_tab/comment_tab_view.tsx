@@ -44,7 +44,6 @@ import { useEffectOnlyOnce } from "libs/react_hooks";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
 import { useLifecycle } from "beautiful-react-hooks";
 import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
-import { confirmAsync } from "dashboard/dataset/helper_components";
 
 const commentTabId = "commentTabId";
 enum SortByEnum {

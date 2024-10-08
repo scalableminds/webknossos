@@ -1,4 +1,4 @@
-import { Button, Col, Divider, Dropdown, type MenuProps, Modal, Row, Switch, Tooltip } from "antd";
+import { Button, Col, Divider, Dropdown, type MenuProps, Modal, Row, Switch } from "antd";
 import type { Dispatch } from "redux";
 import {
   EditOutlined,
@@ -126,6 +126,11 @@ import FastTooltip from "components/fast_tooltip";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { DndContext, type DragEndEvent } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
+import {
+  defaultDatasetViewConfigurationWithoutNull,
+  getDefaultLayerViewConfiguration,
+} from "types/schemas/dataset_view_configuration.schema";
+import defaultState from "oxalis/default_state";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;
@@ -841,74 +846,78 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   getColorLayerSpecificSettings = (
     layerConfiguration: DatasetLayerConfiguration,
     layerName: string,
-  ) => (
-    <div>
-      <LogSliderSetting
-        label={
-          <FastTooltip title={layerViewConfigurationTooltips.gammaCorrectionValue}>
-            {layerViewConfigurations.gammaCorrectionValue}
-          </FastTooltip>
-        }
-        min={0.01}
-        max={10}
-        roundTo={3}
-        value={layerConfiguration.gammaCorrectionValue}
-        onChange={_.partial(this.props.onChangeLayer, layerName, "gammaCorrectionValue")}
-      />
-      <Row
-        className="margin-bottom"
-        style={{
-          marginTop: 6,
-        }}
-      >
-        <Col span={SETTING_LEFT_SPAN}>
-          <label className="setting-label">Color</label>
-        </Col>
-        <Col span={SETTING_MIDDLE_SPAN}>
-          <ColorSetting
-            value={Utils.rgbToHex(layerConfiguration.color)}
-            onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
-            style={{
-              marginLeft: 6,
-            }}
-          />
-        </Col>
-        <Col span={SETTING_VALUE_SPAN}>
-          <FastTooltip title="Invert the color of this layer.">
-            <div
-              onClick={() =>
-                this.props.onChangeLayer(
-                  layerName,
-                  "isInverted",
-                  layerConfiguration ? !layerConfiguration.isInverted : false,
-                )
-              }
+  ) => {
+    const defaultSettings = getDefaultLayerViewConfiguration();
+    return (
+      <div>
+        <LogSliderSetting
+          label={
+            <FastTooltip title={layerViewConfigurationTooltips.gammaCorrectionValue}>
+              {layerViewConfigurations.gammaCorrectionValue}
+            </FastTooltip>
+          }
+          min={0.01}
+          max={10}
+          roundTo={3}
+          value={layerConfiguration.gammaCorrectionValue}
+          onChange={_.partial(this.props.onChangeLayer, layerName, "gammaCorrectionValue")}
+          defaultValue={defaultSettings.gammaCorrectionValue}
+        />
+        <Row
+          className="margin-bottom"
+          style={{
+            marginTop: 6,
+          }}
+        >
+          <Col span={SETTING_LEFT_SPAN}>
+            <label className="setting-label">Color</label>
+          </Col>
+          <Col span={SETTING_MIDDLE_SPAN}>
+            <ColorSetting
+              value={Utils.rgbToHex(layerConfiguration.color)}
+              onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
               style={{
-                top: 4,
-                right: 0,
-                marginTop: 0,
-                marginLeft: 10,
-                display: "inline-flex",
+                marginLeft: 6,
               }}
-            >
-              <i
-                className={classnames("fas", "fa-adjust", {
-                  "flip-horizontally": layerConfiguration.isInverted,
-                })}
+            />
+          </Col>
+          <Col span={SETTING_VALUE_SPAN}>
+            <FastTooltip title="Invert the color of this layer.">
+              <div
+                onClick={() =>
+                  this.props.onChangeLayer(
+                    layerName,
+                    "isInverted",
+                    layerConfiguration ? !layerConfiguration.isInverted : false,
+                  )
+                }
                 style={{
-                  margin: 0,
-                  transition: "transform 0.5s ease 0s",
-                  color: layerConfiguration.isInverted
-                    ? "var(--ant-color-primary)"
-                    : "var(--ant-color-text-secondary)",
+                  top: 4,
+                  right: 0,
+                  marginTop: 0,
+                  marginLeft: 10,
+                  display: "inline-flex",
                 }}
-              />
-            </div>
-          </FastTooltip>
-        </Col>
-      </Row>
-    </div>
-  );
+              >
+                <i
+                  className={classnames("fas", "fa-adjust", {
+                    "flip-horizontally": layerConfiguration.isInverted,
+                  })}
+                  style={{
+                    margin: 0,
+                    transition: "transform 0.5s ease 0s",
+                    color: layerConfiguration.isInverted
+                      ? "var(--ant-color-primary)"
+                      : "var(--ant-color-text-secondary)",
+                  }}
+                />
+              </div>
+            </FastTooltip>
+          </Col>
+        </Row>
+      </div>
+    );
+  };
 
   getSegmentationSpecificSettings = (layerName: string) => {
     const segmentationOpacitySetting = (
@@ -919,6 +928,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         step={1}
         value={this.props.datasetConfiguration.segmentationPatternOpacity}
         onChange={_.partial(this.props.onChange, "segmentationPatternOpacity")}
+        defaultValue={defaultDatasetViewConfigurationWithoutNull.segmentationPatternOpacity}
       />
     );
     return (
@@ -969,6 +979,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         "Opacity"
       );
 
+    const defaultLayerViewConfig = getDefaultLayerViewConfiguration();
+
     return (
       <div key={layerName} style={style} ref={setNodeRef}>
         {this.getLayerSettingsHeader(
@@ -995,6 +1007,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               max={100}
               value={layerConfiguration.alpha}
               onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
+              defaultValue={defaultLayerViewConfig.alpha}
             />
             {isColorLayer
               ? this.getColorLayerSpecificSettings(layerConfiguration, layerName)
@@ -1228,6 +1241,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               value={activeNodeRadius}
               onChange={onChangeRadius}
               disabled={userConfiguration.overrideNodeRadius || activeNodeRadius === 0}
+              defaultValue={Constants.DEFAULT_NODE_RADIUS}
             />
             <NumberSliderSetting
               label={
@@ -1240,6 +1254,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               step={0.1}
               value={userConfiguration.particleSize}
               onChange={this.onChangeUser.particleSize}
+              defaultValue={defaultState.userConfiguration.particleSize}
             />
             {this.props.isArbitraryMode ? (
               <NumberSliderSetting
@@ -1248,6 +1263,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                 max={userSettings.clippingDistanceArbitrary.maximum}
                 value={userConfiguration.clippingDistanceArbitrary}
                 onChange={this.onChangeUser.clippingDistanceArbitrary}
+                defaultValue={defaultState.userConfiguration.clippingDistanceArbitrary}
               />
             ) : (
               <LogSliderSetting
@@ -1257,6 +1273,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                 max={userSettings.clippingDistance.maximum}
                 value={userConfiguration.clippingDistance}
                 onChange={this.onChangeUser.clippingDistance}
+                defaultValue={defaultState.userConfiguration.clippingDistance}
               />
             )}
             <SwitchSetting

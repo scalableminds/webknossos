@@ -181,7 +181,7 @@ trait PathUtils extends LazyLogging {
   private def removeOneName(path: Path): Path =
     if (path.getNameCount == 1) {
       Paths.get("")
-    } else path.subpath(0, path.getNameCount - 1)
+    } else path.getParent
 
   def deleteDirectoryRecursively(path: Path): Box[Unit] = {
     val directory = new Directory(new File(path.toString))

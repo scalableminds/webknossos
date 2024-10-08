@@ -57,7 +57,8 @@
       "correctness": {
         "noUnusedVariables": "error",
         "noRenderReturnValue": "off",
-        "useHookAtTopLevel": "error"
+        "useHookAtTopLevel": "error",
+        "noUnusedImports": "error"
       },
       "suspicious": {
         "noExplicitAny": "off",

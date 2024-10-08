@@ -3,7 +3,7 @@ import { syncValidator } from "types/validation";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import _ from "lodash";
 import {
   type APITaskType,

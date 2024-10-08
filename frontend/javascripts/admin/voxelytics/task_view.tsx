@@ -1,4 +1,3 @@
-import React from "react";
 import { JSONTree, type ShouldExpandNodeInitially, type LabelRenderer } from "react-json-tree";
 import { Progress, Tabs, type TabsProps, Tooltip } from "antd";
 import Markdown from "libs/markdown_adapter";

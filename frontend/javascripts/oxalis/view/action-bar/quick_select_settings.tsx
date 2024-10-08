@@ -6,7 +6,6 @@ import {
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { useDispatch, useSelector } from "react-redux";
 import type { OxalisState } from "oxalis/store";
-import React from "react";
 import defaultState from "oxalis/default_state";
 import Shortcut from "libs/shortcut_component";
 import { Radio, type RadioChangeEvent } from "antd";
@@ -80,6 +79,7 @@ export function AiQuickSelectControls() {
         max={MAX_DEPTH_FOR_SAM}
         step={1}
         onChange={onChangePredictionDepth}
+        defaultValue={defaultState.userConfiguration.quickSelect.predictionDepth}
       />
       <Shortcut supportInputElements keys="escape" onTrigger={closeControls} />
       <Shortcut supportInputElements keys="enter" onTrigger={closeControls} />
@@ -180,6 +180,7 @@ export function HeuristicQuickSelectControls() {
         step={0.25} // a granular step is important so that all 256 values can be effectively targeted
         onChange={onChangeThreshold}
         disabled={!isQuickSelectActive}
+        defaultValue={defaultState.userConfiguration.quickSelect.threshold}
       />
       <NumberSliderSetting
         label="Close [vx]"
@@ -188,6 +189,7 @@ export function HeuristicQuickSelectControls() {
         max={10}
         step={1}
         onChange={onChangeCloseValue}
+        defaultValue={defaultState.userConfiguration.quickSelect.closeValue}
       />
       <NumberSliderSetting
         label="Erode [vx]"
@@ -196,6 +198,7 @@ export function HeuristicQuickSelectControls() {
         max={10}
         step={1}
         onChange={onChangeErodeValue}
+        defaultValue={defaultState.userConfiguration.quickSelect.erodeValue}
       />
       <NumberSliderSetting
         label="Dilate [vx]"
@@ -204,6 +207,7 @@ export function HeuristicQuickSelectControls() {
         max={10}
         step={1}
         onChange={onChangeDilateValue}
+        defaultValue={defaultState.userConfiguration.quickSelect.dilateValue}
       />
       <Shortcut supportInputElements keys="escape" onTrigger={onDiscard} />
       <Shortcut supportInputElements keys="enter" onTrigger={onConfirm} />

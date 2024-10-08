@@ -1,8 +1,7 @@
 import { getTeams, getTimeEntries, getTimeTrackingForUserSpans } from "admin/admin_rest_api";
 import { Card, Select, Spin, Button, DatePicker, type TimeRangePickerProps, Table } from "antd";
 import { useFetch } from "libs/react_helpers";
-import _ from "lodash";
-import React, { useState } from "react";
+import { useState } from "react";
 import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";

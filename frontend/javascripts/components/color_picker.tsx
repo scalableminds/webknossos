@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Popover } from "antd";
 import * as Utils from "libs/utils";
 import { HexColorInput, HexColorPicker } from "react-colorful";

@@ -24,7 +24,7 @@ import type {
   UnitLong,
 } from "oxalis/constants";
 import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import type { EmptyObject, ValueOf } from "./globals";
+import type { EmptyObject } from "./globals";
 
 export type AdditionalCoordinate = { name: string; value: number };
 
@@ -711,6 +711,7 @@ export type WkLibsNdBoundingBox = BoundingBoxObject & {
 
 export type APIJob = {
   readonly id: string;
+  readonly owner: APIUserBase;
   readonly datasetName: string | null | undefined;
   readonly exportFileName: string | null | undefined;
   readonly layerName: string | null | undefined;

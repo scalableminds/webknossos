@@ -141,7 +141,9 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
      """
 
   private def listAccessQ(requestingUserId: ObjectId) =
-    q"""_owner = $requestingUserId"""
+    q"""_owner = $requestingUserId OR
+       ((SELECT u._organization FROM webknossos.users_ u WHERE u._id = _owner) IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))
+     """
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Job]] =
     for {

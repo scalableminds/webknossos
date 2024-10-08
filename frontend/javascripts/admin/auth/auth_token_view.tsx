@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { CopyOutlined, SwapOutlined } from "@ant-design/icons";
 import { Input, Button, Col, Row, Spin, Form, Space } from "antd";
 import { getAuthToken, revokeAuthToken } from "admin/admin_rest_api";

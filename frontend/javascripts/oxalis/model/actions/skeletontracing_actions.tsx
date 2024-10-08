@@ -1,6 +1,5 @@
 import { Modal } from "antd";
 import renderIndependently from "libs/render_independently";
-import _ from "lodash";
 import messages from "messages";
 import type { TreeType, Vector3 } from "oxalis/constants";
 import {

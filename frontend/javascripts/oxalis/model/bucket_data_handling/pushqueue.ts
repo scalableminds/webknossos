@@ -1,4 +1,3 @@
-import _ from "lodash";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { createCompressedUpdateBucketActions } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";

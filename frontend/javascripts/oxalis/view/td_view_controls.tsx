@@ -16,7 +16,6 @@ import {
   BorderOuterOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
-import * as React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import type { OxalisState } from "oxalis/store";

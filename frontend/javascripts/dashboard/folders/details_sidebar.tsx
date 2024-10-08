@@ -14,7 +14,7 @@ import {
   OwningOrganizationRow,
   VoxelSizeRow,
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import type { APIDatasetCompact, Folder } from "types/api_flow_types";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";

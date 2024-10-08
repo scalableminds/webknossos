@@ -823,7 +823,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 <DatasetNameFormItem
                   activeUser={activeUser}
                   disabled={continuingUnfinishedUpload}
-                  allowDuplicate={continuingUnfinishedUpload}
+                  allowDuplicate
                 />
               </Col>
               <Col span={12}>

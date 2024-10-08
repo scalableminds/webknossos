@@ -56,7 +56,7 @@ import {
   getDefaultValueRangeOfLayer,
   getEnabledColorLayers,
   getLayerBoundingBox,
-  getResolutionInfo,
+  getMagnificationInfo,
   getTransformsForLayer,
 } from "../accessors/dataset_accessor";
 import Dimensions, { type DimensionIndices } from "../dimensions";
@@ -145,7 +145,7 @@ export function* prepareQuickSelect(
   const requestedZoomStep = yield* select((store) =>
     getActiveMagIndexForLayer(store, colorLayer.name),
   );
-  const resolutionInfo = getResolutionInfo(
+  const resolutionInfo = getMagnificationInfo(
     // Ensure that a magnification is used which exists in the color layer as well as the
     // target segmentation layer.
     _.intersectionBy(colorLayer.resolutions, volumeLayer.resolutions, (mag) => mag.join("-")),
@@ -154,7 +154,7 @@ export function* prepareQuickSelect(
     requestedZoomStep,
     "The visible color layer and the active segmentation layer don't have any magnifications in common. Cannot select segment.",
   );
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+  const labeledResolution = resolutionInfo.getMagByIndexOrThrow(labeledZoomStep);
 
   return {
     labeledZoomStep,

@@ -59,7 +59,7 @@ import {
   getElementClass,
   isColorLayer as getIsColorLayer,
   getLayerByName,
-  getResolutionInfo,
+  getMagnificationInfo,
   getTransformsForLayerOrNull,
   getWidestResolutions,
   getLayerBoundingBox,
@@ -305,8 +305,8 @@ function LayerInfoIconWithTooltip({
 }: { layer: APIDataLayer; dataset: APIDataset }) {
   const renderTooltipContent = useCallback(() => {
     const elementClass = getElementClass(dataset, layer.name);
-    const resolutionInfo = getResolutionInfo(layer.resolutions);
-    const resolutions = resolutionInfo.getResolutionList();
+    const resolutionInfo = getMagnificationInfo(layer.resolutions);
+    const resolutions = resolutionInfo.getMagList();
     return (
       <div>
         <div>Data Type: {elementClass}</div>

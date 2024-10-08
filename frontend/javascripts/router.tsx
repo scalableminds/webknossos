@@ -57,7 +57,7 @@ import { type ContextRouter, Link, type RouteProps } from "react-router-dom";
 import { Redirect, Route, Router, Switch } from "react-router-dom";
 import {
   APICompoundTypeEnum,
-  type APIResolutionRestrictions,
+  type APIMagRestrictions,
   type APIUser,
   TracingTypeEnum,
 } from "types/api_flow_types";
@@ -647,20 +647,20 @@ class ReactRouter extends React.Component<Props> {
                         coalesce(TracingTypeEnum, match.params.type) || TracingTypeEnum.skeleton;
                       const getParams = Utils.getUrlParamsObjectFromString(location.search);
                       const { autoFallbackLayer, fallbackLayerName } = getParams;
-                      const resolutionRestrictions: APIResolutionRestrictions = {};
+                      const magRestrictions: APIMagRestrictions = {};
 
                       if (getParams.minRes !== undefined) {
-                        resolutionRestrictions.min = Number.parseInt(getParams.minRes);
+                        magRestrictions.min = Number.parseInt(getParams.minRes);
 
-                        if (!_.isNumber(resolutionRestrictions.min)) {
+                        if (!_.isNumber(magRestrictions.min)) {
                           throw new Error("Invalid minRes parameter");
                         }
                       }
 
                       if (getParams.maxRes !== undefined) {
-                        resolutionRestrictions.max = Number.parseInt(getParams.maxRes);
+                        magRestrictions.max = Number.parseInt(getParams.maxRes);
 
-                        if (!_.isNumber(resolutionRestrictions.max)) {
+                        if (!_.isNumber(magRestrictions.max)) {
                           throw new Error("Invalid maxRes parameter");
                         }
                       }
@@ -671,7 +671,7 @@ class ReactRouter extends React.Component<Props> {
                         !!autoFallbackLayer,
                         fallbackLayerName,
                         null,
-                        resolutionRestrictions,
+                        magRestrictions,
                       );
                       trackAction(`Create ${type} tracing`);
                       return `/annotations/${annotation.id}`;

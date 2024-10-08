@@ -82,7 +82,7 @@ import { getHalfViewportExtentsInUnitFromState } from "oxalis/model/sagas/saga_s
 import {
   getLayerBoundingBox,
   getLayerByName,
-  getResolutionInfo,
+  getMagnificationInfo,
   getVisibleSegmentationLayer,
   getMappingInfo,
   flatToNestedMatrix,
@@ -175,7 +175,7 @@ import messages from "messages";
 import window, { location } from "libs/window";
 import { coalesce } from "libs/utils";
 import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import { MagnificationInfo } from "oxalis/model/helpers/resolution_info";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
@@ -669,7 +669,7 @@ class TracingApi {
       );
     }
 
-    const resolutionInfo = getResolutionInfo(
+    const resolutionInfo = getMagnificationInfo(
       getLayerByName(state.dataset, segmentationLayerName).resolutions,
     );
     const theoreticalMagIndex = getActiveMagIndexForLayer(state, segmentationLayerName);
@@ -677,7 +677,7 @@ class TracingApi {
     if (existingMagIndex == null) {
       throw new Error("The index of the current mag could not be found.");
     }
-    const currentMag = resolutionInfo.getResolutionByIndex(existingMagIndex);
+    const currentMag = resolutionInfo.getMagByIndex(existingMagIndex);
     if (currentMag == null) {
       throw new Error("No mag could be found.");
     }
@@ -1842,8 +1842,8 @@ class DataApi {
       zoomStep = _zoomStep;
     } else {
       const layer = getLayerByName(Store.getState().dataset, layerName);
-      const resolutionInfo = getResolutionInfo(layer.resolutions);
-      zoomStep = resolutionInfo.getFinestResolutionIndex();
+      const resolutionInfo = getMagnificationInfo(layer.resolutions);
+      zoomStep = resolutionInfo.getFinestMagIndex();
     }
 
     const cube = this.model.getCubeByLayerName(layerName);
@@ -1899,16 +1899,16 @@ class DataApi {
     additionalCoordinates: AdditionalCoordinate[] | null = null,
   ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
-    const resolutionInfo = getResolutionInfo(layer.resolutions);
+    const resolutionInfo = getMagnificationInfo(layer.resolutions);
     let zoomStep;
 
     if (_zoomStep != null) {
       zoomStep = _zoomStep;
     } else {
-      zoomStep = resolutionInfo.getFinestResolutionIndex();
+      zoomStep = resolutionInfo.getFinestMagIndex();
     }
 
-    const resolutions = resolutionInfo.getDenseResolutions();
+    const resolutions = resolutionInfo.getDenseMagnifications();
     const bucketAddresses = this.getBucketAddressesInCuboid(
       mag1Bbox,
       resolutions,
@@ -1945,7 +1945,7 @@ class DataApi {
       viewport,
     );
     const layer = getLayerByName(state.dataset, layerName);
-    const magInfo = getResolutionInfo(layer.resolutions);
+    const magInfo = getMagnificationInfo(layer.resolutions);
     if (maybeResolutionIndex == null) {
       maybeResolutionIndex = getActiveMagIndexForLayer(state, layerName);
     }
@@ -1960,7 +1960,7 @@ class DataApi {
       viewport,
     );
 
-    const mag = magInfo.getResolutionByIndexOrThrow(zoomStep);
+    const mag = magInfo.getMagByIndexOrThrow(zoomStep);
     const resolutionUVX = dimensions.transDim(mag, viewport);
     const widthInVoxel = Math.ceil(halfViewportExtentU / resolutionUVX[0]);
     const heightInVoxel = Math.ceil(halfViewportExtentV / resolutionUVX[1]);
@@ -1998,7 +1998,7 @@ class DataApi {
     );
 
     const topLeft = (bucketAddress: BucketAddress) =>
-      bucketPositionToGlobalAddress(bucketAddress, new ResolutionInfo(resolutions));
+      bucketPositionToGlobalAddress(bucketAddress, new MagnificationInfo(resolutions));
 
     const nextBucketInDim = (bucket: BucketAddress, dim: 0 | 1 | 2) => {
       const copy = bucket.slice() as BucketAddress;
@@ -2106,8 +2106,10 @@ class DataApi {
     mag?: Vector3,
   ): string {
     const { dataset } = Store.getState();
-    const resolutionInfo = getResolutionInfo(getLayerByName(dataset, layerName, true).resolutions);
-    mag = mag || resolutionInfo.getFinestResolution();
+    const resolutionInfo = getMagnificationInfo(
+      getLayerByName(dataset, layerName, true).resolutions,
+    );
+    mag = mag || resolutionInfo.getFinestMag();
 
     const magString = mag.join("-");
     return (

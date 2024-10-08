@@ -9,7 +9,10 @@ import Constants, {
   type Vector2,
   type Vector3,
 } from "oxalis/constants";
-import { getDatasetBoundingBox, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getDatasetBoundingBox,
+  getMagnificationInfo,
+} from "oxalis/model/accessors/dataset_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
@@ -26,7 +29,7 @@ import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing
 import type { BoundingBoxObject, VolumeTracing } from "oxalis/store";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
-import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import type { MagnificationInfo } from "oxalis/model/helpers/resolution_info";
 
 function* pairwise<T>(arr: Array<T>): Generator<[T, T], any, any> {
   for (let i = 0; i < arr.length - 1; i++) {
@@ -79,7 +82,7 @@ export function applyLabeledVoxelMapToAllMissingResolutions(
   inputLabeledVoxelMap: LabeledVoxelsMap,
   labeledZoomStep: number,
   dimensionIndices: DimensionMap,
-  resolutionInfo: ResolutionInfo,
+  resolutionInfo: MagnificationInfo,
   segmentationCube: DataCube,
   segmentId: number,
   thirdDimensionOfSlice: number, // this value is specified in global (mag1) coords
@@ -111,8 +114,8 @@ export function applyLabeledVoxelMapToAllMissingResolutions(
   // should be downsampled)
   // `upsampleSequence` contains the current mag and all lower mags (to which
   // should be upsampled)
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
-  const allResolutionsWithIndices = resolutionInfo.getResolutionsWithIndices();
+  const labeledResolution = resolutionInfo.getMagByIndexOrThrow(labeledZoomStep);
+  const allResolutionsWithIndices = resolutionInfo.getMagsWithIndices();
   const pivotIndex = allResolutionsWithIndices.findIndex(([index]) => index === labeledZoomStep);
   const downsampleSequence = allResolutionsWithIndices.slice(pivotIndex);
   const upsampleSequence = allResolutionsWithIndices.slice(0, pivotIndex + 1).reverse();
@@ -185,8 +188,8 @@ export function* labelWithVoxelBuffer2D(
   const { cube } = segmentationLayer;
   const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
   const dimensionIndices = Dimensions.getIndices(viewport);
-  const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+  const resolutionInfo = yield* call(getMagnificationInfo, segmentationLayer.resolutions);
+  const labeledResolution = resolutionInfo.getMagByIndexOrThrow(labeledZoomStep);
 
   const get3DCoordinateFromLocal2D = ([x, y]: Vector2) =>
     voxelBuffer.get3DCoordinate([x + voxelBuffer.minCoord2d[0], y + voxelBuffer.minCoord2d[1]]);

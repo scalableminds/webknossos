@@ -12,7 +12,7 @@ import {
   getActiveSegmentationTracingLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { finishAnnotationStrokeAction } from "oxalis/model/actions/volumetracing_actions";
-import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getMagnificationInfo } from "oxalis/model/accessors/dataset_accessor";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Toast from "libs/toast";
@@ -21,7 +21,7 @@ import createProgressCallback from "libs/progress_callback";
 import { api } from "oxalis/singletons";
 import window from "libs/window";
 import type { APISegmentationLayer } from "types/api_flow_types";
-import type { ResolutionInfo } from "../helpers/resolution_info";
+import type { MagnificationInfo } from "../helpers/resolution_info";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 
 // By default, a new bounding box is created around
@@ -62,9 +62,9 @@ const ALWAYS_IGNORE_FIRST_MAG_INITIALLY = true;
 
 function selectAppropriateResolutions(
   boundingBoxMag1: BoundingBox,
-  resolutionInfo: ResolutionInfo,
+  resolutionInfo: MagnificationInfo,
 ): Array<[number, Vector3]> {
-  const resolutionsWithIndices = resolutionInfo.getResolutionsWithIndices();
+  const resolutionsWithIndices = resolutionInfo.getMagsWithIndices();
   const appropriateResolutions: Array<[number, Vector3]> = [];
 
   for (const [resolutionIndex, resolution] of resolutionsWithIndices) {
@@ -284,7 +284,7 @@ function* performMinCut(action: Action): Saga<void> {
     return;
   }
 
-  const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
+  const resolutionInfo = getMagnificationInfo(volumeTracingLayer.resolutions);
   const appropriateResolutionInfos = selectAppropriateResolutions(boundingBoxMag1, resolutionInfo);
 
   if (appropriateResolutionInfos.length === 0) {
@@ -332,8 +332,7 @@ function* performMinCut(action: Action): Saga<void> {
           continue;
         }
 
-        const refiningResolution =
-          resolutionInfo.getResolutionByIndexOrThrow(refiningResolutionIndex);
+        const refiningResolution = resolutionInfo.getMagByIndexOrThrow(refiningResolutionIndex);
         console.group("Refining min-cut at", refiningResolution.join("-"));
         yield* call(
           progressCallback,

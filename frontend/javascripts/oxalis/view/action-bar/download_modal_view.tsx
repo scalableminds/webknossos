@@ -45,7 +45,7 @@ import {
   getByteCountFromLayer,
   getDataLayers,
   getLayerByName,
-  getResolutionInfo,
+  getMagnificationInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { useSelector } from "react-redux";
 import type { HybridTracing, OxalisState, UserBoundingBox } from "oxalis/store";
@@ -307,7 +307,7 @@ function _DownloadModalView({
 
   const selectedLayer = getLayerByName(dataset, selectedLayerName);
   const selectedLayerInfos = getExportLayerInfos(selectedLayer, tracing);
-  const selectedLayerResolutionInfo = getResolutionInfo(selectedLayer.resolutions);
+  const selectedLayerResolutionInfo = getMagnificationInfo(selectedLayer.resolutions);
 
   const userBoundingBoxes = [
     ...rawUserBoundingBoxes,
@@ -323,8 +323,8 @@ function _DownloadModalView({
   const [selectedBoundingBoxId, setSelectedBoundingBoxId] = useState(
     initialBoundingBoxId ?? userBoundingBoxes[0].id,
   );
-  const [rawMag, setMag] = useState<Vector3>(selectedLayerResolutionInfo.getFinestResolution());
-  const mag = selectedLayerResolutionInfo.getClosestExistingResolution(rawMag);
+  const [rawMag, setMag] = useState<Vector3>(selectedLayerResolutionInfo.getFinestMag());
+  const mag = selectedLayerResolutionInfo.getClosestExistingMag(rawMag);
   const [exportFormat, setExportFormat] = useState<ExportFormat>(ExportFormat.OME_TIFF);
 
   const selectedBoundingBox = userBoundingBoxes.find(

@@ -16,7 +16,7 @@ import {
   getLayerByName,
   getMappingInfo,
   getSegmentationLayers,
-  getResolutionInfo,
+  getMagnificationInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getAllReadableLayerNames,
@@ -132,7 +132,7 @@ export default function AddVolumeLayerModal({
   const resolutionInfo =
     selectedSegmentationLayer == null
       ? getSomeResolutionInfoForDataset(dataset)
-      : getResolutionInfo(selectedSegmentationLayer.resolutions);
+      : getMagnificationInfo(selectedSegmentationLayer.resolutions);
   const [resolutionIndices, setResolutionIndices] = useState([0, 10000]);
 
   const handleSetNewLayerName = (evt: React.ChangeEvent<HTMLInputElement>) =>
@@ -155,10 +155,10 @@ export default function AddVolumeLayerModal({
       return;
     }
     const minResolutionAllowed = Math.max(
-      ...resolutionInfo.getResolutionByIndexOrThrow(resolutionIndices[0]),
+      ...resolutionInfo.getMagByIndexOrThrow(resolutionIndices[0]),
     );
     const maxResolutionAllowed = Math.max(
-      ...resolutionInfo.getResolutionByIndexOrThrow(resolutionIndices[1]),
+      ...resolutionInfo.getMagByIndexOrThrow(resolutionIndices[1]),
     );
 
     if (selectedSegmentationLayerName == null) {
@@ -166,7 +166,7 @@ export default function AddVolumeLayerModal({
         typ: "Volume",
         name: newLayerName,
         fallbackLayerName: undefined,
-        resolutionRestrictions: {
+        magRestrictions: {
           min: minResolutionAllowed,
           max: maxResolutionAllowed,
         },
@@ -193,7 +193,7 @@ export default function AddVolumeLayerModal({
         typ: "Volume",
         name: newLayerName,
         fallbackLayerName,
-        resolutionRestrictions: {
+        magRestrictions: {
           min: minResolutionAllowed,
           max: maxResolutionAllowed,
         },

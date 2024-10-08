@@ -13,7 +13,7 @@ import {
   type Vector3,
 } from "oxalis/constants";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
-import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getMagnificationInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveMagIndexForLayer,
   getFlooredPosition,
@@ -84,9 +84,9 @@ function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
 
   const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
   const requestedZoomStep = getActiveMagIndexForLayer(state, segmentationLayer.name);
-  const resolutionInfo = getResolutionInfo(segmentationLayer.resolutions);
+  const resolutionInfo = getMagnificationInfo(segmentationLayer.resolutions);
   const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+  const labeledResolution = resolutionInfo.getMagByIndexOrThrow(labeledZoomStep);
 
   const previousCentroid = getLabelActionFromPreviousSlice(
     state,

@@ -8,51 +8,51 @@ export type SmallerOrHigherInfo = {
   higher: boolean;
 };
 
-export class ResolutionInfo {
-  readonly resolutions: ReadonlyArray<Vector3>;
-  readonly resolutionMap: ReadonlyMap<number, Vector3>;
+export class MagnificationInfo {
+  readonly magnifications: ReadonlyArray<Vector3>;
+  readonly magnificationMap: ReadonlyMap<number, Vector3>;
 
-  constructor(resolutions: Array<Vector3>) {
-    this.resolutions = resolutions;
-    this.resolutionMap = this._buildResolutionMap();
+  constructor(mags: Array<Vector3>) {
+    this.magnifications = mags;
+    this.magnificationMap = this._buildMagnificationMap();
   }
 
-  _buildResolutionMap() {
-    // Each resolution entry can be characterized by it's greatest resolution dimension.
-    // E.g., the resolution array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
-    // a zoomstep of 2 corresponds to the resolution [2, 2, 1] (and not [4, 4, 2]).
-    // Therefore, the largest dim for each resolution has to be unique across all resolutions.
-    // This function creates a map which maps from powerOfTwo (2**index) to resolution.
+  _buildMagnificationMap() {
+    // Each magnification entry can be characterized by it's greatest magnification dimension.
+    // E.g., the mag array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
+    // a zoomstep of 2 corresponds to the mag [2, 2, 1] (and not [4, 4, 2]).
+    // Therefore, the largest dim for each mag has to be unique across all magnifications.
+    // This function creates a map which maps from powerOfTwo (2**index) to mag.
     // E.g.
     // {
     //  0: [1, 1, 1],
     //  2: [2, 2, 1],
     //  4: [4, 4, 2]
     // }
-    const { resolutions } = this;
-    const resolutionMap = new Map();
+    const { magnifications } = this;
+    const magnificationMap = new Map();
 
-    if (resolutions.length !== _.uniq(resolutions.map(maxValue)).length) {
-      throw new Error("Max dimension in resolutions is not unique.");
+    if (magnifications.length !== _.uniq(magnifications.map(maxValue)).length) {
+      throw new Error("Max dimension in magnifications is not unique.");
     }
 
-    for (const resolution of resolutions) {
-      resolutionMap.set(maxValue(resolution), resolution);
+    for (const mag of magnifications) {
+      magnificationMap.set(maxValue(mag), mag);
     }
-    return resolutionMap;
+    return magnificationMap;
   }
 
-  getDenseResolutions = memoizeOne(() => convertToDenseResolution(this.getResolutionList()));
+  getDenseMagnifications = memoizeOne(() => convertToDenseMagnifications(this.getMagList()));
 
-  getResolutionList = memoizeOne(() => Array.from(this.resolutionMap.values()));
+  getMagList = memoizeOne(() => Array.from(this.magnificationMap.values()));
 
-  getResolutionsWithIndices(): Array<[number, Vector3]> {
+  getMagsWithIndices(): Array<[number, Vector3]> {
     return _.sortBy(
-      Array.from(this.resolutionMap.entries()).map((entry) => {
-        const [powerOfTwo, resolution] = entry;
-        const resolutionIndex = Math.log2(powerOfTwo);
-        return [resolutionIndex, resolution];
-      }), // Sort by resolutionIndex
+      Array.from(this.magnificationMap.entries()).map((entry) => {
+        const [powerOfTwo, mag] = entry;
+        const magIndex = Math.log2(powerOfTwo);
+        return [magIndex, mag];
+      }), // Sort by magIndex
       (tuple) => tuple[0],
     );
   }
@@ -63,57 +63,57 @@ export class ResolutionInfo {
 
   hasIndex(index: number): boolean {
     const powerOfTwo = this.indexToPowerOf2(index);
-    return this.resolutionMap.has(powerOfTwo);
+    return this.magnificationMap.has(powerOfTwo);
   }
 
-  hasResolution(resolution: Vector3): boolean {
-    return this.resolutionMap.has(Math.max(...resolution));
+  hasMag(magnification: Vector3): boolean {
+    return this.magnificationMap.has(Math.max(...magnification));
   }
 
-  getResolutionByIndex(index: number): Vector3 | null | undefined {
+  getMagByIndex(index: number): Vector3 | null | undefined {
     const powerOfTwo = this.indexToPowerOf2(index);
-    return this.getResolutionByPowerOf2(powerOfTwo);
+    return this.getMagByPowerOf2(powerOfTwo);
   }
 
-  getResolutionByIndexOrThrow(index: number): Vector3 {
-    const resolution = this.getResolutionByIndex(index);
+  getMagByIndexOrThrow(index: number): Vector3 {
+    const magnification = this.getMagByIndex(index);
 
-    if (!resolution) {
+    if (!magnification) {
       throw new Error(`Magnification with index ${index} does not exist.`);
     }
 
-    return resolution;
+    return magnification;
   }
 
-  getIndexByResolution(resolution: Vector3): number {
-    const index = Math.log2(Math.max(...resolution));
+  getIndexByMag(mag: Vector3): number {
+    const index = Math.log2(Math.max(...mag));
 
-    // Assert that the index exists and that the resolution at that index
-    // equals the resolution argument
-    const resolutionMaybe = this.getResolutionByIndex(index);
-    if (!_.isEqual(resolution, resolutionMaybe)) {
+    // Assert that the index exists and that the mag at that index
+    // equals the mag argument
+    const magMaybe = this.getMagByIndex(index);
+    if (!_.isEqual(mag, magMaybe)) {
       throw new Error(
-        `Magnification ${resolution} with index ${index} is not equal to existing magnification at that index: ${resolutionMaybe}.`,
+        `Magnification ${mag} with index ${index} is not equal to existing magnification at that index: ${magMaybe}.`,
       );
     }
     return index;
   }
 
-  getResolutionByIndexWithFallback(
+  getMagByIndexWithFallback(
     index: number,
-    fallbackResolutionInfo: ResolutionInfo | null | undefined,
+    fallbackMagnificationInfo: MagnificationInfo | null | undefined,
   ): Vector3 {
-    let resolutionMaybe = this.getResolutionByIndex(index);
+    let magMaybe = this.getMagByIndex(index);
 
-    if (resolutionMaybe) {
-      return resolutionMaybe;
+    if (magMaybe) {
+      return magMaybe;
     }
 
-    resolutionMaybe =
-      fallbackResolutionInfo != null ? fallbackResolutionInfo.getResolutionByIndex(index) : null;
+    magMaybe =
+      fallbackMagnificationInfo != null ? fallbackMagnificationInfo.getMagByIndex(index) : null;
 
-    if (resolutionMaybe) {
-      return resolutionMaybe;
+    if (magMaybe) {
+      return magMaybe;
     }
 
     if (index === 0) {
@@ -124,38 +124,38 @@ export class ResolutionInfo {
     throw new Error(`Magnification could not be determined for index ${index}`);
   }
 
-  getResolutionByPowerOf2(powerOfTwo: number): Vector3 | null | undefined {
-    return this.resolutionMap.get(powerOfTwo);
+  getMagByPowerOf2(powerOfTwo: number): Vector3 | null | undefined {
+    return this.magnificationMap.get(powerOfTwo);
   }
 
-  getCoarsestResolutionPowerOf2(): number {
-    return maxValue(Array.from(this.resolutionMap.keys()));
+  getCoarsestMagPowerOf2(): number {
+    return maxValue(Array.from(this.magnificationMap.keys()));
   }
 
-  getFinestResolutionPowerOf2(): number {
-    return minValue(Array.from(this.resolutionMap.keys()));
+  getFinestMagPowerOf2(): number {
+    return minValue(Array.from(this.magnificationMap.keys()));
   }
 
-  getCoarsestResolutionIndex(): number {
-    return Math.log2(this.getCoarsestResolutionPowerOf2());
+  getCoarsestMagIndex(): number {
+    return Math.log2(this.getCoarsestMagPowerOf2());
   }
 
-  getFinestResolutionIndex(): number {
-    return Math.log2(this.getFinestResolutionPowerOf2());
+  getFinestMagIndex(): number {
+    return Math.log2(this.getFinestMagPowerOf2());
   }
 
-  getCoarsestResolution(): Vector3 {
+  getCoarsestMag(): Vector3 {
     // @ts-ignore
-    return this.getResolutionByPowerOf2(this.getCoarsestResolutionPowerOf2());
+    return this.getMagByPowerOf2(this.getCoarsestMagPowerOf2());
   }
 
-  getFinestResolution(): Vector3 {
+  getFinestMag(): Vector3 {
     // @ts-ignore
-    return this.getResolutionByPowerOf2(this.getFinestResolutionPowerOf2());
+    return this.getMagByPowerOf2(this.getFinestMagPowerOf2());
   }
 
   getAllIndices(): Array<number> {
-    return this.getResolutionsWithIndices().map((entry) => entry[0]);
+    return this.getMagsWithIndices().map((entry) => entry[0]);
   }
 
   getClosestExistingIndex(index: number, errorMessage: string | null = null): number {
@@ -181,15 +181,15 @@ export class ResolutionInfo {
 
     const bestIndexWithDistance = _.head(_.sortBy(indicesWithDistances, (entry) => entry[1]));
     if (bestIndexWithDistance == null) {
-      throw new Error(errorMessage || "Couldn't find any resolution.");
+      throw new Error(errorMessage || "Couldn't find any magnification.");
     }
 
     return bestIndexWithDistance[0];
   }
 
-  getClosestExistingResolution(resolution: Vector3): Vector3 {
-    const index = Math.log2(Math.max(...resolution));
-    return this.getResolutionByIndex(this.getClosestExistingIndex(index)) as Vector3;
+  getClosestExistingMag(mag: Vector3): Vector3 {
+    const index = Math.log2(Math.max(...mag));
+    return this.getMagByIndex(this.getClosestExistingIndex(index)) as Vector3;
   }
 
   hasSmallerAndOrHigherIndex(index: number): SmallerOrHigherInfo {
@@ -215,7 +215,7 @@ export class ResolutionInfo {
       return requestedIndex;
     }
 
-    const indices = this.getResolutionsWithIndices().map((entry) => entry[0]);
+    const indices = this.getMagsWithIndices().map((entry) => entry[0]);
 
     for (const index of indices) {
       if (index > requestedIndex) {
@@ -228,34 +228,34 @@ export class ResolutionInfo {
   }
 }
 
-export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vector3> {
-  // Each resolution entry can be characterized by it's greatest resolution dimension.
-  // E.g., the resolution array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
-  // a log zoomstep of 2 corresponds to the resolution [2, 2, 1] (and not [4, 4, 2]).
-  // Therefore, the largest dim for each resolution has to be unique across all resolutions.
-  // This function returns an array of resolutions, for which each index will
-  // hold a resolution with highest_dim === 2**index and where resolutions are monotonously increasing.
+export function convertToDenseMagnifications(mags: Array<Vector3>): Array<Vector3> {
+  // Each magnification entry can be characterized by it's greatest mag dimension.
+  // E.g., the mag array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
+  // a log zoomstep of 2 corresponds to the mag [2, 2, 1] (and not [4, 4, 2]).
+  // Therefore, the largest dim for each mag has to be unique across all mags.
+  // This function returns an array of mags, for which each index will
+  // hold a mag with highest_dim === 2**index and where mags are monotonously increasing.
 
-  if (resolutions.length !== _.uniq(resolutions.map(maxValue)).length) {
-    throw new Error("Max dimension in resolutions is not unique.");
+  if (mags.length !== _.uniq(mags.map(maxValue)).length) {
+    throw new Error("Max dimension in magnifications is not unique.");
   }
 
-  const maxResolution = Math.log2(maxValue(resolutions.map((v) => maxValue(v))));
+  const maxMag = Math.log2(maxValue(mags.map((v) => maxValue(v))));
 
-  const resolutionsLookUp = _.keyBy(resolutions, maxValue);
+  const magsLookUp = _.keyBy(mags, maxValue);
 
-  const maxResPower = 2 ** maxResolution;
-  let lastResolution = [maxResPower, maxResPower, maxResPower];
+  const maxResPower = 2 ** maxMag;
+  let lastMag = [maxResPower, maxResPower, maxResPower];
 
-  return _.range(maxResolution, -1, -1)
+  return _.range(maxMag, -1, -1)
     .map((exp) => {
       const resPower = 2 ** exp;
-      // If the resolution does not exist, use the component-wise minimum of the next-higher
-      // resolution and an isotropic fallback resolution. Otherwise for anisotropic resolutions,
-      // the dense resolutions wouldn't be monotonously increasing.
-      const fallback = map3((i) => Math.min(lastResolution[i], resPower), [0, 1, 2]);
-      lastResolution = resolutionsLookUp[resPower] || fallback;
-      return lastResolution as Vector3;
+      // If the magnification does not exist, use the component-wise minimum of the next-higher
+      // mag and an isotropic fallback mag. Otherwise for anisotropic mags,
+      // the dense mags wouldn't be monotonously increasing.
+      const fallback = map3((i) => Math.min(lastMag[i], resPower), [0, 1, 2]);
+      lastMag = magsLookUp[resPower] || fallback;
+      return lastMag as Vector3;
     })
     .reverse();
 }

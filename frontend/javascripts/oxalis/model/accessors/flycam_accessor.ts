@@ -11,7 +11,7 @@ import {
   getEnabledLayers,
   getLayerByName,
   getMaxZoomStep,
-  getResolutionInfo,
+  getMagnificationInfo,
   getTransformsForLayer,
   invertAndTranspose,
 } from "oxalis/model/accessors/dataset_accessor";
@@ -241,7 +241,7 @@ function getMaximumZoomForAllResolutionsFromStore(
     viewMode,
     state.datasetConfiguration.loadingStrategy,
     state.dataset.dataSource.scale.factor,
-    getResolutionInfo(layer.resolutions).getDenseResolutions(),
+    getMagnificationInfo(layer.resolutions).getDenseMagnifications(),
     getViewportRects(state),
     Math.min(
       state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,
@@ -362,13 +362,13 @@ export function getCurrentResolution(
   state: OxalisState,
   layerName: string,
 ): Vector3 | null | undefined {
-  const resolutionInfo = getResolutionInfo(getLayerByName(state.dataset, layerName).resolutions);
+  const resolutionInfo = getMagnificationInfo(getLayerByName(state.dataset, layerName).resolutions);
   const magIndex = getActiveMagIndexForLayer(state, layerName);
   const existingMagIndex = resolutionInfo.getIndexOrClosestHigherIndex(magIndex);
   if (existingMagIndex == null) {
     return null;
   }
-  return resolutionInfo.getResolutionByIndex(existingMagIndex);
+  return resolutionInfo.getMagByIndex(existingMagIndex);
 }
 
 function _getValidZoomRangeForUser(state: OxalisState): [number, number] {
@@ -433,7 +433,7 @@ export function getValidTaskZoomRange(
     baseDatasetViewConfiguration.zoom.minimum,
     Number.POSITIVE_INFINITY,
   ] as Vector2;
-  const { resolutionRestrictions } = state.tracing.restrictions;
+  const { magRestrictions: resolutionRestrictions } = state.tracing.restrictions;
   // We use the first color layer as a heuristic to check the validity of the zoom range,
   // as we don't know to which layer a restriction is meant to be applied.
   // If the layers don't have any transforms, the layer choice doesn't matter, anyway.
@@ -463,7 +463,7 @@ export function getValidTaskZoomRange(
 }
 
 export function isMagRestrictionViolated(state: OxalisState): boolean {
-  const { resolutionRestrictions } = state.tracing.restrictions;
+  const { magRestrictions: resolutionRestrictions } = state.tracing.restrictions;
   // We use the first color layer as a heuristic to check the validity of the zoom range,
   // as we don't know to which layer a restriction is meant to be applied.
   // If the layers don't have any transforms, the layer choice doesn't matter, anyway.
@@ -587,7 +587,7 @@ function _getUnrenderableLayerInfosForCurrentZoom(
     .map((layer: DataLayerType) => ({
       layer,
       activeMagIdx: activeMagIndices[layer.name],
-      resolutionInfo: getResolutionInfo(layer.resolutions),
+      resolutionInfo: getMagnificationInfo(layer.resolutions),
     }))
     .filter(({ activeMagIdx, resolutionInfo }) => {
       const isPresent = resolutionInfo.hasIndex(activeMagIdx);
@@ -635,7 +635,7 @@ function _getActiveResolutionInfo(state: OxalisState) {
   const activeMagOfEnabledLayers = Object.fromEntries(
     enabledLayers.map((l) => [
       l.name,
-      getResolutionInfo(l.resolutions).getResolutionByIndex(activeMagIndices[l.name]),
+      getMagnificationInfo(l.resolutions).getMagByIndex(activeMagIndices[l.name]),
     ]),
   );
 

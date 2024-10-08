@@ -32,7 +32,7 @@ import {
   invertAndTranspose,
   getTransformsForLayer,
   getResolutionInfoByLayer,
-  getResolutionInfo,
+  getMagnificationInfo,
   getTransformsPerLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -484,14 +484,12 @@ class PlaneMaterialFactory {
           const state = Store.getState();
           for (const [layerName, activeMagIndex] of Object.entries(activeMagIndices)) {
             const layer = getLayerByName(state.dataset, layerName);
-            const resolutionInfo = getResolutionInfo(layer.resolutions);
+            const resolutionInfo = getMagnificationInfo(layer.resolutions);
             // If the active mag doesn't exist, a fallback mag is likely rendered. Use that
             // to determine a representative mag.
             const suitableMagIndex = resolutionInfo.getIndexOrClosestHigherIndex(activeMagIndex);
             const suitableMag =
-              suitableMagIndex != null
-                ? resolutionInfo.getResolutionByIndex(suitableMagIndex)
-                : null;
+              suitableMagIndex != null ? resolutionInfo.getMagByIndex(suitableMagIndex) : null;
 
             const hasTransform = !_.isEqual(
               getTransformsForLayer(
@@ -569,7 +567,7 @@ class PlaneMaterialFactory {
         (storeState) => getResolutionInfoByLayer(storeState.dataset),
         (resolutionInfosByLayer) => {
           const allDenseResolutions = Object.values(resolutionInfosByLayer).map((resInfo) =>
-            resInfo.getDenseResolutions(),
+            resInfo.getDenseMagnifications(),
           );
           const flatResolutions = _.flattenDeep(allDenseResolutions);
           this.uniforms.allResolutions = {
@@ -1115,7 +1113,7 @@ class PlaneMaterialFactory {
   getTotalResolutionCount(): number {
     const storeState = Store.getState();
     const allDenseResolutions = Object.values(getResolutionInfoByLayer(storeState.dataset)).map(
-      (resInfo) => resInfo.getDenseResolutions(),
+      (resInfo) => resInfo.getDenseMagnifications(),
     );
     const flatResolutions = _.flatten(allDenseResolutions);
     return flatResolutions.length;

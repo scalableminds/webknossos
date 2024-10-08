@@ -51,7 +51,7 @@ import scala.concurrent.ExecutionContext
 
 class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknossosClient,
                                     editableMappingService: EditableMappingService,
-                                    volumeTracingService: VolumeTracingService,
+                                    val volumeTracingService: VolumeTracingService,
                                     skeletonTracingService: SkeletonTracingService,
                                     val remoteDatastoreClient: TSRemoteDatastoreClient,
                                     tracingDataStore: TracingDataStore)
@@ -122,18 +122,18 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         case a: EditableMappingUpdateAction =>
           annotationWithTracings.applyEditableMappingAction(a)
         case a: RevertToVersionUpdateAction =>
-          revertToVersion(annotationId, annotationWithTracings, a)
+          revertToVersion(annotationId, annotationWithTracings, a, targetVersion) // TODO if the revert action is not isolated, we need not the target version of all but the target version of this update
         case _: BucketMutatingVolumeUpdateAction =>
           Fox.successful(annotationWithTracings) // No-op, as bucket-mutating actions are performed eagerly, so not here.
         case _ => Fox.failure(s"Received unsupported AnnotationUpdateAction action ${Json.toJson(updateAction)}")
       }
     } yield updated
 
-  private def revertToVersion(annotationId: String,
-                              annotationWithTracings: AnnotationWithTracings,
-                              revertAction: RevertToVersionUpdateAction)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[AnnotationWithTracings] =
+  private def revertToVersion(
+      annotationId: String,
+      annotationWithTracings: AnnotationWithTracings,
+      revertAction: RevertToVersionUpdateAction,
+      newVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     // Note: works only after “ironing out” the update action groups
     // TODO: read old annotationProto, tracing, buckets, segment indeces
     for {
@@ -145,7 +145,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         requestAll = true) // TODO do we need to request the others?
       _ = logger.info(
         s"reverting to suorceVersion ${revertAction.sourceVersion}. got sourceAnnotation with version ${sourceAnnotation.version} with ${sourceAnnotation.skeletonStats}")
-      // _ <- revertDistributedElements(annotationId, annotationWithTracings, sourceAnnotation, revertAction)
+      _ <- revertDistributedElements(annotationId, annotationWithTracings, sourceAnnotation, revertAction, newVersion)
     } yield sourceAnnotation
 
   def createTracing(a: AddLayerAnnotationUpdateAction)(

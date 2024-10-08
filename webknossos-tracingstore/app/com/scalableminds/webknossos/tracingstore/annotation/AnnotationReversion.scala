@@ -2,12 +2,14 @@ package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeSegmentIndexBuffer
+import com.scalableminds.util.tools.Fox.box2Fox
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 
 import scala.concurrent.ExecutionContext
 
 trait AnnotationReversion {
+
+  def volumeTracingService: VolumeTracingService
 
   def revertDistributedElements(annotationId: String,
                                 currentAnnotationWithTracings: AnnotationWithTracings,
@@ -18,8 +20,15 @@ trait AnnotationReversion {
     for {
       _ <- Fox.serialCombined(sourceAnnotationWithTracings.getVolumes) {
         // Only volume data for volume layers present in the *source annotation* needs to be reverted.
-        case (tracingId, sourceTracing) => Fox.successful(())
-        //revertVolumeData(annotationId, tracingId, sourceTracing, revertAction.sourceVersion, newVersion)
+        case (tracingId, sourceTracing) =>
+          for {
+            tracingBeforeRevert <- currentAnnotationWithTracings.getVolume(tracingId).toFox
+            _ <- volumeTracingService.revertVolumeData(tracingId,
+                                                       revertAction.sourceVersion,
+                                                       sourceTracing,
+                                                       newVersion: Long,
+                                                       tracingBeforeRevert)
+          } yield ()
       }
     } yield ()
 

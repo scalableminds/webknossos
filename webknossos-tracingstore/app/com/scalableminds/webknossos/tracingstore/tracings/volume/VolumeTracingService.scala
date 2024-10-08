@@ -250,19 +250,17 @@ class VolumeTracingService @Inject()(
       bool2Fox(mag.isIsotropic)
     }
 
-  /*
-  // TODO
-  private def revertToVolumeVersion(annotationId: String,
-                                    tracingId: String,
-                                    sourceVersion: Long,
-                                    newVersion: Long,
-                                    tracing: VolumeTracing)(implicit tc: TokenContext): Fox[VolumeTracing] = {
+  def revertVolumeData(tracingId: String,
+                       sourceVersion: Long,
+                       sourceTracing: VolumeTracing,
+                       newVersion: Long,
+                       tracing: VolumeTracing)(implicit tc: TokenContext): Fox[Unit] = {
 
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val bucketStream = dataLayer.volumeBucketProvider.bucketStreamWithVersion()
 
     for {
-      fallbackLayer <- getFallbackLayer(annotationId, tracingId)
+      fallbackLayer <- getFallbackLayer(tracingId, tracing)
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
                                                         volumeSegmentIndexClient,
                                                         newVersion,
@@ -270,8 +268,7 @@ class VolumeTracingService @Inject()(
                                                         fallbackLayer,
                                                         dataLayer.additionalAxes,
                                                         tc)
-      sourceTracing <- find(annotationId, tracingId, Some(sourceVersion))
-      mappingName <- baseMappingName(sourceTracing)
+      mappingName <- selectMappingName(sourceTracing)
       _ <- Fox.serialCombined(bucketStream) {
         case (bucketPosition, dataBeforeRevert, version) =>
           if (version > sourceVersion) {
@@ -310,9 +307,8 @@ class VolumeTracingService @Inject()(
           } else Fox.successful(())
       }
       _ <- segmentIndexBuffer.flush()
-    } yield sourceTracing
+    } yield ()
   }
-   */
 
   def initializeWithDataMultiple(annotationId: String, tracingId: String, tracing: VolumeTracing, initialData: File)(
       implicit mp: MessagesProvider,

@@ -254,7 +254,6 @@ object Zarr3ArrayHeader extends JsonImplicits {
   }
   def fromDataLayer(dataLayer: DataLayer, mag: Vec3Int): Zarr3ArrayHeader = {
     val additionalAxes = reorderAdditionalAxes(dataLayer.additionalAxes.getOrElse(Seq.empty))
-    // TODOM: Make code together with ZarrHeader.scala DRYer
     val xyzBBounds = Array(
       // Zarr can't handle data sets that don't start at 0, so we extend the shape to include "true" coords
       (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / mag.x,

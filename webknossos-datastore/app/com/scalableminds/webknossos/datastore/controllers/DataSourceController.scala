@@ -226,7 +226,7 @@ class DataSourceController @Inject()(
                 request.body.needsConversion.getOrElse(false),
                 viaAddRoute = false,
                 userToken = urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
-            } yield Ok(Json.toJson("newDatasetId" -> uploadedDatasetIdJson))
+            } yield Ok(Json.obj("newDatasetId" -> uploadedDatasetIdJson))
           }
         } yield response
       }

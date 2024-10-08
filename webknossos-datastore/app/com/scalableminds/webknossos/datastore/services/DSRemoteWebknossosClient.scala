@@ -92,7 +92,7 @@ class DSRemoteWebknossosClient @Inject()(
         .addQueryString("viaAddRoute" -> viaAddRoute.toString)
         .addQueryString("datasetSizeBytes" -> datasetSizeBytes.toString)
         .addQueryStringOptional("token", userToken)
-        .getWithJsonResponse[JsValue]
+        .postWithJsonResponse[JsValue]
       uploadedDatasetId <- (uploadedDatasetIdJson \ "id").validate[String].asOpt.toFox ?~> "uploadedDatasetId.invalid"
     } yield uploadedDatasetId
 

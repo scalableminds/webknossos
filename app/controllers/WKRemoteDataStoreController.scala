@@ -145,7 +145,7 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.runIf(!needsConversion)(logUploadToSlack(user, dataset._id, viaAddRoute))
           _ = analyticsService.track(UploadDatasetEvent(user, dataset, dataStore, datasetSizeBytes))
           _ = if (!needsConversion) mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
-        } yield Ok(Json.toJson("id" -> dataset._id))
+        } yield Ok(Json.obj("id" -> dataset._id))
       }
     }
 

@@ -7,12 +7,12 @@ import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
 import {
   NewVolumeLayerSelection,
-  RestrictResolutionSlider,
+  RestrictMagnificationSlider,
 } from "dashboard/advanced_dataset/create_explorative_modal";
 import Store, { type Tracing } from "oxalis/store";
 import { addAnnotationLayer } from "admin/admin_rest_api";
 import {
-  getSomeResolutionInfoForDataset,
+  getSomeMagnificationInfoForDataset,
   getLayerByName,
   getMappingInfo,
   getSegmentationLayers,
@@ -131,7 +131,7 @@ export default function AddVolumeLayerModal({
 
   const resolutionInfo =
     selectedSegmentationLayer == null
-      ? getSomeResolutionInfoForDataset(dataset)
+      ? getSomeMagnificationInfoForDataset(dataset)
       : getMagnificationInfo(selectedSegmentationLayer.resolutions);
   const [resolutionIndices, setResolutionIndices] = useState([0, 10000]);
 
@@ -233,11 +233,11 @@ export default function AddVolumeLayerModal({
           disableLayerSelection={disableLayerSelection ?? false}
         />
       ) : null}
-      <RestrictResolutionSlider
-        resolutionInfo={resolutionInfo}
+      <RestrictMagnificationSlider
+        magnificationInfo={resolutionInfo}
         selectedSegmentationLayer={selectedSegmentationLayer}
-        resolutionIndices={resolutionIndices}
-        setResolutionIndices={setResolutionIndices}
+        magIndices={resolutionIndices}
+        setMagIndices={setResolutionIndices}
       />
       <Row justify="center" align="middle">
         <AsyncButton onClick={handleAddVolumeLayer} type="primary" icon={<PlusOutlined />}>

@@ -31,7 +31,7 @@ import {
   getLayerByName,
   invertAndTranspose,
   getTransformsForLayer,
-  getResolutionInfoByLayer,
+  getMagnificationInfoByLayer,
   getMagnificationInfo,
   getTransformsPerLayer,
 } from "oxalis/model/accessors/dataset_accessor";
@@ -564,7 +564,7 @@ class PlaneMaterialFactory {
     );
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        (storeState) => getResolutionInfoByLayer(storeState.dataset),
+        (storeState) => getMagnificationInfoByLayer(storeState.dataset),
         (resolutionInfosByLayer) => {
           const allDenseResolutions = Object.values(resolutionInfosByLayer).map((resInfo) =>
             resInfo.getDenseMagnifications(),
@@ -1112,7 +1112,7 @@ class PlaneMaterialFactory {
 
   getTotalResolutionCount(): number {
     const storeState = Store.getState();
-    const allDenseResolutions = Object.values(getResolutionInfoByLayer(storeState.dataset)).map(
+    const allDenseResolutions = Object.values(getMagnificationInfoByLayer(storeState.dataset)).map(
       (resInfo) => resInfo.getDenseMagnifications(),
     );
     const flatResolutions = _.flatten(allDenseResolutions);

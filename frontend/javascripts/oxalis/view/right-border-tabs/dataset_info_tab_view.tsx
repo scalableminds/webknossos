@@ -10,7 +10,7 @@ import { ControlModeEnum } from "oxalis/constants";
 import { formatScale } from "libs/format_utils";
 import {
   getDatasetExtentAsString,
-  getResolutionUnion,
+  getMagnificationUnion,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -530,7 +530,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   renderResolutionsTooltip = () => {
     const { dataset, annotation, activeResolutionInfo } = this.props;
     const { activeMagOfEnabledLayers } = activeResolutionInfo;
-    const resolutionUnion = getResolutionUnion(dataset);
+    const resolutionUnion = getMagnificationUnion(dataset);
     return (
       <div>
         Rendered magnification per layer:

@@ -62,13 +62,13 @@ function _getMagnificationInfoByLayer(dataset: APIDataset): Record<string, Magni
   return infos;
 }
 
-export const getResolutionInfoByLayer = _.memoize(_getMagnificationInfoByLayer);
+export const getMagnificationInfoByLayer = _.memoize(_getMagnificationInfoByLayer);
 
-export function getDenseResolutionsForLayerName(dataset: APIDataset, layerName: string) {
-  return getResolutionInfoByLayer(dataset)[layerName].getDenseMagnifications();
+export function getDenseMagsForLayerName(dataset: APIDataset, layerName: string) {
+  return getMagnificationInfoByLayer(dataset)[layerName].getDenseMagnifications();
 }
 
-export const getResolutionUnion = memoizeOne((dataset: APIDataset): Array<Vector3[]> => {
+export const getMagnificationUnion = memoizeOne((dataset: APIDataset): Array<Vector3[]> => {
   /*
    * Returns a list of existent mags per mag level. For example:
    * [
@@ -78,49 +78,49 @@ export const getResolutionUnion = memoizeOne((dataset: APIDataset): Array<Vector
    *    [[8, 8, 8], [8, 8, 2]],
    * ]
    */
-  const resolutionUnionDict: { [key: number]: Vector3[] } = {};
+  const magUnionDict: { [key: number]: Vector3[] } = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
     for (const mag of layer.resolutions) {
       const key = maxValue(mag);
 
-      if (resolutionUnionDict[key] == null) {
-        resolutionUnionDict[key] = [mag];
+      if (magUnionDict[key] == null) {
+        magUnionDict[key] = [mag];
       } else {
-        resolutionUnionDict[key].push(mag);
+        magUnionDict[key].push(mag);
       }
     }
   }
 
-  for (const keyStr of Object.keys(resolutionUnionDict)) {
+  for (const keyStr of Object.keys(magUnionDict)) {
     const key = Number(keyStr);
-    resolutionUnionDict[key] = _.uniqWith(resolutionUnionDict[key], V3.isEqual);
+    magUnionDict[key] = _.uniqWith(magUnionDict[key], V3.isEqual);
   }
 
-  const keys = Object.keys(resolutionUnionDict)
+  const keys = Object.keys(magUnionDict)
     .sort((a, b) => Number(a) - Number(b))
     .map((el) => Number(el));
 
-  return keys.map((key) => resolutionUnionDict[key]);
+  return keys.map((key) => magUnionDict[key]);
 });
 
-export function getWidestResolutions(dataset: APIDataset): Vector3[] {
-  const allLayerResolutions = dataset.dataSource.dataLayers.map((layer) =>
+export function getWidestMags(dataset: APIDataset): Vector3[] {
+  const allLayerMags = dataset.dataSource.dataLayers.map((layer) =>
     convertToDenseMagnifications(layer.resolutions),
   );
 
-  return _.maxBy(allLayerResolutions, (resolutions) => resolutions.length) || [];
+  return _.maxBy(allLayerMags, (mags) => mags.length) || [];
 }
 
-export const getSomeResolutionInfoForDataset = memoizeOne(
+export const getSomeMagnificationInfoForDataset = memoizeOne(
   (dataset: APIDataset): MagnificationInfo => {
-    const resolutionUnion = getResolutionUnion(dataset);
-    const areMagsDistinct = resolutionUnion.every((mags) => mags.length <= 1);
+    const magUnion = getMagnificationUnion(dataset);
+    const areMagsDistinct = magUnion.every((mags) => mags.length <= 1);
 
     if (areMagsDistinct) {
-      return new MagnificationInfo(resolutionUnion.map((mags) => mags[0]));
+      return new MagnificationInfo(magUnion.map((mags) => mags[0]));
     } else {
-      return new MagnificationInfo(getWidestResolutions(dataset));
+      return new MagnificationInfo(getWidestMags(dataset));
     }
   },
 );
@@ -134,7 +134,7 @@ function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
 
   const maxZoomstep = Math.max(
     minimumZoomStepCount,
-    _.max(_.flattenDeep(getResolutionUnion(dataset))) || minimumZoomStepCount,
+    _.max(_.flattenDeep(getMagnificationUnion(dataset))) || minimumZoomStepCount,
   );
 
   return maxZoomstep;
@@ -145,7 +145,7 @@ export function getDataLayers(dataset: APIDataset): DataLayerType[] {
   return dataset.dataSource.dataLayers;
 }
 
-function _getResolutionInfoOfVisibleSegmentationLayer(state: OxalisState): MagnificationInfo {
+function _getMagnificationInfoOfVisibleSegmentationLayer(state: OxalisState): MagnificationInfo {
   const segmentationLayer = getVisibleSegmentationLayer(state);
 
   if (!segmentationLayer) {
@@ -155,8 +155,8 @@ function _getResolutionInfoOfVisibleSegmentationLayer(state: OxalisState): Magni
   return getMagnificationInfo(segmentationLayer.resolutions);
 }
 
-export const getResolutionInfoOfVisibleSegmentationLayer = memoizeOne(
-  _getResolutionInfoOfVisibleSegmentationLayer,
+export const getMagnificationInfoOfVisibleSegmentationLayer = memoizeOne(
+  _getMagnificationInfoOfVisibleSegmentationLayer,
 );
 export function getLayerByName(
   dataset: APIDataset,

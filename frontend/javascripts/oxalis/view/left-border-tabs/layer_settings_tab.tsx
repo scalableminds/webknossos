@@ -61,7 +61,7 @@ import {
   getLayerByName,
   getMagnificationInfo,
   getTransformsForLayerOrNull,
-  getWidestResolutions,
+  getWidestMags,
   getLayerBoundingBox,
   getTransformsForLayer,
   hasDatasetTransforms,
@@ -1096,7 +1096,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         ? fallbackLayerInfo.resolutions
         : // This is only a heuristic. At some point, user configuration
           // might make sense here.
-          getWidestResolutions(this.props.dataset);
+          getWidestMags(this.props.dataset);
 
     const getMaxDim = (resolution: Vector3) => Math.max(...resolution);
 

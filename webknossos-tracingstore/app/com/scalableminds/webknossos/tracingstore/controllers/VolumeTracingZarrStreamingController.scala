@@ -61,7 +61,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
-          existingMags = tracing.resolutions.map(vec3IntFromProto)
+          existingMags = tracing.mags.map(vec3IntFromProto)
           additionalFiles = if (zarrVersion == 2)
             List(NgffMetadata.FILENAME_DOT_ZATTRS, NgffGroupHeader.FILENAME_DOT_ZGROUP)
           else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
@@ -80,7 +80,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
-          existingMags = tracing.resolutions.map(vec3IntFromProto(_).toMagLiteral(allowScalar = true))
+          existingMags = tracing.mags.map(vec3IntFromProto(_).toMagLiteral(allowScalar = true))
           additionalFiles = if (zarrVersion == 2)
             List(NgffMetadata.FILENAME_DOT_ZATTRS, NgffGroupHeader.FILENAME_DOT_ZGROUP)
           else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
@@ -97,7 +97,7 @@ class VolumeTracingZarrStreamingController @Inject()(
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
-          existingMags = tracing.resolutions.map(vec3IntFromProto)
+          existingMags = tracing.mags.map(vec3IntFromProto)
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
           files = if (zarrVersion == 2) List(".zarray") else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
@@ -120,7 +120,7 @@ class VolumeTracingZarrStreamingController @Inject()(
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
-          existingMags = tracing.resolutions.map(vec3IntFromProto)
+          existingMags = tracing.mags.map(vec3IntFromProto)
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
           files = if (zarrVersion == 2) List(".zarray") else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
@@ -134,7 +134,7 @@ class VolumeTracingZarrStreamingController @Inject()(
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
-          existingMags = tracing.resolutions.map(vec3IntFromProto)
+          existingMags = tracing.mags.map(vec3IntFromProto)
           magParsed <- Vec3Int
             .fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
@@ -170,7 +170,7 @@ class VolumeTracingZarrStreamingController @Inject()(
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
-          existingMags = tracing.resolutions.map(vec3IntFromProto)
+          existingMags = tracing.mags.map(vec3IntFromProto)
           magParsed <- Vec3Int
             .fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
@@ -230,7 +230,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       for {
         tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
-        existingMags = tracing.resolutions.map(vec3IntFromProto)
+        existingMags = tracing.mags.map(vec3IntFromProto)
         dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId) ~> NOT_FOUND
         omeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(tracingId,
                                                               dataSourceVoxelSize = dataSource.scale,
@@ -247,7 +247,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       for {
         tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
-        existingMags = tracing.resolutions.map(vec3IntFromProto)
+        existingMags = tracing.mags.map(vec3IntFromProto)
         dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId) ~> NOT_FOUND
         omeNgffHeader = NgffMetadataV0_5.fromNameVoxelSizeAndMags(tracingId,
                                                                   dataSourceVoxelSize = dataSource.scale,
@@ -272,7 +272,7 @@ class VolumeTracingZarrStreamingController @Inject()(
             largestSegmentId = tracing.largestSegmentId,
             boundingBox = tracing.boundingBox,
             elementClass = tracing.elementClass,
-            mags = tracing.resolutions.toList.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
+            mags = tracing.mags.toList.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
             mappings = None,
             numChannels = Some(if (tracing.elementClass.isuint24) 3 else 1),
             dataFormat = if (zarrVersion == 2) DataFormat.zarr else DataFormat.zarr3
@@ -288,7 +288,7 @@ class VolumeTracingZarrStreamingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
-            existingMags = tracing.resolutions.map(vec3IntFromProto)
+            existingMags = tracing.mags.map(vec3IntFromProto)
             magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
             _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
 

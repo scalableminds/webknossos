@@ -1549,7 +1549,7 @@ export async function findDataPositionForLayer(
   position: Vector3 | null | undefined;
   mag: Vector3 | null | undefined;
 }> {
-  const { position, resolution: mag } = await doWithToken((token) =>
+  const { position, mag } = await doWithToken((token) =>
     Request.receiveJSON(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/findData?token=${token}`,
     ),

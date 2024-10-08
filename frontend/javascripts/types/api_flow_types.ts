@@ -715,8 +715,9 @@ export type WkLibsNdBoundingBox = BoundingBoxObject & {
 
 export type APIJob = {
   readonly id: string;
-  readonly datasetId: string | null | undefined; // TODO: Adjust worker accordingly
+  readonly datasetId: string | null | undefined;
   readonly datasetName: string | null | undefined;
+  readonly datasetPath: string | null | undefined;
   readonly exportFileName: string | null | undefined;
   readonly layerName: string | null | undefined;
   readonly annotationLayerName: string | null | undefined;

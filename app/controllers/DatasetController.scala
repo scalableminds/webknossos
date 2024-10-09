@@ -369,6 +369,9 @@ class DatasetController @Inject()(userService: UserService,
       for {
         organization <- organizationDAO.findOne(organizationId)
         _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
+        dataset <- datasetDAO
+          .findOneByNameAndOrganization(datasetName, organizationId) ?~> notFoundMessage(datasetName) ~> NOT_FOUND
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
         _ <- datasetDAO.updateSharingTokenByName(datasetName, organization._id, None)
       } yield Ok
   }

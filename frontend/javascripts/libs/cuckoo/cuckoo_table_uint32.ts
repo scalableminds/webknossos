@@ -17,7 +17,7 @@ export class CuckooTableUint32 extends AbstractCuckooTable<Key, Value, Entry> {
   static getTextureChannelCount() {
     return 2;
   }
-  static getTextureFormat() {
+  static getTextureFormat(): THREE.PixelFormat {
     return THREE.RGIntegerFormat;
   }
   static getInternalFormat(): THREE.PixelFormatGPU {

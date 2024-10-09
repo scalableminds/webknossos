@@ -1796,6 +1796,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tweenjs/tween.js@npm:~23.1.3":
+  version: 23.1.3
+  resolution: "@tweenjs/tween.js@npm:23.1.3"
+  checksum: 10c0/811b30f5f0e7409fb41833401c501c2d6f600eb5f43039dd9067a7f70aff6dad5f5ce1233848e13f0b33a269a160d9c133f344d986cbff4f1f6b72ddecd06c89
+  languageName: node
+  linkType: hard
+
 "@types/body-parser@npm:*":
   version: 1.19.2
   resolution: "@types/body-parser@npm:1.19.2"
@@ -2597,6 +2604,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/stats.js@npm:*":
+  version: 0.17.3
+  resolution: "@types/stats.js@npm:0.17.3"
+  checksum: 10c0/ccccc992c6dfe08fb85049aa3ce44ca7e428db8da4a3edd20298f1c8b72768021fa8bacdfbe8e9735a7552ee5d57f667c6f557050ad2d9a87b699b3566a6177a
+  languageName: node
+  linkType: hard
+
 "@types/supports-color@npm:^8.0.0":
   version: 8.1.1
   resolution: "@types/supports-color@npm:8.1.1"
@@ -2604,12 +2618,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/three@npm:^0.142.0":
-  version: 0.142.0
-  resolution: "@types/three@npm:0.142.0"
+"@types/three@npm:^0.169.0":
+  version: 0.169.0
+  resolution: "@types/three@npm:0.169.0"
   dependencies:
+    "@tweenjs/tween.js": "npm:~23.1.3"
+    "@types/stats.js": "npm:*"
     "@types/webxr": "npm:*"
-  checksum: 10c0/7616a571ed8df10265caca723f686f52a2a43d34412682547f6e4737763c14a1f975b1c56a903c14d27f2b76d47f28693ba6725dfe86f9e6fcb2c7e4352d2b63
+    "@webgpu/types": "npm:*"
+    fflate: "npm:~0.8.2"
+    meshoptimizer: "npm:~0.18.1"
+  checksum: 10c0/d5f588dcc9df02875d46e5e6ea8ea6dc346cd1e4c0fbe7bcca4c8d9584f82ac39a951788a79fc2ffae3d5e232f99e66046adec8f93fdf51d30561a4a00c52b40
   languageName: node
   linkType: hard
 
@@ -2906,6 +2925,13 @@ __metadata:
     "@webassemblyjs/ast": "npm:1.11.1"
     "@xtuc/long": "npm:4.2.2"
   checksum: 10c0/cede13c53a176198f949e7f0edf921047c524472b2e4c99edfe829d20e168b4037395479325635b4a3662ea7b4b59be4555ea3bb6050c61b823c68abdb435c74
+  languageName: node
+  linkType: hard
+
+"@webgpu/types@npm:*":
+  version: 0.1.46
+  resolution: "@webgpu/types@npm:0.1.46"
+  checksum: 10c0/1eedba5e123e12667d39bd234cd354f42b2c7b8407827e8b617f4e2415040c7e55d972ee4473a45bd1da7144aee7ccab15ad2315b887218a3a22ba591062f390
   languageName: node
   linkType: hard
 
@@ -5976,6 +6002,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"fflate@npm:~0.8.2":
+  version: 0.8.2
+  resolution: "fflate@npm:0.8.2"
+  checksum: 10c0/03448d630c0a583abea594835a9fdb2aaf7d67787055a761515bf4ed862913cfd693b4c4ffd5c3f3b355a70cf1e19033e9ae5aedcca103188aaff91b8bd6e293
+  languageName: node
+  linkType: hard
+
 "figures@npm:^6.0.1":
   version: 6.1.0
   resolution: "figures@npm:6.1.0"
@@ -8628,6 +8661,13 @@ __metadata:
   version: 1.4.1
   resolution: "merge2@npm:1.4.1"
   checksum: 10c0/254a8a4605b58f450308fc474c82ac9a094848081bf4c06778200207820e5193726dc563a0d2c16468810516a5c97d9d3ea0ca6585d23c58ccfff2403e8dbbeb
+  languageName: node
+  linkType: hard
+
+"meshoptimizer@npm:~0.18.1":
+  version: 0.18.1
+  resolution: "meshoptimizer@npm:0.18.1"
+  checksum: 10c0/8a825c58b20b65585e8d00788843929b60c66ba4297e89afaa49f7c51ab9a0f7b9130f90cc9ad1b9b48b3d1bee3beb1bc93608acba0d73e78995c3e6e5ca436b
   languageName: node
   linkType: hard
 
@@ -12976,10 +13016,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"three@npm:^0.137.0":
-  version: 0.137.5
-  resolution: "three@npm:0.137.5"
-  checksum: 10c0/ce5392396c21bf4569c7f8f694fdc49c0237e61a41ec3cf7bc82cb3bfdeca7c977229fbc70da95972f51a61a87850854e17d0a1d179daa7c7295724ea8e7670c
+"three@npm:^0.169.0":
+  version: 0.169.0
+  resolution: "three@npm:0.169.0"
+  checksum: 10c0/be2e20f45eaa50489cd22d366c41fa14528f00b873078f52fc6ef37140fa8e541e9805630bbe696ab9b027530c74e5cd341705266eb268b5219402fb9fa78ed4
   languageName: node
   linkType: hard
 
@@ -13925,7 +13965,7 @@ __metadata:
     "@types/react-dom": "npm:^18.3.0"
     "@types/react-router-dom": "npm:^5.3.3"
     "@types/sinon": "npm:^10.0.11"
-    "@types/three": "npm:^0.142.0"
+    "@types/three": "npm:^0.169.0"
     "@types/url-join": "npm:^4.0.0"
     "@zip.js/zip.js": "npm:^2.7.32"
     abort-controller: "npm:^3.0.0"
@@ -14020,7 +14060,7 @@ __metadata:
     saxophone: "npm:^0.8.0"
     shelljs: "npm:^0.8.5"
     sinon: "npm:^12.0.1"
-    three: "npm:^0.137.0"
+    three: "npm:^0.169.0"
     tmp: "npm:0.0.33"
     ts-loader: "npm:^9.4.1"
     tween.js: "npm:^16.3.1"

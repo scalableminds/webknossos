@@ -121,6 +121,7 @@ function AdditionalCoordinatesInputView() {
                   };
                   changeAdditionalCoordinates(newCoords);
                 }}
+                wheelFactor={0.05}
               />
             );
           })}

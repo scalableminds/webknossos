@@ -5,7 +5,6 @@ import {
   Select,
   Button,
   Form,
-  Slider,
   Row,
   Space,
   Radio,
@@ -59,6 +58,7 @@ import { LayerSelectionFormItem } from "components/layer_selection";
 import { useGuardedFetch } from "libs/react_helpers";
 import _ from "lodash";
 import DEFAULT_PREDICT_WORKFLOW from "./default-predict-workflow-template";
+import { Slider } from "components/slider";
 
 const { ThinSpace } = Unicode;
 
@@ -277,6 +277,7 @@ export function MagSlider({
         allMags.length - 1,
       )}
       onChange={(value) => onChange(allMags[value][1])}
+      onWheelDisabled
     />
   );
 }

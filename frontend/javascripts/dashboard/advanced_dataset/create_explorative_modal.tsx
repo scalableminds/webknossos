@@ -1,6 +1,6 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import { Modal, Radio, Button, Tooltip, Slider, Spin } from "antd";
+import { Modal, Radio, Button, Tooltip, Spin } from "antd";
 import React, { useEffect, useState } from "react";
 import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 import {
@@ -13,6 +13,7 @@ import {
 import { getDataset } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import { Slider } from "components/slider";
 
 type Props = {
   datasetId: APIDataset["id"];
@@ -150,6 +151,7 @@ export function RestrictResolutionSlider({
           style={{
             flexGrow: 1,
           }}
+          onWheelDisabled
         />
         <div
           style={{

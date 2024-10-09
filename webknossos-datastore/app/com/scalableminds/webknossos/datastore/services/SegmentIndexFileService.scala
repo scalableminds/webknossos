@@ -58,12 +58,11 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                        segmentId: Long): Fox[Array[Vec3Int]] =
     for {
       segmentIndexPath <- getSegmentIndexFile(organizationId, datasetPath, dataLayerName).toFox
-      segmentIndex = fileHandleCache.withCache(segmentIndexPath)(CachedHdf5File.fromPath)
-      hashFunction = getHashFunction(segmentIndex.reader.string().getAttr("/", "hash_function"))
-      nBuckets = segmentIndex.reader.uint64().getAttr("/", "n_hash_buckets")
+      segmentIndex = fileHandleCache.getCachedHdf5File(segmentIndexPath)(CachedHdf5File.fromPath)
+      nBuckets = segmentIndex.uint64Reader.getAttr("/", "n_hash_buckets")
 
-      bucketIndex = hashFunction(segmentId) % nBuckets
-      bucketOffsets = segmentIndex.reader.uint64().readArrayBlockWithOffset("hash_bucket_offsets", 2, bucketIndex)
+      bucketIndex = segmentIndex.hashFunction(segmentId) % nBuckets
+      bucketOffsets = segmentIndex.uint64Reader.readArrayBlockWithOffset("hash_bucket_offsets", 2, bucketIndex)
       bucketStart = bucketOffsets(0)
       bucketEnd = bucketOffsets(1)
 
@@ -79,8 +78,8 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
   def readFileMag(organizationId: String, datasetPath: String, dataLayerName: String): Fox[Vec3Int] =
     for {
       segmentIndexPath <- getSegmentIndexFile(organizationId, datasetPath, dataLayerName).toFox
-      segmentIndex = fileHandleCache.withCache(segmentIndexPath)(CachedHdf5File.fromPath)
-      mag <- Vec3Int.fromArray(segmentIndex.reader.uint64().getArrayAttr("/", "mag").map(_.toInt)).toFox
+      segmentIndex = fileHandleCache.getCachedHdf5File(segmentIndexPath)(CachedHdf5File.fromPath)
+      mag <- Vec3Int.fromArray(segmentIndex.uint64Reader.getArrayAttr("/", "mag").map(_.toInt)).toFox
     } yield mag
 
   private def readTopLefts(segmentIndex: CachedHdf5File,
@@ -89,20 +88,24 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                            segmentId: Long): Fox[Option[Array[Array[Short]]]] =
     for {
       _ <- Fox.successful(())
-      buckets = segmentIndex.reader
-        .uint64()
-        .readMatrixBlockWithOffset("hash_buckets", (bucketEnd - bucketStart + 1).toInt, 3, bucketStart, 0)
+      buckets = segmentIndex.uint64Reader.readMatrixBlockWithOffset("hash_buckets",
+                                                                    (bucketEnd - bucketStart + 1).toInt,
+                                                                    3,
+                                                                    bucketStart,
+                                                                    0)
       bucketLocalOffset = buckets.map(_(0)).indexOf(segmentId)
       topLeftOpts <- Fox.runIf(bucketLocalOffset >= 0)(for {
         _ <- Fox.successful(())
         topLeftStart = buckets(bucketLocalOffset)(1)
         topLeftEnd = buckets(bucketLocalOffset)(2)
-        bucketEntriesDtype <- tryo(segmentIndex.reader.string().getAttr("/", "dtype_bucket_entries")).toFox
+        bucketEntriesDtype <- tryo(segmentIndex.stringReader.getAttr("/", "dtype_bucket_entries")).toFox
         _ <- Fox
           .bool2Fox(bucketEntriesDtype == "uint16") ?~> "value for dtype_bucket_entries in segment index file is not supported, only uint16 is supported"
-        topLefts = segmentIndex.reader
-          .uint16()
-          .readMatrixBlockWithOffset("top_lefts", (topLeftEnd - topLeftStart).toInt, 3, topLeftStart, 0)
+        topLefts = segmentIndex.uint16Reader.readMatrixBlockWithOffset("top_lefts",
+                                                                       (topLeftEnd - topLeftStart).toInt,
+                                                                       3,
+                                                                       topLeftStart,
+                                                                       0)
       } yield topLefts)
     } yield topLeftOpts
 

@@ -164,9 +164,11 @@ class JobService @Inject()(wkConf: WkConf,
       owner <- userDAO.findOne(job._owner) ?~> "user.notFound"
       organization <- organizationDAO.findOne(owner._organization) ?~> "organization.notFound"
       resultLink = job.resultLink(organization._id)
+      ownerJson <- userService.compactWrites(owner)
     } yield {
       Json.obj(
         "id" -> job._id.id,
+        "owner" -> ownerJson,
         "command" -> job.command,
         "commandArgs" -> (job.commandArgs - "webknossos_token" - "user_auth_token"),
         "state" -> job.state,

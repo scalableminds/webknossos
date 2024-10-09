@@ -18,6 +18,7 @@ function transformBackendJobToAPIJob(job: any): APIJob {
   return {
     id: job.id,
     datasetId: job.commandArgs.datasetId,
+    owner: job.owner,
     type: job.command,
     datasetName: job.commandArgs.dataset_name,
     datasetPath: job.commandArgs.dataset_path,
@@ -213,10 +214,12 @@ function startSegmentationAnnotationDependentJob(
   if (volumeLayerName != null) {
     requestURL.searchParams.append("volumeLayerName", volumeLayerName);
   }
+  const layerName = volumeLayerName || fallbackLayerName;
   requestURL.searchParams.append("fallbackLayerName", fallbackLayerName);
   requestURL.searchParams.append("annotationId", annotationId);
   requestURL.searchParams.append("annotationType", annotationType);
   requestURL.searchParams.append("newDatasetName", newDatasetName);
+  requestURL.searchParams.append("outputSegmentationLayerName", `${layerName}_materialized`);
   if (mergeSegments != null) {
     requestURL.searchParams.append("mergeSegments", mergeSegments.toString());
   }

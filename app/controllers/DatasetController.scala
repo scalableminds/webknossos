@@ -299,14 +299,6 @@ class DatasetController @Inject()(userService: UserService,
       } yield Ok("Ok")
     }
 
-  // TODO: Maybe no longer needed. Remove?
-  def resolveDatasetNameToId(organizationId: String, datasetName: String): Action[AnyContent] =
-    sil.UserAwareAction.async { implicit request =>
-      for {
-        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId) ?~> notFoundMessage(datasetName) ~> NOT_FOUND
-      } yield Ok(Json.obj("datasetId" -> dataset._id))
-    }
-
   def updatePartial(datasetId: String): Action[DatasetUpdateParameters] =
     sil.SecuredAction.async(validateJson[DatasetUpdateParameters]) { implicit request =>
       for {
@@ -415,7 +407,8 @@ class DatasetController @Inject()(userService: UserService,
   def getDatasetIdFromNameAndOrganization(datasetName: String, organizationId: String): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
-        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId) ?~> notFoundMessage(datasetName) ~> NOT_FOUND
+        // TODO: Make this first by path and then by name if the path is not found
+        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId) ?~> notFoundMessage(datasetName) ~> NOT_FOUND
       } yield
         Ok(
           Json.obj("id" -> dataset._id,

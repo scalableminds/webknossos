@@ -26,6 +26,7 @@ import controllers.DatasetUpdateParameters
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
+import net.liftweb.common.Full
 import play.api.libs.json._
 import play.utils.UriEncoding
 import slick.jdbc.PostgresProfile.api._
@@ -401,14 +402,43 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       r <- rList.headOption
     } yield r
 
-  def findOneByPathAndOrganization(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
+  def findOneByPathAndOrganization(path: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
                    FROM $existingCollectionName
-                   WHERE path = $name
+                   WHERE path = $path
                    AND _organization = $organizationId
                    AND $accessQuery
+                   LIMIT 1""".as[DatasetsRow])
+      parsed <- parseFirst(r, s"$organizationId/$path")
+    } yield parsed
+
+  def doesDatasetNameExistInOrganization(name: String, organizationId: String)(
+      implicit ctx: DBAccessContext): Fox[Boolean] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(q"""SELECT 1
+                   FROM $existingCollectionName
+                   WHERE name = $name
+                   AND _organization = $organizationId
+                   AND $accessQuery
+                   LIMIT 1""".as[DatasetsRow])
+      exists <- parseFirst(r, s"$organizationId/$name").futureBox.map {
+        case Full(_) => true
+        case _       => false
+      }
+    } yield exists
+
+  def findOneByNameAndOrganization(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(q"""SELECT $columns
+                   FROM $existingCollectionName
+                   WHERE (path = $name OR name = $name)
+                   AND _organization = $organizationId
+                   AND $accessQuery
+                   ORDER BY created ASC
                    LIMIT 1""".as[DatasetsRow])
       parsed <- parseFirst(r, s"$organizationId/$name")
     } yield parsed

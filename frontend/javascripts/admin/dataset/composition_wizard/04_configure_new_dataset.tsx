@@ -307,7 +307,7 @@ function LinkedLayerForm({
   datasetId: string;
   datasetName: string;
 }) {
-  const layers = Form.useWatch(["layers"]);
+  const layers = Form.useWatch(["layers"]) || [];
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: See comment below
   React.useEffect(() => {

@@ -811,7 +811,7 @@ function CustomAiModelInferenceForm() {
           ...maybeAnnotationId,
           aiModelId: form.getFieldValue("aiModel"),
           workflowYaml: useCustomWorkflow ? form.getFieldValue("workflowYaml") : undefined,
-          datasetName: dataset.name,
+          datasetPath: dataset.path,
           colorLayerName: colorLayer.name,
           boundingBox,
           newDatasetName: newDatasetName,

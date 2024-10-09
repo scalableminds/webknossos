@@ -234,6 +234,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   private def addVolumeFallbackBoundingBox(volume: VolumeTracing, organizationId: String): Fox[VolumeTracing] =
     if (volume.boundingBox.isEmpty) {
       for {
+        // TODOM: Here the dataset also needs to be identified by either path & orga or id
         dataset <- datasetDAO.findOneByPathAndOrganization(volume.datasetName, organizationId)(GlobalAccessContext)
         dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
       } yield volume.copy(boundingBox = dataSource.boundingBox)

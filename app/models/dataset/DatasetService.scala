@@ -63,15 +63,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
     } yield ()
 
-  def isNewDatasetName(name: String, organizationId: String): Fox[Boolean] =
-    datasetDAO
-      .findOneByPathAndOrganization(name, organizationId)(GlobalAccessContext)
-      .futureBox
-      .flatMap {
-        case Full(_) => Fox.successful(false)
-        case _       => Fox.successful(true)
-      }
-      .toFox
+  private def isNewDatasetName(name: String, organizationId: String): Fox[Boolean] =
+    datasetDAO.doesDatasetNameExistInOrganization(name, organizationId)(GlobalAccessContext)
 
   def createPreliminaryDataset(datasetName: String, organizationId: String, dataStore: DataStore): Fox[Dataset] = {
     val unreportedDatasource = UnusableDataSource(DataSourceId(datasetName, organizationId), notYetUploadedStatus)

@@ -114,6 +114,7 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
+  // TODOM: I think this is not used anywhere? Got replaced with the compose route I would say.
   private def validateLayerToLink(layerIdentifier: LinkedLayerIdentifier,
                                   requestingUser: User)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[Unit] =
     for {

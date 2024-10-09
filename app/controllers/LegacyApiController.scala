@@ -93,7 +93,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   def readDatasetV6(organizationName: String, datasetName: String, sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
-        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationName)
+        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationName)
         result <- datasetController.read(dataset._id.toString, sharingToken)(request)
         adaptedResult <- replaceInResult(replaceVoxelSize)(result)
       } yield adaptedResult
@@ -112,7 +112,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     sil.SecuredAction.async(parse.json) { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
-        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId)
+        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
         result <- datasetController.update(dataset._id.toString)(request)
       } yield result
     }
@@ -121,7 +121,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
-        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId)
+        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
         sharingToken <- datasetController.getSharingToken(dataset._id.toString)(request)
       } yield sharingToken
     }
@@ -130,7 +130,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     sil.SecuredAction.async(validateJson[List[ObjectId]]) { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
-        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId)
+        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
         result <- datasetController.updateTeams(dataset._id.toString)(request)
       } yield result
     }
@@ -138,7 +138,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   def readDatasetV8(organizationId: String, datasetName: String, sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
-        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId)
+        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
         result <- datasetController.read(dataset._id.toString, sharingToken)(request)
       } yield result
     }
@@ -270,7 +270,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     sil.SecuredAction.async(validateJson[LegacyCreateExplorationalParameters]) { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
-        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationName)
+        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationName)
         result <- annotationController.createExplorational(dataset._id.toString)(
           request.withBody(replaceCreateExplorationalParameters(request)))
         adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)

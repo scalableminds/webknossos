@@ -236,6 +236,7 @@ class AnnotationIOController @Inject()(
       organizationId <- Fox.fillOption(organizationIdOpt) {
         datasetDAO.getOrganizationIdForDataset(datasetName)(GlobalAccessContext)
       } ?~> Messages("dataset.noAccess", datasetName) ~> FORBIDDEN
+      // TODO: Check whether thats ok, the datasets are addressed via the name by the annotations. This looks broken to me.
       dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId) ?~> (if (wkUrl.nonEmpty && conf.Http.uri != wkUrl) {
                                                                                              Messages(
                                                                                                "dataset.noAccess.wrongHost",

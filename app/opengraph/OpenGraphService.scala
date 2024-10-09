@@ -40,8 +40,10 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
 
   // This should match the frontend-side routes, not api routes, since those are the links people send around
   private val shortLinkRouteRegex = "^/links/(.*)".r
-  private val datasetRoute1Regex = "^/datasets/([^/^#]+)/([^/^#]+)/view".r
-  private val datasetRoute2Regex = "^/datasets/([^/^#]+)/([^/^#]+)".r
+  private val datasetRoute1Regex = "^/datasets/([^/^#]+)/view".r
+  private val datasetRoute2Regex = "^/datasets/([^/^#]+)".r
+  private val datasetRoute1LegacyRegex = "^/datasets/([^/^#]+)/([^/^#]+)/view".r
+  private val datasetRoute2LegacyRegex = "^/datasets/([^/^#]+)/([^/^#]+)".r
   private val workflowRouteRegex = "^/workflows/([^/^#]+)".r
   private val annotationRouteRegex = "^/annotations/([^/^#]+)".r
 
@@ -92,27 +94,44 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
 
   private def detectPageType(uriPath: String) =
     uriPath match {
-      case datasetRoute1Regex(_, _) | datasetRoute2Regex(_, _) => OpenGraphPageType.dataset
-      case annotationRouteRegex(_)                             => OpenGraphPageType.annotation
-      case workflowRouteRegex(_)                               => OpenGraphPageType.workflow
-      case _                                                   => OpenGraphPageType.unknown
+      case datasetRoute1Regex(_, _) | datasetRoute2Regex(_, _) | datasetRoute1LegacyRegex(_, _) |
+          datasetRoute2LegacyRegex(_, _) =>
+        OpenGraphPageType.dataset
+      case annotationRouteRegex(_) => OpenGraphPageType.annotation
+      case workflowRouteRegex(_)   => OpenGraphPageType.workflow
+      case _                       => OpenGraphPageType.unknown
     }
 
   private def datasetOpenGraphTags(uriPath: String, token: Option[String])(implicit ec: ExecutionContext,
                                                                            ctx: DBAccessContext): Fox[OpenGraphTags] =
     uriPath match {
-      case datasetRoute1Regex(organizationId, datasetName) =>
-        datasetOpenGraphTagsWithOrganizationId(organizationId, datasetName, token)
-      case datasetRoute2Regex(organizationId, datasetName) =>
-        datasetOpenGraphTagsWithOrganizationId(organizationId, datasetName, token)
+      case datasetRoute1Regex(datasetId) =>
+        datasetOpenGraphTagsWithOrganizationId(Some(datasetId), None, None, token)
+      case datasetRoute2Regex(datasetId) =>
+        datasetOpenGraphTagsWithOrganizationId(Some(datasetId), None, None, token)
+      case datasetRoute1LegacyRegex(organizationId, datasetName) =>
+        datasetOpenGraphTagsWithOrganizationId(None, Some(organizationId), Some(datasetName), token)
+      case datasetRoute2LegacyRegex(organizationId, datasetName) =>
+        datasetOpenGraphTagsWithOrganizationId(None, Some(organizationId), Some(datasetName), token)
       case _ => Fox.failure("not a matching uri")
     }
 
-  private def datasetOpenGraphTagsWithOrganizationId(organizationId: String,
-                                                     datasetName: String,
-                                                     token: Option[String])(implicit ctx: DBAccessContext) =
+  private def datasetOpenGraphTagsWithOrganizationId(
+      datasetIdOpt: Option[String],
+      organizationIdOpt: Option[String],
+      datasetNameOpt: Option[String],
+      token: Option[String])(implicit ec: ExecutionContext, ctx: DBAccessContext) =
     for {
-      dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId)
+      dataset <- (datasetIdOpt, organizationIdOpt, datasetNameOpt) match {
+        case (Some(datasetId), None, None) =>
+          ObjectId
+            .fromStringSync(datasetId)
+            .map(datasetIdParsed => datasetDAO.findOne(datasetIdParsed))
+            .getOrElse(Fox.failure("Invalid dataset id"))
+        case (None, Some(organizationId), Some(datasetName)) =>
+          datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
+        case _ => Fox.failure("Could not find dataset")
+      }
       layers <- datasetLayerDAO.findAllForDataset(dataset._id)
       layerOpt = layers.find(_.category == Category.color)
       organization <- organizationDAO.findOne(dataset._organization)

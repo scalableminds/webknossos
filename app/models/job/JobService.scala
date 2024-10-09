@@ -152,9 +152,9 @@ class JobService @Inject()(wkConf: WkConf,
       logger.info(s"WKW conversion job ${job._id} failed. Deleting dataset from the database, freeing the name...")
       val commandArgs = job.commandArgs.value
       for {
-        datasetName <- commandArgs.get("dataset_name").map(_.as[String]).toFox
+        datasetPath <- commandArgs.get("dataset_path").map(_.as[String]).toFox
         organizationId <- commandArgs.get("organization_name").map(_.as[String]).toFox
-        dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId)(GlobalAccessContext)
+        dataset <- datasetDAO.findOneByPathAndOrganization(datasetPath, organizationId)(GlobalAccessContext)
         _ <- datasetDAO.deleteDataset(dataset._id)
       } yield ()
     } else Fox.successful(())

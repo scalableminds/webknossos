@@ -36,7 +36,7 @@ case class ReserveUploadInformation(
     organization: String,
     totalFileCount: Long,
     filePaths: Option[List[String]],
-    layersToLink: Option[List[LinkedLayerIdentifier]],
+    layersToLink: Option[List[LinkedLayerIdentifier]], // TODOM: This is not used anywhere? Got replaced with the compose route I would say.
     initialTeams: List[String], // team ids
     folderId: Option[String])
 object ReserveUploadInformation {

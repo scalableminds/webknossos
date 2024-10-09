@@ -316,7 +316,7 @@ export function runTraining(params: RunTrainingParameters) {
 type RunInferenceParameters = {
   annotationId?: string;
   aiModelId: string;
-  datasetName: string;
+  datasetPath: string;
   colorLayerName: string;
   boundingBox: Vector6;
   newDatasetName: string;

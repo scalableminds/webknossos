@@ -2111,7 +2111,7 @@ class DataApi {
 
     const magString = resolution.join("-");
     return (
-      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/data?mag=${magString}&` +
+      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.path}/layers/${layerName}/data?mag=${magString}&` +
       `token=${token}&` +
       `x=${Math.floor(topLeft[0])}&` +
       `y=${Math.floor(topLeft[1])}&` +

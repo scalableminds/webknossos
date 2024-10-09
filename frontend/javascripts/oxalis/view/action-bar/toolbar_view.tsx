@@ -85,6 +85,7 @@ import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
 import { updateNovelUserExperienceInfos } from "admin/admin_rest_api";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import FastTooltip from "components/fast_tooltip";
+import defaultState from "oxalis/default_state";
 
 const NARROW_BUTTON_STYLE = {
   paddingLeft: 10,
@@ -756,6 +757,7 @@ function ChangeBrushSizePopover() {
                   spans={[0, 18, 6]}
                   value={brushSize}
                   onChange={handleUpdateBrushSize}
+                  defaultValue={defaultState.userConfiguration.brushSize}
                 />
               </Col>
               <Col>

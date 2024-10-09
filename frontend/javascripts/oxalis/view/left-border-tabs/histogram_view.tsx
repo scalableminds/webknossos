@@ -1,5 +1,5 @@
 import type { Dispatch } from "redux";
-import { Alert, Slider, Row, Col, InputNumber, Spin } from "antd";
+import { Alert, Row, Col, InputNumber, Spin } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 import * as _ from "lodash";
@@ -10,6 +10,7 @@ import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions"
 import type { DatasetLayerConfiguration } from "oxalis/store";
 import { CloseOutlined } from "@ant-design/icons";
 import FastTooltip from "components/fast_tooltip";
+import { Slider } from "components/slider";
 
 type OwnProps = {
   data: APIHistogramData | null | undefined;

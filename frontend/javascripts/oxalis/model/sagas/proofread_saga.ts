@@ -82,7 +82,7 @@ import type { AdditionalCoordinate } from "types/api_flow_types";
 import { takeEveryUnlessBusy } from "./saga_helpers";
 import type { Action } from "../actions/actions";
 import { isBigInt, isNumberMap, SoftError } from "libs/utils";
-import { getCurrentResolution } from "../accessors/flycam_accessor";
+import { getCurrentMag } from "../accessors/flycam_accessor";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -1037,7 +1037,7 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
   }
 
   const resolutionInfo = getMagnificationInfo(volumeTracingLayer.resolutions);
-  const currentMag = yield* select((state) => getCurrentResolution(state, volumeTracingLayer.name));
+  const currentMag = yield* select((state) => getCurrentMag(state, volumeTracingLayer.name));
 
   const agglomerateFileMag = isSkeletonProofreading
     ? // In case of skeleton proofreading, the finest resolution should be used.

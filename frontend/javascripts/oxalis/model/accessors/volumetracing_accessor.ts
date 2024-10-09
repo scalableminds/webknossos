@@ -647,7 +647,7 @@ export function getLabelActionFromPreviousSlice(
   // Gets the last label action which was performed on a different slice.
   // Note that in coarser mags (e.g., 8-8-2), the comparison of the coordinates
   // is done while respecting how the coordinates are clipped due to that resolution.
-  const adapt = (vec: Vector3) => V3.roundElementToResolution(vec, resolution, dim);
+  const adapt = (vec: Vector3) => V3.roundElementToMag(vec, resolution, dim);
   const position = adapt(getFlooredPosition(state.flycam));
 
   return volumeTracing.lastLabelActions.find(

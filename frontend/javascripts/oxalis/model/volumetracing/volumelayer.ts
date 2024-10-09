@@ -4,7 +4,7 @@ import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import {
-  scaleGlobalPositionWithResolution,
+  scaleGlobalPositionWithMagnification,
   scaleGlobalPositionWithResolutionFloat,
   zoomedPositionToGlobalPosition,
 } from "oxalis/model/helpers/position_converter";
@@ -172,7 +172,7 @@ class VolumeLayer {
   }
 
   updateArea(globalPos: Vector3): void {
-    const pos = scaleGlobalPositionWithResolution(globalPos, this.activeResolution);
+    const pos = scaleGlobalPositionWithMagnification(globalPos, this.activeResolution);
     let [maxCoord, minCoord] = [this.maxCoord, this.minCoord];
 
     if (maxCoord == null || minCoord == null) {
@@ -378,11 +378,11 @@ class VolumeLayer {
     lastUnzoomedPosition: Vector3,
     unzoomedPosition: Vector3,
   ): VoxelBuffer2D | null {
-    const lastPosition = scaleGlobalPositionWithResolution(
+    const lastPosition = scaleGlobalPositionWithMagnification(
       lastUnzoomedPosition,
       this.activeResolution,
     );
-    const position = scaleGlobalPositionWithResolution(unzoomedPosition, this.activeResolution);
+    const position = scaleGlobalPositionWithMagnification(unzoomedPosition, this.activeResolution);
     const state = Store.getState();
     const { brushSize } = state.userConfiguration;
     const radius = Math.round(brushSize / 2);

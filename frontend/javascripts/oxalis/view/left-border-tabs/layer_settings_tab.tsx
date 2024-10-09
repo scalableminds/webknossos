@@ -66,7 +66,7 @@ import {
   getTransformsForLayer,
   hasDatasetTransforms,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getMaxZoomValueForResolution, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getMaxZoomValueForMag, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
@@ -1610,7 +1610,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 
   onZoomToResolution(layerName: string, resolution: Vector3) {
-    const targetZoomValue = getMaxZoomValueForResolution(Store.getState(), layerName, resolution);
+    const targetZoomValue = getMaxZoomValueForMag(Store.getState(), layerName, resolution);
     dispatch(setZoomStepAction(targetZoomValue));
     return targetZoomValue;
   },

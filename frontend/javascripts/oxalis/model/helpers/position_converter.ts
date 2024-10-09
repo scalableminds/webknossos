@@ -21,7 +21,7 @@ export function globalPositionToBucketPosition(
     additionalCoordinates || [],
   ];
 }
-export function scaleGlobalPositionWithResolution(
+export function scaleGlobalPositionWithMagnification(
   [x, y, z]: Vector3,
   resolution: Vector3,
   ceil: boolean = false,

@@ -104,7 +104,7 @@ function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
     // is done while respecting how the coordinates are clipped due to that resolution.
     // For example, in mag 8-8-2, the z distance needs to be divided by two, since it is measured
     // in global coordinates.
-    const adapt = (vec: Vector3) => V3.roundElementToResolution(vec, labeledResolution, thirdDim);
+    const adapt = (vec: Vector3) => V3.roundElementToMag(vec, labeledResolution, thirdDim);
     const signedInterpolationDepth = Math.floor(
       V3.sub(adapt(position), adapt(previousCentroid))[thirdDim] / labeledResolution[thirdDim],
     );

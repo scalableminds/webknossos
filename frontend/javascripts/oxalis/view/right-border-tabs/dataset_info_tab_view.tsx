@@ -12,7 +12,7 @@ import {
   getDatasetExtentAsString,
   getMagnificationUnion,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveMagnificationInfo } from "oxalis/model/accessors/flycam_accessor";
 import {
   getCombinedStats,
   type CombinedTracingStats,
@@ -37,7 +37,7 @@ type StateProps = {
   dataset: APIDataset;
   task: Task | null | undefined;
   activeUser: APIUser | null | undefined;
-  activeResolutionInfo: ReturnType<typeof getActiveResolutionInfo>;
+  activeResolutionInfo: ReturnType<typeof getActiveMagnificationInfo>;
   isDatasetViewMode: boolean;
   mayEditAnnotation: boolean;
 };
@@ -557,7 +557,10 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
 
   getResolutionInfo() {
     const { activeResolutionInfo } = this.props;
-    const { representativeResolution, isActiveResolutionGlobal } = activeResolutionInfo;
+    const {
+      representativeMag: representativeResolution,
+      isActiveMagGlobal: isActiveResolutionGlobal,
+    } = activeResolutionInfo;
 
     return representativeResolution != null ? (
       <FastTooltip dynamicRenderer={this.renderResolutionsTooltip} placement="left" wrapper="tr">
@@ -626,7 +629,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   task: state.task,
   activeUser: state.activeUser,
   isDatasetViewMode: state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
-  activeResolutionInfo: getActiveResolutionInfo(state),
+  activeResolutionInfo: getActiveMagnificationInfo(state),
   mayEditAnnotation: mayEditAnnotationProperties(state),
 });
 

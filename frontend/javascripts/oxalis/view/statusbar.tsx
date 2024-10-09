@@ -10,7 +10,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
 import { useKeyPress } from "libs/react_hooks";
-import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveMagnificationInfo } from "oxalis/model/accessors/flycam_accessor";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   setActiveNodeAction,
@@ -499,12 +499,14 @@ function DownloadSpeedometer() {
 }
 
 function ResolutionInfo() {
-  const { representativeResolution, isActiveResolutionGlobal } =
-    useSelector(getActiveResolutionInfo);
+  const {
+    representativeMag: representativeResolution,
+    isActiveMagGlobal: isActiveResolutionGlobal,
+  } = useSelector(getActiveMagnificationInfo);
 
   const renderMagTooltipContent = useCallback(() => {
     const state = Store.getState();
-    const { activeMagOfEnabledLayers } = getActiveResolutionInfo(state);
+    const { activeMagOfEnabledLayers } = getActiveMagnificationInfo(state);
     const dataset = state.dataset;
     const tracing = state.tracing;
 

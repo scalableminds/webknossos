@@ -1429,7 +1429,7 @@ export async function storeRemoteDataset(
     return Request.sendJSONReceiveJSON(
       `${datastoreUrl}/data/datasets/${organizationId}/${datasetName}?${params}`,
       {
-        method: "PUT",
+        method: "POST",
         data: datasource,
       },
     );

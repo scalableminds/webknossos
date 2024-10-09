@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
@@ -180,14 +181,43 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       withTracings <- getWithTracings(annotationId, version, List.empty, List.empty, requestAll = false)
     } yield withTracings.annotation
 
-  def getWithTracings(
+  private lazy val materializedAnnotationWithTracingCache =
+    // annotation id, version, requestedSkeletons, requestedVolumes, requestAll
+    // TODO instead of requested, use list of tracings determined from requests + updates?
+    AlfuCache[(String, Long, List[String], List[String], Boolean), AnnotationWithTracings]()
+
+  private def getWithTracings(
       annotationId: String,
       version: Option[Long],
       requestedSkeletonTracingIds: List[String],
       requestedVolumeTracingIds: List[String],
       requestAll: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
-      annotationWithVersion <- tracingDataStore.annotations.get(annotationId, version)(fromProtoBytes[AnnotationProto]) ?~> "getAnnotation.failed"
+      targetVersion <- determineTargetVersion(annotationId, version) ?~> "determineTargetVersion.failed"
+      updatedAnnotation <- materializedAnnotationWithTracingCache.getOrLoad(
+        (annotationId, targetVersion, requestedSkeletonTracingIds, requestedVolumeTracingIds, requestAll),
+        _ =>
+          getWithTracingsVersioned(
+            annotationId,
+            targetVersion,
+            requestedSkeletonTracingIds,
+            requestedVolumeTracingIds,
+            requestAll = true) // TODO can we request fewer to save perf? still need to avoid duplicate apply
+      )
+    } yield updatedAnnotation
+
+  private def getWithTracingsVersioned(
+      annotationId: String,
+      version: Long,
+      requestedSkeletonTracingIds: List[String],
+      requestedVolumeTracingIds: List[String],
+      requestAll: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
+    for {
+      annotationWithVersion <- tracingDataStore.annotations.get(annotationId, Some(version))(
+        fromProtoBytes[AnnotationProto]) ?~> "getAnnotation.failed"
+      _ = logger.info(
+        s"cache miss for ${annotationId} v$version, requested ${requestedSkeletonTracingIds.mkString(",")} + ${requestedVolumeTracingIds
+          .mkString(",")} (requestAll=$requestAll). Applying updates from ${annotationWithVersion.version} to $version...")
       annotation = annotationWithVersion.value
       updated <- applyPendingUpdates(annotation,
                                      annotationId,
@@ -225,12 +255,11 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   private def applyPendingUpdates(
       annotation: AnnotationProto,
       annotationId: String,
-      targetVersionOpt: Option[Long],
+      targetVersion: Long,
       requestedSkeletonTracingIds: List[String],
       requestedVolumeTracingIds: List[String],
       requestAll: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
-      targetVersion <- determineTargetVersion(annotation, annotationId, targetVersionOpt) ?~> "determineTargetVersion.failed"
       updates <- findPendingUpdates(annotationId, annotation.version, targetVersion) ?~> "findPendingUpdates.failed"
       annotationWithTracings <- findTracingsForUpdates(annotation,
                                                        updates,
@@ -371,7 +400,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       for {
         updated <- updateIter(Some(annotation), updates)
         updatedWithNewVerson = updated.withVersion(targetVersion)
-        _ = logger.info(s"flushing, with ${updated.skeletonStats}")
+        _ = logger.info(s"flushing v${targetVersion}, with ${updated.skeletonStats}")
         _ <- updatedWithNewVerson.flushBufferedUpdates()
         _ <- flushUpdatedTracings(updatedWithNewVerson)
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVerson)
@@ -406,18 +435,17 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   private def flushAnnotationInfo(annotationId: String, annotationWithTracings: AnnotationWithTracings) =
     tracingDataStore.annotations.put(annotationId, annotationWithTracings.version, annotationWithTracings.annotation)
 
-  private def determineTargetVersion(annotation: AnnotationProto,
-                                     annotationId: String,
-                                     targetVersionOpt: Option[Long]): Fox[Long] =
+  private def determineTargetVersion(annotationId: String, targetVersionOpt: Option[Long]): Fox[Long] =
     /*
      * Determines the newest saved version from the updates column.
      * if there are no updates at all, assume annotation is brand new (possibly created from NML,
      * hence the emptyFallbck annotation.version)
      */
     for {
-      newestUpdateVersion <- tracingDataStore.annotationUpdates.getVersion(annotationId,
-                                                                           mayBeEmpty = Some(true),
-                                                                           emptyFallback = Some(annotation.version))
+      newestUpdateVersion <- tracingDataStore.annotationUpdates.getVersion(
+        annotationId,
+        mayBeEmpty = Some(true),
+        emptyFallback = Some(0L)) // TODO in case of empty, look in annotation table, take version from there
     } yield {
       targetVersionOpt match {
         case None              => newestUpdateVersion

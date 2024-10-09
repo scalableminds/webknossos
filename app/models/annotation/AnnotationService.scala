@@ -525,10 +525,10 @@ class AnnotationService @Inject()(
     } yield result
   }
 
-  def createSkeletonTracingBase(datasetName: String,
+  def createSkeletonTracingBase(datasetId: ObjectId,
                                 boundingBox: Option[BoundingBox],
                                 startPosition: Vec3Int,
-                                startRotation: Vec3Double): SkeletonTracing = {
+                                startRotation: Vec3Double)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
     val initialNode = NodeDefaults.createInstance.withId(1).withPosition(startPosition).withRotation(startRotation)
     val initialTree = Tree(
       1,
@@ -540,8 +540,11 @@ class AnnotationService @Inject()(
       "",
       System.currentTimeMillis()
     )
-    SkeletonTracingDefaults.createInstance.copy(
-      datasetName = datasetName,
+    for {
+      dataset <- datasetDAO.findOne(datasetId)
+    } yield SkeletonTracingDefaults.createInstance.copy(
+      datasetName = dataset.name,
+      datasetId = dataset._id.toString,
       boundingBox = boundingBox.flatMap { box =>
         if (box.isEmpty) None else Some(box)
       },

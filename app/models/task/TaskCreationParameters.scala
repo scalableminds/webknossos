@@ -1,6 +1,7 @@
 package models.task
 
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.requestparsing.ObjectId
 import models.user.Experience
 import play.api.libs.json.{Format, Json}
 
@@ -10,7 +11,8 @@ case class TaskParameters(taskTypeId: String,
                           projectName: String,
                           scriptId: Option[String],
                           boundingBox: Option[BoundingBox],
-                          dataSet: String, // TODOM: Make this a dataSetId
+                          datasetName: String,
+                          datasetId: ObjectId, // TODOM: Make this a dataSetId
                           editPosition: Vec3Int,
                           editRotation: Vec3Double,
                           creationInfo: Option[String],

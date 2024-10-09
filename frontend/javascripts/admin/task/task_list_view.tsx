@@ -158,7 +158,7 @@ function TaskListView({ initialFieldValues }: Props) {
         "team",
         "projectName",
         "id",
-        "dataSet",
+        "datasetName",
         "created",
         "type",
         (task) => task.neededExperience.domain,
@@ -267,9 +267,9 @@ function TaskListView({ initialFieldValues }: Props) {
     },
     {
       title: "Dataset",
-      dataIndex: "dataSet",
-      key: "dataSet",
-      sorter: Utils.localeCompareBy<APITask>((task) => task.dataSet),
+      dataIndex: "datasetName",
+      key: "datasetName",
+      sorter: Utils.localeCompareBy<APITask>((task) => task.datasetName),
     },
     {
       title: "Stats",

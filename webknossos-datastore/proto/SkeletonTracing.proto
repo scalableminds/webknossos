@@ -62,19 +62,20 @@ message TreeGroup {
 }
 
 message SkeletonTracing {
-  required string datasetName = 1; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
-  repeated Tree trees = 2;
-  required int64 createdTimestamp = 3;
-  optional BoundingBoxProto boundingBox = 4;
-  optional int32 activeNodeId = 5;
-  required Vec3IntProto editPosition = 6;
-  required Vec3DoubleProto editRotation = 7;
-  required double zoomLevel = 8;
-  required int64 version = 9;
-  optional BoundingBoxProto userBoundingBox = 10;
-  repeated TreeGroup treeGroups = 11;
-  repeated NamedBoundingBoxProto userBoundingBoxes = 12;
-  optional string organizationId = 13; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
+  required string datasetId = 1;
+  required string datasetName = 2; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
+  repeated Tree trees = 3;
+  required int64 createdTimestamp = 4;
+  optional BoundingBoxProto boundingBox = 5;
+  optional int32 activeNodeId = 6;
+  required Vec3IntProto editPosition = 7;
+  required Vec3DoubleProto editRotation = 8;
+  required double zoomLevel = 9;
+  required int64 version = 10;
+  optional BoundingBoxProto userBoundingBox = 11;
+  repeated TreeGroup treeGroups = 12;
+  repeated NamedBoundingBoxProto userBoundingBoxes = 13;
+  optional string organizationId = 14; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
   repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
   repeated AdditionalAxisProto additionalAxes = 22; // Additional axes for which this tracing is defined
 }

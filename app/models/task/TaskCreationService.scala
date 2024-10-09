@@ -22,6 +22,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import telemetry.SlackNotificationService
 import com.scalableminds.util.requestparsing.ObjectId
+import play.api.http.Status.FORBIDDEN
 
 import scala.concurrent.ExecutionContext
 
@@ -74,7 +75,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     for {
       taskTypeIdValidated <- ObjectId.fromString(taskParameters.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-      dataset <- datasetDAO.findOneByPathAndOrganization(taskParameters.dataSet, organizationId)
+      dataset <- datasetDAO.findOne(taskParameters.datasetId)
       baseAnnotationIdValidated <- ObjectId.fromString(baseAnnotation.baseId)
       annotation <- resolveBaseAnnotationId(baseAnnotationIdValidated)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
@@ -118,9 +119,10 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     }).flatten
 
   // Used in create (without files) in case of base annotation
-  private def duplicateOrCreateSkeletonBase(baseAnnotation: Annotation,
-                                            params: TaskParameters,
-                                            tracingStoreClient: WKRemoteTracingStoreClient): Fox[String] =
+  private def duplicateOrCreateSkeletonBase(
+      baseAnnotation: Annotation,
+      params: TaskParameters,
+      tracingStoreClient: WKRemoteTracingStoreClient)(implicit ctx: DBAccessContext): Fox[String] =
     for {
       baseSkeletonTracingIdOpt <- baseAnnotation.skeletonTracingId
       newTracingId <- baseSkeletonTracingIdOpt
@@ -131,13 +133,14 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                                         editRotation = Some(params.editRotation),
                                                         boundingBox = params.boundingBox))
         .getOrElse(
-          tracingStoreClient.saveSkeletonTracing(
-            annotationService.createSkeletonTracingBase(
-              params.dataSet,
+          annotationService
+            .createSkeletonTracingBase(
+              params.datasetId,
               params.boundingBox,
               params.editPosition,
               params.editRotation
-            )))
+            )
+            .flatMap(tracingStoreClient.saveSkeletonTracing))
     } yield newTracingId
 
   // Used in create (without files) in case of base annotation
@@ -172,15 +175,17 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       for {
         taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"
         taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-        skeletonTracingOpt = if ((taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) && params.baseAnnotation.isEmpty) {
-          Some(
-            annotationService.createSkeletonTracingBase(
-              params.dataSet,
+        skeletonTracingOpt <- if ((taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) && params.baseAnnotation.isEmpty) {
+
+          annotationService
+            .createSkeletonTracingBase(
+              params.datasetId,
               params.boundingBox,
               params.editPosition,
               params.editRotation
-            ))
-        } else None
+            )
+            .map(Some(_))
+        } else Fox.successful(None)
       } yield skeletonTracingOpt
     }
 
@@ -317,9 +322,26 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
           case (paramBox, skeleton, volume) =>
             paramBox match {
               case Full(params) =>
+                for {
+                  skeletonFox <- if(skeleton.isDefined) Fox.successful(skeleton) else annotationService.createSkeletonTracingBase(params.datasetId,
+                    params.boundingBox,
+                    params.editPosition,
+                    params.editRotation)
+                  volumeFox <- if(volume.isDefined) Fox.successful(volume) else annotationService
+                        .createVolumeTracingBase(
+                          params.datasetId.toString,
+                          organizationId,
+                          params.boundingBox,
+                          params.editPosition,
+                          params.editRotation,
+                          volumeShowFallbackLayer = false,
+                          resolutionRestrictions = taskType.settings.resolutionRestrictions
+                        )
+                        .map(v => (v, None))
+                } yield (Full(skeletonFox), Full(volumeFox))
                 val skeletonBox = Full(
                   skeleton.openOr(
-                    annotationService.createSkeletonTracingBase(params.dataSet,
+                    annotationService.createSkeletonTracingBase(params.datasetId,
                                                                 params.boundingBox,
                                                                 params.editPosition,
                                                                 params.editRotation)))
@@ -328,7 +350,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                   .openOr(
                     annotationService
                       .createVolumeTracingBase(
-                        params.dataSet,
+                        params.datasetId.toString,
                         organizationId,
                         params.boundingBox,
                         params.editPosition,
@@ -386,11 +408,12 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     } else {
       for {
         _ <- assertEachHasEitherSkeletonOrVolume(fullTasks) ?~> "task.create.needsEitherSkeletonOrVolume"
-        firstDatasetName <- fullTasks.headOption.map(_._1.dataSet).toFox
-        _ <- assertAllOnSameDataset(fullTasks, firstDatasetName)
-        dataset <- datasetDAO.findOneByPathAndOrganization(firstDatasetName, requestingUser._organization) ?~> Messages(
+        firstDatasetId <- fullTasks.headOption.map(_._1.datasetId).toFox // TODOM continue
+        _ <- assertAllOnSameDataset(fullTasks, firstDatasetId)
+        dataset <- datasetDAO.findOneByPathAndOrganization(firstDatasetId, requestingUser._organization) ?~> Messages(
           "dataset.notFound",
-          firstDatasetName)
+          firstDatasetId)
+        _ <- bool2Fox(dataset._organization == requestingUser._organization) ?~> FORBIDDEN
         _ = if (fullTasks.exists(task => task._1.baseAnnotation.isDefined))
           slackNotificationService.noticeBaseAnnotationTaskCreation(fullTasks.map(_._1.taskTypeId).distinct,
                                                                     fullTasks.count(_._1.baseAnnotation.isDefined))

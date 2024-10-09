@@ -16,7 +16,8 @@ const { TextArea } = Input;
 export const NUM_TASKS_PER_BATCH = 100;
 export type NewTask = {
   readonly boundingBox: BoundingBoxObject | null | undefined;
-  readonly dataSet: string;
+  readonly datasetId: string;
+  readonly datasetName: string;
   readonly editPosition: Vector3;
   readonly editRotation: Vector3;
   readonly neededExperience: {

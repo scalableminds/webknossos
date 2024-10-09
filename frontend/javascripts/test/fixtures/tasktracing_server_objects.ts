@@ -92,7 +92,7 @@ export const annotation: APIAnnotation = {
       recommendedConfiguration: null,
       tracingType: "skeleton",
     },
-    dataSet: "ROI2017_wkw",
+    datasetId: "66f3c82966010034942e9740",
     neededExperience: {
       domain: "oxalis",
       value: 1,
@@ -124,7 +124,7 @@ export const annotation: APIAnnotation = {
       stats: {},
     },
   ],
-  dataSetName: "ROI2017_wkw",
+  datasetName: "ROI2017_wkw",
   organization: "Connectomics Department",
   dataStore: {
     name: "localhost",

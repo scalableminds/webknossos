@@ -76,7 +76,7 @@ export function taskToShortText(task: APITask) {
 export function taskToText(task: APITask) {
   const {
     id,
-    dataSet,
+    datasetId: dataSet,
     type,
     neededExperience,
     editPosition,
@@ -304,7 +304,8 @@ type FormValues = {
   editPosition: Vector3;
   editRotation: Vector3;
   nmlFiles: UploadFile[];
-  dataSet: string;
+  datasetId: string;
+  datasetName: string;
   projectName: string;
   neededExperience: NewTask["neededExperience"];
 };
@@ -491,9 +492,10 @@ function TaskCreateFormView({ taskId, history }: Props) {
                       }),
                     ));
 
-                  if (annotationResponse?.dataSetName != null) {
+                  if (annotationResponse?.datasetName != null) {
                     form.setFieldsValue({
-                      dataSet: annotationResponse.dataSetName,
+                      datasetName: annotationResponse.datasetName,
+                      datasetId: annotationResponse.datasetId,
                     });
                     return Promise.resolve();
                   }
@@ -505,7 +507,7 @@ function TaskCreateFormView({ taskId, history }: Props) {
                   );
 
                   if (
-                    taskResponse?.dataSet != null &&
+                    taskResponse?.datasetId != null &&
                     _.isEqual(taskResponse.status, {
                       pending: 0,
                       active: 0,
@@ -513,13 +515,15 @@ function TaskCreateFormView({ taskId, history }: Props) {
                     })
                   ) {
                     form.setFieldsValue({
-                      dataSet: taskResponse.dataSet,
+                      datasetName: taskResponse.datasetName,
+                      datasetId: taskResponse.datasetId,
                     });
                     return Promise.resolve();
                   }
 
                   form.setFieldsValue({
-                    dataSet: undefined,
+                    datasetName: undefined,
+                    datasetId: undefined,
                   });
                   return Promise.reject(new Error("Invalid base annotation id."));
                 },

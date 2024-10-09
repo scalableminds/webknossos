@@ -151,7 +151,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
   };
 
   async mergeAnnotationIntoActiveTracing(annotation: APIAnnotation): Promise<void> {
-    if (annotation.dataSetName !== Store.getState().dataset.name) {
+    if (annotation.datasetName !== Store.getState().dataset.name) {
       Toast.error(messages["merge.different_dataset"]);
       return;
     }

@@ -7,6 +7,7 @@ import _ from "lodash";
 import type { SkeletonTracing, Tree, TreeGroup, TreeMap, VolumeTracing } from "oxalis/store";
 import type {
   UpdateAction,
+  UpdateActionWithTracingId,
   UpdateTreeVisibilityUpdateAction,
 } from "oxalis/model/sagas/update_actions";
 import { updateTreeGroupVisibility, updateTreeVisibility } from "oxalis/model/sagas/update_actions";

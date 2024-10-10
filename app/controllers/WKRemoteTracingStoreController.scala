@@ -5,6 +5,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.tracingstore.TracingUpdatesReport
+import com.scalableminds.webknossos.tracingstore.tracings.TracingIds
 
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, UpdateAnnotationEvent, UpdateAnnotationViewOnlyEvent}
@@ -25,7 +26,7 @@ import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
-import utils.WkConf
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
 
@@ -56,12 +57,13 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
       tracingStoreService.validateAccess(name, key) { _ =>
         val report = request.body
         for {
-          annotation <- annotationDAO.findOneByTracingId(report.tracingId)
+          annotationId <- ObjectId.fromString(report.annotationId)
+          annotation <- annotationDAO.findOne(annotationId)
           _ <- ensureAnnotationNotFinished(annotation)
           _ <- annotationDAO.updateModified(annotation._id, Instant.now)
-          _ <- Fox.runOptional(report.statistics) { statistics =>
-            annotationLayerDAO.updateStatistics(annotation._id, report.tracingId, statistics)
-          }
+          /*_ <- Fox.runOptional(report.statistics) { statistics =>
+            annotationLayerDAO.updateStatistics(annotation._id, annotationId, statistics)
+          }*/ // TODO stats per tracing id
           userBox <- bearerTokenService.userForTokenOpt(report.userToken).futureBox
           trackTime = report.significantChangesCount > 0 || !wkConf.WebKnossos.User.timeTrackingOnlyWithSignificantChanges
           _ <- Fox.runOptional(userBox)(user =>
@@ -110,6 +112,20 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           dataset <- datasetDAO.findOne(annotation._dataset)
           organization <- organizationDAO.findOne(dataset._organization)
         } yield Ok(Json.toJson(DataSourceId(dataset.name, organization._id)))
+      }
+    }
+
+  def annotationIdForTracing(name: String, key: String, tracingId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      tracingStoreService.validateAccess(name, key) { _ =>
+        implicit val ctx: DBAccessContext = GlobalAccessContext
+        if (tracingId == TracingIds.dummyTracingId) {
+          Fox.successful(Ok(Json.toJson(ObjectId.dummyId)))
+        } else {
+          for {
+            annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
+          } yield Ok(Json.toJson(annotation._id))
+        }
       }
     }
 

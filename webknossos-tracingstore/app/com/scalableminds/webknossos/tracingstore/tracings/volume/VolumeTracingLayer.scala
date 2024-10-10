@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -75,7 +76,7 @@ case class VolumeTracingLayer(
     isTemporaryTracing: Boolean = false,
     includeFallbackDataIfAvailable: Boolean = false,
     tracing: VolumeTracing,
-    userToken: Option[String],
+    tokenContext: TokenContext,
     additionalAxes: Option[Seq[AdditionalAxis]]
 )(implicit val volumeDataStore: FossilDBClient,
   implicit val volumeDataCache: TemporaryVolumeDataStore,

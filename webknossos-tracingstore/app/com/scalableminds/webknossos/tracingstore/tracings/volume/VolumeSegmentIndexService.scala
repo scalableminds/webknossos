@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.google.inject.Inject
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.box2Fox
@@ -25,11 +26,11 @@ import net.liftweb.common.Box.tryo
 import scala.concurrent.ExecutionContext
 
 object VolumeSegmentIndexService {
-  def canHaveSegmentIndex(remoteDatastoreClient: TSRemoteDatastoreClient,
-                          fallbackLayer: Option[RemoteFallbackLayer],
-                          userToken: Option[String])(implicit ec: ExecutionContext): Fox[Boolean] =
+  def canHaveSegmentIndex(remoteDatastoreClient: TSRemoteDatastoreClient, fallbackLayer: Option[RemoteFallbackLayer])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[Boolean] =
     fallbackLayer match {
-      case Some(layer) => remoteDatastoreClient.hasSegmentIndexFile(layer, userToken)
+      case Some(layer) => remoteDatastoreClient.hasSegmentIndexFile(layer)
       case None        => Fox.successful(true)
     }
 }
@@ -158,17 +159,17 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       bucketList <- addEmptyFallback(bucketListBox)
     } yield bucketList
 
-  def getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
-      fallbackLayer: Option[RemoteFallbackLayer],
-      tracingId: String,
-      segmentId: Long,
-      mag: Vec3Int,
-      version: Option[Long] = None,
-      mappingName: Option[String],
-      editableMappingTracingId: Option[String],
-      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-      additionalAxes: Option[Seq[AdditionalAxis]],
-      userToken: Option[String])(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
+  def getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(fallbackLayer: Option[RemoteFallbackLayer],
+                                                            tracingId: String,
+                                                            segmentId: Long,
+                                                            mag: Vec3Int,
+                                                            version: Option[Long] = None,
+                                                            mappingName: Option[String],
+                                                            editableMappingTracingId: Option[String],
+                                                            additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+                                                            additionalAxes: Option[Seq[AdditionalAxis]])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[ListOfVec3IntProto] =
     for {
       bucketListBox <- getSegmentToBucketIndex(fallbackLayer,
                                                tracingId,
@@ -178,8 +179,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                                                mappingName,
                                                editableMappingTracingId,
                                                additionalCoordinates,
-                                               additionalAxes,
-                                               userToken).futureBox
+                                               additionalAxes).futureBox
       bucketList <- addEmptyFallback(bucketListBox)
     } yield bucketList
 
@@ -191,17 +191,17 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       case Empty      => Fox.successful(ListOfVec3IntProto(Seq.empty))
     }
 
-  private def getSegmentToBucketIndex(
-      fallbackLayerOpt: Option[RemoteFallbackLayer],
-      tracingId: String,
-      segmentId: Long,
-      mag: Vec3Int,
-      version: Option[Long],
-      mappingName: Option[String],
-      editableMappingTracingId: Option[String],
-      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-      additionalAxes: Option[Seq[AdditionalAxis]],
-      userToken: Option[String])(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
+  private def getSegmentToBucketIndex(fallbackLayerOpt: Option[RemoteFallbackLayer],
+                                      tracingId: String,
+                                      segmentId: Long,
+                                      mag: Vec3Int,
+                                      version: Option[Long],
+                                      mappingName: Option[String],
+                                      editableMappingTracingId: Option[String],
+                                      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+                                      additionalAxes: Option[Seq[AdditionalAxis]])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[ListOfVec3IntProto] =
     for {
       fromMutableIndex <- getSegmentToBucketIndexFromFossilDB(tracingId,
                                                               segmentId,
@@ -211,12 +211,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                                                               additionalAxes).fillEmpty(ListOfVec3IntProto.of(Seq()))
       fromFileIndex <- fallbackLayerOpt match { // isEmpty is not the same as length == 0 here :(
         case Some(fallbackLayer) if fromMutableIndex.length == 0 =>
-          getSegmentToBucketIndexFromFile(fallbackLayer,
-                                          segmentId,
-                                          mag,
-                                          mappingName,
-                                          editableMappingTracingId,
-                                          userToken) // additional coordinates not supported, see #7556
+          getSegmentToBucketIndexFromFile(fallbackLayer, segmentId, mag, mappingName, editableMappingTracingId) // additional coordinates not supported, see #7556
         case _ => Fox.successful(Seq.empty)
       }
       combined = fromMutableIndex.values.map(vec3IntFromProto) ++ fromFileIndex
@@ -237,8 +232,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                                               segmentId: Long,
                                               mag: Vec3Int,
                                               mappingName: Option[String],
-                                              editableMappingTracingId: Option[String],
-                                              userToken: Option[String]) =
-    remoteDatastoreClient.querySegmentIndex(layer, segmentId, mag, mappingName, editableMappingTracingId, userToken)
+                                              editableMappingTracingId: Option[String])(implicit tc: TokenContext) =
+    remoteDatastoreClient.querySegmentIndex(layer, segmentId, mag, mappingName, editableMappingTracingId)
 
 }

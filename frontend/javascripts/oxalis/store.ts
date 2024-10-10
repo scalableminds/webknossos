@@ -50,7 +50,7 @@ import type {
 } from "oxalis/constants";
 import type { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import type { UpdateAction, UpdateActionWithTracingId } from "oxalis/model/sagas/update_actions";
 import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
 import type DiffableMap from "libs/diffable_map";
@@ -445,7 +445,7 @@ export type SaveQueueEntry = {
   version: number;
   timestamp: number;
   authorId: string;
-  actions: Array<UpdateAction>;
+  actions: Array<UpdateActionWithTracingId>;
   transactionId: string;
   transactionGroupCount: number;
   transactionGroupIndex: number;
@@ -456,23 +456,10 @@ export type ProgressInfo = {
   readonly processedActionCount: number;
   readonly totalActionCount: number;
 };
-export type IsBusyInfo = {
-  readonly skeleton: boolean;
-  readonly volumes: Record<string, boolean>;
-  readonly mappings: Record<string, boolean>;
-};
 export type SaveState = {
-  readonly isBusyInfo: IsBusyInfo;
-  readonly queue: {
-    readonly skeleton: Array<SaveQueueEntry>;
-    readonly volumes: Record<string, Array<SaveQueueEntry>>;
-    readonly mappings: Record<string, Array<SaveQueueEntry>>;
-  };
-  readonly lastSaveTimestamp: {
-    readonly skeleton: number;
-    readonly volumes: Record<string, number>;
-    readonly mappings: Record<string, number>;
-  };
+  readonly isBusy: boolean;
+  readonly queue: Array<SaveQueueEntry>;
+  readonly lastSaveTimestamp: number;
   readonly progressInfo: ProgressInfo;
 };
 export type Flycam = {

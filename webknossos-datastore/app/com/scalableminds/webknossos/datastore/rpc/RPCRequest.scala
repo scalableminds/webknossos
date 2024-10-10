@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.rpc
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -10,6 +11,7 @@ import play.api.libs.ws._
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import java.io.File
+import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -25,6 +27,9 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     request = request.addQueryStringParameters(parameters: _*)
     this
   }
+
+  def withTokenFromContext(implicit tc: TokenContext): RPCRequest =
+    addQueryStringOptional("token", tc.userTokenOpt)
 
   def addHttpHeaders(hdrs: (String, String)*): RPCRequest = {
     request = request.addHttpHeaders(hdrs: _*)
@@ -167,6 +172,12 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     performRequest
   }
 
+  def postProto[T <: GeneratedMessage](body: T): Fox[Unit] = {
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> protobufMimeType).withBody(body.toByteArray).withMethod("POST")
+    performRequest.map(_ => ())
+  }
+
   def postProtoWithJsonResponse[T <: GeneratedMessage, J: Reads](body: T): Fox[J] = {
     request =
       request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> protobufMimeType).withBody(body.toByteArray).withMethod("POST")
@@ -193,7 +204,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
           Full(result)
         } else {
           val errorMsg = s"Unsuccessful WS request to $url (ID: $id)." +
-            s"Status: ${result.status}. Response: ${result.bodyAsBytes.map(_.toChar).mkString.take(2000)}"
+            s"Status: ${result.status}. Response: ${new String(result.bodyAsBytes.toArray, StandardCharsets.UTF_8).take(2000)}"
           logger.error(errorMsg)
           Failure(errorMsg.take(400))
         }

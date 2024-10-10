@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedIntegerArray}
@@ -52,6 +53,7 @@ trait VolumeTracingDownsampling
     with ProtoGeometryImplicits
     with VolumeBucketCompression
     with KeyValueStoreImplicits
+    with ReversionHelper
     with FoxImplicits {
 
   val tracingDataStore: TracingDataStore
@@ -72,24 +74,25 @@ trait VolumeTracingDownsampling
 
   protected def editableMappingTracingId(tracing: VolumeTracing, tracingId: String): Option[String]
 
-  protected def baseMappingName(tracing: VolumeTracing): Fox[Option[String]]
+  protected def selectMappingName(tracing: VolumeTracing): Fox[Option[String]]
 
   protected def volumeSegmentIndexClient: FossilDBClient
 
-  protected def downsampleWithLayer(tracingId: String,
-                                    oldTracingId: String,
-                                    tracing: VolumeTracing,
-                                    dataLayer: VolumeTracingLayer,
-                                    tracingService: VolumeTracingService,
-                                    userToken: Option[String])(implicit ec: ExecutionContext): Fox[List[Vec3Int]] = {
+  protected def downsampleWithLayer(
+      annotationId: String,
+      tracingId: String,
+      oldTracingId: String,
+      newTracing: VolumeTracing,
+      dataLayer: VolumeTracingLayer,
+      tracingService: VolumeTracingService)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Vec3Int]] = {
     val bucketVolume = 32 * 32 * 32
     for {
-      _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
-      _ <- bool2Fox(tracing.resolutions.nonEmpty) ?~> "Cannot downsample tracing with no resolution list"
-      sourceMag = getSourceMag(tracing)
-      magsToCreate <- getMagsToCreate(tracing, oldTracingId)
-      elementClass = elementClassFromProto(tracing.elementClass)
-      bucketDataMapMutable = new mutable.HashMap[BucketPosition, Array[Byte]]().withDefault(_ => Array[Byte](0))
+      _ <- bool2Fox(newTracing.version == 0L) ?~> "Tracing has already been edited."
+      _ <- bool2Fox(newTracing.resolutions.nonEmpty) ?~> "Cannot downsample tracing with no resolution list"
+      sourceMag = getSourceMag(newTracing)
+      magsToCreate <- getMagsToCreate(newTracing, oldTracingId)
+      elementClass = elementClassFromProto(newTracing.elementClass)
+      bucketDataMapMutable = new mutable.HashMap[BucketPosition, Array[Byte]]().withDefault(_ => revertedValue)
       _ = fillMapWithSourceBucketsInplace(bucketDataMapMutable, tracingId, dataLayer, sourceMag)
       originalBucketPositions = bucketDataMapMutable.keys.toList
       updatedBucketsMutable = new mutable.ListBuffer[BucketPosition]()
@@ -104,28 +107,27 @@ trait VolumeTracingDownsampling
                              dataLayer)
         requiredMag
       }
-      fallbackLayer <- tracingService.getFallbackLayer(oldTracingId) // remote wk does not know the new id yet
-      tracing <- tracingService.find(tracingId) ?~> "tracing.notFound"
+      fallbackLayer <- tracingService.getFallbackLayer(oldTracingId, newTracing) // remote wk does not know the new id yet
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
                                                         volumeSegmentIndexClient,
-                                                        tracing.version,
+                                                        newTracing.version,
                                                         tracingService.remoteDatastoreClient,
                                                         fallbackLayer,
                                                         dataLayer.additionalAxes,
-                                                        userToken)
+                                                        tc)
       _ <- Fox.serialCombined(updatedBucketsMutable.toList) { bucketPosition: BucketPosition =>
         for {
-          _ <- saveBucket(dataLayer, bucketPosition, bucketDataMapMutable(bucketPosition), tracing.version)
-          mappingName <- baseMappingName(tracing)
-          _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
+          _ <- saveBucket(dataLayer, bucketPosition, bucketDataMapMutable(bucketPosition), newTracing.version)
+          mappingName <- selectMappingName(newTracing)
+          _ <- Fox.runIfOptionTrue(newTracing.hasSegmentIndex)(
             updateSegmentIndex(
               segmentIndexBuffer,
               bucketPosition,
               bucketDataMapMutable(bucketPosition),
               Empty,
-              tracing.elementClass,
+              newTracing.elementClass,
               mappingName,
-              editableMappingTracingId(tracing, tracingId)
+              editableMappingTracingId(newTracing, tracingId)
             ))
         } yield ()
       }
@@ -167,8 +169,8 @@ trait VolumeTracingDownsampling
         sourceBucketPositionsFor(downsampledBucketPosition, downScaleFactor, previousMag)
       val sourceData: Seq[Array[Byte]] = sourceBuckets.map(bucketDataMapMutable(_))
       val downsampledData: Array[Byte] =
-        if (sourceData.forall(_.sameElements(Array[Byte](0))))
-          Array[Byte](0)
+        if (sourceData.forall(_.sameElements(revertedValue)))
+          revertedValue
         else {
           val sourceDataFilled = fillZeroedIfNeeded(sourceData, bucketVolume, dataLayer.bytesPerElement)
           val sourceDataTyped = UnsignedIntegerArray.fromByteArray(sourceDataFilled.toArray.flatten, elementClass)
@@ -216,7 +218,7 @@ trait VolumeTracingDownsampling
     // Reverted buckets and missing buckets are represented by a single zero-byte.
     // For downsampling, those need to be replaced with the full bucket volume of zero-bytes.
     sourceData.map { sourceBucketData =>
-      if (sourceBucketData.sameElements(Array[Byte](0))) {
+      if (isRevertedElement(sourceBucketData)) {
         Array.fill[Byte](bucketVolume * bytesPerElement)(0)
       } else sourceBucketData
     }
@@ -256,14 +258,16 @@ trait VolumeTracingDownsampling
   private def getSourceMag(tracing: VolumeTracing): Vec3Int =
     tracing.resolutions.minBy(_.maxDim)
 
-  private def getMagsToCreate(tracing: VolumeTracing, oldTracingId: String): Fox[List[Vec3Int]] =
+  private def getMagsToCreate(tracing: VolumeTracing, oldTracingId: String)(
+      implicit tc: TokenContext): Fox[List[Vec3Int]] =
     for {
       requiredMags <- getRequiredMags(tracing, oldTracingId)
       sourceMag = getSourceMag(tracing)
       magsToCreate = requiredMags.filter(_.maxDim > sourceMag.maxDim)
     } yield magsToCreate
 
-  private def getRequiredMags(tracing: VolumeTracing, oldTracingId: String): Fox[List[Vec3Int]] =
+  private def getRequiredMags(tracing: VolumeTracing, oldTracingId: String)(
+      implicit tc: TokenContext): Fox[List[Vec3Int]] =
     for {
       dataSource: DataSourceLike <- tracingStoreWkRpcClient.getDataSourceForTracing(oldTracingId)
       magsForTracing = VolumeTracingDownsampling.magsForVolumeTracingByLayerName(dataSource, tracing.fallbackLayer)

@@ -525,10 +525,12 @@ class AnnotationService @Inject()(
     } yield result
   }
 
-  def createSkeletonTracingBase(datasetId: ObjectId,
+  def createSkeletonTracingBase(datasetIdOpt: Option[ObjectId],
+                                datasetName: String,
+                                organizationId: String,
                                 boundingBox: Option[BoundingBox],
                                 startPosition: Vec3Int,
-                                startRotation: Vec3Double)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
+                                startRotation: Vec3Double)(implicit ctx: DBAccessContext, m: MessagesProvider) : Fox[SkeletonTracing] = {
     val initialNode = NodeDefaults.createInstance.withId(1).withPosition(startPosition).withRotation(startRotation)
     val initialTree = Tree(
       1,
@@ -541,10 +543,9 @@ class AnnotationService @Inject()(
       System.currentTimeMillis()
     )
     for {
-      dataset <- datasetDAO.findOne(datasetId)
+      dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetIdOpt, datasetName, organizationId)
     } yield SkeletonTracingDefaults.createInstance.copy(
       datasetName = dataset.name,
-      datasetId = dataset._id.toString,
       boundingBox = boundingBox.flatMap { box =>
         if (box.isEmpty) None else Some(box)
       },
@@ -555,7 +556,8 @@ class AnnotationService @Inject()(
     )
   }
 
-  def createVolumeTracingBase(datasetName: String,
+  def createVolumeTracingBase(datasetIdOpt: Option[ObjectId],
+                              datasetName: String,
                               organizationId: String,
                               boundingBox: Option[BoundingBox],
                               startPosition: Vec3Int,
@@ -565,7 +567,7 @@ class AnnotationService @Inject()(
                                                                               m: MessagesProvider): Fox[VolumeTracing] =
     for {
       organization <- organizationDAO.findOne(organizationId)
-      dataset <- datasetDAO.findOneByPathAndOrganization(datasetName, organizationId) ?~> Messages("dataset.notFound",
+      dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetIdOpt,datasetName, organizationId) ?~> Messages("dataset.notFound",
                                                                                                    datasetName)
       dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)

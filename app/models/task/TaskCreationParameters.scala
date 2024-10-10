@@ -12,7 +12,7 @@ case class TaskParameters(taskTypeId: String,
                           scriptId: Option[String],
                           boundingBox: Option[BoundingBox],
                           datasetName: String,
-                          datasetId: ObjectId, // TODOM: Make this a dataSetId
+                          datasetId: Option[ObjectId], // TODOM: Make this a dataSetId
                           editPosition: Vec3Int,
                           editRotation: Vec3Double,
                           creationInfo: Option[String],

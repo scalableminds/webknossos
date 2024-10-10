@@ -1,12 +1,10 @@
 package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
-import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Node, SkeletonTracing}
 
 object SkeletonTracingDefaults extends ProtoGeometryImplicits {
   private val datasetName = ""
-  private val datasetId = ""
   private val trees = Seq()
   private def createdTimestamp = System.currentTimeMillis()
   private val boundingBox = None
@@ -18,8 +16,7 @@ object SkeletonTracingDefaults extends ProtoGeometryImplicits {
   private val userBoundingBox = None
 
   def createInstance: SkeletonTracing =
-    SkeletonTracing(datasetId,
-                    datasetName,
+    SkeletonTracing(datasetName,
                     trees,
                     createdTimestamp,
                     boundingBox,

@@ -1,11 +1,10 @@
 package models.annotation.nml
 
 import java.io.File
-
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.UploadedVolumeLayer
+import models.annotation.{SkeletonTracingWithDatasetId, UploadedVolumeLayer}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 
 object NmlResults extends LazyLogging {
@@ -31,7 +30,7 @@ object NmlResults extends LazyLogging {
   }
 
   case class NmlParseSuccess(fileName: String,
-                             skeletonTracing: Option[SkeletonTracing],
+                             skeletonTracingOpt: Option[SkeletonTracingWithDatasetId],
                              volumeLayers: List[UploadedVolumeLayer],
                              _description: String,
                              _wkUrl: Option[String])
@@ -72,7 +71,7 @@ object NmlResults extends LazyLogging {
         val successBox = parseResult.toSuccessBox
         val skeletonBox = successBox match {
           case Full(success) =>
-            success.skeletonTracing match {
+            success.skeletonTracingOpt match {
               case Some(skeleton) => Full(skeleton)
               case None           => Empty
             }
@@ -82,7 +81,7 @@ object NmlResults extends LazyLogging {
         val volumeBox = successBox match {
           case Full(success) if success.volumeLayers.length <= 1 =>
             success.volumeLayers.headOption match {
-              case Some(UploadedVolumeLayer(tracing, dataZipLocation, _)) =>
+              case Some(UploadedVolumeLayer(tracing, datasetId,dataZipLocation, _)) =>
                 Full((tracing, otherFiles.get(dataZipLocation)))
               case None => Empty
             }
@@ -97,7 +96,7 @@ object NmlResults extends LazyLogging {
 
   case class TracingBoxContainer(fileName: Box[String],
                                  description: Box[Option[String]],
-                                 skeleton: Box[SkeletonTracing],
+                                 skeleton: Box[SkeletonTracingWithDatasetId],
                                  volume: Box[(VolumeTracing, Option[File])])
 
 }

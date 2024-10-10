@@ -27,6 +27,7 @@ import controllers.DatasetUpdateParameters
 import javax.inject.Inject
 import models.organization.OrganizationDAO
 import net.liftweb.common.Full
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import play.utils.UriEncoding
 import slick.jdbc.PostgresProfile.api._
@@ -442,6 +443,15 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                    LIMIT 1""".as[DatasetsRow])
       parsed <- parseFirst(r, s"$organizationId/$name")
     } yield parsed
+
+  def findOneByIdOrNameAndOrganization(datasetIdOpt: Option[ObjectId], datasetName: String, organizationId: String)(
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider): Fox[Dataset] =
+    datasetIdOpt
+      .map(datasetId => this.findOne(datasetId))
+      .getOrElse(this.findOneByNameAndOrganization(datasetName, organizationId)) ?~> Messages(
+      "dataset.notFoundByIdOrName",
+      datasetIdOpt.map(_.toString).getOrElse(datasetName))
 
   def findAllByPathsAndOrganization(names: List[String], organizationId: String)(
       implicit ctx: DBAccessContext): Fox[List[Dataset]] =

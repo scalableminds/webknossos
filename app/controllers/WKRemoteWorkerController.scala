@@ -111,7 +111,7 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
         _ <- workerDAO.findOneByKey(key) ?~> "jobs.worker.notFound"
         jobIdParsed <- ObjectId.fromString(id)
         organizationId <- jobDAO.organizationIdForJobId(jobIdParsed) ?~> "job.notFound"
-        dataset <- datasetDAO.findOneByNameAndOrganization(request.body, organizationId)
+        dataset <- datasetDAO.findOneByNameAndOrganization(request.body, organizationId) // TODOM: findOneByPathAndOrganization might be the correct method
         aiInference <- aiInferenceDAO.findOneByJobId(jobIdParsed) ?~> "aiInference.notFound"
         _ <- aiInferenceDAO.updateDataset(aiInference._id, dataset._id)
       } yield Ok

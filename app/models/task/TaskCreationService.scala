@@ -22,6 +22,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import telemetry.SlackNotificationService
 import com.scalableminds.util.requestparsing.ObjectId
+import models.organization.OrganizationDAO
 import play.api.http.Status.FORBIDDEN
 
 import scala.concurrent.ExecutionContext
@@ -30,6 +31,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                     taskTypeDAO: TaskTypeDAO,
                                     annotationService: AnnotationService,
                                     taskDAO: TaskDAO,
+                                    organizationDAO: OrganizationDAO,
                                     taskService: TaskService,
                                     userService: UserService,
                                     teamDAO: TeamDAO,
@@ -75,12 +77,13 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     for {
       taskTypeIdValidated <- ObjectId.fromString(taskParameters.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-      dataset <- datasetDAO.findOne(taskParameters.datasetId)
+      dataset <- datasetDAO.findOneByIdOrNameAndOrganization(taskParameters.datasetId, taskParameters.datasetName, organizationId)
+      _ <- bool2Fox(dataset._organization == organizationId) ?~> "dataset"
       baseAnnotationIdValidated <- ObjectId.fromString(baseAnnotation.baseId)
       annotation <- resolveBaseAnnotationId(baseAnnotationIdValidated)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
       newSkeletonId <- if (taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid)
-        duplicateOrCreateSkeletonBase(annotation, taskParameters, tracingStoreClient).map(Some(_))
+        duplicateOrCreateSkeletonBase(annotation, taskParameters, organizationId, tracingStoreClient).map(Some(_))
       else Fox.successful(None)
       newVolumeId <- if (taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid)
         duplicateOrCreateVolumeBase(annotation,
@@ -122,7 +125,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   private def duplicateOrCreateSkeletonBase(
       baseAnnotation: Annotation,
       params: TaskParameters,
-      tracingStoreClient: WKRemoteTracingStoreClient)(implicit ctx: DBAccessContext): Fox[String] =
+      organizationId: String,
+      tracingStoreClient: WKRemoteTracingStoreClient)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[String] =
     for {
       baseSkeletonTracingIdOpt <- baseAnnotation.skeletonTracingId
       newTracingId <- baseSkeletonTracingIdOpt
@@ -136,6 +140,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
           annotationService
             .createSkeletonTracingBase(
               params.datasetId,
+              params.datasetName,
+              organizationId,
               params.boundingBox,
               params.editPosition,
               params.editRotation
@@ -157,7 +163,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         .getOrElse(
           annotationService
             .createVolumeTracingBase(
-              params.dataSet,
+              params.datasetId,
+              params.datasetName,
               organizationId,
               params.boundingBox,
               params.editPosition,
@@ -180,6 +187,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
           annotationService
             .createSkeletonTracingBase(
               params.datasetId,
+              params.datasetName,
+              organizationId,
               params.boundingBox,
               params.editPosition,
               params.editRotation
@@ -285,7 +294,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   }
 
   // used in createFromFiles route
-  def fillInMissingTracings(skeletons: List[Box[SkeletonTracing]],
+  def fillInMissingTracings(skeletons: List[Box[SkeletonTracingWithDatasetId]],
                             volumes: List[Box[(VolumeTracing, Option[File])]],
                             fullParams: List[Box[TaskParameters]],
                             taskType: TaskType,

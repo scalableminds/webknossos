@@ -36,7 +36,7 @@ case class ReserveUploadInformation(
     organization: String,
     totalFileCount: Long,
     filePaths: Option[List[String]],
-    layersToLink: Option[List[LinkedLayerIdentifier]], // TODOM: This is not used anywhere? Got replaced with the compose route I would say.
+    layersToLink: Option[List[LinkedLayerIdentifier]], // TODOM: This is used by wk libs, should use the legacy heuristic to identify the dataset
     initialTeams: List[String], // team ids
     folderId: Option[String])
 object ReserveUploadInformation {

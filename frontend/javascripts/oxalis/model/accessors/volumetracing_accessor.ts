@@ -179,7 +179,9 @@ export function getSegmentationLayerForTracing(
   return getSegmentationLayerByName(state.dataset, volumeTracing.tracingId);
 }
 
-function _getResolutionInfoOfActiveSegmentationTracingLayer(state: OxalisState): MagnificationInfo {
+function _getMagnificationInfoOfActiveSegmentationTracingLayer(
+  state: OxalisState,
+): MagnificationInfo {
   const volumeTracing = getActiveSegmentationTracing(state);
 
   if (!volumeTracing) {
@@ -191,7 +193,7 @@ function _getResolutionInfoOfActiveSegmentationTracingLayer(state: OxalisState):
 }
 
 const getResolutionInfoOfActiveSegmentationTracingLayer = memoizeOne(
-  _getResolutionInfoOfActiveSegmentationTracingLayer,
+  _getMagnificationInfoOfActiveSegmentationTracingLayer,
 );
 export function getServerVolumeTracings(
   tracings: Array<ServerTracing> | null | undefined,
@@ -537,11 +539,11 @@ function _getRenderableResolutionForSegmentationTracing(
   return null;
 }
 
-export const getRenderableResolutionForSegmentationTracing = reuseInstanceOnEquality(
+export const getRenderableMagForSegmentationTracing = reuseInstanceOnEquality(
   _getRenderableResolutionForSegmentationTracing,
 );
 
-function _getRenderableResolutionForActiveSegmentationTracing(state: OxalisState):
+function _getRenderableMagForActiveSegmentationTracing(state: OxalisState):
   | {
       resolution: Vector3;
       zoomStep: number;
@@ -549,11 +551,11 @@ function _getRenderableResolutionForActiveSegmentationTracing(state: OxalisState
   | null
   | undefined {
   const activeSegmentationTracing = getActiveSegmentationTracing(state);
-  return getRenderableResolutionForSegmentationTracing(state, activeSegmentationTracing);
+  return getRenderableMagForSegmentationTracing(state, activeSegmentationTracing);
 }
 
-export const getRenderableResolutionForActiveSegmentationTracing = reuseInstanceOnEquality(
-  _getRenderableResolutionForActiveSegmentationTracing,
+export const getRenderableMagForActiveSegmentationTracing = reuseInstanceOnEquality(
+  _getRenderableMagForActiveSegmentationTracing,
 );
 
 export function getMappingInfoForVolumeTracing(
@@ -641,13 +643,13 @@ export function getLastLabelAction(volumeTracing: VolumeTracing): LabelAction | 
 export function getLabelActionFromPreviousSlice(
   state: OxalisState,
   volumeTracing: VolumeTracing,
-  resolution: Vector3,
+  mag: Vector3,
   dim: 0 | 1 | 2,
 ): LabelAction | undefined {
   // Gets the last label action which was performed on a different slice.
   // Note that in coarser mags (e.g., 8-8-2), the comparison of the coordinates
-  // is done while respecting how the coordinates are clipped due to that resolution.
-  const adapt = (vec: Vector3) => V3.roundElementToMag(vec, resolution, dim);
+  // is done while respecting how the coordinates are clipped due to that magnification.
+  const adapt = (vec: Vector3) => V3.roundElementToMag(vec, mag, dim);
   const position = adapt(getFlooredPosition(state.flycam));
 
   return volumeTracing.lastLabelActions.find(

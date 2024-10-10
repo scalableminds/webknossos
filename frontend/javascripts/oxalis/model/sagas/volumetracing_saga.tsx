@@ -46,7 +46,7 @@ import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
   getMaximumBrushSize,
-  getRenderableResolutionForSegmentationTracing,
+  getRenderableMagForSegmentationTracing,
   getRequestedOrVisibleSegmentationLayer,
   getSegmentsForLayer,
   isVolumeAnnotationDisallowedForZoom,
@@ -213,7 +213,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
     }
 
     const maybeLabeledResolutionWithZoomStep = yield* select((state) =>
-      getRenderableResolutionForSegmentationTracing(state, volumeTracing),
+      getRenderableMagForSegmentationTracing(state, volumeTracing),
     );
 
     if (!maybeLabeledResolutionWithZoomStep) {

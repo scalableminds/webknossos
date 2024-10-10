@@ -38,7 +38,7 @@ import {
   getActiveSegmentationTracing,
   getMappingInfoForVolumeTracing,
   getMaximumBrushSize,
-  getRenderableResolutionForActiveSegmentationTracing,
+  getRenderableMagForActiveSegmentationTracing,
   getSegmentColorAsRGBA,
   hasAgglomerateMapping,
   hasEditableMapping,
@@ -864,9 +864,7 @@ export default function ToolbarView() {
     (state: OxalisState) => state.userConfiguration.useLegacyBindings,
   );
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
-  const maybeResolutionWithZoomStep = useSelector(
-    getRenderableResolutionForActiveSegmentationTracing,
-  );
+  const maybeResolutionWithZoomStep = useSelector(getRenderableMagForActiveSegmentationTracing);
 
   const labeledResolution =
     maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;

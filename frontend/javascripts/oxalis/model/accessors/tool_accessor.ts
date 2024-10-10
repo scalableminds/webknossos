@@ -5,7 +5,7 @@ import type { OxalisState } from "oxalis/store";
 import {
   type AgglomerateState,
   getActiveSegmentationTracing,
-  getRenderableResolutionForSegmentationTracing,
+  getRenderableMagForSegmentationTracing,
   hasAgglomerateMapping,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -274,7 +274,7 @@ function getDisabledVolumeInfo(state: OxalisState) {
   const hasVolume = state.tracing.volumes.length > 0;
   const hasSkeleton = state.tracing.skeleton != null;
   const segmentationTracingLayer = getActiveSegmentationTracing(state);
-  const labeledResolution = getRenderableResolutionForSegmentationTracing(
+  const labeledResolution = getRenderableMagForSegmentationTracing(
     state,
     segmentationTracingLayer,
   )?.resolution;

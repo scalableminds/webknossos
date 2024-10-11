@@ -36,7 +36,7 @@ case class ReserveUploadInformation(
     organization: String,
     totalFileCount: Long,
     filePaths: Option[List[String]],
-    layersToLink: Option[List[LinkedLayerIdentifier]], // TODOM: This is used by wk libs, should use the legacy heuristic to identify the dataset
+    layersToLink: Option[List[LinkedLayerIdentifier]],
     initialTeams: List[String], // team ids
     folderId: Option[String])
 object ReserveUploadInformation {
@@ -54,15 +54,20 @@ object ReserveManualUploadInformation {
 
 case class LinkedLayerIdentifier(organizationId: Option[String],
                                  organizationName: Option[String],
+                                 // Filled by backend after identifying the dataset by name. Afterwards this updated value is stored in the redis database.
+                                 datasetPath: Option[String],
                                  dataSetName: String,
                                  layerName: String,
                                  newLayerName: Option[String] = None) {
   def this(organizationId: String, dataSetName: String, layerName: String, newLayerName: Option[String]) =
-    this(Some(organizationId), None, dataSetName, layerName, newLayerName)
+    this(Some(organizationId), None, None, dataSetName, layerName, newLayerName)
 
   def getOrganizationId: String = this.organizationId.getOrElse(this.organizationName.getOrElse(""))
 
-  def pathIn(dataBaseDir: Path): Path = dataBaseDir.resolve(getOrganizationId).resolve(dataSetName).resolve(layerName)
+  def pathIn(dataBaseDir: Path): Path = {
+    val datasetPath = this.datasetPath.getOrElse(dataSetName)
+    dataBaseDir.resolve(getOrganizationId).resolve(datasetPath).resolve(layerName)
+  }
 }
 
 object LinkedLayerIdentifier {
@@ -70,7 +75,7 @@ object LinkedLayerIdentifier {
             dataSetName: String,
             layerName: String,
             newLayerName: Option[String]): LinkedLayerIdentifier =
-    new LinkedLayerIdentifier(Some(organizationId), None, dataSetName, layerName, newLayerName)
+    new LinkedLayerIdentifier(Some(organizationId), None, None, dataSetName, layerName, newLayerName)
   implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
 }
 

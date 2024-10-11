@@ -48,6 +48,7 @@ import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task._
 import models.user._
+import net.liftweb.common.Failure
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.json.Json
@@ -253,7 +254,7 @@ class AnnotationIOController @Inject()(
   private def wkUrlsForNMLs(wkUrls: Seq[Option[String]]) =
     if (wkUrls.toSet.size == 1) wkUrls.headOption.flatten.getOrElse("") else ""
 
-  private def returnError(zipParseResult: NmlResults.MultiNmlParseResult)(implicit messagesProvider: MessagesProvider) =
+  /*private def returnError(zipParseResult: NmlResults.MultiNmlParseResult)(implicit messagesProvider: MessagesProvider) =
     if (zipParseResult.containsFailure) {
       val errors = zipParseResult.parseResults.flatMap {
         case result: NmlResults.NmlParseFailure =>
@@ -263,7 +264,7 @@ class AnnotationIOController @Inject()(
       Future.successful(JsonBadRequest(errors))
     } else {
       Future.successful(JsonBadRequest(Messages("nml.file.noFile")))
-    }
+    }*/
 
   private def assertAllOnSameDataset(skeletons: List[SkeletonTracingWithDatasetId],
                                      volumes: List[UploadedVolumeLayer]): Fox[ObjectId] =

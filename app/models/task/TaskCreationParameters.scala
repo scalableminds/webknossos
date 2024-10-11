@@ -11,13 +11,16 @@ case class TaskParameters(taskTypeId: String,
                           projectName: String,
                           scriptId: Option[String],
                           boundingBox: Option[BoundingBox],
-                          datasetName: String,
-                          datasetId: Option[ObjectId], // TODOM: Make this a dataSetId
+                          dataSet: String,
+                          datasetId: Option[ObjectId],
                           editPosition: Vec3Int,
                           editRotation: Vec3Double,
                           creationInfo: Option[String],
                           description: Option[String],
                           baseAnnotation: Option[BaseAnnotation])
+{
+  lazy val datasetName: String = dataSet
+}
 
 object TaskParameters {
   implicit val taskParametersFormat: Format[TaskParameters] = Json.format[TaskParameters]

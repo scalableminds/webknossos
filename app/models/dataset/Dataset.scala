@@ -415,20 +415,17 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       parsed <- parseFirst(r, s"$organizationId/$path")
     } yield parsed
 
-  def doesDatasetNameExistInOrganization(name: String, organizationId: String)(
+  def doesDatasetPathExistInOrganization(path: String, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[Boolean] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"""SELECT 1
+      r <- run(q"""SELECT EXISTS(SELECT 1
                    FROM $existingCollectionName
-                   WHERE name = $name
+                   WHERE path = $path
                    AND _organization = $organizationId
                    AND $accessQuery
-                   LIMIT 1""".as[DatasetsRow])
-      exists <- parseFirst(r, s"$organizationId/$name").futureBox.map {
-        case Full(_) => true
-        case _       => false
-      }
+                   LIMIT 1)""".as[Boolean])
+      exists <- r.headOption
     } yield exists
 
   def findOneByNameAndOrganization(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
@@ -453,13 +450,13 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       "dataset.notFoundByIdOrName",
       datasetIdOpt.map(_.toString).getOrElse(datasetName))
 
-  def findAllByPathsAndOrganization(names: List[String], organizationId: String)(
+  def findAllByPathsAndOrganization(paths: List[String], organizationId: String)(
       implicit ctx: DBAccessContext): Fox[List[Dataset]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
                    FROM $existingCollectionName
-                   WHERE path IN ${SqlToken.tupleFromList(names)}
+                   WHERE path IN ${SqlToken.tupleFromList(paths)}
                    AND _organization = $organizationId
                    AND $accessQuery""".as[DatasetsRow]).map(_.toList)
       parsed <- parseAll(r)

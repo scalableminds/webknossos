@@ -76,12 +76,12 @@ class WKRemoteDataStoreController @Inject()(
           _ <- bool2Fox(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataset.upload.Datastore.restricted"
           folderId <- ObjectId.fromString(uploadInfo.folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
           _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
-          _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l => validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
+          layersToLinkWithDatasetId <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l => validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
           dataset <- datasetService.createPreliminaryDataset(uploadInfo.name, uploadInfo.organization, dataStore) ?~> "dataset.name.alreadyTaken"
           _ <- datasetDAO.updateFolder(dataset._id, folderId)(GlobalAccessContext)
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))
-          updatedInfo = uploadInfo.copy(newDatasetId = dataset._id.toString, path = dataset.path) // Update newDatasetId and path according to the newly created dataset.
+          updatedInfo = uploadInfo.copy(newDatasetId = dataset._id.toString, path = dataset.path, layersToLink = Some(layersToLinkWithDatasetId)) // Update newDatasetId and path according to the newly created dataset.
         } yield Ok(Json.toJson(updatedInfo))
       }
     }
@@ -114,18 +114,18 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  // TODOM: I think this is not used anywhere? Got replaced with the compose route I would say.
   private def validateLayerToLink(layerIdentifier: LinkedLayerIdentifier,
-                                  requestingUser: User)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[Unit] =
+                                  requestingUser: User)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[LinkedLayerIdentifier] =
     for {
       organization <- organizationDAO.findOne(layerIdentifier.getOrganizationId)(GlobalAccessContext) ?~> Messages(
         "organization.notFound",
         layerIdentifier.getOrganizationId) ~> NOT_FOUND
-      dataset <- datasetDAO.findOneByPathAndOrganization(layerIdentifier.dataSetName, organization._id)(
+      // TODOM: Consider to interpret dataSetName as the datasets path, both variations have scenarios in which the dataset might not be found.
+      dataset <- datasetDAO.findOneByNameAndOrganization(layerIdentifier.dataSetName, organization._id)(
         AuthorizedAccessContext(requestingUser)) ?~> Messages("dataset.notFound", layerIdentifier.dataSetName)
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(requestingUser, dataset._organization)
       _ <- Fox.bool2Fox(isTeamManagerOrAdmin || requestingUser.isDatasetManager || dataset.isPublic) ?~> "dataset.upload.linkRestricted"
-    } yield ()
+    } yield layerIdentifier.copy(datasetPath = Some(dataset.path))
 
   def reportDatasetUpload(name: String,
                           key: String,

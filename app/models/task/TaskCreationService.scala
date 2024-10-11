@@ -446,8 +446,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     } else {
       for {
         _ <- assertEachHasEitherSkeletonOrVolume(fullTasks) ?~> "task.create.needsEitherSkeletonOrVolume"
-        firstDatasetId <- fullTasks.headOption.map(_._1.datasetId).toFox // TODOM continue
-        firstDatasetName <- fullTasks.headOption.map(_._1.datasetName).toFox // TODOM continue
+        firstDatasetId <- fullTasks.headOption.map(_._1.datasetId).toFox
+        firstDatasetName <- fullTasks.headOption.map(_._1.datasetName).toFox
         _ <- assertAllOnSameDataset(fullTasks, firstDatasetId, firstDatasetName)
         dataset <- datasetDAO.findOneByIdOrNameAndOrganization(
           firstDatasetId,

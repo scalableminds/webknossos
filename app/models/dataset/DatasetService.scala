@@ -63,8 +63,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
     } yield ()
 
-  private def isNewDatasetName(name: String, organizationId: String): Fox[Boolean] =
-    datasetDAO.doesDatasetNameExistInOrganization(name, organizationId)(GlobalAccessContext)
 
   def createPreliminaryDataset(datasetName: String, organizationId: String, dataStore: DataStore): Fox[Dataset] = {
     val unreportedDatasource = UnusableDataSource(DataSourceId(datasetName, organizationId), notYetUploadedStatus)
@@ -105,7 +103,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     for {
       organization <- organizationDAO.findOne(owningOrganization)
       organizationRootFolder <- folderDAO.findOne(organization._rootFolder)
-      datasetPath <- isNewDatasetName(datasetName, organization._id).map(if (_) datasetName else newId.toString)
+      datasetPath <- datasetDAO
+        .doesDatasetPathExistInOrganization(datasetName, organization._id)
+        .map(if (_) newId.toString else datasetName)
       newDataSource = dataSource.withUpdatedId(dataSource.id.copy(path = datasetPath)) // Sync path with dataSource
       dataset = Dataset(
         newId,
@@ -177,10 +177,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       case Some(foundDataset) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
         updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore)
       case _ =>
-        val maybeParsedDatasetPath = ObjectId.fromStringSync(dataSource.id.path)
-        // Avoid using the path as name in case it is an ObjectId.
-        val newDatasetName = maybeParsedDatasetPath.map(_ => "Newly Discovered Dataset").getOrElse(dataSource.id.path)
-        insertNewDataset(dataSource, newDatasetName, dataStore).toFox
+        insertNewDataset(dataSource, dataSource.id.path, dataStore).toFox
           .map(Some(_)) // TODO: Discuss how to better handle this case
     }
   }

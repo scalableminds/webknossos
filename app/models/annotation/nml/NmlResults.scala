@@ -1,8 +1,6 @@
 package models.annotation.nml
 
 import java.io.File
-import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{SkeletonTracingWithDatasetId, UploadedVolumeLayer}
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -81,8 +79,8 @@ object NmlResults extends LazyLogging {
         val volumeBox = successBox match {
           case Full(success) if success.volumeLayers.length <= 1 =>
             success.volumeLayers.headOption match {
-              case Some(UploadedVolumeLayer(tracing, datasetId,dataZipLocation, _)) =>
-                Full((tracing, otherFiles.get(dataZipLocation)))
+              case Some(volumeLayer) =>
+                Full((volumeLayer, otherFiles.get(volumeLayer.dataZipLocation)))
               case None => Empty
             }
           case Full(success) if success.volumeLayers.length > 1 =>
@@ -97,6 +95,6 @@ object NmlResults extends LazyLogging {
   case class TracingBoxContainer(fileName: Box[String],
                                  description: Box[Option[String]],
                                  skeleton: Box[SkeletonTracingWithDatasetId],
-                                 volume: Box[(VolumeTracing, Option[File])])
+                                 volume: Box[(UploadedVolumeLayer, Option[File])])
 
 }

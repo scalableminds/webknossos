@@ -525,12 +525,13 @@ class AnnotationService @Inject()(
     } yield result
   }
 
-  def createSkeletonTracingBase(datasetIdOpt: Option[ObjectId],
-                                datasetName: String,
-                                organizationId: String,
-                                boundingBox: Option[BoundingBox],
-                                startPosition: Vec3Int,
-                                startRotation: Vec3Double)(implicit ctx: DBAccessContext, m: MessagesProvider) : Fox[SkeletonTracing] = {
+  def createSkeletonTracingBase(
+      datasetIdOpt: Option[ObjectId],
+      datasetName: String,
+      organizationId: String,
+      boundingBox: Option[BoundingBox],
+      startPosition: Vec3Int,
+      startRotation: Vec3Double)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[SkeletonTracing] = {
     val initialNode = NodeDefaults.createInstance.withId(1).withPosition(startPosition).withRotation(startRotation)
     val initialTree = Tree(
       1,
@@ -544,16 +545,17 @@ class AnnotationService @Inject()(
     )
     for {
       dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetIdOpt, datasetName, organizationId)
-    } yield SkeletonTracingDefaults.createInstance.copy(
-      datasetName = dataset.name,
-      boundingBox = boundingBox.flatMap { box =>
-        if (box.isEmpty) None else Some(box)
-      },
-      editPosition = startPosition,
-      editRotation = startRotation,
-      activeNodeId = Some(1),
-      trees = Seq(initialTree)
-    )
+    } yield
+      SkeletonTracingDefaults.createInstance.copy(
+        datasetName = dataset.name,
+        boundingBox = boundingBox.flatMap { box =>
+          if (box.isEmpty) None else Some(box)
+        },
+        editPosition = startPosition,
+        editRotation = startRotation,
+        activeNodeId = Some(1),
+        trees = Seq(initialTree)
+      )
   }
 
   def createVolumeTracingBase(datasetIdOpt: Option[ObjectId],
@@ -567,8 +569,9 @@ class AnnotationService @Inject()(
                                                                               m: MessagesProvider): Fox[VolumeTracing] =
     for {
       organization <- organizationDAO.findOne(organizationId)
-      dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetIdOpt,datasetName, organizationId) ?~> Messages("dataset.notFound",
-                                                                                                   datasetName)
+      dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetIdOpt, datasetName, organizationId) ?~> Messages(
+        "dataset.notFound",
+        datasetName)
       dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)
       fallbackLayer = if (volumeShowFallbackLayer) {

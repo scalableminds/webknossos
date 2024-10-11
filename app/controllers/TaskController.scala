@@ -49,8 +49,8 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         _ <- taskCreationService.assertBatchLimit(request.body.length, request.body.map(_.taskTypeId))
         taskParameters <- taskCreationService.createTracingsFromBaseAnnotations(request.body,
                                                                                 request.identity._organization)
-        skeletonBaseOpts: List[Option[SkeletonTracing]] <- taskCreationService.createTaskSkeletonTracingBases(
-          taskParameters)
+        skeletonBaseOpts: List[Option[SkeletonTracing]] <- taskCreationService
+          .createTaskSkeletonTracingBases(taskParameters, request.identity._organization)
         volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- taskCreationService
           .createTaskVolumeTracingBases(taskParameters, request.identity._organization)
         paramsWithTracings = taskParameters.lazyZip(skeletonBaseOpts).lazyZip(volumeBaseOpts).map {
@@ -87,7 +87,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         .findOneByNameAndOrganization(params.projectName, request.identity._organization) ?~> "project.notFound" ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
       extractedFiles <- nmlService.extractFromFiles(inputFiles.map(f => (f.ref.path.toFile, f.filename)),
-                                                   SharedParsingParameters(useZipName = false, isTaskUpload = true))
+                                                    SharedParsingParameters(useZipName = false, isTaskUpload = true))
       extractedTracingBoxesRaw: List[TracingBoxContainer] = extractedFiles.toBoxes
       extractedTracingBoxes: List[TracingBoxContainer] <- taskCreationService
         .addVolumeFallbackBoundingBoxes(extractedTracingBoxesRaw, request.identity._organization)

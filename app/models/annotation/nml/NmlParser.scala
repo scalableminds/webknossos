@@ -167,6 +167,9 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
       case Failure(message, cause, _chain) =>
         logger.error(s"Failed to parse NML $name due to " + cause)
         Failure(s"Failed to parse NML '$name': " + message)
+      case Empty =>
+        logger.error(s"Failed to parse NML $name. Parser returned empty")
+        Failure(s"Failed to parse NML '$name': Parser returned empty")
     }
   }
 

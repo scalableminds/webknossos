@@ -192,7 +192,7 @@ function _getMagnificationInfoOfActiveSegmentationTracingLayer(
   return getMagnificationInfo(segmentationLayer.resolutions);
 }
 
-const getResolutionInfoOfActiveSegmentationTracingLayer = memoizeOne(
+const getMagnificationInfoOfActiveSegmentationTracingLayer = memoizeOne(
   _getMagnificationInfoOfActiveSegmentationTracingLayer,
 );
 export function getServerVolumeTracings(
@@ -213,9 +213,9 @@ export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode
 }
 
 const MAG_THRESHOLDS_FOR_ZOOM: Partial<Record<AnnotationTool, number>> = {
-  // Note that these are relative to the lowest existing resolution index.
+  // Note that these are relative to the lowest existing mag index.
   // A threshold of 1 indicates that the respective tool can be used in the
-  // lowest existing resolution as well as the next highest one.
+  // lowest existing mag as well as the next highest one.
   [AnnotationToolEnum.TRACE]: 1,
   [AnnotationToolEnum.ERASE_TRACE]: 1,
   [AnnotationToolEnum.BRUSH]: 3,
@@ -244,28 +244,28 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
     return true;
   }
 
-  const volumeResolutions = getResolutionInfoOfActiveSegmentationTracingLayer(state);
-  const lowestExistingResolutionIndex = volumeResolutions.getFinestMagIndex();
-  // The current resolution is too high for the tool
+  const volumeMags = getMagnificationInfoOfActiveSegmentationTracingLayer(state);
+  const lowestExistingMagIndex = volumeMags.getFinestMagIndex();
+  // The current mag is too high for the tool
   // because too many voxels could be annotated at the same time.
   const isZoomStepTooHigh =
     getActiveMagIndexForLayer(state, activeSegmentation.tracingId) >
-    threshold + lowestExistingResolutionIndex;
+    threshold + lowestExistingMagIndex;
   return isZoomStepTooHigh;
 }
 
 const MAX_BRUSH_SIZE_FOR_MAG1 = 300;
 export function getMaximumBrushSize(state: OxalisState) {
-  const volumeResolutions = getResolutionInfoOfActiveSegmentationTracingLayer(state);
+  const volumeMags = getMagnificationInfoOfActiveSegmentationTracingLayer(state);
 
-  if (volumeResolutions.magnifications.length === 0) {
+  if (volumeMags.magnifications.length === 0) {
     return MAX_BRUSH_SIZE_FOR_MAG1;
   }
 
-  const lowestExistingResolutionIndex = volumeResolutions.getFinestMagIndex();
+  const lowestExistingMagIndex = volumeMags.getFinestMagIndex();
   // For each leading magnification which does not exist,
   // we double the maximum brush size.
-  return MAX_BRUSH_SIZE_FOR_MAG1 * 2 ** lowestExistingResolutionIndex;
+  return MAX_BRUSH_SIZE_FOR_MAG1 * 2 ** lowestExistingMagIndex;
 }
 
 export function getRequestedOrVisibleSegmentationLayer(
@@ -476,16 +476,16 @@ export function getActiveSegmentPosition(state: OxalisState): Vector3 | null | u
 }
 
 /*
-  This function returns the resolution and zoom step in which the given segmentation
+  This function returns the mag and zoom step in which the given segmentation
   tracing layer is currently rendered (if it is rendered). These properties should be used
   when labeling volume data.
  */
-function _getRenderableResolutionForSegmentationTracing(
+function _getRenderableMagForSegmentationTracing(
   state: OxalisState,
   segmentationTracing: VolumeTracing | null | undefined,
 ):
   | {
-      resolution: Vector3;
+      mag: Vector3;
       zoomStep: number;
     }
   | null
@@ -498,7 +498,7 @@ function _getRenderableResolutionForSegmentationTracing(
 
   const requestedZoomStep = getActiveMagIndexForLayer(state, segmentationLayer.name);
   const { renderMissingDataBlack } = state.datasetConfiguration;
-  const resolutionInfo = getMagnificationInfo(segmentationLayer.resolutions);
+  const magInfo = getMagnificationInfo(segmentationLayer.resolutions);
   // Check whether the segmentation layer is enabled
   const segmentationSettings = state.datasetConfiguration.layers[segmentationLayer.name];
 
@@ -507,20 +507,20 @@ function _getRenderableResolutionForSegmentationTracing(
   }
 
   // Check whether the requested zoom step exists
-  if (resolutionInfo.hasIndex(requestedZoomStep)) {
+  if (magInfo.hasIndex(requestedZoomStep)) {
     return {
       zoomStep: requestedZoomStep,
-      resolution: resolutionInfo.getMagByIndexOrThrow(requestedZoomStep),
+      mag: magInfo.getMagByIndexOrThrow(requestedZoomStep),
     };
   }
 
-  // Since `renderMissingDataBlack` is enabled, the fallback resolutions
+  // Since `renderMissingDataBlack` is enabled, the fallback mags
   // should not be considered.
   if (renderMissingDataBlack) {
     return null;
   }
 
-  // The current resolution is missing and fallback rendering
+  // The current mag is missing and fallback rendering
   // is activated. Thus, check whether one of the fallback
   // zoomSteps can be rendered.
   for (
@@ -528,10 +528,10 @@ function _getRenderableResolutionForSegmentationTracing(
     fallbackZoomStep <= requestedZoomStep + MAX_ZOOM_STEP_DIFF;
     fallbackZoomStep++
   ) {
-    if (resolutionInfo.hasIndex(fallbackZoomStep)) {
+    if (magInfo.hasIndex(fallbackZoomStep)) {
       return {
         zoomStep: fallbackZoomStep,
-        resolution: resolutionInfo.getMagByIndexOrThrow(fallbackZoomStep),
+        mag: magInfo.getMagByIndexOrThrow(fallbackZoomStep),
       };
     }
   }
@@ -540,12 +540,12 @@ function _getRenderableResolutionForSegmentationTracing(
 }
 
 export const getRenderableMagForSegmentationTracing = reuseInstanceOnEquality(
-  _getRenderableResolutionForSegmentationTracing,
+  _getRenderableMagForSegmentationTracing,
 );
 
 function _getRenderableMagForActiveSegmentationTracing(state: OxalisState):
   | {
-      resolution: Vector3;
+      mag: Vector3;
       zoomStep: number;
     }
   | null

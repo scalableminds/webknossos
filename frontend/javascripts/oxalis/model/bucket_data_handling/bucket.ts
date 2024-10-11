@@ -187,12 +187,12 @@ export class DataBucket {
   }
 
   getBoundingBox(): BoundingBoxType {
-    const min = bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo);
-    const bucketResolution = this.cube.resolutionInfo.getMagByIndexOrThrow(this.zoomedAddress[3]);
+    const min = bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.magInfo);
+    const bucketMag = this.cube.magInfo.getMagByIndexOrThrow(this.zoomedAddress[3]);
     const max: Vector3 = [
-      min[0] + Constants.BUCKET_WIDTH * bucketResolution[0],
-      min[1] + Constants.BUCKET_WIDTH * bucketResolution[1],
-      min[2] + Constants.BUCKET_WIDTH * bucketResolution[2],
+      min[0] + Constants.BUCKET_WIDTH * bucketMag[0],
+      min[1] + Constants.BUCKET_WIDTH * bucketMag[1],
+      min[2] + Constants.BUCKET_WIDTH * bucketMag[2],
     ];
     return {
       min,
@@ -201,7 +201,7 @@ export class DataBucket {
   }
 
   getGlobalPosition(): Vector3 {
-    return bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo);
+    return bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.magInfo);
   }
 
   getTopLeftInMag(): Vector3 {
@@ -707,9 +707,9 @@ export class DataBucket {
     if (this.zoomedAddress[3] === zoomStep) {
       // @ts-ignore
       this.visualizedMesh = window.addBucketMesh(
-        bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo),
+        bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.magInfo),
         this.zoomedAddress[3],
-        this.cube.resolutionInfo.getMagByIndex(this.zoomedAddress[3]),
+        this.cube.magInfo.getMagByIndex(this.zoomedAddress[3]),
         colors[this.zoomedAddress[3]] || this.visualizationColor,
       );
     }

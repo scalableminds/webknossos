@@ -143,7 +143,7 @@ test("GetBucket should only create one bucket on getOrCreateBucket()", (t) => {
 test("Voxel Labeling should request buckets when temporal buckets are created", (t) => {
   const { cube, pullQueue } = t.context;
 
-  cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], null, 42, 0, null);
+  cube._labelVoxelInMag_DEPRECATED([1, 1, 1], null, 42, 0, null);
 
   t.plan(1);
   return runAsync([
@@ -157,7 +157,7 @@ test("Voxel Labeling should request buckets when temporal buckets are created", 
 });
 test("Voxel Labeling should push buckets after they were pulled", async (t) => {
   const { cube, pushQueue } = t.context;
-  await cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], null, 42, 0, null);
+  await cube._labelVoxelInMag_DEPRECATED([1, 1, 1], null, 42, 0, null);
   t.plan(1);
   const bucket = cube.getBucket([0, 0, 0, 0, []]);
   return runAsync([
@@ -172,7 +172,7 @@ test("Voxel Labeling should push buckets immediately if they are pulled already"
   assertNonNullBucket(bucket);
   bucket.markAsPulled();
   bucket.receiveData(new Uint8Array(4 * 32 ** 3));
-  await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, 42, 0, null);
+  await cube._labelVoxelInMag_DEPRECATED([0, 0, 0], null, 42, 0, null);
   t.plan(1);
   return runAsync([
     () => {
@@ -183,9 +183,9 @@ test("Voxel Labeling should push buckets immediately if they are pulled already"
 test("Voxel Labeling should only instantiate one bucket when labelling the same bucket twice", async (t) => {
   const { cube } = t.context;
   // Creates bucket
-  await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, 42, 0, null);
+  await cube._labelVoxelInMag_DEPRECATED([0, 0, 0], null, 42, 0, null);
   // Uses existing bucket
-  await cube._labelVoxelInResolution_DEPRECATED([1, 0, 0], null, 43, 0, null);
+  await cube._labelVoxelInMag_DEPRECATED([1, 0, 0], null, 43, 0, null);
   const data = cube.getBucket([0, 0, 0, 0, []]).getData();
   t.is(data[0], 42);
   t.is(data[1], 43);
@@ -193,13 +193,13 @@ test("Voxel Labeling should only instantiate one bucket when labelling the same 
 test("getDataValue() should return the raw value without a mapping", async (t) => {
   const { cube } = t.context;
   const value = 1 * (1 << 16) + 2 * (1 << 8) + 3;
-  await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, value, 0, null);
+  await cube._labelVoxelInMag_DEPRECATED([0, 0, 0], null, value, 0, null);
   t.is(cube.getDataValue([0, 0, 0], null, null), value);
 });
 test("getDataValue() should return the mapping value if available", async (t) => {
   const { cube } = t.context;
-  await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, 42, 0, null);
-  await cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], null, 43, 0, null);
+  await cube._labelVoxelInMag_DEPRECATED([0, 0, 0], null, 42, 0, null);
+  await cube._labelVoxelInMag_DEPRECATED([1, 1, 1], null, 43, 0, null);
   const mapping = new Map();
   mapping.set(42, 1);
   t.is(cube.getDataValue([0, 0, 0], null, mapping), 1);

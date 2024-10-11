@@ -24,7 +24,7 @@ import { isSkeletonLayerTransformed } from "./skeletontracing_accessor";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 
 const zoomInToUseToolMessage =
-  "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted resolutions from the extended annotation menu in the dashboard.";
+  "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.";
 
 const getExplanationForDisabledVolume = (
   isSegmentationTracingVisible: boolean,
@@ -274,11 +274,8 @@ function getDisabledVolumeInfo(state: OxalisState) {
   const hasVolume = state.tracing.volumes.length > 0;
   const hasSkeleton = state.tracing.skeleton != null;
   const segmentationTracingLayer = getActiveSegmentationTracing(state);
-  const labeledResolution = getRenderableMagForSegmentationTracing(
-    state,
-    segmentationTracingLayer,
-  )?.resolution;
-  const isSegmentationTracingVisibleForMag = labeledResolution != null;
+  const labeledMag = getRenderableMagForSegmentationTracing(state, segmentationTracingLayer)?.mag;
+  const isSegmentationTracingVisibleForMag = labeledMag != null;
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const isSegmentationTracingTransformed =
     segmentationTracingLayer != null &&

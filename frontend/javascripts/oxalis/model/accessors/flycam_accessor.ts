@@ -433,7 +433,7 @@ export function getValidTaskZoomRange(
     baseDatasetViewConfiguration.zoom.minimum,
     Number.POSITIVE_INFINITY,
   ] as Vector2;
-  const { resolutionRestrictions } = state.tracing.restrictions;
+  const { magRestrictions: resolutionRestrictions } = state.tracing.restrictions;
   // We use the first color layer as a heuristic to check the validity of the zoom range,
   // as we don't know to which layer a restriction is meant to be applied.
   // If the layers don't have any transforms, the layer choice doesn't matter, anyway.
@@ -463,7 +463,7 @@ export function getValidTaskZoomRange(
 }
 
 export function isMagRestrictionViolated(state: OxalisState): boolean {
-  const { resolutionRestrictions } = state.tracing.restrictions;
+  const { magRestrictions: resolutionRestrictions } = state.tracing.restrictions;
   // We use the first color layer as a heuristic to check the validity of the zoom range,
   // as we don't know to which layer a restriction is meant to be applied.
   // If the layers don't have any transforms, the layer choice doesn't matter, anyway.

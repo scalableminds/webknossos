@@ -368,7 +368,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.is_scratch":
     "This dataset location is marked as 'scratch' and meant for testing only. Please move this dataset to a permanent storage location and reimport it.",
   "dataset.resolution_mismatch":
-    "This dataset contains multiple layers which differ in their magnification. Please convert the layers to make their resolutions match. Otherwise, rendering errors cannot be avoided.",
+    "This dataset contains multiple layers which differ in their magnification. Please convert the layers to make their magnifications match. Otherwise, rendering errors cannot be avoided.",
   "dataset.z1_downsampling_hint":
     "The currently rendered quality is not optimal due to the available magnifications and the viewport arrangement. To improve the quality try to increase the size of the XY viewport (e.g. by maximizing it).",
   "annotation.finish": "Are you sure you want to permanently finish this annotation?",

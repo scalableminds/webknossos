@@ -511,7 +511,7 @@ function AnnotationsCsvInput({
           annotation,
           dataset,
           volumeTracings,
-          volumeTracingResolutions: volumeServerTracings.map(({ resolutions }) =>
+          volumeTracingResolutions: volumeServerTracings.map(({ mags: resolutions }) =>
             resolutions ? resolutions.map(Utils.point3ToVector3) : ([[1, 1, 1]] as Vector3[]),
           ),
           userBoundingBoxes: userBoundingBoxes || [],

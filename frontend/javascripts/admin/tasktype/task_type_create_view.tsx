@@ -10,7 +10,7 @@ import {
   type TracingType,
   TracingTypeEnum,
   type APIAllowedMode,
-  type APIResolutionRestrictions,
+  type APIMagRestrictions,
   type APITeam,
 } from "types/api_flow_types";
 import {
@@ -48,7 +48,7 @@ type FormValues = {
     mergerMode: boolean;
     preferredMode?: APIAllowedMode;
     allowedModes: APIAllowedMode[];
-    resolutionRestrictions: APIResolutionRestrictions;
+    resolutionRestrictions: APIMagRestrictions;
   };
   recommendedConfiguration: string | undefined;
 };
@@ -130,10 +130,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
       );
     }
 
-    if (
-      taskType?.settings.resolutionRestrictions.min ||
-      taskType?.settings.resolutionRestrictions.max
-    )
+    if (taskType?.settings.magRestrictions.min || taskType?.settings.magRestrictions.max)
       form.setFieldValue(["isResolutionRestricted"], true);
   }
 

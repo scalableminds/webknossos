@@ -33,7 +33,7 @@ import type {
   BucketAddress,
 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
-import type { ResolutionInfo } from "../helpers/resolution_info";
+import type { MagInfo } from "../helpers/mag_info";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 
 const warnAboutTooManyAllocations = _.once(() => {
@@ -82,7 +82,7 @@ class DataCube {
   temporalBucketManager: TemporalBucketManager;
   isSegmentation: boolean;
   elementClass: ElementClass;
-  resolutionInfo: ResolutionInfo;
+  resolutionInfo: MagInfo;
   layerName: string;
   emitter: Emitter;
   lastRequestForValueSet: number | null = null;
@@ -106,7 +106,7 @@ class DataCube {
   constructor(
     layerBBox: BoundingBox,
     additionalAxes: AdditionalAxis[],
-    resolutionInfo: ResolutionInfo,
+    resolutionInfo: MagInfo,
     elementClass: ElementClass,
     isSegmentation: boolean,
     layerName: string,
@@ -239,7 +239,7 @@ class DataCube {
   ): CubeEntry | null {
     const cubeKey = this.getCubeKey(zoomStep, coords);
     if (this.cubes[cubeKey] == null) {
-      const resolution = this.resolutionInfo.getResolutionByIndex(zoomStep);
+      const resolution = this.resolutionInfo.getMagByIndex(zoomStep);
       if (resolution == null) {
         return null;
       }
@@ -433,7 +433,7 @@ class DataCube {
     // Please make use of a LabeledVoxelsMap instead.
     const promises = [];
 
-    for (const [resolutionIndex] of this.resolutionInfo.getResolutionsWithIndices()) {
+    for (const [resolutionIndex] of this.resolutionInfo.getMagsWithIndices()) {
       promises.push(
         this._labelVoxelInResolution_DEPRECATED(
           voxel,
@@ -630,7 +630,7 @@ class DataCube {
       const currentLabeledVoxelMap =
         bucketsWithLabeledVoxelsMap.get(currentBucket.zoomedAddress) || new Map();
 
-      const currentResolution = this.resolutionInfo.getResolutionByIndexOrThrow(
+      const currentResolution = this.resolutionInfo.getMagByIndexOrThrow(
         currentBucket.zoomedAddress[3],
       );
 
@@ -823,7 +823,7 @@ class DataCube {
     additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number,
   ): number {
-    const resolutions = this.resolutionInfo.getDenseResolutions();
+    const resolutions = this.resolutionInfo.getDenseMags();
     let usableZoomStep = zoomStep;
 
     while (
@@ -842,7 +842,7 @@ class DataCube {
     additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number,
   ): Promise<number> {
-    const resolutions = this.resolutionInfo.getDenseResolutions();
+    const resolutions = this.resolutionInfo.getDenseMags();
     let usableZoomStep = zoomStep;
 
     while (
@@ -922,7 +922,7 @@ class DataCube {
   getVoxelOffset(voxel: Vector3, zoomStep: number = 0): Vector3 {
     // No `map` for performance reasons
     const voxelOffset: Vector3 = [0, 0, 0];
-    const resolution = this.resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
+    const resolution = this.resolutionInfo.getMagByIndexOrThrow(zoomStep);
 
     for (let i = 0; i < 3; i++) {
       voxelOffset[i] = Math.floor(voxel[i] / resolution[i]) % constants.BUCKET_WIDTH;
@@ -944,7 +944,7 @@ class DataCube {
     // return the bucket a given voxel lies in
     return globalPositionToBucketPosition(
       position,
-      this.resolutionInfo.getDenseResolutions(),
+      this.resolutionInfo.getDenseMags(),
       zoomStep,
       additionalCoordinates,
     );

@@ -1041,13 +1041,13 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
 
   const agglomerateFileMag = isSkeletonProofreading
     ? // In case of skeleton proofreading, the finest resolution should be used.
-      resolutionInfo.getFinestResolution()
+      resolutionInfo.getFinestMag()
     : // For non-skeleton proofreading, the active resolution suffices
       currentMag;
   if (agglomerateFileMag == null) {
     return null;
   }
-  const agglomerateFileZoomstep = resolutionInfo.getIndexByResolution(agglomerateFileMag);
+  const agglomerateFileZoomstep = resolutionInfo.getIndexByMag(agglomerateFileMag);
 
   const getUnmappedDataValue = (position: Vector3): Promise<number> => {
     const { additionalCoordinates } = Store.getState().flycam;

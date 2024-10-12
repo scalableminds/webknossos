@@ -155,10 +155,10 @@ export default function AddVolumeLayerModal({
       return;
     }
     const minResolutionAllowed = Math.max(
-      ...resolutionInfo.getResolutionByIndexOrThrow(resolutionIndices[0]),
+      ...resolutionInfo.getMagByIndexOrThrow(resolutionIndices[0]),
     );
     const maxResolutionAllowed = Math.max(
-      ...resolutionInfo.getResolutionByIndexOrThrow(resolutionIndices[1]),
+      ...resolutionInfo.getMagByIndexOrThrow(resolutionIndices[1]),
     );
 
     if (selectedSegmentationLayerName == null) {

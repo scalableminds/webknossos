@@ -3,7 +3,7 @@ import { V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
 import type { BoundingBoxType, OrthoView, Vector2, Vector3, Vector4 } from "oxalis/constants";
 import constants, { Vector3Indicies } from "oxalis/constants";
-import type { ResolutionInfo } from "../helpers/resolution_info";
+import type { MagInfo } from "../helpers/mag_info";
 import Dimensions from "../dimensions";
 
 class BoundingBox {
@@ -51,12 +51,12 @@ class BoundingBox {
     };
   });
 
-  containsBucket([x, y, z, zoomStep]: Vector4, resolutionInfo: ResolutionInfo): boolean {
+  containsBucket([x, y, z, zoomStep]: Vector4, resolutionInfo: MagInfo): boolean {
     /* Checks whether a bucket is contained in the active bounding box.
      * If the passed resolutionInfo does not contain the passed zoomStep, this method
      * returns false.
      */
-    const resolutionIndex = resolutionInfo.getResolutionByIndex(zoomStep);
+    const resolutionIndex = resolutionInfo.getMagByIndex(zoomStep);
     if (resolutionIndex == null) {
       return false;
     }

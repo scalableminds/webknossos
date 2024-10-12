@@ -134,10 +134,10 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
       );
       const resolutions =
         volumeTracingResolutions[volumeTracingIndex] || ([[1, 1, 1]] as Vector3[]);
-      return getResolutionInfo(resolutions).getFinestResolution();
+      return getResolutionInfo(resolutions).getFinestMag();
     } else {
       const segmentationLayer = getSegmentationLayerByName(dataset, layerName);
-      return getResolutionInfo(segmentationLayer.resolutions).getFinestResolution();
+      return getResolutionInfo(segmentationLayer.resolutions).getFinestMag();
     }
   };
 

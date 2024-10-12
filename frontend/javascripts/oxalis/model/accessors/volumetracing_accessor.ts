@@ -49,7 +49,7 @@ import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers
 import { V3 } from "libs/mjs";
 import { jsConvertCellIdToRGBA } from "oxalis/shaders/segmentation.glsl";
 import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
-import { ResolutionInfo } from "../helpers/resolution_info";
+import { MagInfo } from "../helpers/mag_info";
 import messages from "messages";
 import {
   MISSING_GROUP_ID,
@@ -179,11 +179,11 @@ export function getSegmentationLayerForTracing(
   return getSegmentationLayerByName(state.dataset, volumeTracing.tracingId);
 }
 
-function _getResolutionInfoOfActiveSegmentationTracingLayer(state: OxalisState): ResolutionInfo {
+function _getResolutionInfoOfActiveSegmentationTracingLayer(state: OxalisState): MagInfo {
   const volumeTracing = getActiveSegmentationTracing(state);
 
   if (!volumeTracing) {
-    return new ResolutionInfo([]);
+    return new MagInfo([]);
   }
 
   const segmentationLayer = getSegmentationLayerForTracing(state, volumeTracing);
@@ -243,7 +243,7 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
   }
 
   const volumeResolutions = getResolutionInfoOfActiveSegmentationTracingLayer(state);
-  const lowestExistingResolutionIndex = volumeResolutions.getFinestResolutionIndex();
+  const lowestExistingResolutionIndex = volumeResolutions.getFinestMagIndex();
   // The current resolution is too high for the tool
   // because too many voxels could be annotated at the same time.
   const isZoomStepTooHigh =
@@ -256,11 +256,11 @@ const MAX_BRUSH_SIZE_FOR_MAG1 = 300;
 export function getMaximumBrushSize(state: OxalisState) {
   const volumeResolutions = getResolutionInfoOfActiveSegmentationTracingLayer(state);
 
-  if (volumeResolutions.resolutions.length === 0) {
+  if (volumeResolutions.mags.length === 0) {
     return MAX_BRUSH_SIZE_FOR_MAG1;
   }
 
-  const lowestExistingResolutionIndex = volumeResolutions.getFinestResolutionIndex();
+  const lowestExistingResolutionIndex = volumeResolutions.getFinestMagIndex();
   // For each leading magnification which does not exist,
   // we double the maximum brush size.
   return MAX_BRUSH_SIZE_FOR_MAG1 * 2 ** lowestExistingResolutionIndex;
@@ -508,7 +508,7 @@ function _getRenderableResolutionForSegmentationTracing(
   if (resolutionInfo.hasIndex(requestedZoomStep)) {
     return {
       zoomStep: requestedZoomStep,
-      resolution: resolutionInfo.getResolutionByIndexOrThrow(requestedZoomStep),
+      resolution: resolutionInfo.getMagByIndexOrThrow(requestedZoomStep),
     };
   }
 
@@ -529,7 +529,7 @@ function _getRenderableResolutionForSegmentationTracing(
     if (resolutionInfo.hasIndex(fallbackZoomStep)) {
       return {
         zoomStep: fallbackZoomStep,
-        resolution: resolutionInfo.getResolutionByIndexOrThrow(fallbackZoomStep),
+        resolution: resolutionInfo.getMagByIndexOrThrow(fallbackZoomStep),
       };
     }
   }

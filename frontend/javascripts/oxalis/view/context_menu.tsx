@@ -1460,7 +1460,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
       const additionalCoordinates = flycam.additionalCoordinates;
       const requestUrl = getVolumeRequestUrl(dataset, tracing, tracingId, visibleSegmentationLayer);
       const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
-      const layersFinestResolution = magInfo.getFinestResolution();
+      const layersFinestResolution = magInfo.getFinestMag();
       const voxelSize = dataset.dataSource.scale;
 
       try {

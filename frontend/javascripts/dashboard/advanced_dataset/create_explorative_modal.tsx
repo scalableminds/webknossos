@@ -12,14 +12,14 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { getDataset } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
-import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import type { MagInfo } from "oxalis/model/helpers/mag_info";
 
 type Props = {
   datasetId: APIDatasetId;
   onClose: () => void;
 };
 type RestrictResolutionSliderProps = {
-  resolutionInfo: ResolutionInfo;
+  resolutionInfo: MagInfo;
   selectedSegmentationLayer: APISegmentationLayer | null;
   resolutionIndices: number[];
   setResolutionIndices: (userIndices: number[]) => void;
@@ -89,15 +89,15 @@ export function RestrictResolutionSlider({
   resolutionIndices,
   setResolutionIndices,
 }: RestrictResolutionSliderProps) {
-  let highestResolutionIndex = resolutionInfo.getCoarsestResolutionIndex();
-  let lowestResolutionIndex = resolutionInfo.getFinestResolutionIndex();
+  let highestResolutionIndex = resolutionInfo.getCoarsestMagIndex();
+  let lowestResolutionIndex = resolutionInfo.getFinestMagIndex();
 
   if (selectedSegmentationLayer != null) {
     const datasetFallbackLayerResolutionInfo = getResolutionInfo(
       selectedSegmentationLayer.resolutions,
     );
-    highestResolutionIndex = datasetFallbackLayerResolutionInfo.getCoarsestResolutionIndex();
-    lowestResolutionIndex = datasetFallbackLayerResolutionInfo.getFinestResolutionIndex();
+    highestResolutionIndex = datasetFallbackLayerResolutionInfo.getCoarsestMagIndex();
+    lowestResolutionIndex = datasetFallbackLayerResolutionInfo.getFinestMagIndex();
   }
 
   const highResolutionIndex = Math.min(highestResolutionIndex, resolutionIndices[1]);
@@ -137,7 +137,7 @@ export function RestrictResolutionSlider({
             marginRight: 20,
           }}
         >
-          {resolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex).join("-")}
+          {resolutionInfo.getMagByIndexOrThrow(lowResolutionIndex).join("-")}
         </div>
         <Slider
           tooltip={{ open: false }}
@@ -157,7 +157,7 @@ export function RestrictResolutionSlider({
             textAlign: "right",
           }}
         >
-          {resolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex).join("-")}
+          {resolutionInfo.getMagByIndexOrThrow(highResolutionIndex).join("-")}
         </div>
       </div>
     </React.Fragment>
@@ -198,8 +198,8 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
       selectedSegmentationLayer == null
         ? getSomeResolutionInfoForDataset(dataset)
         : getResolutionInfo(selectedSegmentationLayer.resolutions);
-    const highestResolutionIndex = resolutionInfo.getCoarsestResolutionIndex();
-    const lowestResolutionIndex = resolutionInfo.getFinestResolutionIndex();
+    const highestResolutionIndex = resolutionInfo.getCoarsestMagIndex();
+    const lowestResolutionIndex = resolutionInfo.getFinestMagIndex();
 
     const highResolutionIndex = Math.min(highestResolutionIndex, userDefinedResolutionIndices[1]);
     const lowResolutionIndex = Math.max(lowestResolutionIndex, userDefinedResolutionIndices[0]);
@@ -245,9 +245,9 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
             to={`/datasets/${dataset.owningOrganization}/${
               dataset.name
             }/createExplorative/${annotationType}/?minRes=${Math.max(
-              ...resolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex),
+              ...resolutionInfo.getMagByIndexOrThrow(lowResolutionIndex),
             )}&maxRes=${Math.max(
-              ...resolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex),
+              ...resolutionInfo.getMagByIndexOrThrow(highResolutionIndex),
             )}${fallbackLayerGetParameter}`}
             title="Create new annotation with selected properties"
           >

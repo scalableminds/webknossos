@@ -175,7 +175,7 @@ import messages from "messages";
 import window, { location } from "libs/window";
 import { coalesce } from "libs/utils";
 import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import { MagInfo } from "oxalis/model/helpers/mag_info";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
@@ -677,7 +677,7 @@ class TracingApi {
     if (existingMagIndex == null) {
       throw new Error("The index of the current mag could not be found.");
     }
-    const currentMag = resolutionInfo.getResolutionByIndex(existingMagIndex);
+    const currentMag = resolutionInfo.getMagByIndex(existingMagIndex);
     if (currentMag == null) {
       throw new Error("No mag could be found.");
     }
@@ -1843,7 +1843,7 @@ class DataApi {
     } else {
       const layer = getLayerByName(Store.getState().dataset, layerName);
       const resolutionInfo = getResolutionInfo(layer.resolutions);
-      zoomStep = resolutionInfo.getFinestResolutionIndex();
+      zoomStep = resolutionInfo.getFinestMagIndex();
     }
 
     const cube = this.model.getCubeByLayerName(layerName);
@@ -1905,10 +1905,10 @@ class DataApi {
     if (_zoomStep != null) {
       zoomStep = _zoomStep;
     } else {
-      zoomStep = resolutionInfo.getFinestResolutionIndex();
+      zoomStep = resolutionInfo.getFinestMagIndex();
     }
 
-    const resolutions = resolutionInfo.getDenseResolutions();
+    const resolutions = resolutionInfo.getDenseMags();
     const bucketAddresses = this.getBucketAddressesInCuboid(
       mag1Bbox,
       resolutions,
@@ -1960,7 +1960,7 @@ class DataApi {
       viewport,
     );
 
-    const resolution = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
+    const resolution = resolutionInfo.getMagByIndexOrThrow(zoomStep);
     const resolutionUVX = dimensions.transDim(resolution, viewport);
     const widthInVoxel = Math.ceil(halfViewportExtentU / resolutionUVX[0]);
     const heightInVoxel = Math.ceil(halfViewportExtentV / resolutionUVX[1]);
@@ -1998,7 +1998,7 @@ class DataApi {
     );
 
     const topLeft = (bucketAddress: BucketAddress) =>
-      bucketPositionToGlobalAddress(bucketAddress, new ResolutionInfo(resolutions));
+      bucketPositionToGlobalAddress(bucketAddress, new MagInfo(resolutions));
 
     const nextBucketInDim = (bucket: BucketAddress, dim: 0 | 1 | 2) => {
       const copy = bucket.slice() as BucketAddress;
@@ -2107,7 +2107,7 @@ class DataApi {
   ): string {
     const { dataset } = Store.getState();
     const resolutionInfo = getResolutionInfo(getLayerByName(dataset, layerName, true).resolutions);
-    resolution = resolution || resolutionInfo.getFinestResolution();
+    resolution = resolution || resolutionInfo.getFinestMag();
 
     const magString = resolution.join("-");
     return (

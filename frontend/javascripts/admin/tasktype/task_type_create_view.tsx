@@ -48,7 +48,7 @@ type FormValues = {
     mergerMode: boolean;
     preferredMode?: APIAllowedMode;
     allowedModes: APIAllowedMode[];
-    resolutionRestrictions: APIMagRestrictions;
+    magRestrictions: APIMagRestrictions;
   };
   recommendedConfiguration: string | undefined;
 };
@@ -58,7 +58,7 @@ function isValidMagnification(_rule: RuleObject, value: number | undefined) {
     return Promise.resolve();
   } else {
     return Promise.reject(
-      new Error("The resolution must be stated as a power of two (e.g., 1 or 2 or 4 or 8 ...)"),
+      new Error("The magnification must be stated as a power of two (e.g., 1 or 2 or 4 or 8 ...)"),
     );
   }
 }
@@ -68,7 +68,7 @@ function isMinimumMagnifactionLargerThenMaxRule(value: number | undefined, maxMa
     return Promise.resolve();
   }
   return Promise.reject(
-    new Error("The minimum resolution needs to be smaller then the maximum mag."),
+    new Error("The minimum magnification needs to be smaller then the maximum mag."),
   );
 }
 function isMaximumMagnificationSmallerThenMinRule(value: number | undefined, minMag: number) {
@@ -76,7 +76,7 @@ function isMaximumMagnificationSmallerThenMinRule(value: number | undefined, min
     return Promise.resolve();
   }
   return Promise.reject(
-    new Error("The maximum resolution needs to be larger then the minimum mag."),
+    new Error("The maximum magnification needs to be larger then the minimum mag."),
   );
 }
 
@@ -150,8 +150,8 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
 
     // FormItems which are not rendered/hidden are not serialized by onFinish
     // add them manually
-    if (!settings.resolutionRestrictions) {
-      settings.resolutionRestrictions = { min: undefined, max: undefined };
+    if (!settings.magRestrictions) {
+      settings.magRestrictions = { min: undefined, max: undefined };
     }
 
     const newTaskType: Omit<APITaskType, "id" | "teamName"> = {
@@ -418,9 +418,9 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
             }}
           >
             <Checkbox disabled={isEditingMode}>
-              Restrict Resolutions{" "}
+              Restrict Magnifications{" "}
               <Tooltip
-                title="The resolutions should be specified as power-of-two numbers. For example, if users should only be able to annotate in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth resolutions can be addressed with 4 and 8."
+                title="The magnifications should be specified as power-of-two numbers. For example, if users should only be able to annotate in the best and second best mag, the minimum should be 1 and the maximum should be 2. The third and fourth mag can be addressed with 4 and 8."
                 placement="right"
               >
                 <InfoCircleOutlined />

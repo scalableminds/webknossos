@@ -75,7 +75,7 @@ import type {
   RemoveSegmentAction,
   UpdateSegmentAction,
 } from "../actions/volumetracing_actions";
-import type { ResolutionInfo } from "../helpers/resolution_info";
+import type { MagInfo } from "../helpers/mag_info";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import Zip from "libs/zipjs_wrapper";
 import type { FlycamAction } from "../actions/flycam_actions";
@@ -155,7 +155,7 @@ function removeMapForSegment(
   adhocMeshesMapByLayer[additionalCoordinateKey][layerName].delete(segmentId);
 }
 
-function getCubeSizeInMag1(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
+function getCubeSizeInMag1(zoomStep: number, resolutionInfo: MagInfo): Vector3 {
   // Convert marchingCubeSizeInTargetMag to mag1 via zoomStep
   // Drop the last element of the Vector4;
   const [x, y, z] = zoomedAddressToAnotherZoomStepWithInfo(
@@ -169,7 +169,7 @@ function getCubeSizeInMag1(zoomStep: number, resolutionInfo: ResolutionInfo): Ve
 function clipPositionToCubeBoundary(
   position: Vector3,
   zoomStep: number,
-  resolutionInfo: ResolutionInfo,
+  resolutionInfo: MagInfo,
 ): Vector3 {
   const cubeSizeInMag1 = getCubeSizeInMag1(zoomStep, resolutionInfo);
   const currentCube = V3.floor(V3.divide3(position, cubeSizeInMag1));
@@ -191,7 +191,7 @@ function getNeighborPosition(
   clippedPosition: Vector3,
   neighborId: number,
   zoomStep: number,
-  resolutionInfo: ResolutionInfo,
+  resolutionInfo: MagInfo,
 ): Vector3 {
   const neighborMultiplier = NEIGHBOR_LOOKUP[neighborId];
   const cubeSizeInMag1 = getCubeSizeInMag1(zoomStep, resolutionInfo);
@@ -238,7 +238,7 @@ function* getInfoForMeshLoading(
   meshExtraInfo: AdHocMeshInfo,
 ): Saga<{
   zoomStep: number;
-  resolutionInfo: ResolutionInfo;
+  resolutionInfo: MagInfo;
 }> {
   const resolutionInfo = getResolutionInfo(layer.resolutions);
   const preferredZoomStep =
@@ -322,7 +322,7 @@ function* loadFullAdHocMesh(
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   zoomStep: number,
   meshExtraInfo: AdHocMeshInfo,
-  resolutionInfo: ResolutionInfo,
+  resolutionInfo: MagInfo,
   removeExistingMesh: boolean,
 ): Saga<void> {
   let isInitialRequest = true;
@@ -342,7 +342,7 @@ function* loadFullAdHocMesh(
 
   const cubeSize = marchingCubeSizeInTargetMag();
   const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
-  const mag = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
+  const mag = resolutionInfo.getMagByIndexOrThrow(zoomStep);
 
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   const visibleSegmentationLayer = yield* select((state) => getVisibleSegmentationLayer(state));
@@ -442,7 +442,7 @@ function* maybeLoadMeshChunk(
   clippedPosition: Vector3,
   zoomStep: number,
   meshExtraInfo: AdHocMeshInfo,
-  resolutionInfo: ResolutionInfo,
+  resolutionInfo: MagInfo,
   isInitialRequest: boolean,
   removeExistingMesh: boolean,
   useDataStore: boolean,
@@ -471,7 +471,7 @@ function* maybeLoadMeshChunk(
   }`;
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
 
-  const mag = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
+  const mag = resolutionInfo.getMagByIndexOrThrow(zoomStep);
 
   if (isInitialRequest) {
     sendAnalyticsEvent("request_isosurface", {

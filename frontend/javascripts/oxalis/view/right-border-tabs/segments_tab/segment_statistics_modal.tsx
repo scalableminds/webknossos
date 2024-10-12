@@ -106,7 +106,7 @@ export function SegmentStatisticsModal({
 }: Props) {
   const { dataset, tracing, temporaryConfiguration } = useSelector((state: OxalisState) => state);
   const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
-  const layersFinestResolution = magInfo.getFinestResolution();
+  const layersFinestResolution = magInfo.getFinestMag();
   const voxelSize = dataset.dataSource.scale;
   // Omit checking that all prerequisites for segment stats (such as a segment index) are
   // met right here because that should happen before opening the modal.

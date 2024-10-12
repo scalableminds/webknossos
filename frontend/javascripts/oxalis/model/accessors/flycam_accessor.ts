@@ -34,7 +34,7 @@ import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
-import type { SmallerOrHigherInfo } from "../helpers/resolution_info";
+import type { SmallerOrHigherInfo } from "../helpers/mag_info";
 import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
 import type { AdditionalCoordinate, VoxelSize } from "types/api_flow_types";
 
@@ -241,7 +241,7 @@ function getMaximumZoomForAllResolutionsFromStore(
     viewMode,
     state.datasetConfiguration.loadingStrategy,
     state.dataset.dataSource.scale.factor,
-    getResolutionInfo(layer.resolutions).getDenseResolutions(),
+    getResolutionInfo(layer.resolutions).getDenseMags(),
     getViewportRects(state),
     Math.min(
       state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,
@@ -368,7 +368,7 @@ export function getCurrentResolution(
   if (existingMagIndex == null) {
     return null;
   }
-  return resolutionInfo.getResolutionByIndex(existingMagIndex);
+  return resolutionInfo.getMagByIndex(existingMagIndex);
 }
 
 function _getValidZoomRangeForUser(state: OxalisState): [number, number] {
@@ -635,7 +635,7 @@ function _getActiveResolutionInfo(state: OxalisState) {
   const activeMagOfEnabledLayers = Object.fromEntries(
     enabledLayers.map((l) => [
       l.name,
-      getResolutionInfo(l.resolutions).getResolutionByIndex(activeMagIndices[l.name]),
+      getResolutionInfo(l.resolutions).getMagByIndex(activeMagIndices[l.name]),
     ]),
   );
 

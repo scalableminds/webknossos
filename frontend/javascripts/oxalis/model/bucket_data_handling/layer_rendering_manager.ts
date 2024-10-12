@@ -188,7 +188,7 @@ export default class LayerRenderingManager {
     const { dataset, datasetConfiguration } = state;
     const layer = getLayerByName(dataset, this.name);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
-    const maximumResolutionIndex = resolutionInfo.getCoarsestResolutionIndex();
+    const maximumResolutionIndex = resolutionInfo.getCoarsestMagIndex();
 
     if (logZoomStep > maximumResolutionIndex) {
       // Don't render anything if the zoomStep is too high
@@ -196,7 +196,7 @@ export default class LayerRenderingManager {
       return;
     }
 
-    const resolutions = getResolutionInfo(layer.resolutions).getDenseResolutions();
+    const resolutions = getResolutionInfo(layer.resolutions).getDenseMags();
     const layerMatrix = invertAndTranspose(
       getTransformsForLayer(dataset, layer, datasetConfiguration.nativelyRenderedLayerName)
         .affineMatrix,

@@ -306,7 +306,7 @@ function LayerInfoIconWithTooltip({
   const renderTooltipContent = useCallback(() => {
     const elementClass = getElementClass(dataset, layer.name);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
-    const resolutions = resolutionInfo.getResolutionList();
+    const resolutions = resolutionInfo.getMagList();
     return (
       <div>
         <div>Data Type: {elementClass}</div>

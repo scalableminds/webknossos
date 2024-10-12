@@ -6,7 +6,7 @@ import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import test from "ava";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import { MagInfo } from "oxalis/model/helpers/mag_info";
 import type { APIDataLayer } from "types/api_flow_types";
 
 const RequestMock = {
@@ -23,7 +23,7 @@ function setFourBit(bool: boolean) {
 
 const mockedCube = {
   isSegmentation: true,
-  resolutionInfo: new ResolutionInfo([
+  resolutionInfo: new MagInfo([
     [1, 1, 1],
     [2, 2, 2],
   ]),

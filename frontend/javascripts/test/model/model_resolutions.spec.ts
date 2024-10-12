@@ -3,10 +3,10 @@ import test from "ava";
 import { getResolutionUnion } from "oxalis/model/accessors/dataset_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type { APIDataset } from "types/api_flow_types";
-import { convertToDenseResolution } from "oxalis/model/helpers/resolution_info";
+import { convertToDenseMag } from "oxalis/model/helpers/mag_info";
 
 test("Simple convertToDenseResolution", (t) => {
-  const denseResolutions = convertToDenseResolution([
+  const denseResolutions = convertToDenseMag([
     [2, 2, 1],
     [4, 4, 2],
   ]);
@@ -55,8 +55,7 @@ test("Complex convertToDenseResolution", (t) => {
     ] as Vector3[],
   };
 
-  const densify = (layer: { resolutions: Vector3[] }) =>
-    convertToDenseResolution(layer.resolutions);
+  const densify = (layer: { resolutions: Vector3[] }) => convertToDenseMag(layer.resolutions);
 
   t.deepEqual(densify(dataset.dataSource.dataLayers[0]), expectedResolutions[0]);
   t.deepEqual(densify(dataset.dataSource.dataLayers[1]), expectedResolutions[1]);

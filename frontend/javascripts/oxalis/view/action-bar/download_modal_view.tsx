@@ -323,8 +323,8 @@ function _DownloadModalView({
   const [selectedBoundingBoxId, setSelectedBoundingBoxId] = useState(
     initialBoundingBoxId ?? userBoundingBoxes[0].id,
   );
-  const [rawMag, setMag] = useState<Vector3>(selectedLayerResolutionInfo.getFinestResolution());
-  const mag = selectedLayerResolutionInfo.getClosestExistingResolution(rawMag);
+  const [rawMag, setMag] = useState<Vector3>(selectedLayerResolutionInfo.getFinestMag());
+  const mag = selectedLayerResolutionInfo.getClosestExistingMag(rawMag);
   const [exportFormat, setExportFormat] = useState<ExportFormat>(ExportFormat.OME_TIFF);
 
   const selectedBoundingBox = userBoundingBoxes.find(

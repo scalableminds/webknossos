@@ -86,7 +86,7 @@ function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
   const requestedZoomStep = getActiveMagIndexForLayer(state, segmentationLayer.name);
   const resolutionInfo = getResolutionInfo(segmentationLayer.resolutions);
   const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+  const labeledResolution = resolutionInfo.getMagByIndexOrThrow(labeledZoomStep);
 
   const previousCentroid = getLabelActionFromPreviousSlice(
     state,

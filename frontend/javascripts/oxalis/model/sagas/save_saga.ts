@@ -295,10 +295,10 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>, tracingId: str
       for (const updateAction of saveEntry.actions) {
         if (updateAction.name === "updateBucket") {
           const { position, mag, additionalCoordinates } = updateAction.value;
-          const resolutionIndex = segmentationResolutionInfo.getIndexByResolution(mag);
+          const resolutionIndex = segmentationResolutionInfo.getIndexByMag(mag);
           const zoomedBucketAddress = globalPositionToBucketPosition(
             position,
-            segmentationResolutionInfo.getDenseResolutions(),
+            segmentationResolutionInfo.getDenseMags(),
             resolutionIndex,
             additionalCoordinates,
           );

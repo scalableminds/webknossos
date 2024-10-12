@@ -154,7 +154,7 @@ export function* prepareQuickSelect(
     requestedZoomStep,
     "The visible color layer and the active segmentation layer don't have any magnifications in common. Cannot select segment.",
   );
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+  const labeledResolution = resolutionInfo.getMagByIndexOrThrow(labeledZoomStep);
 
   return {
     labeledZoomStep,

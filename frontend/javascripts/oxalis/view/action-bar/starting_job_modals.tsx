@@ -46,7 +46,7 @@ import {
 } from "libs/utils";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { V3 } from "libs/mjs";
-import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import type { MagInfo } from "oxalis/model/helpers/mag_info";
 import { isBoundingBoxExportable } from "./download_modal_view";
 import features from "features";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
@@ -256,12 +256,12 @@ export function MagSlider({
   value,
   onChange,
 }: {
-  resolutionInfo: ResolutionInfo;
+  resolutionInfo: MagInfo;
   value: Vector3;
   onChange: (v: Vector3) => void;
 }) {
   // Use `getResolutionsWithIndices` because returns a sorted list
-  const allMags = resolutionInfo.getResolutionsWithIndices();
+  const allMags = resolutionInfo.getMagsWithIndices();
 
   return (
     <Slider

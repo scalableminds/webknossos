@@ -128,7 +128,7 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
 
   const getMagForSegmentationLayer = async (_annotationId: string, layerName: string) => {
     const segmentationLayer = getSegmentationLayerByHumanReadableName(dataset, tracing, layerName);
-    return getResolutionInfo(segmentationLayer.resolutions).getFinestResolution();
+    return getResolutionInfo(segmentationLayer.resolutions).getFinestMag();
   };
   const userBoundingBoxes = getSomeTracing(tracing).userBoundingBoxes;
 

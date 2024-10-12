@@ -113,7 +113,7 @@ export function RestrictMagnificationSlider({
           marginBottom: 0,
         }}
       >
-        Restrict Volume Resolutions{" "}
+        Restrict Volume Magnifications{" "}
         <Tooltip
           title="Select which of the dataset magnifications the volume data should be created at. Restricting the available mags can greatly improve the performance when annotating large structures, such as nuclei, since the volume data does not need to be stored in all quality levels. How to read: Mag 1 is the most detailed, 4-4-2 is downsampled by factor 4 in x and y, and by factor 2 in z."
           placement="right"

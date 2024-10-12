@@ -551,6 +551,10 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
           ))}
         </ul>
+        Layers contain image data in one or multiple magnifications, or short mags. The
+        magnification `4` or `4-4-4` describes a downsampling factor of 4 in each dimension. The
+        image data in full magnification is referred to as the finest mag, e.g. `1-1-1`, downsampled
+        variants are more coarse.
       </div>
     );
   };

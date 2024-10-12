@@ -521,6 +521,8 @@ function MagnificationInfo() {
             );
           })}
         </ul>
+        Layers contain image data in one or multiple magnifications, or short mags. The
+        magnification `4` or `4-4-4` describes a downsampling factor of 4 in each dimension.
       </>
     );
   }, []);

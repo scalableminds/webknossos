@@ -46,7 +46,7 @@ import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
   getMaximumBrushSize,
-  getRenderableResolutionForSegmentationTracing,
+  getRenderableMagForSegmentationTracing,
   getRequestedOrVisibleSegmentationLayer,
   getSegmentsForLayer,
   isVolumeAnnotationDisallowedForZoom,
@@ -104,7 +104,7 @@ import { Model, api } from "oxalis/singletons";
 import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
 import {
-  applyLabeledVoxelMapToAllMissingResolutions,
+  applyLabeledVoxelMapToAllMissingMags,
   createVolumeLayer,
   labelWithVoxelBuffer2D,
   type BooleanBox,
@@ -213,7 +213,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
     }
 
     const maybeLabeledResolutionWithZoomStep = yield* select((state) =>
-      getRenderableResolutionForSegmentationTracing(state, volumeTracing),
+      getRenderableMagForSegmentationTracing(state, volumeTracing),
     );
 
     if (!maybeLabeledResolutionWithZoomStep) {
@@ -499,7 +499,7 @@ export function* floodFill(): Saga<void> {
       }
     }
 
-    console.time("applyLabeledVoxelMapToAllMissingResolutions");
+    console.time("applyLabeledVoxelMapToAllMissingMags");
 
     for (const indexZ of indexSet) {
       const labeledVoxelMapFromFloodFill: LabeledVoxelsMap = new Map();
@@ -512,7 +512,7 @@ export function* floodFill(): Saga<void> {
         }
       }
 
-      applyLabeledVoxelMapToAllMissingResolutions(
+      applyLabeledVoxelMapToAllMissingMags(
         labeledVoxelMapFromFloodFill,
         labeledZoomStep,
         dimensionIndices,
@@ -536,7 +536,7 @@ export function* floodFill(): Saga<void> {
       ),
     );
 
-    console.timeEnd("applyLabeledVoxelMapToAllMissingResolutions");
+    console.timeEnd("applyLabeledVoxelMapToAllMissingMags");
 
     if (wasBoundingBoxExceeded) {
       yield* call(
@@ -604,7 +604,7 @@ export function* finishLayer(
 
   yield* put(registerLabelPointAction(layer.getUnzoomedCentroid()));
 }
-export function* ensureToolIsAllowedInResolution(): Saga<any> {
+export function* ensureToolIsAllowedInMag(): Saga<any> {
   yield* take("INITIALIZE_VOLUMETRACING");
 
   while (true) {
@@ -969,7 +969,7 @@ function* handleDeleteSegmentData(): Saga<void> {
 export default [
   editVolumeLayerAsync,
   handleDeleteSegmentData,
-  ensureToolIsAllowedInResolution,
+  ensureToolIsAllowedInMag,
   floodFill,
   watchVolumeTracingAsync,
   maintainSegmentsMap,

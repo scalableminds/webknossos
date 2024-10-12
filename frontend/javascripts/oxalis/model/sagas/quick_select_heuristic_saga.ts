@@ -87,7 +87,7 @@ export function* prepareQuickSelect(
   colorLayer: APIDataLayer;
   quickSelectConfig: QuickSelectConfig;
   activeViewport: OrthoViewWithoutTD;
-  labeledResolution: Vector3;
+  labeledMag: Vector3;
   volumeTracing: VolumeTracing;
 } | null> {
   const activeViewport = yield* select(
@@ -164,7 +164,7 @@ export function* prepareQuickSelect(
     colorLayer,
     quickSelectConfig,
     activeViewport,
-    labeledResolution,
+    labeledMag: labeledResolution,
     volumeTracing,
   };
 }
@@ -184,7 +184,7 @@ export default function* performQuickSelect(
     colorLayer,
     quickSelectConfig,
     activeViewport,
-    labeledResolution,
+    labeledMag: labeledResolution,
     volumeTracing,
   } = preparation;
   const { startPosition, endPosition, quickSelectGeometry } = action;
@@ -501,7 +501,7 @@ export function* finalizeQuickSelectForSlice(
   quickSelectGeometry: QuickSelectGeometry,
   volumeTracing: VolumeTracing,
   activeViewport: OrthoView,
-  labeledResolution: Vector3,
+  labeledMag: Vector3,
   boundingBoxMag1: BoundingBox,
   w: number,
   mask: ndarray.NdArray<TypedArrayWithoutBigInt>,
@@ -510,13 +510,7 @@ export function* finalizeQuickSelectForSlice(
   skipFinishAnnotationStroke: boolean = false,
 ) {
   quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
-  const volumeLayer = yield* call(
-    createVolumeLayer,
-    volumeTracing,
-    activeViewport,
-    labeledResolution,
-    w,
-  );
+  const volumeLayer = yield* call(createVolumeLayer, volumeTracing, activeViewport, labeledMag, w);
   const sizeUVWInMag = mask.shape;
   const voxelBuffer2D = volumeLayer.createVoxelBuffer2D(
     V2.floor(volumeLayer.globalCoordToMag2DFloat(boundingBoxMag1.min)),

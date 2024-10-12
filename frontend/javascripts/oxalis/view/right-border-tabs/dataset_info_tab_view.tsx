@@ -12,7 +12,7 @@ import {
   getDatasetExtentAsString,
   getMagnificationUnion,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
 import {
   getCombinedStats,
   type CombinedTracingStats,
@@ -37,7 +37,7 @@ type StateProps = {
   dataset: APIDataset;
   task: Task | null | undefined;
   activeUser: APIUser | null | undefined;
-  activeResolutionInfo: ReturnType<typeof getActiveResolutionInfo>;
+  activeMagInfo: ReturnType<typeof getActiveMagInfo>;
   isDatasetViewMode: boolean;
   mayEditAnnotation: boolean;
 };
@@ -528,7 +528,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   renderResolutionsTooltip = () => {
-    const { dataset, annotation, activeResolutionInfo } = this.props;
+    const { dataset, annotation, activeMagInfo: activeResolutionInfo } = this.props;
     const { activeMagOfEnabledLayers } = activeResolutionInfo;
     const resolutionUnion = getMagnificationUnion(dataset);
     return (
@@ -545,7 +545,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             );
           })}
         </ul>
-        Available resolutions:
+        Available magnifications:
         <ul>
           {resolutionUnion.map((mags) => (
             <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
@@ -556,7 +556,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   };
 
   getResolutionInfo() {
-    const { activeResolutionInfo } = this.props;
+    const { activeMagInfo: activeResolutionInfo } = this.props;
     const { representativeResolution, isActiveResolutionGlobal } = activeResolutionInfo;
 
     return representativeResolution != null ? (
@@ -570,7 +570,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
           <img
             className="info-tab-icon"
             src="/assets/images/icon-downsampling.svg"
-            alt="Resolution"
+            alt="Magnification"
           />
         </td>
         <td
@@ -626,7 +626,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   task: state.task,
   activeUser: state.activeUser,
   isDatasetViewMode: state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
-  activeResolutionInfo: getActiveResolutionInfo(state),
+  activeMagInfo: getActiveMagInfo(state),
   mayEditAnnotation: mayEditAnnotationProperties(state),
 });
 

@@ -155,12 +155,12 @@ function removeMapForSegment(
   adhocMeshesMapByLayer[additionalCoordinateKey][layerName].delete(segmentId);
 }
 
-function getCubeSizeInMag1(zoomStep: number, resolutionInfo: MagInfo): Vector3 {
+function getCubeSizeInMag1(zoomStep: number, magInfo: MagInfo): Vector3 {
   // Convert marchingCubeSizeInTargetMag to mag1 via zoomStep
   // Drop the last element of the Vector4;
   const [x, y, z] = zoomedAddressToAnotherZoomStepWithInfo(
     [...marchingCubeSizeInTargetMag(), zoomStep],
-    resolutionInfo,
+    magInfo,
     0,
   );
   return [x, y, z];
@@ -169,9 +169,9 @@ function getCubeSizeInMag1(zoomStep: number, resolutionInfo: MagInfo): Vector3 {
 function clipPositionToCubeBoundary(
   position: Vector3,
   zoomStep: number,
-  resolutionInfo: MagInfo,
+  magInfo: MagInfo,
 ): Vector3 {
-  const cubeSizeInMag1 = getCubeSizeInMag1(zoomStep, resolutionInfo);
+  const cubeSizeInMag1 = getCubeSizeInMag1(zoomStep, magInfo);
   const currentCube = V3.floor(V3.divide3(position, cubeSizeInMag1));
   const clippedPosition = V3.scale3(currentCube, cubeSizeInMag1);
   return clippedPosition;
@@ -191,10 +191,10 @@ function getNeighborPosition(
   clippedPosition: Vector3,
   neighborId: number,
   zoomStep: number,
-  resolutionInfo: MagInfo,
+  magInfo: MagInfo,
 ): Vector3 {
   const neighborMultiplier = NEIGHBOR_LOOKUP[neighborId];
-  const cubeSizeInMag1 = getCubeSizeInMag1(zoomStep, resolutionInfo);
+  const cubeSizeInMag1 = getCubeSizeInMag1(zoomStep, magInfo);
   const neighboringPosition: Vector3 = [
     clippedPosition[0] + neighborMultiplier[0] * cubeSizeInMag1[0],
     clippedPosition[1] + neighborMultiplier[1] * cubeSizeInMag1[1],
@@ -238,7 +238,7 @@ function* getInfoForMeshLoading(
   meshExtraInfo: AdHocMeshInfo,
 ): Saga<{
   zoomStep: number;
-  resolutionInfo: MagInfo;
+  magInfo: MagInfo;
 }> {
   const resolutionInfo = getMagInfo(layer.resolutions);
   const preferredZoomStep =
@@ -250,7 +250,7 @@ function* getInfoForMeshLoading(
   const zoomStep = resolutionInfo.getClosestExistingIndex(preferredZoomStep);
   return {
     zoomStep,
-    resolutionInfo,
+    magInfo: resolutionInfo,
   };
 }
 
@@ -273,7 +273,11 @@ function* loadAdHocMesh(
 
   const meshExtraInfo = yield* call(getMeshExtraInfo, layer.name, maybeExtraInfo);
 
-  const { zoomStep, resolutionInfo } = yield* call(getInfoForMeshLoading, layer, meshExtraInfo);
+  const { zoomStep, magInfo: resolutionInfo } = yield* call(
+    getInfoForMeshLoading,
+    layer,
+    meshExtraInfo,
+  );
   batchCounterPerSegment[segmentId] = 0;
 
   // If a REMOVE_MESH action is dispatched and consumed
@@ -1027,7 +1031,7 @@ function _getLoadChunksTasks(
                 // Compute vertex normals to achieve smooth shading
                 bufferGeometries.forEach((geometry) => geometry.computeVertexNormals());
 
-                // Check if the mesh scale is different to all supported resolutions of the active segmentation scaled by the dataset scale and warn in the console to make debugging easier in such a case.
+                // Check if the mesh scale is different to all supported mags of the active segmentation scaled by the dataset scale and warn in the console to make debugging easier in such a case.
                 // This hint at the mesh file being computed when the dataset scale was different than currently configured.
                 const segmentationLayerResolutions = yield* select(
                   (state) => getVisibleSegmentationLayer(state)?.resolutions,

@@ -165,7 +165,7 @@ type StateProps = {
   activeCellId: number | null | undefined;
   preferredQualityForMeshPrecomputation: number;
   preferredQualityForMeshAdHocComputation: number;
-  resolutionInfoOfVisibleSegmentationLayer: MagInfo;
+  magInfoOfVisibleSegmentationLayer: MagInfo;
 };
 
 const mapStateToProps = (state: OxalisState): StateProps => {
@@ -220,7 +220,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
       state.temporaryConfiguration.preferredQualityForMeshPrecomputation,
     preferredQualityForMeshAdHocComputation:
       state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
-    resolutionInfoOfVisibleSegmentationLayer: getMagInfoOfVisibleSegmentationLayer(state),
+    magInfoOfVisibleSegmentationLayer: getMagInfoOfVisibleSegmentationLayer(state),
   };
 };
 
@@ -826,7 +826,7 @@ class SegmentsView extends React.Component<Props, State> {
     const {
       mappingInfo,
       preferredQualityForMeshPrecomputation,
-      resolutionInfoOfVisibleSegmentationLayer: resolutionInfo,
+      magInfoOfVisibleSegmentationLayer: resolutionInfo,
     } = this.props;
     const defaultOrHigherIndex = resolutionInfo.getIndexOrClosestHigherIndex(
       preferredQualityForMeshPrecomputation,
@@ -902,7 +902,7 @@ class SegmentsView extends React.Component<Props, State> {
   getAdHocMeshSettings = () => {
     const {
       preferredQualityForMeshAdHocComputation,
-      resolutionInfoOfVisibleSegmentationLayer: resolutionInfo,
+      magInfoOfVisibleSegmentationLayer: resolutionInfo,
     } = this.props;
     return (
       <div>
@@ -933,7 +933,7 @@ class SegmentsView extends React.Component<Props, State> {
     const { disabled, title } = this.getPrecomputeMeshesTooltipInfo();
     const {
       preferredQualityForMeshPrecomputation,
-      resolutionInfoOfVisibleSegmentationLayer: resolutionInfo,
+      magInfoOfVisibleSegmentationLayer: resolutionInfo,
     } = this.props;
     return (
       <div

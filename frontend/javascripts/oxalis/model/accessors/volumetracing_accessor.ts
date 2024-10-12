@@ -179,7 +179,7 @@ export function getSegmentationLayerForTracing(
   return getSegmentationLayerByName(state.dataset, volumeTracing.tracingId);
 }
 
-function _getResolutionInfoOfActiveSegmentationTracingLayer(state: OxalisState): MagInfo {
+function _getMagInfoOfActiveSegmentationTracingLayer(state: OxalisState): MagInfo {
   const volumeTracing = getActiveSegmentationTracing(state);
 
   if (!volumeTracing) {
@@ -190,8 +190,8 @@ function _getResolutionInfoOfActiveSegmentationTracingLayer(state: OxalisState):
   return getMagInfo(segmentationLayer.resolutions);
 }
 
-const getResolutionInfoOfActiveSegmentationTracingLayer = memoizeOne(
-  _getResolutionInfoOfActiveSegmentationTracingLayer,
+const getMagInfoOfActiveSegmentationTracingLayer = memoizeOne(
+  _getMagInfoOfActiveSegmentationTracingLayer,
 );
 export function getServerVolumeTracings(
   tracings: Array<ServerTracing> | null | undefined,
@@ -211,9 +211,9 @@ export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode
 }
 
 const MAG_THRESHOLDS_FOR_ZOOM: Partial<Record<AnnotationTool, number>> = {
-  // Note that these are relative to the lowest existing resolution index.
+  // Note that these are relative to the lowest existing mag index.
   // A threshold of 1 indicates that the respective tool can be used in the
-  // lowest existing resolution as well as the next highest one.
+  // lowest existing magnification as well as the next highest one.
   [AnnotationToolEnum.TRACE]: 1,
   [AnnotationToolEnum.ERASE_TRACE]: 1,
   [AnnotationToolEnum.BRUSH]: 3,
@@ -242,9 +242,9 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
     return true;
   }
 
-  const volumeResolutions = getResolutionInfoOfActiveSegmentationTracingLayer(state);
+  const volumeResolutions = getMagInfoOfActiveSegmentationTracingLayer(state);
   const lowestExistingResolutionIndex = volumeResolutions.getFinestMagIndex();
-  // The current resolution is too high for the tool
+  // The current mag is too high for the tool
   // because too many voxels could be annotated at the same time.
   const isZoomStepTooHigh =
     getActiveMagIndexForLayer(state, activeSegmentation.tracingId) >
@@ -254,7 +254,7 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
 
 const MAX_BRUSH_SIZE_FOR_MAG1 = 300;
 export function getMaximumBrushSize(state: OxalisState) {
-  const volumeResolutions = getResolutionInfoOfActiveSegmentationTracingLayer(state);
+  const volumeResolutions = getMagInfoOfActiveSegmentationTracingLayer(state);
 
   if (volumeResolutions.mags.length === 0) {
     return MAX_BRUSH_SIZE_FOR_MAG1;
@@ -474,11 +474,11 @@ export function getActiveSegmentPosition(state: OxalisState): Vector3 | null | u
 }
 
 /*
-  This function returns the resolution and zoom step in which the given segmentation
+  This function returns the magnification and zoom step in which the given segmentation
   tracing layer is currently rendered (if it is rendered). These properties should be used
   when labeling volume data.
  */
-function _getRenderableResolutionForSegmentationTracing(
+function _getRenderableMagForSegmentationTracing(
   state: OxalisState,
   segmentationTracing: VolumeTracing | null | undefined,
 ):
@@ -512,13 +512,13 @@ function _getRenderableResolutionForSegmentationTracing(
     };
   }
 
-  // Since `renderMissingDataBlack` is enabled, the fallback resolutions
+  // Since `renderMissingDataBlack` is enabled, the fallback mags
   // should not be considered.
   if (renderMissingDataBlack) {
     return null;
   }
 
-  // The current resolution is missing and fallback rendering
+  // The current mag is missing and fallback rendering
   // is activated. Thus, check whether one of the fallback
   // zoomSteps can be rendered.
   for (
@@ -537,11 +537,11 @@ function _getRenderableResolutionForSegmentationTracing(
   return null;
 }
 
-export const getRenderableResolutionForSegmentationTracing = reuseInstanceOnEquality(
-  _getRenderableResolutionForSegmentationTracing,
+export const getRenderableMagForSegmentationTracing = reuseInstanceOnEquality(
+  _getRenderableMagForSegmentationTracing,
 );
 
-function _getRenderableResolutionForActiveSegmentationTracing(state: OxalisState):
+function _getRenderableMagForActiveSegmentationTracing(state: OxalisState):
   | {
       resolution: Vector3;
       zoomStep: number;
@@ -549,11 +549,11 @@ function _getRenderableResolutionForActiveSegmentationTracing(state: OxalisState
   | null
   | undefined {
   const activeSegmentationTracing = getActiveSegmentationTracing(state);
-  return getRenderableResolutionForSegmentationTracing(state, activeSegmentationTracing);
+  return getRenderableMagForSegmentationTracing(state, activeSegmentationTracing);
 }
 
-export const getRenderableResolutionForActiveSegmentationTracing = reuseInstanceOnEquality(
-  _getRenderableResolutionForActiveSegmentationTracing,
+export const getRenderableMagForActiveSegmentationTracing = reuseInstanceOnEquality(
+  _getRenderableMagForActiveSegmentationTracing,
 );
 
 export function getMappingInfoForVolumeTracing(
@@ -646,7 +646,7 @@ export function getLabelActionFromPreviousSlice(
 ): LabelAction | undefined {
   // Gets the last label action which was performed on a different slice.
   // Note that in coarser mags (e.g., 8-8-2), the comparison of the coordinates
-  // is done while respecting how the coordinates are clipped due to that resolution.
+  // is done while respecting how the coordinates are clipped due to that mag.
   const adapt = (vec: Vector3) => V3.roundElementToMag(vec, resolution, dim);
   const position = adapt(getFlooredPosition(state.flycam));
 

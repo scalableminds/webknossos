@@ -18,11 +18,11 @@ export class MagInfo {
   }
 
   _buildMagnificationMap() {
-    // Each resolution entry can be characterized by it's greatest resolution dimension.
-    // E.g., the resolution array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
-    // a zoomstep of 2 corresponds to the resolution [2, 2, 1] (and not [4, 4, 2]).
-    // Therefore, the largest dim for each resolution has to be unique across all resolutions.
-    // This function creates a map which maps from powerOfTwo (2**index) to resolution.
+    // Each magnification entry can be characterized by it's greatest mag dimension.
+    // E.g., the mag array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
+    // a zoomstep of 2 corresponds to the mag [2, 2, 1] (and not [4, 4, 2]).
+    // Therefore, the largest dim for each mag has to be unique across all mags.
+    // This function creates a map which maps from powerOfTwo (2**index) to mag.
     // E.g.
     // {
     //  0: [1, 1, 1],

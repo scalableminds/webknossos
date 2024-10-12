@@ -252,16 +252,16 @@ function BoundingBoxSelectionFormItem({
 }
 
 export function MagSlider({
-  resolutionInfo,
+  magnificationInfo,
   value,
   onChange,
 }: {
-  resolutionInfo: MagInfo;
+  magnificationInfo: MagInfo;
   value: Vector3;
   onChange: (v: Vector3) => void;
 }) {
   // Use `getResolutionsWithIndices` because returns a sorted list
-  const allMags = resolutionInfo.getMagsWithIndices();
+  const allMags = magnificationInfo.getMagsWithIndices();
 
   return (
     <Slider
@@ -689,9 +689,9 @@ export function NucleiDetectionForm() {
           <p>
             <b>
               Note that this feature is still experimental. Nuclei detection currently only works
-              with EM data and a resolution of approximately 200{ThinSpace}nm per voxel. The
+              with EM data and a magnification of approximately 200{ThinSpace}nm per voxel. The
               segmentation process will automatically use the magnification that matches that
-              resolution best.
+              magnification best.
             </b>
           </p>
         </>

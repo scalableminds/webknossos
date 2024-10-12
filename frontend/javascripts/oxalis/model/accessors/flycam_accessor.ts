@@ -43,7 +43,7 @@ export const ZOOM_STEP_INTERVAL = 1.1;
 function calculateTotalBucketCountForZoomLevel(
   viewMode: ViewMode,
   loadingStrategy: LoadingStrategy,
-  resolutions: Array<Vector3>,
+  mags: Array<Vector3>,
   logZoomStep: number,
   zoomFactor: number,
   viewportRects: OrthoViewRects,
@@ -67,7 +67,7 @@ function calculateTotalBucketCountForZoomLevel(
     determineBucketsForOblique(
       viewMode,
       loadingStrategy,
-      resolutions,
+      mags,
       position,
       enqueueFunction,
       matrix,
@@ -77,7 +77,7 @@ function calculateTotalBucketCountForZoomLevel(
     );
   } else if (viewMode === constants.MODE_ARBITRARY) {
     determineBucketsForFlight(
-      resolutions,
+      mags,
       position,
       sphericalCapRadius,
       enqueueFunction,
@@ -89,7 +89,7 @@ function calculateTotalBucketCountForZoomLevel(
     determineBucketsForOblique(
       viewMode,
       loadingStrategy,
-      resolutions,
+      mags,
       position,
       enqueueFunction,
       matrix,
@@ -109,15 +109,15 @@ function calculateTotalBucketCountForZoomLevel(
 // Example:
 // The function might return 1.3 for resolutionIndex 0, which means that until a zoom value of 1.3
 // the first magnification can still be rendered.
-// For resolutionIndex 1, the function might return 1.5 etc.
+// For magIndex 1, the function might return 1.5 etc.
 // These values are used to determine the appropriate magnification for a given zoom value (e.g., a zoom value of 1.4
 // would require the second magnification).
 // This function is only exported for testing purposes
-export function _getMaximumZoomForAllResolutions(
+export function _getMaximumZoomForAllMags(
   viewMode: ViewMode,
   loadingStrategy: LoadingStrategy,
   voxelSizeFactor: Vector3,
-  resolutions: Array<Vector3>,
+  mags: Array<Vector3>,
   viewportRects: OrthoViewRects,
   maximumCapacity: number,
   layerMatrix: Matrix4x4,
@@ -159,15 +159,12 @@ export function _getMaximumZoomForAllResolutions(
     throw new Error("Internal error: Invalid maximum capacity provided.");
   }
 
-  while (
-    currentIterationCount < maximumIterationCount &&
-    currentResolutionIndex < resolutions.length
-  ) {
+  while (currentIterationCount < maximumIterationCount && currentResolutionIndex < mags.length) {
     const nextZoomValue = currentMaxZoomValue * ZOOM_STEP_INTERVAL;
     const nextCapacity = calculateTotalBucketCountForZoomLevel(
       viewMode,
       loadingStrategy,
-      resolutions,
+      mags,
       currentResolutionIndex,
       nextZoomValue,
       viewportRects,
@@ -192,7 +189,7 @@ export function _getMaximumZoomForAllResolutions(
 
 // todo: make this cleaner. since the maximum zoom depends on the layer name and the right matrix,
 // a memoization cache size of one doesn't work anymore. move cache to store and update explicitly?
-const perLayerFnCache: Map<string, typeof _getMaximumZoomForAllResolutions> = new Map();
+const perLayerFnCache: Map<string, typeof _getMaximumZoomForAllMags> = new Map();
 
 // Only exported for testing.
 export const _getDummyFlycamMatrix = memoizeOne((scale: Vector3) => {
@@ -214,10 +211,7 @@ export function getMoveOffset3d(state: OxalisState, timeFactor: number) {
   return (moveValue3d * timeFactor) / baseVoxel / constants.FPS;
 }
 
-function getMaximumZoomForAllResolutionsFromStore(
-  state: OxalisState,
-  layerName: string,
-): Array<number> {
+function getMaximumZoomForAllMagsFromStore(state: OxalisState, layerName: string): Array<number> {
   const { viewMode } = state.temporaryConfiguration;
 
   const layer = getLayerByName(state.dataset, layerName);
@@ -231,7 +225,7 @@ function getMaximumZoomForAllResolutionsFromStore(
 
   let fn = perLayerFnCache.get(layerName);
   if (fn == null) {
-    fn = memoizeOne(_getMaximumZoomForAllResolutions);
+    fn = memoizeOne(_getMaximumZoomForAllMags);
     perLayerFnCache.set(layerName, fn);
   }
 
@@ -323,10 +317,10 @@ function _getActiveMagIndicesForLayers(state: OxalisState): { [layerName: string
   const magIndices: { [layerName: string]: number } = {};
 
   for (const layer of getDataLayers(state.dataset)) {
-    const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state, layer.name);
+    const maximumZoomSteps = getMaximumZoomForAllMagsFromStore(state, layer.name);
     const maxLogZoomStep = Math.log2(getMaxZoomStep(state.dataset));
 
-    // Linearly search for the resolution index, for which the zoomFactor
+    // Linearly search for the mag index, for which the zoomFactor
     // is acceptable.
     const zoomStep = _.findIndex(
       maximumZoomSteps,
@@ -354,14 +348,11 @@ export function getActiveMagIndexForLayer(state: OxalisState, layerName: string)
 }
 
 /*
-  Returns the resolution that is supposed to be rendered for the given layer. The return resolution
+  Returns the mag that is supposed to be rendered for the given layer. The return mag
   is independent of the actually loaded data. If null is returned, the layer cannot be rendered,
   because no appropriate mag exists.
  */
-export function getCurrentResolution(
-  state: OxalisState,
-  layerName: string,
-): Vector3 | null | undefined {
+export function getCurrentMag(state: OxalisState, layerName: string): Vector3 | null | undefined {
   const resolutionInfo = getMagInfo(getLayerByName(state.dataset, layerName).resolutions);
   const magIndex = getActiveMagIndexForLayer(state, layerName);
   const existingMagIndex = resolutionInfo.getIndexOrClosestHigherIndex(magIndex);
@@ -374,7 +365,7 @@ export function getCurrentResolution(
 function _getValidZoomRangeForUser(state: OxalisState): [number, number] {
   const maxOfLayers = _.max(
     getDataLayers(state.dataset).map((layer) => {
-      const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state, layer.name);
+      const maximumZoomSteps = getMaximumZoomForAllMagsFromStore(state, layer.name);
       return _.last(maximumZoomSteps);
     }),
   );
@@ -393,21 +384,21 @@ export function getMaxZoomValueForResolution(
 ): number {
   const targetResolutionIdentifier = Math.max(...targetResolution);
   // Extract the max value from the range
-  const maxZoom = getValidZoomRangeForResolution(state, layerName, targetResolutionIdentifier)[1];
+  const maxZoom = getValidZoomRangeForMag(state, layerName, targetResolutionIdentifier)[1];
   if (maxZoom == null) {
-    // This should never happen as long as a valid target resolution is passed to this function.
-    throw new Error("Zoom range could not be determined for target resolution.");
+    // This should never happen as long as a valid target mag is passed to this function.
+    throw new Error("Zoom range could not be determined for target magnification.");
   }
   return maxZoom;
 }
 
-function getValidZoomRangeForResolution(
+function getValidZoomRangeForMag(
   state: OxalisState,
   layerName: string,
   resolutionIdentifier: number,
 ): Vector2 | [null, null] {
-  const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state, layerName);
-  // maximumZoomSteps is densely defined for all resolutions starting from resolution 1,1,1.
+  const maximumZoomSteps = getMaximumZoomForAllMagsFromStore(state, layerName);
+  // maximumZoomSteps is densely defined for all mags starting from magnification 1,1,1.
   // Therefore, we can use log2 as an index.
   const targetResolutionIndex = Math.log2(resolutionIdentifier);
 
@@ -452,7 +443,7 @@ export function getValidTaskZoomRange(
       (magIdentifier == null
         ? defaultRange[idx]
         : // If the magIdentifier is defined, but doesn't match any resolution, we default to the defaultRange values
-          getValidZoomRangeForResolution(state, firstColorLayerName, magIdentifier)[idx]) ||
+          getValidZoomRangeForMag(state, firstColorLayerName, magIdentifier)[idx]) ||
       defaultRange[idx]
     );
   }
@@ -572,10 +563,10 @@ type UnrenderableLayersInfos = {
 };
 
 /*
-  This function returns layers that cannot be rendered (since the current resolution is missing),
+  This function returns layers that cannot be rendered (since the current mag is missing),
   even though they should be rendered (since they are enabled). For each layer, this method
   additionally returns whether data of this layer can be rendered by zooming in or out.
-  The function takes fallback resolutions into account if renderMissingDataBlack is disabled.
+  The function takes fallback mags into account if renderMissingDataBlack is disabled.
  */
 function _getUnrenderableLayerInfosForCurrentZoom(
   state: OxalisState,
@@ -599,12 +590,12 @@ function _getUnrenderableLayerInfosForCurrentZoom(
 
       if (renderMissingDataBlack) {
         // We already know that the layer is missing. Since `renderMissingDataBlack`
-        // is enabled, the fallback resolutions don't matter. The layer cannot be
+        // is enabled, the fallback mags don't matter. The layer cannot be
         // rendered.
         return true;
       }
 
-      // The current resolution is missing and fallback rendering
+      // The current mag is missing and fallback rendering
       // is activated. Thus, check whether one of the fallback
       // zoomSteps can be rendered.
       return !_.range(1, MAX_ZOOM_STEP_DIFF + 1).some((diff) => {
@@ -672,4 +663,4 @@ function _getActiveResolutionInfo(state: OxalisState) {
   };
 }
 
-export const getActiveResolutionInfo = reuseInstanceOnEquality(_getActiveResolutionInfo);
+export const getActiveMagInfo = reuseInstanceOnEquality(_getActiveResolutionInfo);

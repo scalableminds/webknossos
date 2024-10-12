@@ -122,7 +122,12 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
       throw new Error("Cannot find annotation for specified id.");
     }
 
-    const { annotation, dataset, volumeTracings, volumeTracingResolutions } = annotationWithDataset;
+    const {
+      annotation,
+      dataset,
+      volumeTracings,
+      volumeTracingMags: volumeTracingResolutions,
+    } = annotationWithDataset;
 
     let annotationLayer = annotation.annotationLayers.find((l) => l.name === layerName);
     if (annotationLayer != null) {

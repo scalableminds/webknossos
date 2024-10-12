@@ -15,7 +15,7 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { getHalfViewportExtentsInVx } from "oxalis/model/sagas/saga_selectors";
 import { call } from "typed-redux-saga";
-import sampleVoxelMapToResolution, {
+import sampleVoxelMapToMagnification, {
   applyVoxelMap,
 } from "oxalis/model/volumetracing/volume_annotation_sampling";
 import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
@@ -75,11 +75,11 @@ export function getBoundingBoxInMag1(boudingBox: BoundingBoxObject, magOfBB: Vec
   };
 }
 
-export function applyLabeledVoxelMapToAllMissingResolutions(
+export function applyLabeledVoxelMapToAllMissingMags(
   inputLabeledVoxelMap: LabeledVoxelsMap,
   labeledZoomStep: number,
   dimensionIndices: DimensionMap,
-  resolutionInfo: MagInfo,
+  magInfo: MagInfo,
   segmentationCube: DataCube,
   segmentId: number,
   thirdDimensionOfSlice: number, // this value is specified in global (mag1) coords
@@ -104,21 +104,21 @@ export function applyLabeledVoxelMapToAllMissingResolutions(
     };
   };
 
-  // Get all available resolutions and divide the list into two parts.
+  // Get all available magnifications and divide the list into two parts.
   // The pivotIndex is the index within allResolutionsWithIndices which refers to
-  // the labeled resolution.
+  // the labeled mag.
   // `downsampleSequence` contains the current mag and all higher mags (to which
   // should be downsampled)
   // `upsampleSequence` contains the current mag and all lower mags (to which
   // should be upsampled)
-  const labeledResolution = resolutionInfo.getMagByIndexOrThrow(labeledZoomStep);
-  const allResolutionsWithIndices = resolutionInfo.getMagsWithIndices();
+  const labeledResolution = magInfo.getMagByIndexOrThrow(labeledZoomStep);
+  const allResolutionsWithIndices = magInfo.getMagsWithIndices();
   const pivotIndex = allResolutionsWithIndices.findIndex(([index]) => index === labeledZoomStep);
   const downsampleSequence = allResolutionsWithIndices.slice(pivotIndex);
   const upsampleSequence = allResolutionsWithIndices.slice(0, pivotIndex + 1).reverse();
 
-  // Given a sequence of resolutions, the inputLabeledVoxelMap is applied
-  // over all these resolutions.
+  // Given a sequence of mags, the inputLabeledVoxelMap is applied
+  // over all these mags.
   function processSamplingSequence(
     samplingSequence: Array<[number, Vector3]>,
     getNumberOfSlices: (arg0: Vector3) => number,
@@ -130,7 +130,7 @@ export function applyLabeledVoxelMapToAllMissingResolutions(
     for (const [source, target] of pairwise(samplingSequence)) {
       const [sourceZoomStep, sourceResolution] = source;
       const [targetZoomStep, targetResolution] = target;
-      currentLabeledVoxelMap = sampleVoxelMapToResolution(
+      currentLabeledVoxelMap = sampleVoxelMapToMagnification(
         currentLabeledVoxelMap,
         segmentationCube,
         sourceResolution,
@@ -154,7 +154,7 @@ export function applyLabeledVoxelMapToAllMissingResolutions(
     }
   }
 
-  // First upsample the voxel map and apply it to all better resolutions.
+  // First upsample the voxel map and apply it to all better mags.
   // sourceZoomStep will be higher than targetZoomStep
   processSamplingSequence(upsampleSequence, (targetResolution) =>
     Math.ceil(labeledResolution[thirdDim] / targetResolution[thirdDim]),
@@ -263,7 +263,7 @@ export function* labelWithVoxelBuffer2D(
     // thirdDimensionOfSlice needs to be provided in global coordinates
     const thirdDimensionOfSlice =
       topLeft3DCoord[dimensionIndices[2]] * labeledResolution[dimensionIndices[2]];
-    applyLabeledVoxelMapToAllMissingResolutions(
+    applyLabeledVoxelMapToAllMissingMags(
       currentLabeledVoxelMap,
       labeledZoomStep,
       dimensionIndices,

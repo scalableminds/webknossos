@@ -56,7 +56,7 @@ export const initialState = update(defaultState, {
       dataLayers: {
         $set: [
           {
-            // We need to have some resolutions. Otherwise,
+            // We need to have some mags. Otherwise,
             // getRequestLogZoomStep will always return 0
             resolutions: [
               [1, 1, 1],

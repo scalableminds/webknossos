@@ -674,7 +674,7 @@ function _DownloadModalView({
           <Row>
             <Col span={19}>
               <MagSlider
-                resolutionInfo={selectedLayerResolutionInfo}
+                magnificationInfo={selectedLayerResolutionInfo}
                 value={mag}
                 onChange={setMag}
               />
@@ -695,7 +695,7 @@ function _DownloadModalView({
             Estimated file size:{" "}
             {estimateFileSize(selectedLayer, mag, selectedBoundingBox.boundingBox, exportFormat)}
             <br />
-            Resolution: {formatSelectedScale(dataset, mag)}
+            Magnification: {formatSelectedScale(dataset, mag)}
           </Text>
 
           <Divider />

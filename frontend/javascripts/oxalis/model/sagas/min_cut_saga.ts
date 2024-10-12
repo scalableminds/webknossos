@@ -60,11 +60,11 @@ const VOXEL_THRESHOLD = 2000000;
 // optimization (unless it's the only existent mag).
 const ALWAYS_IGNORE_FIRST_MAG_INITIALLY = true;
 
-function selectAppropriateResolutions(
+function selectAppropriateMags(
   boundingBoxMag1: BoundingBox,
-  resolutionInfo: MagInfo,
+  magInfo: MagInfo,
 ): Array<[number, Vector3]> {
-  const resolutionsWithIndices = resolutionInfo.getMagsWithIndices();
+  const resolutionsWithIndices = magInfo.getMagsWithIndices();
   const appropriateResolutions: Array<[number, Vector3]> = [];
 
   for (const [resolutionIndex, resolution] of resolutionsWithIndices) {
@@ -285,7 +285,7 @@ function* performMinCut(action: Action): Saga<void> {
   }
 
   const resolutionInfo = getMagInfo(volumeTracingLayer.resolutions);
-  const appropriateResolutionInfos = selectAppropriateResolutions(boundingBoxMag1, resolutionInfo);
+  const appropriateResolutionInfos = selectAppropriateMags(boundingBoxMag1, resolutionInfo);
 
   if (appropriateResolutionInfos.length === 0) {
     yield* call(
@@ -300,9 +300,9 @@ function* performMinCut(action: Action): Saga<void> {
     successMessageDelay: 5000,
   });
 
-  // Try to perform a min-cut on the selected resolutions. If the min-cut
-  // fails for one resolution, it's tried again on the next resolution.
-  // If the min-cut succeeds, it's refined again with the better resolutions.
+  // Try to perform a min-cut on the selected mags. If the min-cut
+  // fails for one mag, it's tried again on the next mag.
+  // If the min-cut succeeds, it's refined again with the better mags.
   for (const [resolutionIndex, targetMag] of appropriateResolutionInfos) {
     try {
       yield* call(
@@ -327,7 +327,7 @@ function* performMinCut(action: Action): Saga<void> {
         refiningResolutionIndex >= 0;
         refiningResolutionIndex--
       ) {
-        // Refine min-cut on lower resolutions, if they exist.
+        // Refine min-cut on lower mags, if they exist.
         if (!resolutionInfo.hasIndex(refiningResolutionIndex)) {
           continue;
         }
@@ -419,7 +419,7 @@ function* performMinCut(action: Action): Saga<void> {
 // to separate A from B.
 function* tryMinCutAtMag(
   targetMag: Vector3,
-  resolutionIndex: number,
+  magIndex: number,
   boundingBoxMag1: BoundingBox,
   nodes: MutableNode[],
   volumeTracingLayer: APISegmentationLayer,
@@ -440,7 +440,7 @@ function* tryMinCutAtMag(
     [api.data, api.data.getDataForBoundingBox],
     volumeTracingLayer.name,
     boundingBoxMag1,
-    resolutionIndex,
+    magIndex,
     additionalCoordinates,
   );
   // For the 3D volume flat arrays are constructed

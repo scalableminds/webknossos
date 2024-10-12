@@ -31,7 +31,7 @@ import {
 import {
   bucketPositionToGlobalAddress,
   globalPositionToBucketPosition,
-  scaleGlobalPositionWithResolution,
+  scaleGlobalPositionWithMagnification,
   zoomedAddressToZoomedPosition,
 } from "oxalis/model/helpers/position_converter";
 import {
@@ -2038,9 +2038,9 @@ class DataApi {
     const resolution = magnifications[zoomStep];
     // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
     // by the mag
-    const topLeft = scaleGlobalPositionWithResolution(bbox.min, resolution);
+    const topLeft = scaleGlobalPositionWithMagnification(bbox.min, resolution);
     // Ceil the bounding box bottom right instead of flooring, because it is exclusive
-    const bottomRight = scaleGlobalPositionWithResolution(bbox.max, resolution, true);
+    const bottomRight = scaleGlobalPositionWithMagnification(bbox.max, resolution, true);
     const extent: Vector3 = V3.sub(bottomRight, topLeft);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(elementClass);
     const result = new TypedArrayClass(channelCount * extent[0] * extent[1] * extent[2]);

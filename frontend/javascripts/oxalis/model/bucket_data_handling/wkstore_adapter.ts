@@ -288,7 +288,7 @@ export async function createCompressedUpdateBucketActions(
         const compressedBase64Strings = await compressionPool.submit(byteArrays);
         return compressedBase64Strings.map((compressedBase64, index) => {
           const bucket = batchSubset[index];
-          const bucketInfo = createSendBucketInfo(bucket.zoomedAddress, bucket.cube.resolutionInfo);
+          const bucketInfo = createSendBucketInfo(bucket.zoomedAddress, bucket.cube.magInfo);
           return updateBucket(bucketInfo, compressedBase64);
         });
       }),

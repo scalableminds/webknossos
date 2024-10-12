@@ -4,7 +4,7 @@ import saveAs from "file-saver";
 import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
-import { getMappingInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getMappingInfo, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import type { OxalisState, Segment } from "oxalis/store";
 import {
   type SegmentHierarchyNode,
@@ -105,7 +105,7 @@ export function SegmentStatisticsModal({
   groupTree,
 }: Props) {
   const { dataset, tracing, temporaryConfiguration } = useSelector((state: OxalisState) => state);
-  const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
+  const magInfo = getMagInfo(visibleSegmentationLayer.resolutions);
   const layersFinestResolution = magInfo.getFinestMag();
   const voxelSize = dataset.dataSource.scale;
   // Omit checking that all prerequisites for segment stats (such as a segment index) are

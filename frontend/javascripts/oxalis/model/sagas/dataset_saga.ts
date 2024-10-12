@@ -9,7 +9,7 @@ import {
   getEnabledLayers,
   getLayerByName,
   getMaybeSegmentIndexAvailability,
-  getResolutionInfo,
+  getMagInfo,
   getTransformsForLayer,
   invertAndTranspose,
   isLayerVisible,
@@ -111,7 +111,7 @@ export function* watchZ1Downsampling(): Saga<void> {
         // is no appropriate mag for that layer.
         break;
       }
-      const resolutionInfo = getResolutionInfo(dataLayer.resolutions);
+      const resolutionInfo = getMagInfo(dataLayer.resolutions);
       const bestExistingIndex = resolutionInfo.getFinestMagIndex();
       const currentIndex = resolutionInfo.getIndexByMag(currentRes);
       if (currentIndex <= bestExistingIndex) {

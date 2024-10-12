@@ -31,7 +31,7 @@ import {
 import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
 import {
   getMappingInfo,
-  getResolutionInfo,
+  getMagInfo,
   getSegmentationLayerByName,
   getSegmentationLayers,
   getVisibleSegmentationLayer,
@@ -187,7 +187,7 @@ function _getResolutionInfoOfActiveSegmentationTracingLayer(state: OxalisState):
   }
 
   const segmentationLayer = getSegmentationLayerForTracing(state, volumeTracing);
-  return getResolutionInfo(segmentationLayer.resolutions);
+  return getMagInfo(segmentationLayer.resolutions);
 }
 
 const getResolutionInfoOfActiveSegmentationTracingLayer = memoizeOne(
@@ -496,7 +496,7 @@ function _getRenderableResolutionForSegmentationTracing(
 
   const requestedZoomStep = getActiveMagIndexForLayer(state, segmentationLayer.name);
   const { renderMissingDataBlack } = state.datasetConfiguration;
-  const resolutionInfo = getResolutionInfo(segmentationLayer.resolutions);
+  const resolutionInfo = getMagInfo(segmentationLayer.resolutions);
   // Check whether the segmentation layer is enabled
   const segmentationSettings = state.datasetConfiguration.layers[segmentationLayer.name];
 
@@ -647,7 +647,7 @@ export function getLabelActionFromPreviousSlice(
   // Gets the last label action which was performed on a different slice.
   // Note that in coarser mags (e.g., 8-8-2), the comparison of the coordinates
   // is done while respecting how the coordinates are clipped due to that resolution.
-  const adapt = (vec: Vector3) => V3.roundElementToResolution(vec, resolution, dim);
+  const adapt = (vec: Vector3) => V3.roundElementToMag(vec, resolution, dim);
   const position = adapt(getFlooredPosition(state.flycam));
 
   return volumeTracing.lastLabelActions.find(

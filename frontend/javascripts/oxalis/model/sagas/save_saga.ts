@@ -9,7 +9,7 @@ import window, { alert, document, location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
 import { ControlModeEnum } from "oxalis/constants";
-import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import { selectQueue } from "oxalis/model/accessors/save_accessor";
 import { selectTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
@@ -288,7 +288,7 @@ export function* sendRequestToServer(
 
 function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>, tracingId: string) {
   const segmentationLayer = Model.getSegmentationTracingLayer(tracingId);
-  const segmentationResolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
+  const segmentationResolutionInfo = yield* call(getMagInfo, segmentationLayer.resolutions);
 
   if (segmentationLayer != null) {
     for (const saveEntry of saveQueue) {

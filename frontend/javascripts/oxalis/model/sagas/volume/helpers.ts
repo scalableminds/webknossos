@@ -9,7 +9,7 @@ import Constants, {
   type Vector2,
   type Vector3,
 } from "oxalis/constants";
-import { getDatasetBoundingBox, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getDatasetBoundingBox, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
@@ -185,7 +185,7 @@ export function* labelWithVoxelBuffer2D(
   const { cube } = segmentationLayer;
   const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
   const dimensionIndices = Dimensions.getIndices(viewport);
-  const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
+  const resolutionInfo = yield* call(getMagInfo, segmentationLayer.resolutions);
   const labeledResolution = resolutionInfo.getMagByIndexOrThrow(labeledZoomStep);
 
   const get3DCoordinateFromLocal2D = ([x, y]: Vector2) =>

@@ -54,7 +54,7 @@ import {
 import {
   getLayerByName,
   getMappingInfo,
-  getResolutionInfo,
+  getMagInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   type NeighborInfo,
@@ -1036,7 +1036,7 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
     }
   }
 
-  const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
+  const resolutionInfo = getMagInfo(volumeTracingLayer.resolutions);
   const currentMag = yield* select((state) => getCurrentResolution(state, volumeTracingLayer.name));
 
   const agglomerateFileMag = isSkeletonProofreading

@@ -5,9 +5,9 @@ import React, { useEffect, useState } from "react";
 import type { APIDataset, APIDatasetId, APISegmentationLayer } from "types/api_flow_types";
 import {
   doesSupportVolumeWithFallback,
-  getSomeResolutionInfoForDataset,
+  getSomeMagInfoForDataset,
   getSegmentationLayers,
-  getResolutionInfo,
+  getMagInfo,
   getSegmentationLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getDataset } from "admin/admin_rest_api";
@@ -18,11 +18,11 @@ type Props = {
   datasetId: APIDatasetId;
   onClose: () => void;
 };
-type RestrictResolutionSliderProps = {
-  resolutionInfo: MagInfo;
+type RestrictMagnificationSliderProps = {
+  magInfo: MagInfo;
   selectedSegmentationLayer: APISegmentationLayer | null;
-  resolutionIndices: number[];
-  setResolutionIndices: (userIndices: number[]) => void;
+  magIndices: number[];
+  setMagIndices: (userIndices: number[]) => void;
 };
 export function NewVolumeLayerSelection({
   segmentationLayers,
@@ -83,29 +83,27 @@ export function NewVolumeLayerSelection({
   );
 }
 
-export function RestrictResolutionSlider({
-  resolutionInfo,
+export function RestrictMagnificationSlider({
+  magInfo,
   selectedSegmentationLayer,
-  resolutionIndices,
-  setResolutionIndices,
-}: RestrictResolutionSliderProps) {
-  let highestResolutionIndex = resolutionInfo.getCoarsestMagIndex();
-  let lowestResolutionIndex = resolutionInfo.getFinestMagIndex();
+  magIndices,
+  setMagIndices,
+}: RestrictMagnificationSliderProps) {
+  let highestResolutionIndex = magInfo.getCoarsestMagIndex();
+  let lowestResolutionIndex = magInfo.getFinestMagIndex();
 
   if (selectedSegmentationLayer != null) {
-    const datasetFallbackLayerResolutionInfo = getResolutionInfo(
-      selectedSegmentationLayer.resolutions,
-    );
+    const datasetFallbackLayerResolutionInfo = getMagInfo(selectedSegmentationLayer.resolutions);
     highestResolutionIndex = datasetFallbackLayerResolutionInfo.getCoarsestMagIndex();
     lowestResolutionIndex = datasetFallbackLayerResolutionInfo.getFinestMagIndex();
   }
 
-  const highResolutionIndex = Math.min(highestResolutionIndex, resolutionIndices[1]);
-  const lowResolutionIndex = Math.max(lowestResolutionIndex, resolutionIndices[0]);
+  const highResolutionIndex = Math.min(highestResolutionIndex, magIndices[1]);
+  const lowResolutionIndex = Math.max(lowestResolutionIndex, magIndices[0]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: setResolutionIndices should also be added to the dependencies. Consider fixing this.
   useEffect(() => {
-    setResolutionIndices([lowestResolutionIndex, highestResolutionIndex]);
+    setMagIndices([lowestResolutionIndex, highestResolutionIndex]);
   }, [lowestResolutionIndex, highestResolutionIndex]);
 
   return lowestResolutionIndex < highestResolutionIndex ? (
@@ -117,7 +115,7 @@ export function RestrictResolutionSlider({
       >
         Restrict Volume Resolutions{" "}
         <Tooltip
-          title="Select which of the dataset resolutions the volume data should be created at. Restricting the available resolutions can greatly improve the performance when annotating large structures, such as nuclei, since the volume data does not need to be stored in all quality levels. How to read: Resolution 1 is the most detailed, 4-4-2 is downsampled by factor 4 in x and y, and by factor 2 in z."
+          title="Select which of the dataset magnifications the volume data should be created at. Restricting the available mags can greatly improve the performance when annotating large structures, such as nuclei, since the volume data does not need to be stored in all quality levels. How to read: Mag 1 is the most detailed, 4-4-2 is downsampled by factor 4 in x and y, and by factor 2 in z."
           placement="right"
         >
           <InfoCircleOutlined />
@@ -137,11 +135,11 @@ export function RestrictResolutionSlider({
             marginRight: 20,
           }}
         >
-          {resolutionInfo.getMagByIndexOrThrow(lowResolutionIndex).join("-")}
+          {magInfo.getMagByIndexOrThrow(lowResolutionIndex).join("-")}
         </div>
         <Slider
           tooltip={{ open: false }}
-          onChange={(value) => setResolutionIndices(value)}
+          onChange={(value) => setMagIndices(value)}
           range
           step={1}
           min={lowestResolutionIndex}
@@ -157,7 +155,7 @@ export function RestrictResolutionSlider({
             textAlign: "right",
           }}
         >
-          {resolutionInfo.getMagByIndexOrThrow(highResolutionIndex).join("-")}
+          {magInfo.getMagByIndexOrThrow(highResolutionIndex).join("-")}
         </div>
       </div>
     </React.Fragment>
@@ -196,8 +194,8 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
         : "";
     const resolutionInfo =
       selectedSegmentationLayer == null
-        ? getSomeResolutionInfoForDataset(dataset)
-        : getResolutionInfo(selectedSegmentationLayer.resolutions);
+        ? getSomeMagInfoForDataset(dataset)
+        : getMagInfo(selectedSegmentationLayer.resolutions);
     const highestResolutionIndex = resolutionInfo.getCoarsestMagIndex();
     const lowestResolutionIndex = resolutionInfo.getFinestMagIndex();
 
@@ -205,11 +203,11 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
     const lowResolutionIndex = Math.max(lowestResolutionIndex, userDefinedResolutionIndices[0]);
     const resolutionSlider =
       annotationType !== "skeleton" ? (
-        <RestrictResolutionSlider
-          resolutionInfo={resolutionInfo}
+        <RestrictMagnificationSlider
+          magInfo={resolutionInfo}
           selectedSegmentationLayer={selectedSegmentationLayer}
-          resolutionIndices={userDefinedResolutionIndices}
-          setResolutionIndices={setUserDefinedResolutionIndices}
+          magIndices={userDefinedResolutionIndices}
+          setMagIndices={setUserDefinedResolutionIndices}
         />
       ) : null;
     modalContent = (

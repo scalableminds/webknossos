@@ -89,7 +89,7 @@ export type MutableNode = {
   rotation: Vector3;
   bitDepth: number;
   viewport: number;
-  resolution: number;
+  resolution: number; // TODO_c maybe change? is this mag?
   radius: number;
   timestamp: number;
   interpolation: boolean;

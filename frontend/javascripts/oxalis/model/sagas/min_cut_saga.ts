@@ -12,7 +12,7 @@ import {
   getActiveSegmentationTracingLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { finishAnnotationStrokeAction } from "oxalis/model/actions/volumetracing_actions";
-import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Toast from "libs/toast";
@@ -284,7 +284,7 @@ function* performMinCut(action: Action): Saga<void> {
     return;
   }
 
-  const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
+  const resolutionInfo = getMagInfo(volumeTracingLayer.resolutions);
   const appropriateResolutionInfos = selectAppropriateResolutions(boundingBoxMag1, resolutionInfo);
 
   if (appropriateResolutionInfos.length === 0) {

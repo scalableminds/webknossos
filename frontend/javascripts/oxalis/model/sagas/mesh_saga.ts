@@ -10,7 +10,7 @@ import type { ActionPattern } from "redux-saga/effects";
 
 import Store from "oxalis/store";
 import {
-  getResolutionInfo,
+  getMagInfo,
   getMappingInfo,
   getVisibleSegmentationLayer,
   getSegmentationLayerByName,
@@ -240,7 +240,7 @@ function* getInfoForMeshLoading(
   zoomStep: number;
   resolutionInfo: MagInfo;
 }> {
-  const resolutionInfo = getResolutionInfo(layer.resolutions);
+  const resolutionInfo = getMagInfo(layer.resolutions);
   const preferredZoomStep =
     meshExtraInfo.preferredQuality != null
       ? meshExtraInfo.preferredQuality

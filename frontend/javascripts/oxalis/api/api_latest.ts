@@ -82,7 +82,7 @@ import { getHalfViewportExtentsInUnitFromState } from "oxalis/model/sagas/saga_s
 import {
   getLayerBoundingBox,
   getLayerByName,
-  getResolutionInfo,
+  getMagInfo,
   getVisibleSegmentationLayer,
   getMappingInfo,
   flatToNestedMatrix,
@@ -669,7 +669,7 @@ class TracingApi {
       );
     }
 
-    const resolutionInfo = getResolutionInfo(
+    const resolutionInfo = getMagInfo(
       getLayerByName(state.dataset, segmentationLayerName).resolutions,
     );
     const theoreticalMagIndex = getActiveMagIndexForLayer(state, segmentationLayerName);
@@ -688,7 +688,7 @@ class TracingApi {
       Math.ceil(shape[2] / currentMag[2]);
     if (volume > maximumVolume) {
       throw new Error(
-        `The volume of the bounding box exceeds ${maximumVolume} vx, please make it smaller. Currently, the bounding box has a volume of ${volume} vx in the active resolution (${currentMag.join("-")}).`,
+        `The volume of the bounding box exceeds ${maximumVolume} vx, please make it smaller. Currently, the bounding box has a volume of ${volume} vx in the active magnification (${currentMag.join("-")}).`,
       );
     } else if (volume > maximumVolume / 8) {
       Toast.warning(
@@ -1512,7 +1512,7 @@ class TracingApi {
   }
 
   /**
-   * Use this method to create a complete resolution pyramid by downsampling the lowest present mag (e.g., mag 1).
+   * Use this method to create a complete magnification pyramid by downsampling the lowest present mag (e.g., mag 1).
      This method will save the current changes and then reload the page after the downsampling
      has finished.
      This function can only be used for non-tasks.
@@ -1815,9 +1815,9 @@ class DataApi {
 
   /**
    * Returns raw binary data for a given layer, position and zoom level. If the zoom
-   * level is not provided, the first resolution will be used. If this
-   * resolution does not exist, the next existing resolution will be used.
-   * If the zoom level is provided and points to a not existent resolution,
+   * level is not provided, the first magnification will be used. If this
+   * mag does not exist, the next existing mag will be used.
+   * If the zoom level is provided and points to a not existent mag,
    * 0 will be returned.
    *
    * @example // Return the greyscale value for a bucket
@@ -1842,7 +1842,7 @@ class DataApi {
       zoomStep = _zoomStep;
     } else {
       const layer = getLayerByName(Store.getState().dataset, layerName);
-      const resolutionInfo = getResolutionInfo(layer.resolutions);
+      const resolutionInfo = getMagInfo(layer.resolutions);
       zoomStep = resolutionInfo.getFinestMagIndex();
     }
 
@@ -1899,7 +1899,7 @@ class DataApi {
     additionalCoordinates: AdditionalCoordinate[] | null = null,
   ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
-    const resolutionInfo = getResolutionInfo(layer.resolutions);
+    const resolutionInfo = getMagInfo(layer.resolutions);
     let zoomStep;
 
     if (_zoomStep != null) {
@@ -1918,7 +1918,7 @@ class DataApi {
 
     if (bucketAddresses.length > 15000) {
       console.warn(
-        "More than 15000 buckets need to be requested for the given bounding box. Consider passing a smaller bounding box or using another resolution.",
+        "More than 15000 buckets need to be requested for the given bounding box. Consider passing a smaller bounding box or using another magnification.",
       );
     }
 
@@ -1945,7 +1945,7 @@ class DataApi {
       viewport,
     );
     const layer = getLayerByName(state.dataset, layerName);
-    const resolutionInfo = getResolutionInfo(layer.resolutions);
+    const resolutionInfo = getMagInfo(layer.resolutions);
     if (maybeResolutionIndex == null) {
       maybeResolutionIndex = getActiveMagIndexForLayer(state, layerName);
     }
@@ -1966,7 +1966,7 @@ class DataApi {
     const heightInVoxel = Math.ceil(halfViewportExtentV / resolutionUVX[1]);
     if (widthInVoxel * heightInVoxel > 1024 ** 2) {
       throw new Error(
-        "Requested data for viewport cannot be loaded, since the amount of data is too large for the available resolution. Please zoom in further or ensure that coarser magnifications are available.",
+        "Requested data for viewport cannot be loaded, since the amount of data is too large for the available magnification. Please zoom in further or ensure that coarser magnifications are available.",
       );
     }
 
@@ -1984,7 +1984,7 @@ class DataApi {
 
   getBucketAddressesInCuboid(
     bbox: BoundingBoxType,
-    resolutions: Array<Vector3>,
+    magnifications: Array<Vector3>,
     zoomStep: number,
     additionalCoordinates: AdditionalCoordinate[] | null,
   ): Array<BucketAddress> {
@@ -1992,13 +1992,13 @@ class DataApi {
     const bottomRight = bbox.max;
     const minBucket = globalPositionToBucketPosition(
       bbox.min,
-      resolutions,
+      magnifications,
       zoomStep,
       additionalCoordinates,
     );
 
     const topLeft = (bucketAddress: BucketAddress) =>
-      bucketPositionToGlobalAddress(bucketAddress, new MagInfo(resolutions));
+      bucketPositionToGlobalAddress(bucketAddress, new MagInfo(magnifications));
 
     const nextBucketInDim = (bucket: BucketAddress, dim: 0 | 1 | 2) => {
       const copy = bucket.slice() as BucketAddress;
@@ -2032,12 +2032,12 @@ class DataApi {
     buckets: Array<Bucket>,
     bbox: BoundingBoxType,
     elementClass: ElementClass,
-    resolutions: Array<Vector3>,
+    magnifications: Array<Vector3>,
     zoomStep: number,
   ): TypedArray {
-    const resolution = resolutions[zoomStep];
+    const resolution = magnifications[zoomStep];
     // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
-    // by the resolution
+    // by the mag
     const topLeft = scaleGlobalPositionWithResolution(bbox.min, resolution);
     // Ceil the bounding box bottom right instead of flooring, because it is exclusive
     const bottomRight = scaleGlobalPositionWithResolution(bbox.max, resolution, true);
@@ -2103,13 +2103,13 @@ class DataApi {
     topLeft: Vector3,
     bottomRight: Vector3,
     token: string,
-    resolution?: Vector3,
+    magnification?: Vector3,
   ): string {
     const { dataset } = Store.getState();
-    const resolutionInfo = getResolutionInfo(getLayerByName(dataset, layerName, true).resolutions);
-    resolution = resolution || resolutionInfo.getFinestMag();
+    const resolutionInfo = getMagInfo(getLayerByName(dataset, layerName, true).resolutions);
+    magnification = magnification || resolutionInfo.getFinestMag();
 
-    const magString = resolution.join("-");
+    const magString = magnification.join("-");
     return (
       `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/data?mag=${magString}&` +
       `token=${token}&` +
@@ -2147,7 +2147,7 @@ class DataApi {
     layerName: string,
     topLeft: Vector3,
     bottomRight: Vector3,
-    resolution?: Vector3,
+    magnification?: Vector3,
   ): Promise<ArrayBuffer> {
     return doWithToken((token) => {
       const downloadUrl = this._getDownloadUrlForRawDataCuboid(
@@ -2155,7 +2155,7 @@ class DataApi {
         topLeft,
         bottomRight,
         token,
-        resolution,
+        magnification,
       );
       return Request.receiveArraybuffer(downloadUrl);
     });

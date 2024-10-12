@@ -17,7 +17,7 @@ import type { HybridTracing, OxalisState, UserBoundingBox, VolumeTracing } from 
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getColorLayers,
-  getResolutionInfo,
+  getMagInfo,
   getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -128,7 +128,7 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
 
   const getMagForSegmentationLayer = async (_annotationId: string, layerName: string) => {
     const segmentationLayer = getSegmentationLayerByHumanReadableName(dataset, tracing, layerName);
-    return getResolutionInfo(segmentationLayer.resolutions).getFinestMag();
+    return getMagInfo(segmentationLayer.resolutions).getFinestMag();
   };
   const userBoundingBoxes = getSomeTracing(tracing).userBoundingBoxes;
 

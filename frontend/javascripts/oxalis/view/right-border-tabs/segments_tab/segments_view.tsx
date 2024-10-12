@@ -43,7 +43,7 @@ import { EMPTY_OBJECT, MappingStatusEnum } from "oxalis/constants";
 import {
   getMappingInfo,
   getMaybeSegmentIndexAvailability,
-  getResolutionInfoOfVisibleSegmentationLayer,
+  getMagInfoOfVisibleSegmentationLayer,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
@@ -220,7 +220,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
       state.temporaryConfiguration.preferredQualityForMeshPrecomputation,
     preferredQualityForMeshAdHocComputation:
       state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
-    resolutionInfoOfVisibleSegmentationLayer: getResolutionInfoOfVisibleSegmentationLayer(state),
+    resolutionInfoOfVisibleSegmentationLayer: getMagInfoOfVisibleSegmentationLayer(state),
   };
 };
 

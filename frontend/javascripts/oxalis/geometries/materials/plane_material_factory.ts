@@ -31,8 +31,8 @@ import {
   getLayerByName,
   invertAndTranspose,
   getTransformsForLayer,
-  getResolutionInfoByLayer,
-  getResolutionInfo,
+  getMagInfoByLayer,
+  getMagInfo,
   getTransformsPerLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -484,7 +484,7 @@ class PlaneMaterialFactory {
           const state = Store.getState();
           for (const [layerName, activeMagIndex] of Object.entries(activeMagIndices)) {
             const layer = getLayerByName(state.dataset, layerName);
-            const resolutionInfo = getResolutionInfo(layer.resolutions);
+            const resolutionInfo = getMagInfo(layer.resolutions);
             // If the active mag doesn't exist, a fallback mag is likely rendered. Use that
             // to determine a representative mag.
             const suitableMagIndex = resolutionInfo.getIndexOrClosestHigherIndex(activeMagIndex);
@@ -564,7 +564,7 @@ class PlaneMaterialFactory {
     );
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        (storeState) => getResolutionInfoByLayer(storeState.dataset),
+        (storeState) => getMagInfoByLayer(storeState.dataset),
         (resolutionInfosByLayer) => {
           const allDenseResolutions = Object.values(resolutionInfosByLayer).map((resInfo) =>
             resInfo.getDenseMags(),
@@ -1099,7 +1099,7 @@ class PlaneMaterialFactory {
       colorLayerNames,
       segmentationLayerNames,
       textureLayerInfos,
-      resolutionsCount: this.getTotalResolutionCount(),
+      resolutionsCount: this.getTotalMagCount(),
       voxelSizeFactor,
       isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
@@ -1110,9 +1110,9 @@ class PlaneMaterialFactory {
     ];
   }
 
-  getTotalResolutionCount(): number {
+  getTotalMagCount(): number {
     const storeState = Store.getState();
-    const allDenseResolutions = Object.values(getResolutionInfoByLayer(storeState.dataset)).map(
+    const allDenseResolutions = Object.values(getMagInfoByLayer(storeState.dataset)).map(
       (resInfo) => resInfo.getDenseMags(),
     );
     const flatResolutions = _.flatten(allDenseResolutions);
@@ -1134,7 +1134,7 @@ class PlaneMaterialFactory {
       colorLayerNames,
       segmentationLayerNames,
       textureLayerInfos,
-      resolutionsCount: this.getTotalResolutionCount(),
+      resolutionsCount: this.getTotalMagCount(),
       voxelSizeFactor,
       isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,

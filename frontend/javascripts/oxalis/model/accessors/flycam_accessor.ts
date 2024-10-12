@@ -11,7 +11,7 @@ import {
   getEnabledLayers,
   getLayerByName,
   getMaxZoomStep,
-  getResolutionInfo,
+  getMagInfo,
   getTransformsForLayer,
   invertAndTranspose,
 } from "oxalis/model/accessors/dataset_accessor";
@@ -241,7 +241,7 @@ function getMaximumZoomForAllResolutionsFromStore(
     viewMode,
     state.datasetConfiguration.loadingStrategy,
     state.dataset.dataSource.scale.factor,
-    getResolutionInfo(layer.resolutions).getDenseMags(),
+    getMagInfo(layer.resolutions).getDenseMags(),
     getViewportRects(state),
     Math.min(
       state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,
@@ -362,7 +362,7 @@ export function getCurrentResolution(
   state: OxalisState,
   layerName: string,
 ): Vector3 | null | undefined {
-  const resolutionInfo = getResolutionInfo(getLayerByName(state.dataset, layerName).resolutions);
+  const resolutionInfo = getMagInfo(getLayerByName(state.dataset, layerName).resolutions);
   const magIndex = getActiveMagIndexForLayer(state, layerName);
   const existingMagIndex = resolutionInfo.getIndexOrClosestHigherIndex(magIndex);
   if (existingMagIndex == null) {
@@ -587,7 +587,7 @@ function _getUnrenderableLayerInfosForCurrentZoom(
     .map((layer: DataLayerType) => ({
       layer,
       activeMagIdx: activeMagIndices[layer.name],
-      resolutionInfo: getResolutionInfo(layer.resolutions),
+      resolutionInfo: getMagInfo(layer.resolutions),
     }))
     .filter(({ activeMagIdx, resolutionInfo }) => {
       const isPresent = resolutionInfo.hasIndex(activeMagIdx);
@@ -635,7 +635,7 @@ function _getActiveResolutionInfo(state: OxalisState) {
   const activeMagOfEnabledLayers = Object.fromEntries(
     enabledLayers.map((l) => [
       l.name,
-      getResolutionInfo(l.resolutions).getMagByIndex(activeMagIndices[l.name]),
+      getMagInfo(l.resolutions).getMagByIndex(activeMagIndices[l.name]),
     ]),
   );
 

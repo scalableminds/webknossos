@@ -15,7 +15,7 @@ import {
   getActiveMagIndexForLayer,
   getAreasFromState,
 } from "oxalis/model/accessors/flycam_accessor";
-import { isLayerVisible, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { isLayerVisible, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import type DataLayer from "oxalis/model/data_layer";
 import { Model } from "oxalis/singletons";
 import type { Vector3 } from "oxalis/constants";
@@ -103,7 +103,7 @@ export function* prefetchForPlaneMode(
 ): Saga<void> {
   const position = yield* select((state) => getPosition(state.flycam));
   const zoomStep = yield* select((state) => getActiveMagIndexForLayer(state, layer.name));
-  const resolutionInfo = getResolutionInfo(layer.resolutions);
+  const resolutionInfo = getMagInfo(layer.resolutions);
   const activePlane = yield* select((state) => state.viewModeData.plane.activeViewport);
   const tracingTypes = yield* select(getTracingTypes);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
@@ -171,7 +171,7 @@ export function* prefetchForArbitraryMode(
   const matrix = yield* select((state) => state.flycam.currentMatrix);
   const zoomStep = yield* select((state) => getActiveMagIndexForLayer(state, layer.name));
   const tracingTypes = yield* select(getTracingTypes);
-  const resolutionInfo = getResolutionInfo(layer.resolutions);
+  const resolutionInfo = getMagInfo(layer.resolutions);
   const resolutions = resolutionInfo.getDenseMags();
   const layerRenderingManager = yield* call(
     [Model, Model.getLayerRenderingManagerByName],

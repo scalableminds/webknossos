@@ -5,7 +5,7 @@ import { doWithToken } from "admin/admin_rest_api";
 import {
   isSegmentationLayer,
   getByteCountFromLayer,
-  getResolutionInfo,
+  getMagInfo,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -198,7 +198,7 @@ export async function requestFromStore(
       : null;
   })();
 
-  const resolutionInfo = getResolutionInfo(layerInfo.resolutions);
+  const resolutionInfo = getMagInfo(layerInfo.resolutions);
   const version =
     !isVolumeFallback && isSegmentation && maybeVolumeTracing != null
       ? maybeVolumeTracing.version

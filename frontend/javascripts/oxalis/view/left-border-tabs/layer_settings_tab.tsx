@@ -59,9 +59,9 @@ import {
   getElementClass,
   isColorLayer as getIsColorLayer,
   getLayerByName,
-  getResolutionInfo,
+  getMagInfo,
   getTransformsForLayerOrNull,
-  getWidestResolutions,
+  getWidestMags,
   getLayerBoundingBox,
   getTransformsForLayer,
   hasDatasetTransforms,
@@ -305,7 +305,7 @@ function LayerInfoIconWithTooltip({
 }: { layer: APIDataLayer; dataset: APIDataset }) {
   const renderTooltipContent = useCallback(() => {
     const elementClass = getElementClass(dataset, layer.name);
-    const resolutionInfo = getResolutionInfo(layer.resolutions);
+    const resolutionInfo = getMagInfo(layer.resolutions);
     const resolutions = resolutionInfo.getMagList();
     return (
       <div>
@@ -1096,7 +1096,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         ? fallbackLayerInfo.resolutions
         : // This is only a heuristic. At some point, user configuration
           // might make sense here.
-          getWidestResolutions(this.props.dataset);
+          getWidestMags(this.props.dataset);
 
     const getMaxDim = (resolution: Vector3) => Math.max(...resolution);
 

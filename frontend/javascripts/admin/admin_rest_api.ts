@@ -665,7 +665,7 @@ type AnnotationLayerCreateDescriptor = {
   autoFallbackLayer?: boolean;
   fallbackLayerName?: string | null | undefined;
   mappingName?: string | null | undefined;
-  resolutionRestrictions?: APIMagRestrictions | null | undefined;
+  magRestrictions?: APIMagRestrictions | null | undefined;
 };
 
 export function addAnnotationLayer(
@@ -816,7 +816,7 @@ export function createExplorational(
         fallbackLayerName,
         autoFallbackLayer,
         mappingName,
-        resolutionRestrictions,
+        magRestrictions: resolutionRestrictions,
       },
     ];
   } else {
@@ -831,7 +831,7 @@ export function createExplorational(
         fallbackLayerName,
         autoFallbackLayer,
         mappingName,
-        resolutionRestrictions,
+        magRestrictions: resolutionRestrictions,
       },
     ];
   }

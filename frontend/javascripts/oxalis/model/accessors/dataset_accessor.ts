@@ -44,31 +44,31 @@ import {
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
 
-function _getResolutionInfo(resolutions: Array<Vector3>): MagInfo {
-  return new MagInfo(resolutions);
+function _getMagInfo(magnifications: Array<Vector3>): MagInfo {
+  return new MagInfo(magnifications);
 }
 
-// Don't use memoizeOne here, since we want to cache the resolutions for all layers
+// Don't use memoizeOne here, since we want to cache the mags for all layers
 // (which are not that many).
-export const getResolutionInfo = _.memoize(_getResolutionInfo);
+export const getMagInfo = _.memoize(_getMagInfo);
 
-function _getResolutionInfoByLayer(dataset: APIDataset): Record<string, MagInfo> {
+function _getMagInfoByLayer(dataset: APIDataset): Record<string, MagInfo> {
   const infos: Record<string, MagInfo> = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
-    infos[layer.name] = getResolutionInfo(layer.resolutions);
+    infos[layer.name] = getMagInfo(layer.resolutions);
   }
 
   return infos;
 }
 
-export const getResolutionInfoByLayer = _.memoize(_getResolutionInfoByLayer);
+export const getMagInfoByLayer = _.memoize(_getMagInfoByLayer);
 
-export function getDenseResolutionsForLayerName(dataset: APIDataset, layerName: string) {
-  return getResolutionInfoByLayer(dataset)[layerName].getDenseMags();
+export function getDenseMagsForLayerName(dataset: APIDataset, layerName: string) {
+  return getMagInfoByLayer(dataset)[layerName].getDenseMags();
 }
 
-export const getResolutionUnion = memoizeOne((dataset: APIDataset): Array<Vector3[]> => {
+export const getMagnificationUnion = memoizeOne((dataset: APIDataset): Array<Vector3[]> => {
   /*
    * Returns a list of existent mags per mag level. For example:
    * [
@@ -104,7 +104,7 @@ export const getResolutionUnion = memoizeOne((dataset: APIDataset): Array<Vector
   return keys.map((key) => resolutionUnionDict[key]);
 });
 
-export function getWidestResolutions(dataset: APIDataset): Vector3[] {
+export function getWidestMags(dataset: APIDataset): Vector3[] {
   const allLayerResolutions = dataset.dataSource.dataLayers.map((layer) =>
     convertToDenseMag(layer.resolutions),
   );
@@ -112,14 +112,14 @@ export function getWidestResolutions(dataset: APIDataset): Vector3[] {
   return _.maxBy(allLayerResolutions, (resolutions) => resolutions.length) || [];
 }
 
-export const getSomeResolutionInfoForDataset = memoizeOne((dataset: APIDataset): MagInfo => {
-  const resolutionUnion = getResolutionUnion(dataset);
+export const getSomeMagInfoForDataset = memoizeOne((dataset: APIDataset): MagInfo => {
+  const resolutionUnion = getMagnificationUnion(dataset);
   const areMagsDistinct = resolutionUnion.every((mags) => mags.length <= 1);
 
   if (areMagsDistinct) {
     return new MagInfo(resolutionUnion.map((mags) => mags[0]));
   } else {
-    return new MagInfo(getWidestResolutions(dataset));
+    return new MagInfo(getWidestMags(dataset));
   }
 });
 
@@ -132,7 +132,7 @@ function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
 
   const maxZoomstep = Math.max(
     minimumZoomStepCount,
-    _.max(_.flattenDeep(getResolutionUnion(dataset))) || minimumZoomStepCount,
+    _.max(_.flattenDeep(getMagnificationUnion(dataset))) || minimumZoomStepCount,
   );
 
   return maxZoomstep;
@@ -143,18 +143,18 @@ export function getDataLayers(dataset: APIDataset): DataLayerType[] {
   return dataset.dataSource.dataLayers;
 }
 
-function _getResolutionInfoOfVisibleSegmentationLayer(state: OxalisState): MagInfo {
+function _getMagInfoOfVisibleSegmentationLayer(state: OxalisState): MagInfo {
   const segmentationLayer = getVisibleSegmentationLayer(state);
 
   if (!segmentationLayer) {
     return new MagInfo([]);
   }
 
-  return getResolutionInfo(segmentationLayer.resolutions);
+  return getMagInfo(segmentationLayer.resolutions);
 }
 
-export const getResolutionInfoOfVisibleSegmentationLayer = memoizeOne(
-  _getResolutionInfoOfVisibleSegmentationLayer,
+export const getMagInfoOfVisibleSegmentationLayer = memoizeOne(
+  _getMagInfoOfVisibleSegmentationLayer,
 );
 export function getLayerByName(
   dataset: APIDataset,

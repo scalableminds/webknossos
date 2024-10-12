@@ -9,7 +9,7 @@ A **dataset**, can consist of multiple **layer**s, which may be
 
 Layers contain image data in one or multiple **magnification**s or short **mag**s (see [mipmap](https://en.wikipedia.org/wiki/Mipmap) or [image pyramids](https://en.wikipedia.org/wiki/Pyramid_(image_processing)) for similar concepts).
 The magnification `4` or `4-4-4` describes a downsampling factor of 4 in each dimension, `4-4-2` specifies anisotropic downsampling.
-The image data in full resolution is referred to as the **finest** mag, e.g. `1-1-1`, downsampled variants are more **coarse**.
+The image data in full magnification is referred to as the **finest** mag, e.g. `1-1-1`, downsampled variants are more **coarse**.
 
 The **voxel size** describes the size of a voxel in mag `1`, the default unit is *nm* if not specified otherwise.
 

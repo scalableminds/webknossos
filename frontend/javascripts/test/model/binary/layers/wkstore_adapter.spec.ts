@@ -23,7 +23,7 @@ function setFourBit(bool: boolean) {
 
 const mockedCube = {
   isSegmentation: true,
-  resolutionInfo: new MagInfo([
+  magInfo: new MagInfo([
     [1, 1, 1],
     [2, 2, 2],
   ]),

@@ -130,7 +130,7 @@ test("SkeletonTracing should add a new node", (t) => {
     untransformedPosition: position,
     rotation,
     viewport,
-    resolution,
+    mag: resolution,
     id: 1,
     radius: 1,
   });

@@ -31,6 +31,7 @@ import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracin
 import { getOrganization } from "admin/admin_rest_api";
 import { MarkdownModal } from "../components/markdown_modal";
 import FastTooltip from "components/fast_tooltip";
+import messages from "messages";
 
 type StateProps = {
   annotation: Tracing;
@@ -532,7 +533,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const { activeMagOfEnabledLayers } = activeResolutionInfo;
     const resolutionUnion = getMagnificationUnion(dataset);
     return (
-      <div>
+      <div style={{ width: 200 }}>
         Rendered magnification per layer:
         <ul>
           {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
@@ -551,10 +552,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
           ))}
         </ul>
-        Layers contain image data in one or multiple magnifications, or short mags. The
-        magnification `4` or `4-4-4` describes a downsampling factor of 4 in each dimension. The
-        image data in full magnification is referred to as the finest mag, e.g. `1-1-1`, downsampled
-        variants are more coarse.
+        {messages["dataset.mag_explanation"]}
       </div>
     );
   };

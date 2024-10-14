@@ -371,6 +371,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "This dataset contains multiple layers which differ in their magnification. Please convert the layers to make their magnifications match. Otherwise, rendering errors cannot be avoided.",
   "dataset.z1_downsampling_hint":
     "The currently rendered quality is not optimal due to the available magnifications and the viewport arrangement. To improve the quality try to increase the size of the XY viewport (e.g. by maximizing it).",
+  "dataset.mag_explanation":
+    "Layers contain image data in one or multiple magnifications. The image data in full magnification is referred to as the finest mag, e.g. mag 1-1-1. Magnification 4-4-4 describes a downsampling factor of 4 in each dimension.",
   "annotation.finish": "Are you sure you want to permanently finish this annotation?",
   "annotation.was_finished": "Annotation was archived",
   "annotation.no_fallback_data_included":

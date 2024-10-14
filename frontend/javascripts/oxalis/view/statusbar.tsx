@@ -38,6 +38,7 @@ import { useInterval } from "libs/react_helpers";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import FastTooltip from "components/fast_tooltip";
 import { Store } from "oxalis/singletons";
+import messages from "messages";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
@@ -508,7 +509,7 @@ function MagnificationInfo() {
     const tracing = state.tracing;
 
     return (
-      <>
+      <div style={{ width: 200 }}>
         Rendered magnification per layer:
         <ul>
           {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
@@ -521,9 +522,8 @@ function MagnificationInfo() {
             );
           })}
         </ul>
-        Layers contain image data in one or multiple magnifications, or short mags. The
-        magnification `4` or `4-4-4` describes a downsampling factor of 4 in each dimension.
-      </>
+        {messages["dataset.mag_explanation"]}
+      </div>
     );
   }, []);
 

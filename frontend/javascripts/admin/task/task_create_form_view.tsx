@@ -74,7 +74,7 @@ export function taskToText(task: APITask) {
   const {
     id,
     datasetId,
-    dataSet: datasetName,
+    datasetName,
     type,
     neededExperience,
     editPosition,
@@ -516,7 +516,7 @@ function TaskCreateFormView({ taskId, history }: Props) {
                     })
                   ) {
                     form.setFieldsValue({
-                      datasetName: taskResponse.dataSet,
+                      datasetName: taskResponse.datasetName,
                       datasetId: taskResponse.datasetId,
                     });
                     return Promise.resolve();

@@ -93,6 +93,7 @@ export const annotation: APIAnnotation = {
       tracingType: "skeleton",
     },
     datasetId: "66f3c82966010034942e9740",
+    datasetName: "ROI2017_wkw",
     neededExperience: {
       domain: "oxalis",
       value: 1,

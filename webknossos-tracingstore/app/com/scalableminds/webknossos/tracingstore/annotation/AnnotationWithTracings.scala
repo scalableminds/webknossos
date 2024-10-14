@@ -71,7 +71,7 @@ case class AnnotationWithTracings(
       (info, _) <- editableMappingsByTracingId.get(tracingId)
     } yield info
 
-  private def getEditableMappingUpdater(tracingId: String): Option[EditableMappingUpdater] =
+  def getEditableMappingUpdater(tracingId: String): Option[EditableMappingUpdater] =
     for {
       (_, updater) <- editableMappingsByTracingId.get(tracingId)
     } yield updater
@@ -130,7 +130,7 @@ case class AnnotationWithTracings(
   def applyEditableMappingAction(a: EditableMappingUpdateAction)(
       implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
-      updater: EditableMappingUpdater <- getEditableMappingUpdater(a.actionTracingId).toFox // TODO editable mapping update actions need tracing id
+      updater: EditableMappingUpdater <- getEditableMappingUpdater(a.actionTracingId).toFox
       info <- getEditableMappingInfo(a.actionTracingId).toFox
       updated <- updater.applyOneUpdate(info, a)
     } yield

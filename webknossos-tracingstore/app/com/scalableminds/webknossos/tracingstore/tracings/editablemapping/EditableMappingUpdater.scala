@@ -128,8 +128,6 @@ class EditableMappingUpdater(
         applySplitAction(mapping, splitAction) ?~> "Failed to apply split action"
       case mergeAction: MergeAgglomerateUpdateAction =>
         applyMergeAction(mapping, mergeAction) ?~> "Failed to apply merge action"
-      case revertAction: RevertToVersionUpdateAction =>
-        revertToVersion(revertAction) ?~> "Failed to apply revert action"
       case _ => Fox.failure("this is not an editable mapping update action!")
     }
 
@@ -420,13 +418,9 @@ class EditableMappingUpdater(
       )
     }
 
-  private def revertToVersion(revertAction: RevertToVersionUpdateAction)(
-      implicit ec: ExecutionContext): Fox[EditableMappingInfo] =
+  def revertToVersion(revertAction: RevertToVersionUpdateAction)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- bool2Fox(revertAction.sourceVersion <= oldVersion) ?~> "trying to revert editable mapping to a version not yet present in the database"
-      oldInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId, Some(revertAction.sourceVersion))(
-        ec,
-        tokenContext)
       _ = segmentToAgglomerateBuffer.clear()
       _ = agglomerateToGraphBuffer.clear()
       segmentToAgglomerateChunkNewestStream = new VersionedSegmentToAgglomerateChunkIterator(
@@ -466,6 +460,6 @@ class EditableMappingUpdater(
             } yield ()
           } else Fox.successful(())
       }
-    } yield oldInfo
+    } yield ()
 
 }

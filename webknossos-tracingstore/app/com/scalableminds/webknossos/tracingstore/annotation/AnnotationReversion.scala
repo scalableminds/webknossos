@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.box2Fox
+import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 
 import scala.concurrent.ExecutionContext
@@ -28,8 +28,17 @@ trait AnnotationReversion {
                                                        sourceTracing,
                                                        newVersion: Long,
                                                        tracingBeforeRevert)
+            _ <- Fox.runIf(sourceTracing.getHasEditableMapping)(
+              revertEditableMappingFields(currentAnnotationWithTracings, revertAction, tracingId))
           } yield ()
       }
     } yield ()
 
+  private def revertEditableMappingFields(currentAnnotationWithTracings: AnnotationWithTracings,
+                                          revertAction: RevertToVersionUpdateAction,
+                                          tracingId: String)(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      updater <- currentAnnotationWithTracings.getEditableMappingUpdater(tracingId).toFox
+      _ <- updater.revertToVersion(revertAction)
+    } yield ()
 }

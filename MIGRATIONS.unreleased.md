@@ -9,3 +9,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/24.10.0...HEAD)
 
 ### Postgres Evolutions:
+
+- [121-resolution-to-mag.sql](conf/evolutions/121-resolution-to-mag.sql)

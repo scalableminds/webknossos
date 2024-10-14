@@ -607,7 +607,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       else q"_id NOT IN ${SqlToken.tupleFromList(existingDatasetIds)}"
     val statusNotAlreadyInactive = q"status NOT IN ${SqlToken.tupleFromList(inactiveStatusList)}"
     val deleteMagsQuery =
-      q"""DELETE FROM webknossos.dataset_resolutions
+      q"""DELETE FROM webknossos.dataset_mags
          WHERE _dataset IN (
            SELECT _id
            FROM webknossos.datasets
@@ -635,7 +635,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   def deleteDataset(datasetId: ObjectId, onlyMarkAsDeleted: Boolean = false): Fox[Unit] = {
     val deleteMagsQuery =
-      q"DELETE FROM webknossos.dataset_resolutions WHERE _dataset = $datasetId".asUpdate
+      q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId".asUpdate
     val deleteCoordinateTransformsQuery =
       q"DELETE FROM webknossos.dataset_layer_coordinateTransformations WHERE _dataset = $datasetId".asUpdate
     val deleteLayersQuery =
@@ -665,25 +665,24 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 }
 
 class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
-  private def parseRow(row: DatasetResolutionsRow): Fox[Vec3Int] =
+  private def parseRow(row: DatasetMagsRow): Fox[Vec3Int] =
     for {
-      mag <- Vec3Int.fromList(parseArrayLiteral(row.resolution).map(_.toInt)) ?~> "could not parse resolution"
+      mag <- Vec3Int.fromList(parseArrayLiteral(row.mag).map(_.toInt)) ?~> "could not parse mag"
     } yield mag
 
   def findMagForLayer(datasetId: ObjectId, dataLayerName: String): Fox[List[Vec3Int]] =
     for {
-      rows <- run(
-        DatasetResolutions.filter(r => r._Dataset === datasetId.id && r.datalayername === dataLayerName).result)
+      rows <- run(DatasetMags.filter(r => r._Dataset === datasetId.id && r.datalayername === dataLayerName).result)
         .map(_.toList)
-      rowsParsed <- Fox.combined(rows.map(parseRow)) ?~> "could not parse resolution row"
+      rowsParsed <- Fox.combined(rows.map(parseRow)) ?~> "could not parse mag row"
     } yield rowsParsed
 
   def updateMags(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
-    val clearQuery = q"DELETE FROM webknossos.dataset_resolutions WHERE _dataset = $datasetId".asUpdate
+    val clearQuery = q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId".asUpdate
     val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
       layer.resolutions.map { mag: Vec3Int =>
         {
-          q"""INSERT INTO webknossos.dataset_resolutions(_dataset, dataLayerName, resolution)
+          q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag)
                 VALUES($datasetId, ${layer.name}, $mag)""".asUpdate
         }
       }
@@ -707,7 +706,7 @@ class DatasetLayerDAO @Inject()(
         .fromSQL(parseArrayLiteral(row.boundingbox).map(_.toInt))
         .toFox ?~> "Could not parse boundingbox"
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
-      mags <- datasetMagsDAO.findMagForLayer(datasetId, row.name) ?~> "Could not find resolution for layer"
+      mags <- datasetMagsDAO.findMagForLayer(datasetId, row.name) ?~> "Could not find mag for layer"
       defaultViewConfigurationOpt <- Fox.runOptional(row.defaultviewconfiguration)(
         JsonHelper.parseAndValidateJson[LayerViewConfiguration](_))
       adminViewConfigurationOpt <- Fox.runOptional(row.adminviewconfiguration)(

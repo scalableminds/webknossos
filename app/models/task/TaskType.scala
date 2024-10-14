@@ -95,7 +95,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           r.settingsSomaclickingallowed,
           r.settingsVolumeinterpolationallowed,
           r.settingsMergermode,
-          MagRestrictions(r.settingsResolutionrestrictionsMin, r.settingsResolutionrestrictionsMax)
+          MagRestrictions(r.settingsMagrestrictionsMin, r.settingsMagrestrictionsMax)
         ),
         r.recommendedconfiguration.map(Json.parse),
         tracingType,
@@ -142,7 +142,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(q"""INSERT INTO webknossos.taskTypes(
                           _id, _organization, _team, summary, description, settings_allowedModes, settings_preferredMode,
                           settings_branchPointsAllowed, settings_somaClickingAllowed, settings_volumeInterpolationAllowed, settings_mergerMode,
-                          settings_resolutionRestrictions_min, settings_resolutionRestrictions_max,
+                          settings_magRestrictions_min, settings_magRestrictions_max,
                           recommendedConfiguration, tracingType, created, isDeleted)
                    VALUES(${t._id}, $organizationId, ${t._team}, ${t.summary}, ${t.description},
                            ${EnumerationArrayValue(t.settings.allowedModes, "webknossos.TASKTYPE_MODES")},
@@ -174,8 +174,8 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                      settings_somaClickingAllowed = ${t.settings.somaClickingAllowed},
                      settings_volumeInterpolationAllowed = ${t.settings.volumeInterpolationAllowed},
                      settings_mergerMode = ${t.settings.mergerMode},
-                     settings_resolutionRestrictions_min = ${t.settings.magRestrictions.min},
-                     settings_resolutionRestrictions_max = ${t.settings.magRestrictions.max},
+                     settings_magRestrictions_min = ${t.settings.magRestrictions.min},
+                     settings_magRestrictions_max = ${t.settings.magRestrictions.max},
                      recommendedConfiguration = ${t.recommendedConfiguration.map(Json.toJson(_))},
                      isDeleted = ${t.isDeleted}
                    WHERE _id = ${t._id}""".asUpdate)

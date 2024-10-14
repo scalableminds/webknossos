@@ -269,7 +269,7 @@ function TaskListView({ initialFieldValues }: Props) {
       title: "Dataset",
       dataIndex: "datasetName",
       key: "datasetName",
-      sorter: Utils.localeCompareBy<APITask>((task) => task.datasetName),
+      sorter: Utils.localeCompareBy<APITask>((task) => task.dataSet),
     },
     {
       title: "Stats",

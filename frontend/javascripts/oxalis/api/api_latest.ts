@@ -46,7 +46,6 @@ import {
   doWithToken,
   finishAnnotation,
   getMappingsForDatasetLayer,
-  requestTask,
   downsampleSegmentation,
   sendAnalyticsEvent,
 } from "admin/admin_rest_api";
@@ -182,6 +181,7 @@ import {
   createSkeletonNode,
   getOptionsForCreateSkeletonNode,
 } from "oxalis/controller/combinations/skeleton_handlers";
+import { requestTask } from "admin/api/tasks";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }

@@ -32,16 +32,13 @@ import { normalizeFileEvent, NUM_TASKS_PER_BATCH } from "admin/task/task_create_
 import { Vector3Input, Vector6Input } from "libs/vector_input";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import {
-  createTaskFromNML,
-  createTasks,
   getActiveDatasetsOfMyOrganization,
   getAnnotationInformation,
   getProjects,
   getScripts,
-  getTask,
   getTaskTypes,
-  updateTask,
 } from "admin/admin_rest_api";
+import { createTaskFromNML, createTasks, getTask, updateTask } from "admin/api/tasks";
 import { coalesce, tryToAwaitPromise } from "libs/utils";
 import SelectExperienceDomain from "components/select_experience_domain";
 import messages from "messages";
@@ -77,7 +74,7 @@ export function taskToText(task: APITask) {
   const {
     id,
     datasetId,
-    datasetName,
+    dataSet: datasetName,
     type,
     neededExperience,
     editPosition,
@@ -379,7 +376,10 @@ function TaskCreateFormView({ taskId, history }: Props) {
 
     if (taskId != null) {
       // either update an existing task
-      const newTask = { ..._.omit(formValues, "nmlFiles", "baseAnnotation"), boundingBox };
+      const newTask = {
+        ..._.omit(formValues, "nmlFiles", "baseAnnotation"),
+        boundingBox,
+      };
       const confirmedTask = await updateTask(taskId, newTask);
       history.push(`/tasks/${confirmedTask.id}`);
     } else {
@@ -516,7 +516,7 @@ function TaskCreateFormView({ taskId, history }: Props) {
                     })
                   ) {
                     form.setFieldsValue({
-                      datasetName: taskResponse.datasetName,
+                      datasetName: taskResponse.dataSet,
                       datasetId: taskResponse.datasetId,
                     });
                     return Promise.resolve();

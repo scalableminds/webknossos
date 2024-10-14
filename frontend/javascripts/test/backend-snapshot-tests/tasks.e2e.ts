@@ -1,19 +1,28 @@
 import _ from "lodash";
 import { resetDatabase, replaceVolatileValues, writeTypeCheckingFile } from "test/e2e-setup";
 import * as api from "admin/admin_rest_api";
+import {
+  getTask,
+  getTasks,
+  peekNextTasks,
+  getAnnotationsForTask,
+  transferTask,
+  deleteTask,
+  requestTask,
+} from "admin/api/tasks";
 import test from "ava";
 test.before("Reset database", async () => {
   resetDatabase();
 });
 test("getTasks()", async (t) => {
-  const allTasks = (await api.getTasks({})).filter(
+  const allTasks = (await getTasks({})).filter(
     (task) => task.projectName !== "Test_Project3(for_annotation_mutations)",
   );
   writeTypeCheckingFile(allTasks, "task", "APITask", {
     isArray: true,
   });
   t.snapshot(allTasks);
-  const complexQueriedTasks = await api.getTasks({
+  const complexQueriedTasks = await getTasks({
     taskType: "570b9f4c2a7c0e4c008da6ee",
   });
   t.is(complexQueriedTasks.length, 2);
@@ -24,20 +33,20 @@ test("getTasks()", async (t) => {
   t.snapshot(complexQueriedTasks);
 });
 test("peekNextTasks()", async (t) => {
-  const peekedTasks = await api.peekNextTasks();
+  const peekedTasks = await peekNextTasks();
   t.snapshot(peekedTasks);
 });
 test("getTask()", async (t) => {
-  const task = await api.getTask("58135c192faeb34c0081c058");
+  const task = await getTask("58135c192faeb34c0081c058");
   t.snapshot(task);
 });
 test("getAnnotationsForTask()", async (t) => {
-  const annotations = await api.getAnnotationsForTask("581367a82faeb37a008a5352");
+  const annotations = await getAnnotationsForTask("581367a82faeb37a008a5352");
   t.is(annotations.length, 1);
   t.snapshot(annotations);
 });
 test.serial("updateTask()", async (t) => {
-  const taskBase = await api.getTask("58135c192faeb34c0081c058");
+  const taskBase = await getTask("58135c192faeb34c0081c058");
 
   const task = _.omitBy(
     Object.assign({}, taskBase, {
@@ -65,9 +74,9 @@ test.serial("transferTask()", async (t) => {
   const taskAnnotationId = "58135c402faeb34e0081c068";
   const userId = "570b9f4d2a7c0e4d008da6ef";
   const newUserId = "670b9f4d2a7c0e4d008da6ef";
-  const transferredAnnotation = await api.transferTask(taskAnnotationId, newUserId);
+  const transferredAnnotation = await transferTask(taskAnnotationId, newUserId);
   t.is(transferredAnnotation.owner?.id, newUserId);
-  const revertedTask = await api.transferTask(transferredAnnotation.id, userId);
+  const revertedTask = await transferTask(transferredAnnotation.id, userId);
   t.is(revertedTask.owner?.id, userId);
 });
 const newTask = {
@@ -94,7 +103,7 @@ test.serial("createTasks() and deleteTask()", async (t) => {
   if (createdTaskWrapper.success != null) {
     const createdTask = createdTaskWrapper.success;
     t.snapshot(replaceVolatileValues(createdTask));
-    await api.deleteTask(createdTask.id);
+    await deleteTask(createdTask.id);
   } else {
     t.fail("Task creation failed.");
   }
@@ -107,12 +116,12 @@ test.serial("requestTask()", async (t) => {
   const createdTaskWrappers = createTaskResponse.tasks;
   t.is(createdTaskWrappers.length, 1);
   const createdTaskWrapper = createdTaskWrappers[0];
-  const newTaskAnnotation = await api.requestTask();
+  const newTaskAnnotation = await requestTask();
   writeTypeCheckingFile(newTaskAnnotation, "annotation-with-task", "APIAnnotationWithTask");
   t.snapshot(replaceVolatileValues(newTaskAnnotation));
 
   if (createdTaskWrapper.success != null) {
-    await api.deleteTask(createdTaskWrapper.success.id);
+    await deleteTask(createdTaskWrapper.success.id);
   } else {
     t.fail("Task creation failed.");
   }

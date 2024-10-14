@@ -5,7 +5,7 @@ import _ from "lodash";
 import type { APITask } from "types/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
-import { createTasks } from "admin/admin_rest_api";
+import { createTasks } from "admin/api/tasks";
 import { handleTaskCreationResponse } from "admin/task/task_create_form_view";
 import Messages from "messages";
 import Toast from "libs/toast";
@@ -17,7 +17,7 @@ export const NUM_TASKS_PER_BATCH = 100;
 export type NewTask = {
   readonly boundingBox: BoundingBoxObject | null | undefined;
   readonly datasetId: string;
-  readonly dataSet: string;
+  readonly datasetName: string;
   readonly editPosition: Vector3;
   readonly editRotation: Vector3;
   readonly neededExperience: {
@@ -76,7 +76,7 @@ function TaskCreateBulkView() {
 
     if (
       !_.isString(task.neededExperience.domain) ||
-      !_.isString(task.dataSet) ||
+      !_.isString(task.datasetName) ||
       !_.isString(task.taskTypeId) ||
       !_.isString(task.projectName) ||
       task.editPosition.some(Number.isNaN) ||
@@ -158,7 +158,7 @@ function TaskCreateBulkView() {
             depth,
           };
     return {
-      dataSet: datasetName,
+      datasetName,
       datasetId,
       taskTypeId,
       scriptId,

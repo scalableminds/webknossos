@@ -65,7 +65,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   private lazy val materializedAnnotationWithTracingCache =
     // annotation id, version, requestedSkeletons, requestedVolumes, requestAll
     // TODO instead of requested, use list of tracings determined from requests + updates?
-    AlfuCache[(String, Long, List[String], List[String], Boolean), AnnotationWithTracings](maxCapacity = 1)
+    AlfuCache[(String, Long, List[String], List[String], Boolean), AnnotationWithTracings](maxCapacity = 1000)
 
   def reportUpdates(annotationId: String, updateGroups: List[UpdateActionGroup])(implicit tc: TokenContext): Fox[Unit] =
     for {

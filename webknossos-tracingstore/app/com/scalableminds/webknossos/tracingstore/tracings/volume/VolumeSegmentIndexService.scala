@@ -44,6 +44,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
     with ProtoGeometryImplicits
     with VolumeBucketCompression
     with SegmentIndexKeyHelper
+    with ReversionHelper
     with LazyLogging {
 
   private val volumeSegmentIndexClient: FossilDBClient = tracingDataStore.volumeSegmentIndex
@@ -60,10 +61,14 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                        mappingName: Option[String],
                        editableMappingTracingId: Option[String])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      bucketBytesDecompressed <- tryo(
-        decompressIfNeeded(bucketBytes,
-                           expectedUncompressedBucketSizeFor(elementClass),
-                           "updating segment index, new bucket data")).toFox
+      bucketBytesDecompressed <- if (isRevertedElement(bucketBytes)) {
+        Fox.successful(emptyArrayForElementClass(elementClass))
+      } else {
+        tryo(
+          decompressIfNeeded(bucketBytes,
+                             expectedUncompressedBucketSizeFor(elementClass),
+                             "updating segment index, new bucket data")).toFox
+      }
       // previous bytes: include fallback layer bytes if available, otherwise use empty bytes
       previousBucketBytesWithEmptyFallback <- bytesWithEmptyFallback(previousBucketBytesBox, elementClass) ?~> "volumeSegmentIndex.update.getPreviousBucket.failed"
       segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, elementClass)
@@ -90,10 +95,13 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
   private def bytesWithEmptyFallback(bytesBox: Box[Array[Byte]], elementClass: ElementClassProto)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] =
     bytesBox match {
-      case Empty       => Fox.successful(Array.fill[Byte](ElementClass.bytesPerElement(elementClass))(0))
+      case Empty       => Fox.successful(emptyArrayForElementClass(elementClass))
       case Full(bytes) => Fox.successful(bytes)
       case f: Failure  => f.toFox
     }
+
+  private def emptyArrayForElementClass(elementClass: ElementClassProto): Array[Byte] =
+    Array.fill[Byte](ElementClass.bytesPerElement(elementClass))(0)
 
   private def removeBucketFromSegmentIndex(
       segmentIndexBuffer: VolumeSegmentIndexBuffer,

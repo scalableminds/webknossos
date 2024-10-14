@@ -652,9 +652,12 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         this.props.onDeselectActiveTree();
       } else {
         // Just select this tree
-        this.setState((prevState) => ({
-          selectedTreeIds: [...prevState.selectedTreeIds, id],
-        }));
+        this.setState((prevState) => {
+          console.log(prevState);
+          return {
+            selectedTreeIds: [...prevState.selectedTreeIds, id],
+          };
+        });
       }
     }
   };
@@ -849,6 +852,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     searchKey="name"
                     provideShortcut
                     targetId={treeTabId}
+                    onSelectAllMatches={(matchingTrees) => {
+                      console.log(matchingTrees);
+                      this.deselectAllTrees();
+                      matchingTrees.map((tree) => this.onMultiSelectTree(tree.id));
+                    }}
                   >
                     <ButtonComponent title="Open the search via CTRL + Shift + F">
                       <SearchOutlined />

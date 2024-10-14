@@ -254,13 +254,16 @@ class VolumeTracingService @Inject()(
                        sourceVersion: Long,
                        sourceTracing: VolumeTracing,
                        newVersion: Long,
-                       tracing: VolumeTracing)(implicit tc: TokenContext): Fox[Unit] = {
+                       tracingBeforeRevert: VolumeTracing)(implicit tc: TokenContext): Fox[Unit] = {
 
-    val dataLayer = volumeTracingLayer(tracingId, tracing)
-    val bucketStream = dataLayer.volumeBucketProvider.bucketStreamWithVersion()
+    val dataLayer = volumeTracingLayer(tracingId, tracingBeforeRevert)
+    val bucketStreamBeforeRevert =
+      dataLayer.volumeBucketProvider.bucketStreamWithVersion(version = Some(tracingBeforeRevert.version))
+
+    logger.info(s"reverting volume data from v${tracingBeforeRevert.version} to v$sourceVersion, creating v$newVersion")
 
     for {
-      fallbackLayer <- getFallbackLayer(tracingId, tracing)
+      fallbackLayer <- getFallbackLayer(tracingId, tracingBeforeRevert)
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
                                                         volumeSegmentIndexClient,
                                                         newVersion,
@@ -269,14 +272,14 @@ class VolumeTracingService @Inject()(
                                                         dataLayer.additionalAxes,
                                                         tc)
       mappingName <- selectMappingName(sourceTracing)
-      _ <- Fox.serialCombined(bucketStream) {
+      _ <- Fox.serialCombined(bucketStreamBeforeRevert) {
         case (bucketPosition, dataBeforeRevert, version) =>
           if (version > sourceVersion) {
             loadBucket(dataLayer, bucketPosition, Some(sourceVersion)).futureBox.map {
               case Full(dataAfterRevert) =>
                 for {
                   _ <- saveBucket(dataLayer, bucketPosition, dataAfterRevert, newVersion)
-                  _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
+                  _ <- Fox.runIfOptionTrue(tracingBeforeRevert.hasSegmentIndex)(
                     updateSegmentIndex(
                       segmentIndexBuffer,
                       bucketPosition,
@@ -291,7 +294,7 @@ class VolumeTracingService @Inject()(
                 for {
                   dataAfterRevert <- Fox.successful(revertedValue)
                   _ <- saveBucket(dataLayer, bucketPosition, dataAfterRevert, newVersion)
-                  _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
+                  _ <- Fox.runIfOptionTrue(tracingBeforeRevert.hasSegmentIndex)(
                     updateSegmentIndex(
                       segmentIndexBuffer,
                       bucketPosition,

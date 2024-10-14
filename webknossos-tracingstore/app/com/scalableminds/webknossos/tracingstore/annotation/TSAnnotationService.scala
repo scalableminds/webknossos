@@ -62,6 +62,11 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     with AnnotationReversion
     with LazyLogging {
 
+  private lazy val materializedAnnotationWithTracingCache =
+    // annotation id, version, requestedSkeletons, requestedVolumes, requestAll
+    // TODO instead of requested, use list of tracings determined from requests + updates?
+    AlfuCache[(String, Long, List[String], List[String], Boolean), AnnotationWithTracings](maxCapacity = 1)
+
   def reportUpdates(annotationId: String, updateGroups: List[UpdateActionGroup])(implicit tc: TokenContext): Fox[Unit] =
     for {
       _ <- remoteWebknossosClient.reportTracingUpdates(
@@ -180,11 +185,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     for {
       withTracings <- getWithTracings(annotationId, version, List.empty, List.empty, requestAll = false)
     } yield withTracings.annotation
-
-  private lazy val materializedAnnotationWithTracingCache =
-    // annotation id, version, requestedSkeletons, requestedVolumes, requestAll
-    // TODO instead of requested, use list of tracings determined from requests + updates?
-    AlfuCache[(String, Long, List[String], List[String], Boolean), AnnotationWithTracings]()
 
   private def getWithTracings(
       annotationId: String,
@@ -388,8 +388,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           remainingUpdates match {
             case List() => Fox.successful(annotationWithTracings)
             case update :: tail =>
-              logger.info(
-                f"${remainingUpdates.length} remainingUpdates, current skeleton ${annotationWithTracings.skeletonStats})")
               updateIter(applyUpdate(annotationId, annotationWithTracings, update, targetVersion), tail)
           }
         case _ => annotationWithTracingsFox

@@ -61,7 +61,9 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                        editableMappingTracingId: Option[String])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       bucketBytesDecompressed <- tryo(
-        decompressIfNeeded(bucketBytes, expectedUncompressedBucketSizeFor(elementClass), "")).toFox
+        decompressIfNeeded(bucketBytes,
+                           expectedUncompressedBucketSizeFor(elementClass),
+                           "updating segment index, new bucket data")).toFox
       // previous bytes: include fallback layer bytes if available, otherwise use empty bytes
       previousBucketBytesWithEmptyFallback <- bytesWithEmptyFallback(previousBucketBytesBox, elementClass) ?~> "volumeSegmentIndex.update.getPreviousBucket.failed"
       segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, elementClass)

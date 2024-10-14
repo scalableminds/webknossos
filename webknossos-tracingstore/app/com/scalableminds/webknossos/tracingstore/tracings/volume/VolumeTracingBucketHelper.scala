@@ -50,7 +50,7 @@ trait VolumeBucketCompression extends LazyLogging {
       } catch {
         case e: Exception =>
           logger.error(
-            s"Failed to LZ4-decompress volume bucket ($debugInfo, expected uncompressed size $expectedUncompressedBucketSize): $e")
+            s"Failed to LZ4-decompress volume bucket ($debugInfo, compressed size: ${data.length}, expected uncompressed size $expectedUncompressedBucketSize): $e")
           throw e
       }
     }

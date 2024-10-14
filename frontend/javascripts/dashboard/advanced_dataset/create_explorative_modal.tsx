@@ -41,8 +41,8 @@ export function NewVolumeLayerSelection({
   const selectedSegmentationLayerIndex =
     selectedSegmentationLayerName != null
       ? segmentationLayers.indexOf(
-        getSegmentationLayerByName(dataset, selectedSegmentationLayerName),
-      )
+          getSegmentationLayerByName(dataset, selectedSegmentationLayerName),
+        )
       : -1;
   return (
     <div
@@ -186,8 +186,8 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
     const segmentationLayers = getSegmentationLayers(dataset);
     const selectedSegmentationLayer =
       annotationType !== "skeleton" &&
-        segmentationLayers.length > 0 &&
-        selectedSegmentationLayerName != null
+      segmentationLayers.length > 0 &&
+      selectedSegmentationLayerName != null
         ? getSegmentationLayerByName(dataset, selectedSegmentationLayerName)
         : null;
     const fallbackLayerGetParameter =
@@ -242,12 +242,13 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
           }}
         >
           <Link
-            to={`/datasets/${dataset.owningOrganization}/${dataset.name
-              }/createExplorative/${annotationType}/?minRes=${Math.max(
-                ...resolutionInfo.getMagByIndexOrThrow(lowResolutionIndex),
-              )}&maxRes=${Math.max(
-                ...resolutionInfo.getMagByIndexOrThrow(highResolutionIndex),
-              )}${fallbackLayerGetParameter}`}
+            to={`/datasets/${dataset.owningOrganization}/${
+              dataset.name
+            }/createExplorative/${annotationType}/?minRes=${Math.max(
+              ...resolutionInfo.getMagByIndexOrThrow(lowResolutionIndex),
+            )}&maxRes=${Math.max(
+              ...resolutionInfo.getMagByIndexOrThrow(highResolutionIndex),
+            )}${fallbackLayerGetParameter}`}
             title="Create new annotation with selected properties"
           >
             <Button size="large" type="primary">

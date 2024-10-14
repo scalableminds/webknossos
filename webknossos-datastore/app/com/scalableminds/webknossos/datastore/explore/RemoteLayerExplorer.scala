@@ -2,13 +2,11 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.BoundingBox
 import collections.SequenceUtils
-import com.scalableminds.util.tools.TextUtils.normalizeStrong
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayerWithMagLocators, ElementClass}
-import net.liftweb.common.Box
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerWithMagLocators, ElementClass}
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.Reads
 
@@ -49,10 +47,4 @@ trait RemoteLayerExplorer extends FoxImplicits {
 
   protected def boundingBoxFromMags(magsWithAttributes: List[MagWithAttributes]): BoundingBox =
     BoundingBox.union(magsWithAttributes.map(_.boundingBox))
-
-  protected def createAdditionalAxis(name: String, index: Int, bounds: Array[Int]): Box[AdditionalAxis] =
-    for {
-      normalizedName <- Box(normalizeStrong(name)) ?~ s"Axis name '$name' would be empty if sanitized"
-      _ <- Option(bounds.length == 2).collect { case true => () }
-    } yield AdditionalAxis(normalizedName, bounds, index)
 }

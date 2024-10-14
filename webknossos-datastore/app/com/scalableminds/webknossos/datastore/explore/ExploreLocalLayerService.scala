@@ -61,7 +61,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
     exploreLocalLayer(
       layers => layers.map(selectLastTwoDirectories),
-      new NgffExplorer
+      new NgffV0_4Explorer
     )(path, dataSourceId, "")
 
   private def exploreLocalNeuroglancerPrecomputed(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(

@@ -151,6 +151,22 @@ object Fox extends FoxImplicits {
     runNext(Nil)
   }
 
+  def foldLeft[A, B](l: List[A], initial: B)(f: (B, A) => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] =
+    serialCombined(l.iterator)(a => f(initial, a))
+
+  def foldLeft[A, B](it: Iterator[A], initial: B)(f: (B, A) => Fox[B])(implicit ec: ExecutionContext): Fox[B] = {
+    def runNext(collectedResult: B): Fox[B] =
+      if (it.hasNext) {
+        for {
+          currentResult <- f(collectedResult, it.next())
+          results <- runNext(currentResult)
+        } yield results
+      } else {
+        Fox.successful(collectedResult)
+      }
+    runNext(initial)
+  }
+
   // run in sequence, drop everything that isn’t full
   def sequenceOfFulls[T](seq: Seq[Fox[T]])(implicit ec: ExecutionContext): Future[List[T]] =
     Future.sequence(seq.map(_.futureBox)).map { results =>

@@ -169,38 +169,32 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
   def extractFromFiles(files: Seq[(File, String)], sharedParams: SharedParsingParameters)(
       implicit m: MessagesProvider,
       ec: ExecutionContext,
-      ctx: DBAccessContext): Fox[MultiNmlParseResult] = {
-    val accResult = NmlResults.MultiNmlParseResult()
-    Fox
-      .serialCombined(files.iterator) {
-        case (file, name) =>
-          if (name.endsWith(".zip")) {
-            tryo(new java.util.zip.ZipFile(file)).map(ZipIO.forallZipEntries(_)(_.getName.endsWith(".zip"))) match {
-              case Full(allZips) =>
-                if (allZips) {
-                  for {
-                    parsedZipResult <- extractFromZip(file, Some(name), sharedParams)
-                    otherFiles = parsedZipResult.otherFiles.toSeq.map(tuple => (tuple._2, tuple._1))
-                    parsedFileResults <- extractFromFiles(otherFiles, sharedParams)
-                    _ = accResult.combineWith(parsedFileResults)
-                  } yield ()
-                } else {
-                  for {
-                    parsedFile <- extractFromFile(file, name, sharedParams)
-                    _ = accResult.combineWith(parsedFile)
-                  } yield ()
-                }
-              case _ => Fox.successful(())
-            }
-          } else
-            for {
-              parsedFromFile <- extractFromFile(file, name, sharedParams)
-              _ = accResult.combineWith(parsedFromFile)
-            } yield ()
-      }
-      .map(_ => accResult)
+      ctx: DBAccessContext): Fox[MultiNmlParseResult] =
+    Fox.foldLeft(files.iterator, NmlResults.MultiNmlParseResult()) {
+      case (collectedResults, (file, name)) =>
+        if (name.endsWith(".zip")) {
+          tryo(new java.util.zip.ZipFile(file)).map(ZipIO.forallZipEntries(_)(_.getName.endsWith(".zip"))) match {
+            case Full(allZips) =>
+              if (allZips) {
+                for {
+                  parsedZipResult <- extractFromZip(file, Some(name), sharedParams)
+                  otherFiles = parsedZipResult.otherFiles.toSeq.map(tuple => (tuple._2, tuple._1))
+                  parsedFileResults <- extractFromFiles(otherFiles, sharedParams)
+                } yield collectedResults.combineWith(parsedFileResults)
+              } else {
+                for {
+                  parsedFile <- extractFromFile(file, name, sharedParams)
+                } yield collectedResults.combineWith(parsedFile)
+              }
+            case _ => Fox.successful(collectedResults)
+          }
+        } else {
+          for {
+            parsedFromFile <- extractFromFile(file, name, sharedParams)
+          } yield collectedResults.combineWith(parsedFromFile)
 
-  }
+        }
+    }
 
   private def extractFromFile(file: File, fileName: String, sharedParsingParameters: SharedParsingParameters)(
       implicit m: MessagesProvider,

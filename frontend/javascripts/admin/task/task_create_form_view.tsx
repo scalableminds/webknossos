@@ -493,9 +493,9 @@ function TaskCreateFormView({ taskId, history }: Props) {
                       }),
                     ));
 
-                  if (annotationResponse?.datasetName != null) {
+                  if (annotationResponse?.dataSetName != null) {
                     form.setFieldsValue({
-                      datasetName: annotationResponse.datasetName,
+                      datasetName: annotationResponse.dataSetName,
                       datasetId: annotationResponse.datasetId,
                     });
                     return Promise.resolve();

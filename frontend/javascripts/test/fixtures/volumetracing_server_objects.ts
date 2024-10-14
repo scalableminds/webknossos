@@ -91,7 +91,7 @@ export const annotation: APIAnnotation = {
       stats: {},
     },
   ],
-  datasetName: "ROI2017_wkw",
+  dataSetName: "ROI2017_wkw",
   organization: "Connectomics Department",
   dataStore: {
     name: "localhost",

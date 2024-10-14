@@ -1072,7 +1072,7 @@ class TracingApi {
 
     try {
       const annotation = await requestTask();
-      const isDifferentDataset = state.dataset.name !== annotation.datasetName;
+      const isDifferentDataset = state.dataset.name !== annotation.dataSetName;
       const isDifferentTaskType = annotation.task.type.id !== task.type.id;
       const involvesVolumeTask =
         state.tracing.volumes.length > 0 || getVolumeDescriptors(annotation).length > 0;

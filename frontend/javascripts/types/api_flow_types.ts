@@ -448,6 +448,7 @@ export type APITask = {
   readonly boundingBoxVec6?: Vector6;
   readonly created: number;
   readonly creationInfo: string | null | undefined;
+  readonly dataSet: string;
   readonly datasetId: APIDataset["id"];
   readonly datasetName: string;
   readonly editPosition: Vector3;
@@ -478,7 +479,7 @@ export type EditableLayerProperties = Partial<{
 export type APIAnnotationInfo = {
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
   readonly datasetId: APIDataset["id"];
-  readonly datasetName: string;
+  readonly dataSetName: string;
   readonly organization: string;
   readonly description: string;
   readonly modified: number;
@@ -500,7 +501,7 @@ export type APIAnnotationInfo = {
 
 export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInfo {
   const {
-    datasetName,
+    dataSetName,
     description,
     modified,
     id,
@@ -520,7 +521,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
   return {
     datasetId,
     annotationLayers,
-    datasetName,
+    dataSetName,
     organization,
     description,
     modified,

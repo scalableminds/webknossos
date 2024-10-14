@@ -731,7 +731,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                 onClose={_.partial(this.editTagFromAnnotation, annotation, false, tag)}
                 tag={tag}
                 closable={
-                  !(tag === annotation.datasetName || AnnotationContentTypes.includes(tag)) &&
+                  !(tag === annotation.dataSetName || AnnotationContentTypes.includes(tag)) &&
                   !this.state.shouldShowArchivedTracings
                 }
               />

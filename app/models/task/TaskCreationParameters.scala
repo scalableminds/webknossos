@@ -17,8 +17,7 @@ case class TaskParameters(taskTypeId: String,
                           editRotation: Vec3Double,
                           creationInfo: Option[String],
                           description: Option[String],
-                          baseAnnotation: Option[BaseAnnotation])
-{
+                          baseAnnotation: Option[BaseAnnotation]) {
   lazy val datasetName: String = dataSet
 }
 

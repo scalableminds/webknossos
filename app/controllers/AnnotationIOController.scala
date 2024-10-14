@@ -42,13 +42,12 @@ import models.analytics.{AnalyticsService, DownloadAnnotationEvent, UploadAnnota
 import models.annotation.AnnotationState._
 import models.annotation._
 import models.annotation.nml.NmlResults.{NmlParseResult, NmlParseSuccess}
-import models.annotation.nml.{NmlResults, NmlWriter}
+import models.annotation.nml.NmlWriter
 import models.dataset.{DataStoreDAO, Dataset, DatasetDAO, DatasetService, WKRemoteDataStoreClient}
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task._
 import models.user._
-import net.liftweb.common.Failure
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.json.Json
@@ -56,7 +55,7 @@ import play.api.mvc.{Action, AnyContent, MultipartFormData}
 import security.WkEnv
 import utils.WkConf
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class AnnotationIOController @Inject()(
     nmlWriter: NmlWriter,

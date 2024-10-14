@@ -16,6 +16,7 @@ import { assertResponseLimit } from "./api_utils";
 function transformBackendJobToAPIJob(job: any): APIJob {
   return {
     id: job.id,
+    owner: job.owner,
     type: job.command,
     datasetName: job.commandArgs.dataset_name,
     organizationId: job.commandArgs.organization_name,
@@ -237,10 +238,12 @@ function startSegmentationAnnotationDependentJob(
   if (volumeLayerName != null) {
     requestURL.searchParams.append("volumeLayerName", volumeLayerName);
   }
+  const layerName = volumeLayerName || fallbackLayerName;
   requestURL.searchParams.append("fallbackLayerName", fallbackLayerName);
   requestURL.searchParams.append("annotationId", annotationId);
   requestURL.searchParams.append("annotationType", annotationType);
   requestURL.searchParams.append("newDatasetName", newDatasetName);
+  requestURL.searchParams.append("outputSegmentationLayerName", `${layerName}_materialized`);
   if (mergeSegments != null) {
     requestURL.searchParams.append("mergeSegments", mergeSegments.toString());
   }

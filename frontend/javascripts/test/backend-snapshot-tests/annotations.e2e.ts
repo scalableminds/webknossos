@@ -214,3 +214,36 @@ test("Send complex update actions and compare resulting tracing", async (t) => {
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
   t.snapshot(replaceVolatileValues(tracings[0]));
 });
+
+test("Update Metadata for Skeleton Tracing", async (t) => {
+  const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
+  const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 5));
+  const createTreesUpdateActions = Array.from(diffTrees({}, trees));
+  const metadata = [
+    {
+      key: "city",
+      stringValue: "springfield",
+    },
+    {
+      key: "zip",
+      numberValue: 12345,
+    },
+    {
+      key: "tags",
+      stringListValue: ["tagA", "tagB"],
+    },
+  ];
+  trees[1] = {
+    ...trees[1],
+    metadata,
+  };
+  const updateTreeAction = UpdateActions.updateTree(trees[1]);
+  const [saveQueue] = addVersionNumbers(
+    createSaveQueueFromUpdateActions([createTreesUpdateActions, [updateTreeAction]], 123456789),
+    0,
+  );
+
+  await sendUpdateActionsForSkeleton(createdExplorational, saveQueue);
+  const tracings = await api.getTracingsForAnnotation(createdExplorational);
+  t.snapshot(replaceVolatileValues(tracings[0]));
+});

@@ -11,7 +11,6 @@ import {
   Tooltip,
   Table,
   Select,
-  Slider,
   Divider,
 } from "antd";
 import { useMemo, useState } from "react";
@@ -30,6 +29,7 @@ import { BLEND_MODES } from "oxalis/constants";
 import ColorLayerOrderingTable from "./color_layer_ordering_component";
 import type { APIDatasetId } from "types/api_flow_types";
 import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admin/admin_rest_api";
+import { Slider } from "components/slider";
 
 const FormItem = Form.Item;
 

@@ -1,6 +1,6 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import { Modal, Radio, Button, Tooltip, Slider, Spin } from "antd";
+import { Modal, Radio, Button, Tooltip, Spin } from "antd";
 import React, { useEffect, useState } from "react";
 import type { APIDataset, APIDatasetId, APISegmentationLayer } from "types/api_flow_types";
 import {
@@ -13,6 +13,7 @@ import {
 import { getDataset } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import type { MagInfo } from "oxalis/model/helpers/mag_info";
+import { Slider } from "components/slider";
 
 type Props = {
   datasetId: APIDatasetId;
@@ -40,8 +41,8 @@ export function NewVolumeLayerSelection({
   const selectedSegmentationLayerIndex =
     selectedSegmentationLayerName != null
       ? segmentationLayers.indexOf(
-          getSegmentationLayerByName(dataset, selectedSegmentationLayerName),
-        )
+        getSegmentationLayerByName(dataset, selectedSegmentationLayerName),
+      )
       : -1;
   return (
     <div
@@ -148,6 +149,7 @@ export function RestrictMagnificationSlider({
           style={{
             flexGrow: 1,
           }}
+          onWheelDisabled
         />
         <div
           style={{
@@ -184,8 +186,8 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
     const segmentationLayers = getSegmentationLayers(dataset);
     const selectedSegmentationLayer =
       annotationType !== "skeleton" &&
-      segmentationLayers.length > 0 &&
-      selectedSegmentationLayerName != null
+        segmentationLayers.length > 0 &&
+        selectedSegmentationLayerName != null
         ? getSegmentationLayerByName(dataset, selectedSegmentationLayerName)
         : null;
     const fallbackLayerGetParameter =
@@ -240,13 +242,12 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
           }}
         >
           <Link
-            to={`/datasets/${dataset.owningOrganization}/${
-              dataset.name
-            }/createExplorative/${annotationType}/?minRes=${Math.max(
-              ...resolutionInfo.getMagByIndexOrThrow(lowResolutionIndex),
-            )}&maxRes=${Math.max(
-              ...resolutionInfo.getMagByIndexOrThrow(highResolutionIndex),
-            )}${fallbackLayerGetParameter}`}
+            to={`/datasets/${dataset.owningOrganization}/${dataset.name
+              }/createExplorative/${annotationType}/?minRes=${Math.max(
+                ...resolutionInfo.getMagByIndexOrThrow(lowResolutionIndex),
+              )}&maxRes=${Math.max(
+                ...resolutionInfo.getMagByIndexOrThrow(highResolutionIndex),
+              )}${fallbackLayerGetParameter}`}
             title="Create new annotation with selected properties"
           >
             <Button size="large" type="primary">

@@ -1,6 +1,5 @@
 import _ from "lodash";
 import { resetDatabase, replaceVolatileValues, writeTypeCheckingFile } from "test/e2e-setup";
-import * as api from "admin/admin_rest_api";
 import {
   getTask,
   getTasks,
@@ -9,8 +8,11 @@ import {
   transferTask,
   deleteTask,
   requestTask,
+  createTasks,
+  updateTask,
 } from "admin/api/tasks";
 import test from "ava";
+import type { Vector3 } from "oxalis/constants";
 test.before("Reset database", async () => {
   resetDatabase();
 });
@@ -61,12 +63,12 @@ test.serial("updateTask()", async (t) => {
   // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
   const newTask = { ...task, pendingInstances: task.pendingInstances + 10 };
   // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | number | string[] | API... Remove this comment to see the full error message
-  const updatedTask = await api.updateTask(task.id, newTask);
+  const updatedTask = await updateTask(task.id, newTask);
   t.deepEqual(updatedTask.status.pending, newTask.pendingInstances);
   t.snapshot(updatedTask);
   // Reset task to original state
   // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | number | string[] | API... Remove this comment to see the full error message
-  const revertedTask = await api.updateTask(task.id, task);
+  const revertedTask = await updateTask(task.id, task);
   // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
   t.is(revertedTask.status.pending, task.status.pending);
 });
@@ -81,9 +83,11 @@ test.serial("transferTask()", async (t) => {
 });
 const newTask = {
   boundingBox: null,
-  dataSet: "confocal-multi_knossos",
-  editPosition: [1, 2, 3],
-  editRotation: [4, 5, 6],
+  datasetName: "confocal-multi_knossos",
+  datasetPath: "confocal-multi_knossos",
+  datasetId: "59e9cfbdba632ac2ab8b23b3",
+  editPosition: [1, 2, 3] as Vector3,
+  editRotation: [4, 5, 6] as Vector3,
   neededExperience: {
     domain: "abc",
     value: 1,
@@ -94,8 +98,7 @@ const newTask = {
   taskTypeId: "570b9f4c2a7c0e4c008da6ee",
 };
 test.serial("createTasks() and deleteTask()", async (t) => {
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ boundingBox: null; dataSet: string; editPo... Remove this comment to see the full error message
-  const createTaskResponse = await api.createTasks([newTask]);
+  const createTaskResponse = await createTasks([newTask]);
   const createdTaskWrappers = createTaskResponse.tasks;
   t.is(createdTaskWrappers.length, 1);
   const createdTaskWrapper = createdTaskWrappers[0];
@@ -111,8 +114,7 @@ test.serial("createTasks() and deleteTask()", async (t) => {
   t.true(true);
 });
 test.serial("requestTask()", async (t) => {
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ boundingBox: null; dataSet: string; editPo... Remove this comment to see the full error message
-  const createTaskResponse = await api.createTasks([newTask]);
+  const createTaskResponse = await createTasks([newTask]);
   const createdTaskWrappers = createTaskResponse.tasks;
   t.is(createdTaskWrappers.length, 1);
   const createdTaskWrapper = createdTaskWrappers[0];

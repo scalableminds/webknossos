@@ -33,6 +33,7 @@ case class SkeletonTracingWithDatasetId(skeletonTracing: SkeletonTracing, datase
 
 case class SharedParsingParameters(useZipName: Boolean,
                                    overwritingDatasetId: Option[String] = None,
+                                   overwritingDatasetName: Option[String] = None,
                                    overwritingOrganizationId: Option[String] = None,
                                    isTaskUpload: Boolean = false)
 
@@ -61,6 +62,7 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
         name,
         inputStream,
         sharedParsingParameters.overwritingDatasetId,
+        sharedParsingParameters.overwritingDatasetName,
         sharedParsingParameters.overwritingOrganizationId,
         sharedParsingParameters.isTaskUpload,
         basePath

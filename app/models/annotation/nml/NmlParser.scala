@@ -48,6 +48,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
   def parse(name: String,
             nmlInputStream: InputStream,
             overwritingDatasetId: Option[String],
+            overwritingDatasetName: Option[String],
             overwritingOrganizationId: Option[String],
             isTaskUpload: Boolean,
             basePath: Option[String] = None)(implicit m: MessagesProvider, ec: ExecutionContext, ctx: DBAccessContext)
@@ -69,7 +70,9 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
         treeGroupsAfterSplit = treesAndGroupsAfterSplitting._2
         _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
         additionalAxisProtos <- parseAdditionalAxes(parameters \ "additionalAxes")
-        datasetNameFromNml = parseDatasetName(parameters \ "experiment")
+        datasetName = overwritingDatasetName.getOrElse(parseDatasetName(parameters \ "experiment"))
+        datasetIdOpt = if (overwritingDatasetId.isDefined) overwritingDatasetId
+        else parseDatasetId(parameters \ "experiment")
         organizationId = overwritingOrganizationId.getOrElse(parseOrganizationId(parameters \ "experiment"))
       } yield {
         val description = parseDescription(parameters \ "experiment")
@@ -90,8 +93,8 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
         logger.debug(s"Parsed NML file. Trees: ${treesSplit.size}, Volumes: ${volumes.size}")
 
         for {
-          parsedDatasetIdOpt <- Fox.runOptional(overwritingDatasetId)(ObjectId.fromString)
-          dataset <- datasetDAO.findOneByIdOrNameAndOrganization(parsedDatasetIdOpt, datasetNameFromNml, organizationId)
+          parsedDatasetIdOpt <- Fox.runOptional(datasetIdOpt)(ObjectId.fromString)
+          dataset <- datasetDAO.findOneByIdOrNameAndOrganization(parsedDatasetIdOpt, datasetName, organizationId)
           volumeLayers: List[UploadedVolumeLayer] = volumes.toList.map { v =>
             UploadedVolumeLayer(
               VolumeTracing(
@@ -348,6 +351,9 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
 
   private def parseDatasetName(nodes: NodeSeq): String =
     nodes.headOption.map(node => getSingleAttribute(node, "name")).getOrElse("")
+
+  private def parseDatasetId(nodes: NodeSeq): Option[String] =
+    nodes.headOption.map(node => getSingleAttribute(node, "datasetId"))
 
   private def parseDescription(nodes: NodeSeq): String =
     nodes.headOption.map(node => getSingleAttribute(node, "description")).getOrElse(DEFAULT_DESCRIPTION)

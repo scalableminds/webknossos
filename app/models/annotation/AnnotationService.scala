@@ -74,7 +74,8 @@ case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
                               user: User,
                               taskOpt: Option[Task],
                               organizationId: String,
-                              datasetName: String)
+                              datasetName: String,
+                              datasetId: ObjectId)
 
 // Used to pass duplicate properties when creating a new tracing to avoid masking them.
 // Uses the proto-generated geometry classes, hence the full qualifiers.
@@ -673,7 +674,8 @@ class AnnotationService @Inject()(
                                 user,
                                 taskOpt,
                                 organizationId,
-                                datasetName) =>
+                                datasetName,
+                                datasetId) =>
           for {
             fetchedAnnotationLayersForAnnotation <- FetchedAnnotationLayer.layersFromTracings(skeletonTracingIdOpt,
                                                                                               volumeTracingIdOpt,
@@ -688,6 +690,7 @@ class AnnotationService @Inject()(
               organizationId,
               conf.Http.uri,
               datasetName,
+              datasetId,
               Some(user),
               taskOpt,
               skipVolumeData,
@@ -724,7 +727,8 @@ class AnnotationService @Inject()(
                            user,
                            taskOpt,
                            organizationId,
-                           dataset.name)
+                           dataset.name,
+                           dataset._id)
 
     def getSkeletonTracings(datasetId: ObjectId, tracingIds: List[Option[String]]): Fox[List[Option[SkeletonTracing]]] =
       for {

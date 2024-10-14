@@ -23,11 +23,12 @@ trait AnnotationReversion {
         case (tracingId, sourceTracing) =>
           for {
             tracingBeforeRevert <- currentAnnotationWithTracings.getVolume(tracingId).toFox
-            _ <- volumeTracingService.revertVolumeData(tracingId,
-                                                       revertAction.sourceVersion,
-                                                       sourceTracing,
-                                                       newVersion: Long,
-                                                       tracingBeforeRevert)
+            _ <- Fox.runIf(!sourceTracing.getHasEditableMapping)(
+              volumeTracingService.revertVolumeData(tracingId,
+                                                    revertAction.sourceVersion,
+                                                    sourceTracing,
+                                                    newVersion: Long,
+                                                    tracingBeforeRevert))
             _ <- Fox.runIf(sourceTracing.getHasEditableMapping)(
               revertEditableMappingFields(currentAnnotationWithTracings, revertAction, tracingId))
           } yield ()
@@ -40,5 +41,6 @@ trait AnnotationReversion {
     for {
       updater <- currentAnnotationWithTracings.getEditableMappingUpdater(tracingId).toFox
       _ <- updater.revertToVersion(revertAction)
+      _ <- updater.flushBuffersToFossil()
     } yield ()
 }

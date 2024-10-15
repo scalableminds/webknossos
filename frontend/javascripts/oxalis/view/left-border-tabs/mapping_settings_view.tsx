@@ -1,7 +1,6 @@
 import { Select } from "antd";
 import { connect } from "react-redux";
 import React from "react";
-import debounceRender from "react-debounce-render";
 import type { APISegmentationLayer } from "types/api_flow_types";
 import { MappingStatusEnum } from "oxalis/constants";
 import type { OxalisState, Mapping, MappingType, EditableMapping } from "oxalis/store";
@@ -289,12 +288,5 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
   };
 }
 
-const debounceTime = 100;
-const maxWait = 500;
-
 const connector = connect(mapStateToProps, mapDispatchToProps);
-export default connector(
-  debounceRender(MappingSettingsView, debounceTime, {
-    maxWait,
-  }),
-);
+export default connector(MappingSettingsView);

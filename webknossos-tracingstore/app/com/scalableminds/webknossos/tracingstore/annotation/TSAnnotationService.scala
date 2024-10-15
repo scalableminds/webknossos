@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
+import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.time.Instant
@@ -87,7 +88,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     tracingDataStore.annotations.getVersion(annotationId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
 
   private def findPendingUpdates(annotationId: String, existingVersion: Long, desiredVersion: Long)(
-      implicit ec: ExecutionContext): Fox[List[UpdateAction]] =
+      implicit ec: ExecutionContext): Fox[List[(Long, List[UpdateAction])]] =
     if (desiredVersion == existingVersion) Fox.successful(List())
     else {
       for {
@@ -95,8 +96,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           annotationId,
           Some(desiredVersion),
           Some(existingVersion + 1))(fromJsonBytes[List[UpdateAction]])
-        updateActionGroupsWithVersionsIroned = ironOutReversionFolds(updateActionGroupsWithVersions)
-      } yield updateActionGroupsWithVersionsIroned
+        updateActionGroupsWithVersionsRegrouped = regroupByRevertActions(updateActionGroupsWithVersions)
+      } yield updateActionGroupsWithVersionsRegrouped
     }
 
   // TODO option to dry apply?
@@ -260,18 +261,20 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       requestedVolumeTracingIds: List[String],
       requestAll: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
-      updates <- findPendingUpdates(annotationId, annotation.version, targetVersion) ?~> "findPendingUpdates.failed"
+      updatesRegrouped <- findPendingUpdates(annotationId, annotation.version, targetVersion) ?~> "findPendingUpdates.failed"
+      updatesFlat = updatesRegrouped.flatMap(_._2)
       annotationWithTracings <- findTracingsForUpdates(annotation,
-                                                       updates,
+                                                       updatesFlat,
                                                        requestedSkeletonTracingIds,
                                                        requestedVolumeTracingIds,
                                                        requestAll) ?~> "findTracingsForUpdates.failed"
-      annotationWithTracingsAndMappings <- findEditableMappingsForUpdates(annotationId,
-                                                                          annotationWithTracings,
-                                                                          updates,
-                                                                          annotation.version,
-                                                                          targetVersion)
-      updated <- applyUpdates(annotationWithTracingsAndMappings, annotationId, updates, targetVersion) ?~> "applyUpdates.inner.failed"
+      annotationWithTracingsAndMappings <- findEditableMappingsForUpdates(
+        annotationId,
+        annotationWithTracings,
+        updatesFlat,
+        annotation.version,
+        targetVersion) // TODO: targetVersion should be set per update group
+      updated <- applyUpdatesGrouped(annotationWithTracingsAndMappings, annotationId, updatesRegrouped) ?~> "applyUpdates.inner.failed"
     } yield updated
 
   private def findEditableMappingsForUpdates( // TODO integrate with findTracings?
@@ -374,6 +377,12 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     } yield AnnotationWithTracings(annotation, skeletonTracingsMap ++ volumeTracingsMap, Map.empty)
   }
 
+  private def applyUpdatesGrouped(
+      annotation: AnnotationWithTracings,
+      annotationId: String,
+      updates: List[(Long, List[UpdateAction])]
+  ): Fox[AnnotationWithTracings] = ???
+
   private def applyUpdates(
       annotation: AnnotationWithTracings,
       annotationId: String,
@@ -406,10 +415,25 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     }
   }
 
-  private def ironOutReversionFolds(
-      updateActionGroupsWithVersions: List[(Long, List[UpdateAction])]): List[UpdateAction] =
-    // TODO: if the source version is in the current update list, it needs to be ironed out. in case of overlaps, iron out from the back.
-    updateActionGroupsWithVersions.reverse.flatMap(_._2)
+  private def regroupByRevertActions(
+      updateActionGroupsWithVersions: List[(Long, List[UpdateAction])]): List[(Long, List[UpdateAction])] = {
+    val splitGroupLists: List[List[(Long, List[UpdateAction])]] =
+      SequenceUtils.splitAndIsolate(updateActionGroupsWithVersions.reverse)(actionGroup =>
+        actionGroup._2.contains(updateAction => isRevertAction(updateAction)))
+    // TODO assert that the groups that contain revert actions contain nothing else
+    // TODO test this
+
+    splitGroupLists.flatMap { groupsToConcatenate: List[(Long, List[UpdateAction])] =>
+      val updates = groupsToConcatenate.flatMap(_._2)
+      val targetVersionOpt: Option[Long] = groupsToConcatenate.map(_._1).headOption
+      targetVersionOpt.map(targetVersion => (targetVersion, updates))
+    }
+  }
+
+  private def isRevertAction(a: UpdateAction): Boolean = a match {
+    case _: RevertToVersionUpdateAction => true
+    case _                              => false
+  }
 
   private def flushUpdatedTracings(annotationWithTracings: AnnotationWithTracings)(implicit ec: ExecutionContext) =
     // TODO skip some flushes to save disk space (e.g. skeletons only nth version, or only if requested?)

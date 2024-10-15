@@ -1,7 +1,5 @@
 package collections
 
-import scala.annotation.tailrec
-
 object SequenceUtils {
   def findUniqueElement[T](list: Seq[T]): Option[T] = {
     val uniqueElements = list.distinct

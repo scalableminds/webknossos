@@ -6,11 +6,12 @@ Since it is a web app, you can easily [collaborate](./sharing/index.md), [crowds
 
 [Contact us](mailto:hello@webknossos.org) or create a [pull request](https://github.com/scalableminds/webknossos/pulls) to suggest improvements to the documentation.
 
+Check out this video to get started!
 ![youtube-video](https://www.youtube.com/embed/iw2C7XB6wP4)
 
 ## Create a webknossos.org Account
 
-To get started with WEBKNOSOS, sign up for a free account on [webknossos.org](https://webknossos.org).
+To get started with WEBKNOSSOS, sign up for a free account on [webknossos.org](https://webknossos.org).
 Upload your own datasets or explore one of the many community datasets.
 
 You get 50GB of storage for private datasets with the free tier.
@@ -25,13 +26,13 @@ To get started, navigate to the `Featured Publications` tab on your [dashboard](
 There, you find a list of all available public datasets.
 Click on the dataset name to open the dataset.
 
-![The list of available datasets](./images/getting_started-datasets.jpeg)
+![The list of available datasets](./images/screenshot_featured_publications.png)
 
 You can open any WEBKNOSSOS dataset for read-only viewing (“View” mode) or in editor-mode to create a new skeleton and/or volume annotation.
 Three orthogonal viewports slicing the data along the major axis and a 3D viewport make up the main WEBKNOSSOS user interface.
 Read more [about the user interface](./ui/index.md).
 
-![The WEBKNOSSOS user interface consisting of three orthogonal viewports slicing the data along the major axis and a 3D viewport.](./images/main_ui.jpeg)
+![The WEBKNOSSOS user interface consisting of three orthogonal viewports slicing the data along the major axis and a 3D viewport.](./images/main_ui.png)
 
 You can use the following shortcuts to navigate the data.
 See the full list of [gestures and keyboard shortcuts](./ui/keyboard_shortcuts.md) for advanced use.
@@ -47,13 +48,10 @@ See the full list of [gestures and keyboard shortcuts](./ui/keyboard_shortcuts.m
 | Right Click Drag (3D View)    | Rotate 3D View               |
 | . (Dot)                       | Toggle Viewport Maximization |
 
-You can also change the size of the viewports to see more details in your data and customize your layout.
-
-![Explore datasets with customized viewport layouts](./images/getting_started-viewports.jpeg)
 
 ## Your First Annotation
 
-To create your first annotation, click the `Create Annotation`` button while in “View” mode.
+To create your first annotation, click the `Create Annotation` button while in “View” mode.
 WEBKNOSSOS will launch the main annotation screen allowing you to navigate your dataset, place markers to reconstruct skeletons, or annotate segments as volume annotations.
 
 You can perform various actions depending on the current tool - selectable in the toolbar at the top of the screen.
@@ -69,7 +67,7 @@ Use the mouse wheel or press the spacebar keyboard shortcut to move along the 3r
 
 Read the guides about the [annotation UI](./ui/index.md), [skeleton annotation](./skeleton_annotation/index.md), or [volume annotation](./volume_annotation/index.md) for more details.
 
-![Editing skeleton and volume annotations in the Annotation UI](./images/tracing_ui.jpeg)
+![Editing skeleton and volume annotations in the Annotation UI](./images/context_menu.png)
 
 ## Tutorials
 We have tutorials on a wide range of topics to get you started. Also check out our [YouTube channel](https://www.youtube.com/@webknossos) for video guides. 

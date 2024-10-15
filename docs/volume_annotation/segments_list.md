@@ -10,5 +10,9 @@ The following functionality is available for each segment:
 - download of 3D meshes
 - changing the color of the segment
 - activating the segment id (so that you can annotate with that id)
+- organizing your segments in groups
 
-![Segments Tab](../images/segments_tab2.jpeg)
+![youtube-video](https://www.youtube.com/embed/BJ7lblTSVKY)
+
+Working with groups allows you to perform batch actions of a whole group of segment (e.g. changing the color, loading meshes, ...)
+![youtube-video](https://www.youtube.com/embed/lz-3kFWQ2H8)

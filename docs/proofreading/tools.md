@@ -2,6 +2,9 @@
 
 The proofreading tool enables users to fix merge and split errors in a segmentation generated from an automated workflow (outside of WEBKNOSSOS), e.g. from a machine learning system such as [Voxelytics](https://voxelytics.com). Split and merge operations are directly executed on the underlying [super-voxel graph structure](../terminology.md#agglomerates) of a segmentation.
 
+Watch this video to get started with the proofreading tools:
+![youtube-video](https://www.youtube.com/embed/h_paTLAIIwY)
+
 To use the proofreading tool you need to enable an [ID mapping for your segmentation](./segmentation_mappings.md) to load the super-voxel graph. Once, WEBKNOSSOS detects this the proofreading tool can be activated on the toolbar (clipboard icon):
 
 1. Select an ID mapping for a segmentation layer from the left-hand side panel
@@ -31,13 +34,3 @@ In addition to the handy shortcuts available from the right-click context menu, 
 !!!info 
     The proofreading tool requires a super-voxel graph representation of a segmentation to work. At this time, these can only be obtained from the [Voxelytics AI segmentation pipeline](https://voxelytics.com). We are actively working to make this available for more users, so please reach out to us to get you started and provide feedback: [hello@webknossos.org](mailto:hello@webknossos.org)
 
-## Proofreading with Skeletons and Custom Scripting
-
-In our workflows, we make heavy use of skeleton annotations for proofreading and evaluation. In combination with custom Python scripting we use skeletons:
-
-- to mark error locations as determined by evaluation scripts, e.g. incorrect predictions
-- to label locations for True Positives/False Positive examples, e.g. to debug classifications
-- we encode additional metadata for any given segment in the skeleton tree names, groups, and comments, i.e. the biological cell type for a segment
-- we manually annotate classification mistakes or interesting features in the data and download/bring them back into our Python workflows for correction and further processing
-
-This system is very flexible, though requires a little bit of creativity and coding skills with the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py).

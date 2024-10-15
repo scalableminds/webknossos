@@ -816,7 +816,7 @@ export function createExplorational(
         fallbackLayerName,
         autoFallbackLayer,
         mappingName,
-        magRestrictions: magRestrictions,
+        magRestrictions,
       },
     ];
   } else {
@@ -831,7 +831,7 @@ export function createExplorational(
         fallbackLayerName,
         autoFallbackLayer,
         mappingName,
-        magRestrictions: magRestrictions,
+        magRestrictions,
       },
     ];
   }

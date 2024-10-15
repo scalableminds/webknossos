@@ -505,7 +505,7 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
     const boundingBox = getDatasetBoundingBox(dataset).asServerBoundingBox();
     const resolutions = tracing.mags || [];
     const tracingHasResolutionList = resolutions.length > 0;
-    // Legacy tracings don't have the `tracing.mags` property // TODO_c check
+    // Legacy tracings don't have the `tracing.mags` property
     // since they were created before WK started to maintain multiple magnifications
     // in volume annotations. Therefore, this code falls back to mag (1, 1, 1) for
     // that case.

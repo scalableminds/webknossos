@@ -653,15 +653,15 @@ class ReactRouter extends React.Component<Props> {
                         resolutionRestrictions.min = Number.parseInt(getParams.minRes);
 
                         if (!_.isNumber(resolutionRestrictions.min)) {
-                          throw new Error("Invalid minRes parameter"); // TODO_c maybe change get params
+                          throw new Error("Invalid minMag parameter");
                         }
-                      }
 
-                      if (getParams.maxRes !== undefined) {
-                        resolutionRestrictions.max = Number.parseInt(getParams.maxRes);
+                        if (getParams.maxRes !== undefined) {
+                          resolutionRestrictions.max = Number.parseInt(getParams.maxRes);
 
-                        if (!_.isNumber(resolutionRestrictions.max)) {
-                          throw new Error("Invalid maxRes parameter");
+                          if (!_.isNumber(resolutionRestrictions.max)) {
+                            throw new Error("Invalid maxMag parameter");
+                          }
                         }
                       }
 

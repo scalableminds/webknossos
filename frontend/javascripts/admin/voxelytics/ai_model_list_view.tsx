@@ -122,20 +122,14 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
       throw new Error("Cannot find annotation for specified id.");
     }
 
-    const {
-      annotation,
-      dataset,
-      volumeTracings,
-      volumeTracingMags: volumeTracingResolutions,
-    } = annotationWithDataset;
+    const { annotation, dataset, volumeTracings, volumeTracingMags } = annotationWithDataset;
 
     let annotationLayer = annotation.annotationLayers.find((l) => l.name === layerName);
     if (annotationLayer != null) {
       const volumeTracingIndex = volumeTracings.findIndex(
         (tracing) => tracing.tracingId === annotationLayer.tracingId,
       );
-      const resolutions =
-        volumeTracingResolutions[volumeTracingIndex] || ([[1, 1, 1]] as Vector3[]);
+      const resolutions = volumeTracingMags[volumeTracingIndex] || ([[1, 1, 1]] as Vector3[]);
       return getMagInfo(resolutions).getFinestMag();
     } else {
       const segmentationLayer = getSegmentationLayerByName(dataset, layerName);

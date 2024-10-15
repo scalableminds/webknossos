@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.util.requestparsing.{DatasetURIParser, ObjectId}
+import com.scalableminds.util.requestparsing.DatasetURIParser
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.GenericInboxDataSource
@@ -28,21 +28,6 @@ package object datasource {
           "name" -> datasetId.path,
           "team" -> datasetId.organizationId,
         )
-    }
-
-    def fromDatasetNameAndIdAndOrganizationId(datasetNameAndId: String, organizationId: String): DataSourceId = {
-      val (maybeId, maybeDatasetName) = getDatasetIdOrNameFromURIPath(datasetNameAndId)
-      maybeId match {
-        case Some(validId) => DataSourceId(validId.toString, organizationId)
-        case None          => DataSourceId(maybeDatasetName.getOrElse(datasetNameAndId), organizationId)
-      }
-    }
-    def fromDatasetIdOrNameAndOrganizationId(datasetIdOrName: String, organizationId: String): DataSourceId = {
-      val parsedId = ObjectId.fromStringSync(datasetIdOrName)
-      parsedId match {
-        case Some(validId) => DataSourceId(validId.toString, organizationId)
-        case None          => DataSourceId(datasetIdOrName, organizationId)
-      }
     }
   }
 

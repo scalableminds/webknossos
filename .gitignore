@@ -80,3 +80,6 @@ conf/application.conf-e
 .bloop
 .metals
 metals.sbt
+
+.yarn/install-state.gz
+tools/**/.yarn/install-state.gz

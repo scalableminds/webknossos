@@ -421,7 +421,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     if (updates.isEmpty) Full(annotation)
     else {
       for {
-        updated <- updateIter(Some(annotation.withTargetVersion(targetVersion)), updates)
+        updated <- updateIter(Some(annotation.withNewUpdaters(annotation.version, targetVersion)), updates)
         updatedWithNewVerson = updated.withVersion(targetVersion)
         _ = logger.info(s"flushing v${targetVersion}, with ${updated.skeletonStats}")
         _ <- updatedWithNewVerson.flushBufferedUpdates()

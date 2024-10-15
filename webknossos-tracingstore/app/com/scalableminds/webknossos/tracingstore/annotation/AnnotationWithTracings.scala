@@ -106,9 +106,9 @@ case class AnnotationWithTracings(
     this.copy(annotation = annotation.copy(version = newVersion), tracingsById = tracingsUpdated.toMap)
   }
 
-  def withTargetVersion(targetVersion: Long): AnnotationWithTracings = {
+  def withNewUpdaters(materializedVersion: Long, targetVersion: Long): AnnotationWithTracings = {
     val editableMappingsUpdated = editableMappingsByTracingId.view.mapValues {
-      case (mapping, updater) => (mapping, updater.withTargetVersion(targetVersion))
+      case (mapping, updater) => (mapping, updater.newWithTargetVersion(materializedVersion, targetVersion))
     }
     this.copy(editableMappingsByTracingId = editableMappingsUpdated.toMap)
   }

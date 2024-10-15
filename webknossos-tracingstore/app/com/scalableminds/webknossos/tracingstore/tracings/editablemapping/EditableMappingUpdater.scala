@@ -462,5 +462,19 @@ class EditableMappingUpdater(
       }
     } yield ()
 
-  def withTargetVersion(targetVersion: Long): EditableMappingUpdater = ??? // TODO build new or copy?
+  def newWithTargetVersion(currentMaterializedVersion: Long, targetVersion: Long): EditableMappingUpdater =
+    new EditableMappingUpdater(
+      annotationId,
+      tracingId,
+      baseMappingName,
+      currentMaterializedVersion,
+      targetVersion,
+      remoteFallbackLayer,
+      tokenContext,
+      remoteDatastoreClient,
+      editableMappingService,
+      annotationService,
+      tracingDataStore,
+      relyOnAgglomerateIds = relyOnAgglomerateIds
+    )
 }

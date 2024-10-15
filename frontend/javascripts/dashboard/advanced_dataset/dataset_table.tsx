@@ -277,7 +277,7 @@ class DatasetRenderer {
     this.datasetTable = datasetTable;
   }
   getRowKey() {
-    return this.data.name;
+    return this.data.path;
   }
 
   renderTypeColumn() {

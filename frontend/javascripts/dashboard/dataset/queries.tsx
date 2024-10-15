@@ -410,7 +410,7 @@ export function useUpdateDatasetMutation(folderId: string | null) {
         queryClient.setQueryData(mutationKey, (oldItems: APIDatasetCompact[] | undefined) =>
           (oldItems || [])
             .map((oldDataset: APIDatasetCompact) => {
-              return oldDataset.name === updatedDataset.name
+              return oldDataset.id === updatedDataset.id
                 ? // Don't update lastUsedByUser, since this can lead to annoying reorderings in the table.
                   convertDatasetToCompact({
                     ...updatedDataset,
@@ -441,7 +441,7 @@ export function useUpdateDatasetMutation(folderId: string | null) {
                   // The dataset shouldn't be in oldItems, but if it should be
                   // for some reason (e.g., a bug), we filter it away to avoid
                   // duplicates.
-                  .filter((el) => el.name !== updatedDataset.name)
+                  .filter((el) => el.id !== updatedDataset.id)
                   .concat([convertDatasetToCompact(updatedDataset)])
               );
             },
@@ -485,17 +485,17 @@ function diffDatasets(
     onlyB: onlyInNew,
     both,
   } = Utils.diffArrays(
-    oldDatasets.map((ds) => ds.name),
-    newDatasets.map((ds) => ds.name),
+    oldDatasets.map((ds) => ds.id),
+    newDatasets.map((ds) => ds.id),
   );
 
-  const oldDatasetsDict = _.keyBy(oldDatasets, (ds) => ds.name);
-  const newDatasetsDict = _.keyBy(newDatasets, (ds) => ds.name);
+  const oldDatasetsDict = _.keyBy(oldDatasets, (ds) => ds.id);
+  const newDatasetsDict = _.keyBy(newDatasets, (ds) => ds.id);
 
   const changedDatasets = both
-    .map((name) => newDatasetsDict[name])
+    .map((id) => newDatasetsDict[id])
     .filter((newDataset) => {
-      const oldDataset = oldDatasetsDict[newDataset.name];
+      const oldDataset = oldDatasetsDict[newDataset.id];
       return !_.isEqualWith(oldDataset, newDataset, (_objValue, _otherValue, key) => {
         if (key === "lastUsedByUser") {
           // Ignore the lastUsedByUser timestamp when diffing datasets.

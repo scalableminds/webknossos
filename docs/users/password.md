@@ -7,7 +7,7 @@ Users can _change_ their account password by themselves as long as they are logg
 Logged-out users can _reset_ their password by clicking on `Forgot Password` in the navigation bar in the top-right corner of the screen. They have to provide their email address and will receive an email containing instructions to reset the password.
 
 
-## Change Accoint Email
+## Change Account Email
 Admins can update the email address of each user from the `Users` administration page. 
 Select the `Edit` icon next to a user's email address, enter the new email address, and confirm the change. 
 Remember to inform the user about the successful change of an email address since the new email address will be used for the login credentials.

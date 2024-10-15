@@ -10,3 +10,6 @@ There are three different ways to compose a new dataset:
 3. Similar to (2), two datasets can be combined while respecting landmarks that were generated with BigWarp.
 
 See the "Compose from existing datasets" tab in the "Add Dataset" screen for more details.
+
+![youtube-video](https://www.youtube.com/embed/BV6Hw9v3pao)
+

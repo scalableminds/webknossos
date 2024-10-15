@@ -1,6 +1,8 @@
 # Tasks
 
-## Creating a Tasks Type
+The task systems is designed for automated task distribution to a (large) group of annotators based on several criteria, e.g., experience, access rights, etc. For fine-grained control, manual task assignments are also possible.
+
+## Creating a Task Type
 
 First, a _Task Type_ needs to be created:
 
@@ -11,18 +13,7 @@ First, a _Task Type_ needs to be created:
 
 ![Create a Task Type](../images/tasks_tasktype.jpeg)
 
-Next, you need to set up a [Project](../tasks_projects/projects.md):
-
-## Creating a Project
-
-1. Open the `Projects` screen of the administration section and click on `Add Project`.
-2. Fill out the form to create the _Project_.
-   - Note that you can assign a `Priority` to the Project. A higher value means that Tasks from this Project will be more likely to be assigned to users.
-   - With the `Time Limit` property, you can specify the expected completion time of a Task Instance. There will be an email notification if users exceed this limit.
-
-![Create a Project](../images/tasks_project.jpeg)
-
-Now, you are ready to create _Tasks_:
+Next, you need to set up a [Project](../tasks_projects/projects.md). Once you have created your project, you are ready to create _Tasks_:
 
 ## Creating a Task
 
@@ -35,7 +26,7 @@ Tasks can also be created in bulk using the advanced CSV text input. Not recomme
 
 ![Create a Task](../images/tasks_task.jpeg)
 
-**Note that you need to specify required _Experiences_ for a _Task_. Your _Task_ can only be assigned if there are users that have the required _Experience_ assigned to them. You can assign an Experience to a user on the `Users` screen.**
+**Note that you need to specify required _Experiences_ for a _Task_. Your _Task_ can only be assigned if there are users that have the required _Experience_ assigned to them. You can assign an [Experience](../users/new_users.md) to a user on the `Users` screen.**
 
 ![Assigning Experiences to users](../images/users_experience.jpeg)
 

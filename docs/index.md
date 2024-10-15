@@ -4,14 +4,10 @@ WEBKNOSSOS is an [open-source tool](https://github.com/scalableminds/webknossos)
 The web-based tool is powered by a specialized data-delivery backend that stores [large datasets](./datasets/index.md) efficiently on disk and serves many concurrent users.
 WEBKNOSSOS has a GPU-accelerated viewer that includes tools for creating and sharing skeleton and volume annotations.
 Powerful [user](./users/index.md) and [task](./tasks_projects/index.md) management features automatically distribute tasks to human annotators.
-There are many features to enhance the productivity and efficiency of human annotators.
 WEBKNOSSOS is also a platform for [showcasing datasets](https://webknossos.org) alongside a paper publication.
 
 ![youtube-video](https://www.youtube.com/embed/36t4Rwx7Shg)
 
-## Getting Started
-
-Create a free account on [https://webknossos.org/](https://webknossos.org/) and upload your own datasets or explore the published datasets from the community.
 
 ## Features
 
@@ -37,13 +33,13 @@ Create a free account on [https://webknossos.org/](https://webknossos.org/) and 
 
 ## Screenshots
 
-![Skeleton Annotations](./images/tracing_ui_skeleton.jpeg)
-![Volume Annotations](./images/tracing_ui_volume.jpeg)
-![Flight Mode](./images/tracing_ui_flight.jpeg)
+![Volume Annotations](./images/screenshot_volume.png)
+![Skeleton Annotations](./images/screenshot_skeletons.png)
+![Flight Mode](./images/screenshot_flight_mode.png)
 
-![Managing Datasets](./images/dashboard_datasets.jpeg)
-![Working on Tasks](./images/dashboard_tasks.jpeg)
-![Showcasing Datasets](./images/dashboard_featured_publications.jpeg)
+![Managing Datasets](./images/screenshot_DS_management.png)
+![Working on Tasks](./images/screenshot_tasks.png)
+![Showcasing Datasets](./images/screenshot_featured_publications.png)
 
 # Built for Science
 

@@ -9,6 +9,7 @@ The easiest way to get started with working on your datasets is through the WEBK
 3. Drag and drop your data into the upload section
 4. Click the *Upload* button
 
+![youtube-video](https://www.youtube.com/embed/ZvUJrv86w8w?start=17)
 
 Internally, WEBKNOSSOS uses the [WKW-format](./wkw.md) by default to display your data.
 If your data is already in WKW you can simply drag your folder (or zip archive of that folder) into the upload view.
@@ -19,7 +20,9 @@ If your data is not in WKW, you can either:
 Depending on the size of the dataset, the conversion will take some time. 
 You can check the progress at the [`Jobs`](../automation/jobs.md) page or the "Datasets" tab in the dashboard.
 WEBKNOSSOS will also send you an email notification.
-- [Convert](../datasets/converting.md) your data manually to WKW.
+- Convert your data manually to WKW. For this, we provide the following software tools and libraries:
+    - The [WEBKNOSSOS CLI](https://docs.webknossos.org/cli) is a CLI tool that can convert many formats to WKW. 
+    - For other file formats, the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/index.html) can be an option for custom scripting.
 
 In particular, the following file formats are supported for uploading (and conversion):
 

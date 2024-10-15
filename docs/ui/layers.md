@@ -19,10 +19,11 @@ Each dataset consists of one or more data and annotation layers. A dataset typic
 
 - `Opacity`: Increase / Decrease the opacity of a layer. 0% opacity makes a layer invisible. 100% opacity makes it totally opaque. Useful for overlaying several layers above one another.
 - `Gamma Correction`: Increase / Decrease the luminance, brightness and contrast of a layer through a non-linear gamma correction. Low values darken the image, high values increase the perceived brightness. (Color layers only.)
-- `Visibility`: Use the eye icon on the left side of layer name to enable/disable it. Toggling the visibility of a layer, is often the quickest way to make information available in the dataset or hide to get an overview.
+- `Visibility`: Use the toggle on the left side of layer name to enable/disable it. Toggling the visibility of a layer is often the quickest way to make information available in the dataset or hide to get an overview. Alternatively, use the shortcut '3' to toggle the visibility. 
   Disabling the visibility, unloads/frees these resources from your GPU hardware and can make viewing larger datasets more performant. Also, depending on your GPU hardware, there is a physical upper limit for how many layers - typically 16 or more - can be displayed at any time (WebGL limitation). Toggle layers as needed to mitigate this.
 
-![The Histogram overview](../images/histogram.jpeg)
+This video explains how to use the histogram settings to efficiently view your data: 
+![youtube-video](https://www.youtube.com/embed/4IB6jNGa3Rs)
 
 ### Color and Segmentation Layers
 
@@ -32,7 +33,6 @@ In addition to the general layer properties mentioned above, `color` and `segmen
 - `Pattern Opacity`: Adjust the visibility of the texture/pattern on each segment. To make segments easier to distinguish and more unique, a pattern is applied to each in addition to its base color. 0% hides the pattern. 100% makes the pattern very prominent. Great for increasing the visual contrast between segments.
 - `ID Mapping`: WEBKNOSSOS supports applying pre-computed agglomerations/groupings of segmentation IDs for a given segmentation layer. This is a very powerful feature to explore and compare different segmentation strategies for a given segmentation layer. Mappings need to be pre-computed and stored together with a dataset for WEBKNOSSOS to download and apply. [Read more about this here](../proofreading/segmentation_mappings.md).
 
-![youtube-video](https://www.youtube.com/embed/JZLKB9GfMgQ)
 
 ### Skeleton Annotation Layer
 
@@ -83,5 +83,8 @@ Note, not all control/viewport settings are available in every annotation mode.
 - `4 Bit`: Toggles data download from the server using only 4 bit instead of 8 bit for each voxel. Use this to reduce the amount of necessary internet bandwidth for WEBKNOSSOS. Useful for showcasing data on the go over cellular networks, e.g 4G.
 - `Interpolation`: When interpolation is enabled, bilinear filtering is applied while rendering pixels between two voxels. As a result, data may look "smoother" (or blurry when being zoomed in very far). Without interpolation, data may look more "crisp" (or pixelated when being zoomed in very far).
 - `Render Missing Data Black`: If a dataset does not contain data at a specific position, WEBKNOSSOS can either render these voxels in "black" or it can try to render data from another magnification.
+
+This video explains how to work with blend modes and order layer (especially relevant when working with fluorescence microscopy data):
+![youtube-video](https://www.youtube.com/embed/_nSw4nywhLU)
 
 [1] Bosch, C., Ackels, T., Pacureanu, A. et al. Functional and multiscale 3D structural investigation of brain tissue through correlative in vivo physiology, synchrotron microtomography and volume electron microscopy. Nat Commun 13, 2923 (2022). https://doi.org/10.1038/s41467-022-30199-6

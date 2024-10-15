@@ -89,15 +89,14 @@ flow-coverage/
 .nyc_output
 coverage
 coverage-ts
-**/screenshots/*.diff.png
-**/screenshots/*.new.png
+*.vscode
+.bsp
+temp-webknossos-schema**
+conf/application.conf-e
+.env
+.bloop
+.metals
+metals.sbt
 
-# Yarn 
-.yarn/*
-!.yarn/cache
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
-tools/proxy/.yarn/*
+.yarn/install-state.gz
+tools/**/.yarn/install-state.gz

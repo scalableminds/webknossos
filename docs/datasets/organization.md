@@ -12,4 +12,8 @@ This is because the access permissions are handled cumulatively.
 In addition to the folder organization, datasets can also be tagged.
 Use the tags column to do so or select a dataset with a click and use the right sidebar.
 
+You also have the possibility to add metadata for your dataset in the info tab on the right. You'll be able to add text, numbers, or multi-text items as key-value pairs and keep your datasets organized and manageable.
+
+![Adding metadata](../images/metadata_dataset.gif)
+
 To move multiple datasets to a folder at once, you can make use of multi-selection. As in typical file explorers, CTRL + left click adds individual datasets to the current selection. Shift + left click selects a range of datasets.

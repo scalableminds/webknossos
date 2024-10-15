@@ -12,7 +12,7 @@ You can view your dataset slice by slice.
 
 Most skeleton annotation operations and keyboard shortcuts are tailored for the Orthogonal Mode.
 
-![Switch between different annotation modes using the buttons in the toolbar](../images/tracing_ui_modes.jpeg)
+![Switch between different annotation modes using the buttons in the toolbar](../images/view_modes.png)
 
 ## Oblique Mode
 

@@ -11,7 +11,6 @@ If you are [an Admin, a Dataset Manager or a Team Manager](../users/access_right
 
 Read more about the organization of datasets [here](../datasets/organization.md).
 
-![Dashboard for Team Managers or Admins with access to dataset settings and additional administration actions.](../images/dashboard_datasets.jpeg)
-![Dashboard for Regular Users](../images/dashboard_regular_user.jpeg)
+![Dashboard for Team Managers or Admins with access to dataset settings and additional administration actions.](../images/screenshot_DS_management.png)
 
-![youtube-video](https://www.youtube.com/embed/naPL1jfCdOc)
+![Dashboard for Regular Users](../images/dashboard_regular_user.jpeg)

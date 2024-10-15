@@ -1,10 +1,10 @@
 import { Button } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import DatasetSelectionComponent, {
-  DatasetSelectionValue,
+  type DatasetSelectionValue,
 } from "dashboard/dataset/dataset_selection_component";
-import React, { useState } from "react";
-import { tryToFetchDatasetsByName, WizardComponentProps } from "./common";
+import { useState } from "react";
+import { tryToFetchDatasetsByName, type WizardComponentProps } from "./common";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 
 export default function SelectDatasets({ wizardContext, setWizardContext }: WizardComponentProps) {

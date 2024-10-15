@@ -7,7 +7,7 @@ import {
   tokenUserE,
   setCurrToken,
   resetDatabase,
-} from "test/enzyme/e2e-setup";
+} from "test/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
 test.before("Reset database", async () => {
@@ -27,7 +27,7 @@ User:
 user_A, user_B, user_C, user_D, user_E
 
 ++----------------------------------------------------------------------------------------------------------------------++--------------------------------------++
-||  Otganization X                                                                                                      ||  Organization Y                      ||
+||  Organization X                                                                                                      ||  Organization Y                      ||
 ||  Admin: user_A                                                                                                       ||  Admin: user_E                       ||
 ++----------------------------------+---------------------------+---------------------------+---------------------------++--------------------------------------++
 || team_X1                          |  team_X2                  |  team_X3                  |  team_X4                  ||  team_Y1                             ||

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Button, Tooltip } from "antd";
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsChunkStatistics } from "admin/admin_rest_api";
@@ -10,8 +10,8 @@ import {
   formatDurationStrict,
   formatNumber,
 } from "libs/format_utils";
-import { VoxelyticsChunkStatistics } from "types/api_flow_types";
-import { Result } from "./utils";
+import type { VoxelyticsChunkStatistics } from "types/api_flow_types";
+import type { Result } from "./utils";
 import dayjs from "dayjs";
 import { pluralize } from "libs/utils";
 

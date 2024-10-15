@@ -1,6 +1,5 @@
 import { Provider } from "react-redux";
-import React from "react";
-import ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 import window, { document } from "libs/window";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import UnthrottledStore, { startSagas } from "oxalis/store";
@@ -27,6 +26,7 @@ import Model from "oxalis/model";
 import { setupApi } from "oxalis/api/internal_api";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
 import checkBrowserFeatures from "libs/browser_feature_check";
+import { RootForFastTooltips } from "components/fast_tooltip";
 
 import "../stylesheets/main.less";
 import GlobalThemeProvider, { getThemeFromUser } from "theme";
@@ -42,7 +42,7 @@ startSagas(rootSaga);
 const reactQueryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      cacheTime: Infinity,
+      cacheTime: Number.POSITIVE_INFINITY,
     },
   },
 });
@@ -104,7 +104,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const containerElement = document.getElementById("main-container");
 
   if (containerElement) {
-    ReactDOM.render(
+    const react_root = createRoot(containerElement);
+    react_root.render(
       <ErrorBoundary>
         {/* @ts-ignore */}
         <Provider store={Store}>
@@ -115,13 +116,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         https://github.com/frontend-collective/react-sortable-tree/blob/9aeaf3d38b500d58e2bcc1d9b6febce12f8cc7b4/stories/barebones-no-context.js */}
             <DndProvider backend={HTML5Backend}>
               <GlobalThemeProvider>
+                <RootForFastTooltips />
                 <Router />
               </GlobalThemeProvider>
             </DndProvider>
           </QueryClientProvider>
         </Provider>
       </ErrorBoundary>,
-      containerElement,
     );
   }
 });

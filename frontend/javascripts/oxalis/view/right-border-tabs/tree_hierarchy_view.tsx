@@ -1,16 +1,19 @@
 import { DownOutlined } from "@ant-design/icons";
-import { Tree as AntdTree, GetRef, MenuProps, Modal, TreeProps } from "antd";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { AutoSizer } from "react-virtualized";
+import { Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
+import React, { memo, useCallback, useEffect, useRef, useState } from "react";
+import AutoSizer from "react-virtualized-auto-sizer";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeGroupAction,
+  setTreeNameAction,
+  setTreeMetadataAction,
   toggleAllTreesAction,
   toggleTreeAction,
   toggleTreeGroupAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import * as Utils from "libs/utils";
 import { Store } from "oxalis/singletons";
-import type { TreeGroup } from "oxalis/store";
+import type { Tree, TreeGroup, TreeMap } from "oxalis/store";
 import {
   createGroupToTreesMap,
   deepFlatFilter,
@@ -20,19 +23,23 @@ import {
   insertTreesAndTransform,
   MISSING_GROUP_ID,
   moveGroupsHelper,
-  TreeNode,
+  type TreeNode,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { getContextMenuPositionFromEvent } from "../context_menu";
 import { ContextMenuContainer } from "./sidebar_context_menu";
 import {
   onBatchActions,
-  Props,
+  type Props,
   renderGroupNode,
   renderTreeNode,
   selectGroupById,
   setExpandedGroups,
   setUpdateTreeGroups,
 } from "./tree_hierarchy_renderers";
+import { ResizableSplitPane } from "./resizable_split_pane";
+import { MetadataEntryTableRows } from "./metadata_table";
+import type { MetadataEntryProto } from "types/api_flow_types";
+import { InputWithUpdateOnBlur } from "../components/input_with_update_on_blur";
 
 const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
   const { id, type } = info.node;
@@ -261,57 +268,121 @@ function TreeHierarchyView(props: Props) {
         menu={menu}
         className="tree-list-context-menu-overlay"
       />
-      <AutoSizer>
-        {({ height, width }) => (
-          <div
-            style={{
-              height,
-              width,
-            }}
-          >
-            <AntdTree
-              treeData={UITreeData}
-              height={height}
-              ref={treeRef}
-              titleRender={(node) =>
-                node.type === GroupTypeEnum.TREE
-                  ? renderTreeNode(props, onOpenContextMenu, hideContextMenu, node)
-                  : renderGroupNode(
-                      props,
-                      onOpenContextMenu,
-                      hideContextMenu,
-                      node,
-                      expandedNodeKeys,
-                    )
-              }
-              switcherIcon={<DownOutlined />}
-              onSelect={(_selectedKeys, info: { node: TreeNode; nativeEvent: MouseEvent }) =>
-                info.node.type === GroupTypeEnum.TREE
-                  ? onSelectTreeNode(info.node, info.nativeEvent)
-                  : onSelectGroupNode(info.node)
-              }
-              onDrop={onDrop}
-              onCheck={onCheck}
-              onExpand={onExpand}
-              // @ts-expect-error isNodeDraggable has argument of base type DataNode but we use it's extended parent type TreeNode
-              draggable={{ nodeDraggable: isNodeDraggable, icon: false }}
-              checkedKeys={checkedKeys}
-              expandedKeys={expandedNodeKeys}
-              selectedKeys={selectedKeys}
-              style={{ marginLeft: -14 }}
-              autoExpandParent
-              checkable
-              blockNode
-              showLine
-              multiple
-              defaultExpandAll
-            />
-          </div>
-        )}
-      </AutoSizer>
+      <ResizableSplitPane
+        firstChild={
+          <AutoSizer>
+            {({ height, width }) => (
+              <div
+                style={{
+                  height,
+                  width,
+                }}
+              >
+                <AntdTree
+                  treeData={UITreeData}
+                  height={height}
+                  ref={treeRef}
+                  titleRender={(node) =>
+                    node.type === GroupTypeEnum.TREE
+                      ? renderTreeNode(props, onOpenContextMenu, hideContextMenu, node)
+                      : renderGroupNode(
+                          props,
+                          onOpenContextMenu,
+                          hideContextMenu,
+                          node,
+                          expandedNodeKeys,
+                        )
+                  }
+                  switcherIcon={<DownOutlined />}
+                  onSelect={(_selectedKeys, info: { node: TreeNode; nativeEvent: MouseEvent }) =>
+                    info.node.type === GroupTypeEnum.TREE
+                      ? onSelectTreeNode(info.node, info.nativeEvent)
+                      : onSelectGroupNode(info.node)
+                  }
+                  onDrop={onDrop}
+                  onCheck={onCheck}
+                  onExpand={onExpand}
+                  // @ts-expect-error isNodeDraggable has argument of base type DataNode but we use it's extended parent type TreeNode
+                  draggable={{ nodeDraggable: isNodeDraggable, icon: false }}
+                  checkedKeys={checkedKeys}
+                  expandedKeys={expandedNodeKeys}
+                  selectedKeys={selectedKeys}
+                  style={{ marginLeft: -14 }}
+                  autoExpandParent
+                  checkable
+                  blockNode
+                  showLine
+                  multiple
+                  defaultExpandAll
+                />
+              </div>
+            )}
+          </AutoSizer>
+        }
+        secondChild={
+          <DetailsForSelection
+            trees={props.trees}
+            selectedTreeIds={props.selectedTreeIds}
+            readOnly={!props.allowUpdate}
+          />
+        }
+      />
     </>
   );
 }
+
+const setMetadata = (tree: Tree, newProperties: MetadataEntryProto[]) => {
+  Store.dispatch(setTreeMetadataAction(newProperties, tree.treeId));
+};
+
+const DetailsForSelection = memo(
+  ({
+    trees,
+    selectedTreeIds,
+    readOnly,
+  }: { trees: TreeMap; selectedTreeIds: number[]; readOnly: boolean }) => {
+    if (selectedTreeIds.length === 1) {
+      const tree = trees[selectedTreeIds[0]];
+      if (tree == null) {
+        return <>Cannot find details for selected tree.</>;
+      }
+
+      return (
+        <div>
+          <table className="metadata-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th colSpan={2}>{tree.treeId}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Name</td>
+                <td colSpan={2}>
+                  <InputWithUpdateOnBlur
+                    value={tree.name || ""}
+                    onChange={(newValue) =>
+                      Store.dispatch(setTreeNameAction(newValue, tree.treeId))
+                    }
+                  />
+                </td>
+              </tr>
+              <MetadataEntryTableRows item={tree} setMetadata={setMetadata} readOnly={readOnly} />
+            </tbody>
+          </table>
+        </div>
+      );
+    } else if (selectedTreeIds.length > 1) {
+      return (
+        <div>
+          {selectedTreeIds.length} {Utils.pluralize("Tree", selectedTreeIds.length)} selected.{" "}
+        </div>
+      );
+    }
+    return null;
+  },
+);
 
 // React.memo is used to prevent the component from re-rendering without the props changing
 export default React.memo(TreeHierarchyView);

@@ -1,5 +1,5 @@
 import { Form, Input, Button, Card, Upload, Spin, Progress, Divider, App } from "antd";
-import React, { useState } from "react";
+import { useState } from "react";
 import { InboxOutlined } from "@ant-design/icons";
 import _ from "lodash";
 import type { APITask } from "types/api_flow_types";
@@ -120,20 +120,20 @@ function TaskCreateBulkView() {
     const dataSet = words[0];
     const taskTypeId = words[1];
     const experienceDomain = words[2];
-    const minExperience = parseInt(words[3]);
-    const x = parseInt(words[4]);
-    const y = parseInt(words[5]);
-    const z = parseInt(words[6]);
-    const rotX = parseInt(words[7]);
-    const rotY = parseInt(words[8]);
-    const rotZ = parseInt(words[9]);
-    const pendingInstances = parseInt(words[10]);
-    const boundingBoxX = parseInt(words[11]);
-    const boundingBoxY = parseInt(words[12]);
-    const boundingBoxZ = parseInt(words[13]);
-    const width = parseInt(words[14]);
-    const height = parseInt(words[15]);
-    const depth = parseInt(words[16]);
+    const minExperience = Number.parseInt(words[3]);
+    const x = Number.parseInt(words[4]);
+    const y = Number.parseInt(words[5]);
+    const z = Number.parseInt(words[6]);
+    const rotX = Number.parseInt(words[7]);
+    const rotY = Number.parseInt(words[8]);
+    const rotZ = Number.parseInt(words[9]);
+    const pendingInstances = Number.parseInt(words[10]);
+    const boundingBoxX = Number.parseInt(words[11]);
+    const boundingBoxY = Number.parseInt(words[12]);
+    const boundingBoxZ = Number.parseInt(words[13]);
+    const width = Number.parseInt(words[14]);
+    const height = Number.parseInt(words[15]);
+    const depth = Number.parseInt(words[16]);
     const projectName = words[17];
 
     // mapOptional takes care of treating empty strings as null

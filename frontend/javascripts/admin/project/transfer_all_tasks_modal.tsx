@@ -1,5 +1,5 @@
 import { Modal, Table, Spin } from "antd";
-import React, { useState } from "react";
+import { useState } from "react";
 import _ from "lodash";
 import type { APIUser, APIProject, APIActiveUser } from "types/api_flow_types";
 import {

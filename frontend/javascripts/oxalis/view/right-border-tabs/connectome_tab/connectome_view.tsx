@@ -1,4 +1,4 @@
-import { Alert, Empty, Space, Tooltip, TreeProps } from "antd";
+import { Alert, Empty, Space, Tooltip, type TreeProps } from "antd";
 import { connect } from "react-redux";
 import Maybe from "data.maybe";
 import React from "react";
@@ -36,7 +36,7 @@ import {
 import { stringToAntdColorPresetRgb } from "libs/format_utils";
 import { setMappingAction } from "oxalis/model/actions/settings_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
-import { TreeTypeEnum, Vector3 } from "oxalis/constants";
+import { TreeTypeEnum, type Vector3 } from "oxalis/constants";
 import Constants, { MappingStatusEnum } from "oxalis/constants";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
@@ -155,6 +155,7 @@ const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree
   groupId: null,
   type: TreeTypeEnum.DEFAULT,
   edgesAreVisible: true,
+  metadata: [],
 });
 
 const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): MutableNode => ({
@@ -645,7 +646,7 @@ class ConnectomeView extends React.Component<Props, State> {
     // @ts-ignore
     const agglomerateIds = evt.target.value
       .split(",")
-      .map((part: string) => parseInt(part, 10))
+      .map((part: string) => Number.parseInt(part, 10))
       .filter((id: number) => !Number.isNaN(id));
     this.setActiveConnectomeAgglomerateIds(agglomerateIds);
     // @ts-ignore

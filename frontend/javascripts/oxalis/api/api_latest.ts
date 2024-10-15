@@ -4,9 +4,9 @@ import TWEEN from "tween.js";
 import _ from "lodash";
 import type { Bucket, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
-import { APICompoundType, APICompoundTypeEnum, ElementClass } from "types/api_flow_types";
+import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_flow_types";
 import { InputKeyboardNoLoop } from "libs/input";
-import { M4x4, Matrix4x4, V3, Vector16 } from "libs/mjs";
+import { M4x4, type Matrix4x4, V3, type Vector16 } from "libs/mjs";
 import type { Versions } from "oxalis/view/version_view";
 import {
   addTreesAndGroupsAction,
@@ -101,7 +101,7 @@ import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middlewar
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import {
-  BatchableUpdateSegmentAction,
+  type BatchableUpdateSegmentAction,
   batchUpdateGroupsAndSegmentsAction,
   clickSegmentAction,
   removeSegmentAction,
@@ -144,7 +144,7 @@ import Constants, {
   MappingStatusEnum,
   EMPTY_OBJECT,
 } from "oxalis/constants";
-import DataLayer from "oxalis/model/data_layer";
+import type DataLayer from "oxalis/model/data_layer";
 import type { OxalisModel } from "oxalis/model";
 import { Model, api } from "oxalis/singletons";
 import Request from "libs/request";
@@ -176,7 +176,7 @@ import window, { location } from "libs/window";
 import { coalesce } from "libs/utils";
 import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
   createSkeletonNode,
@@ -656,35 +656,55 @@ class TracingApi {
     bbName: string,
     options?: { maximumSegmentCount?: number; maximumVolume?: number },
   ) => {
+    const state = Store.getState();
     const maximumVolume = options?.maximumVolume ?? Constants.REGISTER_SEGMENTS_BB_MAX_VOLUME_VX;
     const maximumSegmentCount =
       options?.maximumSegmentCount ?? Constants.REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT;
     const shape = Utils.computeShapeFromBoundingBox({ min, max });
-    const volume = Math.ceil(shape[0] * shape[1] * shape[2]);
-    if (volume > maximumVolume) {
-      Toast.error(
-        `The volume of the bounding box exceeds ${maximumVolume} Vx, please make it smaller.`,
+
+    const segmentationLayerName = api.data.getVisibleSegmentationLayerName();
+    if (segmentationLayerName == null) {
+      throw new Error(
+        "No segmentation layer is currently visible. Enable the one you want to register segments for.",
       );
-      return;
+    }
+
+    const resolutionInfo = getResolutionInfo(
+      getLayerByName(state.dataset, segmentationLayerName).resolutions,
+    );
+    const theoreticalMagIndex = getActiveMagIndexForLayer(state, segmentationLayerName);
+    const existingMagIndex = resolutionInfo.getIndexOrClosestHigherIndex(theoreticalMagIndex);
+    if (existingMagIndex == null) {
+      throw new Error("The index of the current mag could not be found.");
+    }
+    const currentMag = resolutionInfo.getResolutionByIndex(existingMagIndex);
+    if (currentMag == null) {
+      throw new Error("No mag could be found.");
+    }
+
+    const volume =
+      Math.ceil(shape[0] / currentMag[0]) *
+      Math.ceil(shape[1] / currentMag[1]) *
+      Math.ceil(shape[2] / currentMag[2]);
+    if (volume > maximumVolume) {
+      throw new Error(
+        `The volume of the bounding box exceeds ${maximumVolume} vx, please make it smaller. Currently, the bounding box has a volume of ${volume} vx in the active resolution (${currentMag.join("-")}).`,
+      );
     } else if (volume > maximumVolume / 8) {
       Toast.warning(
         "The volume of the bounding box is very large, registering all segments might take a while.",
       );
     }
 
-    const segmentationLayerName = api.data.getSegmentationLayerNames()[0];
-    const layer = getLayerByName(Store.getState().dataset, segmentationLayerName);
-
-    const resolutionInfo = getResolutionInfo(layer.resolutions);
-    const finestResolution = resolutionInfo.getFinestResolution();
-    // By default, getDataForBoundingBox uses the finest existing magnification.
-    // We use that as strides to traverse the data array properly.
-    const [dx, dy, dz] = finestResolution;
-
-    const data = await api.data.getDataForBoundingBox(segmentationLayerName, {
-      min,
-      max,
-    });
+    const data = await api.data.getDataForBoundingBox(
+      segmentationLayerName,
+      {
+        min,
+        max,
+      },
+      existingMagIndex,
+    );
+    const [dx, dy, dz] = currentMag;
 
     const segmentIdToPosition = new Map();
     let idx = 0;
@@ -703,21 +723,26 @@ class TracingApi {
     const segmentIdCount = Array.from(segmentIdToPosition.entries()).length;
     const halfMaxNoSegments = maximumSegmentCount / 2;
     if (segmentIdCount > maximumSegmentCount) {
-      Toast.error(
+      throw new Error(
         `The given bounding box contains ${segmentIdCount} segments, but only ${maximumSegmentCount} segments can be registered at once. Please reduce the size of the bounding box.`,
       );
-      return;
     } else if (segmentIdCount > halfMaxNoSegments) {
       Toast.warning(
         `The bounding box contains more than ${halfMaxNoSegments} segments. Registering all segments might take a while.`,
       );
     }
 
-    const groupId = api.tracing.createSegmentGroup(
-      `Segments for ${bbName}`,
-      -1,
-      segmentationLayerName,
-    );
+    let groupId = MISSING_GROUP_ID;
+    try {
+      groupId = api.tracing.createSegmentGroup(`Segments for ${bbName}`, -1, segmentationLayerName);
+    } catch (_e) {
+      console.info(
+        `Volume tracing could not be found for the currently visible segmentation layer, registering segments for ${bbName} within root group.`,
+      );
+      Toast.warning(
+        "The current segmentation layer is not editable and the segment list will not be persisted across page reloads. You can make it editable by clicking on the lock symbol to the right of the layer name.",
+      );
+    }
     const updateSegmentActions: BatchableUpdateSegmentAction[] = [];
     for (const [segmentId, position] of segmentIdToPosition.entries()) {
       api.tracing.registerSegment(segmentId, position, undefined, segmentationLayerName);
@@ -1675,7 +1700,9 @@ class DataApi {
       mapping:
         mapping instanceof Map
           ? (new Map(mapping as Map<unknown, unknown>) as Mapping)
-          : new Map(Object.entries(mapping).map(([key, value]) => [parseInt(key, 10), value])),
+          : new Map(
+              Object.entries(mapping).map(([key, value]) => [Number.parseInt(key, 10), value]),
+            ),
       mappingColors,
       hideUnmappedIds,
       showLoadingIndicator,
@@ -2334,9 +2361,7 @@ class DataApi {
       )
     ) {
       throw new Error(
-        `The provided mesh file (${meshFileName}) is not available for this dataset. Available mesh files are: ${(
-          state.localSegmentationData[effectiveLayerName].availableMeshFiles || []
-        ).join(", ")}`,
+        `The provided mesh file (${meshFileName}) is not available for this dataset. Available mesh files are: ${(state.localSegmentationData[effectiveLayerName].availableMeshFiles || []).join(", ")}`,
       );
     }
 

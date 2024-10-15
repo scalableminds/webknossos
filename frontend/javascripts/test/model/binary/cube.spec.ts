@@ -2,17 +2,16 @@ import "test/mocks/lz4";
 import _ from "lodash";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import { sleep } from "libs/utils";
-import type { TestInterface } from "ava";
-import anyTest from "ava";
+import anyTest, { type TestFn } from "ava";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import runAsync from "test/helpers/run-async";
 import sinon from "sinon";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import type { Vector3, Vector4 } from "oxalis/constants";
-import { assertNonNullBucket, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { assertNonNullBucket, type DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import DataCubeType from "oxalis/model/bucket_data_handling/data_cube";
+import type DataCubeType from "oxalis/model/bucket_data_handling/data_cube";
 
 const StoreMock = {
   getState: () => ({
@@ -51,13 +50,14 @@ mockRequire("libs/toast", {
 const DataCube: typeof DataCubeType = mockRequire.reRequire(
   "oxalis/model/bucket_data_handling/data_cube",
 ).default;
-// Ava's recommendation for Flow types
-// https://github.com/avajs/ava/blob/master/docs/recipes/flow.md#typing-tcontext
-const test: TestInterface<{
+
+// Ava's recommendation for Typescript types
+// https://github.com/avajs/ava/blob/main/docs/recipes/typescript.md#typing-tcontext
+const test = anyTest as TestFn<{
   cube: DataCubeType;
   pullQueue: Record<string, any>;
   pushQueue: Record<string, any>;
-}> = anyTest as any;
+}>;
 test.beforeEach((t) => {
   const mockedLayer = {
     resolutions: [

@@ -4,10 +4,11 @@ import {
   ReloadOutlined,
   VerticalAlignBottomOutlined,
   EllipsisOutlined,
+  TagsOutlined,
 } from "@ant-design/icons";
-import { List, MenuProps, App } from "antd";
+import { List, type MenuProps, App } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import Checkbox, { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
+import Checkbox, { type CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import React from "react";
 
 import classnames from "classnames";
@@ -37,12 +38,16 @@ import Toast from "libs/toast";
 import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
 import { V4 } from "libs/mjs";
 import { ChangeColorMenuItemContent } from "components/color_picker";
-import { MenuItemType } from "antd/lib/menu/hooks/useItems";
+import type { MenuItemType } from "antd/es/menu/interface";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
-import { type AdditionalCoordinate } from "types/api_flow_types";
-import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
+import type { AdditionalCoordinate } from "types/api_flow_types";
+import {
+  getAdditionalCoordinatesAsString,
+  getPosition,
+} from "oxalis/model/accessors/flycam_accessor";
 import FastTooltip from "components/fast_tooltip";
 import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
+import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 
@@ -189,7 +194,6 @@ const getMakeSegmentActiveMenuItem = (
 type Props = {
   segment: Segment;
   mappingInfo: ActiveMappingInfo;
-  isCentered: boolean;
   selectedSegmentIds: number[] | null | undefined;
   activeCellId: number | null | undefined;
   setHoveredSegmentId: (arg0: number | null | undefined) => void;
@@ -338,7 +342,7 @@ function _MeshInfoItem(props: {
       >
         <div
           className={classnames("segment-list-item", {
-            "is-selected-cell": isSelectedInList,
+            "is-selected-segment": isSelectedInList,
           })}
         >
           {toggleVisibilityCheckbox}
@@ -375,7 +379,6 @@ const MeshInfoItem = React.memo(_MeshInfoItem);
 function _SegmentListItem({
   segment,
   mappingInfo,
-  isCentered,
   selectedSegmentIds,
   activeCellId,
   setHoveredSegmentId,
@@ -409,6 +412,10 @@ function _SegmentListItem({
   const isHoveredSegmentId = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.hoveredSegmentId === segment.id,
   );
+  const isCentered = useSelector((state: OxalisState) => {
+    const centeredSegmentId = getSegmentIdForPosition(getPosition(state.flycam));
+    return centeredSegmentId === segment.id;
+  });
 
   const createSegmentContextMenu = (): MenuProps => ({
     items: [
@@ -556,13 +563,12 @@ function _SegmentListItem({
         : createSegmentContextMenu(),
     );
   };
-
   return (
     <List.Item
       style={{
         padding: "2px 5px",
       }}
-      className="segment-list-item"
+      className={`segment-list-item ${isHoveredSegmentId ? "is-hovered-segment" : ""}`}
       onMouseEnter={() => {
         setHoveredSegmentId(segment.id);
       }}
@@ -593,8 +599,17 @@ function _SegmentListItem({
               }
             }}
             margin="0 5px"
+            iconClassName="deemphasized"
             disableEditing={!allowUpdate}
           />
+          {(segment.metadata || []).length > 0 ? (
+            <FastTooltip
+              className="deemphasized icon-margin-right"
+              title="This segment has assigned metadata properties."
+            >
+              <TagsOutlined />
+            </FastTooltip>
+          ) : null}
           <FastTooltip title="Open context menu (also available via right-click)">
             <EllipsisOutlined onClick={onOpenContextMenu} />
           </FastTooltip>

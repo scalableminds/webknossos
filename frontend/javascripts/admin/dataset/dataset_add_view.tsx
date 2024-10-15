@@ -1,6 +1,6 @@
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import { Tabs, Modal, Button, Layout, TabsProps } from "antd";
+import { Tabs, Modal, Button, Layout, type TabsProps } from "antd";
 import { CopyOutlined, DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { connect, useSelector } from "react-redux";
@@ -13,7 +13,7 @@ import features from "features";
 import { getDatastores } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import DatasetAddComposeView from "./dataset_add_compose_view";
-import { History } from "history";
+import type { History } from "history";
 
 const { Content, Sider } = Layout;
 
@@ -181,18 +181,23 @@ const alignBanner = (
         width: "100%",
       }}
     />
-    <Button
-      href="https://webknossos.org/services/alignment"
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        display: "block",
-        margin: "10px auto",
-        width: "50%",
-      }}
-    >
-      Learn More
-    </Button>
+    <p>
+      <a
+        href="https://docs.webknossos.org/webknossos/automated_analysis.html"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Single-tile alignment
+      </a>{" "}
+      of image stacks can be done directly in WEBKNOSSOS.
+    </p>
+    <p>
+      For multi-tile stacks, learn about our{" "}
+      <a href="https://webknossos.org/services/alignment" target="_blank" rel="noopener noreferrer">
+        alignment service
+      </a>
+      .
+    </p>
   </div>
 );
 const manualAnnotationBanner = (
@@ -298,12 +303,11 @@ const getPostUploadModal = (
         }}
       >
         The dataset was {addTypeToVerb[datasetAddType]} successfully
-        {datasetNeedsConversion ? " and a conversion job was started." : null}.
+        {datasetNeedsConversion ? " and a conversion job was started" : null}.
         <br />
         <div
           style={{
             display: "flex",
-            justifyContent: "center",
           }}
         >
           <div

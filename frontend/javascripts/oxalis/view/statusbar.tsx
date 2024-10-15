@@ -19,7 +19,7 @@ import {
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import message from "messages";
 import {
-  ActionDescriptor,
+  type ActionDescriptor,
   getToolClassForAnnotationTool,
 } from "oxalis/controller/combinations/tool_controls";
 import {
@@ -28,15 +28,14 @@ import {
 } from "oxalis/model/accessors/view_mode_accessor";
 import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import { V3 } from "libs/mjs";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import {
   getActiveSegmentationTracing,
   getReadableNameForLayerName,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import { useInterval } from "libs/react_helpers";
-import _ from "lodash";
-import { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import FastTooltip from "components/fast_tooltip";
 import { Store } from "oxalis/singletons";
 

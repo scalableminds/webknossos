@@ -43,7 +43,7 @@ import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
 import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_flow_types";
-import {
+import type {
   FinishMappingInitializationAction,
   SetMappingAction,
   SetMappingEnabledAction,
@@ -58,6 +58,7 @@ import {
   findParentIdForGroupId,
   getGroupNodeKey,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { sanitizeMetadata } from "./skeletontracing_reducer";
 type SegmentUpdateInfo =
   | {
       readonly type: "UPDATE_VOLUME_TRACING";
@@ -183,7 +184,9 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       // without a position.
     }
 
-    const newSegment = {
+    const metadata = sanitizeMetadata(segment.metadata || oldSegment?.metadata || []);
+
+    const newSegment: Segment = {
       // If oldSegment exists, its creationTime will be
       // used by ...oldSegment
       creationTime: action.timestamp,
@@ -193,6 +196,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       someAdditionalCoordinates: someAdditionalCoordinates,
       ...oldSegment,
       ...segment,
+      metadata,
       somePosition,
       id: segmentId,
     };

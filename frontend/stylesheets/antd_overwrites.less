@@ -240,6 +240,9 @@ label.ant-checkbox-wrapper {
 
 .ant-tree-node-content-wrapper {
   display: flex;
+  // Set padding to 0 so that the contained title span fills the
+  // wrapper entirely. Otherwise, ugly borders would appear on hovering.
+  padding: 0 !important;
 }
 
 .ant-tree.ant-tree-directory .ant-tree-treenode-selected:hover::before,

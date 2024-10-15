@@ -1,21 +1,29 @@
 import _ from "lodash";
-import React, { useState } from "react";
-import { SyncOutlined } from "@ant-design/icons";
-import { Table, Button, Modal } from "antd";
+import { useState } from "react";
+import { PlusOutlined, SyncOutlined } from "@ant-design/icons";
+import { Table, Button, Modal, Space } from "antd";
 import { getAiModels } from "admin/admin_rest_api";
-import { AiModel } from "types/api_flow_types";
+import type { AiModel, APIAnnotation } from "types/api_flow_types";
 import FormattedDate from "components/formatted_date";
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import { useSelector } from "react-redux";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { JobState } from "admin/job/job_list_view";
 import { Link } from "react-router-dom";
 import { useGuardedFetch } from "libs/react_helpers";
 import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
+import { type AnnotationInfoForAIJob, TrainAiModelTab } from "oxalis/view/jobs/train_ai_model";
+import {
+  getResolutionInfo,
+  getSegmentationLayerByName,
+} from "oxalis/model/accessors/dataset_accessor";
+import type { Vector3 } from "oxalis/constants";
+import type { Key } from "react";
 
 export default function AiModelListView() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const [refreshCounter, setRefreshCounter] = useState(0);
+  const [isTrainModalVisible, setIsTrainModalVisible] = useState(false);
   const [aiModels, isLoading] = useGuardedFetch(
     getAiModels,
     [],
@@ -29,10 +37,18 @@ export default function AiModelListView() {
 
   return (
     <div className="container voxelytics-view">
+      {isTrainModalVisible ? (
+        <TrainNewAiJobModal onClose={() => setIsTrainModalVisible(false)} />
+      ) : null}
       <div className="pull-right">
-        <Button onClick={() => setRefreshCounter((val) => val + 1)}>
-          <SyncOutlined spin={isLoading} /> Refresh
-        </Button>
+        <Space>
+          <Button onClick={() => setIsTrainModalVisible(true)}>
+            <PlusOutlined /> Train new Model
+          </Button>
+          <Button onClick={() => setRefreshCounter((val) => val + 1)}>
+            <SyncOutlined spin={isLoading} /> Refresh
+          </Button>
+        </Space>
       </div>
       <h3>AI Models</h3>
       <Table
@@ -63,7 +79,7 @@ export default function AiModelListView() {
                 value: username,
               }),
             ),
-            onFilter: (value: string | number | boolean, model: AiModel) =>
+            onFilter: (value: Key | boolean, model: AiModel) =>
               formatUserName(null, model.user).startsWith(String(value)),
             filterSearch: true,
           },
@@ -88,6 +104,66 @@ export default function AiModelListView() {
         dataSource={aiModels}
       />
     </div>
+  );
+}
+
+function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
+  const [annotationInfosForAiJob, setAnnotationInfosForAiJob] = useState<
+    AnnotationInfoForAIJob<APIAnnotation>[]
+  >([]);
+
+  const getMagForSegmentationLayer = async (annotationId: string, layerName: string) => {
+    // The layer name is a human-readable one. It can either belong to an annotationLayer
+    // (therefore, also to a volume tracing) or to the actual dataset.
+    // Both are checked below. This won't be ambiguous because annotationLayers must not
+    // have names that dataset layers already have.
+
+    const annotationWithDataset = annotationInfosForAiJob.find(({ annotation }) => {
+      return annotation.id === annotationId;
+    });
+    if (annotationWithDataset == null) {
+      throw new Error("Cannot find annotation for specified id.");
+    }
+
+    const { annotation, dataset, volumeTracings, volumeTracingResolutions } = annotationWithDataset;
+
+    let annotationLayer = annotation.annotationLayers.find((l) => l.name === layerName);
+    if (annotationLayer != null) {
+      const volumeTracingIndex = volumeTracings.findIndex(
+        (tracing) => tracing.tracingId === annotationLayer.tracingId,
+      );
+      const resolutions =
+        volumeTracingResolutions[volumeTracingIndex] || ([[1, 1, 1]] as Vector3[]);
+      return getResolutionInfo(resolutions).getFinestResolution();
+    } else {
+      const segmentationLayer = getSegmentationLayerByName(dataset, layerName);
+      return getResolutionInfo(segmentationLayer.resolutions).getFinestResolution();
+    }
+  };
+
+  return (
+    <Modal
+      width={875}
+      open
+      title={
+        <>
+          <i className="fas fa-magic icon-margin-right" />
+          AI Analysis
+        </>
+      }
+      onCancel={onClose}
+      footer={null}
+      maskClosable={false}
+    >
+      <TrainAiModelTab
+        getMagForSegmentationLayer={getMagForSegmentationLayer}
+        onClose={onClose}
+        annotationInfos={annotationInfosForAiJob}
+        onAddAnnotationsInfos={(newItems) => {
+          setAnnotationInfosForAiJob([...annotationInfosForAiJob, ...newItems]);
+        }}
+      />
+    </Modal>
   );
 }
 
@@ -116,7 +192,7 @@ const renderActionsForModel = (model: AiModel) => {
                   <ul>
                     {trainingAnnotations.map(
                       (annotation: { annotationId: string }, index: number) => (
-                        <li>
+                        <li key={`annotation_${index}`}>
                           <a
                             href={`/annotations/${annotation.annotationId}`}
                             target="_blank"

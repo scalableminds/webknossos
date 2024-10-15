@@ -57,7 +57,8 @@
       "correctness": {
         "noUnusedVariables": "error",
         "noRenderReturnValue": "off",
-        "useHookAtTopLevel": "error"
+        "useHookAtTopLevel": "error",
+        "noUnusedImports": "error"
       },
       "suspicious": {
         "noExplicitAny": "off",
@@ -88,5 +89,13 @@
       "libs/trackball_controls.ts",
       "*.d.ts"
     ]
-  }
+  },
+  "overrides": [
+    {
+      "include": ["**/package.json"],
+      "formatter": {
+        "lineWidth": 1
+      }
+    }
+  ]
 }

@@ -1,6 +1,6 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import { Modal, Radio, Button, Tooltip, Slider, Spin } from "antd";
+import { Modal, Radio, Button, Tooltip, Spin } from "antd";
 import React, { useEffect, useState } from "react";
 import type { APIDataset, APIDatasetId, APISegmentationLayer } from "types/api_flow_types";
 import {
@@ -12,7 +12,8 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { getDataset } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import { Slider } from "components/slider";
 
 type Props = {
   datasetId: APIDatasetId;
@@ -58,7 +59,7 @@ export function NewVolumeLayerSelection({
       </Tooltip>
       <Radio.Group
         onChange={(e) => {
-          const index = parseInt(e.target.value);
+          const index = Number.parseInt(e.target.value);
           setSelectedSegmentationLayerName(
             index !== -1 ? segmentationLayers[index].name : undefined,
           );
@@ -150,6 +151,7 @@ export function RestrictResolutionSlider({
           style={{
             flexGrow: 1,
           }}
+          onWheelDisabled
         />
         <div
           style={{

@@ -1,7 +1,12 @@
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { takeEvery, put, call, all, spawn } from "typed-redux-saga";
 import { select, take } from "oxalis/model/sagas/effect-generators";
-import { AnnotationToolEnum, MappingStatusEnum, TreeTypeEnum, Vector3 } from "oxalis/constants";
+import {
+  AnnotationToolEnum,
+  MappingStatusEnum,
+  TreeTypeEnum,
+  type Vector3,
+} from "oxalis/constants";
 import Toast from "libs/toast";
 import {
   type CreateNodeAction,
@@ -35,7 +40,7 @@ import {
 import {
   splitAgglomerate,
   mergeAgglomerate,
-  UpdateAction,
+  type UpdateAction,
 } from "oxalis/model/sagas/update_actions";
 import { Model, api, Store } from "oxalis/singletons";
 import {
@@ -52,7 +57,7 @@ import {
   getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
-  NeighborInfo,
+  type NeighborInfo,
   getAgglomeratesForSegmentsFromTracingstore,
   getEdgesForAgglomerateMinCut,
   getNeighborsForAgglomerateNode,
@@ -71,11 +76,11 @@ import {
   refreshMeshAction,
   removeMeshAction,
 } from "oxalis/model/actions/annotation_actions";
-import { ActiveMappingInfo, Mapping, NumberLikeMap, Tree, VolumeTracing } from "oxalis/store";
+import type { ActiveMappingInfo, Mapping, NumberLikeMap, Tree, VolumeTracing } from "oxalis/store";
 import _ from "lodash";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import { takeEveryUnlessBusy } from "./saga_helpers";
-import { Action } from "../actions/actions";
+import type { Action } from "../actions/actions";
 import { isBigInt, isNumberMap, SoftError } from "libs/utils";
 import { getCurrentResolution } from "../accessors/flycam_accessor";
 

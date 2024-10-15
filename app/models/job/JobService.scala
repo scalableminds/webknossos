@@ -56,7 +56,7 @@ class JobService @Inject()(wkConf: WkConf,
       durationLabel = jobAfterChange.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
       _ = analyticsService.track(FailedJobEvent(user, jobBeforeChange.command))
       workflowLink = jobAfterChange.workflowLinkSlackFormatted(wkConf.Http.uri)
-      msg = s"Job ${jobBeforeChange._id} failed$durationLabel. Command ${jobBeforeChange.command}, organization: ${organization.displayName}.$workflowLink"
+      msg = s"Job ${jobBeforeChange._id} failed$durationLabel. Command ${jobBeforeChange.command}, organization: ${organization.name}.$workflowLink"
       _ = logger.warn(msg)
       _ = slackNotificationService.warn(
         s"Failed job$superUserLabel",
@@ -71,13 +71,13 @@ class JobService @Inject()(wkConf: WkConf,
     for {
       user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
-      resultLink = jobAfterChange.resultLinkPublic(organization.name, wkConf.Http.uri)
-      resultLinkSlack = jobAfterChange.resultLinkSlackFormatted(organization.name, wkConf.Http.uri)
+      resultLink = jobAfterChange.resultLinkPublic(organization._id, wkConf.Http.uri)
+      resultLinkSlack = jobAfterChange.resultLinkSlackFormatted(organization._id, wkConf.Http.uri)
       workflowLink = jobAfterChange.workflowLinkSlackFormatted(wkConf.Http.uri)
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       durationLabel = jobAfterChange.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
-      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization: ${organization.displayName}.$resultLinkSlack$workflowLink"
+      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization: ${organization.name}.$resultLinkSlack$workflowLink"
       _ = logger.info(msg)
       _ = slackNotificationService.success(
         s"Successful job$superUserLabel",
@@ -152,8 +152,8 @@ class JobService @Inject()(wkConf: WkConf,
       val commandArgs = job.commandArgs.value
       for {
         datasetName <- commandArgs.get("dataset_name").map(_.as[String]).toFox
-        organizationName <- commandArgs.get("organization_name").map(_.as[String]).toFox
-        dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
+        organizationId <- commandArgs.get("organization_name").map(_.as[String]).toFox
+        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(GlobalAccessContext)
         _ <- datasetDAO.deleteDataset(dataset._id)
       } yield ()
     } else Fox.successful(())
@@ -162,10 +162,12 @@ class JobService @Inject()(wkConf: WkConf,
     for {
       owner <- userDAO.findOne(job._owner) ?~> "user.notFound"
       organization <- organizationDAO.findOne(owner._organization) ?~> "organization.notFound"
-      resultLink = job.resultLink(organization.name)
+      resultLink = job.resultLink(organization._id)
+      ownerJson <- userService.compactWrites(owner)
     } yield {
       Json.obj(
         "id" -> job._id.id,
+        "owner" -> ownerJson,
         "command" -> job.command,
         "commandArgs" -> (job.commandArgs - "webknossos_token" - "user_auth_token"),
         "state" -> job.state,

@@ -1,5 +1,5 @@
 import { Form, Input, Select, Button, Card, InputNumber, Checkbox } from "antd";
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
 import { useSelector } from "react-redux";
 import type { APIUser, APITeam } from "types/api_flow_types";

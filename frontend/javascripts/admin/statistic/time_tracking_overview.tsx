@@ -1,8 +1,7 @@
 import { getTeams, getTimeEntries, getTimeTrackingForUserSpans } from "admin/admin_rest_api";
-import { Card, Select, Spin, Button, DatePicker, type TimeRangePickerProps } from "antd";
+import { Card, Select, Spin, Button, DatePicker, type TimeRangePickerProps, Table } from "antd";
 import { useFetch } from "libs/react_helpers";
-import _ from "lodash";
-import React, { useState } from "react";
+import { useState } from "react";
 import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
@@ -12,14 +11,14 @@ import ProjectAndAnnotationTypeDropdown, {
 import { isUserAdminOrTeamManager, transformToCSVRow } from "libs/utils";
 import messages from "messages";
 import Toast from "libs/toast";
-import dayjs, { Dayjs } from "antd/node_modules/dayjs";
 import TimeTrackingDetailView from "./time_tracking_detail_view";
 import LinkButton from "components/link_button";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import * as Utils from "libs/utils";
-import { APITimeTrackingPerUser } from "types/api_flow_types";
+import type { APITimeTrackingPerUser } from "types/api_flow_types";
 import { useSelector } from "react-redux";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
+import dayjs, { type Dayjs } from "dayjs";
 const { RangePicker } = DatePicker;
 
 const TIMETRACKING_CSV_HEADER_PER_USER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
@@ -198,6 +197,34 @@ function TimeTrackingOverview() {
     },
   ];
 
+  const getSummaryRow = (pageData: readonly APITimeTrackingPerUser[]) => {
+    if (pageData.length === 0) {
+      return null;
+    }
+    let totalNumberOfTasksAndAnnotations = 0;
+    let totalTimeMs = 0;
+    pageData.forEach(({ timeMillis, annotationCount }) => {
+      totalNumberOfTasksAndAnnotations += annotationCount;
+      totalTimeMs += timeMillis;
+    });
+    return (
+      <>
+        <Table.Summary.Row>
+          <Table.Summary.Cell index={0} />
+          <Table.Summary.Cell index={1}>
+            <b>Total</b>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={2}> {totalNumberOfTasksAndAnnotations} </Table.Summary.Cell>
+          <Table.Summary.Cell index={3}>
+            {formatMilliseconds(totalTimeMs / totalNumberOfTasksAndAnnotations)}
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={4}> {formatMilliseconds(totalTimeMs)}</Table.Summary.Cell>
+          <Table.Summary.Cell index={5} />
+        </Table.Summary.Row>
+      </>
+    );
+  };
+
   return (
     <Card
       title={"Annotation Time per User"}
@@ -236,7 +263,7 @@ function TimeTrackingOverview() {
         style={filterStyle}
         value={[startDate, endDate]}
         presets={rangePresets}
-        onChange={(dates: null | (Dayjs | null)[]) => {
+        onChange={(dates: [Dayjs | null, Dayjs | null] | null) => {
           if (dates == null || dates[0] == null || dates[1] == null) return;
           if (Math.abs(dates[0].diff(dates[1], "days")) > 3 * 31) {
             Toast.error(messages["timetracking.date_range_too_long"]);
@@ -269,6 +296,7 @@ function TimeTrackingOverview() {
           locale={{
             emptyText: renderPlaceholder(),
           }}
+          summary={getSummaryRow}
         />
       </Spin>
       <Button

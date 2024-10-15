@@ -1,6 +1,5 @@
 import { Layout } from "antd";
-import { Link, RouteComponentProps, withRouter } from "react-router-dom";
-import * as React from "react";
+import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
 const { Footer } = Layout;
 
 const creditsFooter = () => (

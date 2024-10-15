@@ -1,5 +1,5 @@
-import { OxalisState } from "oxalis/store";
-import React, { CSSProperties, StyleHTMLAttributes } from "react";
+import type { OxalisState } from "oxalis/store";
+import type { CSSProperties, StyleHTMLAttributes } from "react";
 import { useSelector } from "react-redux";
 
 export function HideTreeEdgesIcon({

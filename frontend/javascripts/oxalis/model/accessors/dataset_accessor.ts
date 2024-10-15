@@ -22,17 +22,17 @@ import ErrorHandling from "libs/error_handling";
 import {
   IdentityTransform,
   LongUnitToShortUnitMap,
-  Vector3,
-  Vector4,
-  ViewMode,
+  type Vector3,
+  type Vector4,
+  type ViewMode,
 } from "oxalis/constants";
 import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
 import { aggregateBoundingBox, maxValue } from "libs/utils";
 import { formatExtentInUnitWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
-import { DataLayer } from "types/schemas/datasource.types";
+import type { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
-import { M4x4, Matrix4x4, V3 } from "libs/mjs";
+import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import { convertToDenseResolution, ResolutionInfo } from "../helpers/resolution_info";
 import MultiKeyMap from "libs/multi_key_map";
 import {
@@ -40,7 +40,7 @@ import {
   createAffineTransformFromMatrix,
   createThinPlateSplineTransform,
   invertTransform,
-  Transform,
+  type Transform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
 
@@ -269,8 +269,16 @@ export function getLayerBoundingBox(dataset: APIDataset, layerName: string): Bou
 }
 
 export function getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
-  const min: Vector3 = [Infinity, Infinity, Infinity];
-  const max: Vector3 = [-Infinity, -Infinity, -Infinity];
+  const min: Vector3 = [
+    Number.POSITIVE_INFINITY,
+    Number.POSITIVE_INFINITY,
+    Number.POSITIVE_INFINITY,
+  ];
+  const max: Vector3 = [
+    Number.NEGATIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+  ];
   const layers = getDataLayers(dataset);
 
   for (const dataLayer of layers) {
@@ -567,7 +575,7 @@ export function getEnabledColorLayers(
 
 export function getThumbnailURL(dataset: APIDataset): string {
   const datasetName = dataset.name;
-  const organizationName = dataset.owningOrganization;
+  const organizationId = dataset.owningOrganization;
   const layers = dataset.dataSource.dataLayers;
 
   const colorLayer = _.find(layers, {
@@ -575,18 +583,18 @@ export function getThumbnailURL(dataset: APIDataset): string {
   });
 
   if (colorLayer) {
-    return `/api/datasets/${organizationName}/${datasetName}/layers/${colorLayer.name}/thumbnail`;
+    return `/api/datasets/${organizationId}/${datasetName}/layers/${colorLayer.name}/thumbnail`;
   }
 
   return "";
 }
 export function getSegmentationThumbnailURL(dataset: APIDataset): string {
   const datasetName = dataset.name;
-  const organizationName = dataset.owningOrganization;
+  const organizationId = dataset.owningOrganization;
   const segmentationLayer = getFirstSegmentationLayer(dataset);
 
   if (segmentationLayer) {
-    return `/api/datasets/${organizationName}/${datasetName}/layers/${segmentationLayer.name}/thumbnail`;
+    return `/api/datasets/${organizationId}/${datasetName}/layers/${segmentationLayer.name}/thumbnail`;
   }
 
   return "";

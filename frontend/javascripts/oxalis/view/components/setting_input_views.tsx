@@ -1,15 +1,13 @@
 import {
   Row,
   Col,
-  Slider,
   InputNumber,
   Switch,
   Input,
   Select,
   Popover,
-  PopoverProps,
-  Dropdown,
-  MenuProps,
+  type PopoverProps,
+  type MenuProps,
 } from "antd";
 import {
   BorderInnerOutlined,
@@ -22,15 +20,17 @@ import {
 } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
-import { type Vector3, type Vector6 } from "oxalis/constants";
+import type { Vector3, Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { connect } from "react-redux";
-import { OxalisState } from "oxalis/store";
-import { APISegmentationLayer } from "types/api_flow_types";
+import type { OxalisState } from "oxalis/store";
+import type { APISegmentationLayer } from "types/api_flow_types";
 import { api } from "oxalis/singletons";
 import FastTooltip from "components/fast_tooltip";
+import Toast from "libs/toast";
+import { Slider } from "components/slider";
 
 const ROW_GUTTER = 1;
 
@@ -55,6 +55,8 @@ type NumberSliderSettingProps = {
   step: number;
   disabled: boolean;
   spans: Vector3;
+  defaultValue?: number;
+  wheelFactor?: number;
 };
 export class NumberSliderSetting extends React.PureComponent<NumberSliderSettingProps> {
   static defaultProps = {
@@ -74,7 +76,17 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
     _.isNumber(_value) && _value >= this.props.min && _value <= this.props.max;
 
   render() {
-    const { value: originalValue, label, max, min, step, onChange, disabled } = this.props;
+    const {
+      value: originalValue,
+      label,
+      max,
+      min,
+      step,
+      onChange,
+      disabled,
+      defaultValue,
+      wheelFactor: stepSize,
+    } = this.props;
     // Validate the provided value. If it's not valid, fallback to the midpoint between min and max.
     // This check guards against broken settings which could be introduced before this component
     // checked more thoroughly against invalid values.
@@ -92,6 +104,8 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
             value={value}
             step={step}
             disabled={disabled}
+            defaultValue={defaultValue}
+            wheelFactor={stepSize}
           />
         </Col>
         <Col span={this.props.spans[2]}>
@@ -124,6 +138,7 @@ type LogSliderSettingProps = {
   disabled?: boolean;
   spans: Vector3;
   precision?: number;
+  defaultValue?: number;
 };
 
 const LOG_SLIDER_MIN = -100;
@@ -180,7 +195,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   };
 
   render() {
-    const { label, roundTo, value, min, max, disabled } = this.props;
+    const { label, roundTo, value, min, max, disabled, defaultValue } = this.props;
     return (
       <Row align="middle" gutter={ROW_GUTTER}>
         <Col span={this.props.spans[0]}>
@@ -194,6 +209,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
             onChange={this.onChangeSlider}
             value={this.getSliderValue()}
             disabled={disabled}
+            defaultValue={defaultValue}
           />
         </Col>
         <Col span={this.props.spans[2]}>
@@ -217,7 +233,8 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     );
   }
 }
-export type SwitchSettingProps = {
+
+type SwitchSettingProps = React.PropsWithChildren<{
   onChange: (value: boolean) => void | Promise<void>;
   value: boolean;
   label: string | React.ReactNode;
@@ -227,7 +244,8 @@ export type SwitchSettingProps = {
   labelSpan?: number | null;
   postSwitchIcon: React.ReactNode | null | undefined;
   disabledReason?: string | null;
-};
+}>;
+
 export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   static defaultProps = {
     disabled: false,
@@ -393,6 +411,8 @@ type UserBoundingBoxInputProps = {
   isLockedByOwner: boolean;
   isOwner: boolean;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
+  onOpenContextMenu: (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => void;
+  onHideContextMenu?: () => void;
 };
 type State = {
   isEditing: boolean;
@@ -484,8 +504,17 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
   onRegisterSegmentsForBB(value: Vector6, name: string): void {
     const min: Vector3 = [value[0], value[1], value[2]];
     const max: Vector3 = [value[0] + value[3], value[1] + value[4], value[2] + value[5]];
-    api.tracing.registerSegmentsForBoundingBox(min, max, name);
+    api.tracing
+      .registerSegmentsForBoundingBox(min, max, name)
+      .catch((error) => Toast.error(error.message));
+    this.maybeCloseContextMenu();
   }
+
+  maybeCloseContextMenu = () => {
+    if (this.props.onHideContextMenu) {
+      this.props.onHideContextMenu();
+    }
+  };
 
   render() {
     const { name } = this.state;
@@ -499,6 +528,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
       disabled,
       isLockedByOwner,
       isOwner,
+      onOpenContextMenu,
     } = this.props;
     const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
     const marginRightStyle = {
@@ -570,15 +600,14 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
         },
       ];
 
-      return (
-        <Dropdown menu={{ items }}>
-          <EllipsisOutlined style={marginLeftStyle} />
-        </Dropdown>
-      );
+      return { items };
     };
 
     return (
-      <>
+      <div
+        onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+        onClick={this.props.onHideContextMenu}
+      >
         <Row
           style={{
             marginTop: 10,
@@ -593,6 +622,9 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
               style={{
                 margin: "auto 0px",
               }}
+              // To prevent centering the bounding box on every edit (e.g. upon visibility change)
+              // the click events are stopped from propagating to the parent div.
+              onClick={(_value, e) => e.stopPropagation()}
             />
           </Col>
 
@@ -610,11 +642,19 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
                   onPressEnter={this.handleNameChanged}
                   onBlur={this.handleNameChanged}
                   disabled={disabled}
+                  onClick={(e) => e.stopPropagation()}
                 />
               </span>
             </FastTooltip>
           </Col>
-          <Col span={2}>{getContextMenu()}</Col>
+          <Col span={2}>
+            <div
+              onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+              onClick={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+            >
+              <EllipsisOutlined style={marginLeftStyle} />
+            </div>
+          </Col>
         </Row>
         <Row
           style={{
@@ -641,6 +681,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
                 placeholder="0, 0, 0, 512, 512, 512"
                 size="small"
                 disabled={disabled}
+                onClick={(e) => e.stopPropagation()}
               />
             </FastTooltip>
           </Col>
@@ -655,7 +696,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
             </FastTooltip>
           </Col>
         </Row>
-      </>
+      </div>
     );
   }
 }
@@ -693,6 +734,7 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
           backgroundColor: value,
           ...style,
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <input
           type="color"

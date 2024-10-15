@@ -24,6 +24,7 @@ import type {
   ServerSkeletonTracingTree,
   ServerNode,
   ServerBranchPoint,
+  MetadataEntryProto,
 } from "types/api_flow_types";
 import {
   getSkeletonTracing,
@@ -35,13 +36,13 @@ import {
   mapGroupsToGenerator,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import ColorGenerator from "libs/color_generator";
-import { TreeType, TreeTypeEnum, Vector3 } from "oxalis/constants";
+import { type TreeType, TreeTypeEnum, type Vector3 } from "oxalis/constants";
 import Constants, { NODE_ID_REF_REGEX } from "oxalis/constants";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import * as Utils from "libs/utils";
 import { V3 } from "libs/mjs";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = "";
@@ -81,7 +82,7 @@ export function getMaximumTreeId(trees: TreeMap | MutableTreeMap): number {
 
 function getNearestTreeId(treeId: number, trees: TreeMap): number {
   const sortedTreeIds = Object.keys(trees)
-    .map((currentTreeId) => parseInt(currentTreeId))
+    .map((currentTreeId) => Number.parseInt(currentTreeId))
     .sort((firstId, secId) => (firstId > secId ? 1 : -1));
 
   if (sortedTreeIds.length === 0) {
@@ -361,6 +362,7 @@ function splitTreeByNodes(
             groupId: activeTree.groupId,
             type: activeTree.type,
             edgesAreVisible: true,
+            metadata: activeTree.metadata,
           };
         } else {
           const immutableNewTree = createTree(
@@ -484,6 +486,7 @@ export function createTree(
   name?: string,
   type: TreeType = TreeTypeEnum.DEFAULT,
   edgesAreVisible: boolean = true,
+  metadata: MetadataEntryProto[] = [],
 ): Maybe<Tree> {
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     // Create a new tree id and name
@@ -513,6 +516,7 @@ export function createTree(
       groupId,
       type,
       edgesAreVisible,
+      metadata,
     };
     return Maybe.Just(tree);
   });
@@ -850,6 +854,7 @@ export function createMutableTreeMapFromTreeArray(
         groupId: tree.groupId,
         type: tree.type != null ? tree.type : TreeTypeEnum.DEFAULT,
         edgesAreVisible: tree.edgesAreVisible != null ? tree.edgesAreVisible : true,
+        metadata: tree.metadata,
       }),
     ),
     "treeId",

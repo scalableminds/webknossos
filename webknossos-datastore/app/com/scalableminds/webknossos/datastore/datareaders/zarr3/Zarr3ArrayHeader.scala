@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
-import com.scalableminds.util.tools.BoxImplicits
+import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.tools.{BoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
@@ -245,19 +246,25 @@ object Zarr3ArrayHeader extends JsonImplicits {
         "codecs" -> zarrArrayHeader.codecs.map { codec: CodecConfiguration =>
           val configurationJson = if (codec.includeConfiguration) Json.obj("configuration" -> codec) else Json.obj()
           Json.obj("name" -> codec.name) ++ configurationJson
-        },
+        }.map(JsonHelper.removeGeneratedTypeFieldFromJsonRecursively),
         "storage_transformers" -> zarrArrayHeader.storage_transformers,
         "dimension_names" -> zarrArrayHeader.dimension_names
       )
 
   }
-  def fromDataLayer(dataLayer: DataLayer): Zarr3ArrayHeader = {
+  def fromDataLayer(dataLayer: DataLayer, mag: Vec3Int): Zarr3ArrayHeader = {
     val additionalAxes = reorderAdditionalAxes(dataLayer.additionalAxes.getOrElse(Seq.empty))
+    val xyzBBounds = Array(
+      // Zarr can't handle data sets that don't start at 0, so we extend the shape to include "true" coords
+      (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / mag.x,
+      (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / mag.y,
+      (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / mag.z
+    )
     Zarr3ArrayHeader(
       zarr_format = 3,
       node_type = "array",
       // channel, additional axes, XYZ
-      shape = Array(1) ++ additionalAxes.map(_.highestValue).toArray ++ dataLayer.boundingBox.bottomRight.toArray,
+      shape = Array(1) ++ additionalAxes.map(_.highestValue).toArray ++ xyzBBounds,
       data_type = Left(dataLayer.elementClass.toString),
       chunk_grid = Left(
         ChunkGridSpecification(

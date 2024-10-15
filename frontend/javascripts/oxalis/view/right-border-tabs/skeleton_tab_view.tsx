@@ -1,15 +1,4 @@
-import {
-  Alert,
-  Button,
-  Dropdown,
-  Empty,
-  Spin,
-  Modal,
-  Tooltip,
-  notification,
-  MenuProps,
-  Space,
-} from "antd";
+import { Dropdown, Empty, Spin, Modal, Tooltip, notification, type MenuProps, Space } from "antd";
 import type { Dispatch } from "redux";
 import {
   DownloadOutlined,
@@ -22,7 +11,7 @@ import {
 import { batchActions } from "redux-batched-actions";
 import { connect } from "react-redux";
 import { saveAs } from "file-saver";
-import { BlobReader, BlobWriter, ZipReader, Entry } from "@zip.js/zip.js";
+import { BlobReader, BlobWriter, ZipReader, type Entry } from "@zip.js/zip.js";
 import * as React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
@@ -75,7 +64,7 @@ import {
   setTreeGroupAction,
   setTreeGroupsAction,
   addTreesAndGroupsAction,
-  BatchableUpdateTreeAction,
+  type BatchableUpdateTreeAction,
   batchUpdateGroupsAndTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setVersionNumberAction } from "oxalis/model/actions/save_actions";
@@ -785,22 +774,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     };
   }
 
-  getSelectedTreesAlert = () =>
-    this.state.selectedTreeIds.length > 1 ? (
-      <Alert
-        type="info"
-        message={
-          <React.Fragment>
-            {this.state.selectedTreeIds.length}{" "}
-            {Utils.pluralize("Tree", this.state.selectedTreeIds.length)} selected.{" "}
-            <Button type="dashed" size="small" onClick={this.deselectAllTrees}>
-              Clear Selection
-            </Button>
-          </React.Fragment>
-        }
-      />
-    ) : null;
-
   handleMeasureAllSkeletonsLength = () => {
     const { unit } = Store.getState().dataset.dataSource.scale;
     const [totalLengthNm, totalLengthVx] = api.tracing.measureAllTrees();
@@ -970,7 +943,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                       padding: 0,
                     }}
                   >
-                    <div className="tree-hierarchy-header">{this.getSelectedTreesAlert()}</div>
                     {this.getTreesComponents(orderAttribute)}
                   </ul>
                 )}

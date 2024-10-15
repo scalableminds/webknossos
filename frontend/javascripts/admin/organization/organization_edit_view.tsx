@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { connect } from "react-redux";
 import { Form, Button, Card, Input, Row, Col, Skeleton, Typography, Space } from "antd";
 import {
@@ -17,7 +17,7 @@ import {
   getPricingPlanStatus,
 } from "admin/admin_rest_api";
 import Toast from "libs/toast";
-import { APIOrganization, APIPricingPlanStatus } from "types/api_flow_types";
+import type { APIOrganization, APIPricingPlanStatus } from "types/api_flow_types";
 import {
   PlanAboutToExceedAlert,
   PlanDashboardCard,
@@ -63,7 +63,7 @@ const OrganizationEditView = ({ organization }: Props) => {
 
   async function onFinish(formValues: FormValues) {
     await updateOrganization(
-      organization.name,
+      organization.id,
       formValues.displayName,
       formValues.newUserMailingList,
     );
@@ -86,7 +86,7 @@ const OrganizationEditView = ({ organization }: Props) => {
           <p>
             Deleting an organization{" "}
             <Typography.Text type="danger">cannot be undone</Typography.Text>. Are you certain you
-            want to delete the organization {organization.displayName}?
+            want to delete the organization {organization.name}?
           </p>
         </div>
       ),
@@ -97,14 +97,14 @@ const OrganizationEditView = ({ organization }: Props) => {
 
     if (isDeleteConfirmed) {
       setIsDeleting(true);
-      await deleteOrganization(organization.name);
+      await deleteOrganization(organization.id);
       setIsDeleting(false);
       window.location.replace(`${window.location.origin}/dashboard`);
     }
   }
 
   async function handleCopyNameButtonClicked(): Promise<void> {
-    await navigator.clipboard.writeText(organization.name);
+    await navigator.clipboard.writeText(organization.id);
     Toast.success("Copied organization name to the clipboard.");
   }
 
@@ -135,7 +135,7 @@ const OrganizationEditView = ({ organization }: Props) => {
     >
       <Row style={{ color: "#aaa", fontSize: " 12" }}>Your Organization</Row>
       <Row style={{ marginBottom: 20 }}>
-        <h2>{organization.displayName}</h2>
+        <h2>{organization.name}</h2>
       </Row>
       {pricingPlanStatus.isExceeded ? <PlanExceededAlert organization={organization} /> : null}
       {pricingPlanStatus.isAlmostExceeded && !pricingPlanStatus.isExceeded ? (
@@ -150,7 +150,7 @@ const OrganizationEditView = ({ organization }: Props) => {
           onFinish={onFinish}
           layout="vertical"
           initialValues={{
-            displayName: organization.displayName,
+            displayName: organization.name,
             newUserMailingList: organization.newUserMailingList,
           }}
         >
@@ -158,7 +158,7 @@ const OrganizationEditView = ({ organization }: Props) => {
             <Space.Compact>
               <Input
                 prefix={<IdcardOutlined />}
-                value={organization.name}
+                value={organization.id}
                 style={{
                   width: "calc(100% - 31px)",
                 }}

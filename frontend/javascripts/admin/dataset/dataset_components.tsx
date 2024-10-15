@@ -1,5 +1,5 @@
-import * as React from "react";
-import { Form, Input, Select, Card, FormInstance } from "antd";
+import type * as React from "react";
+import { Form, Input, Select, Card, type FormInstance } from "antd";
 import messages from "messages";
 import { isDatasetNameValid } from "admin/admin_rest_api";
 import type { APIDataStore, APITeam, APIUser } from "types/api_flow_types";
@@ -88,10 +88,14 @@ export function DatasetNameFormItem({
   activeUser,
   initialName,
   label,
+  allowDuplicate,
+  disabled,
 }: {
   activeUser: APIUser | null | undefined;
   initialName?: string;
   label?: string;
+  allowDuplicate?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <FormItem
@@ -99,19 +103,21 @@ export function DatasetNameFormItem({
       label={label || "Dataset Name"}
       hasFeedback
       initialValue={initialName}
-      rules={getDatasetNameRules(activeUser)}
+      rules={getDatasetNameRules(activeUser, !allowDuplicate)}
       validateFirst
     >
-      <Input />
+      <Input disabled={disabled} />
     </FormItem>
   );
 }
 export function DatastoreFormItem({
   datastores,
   hidden,
+  disabled,
 }: {
   datastores: Array<APIDataStore>;
   hidden?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <FormItem
@@ -131,6 +137,7 @@ export function DatastoreFormItem({
         showSearch
         placeholder="Select a Datastore"
         optionFilterProp="label"
+        disabled={disabled}
         style={{
           width: "100%",
         }}
@@ -147,12 +154,16 @@ export function AllowedTeamsFormItem({
   isDatasetManagerOrAdmin,
   selectedTeams,
   setSelectedTeams,
+  afterFetchedTeams,
   formRef,
+  disabled,
 }: {
   isDatasetManagerOrAdmin: boolean;
   selectedTeams: APITeam | Array<APITeam>;
   setSelectedTeams: (teams: APITeam | Array<APITeam>) => void;
+  afterFetchedTeams?: (arg0: Array<APITeam>) => void;
   formRef: React.RefObject<FormInstance<any>>;
+  disabled?: boolean;
 }) {
   return (
     <FormItemWithInfo
@@ -165,6 +176,7 @@ export function AllowedTeamsFormItem({
         mode="multiple"
         value={selectedTeams}
         allowNonEditableTeams={isDatasetManagerOrAdmin}
+        disabled={disabled}
         onChange={(selectedTeams) => {
           if (formRef.current == null) return;
 
@@ -179,6 +191,9 @@ export function AllowedTeamsFormItem({
           setSelectedTeams(selectedTeams);
         }}
         afterFetchedTeams={(fetchedTeams) => {
+          if (afterFetchedTeams) {
+            afterFetchedTeams(fetchedTeams);
+          }
           if (!features().isWkorgInstance) {
             return;
           }

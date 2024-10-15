@@ -6,6 +6,30 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [24.10.0](https://github.com/scalableminds/webknossos/releases/tag/24.10.0) - 2024-09-24
+[Commits](https://github.com/scalableminds/webknossos/compare/24.08.1...24.10.0)
+
+- For self-hosted versions of WEBKNOSSOS, you can choose whether switching to webknossos.org will be recommended to you, e.g. when uploading a dataset. To configure this, change `recommendWkorgInstance` in your `application.conf`.
+
+### Postgres Evolutions:
+
+
+## [24.08.1](https://github.com/scalableminds/webknossos/releases/tag/24.08.1) - 2024-09-03
+[Commits](https://github.com/scalableminds/webknossos/compare/24.08.0...24.08.1)
+
+### Postgres Evolutions:
+None.
+
+## [24.08.0](https://github.com/scalableminds/webknossos/releases/tag/24.08.0) - 2024-09-02
+[Commits](https://github.com/scalableminds/webknossos/compare/24.07.0...24.08.0)
+
+- If Segment Anything was already configured, it needs to be pointed to an endpoint that works with SAM 2. [#7965](https://github.com/scalableminds/webknossos/pull/7965)
+
+### Postgres Evolutions:
+- [118-voxelytics-artifacts-index.sql](conf/evolutions/118-voxelytics-artifacts-index.sql)
+- [119-add-metadata-to-folders-and-datasets.sql](conf/evolutions/119-add-metadata-to-folders-and-datasets.sql)
+- [120-remove-old-organization-id.sql](conf/evolutions/120-remove-old-organization-id.sql)
+
 ## [24.07.0](https://github.com/scalableminds/webknossos/releases/tag/24.07.0) - 2024-07-05
 [Commits](https://github.com/scalableminds/webknossos/compare/24.06.0...24.07.0)
 

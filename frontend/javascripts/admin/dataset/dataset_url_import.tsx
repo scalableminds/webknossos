@@ -1,4 +1,3 @@
-import React from "react";
 import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
 import { useFetch } from "libs/react_helpers";
 import { getDatastores } from "admin/admin_rest_api";

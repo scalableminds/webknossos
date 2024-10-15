@@ -14,8 +14,8 @@ import {
   QuestionCircleTwoTone,
   InfoCircleOutlined,
 } from "@ant-design/icons";
-import * as React from "react";
-import { APIJob, APIJobType } from "types/api_flow_types";
+import type * as React from "react";
+import { type APIJob, APIJobType, type APIUserBase } from "types/api_flow_types";
 import { getJobs, cancelJob } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
@@ -23,6 +23,7 @@ import FormattedDate from "components/formatted_date";
 import { AsyncLink } from "components/async_clickables";
 import { useEffect, useState } from "react";
 import { useInterval } from "libs/react_helpers";
+import { formatWkLibsNdBBox } from "libs/format_utils";
 
 // Unfortunately, the twoToneColor (nor the style) prop don't support
 // CSS variables.
@@ -114,14 +115,14 @@ function JobListView() {
   function renderDescription(__: any, job: APIJob) {
     if (job.type === APIJobType.CONVERT_TO_WKW && job.datasetName) {
       return <span>{`Conversion to WKW of ${job.datasetName}`}</span>;
-    } else if (job.type === APIJobType.EXPORT_TIFF && job.organizationName && job.datasetName) {
+    } else if (job.type === APIJobType.EXPORT_TIFF && job.organizationId && job.datasetName) {
       const labelToAnnotationOrDataset =
         job.annotationId != null ? (
           <Link to={`/annotations/${job.annotationId}`}>
             annotation of dataset {job.datasetName}
           </Link>
         ) : (
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
             dataset {job.datasetName}
           </Link>
         );
@@ -129,127 +130,119 @@ function JobListView() {
       return (
         <span>
           Tiff export of layer {layerLabel} from {labelToAnnotationOrDataset} (Bounding Box{" "}
-          {job.boundingBox})
+          {job.ndBoundingBox ? formatWkLibsNdBBox(job.ndBoundingBox) : job.boundingBox})
         </span>
       );
-    } else if (
-      job.type === APIJobType.RENDER_ANIMATION &&
-      job.organizationName &&
-      job.datasetName
-    ) {
+    } else if (job.type === APIJobType.RENDER_ANIMATION && job.organizationId && job.datasetName) {
       return (
         <span>
           Animation rendering for layer {job.layerName} of dataset{" "}
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
             {job.datasetName}
           </Link>
         </span>
       );
-    } else if (
-      job.type === APIJobType.COMPUTE_MESH_FILE &&
-      job.organizationName &&
-      job.datasetName
-    ) {
+    } else if (job.type === APIJobType.COMPUTE_MESH_FILE && job.organizationId && job.datasetName) {
       return (
         <span>
           Mesh file computation for{" "}
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
             {job.datasetName}
           </Link>{" "}
         </span>
       );
     } else if (
       job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE &&
-      job.organizationName &&
+      job.organizationId &&
       job.datasetName
     ) {
       return (
         <span>
           Segment index file computation for{" "}
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
             {job.datasetName}
           </Link>{" "}
         </span>
       );
     } else if (
       job.type === APIJobType.FIND_LARGEST_SEGMENT_ID &&
-      job.organizationName &&
+      job.organizationId &&
       job.datasetName &&
       job.layerName
     ) {
       return (
         <span>
           Largest segment id detection for layer {job.layerName} of{" "}
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
             {job.datasetName}
           </Link>{" "}
         </span>
       );
     } else if (
       job.type === APIJobType.INFER_NUCLEI &&
-      job.organizationName &&
+      job.organizationId &&
       job.datasetName &&
       job.layerName
     ) {
       return (
         <span>
           Nuclei inferral for layer {job.layerName} of{" "}
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
             {job.datasetName}
           </Link>{" "}
         </span>
       );
     } else if (
       job.type === APIJobType.INFER_NEURONS &&
-      job.organizationName &&
+      job.organizationId &&
       job.datasetName &&
       job.layerName
     ) {
       return (
         <span>
           Neuron inferral for layer {job.layerName} of{" "}
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
             {job.datasetName}
           </Link>{" "}
         </span>
       );
     } else if (
       job.type === APIJobType.INFER_MITOCHONDRIA &&
-      job.organizationName &&
+      job.organizationId &&
       job.datasetName &&
       job.layerName
     ) {
       return (
         <span>
           Mitochondria inferral for layer {job.layerName} of{" "}
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
             {job.datasetName}
           </Link>{" "}
         </span>
       );
     } else if (
       job.type === APIJobType.ALIGN_SECTIONS &&
-      job.organizationName &&
+      job.organizationId &&
       job.datasetName &&
       job.layerName
     ) {
       return (
         <span>
           Aligned sections for layer {job.layerName} of{" "}
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
             {job.datasetName}
           </Link>{" "}
         </span>
       );
     } else if (
       job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION &&
-      job.organizationName &&
+      job.organizationId &&
       job.datasetName
     ) {
       return (
         <span>
           Materialize annotation for {job.layerName ? ` layer ${job.layerName} of ` : " "}
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
             {job.datasetName}
           </Link>
           {job.mergeSegments
@@ -382,7 +375,7 @@ function JobListView() {
           </Tooltip>
         </a>
         <br />
-        WEBKNOSSOS will notfiy you via email when a job has finished or reload this page to track
+        WEBKNOSSOS will notify you via email when a job has finished or reload this page to track
         progress.
       </Typography.Paragraph>
       <div
@@ -416,6 +409,18 @@ function JobListView() {
             render={(job) => <FormattedDate timestamp={job.createdAt} />}
             sorter={Utils.compareBy<APIJob>((job) => job.createdAt)}
             defaultSortOrder="descend"
+          />
+          <Column
+            title="Owner"
+            dataIndex="owner"
+            key="owner"
+            sorter={Utils.localeCompareBy<APIJob>((job) => job.owner.lastName)}
+            render={(owner: APIUserBase) => (
+              <>
+                <div>{owner.email ? `${owner.lastName}, ${owner.firstName}` : "-"}</div>
+                <div>{owner.email ? `(${owner.email})` : "-"}</div>
+              </>
+            )}
           />
           <Column
             title="State"

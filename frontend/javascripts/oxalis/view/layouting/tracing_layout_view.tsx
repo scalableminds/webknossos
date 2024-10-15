@@ -37,16 +37,15 @@ import TracingView from "oxalis/view/tracing_view";
 import VersionView from "oxalis/view/version_view";
 import * as React from "react";
 import { connect } from "react-redux";
-import { RouteComponentProps, withRouter } from "react-router-dom";
+import { type RouteComponentProps, withRouter } from "react-router-dom";
 import type { Dispatch } from "redux";
-import { APICompoundType } from "types/api_flow_types";
+import type { APICompoundType } from "types/api_flow_types";
 import DistanceMeasurementTooltip from "oxalis/view/distance_measurement_tooltip";
 import TabTitle from "../components/tab_title_component";
 import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { FloatingMobileControls } from "./floating_mobile_controls";
 import app from "app";
-import { RootForFastTooltips } from "components/fast_tooltip";
 
 const { Sider } = Layout;
 
@@ -271,7 +270,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
           nmlFile: files,
           createGroupForEachFile,
           datasetName: this.props.datasetName,
-          organizationName: this.props.organization,
+          organizationId: this.props.organization,
         },
       });
       this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
@@ -279,7 +278,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
     return (
       <React.Fragment>
-        <RootForFastTooltips />
         <PresentModernControls />
         {this.state.showFloatingMobileButtons && <FloatingMobileControls />}
 

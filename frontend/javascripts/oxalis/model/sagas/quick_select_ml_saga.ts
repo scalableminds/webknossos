@@ -1,19 +1,19 @@
 import _ from "lodash";
-import ndarray, { NdArray } from "ndarray";
-import { OrthoView, TypedArrayWithoutBigInt, Vector2, Vector3 } from "oxalis/constants";
+import ndarray, { type NdArray } from "ndarray";
+import type { OrthoView, TypedArrayWithoutBigInt, Vector2, Vector3 } from "oxalis/constants";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call, cancel, fork, put } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { V3 } from "libs/mjs";
-import {
+import type {
   ComputeQuickSelectForPointAction,
   ComputeQuickSelectForRectAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Toast from "libs/toast";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { map3, sleep } from "libs/utils";
-import { AdditionalCoordinate, APIDataset } from "types/api_flow_types";
+import type { AdditionalCoordinate, APIDataset } from "types/api_flow_types";
 import { getSamMask, sendAnalyticsEvent } from "admin/admin_rest_api";
 import Dimensions from "../dimensions";
 import { finalizeQuickSelectForSlice, prepareQuickSelect } from "./quick_select_heuristic_saga";
@@ -257,17 +257,22 @@ export default function* performQuickSelect(
     const userBoxRelativeToMaskInMag = userBoxInMag.offset(V3.negate(maskBoxInMag.min));
 
     let wOffset = 0;
+    const currentEstimationInputForBBoxEstimation = {
+      min: userBoxRelativeToMaskInMag.getMinUV(activeViewport),
+      max: userBoxRelativeToMaskInMag.getMaxUV(activeViewport),
+    };
     for (const mask of masks) {
       const targetW = alignedUserBoxMag1.min[thirdDim] + labeledResolution[thirdDim] * wOffset;
 
       const { min: minUV, max: maxUV } = estimateBBoxInMask(
         mask,
-        {
-          min: userBoxRelativeToMaskInMag.getMinUV(activeViewport),
-          max: userBoxRelativeToMaskInMag.getMaxUV(activeViewport),
-        },
+        currentEstimationInputForBBoxEstimation,
         MAXIMUM_PADDING_ERROR,
       );
+      // Use the estimated bbox as input for the next iteration so that
+      // moving segments don't "exit" the used bbox at the some point in W.
+      currentEstimationInputForBBoxEstimation.min = minUV;
+      currentEstimationInputForBBoxEstimation.max = maxUV;
 
       // Span a bbox from the estimated values (relative to the mask)
       // and move it by the mask's min position to achieve a global

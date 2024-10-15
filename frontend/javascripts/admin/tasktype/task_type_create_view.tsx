@@ -3,11 +3,11 @@ import { syncValidator } from "types/validation";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import _ from "lodash";
 import {
-  APITaskType,
-  TracingType,
+  type APITaskType,
+  type TracingType,
   TracingTypeEnum,
   type APIAllowedMode,
   type APIResolutionRestrictions,
@@ -23,7 +23,7 @@ import RecommendedConfigurationView, {
   getDefaultRecommendedConfiguration,
 } from "admin/tasktype/recommended_configuration_view";
 import { useFetch } from "libs/react_helpers";
-import { RuleObject } from "antd/es/form";
+import type { RuleObject } from "antd/es/form";
 import { jsonStringify } from "libs/utils";
 
 const RadioGroup = Radio.Group;

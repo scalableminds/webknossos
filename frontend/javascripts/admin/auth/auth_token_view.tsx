@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { CopyOutlined, SwapOutlined } from "@ant-design/icons";
 import { Input, Button, Col, Row, Spin, Form, Space } from "antd";
 import { getAuthToken, revokeAuthToken } from "admin/admin_rest_api";
@@ -38,7 +38,7 @@ function AuthTokenView() {
     Toast.success("Token copied to clipboard");
   };
 
-  const copyOrganizationNameToClipboard = async () => {
+  const copyOrganizationIdToClipboard = async () => {
     if (activeUser != null) {
       await navigator.clipboard.writeText(activeUser.organization);
       Toast.success("Organization ID copied to clipboard");
@@ -89,7 +89,7 @@ function AuthTokenView() {
                         }}
                         readOnly
                       />
-                      <Button onClick={copyOrganizationNameToClipboard} icon={<CopyOutlined />} />
+                      <Button onClick={copyOrganizationIdToClipboard} icon={<CopyOutlined />} />
                     </Space.Compact>
                   </FormItem>
                 </Form>

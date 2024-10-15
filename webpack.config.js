@@ -37,8 +37,6 @@ module.exports = function (env = {}) {
     }),
     new CopyPlugin({
       patterns: [
-        // Use copy plugin to copy *.wasm to output folder.
-        { from: "public/models/*.*", to: "models/[name][ext]" },
         // For CSP, see https://gildas-lormeau.github.io/zip.js/api/interfaces/Configuration.html#workerScripts
         { from: "node_modules/@zip.js/zip.js/dist/z-worker.js", to: "[name][ext]" },
       ],

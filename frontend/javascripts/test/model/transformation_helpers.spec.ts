@@ -1,7 +1,6 @@
 import "test/mocks/lz4";
-import _ from "lodash";
 import test from "ava";
-import { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import { almostEqual } from "test/libs/transform_spec_helpers";
 import {
   chainTransforms,

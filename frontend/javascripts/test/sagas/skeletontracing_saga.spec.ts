@@ -18,14 +18,14 @@ import update from "immutability-helper";
 import { createSaveQueueFromUpdateActions, withoutUpdateTracing } from "../helpers/saveHelpers";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
-import * as OriginalSaveActions from "oxalis/model/actions/save_actions";
-import * as OriginalSaveSaga from "oxalis/model/sagas/save_saga";
-import * as OriginalSkeletonTracingSaga from "oxalis/model/sagas/skeletontracing_saga";
-import OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
+import type * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
+import type * as OriginalSaveActions from "oxalis/model/actions/save_actions";
+import type * as OriginalSaveSaga from "oxalis/model/sagas/save_saga";
+import type * as OriginalSkeletonTracingSaga from "oxalis/model/sagas/skeletontracing_saga";
+import type OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import { TreeTypeEnum } from "oxalis/constants";
-import { Action } from "oxalis/model/actions/actions";
-import { ServerSkeletonTracing } from "types/api_flow_types";
+import type { Action } from "oxalis/model/actions/actions";
+import type { ServerSkeletonTracing } from "types/api_flow_types";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 
 const TIMESTAMP = 1494347146379;
@@ -141,6 +141,7 @@ skeletonTracing.trees[1] = {
   groupId: MISSING_GROUP_ID,
   type: TreeTypeEnum.DEFAULT,
   edgesAreVisible: true,
+  metadata: [],
 };
 const initialState = update(defaultState, {
   tracing: {

@@ -1,6 +1,6 @@
 import { Tag, Tooltip } from "antd";
 import UserLocalStorage from "libs/user_local_storage";
-import React, { MouseEventHandler, useEffect } from "react";
+import { type MouseEventHandler, useEffect } from "react";
 import { stringToColor } from "libs/format_utils";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 type LabelProps = {

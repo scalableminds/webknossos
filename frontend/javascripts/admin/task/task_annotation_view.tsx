@@ -1,4 +1,4 @@
-import { App, Dropdown, MenuProps, Tooltip } from "antd";
+import { App, Dropdown, type MenuProps, Tooltip } from "antd";
 import {
   EyeOutlined,
   PlayCircleOutlined,
@@ -12,7 +12,7 @@ import {
   DownOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { APIUser, APITask, APIAnnotation } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { formatSeconds } from "libs/format_utils";

@@ -3,17 +3,16 @@ import { Alert, Modal, Spin, Table } from "antd";
 import saveAs from "file-saver";
 import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
-import { LongUnitToShortUnitMap, Vector3 } from "oxalis/constants";
+import { LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
 import { getMappingInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
-import { OxalisState, Segment } from "oxalis/store";
-import React from "react";
+import type { OxalisState, Segment } from "oxalis/store";
 import {
-  SegmentHierarchyNode,
-  SegmentHierarchyGroup,
+  type SegmentHierarchyNode,
+  type SegmentHierarchyGroup,
   getVolumeRequestUrl,
 } from "./segments_view_helper";
 import { api } from "oxalis/singletons";
-import { APISegmentationLayer, VoxelSize } from "types/api_flow_types";
+import type { APISegmentationLayer, VoxelSize } from "types/api_flow_types";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import { useSelector } from "react-redux";
 import {

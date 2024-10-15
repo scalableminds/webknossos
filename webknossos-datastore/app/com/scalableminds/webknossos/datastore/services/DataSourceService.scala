@@ -53,6 +53,9 @@ class DataSourceService @Inject()(
     if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0
   }
 
+  def assertDataDirWritable(organizationId: String): Fox[Unit] =
+    Fox.bool2Fox(Files.isWritable(dataBaseDir.resolve(organizationId))) ?~> "Datastore cannot write to its data directory."
+
   def checkInbox(verbose: Boolean): Fox[Unit] = {
     if (verbose) logger.info(s"Scanning inbox ($dataBaseDir)...")
     for {
@@ -111,9 +114,9 @@ class DataSourceService @Inject()(
     }
   }
 
-  def exploreMappings(organizationName: String, datasetName: String, dataLayerName: String): Set[String] =
+  def exploreMappings(organizationId: String, datasetName: String, dataLayerName: String): Set[String] =
     MappingProvider
-      .exploreMappings(dataBaseDir.resolve(organizationName).resolve(datasetName).resolve(dataLayerName))
+      .exploreMappings(dataBaseDir.resolve(organizationId).resolve(datasetName).resolve(dataLayerName))
       .getOrElse(Set())
 
   private def validateDataSource(dataSource: DataSource): Box[Unit] = {
@@ -197,7 +200,7 @@ class DataSourceService @Inject()(
 
     PathUtils.listDirectories(path, silent = true) match {
       case Full(dataSourceDirs) =>
-        val dataSources = dataSourceDirs.map(path => dataSourceFromFolder(path, organization))
+        val dataSources = dataSourceDirs.map(path => dataSourceFromDir(path, organization))
         dataSources
       case _ =>
         logger.error(s"Failed to list directories for organization $organization at path $path")
@@ -205,8 +208,8 @@ class DataSourceService @Inject()(
     }
   }
 
-  def dataSourceFromFolder(path: Path, organization: String): InboxDataSource = {
-    val id = DataSourceId(path.getFileName.toString, organization)
+  def dataSourceFromDir(path: Path, organizationId: String): InboxDataSource = {
+    val id = DataSourceId(path.getFileName.toString, organizationId)
     val propertiesFile = path.resolve(propertiesFileName)
 
     if (new File(propertiesFile.toString).exists()) {

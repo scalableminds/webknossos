@@ -1,5 +1,4 @@
-import React from "react";
-import { Link, RouteComponentProps, withRouter } from "react-router-dom";
+import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
 import { Form, Input, Button, Col, Row, Card } from "antd";
 import { MailOutlined } from "@ant-design/icons";
 import Request from "libs/request";

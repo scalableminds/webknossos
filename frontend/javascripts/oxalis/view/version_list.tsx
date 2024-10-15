@@ -1,5 +1,5 @@
 import { Button, List, Spin } from "antd";
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import _ from "lodash";
 import dayjs from "dayjs";
 import type { APIUpdateActionBatch } from "types/api_flow_types";
@@ -13,7 +13,7 @@ import {
 import { handleGenericError } from "libs/error_handling";
 import {
   pushSaveQueueTransaction,
-  SaveQueueType,
+  type SaveQueueType,
   setVersionNumberAction,
 } from "oxalis/model/actions/save_actions";
 import {
@@ -269,7 +269,7 @@ function InnerVersionList(props: Props & { newestVersion: number }) {
     isFetchingPreviousPage,
   } = useInfiniteQuery(queryKey, fetchPaginatedVersions, {
     refetchOnWindowFocus: false,
-    staleTime: Infinity,
+    staleTime: Number.POSITIVE_INFINITY,
     getNextPageParam: (lastPage) => lastPage.nextPage,
     getPreviousPageParam: (lastPage) => lastPage.previousPage,
   });

@@ -1,10 +1,11 @@
 import mock from "mock-require";
-import test, { ExecutionContext } from "ava";
+import test, { type ExecutionContext } from "ava";
 import _ from "lodash";
-import { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 
 import "test/mocks/globals.mock";
 import "test/mocks/updatable_texture.mock";
+import { generateRandomCuckooEntrySet } from "./cuckoo_table_helpers";
 
 type Entry = [number, Vector3];
 
@@ -19,25 +20,6 @@ function generateRandomEntry(): [number, Vector3] {
       Math.floor(Math.random() * 1000),
     ],
   ];
-}
-
-export function generateRandomCuckooEntrySet<K, V>(
-  generateEntry: () => [K, V],
-  count: number = 1600,
-) {
-  const set = new Set();
-  const entries = [];
-  for (let i = 0; i < count; i++) {
-    const entry = generateEntry();
-    const entryKey = entry[0];
-    if (set.has(entryKey)) {
-      i--;
-      continue;
-    }
-    set.add(entryKey);
-    entries.push(entry);
-  }
-  return entries;
 }
 
 function isValueEqual(t: ExecutionContext<any>, val1: Vector3, val2: Vector3) {

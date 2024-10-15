@@ -1,5 +1,5 @@
-import { Checkbox, Col, Collapse, Form, Input, Row, Table, Button, CollapseProps } from "antd";
-import { FormInstance } from "antd/lib/form";
+import { Checkbox, Col, Collapse, Form, Input, Row, Table, Button, type CollapseProps } from "antd";
+import type { FormInstance } from "antd/lib/form";
 import * as React from "react";
 import _ from "lodash";
 import { jsonEditStyle } from "dashboard/dataset/helper_components";

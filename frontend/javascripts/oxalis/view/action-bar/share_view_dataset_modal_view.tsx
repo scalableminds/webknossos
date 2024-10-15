@@ -1,10 +1,9 @@
 import { CopyOutlined } from "@ant-design/icons";
 import { Modal, Input, Button, Row, Col, Dropdown, Space } from "antd";
 import { useSelector } from "react-redux";
-import React from "react";
 import { makeComponentLazy } from "libs/react_helpers";
 import messages from "messages";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { useDatasetSharingToken, getUrl, CopyableSharingLink } from "./share_modal_view";
 import { useZarrLinkMenu } from "./private_links_view";
 

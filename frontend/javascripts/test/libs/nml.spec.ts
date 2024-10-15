@@ -8,11 +8,11 @@ import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import mock from "mock-require";
-import test, { ExecutionContext } from "ava";
+import test, { type ExecutionContext } from "ava";
 import { TreeTypeEnum } from "oxalis/constants";
-import * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
-import * as OriginalNmlHelpers from "oxalis/model/helpers/nml_helpers";
-import OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
+import type * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
+import type * as OriginalNmlHelpers from "oxalis/model/helpers/nml_helpers";
+import type OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { annotation as TASK_ANNOTATION } from "../fixtures/tasktracing_server_objects";
 import { buildInfo as BUILD_INFO } from "../fixtures/build_info";
@@ -93,6 +93,7 @@ const initialSkeletonTracing: SkeletonTracing = {
       groupId: 3,
       type: TreeTypeEnum.DEFAULT,
       edgesAreVisible: true,
+      metadata: [],
     },
     "2": {
       treeId: 2,
@@ -120,6 +121,7 @@ const initialSkeletonTracing: SkeletonTracing = {
       groupId: 2,
       type: TreeTypeEnum.DEFAULT,
       edgesAreVisible: true,
+      metadata: [],
     },
   },
   treeGroups: [
@@ -404,9 +406,7 @@ test("NML serializer should produce correct NMLs", (t) => {
     BUILD_INFO,
     false,
   );
-  t.snapshot(serializedNml, {
-    id: "nml",
-  });
+  t.snapshot(serializedNml);
 });
 test("NML serializer should produce correct NMLs with additional coordinates", (t) => {
   let adaptedState = update(initialState, {
@@ -449,10 +449,73 @@ test("NML serializer should produce correct NMLs with additional coordinates", (
     BUILD_INFO,
     false,
   );
-  t.snapshot(serializedNml, {
-    id: "nml-with-additional-coordinates",
-  });
+  t.snapshot(serializedNml);
 });
+
+test("NML serializer should produce correct NMLs with metadata for trees", async (t) => {
+  const properties = [
+    {
+      key: "key of string",
+      stringValue: "string value",
+    },
+    {
+      key: "key of true",
+      boolValue: true,
+    },
+    {
+      key: "key of false",
+      boolValue: false,
+    },
+    {
+      key: "key of number",
+      numberValue: 1234,
+    },
+    {
+      key: "key of string list",
+      stringListValue: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"],
+    },
+  ];
+  const state = update(initialState, {
+    tracing: {
+      skeleton: {
+        trees: {
+          "1": {
+            metadata: {
+              $set: properties,
+            },
+          },
+        },
+      },
+    },
+  });
+  const serializedNml = serializeToNml(
+    state,
+    state.tracing,
+    enforceSkeletonTracing(state.tracing),
+    BUILD_INFO,
+    false,
+  );
+
+  t.true(
+    serializedNml.includes('<metadataEntry key="key of string" stringValue="string value" />'),
+  );
+
+  t.true(serializedNml.includes('<metadataEntry key="key of true" boolValue="true" />'));
+  t.true(serializedNml.includes('<metadataEntry key="key of false" boolValue="false" />'));
+  t.true(serializedNml.includes('<metadataEntry key="key of number" numberValue="1234" />'));
+  t.true(
+    serializedNml.includes(
+      '<metadataEntry key="key of string list" stringListValue-0="1" stringListValue-1="2" stringListValue-2="3" stringListValue-3="4" stringListValue-4="5" stringListValue-5="6" stringListValue-6="7" stringListValue-7="8" stringListValue-8="9" stringListValue-9="10" stringListValue-10="11" />',
+    ),
+  );
+
+  const { trees } = await parseNml(serializedNml);
+  if (state.tracing.skeleton == null) {
+    throw new Error("Unexpected null for skeleton");
+  }
+  t.deepEqual(state.tracing.skeleton.trees[1], trees[1]);
+});
+
 test("NML serializer should escape special characters and multilines", (t) => {
   const state = update(initialState, {
     tracing: {
@@ -488,9 +551,7 @@ test("NML serializer should escape special characters and multilines", (t) => {
       "Hello&quot;a&apos;b&lt;c&gt;d&amp;e&quot;f&apos;g&lt;h&gt;i&amp;j&#xa;with&#xa;new&#xa;lines",
     ) > -1,
   );
-  t.snapshot(serializedNml, {
-    id: "nml-special-chars",
-  });
+  t.snapshot(serializedNml);
 });
 test("Serialized nml should be correctly named", async (t) => {
   t.is(getNmlName(initialState), "Test Dataset__5b1fd1cb97000027049c67ec__sboy__tionId.nml");

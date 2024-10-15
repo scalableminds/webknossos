@@ -16,7 +16,7 @@ import localeData from "dayjs/plugin/localeData";
 
 import type { BoundingBoxObject } from "oxalis/store";
 import type { Duration } from "dayjs/plugin/duration";
-import { VoxelSize } from "types/api_flow_types";
+import type { VoxelSize, WkLibsNdBoundingBox } from "types/api_flow_types";
 
 dayjs.extend(updateLocale);
 dayjs.extend(duration);
@@ -536,4 +536,19 @@ export function formatVoxels(voxelCount: number) {
 
 export function formatNumber(num: number): string {
   return new Intl.NumberFormat("en-US").format(num);
+}
+
+export function formatWkLibsNdBBox(ndBBox: WkLibsNdBoundingBox): string {
+  let bboxString = ndBBox.topLeft.join(", ");
+  bboxString += ` ${ndBBox.width}, ${ndBBox.height}, ${ndBBox.depth}`;
+  let additionalAxisStrings = ndBBox.additionalAxes.map((axis) => {
+    const boundsString =
+      axis.bounds[1] - 1 > axis.bounds[0]
+        ? `${axis.bounds[0]}-${axis.bounds[1]}`
+        : `${axis.bounds[0]}`;
+    return `${axis.name}=${boundsString}`;
+  });
+  return additionalAxisStrings.length > 0
+    ? `${bboxString} (${additionalAxisStrings.join(", ")})`
+    : bboxString;
 }

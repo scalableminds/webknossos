@@ -1,5 +1,6 @@
 import { generateRandomId } from "libs/utils";
-import React, { useEffect, useState } from "react";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { Tooltip as ReactTooltip } from "react-tooltip";
 
 /*
@@ -59,7 +60,9 @@ export default function FastTooltip({
   onMouseLeave,
   wrapper,
   html,
+  className,
   style,
+  variant,
   dynamicRenderer,
 }: {
   title?: string | null | undefined;
@@ -70,7 +73,9 @@ export default function FastTooltip({
   onMouseLeave?: () => void;
   wrapper?: "div" | "span" | "p" | "tr"; // Any valid HTML tag, span by default.
   html?: string | null | undefined;
+  className?: string; // class name attached to the wrapper
   style?: React.CSSProperties; // style attached to the wrapper
+  variant?: "dark" | "light" | "success" | "warning" | "error" | "info";
   dynamicRenderer?: () => React.ReactElement;
 }) {
   const Tag = wrapper || "span";
@@ -106,8 +111,10 @@ export default function FastTooltip({
       data-tooltip-place={placement || "top"}
       data-tooltip-html={html}
       data-unique-key={uniqueKeyForDynamic}
+      data-tooltip-variant={variant}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      className={className}
       style={style}
     >
       {children}

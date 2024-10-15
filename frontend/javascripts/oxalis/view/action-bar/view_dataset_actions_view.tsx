@@ -1,6 +1,5 @@
-import React from "react";
 import { useSelector } from "react-redux";
-import { Dropdown, MenuProps } from "antd";
+import { Dropdown, type MenuProps } from "antd";
 import {
   ShareAltOutlined,
   DownOutlined,
@@ -16,8 +15,8 @@ import {
   setShareModalVisibilityAction,
   setRenderAnimationModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
-import Store, { OxalisState } from "oxalis/store";
-import { MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
+import Store, { type OxalisState } from "oxalis/store";
+import type { MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import DownloadModalView from "./download_modal_view";
 import CreateAnimationModal from "./create_animation_modal";
 

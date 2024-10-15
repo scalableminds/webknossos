@@ -1,22 +1,22 @@
 import _ from "lodash";
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
-  APIOrganization,
+  type APIOrganization,
   VoxelyticsRunState,
-  VoxelyticsTaskConfig,
-  VoxelyticsTaskConfigWithHierarchy,
-  VoxelyticsTaskConfigWithName,
-  VoxelyticsTaskInfo,
-  VoxelyticsWorkflowDag,
-  VoxelyticsWorkflowDagEdge,
-  VoxelyticsWorkflowDagNode,
-  VoxelyticsWorkflowReport,
+  type VoxelyticsTaskConfig,
+  type VoxelyticsTaskConfigWithHierarchy,
+  type VoxelyticsTaskConfigWithName,
+  type VoxelyticsTaskInfo,
+  type VoxelyticsWorkflowDag,
+  type VoxelyticsWorkflowDagEdge,
+  type VoxelyticsWorkflowDagNode,
+  type VoxelyticsWorkflowReport,
 } from "types/api_flow_types";
 import { useSearchParams, usePolling } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import TabTitle from "oxalis/view/components/tab_title_component";
 import { getVoxelyticsWorkflow, isWorkflowAccessibleBySwitching } from "admin/admin_rest_api";
 import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";

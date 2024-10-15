@@ -1,6 +1,5 @@
 import { sleep } from "libs/utils";
 import test from "ava";
-import _ from "lodash";
 import { AsyncFifoResolver } from "libs/async/async_fifo_resolver";
 
 const createSubmitterFnWithProtocol = () => {

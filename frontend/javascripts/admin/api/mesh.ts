@@ -1,7 +1,6 @@
 import Request from "libs/request";
-import _ from "lodash";
-import { Vector3, Vector4 } from "oxalis/constants";
-import { APIDatasetId } from "types/api_flow_types";
+import type { Vector3, Vector4 } from "oxalis/constants";
+import type { APIDatasetId } from "types/api_flow_types";
 import { doWithToken } from "./token";
 
 export type MeshChunk = {

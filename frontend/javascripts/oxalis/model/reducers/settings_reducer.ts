@@ -100,8 +100,8 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       const settingSpec = propertyName in userSettings ? userSettings[propertyName] : null;
 
       if (settingSpec != null && settingSpec.type === "number") {
-        const min = "minimum" in settingSpec ? settingSpec.minimum : -Infinity;
-        const max = "maximum" in settingSpec ? settingSpec.maximum : Infinity;
+        const min = "minimum" in settingSpec ? settingSpec.minimum : Number.NEGATIVE_INFINITY;
+        const max = "maximum" in settingSpec ? settingSpec.maximum : Number.POSITIVE_INFINITY;
         // @ts-ignore Since settingSpec.type === "number", value will be a number
         value = clamp(min, value, max);
 

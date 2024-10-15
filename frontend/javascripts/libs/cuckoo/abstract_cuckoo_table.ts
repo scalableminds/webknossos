@@ -1,8 +1,7 @@
 import * as THREE from "three";
-import UpdatableTexture from "libs/UpdatableTexture";
+import type UpdatableTexture from "libs/UpdatableTexture";
 import { getRenderer } from "oxalis/controller/renderer";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
-import _ from "lodash";
 
 const DEFAULT_LOAD_FACTOR = 0.9;
 export const EMPTY_KEY_VALUE = 2 ** 32 - 1;

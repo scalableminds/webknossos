@@ -260,7 +260,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound"
       }
       dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
-      dataSourceId = DataSourceId(dataset.name, organization._id)
+      dataSourceId = DataSourceId(dataset.path, organization._id)
     } yield {
       if (dataset.isUsable)
         for {

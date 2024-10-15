@@ -544,7 +544,7 @@ class DataSourceController @Inject()(
           _ <- Fox.serialCombined(request.body.layers.map(_.datasetId).toList)(
             id =>
               accessTokenService.assertUserAccess(
-                UserAccessRequest.readDataSources(DataSourceId(id.name, id.owningOrganization)),
+                UserAccessRequest.readDataSources(DataSourceId(id.path, id.owningOrganization)),
                 userToken))
           (dataSource, newDatasetId) <- composeService.composeDataset(request.body, userToken)
           _ <- dataSourceRepository.updateDataSource(dataSource)

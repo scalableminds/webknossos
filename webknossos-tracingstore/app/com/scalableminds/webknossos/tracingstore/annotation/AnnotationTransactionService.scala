@@ -165,7 +165,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
       currentCommittedVersion: Fox[Long] = annotationService.currentMaterializableVersion(annotationId)
       _ = logger.info(s"trying to commit ${updateGroups
         .map(_.actions.length)
-        .sum} actions in ${updateGroups.length} groups (versions ${updateGroups.map(_.version).mkString(",")}")
+        .sum} actions in ${updateGroups.length} groups (versions ${updateGroups.map(_.version).mkString(",")})")
       newVersion <- updateGroups.foldLeft(currentCommittedVersion) { (previousVersion, updateGroup) =>
         previousVersion.flatMap { prevVersion: Long =>
           if (prevVersion + 1 == updateGroup.version) {

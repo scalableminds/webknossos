@@ -44,6 +44,7 @@ class TracingDataStore @Inject()(config: TracingStoreConfig,
     healthClient.shutdown()
     skeletons.shutdown()
     annotationUpdates.shutdown()
+    annotations.shutdown()
     volumes.shutdown()
     volumeData.shutdown()
     editableMappingsInfo.shutdown()

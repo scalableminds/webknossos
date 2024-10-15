@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
-import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.time.Instant
@@ -61,6 +60,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     with FallbackDataHelper
     with ProtoGeometryImplicits
     with AnnotationReversion
+    with UpdateGroupHandling
     with LazyLogging {
 
   private lazy val materializedAnnotationWithTracingCache =
@@ -91,13 +91,10 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       implicit ec: ExecutionContext): Fox[List[(Long, List[UpdateAction])]] =
     if (desiredVersion == existingVersion) Fox.successful(List())
     else {
-      for {
-        updateActionGroupsWithVersions <- tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
-          annotationId,
-          Some(desiredVersion),
-          Some(existingVersion + 1))(fromJsonBytes[List[UpdateAction]])
-        updateActionGroupsWithVersionsRegrouped = regroupByRevertActions(updateActionGroupsWithVersions)
-      } yield updateActionGroupsWithVersionsRegrouped
+      tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
+        annotationId,
+        Some(desiredVersion),
+        Some(existingVersion + 1))(fromJsonBytes[List[UpdateAction]])
     }
 
   // TODO option to dry apply?
@@ -261,8 +258,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       requestedVolumeTracingIds: List[String],
       requestAll: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
-      updatesRegrouped <- findPendingUpdates(annotationId, annotation.version, targetVersion) ?~> "findPendingUpdates.failed"
-      updatesFlat = updatesRegrouped.flatMap(_._2)
+      updateGroupsAsSaved <- findPendingUpdates(annotationId, annotation.version, targetVersion) ?~> "findPendingUpdates.failed"
+      updatesGroupsRegrouped = regroupByRevertActions(updateGroupsAsSaved)
+      updatesFlat = updatesGroupsRegrouped.flatMap(_._2)
       annotationWithTracings <- findTracingsForUpdates(annotation,
                                                        updatesFlat,
                                                        requestedSkeletonTracingIds,
@@ -274,7 +272,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         updatesFlat,
         annotation.version,
         targetVersion) // TODO: targetVersion should be set per update group
-      updated <- applyUpdatesGrouped(annotationWithTracingsAndMappings, annotationId, updatesRegrouped) ?~> "applyUpdates.inner.failed"
+      updated <- applyUpdatesGrouped(annotationWithTracingsAndMappings, annotationId, updatesGroupsRegrouped) ?~> "applyUpdates.inner.failed"
     } yield updated
 
   private def findEditableMappingsForUpdates( // TODO integrate with findTracings?
@@ -405,6 +403,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       updates: List[UpdateAction],
       targetVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] = {
 
+    logger.info(s"applying ${updates.length} to go from v${annotation.version} to v$targetVersion")
+
+    // TODO can we make this tail recursive?
     def updateIter(annotationWithTracingsFox: Fox[AnnotationWithTracings],
                    remainingUpdates: List[UpdateAction]): Fox[AnnotationWithTracings] =
       annotationWithTracingsFox.futureBox.flatMap {
@@ -429,26 +430,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVerson)
       } yield updatedWithNewVerson
     }
-  }
-
-  private def regroupByRevertActions(
-      updateActionGroupsWithVersions: List[(Long, List[UpdateAction])]): List[(Long, List[UpdateAction])] = {
-    val splitGroupLists: List[List[(Long, List[UpdateAction])]] =
-      SequenceUtils.splitAndIsolate(updateActionGroupsWithVersions.reverse)(actionGroup =>
-        actionGroup._2.contains(updateAction => isRevertAction(updateAction)))
-    // TODO assert that the groups that contain revert actions contain nothing else
-    // TODO test this
-
-    splitGroupLists.flatMap { groupsToConcatenate: List[(Long, List[UpdateAction])] =>
-      val updates = groupsToConcatenate.flatMap(_._2)
-      val targetVersionOpt: Option[Long] = groupsToConcatenate.map(_._1).headOption
-      targetVersionOpt.map(targetVersion => (targetVersion, updates))
-    }
-  }
-
-  private def isRevertAction(a: UpdateAction): Boolean = a match {
-    case _: RevertToVersionUpdateAction => true
-    case _                              => false
   }
 
   private def flushUpdatedTracings(annotationWithTracings: AnnotationWithTracings)(implicit ec: ExecutionContext) =

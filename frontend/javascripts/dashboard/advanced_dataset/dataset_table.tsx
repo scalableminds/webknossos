@@ -290,7 +290,6 @@ class DatasetRenderer {
       ? `/api/datasets/${this.data.id}/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
       : "/assets/images/inactive-dataset-thumbnail.svg";
     const iconClassName = selectedLayerName ? "" : " icon-thumbnail";
-    console.log("linking to", `/datasets/${this.data.id}/view`);
     return (
       <>
         <Link to={`/datasets/${this.data.id}/view`} title="View Dataset">

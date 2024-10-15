@@ -380,8 +380,24 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   private def applyUpdatesGrouped(
       annotation: AnnotationWithTracings,
       annotationId: String,
-      updates: List[(Long, List[UpdateAction])]
-  ): Fox[AnnotationWithTracings] = ???
+      updateGroups: List[(Long, List[UpdateAction])]
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] = {
+    def updateGroupedIter(annotationWithTracingsFox: Fox[AnnotationWithTracings],
+                          remainingUpdateGroups: List[(Long, List[UpdateAction])]): Fox[AnnotationWithTracings] =
+      annotationWithTracingsFox.futureBox.flatMap {
+        case Empty => Fox.empty
+        case Full(annotationWithTracings) =>
+          remainingUpdateGroups match {
+            case List() => Fox.successful(annotationWithTracings)
+            case updateGroup :: tail =>
+              updateGroupedIter(applyUpdates(annotationWithTracings, annotationId, updateGroup._2, updateGroup._1),
+                                tail)
+          }
+        case _ => annotationWithTracingsFox
+      }
+
+    updateGroupedIter(Some(annotation), updateGroups)
+  }
 
   private def applyUpdates(
       annotation: AnnotationWithTracings,
@@ -405,7 +421,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     if (updates.isEmpty) Full(annotation)
     else {
       for {
-        updated <- updateIter(Some(annotation), updates)
+        updated <- updateIter(Some(annotation.withTargetVersion(targetVersion)), updates)
         updatedWithNewVerson = updated.withVersion(targetVersion)
         _ = logger.info(s"flushing v${targetVersion}, with ${updated.skeletonStats}")
         _ <- updatedWithNewVerson.flushBufferedUpdates()

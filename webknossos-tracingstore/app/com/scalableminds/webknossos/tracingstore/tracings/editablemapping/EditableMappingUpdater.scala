@@ -462,4 +462,5 @@ class EditableMappingUpdater(
       }
     } yield ()
 
+  def withTargetVersion(targetVersion: Long): EditableMappingUpdater = ??? // TODO build new or copy?
 }

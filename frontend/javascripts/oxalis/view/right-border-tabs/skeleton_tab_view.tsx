@@ -22,6 +22,8 @@ import {
   callDeep,
   MISSING_GROUP_ID,
   GroupTypeEnum,
+  createGroupToParentMap,
+  getExpandedGroups,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
@@ -66,6 +68,7 @@ import {
   addTreesAndGroupsAction,
   type BatchableUpdateTreeAction,
   batchUpdateGroupsAndTreesAction,
+  setExpandedTreeGroupsByIdsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -666,7 +669,22 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
   };
 
   handleSearchSelect = (selectedElement: TreeOrTreeGroup) => {
+    const { skeletonTracing } = this.props;
+    if (!skeletonTracing) {
+      return;
+    }
     if (selectedElement.type === GroupTypeEnum.TREE) {
+      const groupToParentGroupId = createGroupToParentMap(skeletonTracing.treeGroups);
+      const treeToSelect = skeletonTracing.trees[selectedElement.id];
+      const expandedGroups = new Set(
+        getExpandedGroups(skeletonTracing.treeGroups).map((group) => group.groupId),
+      );
+      let currentGroupId = treeToSelect.groupId;
+      while (currentGroupId) {
+        expandedGroups.add(currentGroupId);
+        currentGroupId = groupToParentGroupId[currentGroupId];
+      }
+      this.props.onSetExpandedGroups(expandedGroups);
       this.props.onSetActiveTree(selectedElement.id);
     } else {
       this.props.onSetActiveTreeGroup(selectedElement.id);
@@ -800,12 +818,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       );
     }
 
-    const { showSkeletons } = skeletonTracing;
+    const { showSkeletons, trees, treeGroups } = skeletonTracing;
     const activeTreeName = getActiveTree(skeletonTracing)?.name ?? "";
     const activeGroupName = getActiveTreeGroup(skeletonTracing)
       .map((activeGroup) => activeGroup.name)
       .getOrElse("");
-    const { trees, treeGroups } = skeletonTracing;
     const noTreesAndGroups = _.size(trees) === 0 && _.size(treeGroups) === 0;
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
     // Avoid that the title switches to the other title during the fadeout of the Modal
@@ -1018,6 +1035,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   onSetActiveTree(treeId: number) {
     dispatch(setActiveTreeAction(treeId));
+  },
+
+  onSetExpandedGroups(expandedTreeGroups: Set<number>) {
+    dispatch(setExpandedTreeGroupsByIdsAction(expandedTreeGroups));
   },
 
   onDeselectActiveTree() {

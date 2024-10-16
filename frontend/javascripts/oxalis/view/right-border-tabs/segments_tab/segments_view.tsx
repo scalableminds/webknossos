@@ -124,6 +124,7 @@ import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
   createGroupToSegmentsMap,
   findParentIdForGroupId,
+  getExpandedGroups,
   getGroupByIdWithSubgroups,
   getGroupNodeKey,
   MISSING_GROUP_ID,
@@ -356,13 +357,7 @@ function renderEmptyMeshFileSelect() {
 }
 
 const getExpandedKeys = (segmentGroups: TreeGroup[]) => {
-  return segmentGroups.reduce((expandedKeysAcc: string[], node) => {
-    if (node.isExpanded || node.isExpanded == null) {
-      expandedKeysAcc.push(getGroupNodeKey(node.groupId));
-    }
-    if (node.children.length > 0) expandedKeysAcc.push(...getExpandedKeys(node.children));
-    return expandedKeysAcc;
-  }, []);
+  return getExpandedGroups(segmentGroups).map((group) => getGroupNodeKey(group.groupId));
 };
 
 const getExpandedKeysWithRoot = (segmentGroups: TreeGroup[]) => {

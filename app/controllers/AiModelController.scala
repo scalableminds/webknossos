@@ -224,7 +224,7 @@ class AiModelController @Inject()(
       for {
         _ <- userService.assertIsSuperUser(request.identity)
         _ <- dataStoreDAO.findOneByName(request.body.dataStoreName) ?~> "dataStore.notFound"
-        _ <- aiModelDAO.findOne(request.body.id).reverse ?~> "aiModel.id.taken"
+        // TODO _ <- aiModelDAO.findOne(request.body.id).reverse ?~> "aiModel.id.taken"
         _ <- aiModelDAO.insertOne(
           AiModel(
             request.body.id,

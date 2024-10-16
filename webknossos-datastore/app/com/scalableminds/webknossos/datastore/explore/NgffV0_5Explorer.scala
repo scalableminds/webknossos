@@ -111,7 +111,7 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
         elementClass,
         boundingBox)
 
-  override protected def getShape(dataset: NgffDataset, path: VaultPath): Fox[Array[Int]] =
+  protected def getShape(dataset: NgffDataset, path: VaultPath): Fox[Array[Int]] =
     for {
       zarrHeader <- getZarrHeader(dataset, path)
       shape = zarrHeader.shape

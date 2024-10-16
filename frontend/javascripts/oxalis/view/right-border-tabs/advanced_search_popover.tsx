@@ -1,5 +1,5 @@
 import { Input, Tooltip, Popover, Space, type InputRef } from "antd";
-import { CheckOutlined, DownOutlined, UpOutlined } from "@ant-design/icons";
+import { CheckSquareOutlined, DownOutlined, UpOutlined } from "@ant-design/icons";
 import * as React from "react";
 import memoizeOne from "memoize-one";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -212,7 +212,7 @@ export default class AdvancedSearchPopover<
                       }
                       disabled={!hasMultipleResults}
                     >
-                      <CheckOutlined />
+                      <CheckSquareOutlined />
                     </ButtonComponent>
                   </Tooltip>
                 </Space.Compact>

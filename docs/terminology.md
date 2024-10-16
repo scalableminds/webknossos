@@ -20,8 +20,8 @@ The underlying file formats zarr and wkw use **chunks** as a compressible unit a
 
 An **annotation** can consist of one or multiple **annotation layers**, which can either be a
 
-* **volume annotation layer**, or **volume layer** in short ([main guide](./volume_annotation.md)), or
-* **skeleton annotation layer**, or **skeleton layer** and **skeleton** in short ([main guide](./skeleton_annotation.md)).
+* **volume annotation layer**, or **volume layer** in short ([main guide](./volume_annotation/index.md)), or
+* **skeleton annotation layer**, or **skeleton layer** and **skeleton** in short ([main guide](./skeleton_annotation/index.md)).
 
 **Volume-only** and **skeleton-only** annotations are restricted to the specific annotation layer type.
 
@@ -37,7 +37,7 @@ A **task** specifies a desired annotation result. A **task instance** refers to 
 
 A **project** is a collection of tasks.
 
-See also the [task and projects guide](./tasks.md).
+See also the [task and projects guide](./tasks_projects/index.md).
 
 ## Segments
 At its lowest-level a **segment** is the collection of several annotated voxels. At a larger level, segments can grow to be the size of whole cell bodies or partial cells, e.g. a single axon.

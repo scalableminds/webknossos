@@ -98,5 +98,15 @@ conf/application.conf-e
 .metals
 metals.sbt
 
-.yarn/install-state.gz
-tools/**/.yarn/install-state.gz
+**/screenshots/*.diff.png
+**/screenshots/*.new.png
+
+# Yarn 
+.yarn/*
+!.yarn/cache
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+tools/**/.yarn/*

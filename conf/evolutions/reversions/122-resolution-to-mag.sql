@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 121, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 122, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 DROP VIEW webknossos.taskTypes_;
 
@@ -14,6 +14,6 @@ ALTER TABLE webknossos.taskTypes RENAME COLUMN settings_magRestrictions_max TO s
 
 CREATE VIEW webknossos.taskTypes_ AS SELECT * FROM webknossos.taskTypes WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 120;
+UPDATE webknossos.releaseInformation SET schemaVersion = 121;
 
 COMMIT TRANSACTION;

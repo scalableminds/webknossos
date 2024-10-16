@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.{Zarr3DataLayer, Zarr3Layer, Zarr3SegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
-import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffDataset, NgffLabelsGroup, NgffMultiscalesItemV0_5}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffDataset, NgffMultiscalesItemV0_5}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{Zarr3ArrayHeader, Zarr3GroupHeader}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
@@ -22,7 +22,7 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
                        credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       zarrJsonPath <- Fox.successful(remotePath / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
-      groupHeader <- parseJsonFromPath[Zarr3GroupHeader](zarrJsonPath)
+      groupHeader <- parseJsonFromPath[Zarr3GroupHeader](zarrJsonPath) ?~> s"Failed to read OME NGFF header at $zarrJsonPath"
       ngffMetadata <- groupHeader.ngffMetadata.toFox
       labelLayers <- exploreLabelLayers(remotePath, credentialId).orElse(
         Fox.successful(List[(Zarr3Layer, VoxelSize)]()))
@@ -126,19 +126,9 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
       shape = zarrHeader.shape
     } yield shape
 
-  private def exploreLabelLayers(remotePath: VaultPath,
-                                 credentialId: Option[String]): Fox[List[(Zarr3Layer, VoxelSize)]] =
-    for {
-      labelDescriptionPath <- Fox.successful(remotePath / NgffLabelsGroup.LABEL_PATH)
-      labelGroup <- parseJsonFromPath[NgffLabelsGroup](labelDescriptionPath)
-      layerTuples <- Fox.serialCombined(labelGroup.labels) { labelPath =>
-        layersForLabel(remotePath, labelPath, credentialId)
-      }
-    } yield layerTuples.flatten
-
-  private def layersForLabel(remotePath: VaultPath,
-                             labelPath: String,
-                             credentialId: Option[String]): Fox[List[(Zarr3Layer, VoxelSize)]] =
+  protected def layersForLabel(remotePath: VaultPath,
+                               labelPath: String,
+                               credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       fullLabelPath <- Fox.successful(remotePath / "labels" / labelPath)
       zarrJsonPath = fullLabelPath / Zarr3ArrayHeader.FILENAME_ZARR_JSON

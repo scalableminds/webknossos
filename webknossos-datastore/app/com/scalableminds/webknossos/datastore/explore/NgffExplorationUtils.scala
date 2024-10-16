@@ -10,15 +10,21 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   NgffChannelWindow,
   NgffCoordinateTransformation,
   NgffDataset,
+  NgffLabelsGroup,
   NgffMultiscalesItem,
   NgffMultiscalesItemV0_5,
   NgffOmeroMetadata
 }
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.LengthUnit
+import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.LengthUnit.LengthUnit
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass, LayerViewConfiguration}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  AdditionalAxis,
+  DataLayerWithMagLocators,
+  ElementClass,
+  LayerViewConfiguration
+}
 import net.liftweb.common.Box
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, Json}
 
@@ -174,7 +180,7 @@ trait NgffExplorationUtils extends FoxImplicits {
     Vec3Double(xFactors.product, yFactors.product, zFactors.product)
   }
 
-  protected def getShape(dataset: NgffDataset, path: VaultPath): Fox[Array[Int]] = ???
+  protected def getShape(dataset: NgffDataset, path: VaultPath): Fox[Array[Int]]
 
   protected def createAdditionalAxis(name: String, index: Int, bounds: Array[Int]): Box[AdditionalAxis] =
     for {
@@ -211,6 +217,20 @@ trait NgffExplorationUtils extends FoxImplicits {
         case _                      => 1
       }
     } yield channelCount
+
+  protected def layersForLabel(remotePath: VaultPath,
+                               labelPath: String,
+                               credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]]
+
+  protected def exploreLabelLayers(remotePath: VaultPath, credentialId: Option[String])(
+      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+    for {
+      labelDescriptionPath <- Fox.successful(remotePath / NgffLabelsGroup.LABEL_PATH)
+      labelGroup <- labelDescriptionPath.parseAsJson[NgffLabelsGroup]
+      layerTuples <- Fox.serialCombined(labelGroup.labels) { labelPath =>
+        layersForLabel(remotePath, labelPath, credentialId)
+      }
+    } yield layerTuples.flatten
 
   implicit def multiScalesV0_5ToV0_4(multiscalesItemV0_5: NgffMultiscalesItemV0_5): NgffMultiscalesItem =
     NgffMultiscalesItemV0_5.asV0_4(multiscalesItemV0_5)

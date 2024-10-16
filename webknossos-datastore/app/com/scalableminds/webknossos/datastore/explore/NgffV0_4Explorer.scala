@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataFormat}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataFormat, DataLayerWithMagLocators}
 
 import scala.concurrent.ExecutionContext
 
@@ -17,20 +17,23 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
 
   override def name: String = "OME NGFF Zarr v0.4"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(ZarrLayer, VoxelSize)]] =
+  override def explore(remotePath: VaultPath,
+                       credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       zattrsPath <- Fox.successful(remotePath / NgffMetadata.FILENAME_DOT_ZATTRS)
       ngffHeader <- parseJsonFromPath[NgffMetadata](zattrsPath) ?~> s"Failed to read OME NGFF header at $zattrsPath"
-      labelLayers <- exploreLabelLayers(remotePath, credentialId).orElse(Fox.successful(List[(ZarrLayer, VoxelSize)]()))
+      labelLayers <- exploreLabelLayers(remotePath, credentialId).orElse(
+        Fox.successful(List[(DataLayerWithMagLocators, VoxelSize)]()))
 
-      layerLists: List[List[(ZarrLayer, VoxelSize)]] <- Fox.serialCombined(ngffHeader.multiscales)(multiscale => {
-        for {
-          channelCount <- getNgffMultiscaleChannelCount(multiscale, remotePath)
-          channelAttributes = getChannelAttributes(ngffHeader.omero)
-          layers <- layersFromNgffMultiscale(multiscale, remotePath, credentialId, channelCount, channelAttributes)
-        } yield layers
-      })
-      layers: List[(ZarrLayer, VoxelSize)] = layerLists.flatten
+      layerLists: List[List[(DataLayerWithMagLocators, VoxelSize)]] <- Fox.serialCombined(ngffHeader.multiscales)(
+        multiscale => {
+          for {
+            channelCount <- getNgffMultiscaleChannelCount(multiscale, remotePath)
+            channelAttributes = getChannelAttributes(ngffHeader.omero)
+            layers <- layersFromNgffMultiscale(multiscale, remotePath, credentialId, channelCount, channelAttributes)
+          } yield layers
+        })
+      layers: List[(DataLayerWithMagLocators, VoxelSize)] = layerLists.flatten
     } yield layers ++ labelLayers
 
   private def layersFromNgffMultiscale(multiscale: NgffMultiscalesItem,
@@ -89,19 +92,9 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
       })
     } yield layerTuples
 
-  private def exploreLabelLayers(remotePath: VaultPath,
-                                 credentialId: Option[String]): Fox[List[(ZarrLayer, VoxelSize)]] =
-    for {
-      labelDescriptionPath <- Fox.successful(remotePath / NgffLabelsGroup.LABEL_PATH)
-      labelGroup <- parseJsonFromPath[NgffLabelsGroup](labelDescriptionPath)
-      layerTuples <- Fox.serialCombined(labelGroup.labels) { labelPath =>
-        layersForLabel(remotePath, labelPath, credentialId)
-      }
-    } yield layerTuples.flatten
-
-  private def layersForLabel(remotePath: VaultPath,
-                             labelPath: String,
-                             credentialId: Option[String]): Fox[List[(ZarrLayer, VoxelSize)]] =
+  protected def layersForLabel(remotePath: VaultPath,
+                               labelPath: String,
+                               credentialId: Option[String]): Fox[List[(ZarrLayer, VoxelSize)]] =
     for {
       fullLabelPath <- Fox.successful(remotePath / "labels" / labelPath)
       zattrsPath = fullLabelPath / NgffMetadata.FILENAME_DOT_ZATTRS

@@ -23,7 +23,7 @@ dataset_name/
 ```
 
 ## Multi-Layer Image File Sequence
-The image file sequences explained above can be composed to build multiple [layers](#layers).
+The image file sequences explained above can be composed to build multiple [layers](./concepts.md#layers) within a single dataset.
 For example, the following file structure (note the additional hierarchy level) would create a dataset with two layers (named `color` and `segmentation`):
 
 ```

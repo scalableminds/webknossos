@@ -215,7 +215,7 @@ class AnnotationService @Inject()(
 
   def deleteAnnotationLayer(annotation: Annotation, layerName: String): Fox[Unit] =
     for {
-      _ <- annotationLayersDAO.deleteOne(annotation._id, layerName)
+      _ <- annotationLayersDAO.deleteOneByName(annotation._id, layerName)
     } yield ()
 
   private def createTracingsForExplorational(dataset: Dataset,
@@ -314,7 +314,7 @@ class AnnotationService @Inject()(
         AnnotationLayer(tracingIdAndName._1,
                         annotationLayerParameters.typ,
                         tracingIdAndName._2,
-                        AnnotationLayerStatistics.zeroedForTyp(annotationLayerParameters.typ))
+                        AnnotationLayerStatistics.zeroedForType(annotationLayerParameters.typ))
 
     def fetchOldPrecedenceLayer: Fox[Option[FetchedAnnotationLayer]] =
       if (existingAnnotationLayers.isEmpty) Fox.successful(None)

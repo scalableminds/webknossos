@@ -179,7 +179,20 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
           } else failUnlessAlreadyHandled(updateGroup, annotationId, prevVersion)
         }
       }
+      _ <- applyImmediatelyIfNeeded(annotationId, updateGroups.flatMap(_.actions), newVersion)
     } yield newVersion
+
+  private def applyImmediatelyIfNeeded(annotationId: String, updates: List[UpdateAction], newVersion: Long)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[Unit] =
+    if (containsApplyImmediatelyUpdateActions(updates)) {
+      annotationService.get(annotationId, Some(newVersion)).map(_ => ())
+    } else Fox.successful(())
+
+  private def containsApplyImmediatelyUpdateActions(updates: List[UpdateAction]) = updates.exists {
+    case _: ApplyImmediatelyUpdateAction => true
+    case _                               => false
+  }
 
   private def handleUpdateGroup(annotationId: String, updateActionGroup: UpdateActionGroup)(
       implicit ec: ExecutionContext,

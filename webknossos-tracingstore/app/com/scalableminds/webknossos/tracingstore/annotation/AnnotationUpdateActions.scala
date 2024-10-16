@@ -18,7 +18,7 @@ object AnnotationLayerParameters {
     Json.using[WithDefaultValues].format[AnnotationLayerParameters]
 }
 
-trait AnnotationUpdateAction extends UpdateAction
+trait AnnotationUpdateAction extends ApplyImmediatelyUpdateAction
 
 case class AddLayerAnnotationUpdateAction(layerParameters: AnnotationLayerParameters,
                                           tracingId: String,
@@ -48,7 +48,7 @@ case class DeleteLayerAnnotationUpdateAction(tracingId: String,
 }
 
 case class UpdateLayerMetadataAnnotationUpdateAction(tracingId: String,
-                                                     layerName: String, // Just stored for nicer-looking history
+                                                     layerName: String,
                                                      actionTimestamp: Option[Long] = None,
                                                      actionAuthorId: Option[String] = None,
                                                      info: Option[String] = None)

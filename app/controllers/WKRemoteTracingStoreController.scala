@@ -3,6 +3,7 @@ package controllers
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.tracingstore.TracingUpdatesReport
 import com.scalableminds.webknossos.tracingstore.tracings.TracingIds
@@ -51,6 +52,26 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
   val bearerTokenService: WebknossosBearerTokenAuthenticatorService =
     wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
+  def updateAnnotationLayers(name: String, key: String, annotationId: String): Action[List[AnnotationLayer]] =
+    Action.async(validateJson[List[AnnotationLayer]]) { implicit request =>
+      for {
+        annotationIdValidated <- ObjectId.fromString(annotationId)
+        existingLayers <- annotationLayerDAO.findAnnotationLayersFor(annotationIdValidated)
+        existingLayerIds = existingLayers.map(_.tracingId).toSet
+        newLayerIds = request.body.map(_.tracingId).toSet
+        layerIdsToDelete = existingLayerIds.diff(newLayerIds)
+        layerIdsToUpdate = existingLayerIds.intersect(newLayerIds)
+        layerIdsToInsert = newLayerIds.diff(existingLayerIds)
+        _ <- Fox.serialCombined(layerIdsToDelete.toList)(
+          annotationLayerDAO.deleteOneByTracingId(annotationIdValidated, _))
+        _ <- Fox.serialCombined(request.body.filter(l => layerIdsToInsert.contains(l.tracingId)))(
+          annotationLayerDAO.insertOne(annotationIdValidated, _))
+        _ <- Fox.serialCombined(request.body.filter(l => layerIdsToUpdate.contains(l.tracingId)))(l =>
+          annotationLayerDAO.updateName(annotationIdValidated, l.tracingId, l.name))
+        // Layer stats are ignored here, they are sent eagerly when saving updates
+      } yield Ok
+    }
+
   def handleTracingUpdateReport(name: String, key: String): Action[TracingUpdatesReport] =
     Action.async(validateJson[TracingUpdatesReport]) { implicit request =>
       implicit val ctx: DBAccessContext = GlobalAccessContext
@@ -63,7 +84,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           _ <- annotationDAO.updateModified(annotation._id, Instant.now)
           /*_ <- Fox.runOptional(report.statistics) { statistics =>
             annotationLayerDAO.updateStatistics(annotation._id, annotationId, statistics)
-          }*/ // TODO stats per tracing id
+          }*/ // TODO stats per tracing id. note: they might arrive before the layer is created. skip them then.
           userBox <- bearerTokenService.userForTokenOpt(report.userToken).futureBox
           trackTime = report.significantChangesCount > 0 || !wkConf.WebKnossos.User.timeTrackingOnlyWithSignificantChanges
           _ <- Fox.runOptional(userBox)(user =>

@@ -54,6 +54,8 @@ trait UpdateAction {
   def isViewOnlyChange: Boolean = false
 }
 
+trait ApplyImmediatelyUpdateAction extends UpdateAction
+
 trait LayerUpdateAction extends UpdateAction {
   def actionTracingId: String
 }

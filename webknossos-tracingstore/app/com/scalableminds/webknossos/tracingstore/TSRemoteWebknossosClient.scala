@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, DataSourceLike}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{
@@ -88,6 +89,12 @@ class TSRemoteWebknossosClient @Inject()(
           .addQueryString("key" -> tracingStoreKey)
           .getWithJsonResponse[String]
     ) ?~> "annotation.idForTracing.failed"
+
+  def updateAnnotationLayers(annotationId: String, annotationLayers: List[AnnotationLayer]): Fox[Unit] =
+    rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/updateAnnotationLayers")
+      .addQueryString("annotationId" -> annotationId)
+      .addQueryString("key" -> tracingStoreKey)
+      .postJson(annotationLayers)
 
   override def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/validateUserAccess")

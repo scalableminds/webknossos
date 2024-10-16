@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappin
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingLayer,
   EditableMappingService,
@@ -428,6 +429,10 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         _ <- updatedWithNewVerson.flushBufferedUpdates()
         _ <- flushUpdatedTracings(updatedWithNewVerson)
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVerson)
+        _ <- remoteWebknossosClient.updateAnnotationLayers(annotationId,
+                                                           updatedWithNewVerson.annotation.layers
+                                                             .map(AnnotationLayer.fromProto)
+                                                             .toList) // TODO perf: skip if no layer changes
       } yield updatedWithNewVerson
     }
   }

@@ -12,4 +12,10 @@ object AnnotationLayerType extends ExtendedEnumeration {
       case Skeleton => AnnotationLayerTypeProto.skeleton
       case Volume   => AnnotationLayerTypeProto.volume
     }
+
+  def fromProto(p: AnnotationLayerTypeProto): AnnotationLayerType =
+    p match {
+      case AnnotationLayerTypeProto.skeleton => Skeleton
+      case AnnotationLayerTypeProto.volume   => Volume
+    }
 }

@@ -140,11 +140,18 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
     q"""INSERT INTO webknossos.annotation_layers(_annotation, tracingId, typ, name, statistics)
           VALUES($annotationId, ${a.tracingId}, ${a.typ}, ${a.name}, ${a.stats})""".asUpdate
 
-  def deleteOne(annotationId: ObjectId, layerName: String): Fox[Unit] =
+  def deleteOneByName(annotationId: ObjectId, layerName: String): Fox[Unit] =
     for {
       _ <- run(q"""DELETE FROM webknossos.annotation_layers
                    WHERE _annotation = $annotationId
                    AND name = $layerName""".asUpdate)
+    } yield ()
+
+  def deleteOneByTracingId(annotationId: ObjectId, tracingId: String): Fox[Unit] =
+    for {
+      _ <- run(q"""DELETE FROM webknossos.annotation_layers
+                   WHERE _annotation = $annotationId
+                   AND tracingId = $tracingId""".asUpdate)
     } yield ()
 
   def findAnnotationIdByTracingId(tracingId: String): Fox[ObjectId] =

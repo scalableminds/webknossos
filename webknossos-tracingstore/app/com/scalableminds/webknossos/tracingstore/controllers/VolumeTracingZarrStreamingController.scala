@@ -23,7 +23,6 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.math.Ordering.Implicits.infixOrderingOps
 
 class VolumeTracingZarrStreamingController @Inject()(
     tracingService: VolumeTracingService,

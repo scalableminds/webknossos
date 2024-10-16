@@ -8,23 +8,8 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.ZarrSegmentationLayer
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{Zarr3OutputHelper, ZarrCoordinatesParser}
-import com.scalableminds.webknossos.datastore.datareaders.zarr.{
-  NgffGroupHeader,
-  NgffMetadata,
-  NgffMetadataV0_5,
-  ZarrHeader
-}
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
-  BytesCodecConfiguration,
-  ChunkGridConfiguration,
-  ChunkGridSpecification,
-  ChunkKeyEncoding,
-  ChunkKeyEncodingConfiguration,
-  TransposeCodecConfiguration,
-  TransposeSetting,
-  Zarr3ArrayHeader,
-  Zarr3GroupHeader
-}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, NgffMetadataV0_5, ZarrHeader}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.{BytesCodecConfiguration, ChunkGridConfiguration, ChunkGridSpecification, ChunkKeyEncoding, ChunkKeyEncodingConfiguration, TransposeCodecConfiguration, TransposeSetting, Zarr3ArrayHeader, Zarr3GroupHeader}
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, WebknossosDataRequest}
@@ -32,16 +17,13 @@ import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis,
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
-import com.scalableminds.webknossos.tracingstore.{
-  TSRemoteDatastoreClient,
-  TSRemoteWebknossosClient,
-  TracingStoreAccessTokenService
-}
+import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient, TracingStoreAccessTokenService}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.math.Ordering.Implicits.infixOrderingOps
 
 class VolumeTracingZarrStreamingController @Inject()(
     tracingService: VolumeTracingService,
@@ -247,11 +229,11 @@ class VolumeTracingZarrStreamingController @Inject()(
       for {
         tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
-        existingMags = tracing.resolutions.map(vec3IntFromProto)
+        sortedExistingMags = tracing.resolutions.map(vec3IntFromProto).toList.sortBy(_.maxDim)
         dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId) ~> NOT_FOUND
         omeNgffHeader = NgffMetadataV0_5.fromNameVoxelSizeAndMags(tracingId,
                                                                   dataSourceVoxelSize = dataSource.scale,
-                                                                  mags = existingMags.toList,
+                                                                  mags = sortedExistingMags,
                                                                   additionalAxes = dataSource.additionalAxesUnion)
         zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(omeNgffHeader))
       } yield Ok(Json.toJson(zarr3GroupHeader))

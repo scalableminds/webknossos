@@ -82,22 +82,6 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
         )
     } yield layer
 
-  protected def layersForLabel(remotePath: VaultPath,
-                               labelPath: String,
-                               credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
-    for {
-      fullLabelPath <- Fox.successful(remotePath / "labels" / labelPath)
-      zattrsPath = fullLabelPath / NgffMetadata.FILENAME_DOT_ZATTRS
-      ngffHeader <- parseJsonFromPath[NgffMetadata](zattrsPath) ?~> s"Failed to read OME NGFF header at $zattrsPath"
-      layers: List[List[(DataLayerWithMagLocators, VoxelSize)]] <- Fox.serialCombined(ngffHeader.multiscales)(
-        multiscale =>
-          layersFromNgffMultiscale(multiscale.copy(name = Some(s"labels-$labelPath")),
-                                   fullLabelPath,
-                                   credentialId,
-                                   1,
-                                   isSegmentation = true))
-    } yield layers.flatten
-
   private def getZarrHeader(ngffDataset: NgffDataset, layerPath: VaultPath) = {
     val magPath = layerPath / ngffDataset.path
     val zarrayPath = magPath / ZarrHeader.FILENAME_DOT_ZARRAY
@@ -136,5 +120,21 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
       zarrHeader <- getZarrHeader(dataset, path)
       shape = zarrHeader.shape
     } yield shape
+
+  protected def layersForLabel(remotePath: VaultPath,
+                               labelPath: String,
+                               credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+    for {
+      fullLabelPath <- Fox.successful(remotePath / "labels" / labelPath)
+      zattrsPath = fullLabelPath / NgffMetadata.FILENAME_DOT_ZATTRS
+      ngffHeader <- parseJsonFromPath[NgffMetadata](zattrsPath) ?~> s"Failed to read OME NGFF header at $zattrsPath"
+      layers: List[List[(DataLayerWithMagLocators, VoxelSize)]] <- Fox.serialCombined(ngffHeader.multiscales)(
+        multiscale =>
+          layersFromNgffMultiscale(multiscale.copy(name = Some(s"labels-$labelPath")),
+                                   fullLabelPath,
+                                   credentialId,
+                                   1,
+                                   isSegmentation = true))
+    } yield layers.flatten
 
 }

@@ -83,6 +83,14 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
         )
     } yield layer
 
+  private def getZarrHeader(ngffDataset: NgffDataset, layerPath: VaultPath): Fox[Zarr3ArrayHeader] = {
+    val magPath = layerPath / ngffDataset.path
+    val zarrJsonPath = magPath / Zarr3ArrayHeader.FILENAME_ZARR_JSON
+    for {
+      parsedHeader <- parseJsonFromPath[Zarr3ArrayHeader](zarrJsonPath) ?~> s"failed to read zarr header at $zarrJsonPath"
+    } yield parsedHeader
+  }
+
   private def zarrMagFromNgffDataset(ngffDataset: NgffDataset,
                                      layerPath: VaultPath,
                                      voxelSizeInAxisUnits: Vec3Double,
@@ -102,14 +110,6 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
         magPath,
         elementClass,
         boundingBox)
-
-  private def getZarrHeader(ngffDataset: NgffDataset, layerPath: VaultPath): Fox[Zarr3ArrayHeader] = {
-    val magPath = layerPath / ngffDataset.path
-    val zarrJsonPath = magPath / Zarr3ArrayHeader.FILENAME_ZARR_JSON
-    for {
-      parsedHeader <- parseJsonFromPath[Zarr3ArrayHeader](zarrJsonPath) ?~> s"failed to read zarr header at $zarrJsonPath"
-    } yield parsedHeader
-  }
 
   override protected def getShape(dataset: NgffDataset, path: VaultPath): Fox[Array[Int]] =
     for {

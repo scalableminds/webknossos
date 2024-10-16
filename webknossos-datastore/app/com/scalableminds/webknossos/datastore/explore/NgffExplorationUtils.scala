@@ -218,6 +218,47 @@ trait NgffExplorationUtils extends FoxImplicits {
       }
     } yield channelCount
 
+  protected def createLayer(remotePath: VaultPath,
+                            credentialId: Option[String],
+                            multiscale: NgffMultiscalesItem,
+                            channelIndex: Int,
+                            channelAttributes: Option[Seq[ChannelAttributes]],
+                            datasetName: String,
+                            voxelSizeInAxisUnits: Vec3Double,
+                            axisOrder: AxisOrder,
+                            isSegmentation: Boolean): Fox[DataLayerWithMagLocators]
+
+  protected def layersFromNgffMultiscale(multiscale: NgffMultiscalesItem,
+                                         remotePath: VaultPath,
+                                         credentialId: Option[String],
+                                         channelCount: Int,
+                                         channelAttributes: Option[Seq[ChannelAttributes]] = None,
+                                         isSegmentation: Boolean = false)(
+      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+    for {
+      axisOrder <- extractAxisOrder(multiscale.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
+      unifiedAxisUnit <- selectAxisUnit(multiscale.axes, axisOrder)
+      axisUnitFactors <- extractAxisUnitFactors(unifiedAxisUnit, multiscale.axes, axisOrder) ?~> "Could not extract axis unit-to-nm factors"
+      voxelSizeInAxisUnits <- extractVoxelSizeInAxisUnits(
+        multiscale.datasets.map(_.coordinateTransformations),
+        axisOrder) ?~> "Could not extract voxel size from scale transforms"
+      voxelSizeFactor = voxelSizeInAxisUnits * axisUnitFactors
+      nameFromPath = remotePath.basename
+      datasetName = multiscale.name.getOrElse(nameFromPath)
+      layers <- Fox.serialCombined((0 until channelCount).toList)({ channelIndex: Int =>
+        createLayer(remotePath,
+                    credentialId,
+                    multiscale,
+                    channelIndex,
+                    channelAttributes,
+                    datasetName,
+                    voxelSizeInAxisUnits,
+                    axisOrder,
+                    isSegmentation)
+      })
+      layerAndVoxelSizeTuples = layers.map((_, VoxelSize(voxelSizeFactor, unifiedAxisUnit)))
+    } yield layerAndVoxelSizeTuples
+
   protected def layersForLabel(remotePath: VaultPath,
                                labelPath: String,
                                credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]]

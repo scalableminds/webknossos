@@ -23,6 +23,7 @@ import scala.concurrent.duration._
 
 case class Worker(_id: ObjectId,
                   _dataStore: String,
+                  name: String,
                   key: String,
                   maxParallelHighPriorityJobs: Int,
                   maxParallelLowPriorityJobs: Int,
@@ -48,6 +49,7 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       Worker(
         ObjectId(r._Id),
         r._Datastore,
+        r.name,
         r.key,
         r.maxparallelhighpriorityjobs,
         r.maxparallellowpriorityjobs,
@@ -85,6 +87,7 @@ class WorkerService @Inject()(conf: WkConf, dataStoreDAO: DataStoreDAO, workerDA
   def publicWrites(worker: Worker): JsObject =
     Json.obj(
       "id" -> worker._id.id,
+      "name" -> worker.name,
       "maxParallelHighPriorityJobs" -> worker.maxParallelHighPriorityJobs,
       "maxParallelLowPriorityJobs" -> worker.maxParallelLowPriorityJobs,
       "supportedJobCommands" -> worker.supportedJobCommands,
@@ -131,13 +134,15 @@ class WorkerLivenessService @Inject()(workerService: WorkerService,
   }
 
   private def reportAsDead(worker: Worker): Unit = {
-    val msg = s"Worker ${worker._id} is not reporting. Last heartbeat was at ${formatDate(worker.lastHeartBeat)}"
+    val msg =
+      s"Worker ${worker.name} (${worker._id}) is not reporting. Last heartbeat was at ${formatDate(worker.lastHeartBeat)}"
     slackNotificationService.warn("Worker missing", msg)
     logger.warn(msg)
   }
 
   private def reportAsResurrected(worker: Worker): Unit = {
-    val msg = s"Worker ${worker._id} is reporting again. Last heartbeat was at ${formatDate(worker.lastHeartBeat)}"
+    val msg =
+      s"Worker ${worker.name} (${worker._id}) is reporting again. Last heartbeat was at ${formatDate(worker.lastHeartBeat)}"
     slackNotificationService.success("Worker return", msg)
     logger.info(msg)
   }

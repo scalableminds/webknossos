@@ -301,8 +301,6 @@ class JobController @Inject()(
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
           _ <- Fox.runOptional(annotationId)(ObjectId.fromString)
-          multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-          _ <- bool2Fox(multiUser.isSuperUser) ?~> "job.alignSections.notAllowed.onlySuperUsers"
           command = JobCommand.align_sections
           commandArgs = Json.obj(
             "organization_name" -> organizationId,

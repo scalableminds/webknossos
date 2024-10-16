@@ -11,7 +11,7 @@ Synapse locations, types, and partners have to be pre-computed outside of WEBKNO
 - Display of metadata information such as synapse types (e.g., "dendritic shaft", "spine head", "soma"-synapse, etc.)
 - Filtering by synapse type or direction 
 
-![The Synapse and Connectome viewer displays the incoming and outgoing synaptic connections for a selected neuron.](images/connectome_viewer.jpeg)
+![The Synapse and Connectome viewer displays the incoming and outgoing synaptic connections for a selected neuron.](./images/connectome_viewer.jpeg)
 
 ## Getting started with the Synapse & Connectome Viewer
 

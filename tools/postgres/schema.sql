@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(120);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(121);
 COMMIT TRANSACTION;
 
 
@@ -447,6 +447,7 @@ CREATE TABLE webknossos.maintenances(
 CREATE TABLE webknossos.workers(
   _id CHAR(24) PRIMARY KEY,
   _dataStore VARCHAR(256) NOT NULL,
+  name VARCHAR(256) NOT NULL DEFAULT 'Unnamed Worker',
   key VARCHAR(1024) NOT NULL UNIQUE,
   maxParallelHighPriorityJobs INT NOT NULL DEFAULT 1,
   maxParallelLowPriorityJobs INT NOT NULL DEFAULT 1,

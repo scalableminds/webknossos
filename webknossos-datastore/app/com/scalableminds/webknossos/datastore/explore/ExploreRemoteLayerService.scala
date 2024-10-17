@@ -88,7 +88,8 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
         credentialId,
         List(
           // Explorers are ordered to prioritize the explorer reading meta information over raw Zarr, N5, ... data.
-          new NgffExplorer,
+          new NgffV0_4Explorer,
+          new NgffV0_5Explorer,
           new WebknossosZarrExplorer,
           new Zarr3ArrayExplorer,
           new ZarrArrayExplorer(Vec3Int.ones),

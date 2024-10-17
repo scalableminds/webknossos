@@ -32,16 +32,13 @@ import { normalizeFileEvent, NUM_TASKS_PER_BATCH } from "admin/task/task_create_
 import { Vector3Input, Vector6Input } from "libs/vector_input";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import {
-  createTaskFromNML,
-  createTasks,
   getActiveDatasetsOfMyOrganization,
   getAnnotationInformation,
   getProjects,
   getScripts,
-  getTask,
   getTaskTypes,
-  updateTask,
 } from "admin/admin_rest_api";
+import { createTaskFromNML, createTasks, getTask, updateTask } from "admin/api/tasks";
 import { coalesce, tryToAwaitPromise } from "libs/utils";
 import SelectExperienceDomain from "components/select_experience_domain";
 import messages from "messages";
@@ -59,7 +56,7 @@ const fullWidth = {
 const maxDisplayedTasksCount = 50;
 
 const TASK_CSV_HEADER =
-  "taskId,dataSet,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId,creationInfo";
+  "taskId,datasetId,datasetName,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId,creationInfo";
 
 export enum SpecificationEnum {
   Manual = "Manual",
@@ -76,7 +73,8 @@ export function taskToShortText(task: APITask) {
 export function taskToText(task: APITask) {
   const {
     id,
-    dataSet,
+    datasetId,
+    datasetName,
     type,
     neededExperience,
     editPosition,
@@ -96,7 +94,7 @@ export function taskToText(task: APITask) {
   const scriptId = script ? `${script.id}` : "";
   const creationInfoOrEmpty = creationInfo || "";
   const taskAsString =
-    `${id},${dataSet},${type.id},${neededExperienceAsString},${editPositionAsString},` +
+    `${id},${datasetId},${datasetName},${type.id},${neededExperienceAsString},${editPositionAsString},` +
     `${editRotationAsString},${totalNumberOfInstances},${boundingBoxAsString},${projectName},${scriptId},${creationInfoOrEmpty}`;
   return taskAsString;
 }
@@ -304,7 +302,8 @@ type FormValues = {
   editPosition: Vector3;
   editRotation: Vector3;
   nmlFiles: UploadFile[];
-  dataSet: string;
+  datasetId: string;
+  datasetName: string;
   projectName: string;
   neededExperience: NewTask["neededExperience"];
 };
@@ -377,7 +376,10 @@ function TaskCreateFormView({ taskId, history }: Props) {
 
     if (taskId != null) {
       // either update an existing task
-      const newTask = { ..._.omit(formValues, "nmlFiles", "baseAnnotation"), boundingBox };
+      const newTask = {
+        ..._.omit(formValues, "nmlFiles", "baseAnnotation"),
+        boundingBox,
+      };
       const confirmedTask = await updateTask(taskId, newTask);
       history.push(`/tasks/${confirmedTask.id}`);
     } else {
@@ -493,7 +495,8 @@ function TaskCreateFormView({ taskId, history }: Props) {
 
                   if (annotationResponse?.dataSetName != null) {
                     form.setFieldsValue({
-                      dataSet: annotationResponse.dataSetName,
+                      datasetName: annotationResponse.dataSetName,
+                      datasetId: annotationResponse.datasetId,
                     });
                     return Promise.resolve();
                   }
@@ -505,7 +508,7 @@ function TaskCreateFormView({ taskId, history }: Props) {
                   );
 
                   if (
-                    taskResponse?.dataSet != null &&
+                    taskResponse?.datasetId != null &&
                     _.isEqual(taskResponse.status, {
                       pending: 0,
                       active: 0,
@@ -513,13 +516,15 @@ function TaskCreateFormView({ taskId, history }: Props) {
                     })
                   ) {
                     form.setFieldsValue({
-                      dataSet: taskResponse.dataSet,
+                      datasetName: taskResponse.datasetName,
+                      datasetId: taskResponse.datasetId,
                     });
                     return Promise.resolve();
                   }
 
                   form.setFieldsValue({
-                    dataSet: undefined,
+                    datasetName: undefined,
+                    datasetId: undefined,
                   });
                   return Promise.reject(new Error("Invalid base annotation id."));
                 },

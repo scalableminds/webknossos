@@ -19,14 +19,8 @@ import classNames from "classnames";
 import type { APITaskWithAnnotation, APIUser, APIAnnotation } from "types/api_flow_types";
 import { AsyncButton, AsyncLink } from "components/async_clickables";
 import type { OxalisState } from "oxalis/store";
-import {
-  deleteAnnotation,
-  resetAnnotation,
-  finishTask,
-  requestTask,
-  peekNextTasks,
-  downloadAnnotation,
-} from "admin/admin_rest_api";
+import { deleteAnnotation, resetAnnotation, downloadAnnotation } from "admin/admin_rest_api";
+import { finishTask, requestTask, peekNextTasks } from "admin/api/tasks";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { getSkeletonDescriptor } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";

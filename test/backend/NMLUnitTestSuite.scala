@@ -1,60 +1,73 @@
 package backend
 
+import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.requestparsing.ObjectId
+
 import java.io.ByteArrayInputStream
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalAxisProto, Vec2IntProto}
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, FetchedAnnotationLayer}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat
 import models.annotation.nml.{NmlParser, NmlWriter}
-import models.annotation.UploadedVolumeLayer
+import models.annotation.{SkeletonTracingWithDatasetId, UploadedVolumeLayer}
 import net.liftweb.common.{Box, Full}
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatestplus.play.PlaySpec
 import play.api.i18n.{DefaultMessagesApi, Messages, MessagesProvider}
 import play.api.test.FakeRequest
 
+import javax.inject.Inject
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-class NMLUnitTestSuite extends PlaySpec {
+class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
   implicit val messagesProvider: MessagesProvider = new MessagesProvider {
     val m = new DefaultMessagesApi()
     override def messages: Messages = m.preferred({ FakeRequest("GET", "/") })
   }
 
   def writeAndParseTracing(skeletonTracing: SkeletonTracing)
-    : Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])] = {
+    : Box[(Option[SkeletonTracingWithDatasetId], List[UploadedVolumeLayer], String, Option[String])] = {
     val annotationLayers = List(
       FetchedAnnotationLayer("dummySkeletonTracingId",
                              AnnotationLayer.defaultSkeletonLayerName,
                              Left(skeletonTracing),
                              None))
     val nmlFunctionStream =
-      new NmlWriter()(scala.concurrent.ExecutionContext.global).toNmlStream("",
-                                                                            annotationLayers,
-                                                                            None,
-                                                                            None,
-                                                                            None,
-                                                                            "testOrganization",
-                                                                            "http://wk.test",
-                                                                            "dummy_dataset",
-                                                                            None,
-                                                                            None,
-                                                                            volumeDataZipFormat =
-                                                                              VolumeDataZipFormat.wkw)
+      new NmlWriter()(scala.concurrent.ExecutionContext.global).toNmlStream(
+        "",
+        annotationLayers,
+        None,
+        None,
+        None,
+        "testOrganization",
+        "http://wk.test",
+        "dummy_dataset",
+        ObjectId.dummyId,
+        None,
+        None,
+        volumeDataZipFormat = VolumeDataZipFormat.wkw
+      )
     val os = new ByteArrayOutputStream()
     Await.result(nmlFunctionStream.writeTo(os)(scala.concurrent.ExecutionContext.global), Duration.Inf)
     val array = os.toByteArray
-    NmlParser.parse("",
-                    new ByteArrayInputStream(array),
-                    overwritingDatasetName = None,
-                    overwritingOrganizationId = None,
-                    isTaskUpload = true,
-                    basePath = None)
+    val a =Await.result(
+      nmlParser.parse(
+        "",
+        new ByteArrayInputStream(array),
+        overwritingDatasetName = None,
+        overwritingDatasetId = None,
+        overwritingOrganizationId = None,
+        isTaskUpload = true,
+        basePath = None
+      )(messagesProvider, scala.concurrent.ExecutionContext.global, GlobalAccessContext).futureBox,
+      Duration.Inf
+    )
+    a
   }
 
   def isParseSuccessful(
-      parsedTracing: Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])]): Boolean =
+      parsedTracing: Box[(Option[SkeletonTracingWithDatasetId], List[UploadedVolumeLayer], String, Option[String])]): Boolean =
     parsedTracing match {
       case Full(tuple) =>
         tuple match {

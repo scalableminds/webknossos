@@ -204,7 +204,7 @@ const saveCurrentMetadata = async (
   try {
     if (isADataset) {
       // In case of a dataset, update the dataset's metadata.
-      serverResponse = await context.updateCachedDataset(datasetOrFolderToUpdate, {
+      serverResponse = await context.updateCachedDataset(datasetOrFolderToUpdate.id, {
         metadata: metadataWithoutIndexAndError,
       });
     } else {

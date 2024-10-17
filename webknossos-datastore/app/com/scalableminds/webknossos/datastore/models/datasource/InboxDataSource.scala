@@ -9,6 +9,7 @@ package object inbox {
   trait GenericInboxDataSource[+T <: DataLayerLike] {
 
     def id: DataSourceId
+    def withUpdatedId(newId: DataSourceId): GenericInboxDataSource[T]
 
     def toUsable: Option[GenericDataSource[T]]
 
@@ -47,6 +48,8 @@ package object inbox {
     val statusOpt: Option[String] = Some(status)
 
     val defaultViewConfiguration: Option[DatasetViewConfiguration] = None
+
+    def withUpdatedId(newId: DataSourceId): UnusableDataSource[T] = copy(id = newId)
   }
 
   object UnusableDataSource {

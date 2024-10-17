@@ -649,15 +649,15 @@ class ReactRouter extends React.Component<Props> {
                       const { autoFallbackLayer, fallbackLayerName } = getParams;
                       const resolutionRestrictions: APIMagRestrictions = {};
 
-                      if (getParams.minRes !== undefined) {
-                        resolutionRestrictions.min = Number.parseInt(getParams.minRes);
+                      if (getParams.minMag !== undefined) {
+                        resolutionRestrictions.min = Number.parseInt(getParams.minMag);
 
                         if (!_.isNumber(resolutionRestrictions.min)) {
                           throw new Error("Invalid minMag parameter");
                         }
 
-                        if (getParams.maxRes !== undefined) {
-                          resolutionRestrictions.max = Number.parseInt(getParams.maxRes);
+                        if (getParams.maxMag !== undefined) {
+                          resolutionRestrictions.max = Number.parseInt(getParams.maxMag);
 
                           if (!_.isNumber(resolutionRestrictions.max)) {
                             throw new Error("Invalid maxMag parameter");

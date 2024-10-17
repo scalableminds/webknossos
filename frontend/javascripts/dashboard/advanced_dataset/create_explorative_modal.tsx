@@ -244,9 +244,9 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
           <Link
             to={`/datasets/${dataset.owningOrganization}/${
               dataset.name
-            }/createExplorative/${annotationType}/?minRes=${Math.max(
+            }/createExplorative/${annotationType}/?minMag=${Math.max(
               ...resolutionInfo.getMagByIndexOrThrow(lowResolutionIndex),
-            )}&maxRes=${Math.max(
+            )}&maxMag=${Math.max(
               ...resolutionInfo.getMagByIndexOrThrow(highResolutionIndex),
             )}${fallbackLayerGetParameter}`}
             title="Create new annotation with selected properties"

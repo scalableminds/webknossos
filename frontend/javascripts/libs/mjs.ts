@@ -353,12 +353,12 @@ const V3 = {
     return [vec[0], vec[1], vec[2]];
   },
 
-  roundElementToResolution(vec: Vector3, resolution: Vector3, index: 0 | 1 | 2): Vector3 {
+  roundElementToMag(vec: Vector3, magnification: Vector3, index: 0 | 1 | 2): Vector3 {
     // Rounds the element at the position referenced by index so that it's divisible by the
-    // resolution element.
-    // For example: roundElementToResolution([11, 12, 13], [4, 4, 2], 2) == [11, 12, 12]
+    // mag element.
+    // For example: roundElementToMag([11, 12, 13], [4, 4, 2], 2) == [11, 12, 12]
     const res: Vector3 = [vec[0], vec[1], vec[2]];
-    res[index] = Math.floor(res[index] / resolution[index]) * resolution[index];
+    res[index] = Math.floor(res[index] / magnification[index]) * magnification[index];
     return res;
   },
   isEqual(a: Vector3, b: Vector3) {

@@ -9,12 +9,12 @@ import {
   getEnabledLayers,
   getLayerByName,
   getMaybeSegmentIndexAvailability,
-  getResolutionInfo,
+  getMagInfo,
   getTransformsForLayer,
   invertAndTranspose,
   isLayerVisible,
 } from "../accessors/dataset_accessor";
-import { getCurrentResolution } from "../accessors/flycam_accessor";
+import { getCurrentMag } from "../accessors/flycam_accessor";
 import { getViewportExtents } from "../accessors/view_mode_accessor";
 import { V3 } from "libs/mjs";
 import { Identity4x4 } from "oxalis/constants";
@@ -105,15 +105,15 @@ export function* watchZ1Downsampling(): Saga<void> {
         scaleY = V3.length([matrix[1], matrix[5], matrix[9]]);
       }
 
-      const currentRes = yield* select((state) => getCurrentResolution(state, dataLayer.name));
+      const currentRes = yield* select((state) => getCurrentMag(state, dataLayer.name));
       if (currentRes == null) {
         // The layer cannot be rendered. For example, because the user zoomed out and there
         // is no appropriate mag for that layer.
         break;
       }
-      const resolutionInfo = getResolutionInfo(dataLayer.resolutions);
-      const bestExistingIndex = resolutionInfo.getFinestResolutionIndex();
-      const currentIndex = resolutionInfo.getIndexByResolution(currentRes);
+      const resolutionInfo = getMagInfo(dataLayer.resolutions);
+      const bestExistingIndex = resolutionInfo.getFinestMagIndex();
+      const currentIndex = resolutionInfo.getIndexByMag(currentRes);
       if (currentIndex <= bestExistingIndex) {
         // There's no better mag to render the current layer in.
         continue;

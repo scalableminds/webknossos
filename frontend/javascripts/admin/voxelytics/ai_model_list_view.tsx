@@ -13,10 +13,7 @@ import { Link } from "react-router-dom";
 import { useGuardedFetch } from "libs/react_helpers";
 import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
 import { type AnnotationInfoForAIJob, TrainAiModelTab } from "oxalis/view/jobs/train_ai_model";
-import {
-  getResolutionInfo,
-  getSegmentationLayerByName,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getMagInfo, getSegmentationLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type { Key } from "react";
 
@@ -125,19 +122,18 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
       throw new Error("Cannot find annotation for specified id.");
     }
 
-    const { annotation, dataset, volumeTracings, volumeTracingResolutions } = annotationWithDataset;
+    const { annotation, dataset, volumeTracings, volumeTracingMags } = annotationWithDataset;
 
     let annotationLayer = annotation.annotationLayers.find((l) => l.name === layerName);
     if (annotationLayer != null) {
       const volumeTracingIndex = volumeTracings.findIndex(
         (tracing) => tracing.tracingId === annotationLayer.tracingId,
       );
-      const resolutions =
-        volumeTracingResolutions[volumeTracingIndex] || ([[1, 1, 1]] as Vector3[]);
-      return getResolutionInfo(resolutions).getFinestResolution();
+      const resolutions = volumeTracingMags[volumeTracingIndex] || ([[1, 1, 1]] as Vector3[]);
+      return getMagInfo(resolutions).getFinestMag();
     } else {
       const segmentationLayer = getSegmentationLayerByName(dataset, layerName);
-      return getResolutionInfo(segmentationLayer.resolutions).getFinestResolution();
+      return getMagInfo(segmentationLayer.resolutions).getFinestMag();
     }
   };
 

@@ -5,7 +5,7 @@ import { doWithToken } from "admin/admin_rest_api";
 import {
   isSegmentationLayer,
   getByteCountFromLayer,
-  getResolutionInfo,
+  getMagInfo,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -26,7 +26,7 @@ import type { BucketAddress, Vector3 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
 import window from "libs/window";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
-import type { ResolutionInfo } from "../helpers/resolution_info";
+import type { MagInfo } from "../helpers/mag_info";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import _ from "lodash";
 
@@ -60,7 +60,7 @@ type RequestBucketInfo = SendBucketInfo & {
 // object as expected by the server on bucket request
 const createRequestBucketInfo = (
   zoomedAddress: BucketAddress,
-  resolutionInfo: ResolutionInfo,
+  resolutionInfo: MagInfo,
   fourBit: boolean,
   applyAgglomerate: string | null | undefined,
   version: number | null | undefined,
@@ -81,12 +81,12 @@ const createRequestBucketInfo = (
 
 function createSendBucketInfo(
   zoomedAddress: BucketAddress,
-  resolutionInfo: ResolutionInfo,
+  resolutionInfo: MagInfo,
 ): SendBucketInfo {
   return {
     position: bucketPositionToGlobalAddress(zoomedAddress, resolutionInfo),
     additionalCoordinates: zoomedAddress[4],
-    mag: resolutionInfo.getResolutionByIndexOrThrow(zoomedAddress[3]),
+    mag: resolutionInfo.getMagByIndexOrThrow(zoomedAddress[3]),
     cubeSize: constants.BUCKET_WIDTH,
   };
 }
@@ -198,7 +198,7 @@ export async function requestFromStore(
       : null;
   })();
 
-  const resolutionInfo = getResolutionInfo(layerInfo.resolutions);
+  const resolutionInfo = getMagInfo(layerInfo.resolutions);
   const version =
     !isVolumeFallback && isSegmentation && maybeVolumeTracing != null
       ? maybeVolumeTracing.version
@@ -288,7 +288,7 @@ export async function createCompressedUpdateBucketActions(
         const compressedBase64Strings = await compressionPool.submit(byteArrays);
         return compressedBase64Strings.map((compressedBase64, index) => {
           const bucket = batchSubset[index];
-          const bucketInfo = createSendBucketInfo(bucket.zoomedAddress, bucket.cube.resolutionInfo);
+          const bucketInfo = createSendBucketInfo(bucket.zoomedAddress, bucket.cube.magInfo);
           return updateBucket(bucketInfo, compressedBase64);
         });
       }),

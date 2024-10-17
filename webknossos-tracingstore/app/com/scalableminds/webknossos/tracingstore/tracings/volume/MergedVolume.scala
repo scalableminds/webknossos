@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContext
 
 case class MergedVolumeStats(
     largestSegmentId: Long,
-    sortedResolutionList: Option[List[Vec3IntProto]], // None means do not touch the resolution list
+    sortedMagsList: Option[List[Vec3IntProto]], // None means do not touch the mag list
     labelMaps: List[Map[Long, Long]],
     createdSegmentIndex: Boolean
 )
@@ -49,11 +49,11 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
   }
 
   def addLabelSetFromBucketStream(bucketStream: Iterator[(BucketPosition, Array[Byte])],
-                                  allowedResolutions: Set[Vec3Int]): Unit = {
+                                  allowedMags: Set[Vec3Int]): Unit = {
     val labelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
     bucketStream.foreach {
       case (bucketPosition, data) =>
-        if (allowedResolutions.contains(bucketPosition.mag)) {
+        if (allowedMags.contains(bucketPosition.mag)) {
           val dataTyped = UnsignedIntegerArray.fromByteArray(data, elementClass)
           val nonZeroData: Array[UnsignedInteger] = UnsignedIntegerArray.filterNonZero(dataTyped)
           labelSet ++= nonZeroData
@@ -86,10 +86,10 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
 
   def addFromBucketStream(sourceVolumeIndex: Int,
                           bucketStream: Iterator[(BucketPosition, Array[Byte])],
-                          allowedResolutions: Option[Set[Vec3Int]] = None): Unit =
+                          allowedMags: Option[Set[Vec3Int]] = None): Unit =
     bucketStream.foreach {
       case (bucketPosition, bytes) =>
-        if (!isAllZero(bytes) && allowedResolutions.forall(_.contains(bucketPosition.mag))) {
+        if (!isAllZero(bytes) && allowedMags.forall(_.contains(bucketPosition.mag))) {
           add(sourceVolumeIndex, bucketPosition, bytes)
         }
     }
@@ -136,7 +136,7 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
       }
     } yield ()
 
-  def presentResolutions: Set[Vec3Int] =
+  def presentMags: Set[Vec3Int] =
     mergedVolume.map {
       case (bucketPosition: BucketPosition, _) => bucketPosition.mag
     }.toSet
@@ -144,7 +144,7 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
   def stats(createdSegmentIndex: Boolean): MergedVolumeStats =
     MergedVolumeStats(
       largestSegmentId.toLong,
-      Some(presentResolutions.toList.sortBy(_.maxDim).map(vec3IntToProto)),
+      Some(presentMags.toList.sortBy(_.maxDim).map(vec3IntToProto)),
       labelMapsToLongMaps,
       createdSegmentIndex
     )

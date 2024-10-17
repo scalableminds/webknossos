@@ -24,8 +24,8 @@ async function getClippingValues(
   const [TypedArrayClass] = getConstructorForElementClass(elementClass);
   const { additionalCoordinates } = state.flycam;
 
-  // Find a viable resolution to compute the histogram on
-  // Ideally, we want to avoid resolutions 1 and 2 to keep
+  // Find a viable mag to compute the histogram on
+  // Ideally, we want to avoid mags 1 and 2 to keep
   // the amount of data that has to be loaded small and
   // to de-noise the data
   const desiredResolutionIndex = Math.max(2, getActiveMagIndexForLayer(state, layerName) + 1);

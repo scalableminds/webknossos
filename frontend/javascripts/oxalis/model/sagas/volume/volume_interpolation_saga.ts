@@ -13,7 +13,7 @@ import {
   type Vector3,
 } from "oxalis/constants";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
-import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveMagIndexForLayer,
   getFlooredPosition,
@@ -84,9 +84,9 @@ function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
 
   const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
   const requestedZoomStep = getActiveMagIndexForLayer(state, segmentationLayer.name);
-  const resolutionInfo = getResolutionInfo(segmentationLayer.resolutions);
+  const resolutionInfo = getMagInfo(segmentationLayer.resolutions);
   const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+  const labeledResolution = resolutionInfo.getMagByIndexOrThrow(labeledZoomStep);
 
   const previousCentroid = getLabelActionFromPreviousSlice(
     state,
@@ -104,7 +104,7 @@ function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
     // is done while respecting how the coordinates are clipped due to that resolution.
     // For example, in mag 8-8-2, the z distance needs to be divided by two, since it is measured
     // in global coordinates.
-    const adapt = (vec: Vector3) => V3.roundElementToResolution(vec, labeledResolution, thirdDim);
+    const adapt = (vec: Vector3) => V3.roundElementToMag(vec, labeledResolution, thirdDim);
     const signedInterpolationDepth = Math.floor(
       V3.sub(adapt(position), adapt(previousCentroid))[thirdDim] / labeledResolution[thirdDim],
     );

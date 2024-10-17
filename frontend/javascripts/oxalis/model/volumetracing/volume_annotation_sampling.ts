@@ -10,9 +10,9 @@ import type { DimensionMap } from "oxalis/model/dimensions";
 function upsampleVoxelMap(
   labeledVoxelMap: LabeledVoxelsMap,
   dataCube: DataCube,
-  sourceResolution: Vector3,
+  sourceMag: Vector3,
   sourceZoomStep: number,
-  targetResolution: Vector3,
+  targetMag: Vector3,
   targetZoomStep: number,
   dimensionIndices: DimensionMap,
   thirdDimensionVoxelValue: number,
@@ -26,9 +26,9 @@ function upsampleVoxelMap(
   }
 
   const labeledVoxelMapInTargetResolution: LabeledVoxelsMap = new Map();
-  const scaleToSource = map3((val, index) => val / sourceResolution[index], targetResolution);
+  const scaleToSource = map3((val, index) => val / sourceMag[index], targetMag);
   // This array serves multiple purposes. It has a name / variable for each purpose.
-  const scaleToGoal = map3((val, index) => val / targetResolution[index], sourceResolution);
+  const scaleToGoal = map3((val, index) => val / targetMag[index], sourceMag);
   const numberOfBucketWithinSourceBucket = scaleToGoal;
   const singleVoxelBoundsInTargetResolution = scaleToGoal;
   const boundsOfGoalBucketWithinSourceBucket = map3(
@@ -37,7 +37,7 @@ function upsampleVoxelMap(
   );
   // This is the buckets zoomed address part of the third dimension.
   const thirdDimensionBucketValue = Math.floor(
-    thirdDimensionVoxelValue / targetResolution[dimensionIndices[2]] / constants.BUCKET_WIDTH,
+    thirdDimensionVoxelValue / targetMag[dimensionIndices[2]] / constants.BUCKET_WIDTH,
   );
 
   const warnAboutCouldNotCreate = _.once((zoomedAddress) => {
@@ -155,23 +155,23 @@ function upsampleVoxelMap(
 function downsampleVoxelMap(
   labeledVoxelMap: LabeledVoxelsMap,
   dataCube: DataCube,
-  sourceResolution: Vector3,
+  sourceMag: Vector3,
   sourceZoomStep: number,
-  targetResolution: Vector3,
+  targetMag: Vector3,
   targetZoomStep: number,
   dimensionIndices: DimensionMap,
 ): LabeledVoxelsMap {
   // This method downsamples a LabeledVoxelsMap. For each bucket of the LabeledVoxelsMap
-  // the matching bucket of the lower resolution is determined and all the labeledVoxels
-  // are downsampled to the lower resolution bucket. The downsampling uses a kernel to skip
+  // the matching bucket of the lower magnification is determined and all the labeledVoxels
+  // are downsampled to the lower mag bucket. The downsampling uses a kernel to skip
   // checking whether to label a downsampled voxel if already one labeled voxel matching the downsampled voxel is found.
   if (targetZoomStep <= sourceZoomStep) {
     throw new Error("Trying to upsample a LabeledVoxelMap with the downsample function.");
   }
 
   const labeledVoxelMapInTargetResolution: LabeledVoxelsMap = new Map();
-  const scaleToSource = map3((val, index) => val / sourceResolution[index], targetResolution);
-  const scaleToGoal = map3((val, index) => val / targetResolution[index], sourceResolution);
+  const scaleToSource = map3((val, index) => val / sourceMag[index], targetMag);
+  const scaleToGoal = map3((val, index) => val / targetMag[index], sourceMag);
 
   const warnAboutCouldNotCreate = _.once((zoomedAddress) => {
     console.warn(messages["sampling.could_not_get_or_create_bucket"](zoomedAddress));
@@ -270,12 +270,12 @@ function downsampleVoxelMap(
   return labeledVoxelMapInTargetResolution;
 }
 
-export default function sampleVoxelMapToResolution(
+export default function sampleVoxelMapToMagnification(
   labeledVoxelMap: LabeledVoxelsMap,
   dataCube: DataCube,
-  sourceResolution: Vector3,
+  sourceMag: Vector3,
   sourceZoomStep: number,
-  targetResolution: Vector3,
+  targetMag: Vector3,
   targetZoomStep: number,
   dimensionIndices: DimensionMap,
   thirdDimensionVoxelValue: number,
@@ -284,9 +284,9 @@ export default function sampleVoxelMapToResolution(
     return downsampleVoxelMap(
       labeledVoxelMap,
       dataCube,
-      sourceResolution,
+      sourceMag,
       sourceZoomStep,
-      targetResolution,
+      targetMag,
       targetZoomStep,
       dimensionIndices,
     );
@@ -294,9 +294,9 @@ export default function sampleVoxelMapToResolution(
     return upsampleVoxelMap(
       labeledVoxelMap,
       dataCube,
-      sourceResolution,
+      sourceMag,
       sourceZoomStep,
-      targetResolution,
+      targetMag,
       targetZoomStep,
       dimensionIndices,
       thirdDimensionVoxelValue,

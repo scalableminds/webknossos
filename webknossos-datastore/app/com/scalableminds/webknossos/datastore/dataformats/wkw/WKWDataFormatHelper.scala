@@ -20,8 +20,8 @@ trait WKWDataFormatHelper {
   protected def parseWKWFilePath(path: String): Option[BucketPosition] = {
     val CubeRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/z(\\d+)/y(\\d+)/x(\\d+).$dataFileExtension".r
     path match {
-      case CubeRx(_, resolutionStr, z, y, x) =>
-        Vec3Int.fromMagLiteral(resolutionStr, allowScalar = true).map { mag =>
+      case CubeRx(_, magStr, z, y, x) =>
+        Vec3Int.fromMagLiteral(magStr, allowScalar = true).map { mag =>
           BucketPosition(x.toInt * mag.x * DataLayer.bucketLength,
                          y.toInt * mag.y * DataLayer.bucketLength,
                          z.toInt * mag.z * DataLayer.bucketLength,

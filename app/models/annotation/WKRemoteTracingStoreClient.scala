@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
-import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
+import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
@@ -100,7 +100,7 @@ class WKRemoteTracingStoreClient(
   def duplicateVolumeTracing(volumeTracingId: String,
                              isFromTask: Boolean = false,
                              datasetBoundingBox: Option[BoundingBox] = None,
-                             resolutionRestrictions: ResolutionRestrictions = ResolutionRestrictions.empty,
+                             magRestrictions: MagRestrictions = MagRestrictions.empty,
                              downsample: Boolean = false,
                              editPosition: Option[Vec3Int] = None,
                              editRotation: Option[Vec3Double] = None,
@@ -109,8 +109,8 @@ class WKRemoteTracingStoreClient(
     rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("fromTask" -> isFromTask.toString)
-      .addQueryStringOptional("minResolution", resolutionRestrictions.minStr)
-      .addQueryStringOptional("maxResolution", resolutionRestrictions.maxStr)
+      .addQueryStringOptional("minMag", magRestrictions.minStr)
+      .addQueryStringOptional("maxMag", magRestrictions.maxStr)
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
@@ -173,7 +173,7 @@ class WKRemoteTracingStoreClient(
 
   def saveVolumeTracing(tracing: VolumeTracing,
                         initialData: Option[File] = None,
-                        resolutionRestrictions: ResolutionRestrictions = ResolutionRestrictions.empty,
+                        magRestrictions: MagRestrictions = MagRestrictions.empty,
                         dataSource: Option[DataSourceLike] = None): Fox[String] = {
     logger.debug("Called to create VolumeTracing." + baseInfo)
     for {
@@ -185,8 +185,8 @@ class WKRemoteTracingStoreClient(
         case Some(file) =>
           rpc(s"${tracingStore.url}/tracings/volume/$tracingId/initialData").withLongTimeout
             .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-            .addQueryStringOptional("minResolution", resolutionRestrictions.minStr)
-            .addQueryStringOptional("maxResolution", resolutionRestrictions.maxStr)
+            .addQueryStringOptional("minMag", magRestrictions.minStr)
+            .addQueryStringOptional("maxMag", magRestrictions.maxStr)
             .post(file)
         case _ =>
           Fox.successful(())

@@ -11,7 +11,7 @@ import ucar.ma2.{Array => MultiArray}
 
 case class WKWResolution(resolution: Vec3Int, cubeLength: Int)
 
-object WKWResolution extends ResolutionFormatHelper {
+object WKWResolution extends MagFormatHelper {
   implicit val jsonFormat: OFormat[WKWResolution] = Json.format[WKWResolution]
 }
 
@@ -30,8 +30,8 @@ trait WKWLayer extends DataLayer {
 
   def resolutions: List[Vec3Int] = wkwResolutions.map(_.resolution)
 
-  def lengthOfUnderlyingCubes(resolution: Vec3Int): Int =
-    wkwResolutions.find(_.resolution == resolution).map(_.cubeLength).getOrElse(0)
+  def lengthOfUnderlyingCubes(mag: Vec3Int): Int =
+    wkwResolutions.find(_.resolution == mag).map(_.cubeLength).getOrElse(0)
 
 }
 

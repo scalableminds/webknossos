@@ -7,6 +7,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationProto}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.geometry.{
@@ -32,6 +33,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   SegmentationLayerLike => SegmentationLayer
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
+import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
@@ -41,7 +43,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeTracingDownsampling
 }
 import com.typesafe.scalalogging.LazyLogging
-import controllers.AnnotationLayerParameters
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.SavedTracingInformationHandler
@@ -205,6 +206,7 @@ class AnnotationService @Inject()(
       newAnnotationLayers <- createTracingsForExplorational(
         dataset,
         dataSource,
+        annotation._id,
         List(annotationLayerParameters),
         organizationId,
         annotation.annotationLayers) ?~> "annotation.createTracings.failed"
@@ -213,11 +215,12 @@ class AnnotationService @Inject()(
 
   def deleteAnnotationLayer(annotation: Annotation, layerName: String): Fox[Unit] =
     for {
-      _ <- annotationLayersDAO.deleteOne(annotation._id, layerName)
+      _ <- annotationLayersDAO.deleteOneByName(annotation._id, layerName)
     } yield ()
 
   private def createTracingsForExplorational(dataset: Dataset,
                                              dataSource: DataSource,
+                                             annotationId: ObjectId,
                                              allAnnotationLayerParameters: List[AnnotationLayerParameters],
                                              datasetOrganizationId: String,
                                              existingAnnotationLayers: List[AnnotationLayer] = List())(
@@ -311,7 +314,7 @@ class AnnotationService @Inject()(
         AnnotationLayer(tracingIdAndName._1,
                         annotationLayerParameters.typ,
                         tracingIdAndName._2,
-                        AnnotationLayerStatistics.zeroedForTyp(annotationLayerParameters.typ))
+                        AnnotationLayerStatistics.zeroedForType(annotationLayerParameters.typ))
 
     def fetchOldPrecedenceLayer: Fox[Option[FetchedAnnotationLayer]] =
       if (existingAnnotationLayers.isEmpty) Fox.successful(None)
@@ -351,6 +354,22 @@ class AnnotationService @Inject()(
           )
       }
 
+    def createAndSaveAnnotationProto(annotationId: ObjectId, annotationLayers: List[AnnotationLayer]): Fox[Unit] = {
+      val layersProto = annotationLayers.map { l =>
+        AnnotationLayerProto(
+          l.tracingId,
+          l.name,
+          AnnotationLayerType.toProto(l.typ)
+        )
+      }
+      // todo pass right name, description here
+      val annotationProto = AnnotationProto(name = None, description = None, version = 0L, layers = layersProto)
+      for {
+        tracingStoreClient <- tracingStoreService.clientFor(dataset)
+        _ <- tracingStoreClient.saveAnnotationProto(annotationId, annotationProto)
+      } yield ()
+    }
+
     for {
       /*
         Note that the tracings have redundant properties, with a precedence logic selecting a layer
@@ -366,6 +385,7 @@ class AnnotationService @Inject()(
       precedenceProperties = oldPrecedenceLayer.map(extractPrecedenceProperties)
       newAnnotationLayers <- Fox.serialCombined(allAnnotationLayerParameters)(p =>
         createAndSaveAnnotationLayer(p, precedenceProperties, dataStore))
+      _ <- createAndSaveAnnotationProto(annotationId, newAnnotationLayers)
     } yield newAnnotationLayers
   }
 
@@ -393,12 +413,14 @@ class AnnotationService @Inject()(
       dataSource <- datasetService.dataSourceFor(dataset)
       datasetOrganization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound"
       usableDataSource <- dataSource.toUsable ?~> Messages("dataset.notImported", dataSource.id.name)
+      newAnnotationId = ObjectId.generate
       annotationLayers <- createTracingsForExplorational(dataset,
                                                          usableDataSource,
+                                                         newAnnotationId,
                                                          annotationLayerParameters,
                                                          datasetOrganization._id) ?~> "annotation.createTracings.failed"
       teamId <- selectSuitableTeam(user, dataset) ?~> "annotation.create.forbidden"
-      annotation = Annotation(ObjectId.generate, datasetId, None, teamId, user._id, annotationLayers)
+      annotation = Annotation(newAnnotationId, datasetId, None, teamId, user._id, annotationLayers)
       _ <- annotationDAO.insertOne(annotation)
     } yield annotation
 

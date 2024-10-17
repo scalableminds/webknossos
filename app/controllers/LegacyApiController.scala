@@ -5,6 +5,7 @@ import play.silhouette.api.actions.SecuredRequest
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
+import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import models.dataset.DatasetService
 import models.organization.OrganizationDAO
@@ -128,7 +129,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     } yield adaptedResult
   }
 
-  def annotationInfoV4(typ: String, id: String, timestamp: Long): Action[AnyContent] = sil.SecuredAction.async {
+  def annotationInfoV4(typ: String, id: String, timestamp: Option[Long]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))

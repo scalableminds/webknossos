@@ -179,21 +179,9 @@ const defaultState: OxalisState = {
     annotationLayers: [],
   },
   save: {
-    queue: {
-      skeleton: [],
-      volumes: {},
-      mappings: {},
-    },
-    isBusyInfo: {
-      skeleton: false,
-      volumes: {},
-      mappings: {},
-    },
-    lastSaveTimestamp: {
-      skeleton: 0,
-      volumes: {},
-      mappings: {},
-    },
+    queue: [],
+    isBusy: false,
+    lastSaveTimestamp: 0,
     progressInfo: {
       processedActionCount: 0,
       totalActionCount: 0,

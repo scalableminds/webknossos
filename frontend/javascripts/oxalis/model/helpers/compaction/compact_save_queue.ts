@@ -5,7 +5,10 @@ function removeAllButLastUpdateTracingAction(updateActionsBatches: Array<SaveQue
   // This part of the code removes all entries from the save queue that consist only of
   // one updateTracing update action, except for the last one
   const updateTracingOnlyBatches = updateActionsBatches.filter(
-    (batch) => batch.actions.length === 1 && batch.actions[0].name === "updateTracing",
+    (batch) =>
+      batch.actions.length === 1 &&
+      (batch.actions[0].name === "updateSkeletonTracing" ||
+        batch.actions[0].name === "updateVolumeTracing"),
   );
   return _.without(updateActionsBatches, ...updateTracingOnlyBatches.slice(0, -1));
 }

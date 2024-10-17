@@ -278,10 +278,10 @@ function* createEditableMapping(): Saga<string> {
   const serverEditableMapping = yield* call(makeMappingEditable, tracingStoreUrl, volumeTracingId);
   // The server increments the volume tracing's version by 1 when switching the mapping to an editable one
   yield* put(setVersionNumberAction(upToDateVolumeTracing.version + 1, "volume", volumeTracingId));
-  yield* put(setMappingNameAction(layerName, serverEditableMapping.mappingName, "HDF5"));
+  yield* put(setMappingNameAction(layerName, volumeTracingId, "HDF5"));
   yield* put(setHasEditableMappingAction());
   yield* put(initializeEditableMappingAction(serverEditableMapping));
-  return serverEditableMapping.mappingName;
+  return volumeTracingId;
 }
 
 function* ensureHdf5MappingIsEnabled(layerName: string): Saga<boolean> {
@@ -1272,12 +1272,12 @@ function* splitAgglomerateInMapping(
     .filter(([_segmentId, agglomerateId]) => agglomerateId === comparableSourceAgglomerateId)
     .map(([segmentId, _agglomerateId]) => segmentId);
 
-  const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
+  const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
   // Ask the server to map the (split) segment ids. This creates a partial mapping
   // that only contains these ids.
   const mappingAfterSplit = yield* call(
     getAgglomeratesForSegmentsFromTracingstore,
-    tracingStoreHost,
+    tracingStoreUrl,
     volumeTracingId,
     splitSegmentIds,
   );

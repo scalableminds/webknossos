@@ -47,16 +47,10 @@ export const saveNowAction = () =>
     type: "SAVE_NOW",
   }) as const;
 
-export const shiftSaveQueueAction = (
-  count: number,
-  saveQueueType: SaveQueueType,
-  tracingId: string,
-) =>
+export const shiftSaveQueueAction = (count: number) =>
   ({
     type: "SHIFT_SAVE_QUEUE",
     count,
-    saveQueueType,
-    tracingId,
   }) as const;
 
 export const discardSaveQueuesAction = () =>
@@ -64,24 +58,16 @@ export const discardSaveQueuesAction = () =>
     type: "DISCARD_SAVE_QUEUES",
   }) as const;
 
-export const setSaveBusyAction = (
-  isBusy: boolean,
-  saveQueueType: SaveQueueType,
-  tracingId: string,
-) =>
+export const setSaveBusyAction = (isBusy: boolean) =>
   ({
     type: "SET_SAVE_BUSY",
     isBusy,
-    saveQueueType,
-    tracingId,
   }) as const;
 
-export const setLastSaveTimestampAction = (saveQueueType: SaveQueueType, tracingId: string) =>
+export const setLastSaveTimestampAction = () =>
   ({
     type: "SET_LAST_SAVE_TIMESTAMP",
     timestamp: Date.now(),
-    saveQueueType,
-    tracingId,
   }) as const;
 
 export const setVersionNumberAction = (

@@ -18,7 +18,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class WKWBucketStreamSink(val layer: DataLayer, tracingHasFallbackLayer: Boolean)
     extends WKWDataFormatHelper
-    with VolumeBucketReversionHelper
+    with ReversionHelper
     with ByteUtils {
 
   def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int])(
@@ -27,7 +27,7 @@ class WKWBucketStreamSink(val layer: DataLayer, tracingHasFallbackLayer: Boolean
     val header = WKWHeader(1, DataLayer.bucketLength, ChunkType.LZ4, voxelType, numChannels)
     bucketStream.flatMap {
       case (bucket, data) =>
-        val skipBucket = if (tracingHasFallbackLayer) isRevertedBucket(data) else isAllZero(data)
+        val skipBucket = if (tracingHasFallbackLayer) isRevertedElement(data) else isAllZero(data)
         if (skipBucket) {
           // If the tracing has no fallback segmentation, all-zero buckets can be omitted entirely
           None

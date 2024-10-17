@@ -64,7 +64,7 @@ class ZarrStreamingController @Inject()(
           "dataSource.notFound") ~> NOT_FOUND
         omeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(dataLayerName,
                                                               dataSource.scale,
-                                                              dataLayer.sortedResolutions)
+                                                              dataLayer.sortedMags)
       } yield Ok(Json.toJson(omeNgffHeader))
     }
   }
@@ -84,7 +84,7 @@ class ZarrStreamingController @Inject()(
           "dataSource.notFound") ~> NOT_FOUND
         omeNgffHeaderV0_5 = NgffMetadataV0_5.fromNameVoxelSizeAndMags(dataLayerName,
                                                                       dataSource.scale,
-                                                                      dataLayer.sortedResolutions,
+                                                                      dataLayer.sortedMags,
                                                                       dataLayer.additionalAxes)
         zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(omeNgffHeaderV0_5))
       } yield Ok(Json.toJson(zarr3GroupHeader))
@@ -112,7 +112,7 @@ class ZarrStreamingController @Inject()(
               "dataSource.notFound") ~> NOT_FOUND
             dataSourceOmeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(dataLayerName,
                                                                             dataSource.scale,
-                                                                            dataLayer.sortedResolutions)
+                                                                            dataLayer.sortedMags)
           } yield Ok(Json.toJson(dataSourceOmeNgffHeader))
       )
     }
@@ -138,7 +138,7 @@ class ZarrStreamingController @Inject()(
               "dataSource.notFound") ~> NOT_FOUND
             dataSourceOmeNgffHeader = NgffMetadataV0_5.fromNameVoxelSizeAndMags(dataLayerName,
                                                                                 dataSource.scale,
-                                                                                dataLayer.sortedResolutions,
+                                                                                dataLayer.sortedMags,
                                                                                 dataLayer.additionalAxes)
             zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(dataSourceOmeNgffHeader))
           } yield Ok(Json.toJson(zarr3GroupHeader))
@@ -176,7 +176,7 @@ class ZarrStreamingController @Inject()(
           s.boundingBox,
           s.elementClass,
           mags =
-            s.sortedResolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cAdditionalxyz(rank)), None, None)),
+            s.sortedMags.map(x => MagLocator(x, None, None, Some(AxisOrder.cAdditionalxyz(rank)), None, None)),
           mappings = s.mappings,
           largestSegmentId = s.largestSegmentId,
           numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1),
@@ -194,7 +194,7 @@ class ZarrStreamingController @Inject()(
           d.boundingBox,
           d.elementClass,
           mags =
-            d.sortedResolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cAdditionalxyz(rank)), None, None)),
+            d.sortedMags.map(x => MagLocator(x, None, None, Some(AxisOrder.cAdditionalxyz(rank)), None, None)),
           numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1),
           defaultViewConfiguration = d.defaultViewConfiguration,
           adminViewConfiguration = d.adminViewConfiguration,
@@ -484,7 +484,7 @@ class ZarrStreamingController @Inject()(
     for {
       (_, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId, datasetName, dataLayerName) ?~> Messages(
         "dataSource.notFound") ~> NOT_FOUND
-      mags = dataLayer.sortedResolutions
+      mags = dataLayer.sortedMags
       additionalFiles = if (zarrVersion == 2)
         List(NgffMetadata.FILENAME_DOT_ZATTRS, NgffGroupHeader.FILENAME_DOT_ZGROUP)
       else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)

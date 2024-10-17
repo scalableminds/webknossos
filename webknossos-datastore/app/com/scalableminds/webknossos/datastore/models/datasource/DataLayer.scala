@@ -148,7 +148,7 @@ trait DataLayerLike {
 
   def resolutions: List[Vec3Int]
 
-  lazy val sortedResolutions: List[Vec3Int] = resolutions.sortBy(_.maxDim)
+  lazy val sortedMags: List[Vec3Int] = resolutions.sortBy(_.maxDim)
 
   def elementClass: ElementClass.Value
 

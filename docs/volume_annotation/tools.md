@@ -70,5 +70,5 @@ WEBKNOSSOS supports volumetric flood fills (3D) to relabel a segment with a new 
 - For merge errors: You have to manually split two segments at their intersection/border, e.g. a cell boundary. Use the eraser brush and make sure to establish a clear cut between both segments on a slice-by-slice basis. Both segments must not touch any longer. Create a new segment ID from the toolbar and apply it to one of the partial segments that you just divided.
 
 Note that due to performance reasons, 3D flood-fills only work in a small, local bounding box.
-For larger areas we recommend working with the [proofreading tool](../proof_reading/tools.md) instead.
+For larger areas we recommend working with the [proofreading tool](../proofreading/tools.md) instead.
 

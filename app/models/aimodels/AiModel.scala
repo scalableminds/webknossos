@@ -144,4 +144,11 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         q"UPDATE webknossos.aiModels SET name = ${a.name}, comment = ${a.comment}, modified = ${a.modified} WHERE _id = ${a._id}".asUpdate)
     } yield ()
 
+  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[AiModel] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE name = $name AND $accessQuery".as[AimodelsRow])
+      parsed <- parseFirst(r, name)
+    } yield parsed
+
 }

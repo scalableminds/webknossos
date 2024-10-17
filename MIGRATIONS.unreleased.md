@@ -11,3 +11,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ### Postgres Evolutions:
 
 - [121-worker-name.sql](conf/evolutions/121-worker-name.sql)
+- [122-more-model-categories.sql](conf/evolutions/122-more-model-categories.sql)

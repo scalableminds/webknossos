@@ -1832,6 +1832,16 @@ class SegmentsView extends React.Component<Props, State> {
                     searchKey={(item) => item.name ?? `${item.id}` ?? ""}
                     provideShortcut
                     targetId={segmentsTabId}
+                    onSelectAllMatches={(allMatches) => {
+                      if (this.props.visibleSegmentationLayer == null) return;
+                      Store.dispatch(
+                        setSelectedSegmentsOrGroupAction(
+                          allMatches.map((match) => match.id),
+                          null,
+                          this.props.visibleSegmentationLayer.name,
+                        ),
+                      );
+                    }}
                   >
                     <ButtonComponent
                       size="small"

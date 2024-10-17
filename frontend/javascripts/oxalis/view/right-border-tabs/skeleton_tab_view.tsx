@@ -864,6 +864,9 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     searchKey="name"
                     provideShortcut
                     targetId={treeTabId}
+                    onSelectAllMatches={(matchingTrees) => {
+                      this.setState({ selectedTreeIds: matchingTrees.map((tree) => tree.id) });
+                    }}
                   >
                     <ButtonComponent title="Open the search via CTRL + Shift + F">
                       <SearchOutlined />

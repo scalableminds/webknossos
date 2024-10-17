@@ -109,7 +109,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
         branchPointsAllowed: true,
         volumeInterpolationAllowed: false,
         mergerMode: false,
-        resolutionRestrictions: {
+        magRestrictions: {
           min: 1,
           max: 512,
         },
@@ -443,7 +443,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
                   }}
                 >
                   <FormItem
-                    name={["settings", "resolutionRestrictions", "min"]}
+                    name={["settings", "magRestrictions", "min"]}
                     hasFeedback
                     label="Minimum"
                     style={{
@@ -457,7 +457,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
                         validator: (_rule, value) =>
                           isMinimumMagnifactionLargerThenMaxRule(
                             value,
-                            getFieldValue(["settings", "resolutionRestrictions", "max"]),
+                            getFieldValue(["settings", "magRestrictions", "max"]),
                           ),
                       },
                     ]}
@@ -465,7 +465,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
                     <InputNumber min={1} size="small" disabled={isEditingMode} />
                   </FormItem>
                   <FormItem
-                    name={["settings", "resolutionRestrictions", "max"]}
+                    name={["settings", "magRestrictions", "max"]}
                     hasFeedback
                     label="Maximum"
                     rules={[
@@ -476,7 +476,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
                         validator: (_rule, value) =>
                           isMaximumMagnificationSmallerThenMinRule(
                             value,
-                            getFieldValue(["settings", "resolutionRestrictions", "min"]),
+                            getFieldValue(["settings", "magRestrictions", "min"]),
                           ),
                       },
                     ]}

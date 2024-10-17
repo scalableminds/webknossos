@@ -187,8 +187,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     "You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
   "tracing.edit_volume_in_merger_mode":
     "The volume annotation would be changed by this action. This is not allowed while merger mode is active.",
-  "tracing.volume_mag_mismatch":
-    "The volume annotation magnifications do not match the dataset magnifications. Was the dataset edited after creating the annotation? Consider downloading and re-uploading magnification 1 only to adapt the annotation.",
   "tracing.segmentation_zoom_warning":
     "Segmentation data and volume annotation is only fully supported at a smaller zoom level.",
   "tracing.uint64_segmentation_warning":
@@ -367,8 +365,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The segmentation layer was defined as int64. This format is not supported for segmentations. Please convert the layer to the unsigned uint64 format.",
   "dataset.is_scratch":
     "This dataset location is marked as 'scratch' and meant for testing only. Please move this dataset to a permanent storage location and reimport it.",
-  "dataset.mag_mismatch":
-    "This dataset contains multiple layers which differ in their magnification. Please convert the layers to make their magnifications match. Otherwise, rendering errors cannot be avoided.",
   "dataset.z1_downsampling_hint":
     "The currently rendered quality is not optimal due to the available magnifications and the viewport arrangement. To improve the quality try to increase the size of the XY viewport (e.g. by maximizing it).",
   "dataset.mag_explanation":

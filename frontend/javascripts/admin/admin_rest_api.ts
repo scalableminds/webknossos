@@ -83,7 +83,6 @@ import type {
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
 import { V3 } from "libs/mjs";
-import type { Versions } from "oxalis/view/version_view";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import {
   parseProtoListOfLong,
@@ -97,7 +96,6 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
-import type { SaveQueueType } from "oxalis/model/actions/save_actions";
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";
 import { doWithToken } from "./api/token";
 import type BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -841,12 +839,12 @@ export function createExplorational(
 
 export async function getTracingsForAnnotation(
   annotation: APIAnnotation,
-  versions: Versions = {},
+  version: number | null | undefined,
 ): Promise<Array<ServerTracing>> {
   const skeletonLayers = annotation.annotationLayers.filter((layer) => layer.typ === "Skeleton");
   const fullAnnotationLayers = await Promise.all(
     annotation.annotationLayers.map((layer) =>
-      getTracingForAnnotationType(annotation, layer, versions),
+      getTracingForAnnotationType(annotation, layer, version),
     ),
   );
 
@@ -871,27 +869,12 @@ export async function acquireAnnotationMutex(
   return { canEdit, blockedByUser };
 }
 
-function extractVersion(
-  versions: Versions,
-  tracingId: string,
-  typ: "Volume" | "Skeleton",
-): number | null | undefined {
-  if (typ === "Skeleton") {
-    return versions.skeleton;
-  } else if (versions.volumes != null) {
-    return versions.volumes[tracingId];
-  }
-
-  return null;
-}
-
 export async function getTracingForAnnotationType(
   annotation: APIAnnotation,
   annotationLayerDescriptor: AnnotationLayerDescriptor,
-  versions: Versions = {},
+  version: number | null | undefined, // TODO: Use this parameter
 ): Promise<ServerTracing> {
   const { tracingId, typ } = annotationLayerDescriptor;
-  const version = extractVersion(versions, tracingId, typ);
   const tracingType = typ.toLowerCase() as "skeleton" | "volume";
   const possibleVersionString = version != null ? `&version=${version}` : "";
   const tracingArrayBuffer = await doWithToken((token) =>
@@ -1042,16 +1025,17 @@ export async function downloadAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
   showVolumeFallbackDownloadWarning: boolean = false,
-  versions: Versions = {},
+  _version: number | null | undefined = null,
   downloadFileFormat: "zarr3" | "wkw" | "nml" = "wkw",
   includeVolumeData: boolean = true,
 ) {
   const searchParams = new URLSearchParams();
-  Object.entries(versions).forEach(([key, val]) => {
+  // TODO: Use the version parameter
+  /*Object.entries(versions).forEach(([key, val]) => {
     if (val != null) {
       searchParams.append(`${key}Version`, val.toString());
     }
-  });
+  });*/
 
   if (includeVolumeData && showVolumeFallbackDownloadWarning) {
     Toast.info(messages["annotation.no_fallback_data_included"], {

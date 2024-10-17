@@ -30,15 +30,11 @@ export type SaveAction =
 
 export const pushSaveQueueTransaction = (
   items: Array<UpdateAction>,
-  saveQueueType: SaveQueueType,
-  tracingId: string,
   transactionId: string = getUid(),
 ) =>
   ({
     type: "PUSH_SAVE_QUEUE_TRANSACTION",
     items,
-    saveQueueType,
-    tracingId,
     transactionId,
   }) as const;
 
@@ -70,16 +66,10 @@ export const setLastSaveTimestampAction = () =>
     timestamp: Date.now(),
   }) as const;
 
-export const setVersionNumberAction = (
-  version: number,
-  saveQueueType: SaveQueueType,
-  tracingId: string,
-) =>
+export const setVersionNumberAction = (version: number) =>
   ({
     type: "SET_VERSION_NUMBER",
     version,
-    saveQueueType,
-    tracingId,
   }) as const;
 
 export const undoAction = (callback?: () => void) =>

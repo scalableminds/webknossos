@@ -1,6 +1,6 @@
 import { Button, Alert, Tabs, type TabsProps } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
-import { connect } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 import * as React from "react";
 import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
@@ -9,6 +9,8 @@ import type { OxalisState, Tracing } from "oxalis/store";
 import { type TracingType, TracingTypeEnum } from "types/api_flow_types";
 import Store from "oxalis/store";
 import VersionList, { previewVersion } from "oxalis/view/version_list";
+import { useState } from "react";
+import { useWillUnmount } from "beautiful-react-hooks";
 
 export type Versions = {
   skeleton?: number | null | undefined;
@@ -26,33 +28,20 @@ type State = {
   initialAllowUpdate: boolean;
 };
 
-class VersionView extends React.Component<Props, State> {
-  state: State = {
-    activeTracingType:
-      this.props.tracing.skeleton != null ? TracingTypeEnum.skeleton : TracingTypeEnum.volume,
-    // Remember whether the tracing could originally be updated
-    initialAllowUpdate: this.props.allowUpdate,
-  };
+function VersionView(props: Props): React.FC<Props> {
+  const [initialAllowUpdate, _neverUpdated] = useState<boolean>(props.allowUpdate);
+  const dispatch = useDispatch();
 
-  componentWillUnmount() {
-    Store.dispatch(setAnnotationAllowUpdateAction(this.state.initialAllowUpdate));
-  }
+  useWillUnmount(() => {
+    Store.dispatch(setAnnotationAllowUpdateAction(initialAllowUpdate));
+  });
 
-  handleClose = async () => {
+  const handleClose = async () => {
     // This will load the newest version of both skeleton and volume tracings
     await previewVersion();
     Store.dispatch(setVersionRestoreVisibilityAction(false));
-    Store.dispatch(setAnnotationAllowUpdateAction(this.state.initialAllowUpdate));
+    Store.dispatch(setAnnotationAllowUpdateAction(initialAllowUpdate));
   };
-
-  onChangeTab = (activeKey: string) => {
-    this.setState({
-      activeTracingType: activeKey as TracingType,
-    });
-  };
-
-  render() {
-    const tabs: TabsProps["items"] = [];
 
     if (this.props.tracing.skeleton != null)
       tabs.push({
@@ -126,7 +115,7 @@ class VersionView extends React.Component<Props, State> {
               float: "right",
               border: 0,
             }}
-            onClick={this.handleClose}
+            onClick={handleClose}
             shape="circle"
             icon={<CloseOutlined />}
           />

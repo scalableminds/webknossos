@@ -63,17 +63,14 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
         dispatchedAction.items,
         (ua) => ua.name !== "updateSkeletonTracing" && ua.name !== "updateVolumeTracing",
       )
-        ? getStats(state.tracing, dispatchedAction.saveQueueType, dispatchedAction.tracingId)
+        ? getStats(state.tracing)
         : null;
       const { activeUser } = state;
       if (activeUser == null) {
         throw new Error("Tried to save something even though user is not logged in.");
       }
 
-      const updateActionChunks = _.chunk(
-        items,
-        MAXIMUM_ACTION_COUNT_PER_BATCH[dispatchedAction.saveQueueType],
-      );
+      const updateActionChunks = _.chunk(items, MAXIMUM_ACTION_COUNT_PER_BATCH);
 
       const transactionGroupCount = updateActionChunks.length;
       const actionLogInfo = JSON.stringify(getActionLog().slice(-10));

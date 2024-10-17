@@ -11,7 +11,6 @@ import type {
   APICompoundType,
   APISegmentationLayer,
 } from "types/api_flow_types";
-import type { Versions } from "oxalis/view/version_view";
 import {
   computeDataTexturesSetup,
   getSupportedTextureSpecs,
@@ -114,7 +113,7 @@ export async function initialize(
   initialMaybeCompoundType: APICompoundType | null,
   initialCommandType: TraceOrViewCommand,
   initialFetch: boolean,
-  versions?: Versions,
+  version?: number | undefined | null,
 ): Promise<
   | {
       dataLayers: DataLayerCollection;
@@ -169,7 +168,7 @@ export async function initialize(
   const [dataset, initialUserSettings, serverTracings] = await fetchParallel(
     annotation,
     datasetId,
-    versions,
+    version,
   );
   const serverVolumeTracings = getServerVolumeTracings(serverTracings);
   const serverVolumeTracingIds = serverVolumeTracings.map((volumeTracing) => volumeTracing.id);
@@ -237,12 +236,12 @@ export async function initialize(
 async function fetchParallel(
   annotation: APIAnnotation | null | undefined,
   datasetId: APIDatasetId,
-  versions?: Versions,
+  version: number | undefined | null,
 ): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>]> {
   return Promise.all([
     getDataset(datasetId, getSharingTokenFromUrlParameters()),
     getUserConfiguration(), // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
-    annotation ? getTracingsForAnnotation(annotation, versions) : [],
+    annotation ? getTracingsForAnnotation(annotation, version) : [],
   ]);
 }
 

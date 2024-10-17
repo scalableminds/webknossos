@@ -651,12 +651,9 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         this.props.onDeselectActiveTree();
       } else {
         // Just select this tree
-        this.setState((prevState) => {
-          console.log(prevState);
-          return {
-            selectedTreeIds: [...prevState.selectedTreeIds, id],
-          };
-        });
+        this.setState((prevState) => ({
+          selectedTreeIds: [...prevState.selectedTreeIds, id],
+        }));
       }
     }
   };

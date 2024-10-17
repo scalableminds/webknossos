@@ -34,6 +34,7 @@ import {
   getActiveTreeGroup,
   findTreeByNodeId,
   mapGroupsToGenerator,
+  mapGroups,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import ColorGenerator from "libs/color_generator";
 import { type TreeType, TreeTypeEnum, type Vector3 } from "oxalis/constants";
@@ -804,6 +805,34 @@ export function toggleTreeGroupReducer(
     tracing: {
       skeleton: {
         trees: updateTreeObject,
+      },
+    },
+  });
+}
+
+export function setExpandedTreeGroups(
+  state: OxalisState,
+  shouldBeExpanded: (arg: TreeGroup) => boolean,
+): OxalisState {
+  const currentTreeGroups = state.tracing?.skeleton?.treeGroups;
+  if (currentTreeGroups == null) {
+    return state;
+  }
+  const newGroups = mapGroups(currentTreeGroups, (group) => {
+    const updatedIsExpanded = shouldBeExpanded(group);
+    if (updatedIsExpanded !== group.isExpanded) {
+      return { ...group, isExpanded: updatedIsExpanded };
+    } else {
+      return group;
+    }
+  });
+
+  return update(state, {
+    tracing: {
+      skeleton: {
+        treeGroups: {
+          $set: newGroups,
+        },
       },
     },
   });

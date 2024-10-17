@@ -313,3 +313,23 @@ export function findParentGroupNode(nodes: TreeNode[], parentGroupId: number): T
   });
   return foundParentNode;
 }
+
+export function additionallyExpandGroup<T extends string | number>(
+  groups: TreeGroup[],
+  groupId: number | null | undefined,
+  groupIdToKey: (groupId: number) => T,
+): Set<T> | null {
+  if (!groupId) {
+    return null;
+  }
+  const groupToParentGroupId = createGroupToParentMap(groups);
+  const expandedGroups = new Set(
+    getExpandedGroups(groups).map((group) => groupIdToKey(group.groupId)),
+  );
+  let currentGroupId: number | undefined | null = groupId;
+  while (currentGroupId) {
+    expandedGroups.add(groupIdToKey(currentGroupId));
+    currentGroupId = groupToParentGroupId[currentGroupId];
+  }
+  return expandedGroups;
+}

@@ -23,7 +23,7 @@ import {
   MISSING_GROUP_ID,
   GroupTypeEnum,
   createGroupToParentMap,
-  getExpandedGroups,
+  additionallyExpandGroup,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
@@ -673,18 +673,16 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     if (!skeletonTracing) {
       return;
     }
-    if (selectedElement.type === GroupTypeEnum.TREE) {
-      const groupToParentGroupId = createGroupToParentMap(skeletonTracing.treeGroups);
-      const treeToSelect = skeletonTracing.trees[selectedElement.id];
-      const expandedGroups = new Set(
-        getExpandedGroups(skeletonTracing.treeGroups).map((group) => group.groupId),
-      );
-      let currentGroupId = treeToSelect.groupId;
-      while (currentGroupId) {
-        expandedGroups.add(currentGroupId);
-        currentGroupId = groupToParentGroupId[currentGroupId];
-      }
+    const { trees, treeGroups } = skeletonTracing;
+    const isTree = selectedElement.type === GroupTypeEnum.TREE;
+    const groupToExpand = isTree
+      ? trees[selectedElement.id].groupId
+      : createGroupToParentMap(treeGroups)[selectedElement.id];
+    const expandedGroups = additionallyExpandGroup(treeGroups, groupToExpand, (groupId) => groupId);
+    if (expandedGroups) {
       this.props.onSetExpandedGroups(expandedGroups);
+    }
+    if (selectedElement.type === GroupTypeEnum.TREE) {
       this.props.onSetActiveTree(selectedElement.id);
     } else {
       this.props.onSetActiveTreeGroup(selectedElement.id);

@@ -377,6 +377,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
             // Trees are sorted by the sortBy property
             const sortedTrees = _.orderBy(_groupToTreesMap[group.groupId], [_sortBy], ["asc"]);
 
+            // @ts-expect-error ts-migrate(2766) FIXME: Cannot delegate iteration to value because the 'ne... Remove this comment to see the full error message
             yield* sortedTrees.map(makeTree);
           }
         }

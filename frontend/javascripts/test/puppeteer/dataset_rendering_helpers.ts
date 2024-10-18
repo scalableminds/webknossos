@@ -357,12 +357,13 @@ export function setupBeforeEachAndAfterEach() {
   test.beforeEach(async (t) => {
     t.context.browser = await puppeteer.launch({
       args: [
-        "--headless",
+        "--headless=new",
         "--hide-scrollbars",
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
-        "--use-gl=swiftshader",
+        // "--use-gl=swiftshader",
+        // "--enable-gpu",
       ],
       dumpio: true,
     });

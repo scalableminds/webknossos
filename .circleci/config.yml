@@ -202,7 +202,7 @@ jobs:
 
   nightly:
     docker:
-      - image: scalableminds/puppeteer:master
+      - image: scalableminds/puppeteer:fix_wk_nightly
     resource_class: large
     steps:
       - checkout
@@ -258,7 +258,7 @@ jobs:
 
   wkorg_nightly:
     docker:
-      - image: scalableminds/puppeteer:master
+      - image: scalableminds/puppeteer:fix_wk_nightly
     resource_class: large
     steps:
       - checkout

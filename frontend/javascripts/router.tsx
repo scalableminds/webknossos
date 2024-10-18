@@ -539,7 +539,7 @@ class ReactRouter extends React.Component<Props> {
               <RouteWithErrorBoundary
                 path="/help/keyboardshortcuts"
                 render={() => (
-                  <Redirect to="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html" />
+                  <Redirect to="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html" />
                 )}
               />
               <SecuredRouteWithErrorBoundary

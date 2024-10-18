@@ -1,5 +1,5 @@
 import { Input, Tooltip, Popover, Space, type InputRef } from "antd";
-import { DownOutlined, UpOutlined } from "@ant-design/icons";
+import { CheckSquareOutlined, DownOutlined, UpOutlined } from "@ant-design/icons";
 import * as React from "react";
 import memoizeOne from "memoize-one";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -11,6 +11,7 @@ type Props<S> = {
   data: S[];
   searchKey: keyof S | ((item: S) => string);
   onSelect: (arg0: S) => void;
+  onSelectAllMatches?: (arg0: S[]) => void;
   children: React.ReactNode;
   provideShortcut?: boolean;
   targetId: string;
@@ -110,6 +111,10 @@ export default class AdvancedSearchPopover<
       currentPosition == null ? -1 : Math.min(currentPosition, numberOfAvailableOptions - 1);
     const hasNoResults = numberOfAvailableOptions === 0;
     const hasMultipleResults = numberOfAvailableOptions > 1;
+    const availableOptionsToSelectAllMatches = availableOptions.filter(
+      (result) => result.type === "Tree" || result.type === "segment",
+    );
+    const isSelectAllMatchesDisabled = availableOptionsToSelectAllMatches.length < 2;
     const additionalInputStyle =
       hasNoResults && searchQuery !== ""
         ? {
@@ -197,6 +202,21 @@ export default class AdvancedSearchPopover<
                       disabled={!hasMultipleResults}
                     >
                       <DownOutlined />
+                    </ButtonComponent>
+                  </Tooltip>
+                  <Tooltip title="Select all matches">
+                    <ButtonComponent
+                      style={{
+                        width: 40,
+                      }}
+                      onClick={
+                        this.props.onSelectAllMatches != null
+                          ? () => this.props.onSelectAllMatches!(availableOptionsToSelectAllMatches)
+                          : undefined
+                      }
+                      disabled={isSelectAllMatchesDisabled}
+                    >
+                      <CheckSquareOutlined />
                     </ButtonComponent>
                   </Tooltip>
                 </Space.Compact>

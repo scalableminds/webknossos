@@ -52,7 +52,9 @@ jobs:
           timeout 3000 \
           yarn test-screenshot
         env:
-            WK_AUTH_TOKEN: ${{ secrets.WK_AUTH_TOKEN }}
+          WK_AUTH_TOKEN: ${{ secrets.WK_AUTH_TOKEN }}
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY : ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
 
       - name: Upload screenshots as artifact
         uses: actions/upload-artifact@v3

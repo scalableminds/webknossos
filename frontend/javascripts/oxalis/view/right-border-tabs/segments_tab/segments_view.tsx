@@ -1612,6 +1612,15 @@ class SegmentsView extends React.Component<Props, State> {
     const isASegment = "color" in selectedElement;
     if (isASegment) {
       this.onSelectSegment(selectedElement);
+    } else {
+      if (this.props.visibleSegmentationLayer == null) return;
+      Store.dispatch(
+        setSelectedSegmentsOrGroupAction(
+          [],
+          selectedElement.id,
+          this.props.visibleSegmentationLayer?.name,
+        ),
+      );
     }
   };
 

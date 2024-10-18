@@ -362,7 +362,8 @@ export function setupBeforeEachAndAfterEach() {
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
-        "--use-gl=swiftshader",
+        // "--use-gl=swiftshader",
+        // "--enable-gpu",
       ],
       dumpio: true,
     });

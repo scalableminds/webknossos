@@ -9,7 +9,6 @@ import {
   isLayerVisible,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getTotalSaveQueueLength } from "oxalis/model/reducers/save_reducer";
-import { isBusy } from "oxalis/model/accessors/save_accessor";
 import { isDatasetAccessibleBySwitching } from "admin/admin_rest_api";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -283,8 +282,7 @@ export class OxalisModel {
 
   stateSaved() {
     const state = Store.getState();
-    const storeStateSaved =
-      !isBusy(state.save.isBusyInfo) && getTotalSaveQueueLength(state.save.queue) === 0;
+    const storeStateSaved = !state.save.isBusy && getTotalSaveQueueLength(state.save.queue) === 0;
 
     const pushQueuesSaved = _.reduce(
       this.dataLayers,
@@ -341,7 +339,7 @@ export class OxalisModel {
       // The dispatch of the saveNowAction IN the while loop is deliberate.
       // Otherwise if an update action is pushed to the save queue during the Utils.sleep,
       // the while loop would continue running until the next save would be triggered.
-      if (!isBusy(Store.getState().save.isBusyInfo)) {
+      if (!Store.getState().save.isBusy) {
         Store.dispatch(saveNowAction());
       }
 

@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -33,7 +34,7 @@ object TracingStoreInfo {
 }
 
 trait RemoteWebknossosClient {
-  def requestUserAccess(token: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer]
+  def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer]
 }
 
 class DSRemoteWebknossosClient @Inject()(
@@ -68,21 +69,17 @@ class DSRemoteWebknossosClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .put(dataSource)
 
-  def getUnfinishedUploadsForUser(userTokenOpt: Option[String], organizationName: String): Fox[List[UnfinishedUpload]] =
+  def getUnfinishedUploadsForUser(organizationName: String)(implicit tc: TokenContext): Fox[List[UnfinishedUpload]] =
     for {
-      userToken <- option2Fox(userTokenOpt) ?~> "reserveUpload.noUserToken"
       unfinishedUploads <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/getUnfinishedUploadsForUser")
         .addQueryString("key" -> dataStoreKey)
-        .addQueryString("token" -> userToken)
         .addQueryString("organizationName" -> organizationName)
+        .withTokenFromContext
         .getWithJsonResponse[List[UnfinishedUpload]]
     } yield unfinishedUploads
 
-  def reportUpload(dataSourceId: DataSourceId,
-                   datasetSizeBytes: Long,
-                   needsConversion: Boolean,
-                   viaAddRoute: Boolean,
-                   userToken: Option[String]): Fox[Unit] =
+  def reportUpload(dataSourceId: DataSourceId, datasetSizeBytes: Long, needsConversion: Boolean, viaAddRoute: Boolean)(
+      implicit tc: TokenContext): Fox[Unit] =
     for {
       _ <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
         .addQueryString("key" -> dataStoreKey)
@@ -90,7 +87,7 @@ class DSRemoteWebknossosClient @Inject()(
         .addQueryString("needsConversion" -> needsConversion.toString)
         .addQueryString("viaAddRoute" -> viaAddRoute.toString)
         .addQueryString("datasetSizeBytes" -> datasetSizeBytes.toString)
-        .addQueryStringOptional("token", userToken)
+        .withTokenFromContext
         .post()
     } yield ()
 
@@ -100,12 +97,11 @@ class DSRemoteWebknossosClient @Inject()(
       .silent
       .put(dataSources)
 
-  def reserveDataSourceUpload(info: ReserveUploadInformation, userTokenOpt: Option[String]): Fox[Unit] =
+  def reserveDataSourceUpload(info: ReserveUploadInformation)(implicit tc: TokenContext): Fox[Unit] =
     for {
-      userToken <- option2Fox(userTokenOpt) ?~> "reserveUpload.noUserToken"
       _ <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveUpload")
         .addQueryString("key" -> dataStoreKey)
-        .addQueryString("token" -> userToken)
+        .withTokenFromContext
         .post(info)
     } yield ()
 
@@ -118,10 +114,10 @@ class DSRemoteWebknossosClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .getWithJsonResponse[JobExportProperties]
 
-  override def requestUserAccess(userToken: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =
+  override def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/validateUserAccess")
       .addQueryString("key" -> dataStoreKey)
-      .addQueryStringOptional("token", userToken)
+      .withTokenFromContext
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 
   private lazy val tracingstoreUriCache: AlfuCache[String, String] = AlfuCache()
@@ -141,13 +137,13 @@ class DSRemoteWebknossosClient @Inject()(
   private lazy val annotationSourceCache: AlfuCache[(String, Option[String]), AnnotationSource] =
     AlfuCache(timeToLive = 5 seconds, timeToIdle = 5 seconds)
 
-  def getAnnotationSource(accessToken: String, userToken: Option[String]): Fox[AnnotationSource] =
+  def getAnnotationSource(accessToken: String)(implicit tc: TokenContext): Fox[AnnotationSource] =
     annotationSourceCache.getOrLoad(
-      (accessToken, userToken),
+      (accessToken, tc.userTokenOpt),
       _ =>
         rpc(s"$webknossosUri/api/annotations/source/$accessToken")
           .addQueryString("key" -> dataStoreKey)
-          .addQueryStringOptional("userToken", userToken)
+          .withTokenFromContext
           .getWithJsonResponse[AnnotationSource]
     )
 

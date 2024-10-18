@@ -14,17 +14,20 @@ import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import dummyUser from "test/fixtures/dummy_user";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
 import { omit } from "lodash";
+import { tracing as TaskTracing } from "test/fixtures/tasktracing_server_objects";
 
-const {
-  createTreeMapFromTreeArray,
-  generateTreeName,
-} = require("oxalis/model/reducers/skeletontracing_reducer_helpers");
+const { createTreeMapFromTreeArray, generateTreeName } =
+  require("oxalis/model/reducers/skeletontracing_reducer_helpers") as typeof import("oxalis/model/reducers/skeletontracing_reducer_helpers");
 
 const { addTreesAndGroupsAction, deleteNodeAction } = mockRequire.reRequire(
   "oxalis/model/actions/skeletontracing_actions",
-);
-const { discardSaveQueuesAction } = mockRequire.reRequire("oxalis/model/actions/save_actions");
-const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions");
+) as typeof import("oxalis/model/actions/skeletontracing_actions");
+const { discardSaveQueuesAction } = mockRequire.reRequire(
+  "oxalis/model/actions/save_actions",
+) as typeof import("oxalis/model/actions/save_actions");
+const UpdateActions = mockRequire.reRequire(
+  "oxalis/model/sagas/update_actions",
+) as typeof import("oxalis/model/sagas/update_actions");
 
 test.beforeEach(async (t) => {
   // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
@@ -58,7 +61,7 @@ test.serial(
         [
           UpdateActions.updateTree(treeWithCorrectName),
           UpdateActions.updateSkeletonTracing(
-            Store.getState().tracing.skeleton,
+            enforceSkeletonTracing(Store.getState().tracing),
             [1, 2, 3],
             [],
             [0, 0, 0],
@@ -67,10 +70,11 @@ test.serial(
         ],
       ],
       TIMESTAMP,
+      TaskTracing.id,
       getStats(state.tracing, "skeleton", "irrelevant_in_skeleton_case") || undefined,
     );
     // Reset the info field which is just for debugging purposes
-    const actualSaveQueue = state.save.queue.skeleton.map((entry) => {
+    const actualSaveQueue = state.save.queue.map((entry) => {
       return { ...omit(entry, "info"), info: "[]" };
     });
     // Once the updateTree update action is in the save queue, we're good.
@@ -81,24 +85,21 @@ test.serial(
 
 test.serial("Save actions should not be chunked below the chunk limit (1/3)", (t) => {
   Store.dispatch(discardSaveQueuesAction());
-  t.deepEqual(Store.getState().save.queue.skeleton, []);
+  t.deepEqual(Store.getState().save.queue, []);
   const trees = generateDummyTrees(1000, 1);
   Store.dispatch(addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), []));
-  t.is(Store.getState().save.queue.skeleton.length, 1);
-  t.true(
-    Store.getState().save.queue.skeleton[0].actions.length <
-      MAXIMUM_ACTION_COUNT_PER_BATCH.skeleton,
-  );
+  t.is(Store.getState().save.queue.length, 1);
+  t.true(Store.getState().save.queue[0].actions.length < MAXIMUM_ACTION_COUNT_PER_BATCH.skeleton);
 });
 
 test.serial("Save actions should be chunked above the chunk limit (2/3)", (t) => {
   Store.dispatch(discardSaveQueuesAction());
-  t.deepEqual(Store.getState().save.queue.skeleton, []);
+  t.deepEqual(Store.getState().save.queue, []);
   const trees = generateDummyTrees(5000, 1);
   Store.dispatch(addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), []));
   const state = Store.getState();
-  t.true(state.save.queue.skeleton.length > 1);
-  t.is(state.save.queue.skeleton[0].actions.length, MAXIMUM_ACTION_COUNT_PER_BATCH.skeleton);
+  t.true(state.save.queue.length > 1);
+  t.is(state.save.queue[0].actions.length, MAXIMUM_ACTION_COUNT_PER_BATCH.skeleton);
 });
 
 test.serial("Save actions should be chunked after compacting (3/3)", (t) => {
@@ -107,12 +108,12 @@ test.serial("Save actions should be chunked after compacting (3/3)", (t) => {
   const trees = generateDummyTrees(1, nodeCount);
   Store.dispatch(addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), []));
   Store.dispatch(discardSaveQueuesAction());
-  t.deepEqual(Store.getState().save.queue.skeleton, []);
+  t.deepEqual(Store.getState().save.queue, []);
   // Delete some node, NOTE that this is not the node in the middle of the tree!
   // The addTreesAndGroupsAction gives new ids to nodes and edges in a non-deterministic way.
   const middleNodeId = trees[0].nodes[nodeCount / 2].id;
   Store.dispatch(deleteNodeAction(middleNodeId));
-  const { skeleton: skeletonSaveQueue } = Store.getState().save.queue;
+  const skeletonSaveQueue = Store.getState().save.queue;
   // There should only be one chunk
   t.is(skeletonSaveQueue.length, 1);
   t.true(skeletonSaveQueue[0].actions.length < MAXIMUM_ACTION_COUNT_PER_BATCH.skeleton);

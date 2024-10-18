@@ -927,8 +927,7 @@ export async function getTracingForAnnotationType(
 
 export function getUpdateActionLog(
   tracingStoreUrl: string,
-  tracingId: string,
-  versionedObjectType: SaveQueueType,
+  annotationId: string,
   oldestVersion?: number,
   newestVersion?: number,
 ): Promise<Array<APIUpdateActionBatch>> {
@@ -942,19 +941,18 @@ export function getUpdateActionLog(
       params.append("newestVersion", newestVersion.toString());
     }
     return Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/${versionedObjectType}/${tracingId}/updateActionLog?${params}`,
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
     );
   });
 }
 
 export function getNewestVersionForTracing(
   tracingStoreUrl: string,
-  tracingId: string,
-  tracingType: SaveQueueType,
+  annotationId: string,
 ): Promise<number> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/newestVersion?token=${token}`,
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}/newestVersion?token=${token}`,
     ).then((obj) => obj.version),
   );
 }
@@ -1620,7 +1618,7 @@ export function makeMappingEditable(
 ): Promise<ServerEditableMapping> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/makeMappingEditable?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/makeMappingEditable?token=${token}`,
       {
         method: "POST",
       },
@@ -2157,7 +2155,7 @@ export function getEditableAgglomerateSkeleton(
 ): Promise<ArrayBuffer> {
   return doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
@@ -2319,7 +2317,7 @@ export async function getEdgesForAgglomerateMinCut(
 ): Promise<Array<MinCutTargetEdge>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphMinCut?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
       {
         data: {
           ...segmentsInfo,
@@ -2350,7 +2348,7 @@ export async function getNeighborsForAgglomerateNode(
 ): Promise<NeighborInfo> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
       {
         data: {
           ...segmentInfo,

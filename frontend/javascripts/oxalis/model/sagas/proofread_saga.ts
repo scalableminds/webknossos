@@ -54,7 +54,7 @@ import {
 import {
   getLayerByName,
   getMappingInfo,
-  getResolutionInfo,
+  getMagInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   type NeighborInfo,
@@ -82,7 +82,7 @@ import type { AdditionalCoordinate } from "types/api_flow_types";
 import { takeEveryUnlessBusy } from "./saga_helpers";
 import type { Action } from "../actions/actions";
 import { isBigInt, isNumberMap, SoftError } from "libs/utils";
-import { getCurrentResolution } from "../accessors/flycam_accessor";
+import { getCurrentMag } from "../accessors/flycam_accessor";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -128,7 +128,7 @@ export default function* proofreadRootSaga(): Saga<void> {
   );
 }
 
-function proofreadCoarseResolutionIndex(): number {
+function proofreadCoarseMagIndex(): number {
   // @ts-ignore
   return window.__proofreadCoarseResolutionIndex != null
     ? // @ts-ignore
@@ -204,8 +204,8 @@ function* loadCoarseMesh(
     );
     const { mappingName, mappingType } = mappingInfo;
 
-    // Load the whole agglomerate mesh in a coarse resolution for performance reasons
-    const preferredQuality = proofreadCoarseResolutionIndex();
+    // Load the whole agglomerate mesh in a coarse mag for performance reasons
+    const preferredQuality = proofreadCoarseMagIndex();
     yield* put(
       loadAdHocMeshAction(segmentId, position, additionalCoordinates, {
         mappingName,
@@ -1036,18 +1036,18 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
     }
   }
 
-  const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
-  const currentMag = yield* select((state) => getCurrentResolution(state, volumeTracingLayer.name));
+  const resolutionInfo = getMagInfo(volumeTracingLayer.resolutions);
+  const currentMag = yield* select((state) => getCurrentMag(state, volumeTracingLayer.name));
 
   const agglomerateFileMag = isSkeletonProofreading
-    ? // In case of skeleton proofreading, the finest resolution should be used.
-      resolutionInfo.getFinestResolution()
-    : // For non-skeleton proofreading, the active resolution suffices
+    ? // In case of skeleton proofreading, the finest mag should be used.
+      resolutionInfo.getFinestMag()
+    : // For non-skeleton proofreading, the active mag suffices
       currentMag;
   if (agglomerateFileMag == null) {
     return null;
   }
-  const agglomerateFileZoomstep = resolutionInfo.getIndexByResolution(agglomerateFileMag);
+  const agglomerateFileZoomstep = resolutionInfo.getIndexByMag(agglomerateFileMag);
 
   const getUnmappedDataValue = (position: Vector3): Promise<number> => {
     const { additionalCoordinates } = Store.getState().flycam;

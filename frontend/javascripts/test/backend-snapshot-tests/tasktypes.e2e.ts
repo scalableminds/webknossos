@@ -32,7 +32,7 @@ test("createTaskType and deleteTaskType", async (t) => {
       mergerMode: false,
       volumeInterpolationAllowed: false,
       allowedModes: ["orthogonal" as APIAllowedMode],
-      resolutionRestrictions: {},
+      magRestrictions: {},
     },
     recommendedConfiguration: null,
     tracingType: "skeleton" as const,

@@ -1,33 +1,30 @@
 import type { Vector3, Vector4, BucketAddress } from "oxalis/constants";
 import constants from "oxalis/constants";
 import type { AdditionalCoordinate } from "types/api_flow_types";
-import type { ResolutionInfo } from "./resolution_info";
+import type { MagInfo } from "./mag_info";
 
 export function globalPositionToBucketPosition(
   [x, y, z]: Vector3,
-  resolutions: Array<Vector3>,
-  resolutionIndex: number,
+  mags: Array<Vector3>,
+  magIndex: number,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
 ): BucketAddress {
-  const resolution =
-    resolutionIndex < resolutions.length
-      ? resolutions[resolutionIndex]
-      : upsampleResolution(resolutions, resolutionIndex);
+  const resolution = magIndex < mags.length ? mags[magIndex] : upsampleMag(mags, magIndex);
   return [
     Math.floor(x / (constants.BUCKET_WIDTH * resolution[0])),
     Math.floor(y / (constants.BUCKET_WIDTH * resolution[1])),
     Math.floor(z / (constants.BUCKET_WIDTH * resolution[2])),
-    resolutionIndex,
+    magIndex,
     additionalCoordinates || [],
   ];
 }
-export function scaleGlobalPositionWithResolution(
+export function scaleGlobalPositionWithMagnification(
   [x, y, z]: Vector3,
-  resolution: Vector3,
+  mag: Vector3,
   ceil: boolean = false,
 ): Vector3 {
   const round = ceil ? Math.ceil : Math.floor;
-  return [round(x / resolution[0]), round(y / resolution[1]), round(z / resolution[2])];
+  return [round(x / mag[0]), round(y / mag[1]), round(z / mag[2])];
 }
 export function zoomedPositionToGlobalPosition(
   [x, y, z]: Vector3,
@@ -35,29 +32,26 @@ export function zoomedPositionToGlobalPosition(
 ): Vector3 {
   return [x * currentResolution[0], y * currentResolution[1], z * currentResolution[2]];
 }
-export function scaleGlobalPositionWithResolutionFloat(
+export function scaleGlobalPositionWithMagnificationFloat(
   [x, y, z]: Vector3,
-  resolution: Vector3,
+  mag: Vector3,
 ): Vector3 {
-  return [x / resolution[0], y / resolution[1], z / resolution[2]];
+  return [x / mag[0], y / mag[1], z / mag[2]];
 }
 export function globalPositionToBucketPositionFloat(
   [x, y, z]: Vector3,
-  resolutions: Array<Vector3>,
-  resolutionIndex: number,
+  mags: Array<Vector3>,
+  magIndex: number,
 ): Vector4 {
-  const resolution =
-    resolutionIndex < resolutions.length
-      ? resolutions[resolutionIndex]
-      : upsampleResolution(resolutions, resolutionIndex);
+  const resolution = magIndex < mags.length ? mags[magIndex] : upsampleMag(mags, magIndex);
   return [
     x / (constants.BUCKET_WIDTH * resolution[0]),
     y / (constants.BUCKET_WIDTH * resolution[1]),
     z / (constants.BUCKET_WIDTH * resolution[2]),
-    resolutionIndex,
+    magIndex,
   ];
 }
-export function upsampleResolution(resolutions: Array<Vector3>, resolutionIndex: number): Vector3 {
+export function upsampleMag(resolutions: Array<Vector3>, resolutionIndex: number): Vector3 {
   const lastResolutionIndex = resolutions.length - 1;
   const lastResolution = resolutions[lastResolutionIndex];
   const multiplier = Math.pow(2, resolutionIndex - lastResolutionIndex);
@@ -69,33 +63,29 @@ export function upsampleResolution(resolutions: Array<Vector3>, resolutionIndex:
 }
 export function bucketPositionToGlobalAddress(
   bucketPosition: BucketAddress,
-  resolutionInfo: ResolutionInfo,
+  resolutionInfo: MagInfo,
 ): Vector3 {
   const [x, y, z, resolutionIndex, _additionalCoordinates] = bucketPosition;
-  const resolution = resolutionInfo.getResolutionByIndexOrThrow(resolutionIndex);
+  const resolution = resolutionInfo.getMagByIndexOrThrow(resolutionIndex);
   return [
     x * constants.BUCKET_WIDTH * resolution[0],
     y * constants.BUCKET_WIDTH * resolution[1],
     z * constants.BUCKET_WIDTH * resolution[2],
   ];
 }
-export function getResolutionsFactors(resolutionA: Vector3, resolutionB: Vector3): Vector3 {
-  return [
-    resolutionA[0] / resolutionB[0],
-    resolutionA[1] / resolutionB[1],
-    resolutionA[2] / resolutionB[2],
-  ];
+export function getMagFactors(magA: Vector3, magB: Vector3): Vector3 {
+  return [magA[0] / magB[0], magA[1] / magB[1], magA[2] / magB[2]];
 }
 export function zoomedPositionToZoomedAddress(
   [x, y, z]: Vector3,
-  resolutionIndex: number,
+  magIndex: number,
   additionalCoordinates: AdditionalCoordinate[] | null,
 ): BucketAddress {
   return [
     Math.floor(x / constants.BUCKET_WIDTH),
     Math.floor(y / constants.BUCKET_WIDTH),
     Math.floor(z / constants.BUCKET_WIDTH),
-    resolutionIndex,
+    magIndex,
     additionalCoordinates || [],
   ];
 }
@@ -104,51 +94,48 @@ export function zoomedAddressToZoomedPosition([x, y, z, _]: BucketAddress): Vect
 }
 // TODO: zoomedAddressToAnotherZoomStep usages should be converted to zoomedAddressToAnotherZoomStepWithInfo
 // Note that this is not trivial since zoomedAddressToAnotherZoomStepWithInfo will throw on not existing
-// resolution indices (in contrast to zoomedAddressToAnotherZoomStep).
+// mag indices (in contrast to zoomedAddressToAnotherZoomStep).
 // See: https://github.com/scalableminds/webknossos/issues/4838
 export function zoomedAddressToAnotherZoomStep(
-  [x, y, z, resolutionIndex]: Vector4,
-  resolutions: Array<Vector3>,
-  targetResolutionIndex: number,
+  [x, y, z, magIndex]: Vector4,
+  mags: Array<Vector3>,
+  targetMagIndex: number,
 ): Vector4 {
-  const currentResolution = resolutions[resolutionIndex];
-  const targetResolution = resolutions[targetResolutionIndex];
-  const factors = getResolutionsFactors(currentResolution, targetResolution);
+  const currentResolution = mags[magIndex];
+  const targetResolution = mags[targetMagIndex];
+  const factors = getMagFactors(currentResolution, targetResolution);
   return [
     Math.floor(x * factors[0]),
     Math.floor(y * factors[1]),
     Math.floor(z * factors[2]),
-    targetResolutionIndex,
+    targetMagIndex,
   ];
 }
 
 /*
-  Please note that this function will fail if the passed resolutionIndex or
-  targetResolutionIndex don't exist in the resolutionInfo.
+  Please note that this function will fail if the passed magIndex or
+  targetMagIndex don't exist in the magInfo.
  */
 export function zoomedAddressToAnotherZoomStepWithInfo(
-  [x, y, z, resolutionIndex]: Vector4,
-  resolutionInfo: ResolutionInfo,
-  targetResolutionIndex: number,
+  [x, y, z, magIndex]: Vector4,
+  magInfo: MagInfo,
+  targetMagIndex: number,
 ): Vector4 {
-  const currentResolution = resolutionInfo.getResolutionByIndexWithFallback(resolutionIndex, null);
-  const targetResolution = resolutionInfo.getResolutionByIndexWithFallback(
-    targetResolutionIndex,
-    null,
-  );
-  const factors = getResolutionsFactors(currentResolution, targetResolution);
+  const currentResolution = magInfo.getMagByIndexWithFallback(magIndex, null);
+  const targetResolution = magInfo.getMagByIndexWithFallback(targetMagIndex, null);
+  const factors = getMagFactors(currentResolution, targetResolution);
   return [
     Math.floor(x * factors[0]),
     Math.floor(y * factors[1]),
     Math.floor(z * factors[2]),
-    targetResolutionIndex,
+    targetMagIndex,
   ];
 }
-export function getBucketExtent(resolution: Vector3): Vector3 {
+export function getBucketExtent(mag: Vector3): Vector3 {
   return [
-    constants.BUCKET_WIDTH * resolution[0],
-    constants.BUCKET_WIDTH * resolution[1],
-    constants.BUCKET_WIDTH * resolution[2],
+    constants.BUCKET_WIDTH * mag[0],
+    constants.BUCKET_WIDTH * mag[1],
+    constants.BUCKET_WIDTH * mag[2],
   ];
 }
 // This function returns all bucket addresses for which the fallback bucket
@@ -156,21 +143,18 @@ export function getBucketExtent(resolution: Vector3): Vector3 {
 export function getBaseBucketsForFallbackBucket(
   fallbackBucketAddress: Vector4,
   zoomStepDifference: number,
-  resolutions: Array<Vector3>,
+  mags: Array<Vector3>,
 ): Array<Vector4> {
   const fallbackBucketZoomStep = fallbackBucketAddress[3];
   const betterZoomStep = fallbackBucketZoomStep - zoomStepDifference;
   const betterBucketAddress = zoomedAddressToAnotherZoomStep(
     fallbackBucketAddress,
-    resolutions,
+    mags,
     betterZoomStep,
   );
   // resolutionFactors is a [x, y, z] tuple with x, y, z being 1 or 2 each (because
   // zoomStepDifference === 1). In the case of isotropic resolutions, it's simply [2, 2, 2]
-  const resolutionFactors = getResolutionsFactors(
-    resolutions[fallbackBucketZoomStep],
-    resolutions[betterZoomStep],
-  );
+  const resolutionFactors = getMagFactors(mags[fallbackBucketZoomStep], mags[betterZoomStep]);
   const bucketAddresses = [];
   const [baseX, baseY, baseZ] = betterBucketAddress;
 

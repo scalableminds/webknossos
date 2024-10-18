@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.dataformats
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
-import com.scalableminds.webknossos.datastore.models.datasource.ResolutionFormatHelper
+import com.scalableminds.webknossos.datastore.models.datasource.MagFormatHelper
 import com.scalableminds.webknossos.datastore.storage.LegacyDataVaultCredential
 import play.api.libs.json.{Json, OFormat}
 
@@ -13,6 +13,6 @@ case class MagLocator(mag: Vec3Int,
                       channelIndex: Option[Int] = None,
                       credentialId: Option[String] = None)
 
-object MagLocator extends ResolutionFormatHelper {
+object MagLocator extends MagFormatHelper {
   implicit val jsonFormat: OFormat[MagLocator] = Json.format[MagLocator]
 }

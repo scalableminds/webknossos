@@ -79,7 +79,7 @@ import {
 import {
   getVisibleSegmentationLayer,
   getMappingInfo,
-  getResolutionInfo,
+  getMagInfo,
   getMaybeSegmentIndexAvailability,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -1459,8 +1459,8 @@ function ContextMenuInner(propsWithInputRef: Props) {
       const tracingId = volumeTracing?.tracingId;
       const additionalCoordinates = flycam.additionalCoordinates;
       const requestUrl = getVolumeRequestUrl(dataset, tracing, tracingId, visibleSegmentationLayer);
-      const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
-      const layersFinestResolution = magInfo.getFinestResolution();
+      const magInfo = getMagInfo(visibleSegmentationLayer.resolutions);
+      const layersFinestResolution = magInfo.getFinestMag();
       const voxelSize = dataset.dataSource.scale;
 
       try {

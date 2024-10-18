@@ -12,7 +12,7 @@ import {
   getActiveSegmentationTracingLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { finishAnnotationStrokeAction } from "oxalis/model/actions/volumetracing_actions";
-import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Toast from "libs/toast";
@@ -21,7 +21,7 @@ import createProgressCallback from "libs/progress_callback";
 import { api } from "oxalis/singletons";
 import window from "libs/window";
 import type { APISegmentationLayer } from "types/api_flow_types";
-import type { ResolutionInfo } from "../helpers/resolution_info";
+import type { MagInfo } from "../helpers/mag_info";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 
 // By default, a new bounding box is created around
@@ -60,11 +60,11 @@ const VOXEL_THRESHOLD = 2000000;
 // optimization (unless it's the only existent mag).
 const ALWAYS_IGNORE_FIRST_MAG_INITIALLY = true;
 
-function selectAppropriateResolutions(
+function selectAppropriateMags(
   boundingBoxMag1: BoundingBox,
-  resolutionInfo: ResolutionInfo,
+  magInfo: MagInfo,
 ): Array<[number, Vector3]> {
-  const resolutionsWithIndices = resolutionInfo.getResolutionsWithIndices();
+  const resolutionsWithIndices = magInfo.getMagsWithIndices();
   const appropriateResolutions: Array<[number, Vector3]> = [];
 
   for (const [resolutionIndex, resolution] of resolutionsWithIndices) {
@@ -284,8 +284,8 @@ function* performMinCut(action: Action): Saga<void> {
     return;
   }
 
-  const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
-  const appropriateResolutionInfos = selectAppropriateResolutions(boundingBoxMag1, resolutionInfo);
+  const resolutionInfo = getMagInfo(volumeTracingLayer.resolutions);
+  const appropriateResolutionInfos = selectAppropriateMags(boundingBoxMag1, resolutionInfo);
 
   if (appropriateResolutionInfos.length === 0) {
     yield* call(
@@ -300,9 +300,9 @@ function* performMinCut(action: Action): Saga<void> {
     successMessageDelay: 5000,
   });
 
-  // Try to perform a min-cut on the selected resolutions. If the min-cut
-  // fails for one resolution, it's tried again on the next resolution.
-  // If the min-cut succeeds, it's refined again with the better resolutions.
+  // Try to perform a min-cut on the selected mags. If the min-cut
+  // fails for one mag, it's tried again on the next mag.
+  // If the min-cut succeeds, it's refined again with the better mags.
   for (const [resolutionIndex, targetMag] of appropriateResolutionInfos) {
     try {
       yield* call(
@@ -327,13 +327,12 @@ function* performMinCut(action: Action): Saga<void> {
         refiningResolutionIndex >= 0;
         refiningResolutionIndex--
       ) {
-        // Refine min-cut on lower resolutions, if they exist.
+        // Refine min-cut on lower mags, if they exist.
         if (!resolutionInfo.hasIndex(refiningResolutionIndex)) {
           continue;
         }
 
-        const refiningResolution =
-          resolutionInfo.getResolutionByIndexOrThrow(refiningResolutionIndex);
+        const refiningResolution = resolutionInfo.getMagByIndexOrThrow(refiningResolutionIndex);
         console.group("Refining min-cut at", refiningResolution.join("-"));
         yield* call(
           progressCallback,
@@ -420,7 +419,7 @@ function* performMinCut(action: Action): Saga<void> {
 // to separate A from B.
 function* tryMinCutAtMag(
   targetMag: Vector3,
-  resolutionIndex: number,
+  magIndex: number,
   boundingBoxMag1: BoundingBox,
   nodes: MutableNode[],
   volumeTracingLayer: APISegmentationLayer,
@@ -441,7 +440,7 @@ function* tryMinCutAtMag(
     [api.data, api.data.getDataForBoundingBox],
     volumeTracingLayer.name,
     boundingBoxMag1,
-    resolutionIndex,
+    magIndex,
     additionalCoordinates,
   );
   // For the 3D volume flat arrays are constructed

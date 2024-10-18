@@ -2,7 +2,7 @@ import type { Vector3 } from "oxalis/constants";
 import type { VoxelSize } from "types/api_flow_types";
 
 export function getBaseVoxelInUnit(voxelSizeFactor: Vector3): number {
-  // base voxel should be a cube with highest resolution
+  // base voxel should be a cube with highest mag
   return Math.min(...voxelSizeFactor);
 }
 
@@ -24,7 +24,7 @@ export function voxelToVolumeInUnit(
 
 export function getBaseVoxelFactorsInUnit(voxelSize: VoxelSize): Vector3 {
   const scaleFactor = voxelSize.factor;
-  // base voxel should be a cube with highest resolution
+  // base voxel should be a cube with highest mag
   const baseVoxel = getBaseVoxelInUnit(scaleFactor);
   // scale factor to calculate the voxels in a certain
   // dimension from baseVoxels

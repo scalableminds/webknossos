@@ -93,11 +93,11 @@ case class VolumeTracingLayer(
   override val coordinateTransformations: Option[List[CoordinateTransformation]] = None
   override val mags: List[MagLocator] = List.empty // MagLocators do not apply for annotation layers
 
-  private lazy val volumeResolutions: List[Vec3Int] = tracing.resolutions.map(vec3IntFromProto).toList
+  private lazy val volumeMags: List[Vec3Int] = tracing.mags.map(vec3IntFromProto).toList
 
   override def bucketProviderCacheKey: String = s"$name-withFallbackData=$includeFallbackDataIfAvailable"
 
-  def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = DataLayer.bucketLength
+  def lengthOfUnderlyingCubes(mag: Vec3Int): Int = DataLayer.bucketLength
 
   val dataFormat: DataFormat.Value = DataFormat.tracing
 
@@ -115,9 +115,9 @@ case class VolumeTracingLayer(
   def bucketProvider: AbstractVolumeTracingBucketProvider = volumeBucketProvider
 
   override val resolutions: List[Vec3Int] =
-    if (volumeResolutions.nonEmpty) volumeResolutions else List(Vec3Int.ones)
+    if (volumeMags.nonEmpty) volumeMags else List(Vec3Int.ones)
 
-  override def containsResolution(resolution: Vec3Int) =
-    true // allow requesting buckets of all resolutions. database takes care of missing.
+  override def containsMag(mag: Vec3Int) =
+    true // allow requesting buckets of all mags. database takes care of missing.
 
 }

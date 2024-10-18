@@ -5,7 +5,7 @@ import { M4x4, V3 } from "libs/mjs";
 import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import PolyhedronRasterizer from "oxalis/model/bucket_data_handling/polyhedron_rasterizer";
-import type { ResolutionInfo } from "../helpers/resolution_info";
+import type { MagInfo } from "../helpers/mag_info";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
@@ -58,7 +58,7 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
     activeZoomStep: number,
     position: Vector3,
     resolutions: Array<Vector3>,
-    resolutionInfo: ResolutionInfo,
+    resolutionInfo: MagInfo,
     additionalCoordinates: AdditionalCoordinate[] | null,
   ): Array<PullQueueItem> {
     const pullQueue: PullQueueItem[] = [];

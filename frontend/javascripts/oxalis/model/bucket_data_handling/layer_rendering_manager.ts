@@ -10,7 +10,7 @@ import {
   getElementClass,
   isLayerVisible,
   getLayerByName,
-  getResolutionInfo,
+  getMagInfo,
   invertAndTranspose,
   getTransformsForLayer,
 } from "oxalis/model/accessors/dataset_accessor";
@@ -187,8 +187,8 @@ export default class LayerRenderingManager {
     const state = Store.getState();
     const { dataset, datasetConfiguration } = state;
     const layer = getLayerByName(dataset, this.name);
-    const resolutionInfo = getResolutionInfo(layer.resolutions);
-    const maximumResolutionIndex = resolutionInfo.getCoarsestResolutionIndex();
+    const resolutionInfo = getMagInfo(layer.resolutions);
+    const maximumResolutionIndex = resolutionInfo.getCoarsestMagIndex();
 
     if (logZoomStep > maximumResolutionIndex) {
       // Don't render anything if the zoomStep is too high
@@ -196,7 +196,7 @@ export default class LayerRenderingManager {
       return;
     }
 
-    const resolutions = getResolutionInfo(layer.resolutions).getDenseResolutions();
+    const resolutions = getMagInfo(layer.resolutions).getDenseMags();
     const layerMatrix = invertAndTranspose(
       getTransformsForLayer(dataset, layer, datasetConfiguration.nativelyRenderedLayerName)
         .affineMatrix,

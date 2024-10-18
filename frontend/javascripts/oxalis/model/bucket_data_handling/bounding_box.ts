@@ -3,7 +3,7 @@ import { V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
 import type { BoundingBoxType, OrthoView, Vector2, Vector3, Vector4 } from "oxalis/constants";
 import constants, { Vector3Indicies } from "oxalis/constants";
-import type { ResolutionInfo } from "../helpers/resolution_info";
+import type { MagInfo } from "../helpers/mag_info";
 import Dimensions from "../dimensions";
 
 class BoundingBox {
@@ -34,13 +34,13 @@ class BoundingBox {
     return [u, v];
   }
 
-  getBoxForZoomStep = _.memoize((resolution: Vector3): BoundingBoxType => {
+  getBoxForZoomStep = _.memoize((mag: Vector3): BoundingBoxType => {
     // No `map` for performance reasons
     const min = [0, 0, 0] as Vector3;
     const max = [0, 0, 0] as Vector3;
 
     for (let i = 0; i < 3; i++) {
-      const divisor = constants.BUCKET_WIDTH * resolution[i];
+      const divisor = constants.BUCKET_WIDTH * mag[i];
       min[i] = Math.floor(this.min[i] / divisor);
       max[i] = Math.ceil(this.max[i] / divisor);
     }
@@ -51,16 +51,16 @@ class BoundingBox {
     };
   });
 
-  containsBucket([x, y, z, zoomStep]: Vector4, resolutionInfo: ResolutionInfo): boolean {
+  containsBucket([x, y, z, zoomStep]: Vector4, magInfo: MagInfo): boolean {
     /* Checks whether a bucket is contained in the active bounding box.
-     * If the passed resolutionInfo does not contain the passed zoomStep, this method
+     * If the passed magInfo does not contain the passed zoomStep, this method
      * returns false.
      */
-    const resolutionIndex = resolutionInfo.getResolutionByIndex(zoomStep);
-    if (resolutionIndex == null) {
+    const magIndex = magInfo.getMagByIndex(zoomStep);
+    if (magIndex == null) {
       return false;
     }
-    const { min, max } = this.getBoxForZoomStep(resolutionIndex);
+    const { min, max } = this.getBoxForZoomStep(magIndex);
     return min[0] <= x && x < max[0] && min[1] <= y && y < max[1] && min[2] <= z && z < max[2];
   }
 

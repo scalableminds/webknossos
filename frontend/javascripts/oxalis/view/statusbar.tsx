@@ -10,7 +10,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
 import { useKeyPress } from "libs/react_hooks";
-import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   setActiveNodeAction,
@@ -38,6 +38,7 @@ import { useInterval } from "libs/react_helpers";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import FastTooltip from "components/fast_tooltip";
 import { Store } from "oxalis/singletons";
+import messages from "messages";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
@@ -471,7 +472,7 @@ function Infos() {
           />
         </span>
       ) : null}
-      <ResolutionInfo />
+      <MagnificationInfo />
     </React.Fragment>
   );
 }
@@ -498,18 +499,17 @@ function DownloadSpeedometer() {
   );
 }
 
-function ResolutionInfo() {
-  const { representativeResolution, isActiveResolutionGlobal } =
-    useSelector(getActiveResolutionInfo);
+function MagnificationInfo() {
+  const { representativeResolution, isActiveResolutionGlobal } = useSelector(getActiveMagInfo);
 
   const renderMagTooltipContent = useCallback(() => {
     const state = Store.getState();
-    const { activeMagOfEnabledLayers } = getActiveResolutionInfo(state);
+    const { activeMagOfEnabledLayers } = getActiveMagInfo(state);
     const dataset = state.dataset;
     const tracing = state.tracing;
 
     return (
-      <>
+      <div style={{ width: 200 }}>
         Rendered magnification per layer:
         <ul>
           {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
@@ -522,7 +522,8 @@ function ResolutionInfo() {
             );
           })}
         </ul>
-      </>
+        {messages["dataset.mag_explanation"]}
+      </div>
     );
   }, []);
 
@@ -535,7 +536,7 @@ function ResolutionInfo() {
       <img
         src="/assets/images/icon-statusbar-downsampling.svg"
         className="resolution-status-bar-icon"
-        alt="Resolution"
+        alt="Magnification"
       />{" "}
       <FastTooltip dynamicRenderer={renderMagTooltipContent} placement="top">
         {representativeResolution.join("-")}

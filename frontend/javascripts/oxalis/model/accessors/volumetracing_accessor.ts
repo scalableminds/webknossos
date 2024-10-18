@@ -58,6 +58,7 @@ import {
 import { Store } from "oxalis/singletons";
 import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
 import _ from "lodash";
+import type { SegmentHierarchyNode } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 
 export function getVolumeTracings(tracing: Tracing): Array<VolumeTracing> {
   return tracing.volumes;
@@ -655,7 +656,10 @@ export function getLabelActionFromPreviousSlice(
   );
 }
 
-export function getSegmentName(segment: Segment, fallbackToId: boolean = false): string {
+export function getSegmentName(
+  segment: Segment | SegmentHierarchyNode,
+  fallbackToId: boolean = false,
+): string {
   const fallback = fallbackToId ? `${segment.id}` : `Segment ${segment.id}`;
   return segment.name || fallback;
 }

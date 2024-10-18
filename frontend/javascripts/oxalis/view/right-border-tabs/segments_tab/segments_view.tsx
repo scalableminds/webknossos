@@ -50,6 +50,7 @@ import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_
 import {
   getActiveSegmentationTracing,
   getMeshesForCurrentAdditionalCoordinates,
+  getSegmentName,
   getSelectedIds,
   getVisibleSegments,
   hasEditableMapping,
@@ -1829,7 +1830,7 @@ class SegmentsView extends React.Component<Props, State> {
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.state.searchableTreeItemList}
-                    searchKey={(item) => item.name ?? `${item.id}` ?? ""}
+                    searchKey={(item) => getSegmentName(item)}
                     provideShortcut
                     targetId={segmentsTabId}
                   >

@@ -7,7 +7,6 @@ import type {
   DeleteNodeUpdateAction,
   DeleteTreeUpdateAction,
   UpdateAction,
-  UpdateActionWithTracingId,
 } from "oxalis/model/sagas/update_actions";
 import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
 import compactToggleActions from "oxalis/model/helpers/compaction/compact_toggle_actions";

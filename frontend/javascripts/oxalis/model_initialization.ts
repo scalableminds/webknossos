@@ -454,7 +454,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
 
   for (const layer of layers) {
     const textureInformation = textureInformationPerLayer.get(layer);
-
     if (!textureInformation) {
       throw new Error("No texture information for layer?");
     }
@@ -463,6 +462,7 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
       layer,
       textureInformation.textureSize,
       textureInformation.textureCount,
+      layer.name, // In case of a volume tracing layer the layer name will equal its tracingId.
     );
   }
 

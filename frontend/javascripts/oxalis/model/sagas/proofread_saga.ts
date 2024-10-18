@@ -268,6 +268,7 @@ function* createEditableMapping(): Saga<string> {
   // Save before making the mapping editable to make sure the correct mapping is activated in the backend
   yield* call([Model, Model.ensureSavedState]);
   // Get volume tracing again to make sure the version is up to date
+  const tracing = yield* select((state) => state.tracing);
   const upToDateVolumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (upToDateVolumeTracing == null) {
     throw new Error("No active segmentation tracing layer. Cannot create editble mapping.");
@@ -277,7 +278,7 @@ function* createEditableMapping(): Saga<string> {
   const layerName = volumeTracingId;
   const serverEditableMapping = yield* call(makeMappingEditable, tracingStoreUrl, volumeTracingId);
   // The server increments the volume tracing's version by 1 when switching the mapping to an editable one
-  yield* put(setVersionNumberAction(upToDateVolumeTracing.version + 1, "volume", volumeTracingId));
+  yield* put(setVersionNumberAction(tracing.version + 1));
   yield* put(setMappingNameAction(layerName, volumeTracingId, "HDF5"));
   yield* put(setHasEditableMappingAction());
   yield* put(initializeEditableMappingAction(serverEditableMapping));
@@ -453,7 +454,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     return;
   }
 
-  yield* put(pushSaveQueueTransaction(items, "mapping", volumeTracingId));
+  yield* put(pushSaveQueueTransaction(items, volumeTracingId));
   yield* call([Model, Model.ensureSavedState]);
 
   if (action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS" || action.type === "DELETE_EDGE") {
@@ -781,7 +782,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     return;
   }
 
-  yield* put(pushSaveQueueTransaction(items, "mapping", volumeTracingId));
+  yield* put(pushSaveQueueTransaction(items, volumeTracingId));
   yield* call([Model, Model.ensureSavedState]);
 
   if (action.type === "MIN_CUT_AGGLOMERATE") {
@@ -942,7 +943,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     return;
   }
 
-  yield* put(pushSaveQueueTransaction(items, "mapping", volumeTracingId));
+  yield* put(pushSaveQueueTransaction(items, volumeTracingId));
   yield* call([Model, Model.ensureSavedState]);
 
   // Now that the changes are saved, we can split the mapping locally (because it requires

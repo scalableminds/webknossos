@@ -872,7 +872,7 @@ export async function acquireAnnotationMutex(
 export async function getTracingForAnnotationType(
   annotation: APIAnnotation,
   annotationLayerDescriptor: AnnotationLayerDescriptor,
-  version: number | null | undefined, // TODO: Use this parameter
+  version?: number | null | undefined, // TODO: Use this parameter
 ): Promise<ServerTracing> {
   const { tracingId, typ } = annotationLayerDescriptor;
   const tracingType = typ.toLowerCase() as "skeleton" | "volume";

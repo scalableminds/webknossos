@@ -14,7 +14,7 @@ object AnnotationLayerType extends ExtendedEnumeration {
     }
 
   def fromProto(p: AnnotationLayerTypeProto): AnnotationLayerType =
-    p match {
+    p match { // potential TODO: compiler says that this match may no be exhaustive.
       case AnnotationLayerTypeProto.skeleton => Skeleton
       case AnnotationLayerTypeProto.volume   => Volume
     }

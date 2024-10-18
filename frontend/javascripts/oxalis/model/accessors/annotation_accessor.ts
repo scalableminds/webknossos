@@ -1,6 +1,5 @@
 import _ from "lodash";
 import type { OxalisState, Tracing } from "oxalis/store";
-import { getVolumeTracingById } from "./volumetracing_accessor";
 import type { APIAnnotationInfo } from "types/api_flow_types";
 import type { EmptyObject } from "types/globals";
 
@@ -47,7 +46,7 @@ type TracingStatsHelper = {
 // biome-ignore lint/complexity/noBannedTypes: {} should be avoided actually
 export type CombinedTracingStats = (SkeletonTracingStats | {}) & (VolumeTracingStats | {});
 
-export function getStats(tracing: Tracing): TracingStats | null {
+export function getStats(tracing: Tracing): CombinedTracingStats {
   const { skeleton, volumes } = tracing;
   let totalSegmentCount = 0;
   for (const volumeTracing of volumes) {
@@ -58,6 +57,7 @@ export function getStats(tracing: Tracing): TracingStats | null {
   };
   if (skeleton) {
     stats = {
+      ...stats,
       treeCount: _.size(skeleton.trees),
       nodeCount: _.reduce(skeleton.trees, (sum, tree) => sum + tree.nodes.size(), 0),
       edgeCount: _.reduce(skeleton.trees, (sum, tree) => sum + tree.edges.size(), 0),
@@ -65,6 +65,16 @@ export function getStats(tracing: Tracing): TracingStats | null {
     };
   }
   return stats;
+}
+
+export function getCreationTimestamp(tracing: Tracing) {
+  let timestamp = tracing.skeleton?.createdTimestamp;
+  for (const volumeTracing of tracing.volumes) {
+    if (!timestamp || volumeTracing.createdTimestamp < timestamp) {
+      timestamp = volumeTracing.createdTimestamp;
+    }
+  }
+  return timestamp || 0;
 }
 
 export function getCombinedStatsFromServerAnnotation(

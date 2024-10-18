@@ -947,11 +947,7 @@ function* handleDeleteSegmentData(): Saga<void> {
 
     yield* put(setBusyBlockingInfoAction(true, "Segment is being deleted."));
     yield* put(
-      pushSaveQueueTransaction(
-        [deleteSegmentDataVolumeAction(action.segmentId)],
-        "volume",
-        action.layerName,
-      ),
+      pushSaveQueueTransaction([deleteSegmentDataVolumeAction(action.segmentId)], action.layerName),
     );
     yield* call([Model, Model.ensureSavedState]);
 

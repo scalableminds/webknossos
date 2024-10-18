@@ -9,8 +9,8 @@ on:
 jobs:
   nightly:
     runs-on: ubuntu-latest
-    container:
-      image: scalableminds/puppeteer:fix_wk_nightly
+    # container:
+    #   image: scalableminds/puppeteer:fix_wk_nightly
 
     steps:
       - name: Checkout code
@@ -30,6 +30,10 @@ jobs:
           curl -X POST \
             -H "X-Auth-Token: ${{ secrets.RELEASE_API_TOKEN }}" \
             https://kubernetix.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
+
+      - uses: actions/setup-node@v4
+        with:
+            node-version: 18
 
       - name: Install dependencies and wait
         run: |

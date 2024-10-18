@@ -51,6 +51,8 @@ jobs:
           URL=https://master.webknossos.xyz/ \
           timeout 3000 \
           yarn test-screenshot
+        env:
+            WK_AUTH_TOKEN: ${{ secrets.WK_AUTH_TOKEN }}
 
       - name: Upload screenshots as artifact
         uses: actions/upload-artifact@v3

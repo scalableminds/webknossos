@@ -258,7 +258,11 @@ function TreeHierarchyView(props: Props) {
     getNodeKey(GroupTypeEnum.TREE, treeId),
   );
 
-  if (props.activeGroupId) selectedKeys.push(getNodeKey(GroupTypeEnum.GROUP, props.activeGroupId));
+  if (props.activeGroupId) {
+    selectedKeys.push(getNodeKey(GroupTypeEnum.GROUP, props.activeGroupId));
+  } else {
+    treeRef.current?.scrollTo({ key: selectedKeys[0], align: "auto" });
+  }
 
   return (
     <>

@@ -1615,6 +1615,18 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
+  handleSelectAllMatchingSegments = (allMatches: SegmentHierarchyNode[]) => {
+    if (this.props.visibleSegmentationLayer == null) return;
+    Store.dispatch(
+      setSelectedSegmentsOrGroupAction(
+        allMatches.map((match) => match.id),
+        null,
+        this.props.visibleSegmentationLayer.name,
+      ),
+    );
+    this.tree.current?.scrollTo({ key: allMatches[0].key });
+  };
+
   getSegmentStatisticsModal = (groupId: number) => {
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
     if (visibleSegmentationLayer == null) {
@@ -1832,16 +1844,7 @@ class SegmentsView extends React.Component<Props, State> {
                     searchKey={(item) => item.name ?? `${item.id}` ?? ""}
                     provideShortcut
                     targetId={segmentsTabId}
-                    onSelectAllMatches={(allMatches) => {
-                      if (this.props.visibleSegmentationLayer == null) return;
-                      Store.dispatch(
-                        setSelectedSegmentsOrGroupAction(
-                          allMatches.map((match) => match.id),
-                          null,
-                          this.props.visibleSegmentationLayer.name,
-                        ),
-                      );
-                    }}
+                    onSelectAllMatches={this.handleSelectAllMatchingSegments}
                   >
                     <ButtonComponent
                       size="small"

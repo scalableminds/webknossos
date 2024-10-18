@@ -111,6 +111,10 @@ export default class AdvancedSearchPopover<
       currentPosition == null ? -1 : Math.min(currentPosition, numberOfAvailableOptions - 1);
     const hasNoResults = numberOfAvailableOptions === 0;
     const hasMultipleResults = numberOfAvailableOptions > 1;
+    const availableOptionsToSelectAllMatches = availableOptions.filter(
+      (result) => result.type === "Tree" || result.type === "segment",
+    );
+    const isSelectAllMatchesDisabled = availableOptionsToSelectAllMatches.length < 2;
     const additionalInputStyle =
       hasNoResults && searchQuery !== ""
         ? {
@@ -207,10 +211,10 @@ export default class AdvancedSearchPopover<
                       }}
                       onClick={
                         this.props.onSelectAllMatches != null
-                          ? () => this.props.onSelectAllMatches!(availableOptions)
+                          ? () => this.props.onSelectAllMatches!(availableOptionsToSelectAllMatches)
                           : undefined
                       }
-                      disabled={!hasMultipleResults}
+                      disabled={isSelectAllMatchesDisabled}
                     >
                       <CheckSquareOutlined />
                     </ButtonComponent>

@@ -9,27 +9,25 @@ on:
 jobs:
   nightly:
     runs-on: ubuntu-latest
-    # container:
-    #   image: scalableminds/puppeteer:fix_wk_nightly
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-    #   - name: Remove dev-deployment
-    #     run: |
-    #       curl -X POST \
-    #         -H "X-Auth-Token: ${{ secrets.RELEASE_API_TOKEN }}" \
-    #         https://kubernetix.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
+      - name: Remove dev-deployment
+        run: |
+          curl -X POST \
+            -H "X-Auth-Token: ${{ secrets.RELEASE_API_TOKEN }}" \
+            https://kubernetix.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
 
-    #   - name: Wait 3 minutes
-    #     run: sleep 180
+      - name: Wait 3 minutes
+        run: sleep 180
 
-    #   - name: Install dev-deployment
-    #     run: |
-    #       curl -X POST \
-    #         -H "X-Auth-Token: ${{ secrets.RELEASE_API_TOKEN }}" \
-    #         https://kubernetix.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
+      - name: Install dev-deployment
+        run: |
+          curl -X POST \
+            -H "X-Auth-Token: ${{ secrets.RELEASE_API_TOKEN }}" \
+            https://kubernetix.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
 
       - uses: actions/setup-node@v4
         with:
@@ -37,10 +35,6 @@ jobs:
 
       - name: Install dependencies and wait
         run: corepack enable && yarn install --immutable
-        # run: | 
-        # yarn install --immutable # &
-        #   sleep 180 &
-        #   wait
 
       - name: Refresh datasets
         run: |
@@ -62,20 +56,3 @@ jobs:
         with:
           name: screenshots
           path: frontend/javascripts/test/screenshots
-
-      - name: Upload type-check snapshots as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: snapshots
-          path: frontend/javascripts/test/snapshots/type-check
-
-      - name: Bundle screenshots
-        if: always()
-        run: |
-          tar -czvf screenshots.tar frontend/javascripts/test/screenshots
-
-      - name: Upload bundled screenshots as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: bundled-screenshots
-          path: screenshots.tar

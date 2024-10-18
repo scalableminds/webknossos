@@ -16,20 +16,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Remove dev-deployment
-        run: |
-          curl -X POST \
-            -H "X-Auth-Token: ${{ secrets.RELEASE_API_TOKEN }}" \
-            https://kubernetix.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
+    #   - name: Remove dev-deployment
+    #     run: |
+    #       curl -X POST \
+    #         -H "X-Auth-Token: ${{ secrets.RELEASE_API_TOKEN }}" \
+    #         https://kubernetix.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
 
-      - name: Wait 3 minutes
-        run: sleep 180
+    #   - name: Wait 3 minutes
+    #     run: sleep 180
 
-      - name: Install dev-deployment
-        run: |
-          curl -X POST \
-            -H "X-Auth-Token: ${{ secrets.RELEASE_API_TOKEN }}" \
-            https://kubernetix.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
+    #   - name: Install dev-deployment
+    #     run: |
+    #       curl -X POST \
+    #         -H "X-Auth-Token: ${{ secrets.RELEASE_API_TOKEN }}" \
+    #         https://kubernetix.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
 
       - uses: actions/setup-node@v4
         with:
@@ -37,9 +37,9 @@ jobs:
 
       - name: Install dependencies and wait
         run: |
-          yarn install --immutable &
-          sleep 180 &
-          wait
+          yarn install --immutable # &
+        #   sleep 180 &
+        #   wait
 
       - name: Refresh datasets
         run: |

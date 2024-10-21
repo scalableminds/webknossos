@@ -105,7 +105,7 @@ class PlaneView {
     // working and keeps your lap cool
     // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequency)
     if (forceRender || this.needsRerender) {
-      const { renderer, scene } = SceneController;
+      const { renderer, scene, composer } = SceneController;
       SceneController.update();
       const storeState = Store.getState();
       const viewport = {
@@ -123,7 +123,14 @@ class PlaneView {
 
         if (width > 0 && height > 0) {
           setupRenderArea(renderer, left, top, width, height, OrthoViewColors[plane]);
-          renderer.render(scene, this.cameras[plane]);
+          // TODO: only use composed scene for TDView.
+          if (plane === OrthoViews.TDView) {
+            composer.setSize(width, height);
+            composer.setPixelRatio(renderer.pixelRatio);
+            composer.render(scene, this.cameras[plane]);
+          } else {
+            renderer.render(scene, this.cameras[plane]);
+          }
         }
       }
 

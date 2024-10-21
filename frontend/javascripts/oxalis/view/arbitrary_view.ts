@@ -142,7 +142,7 @@ class ArbitraryView {
 
     if (this.needsRerender) {
       const { camera, geometries } = this;
-      const { renderer, scene } = getSceneController();
+      const { renderer, scene, composer } = getSceneController();
 
       for (const geometry of geometries) {
         // @ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'Geometry... Remove this comment to see the full error message
@@ -173,7 +173,7 @@ class ArbitraryView {
 
         if (width > 0 && height > 0) {
           setupRenderArea(renderer, left, top, width, height, 0xffffff);
-          renderer.render(scene, _camera);
+          composer.render(scene, _camera);
         }
       };
 

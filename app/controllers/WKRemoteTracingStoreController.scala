@@ -181,7 +181,11 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
           annotationIdValidated <- ObjectId.fromString(annotationId)
-          tracingEither <- annotationService.createTracingForExplorational(annotationIdValidated, request.body)
+          annotation <- annotationDAO.findOne(annotationIdValidated) ?~> "annotation.notFound"
+          dataset <- datasetDAO.findOne(annotation._dataset)
+          tracingEither <- annotationService.createTracingForExplorational(dataset,
+                                                                           request.body,
+                                                                           annotation.annotationLayers)
           tracing: GeneratedMessage = tracingEither match {
             case Left(s: SkeletonTracing) => s
             case Right(v: VolumeTracing)  => v

@@ -272,7 +272,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       requestAll: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
       updateGroupsAsSaved <- findPendingUpdates(annotationId, annotation.version, targetVersion) ?~> "findPendingUpdates.failed"
-      updatesGroupsRegrouped = regroupByRevertActions(updateGroupsAsSaved)
+      updatesGroupsRegrouped = regroupByIsolationSensitiveActions(updateGroupsAsSaved)
       updatesFlat = updatesGroupsRegrouped.flatMap(_._2)
       annotationWithTracings <- findTracingsForUpdates(annotation,
                                                        updatesFlat,

@@ -4,12 +4,12 @@ import collections.SequenceUtils
 
 trait UpdateGroupHandling {
 
-  def regroupByRevertActions(
+  def regroupByIsolationSensitiveActions(
       updateActionGroupsWithVersions: List[(Long, List[UpdateAction])]): List[(Long, List[UpdateAction])] = {
     val splitGroupLists: List[List[(Long, List[UpdateAction])]] =
       SequenceUtils.splitAndIsolate(updateActionGroupsWithVersions.reverse)(actionGroup =>
-        actionGroup._2.exists(updateAction => isRevertAction(updateAction)))
-    // TODO assert that the groups that contain revert actions contain nothing else
+        actionGroup._2.exists(updateAction => isIsolationSensitiveAction(updateAction)))
+    // TODO assert that the *groups* that contain revert actions contain nothing else
     // TODO test this
 
     splitGroupLists.flatMap { groupsToConcatenate: List[(Long, List[UpdateAction])] =>
@@ -24,8 +24,9 @@ trait UpdateGroupHandling {
     targetVersionOpt.map(targetVersion => (targetVersion, updates))
   }
 
-  private def isRevertAction(a: UpdateAction): Boolean = a match {
-    case _: RevertToVersionUpdateAction => true
-    case _                              => false
+  private def isIsolationSensitiveAction(a: UpdateAction): Boolean = a match {
+    case _: RevertToVersionUpdateAction    => true
+    case _: AddLayerAnnotationUpdateAction => true
+    case _                                 => false
   }
 }

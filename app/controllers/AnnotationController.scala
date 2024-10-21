@@ -112,7 +112,6 @@ class AnnotationController @Inject()(
     log() {
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
-        // This does not send the version information, but found a frontend workaround
         result <- info(annotation.typ.toString, id, timestamp)(request)
       } yield result
 

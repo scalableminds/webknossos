@@ -163,7 +163,7 @@ const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): Mutabl
   radius: Constants.DEFAULT_NODE_RADIUS,
   rotation: [0, 0, 0],
   viewport: 0,
-  resolution: 0,
+  mag: 0,
   id: synapseId,
   timestamp: Date.now(),
   bitDepth: 8,

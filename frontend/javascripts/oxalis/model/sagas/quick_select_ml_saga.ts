@@ -177,7 +177,7 @@ export default function* performQuickSelect(
   try {
     const {
       labeledZoomStep,
-      labeledResolution,
+      labeledMag: labeledResolution,
       thirdDim,
       activeViewport,
       volumeTracing,

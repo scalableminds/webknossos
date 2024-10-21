@@ -57,7 +57,7 @@ import { type ContextRouter, Link, type RouteProps } from "react-router-dom";
 import { Redirect, Route, Router, Switch } from "react-router-dom";
 import {
   APICompoundTypeEnum,
-  type APIResolutionRestrictions,
+  type APIMagRestrictions,
   type APIUser,
   TracingTypeEnum,
 } from "types/api_flow_types";
@@ -647,21 +647,21 @@ class ReactRouter extends React.Component<Props> {
                         coalesce(TracingTypeEnum, match.params.type) || TracingTypeEnum.skeleton;
                       const getParams = Utils.getUrlParamsObjectFromString(location.search);
                       const { autoFallbackLayer, fallbackLayerName } = getParams;
-                      const resolutionRestrictions: APIResolutionRestrictions = {};
+                      const resolutionRestrictions: APIMagRestrictions = {};
 
-                      if (getParams.minRes !== undefined) {
-                        resolutionRestrictions.min = Number.parseInt(getParams.minRes);
+                      if (getParams.minMag !== undefined) {
+                        resolutionRestrictions.min = Number.parseInt(getParams.minMag);
 
                         if (!_.isNumber(resolutionRestrictions.min)) {
-                          throw new Error("Invalid minRes parameter");
+                          throw new Error("Invalid minMag parameter");
                         }
-                      }
 
-                      if (getParams.maxRes !== undefined) {
-                        resolutionRestrictions.max = Number.parseInt(getParams.maxRes);
+                        if (getParams.maxMag !== undefined) {
+                          resolutionRestrictions.max = Number.parseInt(getParams.maxMag);
 
-                        if (!_.isNumber(resolutionRestrictions.max)) {
-                          throw new Error("Invalid maxRes parameter");
+                          if (!_.isNumber(resolutionRestrictions.max)) {
+                            throw new Error("Invalid maxMag parameter");
+                          }
                         }
                       }
 

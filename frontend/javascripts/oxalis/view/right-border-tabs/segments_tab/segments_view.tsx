@@ -43,7 +43,7 @@ import { EMPTY_OBJECT, MappingStatusEnum } from "oxalis/constants";
 import {
   getMappingInfo,
   getMaybeSegmentIndexAvailability,
-  getResolutionInfoOfVisibleSegmentationLayer,
+  getMagInfoOfVisibleSegmentationLayer,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
@@ -82,7 +82,7 @@ import {
   setSelectedSegmentsOrGroupAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import type { MagInfo } from "oxalis/model/helpers/mag_info";
 import { api } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
@@ -169,7 +169,7 @@ type StateProps = {
   activeCellId: number | null | undefined;
   preferredQualityForMeshPrecomputation: number;
   preferredQualityForMeshAdHocComputation: number;
-  resolutionInfoOfVisibleSegmentationLayer: ResolutionInfo;
+  magInfoOfVisibleSegmentationLayer: MagInfo;
 };
 
 const mapStateToProps = (state: OxalisState): StateProps => {
@@ -224,7 +224,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
       state.temporaryConfiguration.preferredQualityForMeshPrecomputation,
     preferredQualityForMeshAdHocComputation:
       state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
-    resolutionInfoOfVisibleSegmentationLayer: getResolutionInfoOfVisibleSegmentationLayer(state),
+    magInfoOfVisibleSegmentationLayer: getMagInfoOfVisibleSegmentationLayer(state),
   };
 };
 
@@ -826,7 +826,7 @@ class SegmentsView extends React.Component<Props, State> {
     const {
       mappingInfo,
       preferredQualityForMeshPrecomputation,
-      resolutionInfoOfVisibleSegmentationLayer: resolutionInfo,
+      magInfoOfVisibleSegmentationLayer: resolutionInfo,
     } = this.props;
     const defaultOrHigherIndex = resolutionInfo.getIndexOrClosestHigherIndex(
       preferredQualityForMeshPrecomputation,
@@ -835,7 +835,7 @@ class SegmentsView extends React.Component<Props, State> {
       defaultOrHigherIndex != null
         ? defaultOrHigherIndex
         : resolutionInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation);
-    const meshfileResolution = resolutionInfo.getResolutionByIndexWithFallback(
+    const meshfileResolution = resolutionInfo.getMagByIndexWithFallback(
       meshfileResolutionIndex,
       null,
     );
@@ -902,7 +902,7 @@ class SegmentsView extends React.Component<Props, State> {
   getAdHocMeshSettings = () => {
     const {
       preferredQualityForMeshAdHocComputation,
-      resolutionInfoOfVisibleSegmentationLayer: resolutionInfo,
+      magInfoOfVisibleSegmentationLayer: resolutionInfo,
     } = this.props;
     return (
       <div>
@@ -918,7 +918,7 @@ class SegmentsView extends React.Component<Props, State> {
           onChange={this.handleQualityChangeForAdHocGeneration}
         >
           {resolutionInfo
-            .getResolutionsWithIndices()
+            .getMagsWithIndices()
             .map(([log2Index, mag]: [number, Vector3], index: number) => (
               <Option value={log2Index} key={log2Index}>
                 {formatMagWithLabel(mag, index)}
@@ -933,7 +933,7 @@ class SegmentsView extends React.Component<Props, State> {
     const { disabled, title } = this.getPrecomputeMeshesTooltipInfo();
     const {
       preferredQualityForMeshPrecomputation,
-      resolutionInfoOfVisibleSegmentationLayer: resolutionInfo,
+      magInfoOfVisibleSegmentationLayer: resolutionInfo,
     } = this.props;
     return (
       <div
@@ -965,7 +965,7 @@ class SegmentsView extends React.Component<Props, State> {
             onChange={this.handleQualityChangeForPrecomputation}
           >
             {resolutionInfo
-              .getResolutionsWithIndices()
+              .getMagsWithIndices()
               .map(([log2Index, mag]: [number, Vector3], index: number) => (
                 <Option value={log2Index} key={log2Index}>
                   {formatMagWithLabel(mag, index)}
@@ -1674,8 +1674,8 @@ class SegmentsView extends React.Component<Props, State> {
   showContextMenuAt = (xPos: number, yPos: number, menu: MenuProps) => {
     // On Windows the right click to open the context menu is also triggered for the overlay
     // of the context menu. This causes the context menu to instantly close after opening.
-    // Therefore delay the state update to delay that the context menu is rendered.
-    // Thus the context overlay does not get the right click as an event and therefore does not close.
+    // Therefore delay the state update to delay that the context menu is rendered. Thus
+    // the context overlay does not get the right click as an event and therefore does not close.
     setTimeout(
       () =>
         this.setState({

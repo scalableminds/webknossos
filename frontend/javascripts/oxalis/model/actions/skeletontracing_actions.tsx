@@ -29,7 +29,8 @@ type DeleteBranchPointAction = ReturnType<typeof deleteBranchPointAction>;
 type DeleteBranchpointByIdAction = ReturnType<typeof deleteBranchpointByIdAction>;
 type ToggleTreeAction = ReturnType<typeof toggleTreeAction>;
 type SetTreeVisibilityAction = ReturnType<typeof setTreeVisibilityAction>;
-type SetExpandedTreeGroupsAction = ReturnType<typeof setExpandedTreeGroupsAction>;
+type SetExpandedTreeGroupsByKeysAction = ReturnType<typeof setExpandedTreeGroupsByKeysAction>;
+type SetExpandedTreeGroupsByIdsAction = ReturnType<typeof setExpandedTreeGroupsByIdsAction>;
 type ToggleAllTreesAction = ReturnType<typeof toggleAllTreesAction>;
 type ToggleInactiveTreesAction = ReturnType<typeof toggleInactiveTreesAction>;
 type ToggleTreeGroupAction = ReturnType<typeof toggleTreeGroupAction>;
@@ -110,7 +111,8 @@ export type SkeletonTracingAction =
   | ToggleTreeAction
   | ToggleAllTreesAction
   | SetTreeVisibilityAction
-  | SetExpandedTreeGroupsAction
+  | SetExpandedTreeGroupsByKeysAction
+  | SetExpandedTreeGroupsByIdsAction
   | ToggleInactiveTreesAction
   | ToggleTreeGroupAction
   | NoAction
@@ -149,7 +151,8 @@ export const SkeletonTracingSaveRelevantActions = [
   "CREATE_COMMENT",
   "DELETE_COMMENT",
   "SET_TREE_GROUPS",
-  "SET_EXPANDED_TREE_GROUPS",
+  "SET_EXPANDED_TREE_GROUPS_BY_KEYS",
+  "SET_EXPANDED_TREE_GROUPS_BY_IDS",
   "SET_TREE_GROUP",
   "SET_MERGER_MODE_ENABLED",
   "TOGGLE_TREE",
@@ -349,9 +352,15 @@ export const toggleTreeAction = (
     timestamp,
   }) as const;
 
-export const setExpandedTreeGroupsAction = (expandedGroups: Set<Key>) =>
+export const setExpandedTreeGroupsByKeysAction = (expandedGroups: Set<Key>) =>
   ({
-    type: "SET_EXPANDED_TREE_GROUPS",
+    type: "SET_EXPANDED_TREE_GROUPS_BY_KEYS",
+    expandedGroups,
+  }) as const;
+
+export const setExpandedTreeGroupsByIdsAction = (expandedGroups: Set<number>) =>
+  ({
+    type: "SET_EXPANDED_TREE_GROUPS_BY_IDS",
     expandedGroups,
   }) as const;
 

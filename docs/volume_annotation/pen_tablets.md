@@ -20,7 +20,7 @@ Pen buttons:
 
 - Lower button: Move (ALT)
 
-You can find the full list for keyboard shortcuts in the [documentation](../ui//keyboard_shortcuts.md).
+You can find the full list for keyboard shortcuts in the [documentation](../ui/keyboard_shortcuts.md).
 
 
 ### Annotating with Wacom Pens

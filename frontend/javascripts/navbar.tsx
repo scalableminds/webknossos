@@ -376,7 +376,7 @@ function getHelpSubMenu(
       label: (
         <a
           target="_blank"
-          href="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html"
+          href="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html"
           rel="noopener noreferrer"
         >
           Keyboard Shortcuts

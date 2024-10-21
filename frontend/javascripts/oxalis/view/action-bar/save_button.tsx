@@ -13,7 +13,6 @@ import {
   LoadingOutlined,
 } from "@ant-design/icons";
 import ErrorHandling from "libs/error_handling";
-import * as Utils from "libs/utils";
 import FastTooltip from "components/fast_tooltip";
 import { Tooltip } from "antd";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";

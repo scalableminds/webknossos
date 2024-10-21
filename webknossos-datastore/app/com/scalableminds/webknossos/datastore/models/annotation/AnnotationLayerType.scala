@@ -17,5 +17,7 @@ object AnnotationLayerType extends ExtendedEnumeration {
     p match {
       case AnnotationLayerTypeProto.skeleton => Skeleton
       case AnnotationLayerTypeProto.volume   => Volume
+      case AnnotationLayerTypeProto.Unrecognized(_) =>
+        Volume // unrecognized should never happen, artifact of proto code generation
     }
 }

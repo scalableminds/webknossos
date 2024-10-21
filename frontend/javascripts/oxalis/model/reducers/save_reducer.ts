@@ -4,13 +4,9 @@ import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, SaveState } from "oxalis/store";
 import type { SetVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
-import { getStats } from "oxalis/model/accessors/annotation_accessor";
+import { type CombinedTracingStats, getStats } from "oxalis/model/accessors/annotation_accessor";
 import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
-import { updateKey2 } from "oxalis/model/helpers/deep_update";
-import {
-  updateEditableMapping,
-  updateVolumeTracing,
-} from "oxalis/model/reducers/volumetracing_reducer_helpers";
+import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import Date from "libs/date";
 import type { UpdateAction, UpdateActionWithTracingId } from "../sagas/update_actions";
 
@@ -31,21 +27,9 @@ export function getTotalSaveQueueLength(queueObj: SaveState["queue"]) {
 }
 
 function updateVersion(state: OxalisState, action: SetVersionNumberAction) {
-  if (action.saveQueueType === "skeleton" && state.tracing.skeleton != null) {
-    return updateKey2(state, "tracing", "skeleton", {
-      version: action.version,
-    });
-  } else if (action.saveQueueType === "volume") {
-    return updateVolumeTracing(state, action.tracingId, {
-      version: action.version,
-    });
-  } else if (action.saveQueueType === "mapping") {
-    /*return updateEditableMapping(state, action.tracingId, {
-      version: action.version,
-    });*/
-  }
-
-  return state;
+  return updateKey(state, "tracing", {
+    version: action.version,
+  });
 }
 
 function SaveReducer(state: OxalisState, action: Action): OxalisState {
@@ -55,25 +39,18 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
       // update actions.
       const dispatchedAction = action;
       const { items, transactionId } = dispatchedAction;
-      if (items.length === 0) {
-        return state;
-      }
-      // Only report tracing statistics, if a "real" update to the tracing happened
-      const stats = _.some(
+      const stats: CombinedTracingStats | null = _.some(
         dispatchedAction.items,
         (ua) => ua.name !== "updateSkeletonTracing" && ua.name !== "updateVolumeTracing",
       )
-        ? getStats(state.tracing, dispatchedAction.saveQueueType, dispatchedAction.tracingId)
+        ? getStats(state.tracing)
         : null;
       const { activeUser } = state;
       if (activeUser == null) {
         throw new Error("Tried to save something even though user is not logged in.");
       }
 
-      const updateActionChunks = _.chunk(
-        items,
-        MAXIMUM_ACTION_COUNT_PER_BATCH[dispatchedAction.saveQueueType],
-      );
+      const updateActionChunks = _.chunk(items, MAXIMUM_ACTION_COUNT_PER_BATCH);
 
       const transactionGroupCount = updateActionChunks.length;
       const actionLogInfo = JSON.stringify(getActionLog().slice(-10));
@@ -99,7 +76,6 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
       // caught by the following check. If the bug appears again, we can investigate with more
       // details thanks to airbrake.
       if (
-        dispatchedAction.saveQueueType === "skeleton" &&
         oldQueue.length > 0 &&
         newQueue.length > 0 &&
         newQueue.at(-1)?.actions.some((action) => NOT_IDEMPOTENT_ACTIONS.includes(action.name)) &&

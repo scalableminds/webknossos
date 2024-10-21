@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import _ from "lodash";
 import dayjs from "dayjs";
 import type { APIUpdateActionBatch } from "types/api_flow_types";
-import type { Versions } from "oxalis/view/version_view";
 import { chunkIntoTimeWindows } from "libs/utils";
 import {
   getUpdateActionLog,
@@ -13,7 +12,6 @@ import {
 import { handleGenericError } from "libs/error_handling";
 import {
   pushSaveQueueTransaction,
-  type SaveQueueType,
   setVersionNumberAction,
 } from "oxalis/model/actions/save_actions";
 import {
@@ -24,21 +22,19 @@ import {
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { Model } from "oxalis/singletons";
-import type { EditableMapping, OxalisState, SkeletonTracing, VolumeTracing } from "oxalis/store";
+import type { HybridTracing, OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
 import { api } from "oxalis/singletons";
-import Toast from "libs/toast";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useFetch } from "libs/react_helpers";
 import { useSelector } from "react-redux";
+import { getCreationTimestamp } from "oxalis/model/accessors/annotation_accessor";
 
 const ENTRIES_PER_PAGE = 5000;
 
 type Props = {
-  versionedObjectType: SaveQueueType;
-  tracing: SkeletonTracing | VolumeTracing | EditableMapping;
   allowUpdate: boolean;
 };
 
@@ -49,25 +45,18 @@ type GroupedAndChunkedVersions = Record<string, Array<Array<APIUpdateActionBatch
 const VERSION_LIST_PLACEHOLDER = {
   emptyText: "No versions created yet.",
 };
-export async function previewVersion(versions?: Versions) {
+export async function previewVersion(version?: number) {
   const state = Store.getState();
   const { controlMode } = state.temporaryConfiguration;
   const { annotationId } = state.tracing;
-  await api.tracing.restart(null, annotationId, controlMode, versions);
+  await api.tracing.restart(null, annotationId, controlMode, version);
   Store.dispatch(setAnnotationAllowUpdateAction(false));
   const segmentationLayersToReload = [];
 
-  if (versions == null) {
-    // No versions were passed which means that the newest annotation should be
-    // shown. Therefore, reload all segmentation layers.
-    segmentationLayersToReload.push(...Model.getSegmentationTracingLayers());
-  } else if (versions.volumes != null) {
-    // Since volume versions were specified, reload the volumeTracing layers
-    const versionedSegmentationLayers = Object.keys(versions.volumes).map((volumeTracingId) =>
-      Model.getSegmentationTracingLayer(volumeTracingId),
-    );
-    segmentationLayersToReload.push(...versionedSegmentationLayers);
-  }
+  // TODO: properly determine which layers to reload.
+  // No versions were passed which means that the newest annotation should be
+  // shown. Therefore, reload all segmentation layers.
+  segmentationLayersToReload.push(...Model.getSegmentationTracingLayers());
 
   for (const segmentationLayer of segmentationLayersToReload) {
     segmentationLayer.cube.collectAllBuckets();
@@ -80,20 +69,13 @@ async function handleRestoreVersion(
   versions: APIUpdateActionBatch[],
   version: number,
 ) {
-  const getNewestVersion = () => _.max(versions.map((batch) => batch.version)) || 0;
   if (props.allowUpdate) {
-    Store.dispatch(
-      setVersionNumberAction(
-        getNewestVersion(),
-        props.versionedObjectType,
-        props.tracing.tracingId,
-      ),
-    );
+    const newestVersion = _.max(versions.map((batch) => batch.version)) || 0;
+    Store.dispatch(setVersionNumberAction(newestVersion));
     Store.dispatch(
       pushSaveQueueTransaction(
         [revertToVersion(version)],
-        props.versionedObjectType,
-        props.tracing.tracingId,
+        "experimental; leaving out tracingId as this should not be required",
       ),
     );
     await Model.ensureSavedState();
@@ -102,28 +84,7 @@ async function handleRestoreVersion(
   } else {
     const { annotationType, annotationId, volumes } = Store.getState().tracing;
     const includesVolumeFallbackData = volumes.some((volume) => volume.fallbackLayer != null);
-    downloadAnnotation(annotationId, annotationType, includesVolumeFallbackData, {
-      [props.versionedObjectType]: version,
-    });
-  }
-}
-
-function handlePreviewVersion(props: Props, version: number) {
-  if (props.versionedObjectType === "skeleton") {
-    return previewVersion({
-      skeleton: version,
-    });
-  } else if (props.versionedObjectType === "volume") {
-    return previewVersion({
-      volumes: {
-        [props.tracing.tracingId]: version,
-      },
-    });
-  } else {
-    Toast.warning(
-      `Version preview and restoring for ${props.versionedObjectType}s is not supported yet.`,
-    );
-    return Promise.resolve();
+    downloadAnnotation(annotationId, annotationType, includesVolumeFallbackData, version);
   }
 }
 
@@ -146,7 +107,7 @@ const getGroupedAndChunkedVersions = _.memoize(
 );
 
 async function getUpdateActionLogPage(
-  props: Props,
+  tracing: HybridTracing,
   tracingStoreUrl: string,
   annotationId: string,
   newestVersion: number,
@@ -186,7 +147,7 @@ async function getUpdateActionLogPage(
   if (oldestVersionInPage === 1) {
     updateActionLog.push({
       version: 0,
-      value: [serverCreateTracing(props.tracing.createdTimestamp)],
+      value: [serverCreateTracing(getCreationTimestamp(tracing))],
     });
   }
 
@@ -199,15 +160,15 @@ async function getUpdateActionLogPage(
 }
 
 function VersionList(props: Props) {
-  const { tracing } = props;
   const tracingStoreUrl = useSelector((state: OxalisState) => state.tracing.tracingStore.url);
   const annotationId = useSelector((state: OxalisState) => state.tracing.annotationId);
 
   const newestVersion = useFetch(
     () => getNewestVersionForTracing(tracingStoreUrl, annotationId),
     null,
-    [tracing],
+    [annotationId],
   );
+  console.log("newestVersion", newestVersion);
 
   if (newestVersion == null) {
     return (
@@ -221,24 +182,26 @@ function VersionList(props: Props) {
 }
 
 function InnerVersionList(props: Props & { newestVersion: number }) {
+  const tracing = useSelector((state: OxalisState) => state.tracing);
   const queryClient = useQueryClient();
   // Remember the version with which the version view was opened (
   // the active version could change by the actions of the user).
   // Based on this version, the page numbers are calculated.
   const { newestVersion } = props;
-  const [initialVersion] = useState(props.tracing.version);
+  const [initialVersion] = useState(tracing.version);
 
   function fetchPaginatedVersions({ pageParam }: { pageParam?: number }) {
+    // TODO: maybe refactor this so that this method is not calculated very rendering cycle
     if (pageParam == null) {
       pageParam = Math.floor((newestVersion - initialVersion) / ENTRIES_PER_PAGE);
     }
     const { url: tracingStoreUrl } = Store.getState().tracing.tracingStore;
     const annotationId = Store.getState().tracing.annotationId;
 
-    return getUpdateActionLogPage(props, tracingStoreUrl, annotationId, newestVersion, pageParam);
+    return getUpdateActionLogPage(tracing, tracingStoreUrl, annotationId, newestVersion, pageParam);
   }
 
-  const queryKey = ["versions", props.tracing.tracingId];
+  const queryKey = ["versions", tracing.annotationId];
 
   useEffectOnlyOnce(() => {
     // Remove all previous existent queries so that the content of this view
@@ -330,11 +293,11 @@ function InnerVersionList(props: Props & { newestVersion: number }) {
                 batches={batchesOrDateString}
                 allowUpdate={props.allowUpdate}
                 newestVersion={flattenedVersions[0].version}
-                activeVersion={props.tracing.version}
+                activeVersion={tracing.version}
                 onRestoreVersion={(version) =>
                   handleRestoreVersion(props, flattenedVersions, version)
                 }
-                onPreviewVersion={(version) => handlePreviewVersion(props, version)}
+                onPreviewVersion={(version) => previewVersion(version)}
                 key={batchesOrDateString[0].version}
               />
             )

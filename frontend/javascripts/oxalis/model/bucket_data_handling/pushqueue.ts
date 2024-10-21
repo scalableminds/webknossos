@@ -17,6 +17,7 @@ const PUSH_DEBOUNCE_TIME = 1000;
 
 class PushQueue {
   cube: DataCube;
+  tracingId: string;
 
   // The pendingBuckets contains all buckets that should be:
   // - snapshotted,
@@ -41,8 +42,9 @@ class PushQueue {
   // transaction.
   private waitTimeStartTimeStamp: number | null = null;
 
-  constructor(cube: DataCube) {
+  constructor(cube: DataCube, tracingId: string) {
     this.cube = cube;
+    this.tracingId = tracingId;
     this.pendingBuckets = new Set();
   }
 
@@ -131,7 +133,7 @@ class PushQueue {
 
   push = createDebouncedAbortableParameterlessCallable(this.pushImpl, PUSH_DEBOUNCE_TIME, this);
 
-  async pushTransaction(batch: Array<DataBucket>): Promise<void> {
+  private async pushTransaction(batch: Array<DataBucket>): Promise<void> {
     /*
      * Create a transaction from the batch and push it into the save queue.
      */
@@ -152,7 +154,7 @@ class PushQueue {
       const items = await this.fifoResolver.orderedWaitFor(
         createCompressedUpdateBucketActions(batch),
       );
-      Store.dispatch(pushSaveQueueTransaction(items, "volume", this.cube.layerName));
+      Store.dispatch(pushSaveQueueTransaction(items, this.tracingId, this.cube.layerName));
 
       this.compressingBucketCount -= batch.length;
     } catch (error) {

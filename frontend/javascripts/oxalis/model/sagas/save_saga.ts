@@ -165,10 +165,11 @@ export function* sendSaveRequestToServer(): Saga<number> {
   const fullSaveQueue = yield* select((state) => state.save.queue);
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
   let compactedSaveQueue = compactSaveQueue(saveQueue);
+  const tracing = yield* select((state) => state.tracing);
   const tracings = yield* select((state) =>
     _.compact([state.tracing.skeleton, ...state.tracing.volumes]),
   );
-  const version = _.max(tracings.map((t) => t.version)) || 0;
+  const version = _.max(tracings.map((t) => t.version).concat([tracing.version])) || 0;
   const annotationId = yield* select((state) => state.tracing.annotationId);
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
   let versionIncrement;
@@ -202,11 +203,7 @@ export function* sendSaveRequestToServer(): Saga<number> {
         );
       }
 
-      for (const tracing of tracings) {
-        yield* put(
-          setVersionNumberAction(version + versionIncrement, tracing.type, tracing.tracingId),
-        );
-      }
+      yield* put(setVersionNumberAction(version + versionIncrement));
       yield* put(setLastSaveTimestampAction());
       yield* put(shiftSaveQueueAction(saveQueue.length));
 
@@ -446,7 +443,7 @@ export function* setupSavingForTracingType(
     );
 
     if (items.length > 0) {
-      yield* put(pushSaveQueueTransaction(items, saveQueueType, tracingId));
+      yield* put(pushSaveQueueTransaction(items, tracingId));
     }
 
     prevTracing = tracing;
@@ -502,14 +499,7 @@ function* watchForSaveConflicts() {
       // old reference to tracing might be outdated now due to the
       // immutability.
       const versionOnClient = yield* select((state) => {
-        if (tracing.type === "volume") {
-          return getVolumeTracingById(state.tracing, tracing.tracingId).version;
-        }
-        const { skeleton } = state.tracing;
-        if (skeleton == null) {
-          throw new Error("Skeleton must exist at this point.");
-        }
-        return skeleton.version;
+        return state.tracing.version;
       });
 
       const toastKey = `save_conflicts_warning_${tracing.tracingId}`;

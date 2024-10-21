@@ -1,6 +1,5 @@
 import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
-import type { Versions } from "oxalis/view/version_view";
 import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
 import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -32,14 +31,14 @@ export class OxalisModel {
     initialMaybeCompoundType: APICompoundType | null,
     initialCommandType: TraceOrViewCommand,
     initialFetch: boolean,
-    versions?: Versions,
+    version?: number | undefined | null,
   ) {
     try {
       const initializationInformation = await initialize(
         initialMaybeCompoundType,
         initialCommandType,
         initialFetch,
-        versions,
+        version,
       );
 
       if (initializationInformation) {

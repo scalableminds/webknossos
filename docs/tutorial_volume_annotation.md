@@ -4,7 +4,7 @@ In this tutorial, we will explore the volume annotation features of WEBKNOSSOS. 
 
 Here is full tutorial video, alternatively continue reading below.
 
-![youtube-video](https://www.youtube.com/embed/HgFYzy-lrZ0)
+![youtube-video](https://www.youtube.com/embed/nWJ-ZmFJiN8)
 
 If you already have an account, go to the “featured publications” page. Alternatively, sign up for free in less than a minute on [https://webknossos.org](https://webknossos.org).
 
@@ -25,7 +25,7 @@ Create a new segment by selecting a new segment ID. Use the trace tool to draw m
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-volume-annotation/03_new_segments_lasso.mp4){: autoplay loop muted}
 
 ## Smart Annotation Tools
-Now, let’s explore the smart tools of WEBKNOSSOS. Choose the quick-select tool and turn on the AI option. Click on a cell you want to segment or draw a rectangle around it. Create and annotate new segments by pressing the keyboard shortcut “C”.
+Now, let’s explore the smart tools of WEBKNOSSOS. First, activate the quick-select tool. In the settings, choose the number of sections you'd like to predict. Then, click on a cell to automatically segment it across the chosen number of sections. Repeat this process as much as needed and you will have your cell segmented in no time! Alternatively, you can draw a rectangle around the cell you'd like to segment.
 
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-volume-annotation/04_new_AI_quick_select.mp4){: autoplay loop muted}
 

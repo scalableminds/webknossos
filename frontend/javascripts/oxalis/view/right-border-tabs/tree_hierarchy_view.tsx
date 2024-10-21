@@ -94,7 +94,7 @@ function TreeHierarchyView(props: Props) {
       // For some React rendering/timing reasons, the target element might not be rendered yet. That messes with calculating the offsets for scrolling. Hence delay this a bit
       setTimeout(() => {
         if (treeRef.current) treeRef.current.scrollTo({ key: activeTreeKey, align: "auto" });
-      }, 30);
+      }, 50);
 
       // Make sure to select the active tree (for highlighting etc)
       // Remember, the active tree can be changed by actions outside of this component

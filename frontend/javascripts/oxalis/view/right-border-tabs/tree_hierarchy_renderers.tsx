@@ -27,7 +27,7 @@ import {
   deleteTreeAction,
   setActiveTreeAction,
   setActiveTreeGroupAction,
-  setExpandedTreeGroupsAction,
+  setExpandedTreeGroupsByKeysAction,
   setTreeColorAction,
   setTreeEdgeVisibilityAction,
   setTreeGroupAction,
@@ -485,7 +485,7 @@ function setActiveTreeGroup(groupId: number) {
 }
 
 export function setExpandedGroups(expandedTreeGroups: Set<string>) {
-  Store.dispatch(setExpandedTreeGroupsAction(expandedTreeGroups));
+  Store.dispatch(setExpandedTreeGroupsByKeysAction(expandedTreeGroups));
 }
 
 function handleMeasureSkeletonLength(treeId: number, treeName: string) {

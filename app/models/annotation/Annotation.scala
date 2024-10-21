@@ -22,6 +22,11 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
+object AnnotationDefaults {
+  val defaultName: String = ""
+  val defaultDescription: String = ""
+}
+
 case class Annotation(
     _id: ObjectId,
     _dataset: ObjectId,
@@ -29,9 +34,9 @@ case class Annotation(
     _team: ObjectId,
     _user: ObjectId,
     annotationLayers: List[AnnotationLayer],
-    description: String = "",
+    description: String = AnnotationDefaults.defaultDescription,
     visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
-    name: String = "",
+    name: String = AnnotationDefaults.defaultName,
     viewConfiguration: Option[JsObject] = None,
     state: AnnotationState.Value = Active,
     isLockedByOwner: Boolean = false,
@@ -140,11 +145,18 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
     q"""INSERT INTO webknossos.annotation_layers(_annotation, tracingId, typ, name, statistics)
           VALUES($annotationId, ${a.tracingId}, ${a.typ}, ${a.name}, ${a.stats})""".asUpdate
 
-  def deleteOne(annotationId: ObjectId, layerName: String): Fox[Unit] =
+  def deleteOneByName(annotationId: ObjectId, layerName: String): Fox[Unit] =
     for {
       _ <- run(q"""DELETE FROM webknossos.annotation_layers
                    WHERE _annotation = $annotationId
                    AND name = $layerName""".asUpdate)
+    } yield ()
+
+  def deleteOneByTracingId(annotationId: ObjectId, tracingId: String): Fox[Unit] =
+    for {
+      _ <- run(q"""DELETE FROM webknossos.annotation_layers
+                   WHERE _annotation = $annotationId
+                   AND tracingId = $tracingId""".asUpdate)
     } yield ()
 
   def findAnnotationIdByTracingId(tracingId: String): Fox[ObjectId] =

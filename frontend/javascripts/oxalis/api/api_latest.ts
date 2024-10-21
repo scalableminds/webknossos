@@ -7,7 +7,6 @@ import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_flow_types";
 import { InputKeyboardNoLoop } from "libs/input";
 import { M4x4, type Matrix4x4, V3, type Vector16 } from "libs/mjs";
-import type { Versions } from "oxalis/view/version_view";
 import {
   addTreesAndGroupsAction,
   setActiveNodeAction,
@@ -1115,7 +1114,7 @@ class TracingApi {
     newMaybeCompoundType: APICompoundType | null,
     newAnnotationId: string,
     newControlMode: ControlMode,
-    versions?: Versions,
+    version?: number | undefined | null,
     keepUrlState: boolean = false,
   ) {
     if (newControlMode === ControlModeEnum.VIEW)
@@ -1134,7 +1133,7 @@ class TracingApi {
         type: newControlMode,
       },
       false,
-      versions,
+      version,
     );
     Store.dispatch(discardSaveQueuesAction());
     Store.dispatch(wkReadyAction());

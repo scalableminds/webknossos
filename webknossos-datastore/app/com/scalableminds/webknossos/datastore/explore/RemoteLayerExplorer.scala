@@ -24,9 +24,6 @@ trait RemoteLayerExplorer extends FoxImplicits {
 
   def name: String
 
-  protected def parseJsonFromPath[T: Reads](path: VaultPath): Fox[T] =
-    path.parseAsJson[T]
-
   protected def looksLikeSegmentationLayer(layerName: String, elementClass: ElementClass.Value): Boolean =
     Set("segmentation", "labels").contains(layerName.toLowerCase) && ElementClass.segmentationElementClasses.contains(
       elementClass)

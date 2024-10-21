@@ -22,7 +22,7 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
                        credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       zarrJsonPath <- Fox.successful(remotePath / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
-      groupHeader <- parseJsonFromPath[Zarr3GroupHeader](zarrJsonPath) ?~> s"Failed to read OME NGFF header at $zarrJsonPath"
+      groupHeader <- zarrJsonPath.parseAsJson[Zarr3GroupHeader] ?~> s"Failed to read OME NGFF header at $zarrJsonPath"
       ngffMetadata <- groupHeader.ngffMetadata.toFox
       labelLayers <- exploreLabelLayers(remotePath, credentialId).orElse(
         Fox.successful(List[(Zarr3Layer, VoxelSize)]()))
@@ -87,7 +87,7 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
     val magPath = layerPath / ngffDataset.path
     val zarrJsonPath = magPath / Zarr3ArrayHeader.FILENAME_ZARR_JSON
     for {
-      parsedHeader <- parseJsonFromPath[Zarr3ArrayHeader](zarrJsonPath) ?~> s"failed to read zarr header at $zarrJsonPath"
+      parsedHeader <- zarrJsonPath.parseAsJson[Zarr3ArrayHeader] ?~> s"failed to read zarr header at $zarrJsonPath"
     } yield parsedHeader
   }
 
@@ -123,7 +123,7 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
     for {
       fullLabelPath <- Fox.successful(remotePath / "labels" / labelPath)
       zarrJsonPath = fullLabelPath / Zarr3ArrayHeader.FILENAME_ZARR_JSON
-      groupHeader <- parseJsonFromPath[Zarr3GroupHeader](zarrJsonPath)
+      groupHeader <- zarrJsonPath.parseAsJson[Zarr3GroupHeader]
       ngffMetadata <- groupHeader.ngffMetadata.toFox
       layers: List[List[(DataLayerWithMagLocators, VoxelSize)]] <- Fox.serialCombined(ngffMetadata.multiscales)(
         multiscale =>

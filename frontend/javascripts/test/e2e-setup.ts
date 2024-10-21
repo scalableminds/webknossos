@@ -39,7 +39,7 @@ const volatileKeys: Array<string | number | symbol> = [
   "lastActivity",
   "tracingTime",
   "tracingId",
-  "sortingKey"
+  "sortingKey",
 ];
 export function replaceVolatileValues(obj: ArbitraryObject | null | undefined) {
   if (obj == null) return obj;
@@ -86,9 +86,9 @@ global.fetch = function fetchWrapper(url, options) {
   return promise;
 };
 
-export async function scanDatasetsFromDisk(){
+export async function scanDatasetsFromDisk() {
   await fetch(`http://localhost:9000/data/triggers/checkInboxBlocking?token=${currToken}`, {
-    method: "POST"
+    method: "POST",
   });
 }
 

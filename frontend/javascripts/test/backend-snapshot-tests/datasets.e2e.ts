@@ -5,7 +5,7 @@ import {
   resetDatabase,
   writeTypeCheckingFile,
   scanDatasetsFromDisk,
-  replaceVolatileValues
+  replaceVolatileValues,
 } from "test/e2e-setup";
 import type { APIDataset } from "types/api_flow_types";
 import * as api from "admin/admin_rest_api";
@@ -37,7 +37,7 @@ test.serial("getDatasets", async (t) => {
   writeTypeCheckingFile(datasets, "dataset", "APIDatasetCompact", {
     isArray: true,
   });
-  console.log(datasets)
+  console.log(datasets);
   t.snapshot(replaceVolatileValues(datasets));
 });
 test("getActiveDatasets", async (t) => {
@@ -73,12 +73,12 @@ test("updateDatasetTeams", async (t) => {
 // });
 
 test("Zarr streaming", async (t) => {
-  const zattrsResp = await fetch("/data/zarr/Organization_X/test-dataset/segmentation/.zattrs", {})
-  const zattrs =  await zattrsResp.text()
-  t.snapshot(zattrs)
+  const zattrsResp = await fetch("/data/zarr/Organization_X/test-dataset/segmentation/.zattrs", {});
+  const zattrs = await zattrsResp.text();
+  t.snapshot(zattrs);
 
-  const rawData = await fetch("/data/zarr/Organization_X/test-dataset/segmentation/1/0.0.0", {})
-  const data = await rawData.arrayBuffer()
+  const rawData = await fetch("/data/zarr/Organization_X/test-dataset/segmentation/1/0.0.0", {});
+  const data = await rawData.arrayBuffer();
   const base64 = btoa(String.fromCharCode(...new Uint8Array(data)));
-  t.snapshot(base64)
+  t.snapshot(base64);
 });

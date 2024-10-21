@@ -200,7 +200,7 @@ function TreeHierarchyView(props: Props) {
           selectGroupById(props.deselectAllTrees, groupId);
         },
 
-        onCancel() { },
+        onCancel() {},
       });
     } else {
       selectGroupById(props.deselectAllTrees, groupId);
@@ -285,12 +285,12 @@ function TreeHierarchyView(props: Props) {
                     node.type === GroupTypeEnum.TREE
                       ? renderTreeNode(props, onOpenContextMenu, hideContextMenu, node)
                       : renderGroupNode(
-                        props,
-                        onOpenContextMenu,
-                        hideContextMenu,
-                        node,
-                        expandedNodeKeys,
-                      )
+                          props,
+                          onOpenContextMenu,
+                          hideContextMenu,
+                          node,
+                          expandedNodeKeys,
+                        )
                   }
                   switcherIcon={<DownOutlined />}
                   onSelect={(_selectedKeys, info: { node: TreeNode; nativeEvent: MouseEvent }) =>

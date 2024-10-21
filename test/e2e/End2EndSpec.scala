@@ -8,6 +8,8 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.WithServer
 
+import java.io.{File, FileInputStream, FileOutputStream, IOException}
+import java.util.zip.ZipInputStream
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.sys.process._
@@ -27,6 +29,8 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
 
     "pass the e2e tests" in new WithServer(app = application, port = testPort) {
 
+      ensureTestDataset()
+
       val resp: WSResponse = Await.result(ws.url(s"http://localhost:$testPort").get(), 2 seconds)
       resp.status === 200
 
@@ -41,6 +45,54 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
     val argumentsString = arguments.commandLine.arguments
     val customArgumentsMap = argumentsString.filter(_.startsWith("-D")).map(_.split("="))
     customArgumentsMap.groupBy(_(0).substring(2)).view.mapValues(_(0).last).toMap
+  }
+
+  private def ensureTestDataset(): Unit = {
+    val testDatasetPath = "test/dataset/test-dataset.zip"
+    // Ensure that org directory exists
+    val dataDirectory = new File("binaryData/Organization_X")
+    if (!dataDirectory.exists()) {
+      throw new Exception("Organization_X directory does not exist.")
+    }
+    val testDatasetZip = new File(testDatasetPath)
+    // Unzip test dataset to data directory using Java Zip
+    if (!testDatasetZip.exists()) {
+      throw new Exception("Test dataset zip file does not exist.")
+    }
+    // Stop if the test dataset is already unzipped
+    if (dataDirectory.listFiles().exists(_.getName == "test-dataset")) {
+      return
+    }
+    unzipArchive(testDatasetPath, dataDirectory)
+  }
+
+  private def unzipArchive(archivePath: String, destination: File): Unit = {
+    val buffer = new Array[Byte](1024)
+    val zis = new ZipInputStream(new FileInputStream(archivePath))
+    var zipEntry = zis.getNextEntry
+    while (zipEntry != null) {
+      val newFile = new File(destination, zipEntry.getName)
+      if (zipEntry.isDirectory) {
+        if (!newFile.isDirectory && !newFile.mkdirs) {
+          throw new IOException("Failed to create directory " + newFile)
+        }
+      } else {
+        val parent = newFile.getParentFile
+        if (!parent.isDirectory && !parent.mkdirs)
+          throw new IOException("Failed to create directory " + parent)
+        val fos = new FileOutputStream(newFile)
+        var len = zis.read(buffer)
+        while (len > 0) {
+          fos.write(buffer, 0, len)
+          len = zis.read(buffer)
+        }
+        fos.close()
+
+      }
+      zipEntry = zis.getNextEntry
+    }
+
+    zis.closeEntry()
   }
 
 }

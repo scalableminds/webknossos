@@ -183,54 +183,6 @@ class AnnotationController @Inject()(
       } yield JsonOk(json, Messages("annotation.isLockedByOwner.success"))
   }
 
-  def addAnnotationLayer(typ: String, id: String): Action[AnnotationLayerParameters] =
-    sil.SecuredAction.async(validateJson[AnnotationLayerParameters]) { implicit request =>
-      for {
-        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.addLayer.explorationalsOnly"
-        restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
-        _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-        annotation <- provider.provideAnnotation(typ, id, request.identity)
-        newLayerName = request.body.name.getOrElse(AnnotationLayer.defaultNameForType(request.body.typ))
-        _ <- bool2Fox(!annotation.annotationLayers.exists(_.name == newLayerName)) ?~> "annotation.addLayer.nameInUse"
-        organization <- organizationDAO.findOne(request.identity._organization)
-        _ <- annotationService.addAnnotationLayer(annotation, organization._id, request.body)
-        updated <- provider.provideAnnotation(typ, id, request.identity)
-        json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
-      } yield JsonOk(json)
-    }
-
-  def addAnnotationLayerWithoutType(id: String): Action[AnnotationLayerParameters] =
-    sil.SecuredAction.async(validateJson[AnnotationLayerParameters]) { implicit request =>
-      for {
-        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
-        result <- addAnnotationLayer(annotation.typ.toString, id)(request)
-      } yield result
-    }
-
-  def deleteAnnotationLayer(typ: String, id: String, layerName: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      for {
-        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.deleteLayer.explorationalsOnly"
-        annotation <- provider.provideAnnotation(typ, id, request.identity)
-        _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
-        layer <- annotation.annotationLayers.find(annotationLayer => annotationLayer.name == layerName) ?~> Messages(
-          "annotation.layer.notFound",
-          layerName)
-        _ <- bool2Fox(annotation.annotationLayers.length != 1) ?~> "annotation.deleteLayer.onlyLayer"
-        _ = logger.info(
-          s"Deleting annotation layer $layerName (tracing id ${layer.tracingId}, typ ${layer.typ}) for annotation $id")
-        _ <- annotationService.deleteAnnotationLayer(annotation, layerName)
-      } yield Ok
-    }
-
-  def deleteAnnotationLayerWithoutType(id: String, layerName: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      for {
-        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
-        result <- deleteAnnotationLayer(annotation.typ.toString, id, layerName)(request)
-      } yield result
-    }
-
   def createExplorational(organizationId: String, datasetName: String): Action[List[AnnotationLayerParameters]] =
     sil.SecuredAction.async(validateJson[List[AnnotationLayerParameters]]) { implicit request =>
       for {
@@ -280,28 +232,6 @@ class AnnotationController @Inject()(
         )
         json <- annotationService.publicWrites(annotation, request.identity) ?~> "annotation.write.failed"
       } yield JsonOk(json)
-    }
-
-  def makeHybrid(typ: String, id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      for {
-        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.addLayer.explorationalsOnly"
-        restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
-        _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-        annotation <- provider.provideAnnotation(typ, id, request.identity)
-        organization <- organizationDAO.findOne(request.identity._organization)
-        _ <- annotationService.makeAnnotationHybrid(annotation, organization._id, fallbackLayerName) ?~> "annotation.makeHybrid.failed"
-        updated <- provider.provideAnnotation(typ, id, request.identity)
-        json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
-      } yield JsonOk(json)
-    }
-
-  def makeHybridWithoutType(id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      for {
-        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
-        result <- makeHybrid(annotation.typ.toString, id, fallbackLayerName)(request)
-      } yield result
     }
 
   def downsample(typ: String, id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {

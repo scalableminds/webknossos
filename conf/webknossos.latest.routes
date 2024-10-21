@@ -128,6 +128,7 @@ GET           /tracingstores/:name/dataSource                                   
 GET           /tracingstores/:name/dataSourceId                                                 controllers.WKRemoteTracingStoreController.dataSourceIdForTracing(name: String, key: String, tracingId: String)
 GET           /tracingstores/:name/annotationId                                                 controllers.WKRemoteTracingStoreController.annotationIdForTracing(name: String, key: String, tracingId: String)
 GET           /tracingstores/:name/dataStoreUri/:datasetName                                    controllers.WKRemoteTracingStoreController.dataStoreUriForDataset(name: String, key: String, organizationId: Option[String], datasetName: String)
+POST          /tracingstores/:name/createTracing                                                controllers.WKRemoteTracingStoreController.createTracing(name: String, key: String, annotationId: String)
 
 # User access tokens for datastore authentication
 POST          /userToken/generate                                                               controllers.UserTokenController.generateTokenForDataStore()
@@ -146,7 +147,6 @@ PATCH         /annotations/:typ/:id/transfer                                    
 PATCH         /annotations/:typ/:id/editLockedState                                             controllers.AnnotationController.editLockedState(typ: String, id: String, isLockedByOwner: Boolean)
 
 GET           /annotations/:id/info                                                             controllers.AnnotationController.infoWithoutType(id: String, timestamp: Option[Long])
-PATCH         /annotations/:id/makeHybrid                                                       controllers.AnnotationController.makeHybridWithoutType(id: String, fallbackLayerName: Option[String])
 PATCH         /annotations/:id/downsample                                                       controllers.AnnotationController.downsampleWithoutType(id: String, tracingId: String)
 PATCH         /annotations/:id/addAnnotationLayer                                               controllers.AnnotationController.addAnnotationLayerWithoutType(id: String)
 PATCH         /annotations/:id/deleteAnnotationLayer                                            controllers.AnnotationController.deleteAnnotationLayerWithoutType(id: String, layerName: String)
@@ -157,7 +157,6 @@ POST          /annotations/:id/acquireMutex                                     
 PATCH         /annotations/addSegmentIndicesToAll                                               controllers.AnnotationController.addSegmentIndicesToAll(parallelBatchCount: Int, dryRun: Boolean, skipTracings: Option[String])
 
 GET           /annotations/:typ/:id/info                                                        controllers.AnnotationController.info(typ: String, id: String, timestamp: Option[Long])
-PATCH         /annotations/:typ/:id/makeHybrid                                                  controllers.AnnotationController.makeHybrid(typ: String, id: String, fallbackLayerName: Option[String])
 PATCH         /annotations/:typ/:id/downsample                                                  controllers.AnnotationController.downsample(typ: String, id: String, tracingId: String)
 PATCH         /annotations/:typ/:id/addAnnotationLayer                                          controllers.AnnotationController.addAnnotationLayer(typ: String, id: String)
 PATCH         /annotations/:typ/:id/deleteAnnotationLayer                                       controllers.AnnotationController.deleteAnnotationLayer(typ: String, id: String, layerName: String)

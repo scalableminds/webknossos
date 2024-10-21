@@ -3,9 +3,12 @@ package controllers
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.tracingstore.TracingUpdatesReport
+import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
 import com.scalableminds.webknossos.tracingstore.tracings.TracingId
 
 import javax.inject.Inject
@@ -16,6 +19,7 @@ import models.annotation.{
   AnnotationDAO,
   AnnotationInformationProvider,
   AnnotationLayerDAO,
+  AnnotationService,
   TracingDataSourceTemporaryStore,
   TracingStoreService
 }
@@ -26,6 +30,7 @@ import models.user.time.TimeSpanService
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import scalapb.GeneratedMessage
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import utils.{ObjectId, WkConf}
 
@@ -39,6 +44,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
                                                userDAO: UserDAO,
                                                annotationInformationProvider: AnnotationInformationProvider,
                                                analyticsService: AnalyticsService,
+                                               annotationService: AnnotationService,
                                                datasetDAO: DatasetDAO,
                                                annotationDAO: AnnotationDAO,
                                                annotationLayerDAO: AnnotationLayerDAO,
@@ -168,4 +174,20 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
         } yield Ok(Json.toJson(dataStore.url))
       }
     }
+
+  def createTracing(name: String, key: String, annotationId: String): Action[AnnotationLayerParameters] =
+    Action.async(validateJson[AnnotationLayerParameters]) { implicit request =>
+      tracingStoreService.validateAccess(name, key) { _ =>
+        implicit val ctx: DBAccessContext = GlobalAccessContext
+        for {
+          annotationIdValidated <- ObjectId.fromString(annotationId)
+          tracingEither <- annotationService.createTracingForExplorational(annotationIdValidated, request.body)
+          tracing: GeneratedMessage = tracingEither match {
+            case Left(s: SkeletonTracing) => s
+            case Right(v: VolumeTracing)  => v
+          }
+        } yield Ok(tracing.toByteArray).as(protobufMimeType)
+      }
+    }
+
 }

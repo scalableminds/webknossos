@@ -7,7 +7,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
+import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, DataSourceLike}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{
@@ -17,6 +17,7 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessRequest
 }
 import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
+import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json, OFormat}
@@ -100,8 +101,21 @@ class TSRemoteWebknossosClient @Inject()(
       .postJson(annotationLayers)
 
   def createTracingFor(annotationId: String,
-                       layerParameters: AnnotationLayerParameters): Fox[Either[SkeletonTracing, VolumeTracing]] =
-    ??? // TODO
+                       layerParameters: AnnotationLayerParameters): Fox[Either[SkeletonTracing, VolumeTracing]] = {
+    val req = rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/createTracing")
+      .addQueryString("annotationId" -> annotationId)
+      .addQueryString("key" -> tracingStoreKey)
+    layerParameters.typ match {
+      case AnnotationLayerType.Volume =>
+        req
+          .postJsonWithProtoResponse[AnnotationLayerParameters, VolumeTracing](layerParameters)(VolumeTracing)
+          .map(Right(_))
+      case AnnotationLayerType.Skeleton =>
+        req
+          .postJsonWithProtoResponse[AnnotationLayerParameters, SkeletonTracing](layerParameters)(SkeletonTracing)
+          .map(Left(_))
+    }
+  }
 
   override def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/validateUserAccess")

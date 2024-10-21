@@ -90,8 +90,8 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
 
   private lazy val connectomeFileCache = new Hdf5FileCache(30)
 
-  def exploreConnectomeFiles(organizationId: String, datasetName: String, dataLayerName: String): Set[String] = {
-    val layerDir = dataBaseDir.resolve(organizationId).resolve(datasetName).resolve(dataLayerName)
+  def exploreConnectomeFiles(organizationId: String, datasetPath: String, dataLayerName: String): Set[String] = {
+    val layerDir = dataBaseDir.resolve(organizationId).resolve(datasetPath).resolve(dataLayerName)
     PathUtils
       .listFiles(layerDir.resolve(connectomesDir),
                  silent = true,
@@ -105,12 +105,12 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
   }
 
   def connectomeFilePath(organizationId: String,
-                         datasetName: String,
+                         datasetPath: String,
                          dataLayerName: String,
                          connectomeFileName: String): Path =
     dataBaseDir
       .resolve(organizationId)
-      .resolve(datasetName)
+      .resolve(datasetPath)
       .resolve(dataLayerName)
       .resolve(connectomesDir)
       .resolve(s"$connectomeFileName.$connectomeFileExtension")

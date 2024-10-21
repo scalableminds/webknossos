@@ -7,7 +7,7 @@ import type {
   APISegmentationLayer,
   APIDataset,
   APIConnectomeFile,
-  APIDatasetId,
+  APIDataSourceId,
 } from "types/api_flow_types";
 import { diffArrays, unique, map3 } from "libs/utils";
 import { getTreeNameForAgglomerateSkeleton } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -354,7 +354,7 @@ class ConnectomeView extends React.Component<Props, State> {
       activeAgglomerateIds.length === 0
     )
       return;
-    const fetchProperties: [string, APIDatasetId, string, string] = [
+    const fetchProperties: [string, APIDataSourceId, string, string] = [
       dataset.dataStore.url,
       dataset,
       getBaseSegmentationName(segmentationLayer),

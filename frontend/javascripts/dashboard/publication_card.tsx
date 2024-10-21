@@ -47,9 +47,7 @@ function getDisplayName(item: PublicationItem): string {
       ? "Unnamed annotation"
       : item.annotation.name;
   }
-  return item.dataset.displayName == null || item.dataset.displayName === ""
-    ? item.dataset.name
-    : item.dataset.displayName;
+  return item.dataset.name;
 }
 
 function getExtendedDetails(item: PublicationItem): ExtendedDatasetDetails {
@@ -71,7 +69,7 @@ function getExtendedDetails(item: PublicationItem): ExtendedDatasetDetails {
 function getUrl(item: PublicationItem): string {
   return item.type === PublicationItemType.ANNOTATION
     ? `/annotations/${item.annotation.id}`
-    : `/datasets/${item.dataset.owningOrganization}/${item.dataset.name}`;
+    : `/datasets/${item.dataset.id}`;
 }
 
 function ThumbnailOverlay({ details }: { details: ExtendedDatasetDetails }) {

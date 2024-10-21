@@ -46,13 +46,13 @@ test("getDatasetAccessList", async (t) => {
 test("updateDatasetTeams", async (t) => {
   const [dataset, newTeams] = await Promise.all([getFirstDataset(), api.getEditableTeams()]);
   const updatedDataset = await api.updateDatasetTeams(
-    dataset,
+    dataset.id,
     newTeams.map((team) => team.id),
   );
   t.snapshot(updatedDataset);
   // undo the Change
   await api.updateDatasetTeams(
-    dataset,
+    dataset.id,
     dataset.allowedTeams.map((team) => team.id),
   );
 }); // test("getDatasetSharingToken and revokeDatasetSharingToken", async t => {

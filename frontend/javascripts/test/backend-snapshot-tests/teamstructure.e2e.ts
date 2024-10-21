@@ -8,6 +8,7 @@ import {
   setCurrToken,
   resetDatabase,
 } from "test/e2e-setup";
+import { getTask } from "admin/api/tasks";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
 test.before("Reset database", async () => {
@@ -111,20 +112,20 @@ test("taskTypes_user_E", async (t) => {
 test("tasks_user_D", async (t) => {
   setCurrToken(tokenUserD);
   t.plan(1);
-  await api.getTask("58135c192faeb34c0081c058").catch((err) => {
+  await getTask("58135c192faeb34c0081c058").catch((err) => {
     t.is(err.messages[0].error, "Task could not be found");
   });
 });
 test("tasks_user_E", async (t) => {
   setCurrToken(tokenUserE);
   t.plan(1);
-  await api.getTask("58135c192faeb34c0081c058").catch((err) => {
+  await getTask("58135c192faeb34c0081c058").catch((err) => {
     t.is(err.messages[0].error, "Task could not be found");
   });
 });
 test("tasks_user_C", async (t) => {
   setCurrToken(tokenUserC);
-  const task = await api.getTask("58135c192faeb34c0081c058");
+  const task = await getTask("58135c192faeb34c0081c058");
   t.is(task.id, "58135c192faeb34c0081c058");
 });
 // User

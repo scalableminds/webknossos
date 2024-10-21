@@ -312,20 +312,16 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
 
   getDatasetName() {
     const {
+      id: datasetId,
       name: datasetName,
-      displayName,
       description: datasetDescription,
-      owningOrganization,
     } = this.props.dataset;
     const { activeUser } = this.props;
 
     const getEditSettingsIcon = () =>
       mayUserEditDataset(activeUser, this.props.dataset) ? (
         <FastTooltip title="Edit dataset settings">
-          <Link
-            to={`/datasets/${owningOrganization}/${datasetName}/edit`}
-            style={{ paddingLeft: 3 }}
-          >
+          <Link to={`/datasets/${datasetId}/edit`} style={{ paddingLeft: 3 }}>
             <Typography.Text type="secondary">
               <SettingOutlined />
             </Typography.Text>
@@ -342,7 +338,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             }}
           >
             <Typography.Title level={5} style={{ display: "initial" }}>
-              {displayName || datasetName}
+              {datasetName}
             </Typography.Title>
             {getEditSettingsIcon()}
           </div>
@@ -363,7 +359,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
       <div className="info-tab-block">
         <p className="sidebar-label">Dataset {getEditSettingsIcon()}</p>
         <Link
-          to={`/datasets/${owningOrganization}/${datasetName}/view`}
+          to={`/datasets/${datasetId}/view`}
           title={`Click to view dataset ${datasetName} without annotation`}
           style={{
             wordWrap: "break-word",

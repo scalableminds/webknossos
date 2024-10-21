@@ -2,7 +2,7 @@ import { InfoCircleOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Modal, Radio, Button, Tooltip, Spin } from "antd";
 import React, { useEffect, useState } from "react";
-import type { APIDataset, APIDatasetId, APISegmentationLayer } from "types/api_flow_types";
+import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 import {
   doesSupportVolumeWithFallback,
   getSomeResolutionInfoForDataset,
@@ -16,7 +16,7 @@ import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import { Slider } from "components/slider";
 
 type Props = {
-  datasetId: APIDatasetId;
+  datasetId: APIDataset["id"];
   onClose: () => void;
 };
 type RestrictResolutionSliderProps = {
@@ -244,9 +244,7 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
           }}
         >
           <Link
-            to={`/datasets/${dataset.owningOrganization}/${
-              dataset.name
-            }/createExplorative/${annotationType}/?minRes=${Math.max(
+            to={`/datasets/${dataset.id}/createExplorative/${annotationType}/?minRes=${Math.max(
               ...resolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex),
             )}&maxRes=${Math.max(
               ...resolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex),
@@ -264,7 +262,7 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
 
   return (
     <Modal
-      title={`Create New Annotation for Dataset “${datasetId.name}”`}
+      title={`Create New Annotation for Dataset “${dataset?.name || datasetId}”`}
       open
       width={500}
       footer={null}

@@ -278,8 +278,10 @@ class AnnotationService @Inject()(
           AnnotationLayerType.toProto(l.typ)
         )
       }
-      //TODO pass right name, description here
-      annotationProto = AnnotationProto(name = None, description = None, version = 0L, layers = layersProto)
+      annotationProto = AnnotationProto(name = Some(AnnotationDefaults.defaultName),
+                                        description = Some(AnnotationDefaults.defaultDescription),
+                                        version = 0L,
+                                        layers = layersProto)
       _ <- tracingStoreClient.saveAnnotationProto(annotationId, annotationProto)
     } yield newAnnotationLayers
 

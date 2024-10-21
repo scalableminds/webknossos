@@ -22,6 +22,11 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
+object AnnotationDefaults {
+  val defaultName: String = ""
+  val defaultDescription: String = ""
+}
+
 case class Annotation(
     _id: ObjectId,
     _dataset: ObjectId,
@@ -29,9 +34,9 @@ case class Annotation(
     _team: ObjectId,
     _user: ObjectId,
     annotationLayers: List[AnnotationLayer],
-    description: String = "",
+    description: String = AnnotationDefaults.defaultDescription,
     visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
-    name: String = "",
+    name: String = AnnotationDefaults.defaultName,
     viewConfiguration: Option[JsObject] = None,
     state: AnnotationState.Value = Active,
     isLockedByOwner: Boolean = false,

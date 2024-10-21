@@ -38,12 +38,14 @@ import type {
   MergeTreeUpdateAction,
   UpdateMappingNameUpdateAction,
   DeleteSegmentDataUpdateAction,
+  UpdateActionWithTracingId,
 } from "oxalis/model/sagas/update_actions";
 import FormattedDate from "components/formatted_date";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { useSelector } from "react-redux";
-import type { OxalisState } from "oxalis/store";
+import type { HybridTracing, OxalisState } from "oxalis/store";
 import { formatUserName, getContributorById } from "oxalis/model/accessors/user_accessor";
+import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
 type Description = {
   description: string;
   icon: React.ReactNode;
@@ -56,7 +58,10 @@ const updateTracingDescription = {
 // determines the order in which update actions are checked
 // to describe an update action batch. See also the comment
 // of the `getDescriptionForBatch` function.
-const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Description> = {
+const descriptionFns: Record<
+  ServerUpdateAction["name"],
+  (firstAction: any, actionCount: number, tracing: HybridTracing) => Description
+> = {
   importVolumeTracing: (): Description => ({
     description: "Imported a volume tracing.",
     icon: <PlusOutlined />,
@@ -122,14 +127,28 @@ const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Descr
     description: `Updated the tree with id ${action.value.id}.`,
     icon: <EditOutlined />,
   }),
-  updateBucket: (): Description => ({
-    description: "Updated the segmentation.",
-    icon: <PictureOutlined />,
-  }),
-  updateSegmentGroups: (): Description => ({
-    description: "Updated the segment groups.",
-    icon: <EditOutlined />,
-  }),
+  updateBucket: (
+    firstAction: UpdateActionWithTracingId,
+    _actionCount: number,
+    tracing: HybridTracing,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    return {
+      description: `Updated the segmentation of layer ${layerName}.`,
+      icon: <PictureOutlined />,
+    };
+  },
+  updateSegmentGroups: (
+    firstAction: UpdateActionWithTracingId,
+    _actionCount: number,
+    tracing: HybridTracing,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    return {
+      description: `Updated the segment groups of layer ${layerName}.`,
+      icon: <EditOutlined />,
+    };
+  },
   updateNode: (action: UpdateNodeUpdateAction): Description => ({
     description: `Updated the node with id ${action.value.id}.`,
     icon: <EditOutlined />,
@@ -160,26 +179,61 @@ const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Descr
     description: "Updated the 3D view.",
     icon: <CodeSandboxOutlined />,
   }),
-  createSegment: (action: CreateSegmentUpdateAction): Description => ({
-    description: `Added the segment with id ${action.value.id} to the segments list.`,
-    icon: <PlusOutlined />,
-  }),
-  updateSegment: (action: UpdateSegmentUpdateAction): Description => ({
-    description: `Updated the segment with id ${action.value.id} in the segments list.`,
-    icon: <EditOutlined />,
-  }),
-  deleteSegment: (action: DeleteSegmentUpdateAction): Description => ({
-    description: `Deleted the segment with id ${action.value.id} from the segments list.`,
-    icon: <DeleteOutlined />,
-  }),
-  deleteSegmentData: (action: DeleteSegmentDataUpdateAction): Description => ({
-    description: `Deleted the data of segment ${action.value.id}. All voxels with that id were overwritten with 0.`,
-    icon: <DeleteOutlined />,
-  }),
-  addSegmentIndex: (): Description => ({
-    description: "Added segment index to enable segment statistics.",
-    icon: <EditOutlined />,
-  }),
+  createSegment: (
+    firstAction: UpdateActionWithTracingId & CreateSegmentUpdateAction,
+    _actionCount: number,
+    tracing: HybridTracing,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    return {
+      description: `Added the segment with id ${firstAction.value.id} to the segments list of layer ${layerName}.`,
+      icon: <PlusOutlined />,
+    };
+  },
+  updateSegment: (
+    firstAction: UpdateActionWithTracingId & UpdateSegmentUpdateAction,
+    _actionCount: number,
+    tracing: HybridTracing,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    return {
+      description: `Updated the segment with id ${firstAction.value.id} in the segments list  of layer ${layerName}.`,
+      icon: <EditOutlined />,
+    };
+  },
+  deleteSegment: (
+    firstAction: UpdateActionWithTracingId & DeleteSegmentUpdateAction,
+    _actionCount: number,
+    tracing: HybridTracing,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    return {
+      description: `Deleted the segment with id ${firstAction.value.id} from the segments list of layer ${layerName}.`,
+      icon: <DeleteOutlined />,
+    };
+  },
+  deleteSegmentData: (
+    firstAction: UpdateActionWithTracingId & DeleteSegmentDataUpdateAction,
+    _actionCount: number,
+    tracing: HybridTracing,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    return {
+      description: `Deleted the data of segment ${firstAction.value.id} of layer ${layerName}. All voxels with that id were overwritten with 0.`,
+      icon: <DeleteOutlined />,
+    };
+  },
+  addSegmentIndex: (
+    firstAction: UpdateActionWithTracingId,
+    _actionCount: number,
+    tracing: HybridTracing,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    return {
+      description: `Added segment index to layer ${layerName} to enable segment statistics.`,
+      icon: <EditOutlined />,
+    };
+  },
   // This should never be shown since currently this update action can only be triggered
   // by merging or splitting trees which is recognized separately, before this description
   // is accessed.
@@ -196,9 +250,17 @@ const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Descr
   updateVolumeTracing: (): Description => updateTracingDescription,
 } as const;
 
+function maybeGetReadableVolumeTracingName(tracing: HybridTracing, tracingId: string): string {
+  const volumeTracing = tracing.volumes.find((volume) => volume.tracingId === tracingId);
+  return volumeTracing != null
+    ? getReadableNameByVolumeTracingId(tracing, volumeTracing.tracingId)
+    : "<unknown>";
+}
+
 function getDescriptionForSpecificBatch(
   actions: Array<ServerUpdateAction>,
   type: string,
+  tracing: HybridTracing,
 ): Description {
   const firstAction = actions[0];
 
@@ -206,7 +268,7 @@ function getDescriptionForSpecificBatch(
     throw new Error("Type constraint violated");
   }
   const fn = descriptionFns[type];
-  return fn(firstAction, actions.length);
+  return fn(firstAction, actions.length, tracing);
 }
 
 // An update action batch can consist of more than one update action as a single user action
@@ -220,7 +282,10 @@ function getDescriptionForSpecificBatch(
 // "more expressive" update actions first and for more general ones later.
 // The order is determined by the order in which the update actions are added to the
 // `descriptionFns` object.
-function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description {
+function getDescriptionForBatch(
+  actions: Array<ServerUpdateAction>,
+  tracing: HybridTracing,
+): Description {
   const groupedUpdateActions = _.groupBy(actions, "name");
 
   const moveTreeComponentUAs = groupedUpdateActions.moveTreeComponent;
@@ -270,7 +335,7 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
     const updateActions = groupedUpdateActions[key];
 
     if (updateActions != null) {
-      return getDescriptionForSpecificBatch(updateActions, key);
+      return getDescriptionForSpecificBatch(updateActions, key, tracing);
     }
   }
 
@@ -302,6 +367,7 @@ export default function VersionEntry({
   const contributors = useSelector((state: OxalisState) => state.tracing.contributors);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const owner = useSelector((state: OxalisState) => state.tracing.owner);
+  const tracing = useSelector((state: OxalisState) => state.tracing);
 
   const liClassName = classNames("version-entry", {
     "active-version-entry": isActive,
@@ -317,7 +383,7 @@ export default function VersionEntry({
       {allowUpdate ? "Restore" : "Download"}
     </Button>
   );
-  const { description, icon } = getDescriptionForBatch(actions);
+  const { description, icon } = getDescriptionForBatch(actions, tracing);
 
   // In case the actionAuthorId is not set, the action was created before the multi-contributor
   // support. Default to the owner in that case.

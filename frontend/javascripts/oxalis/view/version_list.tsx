@@ -192,7 +192,6 @@ function InnerVersionList(props: Props & { newestVersion: number }) {
 
   function fetchPaginatedVersions({ pageParam }: { pageParam?: number }) {
     // TODO: maybe refactor this so that this method is not calculated very rendering cycle
-    debugger;
     if (pageParam == null) {
       pageParam = Math.floor((newestVersion - initialVersion) / ENTRIES_PER_PAGE);
     }

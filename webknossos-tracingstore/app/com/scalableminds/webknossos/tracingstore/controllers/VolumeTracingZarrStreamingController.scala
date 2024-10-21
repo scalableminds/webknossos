@@ -247,11 +247,11 @@ class VolumeTracingZarrStreamingController @Inject()(
       for {
         tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
-        existingMags = tracing.mags.map(vec3IntFromProto)
+        sortedExistingMags = tracing.mags.map(vec3IntFromProto).toList.sortBy(_.maxDim)
         dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId) ~> NOT_FOUND
         omeNgffHeader = NgffMetadataV0_5.fromNameVoxelSizeAndMags(tracingId,
                                                                   dataSourceVoxelSize = dataSource.scale,
-                                                                  mags = existingMags.toList,
+                                                                  mags = sortedExistingMags,
                                                                   additionalAxes = dataSource.additionalAxesUnion)
         zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(omeNgffHeader))
       } yield Ok(Json.toJson(zarr3GroupHeader))

@@ -82,7 +82,7 @@ export default function PresentModernControls() {
         Note that you can always change your mind by enabling/disabling &quot;Classic Controls&quot;
         in the settings sidebar. Read more about the setting{" "}
         <a
-          href="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html#classic-controls"
+          href="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html#classic-controls"
           target="_blank"
           rel="noopener noreferrer"
         >

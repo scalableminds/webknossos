@@ -175,7 +175,10 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
       }
     }
 
-  def createTracing(name: String, key: String, annotationId: String): Action[AnnotationLayerParameters] =
+  def createTracing(name: String,
+                    key: String,
+                    annotationId: String,
+                    previousVersion: Long): Action[AnnotationLayerParameters] =
     Action.async(validateJson[AnnotationLayerParameters]) { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
@@ -185,7 +188,8 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           dataset <- datasetDAO.findOne(annotation._dataset)
           tracingEither <- annotationService.createTracingForExplorational(dataset,
                                                                            request.body,
-                                                                           annotation.annotationLayers)
+                                                                           annotation.annotationLayers,
+                                                                           Some(previousVersion))
           tracing: GeneratedMessage = tracingEither match {
             case Left(s: SkeletonTracing) => s
             case Right(v: VolumeTracing)  => v

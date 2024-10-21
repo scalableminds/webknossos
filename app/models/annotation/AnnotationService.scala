@@ -167,7 +167,8 @@ class AnnotationService @Inject()(
 
   def createTracingForExplorational(dataset: Dataset,
                                     params: AnnotationLayerParameters,
-                                    existingAnnotationLayers: List[AnnotationLayer])(
+                                    existingAnnotationLayers: List[AnnotationLayer],
+                                    previousVersion: Option[Long])(
       implicit ctx: DBAccessContext,
       mp: MessagesProvider): Fox[Either[SkeletonTracing, VolumeTracing]] = {
 
@@ -211,6 +212,7 @@ class AnnotationService @Inject()(
         All of this is skipped if existingAnnotationLayers is empty.
        */
       oldPrecedenceLayerProperties <- getOldPrecedenceLayerProperties(existingAnnotationLayers,
+                                                                      previousVersion,
                                                                       dataset,
                                                                       tracingStoreClient)
       tracing <- params.typ match {
@@ -253,7 +255,10 @@ class AnnotationService @Inject()(
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
       newAnnotationLayers <- Fox.serialCombined(allAnnotationLayerParameters) { annotationLayerParameters =>
         for {
-          tracing <- createTracingForExplorational(dataset, annotationLayerParameters, existingAnnotationLayers)
+          tracing <- createTracingForExplorational(dataset,
+                                                   annotationLayerParameters,
+                                                   existingAnnotationLayers,
+                                                   previousVersion = None)
           layerName = annotationLayerParameters.name.getOrElse(
             AnnotationLayer.defaultNameForType(annotationLayerParameters.typ))
           tracingId <- tracing match {

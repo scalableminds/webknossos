@@ -17,7 +17,6 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessRequest
 }
 import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
-import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json, OFormat}
@@ -101,9 +100,11 @@ class TSRemoteWebknossosClient @Inject()(
       .postJson(annotationLayers)
 
   def createTracingFor(annotationId: String,
-                       layerParameters: AnnotationLayerParameters): Fox[Either[SkeletonTracing, VolumeTracing]] = {
+                       layerParameters: AnnotationLayerParameters,
+                       previousVersion: Long): Fox[Either[SkeletonTracing, VolumeTracing]] = {
     val req = rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/createTracing")
       .addQueryString("annotationId" -> annotationId)
+      .addQueryString("previousVersion" -> previousVersion.toString) // used for fetching old precedence layers
       .addQueryString("key" -> tracingStoreKey)
     layerParameters.typ match {
       case AnnotationLayerType.Volume =>

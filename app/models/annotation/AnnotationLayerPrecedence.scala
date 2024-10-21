@@ -20,7 +20,6 @@ import models.dataset.Dataset
 import scala.concurrent.ExecutionContext
 
 // Used to pass duplicate properties when creating a new tracing to avoid masking them.
-// Uses the proto-generated geometry classes, hence the full qualifiers.
 case class RedundantTracingProperties(
     editPosition: Vec3IntProto,
     editRotation: Vec3DoubleProto,
@@ -71,11 +70,15 @@ trait AnnotationLayerPrecedence {
     }.getOrElse(volumeTracing)
 
   protected def getOldPrecedenceLayerProperties(existingAnnotationLayers: List[AnnotationLayer],
+                                                previousVersion: Option[Long],
                                                 dataset: Dataset,
                                                 tracingStoreClient: WKRemoteTracingStoreClient)(
       implicit ec: ExecutionContext): Fox[Option[RedundantTracingProperties]] =
     for {
-      oldPrecedenceLayer <- fetchOldPrecedenceLayer(existingAnnotationLayers, dataset, tracingStoreClient)
+      oldPrecedenceLayer <- fetchOldPrecedenceLayer(existingAnnotationLayers,
+                                                    previousVersion,
+                                                    dataset,
+                                                    tracingStoreClient)
       oldPrecedenceLayerProperties: Option[RedundantTracingProperties] = oldPrecedenceLayer.map(
         extractPrecedenceProperties)
     } yield oldPrecedenceLayerProperties
@@ -102,6 +105,7 @@ trait AnnotationLayerPrecedence {
   }
 
   private def fetchOldPrecedenceLayer(existingAnnotationLayers: List[AnnotationLayer],
+                                      previousVersion: Option[Long],
                                       dataset: Dataset,
                                       tracingStoreClient: WKRemoteTracingStoreClient)(
       implicit ec: ExecutionContext): Fox[Option[FetchedAnnotationLayer]] =
@@ -110,10 +114,10 @@ trait AnnotationLayerPrecedence {
       for {
         oldPrecedenceLayer <- selectLayerWithPrecedence(existingAnnotationLayers)
         oldPrecedenceLayerFetched <- if (oldPrecedenceLayer.typ == AnnotationLayerType.Skeleton)
-          tracingStoreClient.getSkeletonTracing(oldPrecedenceLayer, None)
+          tracingStoreClient.getSkeletonTracing(oldPrecedenceLayer, previousVersion)
         else
           tracingStoreClient.getVolumeTracing(oldPrecedenceLayer,
-                                              None,
+                                              previousVersion,
                                               skipVolumeData = true,
                                               volumeDataZipFormat = VolumeDataZipFormat.wkw,
                                               dataset.voxelSize)

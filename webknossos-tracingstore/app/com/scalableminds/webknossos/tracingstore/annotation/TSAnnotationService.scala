@@ -108,7 +108,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     for {
       updated <- updateAction match {
         case a: AddLayerAnnotationUpdateAction =>
-          addLayer(annotationId, annotationWithTracings, a)
+          addLayer(annotationId, annotationWithTracings, a, targetVersion)
         case a: DeleteLayerAnnotationUpdateAction =>
           Fox.successful(annotationWithTracings.deleteTracing(a))
         case a: UpdateLayerMetadataAnnotationUpdateAction =>
@@ -134,14 +134,15 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       }
     } yield updated
 
-  private def addLayer(
-      annotationId: String,
-      annotationWithTracings: AnnotationWithTracings,
-      action: AddLayerAnnotationUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+  private def addLayer(annotationId: String,
+                       annotationWithTracings: AnnotationWithTracings,
+                       action: AddLayerAnnotationUpdateAction,
+                       targetVersion: Long)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
-      _ <- Fox.successful(())
-      tracingId <- action.tracingId ?~> "add layer action has no tracingId"
-      tracing <- remoteWebknossosClient.createTracingFor(annotationId, action.layerParameters)
+      tracingId <- action.tracingId.toFox ?~> "add layer action has no tracingId"
+      tracing <- remoteWebknossosClient.createTracingFor(annotationId,
+                                                         action.layerParameters,
+                                                         previousVersion = targetVersion - 1)
       updated = annotationWithTracings.addLayer(action, tracingId, tracing)
     } yield updated
 
@@ -436,7 +437,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       for {
         updated <- updateIter(Some(annotation.withNewUpdaters(annotation.version, targetVersion)), updates)
         updatedWithNewVerson = updated.withVersion(targetVersion)
-        _ = logger.info(s"flushing v${targetVersion}, with ${updated.skeletonStats}")
+        _ = logger.info(s"flushing v$targetVersion, with ${updated.skeletonStats}")
         _ <- updatedWithNewVerson.flushBufferedUpdates()
         _ <- flushUpdatedTracings(updatedWithNewVerson)
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVerson)

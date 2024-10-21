@@ -128,7 +128,7 @@ GET           /tracingstores/:name/dataSource                                   
 GET           /tracingstores/:name/dataSourceId                                                 controllers.WKRemoteTracingStoreController.dataSourceIdForTracing(name: String, key: String, tracingId: String)
 GET           /tracingstores/:name/annotationId                                                 controllers.WKRemoteTracingStoreController.annotationIdForTracing(name: String, key: String, tracingId: String)
 GET           /tracingstores/:name/dataStoreUri/:datasetName                                    controllers.WKRemoteTracingStoreController.dataStoreUriForDataset(name: String, key: String, organizationId: Option[String], datasetName: String)
-POST          /tracingstores/:name/createTracing                                                controllers.WKRemoteTracingStoreController.createTracing(name: String, key: String, annotationId: String)
+POST          /tracingstores/:name/createTracing                                                controllers.WKRemoteTracingStoreController.createTracing(name: String, key: String, annotationId: String, previousVersion: Long)
 
 # User access tokens for datastore authentication
 POST          /userToken/generate                                                               controllers.UserTokenController.generateTokenForDataStore()

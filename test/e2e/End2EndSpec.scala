@@ -49,13 +49,11 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
 
   private def ensureTestDataset(): Unit = {
     val testDatasetPath = "test/dataset/test-dataset.zip"
-    // Ensure that org directory exists
     val dataDirectory = new File("binaryData/Organization_X")
     if (!dataDirectory.exists()) {
       throw new Exception("Organization_X directory does not exist.")
     }
     val testDatasetZip = new File(testDatasetPath)
-    // Unzip test dataset to data directory using Java Zip
     if (!testDatasetZip.exists()) {
       throw new Exception("Test dataset zip file does not exist.")
     }

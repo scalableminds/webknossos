@@ -39,6 +39,7 @@ const volatileKeys: Array<string | number | symbol> = [
   "lastActivity",
   "tracingTime",
   "tracingId",
+  "sortingKey"
 ];
 export function replaceVolatileValues(obj: ArbitraryObject | null | undefined) {
   if (obj == null) return obj;
@@ -70,6 +71,13 @@ global.fetch = function fetchWrapper(url, options) {
     newUrl = `http://localhost:9000${url}`;
   }
 
+  if (!options) {
+    options = {};
+  }
+  if (!options.headers) {
+    options.headers = new Headers();
+  }
+
   // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   options.headers.set("X-Auth-Token", currToken);
   const promise = fetch(newUrl, options);
@@ -77,6 +85,12 @@ global.fetch = function fetchWrapper(url, options) {
   console.log("Fetching", newUrl);
   return promise;
 };
+
+export async function scanDatasetsFromDisk(){
+  await fetch(`http://localhost:9000/data/triggers/checkInboxBlocking?token=${currToken}`, {
+    method: "POST"
+  });
+}
 
 global.Headers = Headers;
 global.Request = Request;
@@ -130,7 +144,7 @@ export async function writeTypeCheckingFile(
   const fullTypeAnnotation = options.isArray ? `Array<${typeString}>` : typeString;
   fs.writeFileSync(
     `frontend/javascripts/test/snapshots/type-check/test-type-checking-${name}.ts`,
-    ` 
+    `
 import type { ${typeString} } from "types/api_flow_types";
 const a: ${fullTypeAnnotation} = ${JSON.stringify(object)}`,
   );

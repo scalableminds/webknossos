@@ -31,7 +31,8 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
     for {
       _ <- Fox.successful(())
       explored = Seq(
-        exploreLocalNgffArray(path, dataSourceId),
+        exploreLocalNgffV0_4Array(path, dataSourceId),
+        exploreLocalNgffV0_5Array(path, dataSourceId),
         exploreLocalZarrArray(path, dataSourceId, layerDirectory),
         exploreLocalNeuroglancerPrecomputed(path, dataSourceId, layerDirectory),
         exploreLocalN5Multiscales(path, dataSourceId, layerDirectory),
@@ -57,11 +58,18 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       dataSource = new DataSourceWithMagLocators(dataSourceId, relativeLayers, voxelSize)
     } yield dataSource
 
-  private def exploreLocalNgffArray(path: Path, dataSourceId: DataSourceId)(
+  private def exploreLocalNgffV0_4Array(path: Path, dataSourceId: DataSourceId)(
       implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
     exploreLocalLayer(
       layers => layers.map(selectLastTwoDirectories),
-      new NgffExplorer
+      new NgffV0_4Explorer
+    )(path, dataSourceId, "")
+
+  private def exploreLocalNgffV0_5Array(path: Path, dataSourceId: DataSourceId)(
+      implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
+    exploreLocalLayer(
+      layers => layers.map(selectLastTwoDirectories),
+      new NgffV0_5Explorer
     )(path, dataSourceId, "")
 
   private def exploreLocalNeuroglancerPrecomputed(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(

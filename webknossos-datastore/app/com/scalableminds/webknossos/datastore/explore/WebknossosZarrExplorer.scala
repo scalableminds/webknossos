@@ -28,7 +28,7 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
                        credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       dataSourcePropertiesPath <- Fox.successful(remotePath / GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
-      dataSource <- parseJsonFromPath[DataSource](dataSourcePropertiesPath)
+      dataSource <- dataSourcePropertiesPath.parseAsJson[DataSource]
       zarrLayers <- Fox.serialCombined(dataSource.dataLayers) {
         case l: Zarr3SegmentationLayer =>
           for {

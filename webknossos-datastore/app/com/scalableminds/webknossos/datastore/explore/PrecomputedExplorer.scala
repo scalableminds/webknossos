@@ -22,7 +22,8 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
   override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(PrecomputedLayer, VoxelSize)]] =
     for {
       infoPath <- Fox.successful(remotePath / PrecomputedHeader.FILENAME_INFO)
-      precomputedHeader <- parseJsonFromPath[PrecomputedHeader](infoPath) ?~> s"Failed to read neuroglancer precomputed metadata at $infoPath"
+      precomputedHeader <- infoPath
+        .parseAsJson[PrecomputedHeader] ?~> s"Failed to read neuroglancer precomputed metadata at $infoPath"
       layerAndVoxelSize <- layerFromPrecomputedHeader(precomputedHeader, remotePath, credentialId)
     } yield List(layerAndVoxelSize)
 

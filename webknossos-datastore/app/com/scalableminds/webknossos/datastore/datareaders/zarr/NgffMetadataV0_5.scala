@@ -20,6 +20,14 @@ case class NgffMultiscalesItemV0_5(
 
 object NgffMultiscalesItemV0_5 {
   implicit val jsonFormat: OFormat[NgffMultiscalesItemV0_5] = Json.format[NgffMultiscalesItemV0_5]
+
+  def asV0_4(multiscalesItemV0_5: NgffMultiscalesItemV0_5): NgffMultiscalesItem =
+    NgffMultiscalesItem(
+      version = "0.5",
+      name = multiscalesItemV0_5.name,
+      axes = multiscalesItemV0_5.axes,
+      datasets = multiscalesItemV0_5.datasets
+    )
 }
 
 case class NgffMetadataV0_5(version: String,

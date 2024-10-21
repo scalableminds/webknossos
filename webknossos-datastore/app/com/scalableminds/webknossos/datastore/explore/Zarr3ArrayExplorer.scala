@@ -20,7 +20,7 @@ class Zarr3ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerE
     for {
       zarrayPath <- Fox.successful(remotePath / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
       name = guessNameFromPath(remotePath)
-      zarrHeader <- parseJsonFromPath[Zarr3ArrayHeader](zarrayPath) ?~> s"failed to read zarr v3 header at $zarrayPath"
+      zarrHeader <- zarrayPath.parseAsJson[Zarr3ArrayHeader] ?~> s"failed to read zarr v3 header at $zarrayPath"
       _ <- zarrHeader.assertValid.toFox
       elementClass <- zarrHeader.elementClass ?~> "failed to read element class from zarr header"
       guessedAxisOrder = AxisOrder.asCxyzFromRank(zarrHeader.rank)

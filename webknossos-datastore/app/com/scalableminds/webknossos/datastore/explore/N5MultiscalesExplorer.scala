@@ -20,7 +20,7 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends RemoteLay
   override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(N5Layer, VoxelSize)]] =
     for {
       metadataPath <- Fox.successful(remotePath / N5Metadata.FILENAME_ATTRIBUTES_JSON)
-      n5Metadata <- parseJsonFromPath[N5Metadata](metadataPath) ?~> s"Failed to read N5 header at $metadataPath"
+      n5Metadata <- metadataPath.parseAsJson[N5Metadata] ?~> s"Failed to read N5 header at $metadataPath"
       layers <- Fox.serialCombined(n5Metadata.multiscales)(layerFromN5MultiscalesItem(_, remotePath, credentialId))
     } yield layers
 
@@ -105,7 +105,7 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends RemoteLay
       mag <- magFromTransform(voxelSize, n5Dataset.transform) ?~> "Could not extract mag from transforms"
       magPath = layerPath / n5Dataset.path
       headerPath = magPath / N5Header.FILENAME_ATTRIBUTES_JSON
-      n5Header <- parseJsonFromPath[N5Header](headerPath) ?~> s"failed to read n5 header at $headerPath"
+      n5Header <- headerPath.parseAsJson[N5Header] ?~> s"failed to read n5 header at $headerPath"
       elementClass <- n5Header.elementClass ?~> s"failed to read element class from n5 header at $headerPath"
       boundingBox <- n5Header.boundingBox(axisOrder) ?~> s"failed to read bounding box from n5 header at $headerPath"
     } yield

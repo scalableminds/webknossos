@@ -355,18 +355,20 @@ export const test = anyTest as TestFn<{
 
 export function setupBeforeEachAndAfterEach() {
   test.beforeEach(async (t) => {
-    t.context.browser = await puppeteer.launch({
-      args: [
-        "--headless=new",
-        "--hide-scrollbars",
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        // "--use-gl=swiftshader",
-        // "--enable-gpu",
-      ],
-      dumpio: true,
-    });
+    // TODO Consider removing running local screenshot tests entirely and only use Browserstack
+    
+    // Use this for connecting to local Chrome browser instance
+    // t.context.browser = await puppeteer.launch({
+    //   args: [
+    //     "--headless=new",
+    //     "--hide-scrollbars",
+    //     "--no-sandbox",
+    //     "--disable-setuid-sandbox",
+    //     "--disable-dev-shm-usage",
+    //     "--use-gl=swiftshader",
+    //   ],
+    //   dumpio: true,
+    // });
 
     const caps = {
       browser: "chrome",

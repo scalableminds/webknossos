@@ -36,7 +36,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   MergedVolumeStats,
-  ResolutionRestrictions,
+  MagRestrictions,
   TSFullMeshService,
   UpdateMappingNameAction,
   VolumeDataZipFormat,
@@ -91,8 +91,8 @@ class VolumeTracingController @Inject()(
 
   def initialData(token: Option[String],
                   tracingId: String,
-                  minResolution: Option[Int],
-                  maxResolution: Option[Int]): Action[AnyContent] =
+                  minMag: Option[Int],
+                  maxMag: Option[Int]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
@@ -100,11 +100,9 @@ class VolumeTracingController @Inject()(
             for {
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-              resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
-              resolutions <- tracingService
-                .initializeWithData(tracingId, tracing, initialData, resolutionRestrictions, token)
-                .toFox
-              _ <- tracingService.updateResolutionList(tracingId, tracing, resolutions)
+              magRestrictions = MagRestrictions(minMag, maxMag)
+              mags <- tracingService.initializeWithData(tracingId, tracing, initialData, magRestrictions, token).toFox
+              _ <- tracingService.updateMagList(tracingId, tracing, mags)
             } yield Ok(Json.toJson(tracingId))
           }
         }
@@ -138,8 +136,8 @@ class VolumeTracingController @Inject()(
             for {
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-              resolutions <- tracingService.initializeWithDataMultiple(tracingId, tracing, initialData, token).toFox
-              _ <- tracingService.updateResolutionList(tracingId, tracing, resolutions)
+              mags <- tracingService.initializeWithDataMultiple(tracingId, tracing, initialData, token).toFox
+              _ <- tracingService.updateMagList(tracingId, tracing, mags)
             } yield Ok(Json.toJson(tracingId))
           }
         }
@@ -196,8 +194,8 @@ class VolumeTracingController @Inject()(
   def duplicate(token: Option[String],
                 tracingId: String,
                 fromTask: Option[Boolean],
-                minResolution: Option[Int],
-                maxResolution: Option[Int],
+                minMag: Option[Int],
+                maxMag: Option[Int],
                 downsample: Option[Boolean],
                 editPosition: Option[String],
                 editRotation: Option[String],
@@ -210,7 +208,7 @@ class VolumeTracingController @Inject()(
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
             _ = logger.info(s"Duplicating volume tracing $tracingId...")
             datasetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
-            resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
+            magRestrictions = MagRestrictions(minMag, maxMag)
             editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
             editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
             boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
@@ -223,7 +221,7 @@ class VolumeTracingController @Inject()(
               tracing,
               fromTask.getOrElse(false),
               datasetBoundingBox,
-              resolutionRestrictions,
+              magRestrictions,
               editPositionParsed,
               editRotationParsed,
               boundingBoxParsed,
@@ -336,7 +334,7 @@ class VolumeTracingController @Inject()(
       for {
         positionOpt <- tracingService.findData(tracingId)
       } yield {
-        Ok(Json.obj("position" -> positionOpt, "resolution" -> positionOpt.map(_ => Vec3Int.ones)))
+        Ok(Json.obj("position" -> positionOpt, "mag" -> positionOpt.map(_ => Vec3Int.ones)))
       }
     }
   }

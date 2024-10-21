@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Most sliders have been improved: Wheeling above a slider now changes its value and double-clicking its knob resets it to its default value. [#8095](https://github.com/scalableminds/webknossos/pull/8095)
 - It is now possible to search for unnamed segments with the full default name instead of only their id. [#8133](https://github.com/scalableminds/webknossos/pull/8133)
 - Increased loading speed for precomputed meshes. [#8110](https://github.com/scalableminds/webknossos/pull/8110)
+- Unified wording in UI and code: “Magnification”/“mag” is now used in place of “Resolution“ most of the time, compare [https://docs.webknossos.org/webknossos/terminology.html](terminology document). [#8111](https://github.com/scalableminds/webknossos/pull/8111)
 - Added support for adding remote OME-Zarr NGFF version 0.5 datasets. [#8122](https://github.com/scalableminds/webknossos/pull/8122)
 
 ### Changed

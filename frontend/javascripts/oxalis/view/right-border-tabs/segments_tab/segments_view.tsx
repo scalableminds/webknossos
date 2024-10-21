@@ -1590,7 +1590,7 @@ class SegmentsView extends React.Component<Props, State> {
     this.setState(({ renamingCounter }) => ({ renamingCounter: renamingCounter - 1 }));
   };
 
-  handleSearchSelect = (selectedElement: SegmentHierarchyNode) => {
+  maybeExpandParentGroup = (selectedElement: SegmentHierarchyNode) => {
     if (this.tree?.current == null) {
       return;
     }
@@ -1606,6 +1606,10 @@ class SegmentsView extends React.Component<Props, State> {
     if (expandedGroups) {
       this.setExpandedGroupsFromSet(expandedGroups);
     }
+  };
+
+  handleSearchSelect = (selectedElement: SegmentHierarchyNode) => {
+    this.maybeExpandParentGroup(selectedElement);
     // As parent groups might still need to expand, we need to wait for this to finish.
     setTimeout(() => {
       if (this.tree.current) this.tree.current.scrollTo({ key: selectedElement.key });
@@ -1627,9 +1631,13 @@ class SegmentsView extends React.Component<Props, State> {
 
   handleSelectAllMatchingSegments = (allMatches: SegmentHierarchyNode[]) => {
     if (this.props.visibleSegmentationLayer == null) return;
+    const allMatchingSegmentIds = allMatches.map((match) => {
+      this.maybeExpandParentGroup(match);
+      return match.id;
+    });
     Store.dispatch(
       setSelectedSegmentsOrGroupAction(
-        allMatches.map((match) => match.id),
+        allMatchingSegmentIds,
         null,
         this.props.visibleSegmentationLayer.name,
       ),

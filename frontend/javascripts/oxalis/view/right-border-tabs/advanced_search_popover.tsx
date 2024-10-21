@@ -110,7 +110,6 @@ export default class AdvancedSearchPopover<
     currentPosition =
       currentPosition == null ? -1 : Math.min(currentPosition, numberOfAvailableOptions - 1);
     const hasNoResults = numberOfAvailableOptions === 0;
-    const hasMultipleResults = numberOfAvailableOptions > 1;
     const availableOptionsToSelectAllMatches = availableOptions.filter(
       (result) => result.type === "Tree" || result.type === "segment",
     );
@@ -188,7 +187,7 @@ export default class AdvancedSearchPopover<
                         width: 40,
                       }}
                       onClick={this.selectPreviousOption}
-                      disabled={!hasMultipleResults}
+                      disabled={hasNoResults}
                     >
                       <UpOutlined />
                     </ButtonComponent>
@@ -199,12 +198,12 @@ export default class AdvancedSearchPopover<
                         width: 40,
                       }}
                       onClick={this.selectNextOption}
-                      disabled={!hasMultipleResults}
+                      disabled={hasNoResults}
                     >
                       <DownOutlined />
                     </ButtonComponent>
                   </Tooltip>
-                  <Tooltip title="Select all matches">
+                  <Tooltip title="Select all matches (except groups)">
                     <ButtonComponent
                       style={{
                         width: 40,

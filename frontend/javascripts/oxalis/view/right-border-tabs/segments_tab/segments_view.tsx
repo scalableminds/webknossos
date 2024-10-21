@@ -1645,8 +1645,8 @@ class SegmentsView extends React.Component<Props, State> {
   showContextMenuAt = (xPos: number, yPos: number, menu: MenuProps) => {
     // On Windows the right click to open the context menu is also triggered for the overlay
     // of the context menu. This causes the context menu to instantly close after opening.
-    // Therefore delay the state update to delay that the context menu is rendered.
-    // Thus the context overlay does not get the right click as an event and therefore does not close.
+    // Therefore delay the state update to delay that the context menu is rendered. Thus
+    // the context overlay does not get the right click as an event and therefore does not close.
     setTimeout(
       () =>
         this.setState({

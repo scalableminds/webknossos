@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
-import com.scalableminds.webknossos.tracingstore.tracings.{TracingIds, TracingType}
+import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingType}
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
 import models.annotation.AnnotationState.Cancelled
@@ -273,7 +273,7 @@ class AnnotationController @Inject()(
           ObjectId.dummyId,
           ObjectId.dummyId,
           List(
-            AnnotationLayer(TracingIds.dummyTracingId,
+            AnnotationLayer(TracingId.dummy,
                             AnnotationLayerType.Skeleton,
                             AnnotationLayer.defaultSkeletonLayerName,
                             AnnotationLayerStatistics.unknown))

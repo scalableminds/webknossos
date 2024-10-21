@@ -78,14 +78,17 @@ case class AnnotationWithTracings(
 
   def version: Long = annotation.version
 
-  def addTracing(a: AddLayerAnnotationUpdateAction): AnnotationWithTracings =
+  def addLayer(a: AddLayerAnnotationUpdateAction,
+               tracingId: String,
+               tracing: Either[SkeletonTracing, VolumeTracing]): AnnotationWithTracings =
     this.copy(
       annotation = annotation.copy(
         layers = annotation.layers :+ AnnotationLayerProto(
-          a.tracingId,
+          tracingId,
           a.layerParameters.name.getOrElse(AnnotationLayer.defaultNameForType(a.layerParameters.typ)),
           `type` = AnnotationLayerType.toProto(a.layerParameters.typ)
-        ))
+        )),
+      tracingsById = tracingsById.updated(tracingId, tracing)
     )
 
   def deleteTracing(a: DeleteLayerAnnotationUpdateAction): AnnotationWithTracings =

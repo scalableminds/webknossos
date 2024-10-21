@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessAnswer,
   UserAccessRequest
 }
-import com.scalableminds.webknossos.tracingstore.tracings.TracingIds
+import com.scalableminds.webknossos.tracingstore.tracings.TracingId
 
 import javax.inject.Inject
 import models.annotation._
@@ -161,7 +161,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
                                   mode: AccessMode,
                                   userBox: Box[User],
                                   token: Option[String]): Fox[UserAccessAnswer] =
-    if (tracingId == TracingIds.dummyTracingId)
+    if (tracingId == TracingId.dummy)
       Fox.successful(UserAccessAnswer(granted = true))
     else
       for {

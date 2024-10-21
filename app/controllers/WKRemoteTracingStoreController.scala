@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.tracingstore.TracingUpdatesReport
-import com.scalableminds.webknossos.tracingstore.tracings.TracingIds
+import com.scalableminds.webknossos.tracingstore.tracings.TracingId
 
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, UpdateAnnotationEvent, UpdateAnnotationViewOnlyEvent}
@@ -140,7 +140,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
     Action.async { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
-        if (tracingId == TracingIds.dummyTracingId) {
+        if (tracingId == TracingId.dummy) {
           Fox.successful(Ok(Json.toJson(ObjectId.dummyId)))
         } else {
           for {

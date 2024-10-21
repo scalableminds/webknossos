@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
-import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
+import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingSelector}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
@@ -106,7 +106,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
               case (Some(tracing), Some(selector)) => Some((tracing, selector.tracingId))
               case _                               => None
             }
-            newTracingId = skeletonTracingService.generateTracingId
+            newTracingId = TracingId.generate
             mergedVolumeStats <- skeletonTracingService.mergeVolumeData(request.body.flatten,
                                                                         tracingsWithIds.map(_._1),
                                                                         newTracingId,

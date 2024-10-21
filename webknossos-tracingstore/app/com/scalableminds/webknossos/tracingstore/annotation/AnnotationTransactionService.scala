@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore, TracingId}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   BucketMutatingVolumeUpdateAction,
   UpdateBucketVolumeAction,
@@ -228,8 +228,9 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
       case first :: rest => first.addInfo(updateActionGroup.info) :: rest
     }
     actionsWithInfo.map {
-      case a: UpdateBucketVolumeAction => a.withoutBase64Data
-      case a                           => a
+      case a: UpdateBucketVolumeAction       => a.withoutBase64Data
+      case a: AddLayerAnnotationUpdateAction => a.copy(tracingId = Some(TracingId.generate))
+      case a                                 => a
     }
   }
 

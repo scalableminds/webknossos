@@ -5,6 +5,8 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, DataSourceLike}
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -14,6 +16,7 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessAnswer,
   UserAccessRequest
 }
+import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json, OFormat}
@@ -95,6 +98,10 @@ class TSRemoteWebknossosClient @Inject()(
       .addQueryString("annotationId" -> annotationId)
       .addQueryString("key" -> tracingStoreKey)
       .postJson(annotationLayers)
+
+  def createTracingFor(annotationId: String,
+                       layerParameters: AnnotationLayerParameters): Fox[Either[SkeletonTracing, VolumeTracing]] =
+    ??? // TODO
 
   override def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/validateUserAccess")

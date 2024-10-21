@@ -35,7 +35,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   FallbackDataHelper,
   KeyValueStoreImplicits,
   TracingDataStore,
-  TracingIds,
+  TracingId,
   TracingSelector,
   VersionedKeyValuePair
 }
@@ -108,7 +108,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     for {
       updated <- updateAction match {
         case a: AddLayerAnnotationUpdateAction =>
-          Fox.successful(annotationWithTracings.addTracing(a))
+          addLayer(annotationId, annotationWithTracings, a)
         case a: DeleteLayerAnnotationUpdateAction =>
           Fox.successful(annotationWithTracings.deleteTracing(a))
         case a: UpdateLayerMetadataAnnotationUpdateAction =>
@@ -132,6 +132,17 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           Fox.successful(annotationWithTracings) // No-op, as bucket-mutating actions are performed eagerly, so not here.
         case _ => Fox.failure(s"Received unsupported AnnotationUpdateAction action ${Json.toJson(updateAction)}")
       }
+    } yield updated
+
+  private def addLayer(
+      annotationId: String,
+      annotationWithTracings: AnnotationWithTracings,
+      action: AddLayerAnnotationUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+    for {
+      _ <- Fox.successful(())
+      tracingId <- action.tracingId ?~> "add layer action has no tracingId"
+      tracing <- remoteWebknossosClient.createTracingFor(annotationId, action.layerParameters)
+      updated = annotationWithTracings.addLayer(action, tracingId, tracing)
     } yield updated
 
   private def revertToVersion(
@@ -536,7 +547,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                  version: Option[Long] = None,
                  useCache: Boolean = true,
                  applyUpdates: Boolean = false)(implicit tc: TokenContext, ec: ExecutionContext): Fox[VolumeTracing] =
-    if (tracingId == TracingIds.dummyTracingId)
+    if (tracingId == TracingId.dummy)
       Fox.successful(volumeTracingService.dummyTracing)
     else {
       for {
@@ -551,7 +562,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       version: Option[Long] = None,
       useCache: Boolean = true,
       applyUpdates: Boolean = false)(implicit tc: TokenContext, ec: ExecutionContext): Fox[SkeletonTracing] =
-    if (tracingId == TracingIds.dummyTracingId)
+    if (tracingId == TracingId.dummy)
       Fox.successful(skeletonTracingService.dummyTracing)
     else {
       for {

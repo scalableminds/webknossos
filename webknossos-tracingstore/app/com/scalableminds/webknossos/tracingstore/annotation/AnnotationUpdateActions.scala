@@ -21,7 +21,7 @@ object AnnotationLayerParameters {
 trait AnnotationUpdateAction extends ApplyImmediatelyUpdateAction
 
 case class AddLayerAnnotationUpdateAction(layerParameters: AnnotationLayerParameters,
-                                          tracingId: String,
+                                          tracingId: Option[String] = None, // filled in by backend eagerly on save
                                           actionTimestamp: Option[Long] = None,
                                           actionAuthorId: Option[String] = None,
                                           info: Option[String] = None)

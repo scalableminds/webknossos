@@ -10,13 +10,8 @@ import net.liftweb.common.Box
 import play.api.i18n.MessagesProvider
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
-import java.util.UUID
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-
-object TracingIds {
-  val dummyTracingId: String = "dummyTracingId"
-}
 
 trait TracingService[T <: GeneratedMessage]
     extends KeyValueStoreImplicits
@@ -65,10 +60,8 @@ trait TracingService[T <: GeneratedMessage]
     }
    */
 
-  def generateTracingId: String = UUID.randomUUID.toString
-
   def save(tracing: T, tracingId: Option[String], version: Long, toCache: Boolean = false): Fox[String] = {
-    val id = tracingId.getOrElse(generateTracingId)
+    val id = tracingId.getOrElse(TracingId.generate)
     if (toCache) {
       temporaryTracingStore.insert(id, tracing, Some(temporaryStoreTimeout))
       temporaryTracingIdStore.insert(temporaryIdKey(id), "", Some(temporaryIdStoreTimeout))

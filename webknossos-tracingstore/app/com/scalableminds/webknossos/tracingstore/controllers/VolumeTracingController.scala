@@ -35,7 +35,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeSegmentStatisticsService,
   VolumeTracingService
 }
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingSelector}
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingId, TracingSelector}
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
   TSRemoteWebknossosClient,
@@ -146,7 +146,7 @@ class VolumeTracingController @Inject()(
               case (Some(tracing), Some(selector)) => Some((tracing, selector.tracingId))
               case _                               => None
             }
-            newTracingId = volumeTracingService.generateTracingId
+            newTracingId = TracingId.generate
             mergedVolumeStats <- volumeTracingService.mergeVolumeData(request.body.flatten,
                                                                       tracingsWithIds.map(_._1),
                                                                       newTracingId,
@@ -299,10 +299,11 @@ class VolumeTracingController @Inject()(
             boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
             remoteFallbackLayerOpt <- Fox.runIf(tracing.getHasEditableMapping)(
               volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId))
-            newTracingId = volumeTracingService.generateTracingId
+            newTracingId = TracingId.generate
             // TODO
             /*_ <- Fox.runIf(tracing.getHasEditableMapping)(
               editableMappingService.duplicate(tracingId, newTracingId, version = None, remoteFallbackLayerOpt))*/
+            // TODO actionTracingIds + addLayer tracing ids need to be remapped (as they need to be globally unique)
             (newId, newTracing) <- volumeTracingService.duplicate(
               annotationId,
               tracingId,

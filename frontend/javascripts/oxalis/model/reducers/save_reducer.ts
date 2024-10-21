@@ -39,13 +39,6 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
       // update actions.
       const dispatchedAction = action;
       const { items, transactionId } = dispatchedAction;
-      console.log(
-        "bool",
-        _.some(
-          dispatchedAction.items,
-          (ua) => ua.name !== "updateSkeletonTracing" && ua.name !== "updateVolumeTracing",
-        ),
-      );
       const stats: CombinedTracingStats | null = _.some(
         dispatchedAction.items,
         (ua) => ua.name !== "updateSkeletonTracing" && ua.name !== "updateVolumeTracing",

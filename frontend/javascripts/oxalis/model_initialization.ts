@@ -459,6 +459,7 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
 
   for (const layer of layers) {
     const textureInformation = textureInformationPerLayer.get(layer);
+
     if (!textureInformation) {
       throw new Error("No texture information for layer?");
     }

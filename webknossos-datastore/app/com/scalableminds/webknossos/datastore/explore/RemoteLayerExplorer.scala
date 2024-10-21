@@ -7,7 +7,6 @@ import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerWithMagLocators, ElementClass}
-import play.api.libs.json.Reads
 
 import scala.concurrent.ExecutionContext
 

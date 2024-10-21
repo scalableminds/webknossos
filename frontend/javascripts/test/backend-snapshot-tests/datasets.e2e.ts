@@ -77,8 +77,28 @@ test("Zarr streaming", async (t) => {
   const zattrs = await zattrsResp.text();
   t.snapshot(zattrs);
 
-  const rawData = await fetch("/data/zarr/Organization_X/test-dataset/segmentation/1/0.0.0", {});
-  const data = await rawData.arrayBuffer();
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(data)));
+  const rawDataResponse = await fetch(
+    "/data/zarr/Organization_X/test-dataset/segmentation/1/0.1.1.0",
+    {},
+  );
+  const bytes = await rawDataResponse.arrayBuffer();
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(bytes)));
+  t.snapshot(base64);
+});
+
+test("Zarr 3 streaming", async (t) => {
+  const zarrJsonResp = await fetch(
+    "/data/zarr3_experimental/Organization_X/test-dataset/segmentation/zarr.json",
+    {},
+  );
+  const zarrJson = await zarrJsonResp.text();
+  t.snapshot(zarrJson);
+
+  const rawDataResponse = await fetch(
+    "/data/zarr3_experimental/Organization_X/test-dataset/segmentation/1/0.1.1.0",
+    {},
+  );
+  const bytes = await rawDataResponse.arrayBuffer();
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(bytes)));
   t.snapshot(base64);
 });

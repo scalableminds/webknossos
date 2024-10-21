@@ -14,6 +14,11 @@ import { NO_LOD_MESH_INDEX } from "oxalis/model/sagas/mesh_saga";
 import Store from "oxalis/store";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
+import { MeshBVH, MeshBVHHelper, acceleratedRaycast, getBVHExtremes } from "three-mesh-bvh";
+
+// Add the raycast function. Assumes the BVH is available on
+// the `boundsTree` variable
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
 const ACTIVATED_COLOR = [0.7, 0.5, 0.1] as const;
 const HOVERED_COLOR = [0.65, 0.5, 0.1] as const;
@@ -89,7 +94,6 @@ export default class SegmentMeshController {
       bufferGeometry as BufferGeometryWithInfo,
       segmentId,
       null,
-      null,
       NO_LOD_MESH_INDEX,
       layerName,
       additionalCoordinates,
@@ -123,7 +127,7 @@ export default class SegmentMeshController {
         {
           opacity: 1,
         },
-        500,
+        100,
       )
       .onUpdate(function onUpdate(this: { opacity: number }) {
         meshMaterial.opacity = this.opacity;
@@ -144,7 +148,6 @@ export default class SegmentMeshController {
   addMeshFromGeometries(
     geometries: BufferGeometryWithInfo[],
     segmentId: number,
-    offset: Vector3 | null = null,
     scale: Vector3 | null = null,
     lod: number,
     layerName: string,
@@ -174,16 +177,18 @@ export default class SegmentMeshController {
     }
     const meshChunks = geometries.map((geometry) => {
       const meshChunk = this.constructMesh(segmentId, layerName, geometry);
-      if (offset) {
-        meshChunk.translateX(offset[0]);
-        meshChunk.translateY(offset[1]);
-        meshChunk.translateZ(offset[2]);
-      }
+      meshChunk.geometry.boundsTree = new MeshBVH(meshChunk.geometry);
+      console.log(getBVHExtremes(meshChunk.geometry.boundsTree));
       return meshChunk;
     });
     const group = new THREE.Group() as SceneGroupForMeshes;
     for (const meshChunk of meshChunks) {
       group.add(meshChunk);
+      if (window.DEBUG_BVH) {
+        const bvhHelper = new MeshBVHHelper(meshChunk);
+        bvhHelper.displayParents = true;
+        group.add(bvhHelper);
+      }
     }
     group.segmentId = segmentId;
     this.addMeshToMeshGroups(additionalCoordinatesString, layerName, segmentId, lod, group);
@@ -199,21 +204,12 @@ export default class SegmentMeshController {
   addMeshFromGeometry(
     geometry: BufferGeometryWithInfo,
     segmentId: number,
-    offset: Vector3 | null = null,
     scale: Vector3 | null = null,
     lod: number,
     layerName: string,
     additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   ): void {
-    this.addMeshFromGeometries(
-      [geometry],
-      segmentId,
-      offset,
-      scale,
-      lod,
-      layerName,
-      additionalCoordinates,
-    );
+    this.addMeshFromGeometries([geometry], segmentId, scale, lod, layerName, additionalCoordinates);
   }
 
   removeMeshById(segmentId: number, layerName: string): void {

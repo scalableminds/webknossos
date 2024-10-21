@@ -108,7 +108,7 @@ test("Flycam Accessors should calculate appropriate zoom factors for datasets wi
     TDView: rect,
   };
 
-  const maximumZoomPerResolution = accessors._getMaximumZoomForAllResolutions(
+  const maximumZoomPerResolution = accessors._getMaximumZoomForAllMags(
     constants.MODE_PLANE_TRACING,
     "BEST_QUALITY_FIRST",
     scale,

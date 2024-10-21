@@ -527,7 +527,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/23.06.0...23.07.0)
 
 ### Highlights
-- Added new shortcuts for fast tool switching. Look at the updated [Keyboard Shortcuts documentation](https://docs.webknossos.org/webknossos/keyboard_shortcuts.html#tool-switching-shortcuts) to see the new shortcuts. [#7112](https://github.com/scalableminds/webknossos/pull/7112)
+- Added new shortcuts for fast tool switching. Look at the updated [Keyboard Shortcuts documentation](https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html#tool-switching-shortcuts) to see the new shortcuts. [#7112](https://github.com/scalableminds/webknossos/pull/7112)
 - Creating bounding boxes can now be done by dragging the left mouse button (when the bounding box tool is selected). To move around in the dataset while this tool is active, keep ALT pressed. [#7118](https://github.com/scalableminds/webknossos/pull/7118)
 
 ### Added
@@ -1116,7 +1116,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Highlights
 - The visible meshes are now included in the link copied from the "Share" modal or the "Share" button next to the dataset position. They are automatically loaded for users that open the shared link. [#5993](https://github.com/scalableminds/webknossos/pull/5993)
-- Added a new "Connectome Tab" which can be used to explore connectomes by visualizing neurites and their synaptic connections. Connectome files need to be placed in a `connectomes` folder inside of the respective segmentation layer. It is possible to craft links that automatically load specific agglomerates and their synapses when opened. For more information refer to https://docs.webknossos.org/webknossos/sharing.html#sharing-link-format. [#5894](https://github.com/scalableminds/webknossos/pull/5894)
+- Added a new "Connectome Tab" which can be used to explore connectomes by visualizing neurites and their synaptic connections. Connectome files need to be placed in a `connectomes` folder inside of the respective segmentation layer. It is possible to craft links that automatically load specific agglomerates and their synapses when opened. For more information refer to https://docs.webknossos.org/webknossos/sharing/annotation_sharing.html#sharing-link-format. [#5894](https://github.com/scalableminds/webknossos/pull/5894)
 
 ### Added
 - Added a context-menu option when right-clicking on skeleton trees to hide/show all other trees but the selected one. Great for inspecting a single tree in isolation. Identical to keyboard shortcut "2". [#6102](https://github.com/scalableminds/webknossos/pull/6102)
@@ -1270,7 +1270,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The active mapping is now included in the link copied from the "Share" modal or the new "Share" button next to the dataset position. It is automatically activated for users that open the shared link. [#5738](https://github.com/scalableminds/webknossos/pull/5738)
 
 ### Added
-- Added the possibility to load the skeletons of specific agglomerates from an agglomerate file when opening a tracing by including a mapping and agglomerate ids in the URL hash. See the [docs](https://docs.webknossos.org/webknossos/sharing.html#sharing-link-format) for further information. [#5738](https://github.com/scalableminds/webknossos/pull/5738)
+- Added the possibility to load the skeletons of specific agglomerates from an agglomerate file when opening a tracing by including a mapping and agglomerate ids in the URL hash. See the [docs](https://docs.webknossos.org/webknossos/sharing/annotation_sharing.html#sharing-link-format) for further information. [#5738](https://github.com/scalableminds/webknossos/pull/5738)
 - Added a skeleton sandbox mode where a dataset can be opened and all skeleton tracing capabilities are available. However, by default changes are not saved. At any point, users can decide to copy the current state to their account. The sandbox can be accessed at `<webknossos_host>/datasets/<organization>/<dataset>/sandbox/skeleton`. In the combination with the new agglomerate skeleton loading feature this can be used to craft links that open webknossos with an activated mapping and specific agglomerates loaded on-demand. [#5738](https://github.com/scalableminds/webknossos/pull/5738)
 - For ad-hoc mesh computation and for mesh precomputation, the user can now select which quality the mesh should have (i.e., via selecting which magnification should be used). [#5696](https://github.com/scalableminds/webknossos/pull/5696)
 - The context menu in the data viewport also allows to compute an ad-hoc mesh for the selected segment. [#5696](https://github.com/scalableminds/webknossos/pull/5696)

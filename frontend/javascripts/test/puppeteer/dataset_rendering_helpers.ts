@@ -2,17 +2,16 @@
 import urljoin from "url-join";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
-import type { Browser } from "puppeteer";
+import type { Browser, Page } from "puppeteer-core";
+import puppeteer from "puppeteer-core";
 import anyTest, { type TestFn } from "ava";
 import type { PartialDatasetConfiguration } from "oxalis/store";
-import type { Page } from "puppeteer";
 import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
 import type { RequestOptions } from "libs/request";
 import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
 import type { APIDatasetId } from "../../types/api_flow_types";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
-import puppeteer from "puppeteer";
 import { sleep } from "libs/utils";
 
 export const { WK_AUTH_TOKEN } = process.env;
@@ -355,17 +354,20 @@ export const test = anyTest as TestFn<{
 
 export function setupBeforeEachAndAfterEach() {
   test.beforeEach(async (t) => {
-    t.context.browser = await puppeteer.launch({
-      args: [
-        "--headless",
-        "--hide-scrollbars",
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--use-gl=swiftshader",
-      ],
-      dumpio: true,
-    });
+    // TODO Consider removing running local screenshot tests entirely and only use Browserstack
+
+    // Use this for connecting to local Chrome browser instance
+    // t.context.browser = await puppeteer.launch({
+    //   args: [
+    //     "--headless=new",
+    //     "--hide-scrollbars",
+    //     "--no-sandbox",
+    //     "--disable-setuid-sandbox",
+    //     "--disable-dev-shm-usage",
+    //     "--use-gl=swiftshader",
+    //   ],
+    //   dumpio: true,
+    // });
 
     const caps = {
       browser: "chrome",

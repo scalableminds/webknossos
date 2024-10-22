@@ -2,11 +2,11 @@ import { location } from "libs/window";
 import Request from "libs/request";
 import * as Utils from "libs/utils";
 import Toast from "libs/toast";
-import UrlManager from "oxalis/controller/url_manager";
 
 let tokenPromise: Promise<string>;
 
 let tokenRequestPromise: Promise<string> | null;
+let shouldUseURLToken: boolean = true;
 
 function requestUserToken(): Promise<string> {
   if (tokenRequestPromise) {
@@ -35,15 +35,6 @@ export function getSharingTokenFromUrlParameters(): string | null | undefined {
   return null;
 }
 
-function removeSharingTokenFromURLParameters() {
-  const url = new URL(location.href);
-  if (url.searchParams.has("token")) {
-    url.searchParams.delete("token");
-    UrlManager.changeBaseUrl(url.pathname + url.search);
-    Toast.info("Removed token from URL and trying using your user token instead...");
-  }
-}
-
 function removeErrorToast(error: any) {
   if ("errors" in error && Array.isArray(error.errors)) {
     error.errors.forEach((errorText: string) => {
@@ -59,7 +50,8 @@ export async function doWithToken<T>(
   tries: number = 1,
   useURLTokenIfAvailable: boolean = true,
 ): Promise<any> {
-  let token = useURLTokenIfAvailable ? getSharingTokenFromUrlParameters() : null;
+  let token =
+    useURLTokenIfAvailable && shouldUseURLToken ? getSharingTokenFromUrlParameters() : null;
 
   if (token == null) {
     tokenPromise = tokenPromise == null ? requestUserToken() : tokenPromise;
@@ -78,8 +70,11 @@ export async function doWithToken<T>(
         const result = await doWithToken(fn, tries + 1, false);
         // Upon successful retry with own token, discard the url token.
         if (useURLTokenIfAvailable) {
+          shouldUseURLToken = false;
+          Toast.info(
+            "Initial request using the URL token failed. Your personal token will be used from now on.",
+          );
           removeErrorToast(error);
-          removeSharingTokenFromURLParameters();
         }
         return result;
       }

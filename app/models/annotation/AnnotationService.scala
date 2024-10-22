@@ -35,7 +35,7 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  ResolutionRestrictions,
+  MagRestrictions,
   VolumeDataZipFormat,
   VolumeTracingDefaults,
   VolumeTracingDownsampling
@@ -144,15 +144,15 @@ class AnnotationService @Inject()(
       boundingBox: Option[BoundingBox] = None,
       startPosition: Option[Vec3Int] = None,
       startRotation: Option[Vec3Double] = None,
-      resolutionRestrictions: ResolutionRestrictions,
+      magRestrictions: MagRestrictions,
       mappingName: Option[String]
   ): Fox[VolumeTracing] = {
-    val resolutions = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayer)
-    val resolutionsRestricted = resolutionRestrictions.filterAllowed(resolutions)
+    val mags = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayer)
+    val magsRestricted = magRestrictions.filterAllowed(mags)
     val additionalAxes =
       fallbackLayer.map(_.additionalAxes).getOrElse(dataSource.additionalAxesUnion)
     for {
-      _ <- bool2Fox(resolutionsRestricted.nonEmpty) ?~> "annotation.volume.resolutionRestrictionsTooTight"
+      _ <- bool2Fox(magsRestricted.nonEmpty) ?~> "annotation.volume.magRestrictionsTooTight"
       remoteDatastoreClient = new WKRemoteDataStoreClient(datasetDataStore, rpc)
       fallbackLayerHasSegmentIndex <- fallbackLayer match {
         case Some(layer) =>
@@ -175,7 +175,7 @@ class AnnotationService @Inject()(
         VolumeTracingDefaults.zoomLevel,
         organizationId = Some(datasetOrganizationId),
         mappingName = mappingName,
-        resolutions = resolutionsRestricted.map(vec3IntToProto),
+        mags = magsRestricted.map(vec3IntToProto),
         hasSegmentIndex = Some(fallbackLayer.isEmpty || fallbackLayerHasSegmentIndex),
         additionalAxes = AdditionalAxis.toProto(additionalAxes)
       )
@@ -286,8 +286,7 @@ class AnnotationService @Inject()(
                 datasetOrganizationId,
                 dataStore,
                 fallbackLayer,
-                resolutionRestrictions =
-                  annotationLayerParameters.resolutionRestrictions.getOrElse(ResolutionRestrictions.empty),
+                magRestrictions = annotationLayerParameters.magRestrictions.getOrElse(MagRestrictions.empty),
                 mappingName = annotationLayerParameters.mappingName
               )
               volumeTracingAdapted = oldPrecedenceLayerProperties.map { p =>
@@ -417,7 +416,7 @@ class AnnotationService @Inject()(
         usedFallbackLayerName,
         autoFallbackLayer = false,
         None,
-        Some(ResolutionRestrictions.empty),
+        Some(MagRestrictions.empty),
         Some(AnnotationLayer.defaultNameForType(newAnnotationLayerType)),
         None
       )
@@ -551,14 +550,14 @@ class AnnotationService @Inject()(
     )
   }
 
-  def createVolumeTracingBase(datasetName: String,
-                              organizationId: String,
-                              boundingBox: Option[BoundingBox],
-                              startPosition: Vec3Int,
-                              startRotation: Vec3Double,
-                              volumeShowFallbackLayer: Boolean,
-                              resolutionRestrictions: ResolutionRestrictions)(implicit ctx: DBAccessContext,
-                                                                              m: MessagesProvider): Fox[VolumeTracing] =
+  def createVolumeTracingBase(
+      datasetName: String,
+      organizationId: String,
+      boundingBox: Option[BoundingBox],
+      startPosition: Vec3Int,
+      startRotation: Vec3Double,
+      volumeShowFallbackLayer: Boolean,
+      magRestrictions: MagRestrictions)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[VolumeTracing] =
     for {
       organization <- organizationDAO.findOne(organizationId)
       dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId) ?~> Messages("dataset.notFound",
@@ -583,7 +582,7 @@ class AnnotationService @Inject()(
         },
         startPosition = Some(startPosition),
         startRotation = Some(startRotation),
-        resolutionRestrictions = resolutionRestrictions,
+        magRestrictions = magRestrictions,
         mappingName = None
       )
     } yield volumeTracing

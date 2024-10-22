@@ -355,7 +355,7 @@ export const test = anyTest as TestFn<{
 export function setupBeforeEachAndAfterEach() {
   test.beforeEach(async (t) => {
     // TODO Consider removing running local screenshot tests entirely and only use Browserstack
-    
+
     // Use this for connecting to local Chrome browser instance
     // t.context.browser = await puppeteer.launch({
     //   args: [

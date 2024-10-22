@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, 
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
-import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
+import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 
 import javax.inject.Inject
 import models.annotation.nml.NmlResults.TracingBoxContainer
@@ -86,7 +86,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                     taskParameters,
                                     tracingStoreClient,
                                     organizationId,
-                                    taskType.settings.resolutionRestrictions).map(Some(_))
+                                    taskType.settings.magRestrictions).map(Some(_))
       else Fox.successful(None)
     } yield BaseAnnotation(baseAnnotationIdValidated.id, newSkeletonId, newVolumeId)
 
@@ -146,11 +146,11 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       params: TaskParameters,
       tracingStoreClient: WKRemoteTracingStoreClient,
       organizationId: String,
-      resolutionRestrictions: ResolutionRestrictions)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[String] =
+      magRestrictions: MagRestrictions)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[String] =
     for {
       volumeTracingOpt <- baseAnnotation.volumeTracingId
       newVolumeTracingId <- volumeTracingOpt
-        .map(id => tracingStoreClient.duplicateVolumeTracing(id, resolutionRestrictions = resolutionRestrictions))
+        .map(id => tracingStoreClient.duplicateVolumeTracing(id, magRestrictions = magRestrictions))
         .getOrElse(
           annotationService
             .createVolumeTracingBase(
@@ -160,9 +160,9 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
               params.editPosition,
               params.editRotation,
               volumeShowFallbackLayer = false,
-              resolutionRestrictions = resolutionRestrictions
+              magRestrictions = magRestrictions
             )
-            .flatMap(tracingStoreClient.saveVolumeTracing(_, resolutionRestrictions = resolutionRestrictions)))
+            .flatMap(tracingStoreClient.saveVolumeTracing(_, magRestrictions = magRestrictions)))
     } yield newVolumeTracingId
 
   // Used in create (without files). If base annotations were used, this does nothing.
@@ -201,7 +201,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
               params.editPosition,
               params.editRotation,
               volumeShowFallbackLayer = false,
-              resolutionRestrictions = taskType.settings.resolutionRestrictions
+              magRestrictions = taskType.settings.magRestrictions
             )
             .map(v => Some((v, None)))
         } else Fox.successful(None)
@@ -333,7 +333,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                         params.editPosition,
                         params.editRotation,
                         volumeShowFallbackLayer = false,
-                        resolutionRestrictions = taskType.settings.resolutionRestrictions
+                        magRestrictions = taskType.settings.magRestrictions
                       )
                       .map(v => (v, None)))
 
@@ -485,7 +485,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
           taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"
           taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
           saveResult <- tracingStoreClient
-            .saveVolumeTracing(tracing, initialFile, resolutionRestrictions = taskType.settings.resolutionRestrictions)
+            .saveVolumeTracing(tracing, initialFile, magRestrictions = taskType.settings.magRestrictions)
             .map(Some(_))
         } yield saveResult
       case f: Failure => box2Fox(f)

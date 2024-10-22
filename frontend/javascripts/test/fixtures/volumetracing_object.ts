@@ -38,7 +38,7 @@ export const initialState = update(defaultState, {
         allowFinish: true,
         allowAccess: true,
         allowDownload: true,
-        resolutionRestrictions: {
+        magRestrictions: {
           // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'number | un... Remove this comment to see the full error message
           min: null,
           // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'number | un... Remove this comment to see the full error message
@@ -56,7 +56,7 @@ export const initialState = update(defaultState, {
       dataLayers: {
         $set: [
           {
-            // We need to have some resolutions. Otherwise,
+            // We need to have some mags. Otherwise,
             // getRequestLogZoomStep will always return 0
             resolutions: [
               [1, 1, 1],

@@ -38,7 +38,7 @@ import {
   getActiveSegmentationTracing,
   getMappingInfoForVolumeTracing,
   getMaximumBrushSize,
-  getRenderableResolutionForActiveSegmentationTracing,
+  getRenderableMagForActiveSegmentationTracing,
   getSegmentColorAsRGBA,
   hasAgglomerateMapping,
   hasEditableMapping,
@@ -866,15 +866,13 @@ export default function ToolbarView() {
     (state: OxalisState) => state.userConfiguration.useLegacyBindings,
   );
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
-  const maybeResolutionWithZoomStep = useSelector(
-    getRenderableResolutionForActiveSegmentationTracing,
-  );
+  const maybeResolutionWithZoomStep = useSelector(getRenderableMagForActiveSegmentationTracing);
 
   const labeledResolution =
     maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
   const hasResolutionWithHigherDimension = (labeledResolution || []).some((val) => val > 1);
   const multiSliceAnnotationInfoIcon = hasResolutionWithHigherDimension ? (
-    <FastTooltip title="You are annotating in a low resolution. Depending on the used viewport, you might be annotating multiple slices at once.">
+    <FastTooltip title="You are annotating in a low magnification. Depending on the used viewport, you might be annotating multiple slices at once.">
       <i
         className="fas fa-layer-group"
         style={{

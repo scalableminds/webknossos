@@ -561,7 +561,7 @@ class EditableMappingService @Inject()(
     EditableMappingLayer(
       mappingName,
       tracing.boundingBox,
-      resolutions = tracing.resolutions.map(vec3IntFromProto).toList,
+      resolutions = tracing.mags.map(vec3IntFromProto).toList,
       largestSegmentId = Some(0L),
       elementClass = tracing.elementClass,
       userToken,

@@ -25,6 +25,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Fixed a bug during dataset upload in case the configured `datastore.baseFolder` is an absolute path. [#8098](https://github.com/scalableminds/webknossos/pull/8098) [#8103](https://github.com/scalableminds/webknossos/pull/8103)
+- When trying to save an annotation opened via a link including a sharing token, the token is automatically discarded in case it is insufficient for update actions but the users token is. [#8139](https://github.com/scalableminds/webknossos/pull/8139)
 - Fixed that the skeleton search did not automatically expand groups that contained the selected tree [#8129](https://github.com/scalableminds/webknossos/pull/8129)
 - Fixed a bug that zarr streaming version 3 returned the shape of mag (1, 1, 1) / the finest mag for all mags. [#8116](https://github.com/scalableminds/webknossos/pull/8116)
 - Fixed sorting of mags in outbound zarr streaming. [#8125](https://github.com/scalableminds/webknossos/pull/8125)

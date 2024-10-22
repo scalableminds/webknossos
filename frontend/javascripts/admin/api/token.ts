@@ -1,4 +1,4 @@
-import window, { location } from "libs/window";
+import { location } from "libs/window";
 import Request from "libs/request";
 import * as Utils from "libs/utils";
 import Toast from "libs/toast";
@@ -36,7 +36,7 @@ export function getSharingTokenFromUrlParameters(): string | null | undefined {
 }
 
 function removeSharingTokenFromURLParameters() {
-  const urlObj = new URL(window.location.href);
+  const urlObj = new URL(location.href);
   if (urlObj.searchParams.has("token")) {
     urlObj.searchParams.delete("token");
     UrlManager.changeBaseUrl(urlObj.pathname + urlObj.search);

@@ -643,8 +643,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       if (existingDatasetIds.isEmpty) q"TRUE"
       else q"_id NOT IN ${SqlToken.tupleFromList(existingDatasetIds)}"
     val statusNotAlreadyInactive = q"status NOT IN ${SqlToken.tupleFromList(inactiveStatusList)}"
-    val deleteResolutionsQuery =
-      q"""DELETE FROM webknossos.dataset_resolutions
+    val deleteMagsQuery =
+      q"""DELETE FROM webknossos.dataset_mags
          WHERE _dataset IN (
            SELECT _id
            FROM webknossos.datasets
@@ -666,13 +666,13 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
           AND $inclusionPredicate
           AND $statusNotAlreadyInactive""".asUpdate
     for {
-      _ <- run(DBIO.sequence(List(deleteResolutionsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)
+      _ <- run(DBIO.sequence(List(deleteMagsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)
     } yield ()
   }
 
   def deleteDataset(datasetId: ObjectId, onlyMarkAsDeleted: Boolean = false): Fox[Unit] = {
-    val deleteResolutionsQuery =
-      q"DELETE FROM webknossos.dataset_resolutions WHERE _dataset = $datasetId".asUpdate
+    val deleteMagsQuery =
+      q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId".asUpdate
     val deleteCoordinateTransformsQuery =
       q"DELETE FROM webknossos.dataset_layer_coordinateTransformations WHERE _dataset = $datasetId".asUpdate
     val deleteLayersQuery =
@@ -690,7 +690,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       _ <- run(
         DBIO
           .sequence(
-            List(deleteResolutionsQuery,
+            List(deleteMagsQuery,
                  deleteAdditionalAxesQuery,
                  deleteLayersQuery,
                  deleteAllowedTeamsQuery,
@@ -701,28 +701,26 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   }
 }
 
-class DatasetResolutionsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
-    extends SimpleSQLDAO(sqlClient) {
-  private def parseRow(row: DatasetResolutionsRow): Fox[Vec3Int] =
+class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
+  private def parseRow(row: DatasetMagsRow): Fox[Vec3Int] =
     for {
-      resolution <- Vec3Int.fromList(parseArrayLiteral(row.resolution).map(_.toInt)) ?~> "could not parse resolution"
-    } yield resolution
+      mag <- Vec3Int.fromList(parseArrayLiteral(row.mag).map(_.toInt)) ?~> "could not parse mag"
+    } yield mag
 
-  def findDataResolutionForLayer(datasetId: ObjectId, dataLayerName: String): Fox[List[Vec3Int]] =
+  def findMagForLayer(datasetId: ObjectId, dataLayerName: String): Fox[List[Vec3Int]] =
     for {
-      rows <- run(
-        DatasetResolutions.filter(r => r._Dataset === datasetId.id && r.datalayername === dataLayerName).result)
+      rows <- run(DatasetMags.filter(r => r._Dataset === datasetId.id && r.datalayername === dataLayerName).result)
         .map(_.toList)
-      rowsParsed <- Fox.combined(rows.map(parseRow)) ?~> "could not parse resolution row"
+      rowsParsed <- Fox.combined(rows.map(parseRow)) ?~> "could not parse mag row"
     } yield rowsParsed
 
-  def updateResolutions(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
-    val clearQuery = q"DELETE FROM webknossos.dataset_resolutions WHERE _dataset = $datasetId".asUpdate
+  def updateMags(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
+    val clearQuery = q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId".asUpdate
     val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
-      layer.resolutions.map { resolution: Vec3Int =>
+      layer.resolutions.map { mag: Vec3Int =>
         {
-          q"""INSERT INTO webknossos.dataset_resolutions(_dataset, dataLayerName, resolution)
-                VALUES($datasetId, ${layer.name}, $resolution)""".asUpdate
+          q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag)
+                VALUES($datasetId, ${layer.name}, $mag)""".asUpdate
         }
       }
     }
@@ -733,7 +731,7 @@ class DatasetResolutionsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
 
 class DatasetLayerDAO @Inject()(
     sqlClient: SqlClient,
-    datasetResolutionsDAO: DatasetResolutionsDAO,
+    datasetMagsDAO: DatasetMagsDAO,
     datasetCoordinateTransformationsDAO: DatasetCoordinateTransformationsDAO,
     datasetLayerAdditionalAxesDAO: DatasetLayerAdditionalAxesDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
@@ -745,7 +743,7 @@ class DatasetLayerDAO @Inject()(
         .fromSQL(parseArrayLiteral(row.boundingbox).map(_.toInt))
         .toFox ?~> "Could not parse boundingbox"
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
-      resolutions <- datasetResolutionsDAO.findDataResolutionForLayer(datasetId, row.name) ?~> "Could not find resolution for layer"
+      mags <- datasetMagsDAO.findMagForLayer(datasetId, row.name) ?~> "Could not find mag for layer"
       defaultViewConfigurationOpt <- Fox.runOptional(row.defaultviewconfiguration)(
         JsonHelper.parseAndValidateJson[LayerViewConfiguration](_))
       adminViewConfigurationOpt <- Fox.runOptional(row.adminviewconfiguration)(
@@ -764,7 +762,7 @@ class DatasetLayerDAO @Inject()(
               row.name,
               category,
               boundingBox,
-              resolutions.sortBy(_.maxDim),
+              mags.sortBy(_.maxDim),
               elementClass,
               row.largestsegmentid,
               mappingsAsSet.flatMap(m => if (m.isEmpty) None else Some(m)),
@@ -779,7 +777,7 @@ class DatasetLayerDAO @Inject()(
               row.name,
               category,
               boundingBox,
-              resolutions.sortBy(_.maxDim),
+              mags.sortBy(_.maxDim),
               elementClass,
               defaultViewConfigurationOpt,
               adminViewConfigurationOpt,
@@ -849,7 +847,7 @@ class DatasetLayerDAO @Inject()(
 
     for {
       _ <- run(DBIO.sequence(queries))
-      _ <- datasetResolutionsDAO.updateResolutions(datasetId, source.toUsable.map(_.dataLayers))
+      _ <- datasetMagsDAO.updateMags(datasetId, source.toUsable.map(_.dataLayers))
       _ <- datasetCoordinateTransformationsDAO.updateCoordinateTransformations(datasetId,
                                                                                source.toUsable.map(_.dataLayers))
       _ <- datasetLayerAdditionalAxesDAO.updateAdditionalAxes(datasetId, source.toUsable.map(_.dataLayers))

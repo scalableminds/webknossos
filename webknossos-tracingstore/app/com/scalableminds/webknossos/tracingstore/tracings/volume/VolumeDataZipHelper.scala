@@ -130,15 +130,15 @@ trait VolumeDataZipHelper
     }
   }
 
-  protected def resolutionSetFromZipfile(zipFile: File): Set[Vec3Int] = {
-    val resolutionSet = new mutable.HashSet[Vec3Int]()
+  protected def magSetFromZipfile(zipFile: File): Set[Vec3Int] = {
+    val magSet = new mutable.HashSet[Vec3Int]()
     ZipIO.withUnziped(zipFile) {
       case (fileName, _) =>
         getMagFromWkwOrZarrHeaderFilePath(fileName.toString).map { mag: Vec3Int =>
-          resolutionSet.add(mag)
+          magSet.add(mag)
         }
     }
-    resolutionSet.toSet
+    magSet.toSet
   }
 
   private def getMagFromWkwOrZarrHeaderFilePath(path: String): Option[Vec3Int] = {

@@ -106,7 +106,7 @@ class SceneController {
 
     this.meshesRootGroup = new THREE.Group();
     this.highlightedBBoxId = null;
-    // The dimension(s) with the highest resolution will not be distorted
+    // The dimension(s) with the highest mag will not be distorted
     this.rootGroup.scale.copy(
       new THREE.Vector3(...Store.getState().dataset.dataSource.scale.factor),
     );
@@ -125,13 +125,13 @@ class SceneController {
     window.addBucketMesh = (
       position: Vector3,
       zoomStep: number,
-      resolution: Vector3,
+      mag: Vector3,
       optColor?: string,
     ) => {
       const bucketSize = [
-        constants.BUCKET_WIDTH * resolution[0],
-        constants.BUCKET_WIDTH * resolution[1],
-        constants.BUCKET_WIDTH * resolution[2],
+        constants.BUCKET_WIDTH * mag[0],
+        constants.BUCKET_WIDTH * mag[1],
+        constants.BUCKET_WIDTH * mag[2],
       ];
       const boxGeometry = new THREE.BoxGeometry(...bucketSize);
       const edgesGeometry = new THREE.EdgesGeometry(boxGeometry);

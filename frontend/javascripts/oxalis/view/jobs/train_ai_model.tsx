@@ -17,7 +17,7 @@ import type { HybridTracing, OxalisState, UserBoundingBox, VolumeTracing } from 
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getColorLayers,
-  getResolutionInfo,
+  getMagInfo,
   getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -46,7 +46,7 @@ const FormItem = Form.Item;
 // This type is used for GenericAnnotation = HybridTracing | APIAnnotation as in case of multi annotation training,
 // only the APIAnnotations of the given annotations to train on are loaded from the backend.
 // Thus, the code needs to handle both HybridTracing | APIAnnotation where APIAnnotation is missing some information.
-// Therefore, volumeTracings with the matching volumeTracingResolutions are needed to get more details on each volume annotation layer and its resolutions.
+// Therefore, volumeTracings with the matching volumeTracingMags are needed to get more details on each volume annotation layer and its magnifications.
 // The userBoundingBoxes are needed for checking for equal bounding box sizes. As training on fallback data is supported and an annotation is not required to have VolumeTracings,
 // it is necessary to save userBoundingBoxes separately and not load them from volumeTracings entries to support skeleton only annotations.
 // Note that a copy of the userBoundingBoxes is included in each volume and skeleton tracing of an annotation. Thus, it doesn't matter from which the userBoundingBoxes are taken.
@@ -55,7 +55,7 @@ export type AnnotationInfoForAIJob<GenericAnnotation> = {
   dataset: APIDataset;
   volumeTracings: VolumeTracing[];
   userBoundingBoxes: UserBoundingBox[];
-  volumeTracingResolutions: Vector3[][];
+  volumeTracingMags: Vector3[][];
 };
 
 enum AiModelCategory {
@@ -128,7 +128,7 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
 
   const getMagForSegmentationLayer = async (_annotationId: string, layerName: string) => {
     const segmentationLayer = getSegmentationLayerByHumanReadableName(dataset, tracing, layerName);
-    return getResolutionInfo(segmentationLayer.resolutions).getFinestResolution();
+    return getMagInfo(segmentationLayer.resolutions).getFinestMag();
   };
   const userBoundingBoxes = getSomeTracing(tracing).userBoundingBoxes;
 
@@ -142,7 +142,7 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
           annotation: tracing,
           dataset,
           volumeTracings: tracing.volumes,
-          volumeTracingResolutions: [],
+          volumeTracingMags: [],
           userBoundingBoxes,
         },
       ]}
@@ -508,7 +508,7 @@ function AnnotationsCsvInput({
           annotation,
           dataset,
           volumeTracings,
-          volumeTracingResolutions: volumeServerTracings.map(({ resolutions }) =>
+          volumeTracingMags: volumeServerTracings.map(({ mags: resolutions }) =>
             resolutions ? resolutions.map(Utils.point3ToVector3) : ([[1, 1, 1]] as Vector3[]),
           ),
           userBoundingBoxes: userBoundingBoxes || [],

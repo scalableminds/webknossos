@@ -13,7 +13,7 @@ GET           /datasets/:organizationId/:datasetPath/layers/:dataLayerName/findD
 GET           /datasets/:organizationId/:datasetPath/layers/:dataLayerName/histogram                                                        @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.histogram(token: Option[String], organizationId: String, datasetPath: String, dataLayerName: String)
 
 # Knossos compatible routes
-GET           /datasets/:organizationId/:datasetPath/layers/:dataLayerName/mag:resolution/x:x/y:y/z:z/bucket.raw                            @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestViaKnossos(token: Option[String], organizationId: String, datasetPath: String, dataLayerName: String, resolution: Int, x: Int, y: Int, z: Int, cubeSize: Int)
+GET           /datasets/:organizationId/:datasetPath/layers/:dataLayerName/mag:mag/x:x/y:y/z:z/bucket.raw                            @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestViaKnossos(token: Option[String], organizationId: String, datasetPath: String, dataLayerName: String, mag: Int, x: Int, y: Int, z: Int, cubeSize: Int)
 
 # Zarr2 compatible routes
 GET           /zarr/:organizationId/:datasetPath                                                                                            @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.requestDataSourceFolderContents(token: Option[String], organizationId: String, datasetPath: String, zarrVersion: Int = 2)

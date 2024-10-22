@@ -202,7 +202,7 @@ export const annotation: APIAnnotation = {
     somaClickingAllowed: true,
     volumeInterpolationAllowed: false,
     mergerMode: false,
-    resolutionRestrictions: {},
+    magRestrictions: {},
   },
   tags: ["ROI2017_wkw", "skeleton"],
   tracingTime: 0,

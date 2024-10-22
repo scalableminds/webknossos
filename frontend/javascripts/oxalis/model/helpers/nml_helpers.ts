@@ -413,7 +413,7 @@ function serializeNodes(
       rotY: node.rotation[1],
       rotZ: node.rotation[2],
       inVp: node.viewport,
-      inMag: node.resolution,
+      inMag: node.mag,
       bitDepth: node.bitDepth,
       interpolation: node.interpolation,
       time: node.timestamp,
@@ -964,7 +964,7 @@ export function parseNml(nmlString: string): Promise<{
               }),
               bitDepth: _parseInt(attr, "bitDepth", { defaultValue: DEFAULT_BITDEPTH }),
               viewport: _parseInt(attr, "inVp", { defaultValue: DEFAULT_VIEWPORT }),
-              resolution: _parseInt(attr, "inMag", { defaultValue: DEFAULT_RESOLUTION }),
+              mag: _parseInt(attr, "inMag", { defaultValue: DEFAULT_RESOLUTION }),
               radius: _parseFloat(attr, "radius", { defaultValue: Constants.DEFAULT_NODE_RADIUS }),
               timestamp: _parseTimestamp(attr, "time", { defaultValue: DEFAULT_TIMESTAMP }),
             };

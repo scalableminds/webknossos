@@ -371,7 +371,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         writer.writeAttribute("rotY", n.rotation.y.toString)
         writer.writeAttribute("rotZ", n.rotation.z.toString)
         writer.writeAttribute("inVp", n.viewport.toString)
-        writer.writeAttribute("inMag", n.resolution.toString)
+        writer.writeAttribute("inMag", n.mag.toString)
         writer.writeAttribute("bitDepth", n.bitDepth.toString)
         writer.writeAttribute("interpolation", n.interpolation.toString)
         writer.writeAttribute("time", n.createdTimestamp.toString)

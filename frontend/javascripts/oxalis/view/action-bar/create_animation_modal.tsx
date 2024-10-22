@@ -10,7 +10,7 @@ import {
   getColorLayers,
   getEffectiveIntensityRange,
   getLayerByName,
-  getResolutionInfo,
+  getMagInfo,
   is2dDataset,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -205,7 +205,7 @@ function CreateAnimationModal(props: Props) {
       const layer = getLayerByName(state.dataset, layerName) as APISegmentationLayer;
       const fullLayerName = layer.fallbackLayerInfo?.name || layerName;
 
-      const adhocMagIndex = getResolutionInfo(layer.resolutions).getClosestExistingIndex(
+      const adhocMagIndex = getMagInfo(layer.resolutions).getClosestExistingIndex(
         preferredQualityForMeshAdHocComputation,
       );
       const adhocMag = layer.resolutions[adhocMagIndex];

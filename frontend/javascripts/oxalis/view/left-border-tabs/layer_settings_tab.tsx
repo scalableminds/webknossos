@@ -59,9 +59,9 @@ import {
   getElementClass,
   isColorLayer as getIsColorLayer,
   getLayerByName,
-  getResolutionInfo,
+  getMagInfo,
   getTransformsForLayerOrNull,
-  getWidestResolutions,
+  getWidestMags,
   getLayerBoundingBox,
   getTransformsForLayer,
   hasDatasetTransforms,
@@ -147,7 +147,7 @@ type DatasetSettingsProps = {
   onChangeRadius: (value: number) => void;
   onChangeShowSkeletons: (arg0: boolean) => void;
   onSetPosition: (arg0: Vector3) => void;
-  onZoomToResolution: (layerName: string, arg0: Vector3) => number;
+  onZoomToMag: (layerName: string, arg0: Vector3) => number;
   onChangeUser: (key: keyof UserConfiguration, value: any) => void;
   reloadHistogram: (layerName: string) => void;
   tracing: Tracing;
@@ -310,13 +310,13 @@ function LayerInfoIconWithTooltip({
 }: { layer: APIDataLayer; dataset: APIDataset }) {
   const renderTooltipContent = useCallback(() => {
     const elementClass = getElementClass(dataset, layer.name);
-    const resolutionInfo = getResolutionInfo(layer.resolutions);
-    const resolutions = resolutionInfo.getResolutionList();
+    const resolutionInfo = getMagInfo(layer.resolutions);
+    const resolutions = resolutionInfo.getMagList();
     return (
       <div>
         <div>Data Type: {elementClass}</div>
         <div>
-          Available resolutions:
+          Available magnifications:
           <ul>
             {resolutions.map((r) => (
               <li key={r.join()}>{r.join("-")}</li>
@@ -1069,7 +1069,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     }
 
     this.props.onSetPosition(foundPosition);
-    const zoomValue = this.props.onZoomToResolution(layerName, foundResolution);
+    const zoomValue = this.props.onZoomToMag(layerName, foundResolution);
     Toast.success(
       `Jumping to position ${foundPosition
         .map((el) => Math.floor(el))
@@ -1105,7 +1105,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         ? fallbackLayerInfo.resolutions
         : // This is only a heuristic. At some point, user configuration
           // might make sense here.
-          getWidestResolutions(this.props.dataset);
+          getWidestMags(this.props.dataset);
 
     const getMaxDim = (resolution: Vector3) => Math.max(...resolution);
 
@@ -1150,7 +1150,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               verticalAlign: "top",
               cursor: "pointer",
             }}
-            alt="Resolution Icon"
+            alt="Magnification Icon"
           />
         </LinkButton>
       </FastTooltip>
@@ -1622,7 +1622,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setShowSkeletonsAction(showSkeletons));
   },
 
-  onZoomToResolution(layerName: string, resolution: Vector3) {
+  onZoomToMag(layerName: string, resolution: Vector3) {
     const targetZoomValue = getMaxZoomValueForResolution(Store.getState(), layerName, resolution);
     dispatch(setZoomStepAction(targetZoomValue));
     return targetZoomValue;

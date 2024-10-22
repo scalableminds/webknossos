@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
 }
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
+import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingIds, TracingType}
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
@@ -45,7 +45,7 @@ case class AnnotationLayerParameters(typ: AnnotationLayerType,
                                      fallbackLayerName: Option[String],
                                      autoFallbackLayer: Boolean = false,
                                      mappingName: Option[String] = None,
-                                     resolutionRestrictions: Option[ResolutionRestrictions],
+                                     magRestrictions: Option[MagRestrictions],
                                      name: Option[String],
                                      additionalAxes: Option[Seq[AdditionalAxis]])
 object AnnotationLayerParameters {

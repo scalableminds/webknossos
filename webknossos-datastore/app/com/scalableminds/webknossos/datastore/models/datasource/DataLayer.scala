@@ -148,6 +148,8 @@ trait DataLayerLike {
 
   def resolutions: List[Vec3Int]
 
+  lazy val sortedMags: List[Vec3Int] = resolutions.sortBy(_.maxDim)
+
   def elementClass: ElementClass.Value
 
   // This is the default from the DataSource JSON.
@@ -195,7 +197,7 @@ trait DataLayer extends DataLayerLike {
   /**
     * Defines the length of the underlying cubes making up the layer. This is the maximal size that can be loaded from a single file.
     */
-  def lengthOfUnderlyingCubes(resolution: Vec3Int): Int
+  def lengthOfUnderlyingCubes(mag: Vec3Int): Int
 
   def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                      dataSourceId: DataSourceId,
@@ -203,7 +205,7 @@ trait DataLayer extends DataLayerLike {
 
   def bucketProviderCacheKey: String = this.name
 
-  def containsResolution(resolution: Vec3Int): Boolean = resolutions.contains(resolution)
+  def containsMag(mag: Vec3Int): Boolean = resolutions.contains(mag)
 
   def doesContainBucket(bucket: BucketPosition): Boolean =
     boundingBox.intersects(bucket.toMag1BoundingBox)
@@ -411,15 +413,15 @@ object AbstractSegmentationLayer {
   implicit val jsonFormat: OFormat[AbstractSegmentationLayer] = Json.format[AbstractSegmentationLayer]
 }
 
-trait ResolutionFormatHelper {
+trait MagFormatHelper {
 
-  implicit object resolutionFormat extends Format[Vec3Int] {
+  implicit object magFormat extends Format[Vec3Int] {
 
     override def reads(json: JsValue): JsResult[Vec3Int] =
       json.validate[Int].map(result => Vec3Int(result, result, result)).orElse(Vec3Int.Vec3IntReads.reads(json))
 
-    override def writes(resolution: Vec3Int): JsValue =
-      Vec3Int.Vec3IntWrites.writes(resolution)
+    override def writes(mag: Vec3Int): JsValue =
+      Vec3Int.Vec3IntWrites.writes(mag)
   }
 
 }

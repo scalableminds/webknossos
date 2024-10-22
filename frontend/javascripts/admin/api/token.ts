@@ -44,6 +44,16 @@ function removeSharingTokenFromURLParameters() {
   }
 }
 
+function removeErrorToast(error: any) {
+  if ("errors" in error && Array.isArray(error.errors)) {
+    error.errors.forEach((errorText: string) => {
+      if (errorText.includes("Token may be expired")) {
+        Toast.close(errorText);
+      }
+    });
+  }
+}
+
 export async function doWithToken<T>(
   fn: (token: string) => Promise<T>,
   tries: number = 1,
@@ -68,6 +78,7 @@ export async function doWithToken<T>(
         const result = await doWithToken(fn, tries + 1, false);
         // Upon successful retry with own token, discard the url token.
         if (useURLTokenIfAvailable) {
+          removeErrorToast(error);
           removeSharingTokenFromURLParameters();
         }
         return result;

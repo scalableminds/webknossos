@@ -1,7 +1,8 @@
-import { location } from "libs/window";
+import window, { location } from "libs/window";
 import Request from "libs/request";
 import * as Utils from "libs/utils";
 import Toast from "libs/toast";
+import UrlManager from "oxalis/controller/url_manager";
 
 let tokenPromise: Promise<string>;
 
@@ -38,8 +39,8 @@ function removeSharingTokenFromURLParameters() {
   const urlObj = new URL(window.location.href);
   if (urlObj.searchParams.has("token")) {
     urlObj.searchParams.delete("token");
-    window.history.replaceState({}, document.title, urlObj.toString()); // somehow it is replaced back to the state where the token exists :///
-    Toast.info("Token URL token was outdated and therefore removed.");
+    UrlManager.changeBaseUrl(urlObj.pathname + urlObj.search);
+    Toast.info("Removed token from URL and trying using your user token instead...");
   }
 }
 

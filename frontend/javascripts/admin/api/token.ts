@@ -36,10 +36,10 @@ export function getSharingTokenFromUrlParameters(): string | null | undefined {
 }
 
 function removeSharingTokenFromURLParameters() {
-  const urlObj = new URL(location.href);
-  if (urlObj.searchParams.has("token")) {
-    urlObj.searchParams.delete("token");
-    UrlManager.changeBaseUrl(urlObj.pathname + urlObj.search);
+  const url = new URL(location.href);
+  if (url.searchParams.has("token")) {
+    url.searchParams.delete("token");
+    UrlManager.changeBaseUrl(url.pathname + url.search);
     Toast.info("Removed token from URL and trying using your user token instead...");
   }
 }

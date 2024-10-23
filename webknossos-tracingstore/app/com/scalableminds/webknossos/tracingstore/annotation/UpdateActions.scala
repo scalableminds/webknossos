@@ -14,7 +14,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{
   MergeTreeSkeletonAction,
   MoveTreeComponentSkeletonAction,
   UpdateNodeSkeletonAction,
-  UpdateTdCameraSkeletonAction,
   UpdateTracingSkeletonAction,
   UpdateTreeEdgesVisibilitySkeletonAction,
   UpdateTreeGroupVisibilitySkeletonAction,
@@ -35,7 +34,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   UpdateMappingNameVolumeAction,
   UpdateSegmentGroupsVolumeAction,
   UpdateSegmentVolumeAction,
-  UpdateTdCameraVolumeAction,
   UpdateTracingVolumeAction,
   UpdateUserBoundingBoxVisibilityVolumeAction,
   UpdateUserBoundingBoxesVolumeAction
@@ -90,30 +88,29 @@ object UpdateAction {
         case "updateBucket"        => deserialize[UpdateBucketVolumeAction](jsonValue)
         case "updateVolumeTracing" => deserialize[UpdateTracingVolumeAction](jsonValue)
         case "updateUserBoundingBoxesInVolumeTracing" =>
-          deserialize[UpdateUserBoundingBoxesVolumeAction](jsonValue) // TODO: rename key (must be different from skeleton action)
+          deserialize[UpdateUserBoundingBoxesVolumeAction](jsonValue)
         case "updateUserBoundingBoxVisibilityInVolumeTracing" =>
           deserialize[UpdateUserBoundingBoxVisibilityVolumeAction](jsonValue)
-        case "removeFallbackLayer"    => deserialize[RemoveFallbackLayerVolumeAction](jsonValue)
-        case "importVolumeTracing"    => deserialize[ImportVolumeDataVolumeAction](jsonValue)
-        case "updateTdCameraSkeleton" => deserialize[UpdateTdCameraSkeletonAction](jsonValue) // TODO deduplicate?
-        case "updateTdCameraVolume"   => deserialize[UpdateTdCameraVolumeAction](jsonValue)
-        case "createSegment"          => deserialize[CreateSegmentVolumeAction](jsonValue)
-        case "updateSegment"          => deserialize[UpdateSegmentVolumeAction](jsonValue)
-        case "updateSegmentGroups"    => deserialize[UpdateSegmentGroupsVolumeAction](jsonValue)
-        case "deleteSegment"          => deserialize[DeleteSegmentVolumeAction](jsonValue)
-        case "deleteSegmentData"      => deserialize[DeleteSegmentDataVolumeAction](jsonValue)
-        case "updateMappingName"      => deserialize[UpdateMappingNameVolumeAction](jsonValue)
+        case "removeFallbackLayer" => deserialize[RemoveFallbackLayerVolumeAction](jsonValue)
+        case "importVolumeTracing" => deserialize[ImportVolumeDataVolumeAction](jsonValue)
+        case "createSegment"       => deserialize[CreateSegmentVolumeAction](jsonValue)
+        case "updateSegment"       => deserialize[UpdateSegmentVolumeAction](jsonValue)
+        case "updateSegmentGroups" => deserialize[UpdateSegmentGroupsVolumeAction](jsonValue)
+        case "deleteSegment"       => deserialize[DeleteSegmentVolumeAction](jsonValue)
+        case "deleteSegmentData"   => deserialize[DeleteSegmentDataVolumeAction](jsonValue)
+        case "updateMappingName"   => deserialize[UpdateMappingNameVolumeAction](jsonValue)
 
         // Editable Mapping
         case "mergeAgglomerate" => deserialize[MergeAgglomerateUpdateAction](jsonValue)
         case "splitAgglomerate" => deserialize[SplitAgglomerateUpdateAction](jsonValue)
 
         // Annotation
-        case "addLayerToAnnotation"       => deserialize[AddLayerAnnotationUpdateAction](jsonValue)
-        case "deleteLayerFromAnnotation"  => deserialize[DeleteLayerAnnotationUpdateAction](jsonValue)
-        case "updateLayerMetadata"        => deserialize[UpdateLayerMetadataAnnotationUpdateAction](jsonValue)
-        case "updateMetadataOfAnnotation" => deserialize[UpdateMetadataAnnotationUpdateAction](jsonValue)
-        case "revertToVersion"            => deserialize[RevertToVersionUpdateAction](jsonValue)
+        case "addLayerToAnnotation"       => deserialize[AddLayerAnnotationAction](jsonValue)
+        case "deleteLayerFromAnnotation"  => deserialize[DeleteLayerAnnotationAction](jsonValue)
+        case "updateLayerMetadata"        => deserialize[UpdateLayerMetadataAnnotationAction](jsonValue)
+        case "updateMetadataOfAnnotation" => deserialize[UpdateMetadataAnnotationAction](jsonValue)
+        case "revertToVersion"            => deserialize[RevertToVersionAnnotationAction](jsonValue)
+        case "updateTdCamera"             => deserialize[UpdateTdCameraAnnotationAction](jsonValue)
 
         case unknownAction: String => JsError(s"Invalid update action s'$unknownAction'")
       }
@@ -170,8 +167,6 @@ object UpdateAction {
       case s: UpdateUserBoundingBoxVisibilitySkeletonAction =>
         Json.obj("name" -> "updateUserBoundingBoxVisibilityInSkeletonTracing",
                  "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibilitySkeletonAction.jsonFormat))
-      case s: UpdateTdCameraSkeletonAction =>
-        Json.obj("name" -> "updateTdCameraSkeleton", "value" -> Json.toJson(s)(UpdateTdCameraSkeletonAction.jsonFormat))
 
       // Volume
       case s: UpdateBucketVolumeAction =>
@@ -188,8 +183,6 @@ object UpdateAction {
         Json.obj("name" -> "removeFallbackLayer", "value" -> Json.toJson(s)(RemoveFallbackLayerVolumeAction.jsonFormat))
       case s: ImportVolumeDataVolumeAction =>
         Json.obj("name" -> "importVolumeTracing", "value" -> Json.toJson(s)(ImportVolumeDataVolumeAction.jsonFormat))
-      case s: UpdateTdCameraVolumeAction =>
-        Json.obj("name" -> "updateTdCameraVolume", "value" -> Json.toJson(s)(UpdateTdCameraVolumeAction.jsonFormat))
       case s: CreateSegmentVolumeAction =>
         Json.obj("name" -> "createSegment", "value" -> Json.toJson(s)(CreateSegmentVolumeAction.jsonFormat))
       case s: UpdateSegmentVolumeAction =>
@@ -209,19 +202,21 @@ object UpdateAction {
         Json.obj("name" -> "mergeAgglomerate", "value" -> Json.toJson(s)(MergeAgglomerateUpdateAction.jsonFormat))
 
       // Annotation
-      case s: AddLayerAnnotationUpdateAction =>
-        Json.obj("name" -> "addLayerToAnnotation", "value" -> Json.toJson(s)(AddLayerAnnotationUpdateAction.jsonFormat))
-      case s: DeleteLayerAnnotationUpdateAction =>
+      case s: AddLayerAnnotationAction =>
+        Json.obj("name" -> "addLayerToAnnotation", "value" -> Json.toJson(s)(AddLayerAnnotationAction.jsonFormat))
+      case s: DeleteLayerAnnotationAction =>
         Json.obj("name" -> "deleteLayerFromAnnotation",
-                 "value" -> Json.toJson(s)(DeleteLayerAnnotationUpdateAction.jsonFormat))
-      case s: UpdateLayerMetadataAnnotationUpdateAction =>
+                 "value" -> Json.toJson(s)(DeleteLayerAnnotationAction.jsonFormat))
+      case s: UpdateLayerMetadataAnnotationAction =>
         Json.obj("name" -> "updateLayerMetadata",
-                 "value" -> Json.toJson(s)(UpdateLayerMetadataAnnotationUpdateAction.jsonFormat))
-      case s: UpdateMetadataAnnotationUpdateAction =>
+                 "value" -> Json.toJson(s)(UpdateLayerMetadataAnnotationAction.jsonFormat))
+      case s: UpdateMetadataAnnotationAction =>
         Json.obj("name" -> "updateMetadataOfAnnotation",
-                 "value" -> Json.toJson(s)(UpdateMetadataAnnotationUpdateAction.jsonFormat))
-      case s: RevertToVersionUpdateAction =>
-        Json.obj("name" -> "revertToVersion", "value" -> Json.toJson(s)(RevertToVersionUpdateAction.jsonFormat))
+                 "value" -> Json.toJson(s)(UpdateMetadataAnnotationAction.jsonFormat))
+      case s: RevertToVersionAnnotationAction =>
+        Json.obj("name" -> "revertToVersion", "value" -> Json.toJson(s)(RevertToVersionAnnotationAction.jsonFormat))
+      case s: UpdateTdCameraAnnotationAction =>
+        Json.obj("name" -> "updateTdCamera", "value" -> Json.toJson(s)(UpdateTdCameraAnnotationAction.jsonFormat))
     }
   }
 }
@@ -236,9 +231,8 @@ case class UpdateActionGroup(version: Long,
                              transactionGroupCount: Int,
                              transactionGroupIndex: Int) {
 
-  def significantChangesCount: Int = 1 // TODO
-
-  def viewChangesCount: Int = 1 // TODO
+  def significantChangesCount: Int = actions.count(!_.isViewOnlyChange)
+  def viewChangesCount: Int = actions.count(_.isViewOnlyChange)
 }
 
 object UpdateActionGroup {

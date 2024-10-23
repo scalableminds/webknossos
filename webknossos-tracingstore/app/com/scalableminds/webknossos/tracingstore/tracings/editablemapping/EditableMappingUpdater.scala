@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.{
 }
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.tracingstore.annotation.{
-  RevertToVersionUpdateAction,
+  RevertToVersionAnnotationAction,
   TSAnnotationService,
   UpdateAction
 }
@@ -418,7 +418,7 @@ class EditableMappingUpdater(
       )
     }
 
-  def revertToVersion(revertAction: RevertToVersionUpdateAction)(implicit ec: ExecutionContext): Fox[Unit] =
+  def revertToVersion(revertAction: RevertToVersionAnnotationAction)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- bool2Fox(revertAction.sourceVersion <= oldVersion) ?~> "trying to revert editable mapping to a version not yet present in the database"
       _ = segmentToAgglomerateBuffer.clear()

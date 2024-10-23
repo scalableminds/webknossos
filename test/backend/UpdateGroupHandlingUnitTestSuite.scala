@@ -1,7 +1,7 @@
 package backend
 
-import com.scalableminds.webknossos.tracingstore.annotation.{RevertToVersionUpdateAction, UpdateGroupHandling}
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{MergeTreeSkeletonAction}
+import com.scalableminds.webknossos.tracingstore.annotation.{RevertToVersionAnnotationAction, UpdateGroupHandling}
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.MergeTreeSkeletonAction
 import org.scalatestplus.play.PlaySpec
 
 class UpdateGroupHandlingUnitTestSuite extends PlaySpec with UpdateGroupHandling {
@@ -16,7 +16,7 @@ class UpdateGroupHandlingUnitTestSuite extends PlaySpec with UpdateGroupHandling
          )),
         (6L,
          List(
-           RevertToVersionUpdateAction(sourceVersion = 1),
+           RevertToVersionAnnotationAction(sourceVersion = 1),
          )),
         (7L,
          List(

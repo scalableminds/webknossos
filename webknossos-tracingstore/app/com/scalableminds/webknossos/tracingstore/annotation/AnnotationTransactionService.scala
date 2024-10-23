@@ -229,7 +229,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
     }
     actionsWithInfo.map {
       case a: UpdateBucketVolumeAction       => a.withoutBase64Data
-      case a: AddLayerAnnotationUpdateAction => a.copy(tracingId = Some(TracingId.generate))
+      case a: AddLayerAnnotationAction => a.copy(tracingId = Some(TracingId.generate))
       case a                                 => a
     }
   }

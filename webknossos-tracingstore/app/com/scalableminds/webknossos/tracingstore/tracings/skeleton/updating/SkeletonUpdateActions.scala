@@ -402,6 +402,8 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
 
   override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
+
+  override def isViewOnlyChange: Boolean = true
 }
 
 case class UpdateTreeVisibilitySkeletonAction(treeId: Int,
@@ -425,6 +427,8 @@ case class UpdateTreeVisibilitySkeletonAction(treeId: Int,
 
   override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
+
+  override def isViewOnlyChange: Boolean = true
 }
 
 case class UpdateTreeGroupVisibilitySkeletonAction(treeGroupId: Option[Int],
@@ -534,23 +538,8 @@ case class UpdateUserBoundingBoxVisibilitySkeletonAction(boundingBoxId: Option[I
 
   override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
-}
 
-case class UpdateTdCameraSkeletonAction(actionTimestamp: Option[Long] = None,
-                                        actionAuthorId: Option[String] = None,
-                                        actionTracingId: String,
-                                        info: Option[String] = None)
-    extends SkeletonUpdateAction {
-
-  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = tracing
-
-  override def addTimestamp(timestamp: Long): UpdateAction =
-    this.copy(actionTimestamp = Some(timestamp))
-
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-
-  override def addAuthorId(authorId: Option[String]): UpdateAction =
-    this.copy(actionAuthorId = authorId)
+  override def isViewOnlyChange: Boolean = true
 }
 
 object CreateTreeSkeletonAction {
@@ -607,7 +596,4 @@ object UpdateUserBoundingBoxesSkeletonAction {
 object UpdateUserBoundingBoxVisibilitySkeletonAction {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibilitySkeletonAction] =
     Json.format[UpdateUserBoundingBoxVisibilitySkeletonAction]
-}
-object UpdateTdCameraSkeletonAction {
-  implicit val jsonFormat: OFormat[UpdateTdCameraSkeletonAction] = Json.format[UpdateTdCameraSkeletonAction]
 }

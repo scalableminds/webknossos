@@ -18,14 +18,15 @@ object AnnotationLayerParameters {
     Json.using[WithDefaultValues].format[AnnotationLayerParameters]
 }
 
-trait AnnotationUpdateAction extends ApplyImmediatelyUpdateAction
+trait AnnotationUpdateAction extends UpdateAction
 
-case class AddLayerAnnotationUpdateAction(layerParameters: AnnotationLayerParameters,
-                                          tracingId: Option[String] = None, // filled in by backend eagerly on save
-                                          actionTimestamp: Option[Long] = None,
-                                          actionAuthorId: Option[String] = None,
-                                          info: Option[String] = None)
-    extends AnnotationUpdateAction {
+case class AddLayerAnnotationAction(layerParameters: AnnotationLayerParameters,
+                                    tracingId: Option[String] = None, // filled in by backend eagerly on save
+                                    actionTimestamp: Option[Long] = None,
+                                    actionAuthorId: Option[String] = None,
+                                    info: Option[String] = None)
+    extends AnnotationUpdateAction
+    with ApplyImmediatelyUpdateAction {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
@@ -33,51 +34,14 @@ case class AddLayerAnnotationUpdateAction(layerParameters: AnnotationLayerParame
     this.copy(actionAuthorId = authorId)
 }
 
-case class DeleteLayerAnnotationUpdateAction(tracingId: String,
-                                             layerName: String, // Just stored for nicer-looking history
-                                             `type`: AnnotationLayerType, // Just stored for nicer-looking history
-                                             actionTimestamp: Option[Long] = None,
-                                             actionAuthorId: Option[String] = None,
-                                             info: Option[String] = None)
-    extends AnnotationUpdateAction {
-  override def addTimestamp(timestamp: Long): UpdateAction =
-    this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[String]): UpdateAction =
-    this.copy(actionAuthorId = authorId)
-}
-
-case class UpdateLayerMetadataAnnotationUpdateAction(tracingId: String,
-                                                     layerName: String,
-                                                     actionTimestamp: Option[Long] = None,
-                                                     actionAuthorId: Option[String] = None,
-                                                     info: Option[String] = None)
-    extends AnnotationUpdateAction {
-  override def addTimestamp(timestamp: Long): UpdateAction =
-    this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[String]): UpdateAction =
-    this.copy(actionAuthorId = authorId)
-}
-
-case class UpdateMetadataAnnotationUpdateAction(name: Option[String],
-                                                description: Option[String],
-                                                actionTimestamp: Option[Long] = None,
-                                                actionAuthorId: Option[String] = None,
-                                                info: Option[String] = None)
-    extends AnnotationUpdateAction {
-  override def addTimestamp(timestamp: Long): UpdateAction =
-    this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[String]): UpdateAction =
-    this.copy(actionAuthorId = authorId)
-}
-
-case class RevertToVersionUpdateAction(sourceVersion: Long,
+case class DeleteLayerAnnotationAction(tracingId: String,
+                                       layerName: String, // Just stored for nicer-looking history
+                                       `type`: AnnotationLayerType, // Just stored for nicer-looking history
                                        actionTimestamp: Option[Long] = None,
                                        actionAuthorId: Option[String] = None,
                                        info: Option[String] = None)
-    extends AnnotationUpdateAction {
+    extends AnnotationUpdateAction
+    with ApplyImmediatelyUpdateAction {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
@@ -85,21 +49,79 @@ case class RevertToVersionUpdateAction(sourceVersion: Long,
     this.copy(actionAuthorId = authorId)
 }
 
-object AddLayerAnnotationUpdateAction {
-  implicit val jsonFormat: OFormat[AddLayerAnnotationUpdateAction] = Json.format[AddLayerAnnotationUpdateAction]
+case class UpdateLayerMetadataAnnotationAction(tracingId: String,
+                                               layerName: String,
+                                               actionTimestamp: Option[Long] = None,
+                                               actionAuthorId: Option[String] = None,
+                                               info: Option[String] = None)
+    extends AnnotationUpdateAction
+    with ApplyImmediatelyUpdateAction {
+  override def addTimestamp(timestamp: Long): UpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
+    this.copy(actionAuthorId = authorId)
 }
-object DeleteLayerAnnotationUpdateAction {
-  implicit val jsonFormat: OFormat[DeleteLayerAnnotationUpdateAction] = Json.format[DeleteLayerAnnotationUpdateAction]
+
+case class UpdateMetadataAnnotationAction(name: Option[String],
+                                          description: Option[String],
+                                          actionTimestamp: Option[Long] = None,
+                                          actionAuthorId: Option[String] = None,
+                                          info: Option[String] = None)
+    extends AnnotationUpdateAction
+    with ApplyImmediatelyUpdateAction {
+  override def addTimestamp(timestamp: Long): UpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
+    this.copy(actionAuthorId = authorId)
 }
-object UpdateLayerMetadataAnnotationUpdateAction {
-  implicit val jsonFormat: OFormat[UpdateLayerMetadataAnnotationUpdateAction] =
-    Json.format[UpdateLayerMetadataAnnotationUpdateAction]
+
+case class RevertToVersionAnnotationAction(sourceVersion: Long,
+                                           actionTimestamp: Option[Long] = None,
+                                           actionAuthorId: Option[String] = None,
+                                           info: Option[String] = None)
+    extends AnnotationUpdateAction
+    with ApplyImmediatelyUpdateAction {
+  override def addTimestamp(timestamp: Long): UpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
+    this.copy(actionAuthorId = authorId)
 }
-object UpdateMetadataAnnotationUpdateAction {
-  implicit val jsonFormat: OFormat[UpdateMetadataAnnotationUpdateAction] =
-    Json.format[UpdateMetadataAnnotationUpdateAction]
+
+case class UpdateTdCameraAnnotationAction(actionTimestamp: Option[Long] = None,
+                                          actionAuthorId: Option[String] = None,
+                                          info: Option[String] = None)
+    extends AnnotationUpdateAction {
+
+  override def addTimestamp(timestamp: Long): UpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
+    this.copy(actionAuthorId = authorId)
+
+  override def isViewOnlyChange: Boolean = true
 }
-object RevertToVersionUpdateAction {
-  implicit val jsonFormat: OFormat[RevertToVersionUpdateAction] =
-    Json.format[RevertToVersionUpdateAction]
+
+object AddLayerAnnotationAction {
+  implicit val jsonFormat: OFormat[AddLayerAnnotationAction] = Json.format[AddLayerAnnotationAction]
+}
+object DeleteLayerAnnotationAction {
+  implicit val jsonFormat: OFormat[DeleteLayerAnnotationAction] = Json.format[DeleteLayerAnnotationAction]
+}
+object UpdateLayerMetadataAnnotationAction {
+  implicit val jsonFormat: OFormat[UpdateLayerMetadataAnnotationAction] =
+    Json.format[UpdateLayerMetadataAnnotationAction]
+}
+object UpdateMetadataAnnotationAction {
+  implicit val jsonFormat: OFormat[UpdateMetadataAnnotationAction] =
+    Json.format[UpdateMetadataAnnotationAction]
+}
+object RevertToVersionAnnotationAction {
+  implicit val jsonFormat: OFormat[RevertToVersionAnnotationAction] =
+    Json.format[RevertToVersionAnnotationAction]
+}
+object UpdateTdCameraAnnotationAction {
+  implicit val jsonFormat: OFormat[UpdateTdCameraAnnotationAction] = Json.format[UpdateTdCameraAnnotationAction]
 }

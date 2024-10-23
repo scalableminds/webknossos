@@ -14,7 +14,7 @@ trait AnnotationReversion {
   def revertDistributedElements(annotationId: String,
                                 currentAnnotationWithTracings: AnnotationWithTracings,
                                 sourceAnnotationWithTracings: AnnotationWithTracings,
-                                revertAction: RevertToVersionUpdateAction,
+                                revertAction: RevertToVersionAnnotationAction,
                                 newVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
     // TODO segment index, volume buckets, proofreading data
     for {
@@ -36,7 +36,7 @@ trait AnnotationReversion {
     } yield ()
 
   private def revertEditableMappingFields(currentAnnotationWithTracings: AnnotationWithTracings,
-                                          revertAction: RevertToVersionUpdateAction,
+                                          revertAction: RevertToVersionAnnotationAction,
                                           tracingId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       updater <- currentAnnotationWithTracings.getEditableMappingUpdater(tracingId).toFox

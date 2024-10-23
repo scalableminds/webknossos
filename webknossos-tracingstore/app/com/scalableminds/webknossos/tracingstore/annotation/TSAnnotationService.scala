@@ -106,13 +106,13 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   )(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
       updated <- updateAction match {
-        case a: AddLayerAnnotationUpdateAction =>
+        case a: AddLayerAnnotationAction =>
           addLayer(annotationId, annotationWithTracings, a, targetVersion)
-        case a: DeleteLayerAnnotationUpdateAction =>
+        case a: DeleteLayerAnnotationAction =>
           Fox.successful(annotationWithTracings.deleteTracing(a))
-        case a: UpdateLayerMetadataAnnotationUpdateAction =>
+        case a: UpdateLayerMetadataAnnotationAction =>
           Fox.successful(annotationWithTracings.updateLayerMetadata(a))
-        case a: UpdateMetadataAnnotationUpdateAction =>
+        case a: UpdateMetadataAnnotationAction =>
           Fox.successful(annotationWithTracings.updateMetadata(a))
         case a: SkeletonUpdateAction =>
           annotationWithTracings.applySkeletonAction(a) ?~> "applySkeletonAction.failed"
@@ -125,7 +125,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           annotationWithTracings.applyVolumeAction(a)
         case a: EditableMappingUpdateAction =>
           annotationWithTracings.applyEditableMappingAction(a)
-        case a: RevertToVersionUpdateAction =>
+        case a: RevertToVersionAnnotationAction =>
           revertToVersion(annotationId, annotationWithTracings, a, targetVersion) // TODO if the revert action is not isolated, we need not the target version of all but the target version of this update
         case _: BucketMutatingVolumeUpdateAction =>
           Fox.successful(annotationWithTracings) // No-op, as bucket-mutating actions are performed eagerly, so not here.
@@ -135,7 +135,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
 
   private def addLayer(annotationId: String,
                        annotationWithTracings: AnnotationWithTracings,
-                       action: AddLayerAnnotationUpdateAction,
+                       action: AddLayerAnnotationAction,
                        targetVersion: Long)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
       tracingId <- action.tracingId.toFox ?~> "add layer action has no tracingId"
@@ -146,10 +146,10 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     } yield updated
 
   private def revertToVersion(
-      annotationId: String,
-      annotationWithTracings: AnnotationWithTracings,
-      revertAction: RevertToVersionUpdateAction,
-      newVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
+                               annotationId: String,
+                               annotationWithTracings: AnnotationWithTracings,
+                               revertAction: RevertToVersionAnnotationAction,
+                               newVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     // Note: works only after “ironing out” the update action groups
     // TODO: read old annotationProto, tracing, buckets, segment indeces
     for {
@@ -164,7 +164,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       _ <- revertDistributedElements(annotationId, annotationWithTracings, sourceAnnotation, revertAction, newVersion)
     } yield sourceAnnotation
 
-  def createTracing(a: AddLayerAnnotationUpdateAction)(
+  def createTracing(a: AddLayerAnnotationAction)(
       implicit ec: ExecutionContext): Fox[Either[SkeletonTracing, VolumeTracing]] =
     Fox.failure("not implemented")
   // TODO create tracing object (ask wk for needed parameters e.g. fallback layer info?)

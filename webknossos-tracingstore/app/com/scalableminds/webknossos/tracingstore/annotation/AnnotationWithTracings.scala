@@ -78,7 +78,7 @@ case class AnnotationWithTracings(
 
   def version: Long = annotation.version
 
-  def addLayer(a: AddLayerAnnotationUpdateAction,
+  def addLayer(a: AddLayerAnnotationAction,
                tracingId: String,
                tracing: Either[SkeletonTracing, VolumeTracing]): AnnotationWithTracings =
     this.copy(
@@ -91,14 +91,14 @@ case class AnnotationWithTracings(
       tracingsById = tracingsById.updated(tracingId, tracing)
     )
 
-  def deleteTracing(a: DeleteLayerAnnotationUpdateAction): AnnotationWithTracings =
+  def deleteTracing(a: DeleteLayerAnnotationAction): AnnotationWithTracings =
     this.copy(annotation = annotation.copy(layers = annotation.layers.filter(_.tracingId != a.tracingId)))
 
-  def updateLayerMetadata(a: UpdateLayerMetadataAnnotationUpdateAction): AnnotationWithTracings =
+  def updateLayerMetadata(a: UpdateLayerMetadataAnnotationAction): AnnotationWithTracings =
     this.copy(annotation = annotation.copy(layers = annotation.layers.map(l =>
       if (l.tracingId == a.tracingId) l.copy(name = a.layerName) else l)))
 
-  def updateMetadata(a: UpdateMetadataAnnotationUpdateAction): AnnotationWithTracings =
+  def updateMetadata(a: UpdateMetadataAnnotationAction): AnnotationWithTracings =
     this.copy(annotation = annotation.copy(name = a.name, description = a.description))
 
   def withVersion(newVersion: Long): AnnotationWithTracings = {

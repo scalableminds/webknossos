@@ -25,8 +25,8 @@ trait UpdateGroupHandling {
   }
 
   private def isIsolationSensitiveAction(a: UpdateAction): Boolean = a match {
-    case _: RevertToVersionUpdateAction    => true
-    case _: AddLayerAnnotationUpdateAction => true
+    case _: RevertToVersionAnnotationAction    => true
+    case _: AddLayerAnnotationAction => true
     case _                                 => false
   }
 }

@@ -35,16 +35,6 @@ export function getSharingTokenFromUrlParameters(): string | null | undefined {
   return null;
 }
 
-function removeErrorToast(error: any) {
-  if ("errors" in error && Array.isArray(error.errors)) {
-    error.errors.forEach((errorText: string) => {
-      if (errorText.includes("Token may be expired")) {
-        Toast.close(errorText);
-      }
-    });
-  }
-}
-
 export async function doWithToken<T>(
   fn: (token: string) => Promise<T>,
   tries: number = 1,
@@ -71,10 +61,6 @@ export async function doWithToken<T>(
         // Upon successful retry with own token, discard the url token.
         if (useURLTokenIfAvailable) {
           shouldUseURLToken = false;
-          Toast.info(
-            "Initial request using the URL token failed. Your personal token will be used from now on.",
-          );
-          removeErrorToast(error);
         }
         return result;
       }

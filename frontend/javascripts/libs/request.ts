@@ -311,7 +311,11 @@ class Request {
                 ...message,
                 key: json.status.toString(),
               }));
-              if (showErrorToast) Toast.messages(messages);
+              if (showErrorToast) {
+                Toast.messages(messages); // Toast.error already logs the error
+              } else {
+                console.error(messages);
+              }
               // Check whether the error chain mentions an url which belongs
               // to a datastore. Then, ping the datastore
               pingMentionedDataStores(text);
@@ -319,7 +323,11 @@ class Request {
               /* eslint-disable-next-line prefer-promise-reject-errors */
               return Promise.reject({ ...json, url: requestedUrl });
             } catch (_jsonError) {
-              if (showErrorToast) Toast.error(text);
+              if (showErrorToast) {
+                Toast.error(text); // Toast.error already logs the error
+              } else {
+                console.error(text);
+              }
 
               /* eslint-disable-next-line prefer-promise-reject-errors */
               return Promise.reject({

@@ -25,7 +25,6 @@ import models.task.TaskDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.time._
 import models.user.{User, UserDAO, UserService}
-import net.liftweb.common.Box
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -256,70 +255,6 @@ class AnnotationController @Inject()(
         annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
         result <- downsample(annotation.typ.toString, id, tracingId)(request)
       } yield result
-  }
-
-  def addSegmentIndicesToAll(parallelBatchCount: Int,
-                             dryRun: Boolean,
-                             skipTracings: Option[String]): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      {
-        for {
-          _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
-          _ = logger.info("Running migration to add segment index to all volume annotation layers...")
-          skipTracingsSet = skipTracings.map(_.split(",").toSet).getOrElse(Set())
-          _ = if (skipTracingsSet.nonEmpty) {
-            logger.info(f"Skipping these tracings: ${skipTracingsSet.mkString(",")}")
-          }
-          _ = logger.info("Gathering list of volume tracings...")
-          annotationLayers <- annotationLayerDAO.findAllVolumeLayers
-          annotationLayersFiltered = annotationLayers.filter(l => !skipTracingsSet.contains(l.tracingId))
-          totalCount = annotationLayersFiltered.length
-          batches = batch(annotationLayersFiltered, parallelBatchCount)
-          _ = logger.info(f"Processing $totalCount tracings in ${batches.length} batches")
-          before = Instant.now
-          results: Seq[List[Box[Unit]]] <- Fox.combined(batches.zipWithIndex.map {
-            case (batch, index) => addSegmentIndicesToBatch(batch, index, dryRun)
-          })
-          failures = results.flatMap(_.filter(_.isEmpty))
-          failureCount: Int = failures.length
-          successCount: Int = results.map(_.count(_.isDefined)).sum
-          msg = s"All done (dryRun=$dryRun)! Processed $totalCount tracings in ${batches.length} batches. Took ${Instant
-            .since(before)}. $failureCount failures, $successCount successes."
-          _ = if (failures.nonEmpty) {
-            failures.foreach { failedBox =>
-              logger.info(f"Failed: $failedBox")
-            }
-          }
-          _ = logger.info(msg)
-        } yield JsonOk(msg)
-      }
-    }
-
-  private def addSegmentIndicesToBatch(annotationLayerBatch: List[AnnotationLayer], batchIndex: Int, dryRun: Boolean)(
-      implicit ec: ExecutionContext) = {
-    var processedCount = 0
-    for {
-      tracingStore <- tracingStoreDAO.findFirst(GlobalAccessContext) ?~> "tracingStore.notFound"
-      client = new WKRemoteTracingStoreClient(tracingStore, null, rpc, tracingDataSourceTemporaryStore)
-      batchCount = annotationLayerBatch.length
-      results <- Fox.serialSequenceBox(annotationLayerBatch) { annotationLayer =>
-        processedCount += 1
-        logger.info(
-          f"Processing tracing ${annotationLayer.tracingId}. $processedCount of $batchCount in batch $batchIndex (${percent(processedCount, batchCount)})...")
-        client.addSegmentIndex(annotationLayer.tracingId, dryRun) ?~> s"add segment index failed for ${annotationLayer.tracingId}"
-      }
-      _ = logger.info(f"Batch $batchIndex is done. Processed ${annotationLayerBatch.length} tracings.")
-    } yield results
-  }
-
-  private def batch[T](allItems: List[T], batchCount: Int): List[List[T]] = {
-    val batchSize: Int = Math.max(Math.min(allItems.length / batchCount, allItems.length), 1)
-    allItems.grouped(batchSize).toList
-  }
-
-  private def percent(done: Int, pending: Int) = {
-    val value = done.toDouble / pending.toDouble * 100
-    f"$value%1.1f %%"
   }
 
   private def finishAnnotation(typ: String, id: String, issuingUser: User, timestamp: Instant)(

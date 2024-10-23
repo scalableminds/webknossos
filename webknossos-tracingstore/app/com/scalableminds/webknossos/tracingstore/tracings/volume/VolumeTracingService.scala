@@ -811,61 +811,6 @@ class VolumeTracingService @Inject()(
     }
   }
 
-  def addSegmentIndex(annotationId: String,
-                      tracingId: String,
-                      tracing: VolumeTracing,
-                      currentVersion: Long,
-                      dryRun: Boolean)(implicit tc: TokenContext): Fox[Option[Int]] = {
-    var processedBucketCount = 0
-    for {
-      isTemporaryTracing <- isTemporaryTracing(tracingId)
-      sourceDataLayer = volumeTracingLayer(tracingId, tracing, isTemporaryTracing)
-      buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream()
-      fallbackLayer <- getFallbackLayer(tracingId, tracing)
-      mappingName <- selectMappingName(tracing)
-      segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
-                                                        volumeSegmentIndexClient,
-                                                        currentVersion + 1L,
-                                                        remoteDatastoreClient,
-                                                        fallbackLayer,
-                                                        sourceDataLayer.additionalAxes,
-                                                        tc)
-      _ <- Fox.serialCombined(buckets) {
-        case (bucketPosition, bucketData) =>
-          processedBucketCount += 1
-          updateSegmentIndex(segmentIndexBuffer,
-                             bucketPosition,
-                             bucketData,
-                             Empty,
-                             tracing.elementClass,
-                             mappingName,
-                             editableMappingTracingId(tracing, tracingId))
-      }
-      _ <- Fox.runIf(!dryRun)(segmentIndexBuffer.flush())
-      updateGroup = UpdateActionGroup(
-        tracing.version + 1L,
-        System.currentTimeMillis(),
-        None,
-        List(AddSegmentIndexVolumeAction(tracingId)),
-        None,
-        None,
-        "dummyTransactionId",
-        1,
-        0
-      )
-      // TODO _ <- Fox.runIf(!dryRun)(handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken))
-    } yield Some(processedBucketCount)
-  }
-
-  def checkIfSegmentIndexMayBeAdded(tracingId: String, tracing: VolumeTracing)(implicit ec: ExecutionContext,
-                                                                               tc: TokenContext): Fox[Boolean] =
-    for {
-      fallbackLayerOpt <- Fox.runIf(tracing.fallbackLayer.isDefined)(
-        remoteFallbackLayerFromVolumeTracing(tracing, tracingId))
-      canHaveSegmentIndex <- VolumeSegmentIndexService.canHaveSegmentIndex(remoteDatastoreClient, fallbackLayerOpt)
-      alreadyHasSegmentIndex = tracing.hasSegmentIndex.getOrElse(false)
-    } yield canHaveSegmentIndex && !alreadyHasSegmentIndex
-
   def importVolumeData(annotationId: String,
                        tracingId: String,
                        tracing: VolumeTracing,

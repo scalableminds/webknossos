@@ -410,8 +410,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           remainingUpdateGroups match {
             case List() => Fox.successful(annotationWithTracings)
             case updateGroup :: tail =>
-              updateGroupedIter(applyUpdates(annotationWithTracings, annotationId, updateGroup._2, updateGroup._1),
-                                tail)
+              updateGroupedIter(
+                applyUpdates(annotationWithTracings, annotationId, updateGroup._2, updateGroup._1, reportChangesToWk),
+                tail)
           }
         case _ => annotationWithTracingsFox
       }

@@ -152,7 +152,6 @@ DELETE        /annotations/:id                                                  
 POST          /annotations/:id/merge/:mergedTyp/:mergedId                                       controllers.AnnotationController.mergeWithoutType(id: String, mergedTyp: String, mergedId: String)
 GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: String)
-PATCH         /annotations/addSegmentIndicesToAll                                               controllers.AnnotationController.addSegmentIndicesToAll(parallelBatchCount: Int, dryRun: Boolean, skipTracings: Option[String])
 
 GET           /annotations/:typ/:id/info                                                        controllers.AnnotationController.info(typ: String, id: String, timestamp: Option[Long])
 PATCH         /annotations/:typ/:id/downsample                                                  controllers.AnnotationController.downsample(typ: String, id: String, tracingId: String)

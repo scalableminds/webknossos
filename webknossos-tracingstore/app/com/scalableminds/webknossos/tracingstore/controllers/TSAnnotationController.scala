@@ -59,7 +59,9 @@ class TSAnnotationController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
         for {
           newestMaterializableVersion <- annotationService.currentMaterializableVersion(annotationId)
-          updateLog <- annotationService.updateActionLog(annotationId, newestVersion.getOrElse(newestMaterializableVersion), oldestVersion.getOrElse(0))
+          updateLog <- annotationService.updateActionLog(annotationId,
+                                                         newestVersion.getOrElse(newestMaterializableVersion),
+                                                         oldestVersion.getOrElse(0))
         } yield Ok(updateLog)
       }
     }
@@ -99,17 +101,3 @@ class TSAnnotationController @Inject()(
     }
 
 }
-
-// get version history
-
-// update layer
-
-// restore of layer
-
-// delete layer
-
-// add layer
-
-// skeleton + volume routes can now take annotationVersion
-
-// Is an editable mapping a layer?

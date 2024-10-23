@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
@@ -340,31 +339,6 @@ class VolumeTracingController @Inject()(
                                                                       zipFile,
                                                                       currentVersion)
           } yield Ok(Json.toJson(largestSegmentId))
-        }
-      }
-    }
-
-  def addSegmentIndex(tracingId: String, dryRun: Boolean): Action[AnyContent] =
-    Action.async { implicit request =>
-      log() {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-          for {
-            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
-            currentVersion <- annotationService.currentMaterializableVersion(tracingId)
-            before = Instant.now
-            canAddSegmentIndex <- volumeTracingService.checkIfSegmentIndexMayBeAdded(tracingId, tracing)
-            processedBucketCountOpt <- Fox.runIf(canAddSegmentIndex)(volumeTracingService
-              .addSegmentIndex(annotationId, tracingId, tracing, currentVersion, dryRun)) ?~> "addSegmentIndex.failed"
-            currentVersionNew <- annotationService.currentMaterializableVersion(tracingId)
-            _ <- Fox.runIf(!dryRun)(bool2Fox(
-              processedBucketCountOpt.isEmpty || currentVersionNew == currentVersion + 1L) ?~> "Version increment failed. Looks like someone edited the annotation layer in the meantime.")
-            duration = Instant.since(before)
-            _ = processedBucketCountOpt.foreach { processedBucketCount =>
-              logger.info(
-                s"Added segment index (dryRun=$dryRun) for tracing $tracingId. Took $duration for $processedBucketCount buckets")
-            }
-          } yield Ok
         }
       }
     }

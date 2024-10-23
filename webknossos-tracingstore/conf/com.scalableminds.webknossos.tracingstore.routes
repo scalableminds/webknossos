@@ -24,7 +24,6 @@ POST        /volume/:tracingId/adHocMesh                                        
 POST        /volume/:tracingId/fullMesh.stl                                         @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.loadFullMeshStl(tracingId: String)
 POST        /volume/:tracingId/segmentIndex/:segmentId                              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentIndex(tracingId: String, segmentId: Long)
 POST        /volume/:tracingId/importVolumeData                                     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.importVolumeData(tracingId: String)
-POST        /volume/:tracingId/addSegmentIndex                                      @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.addSegmentIndex(tracingId: String, dryRun: Boolean)
 GET         /volume/:tracingId/findData                                             @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.findData(tracingId: String)
 POST        /volume/:tracingId/segmentStatistics/volume                             @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentVolume(tracingId: String)
 POST        /volume/:tracingId/segmentStatistics/boundingBox                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentBoundingBox(tracingId: String)

@@ -48,7 +48,7 @@ class TaskService @Inject()(conf: WkConf,
         "type" -> taskTypeJs,
         "dataSet" -> dataset.name,
         "datasetName" -> dataset.name,
-        "datasetId" -> dataset._id,
+        "datasetId" -> dataset._id, // Only used for csv serialization in frontend, does this make it worth to keep it?
         "neededExperience" -> task.neededExperience,
         "created" -> task.created,
         "status" -> status,

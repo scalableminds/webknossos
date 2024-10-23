@@ -21,6 +21,7 @@ import { useState } from "react";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { useQueryClient } from "@tanstack/react-query";
 import { getNoActionsAvailableMenu } from "oxalis/view/context_menu";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 
 const disabledStyle: React.CSSProperties = {
   pointerEvents: "none",
@@ -201,7 +202,7 @@ function DatasetActionView(props: Props) {
   const datasetSettingsLink = (
     <>
       <LinkWithDisabled
-        to={`/datasets/${dataset.id}/edit`}
+        to={`/datasets/${getReadableURLPart(dataset)}/edit`}
         title="Open Dataset Settings"
         disabled={isReloading}
       >
@@ -212,7 +213,7 @@ function DatasetActionView(props: Props) {
   );
   const brokenDatasetActions = (
     <div className="dataset-table-actions">
-      <Link to={`/datasets/${dataset.id}/edit`}>
+      <Link to={`/datasets/${getReadableURLPart(dataset)}/edit`}>
         <SettingOutlined className="icon-margin-right" />
         Settings
       </Link>
@@ -258,7 +259,7 @@ function DatasetActionView(props: Props) {
         onCloseCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(false)}
       />
       <LinkWithDisabled
-        to={`/datasets/${dataset.id}/view`}
+        to={`/datasets/${getReadableURLPart(dataset)}/view`}
         title="View Dataset"
         disabled={isReloading}
       >
@@ -317,7 +318,7 @@ export function getDatasetActionContextMenu({
             key: "view",
             label: "View",
             onClick: () => {
-              window.location.href = `/datasets/${dataset.id}/view`;
+              window.location.href = `/datasets/${getReadableURLPart(dataset)}/view`;
             },
           }
         : null,
@@ -326,7 +327,7 @@ export function getDatasetActionContextMenu({
             key: "edit",
             label: "Open Settings",
             onClick: () => {
-              window.location.href = `/datasets/${dataset.id}/edit`;
+              window.location.href = `/datasets/${getReadableURLPart(dataset)}/edit`;
             },
           }
         : null,

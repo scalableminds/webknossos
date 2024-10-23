@@ -66,6 +66,7 @@ import type { EmptyObject } from "types/globals";
 import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import AiModelListView from "admin/voxelytics/ai_model_list_view";
 import { getDatasetIdFromNameAndOrganization } from "admin/api/disambiguate_legacy_routes";
+import { getDatasetIdFromReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 
 const { Content } = Layout;
 
@@ -191,15 +192,18 @@ class ReactRouter extends React.Component<Props> {
     />
   );
 
-  tracingViewMode = ({ match }: ContextRouter) => (
-    <TracingLayoutView
-      initialMaybeCompoundType={null}
-      initialCommandType={{
-        type: ControlModeEnum.VIEW,
-        datasetId: match.params.datasetId || "",
-      }}
-    />
-  );
+  tracingViewMode = ({ match }: ContextRouter) => {
+    const datasetId = getDatasetIdFromReadableURLPart(match.params.datasetNameAndId);
+    return (
+      <TracingLayoutView
+        initialMaybeCompoundType={null}
+        initialCommandType={{
+          type: ControlModeEnum.VIEW,
+          datasetId: datasetId || "",
+        }}
+      />
+    );
+  };
 
   serverAuthenticationCallback = async ({ match }: ContextRouter) => {
     try {
@@ -449,16 +453,19 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:datasetId/edit"
+                path="/datasets/:datasetNameAndId/edit"
                 requiresAdminOrManagerRole
-                render={({ match }: ContextRouter) => (
-                  <DatasetSettingsView
-                    isEditingMode
-                    datasetId={match.params.datasetId || ""}
-                    onComplete={() => window.history.back()}
-                    onCancel={() => window.history.back()}
-                  />
-                )}
+                render={({ match }: ContextRouter) => {
+                  const datasetId = getDatasetIdFromReadableURLPart(match.params.datasetNameAndId);
+                  return (
+                    <DatasetSettingsView
+                      isEditingMode
+                      datasetId={datasetId || ""}
+                      onComplete={() => window.history.back()}
+                      onCancel={() => window.history.back()}
+                    />
+                  );
+                }}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
@@ -610,7 +617,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/datasets/:organizationId/:datasetName/view"
                 render={this.tracingViewModeLegacy}
               />
-              <Route path="/datasets/:datasetId/view" render={this.tracingViewMode} />
+              <Route path="/datasets/:datasetNameAndId/view" render={this.tracingViewMode} />
               {/*maybe this also needs a legacy route?*/}
               <RouteWithErrorBoundary
                 path="/datasets/:datasetId/sandbox/:type"

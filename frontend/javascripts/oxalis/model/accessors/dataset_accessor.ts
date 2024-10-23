@@ -5,6 +5,7 @@ import type {
   APIAllowedMode,
   APIDataLayer,
   APIDataset,
+  APIDatasetCompact,
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
   APISkeletonLayer,
@@ -905,4 +906,16 @@ export function getMaybeSegmentIndexAvailability(
     return false;
   }
   return dataset.dataSource.dataLayers.find((layer) => layer.name === layerName)?.hasSegmentIndex;
+}
+
+export function getURLSanitizedName(dataset: APIDataset | APIDatasetCompact | { name: string }) {
+  return dataset.name.replace(/[^A-Z|a-z|0-9|-|_]/g, "");
+}
+
+export function getReadableURLPart(dataset: APIDataset | APIDatasetCompact) {
+  return `${getURLSanitizedName(dataset)}-${dataset.id}`;
+}
+
+export function getDatasetIdFromReadableURLPart(datasetNameAndId: string) {
+  return datasetNameAndId.split("-").pop();
 }

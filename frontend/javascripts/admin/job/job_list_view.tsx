@@ -24,6 +24,7 @@ import { AsyncLink } from "components/async_clickables";
 import { useEffect, useState } from "react";
 import { useInterval } from "libs/react_helpers";
 import { formatWkLibsNdBBox } from "libs/format_utils";
+import { getURLSanitizedName } from "oxalis/model/accessors/dataset_accessor";
 
 // Unfortunately, the twoToneColor (nor the style) prop don't support
 // CSS variables.
@@ -115,7 +116,7 @@ function JobListView() {
   function renderDescription(__: any, job: APIJob) {
     const linkToDataset =
       job.datasetId != null
-        ? `/datasets/${job.datasetId}/view` // prefer updated link over legacy link.
+        ? `/datasets/${job.datasetName ? getURLSanitizedName({ name: job.datasetName }) : "unknown_name"}-${job.datasetId}/view` // prefer updated link over legacy link.
         : `/datasets/${job.organizationId || ""}/${job.datasetPath || job.datasetName}/view`;
     if (job.type === APIJobType.CONVERT_TO_WKW && job.datasetName) {
       return <span>{`Conversion to WKW of ${job.datasetName}`}</span>;

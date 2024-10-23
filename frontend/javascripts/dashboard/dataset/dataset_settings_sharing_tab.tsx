@@ -16,6 +16,7 @@ import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/util
 import { FormItemWithInfo } from "./helper_components";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 
 type Props = {
   form: FormInstance | null;
@@ -77,7 +78,7 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
 
     const doesNeedToken = !form.getFieldValue("dataset.isPublic");
     const tokenSuffix = `?token=${sharingToken}`;
-    return `${window.location.origin}/datasets/${datasetId}/view${doesNeedToken ? tokenSuffix : ""}`;
+    return `${window.location.origin}/datasets/${dataset ? getReadableURLPart(dataset) : datasetId}/view${doesNeedToken ? tokenSuffix : ""}`;
   }
 
   function getUserAccessList() {

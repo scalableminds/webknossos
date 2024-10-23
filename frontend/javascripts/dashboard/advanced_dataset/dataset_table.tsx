@@ -39,6 +39,7 @@ import type { DatasetUpdater } from "admin/admin_rest_api";
 import { generateSettingsForFolder, useDatasetDrop } from "dashboard/folders/folder_tree";
 import classNames from "classnames";
 import type { EmptyObject } from "types/globals";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 
 type FolderItemWithName = FolderItem & { name: string };
 export type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
@@ -292,7 +293,7 @@ class DatasetRenderer {
     const iconClassName = selectedLayerName ? "" : " icon-thumbnail";
     return (
       <>
-        <Link to={`/datasets/${this.data.id}/view`} title="View Dataset">
+        <Link to={`/datasets/${getReadableURLPart(this.data)}/view`} title="View Dataset">
           <img
             src={imgSrc}
             className={`dataset-table-thumbnail ${iconClassName}`}
@@ -302,7 +303,7 @@ class DatasetRenderer {
         </Link>
         <div className="dataset-table-name-container">
           <Link
-            to={`/datasets/${this.data.id}/view`}
+            to={`/datasets/${getReadableURLPart(this.data)}/view`}
             title="View Dataset"
             className="incognito-link dataset-table-name"
           >
@@ -737,7 +738,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
               },
               onDoubleClick: () => {
                 if (isADataset) {
-                  window.location.href = `/datasets/${data.id}/view`;
+                  window.location.href = `/datasets/${getReadableURLPart(data)}/view`;
                 } else {
                   context.setActiveFolderId(data.key);
                 }

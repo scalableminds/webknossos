@@ -71,13 +71,17 @@ test("updateDatasetTeams", async (t) => {
 // });
 
 test("Zarr streaming", async (t) => {
-  const zattrsResp = await fetch("/data/zarr/Organization_X/test-dataset/segmentation/.zattrs", {});
+  const zattrsResp = await fetch("/data/zarr/Organization_X/test-dataset/segmentation/.zattrs", {
+    headers: new Headers(),
+  });
   const zattrs = await zattrsResp.text();
   t.snapshot(zattrs);
 
   const rawDataResponse = await fetch(
     "/data/zarr/Organization_X/test-dataset/segmentation/1/0.1.1.0",
-    {},
+    {
+      headers: new Headers(),
+    },
   );
   const bytes = await rawDataResponse.arrayBuffer();
   const base64 = btoa(String.fromCharCode(...new Uint8Array(bytes)));
@@ -87,14 +91,18 @@ test("Zarr streaming", async (t) => {
 test("Zarr 3 streaming", async (t) => {
   const zarrJsonResp = await fetch(
     "/data/zarr3_experimental/Organization_X/test-dataset/segmentation/zarr.json",
-    {},
+    {
+      headers: new Headers(),
+    },
   );
   const zarrJson = await zarrJsonResp.text();
   t.snapshot(zarrJson);
 
   const rawDataResponse = await fetch(
     "/data/zarr3_experimental/Organization_X/test-dataset/segmentation/1/0.1.1.0",
-    {},
+    {
+      headers: new Headers(),
+    },
   );
   const bytes = await rawDataResponse.arrayBuffer();
   const base64 = btoa(String.fromCharCode(...new Uint8Array(bytes)));

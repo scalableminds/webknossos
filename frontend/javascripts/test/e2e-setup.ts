@@ -70,9 +70,6 @@ global.fetch = function fetchWrapper(url, options) {
   if (url.indexOf("http:") === -1) {
     newUrl = `http://localhost:9000${url}`;
   }
-  if (!options.headers) {
-    options.headers = new Headers();
-  }
 
   // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   options.headers.set("X-Auth-Token", currToken);

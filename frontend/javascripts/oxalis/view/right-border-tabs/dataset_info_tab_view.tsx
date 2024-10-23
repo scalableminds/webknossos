@@ -12,22 +12,8 @@ import {
   getDatasetExtentAsString,
   getMagnificationUnion,
 } from "oxalis/model/accessors/dataset_accessor";
-<<<<<<< HEAD
-import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
-import { getStats, type CombinedTracingStats } from "oxalis/model/accessors/annotation_accessor";
-||||||| 934bb6aa9b
-import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
-import {
-  getCombinedStats,
-  type CombinedTracingStats,
-} from "oxalis/model/accessors/annotation_accessor";
-=======
 import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
-import {
-  getCombinedStats,
-  type CombinedTracingStats,
-} from "oxalis/model/accessors/annotation_accessor";
->>>>>>> master
+import { getStats, type CombinedTracingStats } from "oxalis/model/accessors/annotation_accessor";
 import {
   setAnnotationNameAction,
   setAnnotationDescriptionAction,

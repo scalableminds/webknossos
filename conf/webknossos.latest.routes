@@ -121,7 +121,7 @@ PUT           /datastores/:name                                                 
 # Tracingstores
 GET           /tracingstore                                                                     controllers.TracingStoreController.listOne()
 POST          /tracingstores/:name/handleTracingUpdateReport                                    controllers.WKRemoteTracingStoreController.handleTracingUpdateReport(name: String, key: String)
-POST          /tracingstores/:name/updateAnnotationLayers                                       controllers.WKRemoteTracingStoreController.updateAnnotationLayers(name: String, key: String, annotationId: String)
+POST          /tracingstores/:name/updateAnnotation                                             controllers.WKRemoteTracingStoreController.updateAnnotation(name: String, key: String, annotationId: String)
 POST          /tracingstores/:name/validateUserAccess                                           controllers.UserTokenController.validateAccessViaTracingstore(name: String, key: String, token: Option[String])
 PUT           /tracingstores/:name                                                              controllers.TracingStoreController.update(name: String)
 GET           /tracingstores/:name/dataSource                                                   controllers.WKRemoteTracingStoreController.dataSourceForTracing(name: String, key: String, tracingId: String)

@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
@@ -98,6 +99,12 @@ class TSRemoteWebknossosClient @Inject()(
       .addQueryString("annotationId" -> annotationId)
       .addQueryString("key" -> tracingStoreKey)
       .postJson(annotationLayers)
+
+  def updateAnnotation(annotationId: String, annotationProto: AnnotationProto): Fox[Unit] =
+    rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/updateAnnotation")
+      .addQueryString("annotationId" -> annotationId)
+      .addQueryString("key" -> tracingStoreKey)
+      .postProto(annotationProto)
 
   def createTracingFor(annotationId: String,
                        layerParameters: AnnotationLayerParameters,

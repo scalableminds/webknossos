@@ -3,6 +3,7 @@ package controllers
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
@@ -17,6 +18,7 @@ import models.annotation.AnnotationState._
 import models.annotation.{
   Annotation,
   AnnotationDAO,
+  AnnotationDefaults,
   AnnotationInformationProvider,
   AnnotationLayerDAO,
   AnnotationService,
@@ -58,23 +60,31 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
   val bearerTokenService: WebknossosBearerTokenAuthenticatorService =
     wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  def updateAnnotationLayers(name: String, key: String, annotationId: String): Action[List[AnnotationLayer]] =
-    Action.async(validateJson[List[AnnotationLayer]]) { implicit request =>
+  def updateAnnotation(name: String, key: String, annotationId: String): Action[AnnotationProto] =
+    Action.async(validateProto[AnnotationProto]) { implicit request =>
+      // tracingstore only sends this request after ensuring write access
+      implicit val ctx: DBAccessContext = GlobalAccessContext
       for {
         annotationIdValidated <- ObjectId.fromString(annotationId)
         existingLayers <- annotationLayerDAO.findAnnotationLayersFor(annotationIdValidated)
+        newLayersProto = request.body.layers
         existingLayerIds = existingLayers.map(_.tracingId).toSet
-        newLayerIds = request.body.map(_.tracingId).toSet
+        newLayerIds = newLayersProto.map(_.tracingId).toSet
         layerIdsToDelete = existingLayerIds.diff(newLayerIds)
         layerIdsToUpdate = existingLayerIds.intersect(newLayerIds)
         layerIdsToInsert = newLayerIds.diff(existingLayerIds)
         _ <- Fox.serialCombined(layerIdsToDelete.toList)(
           annotationLayerDAO.deleteOneByTracingId(annotationIdValidated, _))
-        _ <- Fox.serialCombined(request.body.filter(l => layerIdsToInsert.contains(l.tracingId)))(
-          annotationLayerDAO.insertOne(annotationIdValidated, _))
-        _ <- Fox.serialCombined(request.body.filter(l => layerIdsToUpdate.contains(l.tracingId)))(l =>
+        _ <- Fox.serialCombined(newLayersProto.filter(l => layerIdsToInsert.contains(l.tracingId))) { layerProto =>
+          annotationLayerDAO.insertOne(annotationIdValidated, AnnotationLayer.fromProto(layerProto))
+        }
+        _ <- Fox.serialCombined(newLayersProto.filter(l => layerIdsToUpdate.contains(l.tracingId)))(l =>
           annotationLayerDAO.updateName(annotationIdValidated, l.tracingId, l.name))
         // Layer stats are ignored here, they are sent eagerly when saving updates
+        _ <- annotationDAO.updateName(annotationIdValidated,
+                                      request.body.name.getOrElse(AnnotationDefaults.defaultName))
+        _ <- annotationDAO.updateDescription(annotationIdValidated,
+                                             request.body.description.getOrElse(AnnotationDefaults.defaultDescription))
       } yield Ok
     }
 

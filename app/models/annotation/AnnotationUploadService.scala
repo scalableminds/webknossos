@@ -5,7 +5,6 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import java.io.{File, FileInputStream, InputStream}
 import java.nio.file.{Files, Path, StandardCopyOption}
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeGroup}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{SegmentGroup, VolumeTracing}
@@ -14,22 +13,17 @@ import files.TempFileService
 
 import javax.inject.Inject
 import models.annotation.nml.NmlResults._
-import models.annotation.nml.{NmlParser, NmlResults}
+import models.annotation.nml.{NmlParseSuccessWithoutFile, NmlParser, NmlResults}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.common.Box.tryo
 import play.api.i18n.MessagesProvider
 
 import scala.concurrent.ExecutionContext
 
-case class UploadedVolumeLayer(tracing: VolumeTracing,
-                               datasetId: ObjectId,
-                               dataZipLocation: String,
-                               name: Option[String]) {
+case class UploadedVolumeLayer(tracing: VolumeTracing, dataZipLocation: String, name: Option[String]) {
   def getDataZipFrom(otherFiles: Map[String, File]): Option[File] =
     otherFiles.get(dataZipLocation)
 }
-
-case class SkeletonTracingWithDatasetId(skeletonTracing: SkeletonTracing, datasetId: ObjectId)
 
 case class SharedParsingParameters(useZipName: Boolean,
                                    overwritingDatasetId: Option[String] = None,
@@ -68,8 +62,8 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
         basePath
       )
     parserOutput.futureBox.map {
-      case Full((skeletonTracingOpt, uploadedVolumeLayers, description, wkUrl)) =>
-        NmlParseSuccess(name, skeletonTracingOpt, uploadedVolumeLayers, description, wkUrl)
+      case Full(NmlParseSuccessWithoutFile(skeletonTracingOpt, uploadedVolumeLayers, datasetId, description, wkUrl)) =>
+        NmlParseSuccess(name, skeletonTracingOpt, uploadedVolumeLayers, datasetId, description, wkUrl)
       case Failure(msg, _, chain) => NmlParseFailure(name, msg + chain.map(_ => formatChain(chain)).getOrElse(""))
       case Empty                  => NmlParseEmpty(name)
     }
@@ -104,21 +98,20 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
       addPrefixesToGroupItemNames(parseResults)
 
   private def addPrefixesToGroupItemNames(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
-    def renameTrees(name: String, tracingWithId: SkeletonTracingWithDatasetId): SkeletonTracingWithDatasetId = {
+    def renameTrees(name: String, tracing: SkeletonTracing): SkeletonTracing = {
       val prefix = name.replaceAll("\\.[^.]*$", "") + "_"
-      tracingWithId.copy(
-        skeletonTracing = tracingWithId.skeletonTracing.copy(trees = tracingWithId.skeletonTracing.trees.map(tree =>
-          tree.copy(name = prefix + tree.name))))
+      tracing.copy(trees = tracing.trees.map(tree => tree.copy(name = prefix + tree.name)))
     }
 
     // Segments are not renamed in this case. Segment ids are adjusted in the separate merge step.
 
     if (parseResults.length > 1) {
       parseResults.map {
-        case NmlParseSuccess(name, Some(skeletonTracingWithDatasetId), uploadedVolumeLayers, description, wkUrl) =>
+        case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, datasetId, description, wkUrl) =>
           NmlParseSuccess(name,
-                          Some(renameTrees(name, skeletonTracingWithDatasetId)),
+                          Some(renameTrees(name, skeletonTracing)),
                           uploadedVolumeLayers,
+                          datasetId,
                           description,
                           wkUrl)
         case r => r
@@ -137,13 +130,11 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
       if (segmentGroups.isEmpty) 0
       else Math.max(segmentGroups.map(_.groupId).max, getMaximumSegmentGroupId(segmentGroups.flatMap(_.children)))
 
-    def wrapTreesInGroup(name: String, tracing: SkeletonTracingWithDatasetId): SkeletonTracingWithDatasetId = {
-      val unusedGroupId = getMaximumTreeGroupId(tracing.skeletonTracing.treeGroups) + 1
-      val newTrees =
-        tracing.skeletonTracing.trees.map(tree => tree.copy(groupId = Some(tree.groupId.getOrElse(unusedGroupId))))
-      val newTreeGroups = Seq(
-        TreeGroup(name, unusedGroupId, tracing.skeletonTracing.treeGroups, isExpanded = Some(true)))
-      tracing.copy(skeletonTracing = tracing.skeletonTracing.copy(trees = newTrees, treeGroups = newTreeGroups))
+    def wrapTreesInGroup(name: String, tracing: SkeletonTracing): SkeletonTracing = {
+      val unusedGroupId = getMaximumTreeGroupId(tracing.treeGroups) + 1
+      val newTrees = tracing.trees.map(tree => tree.copy(groupId = Some(tree.groupId.getOrElse(unusedGroupId))))
+      val newTreeGroups = Seq(TreeGroup(name, unusedGroupId, tracing.treeGroups, isExpanded = Some(true)))
+      tracing.copy(trees = newTrees, treeGroups = newTreeGroups)
     }
 
     def wrapSegmentsInGroup(name: String, tracing: VolumeTracing): VolumeTracing = {
@@ -158,10 +149,11 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
       volumeLayers.map(v => v.copy(tracing = wrapSegmentsInGroup(name, v.tracing)))
 
     parseResults.map {
-      case NmlParseSuccess(name, Some(skeletonTracingWithDatasetId), uploadedVolumeLayers, description, wkUrl) =>
+      case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, datasetId, description, wkUrl) =>
         NmlParseSuccess(name,
-                        Some(wrapTreesInGroup(name, skeletonTracingWithDatasetId)),
+                        Some(wrapTreesInGroup(name, skeletonTracing)),
                         wrapVolumeLayers(name, uploadedVolumeLayers),
+                        datasetId,
                         description,
                         wkUrl)
       case r => r

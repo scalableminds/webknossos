@@ -90,7 +90,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
                                                     SharedParsingParameters(useZipName = false, isTaskUpload = true))
       extractedTracingBoxesRaw: List[TracingBoxContainer] = extractedFiles.toBoxes
       extractedTracingBoxes: List[TracingBoxContainer] <- taskCreationService
-        .addVolumeFallbackBoundingBoxes(extractedTracingBoxesRaw, request.identity._organization)
+        .addVolumeFallbackBoundingBoxes(extractedTracingBoxesRaw)
       fullParams: List[Box[TaskParameters]] = taskCreationService.buildFullParamsFromFiles(params,
                                                                                            extractedTracingBoxes)
       (skeletonBases, volumeBases) <- taskCreationService.fillInMissingTracings(

@@ -1,6 +1,6 @@
 package com.scalableminds.util.tools
 
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full, ParamFailure}
 import play.api.libs.json.{JsError, JsResult, JsSuccess}
 
 import scala.concurrent.duration._
@@ -67,6 +67,9 @@ object Fox extends FoxImplicits {
   def failure(message: String, ex: Box[Throwable] = Empty, chain: Box[Failure] = Empty)(
       implicit ec: ExecutionContext): Fox[Nothing] =
     new Fox(Future.successful(Failure(message, ex, chain)))
+
+  def paramFailure[T](message: String, ex: Box[Throwable] = Empty, chain: Box[Failure] = Empty, param: T)( implicit ec: ExecutionContext): Fox[Nothing] =
+    new Fox(Future.successful(ParamFailure(message, ex, chain, param)))
 
   // run serially, fail on the first failure
   def serialSequence[A, B](l: List[A])(f: A => Future[B])(implicit ec: ExecutionContext): Future[List[B]] = {

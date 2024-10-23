@@ -11,7 +11,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracingOpt, SkeletonTracings}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.annotation.{
@@ -36,13 +36,14 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeTracingDownsampling
 }
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Empty
 
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, DownloadAnnotationEvent, UploadAnnotationEvent}
 import models.annotation.AnnotationState._
 import models.annotation._
 import models.annotation.nml.NmlResults.{NmlParseResult, NmlParseSuccess}
-import models.annotation.nml.NmlWriter
+import models.annotation.nml.{NmlResults, NmlWriter}
 import models.dataset.{DataStoreDAO, Dataset, DatasetDAO, DatasetService, WKRemoteDataStoreClient}
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
@@ -118,18 +119,20 @@ class AnnotationIOController @Inject()(
           parsedFilesWrapped = annotationUploadService.wrapOrPrefixGroups(parsedFiles.parseResults,
                                                                           shouldCreateGroupForEachFile)
           parseResultsFiltered: List[NmlParseResult] = parsedFilesWrapped.filter(_.succeeded)
-          // _ <- bool2Fox(parseResultsFiltered.isEmpty) ?~> returnError(parsedFiles)) TODOM: Find a proper way to return an error when parseResultsFiltered.isEmpty
+          _ <- bool2Fox(parseResultsFiltered.isEmpty) ~> returnError(parsedFiles) // TODOM: Find a proper way to return an error when parseResultsFiltered.isEmpty
           parseSuccesses <- Fox.serialCombined(parseResultsFiltered)(r => r.toSuccessBox)
           name = nameForUploaded(parseResultsFiltered.map(_.fileName))
           description = descriptionForNMLs(parseResultsFiltered.map(_.description))
           wkUrl = wkUrlsForNMLs(parseResultsFiltered.map(_.wkUrl))
           _ <- assertNonEmpty(parseSuccesses)
-          skeletonTracingsWithDatasetId = parseSuccesses.flatMap(_.skeletonTracingOpt)
+          skeletonTracings = parseSuccesses.flatMap(_.skeletonTracingOpt)
           // Create a list of volume layers for each uploaded (non-skeleton-only) annotation.
           // This is what determines the merging strategy for volume layers
           volumeLayersGroupedRaw = parseSuccesses.map(_.volumeLayers).filter(_.nonEmpty)
-          dataset <- findDatasetForUploadedAnnotations(skeletonTracingsWithDatasetId,
+          datasetIds = parseSuccesses.map(_.datasetId)
+          dataset <- findDatasetForUploadedAnnotations(skeletonTracings,
                                                        volumeLayersGroupedRaw.flatten,
+            datasetIds,
                                                        wkUrl)
           dataSource <- datasetService.dataSourceFor(dataset) ?~> Messages("dataset.notImported", dataset.name)
           usableDataSource <- dataSource.toUsable.toFox ?~> Messages("dataset.notImported", dataset.name)
@@ -139,7 +142,7 @@ class AnnotationIOController @Inject()(
                                                          tracingStoreClient,
                                                          parsedFiles.otherFiles,
                                                          usableDataSource)
-          mergedSkeletonLayers <- mergeAndSaveSkeletonLayers(skeletonTracingsWithDatasetId, tracingStoreClient)
+          mergedSkeletonLayers <- mergeAndSaveSkeletonLayers(skeletonTracings, tracingStoreClient)
           annotation <- annotationService.createFrom(request.identity,
                                                      dataset,
                                                      mergedSkeletonLayers ::: mergedVolumeLayers,
@@ -198,14 +201,14 @@ class AnnotationIOController @Inject()(
           ))
     }
 
-  private def mergeAndSaveSkeletonLayers(skeletonTracings: List[SkeletonTracingWithDatasetId],
+  private def mergeAndSaveSkeletonLayers(skeletonTracings: List[SkeletonTracing],
                                          tracingStoreClient: WKRemoteTracingStoreClient): Fox[List[AnnotationLayer]] =
     if (skeletonTracings.isEmpty)
       Fox.successful(List())
     else {
       for {
         mergedTracingId <- tracingStoreClient.mergeSkeletonTracingsByContents(
-          SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t.skeletonTracing)))),
+          SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
           persistTracing = true)
       } yield
         List(
@@ -219,11 +222,13 @@ class AnnotationIOController @Inject()(
     bool2Fox(parseSuccesses.exists(p => p.skeletonTracingOpt.nonEmpty || p.volumeLayers.nonEmpty)) ?~> "nml.file.noFile"
 
   private def findDatasetForUploadedAnnotations(
-      skeletonTracings: List[SkeletonTracingWithDatasetId],
+      skeletonTracings: List[SkeletonTracing],
       volumeTracings: List[UploadedVolumeLayer],
+      datasetIds: List[ObjectId],
       wkUrl: String)(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[Dataset] =
     for {
-      datasetId <- assertAllOnSameDataset(skeletonTracings, volumeTracings) ?~> "nml.file.differentDatasets"
+      _ <- assertAllOnSameDataset(skeletonTracings, volumeTracings) ?~> "nml.file.differentDatasets" // TODO: Should this be kept? OR is the line below enough?
+      datasetId <- SequenceUtils.findUniqueElement(datasetIds).toFox
       organizationIdOpt <- assertAllOnSameOrganization(skeletonTracings, volumeTracings) ?~> "nml.file.differentDatasets"
       organizationIdOpt <- Fox.runOptional(organizationIdOpt) {
         organizationDAO.findOne(_)(GlobalAccessContext).map(_._id)
@@ -257,27 +262,27 @@ class AnnotationIOController @Inject()(
   private def wkUrlsForNMLs(wkUrls: Seq[Option[String]]) =
     if (wkUrls.toSet.size == 1) wkUrls.headOption.flatten.getOrElse("") else ""
 
-  /*private def returnError(zipParseResult: NmlResults.MultiNmlParseResult)(implicit messagesProvider: MessagesProvider) =
+  private def returnError(zipParseResult: NmlResults.MultiNmlParseResult)(
+      implicit messagesProvider: MessagesProvider): Fox[Nothing] =
     if (zipParseResult.containsFailure) {
       val errors = zipParseResult.parseResults.flatMap {
         case result: NmlResults.NmlParseFailure =>
           Some("error" -> Messages("nml.file.invalid", result.fileName, result.error))
         case _ => None
       }
-      Future.successful(JsonBadRequest(errors))
+      Fox.paramFailure("NML upload failed", Empty, Empty, errors)
     } else {
-      Future.successful(JsonBadRequest(Messages("nml.file.noFile")))
-    }*/
+      Fox.paramFailure("NML upload failed", Empty, Empty, None)
+    }
 
-  private def assertAllOnSameDataset(skeletons: List[SkeletonTracingWithDatasetId],
-                                     volumes: List[UploadedVolumeLayer]): Fox[ObjectId] =
-    SequenceUtils.findUniqueElement(volumes.map(_.datasetId) ++ skeletons.map(_.datasetId)).toFox
+  private def assertAllOnSameDataset(skeletons: List[SkeletonTracing],
+                                     volumes: List[UploadedVolumeLayer]): Fox[String] =
+    SequenceUtils.findUniqueElement(volumes.map(_.tracing.datasetName) ++ skeletons.map(_.datasetName)).toFox
 
-  private def assertAllOnSameOrganization(skeletons: List[SkeletonTracingWithDatasetId],
+  private def assertAllOnSameOrganization(skeletons: List[SkeletonTracing],
                                           volumes: List[UploadedVolumeLayer]): Fox[Option[String]] = {
     // Note that organizationIds are optional. Tracings with no organization attribute are ignored here
-    val organizationIds = skeletons.flatMap(_.skeletonTracing.organizationId) ::: volumes.flatMap(
-      _.tracing.organizationId)
+    val organizationIds = skeletons.flatMap(_.organizationId) ::: volumes.flatMap(_.tracing.organizationId)
     for {
       _ <- Fox.runOptional(organizationIds.headOption)(name => bool2Fox(organizationIds.forall(_ == name)))
     } yield organizationIds.headOption

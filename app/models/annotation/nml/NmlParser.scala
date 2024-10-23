@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.{SkeletonTracingWithDatasetId, UploadedVolumeLayer}
+import models.annotation.UploadedVolumeLayer
 import models.dataset.DatasetDAO
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -51,8 +51,9 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
             overwritingDatasetName: Option[String],
             overwritingOrganizationId: Option[String],
             isTaskUpload: Boolean,
-            basePath: Option[String] = None)(implicit m: MessagesProvider, ec: ExecutionContext, ctx: DBAccessContext)
-    : Fox[(Option[SkeletonTracingWithDatasetId], List[UploadedVolumeLayer], String, Option[String])] = {
+            basePath: Option[String] = None)(implicit m: MessagesProvider,
+                                             ec: ExecutionContext,
+                                             ctx: DBAccessContext): Fox[NmlParseSuccessWithoutFile] = {
     val foxInABox = try {
       val data = XML.load(nmlInputStream)
       for {
@@ -120,37 +121,33 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
                 editPositionAdditionalCoordinates = editPositionAdditionalCoordinates,
                 additionalAxes = additionalAxisProtos
               ),
-              dataset._id,
               basePath.getOrElse("") + v.dataZipPath,
               v.name,
             )
           }
-          skeletonTracingOpt: Option[SkeletonTracingWithDatasetId] = if (treesSplit.isEmpty && userBoundingBoxes.isEmpty)
+          skeletonTracingOpt: Option[SkeletonTracing] = if (treesSplit.isEmpty && userBoundingBoxes.isEmpty)
             None
           else
             Some(
-              SkeletonTracingWithDatasetId(
-                SkeletonTracing(
-                  dataset.name,
-                  treesSplit,
-                  timestamp,
-                  taskBoundingBox,
-                  activeNodeId,
-                  editPosition,
-                  editRotation,
-                  zoomLevel,
-                  version = 0,
-                  None,
-                  treeGroupsAfterSplit,
-                  userBoundingBoxes,
-                  Some(organizationId),
-                  editPositionAdditionalCoordinates,
-                  additionalAxes = additionalAxisProtos
-                ),
-                dataset._id
+              SkeletonTracing(
+                dataset.name,
+                treesSplit,
+                timestamp,
+                taskBoundingBox,
+                activeNodeId,
+                editPosition,
+                editRotation,
+                zoomLevel,
+                version = 0,
+                None,
+                treeGroupsAfterSplit,
+                userBoundingBoxes,
+                Some(organizationId),
+                editPositionAdditionalCoordinates,
+                additionalAxes = additionalAxisProtos
               )
             )
-        } yield (skeletonTracingOpt, volumeLayers, description, wkUrl) // TODO: to fox and flatten
+        } yield NmlParseSuccessWithoutFile(skeletonTracingOpt, volumeLayers, dataset._id, description, wkUrl)
       }
     } catch {
       case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>

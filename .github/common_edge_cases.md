@@ -14,3 +14,5 @@ Consider SQL pitfalls:
  - `x IN ()` statements must never called with empty list
  - `ARRAY_AGG(x)` may have nullable values (use `ARRAY_REMOVE(ARRAY_AGG(x), null)` instead)
  - Complex SQL queries may have a fanout effect due to multiple left joins, leading to duplicates
+
+When changing the API version, also adapt `ApiVersioning.CURRENT_API_VERSION`

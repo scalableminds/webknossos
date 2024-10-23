@@ -4,7 +4,7 @@ import play.api.mvc.RequestHeader
 
 trait ApiVersioning {
 
-  protected def CURRENT_API_VERSION: Int = 7
+  protected def CURRENT_API_VERSION: Int = 8
 
   protected def OLDEST_SUPPORTED_API_VERSION: Int = 3
 

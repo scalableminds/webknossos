@@ -558,15 +558,15 @@ class AnnotationService @Inject()(
       )
   }
 
-  def createVolumeTracingBase(datasetIdOpt: Option[ObjectId],
-                              datasetName: String,
-                              organizationId: String,
-                              boundingBox: Option[BoundingBox],
-                              startPosition: Vec3Int,
-                              startRotation: Vec3Double,
-                              volumeShowFallbackLayer: Boolean,
-                              magRestrictions: MagRestrictions)(implicit ctx: DBAccessContext,
-                                                                              m: MessagesProvider): Fox[VolumeTracing] =
+  def createVolumeTracingBase(
+      datasetIdOpt: Option[ObjectId],
+      datasetName: String,
+      organizationId: String,
+      boundingBox: Option[BoundingBox],
+      startPosition: Vec3Int,
+      startRotation: Vec3Double,
+      volumeShowFallbackLayer: Boolean,
+      magRestrictions: MagRestrictions)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[VolumeTracing] =
     for {
       organization <- organizationDAO.findOne(organizationId)
       dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetIdOpt, datasetName, organizationId) ?~> Messages(
@@ -715,7 +715,7 @@ class AnnotationService @Inject()(
         skeletonTracingIdOpt <- annotation.skeletonTracingId
         volumeTracingIdOpt <- annotation.volumeTracingId
       } yield
-        3(skeletonTracingIdOpt,
+        DownloadAnnotation(skeletonTracingIdOpt,
                            volumeTracingIdOpt,
                            None,
                            None,
@@ -921,6 +921,7 @@ class AnnotationService @Inject()(
         "stats" -> Json.obj(), // included for legacy parsers
         "restrictions" -> restrictionsJs,
         "annotationLayers" -> Json.toJson(annotation.annotationLayers),
+        "datasetId" -> dataset._id,
         "dataSetName" -> dataset.name,
         "organization" -> organization._id,
         "dataStore" -> dataStoreJs,

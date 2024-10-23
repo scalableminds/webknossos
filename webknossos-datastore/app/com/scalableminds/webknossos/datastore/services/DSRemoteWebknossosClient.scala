@@ -66,7 +66,7 @@ class DSRemoteWebknossosClient @Inject()(
   def reportDataSource(dataSource: InboxDataSourceLike): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasource")
       .addQueryString("key" -> dataStoreKey)
-      .put(dataSource) // TODO:
+      .put(dataSource)
 
   def getUnfinishedUploadsForUser(userTokenOpt: Option[String], organizationName: String): Fox[List[UnfinishedUpload]] =
     for {

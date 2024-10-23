@@ -392,7 +392,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                       params.editPosition,
                       params.editRotation,
                       volumeShowFallbackLayer = false,
-                      resolutionRestrictions = taskType.settings.resolutionRestrictions
+                      magRestrictions = taskType.settings.magRestrictions
                     )
                     .map(v => (v, None)))
                 for {

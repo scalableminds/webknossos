@@ -21,7 +21,7 @@ async function getFirstDataset(): Promise<APIDataset> {
 test.before("Reset database and change token", async () => {
   resetDatabase();
   setCurrToken(tokenUserA);
-  await api.triggerDatasetCheck("http://localhost:9000")
+  await api.triggerDatasetCheck("http://localhost:9000");
 });
 test.serial("getDatasets", async (t) => {
   let datasets = await api.getDatasets();

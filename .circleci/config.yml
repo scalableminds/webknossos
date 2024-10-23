@@ -118,6 +118,8 @@ jobs:
       - run:
           name: Run end-to-end tests
           command: |
+            mkdir -p "binaryData/Connectomics department"
+            chmod 777 "binaryData/Connectomics department"
             for i in {1..3}; do # retry
               .circleci/not-on-master.sh docker-compose run e2e-tests && s=0 && break || s=$?
             done

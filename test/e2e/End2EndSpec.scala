@@ -1,5 +1,6 @@
 package e2e
 
+import com.scalableminds.util.io.ZipIO
 import com.typesafe.scalalogging.LazyLogging
 import org.scalatestplus.play.guice._
 import org.specs2.main.Arguments
@@ -8,6 +9,8 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.WithServer
 
+import java.io.File
+import java.nio.file.Paths
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.sys.process._
@@ -27,6 +30,8 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
 
     "pass the e2e tests" in new WithServer(app = application, port = testPort) {
 
+      ensureTestDataset()
+
       val resp: WSResponse = Await.result(ws.url(s"http://localhost:$testPort").get(), 2 seconds)
       resp.status === 200
 
@@ -41,6 +46,28 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
     val argumentsString = arguments.commandLine.arguments
     val customArgumentsMap = argumentsString.filter(_.startsWith("-D")).map(_.split("="))
     customArgumentsMap.groupBy(_(0).substring(2)).view.mapValues(_(0).last).toMap
+  }
+
+  private def ensureTestDataset(): Unit = {
+    val testDatasetPath = "test/dataset/test-dataset.zip"
+    val dataDirectory = new File("binaryData/Organization_X")
+    if (!dataDirectory.exists()) {
+      throw new Exception("Organization_X directory does not exist.")
+    }
+    val testDatasetZip = new File(testDatasetPath)
+    if (!testDatasetZip.exists()) {
+      throw new Exception("Test dataset zip file does not exist.")
+    }
+    // Skip unzipping if the test dataset is already present
+    if (!dataDirectory.listFiles().exists(_.getName == "test-dataset"))
+      ZipIO.unzipToFolder(
+        testDatasetZip,
+        Paths.get(dataDirectory.toPath.toString, "test-dataset"),
+        includeHiddenFiles = true,
+        hiddenFilesWhitelist = List(),
+        truncateCommonPrefix = true,
+        excludeFromPrefix = None
+      )
   }
 
 }

@@ -4,7 +4,6 @@ import {
   setCurrToken,
   resetDatabase,
   writeTypeCheckingFile,
-  scanDatasetsFromDisk,
   replaceVolatileValues,
 } from "test/e2e-setup";
 import type { APIDataset } from "types/api_flow_types";
@@ -22,7 +21,7 @@ async function getFirstDataset(): Promise<APIDataset> {
 test.before("Reset database and change token", async () => {
   resetDatabase();
   setCurrToken(tokenUserA);
-  await scanDatasetsFromDisk();
+  await api.triggerDatasetCheck("http://localhost:9000")
 });
 test.serial("getDatasets", async (t) => {
   let datasets = await api.getDatasets();
@@ -37,7 +36,6 @@ test.serial("getDatasets", async (t) => {
   writeTypeCheckingFile(datasets, "dataset", "APIDatasetCompact", {
     isArray: true,
   });
-  console.log(datasets);
   t.snapshot(replaceVolatileValues(datasets));
 });
 test("getActiveDatasets", async (t) => {

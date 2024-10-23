@@ -70,10 +70,6 @@ global.fetch = function fetchWrapper(url, options) {
   if (url.indexOf("http:") === -1) {
     newUrl = `http://localhost:9000${url}`;
   }
-
-  if (!options) {
-    options = {};
-  }
   if (!options.headers) {
     options.headers = new Headers();
   }
@@ -85,12 +81,6 @@ global.fetch = function fetchWrapper(url, options) {
   console.log("Fetching", newUrl);
   return promise;
 };
-
-export async function scanDatasetsFromDisk() {
-  await fetch(`http://localhost:9000/data/triggers/checkInboxBlocking?token=${currToken}`, {
-    method: "POST",
-  });
-}
 
 global.Headers = Headers;
 global.Request = Request;

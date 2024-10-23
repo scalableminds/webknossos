@@ -65,6 +65,49 @@ WEBKNOSSOS expects the following file structure for OME-Zarr (v0.4) datasets:
 
 See [OME-Zarr 0.4 spec](https://ngff.openmicroscopy.org/latest/index.html#image-layout) for details.
 
+### Zarr Folder Structure (v0.5)
+
+For OME-Zarr (v0.5) datasets, the structure is slightly different (See [OME-Zarr 0.5 spec](https://ngff--242.org.readthedocs.build/latest/index.html#image-layout)):
+
+```
+├── 123.zarr                  # One OME-Zarr image (id=123).
+│   ...
+│
+└── 456.zarr                  # Another OME-Zarr image (id=456).
+    │
+    ├── zarr.json             # Each image is a Zarr group of other groups and arrays.
+    │                         # Group level attributes are stored in the zarr.json file and include
+    │                         # "multiscales" and "omero" (see below).
+    │
+    ├── 0                     # Each multiscale level is stored as a separate Zarr array,
+    │   ...                   # which is a folder containing chunk files which compose the array.
+    ├── n                     # The name of the array is arbitrary with the ordering defined by
+    │   │                     # by the "multiscales" metadata, but is often a sequence starting at 0.
+    │   │
+    │   ├── zarr.json         # All image arrays must be up to 5-dimensional
+    │   │                     # with the axis of type time before type channel, before spatial axes.
+    │   │
+    │   └─ ...                # Chunks are stored conforming to the Zarr array specification and 
+    │                         # metadata as specified in the array’s zarr.json.
+    │
+    └── labels
+        │
+        ├── zarr.json         # The labels group is a container which holds a list of labels to make the objects easily discoverable
+        │                     # All labels will be listed in zarr.json e.g. { "labels": [ "original/0" ] }
+        │                     # Each dimension of the label should be either the same as the
+        │                     # corresponding dimension of the image, or 1 if that dimension of the label
+        │                     # is irrelevant.
+        │
+        └── original          # Intermediate folders are permitted but not necessary and currently contain no extra metadata.
+            │
+            └── 0             # Multiscale, labeled image. The name is unimportant but is registered in the "labels" group above.
+                ├── zarr.json # Zarr Group which is both a multiscaled image as well as a labeled image.
+                │             # Metadata of the related image and as well as display information under the "image-label" key.
+                │
+                ├── 0         # Each multiscale level is stored as a separate Zarr array, as above, but only integer values
+                └── ...       # are supported.
+```
+
 ## Conversion to Zarr
 
 You can easily convert image stacks manually with the [WEBKNOSSOS CLI](https://docs.webknossos.org/cli).

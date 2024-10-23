@@ -2,12 +2,13 @@ import { Alert, Button, Form, Input } from "antd";
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { getIsInIframe } from "libs/utils";
-import { loginUser, requestSingleSignOnLogin } from "admin/admin_rest_api";
+import { loginUser, requestSingleSignOnLogin, requestWebAuthnLoginStart, requestWebAuthnLoginFinish } from "admin/admin_rest_api";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import Store from "oxalis/store";
 import messages from "messages";
 import features from "features";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
+import * as webauthnJson from "@github/webauthn-json";
 
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -139,6 +140,23 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
             </FormItem>
           )}
         </div>
+        <FormItem style={{ flexGrow: 1 }}>
+          <Button
+            type="primary"
+            style={{
+              width: "100%",
+            }}
+            onClick={async () => {
+              const opts = await requestWebAuthnLoginStart("sample@scm.io") // TODO: Read user field
+              console.log(opts)
+              const publicKeyCredential = await webauthnJson.get(opts)
+              console.log(publicKeyCredential)
+              console.log(await requestWebAuthnLoginFinish(publicKeyCredential))
+            }}
+          >
+            Continue with Device
+          </Button>
+        </FormItem>
         {hideFooter ? null : (
           <FormItem
             style={{

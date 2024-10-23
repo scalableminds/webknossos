@@ -204,6 +204,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       requestAll: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
       targetVersion <- determineTargetVersion(annotationId, version) ?~> "determineTargetVersion.failed"
+      // When requesting any other than the newest version, do not consider the changes final
+      reportChangesToWk = version.isEmpty || version.contains(targetVersion)
       updatedAnnotation <- materializedAnnotationWithTracingCache.getOrLoad(
         (annotationId, targetVersion, requestedSkeletonTracingIds, requestedVolumeTracingIds, requestAll),
         _ =>
@@ -212,7 +214,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
             targetVersion,
             requestedSkeletonTracingIds,
             requestedVolumeTracingIds,
-            requestAll = true) // TODO can we request fewer to save perf? still need to avoid duplicate apply
+            requestAll = true,
+            reportChangesToWk = reportChangesToWk) // TODO can we request fewer to save perf? still need to avoid duplicate apply
       )
     } yield updatedAnnotation
 
@@ -221,7 +224,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       version: Long,
       requestedSkeletonTracingIds: List[String],
       requestedVolumeTracingIds: List[String],
-      requestAll: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
+      requestAll: Boolean,
+      reportChangesToWk: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
       annotationWithVersion <- tracingDataStore.annotations.get(annotationId, Some(version))(
         fromProtoBytes[AnnotationProto]) ?~> "getAnnotation.failed"
@@ -234,7 +238,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                      version,
                                      requestedSkeletonTracingIds,
                                      requestedVolumeTracingIds,
-                                     requestAll) ?~> "applyUpdates.failed"
+                                     requestAll,
+                                     reportChangesToWk) ?~> "applyUpdates.failed"
     } yield updated
 
   def getEditableMappingInfo(annotationId: String, tracingId: String, version: Option[Long] = None)(
@@ -268,7 +273,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       targetVersion: Long,
       requestedSkeletonTracingIds: List[String],
       requestedVolumeTracingIds: List[String],
-      requestAll: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
+      requestAll: Boolean,
+      reportChangesToWk: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
       updateGroupsAsSaved <- findPendingUpdates(annotationId, annotation.version, targetVersion) ?~> "findPendingUpdates.failed"
       updatesGroupsRegrouped = regroupByIsolationSensitiveActions(updateGroupsAsSaved)
@@ -284,7 +290,10 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         updatesFlat,
         annotation.version,
         targetVersion) // TODO: targetVersion should be set per update group
-      updated <- applyUpdatesGrouped(annotationWithTracingsAndMappings, annotationId, updatesGroupsRegrouped) ?~> "applyUpdates.inner.failed"
+      updated <- applyUpdatesGrouped(annotationWithTracingsAndMappings,
+                                     annotationId,
+                                     updatesGroupsRegrouped,
+                                     reportChangesToWk) ?~> "applyUpdates.inner.failed"
     } yield updated
 
   private def findEditableMappingsForUpdates( // TODO integrate with findTracings?
@@ -390,7 +399,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   private def applyUpdatesGrouped(
       annotation: AnnotationWithTracings,
       annotationId: String,
-      updateGroups: List[(Long, List[UpdateAction])]
+      updateGroups: List[(Long, List[UpdateAction])],
+      reportChangesToWk: Boolean
   )(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] = {
     def updateGroupedIter(annotationWithTracingsFox: Fox[AnnotationWithTracings],
                           remainingUpdateGroups: List[(Long, List[UpdateAction])]): Fox[AnnotationWithTracings] =
@@ -413,7 +423,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       annotation: AnnotationWithTracings,
       annotationId: String,
       updates: List[UpdateAction],
-      targetVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] = {
+      targetVersion: Long,
+      reportChangesToWk: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] = {
 
     logger.info(s"applying ${updates.length} to go from v${annotation.version} to v$targetVersion")
 

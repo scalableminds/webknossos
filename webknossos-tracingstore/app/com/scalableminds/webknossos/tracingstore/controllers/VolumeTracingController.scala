@@ -22,12 +22,12 @@ import com.scalableminds.webknossos.datastore.models.{
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{FullMeshRequest, UserAccessRequest}
-import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
+import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, TSAnnotationService}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  MergedVolumeStats,
   MagRestrictions,
+  MergedVolumeStats,
   TSFullMeshService,
   VolumeDataZipFormat,
   VolumeSegmentIndexService,
@@ -60,6 +60,7 @@ class VolumeTracingController @Inject()(
     editableMappingService: EditableMappingService,
     val slackNotificationService: TSSlackNotificationService,
     val remoteWebknossosClient: TSRemoteWebknossosClient,
+    annotationTransactionService: AnnotationTransactionService,
     volumeSegmentStatisticsService: VolumeSegmentStatisticsService,
     volumeSegmentIndexService: VolumeSegmentIndexService,
     fullMeshService: TSFullMeshService,
@@ -333,11 +334,11 @@ class VolumeTracingController @Inject()(
             tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
             currentVersion <- request.body.dataParts("currentVersion").headOption.flatMap(_.toIntOpt).toFox
             zipFile <- request.body.files.headOption.map(f => new File(f.ref.path.toString)).toFox
-            largestSegmentId <- volumeTracingService.importVolumeData(annotationId,
-                                                                      tracingId,
-                                                                      tracing,
-                                                                      zipFile,
-                                                                      currentVersion)
+            (updateGroup, largestSegmentId) <- volumeTracingService.importVolumeData(tracingId,
+                                                                                     tracing,
+                                                                                     zipFile,
+                                                                                     currentVersion)
+            _ <- annotationTransactionService.handleUpdateGroups(annotationId, List(updateGroup))
           } yield Ok(Json.toJson(largestSegmentId))
         }
       }

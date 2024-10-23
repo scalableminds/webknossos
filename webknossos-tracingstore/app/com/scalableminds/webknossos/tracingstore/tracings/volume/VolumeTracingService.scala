@@ -811,11 +811,9 @@ class VolumeTracingService @Inject()(
     }
   }
 
-  def importVolumeData(annotationId: String,
-                       tracingId: String,
-                       tracing: VolumeTracing,
-                       zipFile: File,
-                       currentVersion: Int)(implicit mp: MessagesProvider, tc: TokenContext): Fox[Long] =
+  def importVolumeData(tracingId: String, tracing: VolumeTracing, zipFile: File, currentVersion: Int)(
+      implicit mp: MessagesProvider,
+      tc: TokenContext): Fox[(UpdateActionGroup, Long)] =
     if (currentVersion != tracing.version)
       Fox.failure("version.mismatch")
     else {
@@ -881,8 +879,7 @@ class VolumeTracingService @Inject()(
             1,
             0
           )
-          // TODO: _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken)
-        } yield mergedVolume.largestSegmentId.toPositiveLong
+        } yield (updateGroup, mergedVolume.largestSegmentId.toPositiveLong)
       }
     }
 

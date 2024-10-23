@@ -28,7 +28,7 @@ import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotifi
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   MergedVolumeStats,
-  ResolutionRestrictions,
+  MagRestrictions,
   TSFullMeshService,
   VolumeDataZipFormat,
   VolumeSegmentIndexService,
@@ -168,7 +168,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def initialData(tracingId: String, minResolution: Option[Int], maxResolution: Option[Int]): Action[AnyContent] =
+  def initialData(tracingId: String, minMag: Option[Int], maxMag: Option[Int]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
@@ -177,11 +177,11 @@ class VolumeTracingController @Inject()(
               annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
-              resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
-              resolutions <- volumeTracingService
-                .initializeWithData(annotationId, tracingId, tracing, initialData, resolutionRestrictions)
+              magRestrictions = MagRestrictions(minMag, maxMag)
+              mags <- volumeTracingService
+                .initializeWithData(annotationId, tracingId, tracing, initialData, magRestrictions)
                 .toFox
-              _ <- volumeTracingService.updateResolutionList(tracingId, tracing, resolutions)
+              _ <- volumeTracingService.updateMagList(tracingId, tracing, mags)
             } yield Ok(Json.toJson(tracingId))
           }
         }
@@ -218,10 +218,10 @@ class VolumeTracingController @Inject()(
               annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
-              resolutions <- volumeTracingService
+              mags <- volumeTracingService
                 .initializeWithDataMultiple(annotationId, tracingId, tracing, initialData)
                 .toFox
-              _ <- volumeTracingService.updateResolutionList(tracingId, tracing, resolutions)
+              _ <- volumeTracingService.updateMagList(tracingId, tracing, mags)
             } yield Ok(Json.toJson(tracingId))
           }
         }
@@ -279,8 +279,8 @@ class VolumeTracingController @Inject()(
 
   def duplicate(tracingId: String,
                 fromTask: Option[Boolean],
-                minResolution: Option[Int],
-                maxResolution: Option[Int],
+                minMag: Option[Int],
+                maxMag: Option[Int],
                 downsample: Option[Boolean],
                 editPosition: Option[String],
                 editRotation: Option[String],
@@ -293,7 +293,7 @@ class VolumeTracingController @Inject()(
             tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
             _ = logger.info(s"Duplicating volume tracing $tracingId...")
             datasetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
-            resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
+            magRestrictions = MagRestrictions(minMag, maxMag)
             editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
             editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
             boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
@@ -311,7 +311,7 @@ class VolumeTracingController @Inject()(
               tracing,
               fromTask.getOrElse(false),
               datasetBoundingBox,
-              resolutionRestrictions,
+              magRestrictions,
               editPositionParsed,
               editRotationParsed,
               boundingBoxParsed,
@@ -414,7 +414,7 @@ class VolumeTracingController @Inject()(
         tracing <- annotationService.findVolume(annotationId, tracingId)
         positionOpt <- volumeTracingService.findData(tracingId, tracing)
       } yield {
-        Ok(Json.obj("position" -> positionOpt, "resolution" -> positionOpt.map(_ => Vec3Int.ones)))
+        Ok(Json.obj("position" -> positionOpt, "mag" -> positionOpt.map(_ => Vec3Int.ones)))
       }
     }
   }

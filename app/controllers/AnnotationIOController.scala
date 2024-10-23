@@ -335,7 +335,7 @@ class AnnotationIOController @Inject()(
         fallbackLayer = fallbackLayerOpt.map(_.name),
         largestSegmentId = combineLargestSegmentIdsByPrecedence(volumeTracing.largestSegmentId,
                                                                 fallbackLayerOpt.map(_.largestSegmentId)),
-        resolutions = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayerOpt).map(vec3IntToProto),
+        mags = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayerOpt).map(vec3IntToProto),
         hasSegmentIndex = Some(tracingCanHaveSegmentIndex)
       )
   }

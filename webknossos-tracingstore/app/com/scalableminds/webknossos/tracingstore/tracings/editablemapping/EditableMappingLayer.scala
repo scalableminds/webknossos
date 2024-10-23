@@ -84,7 +84,7 @@ case class EditableMappingLayer(name: String,
 
   override def coordinateTransformations: Option[List[CoordinateTransformation]] = None
 
-  override def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = DataLayer.bucketLength
+  override def lengthOfUnderlyingCubes(mag: Vec3Int): Int = DataLayer.bucketLength
 
   override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                               dataSourceId: DataSourceId,

@@ -28,7 +28,7 @@ import type {
   APIProjectUpdater,
   APIProjectWithStatus,
   APIPublication,
-  APIResolutionRestrictions,
+  APIMagRestrictions,
   APIScript,
   APIScriptCreator,
   APIScriptUpdater,
@@ -663,7 +663,7 @@ type AnnotationLayerCreateDescriptor = {
   autoFallbackLayer?: boolean;
   fallbackLayerName?: string | null | undefined;
   mappingName?: string | null | undefined;
-  resolutionRestrictions?: APIResolutionRestrictions | null | undefined;
+  magRestrictions?: APIMagRestrictions | null | undefined;
 };
 
 export function addAnnotationLayer(
@@ -793,7 +793,7 @@ export function createExplorational(
   autoFallbackLayer: boolean,
   fallbackLayerName?: string | null | undefined,
   mappingName?: string | null | undefined,
-  resolutionRestrictions?: APIResolutionRestrictions | null | undefined,
+  magRestrictions?: APIMagRestrictions | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
@@ -814,7 +814,7 @@ export function createExplorational(
         fallbackLayerName,
         autoFallbackLayer,
         mappingName,
-        resolutionRestrictions,
+        magRestrictions,
       },
     ];
   } else {
@@ -829,7 +829,7 @@ export function createExplorational(
         fallbackLayerName,
         autoFallbackLayer,
         mappingName,
-        resolutionRestrictions,
+        magRestrictions,
       },
     ];
   }

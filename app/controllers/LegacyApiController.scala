@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
-import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
+import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import models.dataset.DatasetService
 import models.organization.OrganizationDAO
 
@@ -25,7 +25,7 @@ import scala.concurrent.ExecutionContext
 
 case class LegacyCreateExplorationalParameters(typ: String,
                                                fallbackLayerName: Option[String],
-                                               resolutionRestrictions: Option[ResolutionRestrictions])
+                                               resolutionRestrictions: Option[MagRestrictions])
 object LegacyCreateExplorationalParameters {
   implicit val jsonFormat: OFormat[LegacyCreateExplorationalParameters] =
     Json.format[LegacyCreateExplorationalParameters]

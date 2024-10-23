@@ -69,7 +69,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
-      _ <- bool2Fox(tracing.resolutions.contains(vec3IntToProto(mag))) ?~> "mag.notPresentInTracing"
+      _ <- bool2Fox(tracing.mags.contains(vec3IntToProto(mag))) ?~> "mag.notPresentInTracing"
       before = Instant.now
       voxelSize <- remoteDatastoreClient.voxelSizeForTracingWithCache(tracingId) ?~> "voxelSize.failedToFetch"
       verticesForChunks <- if (tracing.hasSegmentIndex.getOrElse(false))

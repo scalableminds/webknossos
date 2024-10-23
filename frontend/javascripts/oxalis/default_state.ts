@@ -36,7 +36,7 @@ const initialAnnotationInfo = {
     mergerMode: false,
     volumeInterpolationAllowed: false,
     allowedModes: ["orthogonal", "oblique", "flight"] as APIAllowedMode[],
-    resolutionRestrictions: {},
+    magRestrictions: {},
   },
   visibility: "Internal" as APIAnnotationVisibility,
   tags: [],

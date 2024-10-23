@@ -108,8 +108,8 @@ trait BucketKeys extends MortonEncoding with WKWDataFormatHelper with LazyLoggin
   private def parseBucketKeyXYZ(key: String) = {
     val keyRx = "([0-9a-z-]+)/(\\d+|\\d+-\\d+-\\d+)/-?\\d+-\\[(\\d+),(\\d+),(\\d+)]".r
     key match {
-      case keyRx(name, resolutionStr, xStr, yStr, zStr) =>
-        getBucketPosition(xStr, yStr, zStr, resolutionStr, None).map(bucketPosition => (name, bucketPosition))
+      case keyRx(name, magStr, xStr, yStr, zStr) =>
+        getBucketPosition(xStr, yStr, zStr, magStr, None).map(bucketPosition => (name, bucketPosition))
       case _ =>
         None
     }
@@ -124,7 +124,7 @@ trait BucketKeys extends MortonEncoding with WKWDataFormatHelper with LazyLoggin
     matchOpt match {
       case Some(aMatch) =>
         val name = aMatch.group(1)
-        val resolutionStr = aMatch.group(2)
+        val magStr = aMatch.group(2)
         val xStr = aMatch.group(additionalAxes.length + 3)
         val yStr = aMatch.group(additionalAxes.length + 4)
         val zStr = aMatch.group(additionalAxes.length + 5)
@@ -136,7 +136,7 @@ trait BucketKeys extends MortonEncoding with WKWDataFormatHelper with LazyLoggin
               AdditionalCoordinate(additionalAxesIndexSorted(groupIndexAndAxisIndex._2).name,
                                    aMatch.group(groupIndexAndAxisIndex._1).toInt))
 
-        getBucketPosition(xStr, yStr, zStr, resolutionStr, Some(additionalCoordinates)).map(bucketPosition =>
+        getBucketPosition(xStr, yStr, zStr, magStr, Some(additionalCoordinates)).map(bucketPosition =>
           (name, bucketPosition))
 
       case _ =>
@@ -147,23 +147,20 @@ trait BucketKeys extends MortonEncoding with WKWDataFormatHelper with LazyLoggin
   private def getBucketPosition(xStr: String,
                                 yStr: String,
                                 zStr: String,
-                                resolutionStr: String,
+                                magStr: String,
                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]]): Option[BucketPosition] = {
-    val resolutionOpt = Vec3Int.fromMagLiteral(resolutionStr, allowScalar = true)
-    resolutionOpt match {
-      case Some(resolution) =>
-        val x = xStr.toInt
-        val y = yStr.toInt
-        val z = zStr.toInt
-        val bucket = BucketPosition(
-          x * resolution.x * DataLayer.bucketLength,
-          y * resolution.y * DataLayer.bucketLength,
-          z * resolution.z * DataLayer.bucketLength,
-          resolution,
-          additionalCoordinates
-        )
-        Some(bucket)
-      case _ => None
+    val magnOpt = Vec3Int.fromMagLiteral(magStr, allowScalar = true)
+    magnOpt.map { mag =>
+      val x = xStr.toInt
+      val y = yStr.toInt
+      val z = zStr.toInt
+      BucketPosition(
+        x * mag.x * DataLayer.bucketLength,
+        y * mag.y * DataLayer.bucketLength,
+        z * mag.z * DataLayer.bucketLength,
+        mag,
+        additionalCoordinates
+      )
     }
   }
 

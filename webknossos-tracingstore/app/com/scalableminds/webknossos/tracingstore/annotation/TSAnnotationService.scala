@@ -516,7 +516,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     EditableMappingLayer(
       tracingId,
       tracing.boundingBox,
-      resolutions = tracing.resolutions.map(vec3IntFromProto).toList,
+      resolutions = tracing.mags.map(vec3IntFromProto).toList,
       largestSegmentId = Some(0L),
       elementClass = tracing.elementClass,
       tc,

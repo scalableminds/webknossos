@@ -265,7 +265,7 @@ class ZarrStreamingController @Inject()(
         coordinates,
         reorderedAdditionalAxes) ?~> "zarr.invalidChunkCoordinates" ~> NOT_FOUND
       magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
-      _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
+      _ <- bool2Fox(dataLayer.containsMag(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
       cubeSize = DataLayer.bucketLength
       request = DataServiceDataRequest(
         dataSource,
@@ -303,7 +303,7 @@ class ZarrStreamingController @Inject()(
       (_, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId, datasetName, dataLayerName) ?~> Messages(
         "dataSource.notFound") ~> NOT_FOUND
       magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
-      _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
+      _ <- bool2Fox(dataLayer.containsMag(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
       zarrHeader = ZarrHeader.fromLayer(dataLayer, magParsed)
     } yield Ok(Json.toJson(zarrHeader))
 
@@ -325,7 +325,7 @@ class ZarrStreamingController @Inject()(
       (_, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId, datasetName, dataLayerName) ?~> Messages(
         "dataSource.notFound") ~> NOT_FOUND
       magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
-      _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
+      _ <- bool2Fox(dataLayer.containsMag(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
       zarrHeader = Zarr3ArrayHeader.fromDataLayer(dataLayer, magParsed)
     } yield Ok(Json.toJson(zarrHeader))
 
@@ -393,7 +393,7 @@ class ZarrStreamingController @Inject()(
     for {
       (_, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId, datasetName, dataLayerName) ~> NOT_FOUND
       magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
-      _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
+      _ <- bool2Fox(dataLayer.containsMag(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
       additionalEntries = if (zarrVersion == 2) List(ZarrHeader.FILENAME_DOT_ZARRAY)
       else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
     } yield

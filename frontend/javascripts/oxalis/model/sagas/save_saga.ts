@@ -9,7 +9,15 @@ import window, { alert, document, location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
 import { ControlModeEnum } from "oxalis/constants";
+<<<<<<< HEAD
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+||||||| 934bb6aa9b
+import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { selectQueue } from "oxalis/model/accessors/save_accessor";
+=======
+import { getMagInfo } from "oxalis/model/accessors/dataset_accessor";
+import { selectQueue } from "oxalis/model/accessors/save_accessor";
+>>>>>>> master
 import { selectTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
@@ -278,6 +286,7 @@ export function* sendSaveRequestToServer(): Saga<number> {
   }
 }
 
+<<<<<<< HEAD
 function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
   for (const saveEntry of saveQueue) {
     for (const updateAction of saveEntry.actions) {
@@ -290,7 +299,17 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
           getResolutionInfo,
           segmentationLayer.resolutions,
         );
+||||||| 934bb6aa9b
+function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>, tracingId: string) {
+  const segmentationLayer = Model.getSegmentationTracingLayer(tracingId);
+  const segmentationResolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
+=======
+function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>, tracingId: string) {
+  const segmentationLayer = Model.getSegmentationTracingLayer(tracingId);
+  const segmentationResolutionInfo = yield* call(getMagInfo, segmentationLayer.resolutions);
+>>>>>>> master
 
+<<<<<<< HEAD
         const { position, mag, additionalCoordinates } = updateAction.value;
         const resolutionIndex = segmentationResolutionInfo.getIndexByResolution(mag);
         const zoomedBucketAddress = globalPositionToBucketPosition(
@@ -300,6 +319,35 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
           additionalCoordinates,
         );
         const bucket = segmentationLayer.cube.getOrCreateBucket(zoomedBucketAddress);
+||||||| 934bb6aa9b
+  if (segmentationLayer != null) {
+    for (const saveEntry of saveQueue) {
+      for (const updateAction of saveEntry.actions) {
+        if (updateAction.name === "updateBucket") {
+          const { position, mag, additionalCoordinates } = updateAction.value;
+          const resolutionIndex = segmentationResolutionInfo.getIndexByResolution(mag);
+          const zoomedBucketAddress = globalPositionToBucketPosition(
+            position,
+            segmentationResolutionInfo.getDenseResolutions(),
+            resolutionIndex,
+            additionalCoordinates,
+          );
+          const bucket = segmentationLayer.cube.getOrCreateBucket(zoomedBucketAddress);
+=======
+  if (segmentationLayer != null) {
+    for (const saveEntry of saveQueue) {
+      for (const updateAction of saveEntry.actions) {
+        if (updateAction.name === "updateBucket") {
+          const { position, mag, additionalCoordinates } = updateAction.value;
+          const resolutionIndex = segmentationResolutionInfo.getIndexByMag(mag);
+          const zoomedBucketAddress = globalPositionToBucketPosition(
+            position,
+            segmentationResolutionInfo.getDenseMags(),
+            resolutionIndex,
+            additionalCoordinates,
+          );
+          const bucket = segmentationLayer.cube.getOrCreateBucket(zoomedBucketAddress);
+>>>>>>> master
 
         if (bucket.type === "null") {
           continue;

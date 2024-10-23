@@ -211,25 +211,3 @@ workflows:
           filters:
             tags:
               only: /.*/
-  circleci_nightly:
-    jobs:
-      - nightly
-    triggers:
-      - schedule:
-          # 02:15 AM UTC
-          cron: "15 2 * * *"
-          filters:
-            branches:
-              only:
-                - master
-  circleci_wkorg_nightly:
-    jobs:
-      - wkorg_nightly
-    triggers:
-      - schedule:
-          # 03:15 AM UTC
-          cron: "15 3 * * *"
-          filters:
-            branches:
-              only:
-                - master

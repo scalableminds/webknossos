@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
-import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
+import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json.{Json, OFormat}
 
@@ -10,7 +10,7 @@ case class AnnotationLayerParameters(typ: AnnotationLayerType,
                                      fallbackLayerName: Option[String],
                                      autoFallbackLayer: Boolean = false,
                                      mappingName: Option[String] = None,
-                                     resolutionRestrictions: Option[ResolutionRestrictions],
+                                     magRestrictions: Option[MagRestrictions],
                                      name: Option[String],
                                      additionalAxes: Option[Seq[AdditionalAxis]])
 object AnnotationLayerParameters {

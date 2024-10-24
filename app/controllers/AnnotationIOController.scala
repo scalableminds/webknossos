@@ -79,6 +79,7 @@ class AnnotationIOController @Inject()(
     extends Controller
     with FoxImplicits
     with ProtoGeometryImplicits
+    with AnnotationLayerPrecedence
     with LazyLogging {
   implicit val actorSystem: ActorSystem = ActorSystem()
 
@@ -145,7 +146,8 @@ class AnnotationIOController @Inject()(
                                                        mergedSkeletonLayers ::: mergedVolumeLayers,
                                                        AnnotationType.Explorational,
                                                        name,
-                                                       description)
+                                                       description,
+                                                       ObjectId.generate)
             _ = analyticsService.track(UploadAnnotationEvent(request.identity, annotation))
           } yield
             JsonOk(
@@ -332,9 +334,8 @@ class AnnotationIOController @Inject()(
         boundingBox = bbox,
         elementClass = elementClass,
         fallbackLayer = fallbackLayerOpt.map(_.name),
-        largestSegmentId =
-          annotationService.combineLargestSegmentIdsByPrecedence(volumeTracing.largestSegmentId,
-                                                                 fallbackLayerOpt.map(_.largestSegmentId)),
+        largestSegmentId = combineLargestSegmentIdsByPrecedence(volumeTracing.largestSegmentId,
+                                                                fallbackLayerOpt.map(_.largestSegmentId)),
         mags = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayerOpt).map(vec3IntToProto),
         hasSegmentIndex = Some(tracingCanHaveSegmentIndex)
       )

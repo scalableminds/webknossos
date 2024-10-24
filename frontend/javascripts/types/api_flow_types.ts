@@ -551,6 +551,7 @@ type APIAnnotationBase = APIAnnotationInfo & {
   readonly owner?: APIUserBase;
   // This `user` attribute is deprecated and should not be used, anymore. It only exists to satisfy e2e type checks
   readonly user?: APIUserBase;
+  readonly version: number;
   readonly contributors: APIUserBase[];
   readonly othersMayEdit: boolean;
 };
@@ -870,8 +871,6 @@ export type ServerVolumeTracing = ServerTracingBase & {
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
 export type ServerEditableMapping = {
   createdTimestamp: number;
-  version: number;
-  mappingName: string;
   baseMappingName: string;
   // The id of the volume tracing the editable mapping belongs to
   tracingId: string;

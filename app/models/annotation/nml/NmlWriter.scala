@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayerType, FetchedAnnotationLayer}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
-import models.annotation.Annotation
+import models.annotation.{Annotation, AnnotationLayerPrecedence}
 import models.task.Task
 import models.user.User
 
@@ -37,7 +37,7 @@ case class NmlParameters(
     editPositionAdditionalCoordinates: Seq[AdditionalCoordinateProto]
 )
 
-class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
+class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits with AnnotationLayerPrecedence {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
   def toNmlStream(name: String,
@@ -129,7 +129,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                                        datasetName: String,
                                        voxelSize: Option[VoxelSize]): Fox[NmlParameters] =
     for {
-      parameterSourceAnnotationLayer <- selectLayerWithPrecedence(skeletonLayers, volumeLayers)
+      parameterSourceAnnotationLayer <- selectLayerWithPrecedenceFetched(skeletonLayers, volumeLayers)
       nmlParameters = parameterSourceAnnotationLayer.tracing match {
         case Left(s) =>
           NmlParameters(
@@ -167,15 +167,6 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           )
       }
     } yield nmlParameters
-
-  // If there is more than one tracing, select the one that has precedence for the parameters (they should be identical anyway)
-  private def selectLayerWithPrecedence(skeletonLayers: List[FetchedAnnotationLayer],
-                                        volumeLayers: List[FetchedAnnotationLayer]): Fox[FetchedAnnotationLayer] =
-    if (skeletonLayers.nonEmpty) {
-      Fox.successful(skeletonLayers.minBy(_.tracingId))
-    } else if (volumeLayers.nonEmpty) {
-      Fox.successful(volumeLayers.minBy(_.tracingId))
-    } else Fox.failure("annotation.download.noLayers")
 
   private def writeParameters(parameters: NmlParameters)(implicit writer: XMLStreamWriter): Unit =
     Xml.withinElementSync("parameters") {

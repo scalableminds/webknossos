@@ -6,6 +6,7 @@ import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
+import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
@@ -23,6 +24,7 @@ import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import models.dataset.Dataset
 import net.liftweb.common.Box
+import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
@@ -33,7 +35,7 @@ class WKRemoteTracingStoreClient(
     tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
-  def baseInfo = s" Dataset: ${dataset.name} Tracingstore: ${tracingStore.url}"
+  private def baseInfo = s" Dataset: ${dataset.name} Tracingstore: ${tracingStore.url}"
 
   def getSkeletonTracing(annotationLayer: AnnotationLayer, version: Option[Long]): Fox[FetchedAnnotationLayer] = {
     logger.debug("Called to get SkeletonTracing." + baseInfo)
@@ -80,22 +82,43 @@ class WKRemoteTracingStoreClient(
       .postProtoWithJsonResponse[SkeletonTracings, List[Box[Option[String]]]](tracings)
   }
 
+  def saveAnnotationProto(annotationId: ObjectId, annotationProto: AnnotationProto): Fox[Unit] = {
+    logger.debug("Called to save AnnotationProto." + baseInfo)
+    rpc(s"${tracingStore.url}/tracings/annotation/save")
+      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryString("annotationId" -> annotationId.toString)
+      .postProto[AnnotationProto](annotationProto)
+  }
+
+  def duplicateAnnotation(annotationId: ObjectId,
+                          newAnnotationId: ObjectId,
+                          version: Option[Long],
+                          isFromTask: Boolean,
+                          editPosition: Option[Vec3Int],
+                          editRotation: Option[Vec3Double],
+                          boundingBox: Option[BoundingBox],
+                          magRestrictions: MagRestrictions,
+  ): Fox[AnnotationProto] = {
+    logger.debug(s"Called to duplicate annotation $annotationId." + baseInfo)
+    rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/duplicate").withLongTimeout
+      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryString("newAnnotationId" -> newAnnotationId.toString)
+      .addQueryStringOptional("version", version.map(_.toString))
+      .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
+      .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
+      .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
+      .addQueryString("isFromTask" -> isFromTask.toString)
+      .addQueryStringOptional("minMag", magRestrictions.minStr)
+      .addQueryStringOptional("maxMag", magRestrictions.maxStr)
+      .postWithProtoResponse[AnnotationProto]()(AnnotationProto)
+  }
+
   def duplicateSkeletonTracing(skeletonTracingId: String,
                                versionString: Option[String] = None,
                                isFromTask: Boolean = false,
                                editPosition: Option[Vec3Int] = None,
                                editRotation: Option[Vec3Double] = None,
-                               boundingBox: Option[BoundingBox] = None): Fox[String] = {
-    logger.debug("Called to duplicate SkeletonTracing." + baseInfo)
-    rpc(s"${tracingStore.url}/tracings/skeleton/$skeletonTracingId/duplicate").withLongTimeout
-      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryStringOptional("version", versionString)
-      .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
-      .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
-      .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
-      .addQueryString("fromTask" -> isFromTask.toString)
-      .postWithJsonResponse[String]
-  }
+                               boundingBox: Option[BoundingBox] = None): Fox[String] = ???
 
   def duplicateVolumeTracing(volumeTracingId: String,
                              isFromTask: Boolean = false,
@@ -109,22 +132,12 @@ class WKRemoteTracingStoreClient(
     rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("fromTask" -> isFromTask.toString)
-      .addQueryStringOptional("minMag", magRestrictions.minStr)
-      .addQueryStringOptional("maxMag", magRestrictions.maxStr)
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
       .addQueryString("downsample" -> downsample.toString)
       .postJsonWithJsonResponse[Option[BoundingBox], String](datasetBoundingBox)
   }
-
-  def addSegmentIndex(volumeTracingId: String, dryRun: Boolean): Fox[Unit] =
-    rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/addSegmentIndex").withLongTimeout
-      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryString("dryRun" -> dryRun.toString)
-      .silent
-      .post()
-      .map(_ => ())
 
   def mergeSkeletonTracingsByIds(tracingIds: List[String], persistTracing: Boolean): Fox[String] = {
     logger.debug("Called to merge SkeletonTracings by ids." + baseInfo)

@@ -27,7 +27,7 @@ import {
   updateTreeEdgesVisibility,
   updateNode,
   updateSkeletonTracing,
-  updateUserBoundingBoxes,
+  updateUserBoundingBoxesInSkeletonTracing,
   updateTree,
   updateTreeGroups,
 } from "oxalis/model/sagas/update_actions";
@@ -250,9 +250,7 @@ function* getAgglomerateSkeletonTracing(
   const annotation = yield* select((state) => state.tracing);
   const layerInfo = getLayerByName(dataset, layerName);
 
-  const editableMapping = annotation.mappings.find(
-    (mapping) => mapping.mappingName === mappingName,
-  );
+  const editableMapping = annotation.mappings.find((mapping) => mapping.tracingId === mappingName);
 
   try {
     let nmlProtoBuffer;
@@ -638,7 +636,7 @@ export function* diffSkeletonTracing(
   }
 
   if (!_.isEqual(prevSkeletonTracing.userBoundingBoxes, skeletonTracing.userBoundingBoxes)) {
-    yield updateUserBoundingBoxes(skeletonTracing.userBoundingBoxes);
+    yield updateUserBoundingBoxesInSkeletonTracing(skeletonTracing.userBoundingBoxes);
   }
 }
 export default [

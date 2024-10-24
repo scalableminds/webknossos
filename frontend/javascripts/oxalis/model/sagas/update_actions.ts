@@ -34,7 +34,12 @@ export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAct
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
 export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
-type UpdateUserBoundingBoxesUpdateAction = ReturnType<typeof updateUserBoundingBoxes>;
+type UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
+  typeof updateUserBoundingBoxesInSkeletonTracing
+>;
+type UpdateUserBoundingBoxesInVolumeTracingUpdateAction = ReturnType<
+  typeof updateUserBoundingBoxesInVolumeTracing
+>;
 export type UpdateBucketUpdateAction = ReturnType<typeof updateBucket>;
 type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
 
@@ -61,7 +66,8 @@ export type UpdateAction =
   | DeleteEdgeUpdateAction
   | UpdateSkeletonTracingUpdateAction
   | UpdateVolumeTracingUpdateAction
-  | UpdateUserBoundingBoxesUpdateAction
+  | UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
+  | UpdateUserBoundingBoxesInVolumeTracingUpdateAction
   | CreateSegmentUpdateAction
   | UpdateSegmentUpdateAction
   | DeleteSegmentUpdateAction
@@ -78,6 +84,13 @@ export type UpdateAction =
   | UpdateMappingNameUpdateAction
   | SplitAgglomerateUpdateAction
   | MergeAgglomerateUpdateAction;
+
+export type UpdateActionWithTracingId = UpdateAction & {
+  value: UpdateAction["value"] & {
+    actionTracingId: string;
+  };
+};
+
 // This update action is only created in the frontend for display purposes
 type CreateTracingUpdateAction = {
   name: "createTracing";
@@ -107,6 +120,8 @@ type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {
 
 type AsServerAction<A extends { value: any }> = ReturnType<AddServerValuesFn<A>>;
 
+// When the server delivers update actions (e.g., when requesting the version history
+// of an annotation), ServerUpdateActions are sent which include some additional information.
 export type ServerUpdateAction = AsServerAction<
   | UpdateAction
   // These two actions are never sent by the frontend and, therefore, don't exist in the UpdateAction type
@@ -262,7 +277,7 @@ export function updateSkeletonTracing(
   zoomLevel: number,
 ) {
   return {
-    name: "updateTracing",
+    name: "updateSkeletonTracing",
     value: {
       activeNode: tracing.activeNodeId,
       editPosition,
@@ -294,7 +309,7 @@ export function updateVolumeTracing(
   zoomLevel: number,
 ) {
   return {
-    name: "updateTracing",
+    name: "updateVolumeTracing",
     value: {
       activeSegmentId: tracing.activeCellId,
       editPosition: position,
@@ -305,9 +320,19 @@ export function updateVolumeTracing(
     },
   } as const;
 }
-export function updateUserBoundingBoxes(userBoundingBoxes: Array<UserBoundingBox>) {
+export function updateUserBoundingBoxesInSkeletonTracing(
+  userBoundingBoxes: Array<UserBoundingBox>,
+) {
   return {
-    name: "updateUserBoundingBoxes",
+    name: "updateUserBoundingBoxesInSkeletonTracing",
+    value: {
+      boundingBoxes: convertUserBoundingBoxesFromFrontendToServer(userBoundingBoxes),
+    },
+  } as const;
+}
+export function updateUserBoundingBoxesInVolumeTracing(userBoundingBoxes: Array<UserBoundingBox>) {
+  return {
+    name: "updateUserBoundingBoxesInVolumeTracing",
     value: {
       boundingBoxes: convertUserBoundingBoxesFromFrontendToServer(userBoundingBoxes),
     },

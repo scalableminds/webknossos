@@ -15,10 +15,12 @@ import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-trait VolumeBucketReversionHelper {
-  protected def isRevertedBucket(data: Array[Byte]): Boolean = data sameElements Array[Byte](0)
+trait ReversionHelper {
+  val revertedValue: Array[Byte] = Array[Byte](0)
 
-  protected def isRevertedBucket(bucket: VersionedKeyValuePair[Array[Byte]]): Boolean = isRevertedBucket(bucket.value)
+  protected def isRevertedElement(data: Array[Byte]): Boolean = data.sameElements(revertedValue)
+
+  protected def isRevertedElement(bucket: VersionedKeyValuePair[Array[Byte]]): Boolean = isRevertedElement(bucket.value)
 }
 
 trait VolumeBucketCompression extends LazyLogging {
@@ -48,7 +50,7 @@ trait VolumeBucketCompression extends LazyLogging {
       } catch {
         case e: Exception =>
           logger.error(
-            s"Failed to LZ4-decompress volume bucket ($debugInfo, expected uncompressed size $expectedUncompressedBucketSize): $e")
+            s"Failed to LZ4-decompress volume bucket ($debugInfo, compressed size: ${data.length}, expected uncompressed size $expectedUncompressedBucketSize): $e")
           throw e
       }
     }
@@ -170,7 +172,7 @@ trait VolumeTracingBucketHelper
     with VolumeBucketCompression
     with DataConverter
     with BucketKeys
-    with VolumeBucketReversionHelper {
+    with ReversionHelper {
 
   implicit def ec: ExecutionContext
 
@@ -193,7 +195,7 @@ trait VolumeTracingBucketHelper
       case None       => volumeDataStore.get(key, version, mayBeEmpty = Some(true))
     }
     val unpackedDataFox = dataFox.flatMap { versionedVolumeBucket =>
-      if (isRevertedBucket(versionedVolumeBucket)) Fox.empty
+      if (isRevertedElement(versionedVolumeBucket)) Fox.empty
       else {
         val debugInfo =
           s"key: $key, ${versionedVolumeBucket.value.length} bytes, version ${versionedVolumeBucket.version}"
@@ -211,22 +213,20 @@ trait VolumeTracingBucketHelper
     }
   }
 
-  private def loadFallbackBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition): Fox[Array[Byte]] = {
+  private def loadFallbackBucket(layer: VolumeTracingLayer, bucket: BucketPosition): Fox[Array[Byte]] = {
     val dataRequest: WebknossosDataRequest = WebknossosDataRequest(
       position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
       mag = bucket.mag,
-      cubeSize = dataLayer.lengthOfUnderlyingCubes(bucket.mag),
+      cubeSize = layer.lengthOfUnderlyingCubes(bucket.mag),
       fourBit = None,
-      applyAgglomerate = dataLayer.tracing.mappingName,
+      applyAgglomerate = layer.tracing.mappingName,
       version = None,
       additionalCoordinates = None
     )
     for {
-      remoteFallbackLayer <- dataLayer.volumeTracingService
-        .remoteFallbackLayerFromVolumeTracing(dataLayer.tracing, dataLayer.name)
-      (unmappedData, indices) <- dataLayer.volumeTracingService.getFallbackDataFromDatastore(remoteFallbackLayer,
-                                                                                             List(dataRequest),
-                                                                                             dataLayer.userToken)
+      remoteFallbackLayer <- layer.volumeTracingService.remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.name)
+      (unmappedData, indices) <- layer.volumeTracingService
+        .getFallbackDataFromDatastore(remoteFallbackLayer, List(dataRequest))(ec, layer.tokenContext)
       unmappedDataOrEmpty <- if (indices.isEmpty) Fox.successful(unmappedData) else Fox.empty
     } yield unmappedDataOrEmpty
   }
@@ -301,7 +301,7 @@ class VersionedBucketIterator(prefix: String,
     with VolumeBucketCompression
     with BucketKeys
     with FoxImplicits
-    with VolumeBucketReversionHelper {
+    with ReversionHelper {
   private val batchSize = 64
 
   private var currentStartAfterKey: Option[String] = None
@@ -321,7 +321,7 @@ class VersionedBucketIterator(prefix: String,
     if (currentBatchIterator.hasNext) {
       val bucket = currentBatchIterator.next()
       currentStartAfterKey = Some(bucket.key)
-      if (isRevertedBucket(bucket) || parseBucketKey(bucket.key, additionalAxes).isEmpty) {
+      if (isRevertedElement(bucket) || parseBucketKey(bucket.key, additionalAxes).isEmpty) {
         getNextNonRevertedBucket
       } else {
         Some(bucket)

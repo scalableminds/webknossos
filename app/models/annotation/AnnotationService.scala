@@ -7,15 +7,10 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationProto}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.geometry.{
-  AdditionalCoordinateProto,
-  ColorProto,
-  NamedBoundingBoxProto,
-  Vec3DoubleProto,
-  Vec3IntProto
-}
+import com.scalableminds.webknossos.datastore.geometry.ColorProto
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation.{
@@ -32,16 +27,14 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   SegmentationLayerLike => SegmentationLayer
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   MagRestrictions,
-  VolumeDataZipFormat,
   VolumeTracingDefaults,
   VolumeTracingDownsampling
 }
 import com.typesafe.scalalogging.LazyLogging
-import controllers.AnnotationLayerParameters
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.SavedTracingInformationHandler
@@ -75,16 +68,6 @@ case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
                               organizationId: String,
                               datasetName: String)
 
-// Used to pass duplicate properties when creating a new tracing to avoid masking them.
-// Uses the proto-generated geometry classes, hence the full qualifiers.
-case class RedundantTracingProperties(
-    editPosition: Vec3IntProto,
-    editRotation: Vec3DoubleProto,
-    zoomLevel: Double,
-    userBoundingBoxes: Seq[NamedBoundingBoxProto],
-    editPositionAdditionalCoordinates: Seq[AdditionalCoordinateProto],
-)
-
 class AnnotationService @Inject()(
     annotationInformationProvider: AnnotationInformationProvider,
     savedTracingInformationHandler: SavedTracingInformationHandler,
@@ -114,6 +97,7 @@ class AnnotationService @Inject()(
     extends BoxImplicits
     with FoxImplicits
     with ProtoGeometryImplicits
+    with AnnotationLayerPrecedence
     with LazyLogging {
   implicit val actorSystem: ActorSystem = ActorSystem()
 
@@ -181,56 +165,20 @@ class AnnotationService @Inject()(
       )
   }
 
-  def combineLargestSegmentIdsByPrecedence(fromNml: Option[Long],
-                                           fromFallbackLayer: Option[Option[Long]]): Option[Long] =
-    if (fromNml.nonEmpty)
-      // This was called for an NML upload. The NML had an explicit largestSegmentId. Use that.
-      fromNml
-    else if (fromFallbackLayer.nonEmpty)
-      // There is a fallback layer. Use its largestSegmentId, even if it is None.
-      // Some tracing functionality will be disabled until a segment id is set by the user.
-      fromFallbackLayer.flatten
-    else {
-      // There is no fallback layer. Start at default segment id for fresh volume layers
-      VolumeTracingDefaults.largestSegmentId
-    }
-
-  def addAnnotationLayer(annotation: Annotation,
-                         organizationId: String,
-                         annotationLayerParameters: AnnotationLayerParameters)(implicit ctx: DBAccessContext,
-                                                                               mp: MessagesProvider): Fox[Unit] =
-    for {
-      dataset <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
-      dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable) ?~> "dataSource.notFound"
-      newAnnotationLayers <- createTracingsForExplorational(
-        dataset,
-        dataSource,
-        List(annotationLayerParameters),
-        organizationId,
-        annotation.annotationLayers) ?~> "annotation.createTracings.failed"
-      _ <- annotationLayersDAO.insertForAnnotation(annotation._id, newAnnotationLayers)
-    } yield ()
-
-  def deleteAnnotationLayer(annotation: Annotation, layerName: String): Fox[Unit] =
-    for {
-      _ <- annotationLayersDAO.deleteOne(annotation._id, layerName)
-    } yield ()
-
-  private def createTracingsForExplorational(dataset: Dataset,
-                                             dataSource: DataSource,
-                                             allAnnotationLayerParameters: List[AnnotationLayerParameters],
-                                             datasetOrganizationId: String,
-                                             existingAnnotationLayers: List[AnnotationLayer] = List())(
+  def createTracingForExplorational(dataset: Dataset,
+                                    params: AnnotationLayerParameters,
+                                    existingAnnotationLayers: List[AnnotationLayer],
+                                    previousVersion: Option[Long])(
       implicit ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[List[AnnotationLayer]] = {
+      mp: MessagesProvider): Fox[Either[SkeletonTracing, VolumeTracing]] = {
 
-    def getAutoFallbackLayerName: Option[String] =
+    def getAutoFallbackLayerName(dataSource: DataSource): Option[String] =
       dataSource.dataLayers.find {
         case _: SegmentationLayer => true
         case _                    => false
       }.map(_.name)
 
-    def getFallbackLayer(fallbackLayerName: String): Fox[SegmentationLayer] =
+    def getFallbackLayer(dataSource: DataSource, fallbackLayerName: String): Fox[SegmentationLayer] =
       for {
         fallbackLayer <- dataSource.dataLayers
           .filter(dl => dl.name == fallbackLayerName)
@@ -248,109 +196,12 @@ class AnnotationService @Inject()(
           fallbackLayer.elementClass)
       } yield fallbackLayer
 
-    def createAndSaveAnnotationLayer(annotationLayerParameters: AnnotationLayerParameters,
-                                     oldPrecedenceLayerProperties: Option[RedundantTracingProperties],
-                                     dataStore: DataStore): Fox[AnnotationLayer] =
-      for {
-        client <- tracingStoreService.clientFor(dataset)
-        tracingIdAndName <- annotationLayerParameters.typ match {
-          case AnnotationLayerType.Skeleton =>
-            val skeleton = SkeletonTracingDefaults.createInstance.copy(
-              datasetName = dataset.name,
-              editPosition = dataSource.center,
-              organizationId = Some(datasetOrganizationId),
-              additionalAxes = AdditionalAxis.toProto(dataSource.additionalAxesUnion)
-            )
-            val skeletonAdapted = oldPrecedenceLayerProperties.map { p =>
-              skeleton.copy(
-                editPosition = p.editPosition,
-                editRotation = p.editRotation,
-                zoomLevel = p.zoomLevel,
-                userBoundingBoxes = p.userBoundingBoxes,
-                editPositionAdditionalCoordinates = p.editPositionAdditionalCoordinates
-              )
-            }.getOrElse(skeleton)
-            for {
-              tracingId <- client.saveSkeletonTracing(skeletonAdapted)
-              name = annotationLayerParameters.name.getOrElse(
-                AnnotationLayer.defaultNameForType(annotationLayerParameters.typ))
-            } yield (tracingId, name)
-          case AnnotationLayerType.Volume =>
-            val autoFallbackLayerName =
-              if (annotationLayerParameters.autoFallbackLayer) getAutoFallbackLayerName else None
-            val fallbackLayerName = annotationLayerParameters.fallbackLayerName.orElse(autoFallbackLayerName)
-            for {
-              fallbackLayer <- Fox.runOptional(fallbackLayerName)(getFallbackLayer)
-              volumeTracing <- createVolumeTracing(
-                dataSource,
-                datasetOrganizationId,
-                dataStore,
-                fallbackLayer,
-                magRestrictions = annotationLayerParameters.magRestrictions.getOrElse(MagRestrictions.empty),
-                mappingName = annotationLayerParameters.mappingName
-              )
-              volumeTracingAdapted = oldPrecedenceLayerProperties.map { p =>
-                volumeTracing.copy(
-                  editPosition = p.editPosition,
-                  editRotation = p.editRotation,
-                  zoomLevel = p.zoomLevel,
-                  userBoundingBoxes = p.userBoundingBoxes,
-                  editPositionAdditionalCoordinates = p.editPositionAdditionalCoordinates
-                )
-              }.getOrElse(volumeTracing)
-              volumeTracingId <- client.saveVolumeTracing(volumeTracingAdapted, dataSource = Some(dataSource))
-              name = annotationLayerParameters.name
-                .orElse(autoFallbackLayerName)
-                .getOrElse(AnnotationLayer.defaultNameForType(annotationLayerParameters.typ))
-            } yield (volumeTracingId, name)
-          case _ =>
-            Fox.failure(s"Unknown AnnotationLayerType: ${annotationLayerParameters.typ}")
-        }
-      } yield
-        AnnotationLayer(tracingIdAndName._1,
-                        annotationLayerParameters.typ,
-                        tracingIdAndName._2,
-                        AnnotationLayerStatistics.zeroedForTyp(annotationLayerParameters.typ))
-
-    def fetchOldPrecedenceLayer: Fox[Option[FetchedAnnotationLayer]] =
-      if (existingAnnotationLayers.isEmpty) Fox.successful(None)
-      else
-        for {
-          oldPrecedenceLayer <- selectLayerWithPrecedence(existingAnnotationLayers)
-          tracingStoreClient <- tracingStoreService.clientFor(dataset)
-          oldPrecedenceLayerFetched <- if (oldPrecedenceLayer.typ == AnnotationLayerType.Skeleton)
-            tracingStoreClient.getSkeletonTracing(oldPrecedenceLayer, None)
-          else
-            tracingStoreClient.getVolumeTracing(oldPrecedenceLayer,
-                                                None,
-                                                skipVolumeData = true,
-                                                volumeDataZipFormat = VolumeDataZipFormat.wkw,
-                                                dataset.voxelSize)
-        } yield Some(oldPrecedenceLayerFetched)
-
-    def extractPrecedenceProperties(oldPrecedenceLayer: FetchedAnnotationLayer): RedundantTracingProperties =
-      oldPrecedenceLayer.tracing match {
-        case Left(s) =>
-          RedundantTracingProperties(
-            s.editPosition,
-            s.editRotation,
-            s.zoomLevel,
-            s.userBoundingBoxes ++ s.userBoundingBox.map(
-              com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _)),
-            s.editPositionAdditionalCoordinates
-          )
-        case Right(v) =>
-          RedundantTracingProperties(
-            v.editPosition,
-            v.editRotation,
-            v.zoomLevel,
-            v.userBoundingBoxes ++ v.userBoundingBox.map(
-              com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _)),
-            v.editPositionAdditionalCoordinates
-          )
-      }
-
     for {
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> "dataStore.notFoundForDataset"
+      inboxDataSource <- datasetService.dataSourceFor(dataset)
+      dataSource <- inboxDataSource.toUsable ?~> Messages("dataset.notImported", inboxDataSource.id.name)
+      tracingStoreClient <- tracingStoreService.clientFor(dataset)
+
       /*
         Note that the tracings have redundant properties, with a precedence logic selecting a layer
         from which the values are used. Adding a layer may change this precedence, so the redundant
@@ -360,27 +211,79 @@ class AnnotationService @Inject()(
         We do this for *every* new layer, since we only later get its ID which determines the actual precedence.
         All of this is skipped if existingAnnotationLayers is empty.
        */
-      oldPrecedenceLayer <- fetchOldPrecedenceLayer
-      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> "dataStore.notFoundForDataset"
-      precedenceProperties = oldPrecedenceLayer.map(extractPrecedenceProperties)
-      newAnnotationLayers <- Fox.serialCombined(allAnnotationLayerParameters)(p =>
-        createAndSaveAnnotationLayer(p, precedenceProperties, dataStore))
-    } yield newAnnotationLayers
+      oldPrecedenceLayerProperties <- getOldPrecedenceLayerProperties(existingAnnotationLayers,
+                                                                      previousVersion,
+                                                                      dataset,
+                                                                      tracingStoreClient)
+      tracing <- params.typ match {
+        case AnnotationLayerType.Skeleton =>
+          val skeleton = SkeletonTracingDefaults.createInstance.copy(
+            datasetName = dataset.name,
+            editPosition = dataSource.center,
+            organizationId = Some(dataset._organization),
+            additionalAxes = AdditionalAxis.toProto(dataSource.additionalAxesUnion)
+          )
+          val skeletonAdapted = adaptSkeletonTracing(skeleton, oldPrecedenceLayerProperties)
+          Fox.successful(Left(skeletonAdapted))
+        case AnnotationLayerType.Volume =>
+          val autoFallbackLayerName =
+            if (params.autoFallbackLayer) getAutoFallbackLayerName(dataSource) else None
+          val fallbackLayerName = params.fallbackLayerName.orElse(autoFallbackLayerName)
+          for {
+            fallbackLayer <- Fox.runOptional(fallbackLayerName)(n => getFallbackLayer(dataSource, n))
+            volumeTracing <- createVolumeTracing(
+              dataSource,
+              dataset._organization,
+              dataStore,
+              fallbackLayer,
+              magRestrictions = params.magRestrictions.getOrElse(MagRestrictions.empty),
+              mappingName = params.mappingName
+            )
+            volumeTracingAdapted = adaptVolumeTracing(volumeTracing, oldPrecedenceLayerProperties)
+          } yield Right(volumeTracingAdapted)
+      }
+    } yield tracing
   }
 
-  /*
-   If there is more than one tracing, select the one that has precedence for the parameters (they should be identical anyway)
-   This needs to match the code in NmlWriter’s selectLayerWithPrecedence, though the types are different
-   */
-  private def selectLayerWithPrecedence(annotationLayers: List[AnnotationLayer]): Fox[AnnotationLayer] = {
-    val skeletonLayers = annotationLayers.filter(_.typ == AnnotationLayerType.Skeleton)
-    val volumeLayers = annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
-    if (skeletonLayers.nonEmpty) {
-      Fox.successful(skeletonLayers.minBy(_.tracingId))
-    } else if (volumeLayers.nonEmpty) {
-      Fox.successful(volumeLayers.minBy(_.tracingId))
-    } else Fox.failure("Trying to select precedence layer from empty layer list.")
-  }
+  private def createLayersForExplorational(dataset: Dataset,
+                                           annotationId: ObjectId,
+                                           allAnnotationLayerParameters: List[AnnotationLayerParameters],
+                                           existingAnnotationLayers: List[AnnotationLayer])(
+      implicit ctx: DBAccessContext,
+      mp: MessagesProvider): Fox[List[AnnotationLayer]] =
+    for {
+      tracingStoreClient <- tracingStoreService.clientFor(dataset)
+      newAnnotationLayers <- Fox.serialCombined(allAnnotationLayerParameters) { annotationLayerParameters =>
+        for {
+          tracing <- createTracingForExplorational(dataset,
+                                                   annotationLayerParameters,
+                                                   existingAnnotationLayers,
+                                                   previousVersion = None)
+          layerName = annotationLayerParameters.name.getOrElse(
+            AnnotationLayer.defaultNameForType(annotationLayerParameters.typ))
+          tracingId <- tracing match {
+            case Left(skeleton) => tracingStoreClient.saveSkeletonTracing(skeleton)
+            case Right(volume)  => tracingStoreClient.saveVolumeTracing(volume)
+          }
+        } yield
+          AnnotationLayer(tracingId,
+                          annotationLayerParameters.typ,
+                          layerName,
+                          AnnotationLayerStatistics.zeroedForType(annotationLayerParameters.typ))
+      }
+      layersProto = newAnnotationLayers.map { l =>
+        AnnotationLayerProto(
+          l.tracingId,
+          l.name,
+          AnnotationLayerType.toProto(l.typ)
+        )
+      }
+      annotationProto = AnnotationProto(name = Some(AnnotationDefaults.defaultName),
+                                        description = Some(AnnotationDefaults.defaultDescription),
+                                        version = 0L,
+                                        layers = layersProto)
+      _ <- tracingStoreClient.saveAnnotationProto(annotationId, annotationProto)
+    } yield newAnnotationLayers
 
   def createExplorationalFor(user: User,
                              datasetId: ObjectId,
@@ -389,39 +292,16 @@ class AnnotationService @Inject()(
       m: MessagesProvider): Fox[Annotation] =
     for {
       dataset <- datasetDAO.findOne(datasetId) ?~> "dataset.noAccessById"
-      dataSource <- datasetService.dataSourceFor(dataset)
-      datasetOrganization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      usableDataSource <- dataSource.toUsable ?~> Messages("dataset.notImported", dataSource.id.name)
-      annotationLayers <- createTracingsForExplorational(dataset,
-                                                         usableDataSource,
-                                                         annotationLayerParameters,
-                                                         datasetOrganization._id) ?~> "annotation.createTracings.failed"
+      newAnnotationId = ObjectId.generate
+      annotationLayers <- createLayersForExplorational(
+        dataset,
+        newAnnotationId,
+        annotationLayerParameters,
+        existingAnnotationLayers = List.empty) ?~> "annotation.createTracings.failed"
       teamId <- selectSuitableTeam(user, dataset) ?~> "annotation.create.forbidden"
-      annotation = Annotation(ObjectId.generate, datasetId, None, teamId, user._id, annotationLayers)
+      annotation = Annotation(newAnnotationId, datasetId, None, teamId, user._id, annotationLayers)
       _ <- annotationDAO.insertOne(annotation)
     } yield annotation
-
-  def makeAnnotationHybrid(annotation: Annotation, organizationId: String, fallbackLayerName: Option[String])(
-      implicit ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[Unit] =
-    for {
-      newAnnotationLayerType <- annotation.tracingType match {
-        case TracingType.skeleton => Fox.successful(AnnotationLayerType.Volume)
-        case TracingType.volume   => Fox.successful(AnnotationLayerType.Skeleton)
-        case _                    => Fox.failure("annotation.makeHybrid.alreadyHybrid")
-      }
-      usedFallbackLayerName = if (newAnnotationLayerType == AnnotationLayerType.Volume) fallbackLayerName else None
-      newAnnotationLayerParameters = AnnotationLayerParameters(
-        newAnnotationLayerType,
-        usedFallbackLayerName,
-        autoFallbackLayer = false,
-        None,
-        Some(MagRestrictions.empty),
-        Some(AnnotationLayer.defaultNameForType(newAnnotationLayerType)),
-        None
-      )
-      _ <- addAnnotationLayer(annotation, organizationId, newAnnotationLayerParameters) ?~> "makeHybrid.createTracings.failed"
-    } yield ()
 
   def downsampleAnnotation(annotation: Annotation, volumeAnnotationLayer: AnnotationLayer)(
       implicit ctx: DBAccessContext): Fox[Unit] =
@@ -622,18 +502,19 @@ class AnnotationService @Inject()(
 
   def createFrom(user: User,
                  dataset: Dataset,
-                 annotationLayers: List[AnnotationLayer],
+                 annotationLayers: Seq[AnnotationLayer],
                  annotationType: AnnotationType,
                  name: Option[String],
-                 description: String): Fox[Annotation] =
+                 description: String,
+                 newAnnotationId: ObjectId): Fox[Annotation] =
     for {
       teamId <- selectSuitableTeam(user, dataset)
-      annotation = Annotation(ObjectId.generate,
+      annotation = Annotation(newAnnotationId,
                               dataset._id,
                               None,
                               teamId,
                               user._id,
-                              annotationLayers,
+                              annotationLayers.toList,
                               description,
                               name = name.getOrElse(""),
                               typ = annotationType)

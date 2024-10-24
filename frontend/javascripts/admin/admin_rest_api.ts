@@ -83,7 +83,6 @@ import type {
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
 import { V3 } from "libs/mjs";
-import type { Versions } from "oxalis/view/version_view";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import {
   parseProtoListOfLong,
@@ -97,7 +96,6 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
-import type { SaveQueueType } from "oxalis/model/actions/save_actions";
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";
 import { doWithToken } from "./api/token";
 import type BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -841,12 +839,12 @@ export function createExplorational(
 
 export async function getTracingsForAnnotation(
   annotation: APIAnnotation,
-  versions: Versions = {},
+  version: number | null | undefined,
 ): Promise<Array<ServerTracing>> {
   const skeletonLayers = annotation.annotationLayers.filter((layer) => layer.typ === "Skeleton");
   const fullAnnotationLayers = await Promise.all(
     annotation.annotationLayers.map((layer) =>
-      getTracingForAnnotationType(annotation, layer, versions),
+      getTracingForAnnotationType(annotation, layer, version),
     ),
   );
 
@@ -871,27 +869,12 @@ export async function acquireAnnotationMutex(
   return { canEdit, blockedByUser };
 }
 
-function extractVersion(
-  versions: Versions,
-  tracingId: string,
-  typ: "Volume" | "Skeleton",
-): number | null | undefined {
-  if (typ === "Skeleton") {
-    return versions.skeleton;
-  } else if (versions.volumes != null) {
-    return versions.volumes[tracingId];
-  }
-
-  return null;
-}
-
 export async function getTracingForAnnotationType(
   annotation: APIAnnotation,
   annotationLayerDescriptor: AnnotationLayerDescriptor,
-  versions: Versions = {},
+  version?: number | null | undefined, // TODO: Use this parameter
 ): Promise<ServerTracing> {
   const { tracingId, typ } = annotationLayerDescriptor;
-  const version = extractVersion(versions, tracingId, typ);
   const tracingType = typ.toLowerCase() as "skeleton" | "volume";
   const possibleVersionString = version != null ? `&version=${version}` : "";
   const tracingArrayBuffer = await doWithToken((token) =>
@@ -927,8 +910,7 @@ export async function getTracingForAnnotationType(
 
 export function getUpdateActionLog(
   tracingStoreUrl: string,
-  tracingId: string,
-  versionedObjectType: SaveQueueType,
+  annotationId: string,
   oldestVersion?: number,
   newestVersion?: number,
 ): Promise<Array<APIUpdateActionBatch>> {
@@ -942,19 +924,18 @@ export function getUpdateActionLog(
       params.append("newestVersion", newestVersion.toString());
     }
     return Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/${versionedObjectType}/${tracingId}/updateActionLog?${params}`,
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
     );
   });
 }
 
 export function getNewestVersionForTracing(
   tracingStoreUrl: string,
-  tracingId: string,
-  tracingType: SaveQueueType,
+  annotationId: string,
 ): Promise<number> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/newestVersion?token=${token}`,
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}/newestVersion?token=${token}`,
     ).then((obj) => obj.version),
   );
 }
@@ -1044,16 +1025,17 @@ export async function downloadAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
   showVolumeFallbackDownloadWarning: boolean = false,
-  versions: Versions = {},
+  _version: number | null | undefined = null,
   downloadFileFormat: "zarr3" | "wkw" | "nml" = "wkw",
   includeVolumeData: boolean = true,
 ) {
   const searchParams = new URLSearchParams();
-  Object.entries(versions).forEach(([key, val]) => {
+  // TODO: Use the version parameter
+  /*Object.entries(versions).forEach(([key, val]) => {
     if (val != null) {
       searchParams.append(`${key}Version`, val.toString());
     }
-  });
+  });*/
 
   if (includeVolumeData && showVolumeFallbackDownloadWarning) {
     Toast.info(messages["annotation.no_fallback_data_included"], {
@@ -1620,7 +1602,7 @@ export function makeMappingEditable(
 ): Promise<ServerEditableMapping> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/makeMappingEditable?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/makeMappingEditable?token=${token}`,
       {
         method: "POST",
       },
@@ -2157,7 +2139,7 @@ export function getEditableAgglomerateSkeleton(
 ): Promise<ArrayBuffer> {
   return doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
@@ -2319,7 +2301,7 @@ export async function getEdgesForAgglomerateMinCut(
 ): Promise<Array<MinCutTargetEdge>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphMinCut?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
       {
         data: {
           ...segmentsInfo,
@@ -2350,7 +2332,7 @@ export async function getNeighborsForAgglomerateNode(
 ): Promise<NeighborInfo> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
       {
         data: {
           ...segmentInfo,

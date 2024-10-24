@@ -3,8 +3,14 @@ package controllers
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
+import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.tracingstore.TracingUpdatesReport
+import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
+import com.scalableminds.webknossos.tracingstore.tracings.TracingId
 
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, UpdateAnnotationEvent, UpdateAnnotationViewOnlyEvent}
@@ -12,8 +18,10 @@ import models.annotation.AnnotationState._
 import models.annotation.{
   Annotation,
   AnnotationDAO,
+  AnnotationDefaults,
   AnnotationInformationProvider,
   AnnotationLayerDAO,
+  AnnotationService,
   TracingDataSourceTemporaryStore,
   TracingStoreService
 }
@@ -24,8 +32,9 @@ import models.user.time.TimeSpanService
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import scalapb.GeneratedMessage
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
-import utils.WkConf
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
 
@@ -37,6 +46,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
                                                userDAO: UserDAO,
                                                annotationInformationProvider: AnnotationInformationProvider,
                                                analyticsService: AnalyticsService,
+                                               annotationService: AnnotationService,
                                                datasetDAO: DatasetDAO,
                                                annotationDAO: AnnotationDAO,
                                                annotationLayerDAO: AnnotationLayerDAO,
@@ -50,18 +60,47 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
   val bearerTokenService: WebknossosBearerTokenAuthenticatorService =
     wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
+  def updateAnnotation(name: String, key: String, annotationId: String): Action[AnnotationProto] =
+    Action.async(validateProto[AnnotationProto]) { implicit request =>
+      // tracingstore only sends this request after ensuring write access
+      implicit val ctx: DBAccessContext = GlobalAccessContext
+      for {
+        annotationIdValidated <- ObjectId.fromString(annotationId)
+        existingLayers <- annotationLayerDAO.findAnnotationLayersFor(annotationIdValidated)
+        newLayersProto = request.body.layers
+        existingLayerIds = existingLayers.map(_.tracingId).toSet
+        newLayerIds = newLayersProto.map(_.tracingId).toSet
+        layerIdsToDelete = existingLayerIds.diff(newLayerIds)
+        layerIdsToUpdate = existingLayerIds.intersect(newLayerIds)
+        layerIdsToInsert = newLayerIds.diff(existingLayerIds)
+        _ <- Fox.serialCombined(layerIdsToDelete.toList)(
+          annotationLayerDAO.deleteOneByTracingId(annotationIdValidated, _))
+        _ <- Fox.serialCombined(newLayersProto.filter(l => layerIdsToInsert.contains(l.tracingId))) { layerProto =>
+          annotationLayerDAO.insertOne(annotationIdValidated, AnnotationLayer.fromProto(layerProto))
+        }
+        _ <- Fox.serialCombined(newLayersProto.filter(l => layerIdsToUpdate.contains(l.tracingId)))(l =>
+          annotationLayerDAO.updateName(annotationIdValidated, l.tracingId, l.name))
+        // Layer stats are ignored here, they are sent eagerly when saving updates
+        _ <- annotationDAO.updateName(annotationIdValidated,
+                                      request.body.name.getOrElse(AnnotationDefaults.defaultName))
+        _ <- annotationDAO.updateDescription(annotationIdValidated,
+                                             request.body.description.getOrElse(AnnotationDefaults.defaultDescription))
+      } yield Ok
+    }
+
   def handleTracingUpdateReport(name: String, key: String): Action[TracingUpdatesReport] =
     Action.async(validateJson[TracingUpdatesReport]) { implicit request =>
       implicit val ctx: DBAccessContext = GlobalAccessContext
       tracingStoreService.validateAccess(name, key) { _ =>
         val report = request.body
         for {
-          annotation <- annotationDAO.findOneByTracingId(report.tracingId)
+          annotationId <- ObjectId.fromString(report.annotationId)
+          annotation <- annotationDAO.findOne(annotationId)
           _ <- ensureAnnotationNotFinished(annotation)
           _ <- annotationDAO.updateModified(annotation._id, Instant.now)
-          _ <- Fox.runOptional(report.statistics) { statistics =>
-            annotationLayerDAO.updateStatistics(annotation._id, report.tracingId, statistics)
-          }
+          /*_ <- Fox.runOptional(report.statistics) { statistics =>
+            annotationLayerDAO.updateStatistics(annotation._id, annotationId, statistics)
+          }*/ // TODO stats per tracing id. note: they might arrive before the layer is created. skip them then.
           userBox <- bearerTokenService.userForTokenOpt(report.userToken).futureBox
           trackTime = report.significantChangesCount > 0 || !wkConf.WebKnossos.User.timeTrackingOnlyWithSignificantChanges
           _ <- Fox.runOptional(userBox)(user =>
@@ -113,6 +152,20 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
       }
     }
 
+  def annotationIdForTracing(name: String, key: String, tracingId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      tracingStoreService.validateAccess(name, key) { _ =>
+        implicit val ctx: DBAccessContext = GlobalAccessContext
+        if (tracingId == TracingId.dummy) {
+          Fox.successful(Ok(Json.toJson(ObjectId.dummyId)))
+        } else {
+          for {
+            annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
+          } yield Ok(Json.toJson(annotation._id))
+        }
+      }
+    }
+
   def dataStoreUriForDataset(name: String,
                              key: String,
                              organizationId: Option[String],
@@ -131,4 +184,28 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
         } yield Ok(Json.toJson(dataStore.url))
       }
     }
+
+  def createTracing(name: String,
+                    key: String,
+                    annotationId: String,
+                    previousVersion: Long): Action[AnnotationLayerParameters] =
+    Action.async(validateJson[AnnotationLayerParameters]) { implicit request =>
+      tracingStoreService.validateAccess(name, key) { _ =>
+        implicit val ctx: DBAccessContext = GlobalAccessContext
+        for {
+          annotationIdValidated <- ObjectId.fromString(annotationId)
+          annotation <- annotationDAO.findOne(annotationIdValidated) ?~> "annotation.notFound"
+          dataset <- datasetDAO.findOne(annotation._dataset)
+          tracingEither <- annotationService.createTracingForExplorational(dataset,
+                                                                           request.body,
+                                                                           annotation.annotationLayers,
+                                                                           Some(previousVersion))
+          tracing: GeneratedMessage = tracingEither match {
+            case Left(s: SkeletonTracing) => s
+            case Right(v: VolumeTracing)  => v
+          }
+        } yield Ok(tracing.toByteArray).as(protobufMimeType)
+      }
+    }
+
 }

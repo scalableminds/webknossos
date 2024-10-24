@@ -13,10 +13,7 @@ import {
   getMagnificationUnion,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
-import {
-  getCombinedStats,
-  type CombinedTracingStats,
-} from "oxalis/model/accessors/annotation_accessor";
+import { getStats, type CombinedTracingStats } from "oxalis/model/accessors/annotation_accessor";
 import {
   setAnnotationNameAction,
   setAnnotationDescriptionAction,
@@ -273,7 +270,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   getAnnotationStatistics() {
     if (this.props.isDatasetViewMode) return null;
 
-    return <AnnotationStats stats={getCombinedStats(this.props.annotation)} asInfoBlock />;
+    return <AnnotationStats stats={getStats(this.props.annotation)} asInfoBlock />;
   }
 
   getKeyboardShortcuts() {

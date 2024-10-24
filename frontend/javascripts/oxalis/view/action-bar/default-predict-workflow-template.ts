@@ -1,8 +1,9 @@
 export default `predict:
   task: PredictTask
   distribution:
-    default:
-      processes: 2
+    step:
+      strategy: sequential
+      num_io_threads: 5
   inputs:
     model: TO_BE_SET_BY_WORKER
   config:
@@ -19,6 +20,6 @@ publish_dataset_meshes:
   config:
     name: TO_BE_SET_BY_WORKER
     public_directory: TO_BE_SET_BY_WORKER
-    webknossos_organization: TO_BE_SET_BY_WORKER
     use_symlinks: False
-    move_dataset_symlink_artifact: True`;
+    move_dataset_symlink_artifact: True
+    keep_symlinks_to: TO_BE_SET_BY_WORKER`;

@@ -18,6 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Increased loading speed for precomputed meshes. [#8110](https://github.com/scalableminds/webknossos/pull/8110)
 - Added a button to the search popover in the skeleton and segment tab to select all matching non-group results. [#8123](https://github.com/scalableminds/webknossos/pull/8123)
 - Unified wording in UI and code: “Magnification”/“mag” is now used in place of “Resolution“ most of the time, compare [https://docs.webknossos.org/webknossos/terminology.html](terminology document). [#8111](https://github.com/scalableminds/webknossos/pull/8111)
+- Added support for adding remote OME-Zarr NGFF version 0.5 datasets. [#8122](https://github.com/scalableminds/webknossos/pull/8122)
 
 ### Changed
 - Some mesh-related actions were disabled in proofreading-mode when using meshfiles that were created for a mapping rather than an oversegmentation. [#8091](https://github.com/scalableminds/webknossos/pull/8091)

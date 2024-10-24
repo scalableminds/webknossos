@@ -71,44 +71,44 @@ jobs:
       - name: Build webknossos-dev docker image
         run: |
           docker pull scalableminds/webknossos-dev:$NORMALIZED_BRANCH || true
-          DEV_CACHE=$NORMALIZED_BRANCH docker-compose build base
+          DEV_CACHE=$NORMALIZED_BRANCH docker compose build base
 
       - name: Prepare dependency folders
         run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
 
       - name: Install frontend dependencies
-        run: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --immutable
+        run: docker compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --immutable
 
       - name: Assert unique evolution numbers
-        run: docker-compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers
+        run: docker compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers
 
       - name: Assert schema.sql and evolutions are equal
         run: |
-          docker-compose up -d postgres
+          docker compose up -d postgres
           sleep 3
-          docker-compose run compile tools/postgres/dbtool.js check-evolutions-schema
+          docker compose run compile tools/postgres/dbtool.js check-evolutions-schema
 
       - name: Build frontend documentation
         run: |
           WK_VERSION=${{ github.event.release.tag_name || github.run_number || 'dev' }}
-          docker-compose run base yarn run docs --project-version $WK_VERSION
+          docker compose run base yarn run docs --project-version $WK_VERSION
 
       - name: Build webknossos (webpack)
-        run: docker-compose run base yarn build
+        run: docker compose run base yarn build
 
       - name: Build webknossos (sbt)
         run: |
           if [ "${{ github.ref }}" == "refs/heads/master" ]; then
-            docker-compose run compile sbt -no-colors clean compile stage
+            docker compose run compile sbt -no-colors clean compile stage
           else
-            docker-compose run compile sbt -no-colors -DfailOnWarning compile stage
+            docker compose run compile sbt -no-colors -DfailOnWarning compile stage
           fi
 
       - name: Build webknossos-datastore (sbt)
-        run: docker-compose run base sbt -no-colors -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
+        run: docker compose run base sbt -no-colors -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
 
       - name: Build webknossos-tracingstore (sbt)
-        run: docker-compose run base sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
+        run: docker compose run base sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
 
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
@@ -116,38 +116,38 @@ jobs:
       - name: Build webknossos docker image
         run: |
           docker pull scalableminds/webknossos:$NORMALIZED_BRANCH || true
-          DEV_CACHE=$NORMALIZED_BRANCH docker-compose build --pull webknossos
+          DEV_CACHE=$NORMALIZED_BRANCH docker compose build --pull webknossos
 
       - name: Build webknossos-datastore docker image
-        run: docker-compose build --pull webknossos-datastore
+        run: docker compose build --pull webknossos-datastore
 
       - name: Build webknossos-tracingstore docker image
-        run: docker-compose build --pull webknossos-tracingstore
+        run: docker compose build --pull webknossos-tracingstore
 
       - name: Run frontend tests
-        run: .github/not-on-master.sh docker-compose run base yarn test-verbose
+        run: .github/not-on-master.sh docker compose run base yarn test-verbose
 
       - name: Lint backend code and check formatting
-        run: .github/not-on-master.sh docker-compose run backend-lint-format
+        run: .github/not-on-master.sh docker compose run backend-lint-format
 
       - name: Run backend tests
-        run: .github/not-on-master.sh docker-compose run backend-tests
+        run: .github/not-on-master.sh docker compose run backend-tests
 
       - name: Run end-to-end tests
         run: |
           for i in {1..3}; do # retry
-            .github/not-on-master.sh docker-compose run e2e-tests && s=0 && break || s=$?
+            .github/not-on-master.sh docker compose run e2e-tests && s=0 && break || s=$?
           done
           (exit $s)
 
       - name: Validate frontend types
-        run: .github/not-on-master.sh docker-compose run base yarn typecheck
+        run: .github/not-on-master.sh docker compose run base yarn typecheck
 
       - name: Start webknossos, datastore, and tracingstore
         run: |
-          docker-compose up -d webknossos
-          docker-compose up -d webknossos-datastore
-          docker-compose up -d webknossos-tracingstore
+          docker compose up -d webknossos
+          docker compose up -d webknossos-datastore
+          docker compose up -d webknossos-tracingstore
 
       - name: Run webknossos smoke test
         run: |
@@ -174,7 +174,7 @@ jobs:
           (exit $s)
 
       - name: Stop webknossos, datastore, and tracingstore
-        run: docker-compose down --volumes --remove-orphans
+        run: docker compose down --volumes --remove-orphans
 
       - name: Push docker images
         run: |
@@ -186,9 +186,9 @@ jobs:
             return $s
           }
           retry docker login -u $DOCKER_USER -p $DOCKER_PASS
-          retry docker-compose push webknossos
-          retry docker-compose push webknossos-datastore
-          retry docker-compose push webknossos-tracingstore
+          retry docker compose push webknossos
+          retry docker compose push webknossos-datastore
+          retry docker compose push webknossos-tracingstore
           if [[ ${{ github.ref_type }} == "branch" ]]; then
             docker tag scalableminds/webknossos:${DOCKER_TAG} scalableminds/webknossos:${NORMALIZED_BRANCH}
             retry docker push scalableminds/webknossos:${NORMALIZED_BRANCH}
@@ -202,7 +202,7 @@ jobs:
           docker logout
 
       - name: Report coverage
-        run: .github/not-on-master.sh docker-compose run base yarn coverage || true
+        run: .github/not-on-master.sh docker compose run base yarn coverage || true
 
       # - name: Send Slack notification (master only)
       #   run: .circleci/slack-notification.sh

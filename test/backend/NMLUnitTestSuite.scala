@@ -8,8 +8,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalAxisProto, Vec2IntProto}
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, FetchedAnnotationLayer}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat
-import models.annotation.nml.{NmlParser, NmlWriter}
-import models.annotation.{SkeletonTracingWithDatasetId, UploadedVolumeLayer}
+import models.annotation.nml.{NmlParseSuccessWithoutFile, NmlParser, NmlWriter}
 import net.liftweb.common.{Box, Full}
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatestplus.play.PlaySpec
@@ -26,8 +25,7 @@ class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
     override def messages: Messages = m.preferred({ FakeRequest("GET", "/") })
   }
 
-  def writeAndParseTracing(skeletonTracing: SkeletonTracing)
-    : Box[(Option[SkeletonTracingWithDatasetId], List[UploadedVolumeLayer], String, Option[String])] = {
+  def writeAndParseTracing(skeletonTracing: SkeletonTracing): Box[NmlParseSuccessWithoutFile] = {
     val annotationLayers = List(
       FetchedAnnotationLayer("dummySkeletonTracingId",
                              AnnotationLayer.defaultSkeletonLayerName,
@@ -51,28 +49,29 @@ class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
     val os = new ByteArrayOutputStream()
     Await.result(nmlFunctionStream.writeTo(os)(scala.concurrent.ExecutionContext.global), Duration.Inf)
     val array = os.toByteArray
-    val a =Await.result(
-      nmlParser.parse(
-        "",
-        new ByteArrayInputStream(array),
-        overwritingDatasetName = None,
-        overwritingDatasetId = None,
-        overwritingOrganizationId = None,
-        isTaskUpload = true,
-        basePath = None
-      )(messagesProvider, scala.concurrent.ExecutionContext.global, GlobalAccessContext).futureBox,
+    val a = Await.result(
+      nmlParser
+        .parse(
+          "",
+          new ByteArrayInputStream(array),
+          overwritingDatasetName = None,
+          overwritingDatasetId = None,
+          overwritingOrganizationId = None,
+          isTaskUpload = true,
+          basePath = None
+        )(messagesProvider, scala.concurrent.ExecutionContext.global, GlobalAccessContext)
+        .futureBox,
       Duration.Inf
     )
     a
   }
 
-  def isParseSuccessful(
-      parsedTracing: Box[(Option[SkeletonTracingWithDatasetId], List[UploadedVolumeLayer], String, Option[String])]): Boolean =
+  def isParseSuccessful(parsedTracing: Box[NmlParseSuccessWithoutFile]): Boolean =
     parsedTracing match {
       case Full(tuple) =>
         tuple match {
-          case (Some(_), _, _, _) => true
-          case _                  => false
+          case NmlParseSuccessWithoutFile(Some(_), _, _, _, _) => true
+          case _                                               => false
         }
       case _ => false
     }
@@ -84,7 +83,7 @@ class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
       writeAndParseTracing(dummyTracing) match {
         case Full(tuple) =>
           tuple match {
-            case (Some(tracing), _, _, _) =>
+            case NmlParseSuccessWithoutFile(Some(tracing), _, _, _, _) =>
               assert(tracing == dummyTracing)
             case _ => throw new Exception
           }
@@ -106,7 +105,7 @@ class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
       writeAndParseTracing(dummyTracingWithOmittedIsExpandedTreeGroupProp) match {
         case Full(tuple) =>
           tuple match {
-            case (Some(tracing), _, _, _) =>
+            case NmlParseSuccessWithoutFile(Some(tracing), _, _, _, _) =>
               assert(tracing == dummyTracing)
             case _ => throw new Exception
           }

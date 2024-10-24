@@ -312,7 +312,7 @@ class Request {
                 key: json.status.toString(),
               }));
               if (showErrorToast) {
-                Toast.messages(messages); // Toast.error already logs the error
+                Toast.messages(messages); // Note: Toast.error internally logs to console
               } else {
                 console.error(messages);
               }
@@ -324,9 +324,9 @@ class Request {
               return Promise.reject({ ...json, url: requestedUrl });
             } catch (_jsonError) {
               if (showErrorToast) {
-                Toast.error(text); // Toast.error already logs the error
+                Toast.error(text); // Note: Toast.error internally logs to console
               } else {
-                console.error(text);
+                console.error(`Request failed for ${requestedUrl}:`, text);
               }
 
               /* eslint-disable-next-line prefer-promise-reject-errors */

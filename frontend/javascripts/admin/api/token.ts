@@ -38,7 +38,7 @@ export async function doWithToken<T>(
   fn: (token: string) => Promise<T>,
   tries: number = 1,
   useURLTokenIfAvailable: boolean = true,
-): Promise<any> {
+): Promise<T> {
   let token =
     useURLTokenIfAvailable && shouldUseURLToken ? getSharingTokenFromUrlParameters() : null;
 

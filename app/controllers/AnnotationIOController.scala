@@ -146,7 +146,8 @@ class AnnotationIOController @Inject()(
                                                        mergedSkeletonLayers ::: mergedVolumeLayers,
                                                        AnnotationType.Explorational,
                                                        name,
-                                                       description)
+                                                       description,
+                                                       ObjectId.generate)
             _ = analyticsService.track(UploadAnnotationEvent(request.identity, annotation))
           } yield
             JsonOk(

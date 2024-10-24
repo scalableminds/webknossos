@@ -101,6 +101,7 @@ class TSAnnotationController @Inject()(
     }
 
   def duplicate(annotationId: String,
+                newAnnotationId: String,
                 version: Option[Long],
                 isFromTask: Option[Boolean],
                 minMag: Option[Int],
@@ -114,7 +115,7 @@ class TSAnnotationController @Inject()(
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeAnnotation(annotationId)) {
             for {
-              annotationProto <- annotationService.duplicate(annotationId, version)
+              annotationProto <- annotationService.duplicate(annotationId, newAnnotationId, version)
             } yield Ok(annotationProto.toByteArray).as(protobufMimeType)
           }
         }

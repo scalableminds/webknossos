@@ -91,6 +91,7 @@ class WKRemoteTracingStoreClient(
   }
 
   def duplicateAnnotation(annotationId: ObjectId,
+                          newAnnotationId: ObjectId,
                           version: Option[Long],
                           isFromTask: Boolean,
                           editPosition: Option[Vec3Int],
@@ -101,6 +102,7 @@ class WKRemoteTracingStoreClient(
     logger.debug(s"Called to duplicate annotation $annotationId." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryString("newAnnotationId" -> newAnnotationId.toString)
       .addQueryStringOptional("version", version.map(_.toString))
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))

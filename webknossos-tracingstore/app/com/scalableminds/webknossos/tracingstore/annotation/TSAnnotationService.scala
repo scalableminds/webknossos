@@ -5,7 +5,11 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
-import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerTypeProto, AnnotationProto}
+import com.scalableminds.webknossos.datastore.Annotation.{
+  AnnotationLayerProto,
+  AnnotationLayerTypeProto,
+  AnnotationProto
+}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -612,5 +616,37 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       }
     }
 
-  def duplicate(annotationId: String, version: Option[Long]): Fox[AnnotationProto] = ??? // TODO
+  // TODO duplicate v0 as well? (if current version is not v0)
+  def duplicate(annotationId: String, newAnnotationId: String, version: Option[Long])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[AnnotationProto] =
+    for {
+      current <- get(annotationId, version)
+      newLayers <- Fox.serialCombined(current.layers)(layer => duplicateLayer(annotationId, layer, version))
+      duplicated = current.copy(layers = newLayers)
+      // TODO save duplicated
+    } yield duplicated
+
+  private def duplicateLayer(annotationId: String, layer: AnnotationLayerProto, version: Option[Long])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[AnnotationLayerProto] =
+    for {
+      newTracingId <- layer.`type` match {
+        case AnnotationLayerTypeProto.volume            => duplicateVolumeTracing(layer.tracingId, version)
+        case AnnotationLayerTypeProto.skeleton          => duplicateSkeletonTracing(layer.tracingId, version)
+        case AnnotationLayerTypeProto.Unrecognized(num) => Fox.failure(f"unrecognized annotation layer type: $num")
+      }
+    } yield layer.copy(tracingId = newTracingId)
+
+  private def duplicateVolumeTracing(tracingId: String, version: Option[Long])(
+      implicit ec: ExecutionContext): Fox[String] = {
+    val newTracingId = TracingId.generate
+    Fox.successful(newTracingId)
+  }
+
+  private def duplicateSkeletonTracing(tracingId: String, version: Option[Long])(
+      implicit ec: ExecutionContext): Fox[String] = {
+    val newTracingId = TracingId.generate
+    Fox.successful(newTracingId)
+  }
 }

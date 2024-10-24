@@ -433,8 +433,10 @@ class AnnotationController @Inject()(
         datasetService.dataSourceFor(dataset).flatMap(_.toUsable).map(Some(_))
       else Fox.successful(None)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
+      newAnnotationId = ObjectId.generate
       newAnnotationProto <- tracingStoreClient.duplicateAnnotation(
         annotation._id,
+        newAnnotationId,
         version = None,
         isFromTask = annotation._task.isDefined,
         editPosition = None,
@@ -448,7 +450,8 @@ class AnnotationController @Inject()(
                                                        newAnnotationLayers,
                                                        AnnotationType.Explorational,
                                                        None,
-                                                       annotation.description) ?~> Messages("annotation.create.failed")
+                                                       annotation.description,
+                                                       newAnnotationId) ?~> Messages("annotation.create.failed")
     } yield clonedAnnotation
 
   def tryAcquiringAnnotationMutex(id: String): Action[AnyContent] =

@@ -505,10 +505,11 @@ class AnnotationService @Inject()(
                  annotationLayers: Seq[AnnotationLayer],
                  annotationType: AnnotationType,
                  name: Option[String],
-                 description: String): Fox[Annotation] =
+                 description: String,
+                 newAnnotationId: ObjectId): Fox[Annotation] =
     for {
       teamId <- selectSuitableTeam(user, dataset)
-      annotation = Annotation(ObjectId.generate,
+      annotation = Annotation(newAnnotationId,
                               dataset._id,
                               None,
                               teamId,

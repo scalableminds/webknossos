@@ -90,22 +90,33 @@ class WKRemoteTracingStoreClient(
       .postProto[AnnotationProto](annotationProto)
   }
 
+  def duplicateAnnotation(annotationId: ObjectId,
+                          version: Option[Long],
+                          isFromTask: Boolean,
+                          editPosition: Option[Vec3Int],
+                          editRotation: Option[Vec3Double],
+                          boundingBox: Option[BoundingBox],
+                          magRestrictions: MagRestrictions,
+  ): Fox[AnnotationProto] = {
+    logger.debug(s"Called to duplicate annotation $annotationId." + baseInfo)
+    rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/duplicate").withLongTimeout
+      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryStringOptional("version", version.map(_.toString))
+      .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
+      .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
+      .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
+      .addQueryString("isFromTask" -> isFromTask.toString)
+      .addQueryStringOptional("minMag", magRestrictions.minStr)
+      .addQueryStringOptional("maxMag", magRestrictions.maxStr)
+      .postWithProtoResponse[AnnotationProto]()(AnnotationProto)
+  }
+
   def duplicateSkeletonTracing(skeletonTracingId: String,
                                versionString: Option[String] = None,
                                isFromTask: Boolean = false,
                                editPosition: Option[Vec3Int] = None,
                                editRotation: Option[Vec3Double] = None,
-                               boundingBox: Option[BoundingBox] = None): Fox[String] = {
-    logger.debug("Called to duplicate SkeletonTracing." + baseInfo)
-    rpc(s"${tracingStore.url}/tracings/skeleton/$skeletonTracingId/duplicate").withLongTimeout
-      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryStringOptional("version", versionString)
-      .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
-      .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
-      .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
-      .addQueryString("fromTask" -> isFromTask.toString)
-      .postWithJsonResponse[String]
-  }
+                               boundingBox: Option[BoundingBox] = None): Fox[String] = ???
 
   def duplicateVolumeTracing(volumeTracingId: String,
                              isFromTask: Boolean = false,
@@ -119,8 +130,6 @@ class WKRemoteTracingStoreClient(
     rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("fromTask" -> isFromTask.toString)
-      .addQueryStringOptional("minMag", magRestrictions.minStr)
-      .addQueryStringOptional("maxMag", magRestrictions.maxStr)
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))

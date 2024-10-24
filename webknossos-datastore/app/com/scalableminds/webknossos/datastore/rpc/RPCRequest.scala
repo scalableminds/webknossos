@@ -191,6 +191,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     parseProtoResponse(performRequest)(companion)
   }
 
+  def postWithProtoResponse[T <: GeneratedMessage]()(companion: GeneratedMessageCompanion[T]): Fox[T] = {
+    request = request.withMethod("POST")
+    parseProtoResponse(performRequest)(companion)
+  }
+
   private def performRequest: Fox[WSResponse] = {
     if (verbose) {
       logger.debug(

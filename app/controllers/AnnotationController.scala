@@ -3,7 +3,6 @@ package controllers
 import org.apache.pekko.util.Timeout
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.annotation.{
@@ -11,8 +10,8 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayerStatistics,
   AnnotationLayerType
 }
-import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
+import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingType}
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
@@ -43,7 +42,6 @@ class AnnotationController @Inject()(
     userDAO: UserDAO,
     organizationDAO: OrganizationDAO,
     datasetDAO: DatasetDAO,
-    tracingStoreDAO: TracingStoreDAO,
     datasetService: DatasetService,
     annotationService: AnnotationService,
     annotationMutexService: AnnotationMutexService,
@@ -59,9 +57,7 @@ class AnnotationController @Inject()(
     analyticsService: AnalyticsService,
     slackNotificationService: SlackNotificationService,
     mailchimpClient: MailchimpClient,
-    tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore,
     conf: WkConf,
-    rpc: RPC,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with UserAwareRequestLogging
@@ -232,30 +228,6 @@ class AnnotationController @Inject()(
         json <- annotationService.publicWrites(annotation, request.identity) ?~> "annotation.write.failed"
       } yield JsonOk(json)
     }
-
-  def downsample(typ: String, id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
-      for {
-        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.downsample.explorationalsOnly"
-        restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
-        _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-        annotation <- provider.provideAnnotation(typ, id, request.identity)
-        annotationLayer <- annotation.annotationLayers
-          .find(_.tracingId == tracingId)
-          .toFox ?~> "annotation.downsample.layerNotFound"
-        _ <- annotationService.downsampleAnnotation(annotation, annotationLayer) ?~> "annotation.downsample.failed"
-        updated <- provider.provideAnnotation(typ, id, request.identity)
-        json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
-      } yield JsonOk(json)
-  }
-
-  def downsampleWithoutType(id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
-      for {
-        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
-        result <- downsample(annotation.typ.toString, id, tracingId)(request)
-      } yield result
-  }
 
   private def finishAnnotation(typ: String, id: String, issuingUser: User, timestamp: Instant)(
       implicit ctx: DBAccessContext): Fox[(Annotation, String)] =
@@ -461,12 +433,16 @@ class AnnotationController @Inject()(
         datasetService.dataSourceFor(dataset).flatMap(_.toUsable).map(Some(_))
       else Fox.successful(None)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
-      newAnnotationLayers <- Fox.serialCombined(annotation.annotationLayers) { annotationLayer =>
-        duplicateAnnotationLayer(annotationLayer,
-                                 annotation._task.isDefined,
-                                 dataSource.map(_.boundingBox),
-                                 tracingStoreClient)
-      }
+      newAnnotationProto <- tracingStoreClient.duplicateAnnotation(
+        annotation._id,
+        version = None,
+        isFromTask = annotation._task.isDefined,
+        editPosition = None,
+        editRotation = None,
+        boundingBox = dataSource.map(_.boundingBox),
+        magRestrictions = MagRestrictions.empty
+      )
+      newAnnotationLayers = newAnnotationProto.layers.map(AnnotationLayer.fromProto)
       clonedAnnotation <- annotationService.createFrom(user,
                                                        dataset,
                                                        newAnnotationLayers,
@@ -474,19 +450,6 @@ class AnnotationController @Inject()(
                                                        None,
                                                        annotation.description) ?~> Messages("annotation.create.failed")
     } yield clonedAnnotation
-
-  private def duplicateAnnotationLayer(annotationLayer: AnnotationLayer,
-                                       isFromTask: Boolean,
-                                       datasetBoundingBox: Option[BoundingBox],
-                                       tracingStoreClient: WKRemoteTracingStoreClient): Fox[AnnotationLayer] =
-    for {
-
-      newTracingId <- if (annotationLayer.typ == AnnotationLayerType.Skeleton) {
-        tracingStoreClient.duplicateSkeletonTracing(annotationLayer.tracingId, None, isFromTask) ?~> "Failed to duplicate skeleton tracing."
-      } else {
-        tracingStoreClient.duplicateVolumeTracing(annotationLayer.tracingId, isFromTask, datasetBoundingBox) ?~> "Failed to duplicate volume tracing."
-      }
-    } yield annotationLayer.copy(tracingId = newTracingId)
 
   def tryAcquiringAnnotationMutex(id: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>

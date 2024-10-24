@@ -146,10 +146,10 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     } yield updated
 
   private def revertToVersion(
-                               annotationId: String,
-                               annotationWithTracings: AnnotationWithTracings,
-                               revertAction: RevertToVersionAnnotationAction,
-                               newVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
+      annotationId: String,
+      annotationWithTracings: AnnotationWithTracings,
+      revertAction: RevertToVersionAnnotationAction,
+      newVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     // Note: works only after “ironing out” the update action groups
     // TODO: read old annotationProto, tracing, buckets, segment indeces
     for {
@@ -612,4 +612,5 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       }
     }
 
+  def duplicate(annotationId: String, version: Option[Long]): Fox[AnnotationProto] = ??? // TODO
 }

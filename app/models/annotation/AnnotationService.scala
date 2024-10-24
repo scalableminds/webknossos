@@ -502,7 +502,7 @@ class AnnotationService @Inject()(
 
   def createFrom(user: User,
                  dataset: Dataset,
-                 annotationLayers: List[AnnotationLayer],
+                 annotationLayers: Seq[AnnotationLayer],
                  annotationType: AnnotationType,
                  name: Option[String],
                  description: String): Fox[Annotation] =
@@ -513,7 +513,7 @@ class AnnotationService @Inject()(
                               None,
                               teamId,
                               user._id,
-                              annotationLayers,
+                              annotationLayers.toList,
                               description,
                               name = name.getOrElse(""),
                               typ = annotationType)

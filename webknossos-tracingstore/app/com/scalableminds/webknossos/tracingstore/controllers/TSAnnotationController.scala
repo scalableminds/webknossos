@@ -100,4 +100,24 @@ class TSAnnotationController @Inject()(
       }
     }
 
+  def duplicate(annotationId: String,
+                version: Option[Long],
+                isFromTask: Option[Boolean],
+                minMag: Option[Int],
+                maxMag: Option[Int],
+                downsample: Option[Boolean],
+                editPosition: Option[String],
+                editRotation: Option[String],
+                boundingBox: Option[String]): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeAnnotation(annotationId)) {
+            for {
+              annotationProto <- annotationService.duplicate(annotationId, version)
+            } yield Ok(annotationProto.toByteArray).as(protobufMimeType)
+          }
+        }
+      }
+    }
 }

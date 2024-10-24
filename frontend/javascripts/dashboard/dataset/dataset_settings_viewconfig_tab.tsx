@@ -27,23 +27,23 @@ import type { DatasetConfiguration, DatasetLayerConfiguration } from "oxalis/sto
 import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
 import { BLEND_MODES } from "oxalis/constants";
 import ColorLayerOrderingTable from "./color_layer_ordering_component";
-import type { APIDatasetId } from "types/api_flow_types";
+import type { APIDataSourceId } from "types/api_flow_types";
 import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admin/admin_rest_api";
 import { Slider } from "components/slider";
 
 const FormItem = Form.Item;
 
 export default function DatasetSettingsViewConfigTab(props: {
-  datasetId: APIDatasetId;
+  dataSourceId: APIDataSourceId;
   dataStoreURL: string | undefined;
 }) {
-  const { datasetId, dataStoreURL } = props;
+  const { dataSourceId, dataStoreURL } = props;
   const [availableMappingsPerLayerCache, setAvailableMappingsPerLayer] = useState<
     Record<string, [string[], string[]]>
   >({});
 
   const validateDefaultMappings = useMemo(
-    () => async (configStr: string, dataStoreURL: string, datasetId: APIDatasetId) => {
+    () => async (configStr: string, dataStoreURL: string, dataSourceId: APIDataSourceId) => {
       let config = {} as DatasetConfiguration["layers"];
       try {
         config = JSON.parse(configStr);
@@ -60,8 +60,8 @@ export default function DatasetSettingsViewConfigTab(props: {
         }
         try {
           const jsonAndAgglomerateMappings = await Promise.all([
-            getMappingsForDatasetLayer(dataStoreURL, datasetId, layerName),
-            getAgglomeratesForDatasetLayer(dataStoreURL, datasetId, layerName),
+            getMappingsForDatasetLayer(dataStoreURL, dataSourceId, layerName),
+            getAgglomeratesForDatasetLayer(dataStoreURL, dataSourceId, layerName),
           ]);
           setAvailableMappingsPerLayer((prev) => ({
             ...prev,
@@ -305,7 +305,7 @@ export default function DatasetSettingsViewConfigTab(props: {
                   Promise.all([
                     validateLayerViewConfigurationObjectJSON(_rule, config),
                     dataStoreURL
-                      ? validateDefaultMappings(config, dataStoreURL, datasetId)
+                      ? validateDefaultMappings(config, dataStoreURL, dataSourceId)
                       : Promise.resolve(),
                   ]),
               },

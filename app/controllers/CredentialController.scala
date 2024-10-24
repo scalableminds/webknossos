@@ -11,7 +11,7 @@ import models.dataset.credential.CredentialDAO
 import play.api.libs.json.{JsValue, Json, OFormat}
 import play.api.mvc.{Action, PlayBodyParsers}
 import security.WkEnv
-import utils.ObjectId
+import com.scalableminds.util.requestparsing.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

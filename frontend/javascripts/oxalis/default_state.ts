@@ -121,6 +121,7 @@ const defaultState: OxalisState = {
   },
   task: null,
   dataset: {
+    id: "dummy-dataset-id",
     name: "Loading",
     folderId: "dummy-folder-id",
     isUnreported: false,
@@ -148,7 +149,7 @@ const defaultState: OxalisState = {
     },
     owningOrganization: "",
     description: null,
-    displayName: "Loading",
+    directoryName: "Loading",
     allowedTeams: [],
     allowedTeamsCumulative: [],
     logoUrl: null,

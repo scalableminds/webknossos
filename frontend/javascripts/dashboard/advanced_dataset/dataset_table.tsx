@@ -7,8 +7,8 @@ import _ from "lodash";
 import { diceCoefficient as dice } from "dice-coefficient";
 import type { OxalisState } from "oxalis/store";
 import type {
+  APIDataset,
   APIDatasetCompact,
-  APIDatasetId,
   APIMaybeUnimportedDataset,
   FolderItem,
 } from "types/api_flow_types";
@@ -39,6 +39,7 @@ import type { DatasetUpdater } from "admin/admin_rest_api";
 import { generateSettingsForFolder, useDatasetDrop } from "dashboard/folders/folder_tree";
 import classNames from "classnames";
 import type { EmptyObject } from "types/globals";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 
 type FolderItemWithName = FolderItem & { name: string };
 export type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
@@ -57,8 +58,8 @@ type Props = {
   isUserAdmin: boolean;
   isUserDatasetManager: boolean;
   datasetFilteringMode: DatasetFilteringMode;
-  reloadDataset: (arg0: APIDatasetId) => Promise<void>;
-  updateDataset: (id: APIDatasetId, updater: DatasetUpdater) => void;
+  reloadDataset: (arg0: APIDataset["id"]) => Promise<void>;
+  updateDataset: (id: APIDataset["id"], updater: DatasetUpdater) => void;
   addTagToSearch: (tag: string) => void;
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
@@ -277,7 +278,7 @@ class DatasetRenderer {
     this.datasetTable = datasetTable;
   }
   getRowKey() {
-    return this.data.name;
+    return this.data.directoryName;
   }
 
   renderTypeColumn() {
@@ -287,17 +288,12 @@ class DatasetRenderer {
     const selectedLayerName: string | null =
       this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0];
     const imgSrc = selectedLayerName
-      ? `/api/datasets/${this.data.owningOrganization}/${
-          this.data.name
-        }/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
+      ? `/api/datasets/${this.data.id}/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
       : "/assets/images/inactive-dataset-thumbnail.svg";
     const iconClassName = selectedLayerName ? "" : " icon-thumbnail";
     return (
       <>
-        <Link
-          to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
-          title="View Dataset"
-        >
+        <Link to={`/datasets/${getReadableURLPart(this.data)}/view`} title="View Dataset">
           <img
             src={imgSrc}
             className={`dataset-table-thumbnail ${iconClassName}`}
@@ -307,11 +303,18 @@ class DatasetRenderer {
         </Link>
         <div className="dataset-table-name-container">
           <Link
-            to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
+            to={`/datasets/${getReadableURLPart(this.data)}/view`}
             title="View Dataset"
             className="incognito-link dataset-table-name"
           >
             {this.data.name}
+          </Link>
+          <Link
+            to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
+            title="View Dataset"
+            className="incognito-link dataset-table-name"
+          >
+            Test disambiguate
           </Link>
 
           {this.renderTags()}
@@ -433,7 +436,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
     });
   };
 
-  reloadSingleDataset = (datasetId: APIDatasetId): Promise<void> =>
+  reloadSingleDataset = (datasetId: APIDataset["id"]): Promise<void> =>
     this.props.reloadDataset(datasetId);
 
   getFilteredDatasets() {
@@ -735,7 +738,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
               },
               onDoubleClick: () => {
                 if (isADataset) {
-                  window.location.href = `/datasets/${data.owningOrganization}/${data.name}/view`;
+                  window.location.href = `/datasets/${getReadableURLPart(data)}/view`;
                 } else {
                   context.setActiveFolderId(data.key);
                 }
@@ -762,7 +765,7 @@ export function DatasetTags({
 }: {
   dataset: APIDatasetCompact;
   onClickTag?: (t: string) => void;
-  updateDataset: (id: APIDatasetId, updater: DatasetUpdater) => void;
+  updateDataset: (id: APIDataset["id"], updater: DatasetUpdater) => void;
 }) {
   const editTagFromDataset = (
     shouldAddTag: boolean,
@@ -792,7 +795,7 @@ export function DatasetTags({
     }
 
     trackAction("Edit dataset tag");
-    updateDataset(dataset, updater);
+    updateDataset(dataset.id, updater);
   };
 
   return (

@@ -11,7 +11,7 @@ import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.WkEnv
-import utils.ObjectId
+import com.scalableminds.util.requestparsing.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -40,7 +40,7 @@ object RunTrainingParameters {
 
 case class RunInferenceParameters(annotationId: Option[ObjectId],
                                   aiModelId: ObjectId,
-                                  datasetName: String,
+                                  datasetDirectoryName: String,
                                   colorLayerName: String,
                                   boundingBox: String,
                                   newDatasetName: String,
@@ -133,7 +133,7 @@ class AiModelController @Inject()(
         jobCommand = JobCommand.train_model
         commandArgs = Json.obj(
           "training_annotations" -> Json.toJson(trainingAnnotations),
-          "organization_name" -> organization._id,
+          "organization_id" -> organization._id,
           "model_id" -> modelId,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml
         )
@@ -163,15 +163,14 @@ class AiModelController @Inject()(
       for {
         _ <- userService.assertIsSuperUser(request.identity)
         organization <- organizationDAO.findOne(request.identity._organization)
-        dataset <- datasetDAO.findOneByNameAndOrganization(request.body.datasetName, organization._id)
+        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body.datasetDirectoryName, organization._id)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         _ <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
-        _ <- datasetService.assertNewDatasetName(request.body.newDatasetName, organization._id)
         jobCommand = JobCommand.infer_with_model
         boundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
         commandArgs = Json.obj(
-          "organization_name" -> organization._id,
+          "organization_id" -> organization._id,
           "dataset_name" -> dataset.name,
           "color_layer_name" -> request.body.colorLayerName,
           "bounding_box" -> boundingBox.toLiteral,

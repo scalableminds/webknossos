@@ -9,7 +9,7 @@ import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import {
-  tryToFetchDatasetsByName,
+  tryToFetchDatasetsByNameOrId,
   type WizardComponentProps,
   type WizardContext,
   type FileList,
@@ -166,10 +166,12 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     throw new SoftError("NML files should not be empty.");
   }
 
-  const { trees: trees1, datasetName: datasetName1 } = await parseNml(nmlString1);
-  const { trees: trees2, datasetName: datasetName2 } = await parseNml(nmlString2);
+  // TODO: Now the datasetName stored in the nml is interpreted as the path of the dataset. -> call to legacy route is necessary.
+  //  Discussion: how to handle this better?
+  const { trees: trees1, datasetName: datasetDirectoryName1 } = await parseNml(nmlString1);
+  const { trees: trees2, datasetName: datasetDirectoryName2 } = await parseNml(nmlString2);
 
-  if (!datasetName1 || !datasetName2) {
+  if (!datasetDirectoryName1 || !datasetDirectoryName2) {
     throw new SoftError("Could not extract dataset names.");
   }
 
@@ -205,8 +207,9 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     throw new SoftError("Each file should contain at least 3 nodes.");
   }
 
-  const datasets = await tryToFetchDatasetsByName(
-    [datasetName1, datasetName2],
+  const datasets = await tryToFetchDatasetsByNameOrId(
+    [datasetDirectoryName1, datasetDirectoryName2], // fetch by name
+    [],
     "Could not derive datasets from NML. Please specify these manually.",
   );
 

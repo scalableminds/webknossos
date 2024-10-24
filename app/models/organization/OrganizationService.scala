@@ -1,6 +1,7 @@
 package models.organization
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
@@ -11,7 +12,7 @@ import models.folder.{Folder, FolderDAO, FolderService}
 import models.team.{PricingPlan, Team, TeamDAO}
 import models.user.{Invite, MultiUserDAO, User, UserDAO, UserService}
 import play.api.libs.json.{JsArray, JsObject, Json}
-import utils.{ObjectId, WkConf}
+import utils.{WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
 

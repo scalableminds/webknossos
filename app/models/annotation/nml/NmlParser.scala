@@ -1,7 +1,10 @@
 package models.annotation.nml
 
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.bool2Box
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
@@ -21,15 +24,18 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.Tree
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.UploadedVolumeLayer
+import models.dataset.DatasetDAO
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 
 import java.io.InputStream
+import javax.inject.Inject
 import scala.collection.{immutable, mutable}
+import scala.concurrent.ExecutionContext
 import scala.xml.{Attribute, NodeSeq, XML, Node => XMLNode}
 
-object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGenerator {
+class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with ProtoGeometryImplicits with ColorGenerator {
 
   private val DEFAULT_TIME = 0L
   private val DEFAULT_VIEWPORT = 0
@@ -41,12 +47,14 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
 
   def parse(name: String,
             nmlInputStream: InputStream,
+            overwritingDatasetId: Option[String],
             overwritingDatasetName: Option[String],
             overwritingOrganizationId: Option[String],
             isTaskUpload: Boolean,
-            basePath: Option[String] = None)(
-      implicit m: MessagesProvider): Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])] =
-    try {
+            basePath: Option[String] = None)(implicit m: MessagesProvider,
+                                             ec: ExecutionContext,
+                                             ctx: DBAccessContext): Fox[NmlParseSuccessWithoutFile] = {
+    val foxInABox = try {
       val data = XML.load(nmlInputStream)
       for {
         parameters <- (data \ "parameters").headOption ?~ Messages("nml.parameters.notFound")
@@ -64,8 +72,9 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
         additionalAxisProtos <- parseAdditionalAxes(parameters \ "additionalAxes")
         datasetName = overwritingDatasetName.getOrElse(parseDatasetName(parameters \ "experiment"))
-        organizationId = if (overwritingDatasetName.isDefined) overwritingOrganizationId
-        else parseOrganizationId(parameters \ "experiment")
+        datasetIdOpt = if (overwritingDatasetId.isDefined) overwritingDatasetId
+        else parseDatasetId(parameters \ "experiment")
+        organizationId = overwritingOrganizationId.getOrElse(parseOrganizationId(parameters \ "experiment"))
       } yield {
         val description = parseDescription(parameters \ "experiment")
         val wkUrl = parseWkUrl(parameters \ "experiment")
@@ -84,14 +93,16 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
 
         logger.debug(s"Parsed NML file. Trees: ${treesSplit.size}, Volumes: ${volumes.size}")
 
-        val volumeLayers: List[UploadedVolumeLayer] =
-          volumes.toList.map { v =>
+        for {
+          parsedDatasetIdOpt <- Fox.runOptional(datasetIdOpt)(ObjectId.fromString)
+          dataset <- datasetDAO.findOneByIdOrNameAndOrganization(parsedDatasetIdOpt, datasetName, organizationId)
+          volumeLayers: List[UploadedVolumeLayer] = volumes.toList.map { v =>
             UploadedVolumeLayer(
               VolumeTracing(
                 activeSegmentId = None,
                 boundingBox = boundingBoxToProto(taskBoundingBox.getOrElse(BoundingBox.empty)), // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
                 createdTimestamp = timestamp,
-                datasetName = datasetName,
+                datasetName = dataset.name,
                 editPosition = editPosition,
                 editRotation = editRotation,
                 elementClass = ElementClass.uint32, // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
@@ -101,7 +112,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 zoomLevel = zoomLevel,
                 userBoundingBox = None,
                 userBoundingBoxes = userBoundingBoxes,
-                organizationId = organizationId,
+                organizationId = Some(organizationId),
                 segments = v.segments,
                 mappingName = v.mappingName,
                 mappingIsLocked = v.mappingIsLocked,
@@ -114,13 +125,12 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
               v.name,
             )
           }
-
-        val skeletonTracingOpt: Option[SkeletonTracing] =
-          if (treesSplit.isEmpty && userBoundingBoxes.isEmpty) None
+          skeletonTracingOpt: Option[SkeletonTracing] = if (treesSplit.isEmpty && userBoundingBoxes.isEmpty)
+            None
           else
             Some(
               SkeletonTracing(
-                datasetName,
+                dataset.name,
                 treesSplit,
                 timestamp,
                 taskBoundingBox,
@@ -132,13 +142,12 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 None,
                 treeGroupsAfterSplit,
                 userBoundingBoxes,
-                organizationId,
+                Some(organizationId),
                 editPositionAdditionalCoordinates,
                 additionalAxes = additionalAxisProtos
               )
             )
-
-        (skeletonTracingOpt, volumeLayers, description, wkUrl)
+        } yield NmlParseSuccessWithoutFile(skeletonTracingOpt, volumeLayers, dataset._id, description, wkUrl)
       }
     } catch {
       case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>
@@ -153,6 +162,16 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         logger.error(s"Failed to parse NML $name due to " + e)
         Failure(s"Failed to parse NML '$name': " + e.toString)
     }
+    foxInABox match {
+      case Full(value) => value
+      case Failure(message, cause, _chain) =>
+        logger.error(s"Failed to parse NML $name due to " + cause)
+        Failure(s"Failed to parse NML '$name': " + message)
+      case Empty =>
+        logger.error(s"Failed to parse NML $name. Parser returned empty")
+        Failure(s"Failed to parse NML '$name': Parser returned empty")
+    }
+  }
 
   private def extractTreeGroups(treeGroupContainerNodes: NodeSeq)(
       implicit m: MessagesProvider): Box[List[TreeGroup]] = {
@@ -330,14 +349,17 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   private def parseDatasetName(nodes: NodeSeq): String =
     nodes.headOption.map(node => getSingleAttribute(node, "name")).getOrElse("")
 
+  private def parseDatasetId(nodes: NodeSeq) =
+    nodes.headOption.flatMap(node => getSingleAttributeOpt(node, "datasetId"))
+
   private def parseDescription(nodes: NodeSeq): String =
     nodes.headOption.map(node => getSingleAttribute(node, "description")).getOrElse(DEFAULT_DESCRIPTION)
 
   private def parseWkUrl(nodes: NodeSeq): Option[String] =
     nodes.headOption.map(node => getSingleAttribute(node, "wkUrl"))
 
-  private def parseOrganizationId(nodes: NodeSeq): Option[String] =
-    nodes.headOption.flatMap(node => getSingleAttributeOpt(node, "organization"))
+  private def parseOrganizationId(nodes: NodeSeq): String =
+    nodes.headOption.map(node => getSingleAttribute(node, "organization")).getOrElse("")
 
   private def parseActiveNode(nodes: NodeSeq): Option[Int] =
     nodes.headOption.flatMap(node => getSingleAttribute(node, "id").toIntOpt)

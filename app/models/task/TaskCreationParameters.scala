@@ -1,6 +1,7 @@
 package models.task
 
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.requestparsing.ObjectId
 import models.user.Experience
 import play.api.libs.json.{Format, Json}
 
@@ -11,11 +12,14 @@ case class TaskParameters(taskTypeId: String,
                           scriptId: Option[String],
                           boundingBox: Option[BoundingBox],
                           dataSet: String,
+                          datasetId: Option[ObjectId],
                           editPosition: Vec3Int,
                           editRotation: Vec3Double,
                           creationInfo: Option[String],
                           description: Option[String],
-                          baseAnnotation: Option[BaseAnnotation])
+                          baseAnnotation: Option[BaseAnnotation]) {
+  lazy val datasetName: String = dataSet
+}
 
 object TaskParameters {
   implicit val taskParametersFormat: Format[TaskParameters] = Json.format[TaskParameters]

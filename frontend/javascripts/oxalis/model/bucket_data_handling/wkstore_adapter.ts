@@ -100,13 +100,13 @@ export async function requestWithFallback(
   batch: Array<BucketAddress>,
 ): Promise<Array<Uint8Array | null | undefined>> {
   const state = Store.getState();
-  const datasetName = state.dataset.name;
+  const datasetDirectoryName = state.dataset.directoryName;
   const organization = state.dataset.owningOrganization;
   const dataStoreHost = state.dataset.dataStore.url;
   const tracingStoreHost = state.tracing.tracingStore.url;
 
   const getDataStoreUrl = (optLayerName?: string) =>
-    `${dataStoreHost}/data/datasets/${organization}/${datasetName}/layers/${
+    `${dataStoreHost}/data/datasets/${organization}/${datasetDirectoryName}/layers/${
       optLayerName || layerInfo.name
     }`;
 

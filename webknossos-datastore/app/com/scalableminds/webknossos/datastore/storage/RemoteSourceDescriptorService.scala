@@ -50,7 +50,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
                                dataSourceId: DataSourceId,
                                layerName: String,
                                magLocator: MagLocator): Box[URI] = tryo {
-    val localDatasetDir = baseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
+    val localDatasetDir = baseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
     val localLayerDir = localDatasetDir.resolve(layerName)
     magLocator.path match {
       case Some(magLocatorPath) =>

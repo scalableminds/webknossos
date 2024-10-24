@@ -251,7 +251,8 @@ function serializeParameters(
     ...indent(
       _.compact([
         serializeTag("experiment", {
-          name: state.dataset.name,
+          datasetId: state.dataset.id,
+          name: state.dataset.directoryName,
           description: annotation.description,
           organization: state.dataset.owningOrganization,
           wkUrl: `${location.protocol}//${location.host}`,

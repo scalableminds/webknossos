@@ -53,10 +53,7 @@ export const layerNameRules = [
   },
 ];
 
-export const getDatasetNameRules = (
-  activeUser: APIUser | null | undefined,
-  allowRenaming: boolean = true,
-) => [
+export const getDatasetNameRules = (activeUser: APIUser | null | undefined) => [
   {
     required: true,
     message: messages["dataset.import.required.name"],
@@ -64,16 +61,9 @@ export const getDatasetNameRules = (
   { min: 3, message: messages["dataset.name_length"] },
   ...layerNameRules,
   {
-    validator: async (_rule: any, value: string) => {
-      if (!allowRenaming) {
-        // Renaming is not allowed. No need to validate the (existing) name then.
-        return Promise.resolve();
-      }
+    validator: async (_rule: any, newName: string) => {
       if (!activeUser) throw new Error("Can't do operation if no user is logged in.");
-      const reasons = await isDatasetNameValid({
-        name: value,
-        owningOrganization: activeUser.organization,
-      });
+      const reasons = await isDatasetNameValid(newName);
 
       if (reasons != null) {
         return Promise.reject(reasons);
@@ -88,7 +78,6 @@ export function DatasetNameFormItem({
   activeUser,
   initialName,
   label,
-  allowDuplicate,
   disabled,
 }: {
   activeUser: APIUser | null | undefined;
@@ -103,7 +92,7 @@ export function DatasetNameFormItem({
       label={label || "Dataset Name"}
       hasFeedback
       initialValue={initialName}
-      rules={getDatasetNameRules(activeUser, !allowDuplicate)}
+      rules={getDatasetNameRules(activeUser)}
       validateFirst
     >
       <Input disabled={disabled} />

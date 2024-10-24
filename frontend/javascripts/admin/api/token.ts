@@ -1,7 +1,6 @@
 import { location } from "libs/window";
 import Request from "libs/request";
 import * as Utils from "libs/utils";
-import Toast from "libs/toast";
 
 let tokenPromise: Promise<string>;
 

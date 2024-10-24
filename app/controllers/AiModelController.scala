@@ -40,7 +40,7 @@ object RunTrainingParameters {
 
 case class RunInferenceParameters(annotationId: Option[ObjectId],
                                   aiModelId: ObjectId,
-                                  datasetPath: String,
+                                  datasetDirectoryName: String,
                                   colorLayerName: String,
                                   boundingBox: String,
                                   newDatasetName: String,
@@ -163,7 +163,7 @@ class AiModelController @Inject()(
       for {
         _ <- userService.assertIsSuperUser(request.identity)
         organization <- organizationDAO.findOne(request.identity._organization)
-        dataset <- datasetDAO.findOneByPathAndOrganization(request.body.datasetPath, organization._id)
+        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body.datasetDirectoryName, organization._id)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         _ <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)

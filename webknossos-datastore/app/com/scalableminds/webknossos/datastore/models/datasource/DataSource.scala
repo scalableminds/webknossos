@@ -10,8 +10,8 @@ import play.api.libs.json._
 package object datasource {
 
   // here team is not (yet) renamed to organization to avoid migrating all jsons
-  case class DataSourceId(path: String, organizationId: String) extends DatasetURIParser {
-    override def toString: String = s"DataSourceId($organizationId/$path)"
+  case class DataSourceId(directoryName: String, organizationId: String) extends DatasetURIParser {
+    override def toString: String = s"DataSourceId($organizationId/$directoryName)"
   }
 
   object DataSourceId extends JsonImplicits with DatasetURIParser {
@@ -25,7 +25,7 @@ package object datasource {
 
       override def writes(datasetId: DataSourceId): JsValue =
         Json.obj(
-          "name" -> datasetId.path,
+          "name" -> datasetId.directoryName,
           "team" -> datasetId.organizationId,
         )
     }

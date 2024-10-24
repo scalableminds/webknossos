@@ -25,14 +25,14 @@ import scala.collection.compat.immutable.ArraySeq
 class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
   private val agglomerateDir = "agglomerates"
   private val agglomerateFileExtension = "hdf5"
-  private val datasetName = "/segment_to_agglomerate" // TODO: How does this work? There is no assignemnt to this val anywhere? It is plain constant.
+  private val datasetName = "/segment_to_agglomerate"
   private val dataBaseDir = Paths.get(config.Datastore.baseFolder)
   private val cumsumFileName = "cumsum.json"
 
   lazy val agglomerateFileCache = new AgglomerateFileCache(config.Datastore.Cache.AgglomerateFile.maxFileHandleEntries)
 
-  def exploreAgglomerates(organizationId: String, datasetPath: String, dataLayerName: String): Set[String] = {
-    val layerDir = dataBaseDir.resolve(organizationId).resolve(datasetPath).resolve(dataLayerName)
+  def exploreAgglomerates(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Set[String] = {
+    val layerDir = dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName).resolve(dataLayerName)
     PathUtils
       .listFiles(layerDir.resolve(agglomerateDir),
                  silent = true,
@@ -115,7 +115,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     val cumsumPath =
       dataBaseDir
         .resolve(agglomerateFileKey.organizationId)
-        .resolve(agglomerateFileKey.datasetPath)
+        .resolve(agglomerateFileKey.datasetDirectoryName)
         .resolve(agglomerateFileKey.layerName)
         .resolve(agglomerateDir)
         .resolve(cumsumFileName)
@@ -136,7 +136,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   }
 
   def generateSkeleton(organizationId: String,
-                       datasetPath: String,
+                       datasetDirectoryName: String,
                        dataLayerName: String,
                        mappingName: String,
                        agglomerateId: Long): Box[SkeletonTracing] =
@@ -145,7 +145,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
       val hdfFile =
         dataBaseDir
           .resolve(organizationId)
-          .resolve(datasetPath)
+          .resolve(datasetDirectoryName)
           .resolve(dataLayerName)
           .resolve(agglomerateDir)
           .resolve(s"$mappingName.$agglomerateFileExtension")
@@ -208,7 +208,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         ))
 
       val skeleton = SkeletonTracingDefaults.createInstance.copy(
-        datasetName = datasetPath,
+        datasetName = datasetDirectoryName,
         trees = trees
       )
       val duration = System.nanoTime() - startTime
@@ -235,7 +235,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     val hdfFile =
       dataBaseDir
         .resolve(agglomerateFileKey.organizationId)
-        .resolve(agglomerateFileKey.datasetPath)
+        .resolve(agglomerateFileKey.datasetDirectoryName)
         .resolve(agglomerateFileKey.layerName)
         .resolve(agglomerateDir)
         .resolve(s"${agglomerateFileKey.mappingName}.$agglomerateFileExtension")

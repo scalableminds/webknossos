@@ -21,7 +21,7 @@ function transformBackendJobToAPIJob(job: any): APIJob {
     owner: job.owner,
     type: job.command,
     datasetName: job.commandArgs.dataset_name,
-    datasetPath: job.commandArgs.dataset_path,
+    datasetDirectoryName: job.commandArgs.dataset_directory_name,
     organizationId: job.commandArgs.organization_id,
     layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
     annotationLayerName: job.commandArgs.annotation_layer_name,
@@ -316,7 +316,7 @@ export function runTraining(params: RunTrainingParameters) {
 type RunInferenceParameters = {
   annotationId?: string;
   aiModelId: string;
-  datasetPath: string;
+  datasetDirectoryName: string;
   colorLayerName: string;
   boundingBox: Vector6;
   newDatasetName: string;

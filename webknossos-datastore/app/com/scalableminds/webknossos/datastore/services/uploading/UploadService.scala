@@ -31,7 +31,7 @@ import scala.concurrent.ExecutionContext
 case class ReserveUploadInformation(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
     name: String, // dataset name
-    path: String, // dataset path
+    directoryName: String, // dataset directory name
     newDatasetId: String,
     organization: String,
     totalFileCount: Long,
@@ -43,7 +43,7 @@ object ReserveUploadInformation {
   implicit val reserveUploadInformation: OFormat[ReserveUploadInformation] = Json.format[ReserveUploadInformation]
 }
 case class ReserveManualUploadInformation(datasetName: String,
-                                          datasetPath: String,
+                                          datasetDirectoryName: String,
                                           organization: String,
                                           initialTeamIds: List[String],
                                           folderId: Option[String])
@@ -55,7 +55,7 @@ object ReserveManualUploadInformation {
 case class LinkedLayerIdentifier(organizationId: Option[String],
                                  organizationName: Option[String],
                                  // Filled by backend after identifying the dataset by name. Afterwards this updated value is stored in the redis database.
-                                 datasetPath: Option[String],
+                                 datasetDirectoryName: Option[String],
                                  dataSetName: String,
                                  layerName: String,
                                  newLayerName: Option[String] = None) {
@@ -65,8 +65,8 @@ case class LinkedLayerIdentifier(organizationId: Option[String],
   def getOrganizationId: String = this.organizationId.getOrElse(this.organizationName.getOrElse(""))
 
   def pathIn(dataBaseDir: Path): Path = {
-    val datasetPath = this.datasetPath.getOrElse(dataSetName)
-    dataBaseDir.resolve(getOrganizationId).resolve(datasetPath).resolve(layerName)
+    val datasetDirectoryName = this.datasetDirectoryName.getOrElse(dataSetName)
+    dataBaseDir.resolve(getOrganizationId).resolve(datasetDirectoryName).resolve(layerName)
   }
 }
 
@@ -157,10 +157,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                                              String.valueOf(reservedInfoByWk.totalFileCount))
       _ <- runningUploadMetadataStore.insert(
         redisKeyForDataSourceId(reservedInfoByWk.uploadId),
-        Json.stringify(Json.toJson(DataSourceId(reservedInfoByWk.path, reservedInfoByWk.organization)))
+        Json.stringify(Json.toJson(DataSourceId(reservedInfoByWk.directoryName, reservedInfoByWk.organization)))
       )
       _ <- runningUploadMetadataStore.insert(
-        redisKeyForUploadId(DataSourceId(reservedInfoByWk.path, reservedInfoByWk.organization)),
+        redisKeyForUploadId(DataSourceId(reservedInfoByWk.directoryName, reservedInfoByWk.organization)),
         reservedInfoByWk.uploadId
       )
       filePaths = Json.stringify(Json.toJson(reservedInfoByWk.filePaths.getOrElse(List.empty)))
@@ -255,7 +255,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
           case e: Exception =>
             runningUploadMetadataStore.removeFromSet(redisKeyForFileChunkSet(uploadId, filePath),
                                                      String.valueOf(currentChunkNumber))
-            val errorMsg = s"Error receiving chunk $currentChunkNumber for upload ${dataSourceId.path}: ${e.getMessage}"
+            val errorMsg =
+              s"Error receiving chunk $currentChunkNumber for upload ${dataSourceId.directoryName}: ${e.getMessage}"
             logger.warn(errorMsg)
             Fox.failure(errorMsg)
         }
@@ -270,7 +271,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield
       if (knownUpload) {
         logger.info(
-          f"Cancelling dataset upload of ${dataSourceId.organizationId}/${dataSourceId.path} with id $uploadId...")
+          f"Cancelling dataset upload of ${dataSourceId.organizationId}/${dataSourceId.directoryName} with id $uploadId...")
         removeFromRedis(uploadId).flatMap(_ =>
           PathUtils.deleteDirectoryRecursively(uploadDirectory(dataSourceId.organizationId, uploadId)))
       } else {
@@ -288,7 +289,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       unpackToDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
 
       _ = logger.info(
-        s"Finishing dataset upload of ${dataSourceId.organizationId}/${dataSourceId.path} with id $uploadId...")
+        s"Finishing dataset upload of ${dataSourceId.organizationId}/${dataSourceId.directoryName} with id $uploadId...")
       _ <- Fox.runIf(checkCompletion)(ensureAllChunksUploaded(uploadId))
       _ <- ensureDirectoryBox(unpackToDir.getParent) ?~> "dataset.import.fileAccessDenied"
       unpackResult <- unpackDataset(uploadDir, unpackToDir).futureBox
@@ -381,11 +382,17 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       case Full(_) =>
         Fox.successful(())
       case Empty =>
-        deleteOnDisk(dataSourceId.organizationId, dataSourceId.path, datasetNeedsConversion, Some("the upload failed"))
+        deleteOnDisk(dataSourceId.organizationId,
+                     dataSourceId.directoryName,
+                     datasetNeedsConversion,
+                     Some("the upload failed"))
         Fox.failure(s"Unknown error $label")
       case Failure(msg, e, _) =>
         logger.warn(s"Error while $label: $msg, $e")
-        deleteOnDisk(dataSourceId.organizationId, dataSourceId.path, datasetNeedsConversion, Some("the upload failed"))
+        deleteOnDisk(dataSourceId.organizationId,
+                     dataSourceId.directoryName,
+                     datasetNeedsConversion,
+                     Some("the upload failed"))
         dataSourceRepository.cleanUpDataSource(dataSourceId)
         for {
           _ <- result ?~> f"Error while $label"
@@ -413,9 +420,9 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   private def dataSourceDirFor(dataSourceId: DataSourceId, datasetNeedsConversion: Boolean): Path = {
     val dataSourceDir =
       if (datasetNeedsConversion)
-        dataBaseDir.resolve(dataSourceId.organizationId).resolve(forConversionDir).resolve(dataSourceId.path)
+        dataBaseDir.resolve(dataSourceId.organizationId).resolve(forConversionDir).resolve(dataSourceId.directoryName)
       else
-        dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.path)
+        dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
     dataSourceDir
   }
 

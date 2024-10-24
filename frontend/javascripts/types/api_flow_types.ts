@@ -166,7 +166,7 @@ export type APIPublication = {
 };
 export type MutableAPIDataSourceId = {
   owningOrganization: string;
-  path: string;
+  directoryName: string;
 };
 export type APIDataSourceId = Readonly<MutableAPIDataSourceId>;
 
@@ -206,7 +206,7 @@ type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   metadata: APIMetadataEntry[] | null | undefined;
   isEditable: boolean;
   isPublic: boolean;
-  path: string;
+  directoryName: string;
   logoUrl: string | null | undefined;
   lastUsedByUser: number;
   sortingKey: number;
@@ -240,7 +240,7 @@ export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   | "name"
   | "folderId"
   | "isActive"
-  | "path"
+  | "directoryName"
   | "created"
   | "isEditable"
   | "lastUsedByUser"
@@ -266,7 +266,7 @@ export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact 
     name: dataset.name,
     folderId: dataset.folderId,
     isActive: dataset.isActive,
-    path: dataset.path,
+    directoryName: dataset.directoryName,
     created: dataset.created,
     isEditable: dataset.isEditable,
     lastUsedByUser: dataset.lastUsedByUser,
@@ -720,7 +720,7 @@ export type APIJob = {
   readonly datasetId: string | null | undefined;
   readonly owner: APIUserBase;
   readonly datasetName: string | null | undefined;
-  readonly datasetPath: string | null | undefined;
+  readonly datasetDirectoryName: string | null | undefined;
   readonly exportFileName: string | null | undefined;
   readonly layerName: string | null | undefined;
   readonly annotationLayerName: string | null | undefined;

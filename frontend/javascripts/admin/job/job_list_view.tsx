@@ -117,7 +117,7 @@ function JobListView() {
     const linkToDataset =
       job.datasetId != null
         ? `/datasets/${job.datasetName ? getURLSanitizedName({ name: job.datasetName }) : "unknown_name"}-${job.datasetId}/view` // prefer updated link over legacy link.
-        : `/datasets/${job.organizationId || ""}/${job.datasetPath || job.datasetName}/view`;
+        : `/datasets/${job.organizationId || ""}/${job.datasetDirectoryName || job.datasetName}/view`;
     if (job.type === APIJobType.CONVERT_TO_WKW && job.datasetName) {
       return <span>{`Conversion to WKW of ${job.datasetName}`}</span>;
     } else if (job.type === APIJobType.EXPORT_TIFF && job.organizationId && job.datasetName) {

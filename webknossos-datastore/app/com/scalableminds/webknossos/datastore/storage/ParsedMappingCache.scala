@@ -20,7 +20,7 @@ object CachedMapping {
 
   def fromMappingRequest(mappingRequest: DataServiceMappingRequest): CachedMapping =
     storage.CachedMapping(mappingRequest.dataSource.id.organizationId,
-                          mappingRequest.dataSource.id.path,
+                          mappingRequest.dataSource.id.directoryName,
                           mappingRequest.dataLayer.name,
                           mappingRequest.mapping)
 }

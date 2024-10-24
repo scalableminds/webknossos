@@ -42,7 +42,10 @@ const DatasetSettingsDeleteTab = ({ datasetId, history }: Props) => {
     if (!deleteDataset) {
       return;
     }
-    const dataSourceId = { owningOrganization: dataset.owningOrganization, path: dataset.path };
+    const dataSourceId = {
+      owningOrganization: dataset.owningOrganization,
+      directoryName: dataset.directoryName,
+    };
 
     setIsDeleting(true);
     await deleteDatasetOnDisk(dataset.dataStore.url, dataSourceId);

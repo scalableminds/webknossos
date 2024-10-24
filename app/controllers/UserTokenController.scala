@@ -98,9 +98,9 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
           case AccessResourceType.datasource =>
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(sharingTokenAccessCtx)
           case AccessResourceType.tracing =>
-            handleTracingAccess(accessRequest.resourceId.path, accessRequest.mode, userBox, token)
+            handleTracingAccess(accessRequest.resourceId.directoryName, accessRequest.mode, userBox, token)
           case AccessResourceType.jobExport =>
-            handleJobExportAccess(accessRequest.resourceId.path, accessRequest.mode, userBox)
+            handleJobExportAccess(accessRequest.resourceId.directoryName, accessRequest.mode, userBox)
           case _ =>
             Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
         }
@@ -115,7 +115,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     def tryRead: Fox[UserAccessAnswer] =
       for {
         dataSourceBox <- datasetDAO
-          .findOneByPathAndOrganization(dataSourceId.path, dataSourceId.organizationId)
+          .findOneByDirectoryNameAndOrganization(dataSourceId.directoryName, dataSourceId.organizationId)
           .futureBox
       } yield
         dataSourceBox match {
@@ -125,7 +125,9 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
 
     def tryWrite: Fox[UserAccessAnswer] =
       for {
-        dataset <- datasetDAO.findOneByPathAndOrganization(dataSourceId.path, dataSourceId.organizationId) ?~> "datasource.notFound"
+        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(
+          dataSourceId.directoryName,
+          dataSourceId.organizationId) ?~> "datasource.notFound"
         user <- userBox.toFox ?~> "auth.token.noUser"
         isAllowed <- datasetService.isEditableBy(dataset, Some(user))
       } yield UserAccessAnswer(isAllowed)
@@ -146,8 +148,9 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     def tryDelete: Fox[UserAccessAnswer] =
       for {
         _ <- bool2Fox(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
-        dataset <- datasetDAO.findOneByPathAndOrganization(dataSourceId.path, dataSourceId.organizationId)(
-          GlobalAccessContext) ?~> "datasource.notFound"
+        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(
+          dataSourceId.directoryName,
+          dataSourceId.organizationId)(GlobalAccessContext) ?~> "datasource.notFound"
         user <- userBox.toFox ?~> "auth.token.noUser"
       } yield UserAccessAnswer(user._organization == dataset._organization && user.isAdmin)
 

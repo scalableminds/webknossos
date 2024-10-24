@@ -168,10 +168,10 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
 
   // TODO: Now the datasetName stored in the nml is interpreted as the path of the dataset. -> call to legacy route is necessary.
   //  Discussion: how to handle this better?
-  const { trees: trees1, datasetName: datasetPath1 } = await parseNml(nmlString1);
-  const { trees: trees2, datasetName: datasetPath2 } = await parseNml(nmlString2);
+  const { trees: trees1, datasetName: datasetDirectoryName1 } = await parseNml(nmlString1);
+  const { trees: trees2, datasetName: datasetDirectoryName2 } = await parseNml(nmlString2);
 
-  if (!datasetPath1 || !datasetPath2) {
+  if (!datasetDirectoryName1 || !datasetDirectoryName2) {
     throw new SoftError("Could not extract dataset names.");
   }
 
@@ -208,7 +208,7 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
   }
 
   const datasets = await tryToFetchDatasetsByNameOrId(
-    [datasetPath1, datasetPath2], // fetch by name
+    [datasetDirectoryName1, datasetDirectoryName2], // fetch by name
     [],
     "Could not derive datasets from NML. Please specify these manually.",
   );

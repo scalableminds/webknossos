@@ -109,24 +109,24 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
           dataset <- datasetDAO.findOne(annotation._dataset)
           organization <- organizationDAO.findOne(dataset._organization)
-        } yield Ok(Json.toJson(DataSourceId(dataset.path, organization._id)))
+        } yield Ok(Json.toJson(DataSourceId(dataset.directoryName, organization._id)))
       }
     }
 
   def dataStoreUriForDataset(name: String,
                              key: String,
                              organizationId: Option[String],
-                             datasetPath: String): Action[AnyContent] =
+                             datasetDirectory: String): Action[AnyContent] =
     Action.async { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
           organizationIdWithFallback <- Fox.fillOption(organizationId) {
-            datasetDAO.getOrganizationIdForDataset(datasetPath)(GlobalAccessContext)
-          } ?~> Messages("dataset.noAccess", datasetPath) ~> FORBIDDEN
-          dataset <- datasetDAO.findOneByPathAndOrganization(datasetPath, organizationIdWithFallback) ?~> Messages(
+            datasetDAO.getOrganizationIdForDataset(datasetDirectory)(GlobalAccessContext)
+          } ?~> Messages("dataset.noAccess", datasetDirectory) ~> FORBIDDEN
+          dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectory, organizationIdWithFallback) ?~> Messages(
             "dataset.noAccess",
-            datasetPath) ~> FORBIDDEN
+            datasetDirectory) ~> FORBIDDEN
           dataStore <- datasetService.dataStoreFor(dataset)
         } yield Ok(Json.toJson(dataStore.url))
       }

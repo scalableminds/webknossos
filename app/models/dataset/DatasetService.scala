@@ -102,10 +102,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     for {
       organization <- organizationDAO.findOne(owningOrganization)
       organizationRootFolder <- folderDAO.findOne(organization._rootFolder)
-      datasetPath <- datasetDAO
-        .doesDatasetPathExistInOrganization(datasetName, organization._id)
-        .map(if (_) newId.toString else datasetName)
-      newDataSource = dataSource.withUpdatedId(dataSource.id.copy(path = datasetPath)) // Sync path with dataSource
+      datasetDirectoryName <- datasetDAO
+        .doesDatasetDirectoryExistInOrganization(datasetName, organization._id)
+        .map(if (_) s"${datasetName}-${newId.toString}" else datasetName)
+      newDataSource = dataSource.withUpdatedId(dataSource.id.copy(directoryName = datasetDirectoryName)) // Sync path with dataSource
       dataset = Dataset(
         newId,
         dataStore.name,
@@ -117,7 +117,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         newDataSource.defaultViewConfiguration,
         adminViewConfiguration = None,
         description = None,
-        path = datasetPath,
+        directoryName = datasetDirectoryName,
         isPublic = false,
         isUsable = newDataSource.isUsable,
         name = datasetName,
@@ -149,8 +149,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
               Fox.successful(List.empty)
             case Full(organization) =>
               for {
-                foundDatasets <- datasetDAO.findAllByPathsAndOrganization(orgaTuple._2.map(_.id.path), organization._id)
-                foundDatasetsByPath = foundDatasets.groupBy(_.path)
+                foundDatasets <- datasetDAO.findAllByDirectoryNameAndOrganization(orgaTuple._2.map(_.id.directoryName),
+                                                                                  organization._id)
+                foundDatasetsByPath = foundDatasets.groupBy(_.directoryName)
                 existingIds <- Fox.serialCombined(orgaTuple._2)(dataSource =>
                   updateDataSource(dataStore, dataSource, foundDatasetsByPath))
               } yield existingIds.flatten
@@ -169,14 +170,14 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       dataSource: InboxDataSource,
       foundDatasetsByPath: Map[String, List[Dataset]]
   )(implicit ctx: DBAccessContext): Fox[Option[ObjectId]] = {
-    val foundDatasetOpt = foundDatasetsByPath.get(dataSource.id.path).flatMap(_.headOption)
+    val foundDatasetOpt = foundDatasetsByPath.get(dataSource.id.directoryName).flatMap(_.headOption)
     foundDatasetOpt match {
       case Some(foundDataset) if foundDataset._dataStore == dataStore.name =>
         updateKnownDataSource(foundDataset, dataSource, dataStore).toFox.map(Some(_))
       case Some(foundDataset) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
         updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore)
       case _ =>
-        insertNewDataset(dataSource, dataSource.id.path, dataStore).toFox
+        insertNewDataset(dataSource, dataSource.id.directoryName, dataStore).toFox
           .map(Some(_)) // TODO: Discuss how to better handle this case
     }
   }
@@ -260,7 +261,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound"
       }
       dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
-      dataSourceId = DataSourceId(dataset.path, organization._id)
+      dataSourceId = DataSourceId(dataset.directoryName, organization._id)
     } yield {
       if (dataset.isUsable)
         for {
@@ -372,7 +373,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         "isActive" -> dataset.isUsable,
         "isPublic" -> dataset.isPublic,
         "description" -> dataset.description,
-        "path" -> dataset.path,
+        "path" -> dataset.directoryName,
         "created" -> dataset.created,
         "isEditable" -> isEditable,
         "lastUsedByUser" -> lastUsedByUser,

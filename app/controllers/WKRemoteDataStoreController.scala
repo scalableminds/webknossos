@@ -82,10 +82,10 @@ class WKRemoteDataStoreController @Inject()(
           _ <- datasetDAO.updateFolder(dataset._id, folderId)(GlobalAccessContext)
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))
-          updatedInfo = uploadInfo.copy(
-            newDatasetId = dataset._id.toString,
-            path = dataset.path,
-            layersToLink = Some(layersToLinkWithDatasetId)) // Update newDatasetId and path according to the newly created dataset.
+          // Update newDatasetId and directoryName according to the newly created dataset.
+          updatedInfo = uploadInfo.copy(newDatasetId = dataset._id.toString,
+                                        directoryName = dataset.directoryName,
+                                        layersToLink = Some(layersToLinkWithDatasetId))
         } yield Ok(Json.toJson(updatedInfo))
       }
     }
@@ -130,12 +130,12 @@ class WKRemoteDataStoreController @Inject()(
         AuthorizedAccessContext(requestingUser)) ?~> Messages("dataset.notFound", layerIdentifier.dataSetName)
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(requestingUser, dataset._organization)
       _ <- Fox.bool2Fox(isTeamManagerOrAdmin || requestingUser.isDatasetManager || dataset.isPublic) ?~> "dataset.upload.linkRestricted"
-    } yield layerIdentifier.copy(datasetPath = Some(dataset.path))
+    } yield layerIdentifier.copy(datasetDirectoryName = Some(dataset.directoryName))
 
   def reportDatasetUpload(name: String,
                           key: String,
                           token: String,
-                          datasetPath: String,
+                          datasetDirectoryName: String,
                           organizationId: String,
                           datasetSizeBytes: Long,
                           needsConversion: Boolean,
@@ -144,9 +144,8 @@ class WKRemoteDataStoreController @Inject()(
       dataStoreService.validateAccess(name, key) { dataStore =>
         for {
           user <- bearerTokenService.userForToken(token)
-          dataset <- datasetDAO.findOneByPathAndOrganization(datasetPath, organizationId)(GlobalAccessContext) ?~> Messages(
-            "dataset.notFound",
-            datasetPath) ~> NOT_FOUND
+          dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)(
+            GlobalAccessContext) ?~> Messages("dataset.notFound", datasetDirectoryName) ~> NOT_FOUND
           _ <- Fox.runIf(!needsConversion && !viaAddRoute)(usedStorageService.refreshStorageReportForDataset(dataset))
           _ <- Fox.runIf(!needsConversion)(logUploadToSlack(user, dataset._id, viaAddRoute))
           _ = analyticsService.track(UploadDatasetEvent(user, dataset, dataStore, datasetSizeBytes))
@@ -225,7 +224,8 @@ class WKRemoteDataStoreController @Inject()(
       for {
         datasourceId <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
         existingDataset = datasetDAO
-          .findOneByPathAndOrganization(datasourceId.path, datasourceId.organizationId)(GlobalAccessContext)
+          .findOneByDirectoryNameAndOrganization(datasourceId.directoryName, datasourceId.organizationId)(
+            GlobalAccessContext)
           .futureBox
 
         _ <- existingDataset.flatMap {

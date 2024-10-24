@@ -132,7 +132,7 @@ class AnnotationIOController @Inject()(
           datasetIds = parseSuccesses.map(_.datasetId)
           dataset <- findDatasetForUploadedAnnotations(skeletonTracings,
                                                        volumeLayersGroupedRaw.flatten,
-            datasetIds,
+                                                       datasetIds,
                                                        wkUrl)
           dataSource <- datasetService.dataSourceFor(dataset) ?~> Messages("dataset.notImported", dataset.name)
           usableDataSource <- dataSource.toUsable.toFox ?~> Messages("dataset.notImported", dataset.name)

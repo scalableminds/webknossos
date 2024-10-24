@@ -33,7 +33,7 @@ const StoreMock = {
   getState: () => ({
     dataset: {
       name: "dataset",
-      path: "datasetPath",
+      directoryName: "datasetPath",
       dataStore: {
         typ: "webknossos-store",
         url: "url",

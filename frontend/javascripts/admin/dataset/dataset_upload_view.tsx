@@ -315,7 +315,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     const reserveUploadInformation = {
       uploadId,
       name: newDatasetName,
-      path: "<filled by backend>",
+      directoryName: "<filled by backend>",
       newDatasetId: "<filled by backend>",
       organization: activeUser.organization,
       totalFileCount: formValues.zipFile.length,

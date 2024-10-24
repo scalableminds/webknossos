@@ -132,7 +132,7 @@ class JobController @Inject()(
             "organization_id" -> organization._id,
             "organization_display_name" -> organization.name,
             "dataset_name" -> dataset.name,
-            "dataset_path" -> dataset.path,
+            "dataset_directory_name" -> dataset.directoryName,
             "voxel_size_factor" -> voxelSize.factor.toUriLiteral,
             "voxel_size_unit" -> voxelSize.unit
           )
@@ -159,7 +159,7 @@ class JobController @Inject()(
         commandArgs = Json.obj(
           "organization_id" -> organization._id,
           "dataset_name" -> dataset.name,
-          "dataset_path" -> dataset.path,
+          "dataset_directory_name" -> dataset.directoryName,
           "layer_name" -> layerName,
           "mag" -> mag,
           "agglomerate_view" -> agglomerateView
@@ -183,7 +183,7 @@ class JobController @Inject()(
         commandArgs = Json.obj(
           "organization_id" -> dataset._organization,
           "dataset_name" -> dataset.name,
-          "dataset_path" -> dataset.path,
+          "dataset_directory_name" -> dataset.directoryName,
           "segmentation_layer_name" -> layerName,
         )
         job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunSegmentIndexFile"
@@ -207,7 +207,7 @@ class JobController @Inject()(
           commandArgs = Json.obj(
             "organization_id" -> dataset._organization,
             "dataset_name" -> dataset.name,
-            "dataset_path" -> dataset.path,
+            "dataset_directory_name" -> dataset.directoryName,
             "layer_name" -> layerName,
             "new_dataset_name" -> newDatasetName
           )
@@ -237,7 +237,7 @@ class JobController @Inject()(
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
-            "dataset_path" -> dataset.path,
+            "dataset_directory_name" -> dataset.directoryName,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
             "bbox" -> bbox,
@@ -269,7 +269,7 @@ class JobController @Inject()(
           commandArgs = Json.obj(
             "organization_id" -> dataset._organization,
             "dataset_name" -> dataset.name,
-            "dataset_path" -> dataset.path,
+            "dataset_directory_name" -> dataset.directoryName,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
             "bbox" -> bbox,
@@ -299,7 +299,7 @@ class JobController @Inject()(
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
-            "dataset_path" -> dataset.path,
+            "dataset_directory_name" -> dataset.directoryName,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
             "annotation_id" -> annotationId
@@ -350,7 +350,7 @@ class JobController @Inject()(
           else
             s"${formatDateForFilename(new Date())}__${dataset.name}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
           commandArgs = Json.obj(
-            "dataset_path" -> dataset.path,
+            "dataset_directory_name" -> dataset.directoryName,
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "nd_bbox" -> ndBoundingBox.toWkLibsDict,
@@ -390,7 +390,7 @@ class JobController @Inject()(
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
-            "dataset_path" -> dataset.path,
+            "dataset_directory_name" -> dataset.directoryName,
             "fallback_layer_name" -> fallbackLayerName,
             "annotation_id" -> annotationId,
             "output_segmentation_layer_name" -> outputSegmentationLayerName,
@@ -419,7 +419,7 @@ class JobController @Inject()(
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
-            "dataset_path" -> dataset.path,
+            "dataset_directory_name" -> dataset.directoryName,
             "layer_name" -> layerName
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunFindLargestSegmentId"
@@ -452,7 +452,7 @@ class JobController @Inject()(
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
-            "dataset_path" -> dataset.path,
+            "dataset_directory_name" -> dataset.directoryName,
             "export_file_name" -> exportFileName,
             "layer_name" -> animationJobOptions.layerName,
             "bounding_box" -> animationJobOptions.boundingBox.toLiteral,

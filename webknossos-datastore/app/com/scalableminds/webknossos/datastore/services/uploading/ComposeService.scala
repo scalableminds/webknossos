@@ -64,8 +64,8 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
 
   val dataBaseDir: Path = datasetSymlinkService.dataBaseDir
 
-  private def uploadDirectory(organizationId: String, datasetPath: String): Path =
-    dataBaseDir.resolve(organizationId).resolve(datasetPath)
+  private def uploadDirectory(organizationId: String, datasetDirectoryName: String): Path =
+    dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName)
 
   def composeDataset(composeRequest: ComposeRequest, userToken: Option[String]): Fox[(DataSource, String)] =
     for {
@@ -83,9 +83,9 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
         Some(composeRequest.targetFolderId)
       )
       reservedInfo <- remoteWebknossosClient.reserveDataSourceUpload(reserveUploadInfo, userToken) ?~> "Failed to reserve upload."
-      directory = uploadDirectory(reservedInfo.organization, reservedInfo.path)
+      directory = uploadDirectory(reservedInfo.organization, reservedInfo.directoryName)
       _ = PathUtils.ensureDirectory(directory)
-      dataSource <- createDatasource(composeRequest, reservedInfo.path, reservedInfo.organization, directory)
+      dataSource <- createDatasource(composeRequest, reservedInfo.directoryName, reservedInfo.organization, directory)
       properties = Json.toJson(dataSource).toString().getBytes(StandardCharsets.UTF_8)
       _ = Files.write(directory.resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON), properties)
       newDatasetId = reservedInfo.newDatasetId
@@ -145,13 +145,13 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield editedLayer
 
   private def createDatasource(composeRequest: ComposeRequest,
-                               datasetPath: String,
+                               datasetDirectoryName: String,
                                organizationId: String,
                                uploadDir: Path): Fox[DataSource] =
     for {
       layers <- Fox.serialCombined(composeRequest.layers.toList)(getLayerFromComposeLayer(_, uploadDir))
       dataSource = GenericDataSource(
-        DataSourceId(datasetPath, organizationId),
+        DataSourceId(datasetDirectoryName, organizationId),
         layers,
         composeRequest.voxelSize,
         None
@@ -160,7 +160,8 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield dataSource
 
   private def isLayerRemote(dataSourceId: DataSourceId, layerName: String) = {
-    val layerPath = dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.path).resolve(layerName)
+    val layerPath =
+      dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName).resolve(layerName)
     !Files.exists(layerPath)
   }
 }

@@ -28,7 +28,7 @@ case class DataReadInstruction(
     bucket: BucketPosition,
     version: Option[Long] = None
 ) {
-  def layerSummary: String = f"${dataSource.id.organizationId}/${dataSource.id.path}/${dataLayer.name}"
+  def layerSummary: String = f"${dataSource.id.organizationId}/${dataSource.id.directoryName}/${dataLayer.name}"
 }
 
 case class DataServiceMappingRequest(

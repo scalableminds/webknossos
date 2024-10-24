@@ -366,7 +366,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     const dataSource = JSON.parse(formValues.dataSourceJson);
 
     if (dataset != null && this.didDatasourceChange(dataSource)) {
-      await updateDatasetDatasource(this.props.datasetId, dataset.dataStore.url, dataSource);
+      await updateDatasetDatasource(dataset.directoryName, dataset.dataStore.url, dataSource);
       this.setState({
         savedDataSourceOnServer: dataSource,
       });
@@ -481,7 +481,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     const maybeStoredDatasetName = dataset?.name || this.props.datasetId;
     const maybeDataSourceId = {
       owningOrganization: dataset?.owningOrganization || "",
-      path: dataset?.path || "",
+      directoryName: dataset?.directoryName || "",
     };
 
     const { isUserAdmin } = this.props;

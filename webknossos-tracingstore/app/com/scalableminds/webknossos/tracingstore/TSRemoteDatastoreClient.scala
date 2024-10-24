@@ -189,9 +189,9 @@ class TSRemoteDatastoreClient @Inject()(
   private def voxelSizeForTracing(tracingId: String, token: Option[String]): Fox[VoxelSize] =
     for {
       dataSourceId <- remoteWebknossosClient.getDataSourceIdForTracing(tracingId)
-      dataStoreUri <- dataStoreUriWithCache(dataSourceId.organizationId, dataSourceId.path)
+      dataStoreUri <- dataStoreUriWithCache(dataSourceId.organizationId, dataSourceId.directoryName)
       result <- rpc(
-        s"$dataStoreUri/data/datasets/${dataSourceId.organizationId}/${dataSourceId.path}/readInboxDataSource")
+        s"$dataStoreUri/data/datasets/${dataSourceId.organizationId}/${dataSourceId.directoryName}/readInboxDataSource")
         .addQueryStringOptional("token", token)
         .getWithJsonResponse[InboxDataSource]
       scale <- result.voxelSizeOpt ?~> "could not determine voxel size of dataset"
@@ -199,13 +199,13 @@ class TSRemoteDatastoreClient @Inject()(
 
   private def getRemoteLayerUri(remoteLayer: RemoteFallbackLayer): Fox[String] =
     for {
-      datastoreUri <- dataStoreUriWithCache(remoteLayer.organizationId, remoteLayer.datasetPath)
+      datastoreUri <- dataStoreUriWithCache(remoteLayer.organizationId, remoteLayer.datasetDirectoryName)
     } yield
-      s"$datastoreUri/data/datasets/${remoteLayer.organizationId}/${remoteLayer.datasetPath}/layers/${remoteLayer.layerName}"
+      s"$datastoreUri/data/datasets/${remoteLayer.organizationId}/${remoteLayer.datasetDirectoryName}/layers/${remoteLayer.layerName}"
 
-  private def dataStoreUriWithCache(organizationId: String, datasetPath: String): Fox[String] =
+  private def dataStoreUriWithCache(organizationId: String, datasetDirectoryName: String): Fox[String] =
     dataStoreUriCache.getOrLoad(
-      (organizationId, datasetPath),
+      (organizationId, datasetDirectoryName),
       keyTuple => remoteWebknossosClient.getDataStoreUriForDataSource(keyTuple._1, keyTuple._2))
 
 }

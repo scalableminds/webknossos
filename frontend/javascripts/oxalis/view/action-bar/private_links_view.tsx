@@ -145,7 +145,7 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
 
   const baseUrl = maybeAccessToken
     ? `${dataStoreURL}/data/annotations/zarr/${maybeAccessToken}`
-    : `${dataStoreURL}/data/zarr/${dataset.owningOrganization}/${dataset.path}`;
+    : `${dataStoreURL}/data/zarr/${dataset.owningOrganization}/${dataset.directoryName}`;
 
   const copyTokenToClipboard = async ({ key: layerName }: { key: string }) => {
     await navigator.clipboard.writeText(`${baseUrl}/${layerName}`);

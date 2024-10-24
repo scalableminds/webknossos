@@ -84,7 +84,7 @@ test.serial("transferTask()", async (t) => {
 const newTask = {
   boundingBox: null,
   datasetName: "confocal-multi_knossos",
-  datasetPath: "confocal-multi_knossos",
+  datasetDirectoryName: "confocal-multi_knossos",
   datasetId: "59e9cfbdba632ac2ab8b23b3",
   editPosition: [1, 2, 3] as Vector3,
   editRotation: [4, 5, 6] as Vector3,

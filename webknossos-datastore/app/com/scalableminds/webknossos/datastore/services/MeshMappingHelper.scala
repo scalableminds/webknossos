@@ -15,7 +15,7 @@ trait MeshMappingHelper {
 
   protected def segmentIdsForAgglomerateIdIfNeeded(
       organizationId: String,
-      datasetPath: String,
+      datasetDirectoryName: String,
       dataLayerName: String,
       targetMappingName: Option[String],
       editableMappingTracingId: Option[String],
@@ -39,7 +39,7 @@ trait MeshMappingHelper {
             .segmentIdsForAgglomerateId(
               AgglomerateFileKey(
                 organizationId,
-                datasetPath,
+                datasetDirectoryName,
                 dataLayerName,
                 mappingName
               ),
@@ -68,7 +68,7 @@ trait MeshMappingHelper {
               localSegmentIds <- agglomerateService.segmentIdsForAgglomerateId(
                 AgglomerateFileKey(
                   organizationId,
-                  datasetPath,
+                  datasetDirectoryName,
                   dataLayerName,
                   mappingName
                 ),

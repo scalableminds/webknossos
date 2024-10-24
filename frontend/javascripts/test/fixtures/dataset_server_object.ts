@@ -91,7 +91,7 @@ const apiDataset: APIDataset = {
   description: null,
   created: 1502288550432,
   isEditable: true,
-  path: "ROI2017_wkw",
+  directoryName: "ROI2017_wkw",
   isUnreported: false,
   tags: [],
   folderId: "66f3c82466010002752e972c",

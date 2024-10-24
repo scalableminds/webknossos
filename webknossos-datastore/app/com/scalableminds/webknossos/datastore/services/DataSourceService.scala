@@ -87,7 +87,7 @@ class DataSourceService @Inject()(
         team + ": [" + byUsable.keys.map { usable =>
           val label = if (usable) "active: [" else "inactive: ["
           label + byUsable(usable).map { ds =>
-            s"${ds.id.path}"
+            s"${ds.id.directoryName}"
           }.mkString(" ") + "]"
         }.mkString(", ") + "]"
       }.mkString(", ")
@@ -162,7 +162,7 @@ class DataSourceService @Inject()(
   def updateDataSource(dataSource: DataSource, expectExisting: Boolean): Fox[Unit] =
     for { // TODO: Dangerous territory. Unsure whether this still works. Needs testing.
       _ <- validateDataSource(dataSource).toFox
-      dataSourcePath = dataBaseDir.resolve(dataSource.id.organizationId).resolve(dataSource.id.path)
+      dataSourcePath = dataBaseDir.resolve(dataSource.id.organizationId).resolve(dataSource.id.directoryName)
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
       _ <- Fox.runIf(!expectExisting)(ensureDirectoryBox(dataSourcePath))
       _ <- Fox.runIf(!expectExisting)(bool2Fox(!Files.exists(propertiesFile))) ?~> "dataSource.alreadyPresent"

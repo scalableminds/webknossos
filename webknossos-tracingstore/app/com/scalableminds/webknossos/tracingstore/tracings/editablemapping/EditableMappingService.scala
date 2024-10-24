@@ -502,7 +502,7 @@ class EditableMappingService @Inject()(
       ))
 
     val skeleton = SkeletonTracingDefaults.createInstance.copy(
-      datasetName = remoteFallbackLayer.datasetPath, // TODO: Open question: How do we handle this?
+      datasetName = remoteFallbackLayer.datasetDirectoryName, // TODO: Open question: How do we handle this?
       // Migrate the name to datasetPath or not? Might get tricky with the fossilDB.
       trees = trees
     )

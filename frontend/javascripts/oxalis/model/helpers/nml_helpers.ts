@@ -252,7 +252,7 @@ function serializeParameters(
       _.compact([
         serializeTag("experiment", {
           datasetId: state.dataset.id,
-          name: state.dataset.path,
+          name: state.dataset.directoryName,
           description: annotation.description,
           organization: state.dataset.owningOrganization,
           wkUrl: `${location.protocol}//${location.host}`,

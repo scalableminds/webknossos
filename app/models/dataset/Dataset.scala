@@ -47,7 +47,7 @@ case class Dataset(_id: ObjectId,
                    defaultViewConfiguration: Option[DatasetViewConfiguration] = None,
                    adminViewConfiguration: Option[DatasetViewConfiguration] = None,
                    description: Option[String] = None,
-                   path: String,
+                   directoryName: String,
                    isPublic: Boolean,
                    isUsable: Boolean,
                    name: String,
@@ -72,7 +72,7 @@ case class DatasetCompactInfo(
     owningOrganization: String,
     folderId: ObjectId,
     isActive: Boolean,
-    path: String,
+    directoryName: String,
     created: Instant,
     isEditable: Boolean,
     lastUsedByUser: Instant,
@@ -82,7 +82,7 @@ case class DatasetCompactInfo(
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
 ) {
-  def dataSourceId = new DataSourceId(path, owningOrganization)
+  def dataSourceId = new DataSourceId(directoryName, owningOrganization)
 }
 
 object DatasetCompactInfo {
@@ -134,7 +134,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         defaultViewConfigurationOpt,
         adminViewConfigurationOpt,
         r.description,
-        r.path,
+        r.directoryname,
         r.ispublic,
         r.isusable,
         r.name,
@@ -254,7 +254,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
               o._id,
               d._folder,
               d.isUsable,
-              d.path,
+              d.directoryName,
               d.created,
               COALESCE(
                 (
@@ -320,7 +320,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             owningOrganization = row._3,
             folderId = row._4,
             isActive = row._5,
-            path = row._6,
+            directoryName = row._6,
             created = row._7,
             isEditable = row._8,
             lastUsedByUser = row._9,
@@ -402,25 +402,26 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       r <- rList.headOption
     } yield r
 
-  def findOneByPathAndOrganization(path: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
+  def findOneByDirectoryNameAndOrganization(directoryName: String, organizationId: String)(
+      implicit ctx: DBAccessContext): Fox[Dataset] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
                    FROM $existingCollectionName
-                   WHERE path = $path
+                   WHERE directoryName = $directoryName
                    AND _organization = $organizationId
                    AND $accessQuery
                    LIMIT 1""".as[DatasetsRow])
-      parsed <- parseFirst(r, s"$organizationId/$path")
+      parsed <- parseFirst(r, s"$organizationId/$directoryName")
     } yield parsed
 
-  def doesDatasetPathExistInOrganization(path: String, organizationId: String)(
+  def doesDatasetDirectoryExistInOrganization(directoryName: String, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[Boolean] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT EXISTS(SELECT 1
                    FROM $existingCollectionName
-                   WHERE path = $path
+                   WHERE directoryName = $directoryName
                    AND _organization = $organizationId
                    AND $accessQuery
                    LIMIT 1)""".as[Boolean])
@@ -432,7 +433,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
                    FROM $existingCollectionName
-                   WHERE (path = $name OR name = $name)
+                   WHERE (directoryName = $name OR name = $name)
                    AND _organization = $organizationId
                    AND $accessQuery
                    ORDER BY created ASC
@@ -449,13 +450,13 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       "dataset.notFoundByIdOrName",
       datasetIdOpt.map(_.toString).getOrElse(datasetName))
 
-  def findAllByPathsAndOrganization(paths: List[String], organizationId: String)(
+  def findAllByDirectoryNameAndOrganization(directoryNames: List[String], organizationId: String)(
       implicit ctx: DBAccessContext): Fox[List[Dataset]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
                    FROM $existingCollectionName
-                   WHERE path IN ${SqlToken.tupleFromList(paths)}
+                   WHERE directoryName IN ${SqlToken.tupleFromList(directoryNames)}
                    AND _organization = $organizationId
                    AND $accessQuery""".as[DatasetsRow]).map(_.toList)
       parsed <- parseAll(r)
@@ -596,7 +597,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      _id, _dataStore, _organization, _publication,
                      _uploader, _folder,
                      inboxSourceHash, defaultViewConfiguration, adminViewConfiguration,
-                     description, path, isPublic, isUsable,
+                     description, directoryName, isPublic, isUsable,
                      name, voxelSizeFactor, voxelSizeUnit, status,
                      sharingToken, sortingKey, metadata, tags,
                      created, isDeleted
@@ -605,7 +606,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      ${d._id}, ${d._dataStore}, ${d._organization}, ${d._publication},
                      ${d._uploader}, ${d._folder},
                      ${d.inboxSourceHash}, $defaultViewConfiguration, $adminViewConfiguration,
-                     ${d.description}, ${d.path}, ${d.isPublic}, ${d.isUsable},
+                     ${d.description}, ${d.directoryName}, ${d.isPublic}, ${d.isUsable},
                      ${d.name}, ${d.voxelSize.map(_.factor)}, ${d.voxelSize.map(_.unit)}, ${d.status.take(1024)},
                      ${d.sharingToken}, ${d.sortingKey}, ${d.metadata}, ${d.tags},
                      ${d.created}, ${d.isDeleted}

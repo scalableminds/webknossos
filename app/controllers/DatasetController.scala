@@ -415,7 +415,7 @@ class DatasetController @Inject()(userService: UserService,
           Json.obj("id" -> dataset._id,
                    "name" -> dataset.name,
                    "organization" -> dataset._organization,
-                   "path" -> dataset.path))
+                   "path" -> dataset.directoryName))
     }
 
   private def notFoundMessage(datasetName: String)(implicit ctx: DBAccessContext, m: MessagesProvider): String =

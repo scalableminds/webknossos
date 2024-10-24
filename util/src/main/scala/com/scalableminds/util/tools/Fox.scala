@@ -68,7 +68,8 @@ object Fox extends FoxImplicits {
       implicit ec: ExecutionContext): Fox[Nothing] =
     new Fox(Future.successful(Failure(message, ex, chain)))
 
-  def paramFailure[T](message: String, ex: Box[Throwable] = Empty, chain: Box[Failure] = Empty, param: T)( implicit ec: ExecutionContext): Fox[Nothing] =
+  def paramFailure[T](message: String, ex: Box[Throwable] = Empty, chain: Box[Failure] = Empty, param: T)(
+      implicit ec: ExecutionContext): Fox[Nothing] =
     new Fox(Future.successful(ParamFailure(message, ex, chain, param)))
 
   // run serially, fail on the first failure

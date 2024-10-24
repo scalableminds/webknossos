@@ -86,7 +86,7 @@ class DSRemoteWebknossosClient @Inject()(
     for {
       uploadedDatasetIdJson <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
         .addQueryString("key" -> dataStoreKey)
-        .addQueryString("datasetPath" -> dataSourceId.path)
+        .addQueryString("datasetDirectoryName" -> dataSourceId.directoryName)
         .addQueryString("organizationId" -> dataSourceId.organizationId)
         .addQueryString("needsConversion" -> needsConversion.toString)
         .addQueryString("viaAddRoute" -> viaAddRoute.toString)

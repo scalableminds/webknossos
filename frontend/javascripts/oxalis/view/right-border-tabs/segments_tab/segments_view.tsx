@@ -137,6 +137,8 @@ import { SegmentStatisticsModal } from "./segment_statistics_modal";
 import type { ItemType } from "antd/lib/menu/interface";
 import { InputWithUpdateOnBlur } from "oxalis/view/components/input_with_update_on_blur";
 
+const SCROLL_DELAY_MS = 50;
+
 const { confirm } = Modal;
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset
@@ -1613,7 +1615,7 @@ class SegmentsView extends React.Component<Props, State> {
     // As parent groups might still need to expand, we need to wait for this to finish.
     setTimeout(() => {
       if (this.tree.current) this.tree.current.scrollTo({ key: selectedElement.key });
-    }, 50);
+    }, SCROLL_DELAY_MS);
     const isASegment = "color" in selectedElement;
     if (isASegment) {
       this.onSelectSegment(selectedElement);
@@ -1642,7 +1644,9 @@ class SegmentsView extends React.Component<Props, State> {
         this.props.visibleSegmentationLayer.name,
       ),
     );
-    this.tree.current?.scrollTo({ key: allMatches[0].key });
+    setTimeout(() => {
+      this.tree.current?.scrollTo({ key: allMatches[0].key });
+    }, SCROLL_DELAY_MS);
   };
 
   getSegmentStatisticsModal = (groupId: number) => {

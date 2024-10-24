@@ -253,11 +253,14 @@ function TreeHierarchyView(props: Props) {
   const checkedKeys = deepFlatFilter(UITreeData, (node) => node.isChecked).map((node) => node.key);
 
   // selectedKeys is mainly used for highlighting, i.e. blueish background color
-  let selectedKeys = props.selectedTreeIds.map((treeId) => getNodeKey(GroupTypeEnum.TREE, treeId));
+  const selectedKeys = props.activeGroupId
+    ? [getNodeKey(GroupTypeEnum.GROUP, props.activeGroupId)]
+    : props.selectedTreeIds.map((treeId) => getNodeKey(GroupTypeEnum.TREE, treeId));
 
-  if (props.activeGroupId) selectedKeys = [getNodeKey(GroupTypeEnum.GROUP, props.activeGroupId)];
-
-  treeRef.current?.scrollTo({ key: selectedKeys[0], align: "auto" });
+  useEffect(
+    () => treeRef.current?.scrollTo({ key: selectedKeys[0], align: "auto" }),
+    [selectedKeys[0]],
+  );
 
   return (
     <>

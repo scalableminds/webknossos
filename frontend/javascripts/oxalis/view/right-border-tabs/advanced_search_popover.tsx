@@ -7,6 +7,8 @@ import Shortcut from "libs/shortcut_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import { mod } from "libs/utils";
 
+const PRIMARY_COLOR = "var(--ant-color-primary)";
+
 type Props<S> = {
   data: S[];
   searchKey: keyof S | ((item: S) => string);
@@ -21,6 +23,7 @@ type State = {
   isVisible: boolean;
   searchQuery: string;
   currentPosition: number | null | undefined;
+  areAllMatchesSelected: boolean;
 };
 
 export default class AdvancedSearchPopover<
@@ -30,6 +33,7 @@ export default class AdvancedSearchPopover<
     isVisible: false,
     searchQuery: "",
     currentPosition: null,
+    areAllMatchesSelected: false,
   };
 
   getAvailableOptions = memoizeOne(
@@ -70,6 +74,7 @@ export default class AdvancedSearchPopover<
     currentPosition = mod(currentPosition + offset, numberOfAvailableOptions);
     this.setState({
       currentPosition,
+      areAllMatchesSelected: false,
     });
     this.props.onSelect(availableOptions[currentPosition]);
   };
@@ -102,7 +107,7 @@ export default class AdvancedSearchPopover<
 
   render() {
     const { data, searchKey, provideShortcut, children, targetId } = this.props;
-    const { searchQuery, isVisible } = this.state;
+    const { searchQuery, isVisible, areAllMatchesSelected } = this.state;
     let { currentPosition } = this.state;
     const availableOptions = this.getAvailableOptions(data, searchQuery, searchKey);
     const numberOfAvailableOptions = availableOptions.length;
@@ -120,6 +125,7 @@ export default class AdvancedSearchPopover<
             color: "red",
           }
         : {};
+    const selectAllMatchesButtonColor = areAllMatchesSelected ? PRIMARY_COLOR : undefined;
     return (
       <React.Fragment>
         {provideShortcut ? (
@@ -175,9 +181,16 @@ export default class AdvancedSearchPopover<
                       this.setState({
                         searchQuery: evt.target.value,
                         currentPosition: null,
+                        areAllMatchesSelected: false,
                       })
                     }
-                    addonAfter={`${currentPosition + 1}/${numberOfAvailableOptions}`}
+                    addonAfter={
+                      <div style={{ minWidth: 25 }}>
+                        {!areAllMatchesSelected
+                          ? `${currentPosition + 1}/${numberOfAvailableOptions}`
+                          : ""}
+                      </div>
+                    }
                     ref={this.autoFocus}
                     autoFocus
                   />
@@ -207,10 +220,16 @@ export default class AdvancedSearchPopover<
                     <ButtonComponent
                       style={{
                         width: 40,
+                        color: selectAllMatchesButtonColor,
+                        borderColor: selectAllMatchesButtonColor,
                       }}
                       onClick={
                         this.props.onSelectAllMatches != null
-                          ? () => this.props.onSelectAllMatches!(availableOptionsToSelectAllMatches)
+                          ? () => {
+                              this.props.onSelectAllMatches!(availableOptionsToSelectAllMatches);
+                              if (!areAllMatchesSelected)
+                                this.setState({ areAllMatchesSelected: true });
+                            }
                           : undefined
                       }
                       disabled={isSelectAllMatchesDisabled}

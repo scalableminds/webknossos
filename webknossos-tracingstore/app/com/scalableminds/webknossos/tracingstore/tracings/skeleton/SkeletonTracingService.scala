@@ -35,11 +35,11 @@ class SkeletonTracingService @Inject()(
 
   implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
 
-  def duplicate(tracing: SkeletonTracing,
-                fromTask: Boolean,
-                editPosition: Option[Vec3Int],
-                editRotation: Option[Vec3Double],
-                boundingBox: Option[BoundingBox]): Fox[String] = {
+  def adaptSkeletonForDuplicate(tracing: SkeletonTracing,
+                                fromTask: Boolean,
+                                editPosition: Option[Vec3Int],
+                                editRotation: Option[Vec3Double],
+                                boundingBox: Option[BoundingBox]): SkeletonTracing = {
     val taskBoundingBox = if (fromTask) {
       tracing.boundingBox.map { bb =>
         val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
@@ -57,8 +57,7 @@ class SkeletonTracingService @Inject()(
           version = 0
         )
         .addAllUserBoundingBoxes(taskBoundingBox)
-    val finalTracing = if (fromTask) newTracing.clearBoundingBox else newTracing
-    save(finalTracing, None, finalTracing.version)
+    if (fromTask) newTracing.clearBoundingBox else newTracing
   }
 
   def merge(tracings: Seq[SkeletonTracing],

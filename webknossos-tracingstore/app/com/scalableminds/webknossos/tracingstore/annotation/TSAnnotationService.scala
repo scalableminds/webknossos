@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
@@ -617,36 +618,74 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     }
 
   // TODO duplicate v0 as well? (if current version is not v0)
-  def duplicate(annotationId: String, newAnnotationId: String, version: Option[Long])(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[AnnotationProto] =
+  def duplicate(
+      annotationId: String,
+      newAnnotationId: String,
+      version: Option[Long],
+      isFromTask: Boolean,
+      editPosition: Option[Vec3Int],
+      editRotation: Option[Vec3Double],
+      boundingBox: Option[BoundingBox])(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationProto] =
     for {
-      current <- get(annotationId, version)
-      newLayers <- Fox.serialCombined(current.layers)(layer => duplicateLayer(annotationId, layer, version))
-      duplicated = current.copy(layers = newLayers)
-      // TODO save duplicated
-    } yield duplicated
+      currentAnnotation <- get(annotationId, version)
+      newLayers <- Fox.serialCombined(currentAnnotation.layers)(
+        layer =>
+          duplicateLayer(annotationId,
+                         layer,
+                         currentAnnotation.version,
+                         isFromTask,
+                         editPosition,
+                         editRotation,
+                         boundingBox))
+      duplicatedAnnotation = currentAnnotation.copy(layers = newLayers)
+      _ <- tracingDataStore.annotations.put(newAnnotationId, currentAnnotation.version, duplicatedAnnotation)
+    } yield duplicatedAnnotation
 
-  private def duplicateLayer(annotationId: String, layer: AnnotationLayerProto, version: Option[Long])(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[AnnotationLayerProto] =
+  private def duplicateLayer(
+      annotationId: String,
+      layer: AnnotationLayerProto,
+      version: Long,
+      isFromTask: Boolean,
+      editPosition: Option[Vec3Int],
+      editRotation: Option[Vec3Double],
+      boundingBox: Option[BoundingBox])(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationLayerProto] =
     for {
       newTracingId <- layer.`type` match {
-        case AnnotationLayerTypeProto.volume            => duplicateVolumeTracing(layer.tracingId, version)
-        case AnnotationLayerTypeProto.skeleton          => duplicateSkeletonTracing(layer.tracingId, version)
+        case AnnotationLayerTypeProto.volume => duplicateVolumeTracing(annotationId, layer.tracingId, version)
+        case AnnotationLayerTypeProto.skeleton =>
+          duplicateSkeletonTracing(annotationId,
+                                   layer.tracingId,
+                                   version,
+                                   isFromTask,
+                                   editPosition,
+                                   editRotation,
+                                   boundingBox)
         case AnnotationLayerTypeProto.Unrecognized(num) => Fox.failure(f"unrecognized annotation layer type: $num")
       }
     } yield layer.copy(tracingId = newTracingId)
 
-  private def duplicateVolumeTracing(tracingId: String, version: Option[Long])(
+  private def duplicateVolumeTracing(annotationId: String, tracingId: String, version: Long)(
       implicit ec: ExecutionContext): Fox[String] = {
     val newTracingId = TracingId.generate
     Fox.successful(newTracingId)
   }
 
-  private def duplicateSkeletonTracing(tracingId: String, version: Option[Long])(
-      implicit ec: ExecutionContext): Fox[String] = {
+  private def duplicateSkeletonTracing(
+      annotationId: String,
+      tracingId: String,
+      version: Long,
+      isFromTask: Boolean,
+      editPosition: Option[Vec3Int],
+      editRotation: Option[Vec3Double],
+      boundingBox: Option[BoundingBox])(implicit ec: ExecutionContext, tc: TokenContext): Fox[String] = {
     val newTracingId = TracingId.generate
-    Fox.successful(newTracingId)
+    for {
+      skeleton <- findSkeleton(annotationId, tracingId, Some(version))
+      adaptedSkeleton = skeletonTracingService
+        .adaptSkeletonForDuplicate(skeleton, isFromTask, editPosition, editRotation, boundingBox)
+        .withVersion(version)
+      _ <- tracingDataStore.skeletons.put(newTracingId, version, adaptedSkeleton)
+    } yield newTracingId
   }
+
 }

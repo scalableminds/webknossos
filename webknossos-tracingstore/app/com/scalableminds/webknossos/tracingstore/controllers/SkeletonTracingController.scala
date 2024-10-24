@@ -159,11 +159,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
             editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
             editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
             boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
-            newId <- skeletonTracingService.duplicate(tracing,
-                                                      fromTask.getOrElse(false),
-                                                      editPositionParsed,
-                                                      editRotationParsed,
-                                                      boundingBoxParsed)
+            newId = TracingId.generate
           } yield Ok(Json.toJson(newId))
         }
       }

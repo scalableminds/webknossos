@@ -1,6 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
@@ -103,7 +105,7 @@ class TSAnnotationController @Inject()(
   def duplicate(annotationId: String,
                 newAnnotationId: String,
                 version: Option[Long],
-                isFromTask: Option[Boolean],
+                isFromTask: Boolean,
                 minMag: Option[Int],
                 maxMag: Option[Int],
                 downsample: Option[Boolean],
@@ -115,7 +117,16 @@ class TSAnnotationController @Inject()(
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeAnnotation(annotationId)) {
             for {
-              annotationProto <- annotationService.duplicate(annotationId, newAnnotationId, version)
+              editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
+              editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
+              boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
+              annotationProto <- annotationService.duplicate(annotationId,
+                                                             newAnnotationId,
+                                                             version,
+                                                             isFromTask,
+                                                             editPositionParsed,
+                                                             editRotationParsed,
+                                                             boundingBoxParsed)
             } yield Ok(annotationProto.toByteArray).as(protobufMimeType)
           }
         }

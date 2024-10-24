@@ -3,14 +3,14 @@ name: CI Pipeline
 on:
   push:
     branches:
-      - '*'
+      - master
   pull_request:
     branches:
       - '*'
   workflow_dispatch:
 
 env:
-  USER_NAME: circleci
+  USER_NAME: root
   USER_UID: 1000
   USER_GID: 1000
   TZ: Europe/Berlin
@@ -18,7 +18,7 @@ env:
   DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
 
 jobs:
-  static_frontent_code_checks:
+  static_frontend_code_checks:
     runs-on: ubuntu-20.04
     steps:
     - name: Checkout code

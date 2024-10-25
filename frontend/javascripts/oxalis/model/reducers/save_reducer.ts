@@ -196,17 +196,19 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
 export function addTracingIdToActions(
   actions: UpdateAction[],
   tracingId: string,
-): UpdateActionWithTracingId[] {
-  return actions.map(
-    (innerAction) =>
-      ({
-        ...innerAction,
-        value: {
-          ...innerAction.value,
-          actionTracingId: tracingId,
-        },
-      }) as UpdateActionWithTracingId,
-  );
+): Array<UpdateActionWithTracingId | UpdateAction> {
+  return actions.map((action) => {
+    if (action.name === "updateTdCamera" || action.name === "revertToVersion") {
+      return action as UpdateAction;
+    }
+    return {
+      ...action,
+      value: {
+        ...action.value,
+        actionTracingId: tracingId,
+      },
+    } as UpdateActionWithTracingId;
+  });
 }
 
 export default SaveReducer;

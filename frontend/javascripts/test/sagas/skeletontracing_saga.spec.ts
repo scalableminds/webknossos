@@ -79,6 +79,8 @@ function testDiffing(
   );
 }
 
+// TODOM
+// biome-ignore lint/correctness/noUnusedVariables: <explanation>
 function compactSaveQueueWithUpdateActions(
   queue: Array<SaveQueueEntry>,
   tracing: SkeletonTracing,
@@ -90,7 +92,6 @@ function compactSaveQueueWithUpdateActions(
     // filling the save queue). one could probably combine compactUpdateActions and
     // createSaveQueueFromUpdateActions to have a createCompactedSaveQueueFromUpdateActions
     // helper function and use that in this spec.
-    // @ts-expect-error
     queue.map((batch) => ({ ...batch, actions: compactUpdateActions(batch.actions, tracing) })),
   );
 }

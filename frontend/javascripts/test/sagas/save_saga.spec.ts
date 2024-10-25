@@ -301,11 +301,7 @@ test("SaveSaga should remove the correct update actions", (t) => {
   ]);
   saga.next(annotationId);
   saga.next(TRACINGSTORE_URL);
-  expectValueDeepEqual(
-    t,
-    saga.next(),
-    put(SaveActions.setVersionNumberAction(3, TRACING_TYPE, tracingId)),
-  );
+  expectValueDeepEqual(t, saga.next(), put(SaveActions.setVersionNumberAction(3)));
   expectValueDeepEqual(t, saga.next(), put(SaveActions.setLastSaveTimestampAction()));
   expectValueDeepEqual(t, saga.next(), put(SaveActions.shiftSaveQueueAction(2)));
 });
@@ -331,11 +327,7 @@ test("SaveSaga should set the correct version numbers", (t) => {
   ]);
   saga.next(annotationId);
   saga.next(TRACINGSTORE_URL);
-  expectValueDeepEqual(
-    t,
-    saga.next(),
-    put(SaveActions.setVersionNumberAction(LAST_VERSION + 3, TRACING_TYPE, tracingId)),
-  );
+  expectValueDeepEqual(t, saga.next(), put(SaveActions.setVersionNumberAction(LAST_VERSION + 3)));
   expectValueDeepEqual(t, saga.next(), put(SaveActions.setLastSaveTimestampAction()));
   expectValueDeepEqual(t, saga.next(), put(SaveActions.shiftSaveQueueAction(3)));
 });
@@ -362,11 +354,7 @@ test("SaveSaga should set the correct version numbers if the save queue was comp
   saga.next(annotationId);
   saga.next(TRACINGSTORE_URL);
   // two of the updateTracing update actions are removed by compactSaveQueue
-  expectValueDeepEqual(
-    t,
-    saga.next(),
-    put(SaveActions.setVersionNumberAction(LAST_VERSION + 1, TRACING_TYPE, tracingId)),
-  );
+  expectValueDeepEqual(t, saga.next(), put(SaveActions.setVersionNumberAction(LAST_VERSION + 1)));
   expectValueDeepEqual(t, saga.next(), put(SaveActions.setLastSaveTimestampAction()));
   expectValueDeepEqual(t, saga.next(), put(SaveActions.shiftSaveQueueAction(3)));
 });

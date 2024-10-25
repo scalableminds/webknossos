@@ -185,10 +185,17 @@ export default class AdvancedSearchPopover<
                       })
                     }
                     addonAfter={
-                      <div style={{ minWidth: 25 }}>
-                        {!areAllMatchesSelected
-                          ? `${currentPosition + 1}/${numberOfAvailableOptions}`
-                          : ""}
+                      <div
+                        style={{
+                          minWidth: 25,
+                          color: areAllMatchesSelected
+                            ? "var(--ant-color-text-disabled)"
+                            : undefined,
+                        }}
+                      >
+                        {areAllMatchesSelected
+                          ? "all"
+                          : `${currentPosition + 1}/${numberOfAvailableOptions}`}
                       </div>
                     }
                     ref={this.autoFocus}

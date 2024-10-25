@@ -151,9 +151,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
               for {
                 foundDatasets <- datasetDAO.findAllByDirectoryNameAndOrganization(orgaTuple._2.map(_.id.directoryName),
                                                                                   organization._id)
-                foundDatasetsByPath = foundDatasets.groupBy(_.directoryName)
+                foundDatasetsByDirectoryName = foundDatasets.groupBy(_.directoryName)
                 existingIds <- Fox.serialCombined(orgaTuple._2)(dataSource =>
-                  updateDataSource(dataStore, dataSource, foundDatasetsByPath))
+                  updateDataSource(dataStore, dataSource, foundDatasetsByDirectoryName))
               } yield existingIds.flatten
             case _ =>
               logger.info(
@@ -168,9 +168,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   private def updateDataSource(
       dataStore: DataStore,
       dataSource: InboxDataSource,
-      foundDatasetsByPath: Map[String, List[Dataset]]
+      foundDatasetsByDirectoryName: Map[String, List[Dataset]]
   )(implicit ctx: DBAccessContext): Fox[Option[ObjectId]] = {
-    val foundDatasetOpt = foundDatasetsByPath.get(dataSource.id.directoryName).flatMap(_.headOption)
+    val foundDatasetOpt = foundDatasetsByDirectoryName.get(dataSource.id.directoryName).flatMap(_.headOption)
     foundDatasetOpt match {
       case Some(foundDataset) if foundDataset._dataStore == dataStore.name =>
         updateKnownDataSource(foundDataset, dataSource, dataStore).toFox.map(Some(_))
@@ -189,11 +189,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     else
       for {
         _ <- thumbnailCachingService.removeFromCache(foundDataset._id)
-        _ <- datasetDAO.updateDataSourceByNameAndOrganization(foundDataset._id,
-                                                              dataStore.name,
-                                                              dataSource.hashCode,
-                                                              dataSource,
-                                                              dataSource.isUsable)
+        _ <- datasetDAO.updateDataSourceByDatasetId(foundDataset._id,
+                                                    dataStore.name,
+                                                    dataSource.hashCode,
+                                                    dataSource,
+                                                    dataSource.isUsable)
       } yield foundDataset._id
 
   private def updateDataSourceDifferentDataStore(
@@ -206,19 +206,19 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } yield {
       if (originalDataStore.isScratch && !dataStore.isScratch || isUnreported(foundDataset)) {
         logger.info(
-          s"Replacing dataset ${foundDataset.name} (status: ${foundDataset.status}) from datastore ${originalDataStore.name} by the one from ${dataStore.name}"
+          s"Replacing dataset ${foundDataset.name} (with id ${foundDataset._id} and status: ${foundDataset.status}) from datastore ${originalDataStore.name} by the one from ${dataStore.name}"
         )
         for {
           _ <- thumbnailCachingService.removeFromCache(foundDataset._id)
-          _ <- datasetDAO.updateDataSourceByNameAndOrganization(foundDataset._id,
-                                                                dataStore.name,
-                                                                dataSource.hashCode,
-                                                                dataSource,
-                                                                dataSource.isUsable)(GlobalAccessContext)
+          _ <- datasetDAO.updateDataSourceByDatasetId(foundDataset._id,
+                                                      dataStore.name,
+                                                      dataSource.hashCode,
+                                                      dataSource,
+                                                      dataSource.isUsable)(GlobalAccessContext)
         } yield Some(foundDataset._id)
       } else {
         logger.info(
-          s"Dataset ${foundDataset.name}, as reported from ${dataStore.name} is already present from datastore ${originalDataStore.name} and will not be replaced.")
+          s"Dataset ${foundDataset.name} (with id ${foundDataset._id}), as reported from ${dataStore.name} is already present from datastore ${originalDataStore.name} and will not be replaced.")
         Fox.successful(None)
       }
     }).flatten.futureBox
@@ -373,7 +373,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         "isActive" -> dataset.isUsable,
         "isPublic" -> dataset.isPublic,
         "description" -> dataset.description,
-        "path" -> dataset.directoryName,
+        "directoryName" -> dataset.directoryName,
         "created" -> dataset.created,
         "isEditable" -> isEditable,
         "lastUsedByUser" -> lastUsedByUser,

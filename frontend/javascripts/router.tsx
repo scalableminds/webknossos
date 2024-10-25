@@ -187,7 +187,7 @@ class ReactRouter extends React.Component<Props> {
         const datasetName = match.params.datasetName || "";
         const organizationId = match.params.organizationId || "";
         const datasetId = await getDatasetIdFromNameAndOrganization(datasetName, organizationId);
-        return `/datasets/${datasetId}/view${location.search}${location.hash}`;
+        return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
       }}
     />
   );

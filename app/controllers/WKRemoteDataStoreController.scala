@@ -125,7 +125,6 @@ class WKRemoteDataStoreController @Inject()(
       organization <- organizationDAO.findOne(layerIdentifier.getOrganizationId)(GlobalAccessContext) ?~> Messages(
         "organization.notFound",
         layerIdentifier.getOrganizationId) ~> NOT_FOUND
-      // TODOM: Consider to interpret dataSetName as the datasets path, both variations have scenarios in which the dataset might not be found.
       dataset <- datasetDAO.findOneByNameAndOrganization(layerIdentifier.dataSetName, organization._id)(
         AuthorizedAccessContext(requestingUser)) ?~> Messages("dataset.notFound", layerIdentifier.dataSetName)
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(requestingUser, dataset._organization)

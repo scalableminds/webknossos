@@ -277,8 +277,11 @@ class DatasetRenderer {
     this.data = data;
     this.datasetTable = datasetTable;
   }
+  static getRowKey(dataset: APIDatasetCompact) {
+    return dataset.id;
+  }
   getRowKey() {
-    return this.data.directoryName;
+    return DatasetRenderer.getRowKey(this.data);
   }
 
   renderTypeColumn() {
@@ -366,8 +369,11 @@ class FolderRenderer {
     this.data = data;
     this.datasetTable = datasetTable;
   }
+  static getRowKey(folder: FolderItemWithName) {
+    return folder.key;
+  }
   getRowKey() {
-    return this.data.key;
+    return FolderRenderer.getRowKey(this.data);
   }
   renderNameColumn() {
     return (
@@ -576,9 +582,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
 
     let selectedRowKeys: string[] = [];
     if (selectedDatasets.length > 0) {
-      selectedRowKeys = selectedDatasets.map((ds) => ds.name);
-    } else if (context.selectedFolder) {
-      selectedRowKeys = [context.selectedFolder?.key];
+      selectedRowKeys = selectedDatasets.map(DatasetRenderer.getRowKey);
+    } else if (context.selectedFolder && "name" in context.selectedFolder) {
+      selectedRowKeys = [FolderRenderer.getRowKey(context.selectedFolder as FolderItemWithName)];
     }
 
     const columns: TableProps["columns"] = [

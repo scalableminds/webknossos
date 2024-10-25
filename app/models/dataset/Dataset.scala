@@ -613,11 +613,11 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     } yield ()
   }
 
-  def updateDataSourceByNameAndOrganization(id: ObjectId,
-                                            dataStoreName: String,
-                                            inboxSourceHash: Int,
-                                            source: InboxDataSource,
-                                            isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateDataSourceByDatasetId(id: ObjectId,
+                                  dataStoreName: String,
+                                  inboxSourceHash: Int,
+                                  source: InboxDataSource,
+                                  isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(source.id.organizationId)
       defaultViewConfiguration: Option[JsValue] = source.defaultViewConfiguration.map(Json.toJson(_))

@@ -19,7 +19,7 @@ import java.util.Date
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, FullAxisOrder, NDBoundingBox}

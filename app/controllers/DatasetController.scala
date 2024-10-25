@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate

@@ -8,7 +8,7 @@ import play.silhouette.api.util.{Credentials, PasswordInfo}
 import play.silhouette.api.{LoginInfo, Silhouette}
 import play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
@@ -22,7 +22,7 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import play.api.data.Form
-import play.api.data.Forms.{email, _}
+import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.i18n.Messages
 import play.api.libs.json._

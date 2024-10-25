@@ -8,7 +8,7 @@ import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.AnnotationInformationHandlerSelector
 import models.user.User
 import net.liftweb.common.Full
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 

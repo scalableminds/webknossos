@@ -1,7 +1,7 @@
 package models.task
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import models.user.Experience
 import play.api.libs.json.{Format, Json}
 

@@ -2,7 +2,7 @@ package models.user
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -24,7 +24,7 @@ import play.silhouette.api.util.PasswordInfo
 import play.silhouette.impl.providers.CredentialsProvider
 import security.{PasswordHasher, TokenDAO}
 import utils.sql.SqlEscaping
-import utils.{WkConf}
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}

@@ -4,7 +4,7 @@ import org.apache.pekko.http.scaladsl.model.Uri
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayerLike}
 import models.annotation.AnnotationDAO
@@ -14,7 +14,7 @@ import models.shortlinks.ShortLinkDAO
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.Full
 import security.URLSharing
-import utils.{WkConf}
+import utils.WkConf
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -105,10 +105,12 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
   private def datasetOpenGraphTags(uriPath: String, token: Option[String])(implicit ec: ExecutionContext,
                                                                            ctx: DBAccessContext): Fox[OpenGraphTags] =
     uriPath match {
-      case datasetRoute1Regex(datasetId) =>
-        datasetOpenGraphTagsWithOrganizationId(Some(datasetId), None, None, token)
-      case datasetRoute2Regex(datasetId) =>
-        datasetOpenGraphTagsWithOrganizationId(Some(datasetId), None, None, token)
+      case datasetRoute1Regex(datasetIdStr) =>
+        val validDatasetIdOpt = getDatasetIdFromURIPath(datasetIdStr)
+        datasetOpenGraphTagsWithOrganizationId(validDatasetIdOpt, None, None, token)
+      case datasetRoute2Regex(datasetIdStr) =>
+        val validDatasetIdOpt = getDatasetIdFromURIPath(datasetIdStr)
+        datasetOpenGraphTagsWithOrganizationId(validDatasetIdOpt, None, None, token)
       case datasetRoute1LegacyRegex(organizationId, datasetName) =>
         datasetOpenGraphTagsWithOrganizationId(None, Some(organizationId), Some(datasetName), token)
       case datasetRoute2LegacyRegex(organizationId, datasetName) =>
@@ -116,18 +118,24 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
       case _ => Fox.failure("not a matching uri")
     }
 
+  private def getDatasetIdFromURIPath(datasetNameAndId: String): Option[ObjectId] = {
+    val idStrOpt = datasetNameAndId.split("-").lastOption
+    val idOpt = idStrOpt.flatMap(ObjectId.fromStringSync)
+    idOpt match {
+      case Some(validId) => Some(validId)
+      case None          => None
+    }
+  }
+
   private def datasetOpenGraphTagsWithOrganizationId(
-      datasetIdOpt: Option[String],
+      datasetIdOpt: Option[ObjectId],
       organizationIdOpt: Option[String],
       datasetNameOpt: Option[String],
       token: Option[String])(implicit ec: ExecutionContext, ctx: DBAccessContext) =
     for {
       dataset <- (datasetIdOpt, organizationIdOpt, datasetNameOpt) match {
         case (Some(datasetId), None, None) =>
-          ObjectId
-            .fromStringSync(datasetId)
-            .map(datasetIdParsed => datasetDAO.findOne(datasetIdParsed))
-            .getOrElse(Fox.failure("Invalid dataset id"))
+          datasetDAO.findOne(datasetId)
         case (None, Some(organizationId), Some(datasetName)) =>
           datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
         case _ => Fox.failure("Could not find dataset")

@@ -14,7 +14,7 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.{User, UserService}
 import TokenType.TokenType
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import utils.WkConf
 

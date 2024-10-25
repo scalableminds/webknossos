@@ -4,7 +4,7 @@ import org.apache.pekko.util.Timeout
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
@@ -35,7 +35,7 @@ import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{URLSharing, UserAwareRequestLogging, WkEnv}
 import telemetry.SlackNotificationService
-import utils.{WkConf}
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

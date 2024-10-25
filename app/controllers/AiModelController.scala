@@ -11,7 +11,7 @@ import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.WkEnv
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

@@ -1,7 +1,7 @@
 package models.annotation.nml
 
 import com.scalableminds.util.io.NamedFunctionStream
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml

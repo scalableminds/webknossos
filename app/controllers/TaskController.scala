@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import javax.inject.Inject
-import models.annotation.{AnnotationUploadService, _}
+import models.annotation._
 import models.annotation.nml.NmlResults.TracingBoxContainer
 import models.project.ProjectDAO
 import models.task._
@@ -19,7 +19,7 @@ import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 

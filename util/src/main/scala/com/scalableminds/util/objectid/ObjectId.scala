@@ -1,4 +1,4 @@
-package com.scalableminds.util.requestparsing
+package com.scalableminds.util.objectid
 
 import com.scalableminds.util.tools.TextUtils.parseCommaSeparated
 import com.scalableminds.util.tools.{Fox, FoxImplicits}

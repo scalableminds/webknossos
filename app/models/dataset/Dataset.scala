@@ -2,7 +2,7 @@ package models.dataset
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.util.requestparsing.{DatasetURIParser, ObjectId}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
@@ -91,8 +91,7 @@ object DatasetCompactInfo {
 
 class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDAO, organizationDAO: OrganizationDAO)(
     implicit ec: ExecutionContext)
-    extends SQLDAO[Dataset, DatasetsRow, Datasets](sqlClient)
-    with DatasetURIParser {
+    extends SQLDAO[Dataset, DatasetsRow, Datasets](sqlClient) {
   protected val collection = Datasets
 
   protected def idColumn(x: Datasets): Rep[String] = x._Id

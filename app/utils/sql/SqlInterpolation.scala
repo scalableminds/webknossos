@@ -7,7 +7,7 @@ import slick.dbio.{Effect, NoStream}
 import slick.jdbc._
 import slick.sql.{SqlAction, SqlStreamingAction}
 import slick.util.DumpInfo
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import java.sql.{PreparedStatement, Types}
 import scala.collection.mutable

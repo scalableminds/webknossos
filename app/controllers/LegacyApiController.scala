@@ -18,7 +18,7 @@ import play.api.http.HttpEntity
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import security.WkEnv
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 

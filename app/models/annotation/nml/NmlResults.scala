@@ -1,6 +1,6 @@
 package models.annotation.nml
 
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 
 import java.io.File

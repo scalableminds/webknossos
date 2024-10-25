@@ -2,7 +2,7 @@ package models.annotation
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationType.AnnotationType
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 

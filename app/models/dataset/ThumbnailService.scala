@@ -15,7 +15,7 @@ import net.liftweb.common.Full
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.JsArray
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SimpleSQLDAO, SqlClient}
 
 import javax.inject.Inject

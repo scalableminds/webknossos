@@ -19,7 +19,7 @@ import models.user.User
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.{Json, OFormat}
 import security.WkSilhouetteEnvironment
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import java.net.URI
 import javax.inject.Inject

@@ -1,7 +1,7 @@
 package controllers
 
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAccessContext}
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload

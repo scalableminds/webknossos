@@ -1,6 +1,6 @@
 package models.dataset.credential
 
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{
   DataVaultCredential,

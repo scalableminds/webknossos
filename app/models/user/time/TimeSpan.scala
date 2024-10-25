@@ -8,7 +8,7 @@ import models.annotation.AnnotationType.AnnotationType
 import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

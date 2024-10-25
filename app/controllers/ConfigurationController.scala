@@ -2,7 +2,7 @@ package controllers
 
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import models.dataset.{DatasetDAO, DatasetService}

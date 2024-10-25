@@ -8,7 +8,7 @@ import javax.inject.Inject
 import models.annotation._
 import models.dataset.DatasetDAO
 import models.user.{User, UserService}
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 

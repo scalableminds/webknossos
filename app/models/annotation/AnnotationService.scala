@@ -5,7 +5,7 @@ import org.apache.pekko.stream.Materializer
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
@@ -57,7 +57,7 @@ import net.liftweb.common.{Box, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
-import utils.{WkConf}
+import utils.WkConf
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 import javax.inject.Inject

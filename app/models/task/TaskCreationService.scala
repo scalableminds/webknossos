@@ -21,7 +21,7 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import telemetry.SlackNotificationService
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import models.organization.OrganizationDAO
 import play.api.http.Status.FORBIDDEN
 

@@ -1,7 +1,7 @@
 package utils.sql
 
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import models.user.User
 import net.liftweb.common.Full

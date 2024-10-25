@@ -1,7 +1,7 @@
 package models.team
 
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 
 import javax.inject.Inject

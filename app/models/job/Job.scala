@@ -11,7 +11,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

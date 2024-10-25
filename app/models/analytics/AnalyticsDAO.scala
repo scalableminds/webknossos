@@ -1,7 +1,7 @@
 package models.analytics
 
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.requestparsing.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SimpleSQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject

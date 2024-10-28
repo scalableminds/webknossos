@@ -189,6 +189,9 @@ export function* sendSaveRequestToServer(): Saga<number> {
           method: "POST",
           data: compactedSaveQueue,
           compress: process.env.NODE_ENV === "production",
+          // Suppressing error toast, as the doWithToken retry with personal token functionality should not show an error.
+          // Instead the error is logged and toggleErrorHighlighting should take care of showing an error to the user.
+          showErrorToast: false,
         },
       );
       const endTime = Date.now();

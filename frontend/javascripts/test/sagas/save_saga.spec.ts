@@ -149,6 +149,7 @@ test("SaveSaga should send request to server", (t) => {
         method: "POST",
         data: saveQueueWithVersions,
         compress: false,
+        showErrorToast: false,
       },
     ),
   );
@@ -168,6 +169,7 @@ test("SaveSaga should retry update actions", (t) => {
       method: "POST",
       data: saveQueueWithVersions,
       compress: false,
+      showErrorToast: false,
     },
   );
   const saga = sendSaveRequestToServer();
@@ -220,6 +222,7 @@ test("SaveSaga should escalate on permanent client error update actions", (t) =>
         method: "POST",
         data: saveQueueWithVersions,
         compress: false,
+        showErrorToast: false,
       },
     ),
   );

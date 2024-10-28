@@ -840,7 +840,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     );
 
     return (
-      <div id={treeTabId} className="padded-tab-content">
+      <div id={treeTabId} className="padded-tab-content" style={{ overflow: "hidden" }}>
         <DomVisibilityObserver targetId={treeTabId}>
           {(isVisibleInDom) =>
             !isVisibleInDom ? null : (
@@ -899,7 +899,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                       <i className="fas fa-toggle-off" />
                     </ButtonComponent>
                     <Dropdown menu={this.getActionsDropdown()} trigger={["click"]}>
-                      <ButtonComponent>
+                      <ButtonComponent style={{ overflow: "clip" }}>
                         More
                         <DownOutlined />
                       </ButtonComponent>
@@ -927,7 +927,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     <i className="fas fa-arrow-right" />
                   </ButtonComponent>
                   <Dropdown menu={this.getSettingsDropdown()} trigger={["click"]}>
-                    <ButtonComponent title="Sort">
+                    <ButtonComponent title="Sort" style={{ overflow: "clip" }}>
                       <i className="fas fa-sort-alpha-down" />
                     </ButtonComponent>
                   </Dropdown>

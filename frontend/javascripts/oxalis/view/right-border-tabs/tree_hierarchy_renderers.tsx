@@ -87,10 +87,10 @@ export function renderTreeNode(
 
   return (
     <div
-      className="nowrap"
       onContextMenu={(evt) =>
         onOpenContextMenu(createMenuForTree(tree, props, hideContextMenu), evt)
       }
+      style={{ display: "inline-flex", alignItems: "center" }}
     >
       <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
       {`(${tree.nodes.size()}) `} {maybeProofreadingIcon} {tree.name}

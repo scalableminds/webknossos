@@ -31,6 +31,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   ApplyableVolumeUpdateAction,
   BucketMutatingVolumeUpdateAction,
+  MagRestrictions,
   UpdateMappingNameVolumeAction,
   VolumeTracingService,
   VolumeUpdateAction
@@ -625,7 +626,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       isFromTask: Boolean,
       editPosition: Option[Vec3Int],
       editRotation: Option[Vec3Double],
-      boundingBox: Option[BoundingBox])(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationProto] =
+      boundingBox: Option[BoundingBox],
+      magRestrictions: MagRestrictions)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationProto] =
     for {
       currentAnnotation <- get(annotationId, version)
       newLayers <- Fox.serialCombined(currentAnnotation.layers)(
@@ -636,10 +638,24 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                          isFromTask,
                          editPosition,
                          editRotation,
-                         boundingBox))
+                         boundingBox,
+                         magRestrictions))
+      _ <- duplicateUpdates(annotationId, newAnnotationId)
       duplicatedAnnotation = currentAnnotation.copy(layers = newLayers)
       _ <- tracingDataStore.annotations.put(newAnnotationId, currentAnnotation.version, duplicatedAnnotation)
     } yield duplicatedAnnotation
+
+  private def duplicateUpdates(annotationId: String, newAnnotationId: String)(
+      implicit ec: ExecutionContext): Fox[Unit] =
+    // TODO perf: batch or use fossildb duplicate api
+    for {
+      updatesAsBytes: Seq[(Long, Array[Byte])] <- tracingDataStore.annotationUpdates
+        .getMultipleVersionsAsVersionValueTuple(annotationId)
+      _ <- Fox.serialCombined(updatesAsBytes) {
+        case (version, updateBytes) =>
+          tracingDataStore.annotationUpdates.put(newAnnotationId, version, updateBytes)
+      }
+    } yield ()
 
   private def duplicateLayer(
       annotationId: String,
@@ -648,10 +664,19 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       isFromTask: Boolean,
       editPosition: Option[Vec3Int],
       editRotation: Option[Vec3Double],
-      boundingBox: Option[BoundingBox])(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationLayerProto] =
+      boundingBox: Option[BoundingBox],
+      magRestrictions: MagRestrictions)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationLayerProto] =
     for {
       newTracingId <- layer.`type` match {
-        case AnnotationLayerTypeProto.volume => duplicateVolumeTracing(annotationId, layer.tracingId, version)
+        case AnnotationLayerTypeProto.volume =>
+          duplicateVolumeTracing(annotationId,
+                                 layer.tracingId,
+                                 version,
+                                 isFromTask,
+                                 boundingBox,
+                                 magRestrictions,
+                                 editPosition,
+                                 editRotation)
         case AnnotationLayerTypeProto.skeleton =>
           duplicateSkeletonTracing(annotationId,
                                    layer.tracingId,
@@ -664,10 +689,33 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       }
     } yield layer.copy(tracingId = newTracingId)
 
-  private def duplicateVolumeTracing(annotationId: String, tracingId: String, version: Long)(
-      implicit ec: ExecutionContext): Fox[String] = {
+  private def duplicateVolumeTracing(
+      annotationId: String,
+      sourceTracingId: String,
+      version: Long,
+      isFromTask: Boolean,
+      boundingBox: Option[BoundingBox],
+      magRestrictions: MagRestrictions,
+      editPosition: Option[Vec3Int],
+      editRotation: Option[Vec3Double])(implicit ec: ExecutionContext, tc: TokenContext): Fox[String] = {
     val newTracingId = TracingId.generate
-    Fox.successful(newTracingId)
+    for {
+      sourceTracing <- findVolume(annotationId, sourceTracingId, Some(version))
+      newTracing <- volumeTracingService.adaptVolumeForDuplicate(sourceTracingId,
+                                                                 newTracingId,
+                                                                 sourceTracing,
+                                                                 isFromTask,
+                                                                 boundingBox,
+                                                                 magRestrictions,
+                                                                 editPosition,
+                                                                 editRotation,
+                                                                 version)
+      _ <- tracingDataStore.volumes.put(newTracingId, version, newTracing)
+      _ <- volumeTracingService.duplicateVolumeData(sourceTracingId, sourceTracing, newTracingId, newTracing)
+      /*_ <- Fox.runIf(adaptedTracing.getHasEditableMapping)(
+                    editableMappingService.duplicate(tracingId, newTracingId, version = None, remoteFallbackLayerOpt))*/
+      // TODO downsample?
+    } yield newTracingId
   }
 
   private def duplicateSkeletonTracing(
@@ -681,9 +729,12 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     val newTracingId = TracingId.generate
     for {
       skeleton <- findSkeleton(annotationId, tracingId, Some(version))
-      adaptedSkeleton = skeletonTracingService
-        .adaptSkeletonForDuplicate(skeleton, isFromTask, editPosition, editRotation, boundingBox)
-        .withVersion(version)
+      adaptedSkeleton = skeletonTracingService.adaptSkeletonForDuplicate(skeleton,
+                                                                         isFromTask,
+                                                                         editPosition,
+                                                                         editRotation,
+                                                                         boundingBox,
+                                                                         version)
       _ <- tracingDataStore.skeletons.put(newTracingId, version, adaptedSkeleton)
     } yield newTracingId
   }

@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
@@ -138,28 +137,6 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
               skeletonTracingService.merge(tracings.flatten, MergedVolumeStats.empty(), Empty))
             processedTracing = skeletonTracingService.remapTooLargeTreeIds(mergedTracing)
             newId <- skeletonTracingService.save(processedTracing, None, processedTracing.version, toCache = !persist)
-          } yield Ok(Json.toJson(newId))
-        }
-      }
-    }
-
-  def duplicate(tracingId: String,
-                version: Option[Long],
-                fromTask: Option[Boolean],
-                editPosition: Option[String],
-                editRotation: Option[String],
-                boundingBox: Option[String]): Action[AnyContent] =
-    Action.async { implicit request =>
-      log() {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-          for {
-            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- annotationService.findSkeleton(annotationId, tracingId, version, applyUpdates = true) ?~> Messages(
-              "tracing.notFound")
-            editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
-            editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
-            boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
-            newId = TracingId.generate
           } yield Ok(Json.toJson(newId))
         }
       }

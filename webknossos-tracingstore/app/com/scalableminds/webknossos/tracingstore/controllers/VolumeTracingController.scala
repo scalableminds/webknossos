@@ -277,54 +277,6 @@ class VolumeTracingController @Inject()(
   private def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
 
-  def duplicate(tracingId: String,
-                fromTask: Option[Boolean],
-                minMag: Option[Int],
-                maxMag: Option[Int],
-                downsample: Option[Boolean],
-                editPosition: Option[String],
-                editRotation: Option[String],
-                boundingBox: Option[String]): Action[AnyContent] = Action.async { implicit request =>
-    log() {
-      logTime(slackNotificationService.noticeSlowRequest) {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-          for {
-            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
-            _ = logger.info(s"Duplicating volume tracing $tracingId...")
-            datasetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
-            magRestrictions = MagRestrictions(minMag, maxMag)
-            editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
-            editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
-            boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
-            remoteFallbackLayerOpt <- Fox.runIf(tracing.getHasEditableMapping)(
-              volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId))
-            newTracingId = TracingId.generate
-            // TODO
-            /*_ <- Fox.runIf(tracing.getHasEditableMapping)(
-              editableMappingService.duplicate(tracingId, newTracingId, version = None, remoteFallbackLayerOpt))*/
-            // TODO actionTracingIds + addLayer tracing ids need to be remapped (as they need to be globally unique)
-            (newId, newTracing) <- volumeTracingService.duplicate(
-              annotationId,
-              tracingId,
-              newTracingId,
-              tracing,
-              fromTask.getOrElse(false),
-              datasetBoundingBox,
-              magRestrictions,
-              editPositionParsed,
-              editRotationParsed,
-              boundingBoxParsed,
-              mappingName = None
-            )
-            _ <- Fox.runIfOptionTrue(downsample)(
-              volumeTracingService.downsample(annotationId, newId, tracingId, newTracing))
-          } yield Ok(Json.toJson(newId))
-        }
-      }
-    }
-  }
-
   def importVolumeData(tracingId: String): Action[MultipartFormData[TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
       log() {

@@ -39,7 +39,8 @@ class SkeletonTracingService @Inject()(
                                 fromTask: Boolean,
                                 editPosition: Option[Vec3Int],
                                 editRotation: Option[Vec3Double],
-                                boundingBox: Option[BoundingBox]): SkeletonTracing = {
+                                boundingBox: Option[BoundingBox],
+                                newVersion: Long): SkeletonTracing = {
     val taskBoundingBox = if (fromTask) {
       tracing.boundingBox.map { bb =>
         val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
@@ -54,7 +55,7 @@ class SkeletonTracingService @Inject()(
           editPosition = editPosition.map(vec3IntToProto).getOrElse(tracing.editPosition),
           editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracing.editRotation),
           boundingBox = boundingBoxOptToProto(boundingBox).orElse(tracing.boundingBox),
-          version = 0
+          version = newVersion
         )
         .addAllUserBoundingBoxes(taskBoundingBox)
     if (fromTask) newTracing.clearBoundingBox else newTracing

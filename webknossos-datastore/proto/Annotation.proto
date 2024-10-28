@@ -3,8 +3,8 @@ syntax = "proto2";
 package com.scalableminds.webknossos.datastore;
 
 enum AnnotationLayerTypeProto {
-  skeleton = 1;
-  volume = 2;
+  Skeleton = 1;
+  Volume = 2;
 }
 
 message AnnotationProto {

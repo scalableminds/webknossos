@@ -9,14 +9,14 @@ object AnnotationLayerType extends ExtendedEnumeration {
 
   def toProto(annotationLayerType: AnnotationLayerType): AnnotationLayerTypeProto =
     annotationLayerType match {
-      case Skeleton => AnnotationLayerTypeProto.skeleton
-      case Volume   => AnnotationLayerTypeProto.volume
+      case Skeleton => AnnotationLayerTypeProto.Skeleton
+      case Volume   => AnnotationLayerTypeProto.Volume
     }
 
   def fromProto(p: AnnotationLayerTypeProto): AnnotationLayerType =
     p match {
-      case AnnotationLayerTypeProto.skeleton => Skeleton
-      case AnnotationLayerTypeProto.volume   => Volume
+      case AnnotationLayerTypeProto.Skeleton => Skeleton
+      case AnnotationLayerTypeProto.Volume   => Volume
       case AnnotationLayerTypeProto.Unrecognized(_) =>
         Volume // unrecognized should never happen, artifact of proto code generation
     }

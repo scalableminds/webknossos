@@ -151,7 +151,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           .exists(_.name == action.layerParameters.getNameWithDefault)) ?~> "addLayer.nameInUse"
       _ <- bool2Fox(
         !annotationWithTracings.annotation.layers.exists(
-          _.`type` == AnnotationLayerTypeProto.skeleton && action.layerParameters.typ == AnnotationLayerType.Skeleton)) ?~> "addLayer.onlyOneSkeletonAllowed"
+          _.`type` == AnnotationLayerTypeProto.Skeleton && action.layerParameters.typ == AnnotationLayerType.Skeleton)) ?~> "addLayer.onlyOneSkeletonAllowed"
       tracing <- remoteWebknossosClient.createTracingFor(annotationId,
                                                          action.layerParameters,
                                                          previousVersion = targetVersion - 1)
@@ -366,7 +366,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       requestAll: Boolean)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] = {
     val skeletonTracingIds =
       if (requestAll)
-        annotation.layers.filter(_.`type` == AnnotationLayerTypeProto.skeleton).map(_.tracingId)
+        annotation.layers.filter(_.`type` == AnnotationLayerTypeProto.Skeleton).map(_.tracingId)
       else {
         (updates.flatMap {
           case u: SkeletonUpdateAction => Some(u.actionTracingId)
@@ -375,7 +375,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       }
     val volumeTracingIds =
       if (requestAll)
-        annotation.layers.filter(_.`type` == AnnotationLayerTypeProto.volume).map(_.tracingId)
+        annotation.layers.filter(_.`type` == AnnotationLayerTypeProto.Volume).map(_.tracingId)
       else {
         (updates.flatMap {
           case u: VolumeUpdateAction => Some(u.actionTracingId)
@@ -670,7 +670,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       magRestrictions: MagRestrictions)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationLayerProto] =
     for {
       newTracingId <- layer.`type` match {
-        case AnnotationLayerTypeProto.volume =>
+        case AnnotationLayerTypeProto.Volume =>
           duplicateVolumeTracing(annotationId,
                                  layer.tracingId,
                                  version,
@@ -679,7 +679,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                  magRestrictions,
                                  editPosition,
                                  editRotation)
-        case AnnotationLayerTypeProto.skeleton =>
+        case AnnotationLayerTypeProto.Skeleton =>
           duplicateSkeletonTracing(annotationId,
                                    layer.tracingId,
                                    version,

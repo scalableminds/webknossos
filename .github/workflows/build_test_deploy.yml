@@ -52,8 +52,9 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       # The hostname used to communicate with the PostgreSQL service container
-      POSTGRES_HOST: localhost
-      POSTGRES_PORT: 5432
+      # POSTGRES_HOST: localhost
+      # POSTGRES_PORT: 5432
+      PGPASSWORD: secret_password
     services:
         postgres:
           image: postgres:10-alpine

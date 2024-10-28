@@ -105,8 +105,8 @@ services:
       - POSTGRES_USER=webknossos_user
       - POSTGRES_PASSWORD=secret_password
       - HOME=/root
-      - CIRCLE_TAG=${CIRCLE_TAG}
-      - CIRCLE_BUILD_NUM=${CIRCLE_BUILD_NUM}
+      - CI_TAG=${GITHUB_REF}
+      - CI_BUILD_NUM=${GITHUB_JOB}
       - NODE_OPTIONS=--max_old_space_size=2048
       # This will be picked up by ava so that the tests fail if a snapshot doesn't exist during CI, see https://github.com/avajs/ava/issues/1585
       - CI

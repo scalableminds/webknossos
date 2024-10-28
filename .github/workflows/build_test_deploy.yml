@@ -13,7 +13,6 @@ env:
   USER_NAME: root
   USER_UID: 1000
   USER_GID: 1000
-  TZ: Europe/Berlin
   DOCKER_USER: ${{ secrets.DOCKER_USER }}
   DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
 
@@ -150,28 +149,20 @@ jobs:
           docker compose up -d webknossos-tracingstore
 
       - name: Run webknossos smoke test
-        run: |
-          for i in {1..20}; do # retry
-            curl --fail -v http://localhost:9000/api/health && s=0 && break || s=$?
-            sleep 5
-          done
-          (exit $s)
+        uses: ./.github/actions/health_check_action
+        with: 
+          url: http://localhost:9000/api/health
+          
 
       - name: Run webknossos-datastore smoke test
-        run: |
-          for i in {1..20}; do # retry
-            curl --fail -v http://localhost:9090/data/health && s=0 && break || s=$?
-            sleep 5
-          done
-          (exit $s)
+        uses: ./.github/actions/health_check_action
+        with: 
+          url: http://localhost:9090/data/health
 
       - name: Run webknossos-tracingstore smoke test
-        run: |
-          for i in {1..20}; do # retry
-            curl --fail -v http://localhost:9050/tracings/health && s=0 && break || s=$?
-            sleep 5
-          done
-          (exit $s)
+        uses: ./.github/actions/health_check_action
+        with: 
+          url: http://localhost:9050/tracings/health
 
       - name: Stop webknossos, datastore, and tracingstore
         run: docker compose down --volumes --remove-orphans

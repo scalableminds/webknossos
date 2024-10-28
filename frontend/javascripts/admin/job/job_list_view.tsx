@@ -366,7 +366,7 @@ function JobListView() {
         Some actions such as dataset conversions or export as Tiff files require some time for
         processing in the background.
         <a
-          href="https://docs.webknossos.org/webknossos/jobs.html"
+          href="https://docs.webknossos.org/webknossos/automation/jobs.html"
           target="_blank"
           rel="noopener noreferrer"
         >

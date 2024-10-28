@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  USER_NAME: root
+  USER_NAME: webknossos
   USER_UID: 1000
   USER_GID: 1000
   DOCKER_USER: ${{ secrets.DOCKER_USER }}
@@ -76,7 +76,7 @@ jobs:
         run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
 
       - name: Install frontend dependencies
-        run: docker compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --immutable
+        run: docker compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --immutable && yarn cache clean
 
       - name: Assert unique evolution numbers
         run: docker compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers

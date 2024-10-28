@@ -79,7 +79,7 @@ jobs:
           cache: 'sbt'
       
       - name: Install OS dependencies / libs
-        run: sudo apt-get update && apt-get install -y \
+        run: sudo apt-get update && sudo apt-get install -y \
           findutils \
           libdraco-dev \
           libblosc1

@@ -11,7 +11,7 @@ POST        /annotation/:annotationId/update                                    
 GET         /annotation/:annotationId/updateActionLog                               @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.updateActionLog(annotationId: String, newestVersion: Option[Long], oldestVersion: Option[Long])
 GET         /annotation/:annotationId/updateActionStatistics                        @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.updateActionStatistics(annotationId: String)
 GET         /annotation/:annotationId/newestVersion                                 @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.newestVersion(annotationId: String)
-POST        /annotation/:annotationId/duplicate                                     @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.duplicate(annotationId: String, newAnnotationId: String, version: Option[Long], isFromTask: Boolean, minMag: Option[Int], maxMag: Option[Int], downsample: Option[Boolean], editPosition: Option[String], editRotation: Option[String], boundingBox: Option[String])
+POST        /annotation/:annotationId/duplicate                                     @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.duplicate(annotationId: String, newAnnotationId: String, version: Option[Long], isFromTask: Boolean, minMag: Option[Int], maxMag: Option[Int], editPosition: Option[String], editRotation: Option[String], boundingBox: Option[String])
 
 # Volume tracings
 POST        /volume/save                                                            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.save()

@@ -34,9 +34,7 @@ class TSAnnotationController @Inject()(
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
-            // TODO assert id does not already exist
             _ <- tracingDataStore.annotations.put(annotationId, 0L, request.body)
-            _ = logger.info(s"stored annotationProto for $annotationId")
           } yield Ok
         }
       }
@@ -109,7 +107,6 @@ class TSAnnotationController @Inject()(
                 isFromTask: Boolean,
                 minMag: Option[Int],
                 maxMag: Option[Int],
-                downsample: Option[Boolean], // TODO remove or implement
                 editPosition: Option[String],
                 editRotation: Option[String],
                 boundingBox: Option[String]): Action[AnyContent] =

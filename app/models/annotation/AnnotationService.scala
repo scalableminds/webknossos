@@ -305,15 +305,7 @@ class AnnotationService @Inject()(
 
   def downsampleAnnotation(annotation: Annotation, volumeAnnotationLayer: AnnotationLayer)(
       implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      dataset <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
-      _ <- bool2Fox(volumeAnnotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.downsample.volumeOnly"
-      rpcClient <- tracingStoreService.clientFor(dataset)
-      newVolumeTracingId <- rpcClient.duplicateVolumeTracing(volumeAnnotationLayer.tracingId, downsample = true)
-      _ = logger.info(
-        s"Replacing volume tracing ${volumeAnnotationLayer.tracingId} by downsampled copy $newVolumeTracingId for annotation ${annotation._id}.")
-      _ <- annotationLayersDAO.replaceTracingId(annotation._id, volumeAnnotationLayer.tracingId, newVolumeTracingId)
-    } yield ()
+    ??? // TODO: remove feature or implement as update action
 
   // WARNING: needs to be repeatable, might be called multiple times for an annotation
   def finish(annotation: Annotation, user: User, restrictions: AnnotationRestrictions)(

@@ -127,17 +127,7 @@ class WKRemoteTracingStoreClient(
                              downsample: Boolean = false,
                              editPosition: Option[Vec3Int] = None,
                              editRotation: Option[Vec3Double] = None,
-                             boundingBox: Option[BoundingBox] = None): Fox[String] = {
-    logger.debug(s"Called to duplicate volume tracing $volumeTracingId. $baseInfo")
-    rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/duplicate").withLongTimeout
-      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryString("fromTask" -> isFromTask.toString)
-      .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
-      .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
-      .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
-      .addQueryString("downsample" -> downsample.toString)
-      .postJsonWithJsonResponse[Option[BoundingBox], String](datasetBoundingBox)
-  }
+                             boundingBox: Option[BoundingBox] = None): Fox[String] = ???
 
   def mergeSkeletonTracingsByIds(tracingIds: List[String], persistTracing: Boolean): Fox[String] = {
     logger.debug("Called to merge SkeletonTracings by ids." + baseInfo)

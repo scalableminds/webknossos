@@ -5,7 +5,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
+import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationLayerProto,
   AnnotationLayerTypeProto,
@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappin
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingLayer,
   EditableMappingService,
@@ -145,6 +146,12 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                        targetVersion: Long)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
       tracingId <- action.tracingId.toFox ?~> "add layer action has no tracingId"
+      _ <- bool2Fox(
+        !annotationWithTracings.annotation.layers
+          .exists(_.name == action.layerParameters.getNameWithDefault)) ?~> "addLayer.nameInUse"
+      _ <- bool2Fox(
+        !annotationWithTracings.annotation.layers.exists(
+          _.`type` == AnnotationLayerTypeProto.skeleton && action.layerParameters.typ == AnnotationLayerType.Skeleton)) ?~> "addLayer.onlyOneSkeletonAllowed"
       tracing <- remoteWebknossosClient.createTracingFor(annotationId,
                                                          action.layerParameters,
                                                          previousVersion = targetVersion - 1)
@@ -157,7 +164,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       revertAction: RevertToVersionAnnotationAction,
       newVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     // Note: works only after “ironing out” the update action groups
-    // TODO: read old annotationProto, tracing, buckets, segment indeces
     for {
       sourceAnnotation: AnnotationWithTracings <- getWithTracings(
         annotationId,
@@ -167,13 +173,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         requestAll = true) // TODO do we need to request the others?
       _ = logger.info(
         s"reverting to suorceVersion ${revertAction.sourceVersion}. got sourceAnnotation with version ${sourceAnnotation.version} with ${sourceAnnotation.skeletonStats}")
-      _ <- revertDistributedElements(annotationId, annotationWithTracings, sourceAnnotation, revertAction, newVersion)
+      _ <- revertDistributedElements(annotationWithTracings, sourceAnnotation, revertAction, newVersion)
     } yield sourceAnnotation
-
-  def createTracing(a: AddLayerAnnotationAction)(
-      implicit ec: ExecutionContext): Fox[Either[SkeletonTracing, VolumeTracing]] =
-    Fox.failure("not implemented")
-  // TODO create tracing object (ask wk for needed parameters e.g. fallback layer info?)
 
   def updateActionLog(annotationId: String, newestVersion: Long, oldestVersion: Long)(
       implicit ec: ExecutionContext): Fox[JsValue] = {
@@ -256,7 +257,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       tracing <- annotation.getEditableMappingInfo(tracingId) ?~> "getEditableMapping.failed"
     } yield tracing
 
-  // move the functions that construct the AnnotationWithTracigns elsewhere?
+  // TODO move the functions that construct the AnnotationWithTracigns elsewhere to keep this file smaller?
   private def addEditableMapping(
       annotationId: String,
       annotationWithTracings: AnnotationWithTracings,
@@ -295,7 +296,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         annotationWithTracings,
         updatesFlat,
         annotation.version,
-        targetVersion) // TODO: targetVersion should be set per update group
+        targetVersion) // TODO: targetVersion must be set per update group, as reverts may come between these
       updated <- applyUpdatesGrouped(annotationWithTracingsAndMappings,
                                      annotationId,
                                      updatesGroupsRegrouped,
@@ -716,7 +717,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         volumeTracingService.duplicateVolumeData(sourceTracingId, sourceTracing, newTracingId, newTracing))
       _ <- Fox.runIf(newTracing.getHasEditableMapping)(
         duplicateEditableMapping(annotationId, sourceTracingId, newTracingId, version))
-      // TODO downsample?
     } yield newTracingId
   }
 

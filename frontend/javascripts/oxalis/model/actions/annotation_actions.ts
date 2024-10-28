@@ -20,10 +20,10 @@ import Deferred from "libs/async/deferred";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 
 type InitializeAnnotationAction = ReturnType<typeof initializeAnnotationAction>;
-type SetAnnotationNameAction = ReturnType<typeof setAnnotationNameAction>;
+export type SetAnnotationNameAction = ReturnType<typeof setAnnotationNameAction>;
 type SetAnnotationVisibilityAction = ReturnType<typeof setAnnotationVisibilityAction>;
 export type EditAnnotationLayerAction = ReturnType<typeof editAnnotationLayerAction>;
-type SetAnnotationDescriptionAction = ReturnType<typeof setAnnotationDescriptionAction>;
+export type SetAnnotationDescriptionAction = ReturnType<typeof setAnnotationDescriptionAction>;
 type SetAnnotationAllowUpdateAction = ReturnType<typeof setAnnotationAllowUpdateAction>;
 type SetBlockedByUserAction = ReturnType<typeof setBlockedByUserAction>;
 type SetUserBoundingBoxesAction = ReturnType<typeof setUserBoundingBoxesAction>;

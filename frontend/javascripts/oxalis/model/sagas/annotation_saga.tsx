@@ -4,6 +4,8 @@ import type { Action } from "oxalis/model/actions/actions";
 import {
   type EditAnnotationLayerAction,
   setAnnotationAllowUpdateAction,
+  type SetAnnotationDescriptionAction,
+  type SetAnnotationNameAction,
   setBlockedByUserAction,
   type SetOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
@@ -44,12 +46,35 @@ import { getLastActiveLayout, getLayoutConfig } from "oxalis/view/layouting/layo
 import { is3dViewportMaximized } from "oxalis/view/layouting/flex_layout_helper";
 import { needsLocalHdf5Mapping } from "../accessors/volumetracing_accessor";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
-import { updateAnnotationLayerName } from "./update_actions";
+import { updateAnnotationLayerName, updateMetadataOfAnnotation } from "./update_actions";
 
 /* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping
   compare https://github.com/scalableminds/webknossos/issues/5223.
  */
 const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
+
+export function* pushAnnotationNameUpdateAction(action: SetAnnotationNameAction) {
+  const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
+  if (!mayEdit) {
+    return;
+  }
+  yield* put(
+    pushSaveQueueTransaction([updateMetadataOfAnnotation(action.name)], "unused-tracing-id"),
+  );
+}
+
+export function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDescriptionAction) {
+  const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
+  if (!mayEdit) {
+    return;
+  }
+  yield* put(
+    pushSaveQueueTransaction(
+      [updateMetadataOfAnnotation(undefined, action.description)],
+      "unused-tracing-id",
+    ),
+  );
+}
 
 export function* pushAnnotationUpdateAsync(action: Action) {
   const tracing = yield* select((state) => state.tracing);
@@ -68,9 +93,7 @@ export function* pushAnnotationUpdateAsync(action: Action) {
   };
   // The extra type annotation is needed here for flow
   const editObject: Partial<EditableAnnotation> = {
-    name: tracing.name,
     visibility: tracing.visibility,
-    description: tracing.description,
     viewConfiguration,
   };
   try {
@@ -207,9 +230,9 @@ export function* watchAnnotationAsync(): Saga<void> {
   // name, only the latest action is relevant. If `_takeEvery` was used,
   // all updates to the annotation name would be retried regularly, which
   // would also cause race conditions.
-  yield* takeLatest("SET_ANNOTATION_NAME", pushAnnotationUpdateAsync);
+  yield* takeLatest("SET_ANNOTATION_NAME", pushAnnotationNameUpdateAction);
   yield* takeLatest("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);
-  yield* takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
+  yield* takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationDescriptionUpdateAction);
   yield* takeLatest(
     ((action: Action) =>
       action.type === "UPDATE_LAYER_SETTING" &&

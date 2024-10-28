@@ -88,6 +88,13 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
         Future.successful(box)
     }
 
+  private def notFoundToFailure[T](resultFuture: Future[T])(implicit ec: ExecutionContext): Fox[T] =
+    resultFuture.transformWith {
+      case TrySuccess(value) => Fox.successful(value).futureBox
+      case TryFailure(exception) =>
+        Future.successful(BoxFailure(exception.getMessage, Full(exception), Empty))
+    }
+
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
       implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] =
     for {
@@ -115,7 +122,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
     val listObjectsRequest =
       ListObjectsV2Request.builder().bucket(bucketName).prefix(keyPrefix).delimiter("/").maxKeys(maxKeys).build()
     for {
-      objectListing: ListObjectsV2Response <- notFoundToEmpty(client.listObjectsV2(listObjectsRequest).asScala)
+      objectListing: ListObjectsV2Response <- notFoundToFailure(client.listObjectsV2(listObjectsRequest).asScala)
       s3SubPrefixes: List[CommonPrefix] = objectListing.commonPrefixes().asScala.take(maxItems).toList
     } yield s3SubPrefixes.map(_.prefix())
   }

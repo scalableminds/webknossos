@@ -78,9 +78,8 @@ jobs:
           java-version: '21'
           cache: 'sbt'
       
-      - name: Install dependencies
-        run: apt-get update \
-          && apt-get install -y \
+      - name: Install OS dependencies / libs
+        run: apt-get update && apt-get install -y \
           findutils \
           libdraco-dev \
           libblosc1

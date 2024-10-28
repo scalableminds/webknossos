@@ -515,6 +515,18 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                    AND a.typ = ${AnnotationType.Task} """.as[ObjectId])
     } yield r.toList
 
+  def findBaseIdForTask(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[ObjectId] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(q"""SELECT _id
+                   FROM $existingCollectionName
+                   WHERE _task = $taskId
+                   AND typ = ${AnnotationType.TracingBase}
+                   AND state != ${AnnotationState.Cancelled}
+                   AND $accessQuery""".as[ObjectId])
+      firstRow <- r.headOption
+    } yield firstRow
+
   def findAllByTaskIdAndType(taskId: ObjectId, typ: AnnotationType)(
       implicit ctx: DBAccessContext): Fox[List[Annotation]] =
     for {

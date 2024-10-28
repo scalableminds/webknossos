@@ -354,46 +354,37 @@ class AnnotationService @Inject()(
   def annotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Annotation]] =
     annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.Task)
 
-  private def tracingsFromBase(annotationBase: Annotation, dataset: Dataset)(
-      implicit ctx: DBAccessContext,
-      m: MessagesProvider): Fox[(Option[String], Option[String])] =
-    for {
-      _ <- bool2Fox(dataset.isUsable) ?~> Messages("dataset.notImported", dataset.name)
-      tracingStoreClient <- tracingStoreService.clientFor(dataset)
-      baseSkeletonIdOpt <- annotationBase.skeletonTracingId
-      baseVolumeIdOpt <- annotationBase.volumeTracingId
-      newSkeletonId: Option[String] <- Fox.runOptional(baseSkeletonIdOpt)(skeletonId =>
-        tracingStoreClient.duplicateSkeletonTracing(skeletonId))
-      newVolumeId: Option[String] <- Fox.runOptional(baseVolumeIdOpt)(volumeId =>
-        tracingStoreClient.duplicateVolumeTracing(volumeId))
-    } yield (newSkeletonId, newVolumeId)
-
   def createAnnotationFor(user: User, taskId: ObjectId, initializingAnnotationId: ObjectId)(
       implicit m: MessagesProvider,
-      ctx: DBAccessContext): Fox[Annotation] = {
-    def useAsTemplateAndInsert(annotation: Annotation) =
-      for {
-        datasetName <- datasetDAO.getNameById(annotation._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation"
-        dataset <- datasetDAO.findOne(annotation._dataset) ?~> Messages("dataset.noAccess", datasetName)
-        (newSkeletonId, newVolumeId) <- tracingsFromBase(annotation, dataset) ?~> s"Failed to use annotation base as template for task $taskId with annotation base ${annotation._id}"
-        annotationLayers <- AnnotationLayer.layersFromIds(newSkeletonId, newVolumeId)
-        newAnnotation = annotation.copy(
-          _id = initializingAnnotationId,
-          _user = user._id,
-          annotationLayers = annotationLayers,
-          state = Active,
-          typ = AnnotationType.Task,
-          created = Instant.now,
-          modified = Instant.now
-        )
-        _ <- annotationDAO.updateInitialized(newAnnotation)
-      } yield newAnnotation
-
+      ctx: DBAccessContext): Fox[Annotation] =
     for {
-      annotationBase <- baseForTask(taskId) ?~> "Failed to retrieve annotation base."
-      result <- useAsTemplateAndInsert(annotationBase).toFox
-    } yield result
-  }
+      annotationBaseId <- annotationDAO.findBaseIdForTask(taskId) ?~> "Failed to retrieve annotation base id."
+      annotationBase <- annotationDAO.findOne(annotationBaseId) ?~> "Failed to retrieve annotation base."
+      datasetName <- datasetDAO.getNameById(annotationBase._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation"
+      dataset <- datasetDAO.findOne(annotationBase._dataset) ?~> Messages("dataset.noAccess", datasetName)
+      _ <- bool2Fox(dataset.isUsable) ?~> Messages("dataset.notImported", dataset.name)
+      tracingStoreClient <- tracingStoreService.clientFor(dataset)
+      duplicatedAnnotationProto <- tracingStoreClient.duplicateAnnotation(
+        annotationBaseId,
+        initializingAnnotationId,
+        version = None,
+        isFromTask = false,
+        editPosition = None,
+        editRotation = None,
+        boundingBox = None,
+        magRestrictions = MagRestrictions.empty
+      )
+      newAnnotation = annotationBase.copy(
+        _id = initializingAnnotationId,
+        _user = user._id,
+        annotationLayers = duplicatedAnnotationProto.layers.map(AnnotationLayer.fromProto).toList,
+        state = Active,
+        typ = AnnotationType.Task,
+        created = Instant.now,
+        modified = Instant.now
+      )
+      _ <- annotationDAO.updateInitialized(newAnnotation)
+    } yield newAnnotation
 
   def createSkeletonTracingBase(datasetName: String,
                                 boundingBox: Option[BoundingBox],
@@ -705,7 +696,7 @@ class AnnotationService @Inject()(
       updated <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser)
     } yield updated
 
-  def resetToBase(annotation: Annotation)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
+  def resetToBase(annotation: Annotation)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] = // TODO: implement as update action?
     annotation.typ match {
       case AnnotationType.Explorational =>
         Fox.failure("annotation.revert.tasksOnly")
@@ -730,6 +721,20 @@ class AnnotationService @Inject()(
           })
         } yield ()
     }
+
+  private def tracingsFromBase(annotationBase: Annotation, dataset: Dataset)(
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider): Fox[(Option[String], Option[String])] =
+    for {
+      _ <- bool2Fox(dataset.isUsable) ?~> Messages("dataset.notImported", dataset.name)
+      tracingStoreClient <- tracingStoreService.clientFor(dataset)
+      baseSkeletonIdOpt <- annotationBase.skeletonTracingId
+      baseVolumeIdOpt <- annotationBase.volumeTracingId
+      newSkeletonId: Option[String] <- Fox.runOptional(baseSkeletonIdOpt)(skeletonId =>
+        tracingStoreClient.duplicateSkeletonTracing(skeletonId))
+      newVolumeId: Option[String] <- Fox.runOptional(baseVolumeIdOpt)(volumeId =>
+        tracingStoreClient.duplicateVolumeTracing(volumeId))
+    } yield (newSkeletonId, newVolumeId)
 
   private def settingsFor(annotation: Annotation)(implicit ctx: DBAccessContext) =
     if (annotation.typ == AnnotationType.Task || annotation.typ == AnnotationType.TracingBase)

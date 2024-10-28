@@ -486,38 +486,34 @@ class VolumeTracingService @Inject()(
       data <- binaryDataService.handleDataRequests(requests)
     } yield data
 
-  def duplicate(annotationId: String,
-                tracingId: String,
-                newTracingId: String,
-                sourceTracing: VolumeTracing,
-                fromTask: Boolean,
-                datasetBoundingBox: Option[BoundingBox],
-                magRestrictions: MagRestrictions,
-                editPosition: Option[Vec3Int],
-                editRotation: Option[Vec3Double],
-                boundingBox: Option[BoundingBox],
-                mappingName: Option[String])(implicit tc: TokenContext): Fox[(String, VolumeTracing)] = {
-    val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, fromTask, datasetBoundingBox)
+  def adaptVolumeForDuplicate(sourceTracingId: String,
+                              newTracingId: String,
+                              sourceTracing: VolumeTracing,
+                              isFromTask: Boolean,
+                              boundingBox: Option[BoundingBox],
+                              magRestrictions: MagRestrictions,
+                              editPosition: Option[Vec3Int],
+                              editRotation: Option[Vec3Double],
+                              newVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[VolumeTracing] = {
+    val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, isFromTask, boundingBox)
     val tracingWithMagRestrictions = restrictMagList(tracingWithBB, magRestrictions)
     for {
-      fallbackLayer <- getFallbackLayer(tracingId, sourceTracing)
+      fallbackLayer <- getFallbackLayer(sourceTracingId, sourceTracing)
       hasSegmentIndex <- VolumeSegmentIndexService.canHaveSegmentIndex(remoteDatastoreClient, fallbackLayer)
       newTracing = tracingWithMagRestrictions.copy(
         createdTimestamp = System.currentTimeMillis(),
-        editPosition = editPosition.map(vec3IntToProto).getOrElse(tracingWithMagRestrictions.editPosition),
-        editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracingWithMagRestrictions.editRotation),
-        boundingBox = boundingBoxOptToProto(boundingBox).getOrElse(tracingWithMagRestrictions.boundingBox),
-        mappingName = mappingName.orElse(
+        editPosition = editPosition.map(vec3IntToProto).getOrElse(sourceTracing.editPosition),
+        editRotation = editRotation.map(vec3DoubleToProto).getOrElse(sourceTracing.editRotation),
+        boundingBox = boundingBoxOptToProto(boundingBox).getOrElse(sourceTracing.boundingBox),
+        mappingName =
           if (sourceTracing.getHasEditableMapping) Some(newTracingId)
-          else tracingWithMagRestrictions.mappingName),
-        version = 0,
+          else sourceTracing.mappingName,
+        version = newVersion,
         // Adding segment index on duplication if the volume tracing allows it. This will be used in duplicateData
         hasSegmentIndex = Some(hasSegmentIndex)
       )
       _ <- bool2Fox(newTracing.mags.nonEmpty) ?~> "magRestrictions.tooTight"
-      newId <- save(newTracing, Some(newTracingId), newTracing.version)
-      _ <- duplicateData(annotationId, tracingId, sourceTracing, newId, newTracing)
-    } yield (newId, newTracing)
+    } yield newTracing
   }
 
   @SuppressWarnings(Array("OptionGet")) //We suppress this warning because we check the option beforehand
@@ -536,21 +532,21 @@ class VolumeTracingService @Inject()(
         .withBoundingBox(datasetBoundingBox.get)
     } else tracing
 
-  private def duplicateData(annotationId: String,
-                            sourceId: String,
-                            sourceTracing: VolumeTracing,
-                            destinationId: String,
-                            destinationTracing: VolumeTracing)(implicit tc: TokenContext): Fox[Unit] =
+  def duplicateVolumeData(sourceTracingId: String,
+                          sourceTracing: VolumeTracing,
+                          newTracingId: String,
+                          newTracing: VolumeTracing)(implicit tc: TokenContext): Fox[Unit] =
     for {
-      isTemporaryTracing <- isTemporaryTracing(sourceId)
-      sourceDataLayer = volumeTracingLayer(sourceId, sourceTracing, isTemporaryTracing)
-      buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream()
-      destinationDataLayer = volumeTracingLayer(destinationId, destinationTracing)
-      fallbackLayer <- getFallbackLayer(sourceId, sourceTracing)
+      isTemporaryTracing <- isTemporaryTracing(sourceTracingId)
+      sourceDataLayer = volumeTracingLayer(sourceTracingId, sourceTracing, isTemporaryTracing)
+      buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream(
+        Some(newTracing.version))
+      destinationDataLayer = volumeTracingLayer(newTracingId, newTracing)
+      fallbackLayer <- getFallbackLayer(sourceTracingId, sourceTracing)
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(
-        destinationId,
+        newTracingId,
         volumeSegmentIndexClient,
-        destinationTracing.version,
+        newTracing.version,
         remoteDatastoreClient,
         fallbackLayer,
         AdditionalAxis.fromProtosAsOpt(sourceTracing.additionalAxes),
@@ -559,10 +555,10 @@ class VolumeTracingService @Inject()(
       mappingName <- selectMappingName(sourceTracing)
       _ <- Fox.serialCombined(buckets) {
         case (bucketPosition, bucketData) =>
-          if (destinationTracing.mags.contains(vec3IntToProto(bucketPosition.mag))) {
+          if (newTracing.mags.contains(vec3IntToProto(bucketPosition.mag))) {
             for {
-              _ <- saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
-              _ <- Fox.runIfOptionTrue(destinationTracing.hasSegmentIndex)(
+              _ <- saveBucket(destinationDataLayer, bucketPosition, bucketData, newTracing.version)
+              _ <- Fox.runIfOptionTrue(newTracing.hasSegmentIndex)(
                 updateSegmentIndex(
                   segmentIndexBuffer,
                   bucketPosition,
@@ -570,7 +566,7 @@ class VolumeTracingService @Inject()(
                   Empty,
                   sourceTracing.elementClass,
                   mappingName,
-                  editableMappingTracingId(sourceTracing, sourceId)
+                  editableMappingTracingId(sourceTracing, sourceTracingId)
                 ))
             } yield ()
           } else Fox.successful(())

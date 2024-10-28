@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.tracingstore.annotation.{
   UpdateActionGroup
 }
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
+import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
@@ -33,9 +34,7 @@ class TSAnnotationController @Inject()(
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
-            // TODO assert id does not already exist
             _ <- tracingDataStore.annotations.put(annotationId, 0L, request.body)
-            _ = logger.info(s"stored annotationProto for $annotationId")
           } yield Ok
         }
       }
@@ -108,7 +107,6 @@ class TSAnnotationController @Inject()(
                 isFromTask: Boolean,
                 minMag: Option[Int],
                 maxMag: Option[Int],
-                downsample: Option[Boolean],
                 editPosition: Option[String],
                 editRotation: Option[String],
                 boundingBox: Option[String]): Action[AnyContent] =
@@ -120,13 +118,15 @@ class TSAnnotationController @Inject()(
               editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
               editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
               boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
+              magRestrictions = MagRestrictions(minMag, maxMag)
               annotationProto <- annotationService.duplicate(annotationId,
                                                              newAnnotationId,
                                                              version,
                                                              isFromTask,
                                                              editPositionParsed,
                                                              editRotationParsed,
-                                                             boundingBoxParsed)
+                                                             boundingBoxParsed,
+                                                             magRestrictions)
             } yield Ok(annotationProto.toByteArray).as(protobufMimeType)
           }
         }

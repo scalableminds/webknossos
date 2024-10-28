@@ -113,7 +113,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- annotationService.findVolume(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
-            editableMappingInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId, version)
+            editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId, version)
             infoJson = editableMappingService.infoJson(tracingId = tracingId, editableMappingInfo = editableMappingInfo)
           } yield Ok(infoJson)
         }
@@ -151,7 +151,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
             tracing <- annotationService.findVolume(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-            editableMappingInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId, version = None)
+            editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId, version = None)
             relevantMapping: Map[Long, Long] <- editableMappingService.generateCombinedMappingForSegmentIds(
               request.body.items.toSet,
               editableMappingInfo,
@@ -173,7 +173,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
             tracing <- annotationService.findVolume(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-            editableMappingInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId)
+            editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId)
             edges <- editableMappingService.agglomerateGraphMinCut(tracingId,
                                                                    tracing.version,
                                                                    editableMappingInfo,
@@ -193,7 +193,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
             tracing <- annotationService.findVolume(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-            editableMappingInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId)
+            editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId)
             (segmentId, edges) <- editableMappingService.agglomerateGraphNeighbors(tracingId,
                                                                                    editableMappingInfo,
                                                                                    tracing.version,
@@ -211,7 +211,7 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- annotationService.findVolume(annotationId, tracingId)
           _ <- bool2Fox(tracing.getHasEditableMapping) ?~> "Cannot query agglomerate skeleton for volume annotation"
-          editableMappingInfo <- annotationService.getEditableMappingInfo(annotationId, tracingId)
+          editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId)
           remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
           agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(tracingId,
                                                                                                 tracing.version,

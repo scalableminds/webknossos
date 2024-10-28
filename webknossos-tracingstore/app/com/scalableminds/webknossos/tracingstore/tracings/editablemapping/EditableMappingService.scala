@@ -135,60 +135,35 @@ class EditableMappingService @Inject()(
     } yield newEditableMappingInfo
   }
 
-  /* TODO
-  def duplicate(sourceTracingId: String,
-                newTracingId: String,
-                version: Option[Long],
-                remoteFallbackLayerBox: Box[RemoteFallbackLayer])(implicit tc: TokenContext): Fox[Unit] =
-    for {
-      remoteFallbackLayer <- remoteFallbackLayerBox ?~> "duplicate on editable mapping without remote fallback layer"
-      (duplicatedInfo, newVersion) <- getInfoAndActualVersion(sourceTracingId, version, remoteFallbackLayer)
-      _ <- tracingDataStore.editableMappingsInfo.put(newTracingId, newVersion, toProtoBytes(duplicatedInfo))
-      _ <- duplicateSegmentToAgglomerate(sourceTracingId, newTracingId, newVersion)
-      _ <- duplicateAgglomerateToGraph(sourceTracingId, newTracingId, newVersion)
-      updateActionsWithVersions <- getUpdateActionsWithVersions(sourceTracingId, newVersion, 0L)
-      _ <- Fox.serialCombined(updateActionsWithVersions) { updateActionsWithVersion: (Long, List[UpdateAction]) =>
-        tracingDataStore.editableMappingUpdates.put(newTracingId,
-                                                    updateActionsWithVersion._1,
-                                                    updateActionsWithVersion._2)
-      }
-    } yield ()
-
-
-  private def duplicateSegmentToAgglomerate(sourceTracingId: String, newId: String, newVersion: Long): Fox[Unit] = {
+  def duplicateSegmentToAgglomerate(sourceTracingId: String, newId: String, version: Long): Fox[Unit] = {
     val iterator =
       new VersionedFossilDbIterator(sourceTracingId,
                                     tracingDataStore.editableMappingsSegmentToAgglomerate,
-                                    Some(newVersion))
+                                    Some(version))
     for {
       _ <- Fox.combined(iterator.map { keyValuePair =>
         for {
           chunkId <- chunkIdFromSegmentToAgglomerateKey(keyValuePair.key).toFox
           newKey = segmentToAgglomerateKey(newId, chunkId)
-          _ <- tracingDataStore.editableMappingsSegmentToAgglomerate.put(newKey,
-                                                                         version = newVersion,
-                                                                         keyValuePair.value)
+          _ <- tracingDataStore.editableMappingsSegmentToAgglomerate.put(newKey, version = version, keyValuePair.value)
         } yield ()
       }.toList)
     } yield ()
   }
 
-  private def duplicateAgglomerateToGraph(sourceTracingId: String, newId: String, newVersion: Long): Fox[Unit] = {
+  def duplicateAgglomerateToGraph(sourceTracingId: String, newId: String, version: Long): Fox[Unit] = {
     val iterator =
-      new VersionedFossilDbIterator(sourceTracingId,
-                                    tracingDataStore.editableMappingsAgglomerateToGraph,
-                                    Some(newVersion))
+      new VersionedFossilDbIterator(sourceTracingId, tracingDataStore.editableMappingsAgglomerateToGraph, Some(version))
     for {
       _ <- Fox.combined(iterator.map { keyValuePair =>
         for {
           agglomerateId <- agglomerateIdFromAgglomerateGraphKey(keyValuePair.key).toFox
           newKey = agglomerateGraphKey(newId, agglomerateId)
-          _ <- tracingDataStore.editableMappingsAgglomerateToGraph.put(newKey, version = newVersion, keyValuePair.value)
+          _ <- tracingDataStore.editableMappingsAgglomerateToGraph.put(newKey, version = version, keyValuePair.value)
         } yield ()
       }.toList)
     } yield ()
   }
-   */
 
   def assertTracingHasEditableMapping(tracing: VolumeTracing)(implicit ec: ExecutionContext): Fox[Unit] =
     bool2Fox(tracing.getHasEditableMapping) ?~> "annotation.volume.noEditableMapping"

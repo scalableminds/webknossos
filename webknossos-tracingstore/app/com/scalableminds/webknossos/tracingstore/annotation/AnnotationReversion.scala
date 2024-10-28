@@ -11,12 +11,10 @@ trait AnnotationReversion {
 
   def volumeTracingService: VolumeTracingService
 
-  def revertDistributedElements(annotationId: String,
-                                currentAnnotationWithTracings: AnnotationWithTracings,
+  def revertDistributedElements(currentAnnotationWithTracings: AnnotationWithTracings,
                                 sourceAnnotationWithTracings: AnnotationWithTracings,
                                 revertAction: RevertToVersionAnnotationAction,
                                 newVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
-    // TODO segment index, volume buckets, proofreading data
     for {
       _ <- Fox.serialCombined(sourceAnnotationWithTracings.getVolumes) {
         // Only volume data for volume layers present in the *source annotation* needs to be reverted.

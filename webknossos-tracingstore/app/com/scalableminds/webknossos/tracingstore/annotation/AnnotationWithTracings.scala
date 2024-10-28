@@ -92,7 +92,8 @@ case class AnnotationWithTracings(
     )
 
   def deleteTracing(a: DeleteLayerAnnotationAction): AnnotationWithTracings =
-    this.copy(annotation = annotation.copy(layers = annotation.layers.filter(_.tracingId != a.tracingId)))
+    this.copy(annotation = annotation.copy(layers = annotation.layers.filter(_.tracingId != a.tracingId)),
+              tracingsById = tracingsById.removed(a.tracingId))
 
   def updateLayerMetadata(a: UpdateLayerMetadataAnnotationAction): AnnotationWithTracings =
     this.copy(annotation = annotation.copy(layers = annotation.layers.map(l =>

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
@@ -12,7 +13,9 @@ case class AnnotationLayerParameters(typ: AnnotationLayerType,
                                      mappingName: Option[String] = None,
                                      magRestrictions: Option[MagRestrictions],
                                      name: Option[String],
-                                     additionalAxes: Option[Seq[AdditionalAxis]])
+                                     additionalAxes: Option[Seq[AdditionalAxis]]) {
+  def getNameWithDefault: String = name.getOrElse(AnnotationLayer.defaultNameForType(typ))
+}
 object AnnotationLayerParameters {
   implicit val jsonFormat: OFormat[AnnotationLayerParameters] =
     Json.using[WithDefaultValues].format[AnnotationLayerParameters]

@@ -9,11 +9,7 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import type { EditableAnnotation } from "admin/admin_rest_api";
 import type { ActionPattern } from "redux-saga/effects";
-import {
-  editAnnotation,
-  updateAnnotationLayer,
-  acquireAnnotationMutex,
-} from "admin/admin_rest_api";
+import { editAnnotation, acquireAnnotationMutex } from "admin/admin_rest_api";
 import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,
@@ -47,6 +43,8 @@ import { determineLayout } from "oxalis/view/layouting/default_layout_configs";
 import { getLastActiveLayout, getLayoutConfig } from "oxalis/view/layouting/layout_persistence";
 import { is3dViewportMaximized } from "oxalis/view/layouting/flex_layout_helper";
 import { needsLocalHdf5Mapping } from "../accessors/volumetracing_accessor";
+import { pushSaveQueueTransaction } from "../actions/save_actions";
+import { updateAnnotationLayerName } from "./update_actions";
 
 /* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping
   compare https://github.com/scalableminds/webknossos/issues/5223.
@@ -103,16 +101,11 @@ export function* pushAnnotationUpdateAsync(action: Action) {
 
 function* pushAnnotationLayerUpdateAsync(action: EditAnnotationLayerAction): Saga<void> {
   const { tracingId, layerProperties } = action;
-  const annotationId = yield* select((storeState) => storeState.tracing.annotationId);
-  const annotationType = yield* select((storeState) => storeState.tracing.annotationType);
-  yield* retry(
-    SETTINGS_MAX_RETRY_COUNT,
-    SETTINGS_RETRY_DELAY,
-    updateAnnotationLayer,
-    annotationId,
-    annotationType,
-    tracingId,
-    layerProperties,
+  yield* put(
+    pushSaveQueueTransaction(
+      [updateAnnotationLayerName(tracingId, layerProperties.name)],
+      tracingId,
+    ),
   );
 }
 

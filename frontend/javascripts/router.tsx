@@ -1,6 +1,6 @@
 import {
   createExplorational,
-  getAnnotationInformation,
+  getMaybeOutdatedAnnotationInformation,
   getOrganizationForDataset,
   getShortLink,
 } from "admin/admin_rest_api";
@@ -198,7 +198,9 @@ class ReactRouter extends React.Component<Props> {
 
   serverAuthenticationCallback = async ({ match }: ContextRouter) => {
     try {
-      const annotationInformation = await getAnnotationInformation(match.params.id || "");
+      const annotationInformation = await getMaybeOutdatedAnnotationInformation(
+        match.params.id || "",
+      );
       return annotationInformation.visibility === "Public";
     } catch (_ex) {
       // Annotation could not be found

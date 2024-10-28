@@ -1,10 +1,11 @@
 import Maybe from "data.maybe";
 import _ from "lodash";
-import type {
-  ServerTracing,
-  ServerSkeletonTracing,
-  APIAnnotation,
-  AnnotationLayerDescriptor,
+import {
+  type ServerTracing,
+  type ServerSkeletonTracing,
+  type APIAnnotation,
+  type AnnotationLayerDescriptor,
+  AnnotationLayerType,
 } from "types/api_flow_types";
 import type {
   Tracing,
@@ -41,7 +42,7 @@ export function getSkeletonDescriptor(
   annotation: APIAnnotation,
 ): AnnotationLayerDescriptor | null | undefined {
   const skeletonLayers = annotation.annotationLayers.filter(
-    (descriptor) => descriptor.typ === "Skeleton",
+    (descriptor) => descriptor.typ === AnnotationLayerType.Skeleton,
   );
 
   if (skeletonLayers.length > 0) {

@@ -35,7 +35,7 @@ import {
   createTaskFromNML,
   createTasks,
   getActiveDatasetsOfMyOrganization,
-  getAnnotationInformation,
+  getMaybeOutdatedAnnotationInformation,
   getProjects,
   getScripts,
   getTask,
@@ -481,12 +481,12 @@ function TaskCreateFormView({ taskId, history }: Props) {
 
                   const annotationResponse =
                     (await tryToAwaitPromise(
-                      getAnnotationInformation(value, {
+                      getMaybeOutdatedAnnotationInformation(value, {
                         showErrorToast: false,
                       }),
                     )) ||
                     (await tryToAwaitPromise(
-                      getAnnotationInformation(value, {
+                      getMaybeOutdatedAnnotationInformation(value, {
                         showErrorToast: false,
                       }),
                     ));

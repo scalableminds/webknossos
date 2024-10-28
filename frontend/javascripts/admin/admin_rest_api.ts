@@ -1,70 +1,70 @@
 import ResumableJS from "resumablejs";
 import _ from "lodash";
 import dayjs from "dayjs";
-import type {
-  APIActiveUser,
-  APIAnnotation,
-  APIAnnotationInfo,
-  APIAnnotationType,
-  APIAnnotationVisibility,
-  APIAnnotationWithTask,
-  APIBuildInfo,
-  APIConnectomeFile,
-  APIDataSource,
-  APIDataStore,
-  APIDataset,
-  APIDatasetId,
-  APIFeatureToggles,
-  APIHistogramData,
-  APIMapping,
-  APIMaybeUnimportedDataset,
-  APIMeshFile,
-  APIAvailableTasksReport,
-  APIOrganization,
-  APIOrganizationCompact,
-  APIProject,
-  APIProjectCreator,
-  APIProjectProgressReport,
-  APIProjectUpdater,
-  APIProjectWithStatus,
-  APIPublication,
-  APIMagRestrictions,
-  APIScript,
-  APIScriptCreator,
-  APIScriptUpdater,
-  APITask,
-  APITaskType,
-  APITeam,
-  APITimeInterval,
-  APITimeTrackingPerAnnotation,
-  APITimeTrackingSpan,
-  APITracingStore,
-  APIUpdateActionBatch,
-  APIUser,
-  APIUserLoggedTime,
-  APIUserTheme,
-  AnnotationLayerDescriptor,
-  AnnotationViewConfiguration,
-  EditableLayerProperties,
-  ExperienceDomainList,
-  ServerTracing,
-  TracingType,
-  ServerEditableMapping,
-  APICompoundType,
-  ZarrPrivateLink,
-  VoxelyticsWorkflowReport,
-  VoxelyticsChunkStatistics,
-  ShortLink,
-  VoxelyticsWorkflowListing,
-  APIPricingPlanStatus,
-  VoxelyticsLogLine,
-  APIUserCompact,
-  APIDatasetCompact,
-  MaintenanceInfo,
-  AdditionalCoordinate,
-  LayerLink,
-  VoxelSize,
-  APITimeTrackingPerUser,
+import {
+  type APIActiveUser,
+  type APIAnnotation,
+  type APIAnnotationInfo,
+  type APIAnnotationType,
+  type APIAnnotationVisibility,
+  type APIAnnotationWithTask,
+  type APIBuildInfo,
+  type APIConnectomeFile,
+  type APIDataSource,
+  type APIDataStore,
+  type APIDataset,
+  type APIDatasetId,
+  type APIFeatureToggles,
+  type APIHistogramData,
+  type APIMapping,
+  type APIMaybeUnimportedDataset,
+  type APIMeshFile,
+  type APIAvailableTasksReport,
+  type APIOrganization,
+  type APIOrganizationCompact,
+  type APIProject,
+  type APIProjectCreator,
+  type APIProjectProgressReport,
+  type APIProjectUpdater,
+  type APIProjectWithStatus,
+  type APIPublication,
+  type APIMagRestrictions,
+  type APIScript,
+  type APIScriptCreator,
+  type APIScriptUpdater,
+  type APITask,
+  type APITaskType,
+  type APITeam,
+  type APITimeInterval,
+  type APITimeTrackingPerAnnotation,
+  type APITimeTrackingSpan,
+  type APITracingStore,
+  type APIUpdateActionBatch,
+  type APIUser,
+  type APIUserLoggedTime,
+  type APIUserTheme,
+  type AnnotationLayerDescriptor,
+  type AnnotationViewConfiguration,
+  type ExperienceDomainList,
+  type ServerTracing,
+  type TracingType,
+  type ServerEditableMapping,
+  type APICompoundType,
+  type ZarrPrivateLink,
+  type VoxelyticsWorkflowReport,
+  type VoxelyticsChunkStatistics,
+  type ShortLink,
+  type VoxelyticsWorkflowListing,
+  type APIPricingPlanStatus,
+  type VoxelyticsLogLine,
+  type APIUserCompact,
+  type APIDatasetCompact,
+  type MaintenanceInfo,
+  type AdditionalCoordinate,
+  type LayerLink,
+  type VoxelSize,
+  type APITimeTrackingPerUser,
+  AnnotationLayerType,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector2, Vector3 } from "oxalis/constants";
@@ -640,45 +640,14 @@ export function setOthersMayEditForAnnotation(
   );
 }
 
-export function updateAnnotationLayer(
-  annotationId: string,
-  annotationType: APIAnnotationType,
-  tracingId: string,
-  layerProperties: EditableLayerProperties,
-): Promise<{
-  name: string | null | undefined;
-}> {
-  return Request.sendJSONReceiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/editLayer/${tracingId}`,
-    {
-      method: "PATCH",
-      data: layerProperties,
-    },
-  );
-}
-
 type AnnotationLayerCreateDescriptor = {
-  typ: "Skeleton" | "Volume";
+  typ: AnnotationLayerType;
   name: string | null | undefined;
   autoFallbackLayer?: boolean;
   fallbackLayerName?: string | null | undefined;
   mappingName?: string | null | undefined;
   magRestrictions?: APIMagRestrictions | null | undefined;
 };
-
-export function addAnnotationLayer(
-  annotationId: string,
-  annotationType: APIAnnotationType,
-  newAnnotationLayer: AnnotationLayerCreateDescriptor,
-): Promise<APIAnnotation> {
-  return Request.sendJSONReceiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/addAnnotationLayer`,
-    {
-      method: "PATCH",
-      data: newAnnotationLayer,
-    },
-  );
-}
 
 export function deleteAnnotationLayer(
   annotationId: string,
@@ -749,12 +718,25 @@ export function duplicateAnnotation(
   });
 }
 
-export async function getAnnotationInformation(
+export async function getMaybeOutdatedAnnotationInformation(
   annotationId: string,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const infoUrl = `/api/annotations/${annotationId}/info?timestamp=${Date.now()}`;
   const annotationWithMessages = await Request.receiveJSON(infoUrl, options);
+
+  // Extract the potential messages property before returning the task to avoid
+  // failing e2e tests in annotations.e2e.ts
+  const { messages: _messages, ...annotation } = annotationWithMessages;
+  return annotation;
+}
+
+export async function getNewestAnnotationInformation(
+  annotationId: string,
+  tracingstoreUrl: string,
+): Promise<APIAnnotation> {
+  const infoUrl = `${tracingstoreUrl}/tracings/annotation/${annotationId}`;
+  const annotationWithMessages = await Request.receiveJSON(infoUrl); // TODO adjust return type and implement proto type in frontend
 
   // Extract the potential messages property before returning the task to avoid
   // failing e2e tests in annotations.e2e.ts
@@ -802,14 +784,14 @@ export function createExplorational(
   if (typ === "skeleton") {
     layers = [
       {
-        typ: "Skeleton",
+        typ: AnnotationLayerType.Skeleton,
         name: "Skeleton",
       },
     ];
   } else if (typ === "volume") {
     layers = [
       {
-        typ: "Volume",
+        typ: AnnotationLayerType.Volume,
         name: fallbackLayerName,
         fallbackLayerName,
         autoFallbackLayer,
@@ -820,11 +802,11 @@ export function createExplorational(
   } else {
     layers = [
       {
-        typ: "Skeleton",
+        typ: AnnotationLayerType.Skeleton,
         name: "Skeleton",
       },
       {
-        typ: "Volume",
+        typ: AnnotationLayerType.Volume,
         name: fallbackLayerName,
         fallbackLayerName,
         autoFallbackLayer,
@@ -841,7 +823,9 @@ export async function getTracingsForAnnotation(
   annotation: APIAnnotation,
   version: number | null | undefined,
 ): Promise<Array<ServerTracing>> {
-  const skeletonLayers = annotation.annotationLayers.filter((layer) => layer.typ === "Skeleton");
+  const skeletonLayers = annotation.annotationLayers.filter(
+    (layer) => layer.typ === AnnotationLayerType.Skeleton,
+  );
   const fullAnnotationLayers = await Promise.all(
     annotation.annotationLayers.map((layer) =>
       getTracingForAnnotationType(annotation, layer, version),
@@ -872,7 +856,7 @@ export async function acquireAnnotationMutex(
 export async function getTracingForAnnotationType(
   annotation: APIAnnotation,
   annotationLayerDescriptor: AnnotationLayerDescriptor,
-  version?: number | null | undefined, // TODO: Use this parameter
+  version?: number | null | undefined, // TODOM: Use this parameter
 ): Promise<ServerTracing> {
   const { tracingId, typ } = annotationLayerDescriptor;
   const tracingType = typ.toLowerCase() as "skeleton" | "volume";
@@ -999,17 +983,6 @@ export async function importVolumeTracing(
       },
     ),
   );
-}
-
-export function convertToHybridTracing(
-  annotationId: string,
-  fallbackLayerName: string | null | undefined,
-): Promise<void> {
-  return Request.receiveJSON(`/api/annotations/Explorational/${annotationId}/makeHybrid`, {
-    method: "PATCH",
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ method: "PATCH"; fallbackLayer... Remove this comment to see the full error message
-    fallbackLayerName,
-  });
 }
 
 export async function downloadWithFilename(downloadUrl: string) {

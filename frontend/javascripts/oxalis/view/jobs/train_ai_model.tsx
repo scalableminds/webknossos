@@ -21,7 +21,7 @@ import {
   getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
-  getAnnotationInformation,
+  getMaybeOutdatedAnnotationInformation,
   getDataset,
   getTracingForAnnotationType,
   runTraining,
@@ -35,7 +35,12 @@ import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { formatVoxels } from "libs/format_utils";
 import * as Utils from "libs/utils";
 import { V3 } from "libs/mjs";
-import type { APIAnnotation, APIDataset, ServerVolumeTracing } from "types/api_flow_types";
+import {
+  AnnotationLayerType,
+  type APIAnnotation,
+  type APIDataset,
+  type ServerVolumeTracing,
+} from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
 import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reducers/reducer_helpers";
@@ -472,7 +477,7 @@ function AnnotationsCsvInput({
 
     const newAnnotationsWithDatasets = await Promise.all(
       newItems.map(async (item) => {
-        const annotation = await getAnnotationInformation(item.annotationId);
+        const annotation = await getMaybeOutdatedAnnotationInformation(item.annotationId);
         const dataset = await getDataset({
           owningOrganization: annotation.organization,
           name: annotation.dataSetName,
@@ -493,7 +498,7 @@ function AnnotationsCsvInput({
         let userBoundingBoxes = volumeTracings[0]?.userBoundingBoxes;
         if (!userBoundingBoxes) {
           const skeletonLayer = annotation.annotationLayers.find(
-            (layer) => layer.typ === "Skeleton",
+            (layer) => layer.typ === AnnotationLayerType.Skeleton,
           );
           if (skeletonLayer) {
             const skeletonTracing = await getTracingForAnnotationType(annotation, skeletonLayer);

@@ -68,6 +68,8 @@ import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import type { SearchProps } from "antd/lib/input";
 import { getCombinedStatsFromServerAnnotation } from "oxalis/model/accessors/annotation_accessor";
 import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
+import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
+import { updateMetadataOfAnnotation } from "oxalis/model/sagas/update_actions";
 
 const { Search } = Input;
 const pageLength: number = 1000;
@@ -384,14 +386,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   renameTracing(tracing: APIAnnotationInfo, name: string) {
-    editAnnotation(tracing.id, tracing.typ, { name })
-      .then(() => {
-        Toast.success(messages["annotation.was_edited"]);
-        this.updateTracingInLocalState(tracing, (t) => update(t, { name: { $set: name } }));
-      })
-      .catch((error) => {
-        handleGenericError(error as Error, "Could not update the annotation name.");
-      });
+    Store.dispatch(
+      pushSaveQueueTransaction([updateMetadataOfAnnotation(name)], "unused-tracing-id"),
+    );
+    this.updateTracingInLocalState(tracing, (t) => update(t, { name: { $set: name } }));
   }
 
   archiveAll = () => {

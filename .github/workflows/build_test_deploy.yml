@@ -44,6 +44,25 @@ jobs:
 
   build_test_deploy:
     runs-on: ubuntu-24.04
+    env:
+      # The hostname used to communicate with the PostgreSQL service container
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+    services:
+        postgres:
+          image: postgres:10-alpine
+          env:
+            POSTGRES_DB: webknossos
+            POSTGRES_USER: webknossos_user
+            POSTGRES_PASSWORD: secret_password
+          # Set health checks to wait until postgres has started
+          options: >-
+            --health-cmd pg_isready
+            --health-interval 2s
+            --health-timeout 5s
+            --health-retries 30
+          ports:
+            - 5432:5432
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -80,8 +99,8 @@ jobs:
       
       - name: Install OS dependencies / libs
         run: sudo apt-get update && sudo apt-get install -y \
-          draco \
-          c-blosc
+          libdraco-dev \
+          libblosc-dev
 
                     # build-essential \
           # cmake \

@@ -43,6 +43,7 @@ import {
   getDatasetViewConfiguration,
   getEditableMappingInfo,
   getAnnotationCompoundInformation,
+  getNewestVersionOfTracing,
 } from "admin/admin_rest_api";
 import {
   dispatchMaybeFetchMeshFilesAsync,
@@ -129,10 +130,34 @@ export async function initialize(
 
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
-    annotation =
-      initialMaybeCompoundType != null
-        ? await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType)
-        : await getMaybeOutdatedAnnotationInformation(annotationId);
+    if (initialMaybeCompoundType != null) {
+      annotation = await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType);
+    } else {
+      let maybeOutdatedAnnotation = await getMaybeOutdatedAnnotationInformation(annotationId);
+      const annotationFromTracingStore = await getNewestVersionOfTracing(
+        maybeOutdatedAnnotation.tracingStore.url,
+        maybeOutdatedAnnotation.id,
+      );
+      const completeAnnotation = {
+        ...maybeOutdatedAnnotation,
+        name: annotationFromTracingStore.name,
+        description: annotationFromTracingStore.description,
+      };
+      annotationFromTracingStore.layers.forEach((layer) => {
+        if (
+          maybeOutdatedAnnotation.annotationLayers.find((l) => l.tracingId === layer.tracingId) ==
+          null
+        ) {
+          completeAnnotation.annotationLayers.push({
+            tracingId: layer.tracingId,
+            name: layer.name,
+            typ: layer.type,
+            stats: {},
+          });
+        }
+      });
+      annotation = completeAnnotation;
+    }
     datasetId = {
       name: annotation.dataSetName,
       owningOrganization: annotation.organization,

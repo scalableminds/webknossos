@@ -65,6 +65,7 @@ import {
   type VoxelSize,
   type APITimeTrackingPerUser,
   AnnotationLayerType,
+  type APITracingStoreAnnotation,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector2, Vector3 } from "oxalis/constants";
@@ -87,6 +88,7 @@ import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_
 import {
   parseProtoListOfLong,
   parseProtoTracing,
+  parseProtoTracingStoreAnnotation,
   serializeProtoListOfLong,
 } from "oxalis/model/helpers/proto_helpers";
 import type { RequestOptions } from "libs/request";
@@ -913,15 +915,21 @@ export function getUpdateActionLog(
   });
 }
 
-export function getNewestVersionForTracing(
+export async function getNewestVersionOfTracing(
   tracingStoreUrl: string,
   annotationId: string,
-): Promise<number> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/annotation/${annotationId}/newestVersion?token=${token}`,
-    ).then((obj) => obj.version),
+): Promise<APITracingStoreAnnotation> {
+  const annotationArrayBuffer = await doWithToken((token) =>
+    Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}?token=${token}`,
+      {
+        headers: {
+          Accept: "application/x-protobuf",
+        },
+      },
+    ),
   );
+  return parseProtoTracingStoreAnnotation(annotationArrayBuffer);
 }
 
 export function hasSegmentIndexInDataStore(

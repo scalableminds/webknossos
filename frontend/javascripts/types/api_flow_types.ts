@@ -575,6 +575,19 @@ export type APITimeTrackingPerAnnotation = {
   timeMillis: number;
   annotationLayerStats: Array<TracingStats>;
 };
+type APITracingStoreAnnotationLayer = {
+  tracingId: string;
+  name: string;
+  type: AnnotationLayerType;
+};
+
+export type APITracingStoreAnnotation = {
+  name: string;
+  description: string;
+  version: number;
+  layers: APITracingStoreAnnotationLayer[];
+};
+
 export type APITimeTrackingPerUser = {
   user: APIUserCompact & {
     email: string;

@@ -59,7 +59,7 @@ jobs:
           image: postgres:10-alpine
           env:
             POSTGRES_DB: webknossos
-            POSTGRES_USER: webknossos_user
+            POSTGRES_USER: postgres
             POSTGRES_PASSWORD: secret_password
           # Set health checks to wait until postgres has started
           options: >-
@@ -108,7 +108,7 @@ jobs:
           cache: 'sbt'
       - name: Set up sbt
         uses: sbt/setup-sbt@v1
-        
+
       - name: Install OS dependencies / libs
         run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc-dev
 

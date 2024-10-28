@@ -102,12 +102,12 @@ function AuthTokenView() {
         <Col span={8}>
           <p>
             An Auth Token is a series of symbols that serves to authenticate you. It is used in
-            communication with the backend API and sent with every request to verify your identity.
+            communication with the Python API and sent with every request to verify your identity.
           </p>
           <p>
             You should revoke it if somebody else has acquired your token or you have the suspicion
             this has happened.{" "}
-            <a href="https://docs.webknossos.org/webknossos/rest_api.html#authentication">
+            <a href="https://docs.webknossos.org/webknossos-py/index.html">
               Read more
             </a>
           </p>

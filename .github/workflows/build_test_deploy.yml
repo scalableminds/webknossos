@@ -80,9 +80,8 @@ jobs:
       
       - name: Install OS dependencies / libs
         run: sudo apt-get update && sudo apt-get install -y \
-          findutils \
-          libdraco-dev \
-          libblosc1
+          draco \
+          c-blosc
 
                     # build-essential \
           # cmake \

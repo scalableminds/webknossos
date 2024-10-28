@@ -1,6 +1,10 @@
-import type { ServerSkeletonTracing, APIAnnotation } from "types/api_flow_types";
+import {
+  type ServerSkeletonTracing,
+  type APIAnnotation,
+  AnnotationLayerType,
+} from "types/api_flow_types";
 export const tracing: ServerSkeletonTracing = {
-  typ: "Skeleton",
+  typ: AnnotationLayerType.Skeleton,
   id: "47e37793-d0be-4240-a371-87ce68561a13",
   trees: [
     {
@@ -173,11 +177,12 @@ export const annotation: APIAnnotation = {
     allowDownload: true,
     allowSave: true,
   },
+  version: 0,
   annotationLayers: [
     {
-      name: "Skeleton",
+      name: AnnotationLayerType.Skeleton,
       tracingId: "47e37793-d0be-4240-a371-87ce68561a13",
-      typ: "Skeleton",
+      typ: AnnotationLayerType.Skeleton,
       stats: {},
     },
   ],

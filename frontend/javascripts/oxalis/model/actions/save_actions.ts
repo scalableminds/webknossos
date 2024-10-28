@@ -36,8 +36,8 @@ export const pushSaveQueueTransaction = (
   ({
     type: "PUSH_SAVE_QUEUE_TRANSACTION",
     items,
-    transactionId,
     tracingId,
+    transactionId,
   }) as const;
 
 export const saveNowAction = () =>

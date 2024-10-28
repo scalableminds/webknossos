@@ -10,7 +10,11 @@ import type {
   NumberLike,
 } from "oxalis/store";
 import { convertUserBoundingBoxesFromFrontendToServer } from "oxalis/model/reducers/reducer_helpers";
-import type { AdditionalCoordinate, MetadataEntryProto } from "types/api_flow_types";
+import type {
+  AdditionalCoordinate,
+  APIMagRestrictions,
+  MetadataEntryProto,
+} from "types/api_flow_types";
 
 export type NodeWithTreeId = {
   treeId: number;
@@ -51,6 +55,10 @@ export type RevertToVersionUpdateAction = ReturnType<typeof revertToVersion>;
 export type RemoveFallbackLayerUpdateAction = ReturnType<typeof removeFallbackLayer>;
 export type UpdateTdCameraUpdateAction = ReturnType<typeof updateTdCamera>;
 export type UpdateMappingNameUpdateAction = ReturnType<typeof updateMappingName>;
+type AddLayerToAnnotationUpdateAction = ReturnType<typeof addLayerToAnnotation>;
+type DeleteAnnotationLayerUpdateAction = ReturnType<typeof deleteAnnotationLayer>;
+type UpdateAnnotationLayerNameUpdateAction = ReturnType<typeof updateAnnotationLayerName>;
+type UpdateMetadataOfAnnotationUpdateAction = ReturnType<typeof updateMetadataOfAnnotation>;
 export type SplitAgglomerateUpdateAction = ReturnType<typeof splitAgglomerate>;
 export type MergeAgglomerateUpdateAction = ReturnType<typeof mergeAgglomerate>;
 
@@ -82,6 +90,10 @@ export type UpdateAction =
   | RemoveFallbackLayerUpdateAction
   | UpdateTdCameraUpdateAction
   | UpdateMappingNameUpdateAction
+  | AddLayerToAnnotationUpdateAction
+  | DeleteAnnotationLayerUpdateAction
+  | UpdateAnnotationLayerNameUpdateAction
+  | UpdateMetadataOfAnnotationUpdateAction
   | SplitAgglomerateUpdateAction
   | MergeAgglomerateUpdateAction;
 
@@ -526,6 +538,47 @@ export function mergeAgglomerate(
       segmentId2: Number(segmentId2),
       mag,
     },
+  } as const;
+}
+
+type AnnotationLayerCreationParameters = {
+  typ: "Skeleton" | "Volume";
+  name: string | null | undefined;
+  autoFallbackLayer?: boolean;
+  fallbackLayerName?: string | null | undefined;
+  mappingName?: string | null | undefined;
+  magRestrictions?: APIMagRestrictions | null | undefined;
+};
+
+export function addLayerToAnnotation(parameters: AnnotationLayerCreationParameters) {
+  return {
+    name: "addLayerToAnnotation",
+    value: { layerParameters: parameters },
+  } as const;
+}
+
+export function deleteAnnotationLayer(
+  tracingId: string,
+  layerName: string,
+  typ: "Skeleton" | "Volume",
+) {
+  return {
+    name: "deleteLayerFromAnnotation",
+    value: { tracingId, layerName, typ },
+  } as const;
+}
+
+export function updateAnnotationLayerName(tracingId: string, newLayerName: string) {
+  return {
+    name: "updateLayerMetadata",
+    value: { tracingId, layerName: newLayerName },
+  } as const;
+}
+
+export function updateMetadataOfAnnotation(name?: string, description?: string) {
+  return {
+    name: "updateMetadataOfAnnotation",
+    value: { name, description },
   } as const;
 }
 

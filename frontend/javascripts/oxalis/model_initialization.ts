@@ -35,7 +35,7 @@ import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_ac
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getTracingsForAnnotation,
-  getAnnotationInformation,
+  getMaybeOutdatedAnnotationInformation,
   getEmptySandboxAnnotationInformation,
   getDataset,
   getSharingTokenFromUrlParameters,
@@ -132,7 +132,7 @@ export async function initialize(
     annotation =
       initialMaybeCompoundType != null
         ? await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType)
-        : await getAnnotationInformation(annotationId);
+        : await getMaybeOutdatedAnnotationInformation(annotationId);
     datasetId = {
       name: annotation.dataSetName,
       owningOrganization: annotation.organization,

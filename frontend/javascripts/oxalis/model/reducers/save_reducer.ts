@@ -193,12 +193,21 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
   }
 }
 
+const layerIndependentActions = new Set([
+  "updateTdCamera",
+  "revertToVersion",
+  "addLayerToAnnotation",
+  "deleteLayerFromAnnotation",
+  "updateLayerMetadata",
+  "updateMetadataOfAnnotation",
+]);
+
 export function addTracingIdToActions(
   actions: UpdateAction[],
   tracingId: string,
 ): Array<UpdateActionWithTracingId | UpdateAction> {
   return actions.map((action) => {
-    if (action.name === "updateTdCamera" || action.name === "revertToVersion") {
+    if (layerIndependentActions.has(action.name)) {
       return action as UpdateAction;
     }
     return {

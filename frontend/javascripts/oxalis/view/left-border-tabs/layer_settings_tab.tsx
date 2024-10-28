@@ -21,6 +21,7 @@ import _ from "lodash";
 import classnames from "classnames";
 import update from "immutability-helper";
 import {
+  AnnotationLayerType,
   APIAnnotationTypeEnum,
   type APIDataLayer,
   type APIDataset,
@@ -49,8 +50,6 @@ import {
   findDataPositionForLayer,
   clearCache,
   findDataPositionForVolumeTracing,
-  convertToHybridTracing,
-  deleteAnnotationLayer,
   updateDatasetDefaultConfiguration,
   startComputeSegmentIndexFileJob,
 } from "admin/admin_rest_api";
@@ -131,6 +130,8 @@ import {
   getDefaultLayerViewConfiguration,
 } from "types/schemas/dataset_view_configuration.schema";
 import defaultState from "oxalis/default_state";
+import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
+import { addLayerToAnnotation, deleteAnnotationLayer } from "oxalis/model/sagas/update_actions";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;
@@ -150,6 +151,8 @@ type DatasetSettingsProps = {
   onZoomToMag: (layerName: string, arg0: Vector3) => number;
   onChangeUser: (key: keyof UserConfiguration, value: any) => void;
   reloadHistogram: (layerName: string) => void;
+  addSkeletonLayerToAnnotation: () => void;
+  deleteAnnotationLayer: (tracingId: string, type: AnnotationLayerType, layerName: string) => void;
   tracing: Tracing;
   task: Task | null | undefined;
   onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void;
@@ -453,26 +456,39 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     </div>
   );
 
-  getDeleteAnnotationLayerButton = (readableName: string, layer?: APIDataLayer) => (
+  getDeleteAnnotationLayerButton = (
+    readableName: string,
+    type: AnnotationLayerType,
+    tracingId: string,
+  ) => (
     <div className="flex-item">
       <FastTooltip title="Delete this annotation layer.">
         <i
-          onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
+          onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, type, tracingId)}
           className="fas fa-trash icon-margin-right"
         />
       </FastTooltip>
     </div>
   );
 
-  getDeleteAnnotationLayerDropdownOption = (readableName: string, layer?: APIDataLayer) => (
-    <div onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}>
+  getDeleteAnnotationLayerDropdownOption = (
+    readableName: string,
+    type: AnnotationLayerType,
+    tracingId: string,
+    layer?: APIDataLayer,
+  ) => (
+    <div
+      onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, type, tracingId, layer)}
+    >
       <i className="fas fa-trash icon-margin-right" />
       Delete this annotation layer
     </div>
   );
 
   deleteAnnotationLayerIfConfirmed = async (
-    readableAnnoationLayerName: string,
+    readableAnnotationLayerName: string,
+    type: AnnotationLayerType,
+    tracingId: string,
     layer?: APIDataLayer,
   ) => {
     const fallbackLayerNote =
@@ -481,7 +497,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         : "";
     const shouldDelete = await confirmAsync({
       title: `Deleting an annotation layer makes its content and history inaccessible. ${fallbackLayerNote}This cannot be undone. Are you sure you want to delete this layer?`,
-      okText: `Yes, delete annotation layer “${readableAnnoationLayerName}”`,
+      okText: `Yes, delete annotation layer “${readableAnnotationLayerName}”`,
       cancelText: "Cancel",
       maskClosable: true,
       closable: true,
@@ -495,12 +511,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       },
     });
     if (!shouldDelete) return;
+    this.props.deleteAnnotationLayer(tracingId, type, readableAnnotationLayerName);
     await Model.ensureSavedState();
-    await deleteAnnotationLayer(
-      this.props.tracing.annotationId,
-      this.props.tracing.annotationType,
-      readableAnnoationLayerName,
-    );
     location.reload();
   };
 
@@ -623,6 +635,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const { intensityRange } = layerSettings;
     const layer = getLayerByName(dataset, layerName);
     const isSegmentation = layer.category === "segmentation";
+    const layerType =
+      layer.category === "segmentation" ? AnnotationLayerType.Volume : AnnotationLayerType.Skeleton;
     const canBeMadeEditable =
       isSegmentation && layer.tracingId == null && this.props.controlMode === "TRACE";
     const isVolumeTracing = isSegmentation ? layer.tracingId != null : false;
@@ -687,7 +701,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         ? {
             label: (
               <div className="flex-item">
-                {this.getDeleteAnnotationLayerDropdownOption(readableName, layer)}
+                {this.getDeleteAnnotationLayerDropdownOption(
+                  readableName,
+                  layerType,
+                  layer.tracingId,
+                  layer,
+                )}
               </div>
             ),
             key: "deleteAnnotationLayer",
@@ -1173,7 +1192,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const readableName = "Skeleton";
     const skeletonTracing = enforceSkeletonTracing(tracing);
     const isOnlyAnnotationLayer = tracing.annotationLayers.length === 1;
-    const { showSkeletons } = skeletonTracing;
+    const { showSkeletons, tracingId } = skeletonTracing;
     const activeNodeRadius = getActiveNode(skeletonTracing)?.radius ?? 0;
     return (
       <React.Fragment>
@@ -1224,7 +1243,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             }}
           >
             <TransformationIcon layer={{ category: "skeleton" }} />
-            {!isOnlyAnnotationLayer ? this.getDeleteAnnotationLayerButton(readableName) : null}
+            {!isOnlyAnnotationLayer
+              ? this.getDeleteAnnotationLayerButton(
+                  readableName,
+                  AnnotationLayerType.Skeleton,
+                  tracingId,
+                )
+              : null}
           </div>
         </div>
         {showSkeletons ? (
@@ -1325,8 +1350,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   addSkeletonAnnotationLayer = async () => {
+    this.props.addSkeletonLayerToAnnotation();
     await Model.ensureSavedState();
-    await convertToHybridTracing(this.props.tracing.annotationId, null);
     location.reload();
   };
 
@@ -1638,6 +1663,25 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   reloadHistogram(layerName: string) {
     dispatch(reloadHistogramAction(layerName));
+  },
+
+  addSkeletonLayerToAnnotation() {
+    dispatch(
+      pushSaveQueueTransaction(
+        [
+          addLayerToAnnotation({
+            typ: "Skeleton",
+            name: "skeleton",
+            fallbackLayerName: undefined,
+          }),
+        ],
+        "unused-tracing-id",
+      ),
+    );
+  },
+
+  deleteAnnotationLayer(tracingId: string, type: AnnotationLayerType, layerName: string) {
+    dispatch(deleteAnnotationLayer(tracingId, layerName, type));
   },
 });
 

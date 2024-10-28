@@ -100,13 +100,15 @@ jobs:
       - name: Build webknossos (webpack)
         run: yarn build
 
-      - name: Set up Java / SBT
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin' # See 'Supported distributions' for available options
           java-version: '21'
           cache: 'sbt'
-      
+      - name: Set up sbt
+        uses: sbt/setup-sbt@v1
+        
       - name: Install OS dependencies / libs
         run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc-dev
 

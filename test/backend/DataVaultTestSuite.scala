@@ -60,7 +60,7 @@ class DataVaultTestSuite extends PlaySpec {
         }
 
         "return empty box" when {
-          "requesting a nox-existent object" in {
+          "requesting a non-existent object" in {
             val result =
               (vaultPath / s"non-existent-key${UUID.randomUUID}")
                 .readBytes()(globalExecutionContext)
@@ -144,7 +144,7 @@ class DataVaultTestSuite extends PlaySpec {
         }
 
         "return empty box" when {
-          "requesting a nox-existent bucket" in {
+          "requesting a non-existent bucket" in {
             val uri = new URI(s"s3://non-existent-bucket${UUID.randomUUID}/non-existent-object")
             val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None))
             val vaultPath = new VaultPath(uri, s3DataVault)
@@ -154,7 +154,7 @@ class DataVaultTestSuite extends PlaySpec {
         }
 
         "return empty box" when {
-          "requesting a nox-existent object in existent bucket" in {
+          "requesting a non-existent object in existent bucket" in {
             val uri = new URI(s"s3://open-neurodata/non-existent-object${UUID.randomUUID}")
             val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None))
             val vaultPath = new VaultPath(uri, s3DataVault)
@@ -179,7 +179,7 @@ class DataVaultTestSuite extends PlaySpec {
         }
 
         "return failure" when {
-          "requesting directory listing on nox-existent bucket" in {
+          "requesting directory listing on non-existent bucket" in {
             val uri = new URI(f"s3://non-existent-bucket${UUID.randomUUID}/non-existent-object/")
             val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None))
             val vaultPath = new VaultPath(uri, s3DataVault)

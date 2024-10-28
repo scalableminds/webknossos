@@ -694,6 +694,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
   };
 
   handleSelectAllMatchingTrees = (matchingTrees: TreeOrTreeGroup[]) => {
+    this.props.onDeselectActiveGroup();
     const treeIds = matchingTrees.map((tree) => {
       this.maybeExpandParentGroups(tree);
       return tree.id;

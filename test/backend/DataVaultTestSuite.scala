@@ -18,6 +18,7 @@ import net.liftweb.common.{Box, Empty, EmptyBox, Failure, Full}
 import play.api.libs.json.JsString
 import play.api.test.WsTestClient
 
+import java.util.UUID
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.{global => globalExecutionContext}
@@ -61,7 +62,9 @@ class DataVaultTestSuite extends PlaySpec {
         "return empty box" when {
           "requesting a nox-existent object" in {
             val result =
-              (vaultPath / "non-existent-key").readBytes()(globalExecutionContext).await(handleFoxJustification)
+              (vaultPath / s"non-existent-key${UUID.randomUUID}")
+                .readBytes()(globalExecutionContext)
+                .await(handleFoxJustification)
             assertBoxEmpty(result)
           }
         }
@@ -141,8 +144,18 @@ class DataVaultTestSuite extends PlaySpec {
         }
 
         "return empty box" when {
-          "requesting a nox-existent object" in {
-            val uri = new URI("s3://non-existing-bucket/non-existing-object")
+          "requesting a nox-existent bucket" in {
+            val uri = new URI(s"s3://non-existent-bucket${UUID.randomUUID}/non-existent-object")
+            val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None))
+            val vaultPath = new VaultPath(uri, s3DataVault)
+            val result = vaultPath.readBytes()(globalExecutionContext).await(handleFoxJustification)
+            assertBoxEmpty(result)
+          }
+        }
+
+        "return empty box" when {
+          "requesting a nox-existent object in existent bucket" in {
+            val uri = new URI(s"s3://open-neurodata/non-existent-object${UUID.randomUUID}")
             val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None))
             val vaultPath = new VaultPath(uri, s3DataVault)
             val result = vaultPath.readBytes()(globalExecutionContext).await(handleFoxJustification)
@@ -165,15 +178,16 @@ class DataVaultTestSuite extends PlaySpec {
               _.toUri == new URI("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/s0/")))
         }
 
-        "return empty box" when {
+        "return failure" when {
           "requesting directory listing on nox-existent bucket" in {
-            val uri = new URI("s3://non-existing-bucket/non-existing-object/")
+            val uri = new URI(f"s3://non-existent-bucket${UUID.randomUUID}/non-existent-object/")
             val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None))
             val vaultPath = new VaultPath(uri, s3DataVault)
             val result = vaultPath.listDirectory(maxItems = 5)(globalExecutionContext).await(handleFoxJustification)
-            assertBoxEmpty(result)
+            assertBoxFailure(result)
           }
         }
+
       }
     }
 

@@ -18,7 +18,7 @@ env:
 
 jobs:
   static_frontend_code_checks:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -86,19 +86,9 @@ jobs:
 
                     # build-essential \
           # cmake \
-      # - name: Set up Docker
-      #   uses: docker/setup-buildx-action@v2
-
-      # - name: Build webknossos-dev docker image
-      #   run: |
-      #     docker pull scalableminds/webknossos-dev:$NORMALIZED_BRANCH || true
-      #     DEV_CACHE=$NORMALIZED_BRANCH docker compose build base
 
       # - name: Prepare dependency folders
       #   run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
-
-      # - name: Install frontend dependencies
-      #   run: docker compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --immutable && yarn cache clean
 
       # - name: Assert unique evolution numbers
       #   run: docker compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers
@@ -126,6 +116,9 @@ jobs:
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
       - name: Build webknossos docker image
         run: |
           docker pull scalableminds/webknossos:$NORMALIZED_BRANCH || true
@@ -136,9 +129,6 @@ jobs:
 
       - name: Build webknossos-tracingstore docker image
         run: docker compose build --pull webknossos-tracingstore
-
-      - name: Run frontend tests
-        run: .github/not-on-master.sh docker compose run base yarn test-verbose
 
       - name: Lint backend code and check formatting
         run: .github/not-on-master.sh docker compose run backend-lint-format
@@ -164,7 +154,6 @@ jobs:
         with: 
           url: http://localhost:9000/api/health
           
-
       - name: Run webknossos-datastore smoke test
         uses: ./.github/actions/health_check_action
         with: 

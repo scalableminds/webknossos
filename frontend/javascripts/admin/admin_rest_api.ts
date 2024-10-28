@@ -2035,7 +2035,7 @@ export function computeAdHocMesh(
         },
       },
     );
-    const neighbors = Utils.parseMaybe(headers.neighbors) || [];
+    const neighbors = (Utils.parseMaybe(headers.neighbors) as number[] | null) || [];
     return {
       buffer,
       neighbors,

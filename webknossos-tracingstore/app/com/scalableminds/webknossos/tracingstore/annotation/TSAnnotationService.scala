@@ -248,7 +248,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                      reportChangesToWk) ?~> "applyUpdates.failed"
     } yield updated
 
-  def getEditableMappingInfo(annotationId: String, tracingId: String, version: Option[Long] = None)(
+  def findEditableMappingInfo(annotationId: String, tracingId: String, version: Option[Long] = None)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[EditableMappingInfo] =
     for {
@@ -546,7 +546,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       tc: TokenContext): Fox[Option[String]] =
     if (tracing.getHasEditableMapping)
       for {
-        editableMappingInfo <- getEditableMappingInfo(annotationId, tracingId)
+        editableMappingInfo <- findEditableMappingInfo(annotationId, tracingId)
       } yield Some(editableMappingInfo.baseMappingName)
     else Fox.successful(tracing.mappingName)
 
@@ -711,12 +711,24 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                                                  editRotation,
                                                                  version)
       _ <- tracingDataStore.volumes.put(newTracingId, version, newTracing)
-      _ <- volumeTracingService.duplicateVolumeData(sourceTracingId, sourceTracing, newTracingId, newTracing)
-      /*_ <- Fox.runIf(adaptedTracing.getHasEditableMapping)(
-                    editableMappingService.duplicate(tracingId, newTracingId, version = None, remoteFallbackLayerOpt))*/
+      _ <- Fox.runIf(!newTracing.getHasEditableMapping)(
+        volumeTracingService.duplicateVolumeData(sourceTracingId, sourceTracing, newTracingId, newTracing))
+      _ <- Fox.runIf(newTracing.getHasEditableMapping)(
+        duplicateEditableMapping(annotationId, sourceTracingId, newTracingId, version))
       // TODO downsample?
     } yield newTracingId
   }
+
+  private def duplicateEditableMapping(annotationId: String,
+                                       sourceTracingId: String,
+                                       newTracingId: String,
+                                       version: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+    for {
+      editableMappingInfo <- findEditableMappingInfo(annotationId, sourceTracingId, Some(version))
+      _ <- tracingDataStore.editableMappingsInfo.put(newTracingId, version, toProtoBytes(editableMappingInfo))
+      _ <- editableMappingService.duplicateSegmentToAgglomerate(sourceTracingId, newTracingId, version)
+      _ <- editableMappingService.duplicateAgglomerateToGraph(sourceTracingId, newTracingId, version)
+    } yield ()
 
   private def duplicateSkeletonTracing(
       annotationId: String,

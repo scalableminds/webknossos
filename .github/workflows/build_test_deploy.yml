@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
 
 env:
-  # USER_NAME: root
-  # USER_UID: 1000
-  # USER_GID: 1000
+  USER_NAME: root
+  USER_UID: 1000
+  USER_GID: 1000
   DOCKER_USER: ${{ secrets.DOCKER_USER }}
   DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
 
@@ -40,8 +40,6 @@ jobs:
 
     - name: Check for cyclic dependencies in frontend
       run: yarn check-cyclic-dependencies
-
-
 
 
   build_test_deploy:

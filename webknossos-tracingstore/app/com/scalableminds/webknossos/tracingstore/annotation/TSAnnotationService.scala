@@ -458,7 +458,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         _ <- updatedWithNewVerson.flushBufferedUpdates()
         _ <- flushUpdatedTracings(updatedWithNewVerson)
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVerson)
-        _ <- remoteWebknossosClient.updateAnnotation(annotationId, updatedWithNewVerson.annotation) // TODO perf: skip if annotation is identical
+        _ <- Fox.runIf(reportChangesToWk)(remoteWebknossosClient.updateAnnotation(
+          annotationId,
+          updatedWithNewVerson.annotation)) // TODO perf: skip if annotation is identical
       } yield updatedWithNewVerson
     }
   }
@@ -492,10 +494,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
      * hence the emptyFallbck annotation.version)
      */
     for {
-      newestUpdateVersion <- tracingDataStore.annotationUpdates.getVersion(
-        annotationId,
-        mayBeEmpty = Some(true),
-        emptyFallback = Some(0L)) // TODO in case of empty, look in annotation table, take version from there
+      newestUpdateVersion <- tracingDataStore.annotationUpdates.getVersion(annotationId,
+                                                                           mayBeEmpty = Some(true),
+                                                                           emptyFallback = Some(0L))
     } yield {
       targetVersionOpt match {
         case None              => newestUpdateVersion

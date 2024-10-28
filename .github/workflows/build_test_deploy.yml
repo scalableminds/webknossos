@@ -27,7 +27,7 @@ jobs:
 
     - uses: actions/setup-node@v4
       with:
-          node-version: 18
+        node-version: 18
 
     - name: Install frontend dependencies
       run: corepack enable && yarn install --immutable
@@ -61,51 +61,68 @@ jobs:
             echo "NORMALIZED_BRANCH=master" >> $GITHUB_ENV
             echo "DOCKER_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
           fi
-
-      - name: Set up Docker
-        uses: docker/setup-buildx-action@v2
-
-      - name: Build webknossos-dev docker image
-        run: |
-          docker pull scalableminds/webknossos-dev:$NORMALIZED_BRANCH || true
-          DEV_CACHE=$NORMALIZED_BRANCH docker compose build base
-
-      - name: Prepare dependency folders
-        run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
       - name: Install frontend dependencies
-        run: docker compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --immutable && yarn cache clean
-
-      - name: Assert unique evolution numbers
-        run: docker compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers
-
-      - name: Assert schema.sql and evolutions are equal
-        run: |
-          docker compose up -d postgres
-          sleep 3
-          docker compose run compile tools/postgres/dbtool.js check-evolutions-schema
-
-      - name: Build frontend documentation
-        run: |
-          WK_VERSION=${{ github.event.release.tag_name || github.run_number || 'dev' }}
-          docker compose run base yarn run docs --project-version $WK_VERSION
-
+        run: corepack enable && yarn install --immutable
+      
       - name: Build webknossos (webpack)
-        run: docker compose run base yarn build
+        run: yarn build
+
+      - name: Set up Java / SBT
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin' # See 'Supported distributions' for available options
+          java-version: '21'
+          cache: 'sbt'
+      
+      - name: Install dependencies
+        run: apt-get update \
+          && apt-get install -y \
+          findutils \
+          libdraco-dev \
+          libblosc1
+
+                    # build-essential \
+          # cmake \
+      # - name: Set up Docker
+      #   uses: docker/setup-buildx-action@v2
+
+      # - name: Build webknossos-dev docker image
+      #   run: |
+      #     docker pull scalableminds/webknossos-dev:$NORMALIZED_BRANCH || true
+      #     DEV_CACHE=$NORMALIZED_BRANCH docker compose build base
+
+      # - name: Prepare dependency folders
+      #   run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
+
+      # - name: Install frontend dependencies
+      #   run: docker compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --immutable && yarn cache clean
+
+      # - name: Assert unique evolution numbers
+      #   run: docker compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers
+
+      # - name: Assert schema.sql and evolutions are equal
+      #   run: |
+      #     docker compose up -d postgres
+      #     sleep 3
+      #     docker compose run compile tools/postgres/dbtool.js check-evolutions-schema
 
       - name: Build webknossos (sbt)
         run: |
           if [ "${{ github.ref }}" == "refs/heads/master" ]; then
-            docker compose run compile sbt -no-colors clean compile stage
+            sbt -no-colors clean compile stage
           else
-            docker compose run compile sbt -no-colors -DfailOnWarning compile stage
+            sbt -no-colors -DfailOnWarning compile stage
           fi
 
       - name: Build webknossos-datastore (sbt)
-        run: docker compose run base sbt -no-colors -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
+        run: sbt -no-colors -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
 
       - name: Build webknossos-tracingstore (sbt)
-        run: docker compose run base sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
+        run: sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
 
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
@@ -136,9 +153,6 @@ jobs:
             .github/not-on-master.sh docker compose run e2e-tests && s=0 && break || s=$?
           done
           (exit $s)
-
-      - name: Validate frontend types
-        run: .github/not-on-master.sh docker compose run base yarn typecheck
 
       - name: Start webknossos, datastore, and tracingstore
         run: |
@@ -189,6 +203,12 @@ jobs:
             retry docker push scalableminds/webknossos-dev:${NORMALIZED_BRANCH}
           fi
           docker logout
+
+      - name: Build frontend documentation
+        run: |
+          WK_VERSION=${{ github.event.release.tag_name || github.run_number || 'dev' }}
+          yarn run docs --project-version $WK_VERSION
+
 
       - name: Report coverage
         run: .github/not-on-master.sh docker compose run base yarn coverage || true

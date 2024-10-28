@@ -107,9 +107,7 @@ function AuthTokenView() {
           <p>
             You should revoke it if somebody else has acquired your token or you have the suspicion
             this has happened.{" "}
-            <a href="https://docs.webknossos.org/webknossos-py/index.html">
-              Read more
-            </a>
+            <a href="https://docs.webknossos.org/webknossos-py/index.html">Read more</a>
           </p>
         </Col>
       </Row>

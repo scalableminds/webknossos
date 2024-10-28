@@ -64,6 +64,10 @@ jobs:
           ports:
             - 5432:5432
     steps:
+      # Enable tmate debugging of manually-triggered workflows if the input option was provided
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
       - name: Checkout code
         uses: actions/checkout@v3
         with:

@@ -178,9 +178,7 @@ class VolumeTracingController @Inject()(
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
               magRestrictions = MagRestrictions(minMag, maxMag)
-              mags <- volumeTracingService
-                .initializeWithData(annotationId, tracingId, tracing, initialData, magRestrictions)
-                .toFox
+              mags <- volumeTracingService.initializeWithData(tracingId, tracing, initialData, magRestrictions).toFox
               _ <- volumeTracingService.updateMagList(tracingId, tracing, mags)
             } yield Ok(Json.toJson(tracingId))
           }
@@ -218,9 +216,7 @@ class VolumeTracingController @Inject()(
               annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
-              mags <- volumeTracingService
-                .initializeWithDataMultiple(annotationId, tracingId, tracing, initialData)
-                .toFox
+              mags <- volumeTracingService.initializeWithDataMultiple(tracingId, tracing, initialData).toFox
               _ <- volumeTracingService.updateMagList(tracingId, tracing, mags)
             } yield Ok(Json.toJson(tracingId))
           }

@@ -313,7 +313,7 @@ class VolumeTracingService @Inject()(
     } yield ()
   }
 
-  def initializeWithDataMultiple(annotationId: String, tracingId: String, tracing: VolumeTracing, initialData: File)(
+  def initializeWithDataMultiple(tracingId: String, tracing: VolumeTracing, initialData: File)(
       implicit mp: MessagesProvider,
       tc: TokenContext): Fox[Set[Vec3Int]] =
     if (tracing.version != 0L)
@@ -382,8 +382,7 @@ class VolumeTracingService @Inject()(
       } yield mags
     }
 
-  def initializeWithData(annotationId: String,
-                         tracingId: String,
+  def initializeWithData(tracingId: String,
                          tracing: VolumeTracing,
                          initialData: File,
                          magRestrictions: MagRestrictions)(implicit tc: TokenContext): Fox[Set[Vec3Int]] =
@@ -496,7 +495,7 @@ class VolumeTracingService @Inject()(
                               editPosition: Option[Vec3Int],
                               editRotation: Option[Vec3Double],
                               newVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[VolumeTracing] = {
-    val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, isFromTask, boundingBox)
+    val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, isFromTask, datasetBoundingBox)
     val tracingWithMagRestrictions = restrictMagList(tracingWithBB, magRestrictions)
     for {
       fallbackLayer <- getFallbackLayer(sourceTracingId, sourceTracing)
@@ -521,7 +520,7 @@ class VolumeTracingService @Inject()(
                                                isFromTask: Boolean,
                                                datasetBoundingBoxOpt: Option[BoundingBox]): VolumeTracing =
     datasetBoundingBoxOpt match {
-      case Some(datasetBoundingBox) if isFromTask => {
+      case Some(datasetBoundingBox) if isFromTask =>
         val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
         tracing
           .addUserBoundingBoxes(
@@ -531,19 +530,19 @@ class VolumeTracingService @Inject()(
                                   Some(getRandomColor),
                                   tracing.boundingBox))
           .withBoundingBox(datasetBoundingBox)
-      }
       case _ => tracing
     }
 
   def duplicateVolumeData(sourceTracingId: String,
                           sourceTracing: VolumeTracing,
                           newTracingId: String,
-                          newTracing: VolumeTracing)(implicit tc: TokenContext): Fox[Unit] =
+                          newTracing: VolumeTracing)(implicit tc: TokenContext): Fox[Unit] = {
+    var bucketCount = 0
     for {
       isTemporaryTracing <- isTemporaryTracing(sourceTracingId)
       sourceDataLayer = volumeTracingLayer(sourceTracingId, sourceTracing, isTemporaryTracing)
       buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream(
-        Some(newTracing.version))
+        Some(sourceTracing.version))
       destinationDataLayer = volumeTracingLayer(newTracingId, newTracing)
       fallbackLayer <- getFallbackLayer(sourceTracingId, sourceTracing)
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(
@@ -561,6 +560,7 @@ class VolumeTracingService @Inject()(
           if (newTracing.mags.contains(vec3IntToProto(bucketPosition.mag))) {
             for {
               _ <- saveBucket(destinationDataLayer, bucketPosition, bucketData, newTracing.version)
+              _ = bucketCount += 1
               _ <- Fox.runIfOptionTrue(newTracing.hasSegmentIndex)(
                 updateSegmentIndex(
                   segmentIndexBuffer,
@@ -574,8 +574,11 @@ class VolumeTracingService @Inject()(
             } yield ()
           } else Fox.successful(())
       }
+      _ = logger.info(
+        s"Duplicated $bucketCount volume buckets from $sourceTracingId v${sourceTracing.version} to $newTracingId v${newTracing.version}.")
       _ <- segmentIndexBuffer.flush()
     } yield ()
+  }
 
   private def volumeTracingLayer(
       tracingId: String,
@@ -605,6 +608,7 @@ class VolumeTracingService @Inject()(
                  toCache)
     } yield id
 
+  // TODO use or remove
   def downsample(annotationId: String, tracingId: String, oldTracingId: String, newTracing: VolumeTracing)(
       implicit tc: TokenContext): Fox[Unit] =
     for {
@@ -784,7 +788,9 @@ class VolumeTracingService @Inject()(
           elementClass)
         mergedAdditionalAxes <- Fox.box2Fox(AdditionalAxis.mergeAndAssertSameAdditionalAxes(tracings.map(t =>
           AdditionalAxis.fromProtosAsOpt(t.additionalAxes))))
-        fallbackLayer <- getFallbackLayer(tracingSelectors.head.tracingId, tracings.head) // TODO can we get rid of the head?
+        firstTracingSelector <- tracingSelectors.headOption ?~> "merge.noTracings"
+        firstTracing <- tracings.headOption ?~> "merge.noTracings"
+        fallbackLayer <- getFallbackLayer(firstTracingSelector.tracingId, firstTracing)
         segmentIndexBuffer = new VolumeSegmentIndexBuffer(newId,
                                                           volumeSegmentIndexClient,
                                                           newVersion,
@@ -882,8 +888,6 @@ class VolumeTracingService @Inject()(
       }
     }
 
-  def dummyTracing: VolumeTracing = ???
-
   def mergeEditableMappings(newTracingId: String, tracingsWithIds: List[(VolumeTracing, String)])(
       implicit tc: TokenContext): Fox[Unit] =
     if (tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
@@ -892,7 +896,7 @@ class VolumeTracingService @Inject()(
           remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
         remoteFallbackLayer <- remoteFallbackLayers.headOption.toFox
         _ <- bool2Fox(remoteFallbackLayers.forall(_ == remoteFallbackLayer)) ?~> "Cannot merge editable mappings based on different dataset layers"
-        // TODO_ <- editableMappingService.merge(newTracingId, tracingsWithIds.map(_._2), remoteFallbackLayer)
+        // TODO: _ <- editableMappingService.merge(newTracingId, tracingsWithIds.map(_._2), remoteFallbackLayer)
       } yield ()
     } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.getHasEditableMapping)) {
       Fox.empty

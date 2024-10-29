@@ -34,8 +34,6 @@ trait TracingService[T <: GeneratedMessage]
 
   def tracingMigrationService: TracingMigrationService[T]
 
-  def dummyTracing: T
-
   implicit def tracingCompanion: GeneratedMessageCompanion[T]
 
   // this should be longer than maxCacheTime in webknossos/AnnotationStore

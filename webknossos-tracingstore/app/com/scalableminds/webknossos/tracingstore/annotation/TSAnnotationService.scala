@@ -564,14 +564,10 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                  version: Option[Long] = None,
                  useCache: Boolean = true,
                  applyUpdates: Boolean = false)(implicit tc: TokenContext, ec: ExecutionContext): Fox[VolumeTracing] =
-    if (tracingId == TracingId.dummy)
-      Fox.successful(volumeTracingService.dummyTracing)
-    else {
-      for {
-        annotation <- getWithTracings(annotationId, version, List.empty, List(tracingId), requestAll = false) // TODO is applyUpdates still needed?
-        tracing <- annotation.getVolume(tracingId)
-      } yield tracing
-    }
+    for {
+      annotation <- getWithTracings(annotationId, version, List.empty, List(tracingId), requestAll = false) // TODO is applyUpdates still needed?
+      tracing <- annotation.getVolume(tracingId)
+    } yield tracing
 
   def findSkeleton(
       annotationId: String,
@@ -698,16 +694,16 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     } yield layer.copy(tracingId = newTracingId)
 
   def duplicateVolumeTracing(
-                              sourceAnnotationId: String,
-                              sourceTracingId: String,
-                              sourceVersion: Long,
-                              newVersion: Long,
-                              isFromTask: Boolean,
-                              boundingBox: Option[BoundingBox],
-                              datasetBoundingBox: Option[BoundingBox],
-                              magRestrictions: MagRestrictions,
-                              editPosition: Option[Vec3Int],
-                              editRotation: Option[Vec3Double])(implicit ec: ExecutionContext, tc: TokenContext): Fox[String] = {
+      sourceAnnotationId: String,
+      sourceTracingId: String,
+      sourceVersion: Long,
+      newVersion: Long,
+      isFromTask: Boolean,
+      boundingBox: Option[BoundingBox],
+      datasetBoundingBox: Option[BoundingBox],
+      magRestrictions: MagRestrictions,
+      editPosition: Option[Vec3Int],
+      editRotation: Option[Vec3Double])(implicit ec: ExecutionContext, tc: TokenContext): Fox[String] = {
     val newTracingId = TracingId.generate
     for {
       sourceTracing <- findVolume(sourceAnnotationId, sourceTracingId, Some(sourceVersion))
@@ -745,14 +741,14 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     } yield ()
 
   def duplicateSkeletonTracing(
-                                sourceAnnotationId: String,
-                                sourceTracingId: String,
-                                sourceVersion: Long,
-                                newVersion: Long,
-                                isFromTask: Boolean,
-                                editPosition: Option[Vec3Int],
-                                editRotation: Option[Vec3Double],
-                                boundingBox: Option[BoundingBox])(implicit ec: ExecutionContext, tc: TokenContext): Fox[String] = {
+      sourceAnnotationId: String,
+      sourceTracingId: String,
+      sourceVersion: Long,
+      newVersion: Long,
+      isFromTask: Boolean,
+      editPosition: Option[Vec3Int],
+      editRotation: Option[Vec3Double],
+      boundingBox: Option[BoundingBox])(implicit ec: ExecutionContext, tc: TokenContext): Fox[String] = {
     val newTracingId = TracingId.generate
     for {
       skeleton <- findSkeleton(sourceAnnotationId, sourceTracingId, Some(sourceVersion))

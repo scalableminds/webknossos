@@ -1029,6 +1029,7 @@ export async function updateDatasetDatasource(
       `${dataStoreUrl}/data/datasets/${datasource.id.team}/${datasetDirectoryName}?token=${token}`,
       {
         data: datasource,
+        method: "PUT",
       },
     ),
   );

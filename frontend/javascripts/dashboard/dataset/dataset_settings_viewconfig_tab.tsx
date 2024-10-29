@@ -30,7 +30,6 @@ import ColorLayerOrderingTable from "./color_layer_ordering_component";
 import type { APIDatasetId } from "types/api_flow_types";
 import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admin/admin_rest_api";
 import { Slider } from "components/slider";
-
 const FormItem = Form.Item;
 
 export default function DatasetSettingsViewConfigTab(props: {
@@ -223,8 +222,8 @@ export default function DatasetSettingsViewConfigTab(props: {
         <Col span={6}>
           <FormItemWithInfo
             name={["defaultConfiguration", "rotation"]}
-            label="Rotation"
-            info="The default rotation that will be used in oblique and arbitrary view mode."
+            label="Rotation - Arbitrary View Modes"
+            info="The default rotation that will be used in oblique and flight view mode."
           >
             <Vector3Input />
           </FormItemWithInfo>
@@ -328,6 +327,66 @@ export default function DatasetSettingsViewConfigTab(props: {
               x: "max-content",
             }}
           />
+        </Col>
+      </Row>
+      <Row gutter={32}>
+        <Col span={12}>
+          Permanent dataset rotation:
+          <Row gutter={24}>
+            <Col span={16}>
+              <FormItemWithInfo
+                name={["xAxisRotation"]}
+                label="X Axis Rotation"
+                info="Change the datasets rotation around the x-axis."
+                colon={false}
+              >
+                <Slider min={0} max={100} step={1} />
+              </FormItemWithInfo>
+            </Col>
+            <Col span={8} style={{ marginRight: -12 }}>
+              <FormItem
+                name={["defaultConfiguration", "segmentationPatternOpacity"]}
+                colon={false}
+                label=" "
+              >
+                <InputNumber min={0} max={100} step={1} precision={0} />
+              </FormItem>
+            </Col>
+          </Row>
+          <Row gutter={24}>
+            <Col span={16}>
+              <FormItemWithInfo
+                name={["yAxisRotation"]}
+                label="Y Axis Rotation"
+                info="Change the datasets rotation around the y-axis."
+                colon={false}
+              >
+                <Slider min={0} max={100} step={1} />
+              </FormItemWithInfo>
+            </Col>
+            <Col span={8} style={{ marginRight: -12 }}>
+              <FormItem name={["yAxisRotation"]} colon={false} label=" ">
+                <InputNumber min={0} max={100} step={1} precision={0} />
+              </FormItem>
+            </Col>
+          </Row>{" "}
+          <Row gutter={24}>
+            <Col span={16}>
+              <FormItemWithInfo
+                name={["zAxisRotation"]}
+                label="Z Axis Rotation"
+                info="Change the datasets rotation around the z-axis."
+                colon={false}
+              >
+                <Slider min={0} max={100} step={1} />
+              </FormItemWithInfo>
+            </Col>
+            <Col span={8} style={{ marginRight: -12 }}>
+              <FormItem name={["zAxisRotation"]} colon={false} label=" ">
+                <InputNumber min={0} max={100} step={1} precision={0} />
+              </FormItem>
+            </Col>
+          </Row>
         </Col>
       </Row>
     </div>

@@ -81,7 +81,11 @@ const logRetryToAnalytics = _.throttle((datasetName: string) => {
 type OwnProps = {
   datastores: Array<APIDataStore>;
   withoutCard?: boolean;
-  onUploaded: (arg0: string, arg2: boolean) => Promise<void> | void;
+  onUploaded: (
+    datasetId: string,
+    datasetName: string,
+    needsConversion: boolean,
+  ) => Promise<void> | void;
 };
 type StateProps = {
   activeUser: APIUser | null | undefined;
@@ -400,7 +404,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               name: "",
               zipFile: [],
             });
-            this.props.onUploaded(newDatasetId, this.state.needsConversion);
+            this.props.onUploaded(newDatasetId, newDatasetName, this.state.needsConversion);
           }
         },
         (error) => {

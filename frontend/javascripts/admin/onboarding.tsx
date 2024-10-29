@@ -498,7 +498,11 @@ class OnboardingView extends React.PureComponent<Props, State> {
         >
           <DatasetUploadView
             datastores={this.state.datastores}
-            onUploaded={async (uploadedDatasetId: string, needsConversion: boolean) => {
+            onUploaded={async (
+              uploadedDatasetId: string,
+              _uploadedDatasetName: string,
+              needsConversion: boolean,
+            ) => {
               this.setState({
                 datasetIdToImport: uploadedDatasetId,
                 isDatasetUploadModalVisible: false,

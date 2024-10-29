@@ -14,6 +14,7 @@ import { getDatastores } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import DatasetAddComposeView from "./dataset_add_compose_view";
 import type { History } from "history";
+import { getURLSanitizedName } from "oxalis/model/accessors/dataset_accessor";
 
 const { Content, Sider } = Layout;
 
@@ -34,16 +35,19 @@ const addTypeToVerb: Record<DatasetAddType, string> = {
 function DatasetAddView({ history }: RouteComponentProps) {
   const datastores = useFetch<APIDataStore[]>(getDatastores, [], []);
   const [datasetId, setDatasetId] = useState("");
+  const [uploadedDatasetName, setUploadedDatasetName] = useState("");
   const [datasetNeedsConversion, setDatasetNeedsConversion] = useState(false);
   const [datasetAddType, setImportType] = useState<DatasetAddType>(DatasetAddType.UPLOAD);
 
   const handleDatasetAdded = async (
     datasetAddType: DatasetAddType,
     datasetId: string,
+    datasetName: string,
     needsConversion: boolean | null | undefined,
   ): Promise<void> => {
     setDatasetId(datasetId);
     setImportType(datasetAddType);
+    setUploadedDatasetName(datasetName);
     if (needsConversion != null) setDatasetNeedsConversion(needsConversion);
   };
 
@@ -58,6 +62,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
       datasetNeedsConversion,
       datasetAddType,
       datasetId,
+      uploadedDatasetName,
       setDatasetId,
       history,
     );
@@ -267,6 +272,7 @@ const getPostUploadModal = (
   datasetNeedsConversion: boolean,
   datasetAddType: DatasetAddType,
   datasetId: string,
+  uploadedDatasetName: string,
   setDatasetId: (arg0: string) => void,
   history: History<unknown>,
 ) => {
@@ -320,10 +326,23 @@ const getPostUploadModal = (
               </React.Fragment>
             ) : (
               <React.Fragment>
-                <Button type="primary" onClick={() => history.push(`/datasets/${datasetId}/view`)}>
+                <Button
+                  type="primary"
+                  onClick={() =>
+                    history.push(
+                      `/datasets/${getURLSanitizedName({ name: uploadedDatasetName })}-${datasetId}/view`,
+                    )
+                  }
+                >
                   View the Dataset
                 </Button>
-                <Button onClick={() => history.push(`/datasets/${datasetId}/edit`)}>
+                <Button
+                  onClick={() =>
+                    history.push(
+                      `/datasets/${getURLSanitizedName({ name: uploadedDatasetName })}-${datasetId}/edit`,
+                    )
+                  }
+                >
                   Go to Dataset Settings
                 </Button>
                 <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>

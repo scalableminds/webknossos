@@ -181,7 +181,7 @@ function SimpleDatasetForm({
             <Row gutter={48}>
               <Col span={24} xl={12}>
                 <FormItemWithInfo
-                  name={["dataset", "name"]} // TODO: This change needs to be double checked.
+                  name={["dataSource", "id", "name"]}
                   label="Name"
                   info="The name of the dataset"
                   validateFirst

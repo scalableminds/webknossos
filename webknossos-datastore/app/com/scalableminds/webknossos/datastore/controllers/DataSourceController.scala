@@ -468,7 +468,7 @@ class DataSourceController @Inject()(
             needsConversion = false,
             viaAddRoute = true,
             userToken = urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
-        } yield Ok(Json.toJson("newDatasetId" -> uploadedDatasetId))
+        } yield Ok(Json.obj("newDatasetId" -> uploadedDatasetId))
       }
     }
 
@@ -559,7 +559,7 @@ class DataSourceController @Inject()(
                 userToken))
           (dataSource, newDatasetId) <- composeService.composeDataset(request.body, userToken)
           _ <- dataSourceRepository.updateDataSource(dataSource)
-        } yield Ok(Json.toJson("newDatasetId" -> newDatasetId))
+        } yield Ok(Json.obj("newDatasetId" -> newDatasetId))
       }
     }
 

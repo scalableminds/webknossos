@@ -196,7 +196,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
             ".",
         ].join("\n"),
       });
-      props.onAdded(newDatasetId, false);
+      props.onAdded(newDatasetId, newDatasetName, false);
     } finally {
       setIsLoading(false);
     }

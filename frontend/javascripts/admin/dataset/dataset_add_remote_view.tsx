@@ -50,6 +50,7 @@ type FileList = UploadFile<any>[];
 type OwnProps = {
   onAdded: (
     uploadedDatasetId: string,
+    updatedDatasetName: string,
     needsConversion?: boolean | null | undefined,
   ) => Promise<void>;
   datastores: APIDataStore[];
@@ -297,7 +298,7 @@ function DatasetAddRemoteView(props: Props) {
           dataSourceJsonStr,
           targetFolderId,
         );
-        onAdded(newDatasetId);
+        onAdded(newDatasetId, configJSON.id.name);
       } catch (e) {
         setShowLoadingOverlay(false);
         Toast.error(`The datasource config could not be stored. ${e}`);

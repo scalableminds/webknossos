@@ -27,7 +27,11 @@ export type WizardComponentProps = {
   wizardContext: WizardContext;
   setWizardContext: React.Dispatch<React.SetStateAction<WizardContext>>;
   datastores: APIDataStore[];
-  onAdded: (datasetId: string, needsConversion?: boolean | null | undefined) => Promise<void>;
+  onAdded: (
+    datasetId: string,
+    datasetName: string,
+    needsConversion?: boolean | null | undefined,
+  ) => Promise<void>;
 };
 
 export async function tryToFetchDatasetsByNameOrId(

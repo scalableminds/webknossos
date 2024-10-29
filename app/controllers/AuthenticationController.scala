@@ -238,12 +238,12 @@ class AuthenticationController @Inject()(
                             workflowHash: Option[String]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
-        parsedDatasetId <- Fox.runOptional(datasetId)(ObjectId.fromString(_))
+        datasetIdValidated <- Fox.runOptional(datasetId)(ObjectId.fromString(_))
         isSuperUser <- multiUserDAO.findOne(request.identity._multiUser).map(_.isSuperUser)
         selectedOrganization <- if (isSuperUser)
-          accessibleBySwitchingForSuperUser(parsedDatasetId, annotationId, workflowHash)
+          accessibleBySwitchingForSuperUser(datasetIdValidated, annotationId, workflowHash)
         else
-          accessibleBySwitchingForMultiUser(request.identity._multiUser, parsedDatasetId, annotationId, workflowHash)
+          accessibleBySwitchingForMultiUser(request.identity._multiUser, datasetIdValidated, annotationId, workflowHash)
         _ <- bool2Fox(selectedOrganization._id != request.identity._organization) // User is already in correct orga, but still could not see dataset. Assume this had a reason.
         selectedOrganizationJs <- organizationService.publicWrites(selectedOrganization)
       } yield Ok(selectedOrganizationJs)

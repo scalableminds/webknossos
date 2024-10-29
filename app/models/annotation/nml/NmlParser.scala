@@ -94,8 +94,8 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
         logger.debug(s"Parsed NML file. Trees: ${treesSplit.size}, Volumes: ${volumes.size}")
 
         for {
-          parsedDatasetIdOpt <- Fox.runOptional(datasetIdOpt)(ObjectId.fromString)
-          dataset <- datasetDAO.findOneByIdOrNameAndOrganization(parsedDatasetIdOpt, datasetName, organizationId)
+          datasetIdValidatedOpt <- Fox.runOptional(datasetIdOpt)(ObjectId.fromString)
+          dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetIdValidatedOpt, datasetName, organizationId)
           volumeLayers: List[UploadedVolumeLayer] = volumes.toList.map { v =>
             UploadedVolumeLayer(
               VolumeTracing(

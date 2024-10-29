@@ -246,8 +246,8 @@ class AnnotationController @Inject()(
   def createExplorational(datasetId: String): Action[List[AnnotationLayerParameters]] =
     sil.SecuredAction.async(validateJson[List[AnnotationLayerParameters]]) { implicit request =>
       for {
-        parsedDatasetId <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
-        dataset <- datasetDAO.findOne(parsedDatasetId) ?~> Messages("dataset.notFound", parsedDatasetId) ~> NOT_FOUND
+        datasetIdValidated <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
+        dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetIdValidated) ~> NOT_FOUND
         annotation <- annotationService.createExplorationalFor(
           request.identity,
           dataset._id,
@@ -263,8 +263,8 @@ class AnnotationController @Inject()(
     sil.UserAwareAction.async { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken) // users with dataset sharing token may also get a sandbox annotation
       for {
-        parsedDatasetId <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
-        dataset <- datasetDAO.findOne(parsedDatasetId)(ctx) ?~> Messages("dataset.notFound", parsedDatasetId) ~> NOT_FOUND
+        datasetIdValidated <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
+        dataset <- datasetDAO.findOne(datasetIdValidated)(ctx) ?~> Messages("dataset.notFound", datasetIdValidated) ~> NOT_FOUND
         tracingType <- TracingType.fromString(typ).toFox
         _ <- bool2Fox(tracingType == TracingType.skeleton) ?~> "annotation.sandbox.skeletonOnly"
         annotation = Annotation(

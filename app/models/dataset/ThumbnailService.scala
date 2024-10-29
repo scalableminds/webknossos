@@ -36,7 +36,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
   private val MaxThumbnailHeight = 4000
 
   def getThumbnailWithCache(
-      parsedDatasetId: ObjectId,
+      datasetIdValidated: ObjectId,
       layerName: String,
       w: Option[Int],
       h: Option[Int],
@@ -44,7 +44,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
     val width = com.scalableminds.util.tools.Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
     val height = com.scalableminds.util.tools.Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
     for {
-      dataset <- datasetDAO.findOne(parsedDatasetId)(GlobalAccessContext)
+      dataset <- datasetDAO.findOne(datasetIdValidated)(GlobalAccessContext)
       image <- thumbnailCachingService.getOrLoad(
         dataset._id,
         layerName,

@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(122);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(123);
 COMMIT TRANSACTION;
 
 
@@ -546,7 +546,7 @@ CREATE TABLE webknossos.emailVerificationKeys(
   isUsed BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei');
+CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei', 'em_synapses', 'em_neuron_types', 'em_cell_organelles');
 
 CREATE TABLE webknossos.aiModels(
   _id CHAR(24) PRIMARY KEY,

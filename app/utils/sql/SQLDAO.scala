@@ -46,7 +46,7 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
       case Some(r) =>
         parse(r) ?~> ("sql: could not parse database row for object" + id)
       case _ =>
-        Fox.failure("sql: could not find object " + id)
+        Fox.empty
     }.flatten
 
   @nowarn // suppress warning about unused implicit ctx, as it is used in subclasses

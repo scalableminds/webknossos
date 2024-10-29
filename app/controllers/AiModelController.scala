@@ -57,6 +57,16 @@ object UpdateAiModelParameters {
   implicit val jsonFormat: OFormat[UpdateAiModelParameters] = Json.format[UpdateAiModelParameters]
 }
 
+case class RegisterAiModelParameters(id: ObjectId, // must be a valid MongoDB ObjectId
+                                     dataStoreName: String,
+                                     name: String,
+                                     comment: Option[String],
+                                     category: Option[AiModelCategory])
+
+object RegisterAiModelParameters {
+  implicit val jsonFormat: OFormat[RegisterAiModelParameters] = Json.format[RegisterAiModelParameters]
+}
+
 class AiModelController @Inject()(
     aiModelDAO: AiModelDAO,
     aiModelService: AiModelService,
@@ -206,6 +216,28 @@ class AiModelController @Inject()(
         updatedAiModel <- aiModelDAO.findOne(aiModelIdValidated) ?~> "aiModel.notFound" ~> NOT_FOUND
         jsResult <- aiModelService.publicWrites(updatedAiModel)
       } yield Ok(jsResult)
+    }
+
+  def registerAiModel: Action[RegisterAiModelParameters] =
+    sil.SecuredAction.async(validateJson[RegisterAiModelParameters]) { implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity)
+        _ <- dataStoreDAO.findOneByName(request.body.dataStoreName) ?~> "dataStore.notFound"
+        _ <- aiModelDAO.findOne(request.body.id).reverse ?~> "aiModel.id.taken"
+        _ <- aiModelDAO.findOneByName(request.body.name).reverse ?~> "aiModel.name.taken"
+        _ <- aiModelDAO.insertOne(
+          AiModel(
+            request.body.id,
+            _organization = request.identity._organization,
+            request.body.dataStoreName,
+            request.identity._id,
+            None,
+            List.empty,
+            request.body.name,
+            request.body.comment,
+            request.body.category
+          ))
+      } yield Ok
     }
 
   def deleteAiModel(aiModelId: String): Action[AnyContent] =

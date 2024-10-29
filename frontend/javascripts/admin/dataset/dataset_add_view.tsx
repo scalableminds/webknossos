@@ -184,7 +184,7 @@ const alignBanner = (
     />
     <p>
       <a
-        href="https://docs.webknossos.org/webknossos/automated_analysis.html"
+        href="https://docs.webknossos.org/webknossos/automation/alignment.html"
         target="_blank"
         rel="noopener noreferrer"
       >

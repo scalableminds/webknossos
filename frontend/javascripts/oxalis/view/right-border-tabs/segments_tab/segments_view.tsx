@@ -137,6 +137,8 @@ import { SegmentStatisticsModal } from "./segment_statistics_modal";
 import type { ItemType } from "antd/lib/menu/interface";
 import { InputWithUpdateOnBlur } from "oxalis/view/components/input_with_update_on_blur";
 
+const SCROLL_DELAY_MS = 50;
+
 const { confirm } = Modal;
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset
@@ -1589,7 +1591,7 @@ class SegmentsView extends React.Component<Props, State> {
     this.setState(({ renamingCounter }) => ({ renamingCounter: renamingCounter - 1 }));
   };
 
-  handleSearchSelect = (selectedElement: SegmentHierarchyNode) => {
+  maybeExpandParentGroup = (selectedElement: SegmentHierarchyNode) => {
     if (this.tree?.current == null) {
       return;
     }
@@ -1605,14 +1607,45 @@ class SegmentsView extends React.Component<Props, State> {
     if (expandedGroups) {
       this.setExpandedGroupsFromSet(expandedGroups);
     }
+  };
+
+  handleSearchSelect = (selectedElement: SegmentHierarchyNode) => {
+    this.maybeExpandParentGroup(selectedElement);
     // As parent groups might still need to expand, we need to wait for this to finish.
     setTimeout(() => {
       if (this.tree.current) this.tree.current.scrollTo({ key: selectedElement.key });
-    }, 50);
+    }, SCROLL_DELAY_MS);
     const isASegment = "color" in selectedElement;
     if (isASegment) {
       this.onSelectSegment(selectedElement);
+    } else {
+      if (this.props.visibleSegmentationLayer == null) return;
+      Store.dispatch(
+        setSelectedSegmentsOrGroupAction(
+          [],
+          selectedElement.id,
+          this.props.visibleSegmentationLayer?.name,
+        ),
+      );
     }
+  };
+
+  handleSelectAllMatchingSegments = (allMatches: SegmentHierarchyNode[]) => {
+    if (this.props.visibleSegmentationLayer == null) return;
+    const allMatchingSegmentIds = allMatches.map((match) => {
+      this.maybeExpandParentGroup(match);
+      return match.id;
+    });
+    Store.dispatch(
+      setSelectedSegmentsOrGroupAction(
+        allMatchingSegmentIds,
+        null,
+        this.props.visibleSegmentationLayer.name,
+      ),
+    );
+    setTimeout(() => {
+      this.tree.current?.scrollTo({ key: allMatches[0].key });
+    }, SCROLL_DELAY_MS);
   };
 
   getSegmentStatisticsModal = (groupId: number) => {
@@ -1832,6 +1865,7 @@ class SegmentsView extends React.Component<Props, State> {
                     searchKey={(item) => getSegmentName(item)}
                     provideShortcut
                     targetId={segmentsTabId}
+                    onSelectAllMatches={this.handleSelectAllMatchingSegments}
                   >
                     <ButtonComponent
                       size="small"

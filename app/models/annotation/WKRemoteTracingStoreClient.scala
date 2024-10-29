@@ -83,7 +83,8 @@ class WKRemoteTracingStoreClient(
   }
 
   def saveAnnotationProto(annotationId: ObjectId, annotationProto: AnnotationProto): Fox[Unit] = {
-    logger.debug("Called to save AnnotationProto." + baseInfo)
+    logger.debug(
+      f"Called to save AnnotationProto $annotationId with layers ${annotationProto.layers.map(_.tracingId).mkString(",")}." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/annotation/save")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("annotationId" -> annotationId.toString)

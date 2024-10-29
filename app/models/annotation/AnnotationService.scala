@@ -364,6 +364,8 @@ class AnnotationService @Inject()(
       dataset <- datasetDAO.findOne(annotationBase._dataset) ?~> Messages("dataset.noAccess", datasetName)
       _ <- bool2Fox(dataset.isUsable) ?~> Messages("dataset.notImported", dataset.name)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
+      _ = logger.info(
+        f"task assignment. creating annotation $initializingAnnotationId from base $annotationBaseId for task $taskId")
       duplicatedAnnotationProto <- tracingStoreClient.duplicateAnnotation(
         annotationBaseId,
         initializingAnnotationId,
@@ -458,13 +460,15 @@ class AnnotationService @Inject()(
       case _       => annotationDAO.abortInitializingAnnotation(initializingAnnotationId)
     }
 
-  def createAnnotationBase(
+  // Save annotation base to postgres AND annotation proto to tracingstore.
+  def createAndSaveAnnotationBase(
       taskFox: Fox[Task],
       userId: ObjectId,
       skeletonTracingIdBox: Box[Option[String]],
       volumeTracingIdBox: Box[Option[String]],
       datasetId: ObjectId,
-      description: Option[String]
+      description: Option[String],
+      tracingStoreClient: WKRemoteTracingStoreClient
   )(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       task <- taskFox
@@ -481,6 +485,12 @@ class AnnotationService @Inject()(
                                   annotationLayers,
                                   description.getOrElse(""),
                                   typ = AnnotationType.TracingBase)
+      annotationBaseProto = AnnotationProto(name = Some(AnnotationDefaults.defaultName),
+                                            description = Some(AnnotationDefaults.defaultDescription),
+                                            version = 0L,
+                                            layers = annotationLayers.map(_.toProto))
+      _ <- tracingStoreClient.saveAnnotationProto(annotationBase._id, annotationBaseProto)
+      _ = logger.info(s"inserting base annotation ${annotationBase._id} for task ${task._id}")
       _ <- annotationDAO.insertOne(annotationBase)
     } yield ()
 

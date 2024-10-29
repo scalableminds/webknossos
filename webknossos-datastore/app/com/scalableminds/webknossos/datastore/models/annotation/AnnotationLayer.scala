@@ -17,7 +17,10 @@ case class AnnotationLayer(
     typ: AnnotationLayerType,
     name: String,
     stats: JsObject,
-)
+) {
+  def toProto: AnnotationLayerProto =
+    AnnotationLayerProto(tracingId, name, AnnotationLayerType.toProto(typ))
+}
 
 object AnnotationLayer extends FoxImplicits {
   implicit val jsonFormat: OFormat[AnnotationLayer] = Json.format[AnnotationLayer]

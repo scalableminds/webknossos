@@ -114,7 +114,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     parseJsonResponse(performRequest)
   }
 
-  def postWithJsonResponse[T: Reads]: Fox[T] = {
+  def postWithJsonResponse[T: Reads](): Fox[T] = {
     request = request.withMethod("POST")
     parseJsonResponse(performRequest)
   }

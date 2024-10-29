@@ -491,6 +491,7 @@ class VolumeTracingService @Inject()(
                               sourceTracing: VolumeTracing,
                               isFromTask: Boolean,
                               boundingBox: Option[BoundingBox],
+                              datasetBoundingBox: Option[BoundingBox],
                               magRestrictions: MagRestrictions,
                               editPosition: Option[Vec3Int],
                               editRotation: Option[Vec3Double],
@@ -516,21 +517,23 @@ class VolumeTracingService @Inject()(
     } yield newTracing
   }
 
-  @SuppressWarnings(Array("OptionGet")) //We suppress this warning because we check the option beforehand
   private def addBoundingBoxFromTaskIfRequired(tracing: VolumeTracing,
-                                               fromTask: Boolean,
-                                               datasetBoundingBox: Option[BoundingBox]): VolumeTracing =
-    if (fromTask && datasetBoundingBox.isDefined) {
-      val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
-      tracing
-        .addUserBoundingBoxes(
-          NamedBoundingBoxProto(newId,
-                                Some("task bounding box"),
-                                Some(true),
-                                Some(getRandomColor),
-                                tracing.boundingBox))
-        .withBoundingBox(datasetBoundingBox.get)
-    } else tracing
+                                               isFromTask: Boolean,
+                                               datasetBoundingBoxOpt: Option[BoundingBox]): VolumeTracing =
+    datasetBoundingBoxOpt match {
+      case Some(datasetBoundingBox) if isFromTask => {
+        val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
+        tracing
+          .addUserBoundingBoxes(
+            NamedBoundingBoxProto(newId,
+                                  Some("task bounding box"),
+                                  Some(true),
+                                  Some(getRandomColor),
+                                  tracing.boundingBox))
+          .withBoundingBox(datasetBoundingBox)
+      }
+      case _ => tracing
+    }
 
   def duplicateVolumeData(sourceTracingId: String,
                           sourceTracing: VolumeTracing,

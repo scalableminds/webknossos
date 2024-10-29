@@ -90,6 +90,8 @@ class WKRemoteTracingStoreClient(
       .postProto[AnnotationProto](annotationProto)
   }
 
+  // Used in duplicate route. History and version are kept
+  // TODO: can we remove some params here, if they are used only in task case?
   def duplicateAnnotation(annotationId: ObjectId,
                           newAnnotationId: ObjectId,
                           version: Option[Long],
@@ -97,6 +99,7 @@ class WKRemoteTracingStoreClient(
                           editPosition: Option[Vec3Int],
                           editRotation: Option[Vec3Double],
                           boundingBox: Option[BoundingBox],
+                          datasetBoundingBox: Option[BoundingBox],
                           magRestrictions: MagRestrictions,
   ): Fox[AnnotationProto] = {
     logger.debug(s"Called to duplicate annotation $annotationId." + baseInfo)
@@ -107,27 +110,41 @@ class WKRemoteTracingStoreClient(
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
+      .addQueryStringOptional("datasetBoundingBox", datasetBoundingBox.map(_.toLiteral))
       .addQueryString("isFromTask" -> isFromTask.toString)
       .addQueryStringOptional("minMag", magRestrictions.minStr)
       .addQueryStringOptional("maxMag", magRestrictions.maxStr)
       .postWithProtoResponse[AnnotationProto]()(AnnotationProto)
   }
 
-  def duplicateSkeletonTracing(skeletonTracingId: String,
-                               versionString: Option[String] = None,
-                               isFromTask: Boolean = false,
+  // Used in task creation. History is dropped, new version will be zero.
+  // TODO: currently also used in resetToBase. Fix that.
+  def duplicateSkeletonTracing(skeletonTracingId: String, // TODO: might also need annotation id
                                editPosition: Option[Vec3Int] = None,
                                editRotation: Option[Vec3Double] = None,
-                               boundingBox: Option[BoundingBox] = None): Fox[String] = ???
+                               boundingBox: Option[BoundingBox] = None): Fox[String] =
+    rpc(s"${tracingStore.url}/tracings/skeleton/$skeletonTracingId/duplicate").withLongTimeout
+      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
+      .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
+      .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
+      .postWithJsonResponse[String]()
 
+  // Used in task creation. History is dropped, new version will be zero.
+  // TODO: currently also used in resetToBase. Fix that.
   def duplicateVolumeTracing(volumeTracingId: String,
-                             isFromTask: Boolean = false,
-                             datasetBoundingBox: Option[BoundingBox] = None,
                              magRestrictions: MagRestrictions = MagRestrictions.empty,
-                             downsample: Boolean = false,
                              editPosition: Option[Vec3Int] = None,
                              editRotation: Option[Vec3Double] = None,
-                             boundingBox: Option[BoundingBox] = None): Fox[String] = ???
+                             boundingBox: Option[BoundingBox] = None): Fox[String] =
+    rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/duplicate").withLongTimeout
+      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
+      .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
+      .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
+      .addQueryStringOptional("minMag", magRestrictions.minStr)
+      .addQueryStringOptional("maxMag", magRestrictions.maxStr)
+      .postWithJsonResponse[String]()
 
   def mergeSkeletonTracingsByIds(tracingIds: List[String], persistTracing: Boolean): Fox[String] = {
     logger.debug("Called to merge SkeletonTracings by ids." + baseInfo)

@@ -441,7 +441,8 @@ class AnnotationController @Inject()(
         isFromTask = annotation._task.isDefined,
         editPosition = None,
         editRotation = None,
-        boundingBox = dataSource.map(_.boundingBox),
+        boundingBox = None,
+        datasetBoundingBox = dataSource.map(_.boundingBox),
         magRestrictions = MagRestrictions.empty
       )
       newAnnotationLayers = newAnnotationProto.layers.map(AnnotationLayer.fromProto)

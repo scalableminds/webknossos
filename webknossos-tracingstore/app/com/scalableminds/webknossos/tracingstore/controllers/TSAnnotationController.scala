@@ -109,7 +109,8 @@ class TSAnnotationController @Inject()(
                 maxMag: Option[Int],
                 editPosition: Option[String],
                 editRotation: Option[String],
-                boundingBox: Option[String]): Action[AnyContent] =
+                boundingBox: Option[String],
+                datasetBoundingBox: Option[String]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
@@ -118,6 +119,7 @@ class TSAnnotationController @Inject()(
               editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
               editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
               boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
+              datasetBoundingBoxParsed <- Fox.runOptional(datasetBoundingBox)(BoundingBox.fromLiteral)
               magRestrictions = MagRestrictions(minMag, maxMag)
               annotationProto <- annotationService.duplicate(annotationId,
                                                              newAnnotationId,
@@ -126,6 +128,7 @@ class TSAnnotationController @Inject()(
                                                              editPositionParsed,
                                                              editRotationParsed,
                                                              boundingBoxParsed,
+                                                             datasetBoundingBoxParsed,
                                                              magRestrictions)
             } yield Ok(annotationProto.toByteArray).as(protobufMimeType)
           }

@@ -629,6 +629,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       editPosition: Option[Vec3Int],
       editRotation: Option[Vec3Double],
       boundingBox: Option[BoundingBox],
+      datasetBoundingBox: Option[BoundingBox],
       magRestrictions: MagRestrictions)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationProto] =
     for {
       currentAnnotation <- get(annotationId, version)
@@ -641,6 +642,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                          editPosition,
                          editRotation,
                          boundingBox,
+                         datasetBoundingBox,
                          magRestrictions))
       _ <- duplicateUpdates(annotationId, newAnnotationId)
       duplicatedAnnotation = currentAnnotation.copy(layers = newLayers)
@@ -667,6 +669,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       editPosition: Option[Vec3Int],
       editRotation: Option[Vec3Double],
       boundingBox: Option[BoundingBox],
+      datasetBoundingBox: Option[BoundingBox],
       magRestrictions: MagRestrictions)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationLayerProto] =
     for {
       newTracingId <- layer.`type` match {
@@ -676,6 +679,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                  version,
                                  isFromTask,
                                  boundingBox,
+                                 datasetBoundingBox,
                                  magRestrictions,
                                  editPosition,
                                  editRotation)
@@ -697,6 +701,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       version: Long,
       isFromTask: Boolean,
       boundingBox: Option[BoundingBox],
+      datasetBoundingBox: Option[BoundingBox],
       magRestrictions: MagRestrictions,
       editPosition: Option[Vec3Int],
       editRotation: Option[Vec3Double])(implicit ec: ExecutionContext, tc: TokenContext): Fox[String] = {
@@ -708,6 +713,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                                                  sourceTracing,
                                                                  isFromTask,
                                                                  boundingBox,
+                                                                 datasetBoundingBox,
                                                                  magRestrictions,
                                                                  editPosition,
                                                                  editRotation,

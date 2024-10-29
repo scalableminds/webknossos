@@ -150,7 +150,12 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     for {
       volumeTracingOpt <- baseAnnotation.volumeTracingId
       newVolumeTracingId <- volumeTracingOpt
-        .map(id => tracingStoreClient.duplicateVolumeTracing(id, magRestrictions = magRestrictions))
+        .map(
+          id =>
+            tracingStoreClient.duplicateVolumeTracing(id,
+                                                      editPosition = Some(params.editPosition),
+                                                      editRotation = Some(params.editRotation),
+                                                      magRestrictions = magRestrictions))
         .getOrElse(
           annotationService
             .createVolumeTracingBase(

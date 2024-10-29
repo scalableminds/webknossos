@@ -372,6 +372,7 @@ class AnnotationService @Inject()(
         editPosition = None,
         editRotation = None,
         boundingBox = None,
+        datasetBoundingBox = None,
         magRestrictions = MagRestrictions.empty
       )
       newAnnotation = annotationBase.copy(

@@ -114,7 +114,7 @@ class TSAnnotationController @Inject()(
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeAnnotation(annotationId)) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
             for {
               editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
               editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)

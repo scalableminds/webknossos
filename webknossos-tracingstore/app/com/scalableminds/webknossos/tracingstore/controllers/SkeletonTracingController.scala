@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
@@ -142,4 +143,34 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
       }
     }
 
+  // Used in task creation. History is dropped. Caller is responsible to create and save a matching AnnotationProto object
+  def duplicate(tracingId: String,
+                editPosition: Option[String],
+                editRotation: Option[String],
+                boundingBox: Option[String]): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+            for {
+              annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+              editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
+              editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
+              boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
+              newestSourceVersion <- annotationService.currentMaterializableVersion(annotationId)
+              newTracingId <- annotationService.duplicateSkeletonTracing(
+                annotationId,
+                sourceTracingId = tracingId,
+                sourceVersion = newestSourceVersion,
+                newVersion = 0,
+                editPosition = editPositionParsed,
+                editRotation = editRotationParsed,
+                boundingBox = boundingBoxParsed,
+                isFromTask = false
+              )
+            } yield Ok(Json.toJson(newTracingId))
+          }
+        }
+      }
+    }
 }

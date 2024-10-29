@@ -135,31 +135,41 @@ class EditableMappingService @Inject()(
     } yield newEditableMappingInfo
   }
 
-  def duplicateSegmentToAgglomerate(sourceTracingId: String, newId: String, version: Long): Fox[Unit] = {
-    val iterator =
+  def duplicateSegmentToAgglomerate(sourceTracingId: String,
+                                    newId: String,
+                                    sourceVersion: Long,
+                                    newVersion: Long): Fox[Unit] = {
+    val sourceIterator =
       new VersionedFossilDbIterator(sourceTracingId,
                                     tracingDataStore.editableMappingsSegmentToAgglomerate,
-                                    Some(version))
+                                    Some(sourceVersion))
     for {
-      _ <- Fox.combined(iterator.map { keyValuePair =>
+      _ <- Fox.combined(sourceIterator.map { keyValuePair =>
         for {
           chunkId <- chunkIdFromSegmentToAgglomerateKey(keyValuePair.key).toFox
           newKey = segmentToAgglomerateKey(newId, chunkId)
-          _ <- tracingDataStore.editableMappingsSegmentToAgglomerate.put(newKey, version = version, keyValuePair.value)
+          _ <- tracingDataStore.editableMappingsSegmentToAgglomerate.put(newKey,
+                                                                         version = newVersion,
+                                                                         keyValuePair.value)
         } yield ()
       }.toList)
     } yield ()
   }
 
-  def duplicateAgglomerateToGraph(sourceTracingId: String, newId: String, version: Long): Fox[Unit] = {
-    val iterator =
-      new VersionedFossilDbIterator(sourceTracingId, tracingDataStore.editableMappingsAgglomerateToGraph, Some(version))
+  def duplicateAgglomerateToGraph(sourceTracingId: String,
+                                  newId: String,
+                                  sourceVersion: Long,
+                                  newVersion: Long): Fox[Unit] = {
+    val sourceIterator =
+      new VersionedFossilDbIterator(sourceTracingId,
+                                    tracingDataStore.editableMappingsAgglomerateToGraph,
+                                    Some(sourceVersion))
     for {
-      _ <- Fox.combined(iterator.map { keyValuePair =>
+      _ <- Fox.combined(sourceIterator.map { keyValuePair =>
         for {
           agglomerateId <- agglomerateIdFromAgglomerateGraphKey(keyValuePair.key).toFox
           newKey = agglomerateGraphKey(newId, agglomerateId)
-          _ <- tracingDataStore.editableMappingsAgglomerateToGraph.put(newKey, version = version, keyValuePair.value)
+          _ <- tracingDataStore.editableMappingsAgglomerateToGraph.put(newKey, version = newVersion, keyValuePair.value)
         } yield ()
       }.toList)
     } yield ()

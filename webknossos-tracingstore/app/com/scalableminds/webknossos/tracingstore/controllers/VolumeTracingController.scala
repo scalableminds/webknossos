@@ -414,4 +414,39 @@ class VolumeTracingController @Inject()(
       }
     }
 
+  // Used in task creation. History is dropped. Caller is responsible to create and save a matching AnnotationProto object
+  def duplicate(tracingId: String,
+                minMag: Option[Int],
+                maxMag: Option[Int],
+                editPosition: Option[String],
+                editRotation: Option[String],
+                boundingBox: Option[String]): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+            for {
+              annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+              editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
+              editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
+              boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
+              magRestrictions = MagRestrictions(minMag, maxMag)
+              newestSourceVersion <- annotationService.currentMaterializableVersion(annotationId)
+              newTracingId <- annotationService.duplicateVolumeTracing(
+                annotationId,
+                sourceTracingId = tracingId,
+                sourceVersion = newestSourceVersion,
+                newVersion = 0,
+                editPosition = editPositionParsed,
+                editRotation = editRotationParsed,
+                boundingBox = boundingBoxParsed,
+                datasetBoundingBox = None,
+                isFromTask = false,
+                magRestrictions = magRestrictions
+              )
+            } yield Ok(Json.toJson(newTracingId))
+          }
+        }
+      }
+    }
 }

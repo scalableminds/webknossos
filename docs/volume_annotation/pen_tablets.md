@@ -5,7 +5,7 @@ Beyond the mouse and keyboard WEBKNOSSOS is great for annotating datasets with a
 ## Using Wacom/Pen tablets
 Using pen tablet can significantly boost your annotation productivity, especially if you set it up correctly with WEBKNOSSOS.
 
-![youtube-video](https://www.youtube.com/embed/xk0gqsVx494)
+![youtube-video](https://www.youtube.com/embed/qCrqswDwmi8)
 
 To streamline your workflow, program your tablet and pen buttons to match the WEBKNOSSOS shortcuts. By doing so, you can focus on your pen without the need of a mouse or keyboard. Here is an example configuration using a Wacom tablet and the Wacom driver software:
 
@@ -26,7 +26,7 @@ You can find the full list for keyboard shortcuts in the [documentation](../ui/k
 ### Annotating with Wacom Pens
 Now, let’s dive into the annotation process! In this example, we begin by quick-selecting a cell.
 
-![youtube-video](https://www.youtube.com/embed/xk0gqsVx494?start=46)
+![youtube-video](https://www.youtube.com/embed/qCrqswDwmi8?start=37)
 
 If the annotation isn’t precise enough, we can easily switch to the eraser tool (middle left button) and erase a corner. Selecting the brush tool is as simple as pressing the left button, allowing us to add small surfaces to the annotation.
 When ready, pressing the right button creates a new segment, and we can repeat the process for other cells.

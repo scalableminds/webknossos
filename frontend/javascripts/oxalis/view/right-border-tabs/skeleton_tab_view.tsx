@@ -662,7 +662,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
   };
 
-  handleSearchSelect = (selectedElement: TreeOrTreeGroup) => {
+  maybeExpandParentGroups = (selectedElement: TreeOrTreeGroup) => {
     const { skeletonTracing } = this.props;
     if (!skeletonTracing) {
       return;
@@ -676,11 +676,24 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     if (expandedGroups) {
       this.props.onSetExpandedGroups(expandedGroups);
     }
+  };
+
+  handleSearchSelect = (selectedElement: TreeOrTreeGroup) => {
+    this.maybeExpandParentGroups(selectedElement);
     if (selectedElement.type === GroupTypeEnum.TREE) {
       this.props.onSetActiveTree(selectedElement.id);
     } else {
       this.props.onSetActiveTreeGroup(selectedElement.id);
     }
+  };
+
+  handleSelectAllMatchingTrees = (matchingTrees: TreeOrTreeGroup[]) => {
+    this.props.onDeselectActiveGroup();
+    const treeIds = matchingTrees.map((tree) => {
+      this.maybeExpandParentGroups(tree);
+      return tree.id;
+    });
+    this.setState({ selectedTreeIds: treeIds });
   };
 
   getTreesComponents(sortBy: string) {
@@ -858,6 +871,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     searchKey="name"
                     provideShortcut
                     targetId={treeTabId}
+                    onSelectAllMatches={this.handleSelectAllMatchingTrees}
                   >
                     <ButtonComponent title="Open the search via CTRL + Shift + F">
                       <SearchOutlined />

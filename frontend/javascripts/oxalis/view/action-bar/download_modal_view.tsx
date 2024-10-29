@@ -433,7 +433,7 @@ function _DownloadModalView({
     >
       For more information on how to work with {typeDependentFileName} visit the{" "}
       <a
-        href="https://docs.webknossos.org/webknossos/tooling.html"
+        href="https://docs.webknossos.org/webknossos/data/export_ui.html"
         target="_blank"
         rel="noreferrer"
       >

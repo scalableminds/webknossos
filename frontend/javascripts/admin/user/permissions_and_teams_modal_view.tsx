@@ -243,7 +243,7 @@ function PermissionsAndTeamsModalView({
         <h4>
           Organization Permissions{" "}
           <a
-            href="https://docs.webknossos.org/webknossos/users.html"
+            href="https://docs.webknossos.org/webknossos/users/index.html"
             target="_blank"
             rel="noopener noreferrer"
           >

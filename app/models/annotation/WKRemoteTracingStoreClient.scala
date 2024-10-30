@@ -147,22 +147,6 @@ class WKRemoteTracingStoreClient(
       .postJsonWithProtoResponse[List[String], AnnotationProto](annotationIds)(AnnotationProto)
   }
 
-  def mergeSkeletonTracingsByIds(tracingIds: List[String], persistTracing: Boolean): Fox[String] = {
-    logger.debug("Called to merge SkeletonTracings by ids." + baseInfo)
-    rpc(s"${tracingStore.url}/tracings/skeleton/mergedFromIds").withLongTimeout
-      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryString("persist" -> persistTracing.toString)
-      .postJsonWithJsonResponse[List[TracingSelector], String](tracingIds.map(TracingSelector(_)))
-  }
-
-  def mergeVolumeTracingsByIds(tracingIds: List[String], persistTracing: Boolean): Fox[String] = {
-    logger.debug("Called to merge VolumeTracings by ids." + baseInfo)
-    rpc(s"${tracingStore.url}/tracings/volume/mergedFromIds").withLongTimeout
-      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryString("persist" -> persistTracing.toString)
-      .postJsonWithJsonResponse[List[TracingSelector], String](tracingIds.map(TracingSelector(_)))
-  }
-
   def mergeSkeletonTracingsByContents(tracings: SkeletonTracings, persistTracing: Boolean): Fox[String] = {
     logger.debug("Called to merge SkeletonTracings by contents." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/mergedFromContents").withLongTimeout

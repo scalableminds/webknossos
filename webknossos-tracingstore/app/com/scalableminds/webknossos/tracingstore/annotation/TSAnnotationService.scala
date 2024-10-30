@@ -590,7 +590,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       } yield tracing
     }
 
-  def findMultipleVolumes(selectors: List[Option[TracingSelector]],
+  def findMultipleVolumes(selectors: Seq[Option[TracingSelector]],
                           useCache: Boolean = true,
                           applyUpdates: Boolean = false)(implicit tc: TokenContext,
                                                          ec: ExecutionContext): Fox[List[Option[VolumeTracing]]] =

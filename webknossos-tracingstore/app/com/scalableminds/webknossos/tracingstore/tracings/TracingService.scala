@@ -1,13 +1,9 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreRedisStore}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
-import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box
-import play.api.i18n.MessagesProvider
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import scala.concurrent.ExecutionContext
@@ -69,14 +65,4 @@ trait TracingService[T <: GeneratedMessage]
     }
   }
 
-  def remapTooLargeTreeIds(tracing: T): T = tracing
-
-  def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
-                      tracings: Seq[T],
-                      newId: String,
-                      newVersion: Long,
-                      toCache: Boolean)(implicit mp: MessagesProvider, tc: TokenContext): Fox[MergedVolumeStats]
-
-  def mergeEditableMappings(newTracingId: String, tracingsWithIds: List[(T, String)])(
-      implicit tc: TokenContext): Fox[Unit]
 }

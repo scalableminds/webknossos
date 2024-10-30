@@ -727,24 +727,24 @@ class VolumeTracingService @Inject()(
       case (None, None)       => None
     }
 
-  private def bucketStreamFromSelector(selector: TracingSelector, tracing: VolumeTracing)(
+  private def bucketStreamFor(tracingId: String, tracing: VolumeTracing)(
       implicit tc: TokenContext): Iterator[(BucketPosition, Array[Byte])] = {
-    val dataLayer = volumeTracingLayer(selector.tracingId, tracing)
+    val dataLayer = volumeTracingLayer(tracingId, tracing)
     dataLayer.bucketProvider.bucketStream(Some(tracing.version))
   }
 
-  def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
+  def mergeVolumeData(tracingIds: Seq[String],
                       tracings: Seq[VolumeTracing],
                       newId: String,
                       newVersion: Long,
-                      toCache: Boolean)(implicit mp: MessagesProvider, tc: TokenContext): Fox[MergedVolumeStats] = {
+                      persist: Boolean)(implicit mp: MessagesProvider, tc: TokenContext): Fox[MergedVolumeStats] = {
     val elementClass = tracings.headOption.map(_.elementClass).getOrElse(elementClassToProto(ElementClass.uint8))
 
     val magSets = new mutable.HashSet[Set[Vec3Int]]()
-    tracingSelectors.zip(tracings).foreach {
-      case (selector, tracing) =>
+    tracingIds.zip(tracings).foreach {
+      case (tracingId, tracing) =>
         val magSet = new mutable.HashSet[Vec3Int]()
-        bucketStreamFromSelector(selector, tracing).foreach {
+        bucketStreamFor(tracingId, tracing).foreach {
           case (bucketPosition, _) =>
             magSet.add(bucketPosition.mag)
         }
@@ -770,15 +770,15 @@ class VolumeTracingService @Inject()(
 
       val mergedVolume = new MergedVolume(elementClass)
 
-      tracingSelectors.zip(tracings).foreach {
-        case (selector, tracing) =>
-          val bucketStream = bucketStreamFromSelector(selector, tracing)
+      tracingIds.zip(tracings).foreach {
+        case (tracingId, tracing) =>
+          val bucketStream = bucketStreamFor(tracingId, tracing)
           mergedVolume.addLabelSetFromBucketStream(bucketStream, magsIntersection)
       }
 
-      tracingSelectors.zip(tracings).zipWithIndex.foreach {
-        case ((selector, tracing), sourceVolumeIndex) =>
-          val bucketStream = bucketStreamFromSelector(selector, tracing)
+      tracingIds.zip(tracings).zipWithIndex.foreach {
+        case ((tracingIds, tracing), sourceVolumeIndex) =>
+          val bucketStream = bucketStreamFor(tracingIds, tracing)
           mergedVolume.addFromBucketStream(sourceVolumeIndex, bucketStream, Some(magsIntersection))
       }
       for {
@@ -788,9 +788,9 @@ class VolumeTracingService @Inject()(
           elementClass)
         mergedAdditionalAxes <- Fox.box2Fox(AdditionalAxis.mergeAndAssertSameAdditionalAxes(tracings.map(t =>
           AdditionalAxis.fromProtosAsOpt(t.additionalAxes))))
-        firstTracingSelector <- tracingSelectors.headOption ?~> "merge.noTracings"
+        firstTracingId <- tracingIds.headOption ?~> "merge.noTracings"
         firstTracing <- tracings.headOption ?~> "merge.noTracings"
-        fallbackLayer <- getFallbackLayer(firstTracingSelector.tracingId, firstTracing)
+        fallbackLayer <- getFallbackLayer(firstTracingId, firstTracing)
         segmentIndexBuffer = new VolumeSegmentIndexBuffer(newId,
                                                           volumeSegmentIndexClient,
                                                           newVersion,
@@ -800,7 +800,13 @@ class VolumeTracingService @Inject()(
                                                           tc)
         _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
           for {
-            _ <- saveBucket(newId, elementClass, bucketPosition, bucketBytes, newVersion, toCache, mergedAdditionalAxes)
+            _ <- saveBucket(newId,
+                            elementClass,
+                            bucketPosition,
+                            bucketBytes,
+                            newVersion,
+                            toTemporaryStore = !persist, // TODO unify boolean direction + naming
+                            mergedAdditionalAxes)
             _ <- Fox.runIf(shouldCreateSegmentIndex)(
               updateSegmentIndex(segmentIndexBuffer,
                                  bucketPosition,

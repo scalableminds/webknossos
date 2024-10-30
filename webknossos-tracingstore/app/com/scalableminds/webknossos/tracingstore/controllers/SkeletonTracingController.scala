@@ -6,11 +6,9 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
-import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingSelector}
+import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
-import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
-import net.liftweb.common.{Empty, Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import com.scalableminds.webknossos.datastore.controllers.Controller
@@ -91,38 +89,6 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
           } yield {
             Ok(tracings.toByteArray).as(protobufMimeType)
           }
-        }
-      }
-    }
-
-  def mergedFromIds(persist: Boolean): Action[List[Option[TracingSelector]]] =
-    Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
-      log() {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-          for {
-            tracingOpts <- annotationService.findMultipleSkeletons(request.body, applyUpdates = true) ?~> Messages(
-              "tracing.notFound")
-            tracingsWithIds = tracingOpts.zip(request.body).flatMap {
-              case (Some(tracing), Some(selector)) => Some((tracing, selector.tracingId))
-              case _                               => None
-            }
-            newTracingId = TracingId.generate
-            mergedVolumeStats <- skeletonTracingService.mergeVolumeData(request.body.flatten,
-                                                                        tracingsWithIds.map(_._1),
-                                                                        newTracingId,
-                                                                        newVersion = 0L,
-                                                                        toCache = !persist)
-            mergeEditableMappingsResultBox <- skeletonTracingService
-              .mergeEditableMappings(newTracingId, tracingsWithIds)
-              .futureBox
-            newEditableMappingIdOpt <- mergeEditableMappingsResultBox match {
-              case Full(())   => Fox.successful(Some(newTracingId))
-              case Empty      => Fox.successful(None)
-              case f: Failure => f.toFox
-            }
-            mergedTracing <- Fox.box2Fox(skeletonTracingService.merge(tracingsWithIds.map(_._1)))
-            _ <- skeletonTracingService.save(mergedTracing, Some(newTracingId), version = 0, toCache = !persist)
-          } yield Ok(Json.toJson(newTracingId))
         }
       }
     }

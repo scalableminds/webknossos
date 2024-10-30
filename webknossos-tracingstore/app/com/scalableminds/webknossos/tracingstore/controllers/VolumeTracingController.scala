@@ -34,14 +34,14 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeSegmentStatisticsService,
   VolumeTracingService
 }
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingId, TracingSelector}
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingSelector}
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
   TSRemoteWebknossosClient,
   TracingStoreAccessTokenService,
   TracingStoreConfig
 }
-import net.liftweb.common.{Empty, Failure, Full}
+import net.liftweb.common.Empty
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
@@ -131,39 +131,6 @@ class VolumeTracingController @Inject()(
           } yield {
             Ok(tracings.toByteArray).as(protobufMimeType)
           }
-        }
-      }
-    }
-
-  def mergedFromIds(persist: Boolean): Action[List[Option[TracingSelector]]] =
-    Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
-      log() {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-          for {
-            tracingOpts <- annotationService.findMultipleVolumes(request.body, applyUpdates = true) ?~> Messages(
-              "tracing.notFound")
-            tracingsWithIds = tracingOpts.zip(request.body).flatMap {
-              case (Some(tracing), Some(selector)) => Some((tracing, selector.tracingId))
-              case _                               => None
-            }
-            newTracingId = TracingId.generate
-            mergedVolumeStats <- volumeTracingService.mergeVolumeData(request.body.flatten,
-                                                                      tracingsWithIds.map(_._1),
-                                                                      newTracingId,
-                                                                      newVersion = 0L,
-                                                                      toCache = !persist)
-            mergeEditableMappingsResultBox <- volumeTracingService
-              .mergeEditableMappings(newTracingId, tracingsWithIds)
-              .futureBox
-            newEditableMappingIdOpt <- mergeEditableMappingsResultBox match {
-              case Full(())   => Fox.successful(Some(newTracingId))
-              case Empty      => Fox.successful(None)
-              case f: Failure => f.toFox
-            }
-            mergedTracing <- Fox.box2Fox(
-              volumeTracingService.merge(tracingsWithIds.map(_._1), mergedVolumeStats, newEditableMappingIdOpt))
-            _ <- volumeTracingService.save(mergedTracing, Some(newTracingId), version = 0, toCache = !persist)
-          } yield Ok(Json.toJson(newTracingId))
         }
       }
     }

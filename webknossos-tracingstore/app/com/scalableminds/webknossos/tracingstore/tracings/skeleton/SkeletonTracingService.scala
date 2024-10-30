@@ -1,18 +1,15 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
 import com.google.inject.Inject
-import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreRedisStore}
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import net.liftweb.common.{Box, Full}
-import play.api.i18n.MessagesProvider
 
 import scala.concurrent.ExecutionContext
 
@@ -96,22 +93,12 @@ class SkeletonTracingService @Inject()(
       )
 
   // Can be removed again when https://github.com/scalableminds/webknossos/issues/5009 is fixed
-  override def remapTooLargeTreeIds(skeletonTracing: SkeletonTracing): SkeletonTracing =
+  def remapTooLargeTreeIds(skeletonTracing: SkeletonTracing): SkeletonTracing =
     if (skeletonTracing.trees.exists(_.treeId > 1048576)) {
       val newTrees = for ((tree, index) <- skeletonTracing.trees.zipWithIndex) yield tree.withTreeId(index + 1)
       skeletonTracing.withTrees(newTrees)
     } else skeletonTracing
 
-  def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
-                      tracings: Seq[SkeletonTracing],
-                      newId: String,
-                      newVersion: Long,
-                      toCache: Boolean)(implicit mp: MessagesProvider, tc: TokenContext): Fox[MergedVolumeStats] =
-    Fox.successful(MergedVolumeStats.empty())
-
   def dummyTracing: SkeletonTracing = SkeletonTracingDefaults.createInstance
 
-  def mergeEditableMappings(newTracingId: String, tracingsWithIds: List[(SkeletonTracing, String)])(
-      implicit tc: TokenContext): Fox[Unit] =
-    Fox.empty
 }

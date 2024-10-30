@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationLayerTypeProto,
   AnnotationProto
 }
+import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
@@ -25,6 +26,8 @@ import com.scalableminds.webknossos.tracingstore.annotation.{
 }
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
+import net.liftweb.common.{Empty, Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -37,6 +40,7 @@ class TSAnnotationController @Inject()(
     annotationService: TSAnnotationService,
     annotationTransactionService: AnnotationTransactionService,
     skeletonTracingService: SkeletonTracingService,
+    volumeTracingService: VolumeTracingService,
     tracingDataStore: TracingDataStore)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with KeyValueStoreImplicits {
@@ -145,38 +149,52 @@ class TSAnnotationController @Inject()(
             skeletonLayers = annotations.flatMap(
               _.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Skeleton))
             volumeLayers = annotations.flatMap(_.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Volume))
-            // TODO: Volume
-            // TODO: Merge updates? if so, iron out reverts?
-            // TODO: Merge editable mappings
-            /*mergedVolumeStats <- volumeTracingService.mergeVolumeData(request.body.flatten,
-                                                                        tracingsWithIds.map(_._1),
-                                                                        newTracingId,
-                                                                        newVersion = 0L,
-                                                                        toCache = !persist)
-            mergeEditableMappingsResultBox <- skeletonTracingService
-              .mergeEditableMappings(newTracingId, tracingsWithIds)
-              .futureBox
-            newEditableMappingIdOpt <- mergeEditableMappingsResultBox match {
-              case Full(())   => Fox.successful(Some(newTracingId))
-              case Empty      => Fox.successful(None)
-              case f: Failure => f.toFox
-            }*/
-            skeletons <- annotationService.findMultipleSkeletons(skeletonLayers.map { l =>
-              Some(TracingSelector(l.tracingId))
-            }, applyUpdates = true)
             newSkeletonId = TracingId.generate
             newVolumeId = TracingId.generate
             mergedSkeletonName = allEqual(skeletonLayers.map(_.name))
               .getOrElse(AnnotationLayer.defaultSkeletonLayerName)
             mergedVolumeName = allEqual(volumeLayers.map(_.name)).getOrElse(AnnotationLayer.defaultVolumeLayerName)
-            mergedSkeletonOpt <- Fox.runIf(skeletons.flatten.nonEmpty)(
-              skeletonTracingService.merge(skeletons.flatten).toFox)
-            mergedSkeletonLayerOpt: Option[AnnotationLayerProto] = mergedSkeletonOpt.map(
+            // TODO: Merge updates? if so, iron out reverts?
+            // TODO: Merge editable mappings
+            volumeTracings <- annotationService
+              .findMultipleVolumes(volumeLayers.map { l =>
+                Some(TracingSelector(l.tracingId))
+              }, applyUpdates = true)
+              .map(_.flatten)
+            mergedVolumeStats <- volumeTracingService.mergeVolumeData(volumeLayers.map(_.tracingId),
+                                                                      volumeTracings,
+                                                                      newVolumeId,
+                                                                      newVersion = 0L,
+                                                                      persist = !persist)
+            mergeEditableMappingsResultBox <- volumeTracingService
+              .mergeEditableMappings(newVolumeId, volumeTracings.zip(volumeLayers.map(_.tracingId)))
+              .futureBox
+            newEditableMappingIdOpt <- mergeEditableMappingsResultBox match {
+              case Full(())   => Fox.successful(Some(newVolumeId))
+              case Empty      => Fox.successful(None)
+              case f: Failure => f.toFox
+            }
+            mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
+              volumeTracingService.merge(volumeTracings, mergedVolumeStats, newEditableMappingIdOpt))
+            _ <- Fox.runOptional(mergedVolumeOpt)(
+              volumeTracingService.save(_, Some(newVolumeId), version = 0, toCache = !persist))
+            skeletonTracings <- annotationService
+              .findMultipleSkeletons(skeletonLayers.map { l =>
+                Some(TracingSelector(l.tracingId))
+              }, applyUpdates = true)
+              .map(_.flatten)
+            mergedSkeletonOpt <- Fox.runIf(skeletonTracings.nonEmpty)(
+              skeletonTracingService.merge(skeletonTracings).toFox)
+            mergedSkeletonLayerOpt = mergedSkeletonOpt.map(
               _ =>
                 AnnotationLayerProto(name = mergedSkeletonName,
                                      tracingId = newSkeletonId,
                                      `type` = AnnotationLayerTypeProto.Skeleton))
-            mergedVolumeLayerOpt: Option[AnnotationLayerProto] = None // TODO
+            mergedVolumeLayerOpt = mergedVolumeOpt.map(
+              _ =>
+                AnnotationLayerProto(name = mergedVolumeName,
+                                     tracingId = newVolumeId,
+                                     `type` = AnnotationLayerTypeProto.Volume))
             mergedLayers = Seq(mergedSkeletonLayerOpt, mergedVolumeLayerOpt).flatten
             firstAnnotation <- annotations.headOption.toFox
             mergedAnnotation = firstAnnotation.withAnnotationLayers(mergedLayers)

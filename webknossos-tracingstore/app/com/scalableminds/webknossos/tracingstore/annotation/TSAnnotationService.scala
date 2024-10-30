@@ -203,6 +203,12 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       withTracings <- getWithTracings(annotationId, version, List.empty, List.empty, requestAll = false)
     } yield withTracings.annotation
 
+  def getMultiple(annotationIds: Seq[String])(implicit ec: ExecutionContext,
+                                              tc: TokenContext): Fox[Seq[AnnotationProto]] =
+    Fox.serialCombined(annotationIds) { annotationId =>
+      get(annotationId, None)
+    }
+
   private def getWithTracings(
       annotationId: String,
       version: Option[Long],
@@ -600,7 +606,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       }
     }
 
-  def findMultipleSkeletons(selectors: List[Option[TracingSelector]],
+  def findMultipleSkeletons(selectors: Seq[Option[TracingSelector]],
                             useCache: Boolean = true,
                             applyUpdates: Boolean = false)(implicit tc: TokenContext,
                                                            ec: ExecutionContext): Fox[List[Option[SkeletonTracing]]] =
@@ -608,7 +614,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       selectors.map {
         case Some(selector) =>
           for {
-            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(selector.tracingId)
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(selector.tracingId) // TODO perf skip that if we already have it?
             tracing <- findSkeleton(annotationId, selector.tracingId, selector.version, useCache, applyUpdates)
               .map(Some(_))
           } yield tracing

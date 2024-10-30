@@ -61,9 +61,7 @@ class SkeletonTracingService @Inject()(
     if (fromTask) newTracing.clearBoundingBox else newTracing
   }
 
-  def merge(tracings: Seq[SkeletonTracing],
-            mergedVolumeStats: MergedVolumeStats,
-            newEditableMappingIdOpt: Option[String]): Box[SkeletonTracing] =
+  def merge(tracings: Seq[SkeletonTracing]): Box[SkeletonTracing] =
     for {
       tracing <- tracings.map(Full(_)).reduceLeft(mergeTwo)
     } yield

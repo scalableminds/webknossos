@@ -3,10 +3,15 @@ package com.scalableminds.webknossos.tracingstore.controllers
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
+import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerTypeProto, AnnotationProto}
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
+import com.scalableminds.webknossos.tracingstore.tracings.{
+  KeyValueStoreImplicits,
+  TracingDataStore,
+  TracingId,
+  TracingSelector
+}
 import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
 import com.scalableminds.webknossos.tracingstore.annotation.{
   AnnotationTransactionService,
@@ -14,6 +19,8 @@ import com.scalableminds.webknossos.tracingstore.annotation.{
   UpdateActionGroup
 }
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
+import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
@@ -24,6 +31,7 @@ class TSAnnotationController @Inject()(
     slackNotificationService: TSSlackNotificationService,
     annotationService: TSAnnotationService,
     annotationTransactionService: AnnotationTransactionService,
+    skeletonTracingService: SkeletonTracingService,
     tracingDataStore: TracingDataStore)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with KeyValueStoreImplicits {
@@ -118,6 +126,44 @@ class TSAnnotationController @Inject()(
                                                              datasetBoundingBoxParsed)
             } yield Ok(annotationProto.toByteArray).as(protobufMimeType)
           }
+        }
+      }
+    }
+
+  def mergedFromIds(persist: Boolean, newAnnotationId: String): Action[List[String]] =
+    Action.async(validateJson[List[String]]) { implicit request =>
+      log() {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+          for {
+            annotations: Seq[AnnotationProto] <- annotationService.getMultiple(request.body) ?~> Messages(
+              "annotation.notFound")
+            annotationsWithIds = annotations.zip(annotations)
+            skeletonIds = annotations.flatMap(
+              _.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Skeleton).map(_.tracingId))
+            volumeIds = annotations.flatMap(
+              _.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Skeleton).map(_.tracingId))
+            /*mergedVolumeStats <- volumeTracingService.mergeVolumeData(request.body.flatten,
+                                                                        tracingsWithIds.map(_._1),
+                                                                        newTracingId,
+                                                                        newVersion = 0L,
+                                                                        toCache = !persist)
+            mergeEditableMappingsResultBox <- skeletonTracingService
+              .mergeEditableMappings(newTracingId, tracingsWithIds)
+              .futureBox
+            newEditableMappingIdOpt <- mergeEditableMappingsResultBox match {
+              case Full(())   => Fox.successful(Some(newTracingId))
+              case Empty      => Fox.successful(None)
+              case f: Failure => f.toFox
+            }*/
+            skeletons <- annotationService.findMultipleSkeletons(skeletonIds.map { s =>
+              Some(TracingSelector(s))
+            }, applyUpdates = true)
+            // TODO handle zero-skeletons / zero-volumes case
+            newSkeletonId = TracingId.generate
+            newVolumeId = TracingId.generate
+            mergedSkeleton <- skeletonTracingService.merge(skeletons.flatten).toFox
+            _ <- skeletonTracingService.save(mergedSkeleton, Some(newSkeletonId), version = 0, toCache = !persist)
+          } yield Ok
         }
       }
     }

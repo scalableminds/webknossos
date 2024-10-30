@@ -69,8 +69,6 @@ trait TracingService[T <: GeneratedMessage]
     }
   }
 
-  def merge(tracings: Seq[T], mergedVolumeStats: MergedVolumeStats, newEditableMappingIdOpt: Option[String]): Box[T]
-
   def remapTooLargeTreeIds(tracing: T): T = tracing
 
   def mergeVolumeData(tracingSelectors: Seq[TracingSelector],

@@ -120,8 +120,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
               case Empty      => Fox.successful(None)
               case f: Failure => f.toFox
             }
-            mergedTracing <- Fox.box2Fox(
-              skeletonTracingService.merge(tracingsWithIds.map(_._1), mergedVolumeStats, newEditableMappingIdOpt))
+            mergedTracing <- Fox.box2Fox(skeletonTracingService.merge(tracingsWithIds.map(_._1)))
             _ <- skeletonTracingService.save(mergedTracing, Some(newTracingId), version = 0, toCache = !persist)
           } yield Ok(Json.toJson(newTracingId))
         }
@@ -134,8 +133,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           val tracings: List[Option[SkeletonTracing]] = request.body
           for {
-            mergedTracing <- Fox.box2Fox(
-              skeletonTracingService.merge(tracings.flatten, MergedVolumeStats.empty(), Empty))
+            mergedTracing <- Fox.box2Fox(skeletonTracingService.merge(tracings.flatten))
             processedTracing = skeletonTracingService.remapTooLargeTreeIds(mergedTracing)
             newId <- skeletonTracingService.save(processedTracing, None, processedTracing.version, toCache = !persist)
           } yield Ok(Json.toJson(newId))

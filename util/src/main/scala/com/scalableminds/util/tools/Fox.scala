@@ -101,13 +101,14 @@ object Fox extends FoxImplicits {
   def sequence[T](l: List[Fox[T]])(implicit ec: ExecutionContext): Future[List[Box[T]]] =
     Future.sequence(l.map(_.futureBox))
 
-  def combined[T](l: List[Fox[T]])(implicit ec: ExecutionContext): Fox[List[T]] =
+  def combined[T](l: Seq[Fox[T]])(implicit ec: ExecutionContext): Fox[List[T]] =
     Fox(Future.sequence(l.map(_.futureBox)).map { results =>
       results.find(_.isEmpty) match {
         case Some(Empty)            => Empty
         case Some(failure: Failure) => failure
         case _ =>
-          Full(results.map(_.openOrThrowException("An exception should never be thrown, all boxes must be full")))
+          Full(
+            results.map(_.openOrThrowException("An exception should never be thrown, all boxes must be full")).toList)
       }
     })
 

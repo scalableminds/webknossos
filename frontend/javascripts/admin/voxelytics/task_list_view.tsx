@@ -50,7 +50,7 @@ import TaskView from "./task_view";
 import { formatLog } from "./log_tab";
 import { addAfterPadding, addBeforePadding } from "./utils";
 import { LOG_LEVELS } from "oxalis/constants";
-import { getVoxelyticsLogs } from "admin/admin_rest_api";
+import { getVoxelyticsLogs, deleteWorkflow } from "admin/admin_rest_api";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
 import { notEmpty } from "libs/utils";
 import type { ArrayElement } from "types/globals";
@@ -421,6 +421,25 @@ export default function TaskListView({
     }
   }
 
+  async function deleteWorkflowReport() {
+    await modal.confirm({
+      title: "Delete Workflow Report",
+      content: "Are you sure you want to delete this workflow report?",
+      okText: "Delete",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await deleteWorkflow(report.workflow.hash);
+          history.push("/workflows");
+          message.success("Workflow report deleted.");
+        } catch (error) {
+          console.error(error);
+          message.error("Could not delete workflow report.");
+        }
+      },
+    });
+  }
+
   const overflowMenu: MenuProps = {
     items: [
       { key: "1", onClick: copyAllArtifactPaths, label: "Copy All Artifact Paths" },
@@ -440,6 +459,7 @@ export default function TaskListView({
           ),
       },
       { key: "5", onClick: showArtifactsDiskUsageList, label: "Show Disk Usage of Artifacts" },
+      { key: "6", onClick: deleteWorkflowReport, label: "Delete Workflow Report" },
     ],
   };
 

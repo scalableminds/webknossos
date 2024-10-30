@@ -1135,4 +1135,17 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         """.asUpdate)
     } yield ()
 
+  def deleteWorkflow(hash: String): Fox[Unit] =
+    for {
+      _ <- run(q"""
+                  DELETE FROM webknossos.voxelytics_workflows
+                  WHERE hash = $hash;
+                  """.asUpdate)
+      _ <- run(q"""
+                  UPDATE webknossos.jobs
+                  SET _voxelytics_workflowhash = NULL
+                  WHERE _voxelytics_workflowhash = $hash;
+        """.asUpdate)
+    } yield ()
+
 }

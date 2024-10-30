@@ -585,7 +585,7 @@ export type APITracingStoreAnnotation = {
   name: string;
   description: string;
   version: number;
-  layers: APITracingStoreAnnotationLayer[];
+  annotationLayers: APITracingStoreAnnotationLayer[];
 };
 
 export type APITimeTrackingPerUser = {

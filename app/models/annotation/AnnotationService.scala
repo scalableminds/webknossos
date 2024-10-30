@@ -281,7 +281,7 @@ class AnnotationService @Inject()(
       annotationProto = AnnotationProto(name = Some(AnnotationDefaults.defaultName),
                                         description = Some(AnnotationDefaults.defaultDescription),
                                         version = 0L,
-                                        layers = layersProto)
+                                        annotationLayers = layersProto)
       _ <- tracingStoreClient.saveAnnotationProto(annotationId, annotationProto)
     } yield newAnnotationLayers
 
@@ -370,17 +370,13 @@ class AnnotationService @Inject()(
         annotationBaseId,
         initializingAnnotationId,
         version = None,
-        isFromTask = false,
-        editPosition = None,
-        editRotation = None,
-        boundingBox = None,
-        datasetBoundingBox = None,
-        magRestrictions = MagRestrictions.empty
+        isFromTask = false, // isFromTask is when duplicate is called on a task annotation, not when a task is assigned
+        datasetBoundingBox = None
       )
       newAnnotation = annotationBase.copy(
         _id = initializingAnnotationId,
         _user = user._id,
-        annotationLayers = duplicatedAnnotationProto.layers.map(AnnotationLayer.fromProto).toList,
+        annotationLayers = duplicatedAnnotationProto.annotationLayers.map(AnnotationLayer.fromProto).toList,
         state = Active,
         typ = AnnotationType.Task,
         created = Instant.now,
@@ -485,10 +481,12 @@ class AnnotationService @Inject()(
                                   annotationLayers,
                                   description.getOrElse(""),
                                   typ = AnnotationType.TracingBase)
-      annotationBaseProto = AnnotationProto(name = Some(AnnotationDefaults.defaultName),
-                                            description = Some(AnnotationDefaults.defaultDescription),
-                                            version = 0L,
-                                            layers = annotationLayers.map(_.toProto))
+      annotationBaseProto = AnnotationProto(
+        name = Some(AnnotationDefaults.defaultName),
+        description = Some(AnnotationDefaults.defaultDescription),
+        version = 0L,
+        annotationLayers = annotationLayers.map(_.toProto)
+      )
       _ <- tracingStoreClient.saveAnnotationProto(annotationBase._id, annotationBaseProto)
       _ = logger.info(s"inserting base annotation ${annotationBase._id} for task ${task._id}")
       _ <- annotationDAO.insertOne(annotationBase)

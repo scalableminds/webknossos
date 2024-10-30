@@ -83,7 +83,7 @@ case class AnnotationWithTracings(
                tracing: Either[SkeletonTracing, VolumeTracing]): AnnotationWithTracings =
     this.copy(
       annotation = annotation.copy(
-        layers = annotation.layers :+ AnnotationLayerProto(
+        annotationLayers = annotation.annotationLayers :+ AnnotationLayerProto(
           tracingId,
           a.layerParameters.name.getOrElse(AnnotationLayer.defaultNameForType(a.layerParameters.typ)),
           `type` = AnnotationLayerType.toProto(a.layerParameters.typ)
@@ -92,11 +92,13 @@ case class AnnotationWithTracings(
     )
 
   def deleteTracing(a: DeleteLayerAnnotationAction): AnnotationWithTracings =
-    this.copy(annotation = annotation.copy(layers = annotation.layers.filter(_.tracingId != a.tracingId)),
-              tracingsById = tracingsById.removed(a.tracingId))
+    this.copy(
+      annotation = annotation.copy(annotationLayers = annotation.annotationLayers.filter(_.tracingId != a.tracingId)),
+      tracingsById = tracingsById.removed(a.tracingId)
+    )
 
   def updateLayerMetadata(a: UpdateLayerMetadataAnnotationAction): AnnotationWithTracings =
-    this.copy(annotation = annotation.copy(layers = annotation.layers.map(l =>
+    this.copy(annotation = annotation.copy(annotationLayers = annotation.annotationLayers.map(l =>
       if (l.tracingId == a.tracingId) l.copy(name = a.layerName) else l)))
 
   def updateMetadata(a: UpdateMetadataAnnotationAction): AnnotationWithTracings =

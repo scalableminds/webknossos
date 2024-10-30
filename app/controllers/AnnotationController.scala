@@ -439,13 +439,9 @@ class AnnotationController @Inject()(
         newAnnotationId,
         version = None,
         isFromTask = annotation._task.isDefined,
-        editPosition = None,
-        editRotation = None,
-        boundingBox = None,
-        datasetBoundingBox = dataSource.map(_.boundingBox),
-        magRestrictions = MagRestrictions.empty
+        datasetBoundingBox = dataSource.map(_.boundingBox)
       )
-      newAnnotationLayers = newAnnotationProto.layers.map(AnnotationLayer.fromProto)
+      newAnnotationLayers = newAnnotationProto.annotationLayers.map(AnnotationLayer.fromProto)
       clonedAnnotation <- annotationService.createFrom(user,
                                                        dataset,
                                                        newAnnotationLayers,

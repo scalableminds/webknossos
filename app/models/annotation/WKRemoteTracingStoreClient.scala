@@ -84,7 +84,7 @@ class WKRemoteTracingStoreClient(
 
   def saveAnnotationProto(annotationId: ObjectId, annotationProto: AnnotationProto): Fox[Unit] = {
     logger.debug(
-      f"Called to save AnnotationProto $annotationId with layers ${annotationProto.layers.map(_.tracingId).mkString(",")}." + baseInfo)
+      f"Called to save AnnotationProto $annotationId with layers ${annotationProto.annotationLayers.map(_.tracingId).mkString(",")}." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/annotation/save")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("annotationId" -> annotationId.toString)
@@ -92,29 +92,18 @@ class WKRemoteTracingStoreClient(
   }
 
   // Used in duplicate route. History and version are kept
-  // TODO: can we remove some params here, if they are used only in task case?
   def duplicateAnnotation(annotationId: ObjectId,
                           newAnnotationId: ObjectId,
                           version: Option[Long],
                           isFromTask: Boolean,
-                          editPosition: Option[Vec3Int],
-                          editRotation: Option[Vec3Double],
-                          boundingBox: Option[BoundingBox],
-                          datasetBoundingBox: Option[BoundingBox],
-                          magRestrictions: MagRestrictions,
-  ): Fox[AnnotationProto] = {
+                          datasetBoundingBox: Option[BoundingBox]): Fox[AnnotationProto] = {
     logger.debug(s"Called to duplicate annotation $annotationId." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("newAnnotationId" -> newAnnotationId.toString)
       .addQueryStringOptional("version", version.map(_.toString))
-      .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
-      .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
-      .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
       .addQueryStringOptional("datasetBoundingBox", datasetBoundingBox.map(_.toLiteral))
       .addQueryString("isFromTask" -> isFromTask.toString)
-      .addQueryStringOptional("minMag", magRestrictions.minStr)
-      .addQueryStringOptional("maxMag", magRestrictions.maxStr)
       .postWithProtoResponse[AnnotationProto]()(AnnotationProto)
   }
 

@@ -11,7 +11,7 @@ message AnnotationProto {
   optional string name = 1;
   optional string description = 2;
   required int64 version = 3;
-  repeated AnnotationLayerProto layers = 4;
+  repeated AnnotationLayerProto annotationLayers = 4;
 }
 
 message AnnotationLayerProto {

@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.controllers.Controller
@@ -14,7 +14,6 @@ import com.scalableminds.webknossos.tracingstore.annotation.{
   UpdateActionGroup
 }
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
-import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
@@ -105,31 +104,18 @@ class TSAnnotationController @Inject()(
                 newAnnotationId: String,
                 version: Option[Long],
                 isFromTask: Boolean,
-                minMag: Option[Int],
-                maxMag: Option[Int],
-                editPosition: Option[String],
-                editRotation: Option[String],
-                boundingBox: Option[String],
                 datasetBoundingBox: Option[String]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
             for {
-              editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
-              editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
-              boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
               datasetBoundingBoxParsed <- Fox.runOptional(datasetBoundingBox)(BoundingBox.fromLiteral)
-              magRestrictions = MagRestrictions(minMag, maxMag)
               annotationProto <- annotationService.duplicate(annotationId,
                                                              newAnnotationId,
                                                              version,
                                                              isFromTask,
-                                                             editPositionParsed,
-                                                             editRotationParsed,
-                                                             boundingBoxParsed,
-                                                             datasetBoundingBoxParsed,
-                                                             magRestrictions)
+                                                             datasetBoundingBoxParsed)
             } yield Ok(annotationProto.toByteArray).as(protobufMimeType)
           }
         }

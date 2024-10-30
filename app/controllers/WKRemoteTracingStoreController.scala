@@ -67,7 +67,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
       for {
         annotationIdValidated <- ObjectId.fromString(annotationId)
         existingLayers <- annotationLayerDAO.findAnnotationLayersFor(annotationIdValidated)
-        newLayersProto = request.body.layers
+        newLayersProto = request.body.annotationLayers
         existingLayerIds = existingLayers.map(_.tracingId).toSet
         newLayerIds = newLayersProto.map(_.tracingId).toSet
         layerIdsToDelete = existingLayerIds.diff(newLayerIds)

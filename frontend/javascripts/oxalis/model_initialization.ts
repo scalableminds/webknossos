@@ -143,7 +143,7 @@ export async function initialize(
         name: annotationFromTracingStore.name,
         description: annotationFromTracingStore.description,
       };
-      annotationFromTracingStore.layers.forEach((layer) => {
+      annotationFromTracingStore.annotationLayers.forEach((layer) => {
         if (
           maybeOutdatedAnnotation.annotationLayers.find((l) => l.tracingId === layer.tracingId) ==
           null

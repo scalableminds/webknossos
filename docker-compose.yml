@@ -99,7 +99,7 @@ services:
       - USER_GID
       - COVERALLS_REPO_TOKEN
       - TZ=${TZ:-Europe/Berlin}
-      - POSTGRES_URL=jdbc:postgresql://postgres@localhost:5432/webknossos
+      - POSTGRES_URL=jdbc:postgresql://webknossos_user@localhost:5432/webknossos
       - POSTGRES_USER=webknossos_user
       - POSTGRES_PASSWORD=secret_password
       - HOME=/root

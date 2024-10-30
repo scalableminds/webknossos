@@ -138,24 +138,24 @@ export async function initialize(
         maybeOutdatedAnnotation.tracingStore.url,
         maybeOutdatedAnnotation.id,
       );
+      const layersWithStats = annotationFromTracingStore.annotationLayers.map((layer) => {
+        const matchingLayer = maybeOutdatedAnnotation.annotationLayers.find(
+          (l) => l.tracingId === layer.tracingId,
+        );
+
+        return {
+          tracingId: layer.tracingId,
+          name: layer.name,
+          typ: layer.type,
+          stats: matchingLayer?.stats || {},
+        };
+      });
       const completeAnnotation = {
         ...maybeOutdatedAnnotation,
         name: annotationFromTracingStore.name,
         description: annotationFromTracingStore.description,
+        annotationLayers: layersWithStats,
       };
-      annotationFromTracingStore.annotationLayers.forEach((layer) => {
-        if (
-          maybeOutdatedAnnotation.annotationLayers.find((l) => l.tracingId === layer.tracingId) ==
-          null
-        ) {
-          completeAnnotation.annotationLayers.push({
-            tracingId: layer.tracingId,
-            name: layer.name,
-            typ: layer.type,
-            stats: {},
-          });
-        }
-      });
       annotation = completeAnnotation;
     }
     datasetId = {

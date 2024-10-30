@@ -3,8 +3,13 @@ package com.scalableminds.webknossos.tracingstore.controllers
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerTypeProto, AnnotationProto}
+import com.scalableminds.webknossos.datastore.Annotation.{
+  AnnotationLayerProto,
+  AnnotationLayerTypeProto,
+  AnnotationProto
+}
 import com.scalableminds.webknossos.datastore.controllers.Controller
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
@@ -137,11 +142,12 @@ class TSAnnotationController @Inject()(
           for {
             annotations: Seq[AnnotationProto] <- annotationService.getMultiple(request.body) ?~> Messages(
               "annotation.notFound")
-            annotationsWithIds = annotations.zip(annotations)
-            skeletonIds = annotations.flatMap(
-              _.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Skeleton).map(_.tracingId))
-            volumeIds = annotations.flatMap(
-              _.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Skeleton).map(_.tracingId))
+            skeletonLayers = annotations.flatMap(
+              _.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Skeleton))
+            volumeLayers = annotations.flatMap(_.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Volume))
+            // TODO: Volume
+            // TODO: Merge updates? if so, iron out reverts?
+            // TODO: Merge editable mappings
             /*mergedVolumeStats <- volumeTracingService.mergeVolumeData(request.body.flatten,
                                                                         tracingsWithIds.map(_._1),
                                                                         newTracingId,
@@ -155,16 +161,37 @@ class TSAnnotationController @Inject()(
               case Empty      => Fox.successful(None)
               case f: Failure => f.toFox
             }*/
-            skeletons <- annotationService.findMultipleSkeletons(skeletonIds.map { s =>
-              Some(TracingSelector(s))
+            skeletons <- annotationService.findMultipleSkeletons(skeletonLayers.map { l =>
+              Some(TracingSelector(l.tracingId))
             }, applyUpdates = true)
-            // TODO handle zero-skeletons / zero-volumes case
             newSkeletonId = TracingId.generate
             newVolumeId = TracingId.generate
-            mergedSkeleton <- skeletonTracingService.merge(skeletons.flatten).toFox
-            _ <- skeletonTracingService.save(mergedSkeleton, Some(newSkeletonId), version = 0, toCache = !persist)
-          } yield Ok
+            mergedSkeletonName = allEqual(skeletonLayers.map(_.name))
+              .getOrElse(AnnotationLayer.defaultSkeletonLayerName)
+            mergedVolumeName = allEqual(volumeLayers.map(_.name)).getOrElse(AnnotationLayer.defaultVolumeLayerName)
+            mergedSkeletonOpt <- Fox.runIf(skeletons.flatten.nonEmpty)(
+              skeletonTracingService.merge(skeletons.flatten).toFox)
+            mergedSkeletonLayerOpt: Option[AnnotationLayerProto] = mergedSkeletonOpt.map(
+              _ =>
+                AnnotationLayerProto(name = mergedSkeletonName,
+                                     tracingId = newSkeletonId,
+                                     `type` = AnnotationLayerTypeProto.Skeleton))
+            mergedVolumeLayerOpt: Option[AnnotationLayerProto] = None // TODO
+            mergedLayers = Seq(mergedSkeletonLayerOpt, mergedVolumeLayerOpt).flatten
+            firstAnnotation <- annotations.headOption.toFox
+            mergedAnnotation = firstAnnotation.withAnnotationLayers(mergedLayers)
+            _ <- Fox.runOptional(mergedSkeletonOpt)(
+              skeletonTracingService.save(_, Some(newSkeletonId), version = 0L, toCache = !persist))
+            _ <- tracingDataStore.annotations.put(newAnnotationId, 0L, mergedAnnotation)
+          } yield Ok(mergedAnnotation.toByteArray).as(protobufMimeType)
         }
       }
+    }
+
+  // TODO generalize, mix with assertAllOnSame*
+  private def allEqual(str: Seq[String]): Option[String] =
+    // returns the str if all names are equal, None otherwise
+    str.headOption.map(name => str.forall(_ == name)).flatMap { _ =>
+      str.headOption
     }
 }

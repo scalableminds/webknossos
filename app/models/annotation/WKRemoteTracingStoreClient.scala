@@ -136,6 +136,17 @@ class WKRemoteTracingStoreClient(
       .addQueryStringOptional("maxMag", magRestrictions.maxStr)
       .postWithJsonResponse[String]()
 
+  def mergeAnnotationsByIds(annotationIds: List[String],
+                            newAnnotationId: ObjectId,
+                            persist: Boolean): Fox[AnnotationProto] = {
+    logger.debug(s"Called to merge ${annotationIds.length} annotations by ids." + baseInfo)
+    rpc(s"${tracingStore.url}/tracings/annotation/mergedFromIds").withLongTimeout
+      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryString("persist" -> persist.toString)
+      .addQueryString("newAnnotationId" -> newAnnotationId.toString)
+      .postJsonWithProtoResponse[List[String], AnnotationProto](annotationIds)(AnnotationProto)
+  }
+
   def mergeSkeletonTracingsByIds(tracingIds: List[String], persistTracing: Boolean): Fox[String] = {
     logger.debug("Called to merge SkeletonTracings by ids." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/mergedFromIds").withLongTimeout

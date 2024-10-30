@@ -606,6 +606,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       }
     }
 
+  // TODO build variant without TracingSelector and Option?
   def findMultipleSkeletons(selectors: Seq[Option[TracingSelector]],
                             useCache: Boolean = true,
                             applyUpdates: Boolean = false)(implicit tc: TokenContext,

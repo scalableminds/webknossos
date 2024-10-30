@@ -54,9 +54,9 @@ trait TracingService[T <: GeneratedMessage]
     }
    */
 
-  def save(tracing: T, tracingId: Option[String], version: Long, toCache: Boolean = false): Fox[String] = {
+  def save(tracing: T, tracingId: Option[String], version: Long, toTemporaryStore: Boolean = false): Fox[String] = {
     val id = tracingId.getOrElse(TracingId.generate)
-    if (toCache) {
+    if (toTemporaryStore) {
       temporaryTracingStore.insert(id, tracing, Some(temporaryStoreTimeout))
       temporaryTracingIdStore.insert(temporaryIdKey(id), "", Some(temporaryIdStoreTimeout))
       Fox.successful(id)

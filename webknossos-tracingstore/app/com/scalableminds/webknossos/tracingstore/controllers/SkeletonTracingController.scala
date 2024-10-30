@@ -101,7 +101,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
           for {
             mergedTracing <- Fox.box2Fox(skeletonTracingService.merge(tracings.flatten))
             processedTracing = skeletonTracingService.remapTooLargeTreeIds(mergedTracing)
-            newId <- skeletonTracingService.save(processedTracing, None, processedTracing.version, toCache = !persist)
+            newId <- skeletonTracingService.save(processedTracing, None, processedTracing.version, toTemporaryStore = !persist)
           } yield Ok(Json.toJson(newId))
         }
       }

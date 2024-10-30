@@ -598,14 +598,14 @@ class VolumeTracingService @Inject()(
   def updateMagList(tracingId: String,
                     tracing: VolumeTracing,
                     mags: Set[Vec3Int],
-                    toCache: Boolean = false): Fox[String] =
+                    toTemporaryStore: Boolean = false): Fox[String] =
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
       _ <- bool2Fox(mags.nonEmpty) ?~> "Mag restrictions result in zero mags"
       id <- save(tracing.copy(mags = mags.toList.sortBy(_.maxDim).map(vec3IntToProto)),
                  Some(tracingId),
                  tracing.version,
-                 toCache)
+                 toTemporaryStore)
     } yield id
 
   // TODO use or remove
@@ -894,10 +894,12 @@ class VolumeTracingService @Inject()(
       }
     }
 
-  def mergeEditableMappings(newTracingId: String, tracingsWithIds: List[(VolumeTracing, String)])(
-      implicit tc: TokenContext): Fox[Unit] =
+  def mergeEditableMappings(newTracingId: String,
+                            tracingsWithIds: List[(VolumeTracing, String)],
+                            persist: Boolean): Fox[Unit] =
     if (tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
       for {
+        _ <- bool2Fox(persist) ?~> "Cannot merge editable mappings without “persist” (used by compound annotations)"
         remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds)(tracingWithId =>
           remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
         remoteFallbackLayer <- remoteFallbackLayers.headOption.toFox

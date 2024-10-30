@@ -8,7 +8,6 @@ import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationLayerTypeProto,
   AnnotationProto
 }
-import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
@@ -165,9 +164,9 @@ class TSAnnotationController @Inject()(
                                                                       volumeTracings,
                                                                       newVolumeId,
                                                                       newVersion = 0L,
-                                                                      persist = !persist)
+                                                                      persist = persist)
             mergeEditableMappingsResultBox <- volumeTracingService
-              .mergeEditableMappings(newVolumeId, volumeTracings.zip(volumeLayers.map(_.tracingId)))
+              .mergeEditableMappings(newVolumeId, volumeTracings.zip(volumeLayers.map(_.tracingId)), persist)
               .futureBox
             newEditableMappingIdOpt <- mergeEditableMappingsResultBox match {
               case Full(())   => Fox.successful(Some(newVolumeId))
@@ -177,7 +176,7 @@ class TSAnnotationController @Inject()(
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
               volumeTracingService.merge(volumeTracings, mergedVolumeStats, newEditableMappingIdOpt))
             _ <- Fox.runOptional(mergedVolumeOpt)(
-              volumeTracingService.save(_, Some(newVolumeId), version = 0, toCache = !persist))
+              volumeTracingService.save(_, Some(newVolumeId), version = 0, toTemporaryStore = !persist))
             skeletonTracings <- annotationService
               .findMultipleSkeletons(skeletonLayers.map { l =>
                 Some(TracingSelector(l.tracingId))
@@ -199,7 +198,7 @@ class TSAnnotationController @Inject()(
             firstAnnotation <- annotations.headOption.toFox
             mergedAnnotation = firstAnnotation.withAnnotationLayers(mergedLayers)
             _ <- Fox.runOptional(mergedSkeletonOpt)(
-              skeletonTracingService.save(_, Some(newSkeletonId), version = 0L, toCache = !persist))
+              skeletonTracingService.save(_, Some(newSkeletonId), version = 0L, toTemporaryStore = !persist))
             _ <- tracingDataStore.annotations.put(newAnnotationId, 0L, mergedAnnotation)
           } yield Ok(mergedAnnotation.toByteArray).as(protobufMimeType)
         }

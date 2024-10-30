@@ -62,7 +62,7 @@ trait VolumeTracingDownsampling
                            bucket: BucketPosition,
                            data: Array[Byte],
                            version: Long,
-                           toCache: Boolean = false): Fox[Unit]
+                           toTemporaryStore: Boolean = false): Fox[Unit]
 
   protected def updateSegmentIndex(segmentIndexBuffer: VolumeSegmentIndexBuffer,
                                    bucketPosition: BucketPosition,

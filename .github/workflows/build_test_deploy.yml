@@ -59,8 +59,8 @@ jobs:
         postgres:
           image: postgres:10-alpine
           env:
-            POSTGRES_DB: webknossos
-            POSTGRES_USER: postgres
+            POSTGRES_URL: jdbc:postgresql://postgres/webknossos
+            POSTGRES_USER: webknossos_user
             POSTGRES_PASSWORD: secret_password
           # Set health checks to wait until postgres has started
           options: >-
@@ -152,6 +152,12 @@ jobs:
         run: |
           docker pull scalableminds/webknossos:$NORMALIZED_BRANCH || true
           DEV_CACHE=$NORMALIZED_BRANCH docker compose build --pull webknossos
+        env:
+          POSTGRES_URL: jdbc:postgresql://postgres/webknossos
+          POSTGRES_USER: webknossos_user
+          PGUSER: webknossos_user
+          POSTGRES_PASSWORD: secret_password
+          PGPASSWORD: secret_password
 
       - name: Build webknossos-datastore docker image
         run: docker compose build --pull webknossos-datastore

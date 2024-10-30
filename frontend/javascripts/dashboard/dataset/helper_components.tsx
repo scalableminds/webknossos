@@ -234,7 +234,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
           getValueProps={(value) => ({ value: deriveRotationFromMatrix(value) })}
           normalize={(value) => matrixWithUpdatedRotation(value)}
         >
-          <Slider min={0} max={360} step={90} />
+          <Slider min={0} max={270} step={90} />
         </FormItemWithInfo>
       </Col>
       <Col span={8} style={{ marginRight: -12 }}>
@@ -245,7 +245,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
           getValueProps={(value) => ({ value: deriveRotationFromMatrix(value) })}
           normalize={(value) => matrixWithUpdatedRotation(value)}
         >
-          <InputNumber min={0} max={360} step={90} precision={0} />
+          <InputNumber min={0} max={270} step={90} precision={0} />
         </FormItem>
       </Col>
     </Row>

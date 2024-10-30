@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 123, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 124, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 DROP VIEW IF EXISTS webknossos.datasets_;
 
@@ -15,6 +15,6 @@ CREATE INDEX ON webknossos.datasets(name);
 
 CREATE VIEW webknossos.datasets_ AS SELECT * FROM webknossos.datasets WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 122;
+UPDATE webknossos.releaseInformation SET schemaVersion = 123;
 
 COMMIT TRANSACTION;

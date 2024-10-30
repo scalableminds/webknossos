@@ -22,6 +22,7 @@ import {
   FormItemWithInfo,
   RetryingErrorBoundary,
   jsonEditStyle,
+  AxisRotationSettingForLayer,
 } from "dashboard/dataset/helper_components";
 import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
 import { jsonStringify, parseMaybe } from "libs/utils";
@@ -391,8 +392,10 @@ function SimpleLayerForm({
               {
                 validator: syncValidator(
                   (value: string) =>
-                    dataLayers.filter((someLayer: APIDataLayer) => someLayer.name === value)
-                      .length <= 1,
+                    (dataLayers &&
+                      dataLayers.filter((someLayer: APIDataLayer) => someLayer.name === value)
+                        .length <= 1) ||
+                    dataLayers == null,
                   "Layer names must be unique.",
                 ),
               },
@@ -613,6 +616,12 @@ function SimpleLayerForm({
               )}
             </div>
           ) : null}
+          <Row gutter={32}>
+            <Col span={12}>
+              Permanent dataset rotation:
+              <AxisRotationSettingForLayer form={form} index={index} />
+            </Col>
+          </Row>
         </Col>
       </Row>
     </div>

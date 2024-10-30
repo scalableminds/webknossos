@@ -19,9 +19,9 @@ import type {
   Point3,
   ColorObject,
   LOG_LEVELS,
-  Vector4,
   TreeType,
   UnitLong,
+  NestedMatrix4,
 } from "oxalis/constants";
 import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import type { EmptyObject } from "./globals";
@@ -63,7 +63,7 @@ export type ServerAdditionalAxis = {
 export type CoordinateTransformation =
   | {
       type: "affine";
-      matrix: [Vector4, Vector4, Vector4, Vector4];
+      matrix: NestedMatrix4;
     }
   | {
       type: "thin_plate_spline";

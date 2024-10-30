@@ -22,6 +22,7 @@ import ErrorHandling from "libs/error_handling";
 import {
   IdentityTransform,
   LongUnitToShortUnitMap,
+  type NestedMatrix4,
   type Vector3,
   type Vector4,
   type ViewMode,
@@ -867,7 +868,7 @@ export const hasDatasetTransforms = memoizeOne((dataset: APIDataset) => {
   return layers.some((layer) => _getOriginalTransformsForLayerOrNull(dataset, layer) != null);
 });
 
-export function flatToNestedMatrix(matrix: Matrix4x4): [Vector4, Vector4, Vector4, Vector4] {
+export function flatToNestedMatrix(matrix: Matrix4x4): NestedMatrix4 {
   return [
     matrix.slice(0, 4) as Vector4,
     matrix.slice(4, 8) as Vector4,

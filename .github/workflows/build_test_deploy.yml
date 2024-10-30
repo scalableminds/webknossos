@@ -153,7 +153,7 @@ jobs:
           docker pull scalableminds/webknossos:$NORMALIZED_BRANCH || true
           DEV_CACHE=$NORMALIZED_BRANCH docker compose build --pull webknossos
         env:
-          POSTGRES_URL: jdbc:postgresql://postgres/webknossos
+          POSTGRES_URL: jdbc:postgresql://webknossos_user@localhost:5432/webknossos
           POSTGRES_USER: webknossos_user
           PGUSER: webknossos_user
           POSTGRES_PASSWORD: secret_password

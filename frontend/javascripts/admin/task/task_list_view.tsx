@@ -222,7 +222,7 @@ function TaskListView({ initialFieldValues }: Props) {
         <p>
           To learn more about the task system in WEBKNOSSOS,{" "}
           <a
-            href="https://docs.webknossos.org/webknossos/tasks.html"
+            href="https://docs.webknossos.org/webknossos/tasks_projects/index.html"
             rel="noopener noreferrer"
             target="_blank"
           >

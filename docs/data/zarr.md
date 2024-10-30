@@ -111,22 +111,27 @@ For OME-Zarr (v0.5) datasets, the structure is slightly different (See [OME-Zarr
 ## Conversion to Zarr
 
 You can easily convert image stacks manually with the [WEBKNOSSOS CLI](https://docs.webknossos.org/cli).
-The CLI tool expects all image files in a single folder with numbered file names.
+The CLI tool expects a single file or all image files in a single folder with numbered file names.
 After installing, you can convert image stacks to Zarr datasets with the following command:
 
 ```shell
-pip install webknossos
+pip install --extra-index-url https://pypi.scm.io/simple "webknossos[all]"
 
 webknossos convert \
+  --layer-name em \
   --voxel-size 11.24,11.24,25 \
-  --name my_dataset \
+  --chunk-shape 64,64,64 \
   --data-format zarr \
-  data/source data/target
+  --jobs 4 \
+  input.tif output.zarr
+
+webknossos compress --jobs 4 output.zarr
+webknossos downsample --jobs 4 output.zarr
 ```
 
-This snippet converts an image stack that is located in directory called `data/source` into a Zarr dataset which will be located at `data/target`.
-It will create a so called `color` layer containing your raw greyscale/color image.
-The supplied `--voxel-size` is specified in nanometers.
+This example will create an unsharded Zarr v2 dataset with a voxel size of (4,4,4) nm<sup>3</sup> and a chunk size of (64,64,64) voxel. 
+A maximum of 4 parallel jobs will be used to parallelize the conversion, compression and downsampling.
+Using the `--data-format zarr3` argument will produce sharded Zarr v3 datasets.
 
 Read the full documentation at [WEBKNOSSOS CLI](https://docs.webknossos.org/cli).
 
@@ -170,3 +175,5 @@ To get the best streaming performance for Zarr datasets consider the following s
 
 - Use chunk sizes of 32 - 128 voxels^3
 - Enable sharding (only available in Zarr 3+)
+- Use 3D downsampling
+

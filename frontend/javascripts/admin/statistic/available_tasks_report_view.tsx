@@ -45,7 +45,7 @@ function AvailableTasksReportView() {
         available to multiple users here, but each will only be handed to the first user to request
         it.
         <a
-          href="https://docs.webknossos.org/webknossos/tasks.html"
+          href="https://docs.webknossos.org/webknossos/tasks_projects/index.html"
           target="_blank"
           rel="noopener noreferrer"
         >

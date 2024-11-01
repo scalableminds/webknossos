@@ -9,7 +9,7 @@ function ScrollableVirtualizedTree<T extends BasicDataNode>(
   props: TreeProps<T> & { ref: React.RefObject<RcTree> },
 ) {
   const wrapperRef = useRef<HTMLDivElement>(null);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  // biome-ignore lint/correctness/useExhaustiveDependencies: biome is not smart enough to notice that the function needs to be re-created when wrapperRef changes.
   const onDragOver = useCallback(
     throttle((info: { event: React.DragEvent<HTMLDivElement> }) => {
       const target = info.event.target as HTMLElement;

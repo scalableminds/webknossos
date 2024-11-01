@@ -90,7 +90,7 @@ export function renderTreeNode(
       onContextMenu={(evt) =>
         onOpenContextMenu(createMenuForTree(tree, props, hideContextMenu), evt)
       }
-      style={{ display: "inline-flex", alignItems: "center" }}
+      style={{ wordBreak: "break-word" }}
     >
       <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
       {`(${tree.nodes.size()}) `} {maybeProofreadingIcon} {tree.name}
@@ -208,18 +208,16 @@ export function renderGroupNode(
   const displayableName = name.trim() || "<Unnamed Group>";
   return (
     <div
-      className="nowrap"
       onContextMenu={(evt) =>
         onOpenContextMenu(
           createMenuForTreeGroup(props, hideContextMenu, node, expandedNodeKeys),
           evt,
         )
       }
+      style={{ wordBreak: "break-word" }}
     >
-      <span>
-        <FolderOutlined className="icon-margin-right" />
-        {displayableName}
-      </span>
+      <FolderOutlined className="icon-margin-right" />
+      {displayableName}
     </div>
   );
 }

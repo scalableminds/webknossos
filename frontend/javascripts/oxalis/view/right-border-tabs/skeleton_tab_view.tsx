@@ -584,7 +584,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       cancelText: "No",
       autoFocusButton: "cancel",
       icon: <WarningOutlined />,
-      onCancel: () => {},
+      onCancel: () => { },
       onOk: () => {
         onConfirm();
       },
@@ -668,7 +668,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
   };
 
-  handleSearchSelect = (selectedElement: TreeOrTreeGroup) => {
+  maybeExpandParentGroups = (selectedElement: TreeOrTreeGroup) => {
     const { skeletonTracing } = this.props;
     if (!skeletonTracing) {
       return;
@@ -682,11 +682,24 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     if (expandedGroups) {
       this.props.onSetExpandedGroups(expandedGroups);
     }
+  };
+
+  handleSearchSelect = (selectedElement: TreeOrTreeGroup) => {
+    this.maybeExpandParentGroups(selectedElement);
     if (selectedElement.type === GroupTypeEnum.TREE) {
       this.props.onSetActiveTree(selectedElement.id);
     } else {
       this.props.onSetActiveTreeGroup(selectedElement.id);
     }
+  };
+
+  handleSelectAllMatchingTrees = (matchingTrees: TreeOrTreeGroup[]) => {
+    this.props.onDeselectActiveGroup();
+    const treeIds = matchingTrees.map((tree) => {
+      this.maybeExpandParentGroups(tree);
+      return tree.id;
+    });
+    this.setState({ selectedTreeIds: treeIds });
   };
 
   getTreesComponents(sortBy: string) {
@@ -763,12 +776,12 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         },
         this.props.isSkeletonLayerTransformed
           ? {
-              key: "handleNmlDownloadTransformed",
-              onClick: () => this.handleNmlDownload(true),
-              icon: <DownloadOutlined />,
-              label: "Download Visible Trees (Transformed)",
-              title: "The currently active transformation will be applied to each node.",
-            }
+            key: "handleNmlDownloadTransformed",
+            onClick: () => this.handleNmlDownload(true),
+            icon: <DownloadOutlined />,
+            label: "Download Visible Trees (Transformed)",
+            title: "The currently active transformation will be applied to each node.",
+          }
           : null,
         {
           key: "importNml",

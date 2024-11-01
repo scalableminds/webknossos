@@ -584,7 +584,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       cancelText: "No",
       autoFocusButton: "cancel",
       icon: <WarningOutlined />,
-      onCancel: () => { },
+      onCancel: () => {},
       onOk: () => {
         onConfirm();
       },
@@ -776,12 +776,12 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         },
         this.props.isSkeletonLayerTransformed
           ? {
-            key: "handleNmlDownloadTransformed",
-            onClick: () => this.handleNmlDownload(true),
-            icon: <DownloadOutlined />,
-            label: "Download Visible Trees (Transformed)",
-            title: "The currently active transformation will be applied to each node.",
-          }
+              key: "handleNmlDownloadTransformed",
+              onClick: () => this.handleNmlDownload(true),
+              icon: <DownloadOutlined />,
+              label: "Download Visible Trees (Transformed)",
+              title: "The currently active transformation will be applied to each node.",
+            }
           : null,
         {
           key: "importNml",
@@ -871,7 +871,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <Spin />
                 </Modal>
                 <Space.Compact className="compact-icons">
-                  <div style={{ display: "inline-flex", flexWrap: "wrap" }}>
+                  <div
+                    style={{ display: "inline-flex", flexWrap: "wrap" }}
+                    className="compact-buttons"
+                  >
                     <AdvancedSearchPopover
                       onSelect={this.handleSearchSelect}
                       data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
@@ -879,7 +882,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                       provideShortcut
                       targetId={treeTabId}
                     >
-                      <ButtonComponent title="Open the search via CTRL + Shift + F">
+                      <ButtonComponent
+                        title="Open the search via CTRL + Shift + F"
+                        className="firstButton"
+                      >
                         <SearchOutlined />
                       </ButtonComponent>
                     </AdvancedSearchPopover>
@@ -912,7 +918,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                       <i className="fas fa-toggle-off" />
                     </ButtonComponent>
                     <Dropdown menu={this.getActionsDropdown()} trigger={["click"]}>
-                      <ButtonComponent style={{ overflow: "clip" }}>
+                      <ButtonComponent style={{ overflow: "clip" }} className="lastButton">
                         More
                         <DownOutlined />
                       </ButtonComponent>

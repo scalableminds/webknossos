@@ -414,7 +414,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
                         as part of the WEBKNOSSOS project management.{" "}
                       </p>
                       <a
-                        href="https://docs.webknossos.org/webknossos/tasks.html"
+                        href="https://docs.webknossos.org/webknossos/tasks_projects/index.html"
                         rel="noopener noreferrer"
                         target="_blank"
                       >

@@ -90,7 +90,7 @@ export default function BoundingBoxTab() {
   }
 
   function handleExportBoundingBox(bb: UserBoundingBox) {
-    _.partial(setSelectedBoundingBoxForExport, bb);
+    setSelectedBoundingBoxForExport(bb);
     hideContextMenu();
   }
 

@@ -239,6 +239,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     val regex = "^stringListValue-(\\d+)".r
     val valuesWithIndex: Seq[(Int, String)] = node.attributes.flatMap {
       case attribute: Attribute =>
+        logger.info(f"[debug-regex]: matching ${attribute.key} for as string list value in NML")
         attribute.key match {
           case regex(indexStr) =>
             indexStr.toIntOpt.map { index =>
@@ -551,8 +552,10 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
 
   private def parseAdditionalCoordinateValues(node: XMLNode): Seq[AdditionalCoordinateProto] = {
     val regex = "^additionalCoordinate-(\\w)".r
+
     node.attributes.flatMap {
       case attribute: Attribute =>
+        logger.info(f"[debug-regex]: matching ${attribute.key} for as additionalCoordinateValue in NML")
         attribute.key match {
           case regex(axisName) =>
             Some(new AdditionalCoordinateProto(axisName, attribute.value.toString().toInt))

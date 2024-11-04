@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.io.{File, FileOutputStream, InputStream}
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.Vec3Int.logger
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
 import com.scalableminds.util.tools.{BoxImplicits, Fox, JsonHelper}
@@ -104,6 +105,7 @@ trait VolumeDataZipHelper
     // assume additionalAxes,x,y,z
     val chunkPathRegex = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/c\\.(.+)".r
 
+    logger.info(f"[debug-regex]: matching $path as zarr chunk path")
     path match {
       case chunkPathRegex(_, magStr, dimsStr) =>
         val dims: Seq[String] = dimsStr.split("\\.").toSeq

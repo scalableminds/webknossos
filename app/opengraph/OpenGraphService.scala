@@ -6,6 +6,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayerLike}
+import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationDAO
 import models.dataset.{Dataset, DatasetDAO, DatasetLayerDAO}
 import models.organization.{Organization, OrganizationDAO}
@@ -32,7 +33,8 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
                                  datasetLayerDAO: DatasetLayerDAO,
                                  annotationDAO: AnnotationDAO,
                                  shortLinkDAO: ShortLinkDAO,
-                                 conf: WkConf) {
+                                 conf: WkConf)
+    extends LazyLogging {
 
   private val thumbnailWidth = 1000
   private val thumbnailHeight = 300
@@ -59,6 +61,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
       implicit ec: ExecutionContext,
       ctx: DBAccessContext): Fox[OpenGraphTags] =
     for {
+      _ <- Fox.successful(logger.info(f"[debug-regex]: matching $uriPath for openGraph tags"))
       (uriPathResolved, sharingTokenResolved) <- resolveShortLinkIfNeeded(uriPath, sharingToken)
       ctxWithToken = URLSharing.fallbackTokenAccessContext(sharingTokenResolved)
       pageType = detectPageType(uriPathResolved)

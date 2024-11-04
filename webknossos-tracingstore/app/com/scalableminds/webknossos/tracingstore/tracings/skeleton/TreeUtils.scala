@@ -1,11 +1,12 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing.Tree
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.util.matching.Regex
 import scala.util.matching.Regex.Match
 
-object TreeUtils {
+object TreeUtils extends LazyLogging {
   type FunctionalNodeMapping = Function[Int, Int]
   type FunctionalGroupMapping = Function[Int, Int]
 
@@ -63,6 +64,7 @@ object TreeUtils {
       val newId = if (sourceNodeIds.contains(oldId)) f(oldId) else oldId
       "#" + newId
     }
+    logger.info(f"[debug-regex]: matching $comment as node reference in skeleton tree comment")
     nodeIdReferenceRegex.replaceAllIn(comment, m => replacer(m))
   }
 

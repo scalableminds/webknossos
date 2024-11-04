@@ -54,6 +54,8 @@ import { getVoxelyticsLogs, deleteWorkflow } from "admin/admin_rest_api";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
 import { notEmpty } from "libs/utils";
 import type { ArrayElement } from "types/globals";
+import { useSelector } from "react-redux";
+import type { OxalisState } from "oxalis/store";
 
 const { Search } = Input;
 
@@ -272,6 +274,11 @@ export default function TaskListView({
   const highlightedTask = params.highlightedTask || "";
   const location = useLocation();
 
+  const isCurrentUserSuperUser = useSelector((state: OxalisState) => {
+    const activeUser = state.activeUser;
+    return activeUser?.isSuperUser;
+  });
+
   const singleRunId = report.runs.length === 1 ? report.runs[0].id : runId;
 
   useEffect(() => {
@@ -424,7 +431,8 @@ export default function TaskListView({
   async function deleteWorkflowReport() {
     await modal.confirm({
       title: "Delete Workflow Report",
-      content: "Are you sure you want to delete this workflow report?\nNote that if the workflow is still running, this may cause it to fail.",
+      content:
+        "Are you sure you want to delete this workflow report?\nNote that if the workflow is still running, this may cause it to fail.",
       okText: "Delete",
       okButtonProps: { danger: true },
       onOk: async () => {
@@ -459,9 +467,14 @@ export default function TaskListView({
           ),
       },
       { key: "5", onClick: showArtifactsDiskUsageList, label: "Show Disk Usage of Artifacts" },
-      { key: "6", onClick: deleteWorkflowReport, label: "Delete Workflow Report"},
     ],
   };
+  if (isCurrentUserSuperUser)
+    overflowMenu.items?.push({
+      key: "6",
+      onClick: deleteWorkflowReport,
+      label: "Delete Workflow Report",
+    });
 
   type ItemType = ArrayElement<CollapseProps["items"]>;
 

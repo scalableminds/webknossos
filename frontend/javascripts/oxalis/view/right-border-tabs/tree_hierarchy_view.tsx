@@ -188,8 +188,7 @@ function TreeHierarchyView(props: Props) {
     }
   }
 
-  function onSelectGroupNode(node: TreeNode) {
-    const groupId = node.id;
+  function onSelectGroupNode(groupId: number) {
     const numberOfSelectedTrees = props.selectedTreeIds.length;
 
     if (numberOfSelectedTrees > 1) {
@@ -254,11 +253,14 @@ function TreeHierarchyView(props: Props) {
   const checkedKeys = deepFlatFilter(UITreeData, (node) => node.isChecked).map((node) => node.key);
 
   // selectedKeys is mainly used for highlighting, i.e. blueish background color
-  const selectedKeys = props.selectedTreeIds.map((treeId) =>
-    getNodeKey(GroupTypeEnum.TREE, treeId),
-  );
+  const selectedKeys = props.activeGroupId
+    ? [getNodeKey(GroupTypeEnum.GROUP, props.activeGroupId)]
+    : props.selectedTreeIds.map((treeId) => getNodeKey(GroupTypeEnum.TREE, treeId));
 
-  if (props.activeGroupId) selectedKeys.push(getNodeKey(GroupTypeEnum.GROUP, props.activeGroupId));
+  useEffect(
+    () => treeRef.current?.scrollTo({ key: selectedKeys[0], align: "auto" }),
+    [selectedKeys[0]],
+  );
 
   return (
     <>
@@ -297,7 +299,7 @@ function TreeHierarchyView(props: Props) {
                   onSelect={(_selectedKeys, info: { node: TreeNode; nativeEvent: MouseEvent }) =>
                     info.node.type === GroupTypeEnum.TREE
                       ? onSelectTreeNode(info.node, info.nativeEvent)
-                      : onSelectGroupNode(info.node)
+                      : onSelectGroupNode(info.node.id)
                   }
                   onDrop={onDrop}
                   onCheck={onCheck}

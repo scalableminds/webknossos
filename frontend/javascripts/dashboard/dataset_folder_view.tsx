@@ -134,7 +134,7 @@ function DatasetFolderViewInner(props: Props) {
                 <p>
                   WEBKNOSSOS supports a variety of (remote){" "}
                   <a
-                    href="https://docs.webknossos.org/webknossos/data_formats.html"
+                    href="https://docs.webknossos.org/webknossos/data/index.html"
                     target="_blank"
                     rel="noreferrer"
                   >

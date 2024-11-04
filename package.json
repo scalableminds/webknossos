@@ -123,7 +123,7 @@
     "ts-coverage": "typescript-coverage-report",
     "find-cyclic-dependencies": "yarn run dpdm -T --tree false --warning false --extensions .ts,.tsx frontend/javascripts/main.tsx",
     "check-cyclic-dependencies": "node ./tools/check-cyclic-dependencies.js",
-    "startf": "yarn rm-fossil-lock; yarn kill-listeners; yarn start",
+    "startf": "yarn rm-fossil-lock; yarn kill-listeners; rm -r webknossos-jni/target; yarn start",
     "beautify-front": "yarn fix-frontend && yarn typecheck",
     "beautify": "yarn format-backend && yarn beautify-front"
   },

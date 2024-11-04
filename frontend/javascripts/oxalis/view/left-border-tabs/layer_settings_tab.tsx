@@ -66,7 +66,7 @@ import {
   getTransformsForLayer,
   hasDatasetTransforms,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getMaxZoomValueForResolution, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getMaxZoomValueForMag, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
@@ -1029,7 +1029,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     let foundResolution;
 
     if (volume && !isDataLayer) {
-      const { position, resolution } = await findDataPositionForVolumeTracing(
+      const { position, mag: resolution } = await findDataPositionForVolumeTracing(
         tracingStore.url,
         volume.tracingId,
       );
@@ -1042,7 +1042,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       foundPosition = position;
       foundResolution = resolution;
     } else {
-      const { position, resolution } = await findDataPositionForLayer(
+      const { position, mag: resolution } = await findDataPositionForLayer(
         dataset.dataStore.url,
         dataset,
         layerName,
@@ -1627,7 +1627,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 
   onZoomToMag(layerName: string, resolution: Vector3) {
-    const targetZoomValue = getMaxZoomValueForResolution(Store.getState(), layerName, resolution);
+    const targetZoomValue = getMaxZoomValueForMag(Store.getState(), layerName, resolution);
     dispatch(setZoomStepAction(targetZoomValue));
     return targetZoomValue;
   },

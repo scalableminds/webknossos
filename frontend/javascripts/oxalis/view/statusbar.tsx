@@ -500,7 +500,10 @@ function DownloadSpeedometer() {
 }
 
 function MagnificationInfo() {
-  const { representativeResolution, isActiveResolutionGlobal } = useSelector(getActiveMagInfo);
+  const {
+    representativeMag: representativeResolution,
+    isActiveMagGlobal: isActiveResolutionGlobal,
+  } = useSelector(getActiveMagInfo);
 
   const renderMagTooltipContent = useCallback(() => {
     const state = Store.getState();

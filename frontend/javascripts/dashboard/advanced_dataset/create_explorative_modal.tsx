@@ -90,24 +90,24 @@ export function RestrictMagnificationSlider({
   magIndices,
   setMagIndices,
 }: RestrictMagnificationSliderProps) {
-  let highestResolutionIndex = magInfo.getCoarsestMagIndex();
-  let lowestResolutionIndex = magInfo.getFinestMagIndex();
+  let highestMagIndex = magInfo.getCoarsestMagIndex();
+  let lowestMagIndex = magInfo.getFinestMagIndex();
 
   if (selectedSegmentationLayer != null) {
-    const datasetFallbackLayerResolutionInfo = getMagInfo(selectedSegmentationLayer.resolutions);
-    highestResolutionIndex = datasetFallbackLayerResolutionInfo.getCoarsestMagIndex();
-    lowestResolutionIndex = datasetFallbackLayerResolutionInfo.getFinestMagIndex();
+    const datasetFallbackLayerMagInfo = getMagInfo(selectedSegmentationLayer.resolutions);
+    highestMagIndex = datasetFallbackLayerMagInfo.getCoarsestMagIndex();
+    lowestMagIndex = datasetFallbackLayerMagInfo.getFinestMagIndex();
   }
 
-  const highResolutionIndex = Math.min(highestResolutionIndex, magIndices[1]);
-  const lowResolutionIndex = Math.max(lowestResolutionIndex, magIndices[0]);
+  const highMagIndex = Math.min(highestMagIndex, magIndices[1]);
+  const lowMagIndex = Math.max(lowestMagIndex, magIndices[0]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: setResolutionIndices should also be added to the dependencies. Consider fixing this.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: setMagIndices should also be added to the dependencies. Consider fixing this.
   useEffect(() => {
-    setMagIndices([lowestResolutionIndex, highestResolutionIndex]);
-  }, [lowestResolutionIndex, highestResolutionIndex]);
+    setMagIndices([lowestMagIndex, highestMagIndex]);
+  }, [lowestMagIndex, highestMagIndex]);
 
-  return lowestResolutionIndex < highestResolutionIndex ? (
+  return lowestMagIndex < highestMagIndex ? (
     <React.Fragment>
       <h5
         style={{
@@ -136,16 +136,16 @@ export function RestrictMagnificationSlider({
             marginRight: 20,
           }}
         >
-          {magInfo.getMagByIndexOrThrow(lowResolutionIndex).join("-")}
+          {magInfo.getMagByIndexOrThrow(lowMagIndex).join("-")}
         </div>
         <Slider
           tooltip={{ open: false }}
           onChange={(value) => setMagIndices(value)}
           range
           step={1}
-          min={lowestResolutionIndex}
-          max={highestResolutionIndex}
-          value={[lowResolutionIndex, highResolutionIndex]}
+          min={lowestMagIndex}
+          max={highestMagIndex}
+          value={[lowMagIndex, highMagIndex]}
           style={{
             flexGrow: 1,
           }}
@@ -157,7 +157,7 @@ export function RestrictMagnificationSlider({
             textAlign: "right",
           }}
         >
-          {magInfo.getMagByIndexOrThrow(highResolutionIndex).join("-")}
+          {magInfo.getMagByIndexOrThrow(highMagIndex).join("-")}
         </div>
       </div>
     </React.Fragment>
@@ -167,7 +167,7 @@ export function RestrictMagnificationSlider({
 function CreateExplorativeModal({ datasetId, onClose }: Props) {
   const dataset = useFetch(() => getDataset(datasetId), null, [datasetId]);
   const [annotationType, setAnnotationType] = useState("hybrid");
-  const [userDefinedResolutionIndices, setUserDefinedResolutionIndices] = useState([0, 10000]);
+  const [userDefinedMagIndices, setUserDefinedMagIndices] = useState([0, 10000]);
   const [selectedSegmentationLayerName, setSelectedSegmentationLayerName] = useState<
     string | undefined
   >(undefined);
@@ -194,22 +194,22 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
       selectedSegmentationLayer != null
         ? `&fallbackLayerName=${selectedSegmentationLayer.name}`
         : "";
-    const resolutionInfo =
+    const magInfo =
       selectedSegmentationLayer == null
         ? getSomeMagInfoForDataset(dataset)
         : getMagInfo(selectedSegmentationLayer.resolutions);
-    const highestResolutionIndex = resolutionInfo.getCoarsestMagIndex();
-    const lowestResolutionIndex = resolutionInfo.getFinestMagIndex();
+    const highestMagIndex = magInfo.getCoarsestMagIndex();
+    const lowestMagIndex = magInfo.getFinestMagIndex();
 
-    const highResolutionIndex = Math.min(highestResolutionIndex, userDefinedResolutionIndices[1]);
-    const lowResolutionIndex = Math.max(lowestResolutionIndex, userDefinedResolutionIndices[0]);
-    const resolutionSlider =
+    const highMagIndex = Math.min(highestMagIndex, userDefinedMagIndices[1]);
+    const lowMagIndex = Math.max(lowestMagIndex, userDefinedMagIndices[0]);
+    const magSlider =
       annotationType !== "skeleton" ? (
         <RestrictMagnificationSlider
-          magInfo={resolutionInfo}
+          magInfo={magInfo}
           selectedSegmentationLayer={selectedSegmentationLayer}
-          magIndices={userDefinedResolutionIndices}
-          setMagIndices={setUserDefinedResolutionIndices}
+          magIndices={userDefinedMagIndices}
+          setMagIndices={setUserDefinedMagIndices}
         />
       ) : null;
     modalContent = (
@@ -235,7 +235,7 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
           />
         ) : null}
 
-        {resolutionSlider}
+        {magSlider}
         <div
           style={{
             textAlign: "right",
@@ -245,9 +245,9 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
             to={`/datasets/${dataset.owningOrganization}/${
               dataset.name
             }/createExplorative/${annotationType}/?minMag=${Math.max(
-              ...resolutionInfo.getMagByIndexOrThrow(lowResolutionIndex),
+              ...magInfo.getMagByIndexOrThrow(lowMagIndex),
             )}&maxMag=${Math.max(
-              ...resolutionInfo.getMagByIndexOrThrow(highResolutionIndex),
+              ...magInfo.getMagByIndexOrThrow(highMagIndex),
             )}${fallbackLayerGetParameter}`}
             title="Create new annotation with selected properties"
           >

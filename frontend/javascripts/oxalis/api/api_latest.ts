@@ -669,15 +669,13 @@ class TracingApi {
       );
     }
 
-    const resolutionInfo = getMagInfo(
-      getLayerByName(state.dataset, segmentationLayerName).resolutions,
-    );
+    const magInfo = getMagInfo(getLayerByName(state.dataset, segmentationLayerName).resolutions);
     const theoreticalMagIndex = getActiveMagIndexForLayer(state, segmentationLayerName);
-    const existingMagIndex = resolutionInfo.getIndexOrClosestHigherIndex(theoreticalMagIndex);
+    const existingMagIndex = magInfo.getIndexOrClosestHigherIndex(theoreticalMagIndex);
     if (existingMagIndex == null) {
       throw new Error("The index of the current mag could not be found.");
     }
-    const currentMag = resolutionInfo.getMagByIndex(existingMagIndex);
+    const currentMag = magInfo.getMagByIndex(existingMagIndex);
     if (currentMag == null) {
       throw new Error("No mag could be found.");
     }
@@ -1842,8 +1840,8 @@ class DataApi {
       zoomStep = _zoomStep;
     } else {
       const layer = getLayerByName(Store.getState().dataset, layerName);
-      const resolutionInfo = getMagInfo(layer.resolutions);
-      zoomStep = resolutionInfo.getFinestMagIndex();
+      const magInfo = getMagInfo(layer.resolutions);
+      zoomStep = magInfo.getFinestMagIndex();
     }
 
     const cube = this.model.getCubeByLayerName(layerName);
@@ -1899,19 +1897,19 @@ class DataApi {
     additionalCoordinates: AdditionalCoordinate[] | null = null,
   ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
-    const resolutionInfo = getMagInfo(layer.resolutions);
+    const magInfo = getMagInfo(layer.resolutions);
     let zoomStep;
 
     if (_zoomStep != null) {
       zoomStep = _zoomStep;
     } else {
-      zoomStep = resolutionInfo.getFinestMagIndex();
+      zoomStep = magInfo.getFinestMagIndex();
     }
 
-    const resolutions = resolutionInfo.getDenseMags();
+    const mags = magInfo.getDenseMags();
     const bucketAddresses = this.getBucketAddressesInCuboid(
       mag1Bbox,
-      resolutions,
+      mags,
       zoomStep,
       additionalCoordinates,
     );
@@ -1926,13 +1924,13 @@ class DataApi {
       bucketAddresses.map((addr) => this.getLoadedBucket(layerName, addr)),
     );
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
-    return this.cutOutCuboid(buckets, mag1Bbox, elementClass, resolutions, zoomStep);
+    return this.cutOutCuboid(buckets, mag1Bbox, elementClass, mags, zoomStep);
   }
 
   async getViewportData(
     viewport: OrthoView,
     layerName: string,
-    maybeResolutionIndex: number | null | undefined,
+    maybeMagIndex: number | null | undefined,
     additionalCoordinates: AdditionalCoordinate[] | null,
   ) {
     const state = Store.getState();
@@ -1945,11 +1943,11 @@ class DataApi {
       viewport,
     );
     const layer = getLayerByName(state.dataset, layerName);
-    const resolutionInfo = getMagInfo(layer.resolutions);
-    if (maybeResolutionIndex == null) {
-      maybeResolutionIndex = getActiveMagIndexForLayer(state, layerName);
+    const magInfo = getMagInfo(layer.resolutions);
+    if (maybeMagIndex == null) {
+      maybeMagIndex = getActiveMagIndexForLayer(state, layerName);
     }
-    const zoomStep = resolutionInfo.getClosestExistingIndex(maybeResolutionIndex);
+    const zoomStep = magInfo.getClosestExistingIndex(maybeMagIndex);
 
     const min = dimensions.transDim(
       V3.sub([curU, curV, curW], [halfViewportExtentU, halfViewportExtentV, 0]),
@@ -1960,10 +1958,10 @@ class DataApi {
       viewport,
     );
 
-    const resolution = resolutionInfo.getMagByIndexOrThrow(zoomStep);
-    const resolutionUVX = dimensions.transDim(resolution, viewport);
-    const widthInVoxel = Math.ceil(halfViewportExtentU / resolutionUVX[0]);
-    const heightInVoxel = Math.ceil(halfViewportExtentV / resolutionUVX[1]);
+    const mag = magInfo.getMagByIndexOrThrow(zoomStep);
+    const magUVX = dimensions.transDim(mag, viewport);
+    const widthInVoxel = Math.ceil(halfViewportExtentU / magUVX[0]);
+    const heightInVoxel = Math.ceil(halfViewportExtentV / magUVX[1]);
     if (widthInVoxel * heightInVoxel > 1024 ** 2) {
       throw new Error(
         "Requested data for viewport cannot be loaded, since the amount of data is too large for the available magnification. Please zoom in further or ensure that coarser magnifications are available.",
@@ -2035,12 +2033,12 @@ class DataApi {
     magnifications: Array<Vector3>,
     zoomStep: number,
   ): TypedArray {
-    const resolution = magnifications[zoomStep];
+    const mag = magnifications[zoomStep];
     // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
     // by the mag
-    const topLeft = scaleGlobalPositionWithMagnification(bbox.min, resolution);
+    const topLeft = scaleGlobalPositionWithMagnification(bbox.min, mag);
     // Ceil the bounding box bottom right instead of flooring, because it is exclusive
-    const bottomRight = scaleGlobalPositionWithMagnification(bbox.max, resolution, true);
+    const bottomRight = scaleGlobalPositionWithMagnification(bbox.max, mag, true);
     const extent: Vector3 = V3.sub(bottomRight, topLeft);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(elementClass);
     const result = new TypedArrayClass(channelCount * extent[0] * extent[1] * extent[2]);
@@ -2106,8 +2104,8 @@ class DataApi {
     magnification?: Vector3,
   ): string {
     const { dataset } = Store.getState();
-    const resolutionInfo = getMagInfo(getLayerByName(dataset, layerName, true).resolutions);
-    magnification = magnification || resolutionInfo.getFinestMag();
+    const magInfo = getMagInfo(getLayerByName(dataset, layerName, true).resolutions);
+    magnification = magnification || magInfo.getFinestMag();
 
     const magString = magnification.join("-");
     return (
@@ -2180,11 +2178,7 @@ class DataApi {
     const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();
     await Promise.all(
       voxels.map((voxel) =>
-        segmentationLayer.cube._labelVoxelInAllResolutions_DEPRECATED(
-          voxel,
-          additionalCoordinates,
-          label,
-        ),
+        segmentationLayer.cube._labelVoxelInAllMags_DEPRECATED(voxel, additionalCoordinates, label),
       ),
     );
     segmentationLayer.cube.pushQueue.push();

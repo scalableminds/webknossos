@@ -559,7 +559,10 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
 
   getResolutionInfo() {
     const { activeMagInfo: activeResolutionInfo } = this.props;
-    const { representativeResolution, isActiveResolutionGlobal } = activeResolutionInfo;
+    const {
+      representativeMag: representativeResolution,
+      isActiveMagGlobal: isActiveResolutionGlobal,
+    } = activeResolutionInfo;
 
     return representativeResolution != null ? (
       <FastTooltip dynamicRenderer={this.renderResolutionsTooltip} placement="left" wrapper="tr">

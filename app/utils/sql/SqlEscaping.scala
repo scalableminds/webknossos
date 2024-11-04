@@ -1,6 +1,8 @@
 package utils.sql
 
-trait SqlEscaping {
+import com.typesafe.scalalogging.LazyLogging
+
+trait SqlEscaping extends LazyLogging {
   protected def escapeLiteral(aString: String): String = {
     // Ported from PostgreSQL 9.2.4 source code in src/interfaces/libpq/fe-exec.c
     var hasBackslash = false
@@ -35,6 +37,7 @@ trait SqlEscaping {
         // Removing the escaped quotes to split at commas not surrounded by quotes
         // Splitting *the original string* at split positions obtained from matching there
         val withoutEscapedQuotes = trimmed.replace("\\\"", "__")
+        logger.info(f"[debug-regex]: matching $withoutEscapedQuotes as arrayLiteral from SQL")
         val splitPositions: List[Int] =
           ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".r.findAllMatchIn(withoutEscapedQuotes).map(_.start).toList.sorted
         val split = splitAtPositions(splitPositions, trimmed)

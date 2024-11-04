@@ -3,8 +3,9 @@ package com.scalableminds.webknossos.datastore.dataformats.wkw
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.typesafe.scalalogging.LazyLogging
 
-trait WKWDataFormatHelper {
+trait WKWDataFormatHelper extends LazyLogging {
 
   val dataFileExtension: String = "wkw"
   val FILENAME_HEADER_WKW: String = s"header.$dataFileExtension"
@@ -19,6 +20,7 @@ trait WKWDataFormatHelper {
   // Assumes single-bucket wkw files, as for volume tracings
   protected def parseWKWFilePath(path: String): Option[BucketPosition] = {
     val CubeRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/z(\\d+)/y(\\d+)/x(\\d+).$dataFileExtension".r
+    logger.info(f"[debug-regex]: matching $path as WKWFilePath")
     path match {
       case CubeRx(_, magStr, z, y, x) =>
         Vec3Int.fromMagLiteral(magStr, allowScalar = true).map { mag =>

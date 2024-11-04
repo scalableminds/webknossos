@@ -145,6 +145,7 @@ trait VolumeDataZipHelper
   private def getMagFromWkwOrZarrHeaderFilePath(path: String): Option[Vec3Int] = {
     val wkwHeaderRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/$FILENAME_HEADER_WKW".r
     val zarr3HeaderRx = s"(|.*/)(\\d+-\\d+-\\d+)/${Zarr3ArrayHeader.FILENAME_ZARR_JSON}".r
+    logger.info(f"[debug-regex]: matching $path as wkwHeaderPath or zarr3HeaderPath")
     path match {
       case wkwHeaderRx(_, magLiteral) =>
         Vec3Int.fromMagLiteral(magLiteral, allowScalar = true)

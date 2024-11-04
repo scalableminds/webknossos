@@ -68,6 +68,21 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
         truncateCommonPrefix = true,
         excludeFromPrefix = None
       )
+
+    // Test if the dataset was unzipped successfully
+    if (!dataDirectory.listFiles().exists(_.getName == "test-dataset")) {
+      throw new Exception("Test dataset was not unzipped successfully.")
+    }
+    val testFile = new File(dataDirectory, "test-dataset/datasource-properties.json")
+    if (!testFile.exists()) {
+      throw new Exception("Required file does not exist.")
+    }
+    val testFileSource = scala.io.Source.fromFile(testFile)
+    val testFileContent = try testFileSource.mkString
+    finally testFileSource.close()
+    if (testFileContent.isEmpty) {
+      throw new Exception("Required file is empty.")
+    }
   }
 
 }

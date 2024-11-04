@@ -429,7 +429,7 @@ export default function TaskListView({
     await modal.confirm({
       title: "Delete Workflow Report",
       content:
-        "Are you sure you want to delete this workflow report?\nNote that if the workflow is still running, this may cause it to fail.",
+        "Are you sure you want to delete this workflow report? This can not be undone. Note that if the workflow is still running, this may cause it to fail.",
       okText: "Delete",
       okButtonProps: { danger: true },
       onOk: async () => {

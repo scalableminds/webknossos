@@ -166,8 +166,8 @@ class VoxelyticsController @Inject()(
         _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
         _ <- userService.assertIsSuperUser(request.identity)
         _ <- voxelyticsDAO.findWorkflowByHash(workflowHash) ?~> "voxelytics.workflowNotFound" ~> NOT_FOUND
-        _ = logger.info(s"Deleting workflow with hash $workflowHash")
-        _ <- voxelyticsDAO.deleteWorkflow(workflowHash)
+        _ = logger.info(s"Deleting workflow with hash $workflowHash in organization ${request.identity._organization}")
+        _ <- voxelyticsDAO.deleteWorkflow(workflowHash, request.identity._organization)
       } yield Ok
     }
 

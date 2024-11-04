@@ -1145,7 +1145,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
       _ <- run(q"""
                   UPDATE webknossos.jobs
                   SET _voxelytics_workflowHash = NULL
-                  WHERE _voxelytics_workflowHash = $hash;
+                  WHERE _voxelytics_workflowHash = $hash
+                  AND (SELECT _organization FROM webknossos.users  AS u WHERE u._id = _owner) = $organizationId;
         """.asUpdate)
     } yield ()
 

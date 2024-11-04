@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.io.{File, FileOutputStream, InputStream}
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.geometry.Vec3Int.logger
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
 import com.scalableminds.util.tools.{BoxImplicits, Fox, JsonHelper}

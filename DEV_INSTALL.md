@@ -44,7 +44,7 @@ arch -x86_64 /bin/zsh
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install git, node.js, postgres, sbt, gfind, gsed, draco
-brew install openjdk draco openssl git node postgresql sbt findutils coreutils gnu-sed redis yarn c-blosc brotli wget
+brew install openjdk draco openssl git node postgresql sbt findutils coreutils gnu-sed redis c-blosc brotli wget
 
 # Set env variables for openjdk and openssl
 # You probably want to add these lines manually to avoid conflicts in your zshrc
@@ -84,12 +84,8 @@ source ~/.bashrc
 nvm install 18
 nvm use 18
 
-# Adding repositories for yarn
-curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
-echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
-
 sudo apt update
-sudo apt install -y git postgresql postgresql-client unzip zip yarn redis-server build-essential libblosc1 libbrotli1 libdraco-dev cmake
+sudo apt install -y git postgresql postgresql-client unzip zip redis-server build-essential libblosc1 libbrotli1 libdraco-dev cmake
 
  # Install sdkman, java, scala and sbt
 curl -s "https://get.sdkman.io" | bash
@@ -132,8 +128,10 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 ### node.js & yarn
 
 * Install node from [http://nodejs.org/download/](http://nodejs.org/download/)
-* node version **16 to 18 is required**
-* Install yarn package manager: `npm install -g yarn`
+* node version **18 is required**
+* Use `corepack` to install `yarn`
+* `corepack enable`&& `yarn install`
+
 
 ## Run locally
 

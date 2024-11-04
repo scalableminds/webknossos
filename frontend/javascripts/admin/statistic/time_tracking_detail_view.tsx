@@ -1,5 +1,8 @@
 import { useFetch } from "libs/react_helpers";
-import type { AnnotationTypeFilterEnum } from "./project_and_annotation_type_dropdown";
+import type {
+  AnnotationStateFilterEnum,
+  AnnotationTypeFilterEnum,
+} from "./project_and_annotation_type_dropdown";
 import { getTimeTrackingForUserSummedPerAnnotation } from "admin/admin_rest_api";
 import dayjs from "dayjs";
 import { Col, Divider, Row } from "antd";
@@ -13,6 +16,7 @@ type TimeTrackingDetailViewProps = {
   userId: string;
   dateRange: [number, number];
   annotationType: AnnotationTypeFilterEnum;
+  annotationState: AnnotationStateFilterEnum;
   projectIds: string[];
 };
 
@@ -84,6 +88,7 @@ function TimeTrackingDetailView(props: TimeTrackingDetailViewProps) {
         dayjs(props.dateRange[0]),
         dayjs(props.dateRange[1]),
         props.annotationType,
+        props.annotationState,
         props.projectIds,
       );
     },

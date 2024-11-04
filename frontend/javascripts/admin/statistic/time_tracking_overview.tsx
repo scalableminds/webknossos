@@ -6,6 +6,7 @@ import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
 import ProjectAndAnnotationTypeDropdown, {
+  AnnotationStateFilterEnum,
   AnnotationTypeFilterEnum,
 } from "./project_and_annotation_type_dropdown";
 import { isUserAdminOrTeamManager, transformToCSVRow } from "libs/utils";
@@ -50,6 +51,7 @@ function TimeTrackingOverview() {
   const [selectedTypes, setSelectedTypes] = useState(
     AnnotationTypeFilterEnum.TASKS_AND_ANNOTATIONS_KEY,
   );
+  const [selectedState, setSelectedState] = useState(AnnotationStateFilterEnum.ALL);
   const [selectedTeams, setSelectedTeams] = useState(allTeams.map((team) => team.id));
   const filteredTimeEntries = useFetch(
     async () => {
@@ -59,13 +61,14 @@ function TimeTrackingOverview() {
         endDate.valueOf(),
         selectedTeams,
         selectedTypes,
+        selectedState,
         selectedProjectIds,
       );
       setIsFetching(false);
       return filteredEntries;
     },
     [],
-    [selectedTeams, selectedTypes, selectedProjectIds, startDate, endDate],
+    [selectedTeams, selectedTypes, selectedState, selectedProjectIds, startDate, endDate],
   );
   const filterStyle = { marginInline: 10 };
 
@@ -74,6 +77,7 @@ function TimeTrackingOverview() {
     start: Dayjs,
     end: Dayjs,
     annotationTypes: AnnotationTypeFilterEnum,
+    selectedState: AnnotationStateFilterEnum,
     projectIds: string[] | null | undefined,
   ) => {
     const timeSpans = await getTimeTrackingForUserSpans(
@@ -81,6 +85,7 @@ function TimeTrackingOverview() {
       start.valueOf(),
       end.valueOf(),
       annotationTypes,
+      selectedState,
       projectIds,
     );
     const timeEntriesAsString = timeSpans
@@ -186,7 +191,14 @@ function TimeTrackingOverview() {
         return (
           <LinkButton
             onClick={async () => {
-              downloadTimeSpans(user.id, startDate, endDate, selectedTypes, selectedProjectIds);
+              downloadTimeSpans(
+                user.id,
+                startDate,
+                endDate,
+                selectedTypes,
+                selectedState,
+                selectedProjectIds,
+              );
             }}
           >
             <DownloadOutlined className="icon-margin-right" />
@@ -239,6 +251,8 @@ function TimeTrackingOverview() {
         selectedProjectIds={selectedProjectIds}
         setSelectedAnnotationType={setSelectedTypes}
         selectedAnnotationType={selectedTypes}
+        selectedAnnotationState={selectedState}
+        setSelectedAnnotationState={setSelectedState}
         style={{ ...filterStyle }}
       />
       <Select
@@ -289,6 +303,7 @@ function TimeTrackingOverview() {
                 userId={entry.user.id}
                 dateRange={[startDate.valueOf(), endDate.valueOf()]}
                 annotationType={selectedTypes}
+                annotationState={selectedState}
                 projectIds={selectedProjectIds}
               />
             ),

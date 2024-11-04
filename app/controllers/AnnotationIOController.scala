@@ -462,7 +462,7 @@ class AnnotationIOController @Inject()(
             tracingStoreClient.getSkeletonTracing(skeletonAnnotationLayer, skeletonVersion)
         } ?~> "annotation.download.fetchSkeletonLayer.failed"
         user <- userService.findOneCached(annotation._user)(GlobalAccessContext) ?~> "annotation.download.findUser.failed"
-        taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
+        taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne(_)(GlobalAccessContext)) ?~> "task.notFound"
         nmlStream = nmlWriter.toNmlStream(
           name,
           fetchedSkeletonLayers ::: fetchedVolumeLayers,

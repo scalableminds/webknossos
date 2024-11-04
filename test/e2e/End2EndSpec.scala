@@ -52,7 +52,7 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
     val testDatasetPath = "test/dataset/test-dataset.zip"
     val dataDirectory = new File("binaryData/Organization_X")
     if (!dataDirectory.exists()) {
-      throw new Exception("Organization_X directory does not exist.")
+      dataDirectory.mkdirs()
     }
     val testDatasetZip = new File(testDatasetPath)
     if (!testDatasetZip.exists()) {

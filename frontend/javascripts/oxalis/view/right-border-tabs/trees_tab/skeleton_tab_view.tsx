@@ -365,7 +365,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         _groups: Array<TreeGroup>,
         _groupToTreesMap: Record<number, Array<Tree>>,
         _sortBy: string,
-      ): Generator<TreeOrTreeGroup, void, void> {
+      ): Generator<TreeOrTreeGroup, void, undefined> {
         for (const group of _groups) {
           yield makeGroup(group);
 

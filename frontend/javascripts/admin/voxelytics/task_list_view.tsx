@@ -424,7 +424,7 @@ export default function TaskListView({
   async function deleteWorkflowReport() {
     await modal.confirm({
       title: "Delete Workflow Report",
-      content: "Are you sure you want to delete this workflow report?",
+      content: "Are you sure you want to delete this workflow report?\nNote that if the workflow is still running, this may cause it to fail.",
       okText: "Delete",
       okButtonProps: { danger: true },
       onOk: async () => {
@@ -459,7 +459,7 @@ export default function TaskListView({
           ),
       },
       { key: "5", onClick: showArtifactsDiskUsageList, label: "Show Disk Usage of Artifacts" },
-      { key: "6", onClick: deleteWorkflowReport, label: "Delete Workflow Report" },
+      { key: "6", onClick: deleteWorkflowReport, label: "Delete Workflow Report"},
     ],
   };
 

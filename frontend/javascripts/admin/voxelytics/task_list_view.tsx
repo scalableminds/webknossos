@@ -125,7 +125,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             (taskInfo.chunkCounts.complete +
               taskInfo.chunkCounts.failed +
               taskInfo.chunkCounts.cancelled)) *
-            (taskInfo.chunkCounts.total - taskInfo.chunkCounts.skipped) -
+          (taskInfo.chunkCounts.total - taskInfo.chunkCounts.skipped) -
           currentDuration;
         const estimatedEndTime = new Date(Date.now() + estimatedRemainingDuration);
         return (
@@ -274,10 +274,7 @@ export default function TaskListView({
   const highlightedTask = params.highlightedTask || "";
   const location = useLocation();
 
-  const isCurrentUserSuperUser = useSelector((state: OxalisState) => {
-    const activeUser = state.activeUser;
-    return activeUser?.isSuperUser;
-  });
+  const isCurrentUserSuperUser = useSelector((state: OxalisState) => state.activeUser?.isSuperUser);
 
   const singleRunId = report.runs.length === 1 ? report.runs[0].id : runId;
 

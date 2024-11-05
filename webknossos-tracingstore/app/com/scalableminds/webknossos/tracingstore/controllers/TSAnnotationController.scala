@@ -174,8 +174,8 @@ class TSAnnotationController @Inject()(
             mergedVolumeName = SequenceUtils
               .findUniqueElement(volumeLayers.map(_.name))
               .getOrElse(AnnotationLayer.defaultVolumeLayerName)
-            // TODO: Merge updates? if so, iron out reverts?
-            // TODO: Merge editable mappings
+            // TODO Merge updates? if so, iron out reverts?
+            // TODO Merge editable mappings
             volumeTracings <- annotationService
               .findMultipleVolumes(volumeLayers.map { l =>
                 Some(TracingSelector(l.tracingId))

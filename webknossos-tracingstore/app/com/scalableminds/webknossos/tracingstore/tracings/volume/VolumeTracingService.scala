@@ -46,7 +46,6 @@ import scala.concurrent.duration._
 
 class VolumeTracingService @Inject()(
     val tracingDataStore: TracingDataStore,
-    val tracingStoreWkRpcClient: TSRemoteWebknossosClient,
     val adHocMeshServiceHolder: AdHocMeshServiceHolder,
     implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
     implicit val temporaryVolumeDataStore: TemporaryVolumeDataStore,
@@ -878,7 +877,7 @@ class VolumeTracingService @Inject()(
           remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
         remoteFallbackLayer <- remoteFallbackLayers.headOption.toFox
         _ <- bool2Fox(remoteFallbackLayers.forall(_ == remoteFallbackLayer)) ?~> "Cannot merge editable mappings based on different dataset layers"
-        // TODO: _ <- editableMappingService.merge(newTracingId, tracingsWithIds.map(_._2), remoteFallbackLayer)
+        // TODO _ <- editableMappingService.merge(newTracingId, tracingsWithIds.map(_._2), remoteFallbackLayer)
       } yield ()
     } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.getHasEditableMapping)) {
       Fox.empty

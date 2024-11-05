@@ -157,7 +157,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         case a: EditableMappingUpdateAction =>
           annotationWithTracings.applyEditableMappingAction(a)
         case a: RevertToVersionAnnotationAction =>
-          revertToVersion(annotationId, annotationWithTracings, a, targetVersion) // TODO: if the revert action is not isolated, we need not the target version of all but the target version of this update
+          revertToVersion(annotationId, annotationWithTracings, a, targetVersion) // TODO double check that the revert action is isolated and targetVersion is that of group
         case _: ResetToBaseAnnotationAction =>
           resetToBase(annotationId, annotationWithTracings, targetVersion)
         case _: BucketMutatingVolumeUpdateAction =>
@@ -269,7 +269,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         annotationId,
         annotationWithTracings,
         annotation.version,
-        targetVersion) // TODO: targetVersion must be set per update group, as reverts may come between these
+        targetVersion) // TODO double-check that targetVersion is set per update group, as reverts may come between these
       updated <- applyUpdatesGrouped(annotationWithTracingsAndMappings,
                                      annotationId,
                                      updatesGroupsRegrouped,

@@ -11,7 +11,6 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayerType
 }
 import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
-import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingType}
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}

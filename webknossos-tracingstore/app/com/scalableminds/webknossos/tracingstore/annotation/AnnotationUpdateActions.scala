@@ -93,6 +93,19 @@ case class RevertToVersionAnnotationAction(sourceVersion: Long,
     this.copy(actionAuthorId = authorId)
 }
 
+// Used only in tasks by admin to undo the work done of the annotator
+case class ResetToBaseAnnotationAction(actionTimestamp: Option[Long] = None,
+                                       actionAuthorId: Option[String] = None,
+                                       info: Option[String] = None)
+    extends AnnotationUpdateAction
+    with ApplyImmediatelyUpdateAction {
+  override def addTimestamp(timestamp: Long): UpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
+    this.copy(actionAuthorId = authorId)
+}
+
 case class UpdateTdCameraAnnotationAction(actionTimestamp: Option[Long] = None,
                                           actionAuthorId: Option[String] = None,
                                           info: Option[String] = None)
@@ -124,6 +137,10 @@ object UpdateMetadataAnnotationAction {
 object RevertToVersionAnnotationAction {
   implicit val jsonFormat: OFormat[RevertToVersionAnnotationAction] =
     Json.format[RevertToVersionAnnotationAction]
+}
+object ResetToBaseAnnotationAction {
+  implicit val jsonFormat: OFormat[ResetToBaseAnnotationAction] =
+    Json.format[ResetToBaseAnnotationAction]
 }
 object UpdateTdCameraAnnotationAction {
   implicit val jsonFormat: OFormat[UpdateTdCameraAnnotationAction] = Json.format[UpdateTdCameraAnnotationAction]

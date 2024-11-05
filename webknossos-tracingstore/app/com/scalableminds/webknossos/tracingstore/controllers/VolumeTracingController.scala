@@ -26,6 +26,7 @@ import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransacti
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
+  ImportVolumeDataVolumeAction,
   MagRestrictions,
   MergedVolumeStats,
   TSFullMeshService,
@@ -249,11 +250,11 @@ class VolumeTracingController @Inject()(
             tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
             currentVersion <- request.body.dataParts("currentVersion").headOption.flatMap(_.toIntOpt).toFox
             zipFile <- request.body.files.headOption.map(f => new File(f.ref.path.toString)).toFox
-            (updateGroup, largestSegmentId) <- volumeTracingService.importVolumeData(tracingId,
-                                                                                     tracing,
-                                                                                     zipFile,
-                                                                                     currentVersion)
-            _ <- annotationTransactionService.handleUpdateGroups(annotationId, List(updateGroup))
+            largestSegmentId <- volumeTracingService.importVolumeData(tracingId, tracing, zipFile, currentVersion)
+            _ <- annotationTransactionService.handleSingleUpdateAction(
+              annotationId,
+              tracing.version,
+              ImportVolumeDataVolumeAction(tracingId, Some(largestSegmentId)))
           } yield Ok(Json.toJson(largestSegmentId))
         }
       }

@@ -20,6 +20,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
 import com.scalableminds.webknossos.tracingstore.annotation.{
   AnnotationTransactionService,
+  ResetToBaseAnnotationAction,
   TSAnnotationService,
   UpdateActionGroup
 }
@@ -133,6 +134,22 @@ class TSAnnotationController @Inject()(
                                                              isFromTask,
                                                              datasetBoundingBoxParsed)
             } yield Ok(annotationProto.toByteArray).as(protobufMimeType)
+          }
+        }
+      }
+    }
+
+  def resetToBase(annotationId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+            for {
+              currentVersion <- annotationService.currentMaterializableVersion(annotationId)
+              _ <- annotationTransactionService.handleSingleUpdateAction(annotationId,
+                                                                         currentVersion,
+                                                                         ResetToBaseAnnotationAction())
+            } yield Ok
           }
         }
       }

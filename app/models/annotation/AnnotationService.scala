@@ -278,10 +278,13 @@ class AnnotationService @Inject()(
           AnnotationLayerType.toProto(l.typ)
         )
       }
-      annotationProto = AnnotationProto(name = Some(AnnotationDefaults.defaultName),
-                                        description = Some(AnnotationDefaults.defaultDescription),
-                                        version = 0L,
-                                        annotationLayers = layersProto)
+      annotationProto = AnnotationProto(
+        name = Some(AnnotationDefaults.defaultName),
+        description = Some(AnnotationDefaults.defaultDescription),
+        version = 0L,
+        annotationLayers = layersProto,
+        earliestAccessibleVersion = 0L
+      )
       _ <- tracingStoreClient.saveAnnotationProto(annotationId, annotationProto)
     } yield newAnnotationLayers
 
@@ -485,7 +488,8 @@ class AnnotationService @Inject()(
         name = Some(AnnotationDefaults.defaultName),
         description = Some(AnnotationDefaults.defaultDescription),
         version = 0L,
-        annotationLayers = annotationLayers.map(_.toProto)
+        annotationLayers = annotationLayers.map(_.toProto),
+        earliestAccessibleVersion = 0L
       )
       _ <- tracingStoreClient.saveAnnotationProto(annotationBase._id, annotationBaseProto)
       _ = logger.info(s"inserting base annotation ${annotationBase._id} for task ${task._id}")

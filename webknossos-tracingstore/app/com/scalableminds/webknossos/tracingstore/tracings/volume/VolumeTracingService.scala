@@ -23,7 +23,6 @@ import com.scalableminds.webknossos.datastore.models.{
   WebknossosAdHocMeshRequest
 }
 import com.scalableminds.webknossos.datastore.services._
-import com.scalableminds.webknossos.tracingstore.annotation.UpdateActionGroup
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
@@ -824,7 +823,7 @@ class VolumeTracingService @Inject()(
 
   def importVolumeData(tracingId: String, tracing: VolumeTracing, zipFile: File, currentVersion: Int)(
       implicit mp: MessagesProvider,
-      tc: TokenContext): Fox[(UpdateActionGroup, Long)] =
+      tc: TokenContext): Fox[Long] =
     if (currentVersion != tracing.version)
       Fox.failure("version.mismatch")
     else {
@@ -879,18 +878,7 @@ class VolumeTracingService @Inject()(
             } yield ()
           }
           _ <- segmentIndexBuffer.flush()
-          updateGroup = UpdateActionGroup(
-            tracing.version + 1,
-            System.currentTimeMillis(),
-            None,
-            List(ImportVolumeDataVolumeAction(tracingId, Some(mergedVolume.largestSegmentId.toPositiveLong))),
-            None,
-            None,
-            "dummyTransactionId",
-            1,
-            0
-          )
-        } yield (updateGroup, mergedVolume.largestSegmentId.toPositiveLong)
+        } yield mergedVolume.largestSegmentId.toPositiveLong
       }
     }
 

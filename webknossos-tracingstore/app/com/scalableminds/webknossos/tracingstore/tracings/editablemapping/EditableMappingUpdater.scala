@@ -10,11 +10,7 @@ import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.{
   SegmentToAgglomerateChunkProto
 }
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
-import com.scalableminds.webknossos.tracingstore.annotation.{
-  RevertToVersionAnnotationAction,
-  TSAnnotationService,
-  UpdateAction
-}
+import com.scalableminds.webknossos.tracingstore.annotation.{TSAnnotationService, UpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
@@ -418,9 +414,9 @@ class EditableMappingUpdater(
       )
     }
 
-  def revertToVersion(revertAction: RevertToVersionAnnotationAction)(implicit ec: ExecutionContext): Fox[Unit] =
+  def revertToVersion(sourceVersion: Long)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- bool2Fox(revertAction.sourceVersion <= oldVersion) ?~> "trying to revert editable mapping to a version not yet present in the database"
+      _ <- bool2Fox(sourceVersion <= oldVersion) ?~> "trying to revert editable mapping to a version not yet present in the database"
       _ = segmentToAgglomerateBuffer.clear()
       _ = agglomerateToGraphBuffer.clear()
       segmentToAgglomerateChunkNewestStream = new VersionedSegmentToAgglomerateChunkIterator(
@@ -428,16 +424,13 @@ class EditableMappingUpdater(
         tracingDataStore.editableMappingsSegmentToAgglomerate)
       _ <- Fox.serialCombined(segmentToAgglomerateChunkNewestStream) {
         case (chunkKey, _, version) =>
-          if (version > revertAction.sourceVersion) {
-            editableMappingService
-              .getSegmentToAgglomerateChunk(chunkKey, Some(revertAction.sourceVersion))
-              .futureBox
-              .map {
-                case Full(chunkData) => segmentToAgglomerateBuffer.put(chunkKey, (chunkData.toMap, false))
-                case Empty           => segmentToAgglomerateBuffer.put(chunkKey, (Map[Long, Long](), true))
-                case Failure(msg, _, chain) =>
-                  Fox.failure(msg, Empty, chain)
-              }
+          if (version > sourceVersion) {
+            editableMappingService.getSegmentToAgglomerateChunk(chunkKey, Some(sourceVersion)).futureBox.map {
+              case Full(chunkData) => segmentToAgglomerateBuffer.put(chunkKey, (chunkData.toMap, false))
+              case Empty           => segmentToAgglomerateBuffer.put(chunkKey, (Map[Long, Long](), true))
+              case Failure(msg, _, chain) =>
+                Fox.failure(msg, Empty, chain)
+            }
           } else Fox.successful(())
       }
       agglomerateToGraphNewestStream = new VersionedAgglomerateToGraphIterator(
@@ -445,11 +438,11 @@ class EditableMappingUpdater(
         tracingDataStore.editableMappingsAgglomerateToGraph)
       _ <- Fox.serialCombined(agglomerateToGraphNewestStream) {
         case (graphKey, _, version) =>
-          if (version > revertAction.sourceVersion) {
+          if (version > sourceVersion) {
             for {
               agglomerateId <- agglomerateIdFromAgglomerateGraphKey(graphKey)
               _ <- editableMappingService
-                .getAgglomerateGraphForId(tracingId, revertAction.sourceVersion, agglomerateId)
+                .getAgglomerateGraphForId(tracingId, sourceVersion, agglomerateId)
                 .futureBox
                 .map {
                   case Full(graphData) => agglomerateToGraphBuffer.put(graphKey, (graphData, false))

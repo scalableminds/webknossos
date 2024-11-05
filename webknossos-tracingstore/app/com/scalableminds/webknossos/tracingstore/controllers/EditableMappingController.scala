@@ -8,11 +8,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
-import com.scalableminds.webknossos.tracingstore.annotation.{
-  AnnotationTransactionService,
-  TSAnnotationService,
-  UpdateActionGroup
-}
+import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, TSAnnotationService}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingService,
   MinCutParameters,
@@ -52,19 +48,10 @@ class EditableMappingController @Inject()(volumeTracingService: VolumeTracingSer
                                                          actionTracingId = tracingId,
                                                          actionTimestamp = Some(System.currentTimeMillis()))
             _ <- annotationTransactionService
-              .handleUpdateGroups( // TODO replace this route by the update action only? address editable mappings by volume tracing id?
-                annotationId,
-                List(
-                  UpdateActionGroup(tracing.version + 1,
-                                    System.currentTimeMillis(),
-                                    None,
-                                    List(volumeUpdate),
-                                    None,
-                                    None,
-                                    "dummyTransactionId",
-                                    1,
-                                    0))
-              )
+              .handleSingleUpdateAction( // TODO replace this route by the update action only?
+                                        annotationId,
+                                        tracing.version,
+                                        volumeUpdate)
             infoJson = editableMappingService.infoJson(tracingId = tracingId, editableMappingInfo = editableMappingInfo)
           } yield Ok(infoJson)
         }

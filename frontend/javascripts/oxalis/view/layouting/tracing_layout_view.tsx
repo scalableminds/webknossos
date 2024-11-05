@@ -270,7 +270,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
           nmlFile: files,
           createGroupForEachFile,
           datasetId: this.props.datasetId,
-          organizationId: this.props.organization,
         },
       });
       this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);

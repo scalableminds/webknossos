@@ -105,17 +105,10 @@ class AnnotationIOController @Inject()(
           request.body.dataParts("createGroupForEachFile").headOption.contains("true")
         val overwritingDatasetId: Option[String] =
           request.body.dataParts.get("datasetId").flatMap(_.headOption)
-        val overwritingDatasetName: Option[String] =
-          request.body.dataParts.get("datasetName").flatMap(_.headOption)
-        val overwritingOrganizationId: Option[String] =
-          request.body.dataParts.get("organizationId").flatMap(_.headOption)
         val attachedFiles = request.body.files.map(f => (f.ref.path.toFile, f.filename))
         for {
-          parsedFiles <- annotationUploadService.extractFromFiles(attachedFiles,
-                                                                  SharedParsingParameters(useZipName = true,
-                                                                                          overwritingDatasetId,
-                                                                                          overwritingDatasetName,
-                                                                                          overwritingOrganizationId))
+          parsedFiles <- annotationUploadService
+            .extractFromFiles(attachedFiles, SharedParsingParameters(useZipName = true, overwritingDatasetId))
           parsedFilesWrapped = annotationUploadService.wrapOrPrefixGroups(parsedFiles.parseResults,
                                                                           shouldCreateGroupForEachFile)
           parseResultsFiltered: List[NmlParseResult] = parsedFilesWrapped.filter(_.succeeded)

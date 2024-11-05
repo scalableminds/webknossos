@@ -48,8 +48,6 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
   def parse(name: String,
             nmlInputStream: InputStream,
             overwritingDatasetId: Option[String],
-            overwritingDatasetName: Option[String],
-            overwritingOrganizationId: Option[String],
             isTaskUpload: Boolean,
             basePath: Option[String] = None)(implicit m: MessagesProvider,
                                              ec: ExecutionContext,
@@ -71,10 +69,10 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
         treeGroupsAfterSplit = treesAndGroupsAfterSplitting._2
         _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
         additionalAxisProtos <- parseAdditionalAxes(parameters \ "additionalAxes")
-        datasetName = overwritingDatasetName.getOrElse(parseDatasetName(parameters \ "experiment"))
+        datasetName = parseDatasetName(parameters \ "experiment")
         datasetIdOpt = if (overwritingDatasetId.isDefined) overwritingDatasetId
         else parseDatasetId(parameters \ "experiment")
-        organizationId = overwritingOrganizationId.getOrElse(parseOrganizationId(parameters \ "experiment"))
+        organizationId = parseOrganizationId(parameters \ "experiment")
       } yield {
         val description = parseDescription(parameters \ "experiment")
         val wkUrl = parseWkUrl(parameters \ "experiment")

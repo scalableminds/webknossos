@@ -119,7 +119,7 @@ class JobController @Inject()(
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
+          datasetIdValidated <- ObjectId.fromString(datasetId)
           dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           voxelSizeFactor <- Vec3Double.fromUriLiteral(scale).toFox
           voxelSizeUnit <- Fox.runOptional(unit)(u => LengthUnit.fromString(u).toFox)
@@ -148,7 +148,7 @@ class JobController @Inject()(
                             agglomerateView: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
+        datasetIdValidated <- ObjectId.fromString(datasetId)
         dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
         organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
@@ -172,7 +172,7 @@ class JobController @Inject()(
   def runComputeSegmentIndexFileJob(datasetId: String, layerName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
+        datasetIdValidated <- ObjectId.fromString(datasetId)
         dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
         organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
@@ -195,7 +195,7 @@ class JobController @Inject()(
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
+          datasetIdValidated <- ObjectId.fromString(datasetId)
           dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
@@ -224,7 +224,7 @@ class JobController @Inject()(
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
+          datasetIdValidated <- ObjectId.fromString(datasetId)
           dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization) ?~> Messages("organization.notFound",
                                                                                       dataset._organization)
@@ -255,7 +255,7 @@ class JobController @Inject()(
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
+          datasetIdValidated <- ObjectId.fromString(datasetId)
           dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization) ?~> Messages("organization.notFound",
                                                                                       dataset._organization)
@@ -287,7 +287,7 @@ class JobController @Inject()(
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
+          datasetIdValidated <- ObjectId.fromString(datasetId)
           dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization) ?~> Messages("organization.notFound",
                                                                                       dataset._organization)
@@ -321,7 +321,7 @@ class JobController @Inject()(
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
+          datasetIdValidated <- ObjectId.fromString(datasetId)
           dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
@@ -377,7 +377,7 @@ class JobController @Inject()(
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
+          datasetIdValidated <- ObjectId.fromString(datasetId)
           dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
@@ -409,7 +409,7 @@ class JobController @Inject()(
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
+          datasetIdValidated <- ObjectId.fromString(datasetId)
           dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization) ?~> Messages("organization.notFound",
                                                                                       dataset._organization)
@@ -432,7 +432,7 @@ class JobController @Inject()(
     sil.SecuredAction.async(validateJson[AnimationJobOptions]) { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
+          datasetIdValidated <- ObjectId.fromString(datasetId)
           dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization) ?~> Messages("organization.notFound",
                                                                                       dataset._organization)

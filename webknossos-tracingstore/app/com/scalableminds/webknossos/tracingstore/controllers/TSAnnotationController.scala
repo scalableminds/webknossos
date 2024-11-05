@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
+import collections.SequenceUtils
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.Fox
@@ -167,9 +168,12 @@ class TSAnnotationController @Inject()(
             volumeLayers = annotations.flatMap(_.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Volume))
             newSkeletonId = TracingId.generate
             newVolumeId = TracingId.generate
-            mergedSkeletonName = allEqual(skeletonLayers.map(_.name))
+            mergedSkeletonName = SequenceUtils
+              .findUniqueElement(skeletonLayers.map(_.name))
               .getOrElse(AnnotationLayer.defaultSkeletonLayerName)
-            mergedVolumeName = allEqual(volumeLayers.map(_.name)).getOrElse(AnnotationLayer.defaultVolumeLayerName)
+            mergedVolumeName = SequenceUtils
+              .findUniqueElement(volumeLayers.map(_.name))
+              .getOrElse(AnnotationLayer.defaultVolumeLayerName)
             // TODO: Merge updates? if so, iron out reverts?
             // TODO: Merge editable mappings
             volumeTracings <- annotationService
@@ -222,10 +226,4 @@ class TSAnnotationController @Inject()(
       }
     }
 
-  // TODO generalize, mix with assertAllOnSame*
-  private def allEqual(str: Seq[String]): Option[String] =
-    // returns the str if all names are equal, None otherwise
-    str.headOption.map(name => str.forall(_ == name)).flatMap { _ =>
-      str.headOption
-    }
 }

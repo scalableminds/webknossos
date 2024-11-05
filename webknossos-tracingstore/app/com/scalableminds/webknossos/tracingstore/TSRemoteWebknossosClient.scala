@@ -26,15 +26,15 @@ import play.api.libs.ws.WSResponse
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-case class TracingUpdatesReport(annotationId: String,
-                                // TODO stats per tracing id? coordinate with frontend
-                                timestamps: List[Instant],
-                                statistics: Option[JsObject],
-                                significantChangesCount: Int,
-                                viewChangesCount: Int,
-                                userToken: Option[String])
-object TracingUpdatesReport {
-  implicit val jsonFormat: OFormat[TracingUpdatesReport] = Json.format[TracingUpdatesReport]
+case class AnnotationUpdatesReport(annotationId: String,
+                                   // TODO stats per tracing id? coordinate with frontend
+                                   timestamps: List[Instant],
+                                   statistics: Option[JsObject],
+                                   significantChangesCount: Int,
+                                   viewChangesCount: Int,
+                                   userToken: Option[String])
+object AnnotationUpdatesReport {
+  implicit val jsonFormat: OFormat[AnnotationUpdatesReport] = Json.format[AnnotationUpdatesReport]
 }
 
 class TSRemoteWebknossosClient @Inject()(
@@ -53,7 +53,7 @@ class TSRemoteWebknossosClient @Inject()(
   private lazy val annotationIdByTracingIdCache: AlfuCache[String, String] =
     AlfuCache(maxCapacity = 10000, timeToLive = 5 minutes)
 
-  def reportTracingUpdates(tracingUpdatesReport: TracingUpdatesReport): Fox[WSResponse] =
+  def reportAnnotationUpdates(tracingUpdatesReport: AnnotationUpdatesReport): Fox[WSResponse] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/handleTracingUpdateReport")
       .addQueryString("key" -> tracingStoreKey)
       .silent

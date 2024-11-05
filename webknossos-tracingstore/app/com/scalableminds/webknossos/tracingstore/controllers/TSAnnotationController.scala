@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
+import collections.SequenceUtils
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.Fox
@@ -20,6 +21,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
 import com.scalableminds.webknossos.tracingstore.annotation.{
   AnnotationTransactionService,
+  ResetToBaseAnnotationAction,
   TSAnnotationService,
   UpdateActionGroup
 }
@@ -138,6 +140,22 @@ class TSAnnotationController @Inject()(
       }
     }
 
+  def resetToBase(annotationId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+            for {
+              currentVersion <- annotationService.currentMaterializableVersion(annotationId)
+              _ <- annotationTransactionService.handleSingleUpdateAction(annotationId,
+                                                                         currentVersion,
+                                                                         ResetToBaseAnnotationAction())
+            } yield Ok
+          }
+        }
+      }
+    }
+
   def mergedFromIds(persist: Boolean, newAnnotationId: String): Action[List[String]] =
     Action.async(validateJson[List[String]]) { implicit request =>
       log() {
@@ -150,11 +168,14 @@ class TSAnnotationController @Inject()(
             volumeLayers = annotations.flatMap(_.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Volume))
             newSkeletonId = TracingId.generate
             newVolumeId = TracingId.generate
-            mergedSkeletonName = allEqual(skeletonLayers.map(_.name))
+            mergedSkeletonName = SequenceUtils
+              .findUniqueElement(skeletonLayers.map(_.name))
               .getOrElse(AnnotationLayer.defaultSkeletonLayerName)
-            mergedVolumeName = allEqual(volumeLayers.map(_.name)).getOrElse(AnnotationLayer.defaultVolumeLayerName)
-            // TODO: Merge updates? if so, iron out reverts?
-            // TODO: Merge editable mappings
+            mergedVolumeName = SequenceUtils
+              .findUniqueElement(volumeLayers.map(_.name))
+              .getOrElse(AnnotationLayer.defaultVolumeLayerName)
+            // TODO Merge updates? if so, iron out reverts?
+            // TODO Merge editable mappings
             volumeTracings <- annotationService
               .findMultipleVolumes(volumeLayers.map { l =>
                 Some(TracingSelector(l.tracingId))
@@ -205,10 +226,4 @@ class TSAnnotationController @Inject()(
       }
     }
 
-  // TODO generalize, mix with assertAllOnSame*
-  private def allEqual(str: Seq[String]): Option[String] =
-    // returns the str if all names are equal, None otherwise
-    str.headOption.map(name => str.forall(_ == name)).flatMap { _ =>
-      str.headOption
-    }
 }

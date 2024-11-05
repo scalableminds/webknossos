@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.tracingstore.TracingUpdatesReport
+import com.scalableminds.webknossos.tracingstore.AnnotationUpdatesReport
 import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
 import com.scalableminds.webknossos.tracingstore.tracings.TracingId
 
@@ -88,8 +88,8 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
       } yield Ok
     }
 
-  def handleTracingUpdateReport(name: String, key: String): Action[TracingUpdatesReport] =
-    Action.async(validateJson[TracingUpdatesReport]) { implicit request =>
+  def handleTracingUpdateReport(name: String, key: String): Action[AnnotationUpdatesReport] =
+    Action.async(validateJson[AnnotationUpdatesReport]) { implicit request =>
       implicit val ctx: DBAccessContext = GlobalAccessContext
       tracingStoreService.validateAccess(name, key) { _ =>
         val report = request.body

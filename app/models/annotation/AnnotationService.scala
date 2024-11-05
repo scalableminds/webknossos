@@ -32,7 +32,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFo
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   MagRestrictions,
   VolumeTracingDefaults,
-  VolumeTracingDownsampling
+  VolumeTracingMags
 }
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationState._
@@ -72,7 +72,6 @@ class AnnotationService @Inject()(
     annotationInformationProvider: AnnotationInformationProvider,
     savedTracingInformationHandler: SavedTracingInformationHandler,
     annotationDAO: AnnotationDAO,
-    annotationLayersDAO: AnnotationLayerDAO,
     userDAO: UserDAO,
     taskTypeDAO: TaskTypeDAO,
     taskService: TaskService,
@@ -131,7 +130,7 @@ class AnnotationService @Inject()(
       magRestrictions: MagRestrictions,
       mappingName: Option[String]
   ): Fox[VolumeTracing] = {
-    val mags = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayer)
+    val mags = VolumeTracingMags.magsForVolumeTracing(dataSource, fallbackLayer)
     val magsRestricted = magRestrictions.filterAllowed(mags)
     val additionalAxes =
       fallbackLayer.map(_.additionalAxes).getOrElse(dataSource.additionalAxesUnion)
@@ -278,10 +277,13 @@ class AnnotationService @Inject()(
           AnnotationLayerType.toProto(l.typ)
         )
       }
-      annotationProto = AnnotationProto(name = Some(AnnotationDefaults.defaultName),
-                                        description = Some(AnnotationDefaults.defaultDescription),
-                                        version = 0L,
-                                        annotationLayers = layersProto)
+      annotationProto = AnnotationProto(
+        name = Some(AnnotationDefaults.defaultName),
+        description = Some(AnnotationDefaults.defaultDescription),
+        version = 0L,
+        annotationLayers = layersProto,
+        earliestAccessibleVersion = 0L
+      )
       _ <- tracingStoreClient.saveAnnotationProto(annotationId, annotationProto)
     } yield newAnnotationLayers
 
@@ -302,10 +304,6 @@ class AnnotationService @Inject()(
       annotation = Annotation(newAnnotationId, datasetId, None, teamId, user._id, annotationLayers)
       _ <- annotationDAO.insertOne(annotation)
     } yield annotation
-
-  def downsampleAnnotation(annotation: Annotation, volumeAnnotationLayer: AnnotationLayer)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
-    ??? // TODO: remove feature or implement as update action
 
   // WARNING: needs to be repeatable, might be called multiple times for an annotation
   def finish(annotation: Annotation, user: User, restrictions: AnnotationRestrictions)(
@@ -345,11 +343,6 @@ class AnnotationService @Inject()(
       }
     }).flatten
   }
-
-  private def baseForTask(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
-    (for {
-      list <- annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.TracingBase)
-    } yield list.headOption.toFox).flatten
 
   def annotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Annotation]] =
     annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.Task)
@@ -485,7 +478,8 @@ class AnnotationService @Inject()(
         name = Some(AnnotationDefaults.defaultName),
         description = Some(AnnotationDefaults.defaultDescription),
         version = 0L,
-        annotationLayers = annotationLayers.map(_.toProto)
+        annotationLayers = annotationLayers.map(_.toProto),
+        earliestAccessibleVersion = 0L
       )
       _ <- tracingStoreClient.saveAnnotationProto(annotationBase._id, annotationBaseProto)
       _ = logger.info(s"inserting base annotation ${annotationBase._id} for task ${task._id}")
@@ -705,45 +699,13 @@ class AnnotationService @Inject()(
       updated <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser)
     } yield updated
 
-  def resetToBase(annotation: Annotation)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] = // TODO: implement as update action?
-    annotation.typ match {
-      case AnnotationType.Explorational =>
-        Fox.failure("annotation.revert.tasksOnly")
-      case AnnotationType.Task =>
-        for {
-          task <- taskFor(annotation)
-          oldSkeletonTracingIdOpt <- annotation.skeletonTracingId // This also asserts that the annotation does not have multiple volume/skeleton layers
-          oldVolumeTracingIdOpt <- annotation.volumeTracingId
-          _ = logger.warn(
-            s"Resetting annotation ${annotation._id} to base, discarding skeleton tracing $oldSkeletonTracingIdOpt and/or volume tracing $oldVolumeTracingIdOpt")
-          annotationBase <- baseForTask(task._id)
-          dataset <- datasetDAO.findOne(annotationBase._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation"
-          (newSkeletonIdOpt, newVolumeIdOpt) <- tracingsFromBase(annotationBase, dataset)
-          _ <- Fox.bool2Fox(newSkeletonIdOpt.isDefined || newVolumeIdOpt.isDefined) ?~> "annotation.needsEitherSkeletonOrVolume"
-          _ <- Fox.runOptional(newSkeletonIdOpt)(newSkeletonId =>
-            oldSkeletonTracingIdOpt.toFox.map { oldSkeletonId =>
-              annotationLayersDAO.replaceTracingId(annotation._id, oldSkeletonId, newSkeletonId)
-          })
-          _ <- Fox.runOptional(newVolumeIdOpt)(newVolumeId =>
-            oldVolumeTracingIdOpt.toFox.map { oldVolumeId =>
-              annotationLayersDAO.replaceTracingId(annotation._id, oldVolumeId, newVolumeId)
-          })
-        } yield ()
-    }
-
-  private def tracingsFromBase(annotationBase: Annotation, dataset: Dataset)(
-      implicit ctx: DBAccessContext,
-      m: MessagesProvider): Fox[(Option[String], Option[String])] =
+  def resetToBase(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- bool2Fox(dataset.isUsable) ?~> Messages("dataset.notImported", dataset.name)
+      _ <- bool2Fox(annotation.typ == AnnotationType.Task) ?~> "annotation.revert.tasksOnly"
+      dataset <- datasetDAO.findOne(annotation._dataset)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
-      baseSkeletonIdOpt <- annotationBase.skeletonTracingId
-      baseVolumeIdOpt <- annotationBase.volumeTracingId
-      newSkeletonId: Option[String] <- Fox.runOptional(baseSkeletonIdOpt)(skeletonId =>
-        tracingStoreClient.duplicateSkeletonTracing(skeletonId))
-      newVolumeId: Option[String] <- Fox.runOptional(baseVolumeIdOpt)(volumeId =>
-        tracingStoreClient.duplicateVolumeTracing(volumeId))
-    } yield (newSkeletonId, newVolumeId)
+      _ <- tracingStoreClient.resetToBase(annotation._id) ?~> "annotation.revert.failed"
+    } yield ()
 
   private def settingsFor(annotation: Annotation)(implicit ctx: DBAccessContext) =
     if (annotation.typ == AnnotationType.Task || annotation.typ == AnnotationType.TracingBase)

@@ -32,7 +32,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFo
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeDataZipFormat,
   VolumeTracingDefaults,
-  VolumeTracingDownsampling
+  VolumeTracingMags
 }
 import com.typesafe.scalalogging.LazyLogging
 
@@ -336,7 +336,7 @@ class AnnotationIOController @Inject()(
         fallbackLayer = fallbackLayerOpt.map(_.name),
         largestSegmentId = combineLargestSegmentIdsByPrecedence(volumeTracing.largestSegmentId,
                                                                 fallbackLayerOpt.map(_.largestSegmentId)),
-        mags = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayerOpt).map(vec3IntToProto),
+        mags = VolumeTracingMags.magsForVolumeTracing(dataSource, fallbackLayerOpt).map(vec3IntToProto),
         hasSegmentIndex = Some(tracingCanHaveSegmentIndex)
       )
   }
@@ -458,7 +458,7 @@ class AnnotationIOController @Inject()(
             tracingStoreClient.getSkeletonTracing(skeletonAnnotationLayer, skeletonVersion)
         } ?~> "annotation.download.fetchSkeletonLayer.failed"
         user <- userService.findOneCached(annotation._user)(GlobalAccessContext) ?~> "annotation.download.findUser.failed"
-        taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
+        taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne(_)(GlobalAccessContext)) ?~> "task.notFound"
         nmlStream = nmlWriter.toNmlStream(
           name,
           fetchedSkeletonLayers ::: fetchedVolumeLayers,

@@ -13,7 +13,7 @@ trait AnnotationReversion {
 
   def revertDistributedElements(currentAnnotationWithTracings: AnnotationWithTracings,
                                 sourceAnnotationWithTracings: AnnotationWithTracings,
-                                revertAction: RevertToVersionAnnotationAction,
+                                sourceVersion: Long,
                                 newVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
     for {
       _ <- Fox.serialCombined(sourceAnnotationWithTracings.getVolumes) {
@@ -22,23 +22,20 @@ trait AnnotationReversion {
           for {
             tracingBeforeRevert <- currentAnnotationWithTracings.getVolume(tracingId).toFox
             _ <- Fox.runIf(!sourceTracing.getHasEditableMapping)(
-              volumeTracingService.revertVolumeData(tracingId,
-                                                    revertAction.sourceVersion,
-                                                    sourceTracing,
-                                                    newVersion: Long,
-                                                    tracingBeforeRevert))
+              volumeTracingService
+                .revertVolumeData(tracingId, sourceVersion, sourceTracing, newVersion: Long, tracingBeforeRevert))
             _ <- Fox.runIf(sourceTracing.getHasEditableMapping)(
-              revertEditableMappingFields(currentAnnotationWithTracings, revertAction, tracingId))
+              revertEditableMappingFields(currentAnnotationWithTracings, sourceVersion, tracingId))
           } yield ()
       }
     } yield ()
 
   private def revertEditableMappingFields(currentAnnotationWithTracings: AnnotationWithTracings,
-                                          revertAction: RevertToVersionAnnotationAction,
+                                          sourceVersion: Long,
                                           tracingId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       updater <- currentAnnotationWithTracings.getEditableMappingUpdater(tracingId).toFox
-      _ <- updater.revertToVersion(revertAction)
+      _ <- updater.revertToVersion(sourceVersion)
       _ <- updater.flushBuffersToFossil()
     } yield ()
 }

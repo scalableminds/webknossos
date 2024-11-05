@@ -23,7 +23,6 @@ import com.scalableminds.webknossos.datastore.models.{
   WebknossosAdHocMeshRequest
 }
 import com.scalableminds.webknossos.datastore.services._
-import com.scalableminds.webknossos.tracingstore.annotation.UpdateActionGroup
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
@@ -47,7 +46,6 @@ import scala.concurrent.duration._
 
 class VolumeTracingService @Inject()(
     val tracingDataStore: TracingDataStore,
-    val tracingStoreWkRpcClient: TSRemoteWebknossosClient,
     val adHocMeshServiceHolder: AdHocMeshServiceHolder,
     implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
     implicit val temporaryVolumeDataStore: TemporaryVolumeDataStore,
@@ -62,7 +60,6 @@ class VolumeTracingService @Inject()(
     volumeSegmentIndexService: VolumeSegmentIndexService
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
-    with VolumeTracingDownsampling
     with WKWDataFormatHelper
     with FallbackDataHelper
     with DataFinder
@@ -91,7 +88,7 @@ class VolumeTracingService @Inject()(
   private val fallbackLayerCache: AlfuCache[(String, Option[String], Option[String]), Option[RemoteFallbackLayer]] =
     AlfuCache(maxCapacity = 100)
 
-  override protected def updateSegmentIndex(
+  private def updateSegmentIndex(
       segmentIndexBuffer: VolumeSegmentIndexBuffer,
       bucketPosition: BucketPosition,
       bucketBytes: Array[Byte],
@@ -174,10 +171,10 @@ class VolumeTracingService @Inject()(
       }
     } yield volumeTracing
 
-  override def editableMappingTracingId(tracing: VolumeTracing, tracingId: String): Option[String] =
+  def editableMappingTracingId(tracing: VolumeTracing, tracingId: String): Option[String] =
     if (tracing.getHasEditableMapping) Some(tracingId) else None
 
-  def selectMappingName(tracing: VolumeTracing): Fox[Option[String]] =
+  private def selectMappingName(tracing: VolumeTracing): Fox[Option[String]] =
     if (tracing.getHasEditableMapping)
       Fox.failure("mappingName called on volumeTracing with editableMapping!")
     else Fox.successful(tracing.mappingName)
@@ -496,7 +493,7 @@ class VolumeTracingService @Inject()(
                               editRotation: Option[Vec3Double],
                               newVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[VolumeTracing] = {
     val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, isFromTask, datasetBoundingBox)
-    val tracingWithMagRestrictions = restrictMagList(tracingWithBB, magRestrictions)
+    val tracingWithMagRestrictions = VolumeTracingMags.restrictMagList(tracingWithBB, magRestrictions)
     for {
       fallbackLayer <- getFallbackLayer(sourceTracingId, sourceTracing)
       hasSegmentIndex <- VolumeSegmentIndexService.canHaveSegmentIndex(remoteDatastoreClient, fallbackLayer)
@@ -607,19 +604,6 @@ class VolumeTracingService @Inject()(
                  tracing.version,
                  toTemporaryStore)
     } yield id
-
-  // TODO use or remove
-  def downsample(annotationId: String, tracingId: String, oldTracingId: String, newTracing: VolumeTracing)(
-      implicit tc: TokenContext): Fox[Unit] =
-    for {
-      resultingMags <- downsampleWithLayer(annotationId,
-                                           tracingId,
-                                           oldTracingId,
-                                           newTracing,
-                                           volumeTracingLayer(tracingId, newTracing),
-                                           this)
-      _ <- updateMagList(tracingId, newTracing, resultingMags.toSet)
-    } yield ()
 
   def volumeBucketsAreEmpty(tracingId: String): Boolean =
     volumeDataStore.getMultipleKeys(None, Some(tracingId), limit = Some(1))(toBox).isEmpty
@@ -824,13 +808,13 @@ class VolumeTracingService @Inject()(
 
   def importVolumeData(tracingId: String, tracing: VolumeTracing, zipFile: File, currentVersion: Int)(
       implicit mp: MessagesProvider,
-      tc: TokenContext): Fox[(UpdateActionGroup, Long)] =
+      tc: TokenContext): Fox[Long] =
     if (currentVersion != tracing.version)
       Fox.failure("version.mismatch")
     else {
       val magSet = magSetFromZipfile(zipFile)
       val magsDoMatch =
-        magSet.isEmpty || magSet == resolveLegacyMagList(tracing.mags).map(vec3IntFromProto).toSet
+        magSet.isEmpty || magSet == VolumeTracingMags.resolveLegacyMagList(tracing.mags).map(vec3IntFromProto).toSet
 
       if (!magsDoMatch)
         Fox.failure("annotation.volume.magssDoNotMatch")
@@ -879,18 +863,7 @@ class VolumeTracingService @Inject()(
             } yield ()
           }
           _ <- segmentIndexBuffer.flush()
-          updateGroup = UpdateActionGroup(
-            tracing.version + 1,
-            System.currentTimeMillis(),
-            None,
-            List(ImportVolumeDataVolumeAction(tracingId, Some(mergedVolume.largestSegmentId.toPositiveLong))),
-            None,
-            None,
-            "dummyTransactionId",
-            1,
-            0
-          )
-        } yield (updateGroup, mergedVolume.largestSegmentId.toPositiveLong)
+        } yield mergedVolume.largestSegmentId.toPositiveLong
       }
     }
 
@@ -899,12 +872,12 @@ class VolumeTracingService @Inject()(
                             persist: Boolean): Fox[Unit] =
     if (tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
       for {
-        _ <- bool2Fox(persist) ?~> "Cannot merge editable mappings without “persist” (used by compound annotations)"
+        _ <- bool2Fox(persist) ?~> "Cannot merge editable mappings without “persist” (trying to merge compound annotations?)"
         remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds)(tracingWithId =>
           remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
         remoteFallbackLayer <- remoteFallbackLayers.headOption.toFox
         _ <- bool2Fox(remoteFallbackLayers.forall(_ == remoteFallbackLayer)) ?~> "Cannot merge editable mappings based on different dataset layers"
-        // TODO: _ <- editableMappingService.merge(newTracingId, tracingsWithIds.map(_._2), remoteFallbackLayer)
+        // TODO _ <- editableMappingService.merge(newTracingId, tracingsWithIds.map(_._2), remoteFallbackLayer)
       } yield ()
     } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.getHasEditableMapping)) {
       Fox.empty

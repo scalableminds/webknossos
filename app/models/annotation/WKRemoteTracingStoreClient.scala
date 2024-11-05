@@ -108,8 +108,7 @@ class WKRemoteTracingStoreClient(
   }
 
   // Used in task creation. History is dropped, new version will be zero.
-  // TODO: currently also used in resetToBase. Fix that.
-  def duplicateSkeletonTracing(skeletonTracingId: String, // TODO: might also need annotation id
+  def duplicateSkeletonTracing(skeletonTracingId: String,
                                editPosition: Option[Vec3Int] = None,
                                editRotation: Option[Vec3Double] = None,
                                boundingBox: Option[BoundingBox] = None): Fox[String] =
@@ -121,7 +120,6 @@ class WKRemoteTracingStoreClient(
       .postWithJsonResponse[String]()
 
   // Used in task creation. History is dropped, new version will be zero.
-  // TODO: currently also used in resetToBase. Fix that.
   def duplicateVolumeTracing(volumeTracingId: String,
                              magRestrictions: MagRestrictions = MagRestrictions.empty,
                              editPosition: Option[Vec3Int] = None,
@@ -240,5 +238,12 @@ class WKRemoteTracingStoreClient(
         .getWithBytesResponse
     } yield data
   }
+
+  def resetToBase(annotationId: ObjectId): Fox[Unit] =
+    for {
+      _ <- rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/resetToBase").withLongTimeout
+        .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .post()
+    } yield ()
 
 }

@@ -21,11 +21,11 @@ case class SplitAgglomerateUpdateAction(agglomerateId: Long,
                                         info: Option[String] = None)
     extends EditableMappingUpdateAction {
   override def addTimestamp(timestamp: Long): EditableMappingUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-
   override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
 }
 
 object SplitAgglomerateUpdateAction {
@@ -47,11 +47,11 @@ case class MergeAgglomerateUpdateAction(agglomerateId1: Long,
                                         info: Option[String] = None)
     extends EditableMappingUpdateAction {
   override def addTimestamp(timestamp: Long): EditableMappingUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-
   override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
 }
 
 object MergeAgglomerateUpdateAction {

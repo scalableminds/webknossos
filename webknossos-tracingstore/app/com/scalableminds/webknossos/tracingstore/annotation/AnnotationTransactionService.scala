@@ -1,9 +1,14 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.bool2Fox
-import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
+import com.scalableminds.webknossos.tracingstore.{
+  TSRemoteWebknossosClient,
+  TracingStoreRedisStore,
+  AnnotationUpdatesReport
+}
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore, TracingId}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   BucketMutatingVolumeUpdateAction,
@@ -22,6 +27,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
                                              uncommittedUpdatesStore: TracingStoreRedisStore,
                                              volumeTracingService: VolumeTracingService,
                                              tracingDataStore: TracingDataStore,
+                                             remoteWebknossosClient: TSRemoteWebknossosClient,
                                              annotationService: TSAnnotationService)
     extends KeyValueStoreImplicits
     with LazyLogging {
@@ -146,6 +152,24 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
       )
     }
 
+  def handleSingleUpdateAction(annotationId: String, currentVersion: Long, updateAction: UpdateAction)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[Long] = {
+    val wrapped = List(
+      UpdateActionGroup(
+        currentVersion + 1,
+        System.currentTimeMillis(),
+        None,
+        List(updateAction),
+        None,
+        None,
+        "dummyTransactionId",
+        1,
+        0
+      ))
+    handleUpdateGroups(annotationId, wrapped)
+  }
+
   def handleUpdateGroups(annotationId: String, updateGroups: List[UpdateActionGroup])(implicit ec: ExecutionContext,
                                                                                       tc: TokenContext): Fox[Long] =
     if (updateGroups.forall(_.transactionGroupCount == 1)) {
@@ -161,7 +185,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
   private def commitUpdates(annotationId: String, updateGroups: List[UpdateActionGroup])(implicit ec: ExecutionContext,
                                                                                          tc: TokenContext): Fox[Long] =
     for {
-      _ <- annotationService.reportUpdates(annotationId, updateGroups)
+      _ <- reportUpdates(annotationId, updateGroups)
       currentCommittedVersion: Fox[Long] = annotationService.currentMaterializableVersion(annotationId)
       _ = logger.info(s"trying to commit ${updateGroups
         .map(_.actions.length)
@@ -228,9 +252,9 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
       case first :: rest => first.addInfo(updateActionGroup.info) :: rest
     }
     actionsWithInfo.map {
-      case a: UpdateBucketVolumeAction       => a.withoutBase64Data
+      case a: UpdateBucketVolumeAction => a.withoutBase64Data
       case a: AddLayerAnnotationAction => a.copy(tracingId = Some(TracingId.generate))
-      case a                                 => a
+      case a                           => a
     }
   }
 
@@ -249,5 +273,19 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
                                     updateGroup.transactionGroupIndex)) ?~> errorMessage ~> CONFLICT
     } yield updateGroup.version
   }
+
+  private def reportUpdates(annotationId: String, updateGroups: List[UpdateActionGroup])(
+      implicit tc: TokenContext): Fox[Unit] =
+    for {
+      _ <- remoteWebknossosClient.reportAnnotationUpdates(
+        AnnotationUpdatesReport(
+          annotationId,
+          timestamps = updateGroups.map(g => Instant(g.timestamp)),
+          statistics = updateGroups.flatMap(_.stats).lastOption, // TODO statistics per tracing/layer
+          significantChangesCount = updateGroups.map(_.significantChangesCount).sum,
+          viewChangesCount = updateGroups.map(_.viewChangesCount).sum,
+          tc.userTokenOpt
+        ))
+    } yield ()
 
 }

@@ -12,6 +12,7 @@ message AnnotationProto {
   optional string description = 2;
   required int64 version = 3;
   repeated AnnotationLayerProto annotationLayers = 4;
+  required int64 earliestAccessibleVersion = 5;
 }
 
 message AnnotationLayerProto {

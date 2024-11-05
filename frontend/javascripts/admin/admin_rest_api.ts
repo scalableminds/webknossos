@@ -103,9 +103,9 @@ import { doWithToken } from "./api/token";
 import type BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { ArbitraryObject } from "types/globals";
 import { assertResponseLimit } from "./api/api_utils";
-import {
+import type {
   AnnotationStateFilterEnum,
-  type AnnotationTypeFilterEnum,
+  AnnotationTypeFilterEnum,
 } from "admin/statistic/project_and_annotation_type_dropdown";
 
 export * from "./api/token";
@@ -1733,7 +1733,7 @@ export async function getTimeTrackingForUserSummedPerAnnotation(
   if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
   if (projectIds != null && projectIds.length > 0)
     params.append("projectIds", projectIds.join(","));
-  if (annotationState !== AnnotationStateFilterEnum.ALL) {
+  if (annotationState !== "All") {
     params.append("annotationStates", annotationState);
   } else {
     params.append("annotationStates", "Active,Finished");
@@ -1761,7 +1761,7 @@ export async function getTimeTrackingForUserSpans(
   if (projectIds != null && projectIds.length > 0) {
     params.append("projectIds", projectIds.join(","));
   }
-  if (selectedState !== AnnotationStateFilterEnum.ALL) {
+  if (selectedState !== "All") {
     params.append("annotationStates", selectedState);
   } else {
     params.append("annotationStates", "Active,Finished");
@@ -1782,7 +1782,7 @@ export async function getTimeEntries(
     end: endMs.toString(),
     annotationTypes: selectedTypes,
   });
-  if (selectedState !== AnnotationStateFilterEnum.ALL) {
+  if (selectedState !== "All") {
     params.append("annotationStates", selectedState);
   } else {
     params.append("annotationStates", "Active,Finished");
@@ -1790,7 +1790,6 @@ export async function getTimeEntries(
   // Omit empty parameters in request
   if (projectIds.length > 0) params.append("projectIds", projectIds.join(","));
   if (teamIds.length > 0) params.append("teamIds", teamIds.join(","));
-  params.append("annotationStates", "Active,Finished");
   return await Request.receiveJSON(`api/time/overview?${params}`);
 }
 

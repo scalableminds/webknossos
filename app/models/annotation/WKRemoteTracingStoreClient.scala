@@ -241,4 +241,11 @@ class WKRemoteTracingStoreClient(
     } yield data
   }
 
+  def resetToBase(annotationId: ObjectId): Fox[Unit] =
+    for {
+      _ <- rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/resetToBase").withLongTimeout
+        .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .post()
+    } yield ()
+
 }

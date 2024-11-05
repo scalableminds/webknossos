@@ -61,7 +61,7 @@ class VolumeTracingService @Inject()(
     volumeSegmentIndexService: VolumeSegmentIndexService
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
-    with VolumeTracingDownsampling
+    with VolumeTracingMags
     with WKWDataFormatHelper
     with FallbackDataHelper
     with DataFinder

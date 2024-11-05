@@ -24,7 +24,7 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
-object VolumeTracingDownsampling {
+object VolumeTracingMags {
   private def magsForVolumeTracingByLayerName(dataSource: DataSourceLike,
                                               fallbackLayerName: Option[String]): List[Vec3Int] = {
     val fallbackLayer: Option[DataLayerLike] =
@@ -48,7 +48,7 @@ object VolumeTracingDownsampling {
   }
 }
 
-trait VolumeTracingDownsampling
+trait VolumeTracingMags
     extends BucketKeys
     with ProtoGeometryImplicits
     with VolumeBucketCompression
@@ -270,7 +270,7 @@ trait VolumeTracingDownsampling
       implicit tc: TokenContext): Fox[List[Vec3Int]] =
     for {
       dataSource: DataSourceLike <- tracingStoreWkRpcClient.getDataSourceForTracing(oldTracingId)
-      magsForTracing = VolumeTracingDownsampling.magsForVolumeTracingByLayerName(dataSource, tracing.fallbackLayer)
+      magsForTracing = VolumeTracingMags.magsForVolumeTracingByLayerName(dataSource, tracing.fallbackLayer)
     } yield magsForTracing.sortBy(_.maxDim)
 
   protected def restrictMagList(tracing: VolumeTracing, magRestrictions: MagRestrictions): VolumeTracing = {

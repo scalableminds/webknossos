@@ -61,7 +61,6 @@ class VolumeTracingService @Inject()(
     volumeSegmentIndexService: VolumeSegmentIndexService
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
-    with VolumeTracingMags
     with WKWDataFormatHelper
     with FallbackDataHelper
     with DataFinder
@@ -90,7 +89,7 @@ class VolumeTracingService @Inject()(
   private val fallbackLayerCache: AlfuCache[(String, Option[String], Option[String]), Option[RemoteFallbackLayer]] =
     AlfuCache(maxCapacity = 100)
 
-  override protected def updateSegmentIndex(
+  private def updateSegmentIndex(
       segmentIndexBuffer: VolumeSegmentIndexBuffer,
       bucketPosition: BucketPosition,
       bucketBytes: Array[Byte],
@@ -173,10 +172,10 @@ class VolumeTracingService @Inject()(
       }
     } yield volumeTracing
 
-  override def editableMappingTracingId(tracing: VolumeTracing, tracingId: String): Option[String] =
+  def editableMappingTracingId(tracing: VolumeTracing, tracingId: String): Option[String] =
     if (tracing.getHasEditableMapping) Some(tracingId) else None
 
-  def selectMappingName(tracing: VolumeTracing): Fox[Option[String]] =
+  private def selectMappingName(tracing: VolumeTracing): Fox[Option[String]] =
     if (tracing.getHasEditableMapping)
       Fox.failure("mappingName called on volumeTracing with editableMapping!")
     else Fox.successful(tracing.mappingName)
@@ -495,7 +494,7 @@ class VolumeTracingService @Inject()(
                               editRotation: Option[Vec3Double],
                               newVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[VolumeTracing] = {
     val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, isFromTask, datasetBoundingBox)
-    val tracingWithMagRestrictions = restrictMagList(tracingWithBB, magRestrictions)
+    val tracingWithMagRestrictions = VolumeTracingMags.restrictMagList(tracingWithBB, magRestrictions)
     for {
       fallbackLayer <- getFallbackLayer(sourceTracingId, sourceTracing)
       hasSegmentIndex <- VolumeSegmentIndexService.canHaveSegmentIndex(remoteDatastoreClient, fallbackLayer)
@@ -606,19 +605,6 @@ class VolumeTracingService @Inject()(
                  tracing.version,
                  toTemporaryStore)
     } yield id
-
-  // TODO use or remove
-  def downsample(annotationId: String, tracingId: String, oldTracingId: String, newTracing: VolumeTracing)(
-      implicit tc: TokenContext): Fox[Unit] =
-    for {
-      resultingMags <- downsampleWithLayer(annotationId,
-                                           tracingId,
-                                           oldTracingId,
-                                           newTracing,
-                                           volumeTracingLayer(tracingId, newTracing),
-                                           this)
-      _ <- updateMagList(tracingId, newTracing, resultingMags.toSet)
-    } yield ()
 
   def volumeBucketsAreEmpty(tracingId: String): Boolean =
     volumeDataStore.getMultipleKeys(None, Some(tracingId), limit = Some(1))(toBox).isEmpty
@@ -829,7 +815,7 @@ class VolumeTracingService @Inject()(
     else {
       val magSet = magSetFromZipfile(zipFile)
       val magsDoMatch =
-        magSet.isEmpty || magSet == resolveLegacyMagList(tracing.mags).map(vec3IntFromProto).toSet
+        magSet.isEmpty || magSet == VolumeTracingMags.resolveLegacyMagList(tracing.mags).map(vec3IntFromProto).toSet
 
       if (!magsDoMatch)
         Fox.failure("annotation.volume.magssDoNotMatch")

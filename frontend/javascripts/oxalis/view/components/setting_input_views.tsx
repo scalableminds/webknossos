@@ -554,7 +554,6 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
       isLockedByOwner,
       isOwner,
     );
-    const isDeleteEnabled = !disabled && this.props.visibleSegmentationLayer != null;
 
     const getContextMenu = () => {
       const items: MenuProps["items"] = [
@@ -590,13 +589,13 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
         },
         {
           key: "delete",
-          label: isDeleteEnabled ? (
+          label: !disabled ? (
             deleteButton
           ) : (
             <FastTooltip title={editingDisallowedExplanation}>{deleteButton}</FastTooltip>
           ),
           onClick: onDelete,
-          disabled: !isDeleteEnabled,
+          disabled,
         },
       ];
 

@@ -105,7 +105,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       datasetDirectoryName <- datasetDAO
         .doesDatasetDirectoryExistInOrganization(datasetName, organization._id)
         .map(if (_) s"${datasetName}-${newId.toString}" else datasetName)
-      newDataSource = dataSource.withUpdatedId(dataSource.id.copy(directoryName = datasetDirectoryName)) // Sync path with dataSource
+      newDataSource = dataSource.withUpdatedId(dataSource.id.copy(directoryName = datasetDirectoryName))
       dataset = Dataset(
         newId,
         dataStore.name,
@@ -149,8 +149,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
               Fox.successful(List.empty)
             case Full(organization) =>
               for {
-                foundDatasets <- datasetDAO.findAllByDirectoryNameAndOrganization(orgaTuple._2.map(_.id.directoryName),
-                                                                                  organization._id)
+                foundDatasets <- datasetDAO.findAllByDirectoryNamesAndOrganization(orgaTuple._2.map(_.id.directoryName),
+                                                                                   organization._id)
                 foundDatasetsByDirectoryName = foundDatasets.groupBy(_.directoryName)
                 existingIds <- Fox.serialCombined(orgaTuple._2)(dataSource =>
                   updateDataSource(dataStore, dataSource, foundDatasetsByDirectoryName))
@@ -218,7 +218,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         } yield Some(foundDataset._id)
       } else {
         logger.info(
-          s"Dataset ${foundDataset.name} (with id ${foundDataset._id}), as reported from ${dataStore.name} is already present from datastore ${originalDataStore.name} and will not be replaced.")
+          s"Dataset ${foundDataset.name}, as reported from ${dataStore.name}, is already present as id ${foundDataset._id} from datastore ${originalDataStore.name} and will not be replaced.")
         Fox.successful(None)
       }
     }).flatten.futureBox

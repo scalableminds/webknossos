@@ -114,9 +114,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
 
     def tryRead: Fox[UserAccessAnswer] =
       for {
-        dataSourceBox <- datasetDAO
-          .findOneByDirectoryNameAndOrganization(dataSourceId.directoryName, dataSourceId.organizationId)
-          .futureBox
+        dataSourceBox <- datasetDAO.findOneByDataSourceId(dataSourceId).futureBox
       } yield
         dataSourceBox match {
           case Full(_) => UserAccessAnswer(granted = true)
@@ -125,9 +123,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
 
     def tryWrite: Fox[UserAccessAnswer] =
       for {
-        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(
-          dataSourceId.directoryName,
-          dataSourceId.organizationId) ?~> "datasource.notFound"
+        dataset <- datasetDAO.findOneByDataSourceId(dataSourceId) ?~> "datasource.notFound"
         user <- userBox.toFox ?~> "auth.token.noUser"
         isAllowed <- datasetService.isEditableBy(dataset, Some(user))
       } yield UserAccessAnswer(isAllowed)
@@ -148,9 +144,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     def tryDelete: Fox[UserAccessAnswer] =
       for {
         _ <- bool2Fox(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
-        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(
-          dataSourceId.directoryName,
-          dataSourceId.organizationId)(GlobalAccessContext) ?~> "datasource.notFound"
+        dataset <- datasetDAO.findOneByDataSourceId(dataSourceId)(GlobalAccessContext) ?~> "datasource.notFound"
         user <- userBox.toFox ?~> "auth.token.noUser"
       } yield UserAccessAnswer(user._organization == dataset._organization && user.isAdmin)
 

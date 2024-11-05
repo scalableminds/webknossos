@@ -400,15 +400,12 @@ class DatasetController @Inject()(userService: UserService,
     implicit request =>
       for {
         organizationId <- datasetDAO.getOrganizationIdForDataset(datasetName)
-        organization <- organizationDAO
-          .findOne(organizationId) // TODO: Check if this is necessary, it this needed to ensure that the orga still exists?
-      } yield Ok(Json.obj("organization" -> organization._id))
+      } yield Ok(Json.obj("organization" -> organizationId))
   }
 
   def getDatasetIdFromNameAndOrganization(datasetName: String, organizationId: String): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
-        // TODO: Make this first by path and then by name if the path is not found
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId) ?~> notFoundMessage(datasetName) ~> NOT_FOUND
       } yield
         Ok(

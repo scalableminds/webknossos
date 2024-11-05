@@ -222,10 +222,7 @@ class WKRemoteDataStoreController @Inject()(
     dataStoreService.validateAccess(name, key) { _ =>
       for {
         datasourceId <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
-        existingDataset = datasetDAO
-          .findOneByDirectoryNameAndOrganization(datasourceId.directoryName, datasourceId.organizationId)(
-            GlobalAccessContext)
-          .futureBox
+        existingDataset = datasetDAO.findOneByDataSourceId(datasourceId)(GlobalAccessContext).futureBox
 
         _ <- existingDataset.flatMap {
           case Full(dataset) =>

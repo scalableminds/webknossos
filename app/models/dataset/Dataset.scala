@@ -414,6 +414,9 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       parsed <- parseFirst(r, s"$organizationId/$directoryName")
     } yield parsed
 
+  def findOneByDataSourceId(dataSourceId: DataSourceId)(implicit ctx: DBAccessContext): Fox[Dataset] =
+    findOneByDirectoryNameAndOrganization(dataSourceId.directoryName, dataSourceId.organizationId)
+
   def doesDatasetDirectoryExistInOrganization(directoryName: String, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[Boolean] =
     for {
@@ -427,6 +430,10 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       exists <- r.headOption
     } yield exists
 
+  // Datasets are looked up by name and directoryName, as datasets from before dataset renaming was possible
+  // should have their directory name equal to their name during the time the link was created. This heuristic should
+  // have the best expected outcome as it expect to find the dataset by directoryName and it to be the oldest. In case
+  // someone renamed a dataset and created the link with a tool that uses the outdated dataset identification, the dataset should still be found.
   def findOneByNameAndOrganization(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
     for {
       accessQuery <- readAccessQuery
@@ -444,12 +451,12 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[Dataset] =
     datasetIdOpt
-      .map(datasetId => this.findOne(datasetId))
-      .getOrElse(this.findOneByNameAndOrganization(datasetName, organizationId)) ?~> Messages(
+      .map(datasetId => findOne(datasetId))
+      .getOrElse(findOneByNameAndOrganization(datasetName, organizationId)) ?~> Messages(
       "dataset.notFoundByIdOrName",
       datasetIdOpt.map(_.toString).getOrElse(datasetName))
 
-  def findAllByDirectoryNameAndOrganization(directoryNames: List[String], organizationId: String)(
+  def findAllByDirectoryNamesAndOrganization(directoryNames: List[String], organizationId: String)(
       implicit ctx: DBAccessContext): Fox[List[Dataset]] =
     for {
       accessQuery <- readAccessQuery
@@ -505,7 +512,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   def updateSharingTokenById(datasetId: ObjectId, sharingToken: Option[String])(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      accessQuery <- readAccessQuery // TODO: Why is this readAccessQuery and not writeAccessQuery?
+      accessQuery <- readAccessQuery // Read access is enough here, we want to allow anyone who can see this data to create url sharing links.
       _ <- run(q"""UPDATE webknossos.datasets
                    SET sharingToken = $sharingToken
                    WHERE _id = $datasetId

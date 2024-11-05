@@ -220,8 +220,7 @@ class AnnotationIOController @Inject()(
       datasetIds: List[ObjectId],
       wkUrl: String)(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[Dataset] =
     for {
-      _ <- assertAllOnSameDataset(skeletonTracings, volumeTracings) ?~> "nml.file.differentDatasets" // TODO: Should this be kept? OR is the line below enough?
-      datasetId <- SequenceUtils.findUniqueElement(datasetIds).toFox
+      datasetId <- SequenceUtils.findUniqueElement(datasetIds).toFox ?~> "nml.file.differentDatasets"
       organizationIdOpt <- assertAllOnSameOrganization(skeletonTracings, volumeTracings) ?~> "nml.file.differentDatasets"
       organizationIdOpt <- Fox.runOptional(organizationIdOpt) {
         organizationDAO.findOne(_)(GlobalAccessContext).map(_._id)

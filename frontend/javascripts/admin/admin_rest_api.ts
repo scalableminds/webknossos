@@ -913,6 +913,17 @@ export function getUpdateActionLog(
   });
 }
 
+export function getNewestVersionForTracing(
+  tracingStoreUrl: string,
+  annotationId: string,
+): Promise<number> {
+  return doWithToken((token) =>
+    Request.receiveJSON(
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}/newestVersion?token=${token}`,
+    ).then((obj) => obj.version),
+  );
+}
+
 export async function getNewestVersionOfTracing(
   tracingStoreUrl: string,
   annotationId: string,

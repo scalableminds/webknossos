@@ -575,7 +575,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       }
     }
 
-  // TODO duplicate v0 as well? (if current version is not v0)
   def duplicate(
       annotationId: String,
       newAnnotationId: String,
@@ -583,13 +582,26 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       isFromTask: Boolean,
       datasetBoundingBox: Option[BoundingBox])(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationProto] =
     for {
+      // Duplicate v0
+      v0Annotation <- get(annotationId, Some(0L))
+      v0NewLayers <- Fox.serialCombined(v0Annotation.annotationLayers)(layer =>
+        duplicateLayer(annotationId, layer, v0Annotation.version, isFromTask, datasetBoundingBox))
+      v0DuplicatedAnnotation = v0Annotation.copy(annotationLayers = v0NewLayers,
+                                                 earliestAccessibleVersion = v0Annotation.version)
+
+      _ <- tracingDataStore.annotations.put(newAnnotationId, v0Annotation.version, v0DuplicatedAnnotation)
+
+      // Duplicate current
       currentAnnotation <- get(annotationId, version)
       newLayers <- Fox.serialCombined(currentAnnotation.annotationLayers)(layer =>
         duplicateLayer(annotationId, layer, currentAnnotation.version, isFromTask, datasetBoundingBox))
-      _ <- duplicateUpdates(annotationId, newAnnotationId)
       duplicatedAnnotation = currentAnnotation.copy(annotationLayers = newLayers,
                                                     earliestAccessibleVersion = currentAnnotation.version)
       _ <- tracingDataStore.annotations.put(newAnnotationId, currentAnnotation.version, duplicatedAnnotation)
+
+      // Duplicate updates
+      _ <- duplicateUpdates(annotationId, newAnnotationId)
+
     } yield duplicatedAnnotation
 
   private def duplicateUpdates(annotationId: String, newAnnotationId: String)(

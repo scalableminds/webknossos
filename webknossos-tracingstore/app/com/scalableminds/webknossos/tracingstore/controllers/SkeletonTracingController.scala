@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
-import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
+import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingSelector}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
 import play.api.i18n.Messages
@@ -101,7 +101,10 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
           for {
             mergedTracing <- Fox.box2Fox(skeletonTracingService.merge(tracings.flatten))
             processedTracing = skeletonTracingService.remapTooLargeTreeIds(mergedTracing)
-            newId <- skeletonTracingService.save(processedTracing, None, processedTracing.version, toTemporaryStore = !persist)
+            newId <- skeletonTracingService.save(processedTracing,
+                                                 None,
+                                                 processedTracing.version,
+                                                 toTemporaryStore = !persist)
           } yield Ok(Json.toJson(newId))
         }
       }
@@ -126,6 +129,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
                 annotationId,
                 sourceTracingId = tracingId,
                 sourceVersion = newestSourceVersion,
+                newTracingId = TracingId.generate,
                 newVersion = 0,
                 editPosition = editPositionParsed,
                 editRotation = editRotationParsed,

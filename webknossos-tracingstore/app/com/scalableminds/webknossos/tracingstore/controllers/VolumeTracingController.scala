@@ -8,40 +8,17 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, Volu
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
-import com.scalableminds.webknossos.datastore.helpers.{
-  GetSegmentIndexParameters,
-  ProtoGeometryImplicits,
-  SegmentStatisticsParameters
-}
+import com.scalableminds.webknossos.datastore.helpers.{GetSegmentIndexParameters, ProtoGeometryImplicits, SegmentStatisticsParameters}
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
-import com.scalableminds.webknossos.datastore.models.{
-  LengthUnit,
-  VoxelSize,
-  WebknossosAdHocMeshRequest,
-  WebknossosDataRequest
-}
+import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize, WebknossosAdHocMeshRequest, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{FullMeshRequest, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, TSAnnotationService}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  ImportVolumeDataVolumeAction,
-  MagRestrictions,
-  MergedVolumeStats,
-  TSFullMeshService,
-  VolumeDataZipFormat,
-  VolumeSegmentIndexService,
-  VolumeSegmentStatisticsService,
-  VolumeTracingService
-}
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingSelector}
-import com.scalableminds.webknossos.tracingstore.{
-  TSRemoteDatastoreClient,
-  TSRemoteWebknossosClient,
-  TracingStoreAccessTokenService,
-  TracingStoreConfig
-}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{ImportVolumeDataVolumeAction, MagRestrictions, MergedVolumeStats, TSFullMeshService, VolumeDataZipFormat, VolumeSegmentIndexService, VolumeSegmentStatisticsService, VolumeTracingService}
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingId, TracingSelector}
+import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient, TracingStoreAccessTokenService, TracingStoreConfig}
 import net.liftweb.common.Empty
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
@@ -400,6 +377,7 @@ class VolumeTracingController @Inject()(
                 annotationId,
                 sourceTracingId = tracingId,
                 sourceVersion = newestSourceVersion,
+                newTracingId = TracingId.generate,
                 newVersion = 0,
                 editPosition = editPositionParsed,
                 editRotation = editRotationParsed,

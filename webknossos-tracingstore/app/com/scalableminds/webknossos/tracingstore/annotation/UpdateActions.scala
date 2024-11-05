@@ -56,6 +56,7 @@ trait ApplyImmediatelyUpdateAction extends UpdateAction
 
 trait LayerUpdateAction extends UpdateAction {
   def actionTracingId: String
+  def withActionTracingId(newTracingId: String): LayerUpdateAction
 }
 
 object UpdateAction {

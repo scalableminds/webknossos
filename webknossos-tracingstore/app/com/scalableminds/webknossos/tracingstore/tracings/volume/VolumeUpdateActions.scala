@@ -48,6 +48,8 @@ case class UpdateBucketVolumeAction(position: Vec3Int,
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
 
   def withoutBase64Data: UpdateBucketVolumeAction =
     this.copy(base64Data = None)
@@ -70,6 +72,8 @@ case class UpdateTracingVolumeAction(
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
 
   override def isViewOnlyChange: Boolean = true
 
@@ -95,6 +99,8 @@ case class UpdateUserBoundingBoxesVolumeAction(boundingBoxes: List[NamedBounding
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.withUserBoundingBoxes(boundingBoxes.map(_.toProto))
@@ -111,6 +117,8 @@ case class UpdateUserBoundingBoxVisibilityVolumeAction(boundingBoxId: Option[Int
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
 
@@ -137,6 +145,8 @@ case class RemoveFallbackLayerVolumeAction(actionTracingId: String,
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.clearFallbackLayer
@@ -152,6 +162,8 @@ case class ImportVolumeDataVolumeAction(actionTracingId: String,
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.copy(largestSegmentId = largestSegmentId)
@@ -166,6 +178,8 @@ case class AddSegmentIndexVolumeAction(actionTracingId: String,
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.copy(hasSegmentIndex = Some(true))
@@ -192,6 +206,8 @@ case class CreateSegmentVolumeAction(id: Long,
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     val newSegment =
@@ -230,6 +246,8 @@ case class UpdateSegmentVolumeAction(id: Long,
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     def segmentTransform(segment: Segment): Segment =
@@ -258,6 +276,8 @@ case class DeleteSegmentVolumeAction(id: Long,
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.withSegments(tracing.segments.filter(_.segmentId != id))
@@ -274,6 +294,8 @@ case class DeleteSegmentDataVolumeAction(id: Long,
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
 }
 
 case class UpdateMappingNameVolumeAction(mappingName: Option[String],
@@ -288,6 +310,8 @@ case class UpdateMappingNameVolumeAction(mappingName: Option[String],
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     if (tracing.mappingIsLocked.getOrElse(false)) tracing // cannot change mapping name if it is locked
@@ -311,6 +335,8 @@ case class UpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActionSegme
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
 }
 
 // TODO this now exists only for UpdateBucket. Make it a slimmed down version of that rather than generic?
@@ -325,6 +351,8 @@ case class CompactVolumeUpdateAction(name: String,
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
 }
 
 object CompactVolumeUpdateAction {

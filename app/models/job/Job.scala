@@ -62,8 +62,8 @@ case class Job(
         case JobCommand.convert_to_wkw | JobCommand.compute_mesh_file =>
           datasetId.map { datasetId =>
             val datasetNameMaybe = datasetName.map(name => s"$name-").getOrElse("")
-            s"/datasets/$datasetNameMaybe$datasetId/view" // TODOM: Make compatible with old jobs
-          }
+            Some(s"/datasets/$datasetNameMaybe$datasetId/view")
+          }.getOrElse(datasetName.map(name => s"datasets/$organizationId/$name/view"))
         case JobCommand.export_tiff | JobCommand.render_animation =>
           Some(s"/api/jobs/${this._id}/export")
         case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation |

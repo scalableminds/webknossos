@@ -2501,6 +2501,12 @@ export function getVoxelyticsArtifactChecksums(
   );
 }
 
+export function deleteWorkflow(workflowHash: string): Promise<void> {
+  return Request.triggerRequest(`/api/voxelytics/workflows/${workflowHash}`, {
+    method: "DELETE",
+  });
+}
+
 // ### Help / Feedback userEmail
 export function sendHelpEmail(message: string) {
   return Request.receiveJSON(

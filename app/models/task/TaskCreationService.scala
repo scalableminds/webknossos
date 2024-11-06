@@ -134,7 +134,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   private def duplicateOrCreateSkeletonBase(
       baseAnnotation: Annotation,
       params: TaskParametersWithDatasetId,
-      tracingStoreClient: WKRemoteTracingStoreClient)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[String] =
+      tracingStoreClient: WKRemoteTracingStoreClient)(implicit ctx: DBAccessContext): Fox[String] =
     for {
       baseSkeletonTracingIdOpt <- baseAnnotation.skeletonTracingId
       newTracingId <- baseSkeletonTracingIdOpt
@@ -180,8 +180,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
 
   // Used in create (without files). If base annotations were used, this does nothing.
   def createTaskSkeletonTracingBases(paramsList: List[TaskParametersWithDatasetId], organizationId: String)(
-      implicit ctx: DBAccessContext,
-      m: MessagesProvider): Fox[List[Option[SkeletonTracing]]] =
+      implicit ctx: DBAccessContext): Fox[List[Option[SkeletonTracing]]] =
     Fox.serialCombined(paramsList) { params =>
       for {
         taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"

@@ -751,7 +751,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 >
                   {unfinishedAndNotSelectedUploads.map((unfinishedUpload) => (
                     <Row key={unfinishedUpload.uploadId} gutter={16}>
-                      <Col span={8}>{unfinishedUpload.datasetId.name}</Col>
+                      <Col span={8}>{unfinishedUpload.datasetName}</Col>
                       <Col span={8}>
                         <Button
                           type="link"
@@ -761,7 +761,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                               return;
                             }
                             currentFormRef.setFieldsValue({
-                              name: unfinishedUpload.datasetId.name,
+                              name: unfinishedUpload.datasetName,
                               targetFolderId: unfinishedUpload.folderId,
                               initialTeams: this.state.possibleTeams.filter((team) =>
                                 unfinishedUpload.allowedTeams.includes(team.id),

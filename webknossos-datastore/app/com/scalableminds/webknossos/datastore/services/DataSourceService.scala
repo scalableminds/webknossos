@@ -160,7 +160,7 @@ class DataSourceService @Inject()(
   }
 
   def updateDataSource(dataSource: DataSource, expectExisting: Boolean): Fox[Unit] =
-    for { // TODO: Dangerous territory. Unsure whether this still works. Needs testing.
+    for {
       _ <- validateDataSource(dataSource).toFox
       dataSourcePath = dataBaseDir.resolve(dataSource.id.organizationId).resolve(dataSource.id.directoryName)
       propertiesFile = dataSourcePath.resolve(propertiesFileName)

@@ -1207,14 +1207,12 @@ export function reserveDatasetUpload(
 
 export type UnfinishedUpload = {
   uploadId: string;
-  datasetId: { name: string; organizationName: string };
+  datasetName: string;
   folderId: string;
   created: number;
   filePaths: Array<string> | null | undefined;
   allowedTeams: Array<string>;
 };
-
-type OldDatasetIdFormat = { name: string; team: string };
 
 export function getUnfinishedUploads(
   datastoreHost: string,
@@ -1226,12 +1224,8 @@ export function getUnfinishedUploads(
       {
         host: datastoreHost,
       },
-    )) as Array<UnfinishedUpload & { dataSourceId: OldDatasetIdFormat }>;
-    // Rename "team" to "organization" as this is the actual used current naming.
-    return unfinishedUploads.map(({ dataSourceId: { name, team }, ...rest }) => ({
-      ...rest,
-      datasetId: { name, organizationName: team },
-    }));
+    )) as Array<UnfinishedUpload>;
+    return unfinishedUploads;
   });
 }
 

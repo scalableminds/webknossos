@@ -1,7 +1,6 @@
 import type * as React from "react";
 import { Form, Input, Select, Card, type FormInstance } from "antd";
 import messages from "messages";
-import { isDatasetNameValid } from "admin/admin_rest_api";
 import type { APIDataStore, APITeam, APIUser } from "types/api_flow_types";
 import { syncValidator } from "types/validation";
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
@@ -61,15 +60,9 @@ export const getDatasetNameRules = (activeUser: APIUser | null | undefined) => [
   { min: 3, message: messages["dataset.name_length"] },
   ...layerNameRules,
   {
-    validator: async (_rule: any, newName: string) => {
+    validator: async () => {
       if (!activeUser) throw new Error("Can't do operation if no user is logged in.");
-      const reasons = await isDatasetNameValid(newName);
-
-      if (reasons != null) {
-        return Promise.reject(reasons);
-      } else {
-        return Promise.resolve();
-      }
+      return Promise.resolve();
     },
   },
 ];

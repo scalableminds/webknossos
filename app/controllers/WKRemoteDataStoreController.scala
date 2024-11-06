@@ -109,6 +109,7 @@ class WKRemoteDataStoreController @Inject()(
             case (d, teamIds) =>
               new UnfinishedUpload("<filled-in by datastore>",
                                    d.dataSourceId,
+                                   d.name,
                                    d.folderId.toString,
                                    d.created,
                                    None, // Filled by datastore.

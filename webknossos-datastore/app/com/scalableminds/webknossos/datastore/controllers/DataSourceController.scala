@@ -111,9 +111,10 @@ class DataSourceController @Inject()(
                                         urlOrHeaderToken(token, request)) {
         for {
           unfinishedUploads <- dsRemoteWebknossosClient.getUnfinishedUploadsForUser(urlOrHeaderToken(token, request),
-                                                                                  organizationName)
+                                                                                    organizationName)
           unfinishedUploadsWithUploadIds <- uploadService.addUploadIdsToUnfinishedUploads(unfinishedUploads)
-        } yield Ok(Json.toJson(unfinishedUploadsWithUploadIds)) // TODO: Adjust frontend accordingly
+          unfinishedUploadsWithUploadIdsWithoutDataSourceId = unfinishedUploadsWithUploadIds.map(_.withoutDataSourceId)
+        } yield Ok(Json.toJson(unfinishedUploadsWithUploadIdsWithoutDataSourceId))
       }
     }
 

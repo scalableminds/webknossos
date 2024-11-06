@@ -46,7 +46,6 @@ import scala.concurrent.duration._
 class DataSourceController @Inject()(
     dataSourceRepository: DataSourceRepository,
     dataSourceService: DataSourceService,
-    remoteWebknossosClient: DSRemoteWebknossosClient, // duplicate?
     accessTokenService: DataStoreAccessTokenService,
     val binaryDataServiceHolder: BinaryDataServiceHolder,
     connectomeFileService: ConnectomeFileService,
@@ -99,7 +98,7 @@ class DataSourceController @Inject()(
         for {
           isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
           _ <- if (!isKnownUpload) {
-            (remoteWebknossosClient.reserveDataSourceUpload(request.body, urlOrHeaderToken(token, request)) ?~> "dataset.upload.validation.failed")
+            (dsRemoteWebknossosClient.reserveDataSourceUpload(request.body, urlOrHeaderToken(token, request)) ?~> "dataset.upload.validation.failed")
               .flatMap(reservedInfo => uploadService.reserveUpload(reservedInfo))
           } else Fox.successful(())
         } yield Ok
@@ -111,7 +110,7 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
                                         urlOrHeaderToken(token, request)) {
         for {
-          unfinishedUploads <- remoteWebknossosClient.getUnfinishedUploadsForUser(urlOrHeaderToken(token, request),
+          unfinishedUploads <- dsRemoteWebknossosClient.getUnfinishedUploadsForUser(urlOrHeaderToken(token, request),
                                                                                   organizationName)
           unfinishedUploadsWithUploadIds <- uploadService.addUploadIdsToUnfinishedUploads(unfinishedUploads)
         } yield Ok(Json.toJson(unfinishedUploadsWithUploadIds)) // TODO: Adjust frontend accordingly
@@ -125,7 +124,7 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organization),
                                         urlOrHeaderToken(token, request)) {
         for {
-          _ <- remoteWebknossosClient.reserveDataSourceUpload(
+          _ <- dsRemoteWebknossosClient.reserveDataSourceUpload(
             ReserveUploadInformation(
               "aManualUpload",
               request.body.datasetName,
@@ -222,7 +221,7 @@ class DataSourceController @Inject()(
             for {
               (dataSourceId, datasetSizeBytes) <- uploadService
                 .finishUpload(request.body) ?~> "dataset.upload.finishFailed"
-              uploadedDatasetIdJson <- remoteWebknossosClient.reportUpload(
+              uploadedDatasetIdJson <- dsRemoteWebknossosClient.reportUpload(
                 dataSourceId,
                 datasetSizeBytes,
                 request.body.needsConversion.getOrElse(false),
@@ -244,7 +243,7 @@ class DataSourceController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId),
                                           urlOrHeaderToken(token, request)) {
           for {
-            _ <- remoteWebknossosClient.deleteDataSource(dataSourceId) ?~> "dataset.delete.webknossos.failed"
+            _ <- dsRemoteWebknossosClient.deleteDataSource(dataSourceId) ?~> "dataset.delete.webknossos.failed"
             _ <- uploadService.cancelUpload(request.body) ?~> "Could not cancel the upload."
           } yield Ok
         }
@@ -445,7 +444,7 @@ class DataSourceController @Inject()(
     Action.async(validateJson[DataSource]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {
         for {
-          reservedInfo <- remoteWebknossosClient.reserveDataSourceUpload(
+          reservedInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(
             ReserveUploadInformation(
               uploadId = "", // Set by core backend
               name = datasetName,
@@ -462,7 +461,7 @@ class DataSourceController @Inject()(
           ) ?~> "dataset.upload.validation.failed"
           datasourceId = DataSourceId(reservedInfo.directoryName, organizationId)
           _ <- dataSourceService.updateDataSource(request.body.copy(id = datasourceId), expectExisting = false)
-          uploadedDatasetId <- remoteWebknossosClient.reportUpload(
+          uploadedDatasetId <- dsRemoteWebknossosClient.reportUpload(
             datasourceId,
             0L,
             needsConversion = false,

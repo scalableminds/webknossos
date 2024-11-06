@@ -4,7 +4,8 @@
 # Note: keep this in sync with the reported version numbers in the utils.ApiVersioning trait
 
 # version log:
- # changed in v9: Datasets are now identified by their id, not their name.
+ # changed in v9: Datasets are now identified by their id, not their name. The routes now need to pass a datasets id instead of a name and organization id tuple.
+   # Requests to the TracingStore and DatasStore need to address a dataset based on it directoryName and organization id.
  # changed in v8: Datasets' name was renamed to id and the displayName is now named name.
  # changed in v7: datasources now contain scale as object with keys factor and unit, e.g. {"factor": [11,11,5.5], "unit": "nm"}
  # changed in v6: isValidName always returns Ok, with a JSON object containing possible errors and key "isValid"

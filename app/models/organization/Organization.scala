@@ -129,7 +129,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       r <- rList.headOption.toFox
     } yield r
 
-  def findOrganizationForDataset(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] =
+  def findOrganizationIdForDataset(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(q"""SELECT o._id FROM webknossos.organizations_ o

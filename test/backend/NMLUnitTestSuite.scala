@@ -49,21 +49,19 @@ class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
     val os = new ByteArrayOutputStream()
     Await.result(nmlFunctionStream.writeTo(os)(scala.concurrent.ExecutionContext.global), Duration.Inf)
     val array = os.toByteArray
-    val a = Await.result(
+    val parsed = Await.result(
       nmlParser
         .parse(
           "",
           new ByteArrayInputStream(array),
-          overwritingDatasetName = None,
           overwritingDatasetId = None,
-          overwritingOrganizationId = None,
           isTaskUpload = true,
           basePath = None
         )(messagesProvider, scala.concurrent.ExecutionContext.global, GlobalAccessContext)
         .futureBox,
       Duration.Inf
     )
-    a
+    parsed
   }
 
   def isParseSuccessful(parsedTracing: Box[NmlParseSuccessWithoutFile]): Boolean =

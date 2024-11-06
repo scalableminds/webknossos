@@ -114,7 +114,6 @@ CREATE TABLE webknossos.datasets(
   adminViewConfiguration JSONB,
   description TEXT,
   name VARCHAR(256) NOT NULL,
-  -- oldName VARCHAR(256),
   isPublic BOOLEAN NOT NULL DEFAULT false,
   isUsable BOOLEAN NOT NULL DEFAULT false,
   directoryName VARCHAR(256) NOT NULL,

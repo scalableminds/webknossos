@@ -229,7 +229,7 @@ class AnnotationIOController @Inject()(
              } else { Messages("organization.notFound", organizationIdOpt.getOrElse("")) }) ~>
         NOT_FOUND
       organizationId <- Fox.fillOption(organizationIdOpt) {
-        organizationDAO.findOrganizationForDataset(datasetId)(GlobalAccessContext)
+        organizationDAO.findOrganizationIdForDataset(datasetId)(GlobalAccessContext)
       } ?~> Messages("dataset.noAccess", datasetId) ~> FORBIDDEN
       dataset <- datasetDAO.findOne(datasetId) ?~> (if (wkUrl.nonEmpty && conf.Http.uri != wkUrl) {
                                                       Messages("dataset.noAccess.wrongHost",

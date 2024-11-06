@@ -135,7 +135,6 @@ class WKRemoteDataStoreController @Inject()(
                           key: String,
                           token: String,
                           datasetDirectoryName: String,
-                          organizationId: String,
                           datasetSizeBytes: Long,
                           needsConversion: Boolean,
                           viaAddRoute: Boolean): Action[AnyContent] =
@@ -143,7 +142,7 @@ class WKRemoteDataStoreController @Inject()(
       dataStoreService.validateAccess(name, key) { dataStore =>
         for {
           user <- bearerTokenService.userForToken(token)
-          dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)(
+          dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, user._organization)(
             GlobalAccessContext) ?~> Messages("dataset.notFound", datasetDirectoryName) ~> NOT_FOUND
           _ <- Fox.runIf(!needsConversion && !viaAddRoute)(usedStorageService.refreshStorageReportForDataset(dataset))
           _ <- Fox.runIf(!needsConversion)(logUploadToSlack(user, dataset._id, viaAddRoute))

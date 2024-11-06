@@ -100,7 +100,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     // We don't need to differentiate between the data types because the underlying library does the conversion for us
     reader.uint64().readArrayBlockWithOffset(hdf5Dataset, blockSize.toInt, segmentId)
 
-  // This uses the datasetPath, which allows us to call it on the same hdf file in parallel.
+  // This uses the datasetDirectoryName, which allows us to call it on the same hdf file in parallel.
   private def readHDF(reader: IHDF5Reader, segmentId: Long, blockSize: Long) =
     reader.uint64().readArrayBlockWithOffset(datasetName, blockSize.toInt, segmentId)
 

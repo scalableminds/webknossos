@@ -1,19 +1,19 @@
 package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.GenericInboxDataSource
 import play.api.libs.json._
 
 package object datasource {
 
-  // here team is not (yet) renamed to organization to avoid migrating all jsons
   case class DataSourceId(directoryName: String, organizationId: String) {
     override def toString: String = s"DataSourceId($organizationId/$directoryName)"
   }
 
-  object DataSourceId extends JsonImplicits {
+  object DataSourceId {
+    // The legacy names for the directory name and organization id are "name" and "team".
+    // We keep the old names in serialization and deserialization for backwards compatibility.
     implicit object DataSourceIdFormat extends Format[DataSourceId] {
       override def reads(json: JsValue): JsResult[DataSourceId] =
         (json \ "name").validate[String] flatMap { nameRenamedToPath =>

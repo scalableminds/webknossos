@@ -132,6 +132,7 @@ class JobController @Inject()(
             "organization_id" -> organization._id,
             "organization_display_name" -> organization.name,
             "dataset_name" -> dataset.name,
+            "dataset_id" -> dataset._id,
             "dataset_directory_name" -> dataset.directoryName,
             "voxel_size_factor" -> voxelSize.factor.toUriLiteral,
             "voxel_size_unit" -> voxelSize.unit
@@ -159,6 +160,7 @@ class JobController @Inject()(
         commandArgs = Json.obj(
           "organization_id" -> organization._id,
           "dataset_name" -> dataset.name,
+          "dataset_id" -> dataset._id,
           "dataset_directory_name" -> dataset.directoryName,
           "layer_name" -> layerName,
           "mag" -> mag,

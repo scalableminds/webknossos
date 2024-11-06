@@ -526,12 +526,10 @@ class AnnotationService @Inject()(
   }
 
   def createSkeletonTracingBase(
-      datasetIdOpt: Option[ObjectId],
-      datasetName: String,
-      organizationId: String,
+      datasetId: ObjectId,
       boundingBox: Option[BoundingBox],
       startPosition: Vec3Int,
-      startRotation: Vec3Double)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[SkeletonTracing] = {
+      startRotation: Vec3Double)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
     val initialNode = NodeDefaults.createInstance.withId(1).withPosition(startPosition).withRotation(startRotation)
     val initialTree = Tree(
       1,
@@ -544,7 +542,7 @@ class AnnotationService @Inject()(
       System.currentTimeMillis()
     )
     for {
-      dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetIdOpt, datasetName, organizationId)
+      dataset <- datasetDAO.findOne(datasetId)
     } yield
       SkeletonTracingDefaults.createInstance.copy(
         datasetName = dataset.name,
@@ -559,19 +557,14 @@ class AnnotationService @Inject()(
   }
 
   def createVolumeTracingBase(
-      datasetIdOpt: Option[ObjectId],
-      datasetName: String,
-      organizationId: String,
+      datasetId: ObjectId,
       boundingBox: Option[BoundingBox],
       startPosition: Vec3Int,
       startRotation: Vec3Double,
       volumeShowFallbackLayer: Boolean,
       magRestrictions: MagRestrictions)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[VolumeTracing] =
     for {
-      organization <- organizationDAO.findOne(organizationId)
-      dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetIdOpt, datasetName, organizationId) ?~> Messages(
-        "dataset.notFound",
-        datasetName)
+      dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
       dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)
       fallbackLayer = if (volumeShowFallbackLayer) {
@@ -584,7 +577,7 @@ class AnnotationService @Inject()(
 
       volumeTracing <- createVolumeTracing(
         dataSource,
-        organization._id,
+        dataset._organization,
         dataStore,
         fallbackLayer = fallbackLayer,
         boundingBox = boundingBox.flatMap { box =>

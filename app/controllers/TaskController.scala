@@ -47,7 +47,8 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     implicit request =>
       for {
         _ <- taskCreationService.assertBatchLimit(request.body.length, request.body.map(_.taskTypeId))
-        taskParameters <- taskCreationService.createTracingsFromBaseAnnotations(request.body,
+        taskParameters <- taskCreationService.fillMissingDatasetIds(request.body, request.identity._organization)
+        taskParameters <- taskCreationService.createTracingsFromBaseAnnotations(taskParameters,
                                                                                 request.identity._organization)
         skeletonBaseOpts: List[Option[SkeletonTracing]] <- taskCreationService
           .createTaskSkeletonTracingBases(taskParameters, request.identity._organization)
@@ -91,7 +92,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       extractedTracingBoxesRaw: List[TracingBoxContainer] = extractedFiles.toBoxes
       extractedTracingBoxes: List[TracingBoxContainer] <- taskCreationService.addVolumeFallbackBoundingBoxes(
         extractedTracingBoxesRaw)
-      fullParams: List[Box[TaskParameters]] = taskCreationService.buildFullParamsFromFiles(params,
+      fullParams: List[Box[TaskParametersWithDatasetId]] = taskCreationService.buildFullParamsFromFiles(params,
                                                                                            extractedTracingBoxes)
       (skeletonBases, volumeBases) <- taskCreationService.fillInMissingTracings(
         extractedTracingBoxes.map(_.skeleton),

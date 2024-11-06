@@ -267,10 +267,6 @@ class AnnotationIOController @Inject()(
       Fox.paramFailure("NML upload failed", Empty, Empty, None)
     }
 
-  private def assertAllOnSameDataset(skeletons: List[SkeletonTracing],
-                                     volumes: List[UploadedVolumeLayer]): Fox[String] =
-    SequenceUtils.findUniqueElement(volumes.map(_.tracing.datasetName) ++ skeletons.map(_.datasetName)).toFox
-
   private def assertAllOnSameOrganization(skeletons: List[SkeletonTracing],
                                           volumes: List[UploadedVolumeLayer]): Fox[Option[String]] = {
     // Note that organizationIds are optional. Tracings with no organization attribute are ignored here

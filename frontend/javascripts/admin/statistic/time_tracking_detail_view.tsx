@@ -1,8 +1,4 @@
 import { useFetch } from "libs/react_helpers";
-import type {
-  AnnotationStateFilterEnum,
-  AnnotationTypeFilterEnum,
-} from "./project_and_annotation_type_dropdown";
 import { getTimeTrackingForUserSummedPerAnnotation } from "admin/admin_rest_api";
 import dayjs from "dayjs";
 import { Col, Divider, Row } from "antd";
@@ -11,6 +7,7 @@ import _ from "lodash";
 import type { APITimeTrackingPerAnnotation } from "types/api_flow_types";
 import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import { aggregateStatsForAllLayers } from "oxalis/model/accessors/annotation_accessor";
+import type { AnnotationTypeFilterEnum, AnnotationStateFilterEnum } from "oxalis/constants";
 
 type TimeTrackingDetailViewProps = {
   userId: string;

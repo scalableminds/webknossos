@@ -1,13 +1,14 @@
 import { Tree as AntdTree, type TreeProps } from "antd";
 import type { BasicDataNode } from "antd/es/tree";
 import { throttle } from "lodash";
-import Constants from "oxalis/constants";
 import { useCallback, useRef } from "react";
 import type RcTree from "rc-tree";
 
-const SCROLL_SPEED_PX = 32;
-const MIN_SCROLL_AREA_HEIGHT = 48;
+const MIN_SCROLL_SPEED = 30;
+const MAX_SCROLL_SPEED = 200;
+const MIN_SCROLL_AREA_HEIGHT = 60;
 const SCROLL_AREA_RATIO = 10; // 1/10th of the container height
+const THROTTLE_TIME = 25;
 
 function ScrollableVirtualizedTree<T extends BasicDataNode>(
   props: TreeProps<T> & { ref: React.RefObject<RcTree> },
@@ -23,18 +24,33 @@ function ScrollableVirtualizedTree<T extends BasicDataNode>(
       const { bottom: currentBottom, top: currentTop } = target.getBoundingClientRect();
       const { bottom: boxBottom, top: boxTop } = wrapperRef.current.getBoundingClientRect();
       const scrollableList = wrapperRef.current.getElementsByClassName("ant-tree-list-holder")[0];
+      if (!scrollableList) {
+        return;
+      }
       const scrollAreaHeight = Math.max(
         MIN_SCROLL_AREA_HEIGHT,
         Math.round((boxBottom - boxTop) / SCROLL_AREA_RATIO),
       );
 
       if (currentTop > boxBottom - scrollAreaHeight && scrollableList) {
-        scrollableList.scrollTop += SCROLL_SPEED_PX;
+        const ratioWithinScrollingArea =
+          (currentTop - (boxBottom - scrollAreaHeight)) / scrollAreaHeight;
+        const scrollingValue = Math.max(
+          Math.round(ratioWithinScrollingArea * MAX_SCROLL_SPEED),
+          MIN_SCROLL_SPEED,
+        );
+        scrollableList.scrollTop += scrollingValue;
       }
       if (boxTop + scrollAreaHeight > currentBottom && scrollableList) {
-        scrollableList.scrollTop -= SCROLL_SPEED_PX;
+        const ratioWithinScrollingArea =
+          (boxTop + scrollAreaHeight - currentBottom) / scrollAreaHeight;
+        const scrollingValue = Math.max(
+          Math.round(ratioWithinScrollingArea * MAX_SCROLL_SPEED),
+          MIN_SCROLL_SPEED,
+        );
+        scrollableList.scrollTop -= scrollingValue;
       }
-    }, Constants.RESIZE_THROTTLE_TIME),
+    }, THROTTLE_TIME),
     [wrapperRef],
   );
 

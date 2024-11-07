@@ -78,46 +78,46 @@ export const getMagnificationUnion = memoizeOne((dataset: APIDataset): Array<Vec
    *    [[8, 8, 8], [8, 8, 2]],
    * ]
    */
-  const resolutionUnionDict: { [key: number]: Vector3[] } = {};
+  const magUnionDict: { [key: number]: Vector3[] } = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
-    for (const resolution of layer.resolutions) {
-      const key = maxValue(resolution);
+    for (const mag of layer.resolutions) {
+      const key = maxValue(mag);
 
-      if (resolutionUnionDict[key] == null) {
-        resolutionUnionDict[key] = [resolution];
+      if (magUnionDict[key] == null) {
+        magUnionDict[key] = [mag];
       } else {
-        resolutionUnionDict[key].push(resolution);
+        magUnionDict[key].push(mag);
       }
     }
   }
 
-  for (const keyStr of Object.keys(resolutionUnionDict)) {
+  for (const keyStr of Object.keys(magUnionDict)) {
     const key = Number(keyStr);
-    resolutionUnionDict[key] = _.uniqWith(resolutionUnionDict[key], V3.isEqual);
+    magUnionDict[key] = _.uniqWith(magUnionDict[key], V3.isEqual);
   }
 
-  const keys = Object.keys(resolutionUnionDict)
+  const keys = Object.keys(magUnionDict)
     .sort((a, b) => Number(a) - Number(b))
     .map((el) => Number(el));
 
-  return keys.map((key) => resolutionUnionDict[key]);
+  return keys.map((key) => magUnionDict[key]);
 });
 
 export function getWidestMags(dataset: APIDataset): Vector3[] {
-  const allLayerResolutions = dataset.dataSource.dataLayers.map((layer) =>
+  const allLayerMags = dataset.dataSource.dataLayers.map((layer) =>
     convertToDenseMag(layer.resolutions),
   );
 
-  return _.maxBy(allLayerResolutions, (resolutions) => resolutions.length) || [];
+  return _.maxBy(allLayerMags, (mags) => mags.length) || [];
 }
 
 export const getSomeMagInfoForDataset = memoizeOne((dataset: APIDataset): MagInfo => {
-  const resolutionUnion = getMagnificationUnion(dataset);
-  const areMagsDistinct = resolutionUnion.every((mags) => mags.length <= 1);
+  const magUnion = getMagnificationUnion(dataset);
+  const areMagsDistinct = magUnion.every((mags) => mags.length <= 1);
 
   if (areMagsDistinct) {
-    return new MagInfo(resolutionUnion.map((mags) => mags[0]));
+    return new MagInfo(magUnion.map((mags) => mags[0]));
   } else {
     return new MagInfo(getWidestMags(dataset));
   }

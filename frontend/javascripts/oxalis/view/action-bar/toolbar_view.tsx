@@ -869,7 +869,7 @@ export default function ToolbarView() {
   const maybeResolutionWithZoomStep = useSelector(getRenderableMagForActiveSegmentationTracing);
 
   const labeledResolution =
-    maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
+    maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.mag : null;
   const hasResolutionWithHigherDimension = (labeledResolution || []).some((val) => val > 1);
   const multiSliceAnnotationInfoIcon = hasResolutionWithHigherDimension ? (
     <FastTooltip title="You are annotating in a low magnification. Depending on the used viewport, you might be annotating multiple slices at once.">

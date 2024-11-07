@@ -44,7 +44,7 @@ import { getTransformsForSkeletonLayer } from "../accessors/dataset_accessor";
 const DEFAULT_COLOR: Vector3 = [1, 0, 0];
 const TASK_BOUNDING_BOX_COLOR: Vector3 = [0, 1, 0];
 const DEFAULT_VIEWPORT = 0;
-const DEFAULT_RESOLUTION = 0;
+const DEFAULT_MAG = 0;
 const DEFAULT_BITDEPTH = 0;
 const DEFAULT_INTERPOLATION = false;
 const DEFAULT_TIMESTAMP = 0;
@@ -963,7 +963,7 @@ export function parseNml(nmlString: string): Promise<{
               }),
               bitDepth: _parseInt(attr, "bitDepth", { defaultValue: DEFAULT_BITDEPTH }),
               viewport: _parseInt(attr, "inVp", { defaultValue: DEFAULT_VIEWPORT }),
-              mag: _parseInt(attr, "inMag", { defaultValue: DEFAULT_RESOLUTION }),
+              mag: _parseInt(attr, "inMag", { defaultValue: DEFAULT_MAG }),
               radius: _parseFloat(attr, "radius", { defaultValue: Constants.DEFAULT_NODE_RADIUS }),
               timestamp: _parseTimestamp(attr, "time", { defaultValue: DEFAULT_TIMESTAMP }),
             };

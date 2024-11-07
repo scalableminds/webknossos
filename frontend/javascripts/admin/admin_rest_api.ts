@@ -1144,9 +1144,19 @@ export function createDatasetComposition(
   datastoreUrl: string,
   payload: DatasetCompositionArgs,
 ): Promise<NewDatasetReply> {
+  // Formatting the dataSourceId to the old format so that the backend can parse it.
+  // And removing the datasetId as the datastore cannot use it.
+  const updatedLayers = payload.layers.map(({ dataSourceId, datasetId, ...rest }) => ({
+    ...rest,
+    dataSourceId: { name: dataSourceId.directoryName, team: dataSourceId.owningOrganization },
+  }));
+  const payloadWithUpdatedLayers = {
+    ...payload,
+    layers: updatedLayers,
+  };
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${datastoreUrl}/data/datasets/compose?token=${token}`, {
-      data: payload,
+      data: payloadWithUpdatedLayers,
     }),
   );
 }

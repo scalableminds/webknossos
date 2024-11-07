@@ -552,11 +552,8 @@ class DataSourceController @Inject()(
       val userToken = urlOrHeaderToken(token, request)
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organizationId), token) {
         for {
-          _ <- Fox.serialCombined(request.body.layers.map(_.datasetId).toList)(
-            id =>
-              accessTokenService.assertUserAccess(
-                UserAccessRequest.readDataSources(DataSourceId(id.path, id.owningOrganization)),
-                userToken))
+          _ <- Fox.serialCombined(request.body.layers.map(_.dataSourceId).toList)(id =>
+            accessTokenService.assertUserAccess(UserAccessRequest.readDataSources(id), userToken))
           (dataSource, newDatasetId) <- composeService.composeDataset(request.body, userToken)
           _ <- dataSourceRepository.updateDataSource(dataSource)
         } yield Ok(Json.obj("newDatasetId" -> newDatasetId))

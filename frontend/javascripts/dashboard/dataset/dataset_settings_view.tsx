@@ -282,6 +282,16 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     return _.size(diffObjects(dataSource, this.state.savedDataSourceOnServer || {})) > 0;
   }
 
+  didDatasourceIdChange(dataSource: Record<string, any>) {
+    const savedDatasourceId = this.state.savedDataSourceOnServer?.id;
+    if (!savedDatasourceId) {
+      return false;
+    }
+    return (
+      savedDatasourceId.name !== dataSource.id.name || savedDatasourceId.team !== dataSource.id.team
+    );
+  }
+
   isOnlyDatasourceIncorrectAndNotEdited() {
     const validationSummary = this.getFormValidationSummary();
     const form = this.formRef.current;
@@ -366,6 +376,9 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     const dataSource = JSON.parse(formValues.dataSourceJson);
 
     if (dataset != null && this.didDatasourceChange(dataSource)) {
+      if (this.didDatasourceIdChange(dataSource)) {
+        Toast.info(messages["dataset.settings.updated_datasource_id_warning"]);
+      }
       await updateDatasetDatasource(dataset.directoryName, dataset.dataStore.url, dataSource);
       this.setState({
         savedDataSourceOnServer: dataSource,

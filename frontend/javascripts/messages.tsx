@@ -355,6 +355,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.import.required.url": "Please provide a URL to a dataset.",
   "dataset.import.required.folder": "Please define a target folder for this dataset.",
   "dataset.import.invalid_fields": "Please check that all form fields are valid.",
+  "dataset.settings.updated_datasource_id_warning":
+    "The datasource ID of a dataset must no be changed. The changes to the datasource ID will be ignored.",
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
   "dataset.name_length": "Dataset name must be at least 3 characters",
   "dataset.unsupported_element_class": (layerName: string, elementClass: string) =>

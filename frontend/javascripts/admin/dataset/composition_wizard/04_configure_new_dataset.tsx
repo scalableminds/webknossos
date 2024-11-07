@@ -24,7 +24,7 @@ import Toast, { guardedWithErrorToast } from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import { flatToNestedMatrix } from "oxalis/model/accessors/dataset_accessor";
+import { flatToNestedMatrix, getURLSanitizedName } from "oxalis/model/accessors/dataset_accessor";
 import type { OxalisState } from "oxalis/store";
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
@@ -72,6 +72,10 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
     ).map(
       ([dataset, dataLayer]): LayerLink => ({
         datasetId: dataset.id,
+        dataSourceId: {
+          directoryName: dataset.directoryName,
+          owningOrganization: dataset.owningOrganization,
+        },
         datasetName: dataset.name,
         sourceName: dataLayer.name,
         newName: dataLayer.name,
@@ -175,7 +179,10 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
 
       const uniqueDatasets = _.uniqBy(layersWithoutTransforms, (layer) => layer.datasetId);
       const datasetMarkdownLinks = uniqueDatasets
-        .map((el) => `- [${el.datasetName}](/datasets/${el.datasetId})`)
+        .map(
+          (el) =>
+            `- [${el.datasetName}](/datasets/${getURLSanitizedName({ name: el.datasetName })}-${el.dataSourceId})`,
+        )
         .join("\n");
 
       await updateDatasetPartial(newDatasetId, {
@@ -368,7 +375,11 @@ function LinkedLayerForm({
             label="Layer Source"
             info="This is the layer which will be linked into the new dataset."
           >
-            <a href={`/datasets/${datasetId}/view`} target="_blank" rel="noreferrer">
+            <a
+              href={`/datasets/${getURLSanitizedName({ name: datasetName })}-${datasetId}/view`}
+              target="_blank"
+              rel="noreferrer"
+            >
               {datasetName}
             </a>{" "}
             / {layer.sourceName}

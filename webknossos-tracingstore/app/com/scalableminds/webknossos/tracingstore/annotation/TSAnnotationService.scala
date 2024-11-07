@@ -157,7 +157,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         case a: EditableMappingUpdateAction =>
           annotationWithTracings.applyEditableMappingAction(a)
         case a: RevertToVersionAnnotationAction =>
-          revertToVersion(annotationId, annotationWithTracings, a, targetVersion) // TODO double check that the revert action is isolated and targetVersion is that of group
+          revertToVersion(annotationId, annotationWithTracings, a, targetVersion)
         case _: ResetToBaseAnnotationAction =>
           resetToBase(annotationId, annotationWithTracings, targetVersion)
         case _: BucketMutatingVolumeUpdateAction =>
@@ -269,7 +269,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         annotationId,
         annotationWithTracings,
         annotation.version,
-        targetVersion) // TODO double-check that targetVersion is set per update group, as reverts may come between these
+        targetVersion) // Note: this targetVersion is overwritten for each update group, see annotation.withNewUpdaters
       updated <- applyUpdatesGrouped(annotationWithTracingsAndMappings,
                                      annotationId,
                                      updatesGroupsRegrouped,
@@ -421,7 +421,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   }
 
   private def flushUpdatedTracings(annotationWithTracings: AnnotationWithTracings)(implicit ec: ExecutionContext) =
-    // TODO skip some flushes to save disk space (e.g. skeletons only nth version, or only if requested?)
+    // TODO skip some flushes to save disk space (for non-updated layers)
     for {
       _ <- Fox.serialCombined(annotationWithTracings.getVolumes) {
         case (volumeTracingId, volumeTracing) =>

@@ -424,6 +424,13 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       implicit ec: ExecutionContext) = {
     // Flush updated tracing objects, but only if they were updated.
     // If they weren’t updated, the older versions that will automatically be fetched are guaranteed identical
+    val allMayHaveUpdates = updates.exists { update: UpdateAction =>
+      update match {
+        case _: RevertToVersionAnnotationAction => true
+        case _: ResetToBaseAnnotationAction     => true
+        case _                                  => false
+      }
+    }
     val tracingIdsWithUpdates = updates.flatMap {
       case a: LayerUpdateAction        => Some(a.actionTracingId)
       case a: AddLayerAnnotationAction => Some(a.tracingId)
@@ -431,18 +438,19 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     }.toSet
     for {
       _ <- Fox.serialCombined(annotationWithTracings.getVolumes) {
-        case (volumeTracingId, volumeTracing) if tracingIdsWithUpdates.contains(volumeTracingId) =>
+        case (volumeTracingId, volumeTracing) if allMayHaveUpdates || tracingIdsWithUpdates.contains(volumeTracingId) =>
           tracingDataStore.volumes.put(volumeTracingId, volumeTracing.version, volumeTracing)
         case _ => Fox.successful(())
       }
       _ <- Fox.serialCombined(annotationWithTracings.getSkeletons) {
         case (skeletonTracingId, skeletonTracing: SkeletonTracing)
-            if tracingIdsWithUpdates.contains(skeletonTracingId) =>
+            if allMayHaveUpdates || tracingIdsWithUpdates.contains(skeletonTracingId) =>
           tracingDataStore.skeletons.put(skeletonTracingId, skeletonTracing.version, skeletonTracing)
         case _ => Fox.successful(())
       }
       _ <- Fox.serialCombined(annotationWithTracings.getEditableMappingsInfo) {
-        case (volumeTracingId, editableMappingInfo) if tracingIdsWithUpdates.contains(volumeTracingId) =>
+        case (volumeTracingId, editableMappingInfo)
+            if allMayHaveUpdates || tracingIdsWithUpdates.contains(volumeTracingId) =>
           tracingDataStore.editableMappingsInfo.put(volumeTracingId,
                                                     annotationWithTracings.version,
                                                     editableMappingInfo)

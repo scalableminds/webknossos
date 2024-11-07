@@ -371,16 +371,19 @@ export function setupBeforeEachAndAfterEach() {
       browser_version: "latest",
       os: "os x",
       os_version: "mojave",
+      name: t.title, // add test name to BrowserStack session
       "browserstack.username": process.env.BROWSERSTACK_USERNAME,
       "browserstack.accessKey": process.env.BROWSERSTACK_ACCESS_KEY,
     };
-    t.context.browser = await puppeteer.connect({
+    const browser = await puppeteer.connect({
       browserWSEndpoint: `ws://cdp.browserstack.com/puppeteer?caps=${encodeURIComponent(
         JSON.stringify(caps),
       )}`,
     });
+    t.context.browser = browser;
 
     console.log(`\nRunning chrome version ${await t.context.browser.version()}\n`);
+    console.log(`\nBrowserStack Session Id ${await getBrowserstackSessionId(browser)}\n`);
     global.Headers = Headers;
     global.fetch = fetch;
     global.Request = Request;
@@ -392,6 +395,17 @@ export function setupBeforeEachAndAfterEach() {
   test.afterEach.always(async (t) => {
     await t.context.browser.close();
   });
+}
+
+async function getBrowserstackSessionId(browser: Browser) {
+  const page = await browser.newPage();
+  const response = (await page.evaluate(
+    (_) => {},
+    `browserstack_executor: ${JSON.stringify({ action: "getSessionDetails" })}`,
+  )) as unknown as string;
+
+  const sessionDetails = await JSON.parse(response);
+  return sessionDetails.hashed_id;
 }
 
 export function checkBrowserstackCredentials() {

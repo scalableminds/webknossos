@@ -50,10 +50,12 @@ import TaskView from "./task_view";
 import { formatLog } from "./log_tab";
 import { addAfterPadding, addBeforePadding } from "./utils";
 import { LOG_LEVELS } from "oxalis/constants";
-import { getVoxelyticsLogs } from "admin/admin_rest_api";
+import { getVoxelyticsLogs, deleteWorkflow } from "admin/admin_rest_api";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
 import { notEmpty } from "libs/utils";
 import type { ArrayElement } from "types/globals";
+import { useSelector } from "react-redux";
+import type { OxalisState } from "oxalis/store";
 
 const { Search } = Input;
 
@@ -272,6 +274,8 @@ export default function TaskListView({
   const highlightedTask = params.highlightedTask || "";
   const location = useLocation();
 
+  const isCurrentUserSuperUser = useSelector((state: OxalisState) => state.activeUser?.isSuperUser);
+
   const singleRunId = report.runs.length === 1 ? report.runs[0].id : runId;
 
   useEffect(() => {
@@ -421,6 +425,26 @@ export default function TaskListView({
     }
   }
 
+  async function deleteWorkflowReport() {
+    await modal.confirm({
+      title: "Delete Workflow Report",
+      content:
+        "Are you sure you want to delete this workflow report? This can not be undone. Note that if the workflow is still running, this may cause it to fail.",
+      okText: "Delete",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await deleteWorkflow(report.workflow.hash);
+          history.push("/workflows");
+          message.success("Workflow report deleted.");
+        } catch (error) {
+          console.error(error);
+          message.error("Could not delete workflow report.");
+        }
+      },
+    });
+  }
+
   const overflowMenu: MenuProps = {
     items: [
       { key: "1", onClick: copyAllArtifactPaths, label: "Copy All Artifact Paths" },
@@ -442,6 +466,12 @@ export default function TaskListView({
       { key: "5", onClick: showArtifactsDiskUsageList, label: "Show Disk Usage of Artifacts" },
     ],
   };
+  if (isCurrentUserSuperUser)
+    overflowMenu.items?.push({
+      key: "6",
+      onClick: deleteWorkflowReport,
+      label: "Delete Workflow Report",
+    });
 
   type ItemType = ArrayElement<CollapseProps["items"]>;
 

@@ -34,7 +34,6 @@ import _ from "lodash";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { formatVoxels } from "libs/format_utils";
 import * as Utils from "libs/utils";
-import { V3 } from "libs/mjs";
 import type { APIAnnotation, APIDataset, ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
@@ -66,7 +65,7 @@ enum AiModelCategory {
 const ExperimentalWarning = () => (
   <Row style={{ display: "grid", marginBottom: 16 }}>
     <Alert
-      message="Please note that this feature is experimental. All bounding boxes must be the same size, with equal width and height. Ensure the size is not too small (we recommend at least 10 Vx per dimension) and choose boxes that represent the data well."
+      message="Please note that this feature is experimental. All bounding boxes should have equal dimensions or have dimensions which are multiples of the smallest bounding box. Ensure the size is not too small (we recommend at least 10 Vx per dimension) and choose boxes that represent the data well."
       type="warning"
       showIcon
     />
@@ -424,25 +423,7 @@ function areInvalidBoundingBoxesIncluded(userBoundingBoxes: UserBoundingBox[]): 
       invalidBBoxesReason: "At least one bounding box must be defined.",
     };
   }
-  const getSize = (bbox: UserBoundingBox) => V3.sub(bbox.boundingBox.max, bbox.boundingBox.min);
-
-  const size = getSize(userBoundingBoxes[0]);
-  // width must equal height
-  if (size[0] !== size[1]) {
-    return {
-      areSomeBBoxesInvalid: true,
-      invalidBBoxesReason: "The bounding box width must equal its height.",
-    };
-  }
-  // all bounding boxes must have the same size
-  const areSizesIdentical = userBoundingBoxes.every((bbox) => V3.isEqual(getSize(bbox), size));
-  if (areSizesIdentical) {
-    return { areSomeBBoxesInvalid: false, invalidBBoxesReason: null };
-  }
-  return {
-    areSomeBBoxesInvalid: true,
-    invalidBBoxesReason: "All bounding boxes must have the same size.",
-  };
+  return { areSomeBBoxesInvalid: false, invalidBBoxesReason: null };
 }
 
 function AnnotationsCsvInput({

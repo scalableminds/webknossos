@@ -419,7 +419,7 @@ export enum UnitLong {
   Em = "exameter",
   Zm = "zettameter",
   Ym = "yottameter",
-  Å = "ångström",
+  Å = "angstrom",
   in = "inch",
   ft = "foot",
   yd = "yard",

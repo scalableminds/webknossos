@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.models.BucketPosition
 
 trait WKWDataFormatHelper {
 
-  val dataFileExtension: String = "wkw"
+  private val dataFileExtension: String = "wkw"
   val FILENAME_HEADER_WKW: String = s"header.$dataFileExtension"
 
   // Assumes single-bucket wkw files, as for volume tracings

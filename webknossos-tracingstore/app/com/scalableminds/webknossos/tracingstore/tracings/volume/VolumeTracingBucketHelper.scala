@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{MortonEncoding, WKWDataFormatHelper}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.services.DataConverter
@@ -80,20 +80,18 @@ trait AdditionalCoordinateKey {
   }
 }
 
-trait BucketKeys extends MortonEncoding with WKWDataFormatHelper with LazyLogging with AdditionalCoordinateKey {
+trait BucketKeys extends WKWDataFormatHelper with AdditionalCoordinateKey {
   protected def buildBucketKey(dataLayerName: String,
                                bucket: BucketPosition,
-                               additionalAxes: Option[Seq[AdditionalAxis]]): String = {
-    val mortonIndex = mortonEncode(bucket.bucketX, bucket.bucketY, bucket.bucketZ)
+                               additionalAxes: Option[Seq[AdditionalAxis]]): String =
     (bucket.additionalCoordinates, additionalAxes, bucket.hasAdditionalCoordinates) match {
       case (Some(additionalCoordinates), Some(axes), true) =>
-        s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${additionalCoordinatesKeyPart(
+        s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/[${additionalCoordinatesKeyPart(
           additionalCoordinates,
           axes)}][${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
       case _ =>
-        s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
+        s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/[${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
     }
-  }
 
   protected def buildKeyPrefix(dataLayerName: String): String =
     s"$dataLayerName/"

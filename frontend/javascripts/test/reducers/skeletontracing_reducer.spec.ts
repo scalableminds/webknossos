@@ -888,6 +888,20 @@ test("SkeletonTracing should delete several trees", (t) => {
   t.deepEqual(_.size(newSkeletonTracing.trees), 0);
   t.not(newSkeletonTracing.trees, initialSkeletonTracing.trees);
 });
+test("SkeletonTracing should delete several trees at once", (t) => {
+  const createTreeAction = SkeletonTracingActions.createTreeAction();
+  const deleteTreesAction = SkeletonTracingActions.deleteTreesAction([1, 2, 3]);
+  // create trees and delete them
+  const newState = ChainReducer<OxalisState, Action>(initialState)
+    .apply(SkeletonTracingReducer, createTreeAction)
+    .apply(SkeletonTracingReducer, createTreeAction)
+    .apply(SkeletonTracingReducer, deleteTreesAction)
+    .unpack();
+  t.not(newState, initialState);
+  const newSkeletonTracing = enforceSkeletonTracing(newState.tracing);
+  t.deepEqual(_.size(newSkeletonTracing.trees), 0);
+  t.not(newSkeletonTracing.trees, initialSkeletonTracing.trees);
+});
 test("SkeletonTracing should set a new active tree", (t) => {
   const createTreeAction = SkeletonTracingActions.createTreeAction();
   const setActiveTreeAction = SkeletonTracingActions.setActiveTreeAction(2);

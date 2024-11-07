@@ -6,18 +6,8 @@ import { useFetch } from "libs/react_helpers";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import { useSelector } from "react-redux";
 import type { OxalisState } from "oxalis/store";
+import { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "oxalis/constants";
 
-export enum AnnotationTypeFilterEnum {
-  ONLY_ANNOTATIONS_KEY = "Explorational",
-  ONLY_TASKS_KEY = "Task",
-  TASKS_AND_ANNOTATIONS_KEY = "Task,Explorational",
-}
-
-export enum AnnotationStateFilterEnum {
-  ALL = "All",
-  ACTIVE = "Active",
-  FINISHED_OR_ARCHIVED = "Finished",
-}
 type ProjectAndTypeDropdownProps = {
   selectedProjectIds: string[];
   setSelectedProjectIds: (projectIds: string[]) => void;
@@ -134,7 +124,7 @@ function ProjectAndAnnotationTypeDropdown({
       options={filterOptions}
       optionFilterProp="label"
       value={selectedFilters}
-      popupMatchSelectWidth={false}
+      popupMatchSelectWidth={800}
       onDeselect={(removedKey: string) => onDeselect(removedKey)}
       onSelect={(newSelection: string) => setSelectedProjects(selectedFilters, newSelection)}
     />

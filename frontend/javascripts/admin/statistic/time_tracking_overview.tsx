@@ -5,10 +5,7 @@ import { useState } from "react";
 import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
-import ProjectAndAnnotationTypeDropdown, {
-  AnnotationStateFilterEnum,
-  AnnotationTypeFilterEnum,
-} from "./project_and_annotation_type_dropdown";
+import ProjectAndAnnotationTypeDropdown from "./project_and_annotation_type_dropdown";
 import { isUserAdminOrTeamManager, transformToCSVRow } from "libs/utils";
 import messages from "messages";
 import Toast from "libs/toast";
@@ -20,6 +17,7 @@ import type { APITimeTrackingPerUser } from "types/api_flow_types";
 import { useSelector } from "react-redux";
 import type { OxalisState } from "oxalis/store";
 import dayjs, { type Dayjs } from "dayjs";
+import { AnnotationTypeFilterEnum, AnnotationStateFilterEnum } from "oxalis/constants";
 const { RangePicker } = DatePicker;
 
 const TIMETRACKING_CSV_HEADER_PER_USER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];

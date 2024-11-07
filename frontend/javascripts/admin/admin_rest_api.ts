@@ -67,8 +67,8 @@ import type {
   APITimeTrackingPerUser,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
-import type { LOG_LEVELS, Vector2, Vector3 } from "oxalis/constants";
-import Constants, { ControlModeEnum } from "oxalis/constants";
+import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector2, Vector3 } from "oxalis/constants";
+import Constants, { ControlModeEnum, AnnotationStateFilterEnum } from "oxalis/constants";
 import type {
   DatasetConfiguration,
   PartialDatasetConfiguration,
@@ -103,10 +103,6 @@ import { doWithToken } from "./api/token";
 import type BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { ArbitraryObject } from "types/globals";
 import { assertResponseLimit } from "./api/api_utils";
-import type {
-  AnnotationStateFilterEnum,
-  AnnotationTypeFilterEnum,
-} from "admin/statistic/project_and_annotation_type_dropdown";
 
 export * from "./api/token";
 export * from "./api/jobs";
@@ -1733,7 +1729,7 @@ export async function getTimeTrackingForUserSummedPerAnnotation(
   if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
   if (projectIds != null && projectIds.length > 0)
     params.append("projectIds", projectIds.join(","));
-  if (annotationState !== "All") {
+  if (annotationState !== AnnotationStateFilterEnum.ALL) {
     params.append("annotationStates", annotationState);
   } else {
     params.append("annotationStates", "Active,Finished");
@@ -1761,7 +1757,7 @@ export async function getTimeTrackingForUserSpans(
   if (projectIds != null && projectIds.length > 0) {
     params.append("projectIds", projectIds.join(","));
   }
-  if (selectedState !== "All") {
+  if (selectedState !== AnnotationStateFilterEnum.ALL) {
     params.append("annotationStates", selectedState);
   } else {
     params.append("annotationStates", "Active,Finished");
@@ -1782,7 +1778,7 @@ export async function getTimeEntries(
     end: endMs.toString(),
     annotationTypes: selectedTypes,
   });
-  if (selectedState !== "All") {
+  if (selectedState !== AnnotationStateFilterEnum.ALL) {
     params.append("annotationStates", selectedState);
   } else {
     params.append("annotationStates", "Active,Finished");

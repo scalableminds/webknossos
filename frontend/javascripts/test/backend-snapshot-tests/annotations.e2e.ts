@@ -151,10 +151,9 @@ test.serial("getTracingsForAnnotation() for hybrid", async (t) => {
 });
 
 async function sendUpdateActionsForSkeleton(explorational: APIAnnotation, queue: SaveQueueEntry[]) {
-  const skeletonTracing = getSkeletonDescriptor(explorational);
-  if (skeletonTracing == null) throw new Error("No skeleton annotation present.");
+  console.log("explorational.annotationId:", explorational.annotationId);
   return sendRequestWithToken(
-    `${explorational.tracingStore.url}/tracings/skeleton/${skeletonTracing.tracingId}/update?token=`,
+    `${explorational.tracingStore.url}/tracings/annotation/${explorational.id}/update?token=`,
     {
       method: "POST",
       data: queue,
@@ -244,7 +243,7 @@ test("Update Metadata for Skeleton Tracing", async (t) => {
   };
   const updateTreeAction = UpdateActions.updateTree(trees[1]);
   const [saveQueue] = addVersionNumbers(
-    createSaveQueueFromUpdateActions([createTreesUpdateActions, [updateTreeAction]], 123456789),
+    createSaveQueueFromUpdateActions([createTreesUpdateActions, [updateTreeAction]], 123456789, createdExplorational.annotationLayers[0].tracingId),
     0,
   );
 

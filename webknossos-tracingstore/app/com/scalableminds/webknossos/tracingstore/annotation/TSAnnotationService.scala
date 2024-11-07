@@ -411,7 +411,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         updatedWithNewVerson = updated.withVersion(targetVersion)
         _ = logger.info(s"flushing v$targetVersion, with ${updated.skeletonStats}")
         _ <- updatedWithNewVerson.flushBufferedUpdates()
-        _ <- flushUpdatedTracings(updatedWithNewVerson)
+        _ <- flushUpdatedTracings(updatedWithNewVerson, updates)
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVerson)
         _ <- Fox.runIf(reportChangesToWk)(remoteWebknossosClient.updateAnnotation(
           annotationId,
@@ -420,24 +420,36 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     }
   }
 
-  private def flushUpdatedTracings(annotationWithTracings: AnnotationWithTracings)(implicit ec: ExecutionContext) =
-    // TODO skip some flushes to save disk space (for non-updated layers)
+  private def flushUpdatedTracings(annotationWithTracings: AnnotationWithTracings, updates: List[UpdateAction])(
+      implicit ec: ExecutionContext) = {
+    // Flush updated tracing objects, but only if they were updated.
+    // If they weren’t updated, the older versions that will automatically be fetched are guaranteed identical
+    val tracingIdsWithUpdates = updates.flatMap {
+      case a: LayerUpdateAction        => Some(a.actionTracingId)
+      case a: AddLayerAnnotationAction => Some(a.tracingId)
+      case _                           => None
+    }.toSet
     for {
       _ <- Fox.serialCombined(annotationWithTracings.getVolumes) {
-        case (volumeTracingId, volumeTracing) =>
+        case (volumeTracingId, volumeTracing) if tracingIdsWithUpdates.contains(volumeTracingId) =>
           tracingDataStore.volumes.put(volumeTracingId, volumeTracing.version, volumeTracing)
+        case _ => Fox.successful(())
       }
       _ <- Fox.serialCombined(annotationWithTracings.getSkeletons) {
-        case (skeletonTracingId, skeletonTracing: SkeletonTracing) =>
+        case (skeletonTracingId, skeletonTracing: SkeletonTracing)
+            if tracingIdsWithUpdates.contains(skeletonTracingId) =>
           tracingDataStore.skeletons.put(skeletonTracingId, skeletonTracing.version, skeletonTracing)
+        case _ => Fox.successful(())
       }
       _ <- Fox.serialCombined(annotationWithTracings.getEditableMappingsInfo) {
-        case (volumeTracingId, editableMappingInfo) =>
+        case (volumeTracingId, editableMappingInfo) if tracingIdsWithUpdates.contains(volumeTracingId) =>
           tracingDataStore.editableMappingsInfo.put(volumeTracingId,
                                                     annotationWithTracings.version,
                                                     editableMappingInfo)
+        case _ => Fox.successful(())
       }
     } yield ()
+  }
 
   private def flushAnnotationInfo(annotationId: String, annotationWithTracings: AnnotationWithTracings) =
     tracingDataStore.annotations.put(annotationId, annotationWithTracings.version, annotationWithTracings.annotation)

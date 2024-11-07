@@ -10,7 +10,7 @@ import {
 import * as api from "admin/admin_rest_api";
 import test from "ava";
 import type { APITeam, APIUser } from "types/api_flow_types";
-import { AnnotationStateFilterEnum } from "admin/statistic/project_and_annotation_type_dropdown";
+import { AnnotationStateFilterEnum } from "oxalis/constants";
 
 let activeUser: APIUser;
 let firstTeam: APITeam;

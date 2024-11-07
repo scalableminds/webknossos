@@ -150,7 +150,7 @@ test.serial("getTracingsForAnnotation() for hybrid", async (t) => {
   });
 });
 
-async function sendUpdateActionsForSkeleton(explorational: APIAnnotation, queue: SaveQueueEntry[]) {
+async function sendUpdateActions(explorational: APIAnnotation, queue: SaveQueueEntry[]) {
   console.log("explorational.annotationId:", explorational.annotationId);
   return sendRequestWithToken(
     `${explorational.tracingStore.url}/tracings/annotation/${explorational.id}/update?token=`,
@@ -179,7 +179,7 @@ test.serial("Send update actions and compare resulting tracing", async (t) => {
     ),
     0,
   );
-  await sendUpdateActionsForSkeleton(createdExplorational, saveQueue);
+  await sendUpdateActions(createdExplorational, saveQueue);
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
   t.snapshot(replaceVolatileValues(tracings[0]));
 });
@@ -214,7 +214,7 @@ test("Send complex update actions and compare resulting tracing", async (t) => {
     ),
     0,
   );
-  await sendUpdateActionsForSkeleton(createdExplorational, saveQueue);
+  await sendUpdateActions(createdExplorational, saveQueue);
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
   t.snapshot(replaceVolatileValues(tracings[0]));
 });
@@ -247,7 +247,7 @@ test("Update Metadata for Skeleton Tracing", async (t) => {
     0,
   );
 
-  await sendUpdateActionsForSkeleton(createdExplorational, saveQueue);
+  await sendUpdateActions(createdExplorational, saveQueue);
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
   t.snapshot(replaceVolatileValues(tracings[0]));
 });

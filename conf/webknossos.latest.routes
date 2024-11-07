@@ -303,6 +303,7 @@ POST          /verifyEmail                                                      
 POST          /voxelytics/workflows                                                             controllers.VoxelyticsController.storeWorkflow()
 GET           /voxelytics/workflows                                                             controllers.VoxelyticsController.listWorkflows()
 GET           /voxelytics/workflows/:workflowHash                                               controllers.VoxelyticsController.getWorkflow(workflowHash: String, runId: Option[String])
+DELETE        /voxelytics/workflows/:workflowHash                                               controllers.VoxelyticsController.deleteWorkflow(workflowHash: String)
 POST          /voxelytics/workflows/:workflowHash/events                                        controllers.VoxelyticsController.storeWorkflowEvents(workflowHash: String, runName: String)
 GET           /voxelytics/workflows/:workflowHash/chunkStatistics                               controllers.VoxelyticsController.getChunkStatistics(workflowHash: String, runId: Option[String], taskName: String)
 GET           /voxelytics/workflows/:workflowHash/artifactChecksums                             controllers.VoxelyticsController.getArtifactChecksums(workflowHash: String, runId: Option[String], taskName: String, artifactName: Option[String])

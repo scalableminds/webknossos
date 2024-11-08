@@ -122,7 +122,7 @@ export function createNode(
   additionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   viewport: number,
-  resolution: number,
+  mag: number,
   timestamp: number,
 ): Maybe<[Node, EdgeCollection]> {
   const activeNodeMaybe = getActiveNodeFromTree(skeletonTracing, tree);
@@ -146,7 +146,7 @@ export function createNode(
     radius,
     rotation,
     viewport,
-    mag: resolution,
+    mag: mag,
     id: nextNewId,
     timestamp,
     bitDepth: state.datasetConfiguration.fourBit ? 4 : 8,

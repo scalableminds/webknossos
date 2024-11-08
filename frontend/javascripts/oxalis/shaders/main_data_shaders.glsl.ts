@@ -41,7 +41,7 @@ type Params = {
   orderedColorLayerNames: string[];
   segmentationLayerNames: string[];
   textureLayerInfos: Record<string, { packingDegree: number; dataTextureCount: number }>;
-  magCount: number;
+  resolutionsCount: number;
   voxelSizeFactor: Vector3;
   isOrthogonal: boolean;
   tpsTransformPerLayer: Record<string, TPS3D>;

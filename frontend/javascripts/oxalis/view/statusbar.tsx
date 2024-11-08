@@ -500,10 +500,7 @@ function DownloadSpeedometer() {
 }
 
 function MagnificationInfo() {
-  const {
-    representativeMag: representativeResolution,
-    isActiveMagGlobal: isActiveResolutionGlobal,
-  } = useSelector(getActiveMagInfo);
+  const { representativeMag, isActiveMagGlobal } = useSelector(getActiveMagInfo);
 
   const renderMagTooltipContent = useCallback(() => {
     const state = Store.getState();
@@ -530,7 +527,7 @@ function MagnificationInfo() {
     );
   }, []);
 
-  if (representativeResolution == null) {
+  if (representativeMag == null) {
     return null;
   }
 
@@ -542,8 +539,8 @@ function MagnificationInfo() {
         alt="Magnification"
       />{" "}
       <FastTooltip dynamicRenderer={renderMagTooltipContent} placement="top">
-        {representativeResolution.join("-")}
-        {isActiveResolutionGlobal ? "" : "*"}{" "}
+        {representativeMag.join("-")}
+        {isActiveMagGlobal ? "" : "*"}{" "}
       </FastTooltip>
     </span>
   );

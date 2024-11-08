@@ -846,7 +846,7 @@ function serverNodeToMutableNode(n: ServerNode): MutableNode {
     rotation: Utils.point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,
     viewport: n.viewport,
-    mag: n.resolution,
+    mag: n.mag,
     radius: n.radius,
     timestamp: n.createdTimestamp,
     interpolation: n.interpolation,

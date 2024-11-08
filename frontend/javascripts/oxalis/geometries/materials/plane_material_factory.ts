@@ -570,7 +570,7 @@ class PlaneMaterialFactory {
             resInfo.getDenseMags(),
           );
           const flatMags = _.flattenDeep(allDenseMags);
-          this.uniforms.allMags = {
+          this.uniforms.allResolutions = {
             value: flatMags,
           };
 
@@ -581,7 +581,7 @@ class PlaneMaterialFactory {
             magCountCumSum.push(cumSum);
           }
 
-          this.uniforms.magCountCumSum = {
+          this.uniforms.resolutionCountCumSum = {
             value: magCountCumSum,
           };
         },

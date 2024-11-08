@@ -260,7 +260,7 @@ export function MagSlider({
   value: Vector3;
   onChange: (v: Vector3) => void;
 }) {
-  // Use `getResolutionsWithIndices` because returns a sorted list
+  // Use `getMagsWithIndices` because returns a sorted list
   const allMags = magnificationInfo.getMagsWithIndices();
 
   return (

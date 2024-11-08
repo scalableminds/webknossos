@@ -129,11 +129,11 @@ export default function AddVolumeLayerModal({
       : null;
   const [newLayerName, setNewLayerName] = useState(initialNewLayerName);
 
-  const resolutionInfo =
+  const magInfo =
     selectedSegmentationLayer == null
       ? getSomeMagInfoForDataset(dataset)
       : getMagInfo(selectedSegmentationLayer.resolutions);
-  const [resolutionIndices, setResolutionIndices] = useState([0, 10000]);
+  const [magIndices, setMagIndices] = useState([0, 10000]);
 
   const handleSetNewLayerName = (evt: React.ChangeEvent<HTMLInputElement>) =>
     setNewLayerName(evt.target.value);
@@ -154,12 +154,8 @@ export default function AddVolumeLayerModal({
       Toast.error(validationResult.message);
       return;
     }
-    const minResolutionAllowed = Math.max(
-      ...resolutionInfo.getMagByIndexOrThrow(resolutionIndices[0]),
-    );
-    const maxResolutionAllowed = Math.max(
-      ...resolutionInfo.getMagByIndexOrThrow(resolutionIndices[1]),
-    );
+    const minMagAllowed = Math.max(...magInfo.getMagByIndexOrThrow(magIndices[0]));
+    const maxMagAllowed = Math.max(...magInfo.getMagByIndexOrThrow(magIndices[1]));
 
     if (selectedSegmentationLayerName == null) {
       await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
@@ -167,8 +163,8 @@ export default function AddVolumeLayerModal({
         name: newLayerName,
         fallbackLayerName: undefined,
         magRestrictions: {
-          min: minResolutionAllowed,
-          max: maxResolutionAllowed,
+          min: minMagAllowed,
+          max: maxMagAllowed,
         },
       });
     } else {
@@ -194,8 +190,8 @@ export default function AddVolumeLayerModal({
         name: newLayerName,
         fallbackLayerName,
         magRestrictions: {
-          min: minResolutionAllowed,
-          max: maxResolutionAllowed,
+          min: minMagAllowed,
+          max: maxMagAllowed,
         },
         mappingName: maybeMappingName,
       });
@@ -234,10 +230,10 @@ export default function AddVolumeLayerModal({
         />
       ) : null}
       <RestrictMagnificationSlider
-        magInfo={resolutionInfo}
+        magInfo={magInfo}
         selectedSegmentationLayer={selectedSegmentationLayer}
-        magIndices={resolutionIndices}
-        setMagIndices={setResolutionIndices}
+        magIndices={magIndices}
+        setMagIndices={setMagIndices}
       />
       <Row justify="center" align="middle">
         <AsyncButton onClick={handleAddVolumeLayer} type="primary" icon={<PlusOutlined />}>

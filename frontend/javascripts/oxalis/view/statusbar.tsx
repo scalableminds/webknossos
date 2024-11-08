@@ -535,7 +535,7 @@ function MagnificationInfo() {
     <span className="info-element">
       <img
         src="/assets/images/icon-statusbar-downsampling.svg"
-        className="resolution-status-bar-icon"
+        className="mag-status-bar-icon"
         alt="Magnification"
       />{" "}
       <FastTooltip dynamicRenderer={renderMagTooltipContent} placement="top">

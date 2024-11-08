@@ -124,7 +124,7 @@ function ProjectAndAnnotationTypeDropdown({
       options={filterOptions}
       optionFilterProp="label"
       value={selectedFilters}
-      popupMatchSelectWidth={800}
+      popupMatchSelectWidth={400}
       onDeselect={(removedKey: string) => onDeselect(removedKey)}
       onSelect={(newSelection: string) => setSelectedProjects(selectedFilters, newSelection)}
     />

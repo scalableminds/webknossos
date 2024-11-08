@@ -185,7 +185,7 @@ export function* labelWithVoxelBuffer2D(
   const { cube } = segmentationLayer;
   const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
   const dimensionIndices = Dimensions.getIndices(viewport);
-  const magInfo = yield* call(getMagInfo, segmentationLayer.resolutions);
+  const magInfo = yield* call(getMagInfo, segmentationLayer.mags);
   const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
 
   const get3DCoordinateFromLocal2D = ([x, y]: Vector2) =>

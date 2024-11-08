@@ -430,7 +430,7 @@ export function* floodFill(): Saga<void> {
     const requestedZoomStep = yield* select((state) =>
       getActiveMagIndexForLayer(state, segmentationLayer.name),
     );
-    const magInfo = yield* call(getMagInfo, segmentationLayer.resolutions);
+    const magInfo = yield* call(getMagInfo, segmentationLayer.mags);
     const labeledZoomStep = magInfo.getClosestExistingIndex(requestedZoomStep);
     const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
     const oldSegmentIdAtSeed = cube.getDataValue(

@@ -84,7 +84,7 @@ function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
 
   const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
   const requestedZoomStep = getActiveMagIndexForLayer(state, segmentationLayer.name);
-  const magInfo = getMagInfo(segmentationLayer.resolutions);
+  const magInfo = getMagInfo(segmentationLayer.mags);
   const labeledZoomStep = magInfo.getClosestExistingIndex(requestedZoomStep);
   const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
 

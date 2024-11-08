@@ -291,7 +291,7 @@ export function* sendRequestToServer(
 
 function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>, tracingId: string) {
   const segmentationLayer = Model.getSegmentationTracingLayer(tracingId);
-  const segmentationMagInfo = yield* call(getMagInfo, segmentationLayer.resolutions);
+  const segmentationMagInfo = yield* call(getMagInfo, segmentationLayer.mags);
 
   if (segmentationLayer != null) {
     for (const saveEntry of saveQueue) {

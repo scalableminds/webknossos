@@ -240,7 +240,7 @@ function* getInfoForMeshLoading(
   zoomStep: number;
   magInfo: MagInfo;
 }> {
-  const magInfo = getMagInfo(layer.resolutions);
+  const magInfo = getMagInfo(layer.mags);
   const preferredZoomStep =
     meshExtraInfo.preferredQuality != null
       ? meshExtraInfo.preferredQuality

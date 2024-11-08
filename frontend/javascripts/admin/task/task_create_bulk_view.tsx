@@ -17,7 +17,6 @@ export const NUM_TASKS_PER_BATCH = 100;
 export type NewTask = {
   readonly boundingBox: BoundingBoxObject | null | undefined;
   readonly datasetId: string;
-  readonly datasetName: string;
   readonly editPosition: Vector3;
   readonly editRotation: Vector3;
   readonly neededExperience: {
@@ -37,6 +36,16 @@ export type NewTask = {
     | null
     | undefined;
 };
+
+export type NmlNewTask = Pick<
+  NewTask,
+  | "taskTypeId"
+  | "neededExperience"
+  | "pendingInstances"
+  | "projectName"
+  | "scriptId"
+  | "boundingBox"
+>;
 
 export type TaskCreationResponse = {
   status: number;
@@ -76,7 +85,6 @@ function TaskCreateBulkView() {
 
     if (
       !_.isString(task.neededExperience.domain) ||
-      !_.isString(task.datasetName) ||
       !_.isString(task.taskTypeId) ||
       !_.isString(task.projectName) ||
       task.editPosition.some(Number.isNaN) ||
@@ -118,25 +126,24 @@ function TaskCreateBulkView() {
 
   function parseLine(line: string): NewTask {
     const words = splitToWords(line);
-    const datasetName = words[0];
-    const datasetId = words[1];
-    const taskTypeId = words[2];
-    const experienceDomain = words[3];
-    const minExperience = Number.parseInt(words[4]);
-    const x = Number.parseInt(words[5]);
-    const y = Number.parseInt(words[6]);
-    const z = Number.parseInt(words[7]);
-    const rotX = Number.parseInt(words[8]);
-    const rotY = Number.parseInt(words[9]);
-    const rotZ = Number.parseInt(words[10]);
-    const pendingInstances = Number.parseInt(words[11]);
-    const boundingBoxX = Number.parseInt(words[12]);
-    const boundingBoxY = Number.parseInt(words[13]);
-    const boundingBoxZ = Number.parseInt(words[14]);
-    const width = Number.parseInt(words[15]);
-    const height = Number.parseInt(words[16]);
-    const depth = Number.parseInt(words[17]);
-    const projectName = words[18];
+    const datasetId = words[0];
+    const taskTypeId = words[1];
+    const experienceDomain = words[2];
+    const minExperience = Number.parseInt(words[3]);
+    const x = Number.parseInt(words[4]);
+    const y = Number.parseInt(words[5]);
+    const z = Number.parseInt(words[6]);
+    const rotX = Number.parseInt(words[7]);
+    const rotY = Number.parseInt(words[8]);
+    const rotZ = Number.parseInt(words[9]);
+    const pendingInstances = Number.parseInt(words[10]);
+    const boundingBoxX = Number.parseInt(words[11]);
+    const boundingBoxY = Number.parseInt(words[12]);
+    const boundingBoxZ = Number.parseInt(words[13]);
+    const width = Number.parseInt(words[14]);
+    const height = Number.parseInt(words[15]);
+    const depth = Number.parseInt(words[16]);
+    const projectName = words[17];
 
     // mapOptional takes care of treating empty strings as null
     function mapOptional<U>(word: string, fn: (arg0: string) => U): U | null | undefined {
@@ -158,7 +165,6 @@ function TaskCreateBulkView() {
             depth,
           };
     return {
-      datasetName,
       datasetId,
       taskTypeId,
       scriptId,

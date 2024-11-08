@@ -453,7 +453,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     datasetIdOpt
       .map(datasetId => findOne(datasetId))
       .getOrElse(findOneByNameAndOrganization(datasetName, organizationId)) ?~> Messages(
-      "dataset.notFoundByIdOrName",
+      "dataset.notFound",
       datasetIdOpt.map(_.toString).getOrElse(datasetName))
 
   def findAllByDirectoryNamesAndOrganization(directoryNames: List[String], organizationId: String)(

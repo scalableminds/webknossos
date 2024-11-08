@@ -119,6 +119,8 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
     }
 
   private def getDatasetIdFromURIPath(datasetNameAndId: String): Option[ObjectId] = {
+    // URIs contain the naming scheme of /datasets/<dataset_name>-<dataset_id>/view. This function extracts the dataset_id.
+    // This should also work for /datasets/<dataset_id>/view.
     val idStrOpt = datasetNameAndId.split("-").lastOption
     val idOpt = idStrOpt.flatMap(ObjectId.fromStringSync)
     idOpt match {

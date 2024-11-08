@@ -79,7 +79,6 @@ braintracing.exists=Great, you already have an account on braintracing.org. Plea
 
 dataset=Dataset
 dataset.notFound=Dataset {0} does not exist or could not be accessed
-dataset.notFoundByIdOrName=Could not find dataset {0} based on id or name.
 dataset.notFoundConsiderLogin=Dataset {0} does not exist or could not be accessed. You may need to log in.
 dataset.notFoundForAnnotation=The Dataset for this annotation does not exist or could not be accessed.
 dataset.noAccess=Could not access dataset {0}. Does your team have access?

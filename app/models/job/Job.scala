@@ -68,7 +68,9 @@ case class Job(
           Some(s"/api/jobs/${this._id}/export")
         case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation |
             JobCommand.infer_with_model | JobCommand.infer_mitochondria | JobCommand.align_sections =>
-          returnValue.map { resultDatasetDirectoryName => // TODO: Adjust worker
+          // Old jobs before the dataset renaming changes returned the output dataset name.
+          // New jobs return the directory name. Thus, the resulting link should be
+          returnValue.map { resultDatasetDirectoryName =>
             s"/datasets/$organizationId/$resultDatasetDirectoryName/view"
           }
         case _ => None

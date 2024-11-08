@@ -43,23 +43,24 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     } yield Ok(js)
   }
 
-  def create: Action[List[TaskParameters]] = sil.SecuredAction.async(validateJson[List[TaskParameters]]) {
-    implicit request =>
+  def create: Action[List[TaskParametersWithDatasetId]] =
+    sil.SecuredAction.async(validateJson[List[TaskParametersWithDatasetId]]) { implicit request =>
       for {
         _ <- taskCreationService.assertBatchLimit(request.body.length, request.body.map(_.taskTypeId))
-        taskParameters <- taskCreationService.fillMissingDatasetIds(request.body, request.identity._organization)
-        taskParameters <- taskCreationService.createTracingsFromBaseAnnotations(taskParameters,
+        taskParameters <- taskCreationService.createTracingsFromBaseAnnotations(request.body,
                                                                                 request.identity._organization)
-        skeletonBaseOpts: List[Option[SkeletonTracing]] <- taskCreationService
-          .createTaskSkeletonTracingBases(taskParameters, request.identity._organization)
-        volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- taskCreationService
-          .createTaskVolumeTracingBases(taskParameters, request.identity._organization)
+        skeletonBaseOpts: List[Option[SkeletonTracing]] <- taskCreationService.createTaskSkeletonTracingBases(
+          taskParameters,
+          request.identity._organization)
+        volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- taskCreationService.createTaskVolumeTracingBases(
+          taskParameters,
+          request.identity._organization)
         paramsWithTracings = taskParameters.lazyZip(skeletonBaseOpts).lazyZip(volumeBaseOpts).map {
           case (params, skeletonOpt, volumeOpt) => Full((params, skeletonOpt, volumeOpt))
         }
         result <- taskCreationService.createTasks(paramsWithTracings, request.identity)
       } yield Ok(Json.toJson(result))
-  }
+    }
 
   /* Create new tasks from existing annotation files
     Expects:
@@ -92,8 +93,8 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       extractedTracingBoxesRaw: List[TracingBoxContainer] = extractedFiles.toBoxes
       extractedTracingBoxes: List[TracingBoxContainer] <- taskCreationService.addVolumeFallbackBoundingBoxes(
         extractedTracingBoxesRaw)
-      fullParams: List[Box[TaskParametersWithDatasetId]] = taskCreationService.buildFullParamsFromFiles(params,
-                                                                                           extractedTracingBoxes)
+      fullParams: List[Box[TaskParametersWithDatasetId]] = taskCreationService
+        .buildFullParamsFromFiles(params, extractedTracingBoxes)
       (skeletonBases, volumeBases) <- taskCreationService.fillInMissingTracings(
         extractedTracingBoxes.map(_.skeleton),
         extractedTracingBoxes.map(_.volume),
@@ -107,7 +108,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     } yield Ok(Json.toJson(result))
   }
 
-  def update(taskId: String): Action[TaskParameters] = sil.SecuredAction.async(validateJson[TaskParameters]) {
+  def update(taskId: String): Action[TaskParametersWithDatasetId] = sil.SecuredAction.async(validateJson[TaskParametersWithDatasetId]) {
     implicit request =>
       val params = request.body
       for {

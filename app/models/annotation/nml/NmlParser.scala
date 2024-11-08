@@ -171,6 +171,59 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
     }
   }
 
+  private def getParametersFromNML(nmlInputStream: InputStream, name: String, overwritingDatasetId: Option[String], isTaskUpload: Boolean)(implicit m: MessagesProvider): Box[TaskParameters] = {
+    try {
+      val nmlData = XML.load(nmlInputStream)
+      for {
+        parameters <- (nmlData \ "parameters").headOption ?~ Messages("nml.parameters.notFound")
+        timestamp = parseTime(parameters \ "time")
+        comments <- parseComments(nmlData \ "comments")
+        branchPoints <- parseBranchPoints(nmlData \ "branchpoints", timestamp)
+        trees <- parseTrees(nmlData \ "thing", buildBranchPointMap(branchPoints), buildCommentMap(comments))
+        treeGroups <- extractTreeGroups(nmlData \ "groups")
+        volumes = extractVolumes(nmlData \ "volume")
+        _ <- bool2Box(volumes.length == volumes.map(_.name).distinct.length) ?~ Messages(
+          "nml.duplicateVolumeLayerNames")
+        treesAndGroupsAfterSplitting = MultiComponentTreeSplitter.splitMulticomponentTrees(trees, treeGroups)
+        treesSplit = treesAndGroupsAfterSplitting._1
+        treeGroupsAfterSplit = treesAndGroupsAfterSplitting._2
+        _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
+        additionalAxisProtos <- parseAdditionalAxes(parameters \ "additionalAxes")
+        datasetName = parseDatasetName(parameters \ "experiment")
+        datasetIdOpt = if (overwritingDatasetId.isDefined) overwritingDatasetId
+        else parseDatasetId(parameters \ "experiment")
+        organizationId = parseOrganizationId(parameters \ "experiment")
+        description = parseDescription(parameters \ "experiment")
+        wkUrl = parseWkUrl(parameters \ "experiment")
+        activeNodeId = parseActiveNode(parameters \ "activeNode")
+        (editPosition, editPositionAdditionalCoordinates) =
+          parseEditPosition(parameters \ "editPosition").getOrElse((SkeletonTracingDefaults.editPosition, Seq()))
+        editRotation =
+          parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracingDefaults.editRotation)
+        zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracingDefaults.zoomLevel)
+        taskBoundingBox: Option[BoundingBox] = if(isTaskUpload) parseTaskBoundingBox(parameters \ "taskBoundingBox") else None
+        userBoundingBoxes = parseBoundingBoxes(parameters \ "userBoundingBox")
+      } yield {
+        if(!isTaskUpload){
+          parseTaskBoundingBoxAsUserBoundingBox(parameters \ "taskBoundingBox", userBoundingBoxes).map(asUserBoundingBox => userBoundingBoxes :+ asUserBoundingBox)
+        }
+        // TODOM: Yield all the values
+    }
+  } catch {
+      case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>
+        logger.debug(s"Tried  to parse empty NML file $name.")
+        Empty
+      case e: org.xml.sax.SAXParseException =>
+        logger.debug(s"Failed to parse NML $name due to " + e)
+        Failure(
+          s"Failed to parse NML '$name'. Error in Line ${e.getLineNumber} " +
+            s"(column ${e.getColumnNumber}): ${e.getMessage}")
+      case e: Exception =>
+        logger.error(s"Failed to parse NML $name due to " + e)
+        Failure(s"Failed to parse NML '$name': " + e.toString)
+    }
+  }
+
   private def extractTreeGroups(treeGroupContainerNodes: NodeSeq)(
       implicit m: MessagesProvider): Box[List[TreeGroup]] = {
     val treeGroupNodes = treeGroupContainerNodes.flatMap(_ \ "group")
@@ -295,17 +348,16 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
     }
 
   private def parseTaskBoundingBox(
-      nodes: NodeSeq,
-      isTask: Boolean,
-      userBoundingBoxes: Seq[NamedBoundingBoxProto]): Option[Either[BoundingBox, NamedBoundingBoxProto]] =
-    nodes.headOption.flatMap(node => parseBoundingBox(node)).map { bb =>
-      if (isTask) {
-        Left(bb)
-      } else {
-        val newId = if (userBoundingBoxes.isEmpty) 0 else userBoundingBoxes.map(_.id).max + 1
-        Right(NamedBoundingBoxProto(newId, Some("task bounding box"), None, Some(getRandomColor), bb))
-      }
-    }
+      nodes: NodeSeq): Option[BoundingBox] =
+    nodes.headOption.flatMap(node => parseBoundingBox(node))
+
+private def parseTaskBoundingBoxAsUserBoundingBox(nodes: NodeSeq,
+                                  userBoundingBoxes: Seq[NamedBoundingBoxProto]): Option[NamedBoundingBoxProto] =
+  nodes.headOption.flatMap(node => parseBoundingBox(node)).map { bb =>
+      val newId = if (userBoundingBoxes.isEmpty) 0 else userBoundingBoxes.map(_.id).max + 1
+      NamedBoundingBoxProto(newId, Some("task bounding box"), None, Some(getRandomColor), bb))
+
+  }
 
   private def parseBoundingBox(node: XMLNode) =
     for {

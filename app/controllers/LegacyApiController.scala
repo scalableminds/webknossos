@@ -11,7 +11,7 @@ import models.organization.OrganizationDAO
 
 import javax.inject.Inject
 import models.project.ProjectDAO
-import models.task.{TaskDAO, TaskService}
+import models.task.{TaskDAO, TaskParameters, TaskParametersWithDatasetId, TaskService}
 import models.user.User
 import net.liftweb.common.Box.tryo
 import play.api.http.HttpEntity
@@ -34,6 +34,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                     datasetController: DatasetController,
                                     userController: UserController,
                                     projectController: ProjectController,
+                                    taskController: TaskController,
                                     projectDAO: ProjectDAO,
                                     organizationDAO: OrganizationDAO,
                                     datasetService: DatasetService,
@@ -338,6 +339,33 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       project <- projectDAO.findOneByNameAndOrganization(name, request.identity._organization)
       result <- projectController.resume(project._id.toString)(request)
     } yield result
+  }
+
+  def createTaskV8: Action[List[TaskParameters]] = sil.SecuredAction.async(validateJson[List[TaskParameters]]) {
+    implicit request =>
+      for {
+        taskParametersWithDatasetId <- Fox.serialCombined(request.body)(params =>
+          for {
+            dataset <- datasetDAO.findOneByIdOrNameAndOrganization(params.datasetId,
+                                                                   params.dataSet,
+                                                                   request.identity._organization)
+          } yield TaskParametersWithDatasetId.fromTaskParameters(params, dataset._id))
+        requestWithUpdatedBody = request.withBody(taskParametersWithDatasetId)
+        result <- taskController.create()(requestWithUpdatedBody)
+      } yield result
+  }
+
+  def updateTaskV8(taskId: String): Action[TaskParameters] = sil.SecuredAction.async(validateJson[TaskParameters]) {
+    implicit request =>
+      val params = request.body
+      for {
+        dataset <- datasetDAO.findOneByIdOrNameAndOrganization(params.datasetId,
+                                                               params.dataSet,
+                                                               request.identity._organization)
+        paramsWithDatasetId = TaskParametersWithDatasetId.fromTaskParameters(params, dataset._id)
+        requestWithUpdatedBody = request.withBody(paramsWithDatasetId)
+        result <- taskController.update(taskId)(requestWithUpdatedBody)
+      } yield result
   }
 
   def taskListTasks: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>

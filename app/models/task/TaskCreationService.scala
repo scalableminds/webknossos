@@ -59,16 +59,6 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       _ <- bool2Fox(batchSize <= batchLimit) ?~> Messages("task.create.limitExceeded", batchLimit)
     } yield ()
 
-  def fillMissingDatasetIds(taskParametersList: List[TaskParameters], organizationId: String)(
-      implicit ctx: DBAccessContext,
-      m: MessagesProvider): Fox[List[TaskParametersWithDatasetId]] =
-    Fox.serialCombined(taskParametersList)(
-      params =>
-        for {
-          dataset <- datasetDAO.findOneByIdOrNameAndOrganization(params.datasetId, params.dataSet, organizationId)
-        } yield TaskParametersWithDatasetId.fromTaskParameters(params, dataset._id)
-    )
-
   // Used in create (without files) in case of base annotation
   // Note that the requested task’s tracingType is always fulfilled here,
   // either by duplicating the base annotation’s tracings or creating new tracings

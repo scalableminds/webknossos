@@ -76,6 +76,9 @@ export default function DatasetSettingsDataTab({
   // Then, the newest value can be retrieved with getFieldValue
   const dataSource = form.getFieldValue("dataSource");
   const dataSourceJson = Form.useWatch("dataSourceJson", form);
+  const datasetStoredLocationInfo = dataset
+    ? ` (as stored on datastore ${dataset?.dataStore.name} at ${dataset?.owningOrganization}/${dataset?.directoryName})`
+    : "";
 
   const isJSONValid = isValidJSON(dataSourceJson);
 
@@ -118,7 +121,7 @@ export default function DatasetSettingsDataTab({
       <Hideable hidden={activeDataSourceEditMode !== "advanced"}>
         <FormItem
           name="dataSourceJson"
-          label="Dataset Configuration"
+          label={"Dataset Configuration" + datasetStoredLocationInfo}
           hasFeedback
           rules={[
             {

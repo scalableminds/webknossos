@@ -5,21 +5,6 @@ import com.scalableminds.util.objectid.ObjectId
 import models.user.Experience
 import play.api.libs.json.{Format, Json}
 
-trait TaskParametersTrait[T] {
-  val taskTypeId: String
-  val neededExperience: Experience
-  val pendingInstances: Int
-  val projectName: String
-  val scriptId: Option[String]
-  val boundingBox: Option[BoundingBox]
-  val datasetId: T
-  val editPosition: Vec3Int
-  val editRotation: Vec3Double
-  val creationInfo: Option[String]
-  val description: Option[String]
-  val baseAnnotation: Option[BaseAnnotation]
-}
-
 case class TaskParameters(taskTypeId: String,
                           neededExperience: Experience,
                           pendingInstances: Int,
@@ -33,7 +18,6 @@ case class TaskParameters(taskTypeId: String,
                           creationInfo: Option[String],
                           description: Option[String],
                           baseAnnotation: Option[BaseAnnotation])
-    extends TaskParametersTrait[Option[ObjectId]]
 
 object TaskParameters {
   implicit val taskParametersFormat: Format[TaskParameters] = Json.format[TaskParameters]
@@ -51,9 +35,11 @@ case class TaskParametersWithDatasetId(taskTypeId: String,
                                        creationInfo: Option[String],
                                        description: Option[String],
                                        baseAnnotation: Option[BaseAnnotation])
-    extends TaskParametersTrait[ObjectId]
 
 object TaskParametersWithDatasetId {
+  implicit val taskParametersWithDatasetIdFormat: Format[TaskParametersWithDatasetId] =
+    Json.format[TaskParametersWithDatasetId]
+
   def fromTaskParameters(t: TaskParameters, datasetId: ObjectId) = new TaskParametersWithDatasetId(
     t.taskTypeId,
     t.neededExperience,

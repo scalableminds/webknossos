@@ -1,4 +1,3 @@
-import _ from "lodash";
 import type {
   APIActiveUser,
   APIAnnotation,
@@ -6,22 +5,17 @@ import type {
   APITask,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
-import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
+import type {
+  NewTask,
+  NmlNewTask,
+  TaskCreationResponseContainer,
+} from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
 import type { RequestOptions } from "libs/request";
 import Request from "libs/request";
 import * as Utils from "libs/utils";
 import { assertResponseLimit } from "./api_utils";
-import type { ArbitraryObject } from "types/globals";
 import { finishAnnotation } from "admin/admin_rest_api";
-
-function adaptNewTaskToAPITask(task: NewTask): ArbitraryObject {
-  const { datasetName } = task;
-  return {
-    ..._.omit(task, ["datasetName"]),
-    dataSet: datasetName,
-  };
-}
 
 export function peekNextTasks(): Promise<APITask | null | undefined> {
   return Request.receiveJSON("/api/user/tasks/peek");
@@ -67,17 +61,16 @@ export async function getTasks(queryObject: QueryObject): Promise<APITask[]> {
 }
 
 export function createTasks(tasks: NewTask[]): Promise<TaskCreationResponseContainer> {
-  const adaptedTasks = tasks.map(adaptNewTaskToAPITask);
   return Request.sendJSONReceiveJSON("/api/tasks", {
-    data: adaptedTasks,
+    data: tasks,
   });
 }
 
-export function createTaskFromNML(task: NewTask): Promise<TaskCreationResponseContainer> {
+export function createTaskFromNML(task: NmlNewTask): Promise<TaskCreationResponseContainer> {
   return Request.sendMultipartFormReceiveJSON("/api/tasks/createFromFiles", {
     data: {
       nmlFiles: task.nmlFiles,
-      formJSON: JSON.stringify(adaptNewTaskToAPITask(task)),
+      formJSON: JSON.stringify(task),
     },
   });
 }
@@ -90,7 +83,7 @@ export async function getTask(taskId: string, options: RequestOptions = {}): Pro
 export async function updateTask(taskId: string, task: NewTask): Promise<APITask> {
   const updatedTask = await Request.sendJSONReceiveJSON(`/api/tasks/${taskId}`, {
     method: "PUT",
-    data: adaptNewTaskToAPITask(task),
+    data: task,
   });
   return transformTask(updatedTask);
 }

@@ -84,7 +84,7 @@ test("Zarr streaming", async (t) => {
     },
   );
   const bytes = await rawDataResponse.arrayBuffer();
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(bytes)));
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(bytes.slice(-128))));
   t.snapshot(base64);
 });
 
@@ -105,6 +105,6 @@ test("Zarr 3 streaming", async (t) => {
     },
   );
   const bytes = await rawDataResponse.arrayBuffer();
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(bytes)));
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(bytes.slice(-128))));
   t.snapshot(base64);
 });

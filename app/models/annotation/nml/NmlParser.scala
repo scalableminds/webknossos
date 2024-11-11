@@ -5,6 +5,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.util.tools.JsonHelper.bool2Box
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
@@ -51,127 +52,79 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
             isTaskUpload: Boolean,
             basePath: Option[String] = None)(implicit m: MessagesProvider,
                                              ec: ExecutionContext,
-                                             ctx: DBAccessContext): Fox[NmlParseSuccessWithoutFile] = {
-    val foxInABox = try {
-      val data = XML.load(nmlInputStream)
-      for {
-        parameters <- (data \ "parameters").headOption ?~ Messages("nml.parameters.notFound")
-        timestamp = parseTime(parameters \ "time")
-        comments <- parseComments(data \ "comments")
-        branchPoints <- parseBranchPoints(data \ "branchpoints", timestamp)
-        trees <- parseTrees(data \ "thing", buildBranchPointMap(branchPoints), buildCommentMap(comments))
-        treeGroups <- extractTreeGroups(data \ "groups")
-        volumes = extractVolumes(data \ "volume")
-        _ <- bool2Box(volumes.length == volumes.map(_.name).distinct.length) ?~ Messages(
-          "nml.duplicateVolumeLayerNames")
-        treesAndGroupsAfterSplitting = MultiComponentTreeSplitter.splitMulticomponentTrees(trees, treeGroups)
-        treesSplit = treesAndGroupsAfterSplitting._1
-        treeGroupsAfterSplit = treesAndGroupsAfterSplitting._2
-        _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
-        additionalAxisProtos <- parseAdditionalAxes(parameters \ "additionalAxes")
-        datasetName = parseDatasetName(parameters \ "experiment")
-        datasetIdOpt = if (overwritingDatasetId.isDefined) overwritingDatasetId
-        else parseDatasetId(parameters \ "experiment")
-        organizationId = parseOrganizationId(parameters \ "experiment")
-      } yield {
-        val description = parseDescription(parameters \ "experiment")
-        val wkUrl = parseWkUrl(parameters \ "experiment")
-        val activeNodeId = parseActiveNode(parameters \ "activeNode")
-        val (editPosition, editPositionAdditionalCoordinates) =
-          parseEditPosition(parameters \ "editPosition").getOrElse((SkeletonTracingDefaults.editPosition, Seq()))
-        val editRotation =
-          parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracingDefaults.editRotation)
-        val zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracingDefaults.zoomLevel)
-        var userBoundingBoxes = parseBoundingBoxes(parameters \ "userBoundingBox")
-        var taskBoundingBox: Option[BoundingBox] = None
-        parseTaskBoundingBox(parameters \ "taskBoundingBox", isTaskUpload, userBoundingBoxes).foreach {
-          case Left(value)  => taskBoundingBox = Some(value)
-          case Right(value) => userBoundingBoxes = userBoundingBoxes :+ value
-        }
+                                             ctx: DBAccessContext): Fox[NmlParseSuccessWithoutFile] =
+    for {
+      nmlParsedParameters <- getParametersFromNML(nmlInputStream, name, overwritingDatasetId, isTaskUpload).toFox
+      parsedResult <- nmlParametersToResult(nmlParsedParameters, basePath)
+    } yield parsedResult
 
-        logger.debug(s"Parsed NML file. Trees: ${treesSplit.size}, Volumes: ${volumes.size}")
-
-        for {
-          datasetIdValidatedOpt <- Fox.runOptional(datasetIdOpt)(ObjectId.fromString)
-          dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetIdValidatedOpt, datasetName, organizationId)
-          volumeLayers: List[UploadedVolumeLayer] = volumes.toList.map { v =>
-            UploadedVolumeLayer(
-              VolumeTracing(
-                activeSegmentId = None,
-                boundingBox = boundingBoxToProto(taskBoundingBox.getOrElse(BoundingBox.empty)), // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
-                createdTimestamp = timestamp,
-                datasetName = dataset.name,
-                editPosition = editPosition,
-                editRotation = editRotation,
-                elementClass = ElementClass.uint32, // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
-                fallbackLayer = v.fallbackLayerName,
-                largestSegmentId = v.largestSegmentId,
-                version = 0,
-                zoomLevel = zoomLevel,
-                userBoundingBox = None,
-                userBoundingBoxes = userBoundingBoxes,
-                organizationId = Some(organizationId),
-                segments = v.segments,
-                mappingName = v.mappingName,
-                mappingIsLocked = v.mappingIsLocked,
-                segmentGroups = v.segmentGroups,
-                hasSegmentIndex = None, // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
-                editPositionAdditionalCoordinates = editPositionAdditionalCoordinates,
-                additionalAxes = additionalAxisProtos
-              ),
-              basePath.getOrElse("") + v.dataZipPath,
-              v.name,
-            )
-          }
-          skeletonTracingOpt: Option[SkeletonTracing] = if (treesSplit.isEmpty && userBoundingBoxes.isEmpty)
-            None
-          else
-            Some(
-              SkeletonTracing(
-                dataset.name,
-                treesSplit,
-                timestamp,
-                taskBoundingBox,
-                activeNodeId,
-                editPosition,
-                editRotation,
-                zoomLevel,
-                version = 0,
-                None,
-                treeGroupsAfterSplit,
-                userBoundingBoxes,
-                Some(organizationId),
-                editPositionAdditionalCoordinates,
-                additionalAxes = additionalAxisProtos
-              )
-            )
-        } yield NmlParseSuccessWithoutFile(skeletonTracingOpt, volumeLayers, dataset._id, description, wkUrl)
+  private def nmlParametersToResult(nmlParams: NmlParsedParameters, basePath: Option[String])(
+      implicit m: MessagesProvider,
+      ec: ExecutionContext,
+      ctx: DBAccessContext): Fox[NmlParseSuccessWithoutFile] =
+    for {
+      datasetIdValidatedOpt <- Fox.runOptional(nmlParams.datasetIdOpt)(ObjectId.fromString)
+      dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetIdValidatedOpt,
+                                                             nmlParams.datasetName,
+                                                             nmlParams.organizationId)
+      volumeLayers: List[UploadedVolumeLayer] = nmlParams.volumes.toList.map { v =>
+        UploadedVolumeLayer(
+          VolumeTracing(
+            activeSegmentId = None,
+            boundingBox = boundingBoxToProto(nmlParams.taskBoundingBox.getOrElse(BoundingBox.empty)), // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
+            createdTimestamp = nmlParams.timestamp,
+            datasetName = dataset.name,
+            editPosition = nmlParams.editPosition,
+            editRotation = nmlParams.editRotation,
+            elementClass = ElementClass.uint32, // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
+            fallbackLayer = v.fallbackLayerName,
+            largestSegmentId = v.largestSegmentId,
+            version = 0,
+            zoomLevel = nmlParams.zoomLevel,
+            userBoundingBox = None,
+            userBoundingBoxes = nmlParams.userBoundingBoxes,
+            organizationId = Some(nmlParams.organizationId),
+            segments = v.segments,
+            mappingName = v.mappingName,
+            mappingIsLocked = v.mappingIsLocked,
+            segmentGroups = v.segmentGroups,
+            hasSegmentIndex = None, // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
+            editPositionAdditionalCoordinates = nmlParams.editPositionAdditionalCoordinates,
+            additionalAxes = nmlParams.additionalAxisProtos
+          ),
+          basePath.getOrElse("") + v.dataZipPath,
+          v.name,
+        )
       }
-    } catch {
-      case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>
-        logger.debug(s"Tried  to parse empty NML file $name.")
-        Empty
-      case e: org.xml.sax.SAXParseException =>
-        logger.debug(s"Failed to parse NML $name due to " + e)
-        Failure(
-          s"Failed to parse NML '$name'. Error in Line ${e.getLineNumber} " +
-            s"(column ${e.getColumnNumber}): ${e.getMessage}")
-      case e: Exception =>
-        logger.error(s"Failed to parse NML $name due to " + e)
-        Failure(s"Failed to parse NML '$name': " + e.toString)
-    }
-    foxInABox match {
-      case Full(value) => value
-      case Failure(message, cause, _chain) =>
-        logger.error(s"Failed to parse NML $name due to " + cause)
-        Failure(s"Failed to parse NML '$name': " + message)
-      case Empty =>
-        logger.error(s"Failed to parse NML $name. Parser returned empty")
-        Failure(s"Failed to parse NML '$name': Parser returned empty")
-    }
-  }
+      skeletonTracingOpt: Option[SkeletonTracing] = if (nmlParams.treesSplit.isEmpty && nmlParams.userBoundingBoxes.isEmpty)
+        None
+      else
+        Some(
+          SkeletonTracing(
+            dataset.name,
+            nmlParams.treesSplit,
+            nmlParams.timestamp,
+            nmlParams.taskBoundingBox,
+            nmlParams.activeNodeId,
+            nmlParams.editPosition,
+            nmlParams.editRotation,
+            nmlParams.zoomLevel,
+            version = 0,
+            None,
+            nmlParams.treeGroupsAfterSplit,
+            nmlParams.userBoundingBoxes,
+            Some(nmlParams.organizationId),
+            nmlParams.editPositionAdditionalCoordinates,
+            additionalAxes = nmlParams.additionalAxisProtos
+          )
+        )
+    } yield
+      NmlParseSuccessWithoutFile(skeletonTracingOpt, volumeLayers, dataset._id, nmlParams.description, nmlParams.wkUrl)
 
-  private def getParametersFromNML(nmlInputStream: InputStream, name: String, overwritingDatasetId: Option[String], isTaskUpload: Boolean)(implicit m: MessagesProvider): Box[TaskParameters] = {
+  private def getParametersFromNML(nmlInputStream: InputStream,
+                                   name: String,
+                                   overwritingDatasetId: Option[String],
+                                   isTaskUpload: Boolean)(implicit m: MessagesProvider): Box[NmlParsedParameters] =
     try {
       val nmlData = XML.load(nmlInputStream)
       for {
@@ -196,20 +149,39 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
         description = parseDescription(parameters \ "experiment")
         wkUrl = parseWkUrl(parameters \ "experiment")
         activeNodeId = parseActiveNode(parameters \ "activeNode")
-        (editPosition, editPositionAdditionalCoordinates) =
-          parseEditPosition(parameters \ "editPosition").getOrElse((SkeletonTracingDefaults.editPosition, Seq()))
-        editRotation =
-          parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracingDefaults.editRotation)
+        (editPosition, editPositionAdditionalCoordinates) = parseEditPosition(parameters \ "editPosition")
+          .getOrElse((SkeletonTracingDefaults.editPosition, Seq()))
+        editRotation = parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracingDefaults.editRotation)
         zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracingDefaults.zoomLevel)
-        taskBoundingBox: Option[BoundingBox] = if(isTaskUpload) parseTaskBoundingBox(parameters \ "taskBoundingBox") else None
+        taskBoundingBox: Option[BoundingBox] = if (isTaskUpload) parseTaskBoundingBox(parameters \ "taskBoundingBox")
+        else None
         userBoundingBoxes = parseBoundingBoxes(parameters \ "userBoundingBox")
       } yield {
-        if(!isTaskUpload){
-          parseTaskBoundingBoxAsUserBoundingBox(parameters \ "taskBoundingBox", userBoundingBoxes).map(asUserBoundingBox => userBoundingBoxes :+ asUserBoundingBox)
+        if (!isTaskUpload) {
+          parseTaskBoundingBoxAsUserBoundingBox(parameters \ "taskBoundingBox", userBoundingBoxes)
+            .map(asUserBoundingBox => userBoundingBoxes :+ asUserBoundingBox)
         }
-        // TODOM: Yield all the values
-    }
-  } catch {
+        NmlParsedParameters(
+          datasetIdOpt,
+          datasetName,
+          organizationId,
+          description,
+          wkUrl,
+          volumes,
+          editPosition,
+          editPositionAdditionalCoordinates,
+          editRotation,
+          additionalAxisProtos,
+          taskBoundingBox,
+          timestamp,
+          zoomLevel,
+          userBoundingBoxes,
+          treesSplit,
+          activeNodeId,
+          treeGroupsAfterSplit
+        )
+      }
+    } catch {
       case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>
         logger.debug(s"Tried  to parse empty NML file $name.")
         Empty
@@ -222,7 +194,6 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
         logger.error(s"Failed to parse NML $name due to " + e)
         Failure(s"Failed to parse NML '$name': " + e.toString)
     }
-  }
 
   private def extractTreeGroups(treeGroupContainerNodes: NodeSeq)(
       implicit m: MessagesProvider): Box[List[TreeGroup]] = {
@@ -347,17 +318,17 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
       })
     }
 
-  private def parseTaskBoundingBox(
-      nodes: NodeSeq): Option[BoundingBox] =
+  private def parseTaskBoundingBox(nodes: NodeSeq): Option[BoundingBox] =
     nodes.headOption.flatMap(node => parseBoundingBox(node))
 
-private def parseTaskBoundingBoxAsUserBoundingBox(nodes: NodeSeq,
-                                  userBoundingBoxes: Seq[NamedBoundingBoxProto]): Option[NamedBoundingBoxProto] =
-  nodes.headOption.flatMap(node => parseBoundingBox(node)).map { bb =>
+  private def parseTaskBoundingBoxAsUserBoundingBox(
+      nodes: NodeSeq,
+      userBoundingBoxes: Seq[NamedBoundingBoxProto]): Option[NamedBoundingBoxProto] =
+    nodes.headOption.flatMap(node => parseBoundingBox(node)).map { bb =>
       val newId = if (userBoundingBoxes.isEmpty) 0 else userBoundingBoxes.map(_.id).max + 1
-      NamedBoundingBoxProto(newId, Some("task bounding box"), None, Some(getRandomColor), bb))
+      NamedBoundingBoxProto(newId, Some("task bounding box"), None, Some(getRandomColor), bb)
 
-  }
+    }
 
   private def parseBoundingBox(node: XMLNode) =
     for {

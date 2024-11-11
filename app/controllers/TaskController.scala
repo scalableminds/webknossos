@@ -108,21 +108,20 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     } yield Ok(Json.toJson(result))
   }
 
-  def update(taskId: String): Action[TaskParametersWithDatasetId] = sil.SecuredAction.async(validateJson[TaskParametersWithDatasetId]) {
-    implicit request =>
+  def update(taskId: String): Action[TaskParametersWithDatasetId] =
+    sil.SecuredAction.async(validateJson[TaskParametersWithDatasetId]) { implicit request =>
       val params = request.body
       for {
         taskIdValidated <- ObjectId.fromString(taskId) ?~> "task.id.invalid"
         task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
         project <- projectDAO.findOne(task._project)
-        _ <- Fox
-          .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed" ~> FORBIDDEN
         _ <- taskDAO.updateTotalInstances(task._id,
                                           task.totalInstances + params.pendingInstances - task.pendingInstances)
         updatedTask <- taskDAO.findOne(taskIdValidated)
         json <- taskService.publicWrites(updatedTask)
       } yield JsonOk(json, Messages("task.editSuccess"))
-  }
+    }
 
   def delete(taskId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {

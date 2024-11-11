@@ -1,12 +1,38 @@
 package models.annotation.nml
 
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
-
-import java.io.File
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, Tree, TreeGroup}
+import com.scalableminds.webknossos.datastore.geometry.{
+  AdditionalAxisProto,
+  AdditionalCoordinateProto,
+  NamedBoundingBoxProto
+}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.UploadedVolumeLayer
 import net.liftweb.common.{Box, Empty, Failure, Full}
+
+import java.io.File
+
+case class NmlParsedParameters(
+    datasetIdOpt: Option[String],
+    datasetName: String,
+    organizationId: String,
+    description: String,
+    wkUrl: Option[String],
+    volumes: Seq[NmlVolumeTag],
+    editPosition: Vec3Int,
+    editPositionAdditionalCoordinates: Seq[AdditionalCoordinateProto],
+    editRotation: Vec3Double,
+    additionalAxisProtos: Seq[AdditionalAxisProto],
+    taskBoundingBox: Option[BoundingBox],
+    timestamp: Long,
+    zoomLevel: Double,
+    userBoundingBoxes: Seq[NamedBoundingBoxProto],
+    treesSplit: Seq[Tree],
+    activeNodeId: Option[Int],
+    treeGroupsAfterSplit: Seq[TreeGroup],
+)
 
 case class NmlParseSuccessWithoutFile(skeletonTracing: Option[SkeletonTracing],
                                       volumeLayers: List[UploadedVolumeLayer],

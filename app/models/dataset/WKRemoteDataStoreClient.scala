@@ -34,7 +34,8 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
                             intensityRangeOpt: Option[(Double, Double)],
                             colorSettingsOpt: Option[ThumbnailColorSettings]): Fox[Array[Byte]] = {
     val targetMagBoundingBox = mag1BoundingBox / mag
-    logger.debug(s"Thumbnail called for: ${dataset._id}, organization: ${dataset._organization}, directoryName: ${dataset.directoryName}, Layer: $dataLayerName")
+    logger.debug(
+      s"Thumbnail called for: ${dataset._id}, organization: ${dataset._organization}, directoryName: ${dataset.directoryName}, Layer: $dataLayerName")
     rpc(
       s"${dataStore.url}/data/datasets/${urlEncode(dataset._organization)}/${urlEncode(dataset.directoryName)}/layers/$dataLayerName/thumbnail.jpg")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
+import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
@@ -122,17 +123,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         fromProtoBytes[AnnotationProto]) ?~> "getAnnotation.failed"
     } yield keyValuePair.value
 
-  private def findPendingUpdates(annotationId: String, existingVersion: Long, desiredVersion: Long)(
-      implicit ec: ExecutionContext): Fox[List[(Long, List[UpdateAction])]] =
-    if (desiredVersion == existingVersion) Fox.successful(List())
-    else {
-      tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
-        annotationId,
-        Some(desiredVersion),
-        Some(existingVersion + 1))(fromJsonBytes[List[UpdateAction]])
-    }
-
-  // TODO option to dry apply?
   private def applyUpdate(
       annotationId: String,
       annotationWithTracings: AnnotationWithTracings,
@@ -222,7 +212,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         "value" -> Json.toJson(tuple._2)
       )
 
-    val batchRanges = batchRangeInclusive(oldestVersion, newestVersion, batchSize = 100)
+    val batchRanges = SequenceUtils.batchRangeInclusive(oldestVersion, newestVersion, batchSize = 100)
     for {
       updateActionBatches <- Fox.serialCombined(batchRanges.toList) { batchRange =>
         val batchFrom = batchRange._1
@@ -243,7 +233,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       tracing <- annotation.getEditableMappingInfo(tracingId) ?~> "getEditableMapping.failed"
     } yield tracing
 
-  // TODO move the functions that construct the AnnotationWithTracigns elsewhere to keep this file smaller?
   private def addEditableMapping(
       annotationId: String,
       annotationWithTracings: AnnotationWithTracings,
@@ -285,6 +274,41 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                      updatesGroupsRegrouped,
                                      reportChangesToWk) ?~> "applyUpdates.inner.failed"
     } yield updated
+
+  private def findPendingUpdates(annotationId: String, existingVersion: Long, desiredVersion: Long)(
+      implicit ec: ExecutionContext): Fox[List[(Long, List[UpdateAction])]] =
+    if (desiredVersion == existingVersion) Fox.successful(List())
+    else {
+      tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
+        annotationId,
+        Some(desiredVersion),
+        Some(existingVersion + 1))(fromJsonBytes[List[UpdateAction]])
+    }
+
+  private def findTracingsForAnnotation(annotation: AnnotationProto)(
+      implicit ec: ExecutionContext): Fox[AnnotationWithTracings] = {
+    val skeletonTracingIds =
+      annotation.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Skeleton).map(_.tracingId)
+    val volumeTracingIds =
+      annotation.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Volume).map(_.tracingId)
+    for {
+      skeletonTracings <- Fox.serialCombined(skeletonTracingIds.toList)(
+        id =>
+          tracingDataStore.skeletons.get[SkeletonTracing](id, Some(annotation.version), mayBeEmpty = Some(true))(
+            fromProtoBytes[SkeletonTracing]))
+      volumeTracings <- Fox.serialCombined(volumeTracingIds.toList)(
+        id =>
+          tracingDataStore.volumes
+            .get[VolumeTracing](id, Some(annotation.version), mayBeEmpty = Some(true))(fromProtoBytes[VolumeTracing]))
+      _ = logger.info(s"fetched ${skeletonTracings.length} skeletons and ${volumeTracings.length} volumes")
+      skeletonTracingsMap: Map[String, Either[SkeletonTracing, VolumeTracing]] = skeletonTracingIds
+        .zip(skeletonTracings.map(versioned => Left[SkeletonTracing, VolumeTracing](versioned.value)))
+        .toMap
+      volumeTracingsMap: Map[String, Either[SkeletonTracing, VolumeTracing]] = volumeTracingIds
+        .zip(volumeTracings.map(versioned => Right[SkeletonTracing, VolumeTracing](versioned.value)))
+        .toMap
+    } yield AnnotationWithTracings(annotation, skeletonTracingsMap ++ volumeTracingsMap, Map.empty)
+  }
 
   private def findEditableMappingsForAnnotation(
       annotationId: String,
@@ -338,34 +362,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         tracingDataStore,
         relyOnAgglomerateIds = false // TODO should we?
       )
-
-  private def findTracingsForAnnotation(annotation: AnnotationProto)(
-      implicit ec: ExecutionContext): Fox[AnnotationWithTracings] = {
-    val skeletonTracingIds =
-      annotation.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Skeleton).map(_.tracingId)
-
-    val volumeTracingIds =
-      annotation.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Volume).map(_.tracingId)
-
-    logger.info(s"fetching volumes $volumeTracingIds and skeletons $skeletonTracingIds")
-    for {
-      skeletonTracings <- Fox.serialCombined(skeletonTracingIds.toList)(
-        id =>
-          tracingDataStore.skeletons.get[SkeletonTracing](id, Some(annotation.version), mayBeEmpty = Some(true))(
-            fromProtoBytes[SkeletonTracing]))
-      volumeTracings <- Fox.serialCombined(volumeTracingIds.toList)(
-        id =>
-          tracingDataStore.volumes
-            .get[VolumeTracing](id, Some(annotation.version), mayBeEmpty = Some(true))(fromProtoBytes[VolumeTracing]))
-      _ = logger.info(s"fetched ${skeletonTracings.length} skeletons and ${volumeTracings.length} volumes")
-      skeletonTracingsMap: Map[String, Either[SkeletonTracing, VolumeTracing]] = skeletonTracingIds
-        .zip(skeletonTracings.map(versioned => Left[SkeletonTracing, VolumeTracing](versioned.value)))
-        .toMap
-      volumeTracingsMap: Map[String, Either[SkeletonTracing, VolumeTracing]] = volumeTracingIds
-        .zip(volumeTracings.map(versioned => Right[SkeletonTracing, VolumeTracing](versioned.value)))
-        .toMap
-    } yield AnnotationWithTracings(annotation, skeletonTracingsMap ++ volumeTracingsMap, Map.empty)
-  }
 
   private def applyUpdatesGrouped(
       annotation: AnnotationWithTracings,
@@ -540,13 +536,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       } yield Some(editableMappingInfo.baseMappingName)
     else Fox.successful(tracing.mappingName)
 
-  private def batchRangeInclusive(from: Long, to: Long, batchSize: Long): Seq[(Long, Long)] =
-    (0L to ((to - from) / batchSize)).map { batchIndex =>
-      val batchFrom = batchIndex * batchSize + from
-      val batchTo = Math.min(to, (batchIndex + 1) * batchSize + from - 1)
-      (batchFrom, batchTo)
-    }
-
   def findVolume(annotationId: String,
                  tracingId: String,
                  version: Option[Long] = None,
@@ -615,9 +604,13 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       datasetBoundingBox: Option[BoundingBox])(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationProto] =
     for {
       v0Annotation <- get(annotationId, Some(0L))
+      currentAnnotation <- get(annotationId, version)
 
       // Duplicate updates
-      tracingIdMap <- duplicateUpdates(annotationId, newAnnotationId, v0Annotation.annotationLayers.map(_.tracingId))
+      tracingIdMap <- duplicateUpdates(annotationId,
+                                       newAnnotationId,
+                                       v0Annotation.annotationLayers.map(_.tracingId),
+                                       currentAnnotation.version)
 
       // Duplicate v0
       v0NewLayers <- Fox.serialCombined(v0Annotation.annotationLayers)(layer =>
@@ -628,7 +621,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       _ <- tracingDataStore.annotations.put(newAnnotationId, v0Annotation.version, v0DuplicatedAnnotation)
 
       // Duplicate current
-      currentAnnotation <- get(annotationId, version)
       newLayers <- Fox.serialCombined(currentAnnotation.annotationLayers)(layer =>
         duplicateLayer(annotationId, layer, tracingIdMap, currentAnnotation.version, isFromTask, datasetBoundingBox))
       duplicatedAnnotation = currentAnnotation.copy(annotationLayers = newLayers,
@@ -637,38 +629,47 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
 
     } yield duplicatedAnnotation
 
-  private def duplicateUpdates(annotationId: String, newAnnotationId: String, v0TracingIds: Seq[String])(
-      implicit ec: ExecutionContext): Fox[Map[String, String]] = {
+  private def duplicateUpdates(annotationId: String,
+                               newAnnotationId: String,
+                               v0TracingIds: Seq[String],
+                               newestVersion: Long)(implicit ec: ExecutionContext): Fox[Map[String, String]] = {
     val tracingIdMapMutable = scala.collection.mutable.Map[String, String]()
     v0TracingIds.foreach { v0TracingId =>
       tracingIdMapMutable.put(v0TracingId, TracingId.generate)
     }
-    // TODO memory: batch
-
-    for {
-      updateLists: Seq[(Long, List[UpdateAction])] <- tracingDataStore.annotationUpdates
-        .getMultipleVersionsAsVersionValueTuple(annotationId)(fromJsonBytes[List[UpdateAction]])
-      _ <- Fox.serialCombined(updateLists) {
-        case (version, updateList) =>
-          for {
-            updateListAdapted <- Fox.serialCombined(updateList) {
-              case a: AddLayerAnnotationAction =>
-                for {
-                  actionTracingId <- a.tracingId ?~> "duplicating addLayer without tracingId"
-                  _ = if (!tracingIdMapMutable.contains(actionTracingId)) {
-                    a.tracingId.foreach(actionTracingId => tracingIdMapMutable.put(actionTracingId, TracingId.generate))
-                  }
-                  mappedTracingId <- tracingIdMapMutable.get(actionTracingId) ?~> "duplicating action for unknown layer"
-                } yield a.copy(tracingId = Some(mappedTracingId))
-              case a: LayerUpdateAction =>
-                for {
-                  mappedTracingId <- tracingIdMapMutable.get(a.actionTracingId) ?~> "duplicating action for unknown layer"
-                } yield a.withActionTracingId(mappedTracingId)
-            }
-            _ <- tracingDataStore.annotationUpdates.put(newAnnotationId, version, Json.toJson(updateListAdapted))
-          } yield ()
+    val updateBatchRanges = SequenceUtils.batchRangeInclusive(0L, newestVersion, batchSize = 100)
+    Fox
+      .serialCombined(updateBatchRanges.toList) { batchRange =>
+        for {
+          updateLists: Seq[(Long, List[UpdateAction])] <- tracingDataStore.annotationUpdates
+            .getMultipleVersionsAsVersionValueTuple(
+              annotationId,
+              oldestVersion = Some(batchRange._1),
+              newestVersion = Some(batchRange._2))(fromJsonBytes[List[UpdateAction]])
+          _ <- Fox.serialCombined(updateLists) {
+            case (version, updateList) =>
+              for {
+                updateListAdapted <- Fox.serialCombined(updateList) {
+                  case a: AddLayerAnnotationAction =>
+                    for {
+                      actionTracingId <- a.tracingId ?~> "duplicating addLayer without tracingId"
+                      _ = if (!tracingIdMapMutable.contains(actionTracingId)) {
+                        a.tracingId.foreach(actionTracingId =>
+                          tracingIdMapMutable.put(actionTracingId, TracingId.generate))
+                      }
+                      mappedTracingId <- tracingIdMapMutable.get(actionTracingId) ?~> "duplicating action for unknown layer"
+                    } yield a.copy(tracingId = Some(mappedTracingId))
+                  case a: LayerUpdateAction =>
+                    for {
+                      mappedTracingId <- tracingIdMapMutable.get(a.actionTracingId) ?~> "duplicating action for unknown layer"
+                    } yield a.withActionTracingId(mappedTracingId)
+                }
+                _ <- tracingDataStore.annotationUpdates.put(newAnnotationId, version, Json.toJson(updateListAdapted))
+              } yield ()
+          }
+        } yield ()
       }
-    } yield tracingIdMapMutable.toMap
+      .map(_ => tracingIdMapMutable.toMap)
   }
 
   private def duplicateLayer(annotationId: String,

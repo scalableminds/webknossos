@@ -35,4 +35,13 @@ object SequenceUtils {
       .reverse // we prepended on the outer list (for perf reasons)
       .map(_.reverse) // we prepended on the inner lists (for perf reasons)
 
+  /*
+   // TODO: Comment
+   */
+  def batchRangeInclusive(from: Long, to: Long, batchSize: Long): Seq[(Long, Long)] =
+    (0L to ((to - from) / batchSize)).map { batchIndex =>
+      val batchFrom = batchIndex * batchSize + from
+      val batchTo = Math.min(to, (batchIndex + 1) * batchSize + from - 1)
+      (batchFrom, batchTo)
+    }
 }

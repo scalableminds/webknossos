@@ -601,6 +601,7 @@ export type APITimeTrackingSpan = {
   datasetOrganization: string;
   datasetName: string;
   annotationId: string;
+  annotationState: string;
   taskId: string | undefined;
   projectName: string | undefined;
   taskTypeId: string | undefined;

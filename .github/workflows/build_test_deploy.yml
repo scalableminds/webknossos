@@ -71,7 +71,6 @@ jobs:
           ports:
             - 5432:5432
     steps:
-      # Enable tmate debugging of manually-triggered workflows if the input option was provided
       
       - name: Checkout code
         uses: actions/checkout@v3
@@ -125,10 +124,8 @@ jobs:
       #     docker compose up -d postgres
       #     sleep 3
       #     docker compose run compile tools/postgres/dbtool.js check-evolutions-schema
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-
+      
+      
       - name: Build webknossos (sbt)
         run: |
           if [ "${{ github.ref }}" == "refs/heads/master" ]; then
@@ -158,17 +155,20 @@ jobs:
           docker pull scalableminds/webknossos:$NORMALIZED_BRANCH || true
           DEV_CACHE=$NORMALIZED_BRANCH docker compose build --pull webknossos
         env:
-          POSTGRES_URL: jdbc:postgresql://webknossos_user@localhost:5432/webknossos
+          POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
           POSTGRES_USER: webknossos_user
-          PGUSER: webknossos_user
           POSTGRES_PASSWORD: secret_password
-          PGPASSWORD: secret_password
 
       - name: Build webknossos-datastore docker image
         run: docker compose build --pull webknossos-datastore
 
       - name: Build webknossos-tracingstore docker image
         run: docker compose build --pull webknossos-tracingstore
+
+        # Enable tmate debugging of manually-triggered workflows if the input option was provided
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
       - name: Lint backend code and check formatting
         run: .github/not-on-master.sh docker compose run backend-lint-format

@@ -25,6 +25,7 @@ import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "ty
 import type { BoundingBoxObject } from "oxalis/store";
 import type {
   NewTask,
+  NmlNewTask,
   TaskCreationResponse,
   TaskCreationResponseContainer,
 } from "admin/task/task_create_bulk_view";
@@ -399,12 +400,11 @@ function TaskCreateFormView({ taskId, history }: Props) {
           for (let i = 0; i < nmlFiles.length; i += NUM_TASKS_PER_BATCH) {
             const batchOfNmls = nmlFiles.slice(i, i + NUM_TASKS_PER_BATCH);
 
-            const newTask = {
+            const newTask: NmlNewTask = {
               ..._.omit(formValues, "baseAnnotation"),
-              nmlFiles: batchOfNmls,
               boundingBox,
             };
-            const response = await createTaskFromNML(newTask);
+            const response = await createTaskFromNML(newTask, batchOfNmls);
 
             taskResponses = taskResponses.concat(response.tasks);
             warnings = warnings.concat(response.warnings);
@@ -417,7 +417,11 @@ function TaskCreateFormView({ taskId, history }: Props) {
               ? null
               : formValues.baseAnnotation;
 
-          const newTask = { ..._.omit(formValues, "nmlFiles"), boundingBox, baseAnnotation };
+          const newTask = {
+            ..._.omit(formValues, "nmlFiles", "baseAnnotation"),
+            boundingBox,
+            baseAnnotation,
+          };
           const response = await createTasks([newTask]);
 
           taskResponses = taskResponses.concat(response.tasks);

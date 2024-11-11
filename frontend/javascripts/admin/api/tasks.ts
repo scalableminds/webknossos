@@ -66,10 +66,13 @@ export function createTasks(tasks: NewTask[]): Promise<TaskCreationResponseConta
   });
 }
 
-export function createTaskFromNML(task: NmlNewTask): Promise<TaskCreationResponseContainer> {
+export function createTaskFromNML(
+  task: NmlNewTask,
+  nmlFiles: File[],
+): Promise<TaskCreationResponseContainer> {
   return Request.sendMultipartFormReceiveJSON("/api/tasks/createFromFiles", {
     data: {
-      nmlFiles: task.nmlFiles,
+      nmlFiles: nmlFiles,
       formJSON: JSON.stringify(task),
     },
   });

@@ -10,6 +10,7 @@ import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -148,6 +149,15 @@ class AnnotationIOController @Inject()(
                                                        name,
                                                        description,
                                                        ObjectId.generate)
+            annotationProto = AnnotationProto(
+              name = Some(annotation.name),
+              description = Some(annotation.description),
+              version = 0L,
+              annotationLayers = annotation.annotationLayers.map(_.toProto),
+              earliestAccessibleVersion = 0L
+            )
+            _ <- tracingStoreClient.saveAnnotationProto(annotation._id, annotationProto)
+            _ <- annotationDAO.insertOne(annotation)
             _ = analyticsService.track(UploadAnnotationEvent(request.identity, annotation))
           } yield
             JsonOk(

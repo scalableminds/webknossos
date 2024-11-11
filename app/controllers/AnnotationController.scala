@@ -448,6 +448,7 @@ class AnnotationController @Inject()(
                                                        None,
                                                        annotation.description,
                                                        newAnnotationId) ?~> Messages("annotation.create.failed")
+      _ <- annotationDAO.insertOne(annotation)
     } yield clonedAnnotation
 
   def tryAcquiringAnnotationMutex(id: String): Action[AnyContent] =

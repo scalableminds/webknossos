@@ -504,7 +504,6 @@ class AnnotationService @Inject()(
                               description,
                               name = name.getOrElse(""),
                               typ = annotationType)
-      _ <- annotationDAO.insertOne(annotation)
     } yield annotation
 
   def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(

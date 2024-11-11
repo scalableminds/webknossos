@@ -137,6 +137,7 @@ class AnnotationIOController @Inject()(
             usableDataSource <- dataSource.toUsable.toFox ?~> Messages("dataset.notImported", dataset.name)
             volumeLayersGrouped <- adaptVolumeTracingsToFallbackLayer(volumeLayersGroupedRaw, dataset, usableDataSource)
             tracingStoreClient <- tracingStoreService.clientFor(dataset)
+            // TODO ordering. id is looked up in postgres to implement initialdata. cyclic!
             mergedVolumeLayers <- mergeAndSaveVolumeLayers(volumeLayersGrouped,
                                                            tracingStoreClient,
                                                            parsedFiles.otherFiles,

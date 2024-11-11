@@ -177,11 +177,13 @@ class WKRemoteTracingStoreClient(
   def saveVolumeTracing(tracing: VolumeTracing,
                         initialData: Option[File] = None,
                         magRestrictions: MagRestrictions = MagRestrictions.empty,
-                        dataSource: Option[DataSourceLike] = None): Fox[String] = {
+                        dataSource: Option[DataSourceLike] = None,
+                        newTracingId: Option[String] = None): Fox[String] = {
     logger.debug("Called to create VolumeTracing." + baseInfo)
     for {
       tracingId <- rpc(s"${tracingStore.url}/tracings/volume/save")
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .addQueryStringOptional("newTracingId", newTracingId)
         .postProtoWithJsonResponse[VolumeTracing, String](tracing)
       _ = dataSource.foreach(d => tracingDataSourceTemporaryStore.store(tracingId, d))
       _ <- initialData match {

@@ -16,7 +16,7 @@ POST        /annotation/:annotationId/resetToBase                               
 POST        /annotation/mergedFromIds                                               @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.mergedFromIds(persist: Boolean, newAnnotationId: String)
 
 # Volume tracings
-POST        /volume/save                                                            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.save()
+POST        /volume/save                                                            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.save(newTracingId: Option[String])
 POST        /volume/:tracingId/initialData                                          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialData(tracingId: String, minMag: Option[Int], maxMag: Option[Int])
 POST        /volume/:tracingId/initialDataMultiple                                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialDataMultiple(tracingId: String)
 GET         /volume/:tracingId                                                      @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.get(tracingId: String, version: Option[Long])

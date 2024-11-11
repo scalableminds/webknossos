@@ -250,15 +250,21 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       action: UpdateMappingNameVolumeAction,
       targetVersion: Long)(implicit tc: TokenContext, ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
-      editableMappingInfo <- getEditableMappingInfoFromStore(action.actionTracingId, annotationWithTracings.version)
       volumeTracing <- annotationWithTracings.getVolume(action.actionTracingId).toFox
+      _ <- assertMappingIsNotLocked(volumeTracing)
+      baseMappingName <- volumeTracing.mappingName.toFox ?~> "makeEditable.failed.noBaseMapping"
+      _ <- bool2Fox(volumeTracingService.volumeBucketsAreEmpty(action.actionTracingId)) ?~> "annotation.volumeBucketsNotEmpty"
+      editableMappingInfo = editableMappingService.create(baseMappingName)
       updater <- editableMappingUpdaterFor(annotationId,
                                            action.actionTracingId,
                                            volumeTracing,
-                                           editableMappingInfo.value,
+                                           editableMappingInfo,
                                            annotationWithTracings.version,
                                            targetVersion)
-    } yield annotationWithTracings.addEditableMapping(action.actionTracingId, editableMappingInfo.value, updater)
+    } yield annotationWithTracings.addEditableMapping(action.actionTracingId, editableMappingInfo, updater)
+
+  private def assertMappingIsNotLocked(volumeTracing: VolumeTracing)(implicit ec: ExecutionContext): Fox[Unit] =
+    bool2Fox(!volumeTracing.mappingIsLocked.getOrElse(false)) ?~> "annotation.mappingIsLocked"
 
   private def applyPendingUpdates(
       annotation: AnnotationProto,
@@ -771,7 +777,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   def mergeEditableMappings(newTracingId: String,
                             tracingsWithIds: List[(VolumeTracing, String)],
                             linearlizedUpdates: List[UpdateAction],
-                            persist: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+                            persist: Boolean)(implicit ec: ExecutionContext): Fox[Unit] =
     if (tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
       for {
         _ <- bool2Fox(persist) ?~> "Cannot merge editable mappings without “persist” (trying to merge compound annotations?)"

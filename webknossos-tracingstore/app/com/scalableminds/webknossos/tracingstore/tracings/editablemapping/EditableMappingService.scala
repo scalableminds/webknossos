@@ -124,16 +124,12 @@ class EditableMappingService @Inject()(
       "createdTimestamp" -> editableMappingInfo.createdTimestamp
     )
 
-  def create(tracingId: String, baseMappingName: String): Fox[EditableMappingInfo] = {
-    val newEditableMappingInfo = EditableMappingInfo(
+  def create(baseMappingName: String): EditableMappingInfo =
+    EditableMappingInfo(
       baseMappingName = baseMappingName,
       createdTimestamp = Instant.now.epochMillis,
       largestAgglomerateId = 0L
     )
-    for {
-      _ <- tracingDataStore.editableMappingsInfo.put(tracingId, 0L, toProtoBytes(newEditableMappingInfo))
-    } yield newEditableMappingInfo
-  }
 
   def duplicateSegmentToAgglomerate(sourceTracingId: String,
                                     newId: String,

@@ -486,3 +486,15 @@ export const LongUnitToShortUnitMap: Record<UnitLong, UnitShort> = {
 };
 
 export const AllUnits = Object.values(UnitLong);
+
+export enum AnnotationTypeFilterEnum {
+  ONLY_ANNOTATIONS_KEY = "Explorational",
+  ONLY_TASKS_KEY = "Task",
+  TASKS_AND_ANNOTATIONS_KEY = "Task,Explorational",
+}
+
+export enum AnnotationStateFilterEnum {
+  ALL = "All",
+  ACTIVE = "Active",
+  FINISHED_OR_ARCHIVED = "Finished",
+}

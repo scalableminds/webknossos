@@ -29,7 +29,6 @@ import {
   Modal,
   Popover,
   Select,
-  Tree,
   type MenuProps,
 } from "antd";
 import type { DataNode } from "antd/lib/tree";
@@ -136,6 +135,7 @@ import { MetadataEntryTableRows } from "../metadata_table";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
 import type { ItemType } from "antd/lib/menu/interface";
 import { InputWithUpdateOnBlur } from "oxalis/view/components/input_with_update_on_blur";
+import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
 
 const SCROLL_DELAY_MS = 50;
 
@@ -1900,7 +1900,7 @@ class SegmentsView extends React.Component<Props, State> {
                                 overflow: "hidden",
                               }}
                             >
-                              <Tree
+                              <ScrollableVirtualizedTree<SegmentHierarchyNode>
                                 allowDrop={this.allowDrop}
                                 onDrop={this.onDrop}
                                 onSelect={this.onSelectTreeItem}

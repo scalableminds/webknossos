@@ -33,15 +33,17 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   BucketMutatingVolumeUpdateAction,
   MagRestrictions,
   UpdateMappingNameVolumeAction,
-  VolumeTracingService,
+  VolumeTracingService
 }
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FallbackDataHelper,
   KeyValueStoreImplicits,
+  SkeletonTracingMigrationService,
   TracingDataStore,
   TracingId,
   TracingSelector,
-  VersionedKeyValuePair
+  VersionedKeyValuePair,
+  VolumeTracingMigrationService
 }
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
@@ -55,6 +57,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                     editableMappingService: EditableMappingService,
                                     val volumeTracingService: VolumeTracingService,
                                     skeletonTracingService: SkeletonTracingService,
+                                    skeletonTracingMigrationService: SkeletonTracingMigrationService,
+                                    volumeTracingMigrationService: VolumeTracingMigrationService,
                                     val remoteDatastoreClient: TSRemoteDatastoreClient,
                                     tracingDataStore: TracingDataStore)
     extends KeyValueStoreImplicits
@@ -544,8 +548,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                  applyUpdates: Boolean = false)(implicit tc: TokenContext, ec: ExecutionContext): Fox[VolumeTracing] =
     for {
       annotation <- getWithTracings(annotationId, version) // TODO is applyUpdates still needed?
-      tracing <- annotation.getVolume(tracingId)
-    } yield tracing
+      tracing <- annotation.getVolume(tracingId).toFox
+      migrated <- volumeTracingMigrationService.migrateTracing(tracing)
+    } yield migrated
 
   def findSkeleton(
       annotationId: String,
@@ -558,8 +563,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     else {
       for {
         annotation <- getWithTracings(annotationId, version) // TODO is applyUpdates still needed?
-        tracing <- annotation.getSkeleton(tracingId)
-      } yield tracing
+        tracing <- annotation.getSkeleton(tracingId).toFox
+        migrated <- skeletonTracingMigrationService.migrateTracing(tracing)
+      } yield migrated
     }
 
   def findMultipleVolumes(selectors: Seq[Option[TracingSelector]],

@@ -1,8 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreRedisStore}
-import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
+import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import com.typesafe.scalalogging.LazyLogging
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
@@ -18,17 +17,11 @@ trait TracingService[T <: GeneratedMessage]
 
   implicit val ec: ExecutionContext
 
-  def tracingType: TracingType
-
   def tracingStore: FossilDBClient
 
   def temporaryTracingStore: TemporaryTracingStore[T]
 
   def temporaryTracingIdStore: TracingStoreRedisStore
-
-  def remoteWebknossosClient: TSRemoteWebknossosClient
-
-  def tracingMigrationService: TracingMigrationService[T]
 
   implicit def tracingCompanion: GeneratedMessageCompanion[T]
 
@@ -42,17 +35,6 @@ trait TracingService[T <: GeneratedMessage]
 
   protected def temporaryIdKey(tracingId: String) =
     s"temporaryTracingId___$tracingId"
-
-  /* // TODO ? add this to migration?
-  private def migrateTracing(tracingFox: Fox[T], tracingId: String): Fox[T] =
-    tracingMigrationService.migrateTracing(tracingFox).flatMap {
-      case (tracing, hasChanged) =>
-        if (hasChanged)
-          save(tracing, Some(tracingId), currentVersion(tracing)).map(_ => tracing)
-        else
-          Fox.successful(tracing)
-    }
-   */
 
   def save(tracing: T, tracingId: Option[String], version: Long, toTemporaryStore: Boolean = false): Fox[String] = {
     val id = tracingId.getOrElse(TracingId.generate)

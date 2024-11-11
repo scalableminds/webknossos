@@ -23,6 +23,7 @@ import com.scalableminds.webknossos.tracingstore.annotation.{
   AnnotationTransactionService,
   ResetToBaseAnnotationAction,
   TSAnnotationService,
+  UpdateAction,
   UpdateActionGroup
 }
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
@@ -175,7 +176,8 @@ class TSAnnotationController @Inject()(
               .findUniqueElement(volumeLayers.map(_.name))
               .getOrElse(AnnotationLayer.defaultVolumeLayerName)
             // TODO Merge updates? if so, iron out reverts?
-            // TODO Merge editable mappings
+            linearlizedUpdates: List[UpdateAction] = ???
+            // TODO if persist, store the updates
             volumeTracings <- annotationService
               .findMultipleVolumes(volumeLayers.map { l =>
                 Some(TracingSelector(l.tracingId))
@@ -186,8 +188,11 @@ class TSAnnotationController @Inject()(
                                                                       newVolumeId,
                                                                       newVersion = 0L,
                                                                       persist = persist)
-            mergeEditableMappingsResultBox <- volumeTracingService
-              .mergeEditableMappings(newVolumeId, volumeTracings.zip(volumeLayers.map(_.tracingId)), persist)
+            mergeEditableMappingsResultBox <- annotationService
+              .mergeEditableMappings(newVolumeId,
+                                     volumeTracings.zip(volumeLayers.map(_.tracingId)),
+                                     linearlizedUpdates,
+                                     persist)
               .futureBox
             newEditableMappingIdOpt <- mergeEditableMappingsResultBox match {
               case Full(())   => Fox.successful(Some(newVolumeId))

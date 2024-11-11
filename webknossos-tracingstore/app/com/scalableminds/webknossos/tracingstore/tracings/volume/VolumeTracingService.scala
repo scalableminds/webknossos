@@ -25,6 +25,7 @@ import com.scalableminds.webknossos.datastore.models.{
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
@@ -36,6 +37,7 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files
 import play.api.libs.Files.TemporaryFileCreator
+
 import java.io._
 import java.nio.file.Paths
 import java.util.Base64
@@ -56,7 +58,7 @@ class VolumeTracingService @Inject()(
     val remoteDatastoreClient: TSRemoteDatastoreClient,
     val remoteWebknossosClient: TSRemoteWebknossosClient,
     val temporaryFileCreator: TemporaryFileCreator,
-    val tracingMigrationService: VolumeTracingMigrationService,
+    editableMappingService: EditableMappingService,
     volumeSegmentIndexService: VolumeSegmentIndexService
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
@@ -865,24 +867,6 @@ class VolumeTracingService @Inject()(
           _ <- segmentIndexBuffer.flush()
         } yield mergedVolume.largestSegmentId.toPositiveLong
       }
-    }
-
-  def mergeEditableMappings(newTracingId: String,
-                            tracingsWithIds: List[(VolumeTracing, String)],
-                            persist: Boolean): Fox[Unit] =
-    if (tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
-      for {
-        _ <- bool2Fox(persist) ?~> "Cannot merge editable mappings without “persist” (trying to merge compound annotations?)"
-        remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds)(tracingWithId =>
-          remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
-        remoteFallbackLayer <- remoteFallbackLayers.headOption.toFox
-        _ <- bool2Fox(remoteFallbackLayers.forall(_ == remoteFallbackLayer)) ?~> "Cannot merge editable mappings based on different dataset layers"
-        // TODO _ <- editableMappingService.merge(newTracingId, tracingsWithIds.map(_._2), remoteFallbackLayer)
-      } yield ()
-    } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.getHasEditableMapping)) {
-      Fox.empty
-    } else {
-      Fox.failure("Cannot merge tracings with and without editable mappings")
     }
 
   def getFallbackLayer(tracingId: String, tracing: VolumeTracing)(

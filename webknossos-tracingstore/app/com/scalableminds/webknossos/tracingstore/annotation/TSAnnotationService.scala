@@ -768,4 +768,22 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       _ <- tracingDataStore.skeletons.put(newTracingId, newVersion, adaptedSkeleton)
     } yield newTracingId
 
+  def mergeEditableMappings(newTracingId: String,
+                            tracingsWithIds: List[(VolumeTracing, String)],
+                            linearlizedUpdates: List[UpdateAction],
+                            persist: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+    if (tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
+      for {
+        _ <- bool2Fox(persist) ?~> "Cannot merge editable mappings without “persist” (trying to merge compound annotations?)"
+        remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds)(tracingWithId =>
+          remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
+        remoteFallbackLayer <- remoteFallbackLayers.headOption.toFox
+        _ <- bool2Fox(remoteFallbackLayers.forall(_ == remoteFallbackLayer)) ?~> "Cannot merge editable mappings based on different dataset layers"
+        // _ <- editableMappingService.merge(newTracingId, tracingsWithIds.map(_._2), remoteFallbackLayer)
+      } yield ()
+    } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.getHasEditableMapping)) {
+      Fox.empty
+    } else {
+      Fox.failure("Cannot merge annotations with and without editable mappings")
+    }
 }

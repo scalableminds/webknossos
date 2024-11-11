@@ -325,6 +325,7 @@ job.invalidBoundingBox = The selected bounding box could not be parsed, must be 
 job.invalidMag = The selected mag could not be parsed, must be x-y-z
 job.volumeExceeded = The volume of the selected bounding box is too large.
 job.edgeLengthExceeded = An edge length of the selected bounding box is too large.
+job.convertToWkw.notAllowed.organization = "Converting to WKW is only allowed for datasets of your own organization."
 job.inferNuclei.notAllowed.organization = Currently nuclei inferral is only allowed for datasets of your own organization.
 job.inferNeurons.notAllowed.organization = Currently neuron inferral is only allowed for datasets of your own organization.
 job.meshFile.notAllowed.organization = Calculating mesh files is only allowed for datasets of your own organization.
@@ -337,6 +338,7 @@ job.renderAnimation.notAllowed.organization = "Rendering animations is only allo
 job.alignSections.notAllowed.organization = "Aligning sections is only allowed for datasets of your own organization."
 job.alignSections.notAllowed.onlySuperUsers = "For now, aligning sections is only allowed for super users."
 job.additionalCoordinates.invalid = "The passed additional coordinates are invalid."
+job.trainModel.notAllowed.organization = "Training AI models is only allowed for datasets of your own organization."
 
 voxelytics.disabled = Voxelytics workflow reporting and logging are not enabled for this WEBKNOSSOS instance.
 voxelytics.runNotFound = Workflow runs not found

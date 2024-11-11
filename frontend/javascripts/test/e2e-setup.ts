@@ -3,7 +3,7 @@ import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'deep... Remove this comment to see the full error message
 import deepForEach from "deep-for-each";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
-import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
+import fetch, { Headers, FormData, Request, Response, FetchError, File } from "node-fetch";
 import fs from "node:fs";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'shel... Remove this comment to see the full error message
 import shell from "shelljs";
@@ -67,7 +67,7 @@ global.fetch = function fetchWrapper(url, options) {
   let newUrl = url;
 
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'indexOf' does not exist on type 'Request... Remove this comment to see the full error message
-  if (url.indexOf("http:") === -1) {
+  if (url.indexOf("http:") === -1 && url.indexOf("https:") === -1) {
     newUrl = `http://localhost:9000${url}`;
   }
 
@@ -84,6 +84,8 @@ global.Request = Request;
 global.Response = Response;
 // @ts-ignore FIXME: Element implicitly has an 'any' type because type ... Remove this comment to see the full error message
 global.FetchError = FetchError;
+global.FormData = FormData;
+global.File = File;
 
 const { JSDOM } = require("jsdom");
 

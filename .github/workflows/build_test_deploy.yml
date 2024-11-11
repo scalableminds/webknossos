@@ -137,7 +137,7 @@ jobs:
             sbt -no-colors -DfailOnWarning compile stage
           fi
         env:
-          POSTGRES_URL: jdbc:postgresql://webknossos_user:secret_password@localhost:5432/webknossos
+          POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
           POSTGRES_USER: webknossos_user
           POSTGRES_PASSWORD: secret_password
 

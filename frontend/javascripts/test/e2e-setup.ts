@@ -39,6 +39,7 @@ const volatileKeys: Array<string | number | symbol> = [
   "lastActivity",
   "tracingTime",
   "tracingId",
+  "sortingKey",
 ];
 export function replaceVolatileValues(obj: ArbitraryObject | null | undefined) {
   if (obj == null) return obj;
@@ -130,7 +131,7 @@ export async function writeTypeCheckingFile(
   const fullTypeAnnotation = options.isArray ? `Array<${typeString}>` : typeString;
   fs.writeFileSync(
     `frontend/javascripts/test/snapshots/type-check/test-type-checking-${name}.ts`,
-    ` 
+    `
 import type { ${typeString} } from "types/api_flow_types";
 const a: ${fullTypeAnnotation} = ${JSON.stringify(object)}`,
   );

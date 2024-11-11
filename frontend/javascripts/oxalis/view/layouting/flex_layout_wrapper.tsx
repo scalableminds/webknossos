@@ -28,7 +28,7 @@ import InputCatcher from "oxalis/view/input_catcher";
 import LayerSettingsTab from "oxalis/view/left-border-tabs/layer_settings_tab";
 import RecordingSwitch from "oxalis/view/recording_switch";
 import SegmentsView from "oxalis/view/right-border-tabs/segments_tab/segments_view";
-import SkeletonTabView from "oxalis/view/right-border-tabs/skeleton_tab_view";
+import SkeletonTabView from "oxalis/view/right-border-tabs/trees_tab/skeleton_tab_view";
 import Statusbar from "oxalis/view/statusbar";
 import type { OxalisState, BusyBlockingInfo, BorderOpenStatus } from "oxalis/store";
 import Store from "oxalis/store";

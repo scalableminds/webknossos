@@ -12,10 +12,11 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import { hasSegmentIndexInDataStore } from "admin/admin_rest_api";
+import type { BasicDataNode } from "antd/es/tree";
 
 const { confirm } = Modal;
 
-export type SegmentHierarchyGroup = {
+export type SegmentHierarchyGroup = BasicDataNode & {
   title: string;
   type: "group";
   name: string | null | undefined;
@@ -25,11 +26,12 @@ export type SegmentHierarchyGroup = {
   children: Array<SegmentHierarchyNode>;
 };
 
-export type SegmentHierarchyLeaf = Segment & {
-  type: "segment";
-  key: string;
-  title: string;
-};
+export type SegmentHierarchyLeaf = BasicDataNode &
+  Segment & {
+    type: "segment";
+    key: string;
+    title: string;
+  };
 
 export type SegmentHierarchyNode = SegmentHierarchyLeaf | SegmentHierarchyGroup;
 

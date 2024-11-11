@@ -36,7 +36,7 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
       boundingBox <- BoundingBox
         .fromTopLeftAndSize(firstScale.voxel_offset.getOrElse(Array(0, 0, 0)), firstScale.size)
         .toFox
-      elementClass: ElementClass.Value <- elementClassFromPrecomputedDataType(precomputedHeader.data_type) ?~> "Unknown data type"
+      elementClass: ElementClass.Value <- elementClassFromPrecomputedDataType(precomputedHeader.data_type) ?~> s"Unknown data type ${precomputedHeader.data_type}"
       smallestResolution = firstScale.resolution
       voxelSize <- Vec3Double.fromArray(smallestResolution).toFox
       mags: List[MagLocator] <- Fox.serialCombined(precomputedHeader.scales)(

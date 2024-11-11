@@ -1,5 +1,5 @@
 import { DownOutlined } from "@ant-design/icons";
-import { Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
+import { type Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -25,8 +25,8 @@ import {
   moveGroupsHelper,
   type TreeNode,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import { getContextMenuPositionFromEvent } from "../context_menu";
-import { ContextMenuContainer } from "./sidebar_context_menu";
+import { getContextMenuPositionFromEvent } from "../../context_menu";
+import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
   onBatchActions,
   type Props,
@@ -36,10 +36,11 @@ import {
   setExpandedGroups,
   setUpdateTreeGroups,
 } from "./tree_hierarchy_renderers";
-import { ResizableSplitPane } from "./resizable_split_pane";
-import { MetadataEntryTableRows } from "./metadata_table";
+import { ResizableSplitPane } from "../resizable_split_pane";
+import { MetadataEntryTableRows } from "../metadata_table";
 import type { MetadataEntryProto } from "types/api_flow_types";
-import { InputWithUpdateOnBlur } from "../components/input_with_update_on_blur";
+import { InputWithUpdateOnBlur } from "../../components/input_with_update_on_blur";
+import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
 
 const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
   const { id, type } = info.node;
@@ -61,6 +62,7 @@ function TreeHierarchyView(props: Props) {
   const [menu, setMenu] = useState<MenuProps | null>(null);
 
   const treeRef = useRef<GetRef<typeof AntdTree>>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // equivalent of LifeCycle hook "getDerivedStateFromProps"
@@ -275,12 +277,13 @@ function TreeHierarchyView(props: Props) {
           <AutoSizer>
             {({ height, width }) => (
               <div
+                ref={wrapperRef}
                 style={{
                   height,
                   width,
                 }}
               >
-                <AntdTree
+                <ScrollableVirtualizedTree
                   treeData={UITreeData}
                   height={height}
                   ref={treeRef}

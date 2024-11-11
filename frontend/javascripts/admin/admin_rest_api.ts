@@ -63,8 +63,8 @@ import type {
   VoxelSize,
   APITimeTrackingPerUser,
 } from "types/api_flow_types";
-import type { LOG_LEVELS, Vector2, Vector3 } from "oxalis/constants";
-import Constants, { ControlModeEnum } from "oxalis/constants";
+import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector2, Vector3 } from "oxalis/constants";
+import Constants, { ControlModeEnum, AnnotationStateFilterEnum } from "oxalis/constants";
 import type {
   DatasetConfiguration,
   PartialDatasetConfiguration,
@@ -97,7 +97,6 @@ import { doWithToken } from "./api/token";
 import type BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { ArbitraryObject } from "types/globals";
 import { assertResponseLimit } from "./api/api_utils";
-import type { AnnotationTypeFilterEnum } from "admin/statistic/project_and_annotation_type_dropdown";
 import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
 
 export * from "./api/token";
@@ -1604,6 +1603,7 @@ export async function getTimeTrackingForUserSummedPerAnnotation(
   startDate: dayjs.Dayjs,
   endDate: dayjs.Dayjs,
   annotationTypes: "Explorational" | "Task" | "Task,Explorational",
+  annotationState: AnnotationStateFilterEnum,
   projectIds?: string[] | null,
 ): Promise<Array<APITimeTrackingPerAnnotation>> {
   const params = new URLSearchParams({
@@ -1613,7 +1613,11 @@ export async function getTimeTrackingForUserSummedPerAnnotation(
   if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
   if (projectIds != null && projectIds.length > 0)
     params.append("projectIds", projectIds.join(","));
-  params.append("annotationStates", "Active,Finished");
+  if (annotationState !== AnnotationStateFilterEnum.ALL) {
+    params.append("annotationStates", annotationState);
+  } else {
+    params.append("annotationStates", "Active,Finished");
+  }
   const timeTrackingData = await Request.receiveJSON(
     `/api/time/user/${userId}/summedByAnnotation?${params}`,
   );
@@ -1626,6 +1630,7 @@ export async function getTimeTrackingForUserSpans(
   startDate: number,
   endDate: number,
   annotationTypes: "Explorational" | "Task" | "Task,Explorational",
+  selectedState: AnnotationStateFilterEnum,
   projectIds?: string[] | null,
 ): Promise<Array<APITimeTrackingSpan>> {
   const params = new URLSearchParams({
@@ -1633,9 +1638,14 @@ export async function getTimeTrackingForUserSpans(
     end: endDate.toString(),
   });
   if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
-  if (projectIds != null && projectIds.length > 0)
+  if (projectIds != null && projectIds.length > 0) {
     params.append("projectIds", projectIds.join(","));
-  params.append("annotationStates", "Active,Finished");
+  }
+  if (selectedState !== AnnotationStateFilterEnum.ALL) {
+    params.append("annotationStates", selectedState);
+  } else {
+    params.append("annotationStates", "Active,Finished");
+  }
   return await Request.receiveJSON(`/api/time/user/${userId}/spans?${params}`);
 }
 
@@ -1644,6 +1654,7 @@ export async function getTimeEntries(
   endMs: number,
   teamIds: string[],
   selectedTypes: AnnotationTypeFilterEnum,
+  selectedState: AnnotationStateFilterEnum,
   projectIds: string[],
 ): Promise<Array<APITimeTrackingPerUser>> {
   const params = new URLSearchParams({
@@ -1651,10 +1662,14 @@ export async function getTimeEntries(
     end: endMs.toString(),
     annotationTypes: selectedTypes,
   });
+  if (selectedState !== AnnotationStateFilterEnum.ALL) {
+    params.append("annotationStates", selectedState);
+  } else {
+    params.append("annotationStates", "Active,Finished");
+  }
   // Omit empty parameters in request
   if (projectIds.length > 0) params.append("projectIds", projectIds.join(","));
   if (teamIds.length > 0) params.append("teamIds", teamIds.join(","));
-  params.append("annotationStates", "Active,Finished");
   return await Request.receiveJSON(`api/time/overview?${params}`);
 }
 

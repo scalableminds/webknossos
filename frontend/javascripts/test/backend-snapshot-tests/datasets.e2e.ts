@@ -155,7 +155,7 @@ test("Dataset upload", async (t) => {
     bodyString += `--${boundary}\r\n`;
   }
   bodyString += `Content-Disposition: form-data; name="file"; filename="test-dataset.zip"\r\n`;
-  bodyString += `Content-Type: application/octet-stream\r\n\r\n`;
+  bodyString += "Content-Type: application/octet-stream\r\n\r\n";
 
   // We have to send the file as bytes, otherwise JS does some encoding, resulting in erroneous bytes
 

@@ -33,10 +33,7 @@ import {
   getTreeNameForAgglomerateSkeleton,
   isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  pushSaveQueueTransaction,
-  setVersionNumberAction,
-} from "oxalis/model/actions/save_actions";
+import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import {
   splitAgglomerate,
   mergeAgglomerate,
@@ -62,7 +59,6 @@ import {
   getEdgesForAgglomerateMinCut,
   getNeighborsForAgglomerateNode,
   getPositionForSegmentInAgglomerate,
-  makeMappingEditable,
 } from "admin/admin_rest_api";
 import { setMappingAction, setMappingNameAction } from "oxalis/model/actions/settings_actions";
 import { getSegmentIdForPositionAsync } from "oxalis/controller/combinations/volume_handlers";
@@ -78,7 +74,7 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import type { ActiveMappingInfo, Mapping, NumberLikeMap, Tree, VolumeTracing } from "oxalis/store";
 import _ from "lodash";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_flow_types";
 import { takeEveryUnlessBusy } from "./saga_helpers";
 import type { Action } from "../actions/actions";
 import { isBigInt, isNumberMap, SoftError } from "libs/utils";
@@ -264,24 +260,30 @@ function* createEditableMapping(): Saga<string> {
    * Returns the name of the editable mapping. This is not identical to the
    * name of the HDF5 mapping for which the editable mapping is about to be created.
    */
-  const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
-  // Save before making the mapping editable to make sure the correct mapping is activated in the backend
-  yield* call([Model, Model.ensureSavedState]);
   // Get volume tracing again to make sure the version is up to date
-  const tracing = yield* select((state) => state.tracing);
+  const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
+  if (!volumeTracing || !volumeTracing.mappingName) {
+    // This should never occur, because the proofreading tool is only available when a volume tracing layer is active.
+    throw new Error("No active segmentation tracing layer. Cannot create editable mapping.");
+  }
   const upToDateVolumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (upToDateVolumeTracing == null) {
-    throw new Error("No active segmentation tracing layer. Cannot create editble mapping.");
+    throw new Error("No active segmentation tracing layer. Cannot create editable mapping.");
   }
 
   const volumeTracingId = upToDateVolumeTracing.tracingId;
   const layerName = volumeTracingId;
-  const serverEditableMapping = yield* call(makeMappingEditable, tracingStoreUrl, volumeTracingId);
-  // The server increments the volume tracing's version by 1 when switching the mapping to an editable one
-  yield* put(setVersionNumberAction(tracing.version + 1));
+  const baseMappingName = volumeTracing.mappingName;
   yield* put(setMappingNameAction(layerName, volumeTracingId, "HDF5"));
+  // Ensure the backend receives the correct mapping nam, which makes the mapping editable before doing the first proofreading operation.
+  yield* call([Model, Model.ensureSavedState]);
   yield* put(setHasEditableMappingAction());
-  yield* put(initializeEditableMappingAction(serverEditableMapping));
+  const editableMapping: ServerEditableMapping = {
+    baseMappingName: baseMappingName,
+    tracingId: volumeTracingId,
+    createdTimestamp: Date.now(),
+  };
+  yield* put(initializeEditableMappingAction(editableMapping));
   return volumeTracingId;
 }
 

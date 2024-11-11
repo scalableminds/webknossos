@@ -45,10 +45,6 @@ import * as Utils from "libs/utils";
 import { V3 } from "libs/mjs";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 
-// The backend expects "resolution" rather than "mag" for the node, but only for the
-// creation of a new node (CreateNodeSkeletonAction), not for other actions.
-type NodeTypeForCreateNodeAction = Omit<Node, "mag"> & { resolution: number };
-
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = "";
 
@@ -128,7 +124,7 @@ export function createNode(
   viewport: number,
   resolution: number,
   timestamp: number,
-): Maybe<[NodeTypeForCreateNodeAction, EdgeCollection]> {
+): Maybe<[Node, EdgeCollection]> {
   const activeNodeMaybe = getActiveNodeFromTree(skeletonTracing, tree);
 
   if (activeNodeMaybe.isNothing && tree.nodes.size() !== 0) {
@@ -144,7 +140,7 @@ export function createNode(
   const nextNewId = skeletonTracing.cachedMaxNodeId + 1;
   const position = V3.trunc(positionFloat);
   // Create the new node
-  const node: NodeTypeForCreateNodeAction = {
+  const node: Node = {
     untransformedPosition: position,
     additionalCoordinates,
     radius,
@@ -850,7 +846,7 @@ function serverNodeToMutableNode(n: ServerNode): MutableNode {
     rotation: Utils.point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,
     viewport: n.viewport,
-    mag: n.resolution,
+    resolution: n.resolution,
     radius: n.radius,
     timestamp: n.createdTimestamp,
     interpolation: n.interpolation,

@@ -51,8 +51,8 @@ import {
   MISSING_GROUP_ID,
   type TreeNode,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
-import { ColoredDotIcon } from "./segments_tab/segment_list_item";
+import { HideTreeEdgesIcon } from "./hide_tree_edges_icon";
+import { ColoredDotIcon } from "../segments_tab/segment_list_item";
 
 export type Props = {
   activeTreeId: number | null | undefined;

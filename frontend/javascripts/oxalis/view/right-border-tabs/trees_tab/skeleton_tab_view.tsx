@@ -86,12 +86,12 @@ import type {
 } from "oxalis/store";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
-import TreeHierarchyView from "oxalis/view/right-border-tabs/tree_hierarchy_view";
+import TreeHierarchyView from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view";
 import * as Utils from "libs/utils";
 import { api } from "oxalis/singletons";
 import messages from "messages";
-import AdvancedSearchPopover from "./advanced_search_popover";
-import DeleteGroupModalView from "./delete_group_modal_view";
+import AdvancedSearchPopover from "../advanced_search_popover";
+import DeleteGroupModalView from "../delete_group_modal_view";
 import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 import { LongUnitToShortUnitMap } from "oxalis/constants";
 
@@ -365,7 +365,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         _groups: Array<TreeGroup>,
         _groupToTreesMap: Record<number, Array<Tree>>,
         _sortBy: string,
-      ): Generator<TreeOrTreeGroup, void, void> {
+      ): Generator<TreeOrTreeGroup, void, undefined> {
         for (const group of _groups) {
           yield makeGroup(group);
 
@@ -380,7 +380,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
             // Trees are sorted by the sortBy property
             const sortedTrees = _.orderBy(_groupToTreesMap[group.groupId], [_sortBy], ["asc"]);
 
-            // @ts-expect-error ts-migrate(2766) FIXME: Cannot delegate iteration to value because the 'ne... Remove this comment to see the full error message
             yield* sortedTrees.map(makeTree);
           }
         }

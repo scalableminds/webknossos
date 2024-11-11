@@ -32,7 +32,7 @@ import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import PresentModernControls from "oxalis/view/novel_user_experiences/01-present-modern-controls";
 import WelcomeToast from "oxalis/view/novel_user_experiences/welcome_toast";
-import { importTracingFiles } from "oxalis/view/right-border-tabs/skeleton_tab_view";
+import { importTracingFiles } from "oxalis/view/right-border-tabs/trees_tab/skeleton_tab_view";
 import TracingView from "oxalis/view/tracing_view";
 import VersionView from "oxalis/view/version_view";
 import * as React from "react";

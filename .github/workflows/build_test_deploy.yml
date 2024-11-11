@@ -118,7 +118,7 @@ jobs:
       #   run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
 
       # - name: Assert unique evolution numbers
-      #   run: docker compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers
+      #   run: node tools/postgres/dbtool.js assert-unique-evolution-numbers
 
       # - name: Assert schema.sql and evolutions are equal
       #   run: |
@@ -136,6 +136,9 @@ jobs:
           else
             sbt -no-colors -DfailOnWarning compile stage
           fi
+        env:
+          POSTGRES_URL: postgres://webknossos_user:secret_password@localhost:5432/webknossos
+
 
       - name: Build webknossos-datastore (sbt)
         run: sbt -no-colors -DfailOnWarning "project webknossosDatastore" copyMessages compile stage

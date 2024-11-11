@@ -207,12 +207,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   rebuildLayout() {
     const model = this.loadCurrentModel();
     this.updateToModelStateAndAdjustIt(model);
-    this.setState(
-      {
-        model,
-      },
-      () => this.onLayoutChange(),
-    );
+    this.setState({ model }, () => this.onLayoutChange());
 
     if (this.props.layoutName !== DEFAULT_LAYOUT_NAME) {
       sendAnalyticsEvent("load_custom_layout", {

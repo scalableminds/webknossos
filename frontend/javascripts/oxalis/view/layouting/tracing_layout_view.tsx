@@ -194,16 +194,11 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     app.vent.emit("rerender");
 
     if (model != null) {
-      this.setState(
-        {
-          model,
-        },
-        () => {
-          if (this.props.autoSaveLayouts) {
-            this.saveCurrentLayout(layoutName);
-          }
-        },
-      );
+      this.setState({ model }, () => {
+        if (this.props.autoSaveLayouts) {
+          this.saveCurrentLayout(layoutName);
+        }
+      });
     }
   };
 

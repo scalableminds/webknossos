@@ -9,3 +9,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/24.11.0...HEAD)
 
 ### Postgres Evolutions:
+- [123-more-model-categories.sql](conf/evolutions/123-more-model-categories.sql)

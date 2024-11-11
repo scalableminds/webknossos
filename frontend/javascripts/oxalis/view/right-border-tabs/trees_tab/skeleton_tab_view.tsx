@@ -86,12 +86,12 @@ import type {
 } from "oxalis/store";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
-import TreeHierarchyView from "oxalis/view/right-border-tabs/tree_hierarchy_view";
+import TreeHierarchyView from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view";
 import * as Utils from "libs/utils";
 import { api } from "oxalis/singletons";
 import messages from "messages";
-import AdvancedSearchPopover from "./advanced_search_popover";
-import DeleteGroupModalView from "./delete_group_modal_view";
+import AdvancedSearchPopover from "../advanced_search_popover";
+import DeleteGroupModalView from "../delete_group_modal_view";
 import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 import { LongUnitToShortUnitMap } from "oxalis/constants";
 
@@ -365,7 +365,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         _groups: Array<TreeGroup>,
         _groupToTreesMap: Record<number, Array<Tree>>,
         _sortBy: string,
-      ): Generator<TreeOrTreeGroup, void, void> {
+      ): Generator<TreeOrTreeGroup, void, undefined> {
         for (const group of _groups) {
           yield makeGroup(group);
 
@@ -380,7 +380,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
             // Trees are sorted by the sortBy property
             const sortedTrees = _.orderBy(_groupToTreesMap[group.groupId], [_sortBy], ["asc"]);
 
-            // @ts-expect-error ts-migrate(2766) FIXME: Cannot delegate iteration to value because the 'ne... Remove this comment to see the full error message
             yield* sortedTrees.map(makeTree);
           }
         }
@@ -668,7 +667,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
   };
 
-  handleSearchSelect = (selectedElement: TreeOrTreeGroup) => {
+  maybeExpandParentGroups = (selectedElement: TreeOrTreeGroup) => {
     const { skeletonTracing } = this.props;
     if (!skeletonTracing) {
       return;
@@ -682,11 +681,24 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     if (expandedGroups) {
       this.props.onSetExpandedGroups(expandedGroups);
     }
+  };
+
+  handleSearchSelect = (selectedElement: TreeOrTreeGroup) => {
+    this.maybeExpandParentGroups(selectedElement);
     if (selectedElement.type === GroupTypeEnum.TREE) {
       this.props.onSetActiveTree(selectedElement.id);
     } else {
       this.props.onSetActiveTreeGroup(selectedElement.id);
     }
+  };
+
+  handleSelectAllMatchingTrees = (matchingTrees: TreeOrTreeGroup[]) => {
+    this.props.onDeselectActiveGroup();
+    const treeIds = matchingTrees.map((tree) => {
+      this.maybeExpandParentGroups(tree);
+      return tree.id;
+    });
+    this.setState({ selectedTreeIds: treeIds });
   };
 
   getTreesComponents(sortBy: string) {
@@ -840,7 +852,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     );
 
     return (
-      <div id={treeTabId} className="padded-tab-content">
+      <div id={treeTabId} className="padded-tab-content" style={{ overflow: "hidden" }}>
         <DomVisibilityObserver targetId={treeTabId}>
           {(isVisibleInDom) =>
             !isVisibleInDom ? null : (
@@ -858,51 +870,57 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <Spin />
                 </Modal>
                 <Space.Compact className="compact-icons">
-                  <AdvancedSearchPopover
-                    onSelect={this.handleSearchSelect}
-                    data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
-                    searchKey="name"
-                    provideShortcut
-                    targetId={treeTabId}
-                  >
-                    <ButtonComponent title="Open the search via CTRL + Shift + F">
-                      <SearchOutlined />
+                  <div className="compact-buttons">
+                    <AdvancedSearchPopover
+                      onSelect={this.handleSearchSelect}
+                      data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
+                      searchKey="name"
+                      provideShortcut
+                      targetId={treeTabId}
+                      onSelectAllMatches={this.handleSelectAllMatchingTrees}
+                    >
+                      <ButtonComponent
+                        title="Open the search via CTRL + Shift + F"
+                        className="firstButton"
+                      >
+                        <SearchOutlined />
+                      </ButtonComponent>
+                    </AdvancedSearchPopover>
+                    <ButtonComponent
+                      onClick={this.props.onCreateTree}
+                      title={isEditingDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
+                      disabled={isEditingDisabled}
+                    >
+                      <i className="fas fa-plus" />
                     </ButtonComponent>
-                  </AdvancedSearchPopover>
-                  <ButtonComponent
-                    onClick={this.props.onCreateTree}
-                    title={isEditingDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
-                    disabled={isEditingDisabled}
-                  >
-                    <i className="fas fa-plus" />
-                  </ButtonComponent>
-                  <ButtonComponent
-                    onClick={this.handleDelete}
-                    title={isEditingDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
-                    disabled={isEditingDisabled}
-                  >
-                    <i className="far fa-trash-alt" />
-                  </ButtonComponent>
-                  <ButtonComponent
-                    onClick={this.toggleAllTrees}
-                    title="Toggle Visibility of All Trees (1)"
-                    disabled={isEditingDisabled}
-                  >
-                    <i className="fas fa-toggle-on" />
-                  </ButtonComponent>
-                  <ButtonComponent
-                    onClick={this.toggleInactiveTrees}
-                    title="Toggle Visibility of Inactive Trees (2)"
-                    disabled={isEditingDisabled}
-                  >
-                    <i className="fas fa-toggle-off" />
-                  </ButtonComponent>
-                  <Dropdown menu={this.getActionsDropdown()} trigger={["click"]}>
-                    <ButtonComponent>
-                      More
-                      <DownOutlined />
+                    <ButtonComponent
+                      onClick={this.handleDelete}
+                      title={isEditingDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
+                      disabled={isEditingDisabled}
+                    >
+                      <i className="far fa-trash-alt" />
                     </ButtonComponent>
-                  </Dropdown>
+                    <ButtonComponent
+                      onClick={this.toggleAllTrees}
+                      title="Toggle Visibility of All Trees (1)"
+                      disabled={isEditingDisabled}
+                    >
+                      <i className="fas fa-toggle-on" />
+                    </ButtonComponent>
+                    <ButtonComponent
+                      onClick={this.toggleInactiveTrees}
+                      title="Toggle Visibility of Inactive Trees (2)"
+                      disabled={isEditingDisabled}
+                    >
+                      <i className="fas fa-toggle-off" />
+                    </ButtonComponent>
+                    <Dropdown menu={this.getActionsDropdown()} trigger={["click"]}>
+                      <ButtonComponent style={{ overflow: "clip" }} className="lastButton">
+                        More
+                        <DownOutlined />
+                      </ButtonComponent>
+                    </Dropdown>
+                  </div>
                 </Space.Compact>
                 <Space.Compact className="compact-icons compact-items">
                   <ButtonComponent
@@ -925,7 +943,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     <i className="fas fa-arrow-right" />
                   </ButtonComponent>
                   <Dropdown menu={this.getSettingsDropdown()} trigger={["click"]}>
-                    <ButtonComponent title="Sort">
+                    <ButtonComponent title="Sort" style={{ overflow: "clip" }}>
                       <i className="fas fa-sort-alpha-down" />
                     </ButtonComponent>
                   </Dropdown>

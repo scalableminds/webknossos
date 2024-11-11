@@ -1243,7 +1243,7 @@ function FileUploadArea({
                     <Popover
                       content={
                         <a
-                          href="https://docs.webknossos.org/webknossos/zarr.html"
+                          href="https://docs.webknossos.org/webknossos/data/zarr.html"
                           target="_blank"
                           rel="noreferrer"
                           onClick={(e) => e.stopPropagation()}
@@ -1265,7 +1265,7 @@ function FileUploadArea({
                     <Popover
                       content={
                         <a
-                          href="https://docs.webknossos.org/webknossos/neuroglancer_precomputed.html"
+                          href="https://docs.webknossos.org/webknossos/data/neuroglancer_precomputed.html"
                           target="_blank"
                           rel="noreferrer"
                           onClick={(e) => e.stopPropagation()}
@@ -1287,7 +1287,7 @@ function FileUploadArea({
                     <Popover
                       content={
                         <a
-                          href="https://docs.webknossos.org/webknossos/n5.html"
+                          href="https://docs.webknossos.org/webknossos/data/n5.html"
                           target="_blank"
                           rel="noreferrer"
                           onClick={(e) => e.stopPropagation()}
@@ -1309,7 +1309,7 @@ function FileUploadArea({
                 </ul>
                 Have a look at{" "}
                 <a
-                  href="https://docs.webknossos.org/webknossos/data_formats.html"
+                  href="https://docs.webknossos.org/webknossos/data/image_stacks.html"
                   onClick={(e) => e.stopPropagation()}
                 >
                   our documentation

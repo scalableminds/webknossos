@@ -111,26 +111,24 @@ test("Zarr 3 streaming", async (t) => {
 });
 
 test("Dataset upload", async (t) => {
-
   const uploadId = "test-dataset-upload-" + Date.now();
 
-  await fetch("/data/datasets/reserveUpload",
-    {
-      method: "POST",
-      headers: new Headers({
-        "Content-Type": "application/json",
-      }),
-      body: JSON.stringify({
-        filePaths: ["test-dataset-upload.zip"],
-        folderId: "570b9f4e4bb848d0885ea917",
-        initialTeams: [],
-        layersToLink: [],
-        name: "test-dataset-upload",
-        organization: "Organization_X",
-        totalFileCount: 1,
-        uploadId: uploadId,
-      }),
-    })
+  await fetch("/data/datasets/reserveUpload", {
+    method: "POST",
+    headers: new Headers({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      filePaths: ["test-dataset-upload.zip"],
+      folderId: "570b9f4e4bb848d0885ea917",
+      initialTeams: [],
+      layersToLink: [],
+      name: "test-dataset-upload",
+      organization: "Organization_X",
+      totalFileCount: 1,
+      uploadId: uploadId,
+    }),
+  });
 
   const filePath = "test/dataset/test-dataset.zip";
   const testDataset = fs.readFileSync(filePath);
@@ -162,7 +160,7 @@ test("Dataset upload", async (t) => {
   // We have to send the file as bytes, otherwise JS does some encoding, resulting in erroneous bytes
 
   const formBytes = new TextEncoder().encode(bodyString);
-  const fileBytes =new Uint8Array(testDataset);
+  const fileBytes = new Uint8Array(testDataset);
   const endBytes = new TextEncoder().encode(`\r\n--${boundary}--`);
   const body = new Uint8Array(formBytes.length + fileBytes.length + endBytes.length);
   body.set(formBytes, 0);
@@ -171,45 +169,39 @@ test("Dataset upload", async (t) => {
 
   let content_type = `multipart/form-data; boundary=${boundary}`;
 
-  const uploadResult = await fetch("/data/datasets",
-    {
-      method: "POST",
-      headers: new Headers(
-        {
-          "Content-Type": content_type,
-        }
-      ),
-      body: body
-    })
+  const uploadResult = await fetch("/data/datasets", {
+    method: "POST",
+    headers: new Headers({
+      "Content-Type": content_type,
+    }),
+    body: body,
+  });
 
   if (uploadResult.status !== 200) {
     t.fail("Dataset upload failed");
   }
 
-  const finishResult = await fetch("/data/datasets/finishUpload",
-    {
-      method: "POST",
-      headers: new Headers({
-        "Content-Type": "application/json",
-      }),
-      body: JSON.stringify({
-        uploadId: uploadId,
-        needsConversion: false
-      })
-    });
+  const finishResult = await fetch("/data/datasets/finishUpload", {
+    method: "POST",
+    headers: new Headers({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      uploadId: uploadId,
+      needsConversion: false,
+    }),
+  });
 
   if (finishResult.status !== 200) {
     t.fail("Dataset upload failed at finish");
   }
 
-  const result = await fetch("/api/datasets/Organization_X/test-dataset-upload/health",
-    {
-      headers: new Headers(),
-    })
+  const result = await fetch("/api/datasets/Organization_X/test-dataset-upload/health", {
+    headers: new Headers(),
+  });
 
   if (result.status !== 200) {
     t.fail("Dataset upload failed");
   }
   t.pass();
-
 });

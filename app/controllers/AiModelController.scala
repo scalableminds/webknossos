@@ -1,6 +1,5 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.aimodels.{AiInference, AiInferenceDAO, AiInferenceService, AiModel, AiModelDAO, AiModelService}

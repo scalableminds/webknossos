@@ -27,6 +27,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Migrated nightly screenshot tests from CircleCI to GitHub actions. [#8134](https://github.com/scalableminds/webknossos/pull/8134)
 - Migrated nightly screenshot tests for wk.org from CircleCI to GitHub actions. [#8135](https://github.com/scalableminds/webknossos/pull/8135)
 - Thumbnails for datasets now use the selected mapping from the view configuration if available. [#8157](https://github.com/scalableminds/webknossos/pull/8157)
+- Improved error messages for starting jobs on datasets from other organizations. [#8181](https://github.com/scalableminds/webknossos/pull/8181)
 
 ### Fixed
 - Fixed a bug during dataset upload in case the configured `datastore.baseFolder` is an absolute path. [#8098](https://github.com/scalableminds/webknossos/pull/8098) [#8103](https://github.com/scalableminds/webknossos/pull/8103)

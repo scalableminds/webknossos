@@ -58,7 +58,7 @@
     "pixelmatch": "^5.2.0",
     "pngjs": "^3.3.3",
     "proto-loader6": "^0.4.0",
-    "puppeteer": "^19.7.2",
+    "puppeteer-core": "^19.7.2",
     "redux-mock-store": "^1.2.2",
     "shelljs": "^0.8.5",
     "sinon": "^12.0.1",
@@ -123,7 +123,7 @@
     "ts-coverage": "typescript-coverage-report",
     "find-cyclic-dependencies": "yarn run dpdm -T --tree false --warning false --extensions .ts,.tsx frontend/javascripts/main.tsx",
     "check-cyclic-dependencies": "node ./tools/check-cyclic-dependencies.js",
-    "startf": "yarn rm-fossil-lock; yarn kill-listeners; yarn start",
+    "startf": "yarn rm-fossil-lock; yarn kill-listeners; rm -r webknossos-jni/target; yarn start",
     "beautify-front": "yarn fix-frontend && yarn typecheck",
     "beautify": "yarn format-backend && yarn beautify-front"
   },

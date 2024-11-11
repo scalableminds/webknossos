@@ -2,7 +2,7 @@ import Maybe from "data.maybe";
 import _ from "lodash";
 import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, SkeletonTracing, Tree } from "oxalis/store";
+import type { OxalisState, SkeletonTracing, Tree, TreeGroup } from "oxalis/store";
 import {
   convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
@@ -28,6 +28,7 @@ import {
   removeMissingGroupsFromTrees,
   getOrCreateTree,
   ensureTreeNames,
+  setExpandedTreeGroups,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
   getSkeletonTracing,
@@ -36,7 +37,6 @@ import {
   getTreesWithType,
   getNodeAndTree,
   isSkeletonLayerTransformed,
-  mapGroups,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import ColorGenerator from "libs/color_generator";
 import Constants, { AnnotationToolEnum, TreeTypeEnum } from "oxalis/constants";
@@ -494,33 +494,20 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             .getOrElse(state);
         }
 
-        case "SET_EXPANDED_TREE_GROUPS": {
+        case "SET_EXPANDED_TREE_GROUPS_BY_KEYS": {
           const { expandedGroups } = action;
 
-          const currentTreeGroups = state.tracing?.skeleton?.treeGroups;
-          if (currentTreeGroups == null) {
-            return state;
-          }
-          const newGroups = mapGroups(currentTreeGroups, (group) => {
-            const shouldBeExpanded = expandedGroups.has(
-              getNodeKey(GroupTypeEnum.GROUP, group.groupId),
-            );
-            if (shouldBeExpanded !== group.isExpanded) {
-              return { ...group, isExpanded: shouldBeExpanded };
-            } else {
-              return group;
-            }
-          });
+          return setExpandedTreeGroups(state, (group: TreeGroup) =>
+            expandedGroups.has(getNodeKey(GroupTypeEnum.GROUP, group.groupId)),
+          );
+        }
 
-          return update(state, {
-            tracing: {
-              skeleton: {
-                treeGroups: {
-                  $set: newGroups,
-                },
-              },
-            },
-          });
+        case "SET_EXPANDED_TREE_GROUPS_BY_IDS": {
+          const { expandedGroups } = action;
+
+          return setExpandedTreeGroups(state, (group: TreeGroup) =>
+            expandedGroups.has(group.groupId),
+          );
         }
 
         case "TOGGLE_ALL_TREES": {

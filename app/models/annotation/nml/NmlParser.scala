@@ -33,7 +33,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
 
   private val DEFAULT_TIME = 0L
   private val DEFAULT_VIEWPORT = 0
-  private val DEFAULT_RESOLUTION = 0
+  private val DEFAULT_MAG = 0
   private val DEFAULT_BITDEPTH = 0
   private val DEFAULT_DESCRIPTION = ""
   private val DEFAULT_INTERPOLATION = false
@@ -519,8 +519,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   private def parseViewport(node: XMLNode) =
     getSingleAttribute(node, "inVp").toIntOpt.getOrElse(DEFAULT_VIEWPORT)
 
-  private def parseResolution(node: XMLNode) =
-    getSingleAttribute(node, "inMag").toIntOpt.getOrElse(DEFAULT_RESOLUTION)
+  private def parseMag(node: XMLNode) =
+    getSingleAttribute(node, "inMag").toIntOpt.getOrElse(DEFAULT_MAG)
 
   private def parseBitDepth(node: XMLNode) =
     getSingleAttribute(node, "bitDepth").toIntOpt.getOrElse(DEFAULT_BITDEPTH)
@@ -540,21 +540,12 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       position <- parseVec3Int(node) ?~ Messages("nml.node.attribute.invalid", "position", id)
     } yield {
       val viewport = parseViewport(node)
-      val resolution = parseResolution(node)
+      val mag = parseMag(node)
       val timestamp = parseTimestamp(node)
       val bitDepth = parseBitDepth(node)
       val interpolation = parseInterpolation(node)
       val rotation = parseRotationForNode(node).getOrElse(NodeDefaults.rotation)
-      Node(id,
-           position,
-           rotation,
-           radius,
-           viewport,
-           resolution,
-           bitDepth,
-           interpolation,
-           timestamp,
-           additionalCoordinates)
+      Node(id, position, rotation, radius, viewport, mag, bitDepth, interpolation, timestamp, additionalCoordinates)
     }
   }
 

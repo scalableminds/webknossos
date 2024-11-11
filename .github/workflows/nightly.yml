@@ -1,0 +1,62 @@
+name: Nightly Test Pipeline
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Runs every day at 12:00 AM UTC
+    - cron: '0 0 * * *'
+
+jobs:
+  nightly-screenshot-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Remove dev-deployment
+        run: |
+          curl -X POST \
+            -H "X-Auth-Token: ${{ secrets.RELEASE_API_TOKEN }}" \
+            https://kubernetix.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
+
+      - name: Wait 3 minutes
+        run: sleep 180
+
+      - name: Install dev-deployment
+        run: |
+          curl -X POST \
+            -H "X-Auth-Token: ${{ secrets.RELEASE_API_TOKEN }}" \
+            https://kubernetix.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
+
+      - uses: actions/setup-node@v4
+        with:
+            node-version: 18
+
+      - name: Install dependencies and wait
+        run: |
+            corepack enable && yarn install --immutable & 
+            sleep 180 &
+            wait
+
+      - name: Refresh datasets
+        run: |
+          curl -X POST --fail https://master.webknossos.xyz/data/triggers/checkInboxBlocking?token=${{ secrets.WK_AUTH_TOKEN }}
+
+      - name: Run screenshot tests
+        run: |
+          URL=https://master.webknossos.xyz/ \
+          timeout 3000 \
+          yarn test-screenshot
+        env:
+          URL: https://master.webknossos.xyz/
+          WK_AUTH_TOKEN: ${{ secrets.WK_AUTH_TOKEN }}
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY : ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+
+      - name: Upload screenshots as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: frontend/javascripts/test/screenshots

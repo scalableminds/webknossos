@@ -34,6 +34,7 @@ import {
   getActiveTreeGroup,
   findTreeByNodeId,
   mapGroupsToGenerator,
+  mapGroups,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import ColorGenerator from "libs/color_generator";
 import { type TreeType, TreeTypeEnum, type Vector3 } from "oxalis/constants";
@@ -145,7 +146,7 @@ export function createNode(
     radius,
     rotation,
     viewport,
-    resolution,
+    mag: resolution,
     id: nextNewId,
     timestamp,
     bitDepth: state.datasetConfiguration.fourBit ? 4 : 8,
@@ -809,6 +810,34 @@ export function toggleTreeGroupReducer(
   });
 }
 
+export function setExpandedTreeGroups(
+  state: OxalisState,
+  shouldBeExpanded: (arg: TreeGroup) => boolean,
+): OxalisState {
+  const currentTreeGroups = state.tracing?.skeleton?.treeGroups;
+  if (currentTreeGroups == null) {
+    return state;
+  }
+  const newGroups = mapGroups(currentTreeGroups, (group) => {
+    const updatedIsExpanded = shouldBeExpanded(group);
+    if (updatedIsExpanded !== group.isExpanded) {
+      return { ...group, isExpanded: updatedIsExpanded };
+    } else {
+      return group;
+    }
+  });
+
+  return update(state, {
+    tracing: {
+      skeleton: {
+        treeGroups: {
+          $set: newGroups,
+        },
+      },
+    },
+  });
+}
+
 function serverNodeToMutableNode(n: ServerNode): MutableNode {
   return {
     id: n.id,
@@ -817,7 +846,7 @@ function serverNodeToMutableNode(n: ServerNode): MutableNode {
     rotation: Utils.point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,
     viewport: n.viewport,
-    resolution: n.resolution,
+    mag: n.resolution,
     radius: n.radius,
     timestamp: n.createdTimestamp,
     interpolation: n.interpolation,

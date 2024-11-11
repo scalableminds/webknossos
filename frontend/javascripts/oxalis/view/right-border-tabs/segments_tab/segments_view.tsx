@@ -29,7 +29,6 @@ import {
   Modal,
   Popover,
   Select,
-  Tree,
   type MenuProps,
 } from "antd";
 import type { DataNode } from "antd/lib/tree";
@@ -37,19 +36,20 @@ import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
-import _, { isNumber } from "lodash";
+import _, { isNumber, memoize } from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import { EMPTY_OBJECT, MappingStatusEnum } from "oxalis/constants";
 import {
   getMappingInfo,
   getMaybeSegmentIndexAvailability,
-  getResolutionInfoOfVisibleSegmentationLayer,
+  getMagInfoOfVisibleSegmentationLayer,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import {
   getActiveSegmentationTracing,
   getMeshesForCurrentAdditionalCoordinates,
+  getSegmentName,
   getSelectedIds,
   getVisibleSegments,
   hasEditableMapping,
@@ -81,7 +81,7 @@ import {
   setSelectedSegmentsOrGroupAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import type { MagInfo } from "oxalis/model/helpers/mag_info";
 import { api } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
@@ -122,8 +122,11 @@ import DeleteGroupModalView from "../delete_group_modal_view";
 import { ResizableSplitPane } from "../resizable_split_pane";
 import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
+  additionallyExpandGroup,
+  createGroupToParentMap,
   createGroupToSegmentsMap,
   findParentIdForGroupId,
+  getExpandedGroups,
   getGroupByIdWithSubgroups,
   getGroupNodeKey,
   MISSING_GROUP_ID,
@@ -132,6 +135,9 @@ import { MetadataEntryTableRows } from "../metadata_table";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
 import type { ItemType } from "antd/lib/menu/interface";
 import { InputWithUpdateOnBlur } from "oxalis/view/components/input_with_update_on_blur";
+import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
+
+const SCROLL_DELAY_MS = 50;
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -165,7 +171,7 @@ type StateProps = {
   activeCellId: number | null | undefined;
   preferredQualityForMeshPrecomputation: number;
   preferredQualityForMeshAdHocComputation: number;
-  resolutionInfoOfVisibleSegmentationLayer: ResolutionInfo;
+  magInfoOfVisibleSegmentationLayer: MagInfo;
 };
 
 const mapStateToProps = (state: OxalisState): StateProps => {
@@ -220,7 +226,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
       state.temporaryConfiguration.preferredQualityForMeshPrecomputation,
     preferredQualityForMeshAdHocComputation:
       state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
-    resolutionInfoOfVisibleSegmentationLayer: getResolutionInfoOfVisibleSegmentationLayer(state),
+    magInfoOfVisibleSegmentationLayer: getMagInfoOfVisibleSegmentationLayer(state),
   };
 };
 
@@ -326,7 +332,6 @@ type State = {
     [groupId: number]: { areSomeSegmentsVisible: boolean; areSomeSegmentsInvisible: boolean };
   };
   activeStatisticsModalGroupId: number | null;
-  expandedGroupKeys: string[];
   contextMenuPosition: [number, number] | null | undefined;
   menu: MenuProps | null | undefined;
 };
@@ -356,20 +361,14 @@ function renderEmptyMeshFileSelect() {
 }
 
 const getExpandedKeys = (segmentGroups: TreeGroup[]) => {
-  return segmentGroups.reduce((expandedKeysAcc: string[], node) => {
-    if (node.isExpanded || node.isExpanded == null) {
-      expandedKeysAcc.push(getGroupNodeKey(node.groupId));
-    }
-    if (node.children.length > 0) expandedKeysAcc.push(...getExpandedKeys(node.children));
-    return expandedKeysAcc;
-  }, []);
+  return getExpandedGroups(segmentGroups).map((group) => getGroupNodeKey(group.groupId));
 };
 
-const getExpandedKeysWithRoot = (segmentGroups: TreeGroup[]) => {
+const getExpandedKeysWithRoot = memoize((segmentGroups: TreeGroup[]) => {
   const expandedGroups = getExpandedKeys(segmentGroups);
   expandedGroups.unshift(getGroupNodeKey(MISSING_GROUP_ID));
   return expandedGroups;
-};
+});
 
 function constructTreeData(
   groups: { name: string; groupId: number; children: SegmentGroup[] }[],
@@ -420,7 +419,6 @@ class SegmentsView extends React.Component<Props, State> {
     groupToDelete: null,
     groupsSegmentsVisibilityStateMap: {},
     activeStatisticsModalGroupId: null,
-    expandedGroupKeys: [],
     contextMenuPosition: null,
     menu: null,
   };
@@ -446,10 +444,6 @@ class SegmentsView extends React.Component<Props, State> {
     }
 
     Store.dispatch(ensureSegmentIndexIsLoadedAction(this.props.visibleSegmentationLayer?.name));
-
-    this.setState({
-      expandedGroupKeys: getExpandedKeysWithRoot(this.props.segmentGroups),
-    });
   }
 
   componentDidUpdate(prevProps: Props) {
@@ -486,6 +480,8 @@ class SegmentsView extends React.Component<Props, State> {
     }
   }
 
+  getExpandedGroupKeys = () => getExpandedKeysWithRoot(this.props.segmentGroups);
+
   getKeysOfSubGroups = (groupId: number) => {
     if (groupId !== MISSING_GROUP_ID) {
       return getGroupByIdWithSubgroups(this.props.segmentGroups, groupId)
@@ -498,17 +494,24 @@ class SegmentsView extends React.Component<Props, State> {
     return allSegmentGroups.map((group) => getGroupNodeKey(group));
   };
 
-  setExpandedGroups = (expandedGroups: Key[]) => {
+  setExpandedGroupsFromArray = (expandedGroupsArray: Key[]) => {
     if (this.props.visibleSegmentationLayer == null) return;
-    const expandedGroupSet = new Set(expandedGroups as string[]);
+    const expandedGroupSet = new Set(expandedGroupsArray as string[]);
     Store.dispatch(
       setExpandedSegmentGroupsAction(expandedGroupSet, this.props.visibleSegmentationLayer?.name),
     );
   };
 
+  setExpandedGroupsFromSet = (expandedGroupsSet: Set<string>) => {
+    if (this.props.visibleSegmentationLayer == null) return;
+    Store.dispatch(
+      setExpandedSegmentGroupsAction(expandedGroupsSet, this.props.visibleSegmentationLayer?.name),
+    );
+  };
+
   collapseGroups = (groupsToCollapse: string[]) => {
     if (this.props.visibleSegmentationLayer == null) return;
-    const newExpandedGroups = _.difference(this.state.expandedGroupKeys, groupsToCollapse);
+    const newExpandedGroups = _.difference(this.getExpandedGroupKeys(), groupsToCollapse);
     const expandedGroupSet = new Set(newExpandedGroups);
     Store.dispatch(
       setExpandedSegmentGroupsAction(expandedGroupSet, this.props.visibleSegmentationLayer.name),
@@ -634,7 +637,6 @@ class SegmentsView extends React.Component<Props, State> {
         groupTree: generatedGroupTree,
         searchableTreeItemList,
         prevProps: nextProps,
-        expandedGroupKeys: getExpandedKeysWithRoot(nextProps.segmentGroups),
       };
     }
     if (prevState.prevProps?.meshes !== meshes) {
@@ -826,7 +828,7 @@ class SegmentsView extends React.Component<Props, State> {
     const {
       mappingInfo,
       preferredQualityForMeshPrecomputation,
-      resolutionInfoOfVisibleSegmentationLayer: resolutionInfo,
+      magInfoOfVisibleSegmentationLayer: resolutionInfo,
     } = this.props;
     const defaultOrHigherIndex = resolutionInfo.getIndexOrClosestHigherIndex(
       preferredQualityForMeshPrecomputation,
@@ -835,7 +837,7 @@ class SegmentsView extends React.Component<Props, State> {
       defaultOrHigherIndex != null
         ? defaultOrHigherIndex
         : resolutionInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation);
-    const meshfileResolution = resolutionInfo.getResolutionByIndexWithFallback(
+    const meshfileResolution = resolutionInfo.getMagByIndexWithFallback(
       meshfileResolutionIndex,
       null,
     );
@@ -902,7 +904,7 @@ class SegmentsView extends React.Component<Props, State> {
   getAdHocMeshSettings = () => {
     const {
       preferredQualityForMeshAdHocComputation,
-      resolutionInfoOfVisibleSegmentationLayer: resolutionInfo,
+      magInfoOfVisibleSegmentationLayer: resolutionInfo,
     } = this.props;
     return (
       <div>
@@ -918,7 +920,7 @@ class SegmentsView extends React.Component<Props, State> {
           onChange={this.handleQualityChangeForAdHocGeneration}
         >
           {resolutionInfo
-            .getResolutionsWithIndices()
+            .getMagsWithIndices()
             .map(([log2Index, mag]: [number, Vector3], index: number) => (
               <Option value={log2Index} key={log2Index}>
                 {formatMagWithLabel(mag, index)}
@@ -933,7 +935,7 @@ class SegmentsView extends React.Component<Props, State> {
     const { disabled, title } = this.getPrecomputeMeshesTooltipInfo();
     const {
       preferredQualityForMeshPrecomputation,
-      resolutionInfoOfVisibleSegmentationLayer: resolutionInfo,
+      magInfoOfVisibleSegmentationLayer: resolutionInfo,
     } = this.props;
     return (
       <div
@@ -965,7 +967,7 @@ class SegmentsView extends React.Component<Props, State> {
             onChange={this.handleQualityChangeForPrecomputation}
           >
             {resolutionInfo
-              .getResolutionsWithIndices()
+              .getMagsWithIndices()
               .map(([log2Index, mag]: [number, Vector3], index: number) => (
                 <Option value={log2Index} key={log2Index}>
                   {formatMagWithLabel(mag, index)}
@@ -1590,15 +1592,61 @@ class SegmentsView extends React.Component<Props, State> {
     this.setState(({ renamingCounter }) => ({ renamingCounter: renamingCounter - 1 }));
   };
 
-  handleSearchSelect = (selectedElement: SegmentHierarchyNode) => {
+  maybeExpandParentGroup = (selectedElement: SegmentHierarchyNode) => {
     if (this.tree?.current == null) {
       return;
     }
-    this.tree.current.scrollTo({ key: selectedElement.key });
+    const groupToExpand =
+      selectedElement.type === "segment"
+        ? selectedElement.groupId
+        : createGroupToParentMap(this.props.segmentGroups)[selectedElement.id];
+    const expandedGroups = additionallyExpandGroup(
+      this.props.segmentGroups,
+      groupToExpand,
+      getGroupNodeKey,
+    );
+    if (expandedGroups) {
+      this.setExpandedGroupsFromSet(expandedGroups);
+    }
+  };
+
+  handleSearchSelect = (selectedElement: SegmentHierarchyNode) => {
+    this.maybeExpandParentGroup(selectedElement);
+    // As parent groups might still need to expand, we need to wait for this to finish.
+    setTimeout(() => {
+      if (this.tree.current) this.tree.current.scrollTo({ key: selectedElement.key });
+    }, SCROLL_DELAY_MS);
     const isASegment = "color" in selectedElement;
     if (isASegment) {
       this.onSelectSegment(selectedElement);
+    } else {
+      if (this.props.visibleSegmentationLayer == null) return;
+      Store.dispatch(
+        setSelectedSegmentsOrGroupAction(
+          [],
+          selectedElement.id,
+          this.props.visibleSegmentationLayer?.name,
+        ),
+      );
     }
+  };
+
+  handleSelectAllMatchingSegments = (allMatches: SegmentHierarchyNode[]) => {
+    if (this.props.visibleSegmentationLayer == null) return;
+    const allMatchingSegmentIds = allMatches.map((match) => {
+      this.maybeExpandParentGroup(match);
+      return match.id;
+    });
+    Store.dispatch(
+      setSelectedSegmentsOrGroupAction(
+        allMatchingSegmentIds,
+        null,
+        this.props.visibleSegmentationLayer.name,
+      ),
+    );
+    setTimeout(() => {
+      this.tree.current?.scrollTo({ key: allMatches[0].key });
+    }, SCROLL_DELAY_MS);
   };
 
   getSegmentStatisticsModal = (groupId: number) => {
@@ -1630,8 +1678,8 @@ class SegmentsView extends React.Component<Props, State> {
   showContextMenuAt = (xPos: number, yPos: number, menu: MenuProps) => {
     // On Windows the right click to open the context menu is also triggered for the overlay
     // of the context menu. This causes the context menu to instantly close after opening.
-    // Therefore delay the state update to delay that the context menu is rendered.
-    // Thus the context overlay does not get the right click as an event and therefore does not close.
+    // Therefore delay the state update to delay that the context menu is rendered. Thus
+    // the context overlay does not get the right click as an event and therefore does not close.
     setTimeout(
       () =>
         this.setState({
@@ -1815,9 +1863,10 @@ class SegmentsView extends React.Component<Props, State> {
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.state.searchableTreeItemList}
-                    searchKey={(item) => item.name ?? `${item.id}` ?? ""}
+                    searchKey={(item) => getSegmentName(item)}
                     provideShortcut
                     targetId={segmentsTabId}
+                    onSelectAllMatches={this.handleSelectAllMatchingSegments}
                   >
                     <ButtonComponent
                       size="small"
@@ -1855,7 +1904,7 @@ class SegmentsView extends React.Component<Props, State> {
                                 overflow: "hidden",
                               }}
                             >
-                              <Tree
+                              <ScrollableVirtualizedTree<SegmentHierarchyNode>
                                 allowDrop={this.allowDrop}
                                 onDrop={this.onDrop}
                                 onSelect={this.onSelectTreeItem}
@@ -1884,8 +1933,8 @@ class SegmentsView extends React.Component<Props, State> {
                                   overflow: "auto", // use hidden when not using virtualization
                                 }}
                                 ref={this.tree}
-                                onExpand={this.setExpandedGroups}
-                                expandedKeys={this.state.expandedGroupKeys}
+                                onExpand={this.setExpandedGroupsFromArray}
+                                expandedKeys={this.getExpandedGroupKeys()}
                               />
                             </div>
                           )}
@@ -1989,7 +2038,7 @@ class SegmentsView extends React.Component<Props, State> {
 
   getExpandSubgroupsItem(groupId: number) {
     const children = this.getKeysOfSubGroups(groupId);
-    const expandedGroupsSet = new Set(this.state.expandedGroupKeys);
+    const expandedGroupsSet = new Set(this.getExpandedGroupKeys());
     const areAllChildrenExpanded = children.every((childNode) => expandedGroupsSet.has(childNode));
     const isGroupItselfExpanded = expandedGroupsSet.has(getGroupNodeKey(groupId));
     if (areAllChildrenExpanded && isGroupItselfExpanded) {
@@ -1998,9 +2047,9 @@ class SegmentsView extends React.Component<Props, State> {
     return {
       key: "expandAll",
       onClick: () => {
-        const allExpandedGroups = children.concat(this.state.expandedGroupKeys);
+        const allExpandedGroups = children.concat(this.getExpandedGroupKeys());
         if (!isGroupItselfExpanded) allExpandedGroups.push(getGroupNodeKey(groupId));
-        this.setExpandedGroups(allExpandedGroups);
+        this.setExpandedGroupsFromArray(allExpandedGroups);
         this.hideContextMenu();
       },
       icon: <ExpandAltOutlined />,
@@ -2010,7 +2059,7 @@ class SegmentsView extends React.Component<Props, State> {
 
   getCollapseSubgroupsItem(groupId: number) {
     const children = this.getKeysOfSubGroups(groupId);
-    const expandedKeySet = new Set(this.state.expandedGroupKeys);
+    const expandedKeySet = new Set(this.getExpandedGroupKeys());
     const areAllChildrenCollapsed = children.every((childNode) => !expandedKeySet.has(childNode));
     const isGroupItselfCollapsed = !expandedKeySet.has(getGroupNodeKey(groupId));
     if (areAllChildrenCollapsed || isGroupItselfCollapsed) {

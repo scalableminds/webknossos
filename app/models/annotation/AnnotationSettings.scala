@@ -3,7 +3,7 @@ package models.annotation
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
-import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
+import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import play.api.libs.json._
 
 object TracingMode extends ExtendedEnumeration {
@@ -18,7 +18,7 @@ case class AnnotationSettings(
     somaClickingAllowed: Boolean = true,
     volumeInterpolationAllowed: Boolean = true,
     mergerMode: Boolean = false,
-    resolutionRestrictions: ResolutionRestrictions = ResolutionRestrictions.empty
+    magRestrictions: MagRestrictions = MagRestrictions.empty
 )
 
 object AnnotationSettings {

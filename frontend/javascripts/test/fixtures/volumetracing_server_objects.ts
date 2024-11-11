@@ -33,7 +33,7 @@ export const tracing: ServerVolumeTracing = {
   largestSegmentId: 21890,
   version: 0,
   zoomLevel: 0,
-  resolutions: [
+  mags: [
     {
       x: 1,
       y: 1,
@@ -110,7 +110,7 @@ export const annotation: APIAnnotation = {
     somaClickingAllowed: true,
     volumeInterpolationAllowed: false,
     mergerMode: false,
-    resolutionRestrictions: {},
+    magRestrictions: {},
   },
   tags: ["ROI2017_wkw", "volume"],
   tracingTime: 0,

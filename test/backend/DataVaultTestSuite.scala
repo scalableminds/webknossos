@@ -18,6 +18,7 @@ import net.liftweb.common.{Box, Empty, EmptyBox, Failure, Full}
 import play.api.libs.json.JsString
 import play.api.test.WsTestClient
 
+import java.util.UUID
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.{global => globalExecutionContext}
@@ -59,9 +60,11 @@ class DataVaultTestSuite extends PlaySpec {
         }
 
         "return empty box" when {
-          "requesting a nox-existent object" in {
+          "requesting a non-existent object" in {
             val result =
-              (vaultPath / "non-existent-key").readBytes()(globalExecutionContext).await(handleFoxJustification)
+              (vaultPath / s"non-existent-key${UUID.randomUUID}")
+                .readBytes()(globalExecutionContext)
+                .await(handleFoxJustification)
             assertBoxEmpty(result)
           }
         }
@@ -90,11 +93,14 @@ class DataVaultTestSuite extends PlaySpec {
       "using S3 data vault" should {
         "return correct response" in {
           val uri = new URI("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/")
-          val vaultPath = new VaultPath(uri, S3DataVault.create(RemoteSourceDescriptor(uri, None)))
-          val bytes =
-            (vaultPath / "s0/5/5/5").readBytes(Some(range))(globalExecutionContext).get(handleFoxJustification)
-          assert(bytes.length == range.length)
-          assert(bytes.take(10).sameElements(Array(0, 0, 0, 3, 0, 0, 0, 64, 0, 0)))
+          WsTestClient.withClient { ws =>
+            val vaultPath =
+              new VaultPath(uri, S3DataVault.create(RemoteSourceDescriptor(uri, None), ws)(globalExecutionContext))
+            val bytes =
+              (vaultPath / "s0/5/5/5").readBytes(Some(range))(globalExecutionContext).get(handleFoxJustification)
+            assert(bytes.length == range.length)
+            assert(bytes.take(10).sameElements(Array(0, 0, 0, 3, 0, 0, 0, 64, 0, 0)))
+          }
         }
       }
     }
@@ -132,21 +138,38 @@ class DataVaultTestSuite extends PlaySpec {
       "using s3 data vault" should {
         "return correctly decoded brotli-compressed data" in {
           val uri = new URI("s3://open-neurodata/bock11/image/4_4_40")
-          val vaultPath = new VaultPath(uri, S3DataVault.create(RemoteSourceDescriptor(uri, None)))
-          val bytes =
-            (vaultPath / "33792-34304_29696-30208_3216-3232")
-              .readBytes()(globalExecutionContext)
-              .get(handleFoxJustification)
-          assert(bytes.take(10).sameElements(Array(-87, -95, -85, -94, -101, 124, 115, 100, 113, 111)))
+          WsTestClient.withClient { ws =>
+            val vaultPath =
+              new VaultPath(uri, S3DataVault.create(RemoteSourceDescriptor(uri, None), ws)(globalExecutionContext))
+            val bytes =
+              (vaultPath / "33792-34304_29696-30208_3216-3232")
+                .readBytes()(globalExecutionContext)
+                .get(handleFoxJustification)
+            assert(bytes.take(10).sameElements(Array(-87, -95, -85, -94, -101, 124, 115, 100, 113, 111)))
+          }
         }
 
         "return empty box" when {
-          "requesting a nox-existent object" in {
-            val uri = new URI("s3://non-existing-bucket/non-existing-object")
-            val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None))
-            val vaultPath = new VaultPath(uri, s3DataVault)
-            val result = vaultPath.readBytes()(globalExecutionContext).await(handleFoxJustification)
-            assertBoxEmpty(result)
+          "requesting a non-existent bucket" in {
+            val uri = new URI(s"s3://non-existent-bucket${UUID.randomUUID}/non-existent-object")
+            WsTestClient.withClient { ws =>
+              val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None), ws)(globalExecutionContext)
+              val vaultPath = new VaultPath(uri, s3DataVault)
+              val result = vaultPath.readBytes()(globalExecutionContext).await(handleFoxJustification)
+              assertBoxEmpty(result)
+            }
+          }
+        }
+
+        "return empty box" when {
+          "requesting a non-existent object in existent bucket" in {
+            val uri = new URI(s"s3://open-neurodata/non-existent-object${UUID.randomUUID}")
+            WsTestClient.withClient { ws =>
+              val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None), ws)(globalExecutionContext)
+              val vaultPath = new VaultPath(uri, s3DataVault)
+              val result = vaultPath.readBytes()(globalExecutionContext).await(handleFoxJustification)
+              assertBoxEmpty(result)
+            }
           }
         }
       }
@@ -154,25 +177,29 @@ class DataVaultTestSuite extends PlaySpec {
 
     "using directory list requests" when {
       val uri = new URI("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/")
-      val vaultPath = new VaultPath(uri, S3DataVault.create(RemoteSourceDescriptor(uri, None)))
+      WsTestClient.withClient { ws =>
+        val vaultPath =
+          new VaultPath(uri, S3DataVault.create(RemoteSourceDescriptor(uri, None), ws)(globalExecutionContext))
 
-      "using s3 data vault" should {
-        "list available directories" in {
-          val result = vaultPath.listDirectory(maxItems = 3)(globalExecutionContext).get(handleFoxJustification)
-          assert(result.length == 3)
-          assert(
-            result.exists(
-              _.toUri == new URI("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/s0/")))
-        }
-
-        "return empty box" when {
-          "requesting directory listing on nox-existent bucket" in {
-            val uri = new URI("s3://non-existing-bucket/non-existing-object/")
-            val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None))
-            val vaultPath = new VaultPath(uri, s3DataVault)
-            val result = vaultPath.listDirectory(maxItems = 5)(globalExecutionContext).await(handleFoxJustification)
-            assertBoxEmpty(result)
+        "using s3 data vault" should {
+          "list available directories" in {
+            val result = vaultPath.listDirectory(maxItems = 3)(globalExecutionContext).get(handleFoxJustification)
+            assert(result.length == 3)
+            assert(
+              result.exists(
+                _.toUri == new URI("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/s0/")))
           }
+
+          "return failure" when {
+            "requesting directory listing on non-existent bucket" in {
+              val uri = new URI(f"s3://non-existent-bucket${UUID.randomUUID}/non-existent-object/")
+              val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None), ws)(globalExecutionContext)
+              val vaultPath = new VaultPath(uri, s3DataVault)
+              val result = vaultPath.listDirectory(maxItems = 5)(globalExecutionContext).await(handleFoxJustification)
+              assertBoxFailure(result)
+            }
+          }
+
         }
       }
     }

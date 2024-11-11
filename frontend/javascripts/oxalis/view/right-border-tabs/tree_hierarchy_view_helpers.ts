@@ -205,6 +205,24 @@ export function createGroupToTreesMap(trees: TreeMap): Record<number, Tree[]> {
   return _.groupBy(trees, (tree) => (tree.groupId != null ? tree.groupId : MISSING_GROUP_ID));
 }
 
+export function createGroupToParentMap(
+  groups: TreeGroup[],
+): Record<number, number | null | undefined> {
+  const groupToParentId: Record<number, number | null | undefined> = {};
+  function insertParentId(group: TreeGroup) {
+    if (group.children) {
+      group.children.forEach((child) => {
+        groupToParentId[child.groupId] = group.groupId;
+        insertParentId(child);
+      });
+    }
+  }
+  groups.forEach((group) => {
+    insertParentId(group);
+  });
+  return groupToParentId;
+}
+
 export function createGroupToSegmentsMap(segments: SegmentMap): Record<number, Segment[]> {
   const groupToSegments: Record<number, Segment[]> = {};
   for (const segment of segments.values()) {
@@ -216,6 +234,10 @@ export function createGroupToSegmentsMap(segments: SegmentMap): Record<number, S
   }
 
   return groupToSegments;
+}
+
+export function getExpandedGroups(groups: TreeGroup[]): TreeGroup[] {
+  return deepFlatFilter(groups, (group) => group.isExpanded ?? true);
 }
 
 export function getGroupByIdWithSubgroups(
@@ -253,18 +275,18 @@ export function moveGroupsHelper(
   return newGroups;
 }
 
-export function deepFlatFilter(
-  nodes: TreeNode[],
-  predicate: (node: TreeNode) => boolean,
-): TreeNode[] {
+export function deepFlatFilter<T extends TreeNode | TreeGroup>(
+  nodes: T[],
+  predicate: (node: T) => boolean,
+): T[] {
   // Apply a deep "filter" function to a Tree/Group hierarchy structure, traversing along their children.
   // The resulting items are flattened into a single array.
-  return nodes.reduce((acc: TreeNode[], node: TreeNode) => {
+  return nodes.reduce((acc: T[], node: T) => {
     if (predicate(node)) {
       acc.push(node);
     }
     if (node.children) {
-      acc.push(...deepFlatFilter(node.children, predicate));
+      acc.push(...deepFlatFilter(node.children as T[], predicate));
     }
     return acc;
   }, []);
@@ -290,4 +312,24 @@ export function findParentGroupNode(nodes: TreeNode[], parentGroupId: number): T
     }
   });
   return foundParentNode;
+}
+
+export function additionallyExpandGroup<T extends string | number>(
+  groups: TreeGroup[],
+  groupId: number | null | undefined,
+  groupIdToKey: (groupId: number) => T,
+): Set<T> | null {
+  if (!groupId) {
+    return null;
+  }
+  const groupToParentGroupId = createGroupToParentMap(groups);
+  const expandedGroups = new Set(
+    getExpandedGroups(groups).map((group) => groupIdToKey(group.groupId)),
+  );
+  let currentGroupId: number | undefined | null = groupId;
+  while (currentGroupId) {
+    expandedGroups.add(groupIdToKey(currentGroupId));
+    currentGroupId = groupToParentGroupId[currentGroupId];
+  }
+  return expandedGroups;
 }

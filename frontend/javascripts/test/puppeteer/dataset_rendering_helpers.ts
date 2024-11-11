@@ -2,17 +2,16 @@
 import urljoin from "url-join";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
-import type { Browser } from "puppeteer";
+import type { Browser, Page } from "puppeteer-core";
+import puppeteer from "puppeteer-core";
 import anyTest, { type TestFn } from "ava";
 import type { PartialDatasetConfiguration } from "oxalis/store";
-import type { Page } from "puppeteer";
 import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
 import type { RequestOptions } from "libs/request";
 import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
 import type { APIDatasetId } from "../../types/api_flow_types";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
-import puppeteer from "puppeteer";
 import { sleep } from "libs/utils";
 
 export const { WK_AUTH_TOKEN } = process.env;
@@ -355,33 +354,39 @@ export const test = anyTest as TestFn<{
 
 export function setupBeforeEachAndAfterEach() {
   test.beforeEach(async (t) => {
-    t.context.browser = await puppeteer.launch({
-      args: [
-        "--headless",
-        "--hide-scrollbars",
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--use-gl=swiftshader",
-      ],
-      dumpio: true,
-    });
+    // TODO Consider removing running local screenshot tests entirely and only use Browserstack
+
+    // Use this for connecting to local Chrome browser instance
+    // t.context.browser = await puppeteer.launch({
+    //   args: [
+    //     "--headless=new",
+    //     "--hide-scrollbars",
+    //     "--no-sandbox",
+    //     "--disable-setuid-sandbox",
+    //     "--disable-dev-shm-usage",
+    //     "--use-gl=swiftshader",
+    //   ],
+    //   dumpio: true,
+    // });
 
     const caps = {
       browser: "chrome",
       browser_version: "latest",
       os: "os x",
       os_version: "mojave",
+      name: t.title, // add test name to BrowserStack session
       "browserstack.username": process.env.BROWSERSTACK_USERNAME,
       "browserstack.accessKey": process.env.BROWSERSTACK_ACCESS_KEY,
     };
-    t.context.browser = await puppeteer.connect({
+    const browser = await puppeteer.connect({
       browserWSEndpoint: `ws://cdp.browserstack.com/puppeteer?caps=${encodeURIComponent(
         JSON.stringify(caps),
       )}`,
     });
+    t.context.browser = browser;
 
     console.log(`\nRunning chrome version ${await t.context.browser.version()}\n`);
+    console.log(`\nBrowserStack Session Id ${await getBrowserstackSessionId(browser)}\n`);
     global.Headers = Headers;
     global.fetch = fetch;
     global.Request = Request;
@@ -393,6 +398,17 @@ export function setupBeforeEachAndAfterEach() {
   test.afterEach.always(async (t) => {
     await t.context.browser.close();
   });
+}
+
+async function getBrowserstackSessionId(browser: Browser) {
+  const page = await browser.newPage();
+  const response = (await page.evaluate(
+    (_) => {},
+    `browserstack_executor: ${JSON.stringify({ action: "getSessionDetails" })}`,
+  )) as unknown as string;
+
+  const sessionDetails = await JSON.parse(response);
+  return sessionDetails.hashed_id;
 }
 
 export function checkBrowserstackCredentials() {

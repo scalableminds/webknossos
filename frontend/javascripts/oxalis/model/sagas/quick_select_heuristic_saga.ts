@@ -56,7 +56,7 @@ import {
   getDefaultValueRangeOfLayer,
   getEnabledColorLayers,
   getLayerBoundingBox,
-  getResolutionInfo,
+  getMagInfo,
   getTransformsForLayer,
 } from "../accessors/dataset_accessor";
 import Dimensions, { type DimensionIndices } from "../dimensions";
@@ -87,7 +87,7 @@ export function* prepareQuickSelect(
   colorLayer: APIDataLayer;
   quickSelectConfig: QuickSelectConfig;
   activeViewport: OrthoViewWithoutTD;
-  labeledResolution: Vector3;
+  labeledMag: Vector3;
   volumeTracing: VolumeTracing;
 } | null> {
   const activeViewport = yield* select(
@@ -145,7 +145,7 @@ export function* prepareQuickSelect(
   const requestedZoomStep = yield* select((store) =>
     getActiveMagIndexForLayer(store, colorLayer.name),
   );
-  const resolutionInfo = getResolutionInfo(
+  const resolutionInfo = getMagInfo(
     // Ensure that a magnification is used which exists in the color layer as well as the
     // target segmentation layer.
     _.intersectionBy(colorLayer.resolutions, volumeLayer.resolutions, (mag) => mag.join("-")),
@@ -154,7 +154,7 @@ export function* prepareQuickSelect(
     requestedZoomStep,
     "The visible color layer and the active segmentation layer don't have any magnifications in common. Cannot select segment.",
   );
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+  const labeledResolution = resolutionInfo.getMagByIndexOrThrow(labeledZoomStep);
 
   return {
     labeledZoomStep,
@@ -164,7 +164,7 @@ export function* prepareQuickSelect(
     colorLayer,
     quickSelectConfig,
     activeViewport,
-    labeledResolution,
+    labeledMag: labeledResolution,
     volumeTracing,
   };
 }
@@ -184,7 +184,7 @@ export default function* performQuickSelect(
     colorLayer,
     quickSelectConfig,
     activeViewport,
-    labeledResolution,
+    labeledMag: labeledResolution,
     volumeTracing,
   } = preparation;
   const { startPosition, endPosition, quickSelectGeometry } = action;
@@ -501,7 +501,7 @@ export function* finalizeQuickSelectForSlice(
   quickSelectGeometry: QuickSelectGeometry,
   volumeTracing: VolumeTracing,
   activeViewport: OrthoView,
-  labeledResolution: Vector3,
+  labeledMag: Vector3,
   boundingBoxMag1: BoundingBox,
   w: number,
   mask: ndarray.NdArray<TypedArrayWithoutBigInt>,
@@ -510,13 +510,7 @@ export function* finalizeQuickSelectForSlice(
   skipFinishAnnotationStroke: boolean = false,
 ) {
   quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
-  const volumeLayer = yield* call(
-    createVolumeLayer,
-    volumeTracing,
-    activeViewport,
-    labeledResolution,
-    w,
-  );
+  const volumeLayer = yield* call(createVolumeLayer, volumeTracing, activeViewport, labeledMag, w);
   const sizeUVWInMag = mask.shape;
   const voxelBuffer2D = volumeLayer.createVoxelBuffer2D(
     V2.floor(volumeLayer.globalCoordToMag2DFloat(boundingBoxMag1.min)),

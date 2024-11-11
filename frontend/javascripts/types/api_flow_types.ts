@@ -350,7 +350,7 @@ export type APIRestrictions = {
   readonly allowSave?: boolean;
 };
 export type APIAllowedMode = "orthogonal" | "oblique" | "flight";
-export type APIResolutionRestrictions = {
+export type APIMagRestrictions = {
   min?: number;
   max?: number;
 };
@@ -361,7 +361,7 @@ export type APISettings = {
   readonly somaClickingAllowed: boolean;
   readonly volumeInterpolationAllowed: boolean;
   readonly mergerMode: boolean;
-  readonly resolutionRestrictions: APIResolutionRestrictions;
+  readonly magRestrictions: APIMagRestrictions;
 };
 export enum APIAnnotationTypeEnum {
   Explorational = "Explorational",
@@ -583,6 +583,7 @@ export type APITimeTrackingSpan = {
   datasetOrganization: string;
   datasetName: string;
   annotationId: string;
+  annotationState: string;
   taskId: string | undefined;
   projectName: string | undefined;
   taskTypeId: string | undefined;
@@ -857,11 +858,11 @@ export type ServerVolumeTracing = ServerTracingBase & {
   segments: Array<ServerSegment>;
   segmentGroups: Array<SegmentGroup> | null | undefined;
   largestSegmentId: number;
-  // `resolutions` will be undefined for legacy annotations
-  // which were created before the multi-resolution capabilities
+  // `mags` will be undefined for legacy annotations
+  // which were created before the multi-magnification capabilities
   // were added to volume tracings. Also see:
   // https://github.com/scalableminds/webknossos/pull/4755
-  resolutions?: Array<Point3>;
+  mags?: Array<Point3>;
   mappingName?: string | null | undefined;
   hasEditableMapping?: boolean;
   mappingIsLocked?: boolean;

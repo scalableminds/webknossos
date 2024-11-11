@@ -65,25 +65,73 @@ WEBKNOSSOS expects the following file structure for OME-Zarr (v0.4) datasets:
 
 See [OME-Zarr 0.4 spec](https://ngff.openmicroscopy.org/latest/index.html#image-layout) for details.
 
+### Zarr Folder Structure (v0.5)
+
+For OME-Zarr (v0.5) datasets, the structure is slightly different (See [OME-Zarr 0.5 spec](https://ngff--242.org.readthedocs.build/latest/index.html#image-layout)):
+
+```
+├── 123.zarr                  # One OME-Zarr image (id=123).
+│   ...
+│
+└── 456.zarr                  # Another OME-Zarr image (id=456).
+    │
+    ├── zarr.json             # Each image is a Zarr group of other groups and arrays.
+    │                         # Group level attributes are stored in the zarr.json file and include
+    │                         # "multiscales" and "omero" (see below).
+    │
+    ├── 0                     # Each multiscale level is stored as a separate Zarr array,
+    │   ...                   # which is a folder containing chunk files which compose the array.
+    ├── n                     # The name of the array is arbitrary with the ordering defined by
+    │   │                     # by the "multiscales" metadata, but is often a sequence starting at 0.
+    │   │
+    │   ├── zarr.json         # All image arrays must be up to 5-dimensional
+    │   │                     # with the axis of type time before type channel, before spatial axes.
+    │   │
+    │   └─ ...                # Chunks are stored conforming to the Zarr array specification and 
+    │                         # metadata as specified in the array’s zarr.json.
+    │
+    └── labels
+        │
+        ├── zarr.json         # The labels group is a container which holds a list of labels to make the objects easily discoverable
+        │                     # All labels will be listed in zarr.json e.g. { "labels": [ "original/0" ] }
+        │                     # Each dimension of the label should be either the same as the
+        │                     # corresponding dimension of the image, or 1 if that dimension of the label
+        │                     # is irrelevant.
+        │
+        └── original          # Intermediate folders are permitted but not necessary and currently contain no extra metadata.
+            │
+            └── 0             # Multiscale, labeled image. The name is unimportant but is registered in the "labels" group above.
+                ├── zarr.json # Zarr Group which is both a multiscaled image as well as a labeled image.
+                │             # Metadata of the related image and as well as display information under the "image-label" key.
+                │
+                ├── 0         # Each multiscale level is stored as a separate Zarr array, as above, but only integer values
+                └── ...       # are supported.
+```
+
 ## Conversion to Zarr
 
 You can easily convert image stacks manually with the [WEBKNOSSOS CLI](https://docs.webknossos.org/cli).
-The CLI tool expects all image files in a single folder with numbered file names.
+The CLI tool expects a single file or all image files in a single folder with numbered file names.
 After installing, you can convert image stacks to Zarr datasets with the following command:
 
 ```shell
-pip install webknossos
+pip install --extra-index-url https://pypi.scm.io/simple "webknossos[all]"
 
 webknossos convert \
+  --layer-name em \
   --voxel-size 11.24,11.24,25 \
-  --name my_dataset \
+  --chunk-shape 64,64,64 \
   --data-format zarr \
-  data/source data/target
+  --jobs 4 \
+  input.tif output.zarr
+
+webknossos compress --jobs 4 output.zarr
+webknossos downsample --jobs 4 output.zarr
 ```
 
-This snippet converts an image stack that is located in directory called `data/source` into a Zarr dataset which will be located at `data/target`.
-It will create a so called `color` layer containing your raw greyscale/color image.
-The supplied `--voxel-size` is specified in nanometers.
+This example will create an unsharded Zarr v2 dataset with a voxel size of (4,4,4) nm<sup>3</sup> and a chunk size of (64,64,64) voxel. 
+A maximum of 4 parallel jobs will be used to parallelize the conversion, compression and downsampling.
+Using the `--data-format zarr3` argument will produce sharded Zarr v3 datasets.
 
 Read the full documentation at [WEBKNOSSOS CLI](https://docs.webknossos.org/cli).
 
@@ -127,3 +175,5 @@ To get the best streaming performance for Zarr datasets consider the following s
 
 - Use chunk sizes of 32 - 128 voxels^3
 - Enable sharding (only available in Zarr 3+)
+- Use 3D downsampling
+

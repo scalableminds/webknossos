@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(121);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(123);
 COMMIT TRANSACTION;
 
 
@@ -174,11 +174,11 @@ CREATE TABLE webknossos.dataset_allowedTeams(
   PRIMARY KEY (_dataset, _team)
 );
 
-CREATE TABLE webknossos.dataset_resolutions(
+CREATE TABLE webknossos.dataset_mags(
   _dataset CHAR(24) NOT NULL,
   dataLayerName VARCHAR(256),
-  resolution webknossos.VECTOR3 NOT NULL,
-  PRIMARY KEY (_dataset, dataLayerName, resolution)
+  mag webknossos.VECTOR3 NOT NULL,
+  PRIMARY KEY (_dataset, dataLayerName, mag)
 );
 
 CREATE TABLE webknossos.dataset_lastUsedTimes(
@@ -260,8 +260,8 @@ CREATE TABLE webknossos.taskTypes(
   settings_somaClickingAllowed BOOLEAN NOT NULL,
   settings_volumeInterpolationAllowed BOOLEAN NOT NULL DEFAULT false,
   settings_mergerMode BOOLEAN NOT NULL DEFAULT false,
-  settings_resolutionRestrictions_min INT DEFAULT NULL,
-  settings_resolutionRestrictions_max INT DEFAULT NULL,
+  settings_magRestrictions_min INT DEFAULT NULL,
+  settings_magRestrictions_max INT DEFAULT NULL,
   recommendedConfiguration JSONB,
   tracingType webknossos.TASKTYPE_TRACINGTYPES NOT NULL DEFAULT 'skeleton',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -546,7 +546,7 @@ CREATE TABLE webknossos.emailVerificationKeys(
   isUsed BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei');
+CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei', 'em_synapses', 'em_neuron_types', 'em_cell_organelles');
 
 CREATE TABLE webknossos.aiModels(
   _id CHAR(24) PRIMARY KEY,
@@ -787,7 +787,7 @@ ALTER TABLE webknossos.dataset_layers
 ALTER TABLE webknossos.dataset_allowedTeams
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE,
   ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.dataset_resolutions
+ALTER TABLE webknossos.dataset_mags
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.projects
   ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) DEFERRABLE,

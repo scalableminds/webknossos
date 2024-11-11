@@ -36,7 +36,13 @@ object SequenceUtils {
       .map(_.reverse) // we prepended on the inner lists (for perf reasons)
 
   /*
-   // TODO: Comment
+   Create a Seq of Long range tuples, covering a given inclusive Long range.
+   The individual ranges should be treated as inclusive as well.
+   Example:
+     batchRangeInclusive(0,5,3)
+       → Seq((0,2), (3,5))
+     batchRangeInclusive(0,6,2)
+       → Seq((0,1), (2,3), (4,5), (6,6))
    */
   def batchRangeInclusive(from: Long, to: Long, batchSize: Long): Seq[(Long, Long)] =
     (0L to ((to - from) / batchSize)).map { batchIndex =>

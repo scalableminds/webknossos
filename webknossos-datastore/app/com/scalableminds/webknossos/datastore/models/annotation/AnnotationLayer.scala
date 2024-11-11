@@ -11,7 +11,6 @@ import scalapb.GeneratedMessage
 
 import scala.concurrent.ExecutionContext
 
-// TODO can this be moved back to wk-core backend?
 case class AnnotationLayer(
     tracingId: String,
     typ: AnnotationLayerType,

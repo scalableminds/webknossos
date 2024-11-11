@@ -619,7 +619,7 @@ function SimpleLayerForm({
           <Row gutter={32}>
             <Col span={12}>
               Permanent dataset rotation:
-              <AxisRotationSettingForLayer form={form} index={index} />
+              <AxisRotationSettingForLayer form={form} layerIndex={index} />
             </Col>
           </Row>
         </Col>

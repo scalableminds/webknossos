@@ -20,8 +20,9 @@ import type { CoordinateTransformation } from "types/api_flow_types";
 import type { NestedMatrix4 } from "oxalis/constants";
 import * as THREE from "three";
 import { nestedToFlatMatrix } from "oxalis/model/helpers/transformation_helpers";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { flatToNestedMatrix } from "oxalis/model/accessors/dataset_accessor";
+import { mod } from "libs/utils";
 
 const { Text } = Typography;
 
@@ -149,7 +150,7 @@ export const hasFormError = (formErrors: FieldError[], key: string): boolean => 
 
 type AxisRotationFormItemProps = {
   form: FormInstance | undefined;
-  index: number;
+  layerIndex: number;
   axis: "x" | "y" | "z";
 };
 
@@ -160,62 +161,71 @@ const IDENTITY_MATRIX = [
   [0, 0, 0, 1],
 ] as NestedMatrix4;
 
+const sinusLocationOfRotationInMatrix = {
+  x: [1, 2],
+  y: [2, 0],
+  z: [0, 1],
+};
+
+const cosinusLocationOfRotationInMatrix = {
+  x: [1, 1],
+  y: [0, 0],
+  z: [0, 0],
+};
+
+const AXIS_TO_TRANSFORM_INDEX = {
+  x: 0,
+  y: 1,
+  z: 2,
+};
+
 export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
   form,
-  index,
+  layerIndex,
   axis,
 }: AxisRotationFormItemProps) => {
-  const coordinateTransformations: CoordinateTransformation[] = form?.getFieldValue([
+  const transformationIndex = AXIS_TO_TRANSFORM_INDEX[axis];
+  const coordinateTransformation: CoordinateTransformation = form?.getFieldValue([
     "dataSource",
     "dataLayers",
-    index,
+    layerIndex,
     "coordinateTransformations",
+    transformationIndex,
   ]);
-  const firstTransformation = coordinateTransformations?.[0];
   const deriveRotationFromMatrix = useCallback(
     (transformation: CoordinateTransformation | undefined) => {
       if (transformation && transformation.type !== "affine") {
         return;
       }
       const matrix = transformation ? transformation.matrix : IDENTITY_MATRIX;
-      const rotation = new THREE.Quaternion();
-      const affineTransformationMatrix = new THREE.Matrix4();
-      affineTransformationMatrix.fromArray(nestedToFlatMatrix(matrix));
-      affineTransformationMatrix.decompose(new THREE.Vector3(), rotation, new THREE.Vector3());
-      const euler = new THREE.Euler().setFromQuaternion(rotation);
-      return euler[axis] * (180 / Math.PI);
+      const cosinusLocation = cosinusLocationOfRotationInMatrix[axis];
+      const sinusLocation = sinusLocationOfRotationInMatrix[axis];
+      const sinOfAngle = matrix[sinusLocation[0]][sinusLocation[1]];
+      const cosOfAngle = matrix[cosinusLocation[0]][cosinusLocation[1]];
+      const rotation =
+        Math.abs(cosOfAngle) > 1e-6
+          ? Math.atan2(sinOfAngle, cosOfAngle)
+          : sinOfAngle > 0
+            ? Math.PI / 2
+            : -Math.PI / 2;
+      const rotationInDegrees = rotation * (180 / Math.PI);
+      // Round to multiple of 90 degrees and keep the result positive.
+      const roundedRotation = mod(Math.round((rotationInDegrees + 360) / 90) * 90, 360);
+      return roundedRotation;
     },
     [axis],
   );
   const matrixWithUpdatedRotation = useCallback(
-    (rotation: number): CoordinateTransformation => {
-      const matrix: NestedMatrix4 =
-        firstTransformation && firstTransformation.type === "affine" && firstTransformation?.matrix
-          ? firstTransformation.matrix
-          : IDENTITY_MATRIX;
-      const newMatrix = new THREE.Matrix4().fromArray(nestedToFlatMatrix(matrix));
-      const translation = new THREE.Vector3();
-      const scale = new THREE.Vector3();
-      const quaternion = new THREE.Quaternion();
-      newMatrix.decompose(translation, quaternion, scale);
-      const euler = new THREE.Euler().setFromQuaternion(quaternion);
-      euler[axis] = rotation * (Math.PI / 180);
-      quaternion.setFromEuler(euler);
-      newMatrix.compose(translation, quaternion, scale);
-      const newMatrixArray = newMatrix.toArray();
-      return { type: "affine", matrix: flatToNestedMatrix(newMatrixArray) };
+    (rotationInDegrees: number): CoordinateTransformation => {
+      const rotationInRadians = rotationInDegrees * (Math.PI / 180);
+      const euler = new THREE.Euler();
+      euler[axis] = rotationInRadians;
+      const newMatrix = new THREE.Matrix4().makeRotationFromEuler(euler);
+      return { type: "affine", matrix: flatToNestedMatrix(newMatrix.toArray()) };
     },
-    [firstTransformation, axis],
+    [axis],
   );
-  if (coordinateTransformations && coordinateTransformations.length > 1) {
-    return (
-      <Text type="secondary">
-        Setting a layers rotation is only supported for a single affine transformation. This layer
-        has multiple transformations.
-      </Text>
-    );
-  }
-  if (firstTransformation && firstTransformation.type !== "affine") {
+  if (coordinateTransformation && coordinateTransformation.type !== "affine") {
     return (
       <Text type="secondary">
         Setting a layers rotation is only supported for affine transformations. This layer is
@@ -227,7 +237,13 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
     <Row gutter={24}>
       <Col span={16}>
         <FormItemWithInfo
-          name={["dataSource", "dataLayers", index, "coordinateTransformations", 0]}
+          name={[
+            "dataSource",
+            "dataLayers",
+            layerIndex,
+            "coordinateTransformations",
+            transformationIndex,
+          ]}
           label={`${axis.toUpperCase()} Axis Rotation`}
           info={`Change the datasets rotation around the ${axis}-axis.`}
           colon={false}
@@ -239,7 +255,13 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
       </Col>
       <Col span={8} style={{ marginRight: -12 }}>
         <FormItem
-          name={["dataSource", "dataLayers", index, "coordinateTransformations", 0]}
+          name={[
+            "dataSource",
+            "dataLayers",
+            layerIndex,
+            "coordinateTransformations",
+            transformationIndex,
+          ]}
           colon={false}
           label=" "
           getValueProps={(value) => ({ value: deriveRotationFromMatrix(value) })}
@@ -254,17 +276,62 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
 
 type AxisRotationSettingForLayerProps = {
   form: FormInstance | undefined;
-  index: number;
+  layerIndex: number;
 };
+
+const NON_SCALED_VECTOR = new THREE.Vector3(1, 1, 1);
+
+function hasRotationOnlyTransformations(coordinateTransformations: CoordinateTransformation[]) {
+  if (coordinateTransformations == null) {
+    return true;
+  }
+  // There should be one transformation for each axis. => A total max of 3.
+  if (coordinateTransformations.length > 3) {
+    return false;
+  }
+  const translation = new THREE.Vector3();
+  const scale = new THREE.Vector3();
+  const quaternion = new THREE.Quaternion();
+  return coordinateTransformations.every((transformation) => {
+    if (transformation.type !== "affine") {
+      return false;
+    }
+    const threeMatrix = new THREE.Matrix4().fromArray(nestedToFlatMatrix(transformation.matrix));
+    threeMatrix.decompose(translation, quaternion, scale);
+    const hasNoTranslationAndNoScaling =
+      translation.length() === 0 && scale.equals(NON_SCALED_VECTOR);
+    return hasNoTranslationAndNoScaling;
+  });
+}
+
 export const AxisRotationSettingForLayer: React.FC<AxisRotationSettingForLayerProps> = ({
   form,
-  index,
+  layerIndex,
 }: AxisRotationSettingForLayerProps) => {
+  const coordinateTransformations: CoordinateTransformation[] = form?.getFieldValue([
+    "dataSource",
+    "dataLayers",
+    layerIndex,
+    "coordinateTransformations",
+  ]);
+  const isRotationOnly = useMemo(
+    () => hasRotationOnlyTransformations(coordinateTransformations),
+    [coordinateTransformations],
+  );
+
+  if (!isRotationOnly) {
+    return (
+      <Text type="secondary">
+        Setting a layers rotation is only supported for layers with affine rotations only.
+      </Text>
+    );
+  }
+
   return (
     <div>
-      <AxisRotationFormItem form={form} index={index} axis="x" />
-      <AxisRotationFormItem form={form} index={index} axis="y" />
-      <AxisRotationFormItem form={form} index={index} axis="z" />
+      <AxisRotationFormItem form={form} layerIndex={layerIndex} axis="x" />
+      <AxisRotationFormItem form={form} layerIndex={layerIndex} axis="y" />
+      <AxisRotationFormItem form={form} layerIndex={layerIndex} axis="z" />
     </div>
   );
 };

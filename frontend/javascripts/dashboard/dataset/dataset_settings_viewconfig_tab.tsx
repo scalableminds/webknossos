@@ -30,6 +30,7 @@ import ColorLayerOrderingTable from "./color_layer_ordering_component";
 import type { APIDatasetId } from "types/api_flow_types";
 import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admin/admin_rest_api";
 import { Slider } from "components/slider";
+
 const FormItem = Form.Item;
 
 export default function DatasetSettingsViewConfigTab(props: {

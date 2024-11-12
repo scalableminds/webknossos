@@ -600,7 +600,7 @@ class VolumeTracingService @Inject()(
                     toTemporaryStore: Boolean = false): Fox[String] =
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
-      _ <- bool2Fox(mags.nonEmpty) ?~> "Mag restrictions result in zero mags"
+      _ <- bool2Fox(mags.nonEmpty) ?~> "Initializing without any mags. No data or mag restrictions too tight?"
       id <- save(tracing.copy(mags = mags.toList.sortBy(_.maxDim).map(vec3IntToProto)),
                  Some(tracingId),
                  tracing.version,

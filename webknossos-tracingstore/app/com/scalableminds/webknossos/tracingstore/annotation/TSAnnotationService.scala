@@ -292,14 +292,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     val volumeTracingIds =
       annotation.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Volume).map(_.tracingId)
     for {
-      skeletonTracings <- Fox.serialCombined(skeletonTracingIds.toList)(
-        id =>
-          tracingDataStore.skeletons.get[SkeletonTracing](id, Some(annotation.version), mayBeEmpty = Some(true))(
-            fromProtoBytes[SkeletonTracing]))
-      volumeTracings <- Fox.serialCombined(volumeTracingIds.toList)(
-        id =>
-          tracingDataStore.volumes
-            .get[VolumeTracing](id, Some(annotation.version), mayBeEmpty = Some(true))(fromProtoBytes[VolumeTracing]))
+      skeletonTracings <- Fox.serialCombined(skeletonTracingIds.toList)(id =>
+        findSkeletonRaw(id, Some(annotation.version)))
+      volumeTracings <- Fox.serialCombined(volumeTracingIds.toList)(id => findVolumeRaw(id, Some(annotation.version)))
       _ = logger.info(s"fetched ${skeletonTracings.length} skeletons and ${volumeTracings.length} volumes")
       skeletonTracingsMap: Map[String, Either[SkeletonTracing, VolumeTracing]] = skeletonTracingIds
         .zip(skeletonTracings.map(versioned => Left[SkeletonTracing, VolumeTracing](versioned.value)))
@@ -535,6 +530,14 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         editableMappingInfo <- findEditableMappingInfo(annotationId, tracingId)
       } yield Some(editableMappingInfo.baseMappingName)
     else Fox.successful(tracing.mappingName)
+
+  def findVolumeRaw(tracingId: String, version: Option[Long] = None): Fox[VersionedKeyValuePair[VolumeTracing]] =
+    tracingDataStore.volumes
+      .get[VolumeTracing](tracingId, version, mayBeEmpty = Some(true))(fromProtoBytes[VolumeTracing])
+
+  private def findSkeletonRaw(tracingId: String, version: Option[Long]): Fox[VersionedKeyValuePair[SkeletonTracing]] =
+    tracingDataStore.volumes
+      .get[SkeletonTracing](tracingId, version, mayBeEmpty = Some(true))(fromProtoBytes[SkeletonTracing])
 
   def findVolume(annotationId: String,
                  tracingId: String,

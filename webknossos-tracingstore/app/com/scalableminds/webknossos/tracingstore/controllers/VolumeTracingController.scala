@@ -143,12 +143,14 @@ class VolumeTracingController @Inject()(
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             for {
-              annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
-              tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
+              // The annotation object may not yet exist here. Caller is responsible to save that too.
+              tracing <- annotationService.findVolumeRaw(tracingId) ?~> Messages("tracing.notFound")
               magRestrictions = MagRestrictions(minMag, maxMag)
-              mags <- volumeTracingService.initializeWithData(tracingId, tracing, initialData, magRestrictions).toFox
-              _ <- volumeTracingService.updateMagList(tracingId, tracing, mags)
+              mags <- volumeTracingService
+                .initializeWithData(tracingId, tracing.value, initialData, magRestrictions)
+                .toFox
+              _ <- volumeTracingService.updateMagList(tracingId, tracing.value, mags)
             } yield Ok(Json.toJson(tracingId))
           }
         }
@@ -182,11 +184,11 @@ class VolumeTracingController @Inject()(
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             for {
-              annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
-              tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
-              mags <- volumeTracingService.initializeWithDataMultiple(tracingId, tracing, initialData).toFox
-              _ <- volumeTracingService.updateMagList(tracingId, tracing, mags)
+              // The annotation object may not yet exist here. Caller is responsible to save that too.
+              tracing <- annotationService.findVolumeRaw(tracingId) ?~> Messages("tracing.notFound")
+              mags <- volumeTracingService.initializeWithDataMultiple(tracingId, tracing.value, initialData).toFox
+              _ <- volumeTracingService.updateMagList(tracingId, tracing.value, mags)
             } yield Ok(Json.toJson(tracingId))
           }
         }

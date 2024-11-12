@@ -660,7 +660,7 @@ class VolumeTracingService @Inject()(
     } yield
       tracing.copy(
         createdTimestamp = System.currentTimeMillis(),
-        version = 0L,
+        version = newVersion,
         mappingName = newEditableMappingIdOpt,
         hasSegmentIndex = Some(mergedVolumeStats.createdSegmentIndex)
       )

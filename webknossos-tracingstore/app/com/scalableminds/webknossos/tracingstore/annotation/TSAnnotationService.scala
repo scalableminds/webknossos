@@ -263,7 +263,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     for {
       updateGroupsAsSaved <- findPendingUpdates(annotationId, annotation.version, targetVersion) ?~> "findPendingUpdates.failed"
       updatesGroupsRegrouped = regroupByIsolationSensitiveActions(updateGroupsAsSaved)
-      annotationWithTracings <- findTracingsForAnnotation(annotation) ?~> "findTracingsForUpdates.failed"
+      annotationWithTracings <- findTracingsForAnnotation(annotation) ?~> "findTracingsForAnnotation.failed"
       annotationWithTracingsAndMappings <- findEditableMappingsForAnnotation(
         annotationId,
         annotationWithTracings,
@@ -293,8 +293,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       annotation.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Volume).map(_.tracingId)
     for {
       skeletonTracings <- Fox.serialCombined(skeletonTracingIds.toList)(id =>
-        findSkeletonRaw(id, Some(annotation.version)))
-      volumeTracings <- Fox.serialCombined(volumeTracingIds.toList)(id => findVolumeRaw(id, Some(annotation.version)))
+        findSkeletonRaw(id, Some(annotation.version))) ?~> "findSkeletonRaw.failed"
+      volumeTracings <- Fox.serialCombined(volumeTracingIds.toList)(id => findVolumeRaw(id, Some(annotation.version))) ?~> "findVolumeRaw.failed"
       _ = logger.info(s"fetched ${skeletonTracings.length} skeletons and ${volumeTracings.length} volumes")
       skeletonTracingsMap: Map[String, Either[SkeletonTracing, VolumeTracing]] = skeletonTracingIds
         .zip(skeletonTracings.map(versioned => Left[SkeletonTracing, VolumeTracing](versioned.value)))

@@ -186,6 +186,7 @@ class TSAnnotationController @Inject()(
                                                                       persist = persist)
             mergeEditableMappingsResultBox <- annotationService
               .mergeEditableMappings(request.body,
+                                     newAnnotationId,
                                      newVolumeId,
                                      volumeTracings.zip(volumeLayers.map(_.tracingId)),
                                      persist)

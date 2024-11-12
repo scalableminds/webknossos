@@ -511,45 +511,4 @@ class EditableMappingService @Inject()(
     neighborNodes
   }
 
-  /*
-  def merge(newTracingId: String, tracingIds: List[String], remoteFallbackLayer: RemoteFallbackLayer)(
-      implicit tc: TokenContext): Fox[Unit] =
-    for {
-      firstTracingId <- tracingIds.headOption.toFox
-      before = Instant.now
-      _ <- duplicate(firstTracingId, newTracingId, version = None, Some(remoteFallbackLayer))
-      _ <- Fox.serialCombined(tracingIds.tail)(tracingId => mergeInto(newTracingId, tracingId, remoteFallbackLayer))
-      _ = logger.info(s"Merging ${tracingIds.length} editable mappings took ${Instant.since(before)}")
-    } yield ()
-
-  // read as: merge source into target (mutate target)
-  private def mergeInto(targetTracingId: String, sourceTracingId: String, remoteFallbackLayer: RemoteFallbackLayer)(
-      implicit tc: TokenContext): Fox[Unit] =
-    for {
-      targetNewestVersion <- getClosestMaterializableVersionOrZero(targetTracingId, None)
-      sourceNewestMaterializedWithVersion <- getInfoAndActualVersion(sourceTracingId, None, remoteFallbackLayer)
-      sourceNewestVersion = sourceNewestMaterializedWithVersion._2
-      updateActionsWithVersions <- getUpdateActionsWithVersions(sourceTracingId, sourceNewestVersion, 0L)
-      updateActionsToApply = updateActionsWithVersions.map(_._2).reverse.flatten
-      updater = new EditableMappingUpdater(
-        targetTracingId,
-        sourceNewestMaterializedWithVersion._1.baseMappingName,
-        targetNewestVersion,
-        targetNewestVersion + sourceNewestVersion,
-        remoteFallbackLayer,
-        tc,
-        remoteDatastoreClient,
-        this,
-        tracingDataStore,
-        relyOnAgglomerateIds = false
-      )
-      _ <- updater.applyUpdatesAndSave(sourceNewestMaterializedWithVersion._1, updateActionsToApply)
-      _ <- Fox.serialCombined(updateActionsWithVersions) { updateActionsWithVersion =>
-        tracingDataStore.editableMappingUpdates.put(targetTracingId,
-                                                    updateActionsWithVersion._1 + targetNewestVersion,
-                                                    updateActionsWithVersion._2)
-      }
-    } yield ()
- */
-
 }

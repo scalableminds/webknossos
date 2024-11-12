@@ -36,6 +36,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fix that scrolling in the trees and segments tab did not work while dragging. [#8162](https://github.com/scalableminds/webknossos/pull/8162)
 - Fixed that uploading a dataset which needs a conversion failed when the angstrom unit was configured for the conversion. [#8173](https://github.com/scalableminds/webknossos/pull/8173)
 - Fixed that the skeleton search did not automatically expand groups that contained the selected tree [#8129](https://github.com/scalableminds/webknossos/pull/8129)
+- Fixed interactions in the trees and segments tab like the search due to a bug introduced by [#8162](https://github.com/scalableminds/webknossos/pull/8162). [#8186](https://github.com/scalableminds/webknossos/pull/8186)
 - Fixed a bug that zarr streaming version 3 returned the shape of mag (1, 1, 1) / the finest mag for all mags. [#8116](https://github.com/scalableminds/webknossos/pull/8116)
 - Fixed sorting of mags in outbound zarr streaming. [#8125](https://github.com/scalableminds/webknossos/pull/8125)
 - Fixed a bug where you could not create annotations for public datasets of other organizations. [#8107](https://github.com/scalableminds/webknossos/pull/8107)
@@ -44,6 +45,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Removed unnecessary scrollbars in skeleton tab that occurred especially after resizing. [#8148](https://github.com/scalableminds/webknossos/pull/8148)
 - Deleting a bounding box is now possible independently of a visible segmentation layer. [#8164](https://github.com/scalableminds/webknossos/pull/8164)
 - S3-compliant object storages can now be accessed via HTTPS. [#8167](https://github.com/scalableminds/webknossos/pull/8167)
+- Fixed that skeleton tree nodes were created with the wrong mag. [#8185](https://github.com/scalableminds/webknossos/pull/8185)
 - Fixed a layout persistence bug leading to empty viewports, triggered when switching between orthogonal, flight, or oblique mode. [#8177](https://github.com/scalableminds/webknossos/pull/8177)
 
 ### Removed

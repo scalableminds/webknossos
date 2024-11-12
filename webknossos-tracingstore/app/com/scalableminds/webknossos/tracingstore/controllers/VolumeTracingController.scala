@@ -166,7 +166,7 @@ class VolumeTracingController @Inject()(
             tracings = request.body
             shouldCreateSegmentIndex = volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(tracings.flatten)
             mt <- volumeTracingService
-              .merge(tracings.flatten, MergedVolumeStats.empty(shouldCreateSegmentIndex), Empty)
+              .merge(tracings.flatten, MergedVolumeStats.empty(shouldCreateSegmentIndex), Empty, newVersion = 0L)
               .toFox
 
             // segment lists for multi-volume uploads are not supported yet, compare https://github.com/scalableminds/webknossos/issues/6887

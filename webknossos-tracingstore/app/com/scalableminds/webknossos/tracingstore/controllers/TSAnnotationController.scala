@@ -198,7 +198,8 @@ class TSAnnotationController @Inject()(
                                                                       newVersion = newTargetVersion,
                                                                       persist = persist)
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
-              volumeTracingService.merge(volumeTracings, mergedVolumeStats, newMappingName))
+              volumeTracingService
+                .merge(volumeTracings, mergedVolumeStats, newMappingName, newVersion = newTargetVersion))
             _ <- Fox.runOptional(mergedVolumeOpt)(
               volumeTracingService.save(_, Some(newVolumeId), version = newTargetVersion, toTemporaryStore = !persist))
             skeletonTracings <- annotationService
@@ -207,7 +208,7 @@ class TSAnnotationController @Inject()(
               }, applyUpdates = true)
               .map(_.flatten)
             mergedSkeletonOpt <- Fox.runIf(skeletonTracings.nonEmpty)(
-              skeletonTracingService.merge(skeletonTracings).toFox)
+              skeletonTracingService.merge(skeletonTracings, newVersion = newTargetVersion).toFox)
             mergedSkeletonLayerOpt = mergedSkeletonOpt.map(
               _ =>
                 AnnotationLayerProto(name = mergedSkeletonName,

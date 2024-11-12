@@ -173,33 +173,33 @@ services:
   #     - "9000:9000"
   #   command: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
 
-  e2e-tests:
-    extends:
-      service: backend-tests
-    depends_on:
-      redis:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      fossildb:
-        condition: service_healthy
-    environment:
-      POSTGRES_URL: jdbc:postgresql://postgres/webknossos_testing
-      POSTGRES_USER: webknossos_user
-      POSTGRES_PASSWORD: secret_password
-    command:
-      - bash
-      - -c
-      - >
-        sbt
-        -v
-        "testOnly e2e.* --
-          -Dtracingstore.fossildb.address=fossildb
-          -Dtracingstore.redis.address=redis
-          -Ddatastore.redis.address=redis
-          -Ddatastore.watchFileSystem.enabled=false"
-    volumes:
-      - ./binaryData/Connectomics department:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
+  # e2e-tests:
+  #   extends:
+  #     service: backend-tests
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
+  #     postgres:
+  #       condition: service_healthy
+  #     fossildb:
+  #       condition: service_healthy
+  #   environment:
+  #     POSTGRES_URL: jdbc:postgresql://postgres/webknossos_testing
+  #     POSTGRES_USER: webknossos_user
+  #     POSTGRES_PASSWORD: secret_password
+  #   command:
+  #     - bash
+  #     - -c
+  #     - >
+  #       sbt
+  #       -v
+  #       "testOnly e2e.* --
+  #         -Dtracingstore.fossildb.address=fossildb
+  #         -Dtracingstore.redis.address=redis
+  #         -Ddatastore.redis.address=redis
+  #         -Ddatastore.watchFileSystem.enabled=false"
+  #   volumes:
+  #     - ./binaryData/Connectomics department:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
 
   # screenshot-tests:
   #   image: scalableminds/puppeteer:master

@@ -390,7 +390,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
 
     logger.info(s"applying ${updates.length} to go from v${annotation.version} to v$targetVersion")
 
-    // TODO can we make this tail recursive?
     def updateIter(annotationWithTracingsFox: Fox[AnnotationWithTracings],
                    remainingUpdates: List[UpdateAction]): Fox[AnnotationWithTracings] =
       annotationWithTracingsFox.futureBox.flatMap {
@@ -777,9 +776,27 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       _ <- tracingDataStore.skeletons.put(newTracingId, newVersion, adaptedSkeleton)
     } yield newTracingId
 
-  def mergeEditableMappings(newTracingId: String,
+  private def ironUpdates(updateGroups: Seq[(Long, List[UpdateAction])]): Seq[UpdateAction] = ???
+
+  def mergeEditableMappingUpdates(annotationIds: List[String], newTracingId: String)(
+      implicit ec: ExecutionContext): Fox[List[EditableMappingUpdateAction]] =
+    for {
+      updatesByAnnotation <- Fox.serialCombined(annotationIds) { annotationId =>
+        for {
+          updateGroups <- tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(annotationId)(
+            fromJsonBytes[List[UpdateAction]])
+          updatesIroned: Seq[UpdateAction] = ironUpdates(updateGroups)
+          editableMappingUpdates = updatesIroned.flatMap {
+            case a: EditableMappingUpdateAction => Some(a.withActionTracingId(newTracingId))
+            case _                              => None
+          }
+        } yield editableMappingUpdates
+      }
+    } yield updatesByAnnotation.flatten
+
+  def mergeEditableMappings(annotationIds: List[String],
+                            newVolumeTracingId: String,
                             tracingsWithIds: List[(VolumeTracing, String)],
-                            linearlizedUpdates: List[UpdateAction],
                             persist: Boolean)(implicit ec: ExecutionContext): Fox[Unit] =
     if (tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
       for {
@@ -788,6 +805,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
         remoteFallbackLayer <- remoteFallbackLayers.headOption.toFox
         _ <- bool2Fox(remoteFallbackLayers.forall(_ == remoteFallbackLayer)) ?~> "Cannot merge editable mappings based on different dataset layers"
+        linearizedEditableMappingUpdates: List[UpdateAction] <- mergeEditableMappingUpdates(annotationIds,
+                                                                                            newVolumeTracingId)
+        // TODO if persist, store the linearized updates
         // _ <- editableMappingService.merge(newTracingId, tracingsWithIds.map(_._2), remoteFallbackLayer)
       } yield ()
     } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.getHasEditableMapping)) {

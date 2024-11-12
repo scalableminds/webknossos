@@ -5,7 +5,9 @@ import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, 
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json._
 
-trait EditableMappingUpdateAction extends LayerUpdateAction
+trait EditableMappingUpdateAction extends LayerUpdateAction {
+  override def withActionTracingId(newTracingId: String): EditableMappingUpdateAction
+}
 
 // we switched from positions to segment ids in https://github.com/scalableminds/webknossos/pull/7742.
 // Both are now optional to support applying old update actions stored in the db.
@@ -24,7 +26,7 @@ case class SplitAgglomerateUpdateAction(agglomerateId: Long,
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+  override def withActionTracingId(newTracingId: String): EditableMappingUpdateAction =
     this.copy(actionTracingId = newTracingId)
 }
 
@@ -50,7 +52,7 @@ case class MergeAgglomerateUpdateAction(agglomerateId1: Long,
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+  override def withActionTracingId(newTracingId: String): EditableMappingUpdateAction =
     this.copy(actionTracingId = newTracingId)
 }
 

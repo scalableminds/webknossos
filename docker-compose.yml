@@ -116,101 +116,101 @@ services:
       - "${DOCKER_CACHE_PREFIX:-~}/.cache/yarn:/root/.cache/yarn"
     user: ${USER_UID:-1000}:${USER_GID:-1000}
 
-  # compile:
-  #   extends:
-  #     service: base
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
+  compile:
+    extends:
+      service: base
+    depends_on:
+      postgres:
+        condition: service_healthy
 
-  # dev:
-  #   extends:
-  #     service: base
-  #   ports:
-  #     - "5005:5005"
-  #     - "9000:9000"
-  #   links:
-  #     - "fossildb-dev:fossildb"
-  #     - "postgres-dev:postgres"
-  #   depends_on:
-  #     redis:
-  #       condition: service_healthy
-  #     postgres-dev:
-  #       condition: service_healthy
-  #     fossildb-dev:
-  #       condition: service_healthy
-  #   environment:
-  #     POSTGRES_URL: jdbc:postgresql://postgres/webknossos
-  #     POSTGRES_USER: webknossos_user
-  #     POSTGRES_PASSWORD: secret_password
-  #   command:
-  #     - bash
-  #     - -c
-  #     - >
-  #       sbt
-  #       -v -d -jvm-debug 5005
-  #       "run
-  #         -Djava.net.preferIPv4Stack=true
-  #         -Dtracingstore.fossildb.address=fossildb
-  #         -Dtracingstore.redis.address=redis"
-  #         -Ddatastore.redis.address=redis"
-  #   stdin_open: true
+  dev:
+    extends:
+      service: base
+    ports:
+      - "5005:5005"
+      - "9000:9000"
+    links:
+      - "fossildb-dev:fossildb"
+      - "postgres-dev:postgres"
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres-dev:
+        condition: service_healthy
+      fossildb-dev:
+        condition: service_healthy
+    environment:
+      POSTGRES_URL: jdbc:postgresql://postgres/webknossos
+      POSTGRES_USER: webknossos_user
+      POSTGRES_PASSWORD: secret_password
+    command:
+      - bash
+      - -c
+      - >
+        sbt
+        -v -d -jvm-debug 5005
+        "run
+          -Djava.net.preferIPv4Stack=true
+          -Dtracingstore.fossildb.address=fossildb
+          -Dtracingstore.redis.address=redis"
+          -Ddatastore.redis.address=redis"
+    stdin_open: true
 
-  # # Tests
-  # backend-tests:
-  #   extends:
-  #     service: base
-  #   ports:
-  #     - "5005:5005"
-  #     - "9000:9000"
-  #   command: sbt -v "testOnly backend.*"
+  # Tests
+  backend-tests:
+    extends:
+      service: base
+    ports:
+      - "5005:5005"
+      - "9000:9000"
+    command: sbt -v "testOnly backend.*"
 
-  # backend-lint-format:
-  #   extends:
-  #     service: base
-  #   ports:
-  #     - "5005:5005"
-  #     - "9000:9000"
-  #   command: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
+  backend-lint-format:
+    extends:
+      service: base
+    ports:
+      - "5005:5005"
+      - "9000:9000"
+    command: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
 
-  # e2e-tests:
-  #   extends:
-  #     service: backend-tests
-  #   depends_on:
-  #     redis:
-  #       condition: service_healthy
-  #     postgres:
-  #       condition: service_healthy
-  #     fossildb:
-  #       condition: service_healthy
-  #   environment:
-  #     POSTGRES_URL: jdbc:postgresql://postgres/webknossos_testing
-  #     POSTGRES_USER: webknossos_user
-  #     POSTGRES_PASSWORD: secret_password
-  #   command:
-  #     - bash
-  #     - -c
-  #     - >
-  #       sbt
-  #       -v
-  #       "testOnly e2e.* --
-  #         -Dtracingstore.fossildb.address=fossildb
-  #         -Dtracingstore.redis.address=redis
-  #         -Ddatastore.redis.address=redis
-  #         -Ddatastore.watchFileSystem.enabled=false"
-  #   volumes:
-  #     - ./binaryData/Connectomics department:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
+  e2e-tests:
+    extends:
+      service: backend-tests
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      fossildb:
+        condition: service_healthy
+    environment:
+      POSTGRES_URL: jdbc:postgresql://postgres/webknossos_testing
+      POSTGRES_USER: webknossos_user
+      POSTGRES_PASSWORD: secret_password
+    command:
+      - bash
+      - -c
+      - >
+        sbt
+        -v
+        "testOnly e2e.* --
+          -Dtracingstore.fossildb.address=fossildb
+          -Dtracingstore.redis.address=redis
+          -Ddatastore.redis.address=redis
+          -Ddatastore.watchFileSystem.enabled=false"
+    volumes:
+      - ./binaryData/Connectomics department:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
 
-  # screenshot-tests:
-  #   image: scalableminds/puppeteer:master
-  #   environment:
-  #     - URL
-  #     - WK_AUTH_TOKEN
-  #   working_dir: /home/pptruser/webknossos
-  #   command: bash -c 'for i in {1..3}; do yarn test-screenshot && break; done'
-  #   volumes:
-  #     - ".:/home/pptruser/webknossos"
-  #   user: ${USER_UID:-1000}:${USER_GID:-1000}
+  screenshot-tests:
+    image: scalableminds/puppeteer:master
+    environment:
+      - URL
+      - WK_AUTH_TOKEN
+    working_dir: /home/pptruser/webknossos
+    command: bash -c 'for i in {1..3}; do yarn test-screenshot && break; done'
+    volumes:
+      - ".:/home/pptruser/webknossos"
+    user: ${USER_UID:-1000}:${USER_GID:-1000}
 
   # Postgres
   postgres:

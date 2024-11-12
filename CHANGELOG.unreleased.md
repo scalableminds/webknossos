@@ -45,6 +45,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Deleting a bounding box is now possible independently of a visible segmentation layer. [#8164](https://github.com/scalableminds/webknossos/pull/8164)
 - S3-compliant object storages can now be accessed via HTTPS. [#8167](https://github.com/scalableminds/webknossos/pull/8167)
 - Fixed that skeleton tree nodes were created with the wrong mag. [#8185](https://github.com/scalableminds/webknossos/pull/8185)
+- Fixed the expected type of a tree node received from the server. Fixes nml export to include the `inMag` field correctly. [#8187](https://github.com/scalableminds/webknossos/pull/8187)
 - Fixed a layout persistence bug leading to empty viewports, triggered when switching between orthogonal, flight, or oblique mode. [#8177](https://github.com/scalableminds/webknossos/pull/8177)
 
 ### Removed

@@ -317,7 +317,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       idInfoUpdaterTuples <- Fox.serialCombined(volumeWithEditableMapping) {
         case (volumeTracing, volumeTracingId) =>
           for {
-            editableMappingInfo <- getEditableMappingInfoFromStore(volumeTracingId, annotationWithTracings.version)
+            editableMappingInfo <- getEditableMappingInfoRaw(volumeTracingId, annotationWithTracings.version)
             updater <- editableMappingUpdaterFor(annotationId,
                                                  volumeTracingId,
                                                  volumeTracing,
@@ -329,8 +329,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     } yield annotationWithTracings.copy(editableMappingsByTracingId = idInfoUpdaterTuples.toMap)
   }
 
-  private def getEditableMappingInfoFromStore(volumeTracingId: String,
-                                              version: Long): Fox[VersionedKeyValuePair[EditableMappingInfo]] =
+  private def getEditableMappingInfoRaw(volumeTracingId: String,
+                                        version: Long): Fox[VersionedKeyValuePair[EditableMappingInfo]] =
     tracingDataStore.editableMappingsInfo.get(volumeTracingId, version = Some(version))(
       fromProtoBytes[EditableMappingInfo])
 
@@ -815,19 +815,30 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                             newAnnotationId: String,
                             newVolumeTracingId: String,
                             tracingsWithIds: List[(VolumeTracing, String)],
-                            persist: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+                            persist: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     if (tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
       for {
         before <- Instant.nowFox
         _ <- bool2Fox(persist) ?~> "Cannot merge editable mappings without “persist” (trying to merge compound annotations?)"
         remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds)(tracingWithId =>
           remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
-        remoteFallbackLayer <- remoteFallbackLayers.headOption.toFox
-        _ <- bool2Fox(remoteFallbackLayers.forall(_ == remoteFallbackLayer)) ?~> "Cannot merge editable mappings based on different dataset layers"
+        remoteFallbackLayer <- SequenceUtils.findUniqueElement(remoteFallbackLayers) ?~> "Cannot merge editable mappings based on different dataset layers"
+        editableMappingInfos <- Fox.serialCombined(tracingsWithIds) { tracingWithId =>
+          tracingDataStore.editableMappingsInfo.get(tracingWithId._2)(fromProtoBytes[EditableMappingInfo])
+        }
+        baseMappingName <- SequenceUtils.findUniqueElement(editableMappingInfos.map(_.value.baseMappingName)) ?~> "Cannot merge editable mappings based on different base mappings"
         linearizedEditableMappingUpdates: List[UpdateAction] <- mergeEditableMappingUpdates(annotationIds,
                                                                                             newVolumeTracingId)
         targetVersion = linearizedEditableMappingUpdates.length
-        // TODO if persist, store the linearized updates
+        _ <- Fox.runIf(persist) {
+          var updateVersion = 1L
+          Fox.serialCombined(linearizedEditableMappingUpdates) { update: UpdateAction =>
+            for {
+              _ <- tracingDataStore.annotationUpdates.put(newVolumeTracingId, updateVersion, Json.toJson(List(update)))
+              _ = updateVersion += 1
+            } yield ()
+          }
+        }
         editableMappingInfo = editableMappingService.create(baseMappingName)
         updater = editableMappingUpdaterFor(newAnnotationId,
                                             newVolumeTracingId,
@@ -836,8 +847,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                             0L,
                                             targetVersion)
         _ <- updater.applyUpdatesAndSave(editableMappingInfo, linearizedEditableMappingUpdates)
-        _ = logger.info(s"Merging ${tracingsWithIds.length} editable mappings took ${Instant.since(before)}")
-      } yield ()
+        _ = logger.info(
+          s"Merging ${tracingsWithIds.length} editable mappings took ${Instant.since(before)} (applied ${linearizedEditableMappingUpdates.length} updates)")
+      } yield targetVersion
     } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.getHasEditableMapping)) {
       Fox.empty
     } else {

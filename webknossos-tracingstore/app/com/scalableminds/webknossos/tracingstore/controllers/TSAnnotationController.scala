@@ -156,6 +156,7 @@ class TSAnnotationController @Inject()(
       }
     }
 
+  // TODO test with skeleton-only, volume-only, editable-mapping-volume only
   def mergedFromIds(persist: Boolean, newAnnotationId: String): Action[List[String]] =
     Action.async(validateJson[List[String]]) { implicit request =>
       log() {
@@ -179,11 +180,6 @@ class TSAnnotationController @Inject()(
                 Some(TracingSelector(l.tracingId))
               }, applyUpdates = true)
               .map(_.flatten)
-            mergedVolumeStats <- volumeTracingService.mergeVolumeData(volumeLayers.map(_.tracingId),
-                                                                      volumeTracings,
-                                                                      newVolumeId,
-                                                                      newVersion = 0L,
-                                                                      persist = persist)
             mergeEditableMappingsResultBox <- annotationService
               .mergeEditableMappings(request.body,
                                      newAnnotationId,
@@ -191,15 +187,20 @@ class TSAnnotationController @Inject()(
                                      volumeTracings.zip(volumeLayers.map(_.tracingId)),
                                      persist)
               .futureBox
-            newEditableMappingIdOpt <- mergeEditableMappingsResultBox match {
-              case Full(())   => Fox.successful(Some(newVolumeId))
-              case Empty      => Fox.successful(None)
-              case f: Failure => f.toFox
+            (newMappingName: Option[String], newTargetVersion: Long) <- mergeEditableMappingsResultBox match {
+              case Full(targetVersion) => Fox.successful((Some(newVolumeId), targetVersion))
+              case Empty               => Fox.successful((None, 0L))
+              case f: Failure          => f.toFox
             }
+            mergedVolumeStats <- volumeTracingService.mergeVolumeData(volumeLayers.map(_.tracingId),
+                                                                      volumeTracings,
+                                                                      newVolumeId,
+                                                                      newVersion = newTargetVersion,
+                                                                      persist = persist)
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
-              volumeTracingService.merge(volumeTracings, mergedVolumeStats, newEditableMappingIdOpt))
+              volumeTracingService.merge(volumeTracings, mergedVolumeStats, newMappingName))
             _ <- Fox.runOptional(mergedVolumeOpt)(
-              volumeTracingService.save(_, Some(newVolumeId), version = 0, toTemporaryStore = !persist))
+              volumeTracingService.save(_, Some(newVolumeId), version = newTargetVersion, toTemporaryStore = !persist))
             skeletonTracings <- annotationService
               .findMultipleSkeletons(skeletonLayers.map { l =>
                 Some(TracingSelector(l.tracingId))
@@ -219,10 +220,14 @@ class TSAnnotationController @Inject()(
                                      `type` = AnnotationLayerTypeProto.Volume))
             mergedLayers = Seq(mergedSkeletonLayerOpt, mergedVolumeLayerOpt).flatten
             firstAnnotation <- annotations.headOption.toFox
-            mergedAnnotation = firstAnnotation.withAnnotationLayers(mergedLayers)
+            mergedAnnotation = firstAnnotation
+              .withAnnotationLayers(mergedLayers)
+              .withEarliestAccessibleVersion(newTargetVersion)
+              .withVersion(newTargetVersion)
             _ <- Fox.runOptional(mergedSkeletonOpt)(
-              skeletonTracingService.save(_, Some(newSkeletonId), version = 0L, toTemporaryStore = !persist))
-            _ <- tracingDataStore.annotations.put(newAnnotationId, 0L, mergedAnnotation)
+              skeletonTracingService
+                .save(_, Some(newSkeletonId), version = newTargetVersion, toTemporaryStore = !persist))
+            _ <- tracingDataStore.annotations.put(newAnnotationId, newTargetVersion, mergedAnnotation)
           } yield Ok(mergedAnnotation.toByteArray).as(protobufMimeType)
         }
       }

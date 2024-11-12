@@ -1,7 +1,7 @@
 import { Tree as AntdTree, type TreeProps } from "antd";
 import type { BasicDataNode } from "antd/es/tree";
 import { throttle } from "lodash";
-import { useCallback, useRef } from "react";
+import { forwardRef, useCallback, useRef } from "react";
 import type RcTree from "rc-tree";
 
 const MIN_SCROLL_SPEED = 30;
@@ -10,8 +10,10 @@ const MIN_SCROLL_AREA_HEIGHT = 60;
 const SCROLL_AREA_RATIO = 10; // 1/10th of the container height
 const THROTTLE_TIME = 25;
 
-function ScrollableVirtualizedTree<T extends BasicDataNode>(
-  props: TreeProps<T> & { ref: React.RefObject<RcTree> },
+// React.forwardRef does not support generic types, so we need to define the type of the ref separately.
+function ScrollableVirtualizedTreeInner<T extends BasicDataNode>(
+  props: TreeProps<T>,
+  ref: React.Ref<RcTree>,
 ) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: biome is not smart enough to notice that the function needs to be re-created when wrapperRef changes.
@@ -56,9 +58,15 @@ function ScrollableVirtualizedTree<T extends BasicDataNode>(
 
   return (
     <div ref={wrapperRef}>
-      <AntdTree {...props} onDragOver={onDragOver} />
+      <AntdTree {...props} onDragOver={onDragOver} ref={ref} />
     </div>
   );
 }
+
+const ScrollableVirtualizedTree = forwardRef(ScrollableVirtualizedTreeInner) as <
+  T extends BasicDataNode,
+>(
+  props: TreeProps<T> & { ref?: React.Ref<RcTree> },
+) => ReturnType<typeof ScrollableVirtualizedTreeInner>;
 
 export default ScrollableVirtualizedTree;

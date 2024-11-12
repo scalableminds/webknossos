@@ -144,6 +144,9 @@ jobs:
       - name: Build webknossos-tracingstore (sbt)
         run: sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
 
+      - name: Lint backend code and check formatting
+        run: .github/not-on-master.sh sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
+      
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 
@@ -170,18 +173,16 @@ jobs:
         uses: mxschmitt/action-tmate@v3
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
-      - name: Lint backend code and check formatting
-        run: .github/not-on-master.sh docker compose run backend-lint-format
 
       - name: Run backend tests
         run: .github/not-on-master.sh docker compose run backend-tests
 
       - name: Run end-to-end tests
-        run: |
-          for i in {1..3}; do # retry
-            .github/not-on-master.sh docker compose run e2e-tests && s=0 && break || s=$?
-          done
-          (exit $s)
+        uses: nick-invision/retry@v2
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          command: .github/not-on-master.sh docker compose run e2e-tests
 
       - name: Start webknossos, datastore, and tracingstore
         run: |
@@ -208,38 +209,29 @@ jobs:
         run: docker compose down --volumes --remove-orphans
 
       - name: Push docker images
-        run: |
-          function retry() {
-            for i in {1..5}; do
-              "$@" && s=0 && break || s=$?
-              sleep 10
-            done
-            return $s
-          }
-          retry docker login -u $DOCKER_USER -p $DOCKER_PASS
-          retry docker compose push webknossos
-          retry docker compose push webknossos-datastore
-          retry docker compose push webknossos-tracingstore
-          if [[ ${{ github.ref_type }} == "branch" ]]; then
-            docker tag scalableminds/webknossos:${DOCKER_TAG} scalableminds/webknossos:${NORMALIZED_BRANCH}
-            retry docker push scalableminds/webknossos:${NORMALIZED_BRANCH}
-            docker tag scalableminds/webknossos-datastore:${DOCKER_TAG} scalableminds/webknossos-datastore:${NORMALIZED_BRANCH}
-            retry docker push scalableminds/webknossos-datastore:${NORMALIZED_BRANCH}
-            docker tag scalableminds/webknossos-tracingstore:${DOCKER_TAG} scalableminds/webknossos-tracingstore:${NORMALIZED_BRANCH}
-            retry docker push scalableminds/webknossos-tracingstore:${NORMALIZED_BRANCH}
-            docker tag scalableminds/webknossos-dev scalableminds/webknossos-dev:${NORMALIZED_BRANCH}
-            retry docker push scalableminds/webknossos-dev:${NORMALIZED_BRANCH}
-          fi
-          docker logout
-
-      - name: Build frontend documentation
-        run: |
-          WK_VERSION=${{ github.event.release.tag_name || github.run_number || 'dev' }}
-          yarn run docs --project-version $WK_VERSION
-
+        uses: nick-invision/retry@v2
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          command: |
+            docker compose push webknossos
+            docker compose push webknossos-datastore
+            docker compose push webknossos-tracingstore
+            
+            if [[ ${{ github.ref_type }} == "branch" ]]; then
+              docker tag scalableminds/webknossos:${DOCKER_TAG} scalableminds/webknossos:${NORMALIZED_BRANCH}
+              retry docker push scalableminds/webknossos:${NORMALIZED_BRANCH}
+              docker tag scalableminds/webknossos-datastore:${DOCKER_TAG} scalableminds/webknossos-datastore:${NORMALIZED_BRANCH}
+              retry docker push scalableminds/webknossos-datastore:${NORMALIZED_BRANCH}
+              docker tag scalableminds/webknossos-tracingstore:${DOCKER_TAG} scalableminds/webknossos-tracingstore:${NORMALIZED_BRANCH}
+              retry docker push scalableminds/webknossos-tracingstore:${NORMALIZED_BRANCH}
+              docker tag scalableminds/webknossos-dev scalableminds/webknossos-dev:${NORMALIZED_BRANCH}
+              retry docker push scalableminds/webknossos-dev:${NORMALIZED_BRANCH}
+            fi
+            docker logout
 
       - name: Report coverage
-        run: .github/not-on-master.sh docker compose run base yarn coverage || true
+        run: .github/not-on-master.sh yarn coverage || true
 
       # - name: Send Slack notification (master only)
       #   run: .circleci/slack-notification.sh

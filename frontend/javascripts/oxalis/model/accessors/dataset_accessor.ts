@@ -2,6 +2,7 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type {
   AdditionalAxis,
+  AffineTransformation,
   APIAllowedMode,
   APIDataLayer,
   APIDataset,
@@ -38,6 +39,7 @@ import { convertToDenseMag, MagInfo } from "../helpers/mag_info";
 import MultiKeyMap from "libs/multi_key_map";
 import {
   chainTransforms,
+  combineAffineTransformationsToAffineTransformation,
   createAffineTransformFromMatrix,
   createThinPlateSplineTransform,
   invertTransform,
@@ -717,27 +719,29 @@ function _getOriginalTransformsForLayerOrNull(
     return null;
   }
   if (coordinateTransformations.length > 1) {
-    console.error(
-      "Data layer has defined multiple coordinate transforms. This is currently not supported and ignored",
+    return combineAffineTransformationsToAffineTransformation(
+      coordinateTransformations as AffineTransformation[],
     );
-    return null;
-  }
-  const transformation = coordinateTransformations[0];
-  const { type } = transformation;
-
-  if (type === "affine") {
-    const nestedMatrix = transformation.matrix;
-    return createAffineTransformFromMatrix(nestedMatrix);
-  } else if (type === "thin_plate_spline") {
-    const { source, target } = transformation.correspondences;
-
-    return createThinPlateSplineTransform(source, target, dataset.dataSource.scale.factor);
   }
 
-  console.error(
-    "Data layer has defined a coordinate transform that is not affine or thin_plate_spline. This is currently not supported and ignored",
-  );
-  return null;
+  const transforms = coordinateTransformations.map((coordTransformation) => {
+    const { type } = coordTransformation;
+
+    if (type === "affine") {
+      const nestedMatrix = coordTransformation.matrix;
+      return createAffineTransformFromMatrix(nestedMatrix);
+    } else if (type === "thin_plate_spline") {
+      const { source, target } = coordTransformation.correspondences;
+
+      return createThinPlateSplineTransform(source, target, dataset.dataSource.scale.factor);
+    }
+
+    console.error(
+      "Data layer has defined a coordinate transform that is not affine or thin_plate_spline. This is currently not supported and ignored",
+    );
+    return IdentityTransform;
+  });
+  return transforms.reduce(chainTransforms, null);
 }
 
 function _getTransformsForLayerOrNull(

@@ -60,15 +60,17 @@ export type ServerAdditionalAxis = {
   name: string;
 };
 
-export type CoordinateTransformation =
-  | {
-      type: "affine";
-      matrix: NestedMatrix4;
-    }
-  | {
-      type: "thin_plate_spline";
-      correspondences: { source: Vector3[]; target: Vector3[] };
-    };
+export type AffineTransformation = {
+  type: "affine";
+  matrix: NestedMatrix4;
+};
+
+export type ThinPlateSplineTransformation = {
+  type: "thin_plate_spline";
+  correspondences: { source: Vector3[]; target: Vector3[] };
+};
+
+export type CoordinateTransformation = AffineTransformation | ThinPlateSplineTransformation;
 type APIDataLayerBase = {
   readonly name: string;
   readonly boundingBox: BoundingBoxObject;

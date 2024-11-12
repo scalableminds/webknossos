@@ -3,6 +3,7 @@ import { M4x4 } from "libs/mjs";
 import TPS3D from "libs/thin_plate_spline";
 import type { Matrix4x4 } from "mjs";
 import type { Vector3, NestedMatrix4 } from "oxalis/constants";
+import type { AffineTransformation } from "types/api_flow_types";
 
 export function nestedToFlatMatrix(matrix: NestedMatrix4): Matrix4x4 {
   return [...matrix[0], ...matrix[1], ...matrix[2], ...matrix[3]];
@@ -25,6 +26,16 @@ export type Transform =
       scaledTpsInv: TPS3D;
       scaledTps: TPS3D;
     };
+
+export function combineAffineTransformationsToAffineTransformation(
+  transformations: AffineTransformation[],
+): Transform {
+  const affineMatrix = transformations.reduce(
+    (acc, t: AffineTransformation) => M4x4.mul(acc, nestedToFlatMatrix(t.matrix)),
+    M4x4.identity(),
+  );
+  return { type: "affine", affineMatrix, affineMatrixInv: M4x4.inverse(affineMatrix) };
+}
 
 export function createAffineTransformFromMatrix(nestedMatrix: NestedMatrix4): Transform {
   const affineMatrix = nestedToFlatMatrix(nestedMatrix);

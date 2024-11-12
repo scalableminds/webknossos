@@ -851,7 +851,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     );
 
     return (
-      <div id={treeTabId} className="padded-tab-content">
+      <div id={treeTabId} className="padded-tab-content" style={{ overflow: "hidden" }}>
         <DomVisibilityObserver targetId={treeTabId}>
           {(isVisibleInDom) =>
             !isVisibleInDom ? null : (
@@ -869,52 +869,57 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <Spin />
                 </Modal>
                 <Space.Compact className="compact-icons">
-                  <AdvancedSearchPopover
-                    onSelect={this.handleSearchSelect}
-                    data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
-                    searchKey="name"
-                    provideShortcut
-                    targetId={treeTabId}
-                    onSelectAllMatches={this.handleSelectAllMatchingTrees}
-                  >
-                    <ButtonComponent title="Open the search via CTRL + Shift + F">
-                      <SearchOutlined />
+                  <div className="compact-buttons">
+                    <AdvancedSearchPopover
+                      onSelect={this.handleSearchSelect}
+                      data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
+                      searchKey="name"
+                      provideShortcut
+                      targetId={treeTabId}
+                      onSelectAllMatches={this.handleSelectAllMatchingTrees}
+                    >
+                      <ButtonComponent
+                        title="Open the search via CTRL + Shift + F"
+                        className="firstButton"
+                      >
+                        <SearchOutlined />
+                      </ButtonComponent>
+                    </AdvancedSearchPopover>
+                    <ButtonComponent
+                      onClick={this.props.onCreateTree}
+                      title={isEditingDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
+                      disabled={isEditingDisabled}
+                    >
+                      <i className="fas fa-plus" />
                     </ButtonComponent>
-                  </AdvancedSearchPopover>
-                  <ButtonComponent
-                    onClick={this.props.onCreateTree}
-                    title={isEditingDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
-                    disabled={isEditingDisabled}
-                  >
-                    <i className="fas fa-plus" />
-                  </ButtonComponent>
-                  <ButtonComponent
-                    onClick={this.handleDelete}
-                    title={isEditingDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
-                    disabled={isEditingDisabled}
-                  >
-                    <i className="far fa-trash-alt" />
-                  </ButtonComponent>
-                  <ButtonComponent
-                    onClick={this.toggleAllTrees}
-                    title="Toggle Visibility of All Trees (1)"
-                    disabled={isEditingDisabled}
-                  >
-                    <i className="fas fa-toggle-on" />
-                  </ButtonComponent>
-                  <ButtonComponent
-                    onClick={this.toggleInactiveTrees}
-                    title="Toggle Visibility of Inactive Trees (2)"
-                    disabled={isEditingDisabled}
-                  >
-                    <i className="fas fa-toggle-off" />
-                  </ButtonComponent>
-                  <Dropdown menu={this.getActionsDropdown()} trigger={["click"]}>
-                    <ButtonComponent>
-                      More
-                      <DownOutlined />
+                    <ButtonComponent
+                      onClick={this.handleDelete}
+                      title={isEditingDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
+                      disabled={isEditingDisabled}
+                    >
+                      <i className="far fa-trash-alt" />
                     </ButtonComponent>
-                  </Dropdown>
+                    <ButtonComponent
+                      onClick={this.toggleAllTrees}
+                      title="Toggle Visibility of All Trees (1)"
+                      disabled={isEditingDisabled}
+                    >
+                      <i className="fas fa-toggle-on" />
+                    </ButtonComponent>
+                    <ButtonComponent
+                      onClick={this.toggleInactiveTrees}
+                      title="Toggle Visibility of Inactive Trees (2)"
+                      disabled={isEditingDisabled}
+                    >
+                      <i className="fas fa-toggle-off" />
+                    </ButtonComponent>
+                    <Dropdown menu={this.getActionsDropdown()} trigger={["click"]}>
+                      <ButtonComponent style={{ overflow: "clip" }} className="lastButton">
+                        More
+                        <DownOutlined />
+                      </ButtonComponent>
+                    </Dropdown>
+                  </div>
                 </Space.Compact>
                 <Space.Compact className="compact-icons compact-items">
                   <ButtonComponent
@@ -937,7 +942,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     <i className="fas fa-arrow-right" />
                   </ButtonComponent>
                   <Dropdown menu={this.getSettingsDropdown()} trigger={["click"]}>
-                    <ButtonComponent title="Sort">
+                    <ButtonComponent title="Sort" style={{ overflow: "clip" }}>
                       <i className="fas fa-sort-alpha-down" />
                     </ButtonComponent>
                   </Dropdown>

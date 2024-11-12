@@ -35,6 +35,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fix that scrolling in the trees and segments tab did not work while dragging. [#8162](https://github.com/scalableminds/webknossos/pull/8162) 
 - Fixed that uploading a dataset which needs a conversion failed when the angstrom unit was configured for the conversion. [#8173](https://github.com/scalableminds/webknossos/pull/8173)
 - Fixed that the skeleton search did not automatically expand groups that contained the selected tree [#8129](https://github.com/scalableminds/webknossos/pull/8129)
+- Fixed interactions in the trees and segments tab like the search due to a bug introduced by [#8162](https://github.com/scalableminds/webknossos/pull/8162). [#8186](https://github.com/scalableminds/webknossos/pull/8186)
 - Fixed a bug that zarr streaming version 3 returned the shape of mag (1, 1, 1) / the finest mag for all mags. [#8116](https://github.com/scalableminds/webknossos/pull/8116)
 - Fixed sorting of mags in outbound zarr streaming. [#8125](https://github.com/scalableminds/webknossos/pull/8125)
 - Fixed a bug where you could not create annotations for public datasets of other organizations. [#8107](https://github.com/scalableminds/webknossos/pull/8107)

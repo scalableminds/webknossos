@@ -20,7 +20,7 @@ export const tracing: ServerSkeletonTracing = {
           },
           radius: 120,
           viewport: 1,
-          resolution: 1,
+          mag: 1,
           bitDepth: 0,
           interpolation: false,
           createdTimestamp: 1528811979356,

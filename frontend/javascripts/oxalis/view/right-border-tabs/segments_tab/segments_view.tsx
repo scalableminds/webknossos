@@ -1903,7 +1903,7 @@ class SegmentsView extends React.Component<Props, State> {
                                 overflow: "hidden",
                               }}
                             >
-                              <ScrollableVirtualizedTree<SegmentHierarchyNode>
+                              <ScrollableVirtualizedTree
                                 allowDrop={this.allowDrop}
                                 onDrop={this.onDrop}
                                 onSelect={this.onSelectTreeItem}

@@ -112,7 +112,7 @@ class AnnotationIOController @Inject()(
           parsedFilesWrapped = annotationUploadService.wrapOrPrefixGroups(parsedFiles.parseResults,
                                                                           shouldCreateGroupForEachFile)
           parseResultsFiltered: List[NmlParseResult] = parsedFilesWrapped.filter(_.succeeded)
-          _ <- bool2Fox(parseResultsFiltered.isEmpty) ~> returnError(parsedFiles) // TODOM: Find a proper way to return an error when parseResultsFiltered.isEmpty
+          _ <- bool2Fox(parseResultsFiltered.nonEmpty) ~> returnError(parsedFiles)
           parseSuccesses <- Fox.serialCombined(parseResultsFiltered)(r => r.toSuccessBox)
           name = nameForUploaded(parseResultsFiltered.map(_.fileName))
           description = descriptionForNMLs(parseResultsFiltered.map(_.description))
@@ -264,6 +264,7 @@ class AnnotationIOController @Inject()(
       }
       Fox.paramFailure("NML upload failed", Empty, Empty, errors)
     } else {
+      // This does not work. It is not caught and processed properly
       Fox.paramFailure("NML upload failed", Empty, Empty, None)
     }
 

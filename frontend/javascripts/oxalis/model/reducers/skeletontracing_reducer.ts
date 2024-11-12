@@ -13,7 +13,7 @@ import {
   deleteBranchPoint,
   createNode,
   createTree,
-  deleteTree,
+  deleteTrees,
   deleteNode,
   deleteEdge,
   shuffleTreeColor,
@@ -906,7 +906,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                   .map((tree) => [tree.treeId])
                   .getOrElse([])
               : action.treeIds;
-          return deleteTree(skeletonTracing, treeIds, suppressActivatingNextNode)
+          return deleteTrees(skeletonTracing, treeIds, suppressActivatingNextNode)
             .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
               update(state, {
                 tracing: {

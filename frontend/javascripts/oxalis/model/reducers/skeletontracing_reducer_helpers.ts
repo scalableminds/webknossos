@@ -634,7 +634,7 @@ export function addTreesAndGroups(
 
   return Maybe.Just([newTrees, treeGroups, newNodeId - 1]);
 }
-export function deleteTree(
+export function deleteTrees(
   skeletonTracing: SkeletonTracing,
   treeIds: number[],
   suppressActivatingNextNode: boolean = false,

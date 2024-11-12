@@ -140,6 +140,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
         onClick: () => {
           props.deselectAllTrees();
           Store.dispatch(deleteTreeAction(tree.treeId));
+          hideContextMenu();
         },
         title: "Delete Tree",
         disabled: isEditingDisabled,

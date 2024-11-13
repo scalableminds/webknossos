@@ -756,7 +756,7 @@ export type ServerNode = {
   rotation: Point3;
   bitDepth: number;
   viewport: number;
-  resolution: number;
+  mag: number;
   radius: number;
   createdTimestamp: number;
   interpolation: boolean;

@@ -202,7 +202,7 @@ test("Dataset upload", async (t) => {
   });
 
   if (result.status !== 200) {
-    t.fail("Dataset upload failed");
+    t.fail("Dataset health check after upload failed");
   }
   t.pass();
 });

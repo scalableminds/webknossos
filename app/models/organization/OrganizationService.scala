@@ -167,7 +167,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
   def newUserMailRecipient(organization: Organization)(implicit ctx: DBAccessContext): Fox[String] =
     fallbackOnOwnerEmail(organization.newUserMailingList, organization)
 
-  def acceptTermsOfService(organizationId: String, version: Int)(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Unit] =
+  def acceptTermsOfService(organizationId: String, version: Int)(implicit ctx: DBAccessContext,
+                                                                 mp: MessagesProvider): Fox[Unit] =
     for {
       _ <- bool2Fox(conf.WebKnossos.TermsOfService.enabled) ?~> "termsOfService.notEnabled"
       requiredVersion = conf.WebKnossos.TermsOfService.version

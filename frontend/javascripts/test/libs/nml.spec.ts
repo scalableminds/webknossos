@@ -34,7 +34,7 @@ const createDummyNode = (id: number): Node => ({
   untransformedPosition: [id, id, id],
   additionalCoordinates: [],
   radius: id,
-  mag: 10,
+  resolution: 10,
   rotation: [id, id, id],
   timestamp: id,
   viewport: 1,

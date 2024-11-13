@@ -194,7 +194,7 @@ const perLayerFnCache: Map<string, typeof _getMaximumZoomForAllMags> = new Map()
 // Only exported for testing.
 export const _getDummyFlycamMatrix = memoizeOne((scale: Vector3) => {
   const scaleMatrix = getMatrixScale(scale);
-  return rotateOnAxis(M4x4.scale(scaleMatrix, M4x4.identity, []), Math.PI, [0, 0, 1]);
+  return rotateOnAxis(M4x4.scale(scaleMatrix, M4x4.identity(), []), Math.PI, [0, 0, 1]);
 });
 
 export function getMoveOffset(state: OxalisState, timeFactor: number) {

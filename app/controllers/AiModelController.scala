@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.aimodels.{AiInference, AiInferenceDAO, AiInferenceService, AiModel, AiModelDAO, AiModelService}
@@ -42,6 +43,7 @@ object RunTrainingParameters {
 case class RunInferenceParameters(annotationId: Option[ObjectId],
                                   aiModelId: ObjectId,
                                   datasetName: String,
+                                  organizationId: String,
                                   colorLayerName: String,
                                   boundingBox: String,
                                   newDatasetName: String,
@@ -174,7 +176,10 @@ class AiModelController @Inject()(
     sil.SecuredAction.async(validateJson[RunInferenceParameters]) { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity)
-        organization <- organizationDAO.findOne(request.identity._organization)
+        organization <- organizationDAO.findOne(request.body.organizationId)(GlobalAccessContext) ?~> Messages(
+          "organization.notFound",
+          request.body.organizationId)
+        _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
         dataset <- datasetDAO.findOneByNameAndOrganization(request.body.datasetName, organization._id) ?~> Messages(
           "dataset.notFound",
           request.body.datasetName)

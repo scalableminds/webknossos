@@ -2,7 +2,6 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type {
   AdditionalAxis,
-  AffineTransformation,
   APIAllowedMode,
   APIDataLayer,
   APIDataset,
@@ -39,7 +38,6 @@ import { convertToDenseMag, MagInfo } from "../helpers/mag_info";
 import MultiKeyMap from "libs/multi_key_map";
 import {
   chainTransforms,
-  combineAffineTransformationsToAffineTransformation,
   createAffineTransformFromMatrix,
   createThinPlateSplineTransform,
   invertTransform,
@@ -736,6 +734,8 @@ function _getOriginalTransformsForLayerOrNull(
     );
     return IdentityTransform;
   });
+  debugger;
+  console.log(`layer ${layer.name} has transforms.`, transforms);
   return transforms.reduce(chainTransforms, null);
 }
 

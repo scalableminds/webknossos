@@ -621,6 +621,8 @@ class AuthenticationController @Inject()(
                     dataStoreToken <- bearerTokenAuthenticatorService.createAndInitDataStoreTokenForUser(user)
                     _ <- organizationService
                       .createOrganizationDirectory(organization._id, dataStoreToken) ?~> "organization.folderCreation.failed"
+                    _ <- Fox.runOptional(signUpData.acceptedTermsOfService)(version =>
+                      organizationService.acceptTermsOfService(organization._id, version))
                   } yield {
                     Mailer ! Send(defaultMails
                       .newOrganizationMail(organization.name, email, request.headers.get("Host").getOrElse("")))
@@ -730,7 +732,8 @@ trait AuthForms {
                         firstName: String,
                         lastName: String,
                         password: String,
-                        inviteToken: Option[String])
+                        inviteToken: Option[String],
+                        acceptedTermsOfService: Option[Int])
 
   def signUpForm(implicit messages: Messages): Form[SignUpData] =
     Form(
@@ -745,8 +748,9 @@ trait AuthForms {
         "firstName" -> nonEmptyText,
         "lastName" -> nonEmptyText,
         "inviteToken" -> optional(nonEmptyText),
-      )((organization, organizationName, email, password, firstName, lastName, inviteToken) =>
-        SignUpData(organization, organizationName, email, firstName, lastName, password._1, inviteToken))(
+        "acceptTermsOfService" -> optional(number)
+      )((organization, organizationName, email, password, firstName, lastName, inviteToken, acceptTos) =>
+        SignUpData(organization, organizationName, email, firstName, lastName, password._1, inviteToken, acceptTos))(
         signUpData =>
           Some(
             (signUpData.organization,
@@ -755,7 +759,8 @@ trait AuthForms {
              ("", ""),
              signUpData.firstName,
              signUpData.lastName,
-             signUpData.inviteToken))))
+             signUpData.inviteToken,
+             signUpData.acceptedTermsOfService))))
 
   // Sign in
   case class SignInData(email: String, password: String)

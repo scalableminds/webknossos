@@ -718,11 +718,6 @@ function _getOriginalTransformsForLayerOrNull(
   if (!coordinateTransformations || coordinateTransformations.length === 0) {
     return null;
   }
-  if (coordinateTransformations.length > 1) {
-    return combineAffineTransformationsToAffineTransformation(
-      coordinateTransformations as AffineTransformation[],
-    );
-  }
 
   const transforms = coordinateTransformations.map((coordTransformation) => {
     const { type } = coordTransformation;

@@ -409,7 +409,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         },
         (error) => {
           sendFailedRequestAnalyticsEvent("finish_dataset_upload", error, {
-            dataset_name: reserveUploadInformation.name,
+            dataset_name: newDatasetName,
           });
           Toast.error(messages["dataset.upload_failed"]);
           this.setState({

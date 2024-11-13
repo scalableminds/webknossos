@@ -450,7 +450,7 @@ export type APITask = {
   readonly created: number;
   readonly creationInfo: string | null | undefined;
   readonly dataSet: string;
-  readonly datasetId: APIDataset["id"];
+  readonly datasetId: string;
   readonly datasetName: string;
   readonly editPosition: Vector3;
   readonly editRotation: Vector3;
@@ -479,7 +479,7 @@ export type EditableLayerProperties = Partial<{
 }>;
 export type APIAnnotationInfo = {
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
-  readonly datasetId: APIDataset["id"];
+  readonly datasetId: string;
   readonly dataSetName: string;
   readonly organization: string;
   readonly description: string;

@@ -14,7 +14,7 @@ import { getDatastores } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import DatasetAddComposeView from "./dataset_add_compose_view";
 import type { History } from "history";
-import { getURLSanitizedName } from "oxalis/model/accessors/dataset_accessor";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 
 const { Content, Sider } = Layout;
 
@@ -330,7 +330,7 @@ const getPostUploadModal = (
                   type="primary"
                   onClick={() =>
                     history.push(
-                      `/datasets/${getURLSanitizedName({ name: uploadedDatasetName })}-${datasetId}/view`,
+                      `/datasets/${getReadableURLPart({ name: uploadedDatasetName, id: datasetId })}/view`,
                     )
                   }
                 >
@@ -339,7 +339,7 @@ const getPostUploadModal = (
                 <Button
                   onClick={() =>
                     history.push(
-                      `/datasets/${getURLSanitizedName({ name: uploadedDatasetName })}-${datasetId}/edit`,
+                      `/datasets/${getReadableURLPart({ name: uploadedDatasetName, id: datasetId })}/edit`,
                     )
                   }
                 >

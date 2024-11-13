@@ -25,7 +25,7 @@ import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "ty
 import type { BoundingBoxObject } from "oxalis/store";
 import type {
   NewTask,
-  NmlNewTask,
+  NewNmlTask,
   TaskCreationResponse,
   TaskCreationResponseContainer,
 } from "admin/task/task_create_bulk_view";
@@ -57,7 +57,7 @@ const fullWidth = {
 const maxDisplayedTasksCount = 50;
 
 const TASK_CSV_HEADER =
-  "taskId,datasetId,datasetName,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId,creationInfo";
+  "taskId,datasetName,datasetId,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId,creationInfo";
 
 export enum SpecificationEnum {
   Manual = "Manual",
@@ -74,8 +74,8 @@ export function taskToShortText(task: APITask) {
 export function taskToText(task: APITask) {
   const {
     id,
-    datasetId,
     datasetName,
+    datasetId,
     type,
     neededExperience,
     editPosition,
@@ -95,7 +95,7 @@ export function taskToText(task: APITask) {
   const scriptId = script ? `${script.id}` : "";
   const creationInfoOrEmpty = creationInfo || "";
   const taskAsString =
-    `${id},${datasetId},${datasetName},${type.id},${neededExperienceAsString},${editPositionAsString},` +
+    `${id},${datasetName},${datasetId},${type.id},${neededExperienceAsString},${editPositionAsString},` +
     `${editRotationAsString},${totalNumberOfInstances},${boundingBoxAsString},${projectName},${scriptId},${creationInfoOrEmpty}`;
   return taskAsString;
 }
@@ -400,7 +400,7 @@ function TaskCreateFormView({ taskId, history }: Props) {
           for (let i = 0; i < nmlFiles.length; i += NUM_TASKS_PER_BATCH) {
             const batchOfNmls = nmlFiles.slice(i, i + NUM_TASKS_PER_BATCH);
 
-            const newTask: NmlNewTask = {
+            const newTask: NewNmlTask = {
               ..._.omit(formValues, "baseAnnotation"),
               boundingBox,
             };

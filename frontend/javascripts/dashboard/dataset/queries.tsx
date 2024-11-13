@@ -56,7 +56,7 @@ export function useFolderQuery(folderId: string | null) {
   );
 }
 
-export function useDatasetQuery(datasetId: APIDataset["id"]) {
+export function useDatasetQuery(datasetId: string) {
   const queryKey = ["datasetById", datasetId];
   return useQuery(
     queryKey,
@@ -394,7 +394,7 @@ export function useUpdateDatasetMutation(folderId: string | null) {
   const mutationKey = ["datasetsByFolder", folderId];
 
   return useMutation(
-    (params: [APIDataset["id"], DatasetUpdater] | APIDataset["id"]) => {
+    (params: [string, DatasetUpdater] | string) => {
       // If a APIDatasetId is provided, simply refetch the dataset
       // without any mutation so that it gets reloaded effectively.
       if (Array.isArray(params)) {

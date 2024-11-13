@@ -7,7 +7,7 @@ import type {
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type {
   NewTask,
-  NmlNewTask,
+  NewNmlTask,
   TaskCreationResponseContainer,
 } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
@@ -67,7 +67,7 @@ export function createTasks(tasks: NewTask[]): Promise<TaskCreationResponseConta
 }
 
 export function createTaskFromNML(
-  task: NmlNewTask,
+  task: NewNmlTask,
   nmlFiles: File[],
 ): Promise<TaskCreationResponseContainer> {
   return Request.sendMultipartFormReceiveJSON("/api/tasks/createFromFiles", {

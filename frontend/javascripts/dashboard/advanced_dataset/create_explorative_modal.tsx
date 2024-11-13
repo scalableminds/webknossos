@@ -16,7 +16,7 @@ import type { MagInfo } from "oxalis/model/helpers/mag_info";
 import { Slider } from "components/slider";
 
 type Props = {
-  datasetId: APIDataset["id"];
+  datasetId: string;
   onClose: () => void;
 };
 type RestrictMagnificationSliderProps = {

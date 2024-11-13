@@ -124,7 +124,7 @@ export async function initialize(
 > {
   Store.dispatch(setControlModeAction(initialCommandType.type));
   let annotation: APIAnnotation | null | undefined;
-  let datasetId: APIDataset["id"];
+  let datasetId: string;
 
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
@@ -224,7 +224,7 @@ export async function initialize(
 
 async function fetchParallel(
   annotation: APIAnnotation | null | undefined,
-  datasetId: APIDataset["id"],
+  datasetId: string,
   versions?: Versions,
 ): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>]> {
   return Promise.all([

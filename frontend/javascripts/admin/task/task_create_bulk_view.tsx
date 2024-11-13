@@ -37,7 +37,7 @@ export type NewTask = {
     | undefined;
 };
 
-export type NmlNewTask = Pick<
+export type NewNmlTask = Pick<
   NewTask,
   | "taskTypeId"
   | "neededExperience"

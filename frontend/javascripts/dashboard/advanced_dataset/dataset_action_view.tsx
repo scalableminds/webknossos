@@ -87,7 +87,7 @@ function NewAnnotationLink({
 
 type Props = {
   dataset: APIDatasetCompact;
-  reloadDataset: (arg0: APIDataset["id"]) => Promise<void>;
+  reloadDataset: (arg0: string) => Promise<void>;
 };
 
 function LinkWithDisabled({
@@ -281,7 +281,7 @@ function DatasetActionView(props: Props) {
 }
 const onClearCache = async (
   dataset: APIDataset,
-  reloadDataset: (arg0: APIDataset["id"]) => Promise<void>,
+  reloadDataset: (arg0: string) => Promise<void>,
 ) => {
   await clearCache(dataset);
   await reloadDataset(dataset.id);
@@ -297,7 +297,7 @@ export function getDatasetActionContextMenu({
   datasets,
   hideContextMenu,
 }: {
-  reloadDataset: (arg0: APIDataset["id"]) => Promise<void>;
+  reloadDataset: (arg0: string) => Promise<void>;
   datasets: APIDatasetCompact[];
   hideContextMenu: () => void;
 }): MenuProps {

@@ -9,7 +9,6 @@ import type {
   APIEffectiveJobState,
   AiModel,
   RenderAnimationOptions,
-  APIDataset,
   AdditionalCoordinate,
 } from "types/api_flow_types";
 import { assertResponseLimit } from "./api_utils";
@@ -76,7 +75,7 @@ export async function cancelJob(jobId: string): Promise<APIJob> {
 }
 
 export async function startConvertToWkwJob(
-  datasetId: APIDataset["id"],
+  datasetId: string,
   scale: Vector3,
   unit: UnitLong,
 ): Promise<APIJob> {
@@ -101,7 +100,7 @@ export async function startFindLargestSegmentIdJob(
 }
 
 export async function startExportTiffJob(
-  datasetId: APIDataset["id"],
+  datasetId: string,
   bbox: Vector6,
   additionalCoordinates: AdditionalCoordinate[] | null,
   layerName: string | null | undefined,
@@ -132,7 +131,7 @@ export async function startExportTiffJob(
 }
 
 export function startComputeMeshFileJob(
-  datasetId: APIDataset["id"],
+  datasetId: string,
   layerName: string,
   mag: Vector3,
   agglomerateView?: string,
@@ -151,7 +150,7 @@ export function startComputeMeshFileJob(
 }
 
 export function startComputeSegmentIndexFileJob(
-  datasetId: APIDataset["id"],
+  datasetId: string,
   layerName: string,
 ): Promise<APIJob> {
   const params = new URLSearchParams();
@@ -163,7 +162,7 @@ export function startComputeSegmentIndexFileJob(
 }
 
 export function startNucleiInferralJob(
-  datasetId: APIDataset["id"],
+  datasetId: string,
   layerName: string,
   newDatasetName: string,
 ): Promise<APIJob> {
@@ -176,7 +175,7 @@ export function startNucleiInferralJob(
 }
 
 export function startNeuronInferralJob(
-  datasetId: APIDataset["id"],
+  datasetId: string,
   layerName: string,
   bbox: Vector6,
   newDatasetName: string,
@@ -192,7 +191,7 @@ export function startNeuronInferralJob(
 }
 
 export function startRenderAnimationJob(
-  datasetId: APIDataset["id"],
+  datasetId: string,
   animationOptions: RenderAnimationOptions,
 ): Promise<APIJob> {
   return Request.sendJSONReceiveJSON(`/api/jobs/run/renderAnimation/${datasetId}`, {
@@ -202,7 +201,7 @@ export function startRenderAnimationJob(
 
 function startSegmentationAnnotationDependentJob(
   jobURLPath: string,
-  datasetId: APIDataset["id"],
+  datasetId: string,
   fallbackLayerName: string,
   volumeLayerName: string | null | undefined,
   newDatasetName: string,
@@ -229,7 +228,7 @@ function startSegmentationAnnotationDependentJob(
 }
 
 export function startMaterializingVolumeAnnotationJob(
-  datasetId: APIDataset["id"],
+  datasetId: string,
   fallbackLayerName: string,
   volumeLayerName: string | null | undefined,
   newDatasetName: string,
@@ -250,7 +249,7 @@ export function startMaterializingVolumeAnnotationJob(
 }
 
 export function startMitochondriaInferralJob(
-  datasetId: APIDataset["id"],
+  datasetId: string,
   layerName: string,
   bbox: Vector6,
   newDatasetName: string,
@@ -269,7 +268,7 @@ export function startMitochondriaInferralJob(
 }
 
 export function startAlignSectionsJob(
-  datasetId: APIDataset["id"],
+  datasetId: string,
   layerName: string,
   newDatasetName: string,
   annotationId?: string,

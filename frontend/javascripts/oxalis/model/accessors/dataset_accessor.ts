@@ -908,11 +908,13 @@ export function getMaybeSegmentIndexAvailability(
   return dataset.dataSource.dataLayers.find((layer) => layer.name === layerName)?.hasSegmentIndex;
 }
 
-export function getURLSanitizedName(dataset: APIDataset | APIDatasetCompact | { name: string }) {
+function getURLSanitizedName(dataset: APIDataset | APIDatasetCompact | { name: string }) {
   return dataset.name.replace(/[^A-Z|a-z|0-9|-|_]/g, "");
 }
 
-export function getReadableURLPart(dataset: APIDataset | APIDatasetCompact) {
+export function getReadableURLPart(
+  dataset: APIDataset | APIDatasetCompact | { name: string; id: string },
+) {
   return `${getURLSanitizedName(dataset)}-${dataset.id}`;
 }
 

@@ -175,7 +175,7 @@ export function getNodeAndTree(
     let node = null;
 
     if (nodeId != null) {
-      node = tree.nodes.getOrThrow(nodeId);
+      node = tree.nodes.getNullable(nodeId);
     } else {
       const { activeNodeId } = skeletonTracing;
 

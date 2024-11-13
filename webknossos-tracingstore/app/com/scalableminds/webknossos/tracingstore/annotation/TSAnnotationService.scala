@@ -791,21 +791,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       _ <- tracingDataStore.skeletons.put(newTracingId, newVersion, adaptedSkeleton)
     } yield newTracingId
 
-  private def ironOutReversions(updateGroups: Seq[(Long, Seq[UpdateAction])]): Seq[UpdateAction] = {
-    val ironedOutGroups: Seq[Seq[UpdateAction]] = updateGroups.foldLeft[Seq[Seq[UpdateAction]]](Seq()) {
-      (collected: Seq[Seq[UpdateAction]], updateGroupWithVersion) =>
-        val revertSourceVersionOpt = revertSourceVersionFromUpdates(updateGroupWithVersion._2)
-        collected
-    }
-    ironedOutGroups.reverse.flatten
-  }
-
-  private def revertSourceVersionFromUpdates(updates: Seq[UpdateAction]): Option[Long] =
-    updates.flatMap {
-      case u: RevertToVersionAnnotationAction => Some(u.sourceVersion)
-      case _                                  => None
-    }.headOption
-
   private def mergeEditableMappingUpdates(annotationIds: List[String], newTracingId: String)(
       implicit ec: ExecutionContext): Fox[List[EditableMappingUpdateAction]] =
     for {
@@ -813,7 +798,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         for {
           updateGroups <- tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(annotationId)(
             fromJsonBytes[List[UpdateAction]])
-          updatesIroned: Seq[UpdateAction] = ironOutReversions(updateGroups)
+          updatesIroned: Seq[UpdateAction] = ironOutReverts(updateGroups)
           editableMappingUpdates = updatesIroned.flatMap {
             case a: EditableMappingUpdateAction => Some(a.withActionTracingId(newTracingId))
             case _                              => None

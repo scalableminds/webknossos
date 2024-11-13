@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
 import collections.SequenceUtils
+import com.typesafe.scalalogging.LazyLogging
 
-trait UpdateGroupHandling {
+trait UpdateGroupHandling extends LazyLogging {
 
   def regroupByIsolationSensitiveActions(
       updateActionGroupsWithVersions: List[(Long, List[UpdateAction])]): List[(Long, List[UpdateAction])] = {
@@ -25,8 +26,45 @@ trait UpdateGroupHandling {
   }
 
   private def isIsolationSensitiveAction(a: UpdateAction): Boolean = a match {
-    case _: RevertToVersionAnnotationAction    => true
-    case _: AddLayerAnnotationAction => true
-    case _                                 => false
+    case _: RevertToVersionAnnotationAction => true
+    case _: AddLayerAnnotationAction        => true
+    case _                                  => false
   }
+
+  // TODO comment, unit test?
+  // updateGroups must be sorted descending by version number
+  def ironOutReverts(updateGroups: Seq[(Long, Seq[UpdateAction])]): Seq[UpdateAction] =
+    updateGroups.headOption match {
+      case None => Seq() // no update groups, return no updates
+      case Some(firstUpdateGroup) =>
+        val (ironedOutGroups: Seq[Seq[UpdateAction]], _) =
+          updateGroups.foldLeft[(Seq[Seq[UpdateAction]], Long)]((Seq(), firstUpdateGroup._1)) {
+            (collectedAndNextVersion: (Seq[Seq[UpdateAction]], Long), updateGroupWithVersion) =>
+              val collected = collectedAndNextVersion._1
+              val nextVersion = collectedAndNextVersion._2
+              logger.info(s"nextVersion: $nextVersion")
+              if (updateGroupWithVersion._1 > nextVersion) {
+                // We have not yet reached nextVersion. Skip to next element, Do not collect, do not change nextVersion
+                (collected, nextVersion)
+              } else {
+                val revertSourceVersionOpt = revertSourceVersionFromUpdates(updateGroupWithVersion._2)
+                logger.info(f"revertSourceVersionOpt: $revertSourceVersionOpt")
+                revertSourceVersionOpt match {
+                  // This group is a revert action. Set nextVersion to revertSourceVersion, do not collect this group
+                  case Some(revertSourceVersion) => (collected, revertSourceVersion)
+                  // This group is a normal action. Collect it, decrement nextVersion
+                  // Note: we *prepend* the update group here, meaning the output will go from oldest to newest version
+                  case None => (updateGroupWithVersion._2 +: collected, nextVersion - 1)
+                }
+              }
+
+          }
+        ironedOutGroups.flatten
+    }
+
+  private def revertSourceVersionFromUpdates(updates: Seq[UpdateAction]): Option[Long] =
+    updates.flatMap {
+      case u: RevertToVersionAnnotationAction => Some(u.sourceVersion)
+      case _                                  => None
+    }.headOption
 }

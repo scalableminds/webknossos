@@ -26,7 +26,7 @@ class FileSystemDataVault extends DataVault {
     if (Files.exists(localPath)) {
       range match {
         case Complete() =>
-          readAsync(localPath, 0, Files.size(localPath).toInt)
+          readAsync(localPath, 0, Math.toIntExact(Files.size(localPath)))
 
         case StartEnd(r) =>
           readAsync(localPath, r.start, r.length)
@@ -42,28 +42,35 @@ class FileSystemDataVault extends DataVault {
   private def readAsync(path: Path, position: Long, length: Int)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val promise = Promise[Box[Array[Byte]]]()
     val buffer = ByteBuffer.allocateDirect(length)
+    var channel: AsynchronousFileChannel = null
 
-    val channel = AsynchronousFileChannel.open(path, StandardOpenOption.READ)
+    try {
+      channel = AsynchronousFileChannel.open(path, StandardOpenOption.READ)
 
-    channel.read(
-      buffer,
-      position,
-      buffer,
-      new CompletionHandler[Integer, ByteBuffer] {
-        override def completed(result: Integer, buffer: ByteBuffer): Unit = {
-          buffer.rewind()
-          val arr = new Array[Byte](length)
-          buffer.get(arr)
-          promise.success(Full(arr))
-          channel.close()
+      channel.read(
+        buffer,
+        position,
+        buffer,
+        new CompletionHandler[Integer, ByteBuffer] {
+          override def completed(result: Integer, buffer: ByteBuffer): Unit = {
+            buffer.rewind()
+            val arr = new Array[Byte](length)
+            buffer.get(arr)
+            promise.success(Full(arr))
+            channel.close()
+          }
+
+          override def failed(exc: Throwable, buffer: ByteBuffer): Unit = {
+            promise.failure(exc)
+            channel.close()
+          }
         }
-
-        override def failed(exc: Throwable, buffer: ByteBuffer): Unit = {
-          promise.failure(exc)
-          channel.close()
-        }
-      }
-    )
+      )
+    } catch {
+      case e: Throwable =>
+        promise.failure(e)
+        if (channel != null && channel.isOpen) channel.close()
+    }
 
     promise.future
   }

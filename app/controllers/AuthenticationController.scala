@@ -748,7 +748,7 @@ trait AuthForms {
         "firstName" -> nonEmptyText,
         "lastName" -> nonEmptyText,
         "inviteToken" -> optional(nonEmptyText),
-        "acceptTermsOfService" -> optional(number)
+        "acceptedTermsOfService" -> optional(number)
       )((organization, organizationName, email, password, firstName, lastName, inviteToken, acceptTos) =>
         SignUpData(organization, organizationName, email, firstName, lastName, password._1, inviteToken, acceptTos))(
         signUpData =>

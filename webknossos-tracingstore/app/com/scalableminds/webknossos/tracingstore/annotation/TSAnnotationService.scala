@@ -552,7 +552,10 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     tracingDataStore.skeletons
       .get[SkeletonTracing](tracingId, version, mayBeEmpty = Some(true))(fromProtoBytes[SkeletonTracing])
 
-  def findVolume(annotationId: String, tracingId: String, version: Option[Long] = None, useCache: Boolean = true // TODO
+  def findVolume(annotationId: String,
+                 tracingId: String,
+                 version: Option[Long] = None,
+                 fromTemporaryStore: Boolean = true // TODO
   )(implicit tc: TokenContext, ec: ExecutionContext): Fox[VolumeTracing] =
     for {
       annotation <- getWithTracings(annotationId, version)
@@ -564,7 +567,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       annotationId: String,
       tracingId: String,
       version: Option[Long] = None,
-      useCache: Boolean = true // TODO
+      fromTemporaryStoreu: Boolean = true // TODO
   )(implicit tc: TokenContext, ec: ExecutionContext): Fox[SkeletonTracing] =
     if (tracingId == TracingId.dummy)
       Fox.successful(skeletonTracingService.dummyTracing)
@@ -576,7 +579,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       } yield migrated
     }
 
-  def findMultipleVolumes(selectors: Seq[Option[TracingSelector]], useCache: Boolean = true)(
+  def findMultipleVolumes(selectors: Seq[Option[TracingSelector]])(
       implicit tc: TokenContext,
       ec: ExecutionContext): Fox[List[Option[VolumeTracing]]] =
     Fox.combined {
@@ -584,13 +587,13 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         case Some(selector) =>
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(selector.tracingId)
-            tracing <- findVolume(annotationId, selector.tracingId, selector.version, useCache).map(Some(_))
+            tracing <- findVolume(annotationId, selector.tracingId, selector.version).map(Some(_))
           } yield tracing
         case None => Fox.successful(None)
       }
     }
 
-  def findMultipleSkeletons(selectors: Seq[Option[TracingSelector]], useCache: Boolean = true)(
+  def findMultipleSkeletons(selectors: Seq[Option[TracingSelector]])(
       implicit tc: TokenContext,
       ec: ExecutionContext): Fox[List[Option[SkeletonTracing]]] =
     Fox.combined {
@@ -598,7 +601,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         case Some(selector) =>
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(selector.tracingId)
-            tracing <- findSkeleton(annotationId, selector.tracingId, selector.version, useCache).map(Some(_))
+            tracing <- findSkeleton(annotationId, selector.tracingId, selector.version).map(Some(_))
           } yield tracing
         case None => Fox.successful(None)
       }

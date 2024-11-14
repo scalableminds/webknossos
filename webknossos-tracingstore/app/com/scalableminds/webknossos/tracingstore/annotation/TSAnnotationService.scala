@@ -397,13 +397,13 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   }
 
   private def applyUpdates(
-      annotation: AnnotationWithTracings,
+      annotationWithTracings: AnnotationWithTracings,
       annotationId: String,
       updates: List[UpdateAction],
       targetVersion: Long,
       reportChangesToWk: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] = {
 
-    logger.info(s"applying ${updates.length} to go from v${annotation.version} to v$targetVersion")
+    logger.info(s"applying ${updates.length} to go from v${annotationWithTracings.version} to v$targetVersion")
 
     def updateIter(annotationWithTracingsFox: Fox[AnnotationWithTracings],
                    remainingUpdates: List[UpdateAction]): Fox[AnnotationWithTracings] =
@@ -418,18 +418,19 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         case _ => annotationWithTracingsFox
       }
 
-    if (updates.isEmpty) Full(annotation)
+    if (updates.isEmpty) Full(annotationWithTracings)
     else {
       for {
-        updated <- updateIter(Some(annotation.withNewUpdaters(annotation.version, targetVersion)), updates)
+        updated <- updateIter(
+          Some(annotationWithTracings.withNewUpdaters(annotationWithTracings.version, targetVersion)),
+          updates)
         updatedWithNewVerson = updated.withVersion(targetVersion)
         _ = logger.info(s"flushing v$targetVersion, with ${updated.skeletonStats}")
         _ <- updatedWithNewVerson.flushBufferedUpdates()
         _ <- flushUpdatedTracings(updatedWithNewVerson, updates)
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVerson)
-        _ <- Fox.runIf(reportChangesToWk)(remoteWebknossosClient.updateAnnotation(
-          annotationId,
-          updatedWithNewVerson.annotation)) // TODO perf: skip if annotation is identical
+        _ <- Fox.runIf(reportChangesToWk && annotationWithTracings.annotation != updated.annotation)(
+          remoteWebknossosClient.updateAnnotation(annotationId, updatedWithNewVerson.annotation))
       } yield updatedWithNewVerson
     }
   }
@@ -445,9 +446,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         case _                                  => false
       }
     }
-    val tracingIdsWithUpdates = updates.flatMap {
+    val tracingIdsWithUpdates: Set[String] = updates.flatMap {
       case a: LayerUpdateAction        => Some(a.actionTracingId)
-      case a: AddLayerAnnotationAction => Some(a.tracingId)
+      case a: AddLayerAnnotationAction => a.tracingId // tracingId is an option, but filled on save. Drop Nones
       case _                           => None
     }.toSet
     for {

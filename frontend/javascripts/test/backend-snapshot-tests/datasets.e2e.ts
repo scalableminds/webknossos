@@ -9,6 +9,10 @@ import {
 import type { APIDataset } from "types/api_flow_types";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
+import {
+  getOrganizationForDataset,
+  getDatasetIdFromNameAndOrganization,
+} from "admin/api/disambiguate_legacy_routes";
 
 async function getFirstDataset(): Promise<APIDataset> {
   const datasets = await api.getActiveDatasetsOfMyOrganization();
@@ -62,7 +66,18 @@ test("updateDatasetTeams", async (t) => {
     dataset.id,
     dataset.allowedTeams.map((team) => team.id),
   );
-}); // test("getDatasetSharingToken and revokeDatasetSharingToken", async t => {
+});
+test("It should correctly disambiguate old dataset links", async (t) => {
+  let datasets = await api.getActiveDatasetsOfMyOrganization();
+  for (const dataset of datasets) {
+    const organizationId = await getOrganizationForDataset(dataset.name);
+    t.is(organizationId, dataset.owningOrganization);
+    const datasetId = await getDatasetIdFromNameAndOrganization(dataset.name, organizationId);
+    t.is(datasetId, dataset.id);
+  }
+  t.pass();
+});
+// test("getDatasetSharingToken and revokeDatasetSharingToken", async t => {
 //   const dataset = await getFirstDataset();
 //   const sharingToken = api.getDatasetSharingToken(dataset.name);
 //   t.snapshot(sharingToken);

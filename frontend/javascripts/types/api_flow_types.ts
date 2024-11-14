@@ -249,7 +249,7 @@ export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   | "isUnreported"
 >;
 export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
-  id: string; // Open question: Why was this optional?, The backend code clearly always returns an id ... :thinking:
+  id: string;
   status: MutableAPIDataSourceBase["status"];
   colorLayerNames: Array<string>;
   segmentationLayerNames: Array<string>;

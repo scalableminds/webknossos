@@ -37,7 +37,13 @@ import Toast from "libs/toast";
 import messages from "messages";
 import features from "features";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-import { Hideable, hasFormError } from "./helper_components";
+import {
+  type DatasetRotation,
+  Hideable,
+  getRotationFromTransformation,
+  hasFormError,
+  haveAllLayersSameRotation,
+} from "./helper_components";
 import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
 import DatasetSettingsMetadataTab from "./dataset_settings_metadata_tab";
 import DatasetSettingsSharingTab from "./dataset_settings_sharing_tab";
@@ -77,6 +83,7 @@ export type FormData = {
   dataset: APIDataset;
   defaultConfiguration: DatasetConfiguration;
   defaultConfigurationLayersJson: string;
+  datasetRotation?: DatasetRotation;
 };
 
 class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, State> {
@@ -195,6 +202,28 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       form.setFieldsValue({
         dataSource,
       });
+      if (haveAllLayersSameRotation(dataSource.dataLayers)) {
+        const firstLayerTransformations = dataSource.dataLayers[0].coordinateTransformations;
+        let initialDatasetRotationSettings: DatasetRotation;
+        if (!firstLayerTransformations || firstLayerTransformations.length !== 5) {
+          initialDatasetRotationSettings = {
+            x: 0,
+            y: 0,
+            z: 0,
+          };
+        } else {
+          initialDatasetRotationSettings = {
+            // First transformation is a translation to the coordinate system origin.
+            x: getRotationFromTransformation(firstLayerTransformations[1], "x"),
+            y: getRotationFromTransformation(firstLayerTransformations[2], "y"),
+            z: getRotationFromTransformation(firstLayerTransformations[3], "z"),
+            // Fifth transformation is a translation back to the original position.
+          };
+        }
+        form.setFieldsValue({
+          datasetRotation: initialDatasetRotationSettings,
+        });
+      }
       const datasetDefaultConfiguration = await getDatasetDefaultConfiguration(
         this.props.datasetId,
       );

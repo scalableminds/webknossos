@@ -22,7 +22,7 @@ import {
   FormItemWithInfo,
   RetryingErrorBoundary,
   jsonEditStyle,
-  AxisRotationSettingForLayer,
+  AxisRotationSettingForDataset,
 } from "dashboard/dataset/helper_components";
 import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
 import { jsonStringify, parseMaybe } from "libs/utils";
@@ -255,6 +255,12 @@ function SimpleDatasetForm({
                     }))}
                   />
                 </FormItemWithInfo>
+              </Col>
+            </Row>
+            <Row gutter={48}>
+              <Col span={24} xl={12} />
+              <Col span={24} xl={6}>
+                <AxisRotationSettingForDataset form={form} />
               </Col>
             </Row>
           </div>
@@ -616,12 +622,6 @@ function SimpleLayerForm({
               )}
             </div>
           ) : null}
-          <Row gutter={32}>
-            <Col span={12}>
-              Permanent dataset rotation:
-              <AxisRotationSettingForLayer form={form} layerIndex={index} />
-            </Col>
-          </Row>
         </Col>
       </Row>
     </div>

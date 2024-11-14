@@ -136,32 +136,29 @@ class WKRemoteTracingStoreClient(
 
   def mergeAnnotationsByIds(annotationIds: List[String],
                             newAnnotationId: ObjectId,
-                            persist: Boolean): Fox[AnnotationProto] = {
+                            toTemporaryStore: Boolean): Fox[AnnotationProto] = {
     logger.debug(s"Called to merge ${annotationIds.length} annotations by ids." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/annotation/mergedFromIds").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryString("persist" -> persist.toString)
+      .addQueryString("toTemporaryStore" -> toTemporaryStore.toString)
       .addQueryString("newAnnotationId" -> newAnnotationId.toString)
       .postJsonWithProtoResponse[List[String], AnnotationProto](annotationIds)(AnnotationProto)
   }
 
-  def mergeSkeletonTracingsByContents(tracings: SkeletonTracings, persistTracing: Boolean): Fox[String] = {
+  def mergeSkeletonTracingsByContents(tracings: SkeletonTracings): Fox[String] = {
     logger.debug("Called to merge SkeletonTracings by contents." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/mergedFromContents").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryString("persist" -> persistTracing.toString)
       .postProtoWithJsonResponse[SkeletonTracings, String](tracings)
   }
 
   def mergeVolumeTracingsByContents(tracings: VolumeTracings,
                                     dataSource: DataSourceLike,
-                                    initialData: List[Option[File]],
-                                    persistTracing: Boolean): Fox[String] = {
+                                    initialData: List[Option[File]]): Fox[String] = {
     logger.debug("Called to merge VolumeTracings by contents." + baseInfo)
     for {
       tracingId <- rpc(s"${tracingStore.url}/tracings/volume/mergedFromContents")
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-        .addQueryString("persist" -> persistTracing.toString)
         .postProtoWithJsonResponse[VolumeTracings, String](tracings)
       packedVolumeDataZips = packVolumeDataZips(initialData.flatten)
       _ = tracingDataSourceTemporaryStore.store(tracingId, dataSource)

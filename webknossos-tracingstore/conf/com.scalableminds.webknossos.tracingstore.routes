@@ -31,7 +31,7 @@ GET         /volume/:tracingId/findData                                         
 POST        /volume/:tracingId/segmentStatistics/volume                             @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentVolume(tracingId: String)
 POST        /volume/:tracingId/segmentStatistics/boundingBox                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentBoundingBox(tracingId: String)
 POST        /volume/getMultiple                                                     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getMultiple
-POST        /volume/mergedFromContents                                              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.mergedFromContents(persist: Boolean)
+POST        /volume/mergedFromContents                                              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.mergedFromContents
 
 # Editable Mappings
 GET         /mapping/:tracingId/info                                                @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.editableMappingInfo(tracingId: String, version: Option[Long])
@@ -70,7 +70,7 @@ GET         /volume/zarr3_experimental/:tracingId/:mag/:coordinates             
 # Skeleton tracings
 POST        /skeleton/save                                                          @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.save()
 POST        /skeleton/saveMultiple                                                  @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.saveMultiple()
-POST        /skeleton/mergedFromContents                                            @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.mergedFromContents(persist: Boolean)
+POST        /skeleton/mergedFromContents                                            @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.mergedFromContents
 GET         /skeleton/:tracingId                                                    @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.get(tracingId: String, version: Option[Long])
 POST        /skeleton/:tracingId/duplicate                                          @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.duplicate(tracingId: String, editPosition: Option[String], editRotation: Option[String], boundingBox: Option[String])
 POST        /skeleton/getMultiple                                                   @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.getMultiple

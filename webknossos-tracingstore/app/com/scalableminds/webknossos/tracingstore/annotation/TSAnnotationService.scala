@@ -803,11 +803,11 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                             newAnnotationId: String,
                             newVolumeTracingId: String,
                             tracingsWithIds: List[(VolumeTracing, String)],
-                            persist: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+                            toTemporaryStore: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     if (tracingsWithIds.nonEmpty && tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
       for {
         before <- Instant.nowFox
-        _ <- bool2Fox(persist) ?~> "Cannot merge editable mappings without “persist” (trying to merge compound annotations?)"
+        _ <- bool2Fox(!toTemporaryStore) ?~> "Cannot merge editable mappings to temporary store (trying to merge compound annotations?)"
         remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds)(tracingWithId =>
           remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
         remoteFallbackLayer <- SequenceUtils.findUniqueElement(remoteFallbackLayers) ?~> "Cannot merge editable mappings based on different dataset layers"
@@ -818,7 +818,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         linearizedEditableMappingUpdates: List[UpdateAction] <- mergeEditableMappingUpdates(annotationIds,
                                                                                             newVolumeTracingId)
         targetVersion = linearizedEditableMappingUpdates.length
-        _ <- Fox.runIf(persist) {
+        _ <- Fox.runIf(!toTemporaryStore) {
           var updateVersion = 1L
           Fox.serialCombined(linearizedEditableMappingUpdates) { update: UpdateAction =>
             for {

@@ -156,7 +156,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def mergedFromContents(persist: Boolean): Action[VolumeTracings] =
+  def mergedFromContents: Action[VolumeTracings] =
     Action.async(validateProto[VolumeTracings]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -171,7 +171,7 @@ class VolumeTracingController @Inject()(
             // segment lists for multi-volume uploads are not supported yet, compare https://github.com/scalableminds/webknossos/issues/6887
             mergedTracing = mt.copy(segments = List.empty)
 
-            newId <- volumeTracingService.save(mergedTracing, None, mergedTracing.version, toTemporaryStore = !persist)
+            newId <- volumeTracingService.save(mergedTracing, None, mergedTracing.version, toTemporaryStore = false)
           } yield Ok(Json.toJson(newId))
         }
       }

@@ -92,7 +92,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
       }
     }
 
-  def mergedFromContents(persist: Boolean): Action[SkeletonTracings] =
+  def mergedFromContents: Action[SkeletonTracings] =
     Action.async(validateProto[SkeletonTracings]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -103,7 +103,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
             newId <- skeletonTracingService.save(processedTracing,
                                                  None,
                                                  processedTracing.version,
-                                                 toTemporaryStore = !persist)
+                                                 toTemporaryStore = false)
           } yield Ok(Json.toJson(newId))
         }
       }

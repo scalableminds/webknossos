@@ -720,11 +720,12 @@ class VolumeTracingService @Inject()(
     dataLayer.bucketProvider.bucketStream(Some(tracing.version))
   }
 
-  def mergeVolumeData(tracingIds: Seq[String],
-                      tracings: Seq[VolumeTracing],
-                      newId: String,
-                      newVersion: Long,
-                      persist: Boolean)(implicit mp: MessagesProvider, tc: TokenContext): Fox[MergedVolumeStats] = {
+  def mergeVolumeData(
+      tracingIds: Seq[String],
+      tracings: Seq[VolumeTracing],
+      newId: String,
+      newVersion: Long,
+      toTemporaryStore: Boolean)(implicit mp: MessagesProvider, tc: TokenContext): Fox[MergedVolumeStats] = {
     val elementClass = tracings.headOption.map(_.elementClass).getOrElse(elementClassToProto(ElementClass.uint8))
 
     val magSets = new mutable.HashSet[Set[Vec3Int]]()
@@ -792,7 +793,7 @@ class VolumeTracingService @Inject()(
                             bucketPosition,
                             bucketBytes,
                             newVersion,
-                            toTemporaryStore = !persist, // TODO unify boolean direction + naming
+                            toTemporaryStore,
                             mergedAdditionalAxes)
             _ <- Fox.runIf(shouldCreateSegmentIndex)(
               updateSegmentIndex(segmentIndexBuffer,

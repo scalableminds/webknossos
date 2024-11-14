@@ -117,7 +117,7 @@ class AnnotationController @Inject()(
       for {
         annotationA <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
         annotationB <- provider.provideAnnotation(mergedTyp, mergedId, request.identity) ~> NOT_FOUND
-        mergedAnnotation <- annotationMerger.mergeTwo(annotationA, annotationB, persistTracing = true, request.identity) ?~> "annotation.merge.failed"
+        mergedAnnotation <- annotationMerger.mergeTwo(annotationA, annotationB, request.identity) ?~> "annotation.merge.failed"
         restrictions = annotationRestrictionDefaults.defaultsFor(mergedAnnotation)
         _ <- restrictions.allowAccess(request.identity) ?~> Messages("notAllowed") ~> FORBIDDEN
         _ <- annotationDAO.insertOne(mergedAnnotation)

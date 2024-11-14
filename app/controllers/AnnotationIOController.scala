@@ -198,8 +198,7 @@ class AnnotationIOController @Inject()(
         mergedTracingId <- client.mergeVolumeTracingsByContents(
           VolumeTracings(uploadedVolumeLayersFlat.map(v => VolumeTracingOpt(Some(v.tracing)))),
           dataSource,
-          uploadedVolumeLayersFlat.map(v => v.getDataZipFrom(otherFiles)),
-          persistTracing = true
+          uploadedVolumeLayersFlat.map(v => v.getDataZipFrom(otherFiles))
         )
       } yield
         List(
@@ -218,8 +217,7 @@ class AnnotationIOController @Inject()(
     else {
       for {
         mergedTracingId <- tracingStoreClient.mergeSkeletonTracingsByContents(
-          SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
-          persistTracing = true)
+          SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))))
       } yield
         List(
           AnnotationLayer(mergedTracingId,

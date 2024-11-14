@@ -29,7 +29,7 @@ class ProjectInformationHandler @Inject()(annotationDAO: AnnotationDAO,
       _ <- assertNonEmpty(annotations) ?~> "project.noAnnotations"
       datasetId <- annotations.headOption.map(_._dataset).toFox
       mergedAnnotation <- annotationMerger.mergeN(projectId,
-                                                  persistTracing = false,
+                                                  toTemporaryStore = true,
                                                   user._id,
                                                   datasetId,
                                                   project._team,

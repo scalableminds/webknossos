@@ -21,12 +21,11 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
   def mergeTwo(
       annotationA: Annotation,
       annotationB: Annotation,
-      persistTracing: Boolean,
       issuingUser: User
   )(implicit ctx: DBAccessContext): Fox[Annotation] =
     mergeN(
       ObjectId.generate,
-      persistTracing,
+      toTemporaryStore = false,
       issuingUser._id,
       annotationB._dataset,
       annotationB._team,
@@ -36,7 +35,7 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
 
   def mergeN(
       newId: ObjectId,
-      persistTracing: Boolean,
+      toTemporaryStore: Boolean,
       userId: ObjectId,
       datasetId: ObjectId,
       teamId: ObjectId,
@@ -47,7 +46,7 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
       Fox.empty
     else {
       for {
-        mergedAnnotationLayers <- mergeAnnotationsInTracingstore(annotations, datasetId, newId, persistTracing) ?~> "Failed to merge annotations in tracingstore."
+        mergedAnnotationLayers <- mergeAnnotationsInTracingstore(annotations, datasetId, newId, toTemporaryStore) ?~> "Failed to merge annotations in tracingstore."
       } yield {
         Annotation(
           newId,
@@ -65,11 +64,13 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
       annotations: List[Annotation],
       datasetId: ObjectId,
       newAnnotationId: ObjectId,
-      persist: Boolean)(implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] =
+      toTemporaryStore: Boolean)(implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] =
     for {
       dataset <- datasetDAO.findOne(datasetId)
       tracingStoreClient: WKRemoteTracingStoreClient <- tracingStoreService.clientFor(dataset)
-      mergedAnnotationProto <- tracingStoreClient.mergeAnnotationsByIds(annotations.map(_.id), newAnnotationId, persist)
+      mergedAnnotationProto <- tracingStoreClient.mergeAnnotationsByIds(annotations.map(_.id),
+                                                                        newAnnotationId,
+                                                                        toTemporaryStore)
       layers = mergedAnnotationProto.annotationLayers.map(AnnotationLayer.fromProto)
     } yield layers.toList
 

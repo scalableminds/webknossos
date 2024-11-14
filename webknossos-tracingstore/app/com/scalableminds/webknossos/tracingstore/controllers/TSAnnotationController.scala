@@ -156,7 +156,7 @@ class TSAnnotationController @Inject()(
       }
     }
 
-  def mergedFromIds(persist: Boolean, newAnnotationId: String): Action[List[String]] =
+  def mergedFromIds(toTemporaryStore: Boolean, newAnnotationId: String): Action[List[String]] =
     Action.async(validateJson[List[String]]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -184,7 +184,7 @@ class TSAnnotationController @Inject()(
                                      newAnnotationId,
                                      newVolumeId,
                                      volumeTracings.zip(volumeLayers.map(_.tracingId)),
-                                     persist)
+                                     toTemporaryStore)
               .futureBox
             (newMappingName: Option[String], newTargetVersion: Long) <- mergeEditableMappingsResultBox match {
               case Full(targetVersion) => Fox.successful((Some(newVolumeId), targetVersion))
@@ -195,12 +195,12 @@ class TSAnnotationController @Inject()(
                                                                       volumeTracings,
                                                                       newVolumeId,
                                                                       newVersion = newTargetVersion,
-                                                                      persist = persist)
+                                                                      toTemporaryStore)
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
               volumeTracingService
                 .merge(volumeTracings, mergedVolumeStats, newMappingName, newVersion = newTargetVersion))
             _ <- Fox.runOptional(mergedVolumeOpt)(
-              volumeTracingService.save(_, Some(newVolumeId), version = newTargetVersion, toTemporaryStore = !persist))
+              volumeTracingService.save(_, Some(newVolumeId), version = newTargetVersion, toTemporaryStore))
             skeletonTracings <- annotationService
               .findMultipleSkeletons(skeletonLayers.map { l =>
                 Some(TracingSelector(l.tracingId))
@@ -225,8 +225,7 @@ class TSAnnotationController @Inject()(
               .withEarliestAccessibleVersion(newTargetVersion)
               .withVersion(newTargetVersion)
             _ <- Fox.runOptional(mergedSkeletonOpt)(
-              skeletonTracingService
-                .save(_, Some(newSkeletonId), version = newTargetVersion, toTemporaryStore = !persist))
+              skeletonTracingService.save(_, Some(newSkeletonId), version = newTargetVersion, toTemporaryStore))
             _ <- tracingDataStore.annotations.put(newAnnotationId, newTargetVersion, mergedAnnotation)
           } yield Ok(mergedAnnotation.toByteArray).as(protobufMimeType)
         }

@@ -124,7 +124,7 @@ test("SkeletonTracing should add a new node", (t) => {
     untransformedPosition: position,
     rotation,
     viewport,
-    mag: mag,
+    resolution: mag,
     id: 1,
     radius: 1,
   });
@@ -289,7 +289,7 @@ test("SkeletonTracing should delete nodes and split the tree", (t) => {
     untransformedPosition: [0, 0, 0],
     additionalCoordinates: null,
     radius: 10,
-    mag: 10,
+    resolution: 10,
     rotation: [0, 0, 0],
     timestamp: 0,
     viewport: 1,
@@ -447,7 +447,7 @@ test("SkeletonTracing should delete an edge and split the tree", (t) => {
     untransformedPosition: [0, 0, 0],
     additionalCoordinates: null,
     radius: 10,
-    mag: 10,
+    resolution: 10,
     rotation: [0, 0, 0],
     timestamp: 0,
     viewport: 1,
@@ -876,6 +876,20 @@ test("SkeletonTracing should delete several trees", (t) => {
     .apply(SkeletonTracingReducer, deleteTreeAction)
     .apply(SkeletonTracingReducer, deleteTreeAction)
     .apply(SkeletonTracingReducer, deleteTreeAction)
+    .unpack();
+  t.not(newState, initialState);
+  const newSkeletonTracing = enforceSkeletonTracing(newState.tracing);
+  t.deepEqual(_.size(newSkeletonTracing.trees), 0);
+  t.not(newSkeletonTracing.trees, initialSkeletonTracing.trees);
+});
+test("SkeletonTracing should delete several trees at once", (t) => {
+  const createTreeAction = SkeletonTracingActions.createTreeAction();
+  const deleteTreesAction = SkeletonTracingActions.deleteTreesAction([1, 2, 3]);
+  // create trees and delete them
+  const newState = ChainReducer<OxalisState, Action>(initialState)
+    .apply(SkeletonTracingReducer, createTreeAction)
+    .apply(SkeletonTracingReducer, createTreeAction)
+    .apply(SkeletonTracingReducer, deleteTreesAction)
     .unpack();
   t.not(newState, initialState);
   const newSkeletonTracing = enforceSkeletonTracing(newState.tracing);

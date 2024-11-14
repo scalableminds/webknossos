@@ -270,7 +270,7 @@ function* createEditableMapping(): Saga<string> {
   // Get volume tracing again to make sure the version is up to date
   const upToDateVolumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (upToDateVolumeTracing == null) {
-    throw new Error("No active segmentation tracing layer. Cannot create editble mapping.");
+    throw new Error("No active segmentation tracing layer. Cannot create editable mapping.");
   }
 
   const volumeTracingId = upToDateVolumeTracing.tracingId;

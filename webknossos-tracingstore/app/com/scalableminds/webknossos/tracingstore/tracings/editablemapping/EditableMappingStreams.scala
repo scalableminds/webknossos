@@ -61,7 +61,6 @@ class VersionedAgglomerateToGraphIterator(prefix: String,
       case None         => getNextNonRevertedGraph.get
     }
     nextGraph = None
-    // TODO parse graph key? (=agglomerate id)
     (nextRes.key, nextRes.value, nextRes.version)
   }
 
@@ -116,7 +115,6 @@ class VersionedSegmentToAgglomerateChunkIterator(prefix: String,
       case None         => getNextNonRevertedChunk.get
     }
     nextChunk = None
-    // TODO parse chunk key?
     (nextRes.key, nextRes.value, nextRes.version)
   }
 

@@ -156,7 +156,6 @@ class TSAnnotationController @Inject()(
       }
     }
 
-  // TODO test with skeleton-only, volume-only, editable-mapping-volume only
   def mergedFromIds(persist: Boolean, newAnnotationId: String): Action[List[String]] =
     Action.async(validateJson[List[String]]) { implicit request =>
       log() {

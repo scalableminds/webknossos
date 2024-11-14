@@ -24,7 +24,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{
   UpdateUserBoundingBoxesSkeletonAction
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  CompactVolumeUpdateAction,
   CreateSegmentVolumeAction,
   DeleteSegmentDataVolumeAction,
   DeleteSegmentVolumeAction,
@@ -193,7 +192,6 @@ object UpdateAction {
         Json.obj("name" -> "deleteSegment", "value" -> Json.toJson(s)(DeleteSegmentVolumeAction.jsonFormat))
       case s: UpdateSegmentGroupsVolumeAction =>
         Json.obj("name" -> "updateSegmentGroups", "value" -> Json.toJson(s)(UpdateSegmentGroupsVolumeAction.jsonFormat))
-      case s: CompactVolumeUpdateAction => Json.toJson(s)(CompactVolumeUpdateAction.compactVolumeUpdateActionFormat)
       case s: UpdateMappingNameVolumeAction =>
         Json.obj("name" -> "updateMappingName", "value" -> Json.toJson(s)(UpdateMappingNameVolumeAction.jsonFormat))
 

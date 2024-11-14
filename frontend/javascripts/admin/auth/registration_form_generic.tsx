@@ -9,6 +9,8 @@ import Store from "oxalis/throttled_store";
 import messages from "messages";
 import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
+import { useFetch } from "libs/react_helpers";
+import { getTermsOfService } from "admin/api/terms_of_service";
 
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -25,6 +27,8 @@ type Props = {
 
 function RegistrationFormGeneric(props: Props) {
   const [form] = Form.useForm();
+
+  const terms = useFetch(getTermsOfService, null, []);
 
   const onFinish = async (formValues: Record<string, any>) => {
     await Request.sendJSONReceiveJSON(
@@ -276,6 +280,7 @@ function RegistrationFormGeneric(props: Props) {
       </Row>
       {props.hidePrivacyStatement ? null : (
         <FormItem
+          className="registration-form-checkbox privacy"
           name="privacy_check"
           valuePropName="checked"
           rules={[
@@ -296,6 +301,34 @@ function RegistrationFormGeneric(props: Props) {
           </Checkbox>
         </FormItem>
       )}
+      {terms != null && !terms.enabled ? null : (
+        <FormItem
+          className="registration-form-checkbox tos"
+          name="tos_check"
+          valuePropName="checked"
+          rules={[
+            {
+              validator: (_, value) =>
+                value
+                  ? Promise.resolve()
+                  : Promise.reject(new Error(messages["auth.tos_check_required"])),
+            },
+          ]}
+        >
+          <Checkbox disabled={terms == null}>
+            I agree to the{" "}
+            {terms == null ? (
+              "terms of service"
+            ) : (
+              <a target="_blank" href={terms.url} rel="noopener noreferrer">
+                terms of service
+              </a>
+            )}
+            .
+          </Checkbox>
+        </FormItem>
+      )}
+
       <FormItem>
         <Button
           size="large"

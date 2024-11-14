@@ -34,7 +34,6 @@ import DisableGenericDnd from "components/disable_generic_dnd";
 import { Imprint, Privacy } from "components/legal";
 import AsyncRedirect from "components/redirect";
 import SecuredRoute from "components/secured_route";
-import { CheckTermsOfServices } from "components/terms_of_services_check";
 import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
 import PublicationDetailView from "dashboard/publication_details_view";
@@ -213,7 +212,6 @@ class ReactRouter extends React.Component<Props> {
       <Router history={browserHistory}>
         <Layout>
           <DisableGenericDnd />
-          <CheckTermsOfServices />
           <Navbar isAuthenticated={isAuthenticated} />
           <HelpButton />
           <Content>

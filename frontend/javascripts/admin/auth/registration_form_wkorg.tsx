@@ -7,6 +7,8 @@ import Request from "libs/request";
 import Store from "oxalis/throttled_store";
 import messages from "messages";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
+import { useFetch } from "libs/react_helpers";
+import { getTermsOfService } from "admin/api/terms_of_service";
 
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -30,6 +32,7 @@ function generateOrganizationId() {
 function RegistrationFormWKOrg(props: Props) {
   const [form] = Form.useForm();
   const organizationId = useRef(generateOrganizationId());
+  const terms = useFetch(getTermsOfService, null, []);
 
   async function onFinish(formValues: Record<string, any>) {
     await Request.sendJSONReceiveJSON("/api/auth/createOrganizationWithAdmin", {
@@ -43,6 +46,7 @@ function RegistrationFormWKOrg(props: Props) {
         },
         organization: organizationId.current,
         organizationName: `${formValues.firstName.trim()} ${formValues.lastName.trim()} Lab`,
+        acceptedTermsOfService: terms?.version,
       },
     });
     const [user, organization] = await loginUser({
@@ -158,6 +162,7 @@ function RegistrationFormWKOrg(props: Props) {
 
       <FormItem
         name="privacy_check"
+        className="registration-form-checkbox privacy"
         valuePropName="checked"
         rules={[
           {
@@ -177,9 +182,9 @@ function RegistrationFormWKOrg(props: Props) {
         </Checkbox>
       </FormItem>
 
-      {/* WIP! see terms_of_services.tsx */}
       <FormItem
         name="tos_check"
+        className="registration-form-checkbox tos"
         valuePropName="checked"
         rules={[
           {
@@ -190,19 +195,20 @@ function RegistrationFormWKOrg(props: Props) {
           },
         ]}
       >
-        <Checkbox>
+        <Checkbox disabled={terms == null}>
           I agree to the{" "}
-          <a target="_blank" href="/privacy" rel="noopener noreferrer">
-            terms of service
-          </a>
+          {terms == null ? (
+            "terms of service"
+          ) : (
+            <a target="_blank" href={terms.url} rel="noopener noreferrer">
+              terms of service
+            </a>
+          )}
           .
         </Checkbox>
       </FormItem>
-      <FormItem
-        style={{
-          marginBottom: 10,
-        }}
-      >
+
+      <FormItem>
         <Button
           size="large"
           type="primary"

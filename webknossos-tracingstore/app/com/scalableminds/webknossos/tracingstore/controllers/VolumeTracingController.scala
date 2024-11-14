@@ -117,8 +117,7 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- annotationService.findVolume(annotationId, tracingId, version, applyUpdates = true) ?~> Messages(
-              "tracing.notFound")
+            tracing <- annotationService.findVolume(annotationId, tracingId, version) ?~> Messages("tracing.notFound")
           } yield Ok(tracing.toByteArray).as(protobufMimeType)
         }
       }
@@ -129,7 +128,7 @@ class VolumeTracingController @Inject()(
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
-            tracings <- annotationService.findMultipleVolumes(request.body, applyUpdates = true)
+            tracings <- annotationService.findMultipleVolumes(request.body)
           } yield {
             Ok(tracings.toByteArray).as(protobufMimeType)
           }

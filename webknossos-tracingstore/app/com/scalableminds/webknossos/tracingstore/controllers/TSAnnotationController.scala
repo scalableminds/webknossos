@@ -178,7 +178,7 @@ class TSAnnotationController @Inject()(
             volumeTracings <- annotationService
               .findMultipleVolumes(volumeLayers.map { l =>
                 Some(TracingSelector(l.tracingId))
-              }, applyUpdates = true)
+              })
               .map(_.flatten)
             mergeEditableMappingsResultBox <- annotationService
               .mergeEditableMappings(request.body,
@@ -205,7 +205,7 @@ class TSAnnotationController @Inject()(
             skeletonTracings <- annotationService
               .findMultipleSkeletons(skeletonLayers.map { l =>
                 Some(TracingSelector(l.tracingId))
-              }, applyUpdates = true)
+              })
               .map(_.flatten)
             mergedSkeletonOpt <- Fox.runIf(skeletonTracings.nonEmpty)(
               skeletonTracingService.merge(skeletonTracings, newVersion = newTargetVersion).toFox)

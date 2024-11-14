@@ -552,13 +552,10 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     tracingDataStore.skeletons
       .get[SkeletonTracing](tracingId, version, mayBeEmpty = Some(true))(fromProtoBytes[SkeletonTracing])
 
-  def findVolume(annotationId: String,
-                 tracingId: String,
-                 version: Option[Long] = None,
-                 useCache: Boolean = true, // TODO
-                 applyUpdates: Boolean = false)(implicit tc: TokenContext, ec: ExecutionContext): Fox[VolumeTracing] =
+  def findVolume(annotationId: String, tracingId: String, version: Option[Long] = None, useCache: Boolean = true // TODO
+  )(implicit tc: TokenContext, ec: ExecutionContext): Fox[VolumeTracing] =
     for {
-      annotation <- getWithTracings(annotationId, version) // TODO is applyUpdates still needed?
+      annotation <- getWithTracings(annotationId, version)
       tracing <- annotation.getVolume(tracingId).toFox
       migrated <- volumeTracingMigrationService.migrateTracing(tracing)
     } yield migrated
@@ -567,46 +564,41 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       annotationId: String,
       tracingId: String,
       version: Option[Long] = None,
-      useCache: Boolean = true, // TODO
-      applyUpdates: Boolean = false)(implicit tc: TokenContext, ec: ExecutionContext): Fox[SkeletonTracing] =
+      useCache: Boolean = true // TODO
+  )(implicit tc: TokenContext, ec: ExecutionContext): Fox[SkeletonTracing] =
     if (tracingId == TracingId.dummy)
       Fox.successful(skeletonTracingService.dummyTracing)
     else {
       for {
-        annotation <- getWithTracings(annotationId, version) // TODO is applyUpdates still needed?
+        annotation <- getWithTracings(annotationId, version)
         tracing <- annotation.getSkeleton(tracingId).toFox
         migrated <- skeletonTracingMigrationService.migrateTracing(tracing)
       } yield migrated
     }
 
-  def findMultipleVolumes(selectors: Seq[Option[TracingSelector]],
-                          useCache: Boolean = true,
-                          applyUpdates: Boolean = false)(implicit tc: TokenContext,
-                                                         ec: ExecutionContext): Fox[List[Option[VolumeTracing]]] =
+  def findMultipleVolumes(selectors: Seq[Option[TracingSelector]], useCache: Boolean = true)(
+      implicit tc: TokenContext,
+      ec: ExecutionContext): Fox[List[Option[VolumeTracing]]] =
     Fox.combined {
       selectors.map {
         case Some(selector) =>
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(selector.tracingId)
-            tracing <- findVolume(annotationId, selector.tracingId, selector.version, useCache, applyUpdates)
-              .map(Some(_))
+            tracing <- findVolume(annotationId, selector.tracingId, selector.version, useCache).map(Some(_))
           } yield tracing
         case None => Fox.successful(None)
       }
     }
 
-  // TODO build variant without TracingSelector and Option?
-  def findMultipleSkeletons(selectors: Seq[Option[TracingSelector]],
-                            useCache: Boolean = true,
-                            applyUpdates: Boolean = false)(implicit tc: TokenContext,
-                                                           ec: ExecutionContext): Fox[List[Option[SkeletonTracing]]] =
+  def findMultipleSkeletons(selectors: Seq[Option[TracingSelector]], useCache: Boolean = true)(
+      implicit tc: TokenContext,
+      ec: ExecutionContext): Fox[List[Option[SkeletonTracing]]] =
     Fox.combined {
       selectors.map {
         case Some(selector) =>
           for {
-            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(selector.tracingId) // TODO perf skip that if we already have it?
-            tracing <- findSkeleton(annotationId, selector.tracingId, selector.version, useCache, applyUpdates)
-              .map(Some(_))
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(selector.tracingId)
+            tracing <- findSkeleton(annotationId, selector.tracingId, selector.version, useCache).map(Some(_))
           } yield tracing
         case None => Fox.successful(None)
       }

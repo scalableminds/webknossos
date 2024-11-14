@@ -91,6 +91,7 @@ class TSRemoteWebknossosClient @Inject()(
         rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/annotationId")
           .addQueryString("tracingId" -> tracingId)
           .addQueryString("key" -> tracingStoreKey)
+          .silent
           .getWithJsonResponse[String]
     ) ?~> "annotation.idForTracing.failed"
 

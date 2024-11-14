@@ -5,14 +5,17 @@ import com.typesafe.scalalogging.LazyLogging
 
 trait UpdateGroupHandling extends LazyLogging {
 
+  /*
+   * Regroup update action groups, isolating the update actions that need it.
+   * (Currently RevertToVersionAnnotationAction and AddLayerAnnotationAction)
+   * Assumes they are already the only update in their respective group.
+   * Compare unit test for UpdateGroupHandlingUnitTestSuite
+   */
   def regroupByIsolationSensitiveActions(
       updateActionGroupsWithVersions: List[(Long, List[UpdateAction])]): List[(Long, List[UpdateAction])] = {
     val splitGroupLists: List[List[(Long, List[UpdateAction])]] =
       SequenceUtils.splitAndIsolate(updateActionGroupsWithVersions.reverse)(actionGroup =>
         actionGroup._2.exists(updateAction => isIsolationSensitiveAction(updateAction)))
-    // TODO assert that the *groups* that contain revert actions contain nothing else
-    // TODO test this
-
     splitGroupLists.flatMap { groupsToConcatenate: List[(Long, List[UpdateAction])] =>
       concatenateUpdateActionGroups(groupsToConcatenate)
     }
@@ -31,8 +34,13 @@ trait UpdateGroupHandling extends LazyLogging {
     case _                                  => false
   }
 
-  // TODO comment, unit test?
-  // updateGroups must be sorted descending by version number
+  /*
+   * Iron out reverts in a sequence of update groups.
+   * Scans for RevertToVersionActions and skips updates as specified by the reverts
+   * Expects updateGroups as Version-Seq[UpdateAction] tuples, SORTED DESCENDING by version number
+   * Returns a single Seq of UpdateAction, in to-apply order
+   * Compare unit test in UpdateGroupHandlingUnitTestSuite
+   */
   def ironOutReverts(updateGroups: Seq[(Long, Seq[UpdateAction])]): Seq[UpdateAction] =
     updateGroups.headOption match {
       case None => Seq() // no update groups, return no updates

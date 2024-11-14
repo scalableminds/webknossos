@@ -73,8 +73,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- annotationService.findSkeleton(annotationId, tracingId, version, applyUpdates = true) ?~> Messages(
-              "tracing.notFound")
+            tracing <- annotationService.findSkeleton(annotationId, tracingId, version) ?~> Messages("tracing.notFound")
           } yield Ok(tracing.toByteArray).as(protobufMimeType)
         }
       }
@@ -85,7 +84,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
-            tracings <- annotationService.findMultipleSkeletons(request.body, applyUpdates = true)
+            tracings <- annotationService.findMultipleSkeletons(request.body)
           } yield {
             Ok(tracings.toByteArray).as(protobufMimeType)
           }

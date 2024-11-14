@@ -918,6 +918,10 @@ export function getReadableURLPart(
   return `${getURLSanitizedName(dataset)}-${dataset.id}`;
 }
 
-export function getDatasetIdFromReadableURLPart(datasetNameAndId: string) {
-  return datasetNameAndId.split("-").pop();
+export function getDatasetIdOrNameFromReadableURLPart(datasetNameAndId: string) {
+  const datasetIdOrName = datasetNameAndId.split("-").pop();
+  const isId = /^[a-f0-9]{34}$/.test(datasetIdOrName || "");
+  return isId
+    ? { datasetId: datasetIdOrName, datasetName: null }
+    : { datasetId: null, datasetName: datasetIdOrName };
 }

@@ -65,8 +65,11 @@ import loadable from "libs/lazy_loader";
 import type { EmptyObject } from "types/globals";
 import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import AiModelListView from "admin/voxelytics/ai_model_list_view";
-import { getDatasetIdFromNameAndOrganization } from "admin/api/disambiguate_legacy_routes";
-import { getDatasetIdFromReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getDatasetIdFromNameAndOrganization,
+  getOrganizationForDataset,
+} from "admin/api/disambiguate_legacy_routes";
+import { getDatasetIdOrNameFromReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 
 const { Content } = Layout;
 
@@ -209,7 +212,23 @@ class ReactRouter extends React.Component<Props> {
   );
 
   tracingViewMode = ({ match }: ContextRouter) => {
-    const datasetId = getDatasetIdFromReadableURLPart(match.params.datasetNameAndId);
+    const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(
+      match.params.datasetNameAndId,
+    );
+    if (datasetName) {
+      return (
+        <AsyncRedirect
+          redirectTo={async () => {
+            const organizationId = await getOrganizationForDataset(datasetName);
+            const datasetId = await getDatasetIdFromNameAndOrganization(
+              datasetName,
+              organizationId,
+            );
+            return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
+          }}
+        />
+      );
+    }
     return (
       <TracingLayoutView
         initialMaybeCompoundType={null}
@@ -472,7 +491,23 @@ class ReactRouter extends React.Component<Props> {
                 path="/datasets/:datasetNameAndId/edit"
                 requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => {
-                  const datasetId = getDatasetIdFromReadableURLPart(match.params.datasetNameAndId);
+                  const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(
+                    match.params.datasetNameAndId,
+                  );
+                  if (datasetName) {
+                    return (
+                      <AsyncRedirect
+                        redirectTo={async () => {
+                          const organizationId = await getOrganizationForDataset(datasetName);
+                          const datasetId = await getDatasetIdFromNameAndOrganization(
+                            datasetName,
+                            organizationId,
+                          );
+                          return `/datasets/${datasetName}-${datasetId}/edit`;
+                        }}
+                      />
+                    );
+                  }
                   return (
                     <DatasetSettingsView
                       isEditingMode

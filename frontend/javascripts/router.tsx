@@ -162,23 +162,39 @@ class ReactRouter extends React.Component<Props> {
     );
   };
 
+  tracingSandboxLegacy = ({ match }: ContextRouter) => {
+    const tracingType = coalesce(TracingTypeEnum, match.params.type);
+    if (tracingType == null) {
+      return <h3>Invalid annotation URL.</h3>;
+    }
+    return (
+      <AsyncRedirect
+        redirectTo={async () => {
+          const datasetName = match.params.datasetName || "";
+          const organizationId = match.params.organizationId || "";
+          const datasetId = await getDatasetIdFromNameAndOrganization(datasetName, organizationId);
+          return `/datasets/${datasetName}-${datasetId}/sandbox/:${tracingType}${location.search}${location.hash}`;
+        }}
+      />
+    );
+  };
+
   tracingSandbox = ({ match }: ContextRouter) => {
     const tracingType = coalesce(TracingTypeEnum, match.params.type);
 
-    if (tracingType != null) {
-      return (
-        <TracingLayoutView
-          initialMaybeCompoundType={null}
-          initialCommandType={{
-            type: ControlModeEnum.SANDBOX,
-            tracingType,
-            datasetId: match.params.datasetId || "",
-          }}
-        />
-      );
+    if (tracingType == null) {
+      return <h3>Invalid annotation URL.</h3>;
     }
-
-    return <h3>Invalid annotation URL.</h3>;
+    return (
+      <TracingLayoutView
+        initialMaybeCompoundType={null}
+        initialCommandType={{
+          type: ControlModeEnum.SANDBOX,
+          tracingType,
+          datasetId: match.params.datasetId || "",
+        }}
+      />
+    );
   };
 
   tracingViewModeLegacy = ({ match, location }: ContextRouter) => (
@@ -612,16 +628,20 @@ class ReactRouter extends React.Component<Props> {
                   return <FinishResetPasswordView resetToken={params.token} />;
                 }}
               />
-              {/*legacy view mode route */}
+              {/* legacy view mode route */}
               <RouteWithErrorBoundary
                 path="/datasets/:organizationId/:datasetName/view"
                 render={this.tracingViewModeLegacy}
               />
               <Route path="/datasets/:datasetNameAndId/view" render={this.tracingViewMode} />
-              {/*maybe this also needs a legacy route?*/}
               <RouteWithErrorBoundary
                 path="/datasets/:datasetId/sandbox/:type"
                 render={this.tracingSandbox}
+              />
+              {/* legacy sandbox route?*/}
+              <RouteWithErrorBoundary
+                path="/datasets/:organizationId/:datasetName/sandbox/:type"
+                render={this.tracingSandboxLegacy}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}

@@ -377,7 +377,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
 
     if (dataset != null && this.didDatasourceChange(dataSource)) {
       if (this.didDatasourceIdChange(dataSource)) {
-        Toast.info(messages["dataset.settings.updated_datasource_id_warning"]);
+        Toast.warning(messages["dataset.settings.updated_datasource_id_warning"]);
       }
       await updateDatasetDatasource(dataset.directoryName, dataset.dataStore.url, dataSource);
       this.setState({
@@ -492,10 +492,12 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     const { dataset } = this.state;
 
     const maybeStoredDatasetName = dataset?.name || this.props.datasetId;
-    const maybeDataSourceId = {
-      owningOrganization: dataset?.owningOrganization || "",
-      directoryName: dataset?.directoryName || "",
-    };
+    const maybeDataSourceId = dataset
+      ? {
+          owningOrganization: dataset.owningOrganization,
+          directoryName: dataset.directoryName,
+        }
+      : null;
 
     const { isUserAdmin } = this.props;
     const titleString = this.props.isEditingMode ? "Settings for" : "Import";
@@ -589,10 +591,14 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         forceRender: true,
         children: (
           <Hideable hidden={this.state.activeTabKey !== "defaultConfig"}>
-            <DatasetSettingsViewConfigTab
-              dataSourceId={maybeDataSourceId}
-              dataStoreURL={this.state.dataset?.dataStore.url}
-            />
+            {
+              maybeDataSourceId ? (
+                <DatasetSettingsViewConfigTab
+                  dataSourceId={maybeDataSourceId}
+                  dataStoreURL={this.state.dataset?.dataStore.url}
+                />
+              ) : null /* null case should never be rendered as tabs are only rendered when the dataset is loaded. */
+            }
           </Hideable>
         ),
       },

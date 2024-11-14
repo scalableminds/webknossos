@@ -176,6 +176,28 @@ function RegistrationFormWKOrg(props: Props) {
           .
         </Checkbox>
       </FormItem>
+
+      {/* WIP! see terms_of_services.tsx */}
+      <FormItem
+        name="tos_check"
+        valuePropName="checked"
+        rules={[
+          {
+            validator: (_, value) =>
+              value
+                ? Promise.resolve()
+                : Promise.reject(new Error(messages["auth.tos_check_required"])),
+          },
+        ]}
+      >
+        <Checkbox>
+          I agree to the{" "}
+          <a target="_blank" href="/privacy" rel="noopener noreferrer">
+            terms of service
+          </a>
+          .
+        </Checkbox>
+      </FormItem>
       <FormItem
         style={{
           marginBottom: 10,

@@ -351,8 +351,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       remoteDatastoreClient,
       editableMappingService,
       this,
-      tracingDataStore,
-      relyOnAgglomerateIds = false // TODO should we?
+      tracingDataStore
     )
 
   private def editableMappingUpdaterFor(

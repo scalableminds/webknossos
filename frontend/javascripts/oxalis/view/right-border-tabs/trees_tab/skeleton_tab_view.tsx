@@ -53,7 +53,7 @@ import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_action
 import {
   setTreeNameAction,
   createTreeAction,
-  deleteTreeAction,
+  deleteTreesAction,
   deleteTreeAsUserAction,
   shuffleAllTreeColorsAction,
   selectNextTreeAction,
@@ -452,11 +452,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
     checkAndConfirmDeletingInitialNode(treeIdsToDelete).then(() => {
       // Update the store at once
-      const deleteTreeActions: BatchableUpdateTreeAction[] = treeIdsToDelete.map((treeId) =>
-        deleteTreeAction(treeId),
-      );
       this.props.onBatchUpdateGroupsAndTreesAction(
-        updateTreeActions.concat(deleteTreeActions, [setTreeGroupsAction(newTreeGroups)]),
+        updateTreeActions.concat([
+          deleteTreesAction(treeIdsToDelete),
+          setTreeGroupsAction(newTreeGroups),
+        ]),
       );
     });
   };
@@ -504,8 +504,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     if (selectedTreeCount > 0) {
       const deleteAllSelectedTrees = () => {
         checkAndConfirmDeletingInitialNode(selectedTreeIds).then(() => {
-          const deleteTreeActions = selectedTreeIds.map((treeId) => deleteTreeAction(treeId));
-          this.props.onBatchActions(deleteTreeActions, "DELETE_TREE");
+          this.props.onDeleteTrees(selectedTreeIds);
           this.setState({
             selectedTreeIds: [],
           });
@@ -1025,6 +1024,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   onDeleteTree() {
     dispatch(deleteTreeAsUserAction());
+  },
+
+  onDeleteTrees(treeIds: number[]) {
+    dispatch(deleteTreesAction(treeIds));
   },
 
   onBatchActions(actions: Array<Action>, actionName: string) {

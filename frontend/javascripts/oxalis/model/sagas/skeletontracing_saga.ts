@@ -466,6 +466,7 @@ export function* watchSkeletonTracingAsync(): Saga<void> {
       "DELETE_BRANCHPOINT",
       "SELECT_NEXT_TREE",
       "DELETE_TREE",
+      "DELETE_TREES",
       "BATCH_UPDATE_GROUPS_AND_TREES",
       "CENTER_ACTIVE_NODE",
     ],

@@ -13,7 +13,7 @@ import {
   getOrganizationForDataset,
   getDatasetIdFromNameAndOrganization,
 } from "admin/api/disambiguate_legacy_routes";
-import fs from "node:fs";
+// import fs from "node:fs";
 
 async function getFirstDataset(): Promise<APIDataset> {
   const datasets = await api.getActiveDatasetsOfMyOrganization();

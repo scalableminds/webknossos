@@ -107,8 +107,8 @@ const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
 };
 
 const datasetNameToId: Record<string, string> = {};
-datasetNames.map(async (datasetName) => {
-  test.serial(`it should render dataset ${datasetName} correctly`, async (t) => {
+test.before("Retrieve dataset ids", async (t) => {
+  for (const datasetName of datasetNames) {
     await withRetry(
       3,
       async () => {
@@ -120,13 +120,10 @@ datasetNames.map(async (datasetName) => {
         return true;
       },
       (condition) => {
-        t.true(
-          condition,
-          `Dataset with name: "${datasetName}" does not look the same, see ${datasetName}.diff.png for the difference and ${datasetName}.new.png for the new screenshot.`,
-        );
+        t.true(condition, `Could not retrieve datasetId for dataset "${datasetName}".`);
       },
     );
-  });
+  }
 });
 
 datasetNames.map(async (datasetName) => {

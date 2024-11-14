@@ -920,7 +920,7 @@ export function getReadableURLPart(
 
 export function getDatasetIdOrNameFromReadableURLPart(datasetNameAndId: string) {
   const datasetIdOrName = datasetNameAndId.split("-").pop();
-  const isId = /^[a-f0-9]{34}$/.test(datasetIdOrName || "");
+  const isId = /^[a-f0-9]{24}$/.test(datasetIdOrName || "");
   return isId
     ? { datasetId: datasetIdOrName, datasetName: null }
     : { datasetId: null, datasetName: datasetIdOrName };

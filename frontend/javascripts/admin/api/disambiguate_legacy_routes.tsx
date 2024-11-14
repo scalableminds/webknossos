@@ -1,7 +1,7 @@
 import Request, { type RequestOptions } from "libs/request";
 
 export async function getOrganizationForDataset(datasetName: string): Promise<string> {
-  const { organizationId } = await Request.receiveJSON(
+  const { organization: organizationId } = await Request.receiveJSON(
     `/api/datasets/disambiguate/${datasetName}/toNew`,
   );
   return organizationId;

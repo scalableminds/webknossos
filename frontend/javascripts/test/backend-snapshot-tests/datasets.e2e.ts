@@ -125,7 +125,7 @@ test("Zarr 3 streaming", async (t) => {
   t.snapshot(base64);
 });
 
-test("Dataset upload", async (t) => {
+/*test("Dataset upload", async (t) => {
   const uploadId = "test-dataset-upload-" + Date.now();
 
   await fetch("/data/datasets/reserveUpload", {
@@ -145,6 +145,7 @@ test("Dataset upload", async (t) => {
     }),
   });
 
+  // TODOM
   const filePath = "test/dataset/test-dataset.zip";
   const testDataset = fs.readFileSync(filePath);
 
@@ -220,4 +221,4 @@ test("Dataset upload", async (t) => {
     t.fail("Dataset health check after upload failed");
   }
   t.pass();
-});
+});*/

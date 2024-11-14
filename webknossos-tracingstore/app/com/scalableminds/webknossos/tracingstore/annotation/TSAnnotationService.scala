@@ -804,7 +804,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                             newVolumeTracingId: String,
                             tracingsWithIds: List[(VolumeTracing, String)],
                             persist: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
-    if (tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
+    if (tracingsWithIds.nonEmpty && tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
       for {
         before <- Instant.nowFox
         _ <- bool2Fox(persist) ?~> "Cannot merge editable mappings without “persist” (trying to merge compound annotations?)"

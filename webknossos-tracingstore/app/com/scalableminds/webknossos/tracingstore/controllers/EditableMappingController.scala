@@ -28,22 +28,6 @@ class EditableMappingController @Inject()(
     editableMappingService: EditableMappingService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  // TODO remove once frontend sends update action
-  def makeMappingEditable(tracingId: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      log() {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
-          for {
-            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- annotationService.findVolume(annotationId, tracingId)
-            tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
-            editableMappingInfo = editableMappingService.create(tracingMappingName)
-            infoJson = editableMappingService.infoJson(tracingId = tracingId, editableMappingInfo = editableMappingInfo)
-          } yield Ok(infoJson)
-        }
-      }
-    }
-
   def editableMappingInfo(tracingId: String, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {

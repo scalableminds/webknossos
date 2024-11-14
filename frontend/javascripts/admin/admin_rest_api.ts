@@ -1585,20 +1585,6 @@ export function fetchMapping(
   );
 }
 
-export function makeMappingEditable(
-  tracingStoreUrl: string,
-  tracingId: string,
-): Promise<ServerEditableMapping> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/makeMappingEditable?token=${token}`,
-      {
-        method: "POST",
-      },
-    ),
-  );
-}
-
 export function getEditableMappingInfo(
   tracingStoreUrl: string,
   tracingId: string,

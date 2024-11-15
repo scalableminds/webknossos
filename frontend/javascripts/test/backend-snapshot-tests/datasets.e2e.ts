@@ -220,7 +220,6 @@ test("Dataset upload", async (t) => {
   const result = await fetch(`/api/datasets/${newDatasetId}/health`, {
     headers: new Headers(),
   });
-  console.log(await result.text());
   if (result.status !== 200) {
     t.fail("Dataset health check after upload failed");
   }

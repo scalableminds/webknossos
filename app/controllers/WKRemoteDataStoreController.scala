@@ -83,8 +83,8 @@ class WKRemoteDataStoreController @Inject()(
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))
           // Update newDatasetId and directoryName according to the newly created dataset.
-          updatedInfo = uploadInfo.copy(newDatasetId = dataset._id.toString,
-                                        directoryName = dataset.directoryName,
+          updatedInfo = uploadInfo.copy(newDatasetId = Some(dataset._id.toString),
+                                        directoryName = Some(dataset.directoryName),
                                         layersToLink = Some(layersToLinkWithDatasetId))
         } yield Ok(Json.toJson(updatedInfo))
       }

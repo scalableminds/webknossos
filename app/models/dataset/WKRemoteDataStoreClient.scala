@@ -68,7 +68,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
   }
 
   def findPositionWithData(dataset: Dataset, dataLayerName: String): Fox[JsObject] =
-    rpc(s"${dataStore.url}/data/datasets/${dataset._id}/layers/$dataLayerName/findData")
+    rpc(s"${dataStore.url}/data/datasets/${dataset._organization}/${dataset.directoryName}/layers/$dataLayerName/findData")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .getWithJsonResponse[JsObject]
 

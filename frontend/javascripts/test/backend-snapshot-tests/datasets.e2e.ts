@@ -13,7 +13,7 @@ import {
   getOrganizationForDataset,
   getDatasetIdFromNameAndOrganization,
 } from "admin/api/disambiguate_legacy_routes";
-// import fs from "node:fs";
+import fs from "node:fs";
 
 async function getFirstDataset(): Promise<APIDataset> {
   const datasets = await api.getActiveDatasetsOfMyOrganization();
@@ -125,10 +125,10 @@ test("Zarr 3 streaming", async (t) => {
   t.snapshot(base64);
 });
 
-/*test("Dataset upload", async (t) => {
+test("Dataset upload", async (t) => {
   const uploadId = "test-dataset-upload-" + Date.now();
 
-  await fetch("/data/datasets/reserveUpload", {
+  const reserveUpload = await fetch("/data/datasets/reserveUpload", {
     method: "POST",
     headers: new Headers({
       "Content-Type": "application/json",
@@ -145,7 +145,10 @@ test("Zarr 3 streaming", async (t) => {
     }),
   });
 
-  // TODOM
+  if (reserveUpload.status !== 200) {
+    t.fail("Dataset reserve upload failed");
+  }
+
   const filePath = "test/dataset/test-dataset.zip";
   const testDataset = fs.readFileSync(filePath);
 
@@ -213,12 +216,13 @@ test("Zarr 3 streaming", async (t) => {
     t.fail("Dataset upload failed at finish");
   }
 
-  const result = await fetch("/api/datasets/Organization_X/test-dataset-upload/health", {
+  const { newDatasetId } = await finishResult.json();
+  const result = await fetch(`/api/datasets/${newDatasetId}/health`, {
     headers: new Headers(),
   });
-
+  console.log(await result.text());
   if (result.status !== 200) {
     t.fail("Dataset health check after upload failed");
   }
   t.pass();
-});*/
+});

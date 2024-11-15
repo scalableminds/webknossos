@@ -31,8 +31,8 @@ import scala.concurrent.ExecutionContext
 case class ReserveUploadInformation(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
     name: String, // dataset name
-    directoryName: String, // dataset directory name
-    newDatasetId: String,
+    directoryName: Option[String], // dataset directory name
+    newDatasetId: Option[String],
     organization: String,
     totalFileCount: Long,
     filePaths: Option[List[String]],
@@ -152,15 +152,18 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   def reserveUpload(reservedInfoByWk: ReserveUploadInformation): Fox[Unit] =
     for {
+      directoryName <- reservedInfoByWk.directoryName.toFox ?~> s"Directory name was not provided by core backend"
       _ <- dataSourceService.assertDataDirWritable(reservedInfoByWk.organization)
       _ <- runningUploadMetadataStore.insert(redisKeyForFileCount(reservedInfoByWk.uploadId),
                                              String.valueOf(reservedInfoByWk.totalFileCount))
       _ <- runningUploadMetadataStore.insert(
         redisKeyForDataSourceId(reservedInfoByWk.uploadId),
-        Json.stringify(Json.toJson(DataSourceId(reservedInfoByWk.directoryName, reservedInfoByWk.organization)))
+        Json.stringify(Json.toJson(DataSourceId(directoryName, reservedInfoByWk.organization)))
       )
+      _ = logger.info(
+        s"reserved upload id: ${reservedInfoByWk.uploadId} as data source id: ${directoryName}, ${reservedInfoByWk.organization}")
       _ <- runningUploadMetadataStore.insert(
-        redisKeyForUploadId(DataSourceId(reservedInfoByWk.directoryName, reservedInfoByWk.organization)),
+        redisKeyForUploadId(DataSourceId(directoryName, reservedInfoByWk.organization)),
         reservedInfoByWk.uploadId
       )
       filePaths = Json.stringify(Json.toJson(reservedInfoByWk.filePaths.getOrElse(List.empty)))

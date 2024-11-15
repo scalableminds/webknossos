@@ -129,8 +129,8 @@ class DataSourceController @Inject()(
             ReserveUploadInformation(
               "aManualUpload",
               request.body.datasetName,
-              request.body.datasetDirectoryName,
-              "newDatasetIdSetByCoreBackend",
+              Some(request.body.datasetDirectoryName),
+              Some("newDatasetIdSetByCoreBackend"),
               request.body.organization,
               0,
               List.empty,
@@ -160,6 +160,8 @@ class DataSourceController @Inject()(
    */
   def uploadChunk(token: Option[String]): Action[MultipartFormData[Files.TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
+      println(s"uploadChunk: request.body.dataParts: ${request.body.dataParts}")
+      System.err.println(s"uploadChunk: request.body.dataParts: ${request.body.dataParts}")
       val uploadForm = Form(
         tuple(
           "resumableChunkNumber" -> number,
@@ -171,18 +173,22 @@ class DataSourceController @Inject()(
       uploadForm
         .bindFromRequest(request.body.dataParts)
         .fold(
-          hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
+          hasErrors = formWithErrors => {
+            println("reached hasErrors"); Fox.successful(JsonBadRequest(formWithErrors.errors.head.message))
+          },
           success = {
             case (chunkNumber, chunkSize, totalChunkCount, uploadFileId) =>
               for {
                 dataSourceId <- uploadService.getDataSourceIdByUploadId(
                   uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
+                _ = println("reached validateAccess")
                 result <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId),
                                                             urlOrHeaderToken(token, request)) {
                   for {
                     isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
                     _ <- bool2Fox(isKnownUpload) ?~> "dataset.upload.validation.failed"
                     chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
+                    _ = println("reached handleUploadChunk")
                     _ <- uploadService.handleUploadChunk(uploadFileId,
                                                          chunkSize,
                                                          totalChunkCount,
@@ -449,8 +455,8 @@ class DataSourceController @Inject()(
             ReserveUploadInformation(
               uploadId = "", // Set by core backend
               name = datasetName,
-              directoryName = "", // Set by core backend
-              newDatasetId = "", // Set by core backend
+              directoryName = Some(""), // Set by core backend
+              newDatasetId = Some(""), // Set by core backend
               organization = organizationId,
               totalFileCount = 1,
               filePaths = None,
@@ -460,7 +466,8 @@ class DataSourceController @Inject()(
             ),
             urlOrHeaderToken(token, request)
           ) ?~> "dataset.upload.validation.failed"
-          datasourceId = DataSourceId(reservedInfo.directoryName, organizationId)
+          directoryName <- reservedInfo.directoryName.toFox ?~> "Directory name was not provided by core backend"
+          datasourceId = DataSourceId(directoryName, organizationId)
           _ <- dataSourceService.updateDataSource(request.body.copy(id = datasourceId), expectExisting = false)
           uploadedDatasetId <- dsRemoteWebknossosClient.reportUpload(
             datasourceId,

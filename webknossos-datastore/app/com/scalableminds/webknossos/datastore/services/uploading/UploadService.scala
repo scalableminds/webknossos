@@ -160,8 +160,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         redisKeyForDataSourceId(reservedInfoByWk.uploadId),
         Json.stringify(Json.toJson(DataSourceId(directoryName, reservedInfoByWk.organization)))
       )
-      _ = logger.info(
-        s"reserved upload id: ${reservedInfoByWk.uploadId} as data source id: ${directoryName}, ${reservedInfoByWk.organization}")
       _ <- runningUploadMetadataStore.insert(
         redisKeyForUploadId(DataSourceId(directoryName, reservedInfoByWk.organization)),
         reservedInfoByWk.uploadId

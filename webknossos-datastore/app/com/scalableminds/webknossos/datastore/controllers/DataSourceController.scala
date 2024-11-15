@@ -160,8 +160,6 @@ class DataSourceController @Inject()(
    */
   def uploadChunk(token: Option[String]): Action[MultipartFormData[Files.TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
-      println(s"uploadChunk: request.body.dataParts: ${request.body.dataParts}")
-      System.err.println(s"uploadChunk: request.body.dataParts: ${request.body.dataParts}")
       val uploadForm = Form(
         tuple(
           "resumableChunkNumber" -> number,
@@ -173,22 +171,18 @@ class DataSourceController @Inject()(
       uploadForm
         .bindFromRequest(request.body.dataParts)
         .fold(
-          hasErrors = formWithErrors => {
-            println("reached hasErrors"); Fox.successful(JsonBadRequest(formWithErrors.errors.head.message))
-          },
+          hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
           success = {
             case (chunkNumber, chunkSize, totalChunkCount, uploadFileId) =>
               for {
                 dataSourceId <- uploadService.getDataSourceIdByUploadId(
                   uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
-                _ = println("reached validateAccess")
                 result <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId),
                                                             urlOrHeaderToken(token, request)) {
                   for {
                     isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
                     _ <- bool2Fox(isKnownUpload) ?~> "dataset.upload.validation.failed"
                     chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
-                    _ = println("reached handleUploadChunk")
                     _ <- uploadService.handleUploadChunk(uploadFileId,
                                                          chunkSize,
                                                          totalChunkCount,

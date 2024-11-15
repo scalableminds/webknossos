@@ -177,8 +177,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       case Some(foundDataset) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
         updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore)
       case _ =>
-        insertNewDataset(dataSource, dataSource.id.directoryName, dataStore).toFox
-          .map(Some(_)) // TODO: Discuss how to better handle this case
+        insertNewDataset(dataSource, dataSource.id.directoryName, dataStore).toFox.map(Some(_))
     }
   }
 

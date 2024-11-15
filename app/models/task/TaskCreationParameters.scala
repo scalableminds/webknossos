@@ -2,6 +2,7 @@ package models.task
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
+import controllers.LegacyTaskParameters
 import models.user.Experience
 import play.api.libs.json.{Format, Json}
 
@@ -11,8 +12,7 @@ case class TaskParameters(taskTypeId: String,
                           projectName: String,
                           scriptId: Option[String],
                           boundingBox: Option[BoundingBox],
-                          dataSet: String,
-                          datasetId: Option[ObjectId],
+                          datasetId: ObjectId,
                           editPosition: Vec3Int,
                           editRotation: Vec3Double,
                           creationInfo: Option[String],
@@ -20,27 +20,10 @@ case class TaskParameters(taskTypeId: String,
                           baseAnnotation: Option[BaseAnnotation])
 
 object TaskParameters {
-  implicit val taskParametersFormat: Format[TaskParameters] = Json.format[TaskParameters]
-}
+  implicit val taskParametersWithDatasetIdFormat: Format[TaskParameters] =
+    Json.format[TaskParameters]
 
-case class TaskParametersWithDatasetId(taskTypeId: String,
-                                       neededExperience: Experience,
-                                       pendingInstances: Int,
-                                       projectName: String,
-                                       scriptId: Option[String],
-                                       boundingBox: Option[BoundingBox],
-                                       datasetId: ObjectId,
-                                       editPosition: Vec3Int,
-                                       editRotation: Vec3Double,
-                                       creationInfo: Option[String],
-                                       description: Option[String],
-                                       baseAnnotation: Option[BaseAnnotation])
-
-object TaskParametersWithDatasetId {
-  implicit val taskParametersWithDatasetIdFormat: Format[TaskParametersWithDatasetId] =
-    Json.format[TaskParametersWithDatasetId]
-
-  def fromTaskParameters(t: TaskParameters, datasetId: ObjectId) = new TaskParametersWithDatasetId(
+  def fromLegacyTaskParameters(t: LegacyTaskParameters, datasetId: ObjectId) = new TaskParameters(
     t.taskTypeId,
     t.neededExperience,
     t.pendingInstances,

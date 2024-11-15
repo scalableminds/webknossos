@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.SecuredRequest
 import com.scalableminds.util.tools.Fox
@@ -11,8 +12,8 @@ import models.organization.OrganizationDAO
 
 import javax.inject.Inject
 import models.project.ProjectDAO
-import models.task.{TaskDAO, TaskParameters, TaskParametersWithDatasetId, TaskService}
-import models.user.User
+import models.task.{BaseAnnotation, TaskDAO, TaskParameters, TaskService}
+import models.user.{Experience, User}
 import net.liftweb.common.Box.tryo
 import play.api.http.HttpEntity
 import play.api.libs.json._
@@ -28,6 +29,24 @@ case class LegacyCreateExplorationalParameters(typ: String,
 object LegacyCreateExplorationalParameters {
   implicit val jsonFormat: OFormat[LegacyCreateExplorationalParameters] =
     Json.format[LegacyCreateExplorationalParameters]
+}
+
+case class LegacyTaskParameters(taskTypeId: String,
+                                neededExperience: Experience,
+                                pendingInstances: Int,
+                                projectName: String,
+                                scriptId: Option[String],
+                                boundingBox: Option[BoundingBox],
+                                dataSet: String,
+                                datasetId: Option[ObjectId],
+                                editPosition: Vec3Int,
+                                editRotation: Vec3Double,
+                                creationInfo: Option[String],
+                                description: Option[String],
+                                baseAnnotation: Option[BaseAnnotation])
+
+object LegacyTaskParameters {
+  implicit val taskParametersFormat: Format[LegacyTaskParameters] = Json.format[LegacyTaskParameters]
 }
 
 class LegacyApiController @Inject()(annotationController: AnnotationController,
@@ -341,32 +360,32 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     } yield result
   }
 
-  def createTaskV8: Action[List[TaskParameters]] = sil.SecuredAction.async(validateJson[List[TaskParameters]]) {
-    implicit request =>
+  def createTaskV8: Action[List[LegacyTaskParameters]] =
+    sil.SecuredAction.async(validateJson[List[LegacyTaskParameters]]) { implicit request =>
       for {
         taskParametersWithDatasetId <- Fox.serialCombined(request.body)(params =>
           for {
             dataset <- datasetDAO.findOneByIdOrNameAndOrganization(params.datasetId,
                                                                    params.dataSet,
                                                                    request.identity._organization)
-          } yield TaskParametersWithDatasetId.fromTaskParameters(params, dataset._id))
+          } yield TaskParameters.fromLegacyTaskParameters(params, dataset._id))
         requestWithUpdatedBody = request.withBody(taskParametersWithDatasetId)
         result <- taskController.create()(requestWithUpdatedBody)
       } yield result
-  }
+    }
 
-  def updateTaskV8(taskId: String): Action[TaskParameters] = sil.SecuredAction.async(validateJson[TaskParameters]) {
-    implicit request =>
+  def updateTaskV8(taskId: String): Action[LegacyTaskParameters] =
+    sil.SecuredAction.async(validateJson[LegacyTaskParameters]) { implicit request =>
       val params = request.body
       for {
         dataset <- datasetDAO.findOneByIdOrNameAndOrganization(params.datasetId,
                                                                params.dataSet,
                                                                request.identity._organization)
-        paramsWithDatasetId = TaskParametersWithDatasetId.fromTaskParameters(params, dataset._id)
+        paramsWithDatasetId = TaskParameters.fromLegacyTaskParameters(params, dataset._id)
         requestWithUpdatedBody = request.withBody(paramsWithDatasetId)
         result <- taskController.update(taskId)(requestWithUpdatedBody)
       } yield result
-  }
+    }
 
   def taskListTasks: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     for {

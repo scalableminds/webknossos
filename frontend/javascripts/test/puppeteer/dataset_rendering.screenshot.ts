@@ -107,7 +107,7 @@ const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
 };
 
 const datasetNameToId: Record<string, string> = {};
-test.before("Retrieve dataset ids", async (t) => {
+test.before("Retrieve dataset ids", async () => {
   for (const datasetName of datasetNames) {
     await withRetry(
       3,
@@ -119,10 +119,13 @@ test.before("Retrieve dataset ids", async (t) => {
         datasetNameToId[datasetName] = datasetId;
         return true;
       },
-      (condition) => {
-        t.true(condition, `Could not retrieve datasetId for dataset "${datasetName}".`);
-      },
+      () => {},
     );
+  }
+});
+test("Dataset IDs were retrieved successfully", (t) => {
+  for (const datasetName of datasetNames) {
+    t.truthy(datasetNameToId[datasetName], `Dataset ID not found for "${datasetName}"`);
   }
 });
 

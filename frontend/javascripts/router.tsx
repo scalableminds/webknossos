@@ -673,7 +673,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/datasets/:datasetId/sandbox/:type"
                 render={this.tracingSandbox}
               />
-              {/* legacy sandbox route?*/}
+              {/* legacy sandbox route */}
               <RouteWithErrorBoundary
                 path="/datasets/:organizationId/:datasetName/sandbox/:type"
                 render={this.tracingSandboxLegacy}

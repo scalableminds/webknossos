@@ -278,56 +278,56 @@ function RegistrationFormGeneric(props: Props) {
           </FormItem>
         </Col>
       </Row>
-      {props.hidePrivacyStatement ? null : (
-        <FormItem
-          className="registration-form-checkbox privacy"
-          name="privacy_check"
-          valuePropName="checked"
-          rules={[
-            {
-              validator: (_, value) =>
-                value
-                  ? Promise.resolve()
-                  : Promise.reject(new Error(messages["auth.privacy_check_required"])),
-            },
-          ]}
-        >
-          <Checkbox>
-            I agree to storage and processing of my personal data as described in the{" "}
-            <a target="_blank" href="/privacy" rel="noopener noreferrer">
-              privacy statement
-            </a>
-            .
-          </Checkbox>
-        </FormItem>
-      )}
-      {terms != null && !terms.enabled ? null : (
-        <FormItem
-          className="registration-form-checkbox tos"
-          name="tos_check"
-          valuePropName="checked"
-          rules={[
-            {
-              validator: (_, value) =>
-                value
-                  ? Promise.resolve()
-                  : Promise.reject(new Error(messages["auth.tos_check_required"])),
-            },
-          ]}
-        >
-          <Checkbox disabled={terms == null}>
-            I agree to the{" "}
-            {terms == null ? (
-              "terms of service"
-            ) : (
-              <a target="_blank" href={terms.url} rel="noopener noreferrer">
-                terms of service
+      <div className="registration-form-checkboxes">
+        {props.hidePrivacyStatement ? null : (
+          <FormItem
+            name="privacy_check"
+            valuePropName="checked"
+            rules={[
+              {
+                validator: (_, value) =>
+                  value
+                    ? Promise.resolve()
+                    : Promise.reject(new Error(messages["auth.privacy_check_required"])),
+              },
+            ]}
+          >
+            <Checkbox>
+              I agree to storage and processing of my personal data as described in the{" "}
+              <a target="_blank" href="/privacy" rel="noopener noreferrer">
+                privacy statement
               </a>
-            )}
-            .
-          </Checkbox>
-        </FormItem>
-      )}
+              .
+            </Checkbox>
+          </FormItem>
+        )}
+        {terms != null && !terms.enabled ? null : (
+          <FormItem
+            name="tos_check"
+            valuePropName="checked"
+            rules={[
+              {
+                validator: (_, value) =>
+                  value
+                    ? Promise.resolve()
+                    : Promise.reject(new Error(messages["auth.tos_check_required"])),
+              },
+            ]}
+          >
+            <Checkbox disabled={terms == null}>
+              I agree to the{" "}
+              {terms == null ? (
+                "terms of service"
+              ) : (
+                <a target="_blank" href={terms.url} rel="noopener noreferrer">
+                  terms of service
+                </a>
+              )}
+              .
+            </Checkbox>
+          </FormItem>
+        )}
+      </div>
 
       <FormItem>
         <Button

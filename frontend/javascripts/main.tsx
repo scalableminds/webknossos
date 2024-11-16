@@ -6,7 +6,6 @@ import UnthrottledStore, { startSagas } from "oxalis/store";
 import { message } from "antd";
 
 import { getActiveUser, checkAnyOrganizationExists, getOrganization } from "admin/admin_rest_api";
-import { googleAnalyticsLogClicks } from "oxalis/model/helpers/analytics";
 import { load as loadFeatureToggles } from "features";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { setHasOrganizationsAction, setThemeAction } from "oxalis/model/actions/ui_actions";
@@ -97,7 +96,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     throwAssertions: false,
   });
   message.config({ top: 30 });
-  document.addEventListener("click", googleAnalyticsLogClicks);
   checkBrowserFeatures();
   await Promise.all([loadFeatureToggles(), loadActiveUser(), loadHasOrganizations()]);
   await Promise.all([loadOrganization()]);

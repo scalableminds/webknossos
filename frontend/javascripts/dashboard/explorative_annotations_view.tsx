@@ -60,7 +60,6 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
-import { trackAction } from "oxalis/model/helpers/analytics";
 import TextWithDescription from "components/text_with_description";
 import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
@@ -289,7 +288,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       const newTracing = await editLockedState(tracing.id, tracing.typ, locked);
       Toast.success(messages["annotation.was_edited"]);
       this.updateTracingInLocalState(tracing, (_t) => newTracing);
-      trackAction("Lock/Unlock explorative annotation");
     } catch (error) {
       handleGenericError(error as Error, "Could not update the annotation lock state.");
     }
@@ -475,7 +473,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           editAnnotation(newAnnotation.id, newAnnotation.typ, {
             tags: newAnnotation.tags,
           });
-          trackAction("Edit annotation tag");
         }
 
         return newAnnotation;

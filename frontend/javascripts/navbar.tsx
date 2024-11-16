@@ -45,7 +45,6 @@ import {
   sendAnalyticsEvent,
 } from "admin/admin_rest_api";
 import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
-import { trackVersion } from "oxalis/model/helpers/analytics";
 import { useFetch, useInterval } from "libs/react_helpers";
 import LoginForm from "admin/auth/login_form";
 import Request from "libs/request";
@@ -739,13 +738,9 @@ function AnonymousAvatar() {
   );
 }
 
-async function getAndTrackVersion(dontTrack: boolean = false) {
+async function getVersion() {
   const buildInfo = await getBuildInfo();
-  const { version } = buildInfo.webknossos;
-  if (dontTrack) {
-    trackVersion(version);
-  }
-  return version;
+  return buildInfo.webknossos.version;
 }
 
 function AnnotationLockedByUserTag({
@@ -831,7 +826,7 @@ function Navbar({
     location.href = "/";
   };
 
-  const version = useFetch(getAndTrackVersion, null, []);
+  const version = useFetch(getVersion, null, []);
   const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
   const [polledVersion, setPolledVersion] = useState<string | null>(null);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
@@ -839,7 +834,7 @@ function Navbar({
   useInterval(
     async () => {
       if (isHelpMenuOpen) {
-        setPolledVersion(await getAndTrackVersion(true));
+        setPolledVersion(await getVersion());
       }
     },
     2000,

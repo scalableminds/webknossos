@@ -13,7 +13,6 @@ import net.liftweb.common.{Empty, Failure, Full}
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
 
 trait ReversionHelper {
   val revertedValue: Array[Byte] = Array[Byte](0)
@@ -173,39 +172,36 @@ trait VolumeTracingBucketHelper
     with ReversionHelper {
 
   implicit def ec: ExecutionContext
+  def volumeDataStore: FossilDBClient
+  def temporaryTracingService: TemporaryTracingService
 
-  // used to store compound annotations
-  private val temporaryVolumeDataTimeout: FiniteDuration = 70 minutes
-
-  implicit def volumeDataStore: FossilDBClient
-  implicit def temporaryVolumeDataStore: TemporaryVolumeDataStore
-
-  private def loadBucketFromTemporaryStore(key: String) =
-    temporaryVolumeDataStore.find(key).map(VersionedKeyValuePair(VersionedKey(key, 0), _))
-
-  def loadBucket(dataLayer: VolumeTracingLayer,
+  def loadBucket(volumeTracingLayer: VolumeTracingLayer,
                  bucket: BucketPosition,
                  version: Option[Long] = None): Fox[Array[Byte]] = {
-    val key = buildBucketKey(dataLayer.name, bucket, dataLayer.additionalAxes)
+    val bucketKey = buildBucketKey(volumeTracingLayer.name, bucket, volumeTracingLayer.additionalAxes)
 
-    val dataFox = loadBucketFromTemporaryStore(key) match {
-      case Some(data) => Fox.successful(data)
-      case None       => volumeDataStore.get(key, version, mayBeEmpty = Some(true))
-    }
+    val dataFox =
+      if (volumeTracingLayer.isTemporaryTracing)
+        temporaryTracingService.findVolumeBucket(bucketKey).map(VersionedKeyValuePair(VersionedKey(bucketKey, 0), _))
+      else
+        volumeDataStore.get(bucketKey, version, mayBeEmpty = Some(true))
+
     val unpackedDataFox = dataFox.flatMap { versionedVolumeBucket =>
       if (isRevertedElement(versionedVolumeBucket)) Fox.empty
       else {
         val debugInfo =
-          s"key: $key, ${versionedVolumeBucket.value.length} bytes, version ${versionedVolumeBucket.version}"
+          s"key: $bucketKey, ${versionedVolumeBucket.value.length} bytes, version ${versionedVolumeBucket.version}"
         Fox.successful(
-          decompressIfNeeded(versionedVolumeBucket.value, expectedUncompressedBucketSizeFor(dataLayer), debugInfo))
+          decompressIfNeeded(versionedVolumeBucket.value,
+                             expectedUncompressedBucketSizeFor(volumeTracingLayer),
+                             debugInfo))
       }
     }
     unpackedDataFox.futureBox.flatMap {
       case Full(unpackedData) => Fox.successful(unpackedData)
       case Empty =>
-        if (dataLayer.includeFallbackDataIfAvailable && dataLayer.tracing.fallbackLayer.nonEmpty) {
-          loadFallbackBucket(dataLayer, bucket)
+        if (volumeTracingLayer.includeFallbackDataIfAvailable && volumeTracingLayer.tracing.fallbackLayer.nonEmpty) {
+          loadFallbackBucket(volumeTracingLayer, bucket)
         } else Fox.empty
       case f: Failure => f.toFox
     }
@@ -249,20 +245,18 @@ trait VolumeTracingBucketHelper
                            version: Long,
                            toTemporaryStore: Boolean,
                            additionalAxes: Option[Seq[AdditionalAxis]]): Fox[Unit] = {
-    val key = buildBucketKey(tracingId, bucket, additionalAxes)
+    val bucketKey = buildBucketKey(tracingId, bucket, additionalAxes)
     val compressedBucket = compressVolumeBucket(data, expectedUncompressedBucketSizeFor(elementClass))
     if (toTemporaryStore) {
-      // Note that this temporary store is for temporary volumes only (e.g. compound projects)
-      // and cannot be used for download or versioning
-      Fox.successful(temporaryVolumeDataStore.insert(key, compressedBucket, Some(temporaryVolumeDataTimeout)))
+      temporaryTracingService.saveVolumeBucket(bucketKey, compressedBucket)
     } else {
-      volumeDataStore.put(key, version, compressedBucket)
+      volumeDataStore.put(bucketKey, version, compressedBucket)
     }
   }
 
   def bucketStream(dataLayer: VolumeTracingLayer, version: Option[Long]): Iterator[(BucketPosition, Array[Byte])] = {
-    val key = buildKeyPrefix(dataLayer.name)
-    new BucketIterator(key,
+    val keyPrefix = buildKeyPrefix(dataLayer.name)
+    new BucketIterator(keyPrefix,
                        volumeDataStore,
                        expectedUncompressedBucketSizeFor(dataLayer),
                        version,
@@ -271,8 +265,8 @@ trait VolumeTracingBucketHelper
 
   def bucketStreamWithVersion(dataLayer: VolumeTracingLayer,
                               version: Option[Long]): Iterator[(BucketPosition, Array[Byte], Long)] = {
-    val key = buildKeyPrefix(dataLayer.name)
-    new VersionedBucketIterator(key,
+    val keyPrefix = buildKeyPrefix(dataLayer.name)
+    new VersionedBucketIterator(keyPrefix,
                                 volumeDataStore,
                                 expectedUncompressedBucketSizeFor(dataLayer),
                                 version,
@@ -281,7 +275,7 @@ trait VolumeTracingBucketHelper
 
   def bucketStreamFromTemporaryStore(dataLayer: VolumeTracingLayer): Iterator[(BucketPosition, Array[Byte])] = {
     val keyPrefix = buildKeyPrefix(dataLayer.name)
-    val keyValuePairs = temporaryVolumeDataStore.findAllConditionalWithKey(key => key.startsWith(keyPrefix))
+    val keyValuePairs = temporaryTracingService.findAllVolumeBucketsWithPrefix(keyPrefix)
     keyValuePairs.flatMap {
       case (bucketKey, data) =>
         parseBucketKey(bucketKey, dataLayer.additionalAxes).map(tuple => (tuple._2, data))

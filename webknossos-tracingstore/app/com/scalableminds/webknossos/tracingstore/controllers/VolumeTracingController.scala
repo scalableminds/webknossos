@@ -4,44 +4,21 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
-import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
-import com.scalableminds.webknossos.datastore.helpers.{
-  GetSegmentIndexParameters,
-  ProtoGeometryImplicits,
-  SegmentStatisticsParameters
-}
+import com.scalableminds.webknossos.datastore.helpers.{GetSegmentIndexParameters, ProtoGeometryImplicits, SegmentStatisticsParameters}
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
-import com.scalableminds.webknossos.datastore.models.{
-  LengthUnit,
-  VoxelSize,
-  WebknossosAdHocMeshRequest,
-  WebknossosDataRequest
-}
+import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize, WebknossosAdHocMeshRequest, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{FullMeshRequest, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, TSAnnotationService}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  ImportVolumeDataVolumeAction,
-  MagRestrictions,
-  MergedVolumeStats,
-  TSFullMeshService,
-  VolumeDataZipFormat,
-  VolumeSegmentIndexService,
-  VolumeSegmentStatisticsService,
-  VolumeTracingService
-}
+import com.scalableminds.webknossos.tracingstore.tracings.volume._
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingId, TracingSelector}
-import com.scalableminds.webknossos.tracingstore.{
-  TSRemoteDatastoreClient,
-  TSRemoteWebknossosClient,
-  TracingStoreAccessTokenService,
-  TracingStoreConfig
-}
+import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient, TracingStoreAccessTokenService, TracingStoreConfig}
 import net.liftweb.common.Empty
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
@@ -87,7 +64,7 @@ class VolumeTracingController @Inject()(
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             val tracing = request.body
-            volumeTracingService.save(tracing, newTracingId, 0).map { newId =>
+            volumeTracingService.saveVolume(tracing, newTracingId, 0).map { newId =>
               Ok(Json.toJson(newId))
             }
           }
@@ -101,7 +78,7 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           val savedIds = Fox.sequence(request.body.map { tracingOpt: Option[VolumeTracing] =>
             tracingOpt match {
-              case Some(tracing) => volumeTracingService.save(tracing, None, 0).map(Some(_))
+              case Some(tracing) => volumeTracingService.saveVolume(tracing, None, 0).map(Some(_))
               case _             => Fox.successful(None)
             }
           })
@@ -171,7 +148,7 @@ class VolumeTracingController @Inject()(
             // segment lists for multi-volume uploads are not supported yet, compare https://github.com/scalableminds/webknossos/issues/6887
             mergedTracing = mt.copy(segments = List.empty)
 
-            newId <- volumeTracingService.save(mergedTracing, None, mergedTracing.version, toTemporaryStore = false)
+            newId <- volumeTracingService.saveVolume(mergedTracing, None, mergedTracing.version)
           } yield Ok(Json.toJson(newId))
         }
       }

@@ -3,18 +3,18 @@ package com.scalableminds.webknossos.tracingstore.controllers
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
+import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
+import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
-import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingSelector}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
+import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingSelector}
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import com.scalableminds.webknossos.datastore.controllers.Controller
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
-import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 
 import scala.concurrent.ExecutionContext
 
@@ -43,7 +43,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
       logTime(slackNotificationService.noticeSlowRequest) {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           val tracing = request.body
-          skeletonTracingService.save(tracing, None, 0).map { newId =>
+          skeletonTracingService.saveSkeleton(tracing, None, 0).map { newId =>
             Ok(Json.toJson(newId))
           }
         }
@@ -57,7 +57,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           val savedIds = Fox.sequence(request.body.map { tracingOpt: Option[SkeletonTracing] =>
             tracingOpt match {
-              case Some(tracing) => skeletonTracingService.save(tracing, None, 0).map(Some(_))
+              case Some(tracing) => skeletonTracingService.saveSkeleton(tracing, None, 0).map(Some(_))
               case _             => Fox.successful(None)
             }
           })
@@ -100,10 +100,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
           for {
             mergedTracing <- Fox.box2Fox(skeletonTracingService.merge(tracings.flatten, newVersion = 0L))
             processedTracing = skeletonTracingService.remapTooLargeTreeIds(mergedTracing)
-            newId <- skeletonTracingService.save(processedTracing,
-                                                 None,
-                                                 processedTracing.version,
-                                                 toTemporaryStore = false)
+            newId <- skeletonTracingService.saveSkeleton(processedTracing, None, processedTracing.version)
           } yield Ok(Json.toJson(newId))
         }
       }

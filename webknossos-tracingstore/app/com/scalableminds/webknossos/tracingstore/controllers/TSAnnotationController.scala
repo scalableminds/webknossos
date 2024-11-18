@@ -4,28 +4,14 @@ import collections.SequenceUtils
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.Annotation.{
-  AnnotationLayerProto,
-  AnnotationLayerTypeProto,
-  AnnotationProto
-}
+import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto}
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
-import com.scalableminds.webknossos.tracingstore.tracings.{
-  KeyValueStoreImplicits,
-  TracingDataStore,
-  TracingId,
-  TracingSelector
-}
 import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
-import com.scalableminds.webknossos.tracingstore.annotation.{
-  AnnotationTransactionService,
-  ResetToBaseAnnotationAction,
-  TSAnnotationService,
-  UpdateActionGroup
-}
+import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, ResetToBaseAnnotationAction, TSAnnotationService, UpdateActionGroup}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
+import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import net.liftweb.common.{Empty, Failure, Full}
@@ -41,17 +27,21 @@ class TSAnnotationController @Inject()(
     annotationService: TSAnnotationService,
     annotationTransactionService: AnnotationTransactionService,
     skeletonTracingService: SkeletonTracingService,
+    temporaryTracingService: TemporaryTracingService,
     volumeTracingService: VolumeTracingService,
     tracingDataStore: TracingDataStore)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with KeyValueStoreImplicits {
 
-  def save(annotationId: String): Action[AnnotationProto] =
+  def save(annotationId: String, toTemporaryStore: Boolean = false): Action[AnnotationProto] =
     Action.async(validateProto[AnnotationProto]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
-            _ <- tracingDataStore.annotations.put(annotationId, 0L, request.body)
+            _ <- if (toTemporaryStore)
+              temporaryTracingService.saveAnnotationProto(annotationId, request.body)
+            else
+              tracingDataStore.annotations.put(annotationId, 0L, request.body)
           } yield Ok
         }
       }
@@ -200,7 +190,7 @@ class TSAnnotationController @Inject()(
               volumeTracingService
                 .merge(volumeTracings, mergedVolumeStats, newMappingName, newVersion = newTargetVersion))
             _ <- Fox.runOptional(mergedVolumeOpt)(
-              volumeTracingService.save(_, Some(newVolumeId), version = newTargetVersion, toTemporaryStore))
+              volumeTracingService.saveVolume(_, Some(newVolumeId), version = newTargetVersion, toTemporaryStore))
             skeletonTracings <- annotationService
               .findMultipleSkeletons(skeletonLayers.map { l =>
                 Some(TracingSelector(l.tracingId))
@@ -225,8 +215,8 @@ class TSAnnotationController @Inject()(
               .withEarliestAccessibleVersion(newTargetVersion)
               .withVersion(newTargetVersion)
             _ <- Fox.runOptional(mergedSkeletonOpt)(
-              skeletonTracingService.save(_, Some(newSkeletonId), version = newTargetVersion, toTemporaryStore))
-            _ <- tracingDataStore.annotations.put(newAnnotationId, newTargetVersion, mergedAnnotation)
+              skeletonTracingService.saveSkeleton(_, Some(newSkeletonId), version = newTargetVersion, toTemporaryStore))
+            _ <- tracingDataStore.annotations.put(newAnnotationId, newTargetVersion, mergedAnnotation) // TODO toTemporaryStore
           } yield Ok(mergedAnnotation.toByteArray).as(protobufMimeType)
         }
       }

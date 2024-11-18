@@ -2,12 +2,11 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
-import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreRedisStore}
 import com.scalableminds.webknossos.tracingstore.tracings._
 import net.liftweb.common.{Box, Full}
 
@@ -15,22 +14,28 @@ import scala.concurrent.ExecutionContext
 
 class SkeletonTracingService @Inject()(
     tracingDataStore: TracingDataStore,
-    val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing],
-    val handledGroupIdStore: TracingStoreRedisStore,
-    val temporaryTracingIdStore: TracingStoreRedisStore,
-    val remoteWebknossosClient: TSRemoteWebknossosClient,
-    val uncommittedUpdatesStore: TracingStoreRedisStore,
-    val tracingMigrationService: SkeletonTracingMigrationService)(implicit val ec: ExecutionContext)
-    extends TracingService[SkeletonTracing]
-    with KeyValueStoreImplicits
+    temporaryTracingService: TemporaryTracingService,
+    val tracingMigrationService: SkeletonTracingMigrationService // TODO why is this unused?
+)(implicit val ec: ExecutionContext)
+    extends KeyValueStoreImplicits
     with ProtoGeometryImplicits
+    with BoundingBoxMerger
+    with ColorGenerator
     with FoxImplicits {
 
-  val tracingType: TracingType.Value = TracingType.skeleton
-
-  val tracingStore: FossilDBClient = tracingDataStore.skeletons
-
   implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
+
+  def saveSkeleton(tracing: SkeletonTracing,
+                   tracingId: Option[String],
+                   version: Long,
+                   toTemporaryStore: Boolean = false): Fox[String] = {
+    val id = tracingId.getOrElse(TracingId.generate)
+    if (toTemporaryStore) {
+      temporaryTracingService.saveSkeleton(id, tracing).map(_ => id)
+    } else {
+      tracingDataStore.skeletons.put(id, version, tracing).map(_ => id)
+    }
+  }
 
   def adaptSkeletonForDuplicate(tracing: SkeletonTracing,
                                 fromTask: Boolean,

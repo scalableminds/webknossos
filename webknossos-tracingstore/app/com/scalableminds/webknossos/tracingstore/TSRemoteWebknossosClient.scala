@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, DataSourceLike}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, RemoteWebknossosClient, UserAccessAnswer, UserAccessRequest}
@@ -22,7 +22,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
 case class AnnotationUpdatesReport(annotationId: String,
-                                   // TODO stats per tracing id? coordinate with frontend
                                    timestamps: List[Instant],
                                    statistics: Option[JsObject],
                                    significantChangesCount: Int,
@@ -88,12 +87,6 @@ class TSRemoteWebknossosClient @Inject()(
           .silent
           .getWithJsonResponse[String]
     ) ?~> "annotation.idForTracing.failed"
-
-  def updateAnnotationLayers(annotationId: String, annotationLayers: List[AnnotationLayer]): Fox[Unit] =
-    rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/updateAnnotationLayers")
-      .addQueryString("annotationId" -> annotationId)
-      .addQueryString("key" -> tracingStoreKey)
-      .postJson(annotationLayers)
 
   def updateAnnotation(annotationId: String, annotationProto: AnnotationProto): Fox[Unit] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/updateAnnotation")

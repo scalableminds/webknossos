@@ -1,43 +1,9 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
-  MergeAgglomerateUpdateAction,
-  SplitAgglomerateUpdateAction
-}
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{
-  CreateEdgeSkeletonAction,
-  CreateNodeSkeletonAction,
-  CreateTreeSkeletonAction,
-  DeleteEdgeSkeletonAction,
-  DeleteNodeSkeletonAction,
-  DeleteTreeSkeletonAction,
-  MergeTreeSkeletonAction,
-  MoveTreeComponentSkeletonAction,
-  UpdateNodeSkeletonAction,
-  UpdateTracingSkeletonAction,
-  UpdateTreeEdgesVisibilitySkeletonAction,
-  UpdateTreeGroupVisibilitySkeletonAction,
-  UpdateTreeGroupsSkeletonAction,
-  UpdateTreeSkeletonAction,
-  UpdateTreeVisibilitySkeletonAction,
-  UpdateUserBoundingBoxVisibilitySkeletonAction,
-  UpdateUserBoundingBoxesSkeletonAction
-}
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  CreateSegmentVolumeAction,
-  DeleteSegmentDataVolumeAction,
-  DeleteSegmentVolumeAction,
-  ImportVolumeDataVolumeAction,
-  RemoveFallbackLayerVolumeAction,
-  UpdateBucketVolumeAction,
-  UpdateMappingNameVolumeAction,
-  UpdateSegmentGroupsVolumeAction,
-  UpdateSegmentVolumeAction,
-  UpdateTracingVolumeAction,
-  UpdateUserBoundingBoxVisibilityVolumeAction,
-  UpdateUserBoundingBoxesVolumeAction
-}
-import play.api.libs.json.{Format, JsError, JsObject, JsPath, JsResult, JsValue, Json, OFormat, Reads}
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{MergeAgglomerateUpdateAction, SplitAgglomerateUpdateAction}
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
+import com.scalableminds.webknossos.tracingstore.tracings.volume._
+import play.api.libs.json._
 
 trait UpdateAction {
   def actionTimestamp: Option[Long]

@@ -8,12 +8,21 @@ import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerStatistics, AnnotationLayerType, FetchedAnnotationLayer}
+import com.scalableminds.webknossos.datastore.models.annotation.{
+  AnnotationLayer,
+  AnnotationLayerStatistics,
+  AnnotationLayerType,
+  FetchedAnnotationLayer
+}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{VolumeDataZipFormat, VolumeTracingDefaults, VolumeTracingMags}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{
+  VolumeDataZipFormat,
+  VolumeTracingDefaults,
+  VolumeTracingMags
+}
 import com.typesafe.scalalogging.LazyLogging
 import models.analytics.{AnalyticsService, DownloadAnnotationEvent, UploadAnnotationEvent}
 import models.annotation.AnnotationState._
@@ -347,8 +356,7 @@ class AnnotationIOController @Inject()(
   // NML or Zip file containing skeleton and/or volume data of this annotation. In case of Compound annotations, multiple such annotations wrapped in another zip
   def download(typ: String,
                id: String,
-               skeletonVersion: Option[Long],
-               volumeVersion: Option[Long],
+               version: Option[Long],
                skipVolumeData: Option[Boolean],
                volumeDataZipFormat: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
@@ -368,8 +376,7 @@ class AnnotationIOController @Inject()(
               id,
               typ,
               request.identity,
-              skeletonVersion,
-              volumeVersion,
+              version,
               skipVolumeData.getOrElse(false),
               volumeDataZipFormatParsed.getOrElse(VolumeDataZipFormat.wkw)) ?~> "annotation.download.failed"
         }
@@ -377,27 +384,20 @@ class AnnotationIOController @Inject()(
     }
 
   def downloadWithoutType(id: String,
-                          skeletonVersion: Option[Long],
-                          volumeVersion: Option[Long],
+                          version: Option[Long],
                           skipVolumeData: Option[Boolean],
                           volumeDataZipFormat: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ?~> "annotation.notFound" ~> NOT_FOUND
-        result <- download(annotation.typ.toString,
-                           id,
-                           skeletonVersion,
-                           volumeVersion,
-                           skipVolumeData,
-                           volumeDataZipFormat)(request)
+        result <- download(annotation.typ.toString, id, version, skipVolumeData, volumeDataZipFormat)(request)
       } yield result
     }
 
   private def downloadExplorational(annotationId: String,
                                     typ: String,
                                     issuingUser: Option[User],
-                                    skeletonVersion: Option[Long],
-                                    volumeVersion: Option[Long],
+                                    version: Option[Long],
                                     skipVolumeData: Boolean,
                                     volumeDataZipFormat: VolumeDataZipFormat)(implicit ctx: DBAccessContext) = {
 
@@ -407,7 +407,7 @@ class AnnotationIOController @Inject()(
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataset)
         fetchedAnnotationLayers <- Fox.serialCombined(annotation.skeletonAnnotationLayers)(
-          tracingStoreClient.getSkeletonTracing(_, skeletonVersion))
+          tracingStoreClient.getSkeletonTracing(_, version))
         user <- userService.findOneCached(annotation._user)(GlobalAccessContext)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
         nmlStream = nmlWriter.toNmlStream(
@@ -439,14 +439,14 @@ class AnnotationIOController @Inject()(
         fetchedVolumeLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.volumeAnnotationLayers) {
           volumeAnnotationLayer =>
             tracingStoreClient.getVolumeTracing(volumeAnnotationLayer,
-                                                volumeVersion,
+                                                version,
                                                 skipVolumeData,
                                                 volumeDataZipFormat,
                                                 dataset.voxelSize)
         } ?~> "annotation.download.fetchVolumeLayer.failed"
         fetchedSkeletonLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.skeletonAnnotationLayers) {
           skeletonAnnotationLayer =>
-            tracingStoreClient.getSkeletonTracing(skeletonAnnotationLayer, skeletonVersion)
+            tracingStoreClient.getSkeletonTracing(skeletonAnnotationLayer, version)
         } ?~> "annotation.download.fetchSkeletonLayer.failed"
         user <- userService.findOneCached(annotation._user)(GlobalAccessContext) ?~> "annotation.download.findUser.failed"
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne(_)(GlobalAccessContext)) ?~> "task.notFound"

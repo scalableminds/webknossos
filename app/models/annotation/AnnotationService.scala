@@ -1,7 +1,5 @@
 package models.annotation
 
-import org.apache.pekko.actor.ActorSystem
-import org.apache.pekko.stream.Materializer
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
@@ -13,13 +11,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, Volu
 import com.scalableminds.webknossos.datastore.geometry.ColorProto
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.annotation.{
-  AnnotationLayer,
-  AnnotationLayerStatistics,
-  AnnotationLayerType,
-  AnnotationSource,
-  FetchedAnnotationLayer
-}
+import com.scalableminds.webknossos.datastore.models.annotation._
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
   ElementClass,
@@ -46,6 +38,8 @@ import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.{Box, Full}
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
@@ -72,6 +66,7 @@ class AnnotationService @Inject()(
     annotationInformationProvider: AnnotationInformationProvider,
     savedTracingInformationHandler: SavedTracingInformationHandler,
     annotationDAO: AnnotationDAO,
+    annotationLayerDAO: AnnotationLayerDAO,
     userDAO: UserDAO,
     taskTypeDAO: TaskTypeDAO,
     taskService: TaskService,
@@ -876,4 +871,14 @@ class AnnotationService @Inject()(
       "volume"
     }
   }
+
+  def updateStatistics(annotationId: ObjectId, statistics: JsObject): Fox[Unit] = {
+    Fox.serialCombined(statistics.value.toSeq) {
+      case (tracingId, statisticsForTracing) =>
+        annotationLayerDAO.updateStatistics(annotationId, tracingId, statisticsForTracing)
+    }
+    // TODO test + remove this line once frontend is adapted
+    Fox.successful(())
+  }
+
 }

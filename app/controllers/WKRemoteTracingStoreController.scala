@@ -11,20 +11,9 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.tracingstore.AnnotationUpdatesReport
 import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
 import com.scalableminds.webknossos.tracingstore.tracings.TracingId
-
-import javax.inject.Inject
 import models.analytics.{AnalyticsService, UpdateAnnotationEvent, UpdateAnnotationViewOnlyEvent}
 import models.annotation.AnnotationState._
-import models.annotation.{
-  Annotation,
-  AnnotationDAO,
-  AnnotationDefaults,
-  AnnotationInformationProvider,
-  AnnotationLayerDAO,
-  AnnotationService,
-  TracingDataSourceTemporaryStore,
-  TracingStoreService
-}
+import models.annotation._
 import models.dataset.{DatasetDAO, DatasetService}
 import models.organization.OrganizationDAO
 import models.user.UserDAO
@@ -36,6 +25,7 @@ import scalapb.GeneratedMessage
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import utils.{ObjectId, WkConf}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStoreService,
@@ -98,9 +88,8 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           annotation <- annotationDAO.findOne(annotationId)
           _ <- ensureAnnotationNotFinished(annotation)
           _ <- annotationDAO.updateModified(annotation._id, Instant.now)
-          /*_ <- Fox.runOptional(report.statistics) { statistics =>
-            annotationLayerDAO.updateStatistics(annotation._id, annotationId, statistics)
-          }*/ // TODO stats per tracing id. note: they might arrive before the layer is created. skip them then.
+          _ <- Fox.runOptional(report.statistics)(statistics =>
+            annotationService.updateStatistics(annotation._id, statistics))
           userBox <- bearerTokenService.userForTokenOpt(report.userToken).futureBox
           trackTime = report.significantChangesCount > 0 || !wkConf.WebKnossos.User.timeTrackingOnlyWithSignificantChanges
           _ <- Fox.runOptional(userBox)(user =>

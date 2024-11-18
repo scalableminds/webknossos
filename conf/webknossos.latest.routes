@@ -149,13 +149,13 @@ PATCH         /annotations/:typ/:id/editLockedState                             
 GET           /annotations/:id/info                                                             controllers.AnnotationController.infoWithoutType(id: String, timestamp: Option[Long])
 DELETE        /annotations/:id                                                                  controllers.AnnotationController.cancelWithoutType(id: String)
 POST          /annotations/:id/merge/:mergedTyp/:mergedId                                       controllers.AnnotationController.mergeWithoutType(id: String, mergedTyp: String, mergedId: String)
-GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
+GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: String, version: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: String)
 
 GET           /annotations/:typ/:id/info                                                        controllers.AnnotationController.info(typ: String, id: String, timestamp: Option[Long])
 DELETE        /annotations/:typ/:id                                                             controllers.AnnotationController.cancel(typ: String, id: String)
 POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                                  controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
-GET           /annotations/:typ/:id/download                                                    controllers.AnnotationIOController.download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
+GET           /annotations/:typ/:id/download                                                    controllers.AnnotationIOController.download(typ: String, id: String, version: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 
 GET           /annotations/source/:accessTokenOrId                                              controllers.AnnotationPrivateLinkController.annotationSource(accessTokenOrId: String, userToken: Option[String])
 

@@ -2,18 +2,18 @@ package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.bool2Fox
-import com.scalableminds.webknossos.tracingstore.{
-  TSRemoteWebknossosClient,
-  TracingStoreRedisStore,
-  AnnotationUpdatesReport
-}
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore, TracingId}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   BucketMutatingVolumeUpdateAction,
   UpdateBucketVolumeAction,
   VolumeTracingService
+}
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore, TracingId}
+import com.scalableminds.webknossos.tracingstore.{
+  AnnotationUpdatesReport,
+  TSRemoteWebknossosClient,
+  TracingStoreRedisStore
 }
 import com.typesafe.scalalogging.LazyLogging
 import play.api.http.Status.CONFLICT
@@ -281,7 +281,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
         AnnotationUpdatesReport(
           annotationId,
           timestamps = updateGroups.map(g => Instant(g.timestamp)),
-          statistics = updateGroups.flatMap(_.stats).lastOption, // TODO statistics per tracing/layer
+          statistics = updateGroups.flatMap(_.stats).lastOption,
           significantChangesCount = updateGroups.map(_.significantChangesCount).sum,
           viewChangesCount = updateGroups.map(_.viewChangesCount).sum,
           tc.userTokenOpt

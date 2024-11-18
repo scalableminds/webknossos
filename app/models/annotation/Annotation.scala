@@ -9,9 +9,9 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import play.api.libs.json._
+import slick.jdbc.GetResult
 import slick.jdbc.GetResult._
 import slick.jdbc.PostgresProfile.api._
-import slick.jdbc.GetResult
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
@@ -192,7 +192,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
   def deleteAllForAnnotationQuery(annotationId: ObjectId): SqlAction[Int, NoStream, Effect] =
     q"DELETE FROM webknossos.annotation_layers WHERE _annotation = $annotationId".asUpdate
 
-  def updateStatistics(annotationId: ObjectId, tracingId: String, statistics: JsObject): Fox[Unit] =
+  def updateStatistics(annotationId: ObjectId, tracingId: String, statistics: JsValue): Fox[Unit] =
     for {
       _ <- run(q"""UPDATE webknossos.annotation_layers
                    SET statistics = $statistics

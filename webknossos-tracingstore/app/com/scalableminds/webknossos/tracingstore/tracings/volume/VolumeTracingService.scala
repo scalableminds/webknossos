@@ -739,8 +739,7 @@ class VolumeTracingService @Inject()(
         }
     }
 
-    val shouldCreateSegmentIndex = !toTemporaryStore && volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(
-      tracings)
+    val shouldCreateSegmentIndex = volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(tracings)
 
     logger.info(
       s"Merging ${tracings.length} volume tracings into new $newId. CreateSegmentIndex = $shouldCreateSegmentIndex")

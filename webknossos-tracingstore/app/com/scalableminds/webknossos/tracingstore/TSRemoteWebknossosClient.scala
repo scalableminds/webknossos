@@ -11,12 +11,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, DataSourceLike}
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.{
-  AccessTokenService,
-  RemoteWebknossosClient,
-  UserAccessAnswer,
-  UserAccessRequest
-}
+import com.scalableminds.webknossos.datastore.services.{AccessTokenService, RemoteWebknossosClient, UserAccessAnswer, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
@@ -83,7 +78,6 @@ class TSRemoteWebknossosClient @Inject()(
           .getWithJsonResponse[DataSourceId]
     )
 
-  // TODO what about temporary/compound tracings?
   def getAnnotationIdForTracing(tracingId: String)(implicit ec: ExecutionContext): Fox[String] =
     annotationIdByTracingIdCache.getOrLoad(
       tracingId,

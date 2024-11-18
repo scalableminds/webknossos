@@ -14,8 +14,7 @@ import scala.concurrent.ExecutionContext
 
 class SkeletonTracingService @Inject()(
     tracingDataStore: TracingDataStore,
-    temporaryTracingService: TemporaryTracingService,
-    val tracingMigrationService: SkeletonTracingMigrationService // TODO why is this unused?
+    temporaryTracingService: TemporaryTracingService
 )(implicit val ec: ExecutionContext)
     extends KeyValueStoreImplicits
     with ProtoGeometryImplicits

@@ -43,6 +43,7 @@ import DatasetSettingsSharingTab from "./dataset_settings_sharing_tab";
 import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
 import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
 import { defaultContext } from "@tanstack/react-query";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 
 const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";
@@ -502,7 +503,11 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     const { isUserAdmin } = this.props;
     const titleString = this.props.isEditingMode ? "Settings for" : "Import";
     const datasetLinkOrName = this.props.isEditingMode ? (
-      <Link to={`/datasets/${this.props.datasetId}`}>{maybeStoredDatasetName}</Link>
+      <Link
+        to={`/datasets/${this.state.dataset ? getReadableURLPart(this.state.dataset) : this.props.datasetId}/view`}
+      >
+        {maybeStoredDatasetName}
+      </Link>
     ) : (
       maybeStoredDatasetName
     );

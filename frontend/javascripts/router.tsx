@@ -184,9 +184,26 @@ class ReactRouter extends React.Component<Props> {
 
   tracingSandbox = ({ match }: ContextRouter) => {
     const tracingType = coalesce(TracingTypeEnum, match.params.type);
+    const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(
+      match.params.datasetNameAndId,
+    );
 
     if (tracingType == null) {
       return <h3>Invalid annotation URL.</h3>;
+    }
+    if (datasetName) {
+      return (
+        <AsyncRedirect
+          redirectTo={async () => {
+            const organizationId = await getOrganizationForDataset(datasetName);
+            const datasetId = await getDatasetIdFromNameAndOrganization(
+              datasetName,
+              organizationId,
+            );
+            return `/datasets/${datasetName}-${datasetId}/sandbox/${tracingType}${location.search}${location.hash}`;
+          }}
+        />
+      );
     }
     return (
       <TracingLayoutView
@@ -194,7 +211,7 @@ class ReactRouter extends React.Component<Props> {
         initialCommandType={{
           type: ControlModeEnum.SANDBOX,
           tracingType,
-          datasetId: match.params.datasetId || "",
+          datasetId: datasetId || "",
         }}
       />
     );
@@ -670,7 +687,7 @@ class ReactRouter extends React.Component<Props> {
               />
               <Route path="/datasets/:datasetNameAndId/view" render={this.tracingViewMode} />
               <RouteWithErrorBoundary
-                path="/datasets/:datasetId/sandbox/:type"
+                path="/datasets/:datasetNameAndId/sandbox/:type"
                 render={this.tracingSandbox}
               />
               {/* legacy sandbox route */}
@@ -736,7 +753,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/datasets/:organizationId/:datasetName"
                 render={this.tracingViewModeLegacy}
               />
-              <Route path="/datasets/:datasetId" render={this.tracingViewMode} />
+              <Route path="/datasets/:datasetNameAndId" render={this.tracingViewMode} />
               <RouteWithErrorBoundary
                 path="/publications/:id"
                 render={({ match }: ContextRouter) => (

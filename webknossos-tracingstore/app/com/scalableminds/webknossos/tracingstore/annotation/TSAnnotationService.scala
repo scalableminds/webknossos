@@ -624,11 +624,21 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       _ <- saveAnnotationProto(newAnnotationId, v0Annotation.version, v0DuplicatedAnnotation)
 
       // Duplicate current
-      newLayers <- Fox.serialCombined(currentAnnotation.annotationLayers)(layer =>
-        duplicateLayer(annotationId, layer, tracingIdMap, currentAnnotation.version, isFromTask, datasetBoundingBox))
-      duplicatedAnnotation = currentAnnotation.copy(annotationLayers = newLayers,
-                                                    earliestAccessibleVersion = currentAnnotation.version)
-      _ <- saveAnnotationProto(newAnnotationId, currentAnnotation.version, duplicatedAnnotation)
+      duplicatedAnnotation <- if (currentAnnotation.version > 0L) {
+        for {
+          newLayers <- Fox.serialCombined(currentAnnotation.annotationLayers)(
+            layer =>
+              duplicateLayer(annotationId,
+                             layer,
+                             tracingIdMap,
+                             currentAnnotation.version,
+                             isFromTask,
+                             datasetBoundingBox))
+          currentDuplicatedAnnotation = currentAnnotation.copy(annotationLayers = newLayers,
+                                                               earliestAccessibleVersion = currentAnnotation.version)
+          _ <- saveAnnotationProto(newAnnotationId, currentAnnotation.version, currentDuplicatedAnnotation)
+        } yield currentDuplicatedAnnotation
+      } else Fox.successful(v0DuplicatedAnnotation)
 
     } yield duplicatedAnnotation
 

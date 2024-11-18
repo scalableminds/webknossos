@@ -13,7 +13,7 @@ GET         /annotation/:annotationId/updateActionStatistics                    
 GET         /annotation/:annotationId/newestVersion                                 @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.newestVersion(annotationId: String)
 POST        /annotation/:annotationId/duplicate                                     @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.duplicate(annotationId: String, newAnnotationId: String, version: Option[Long], isFromTask: Boolean, datasetBoundingBox: Option[String])
 POST        /annotation/:annotationId/resetToBase                                   @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.resetToBase(annotationId: String)
-POST        /annotation/mergedFromIds                                               @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.mergedFromIds(persist: Boolean, newAnnotationId: String)
+POST        /annotation/mergedFromIds                                               @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.mergedFromIds(toTemporaryStore: Boolean, newAnnotationId: String)
 
 # Volume tracings
 POST        /volume/save                                                            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.save(newTracingId: Option[String])

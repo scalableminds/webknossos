@@ -193,12 +193,26 @@ export function startNeuronInferralJob(
   layerName: string,
   bbox: Vector6,
   newDatasetName: string,
+  doEvaluation: boolean,
+  annotationId?: string,
+  useSparseTracing?: boolean,
+  evalMaxEdgeLength?: string,
+  evalSparseTubeThresholdNm?: string,
+  evalMinMergerPathLengthNm?: string,
 ): Promise<APIJob> {
   const urlParams = new URLSearchParams({
     layerName,
     bbox: bbox.join(","),
     newDatasetName,
+    doEvaluation: doEvaluation.toString()
   });
+  if (doEvaluation) {
+    urlParams.append("annotationId", `${annotationId}`)
+    urlParams.append("evalUseSparseTracing", `${useSparseTracing}`);
+    urlParams.append("evalMaxEdgeLength", `${evalMaxEdgeLength}`);
+    urlParams.append("evalSparseTubeThresholdNm", `${evalSparseTubeThresholdNm}`);
+    urlParams.append("evalMinMergerPathLengthNm", `${evalMinMergerPathLengthNm}`);
+  }
   return Request.receiveJSON(
     `/api/jobs/run/inferNeurons/${organizationId}/${datasetName}?${urlParams.toString()}`,
     {

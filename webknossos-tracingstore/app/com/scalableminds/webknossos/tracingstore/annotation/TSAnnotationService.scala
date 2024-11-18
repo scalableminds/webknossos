@@ -103,10 +103,14 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     for {
       annotationWithVersion <- tracingDataStore.annotations.get(annotationId, Some(version))(
         fromProtoBytes[AnnotationProto]) ?~> "getAnnotation.failed"
-      _ = logger.info(
-        s"cache miss for $annotationId v$version, applying updates from ${annotationWithVersion.version} to $version...")
       annotation = annotationWithVersion.value
-      updated <- applyPendingUpdates(annotation, annotationId, version, reportChangesToWk) ?~> "applyUpdates.failed"
+      annotationWithTracings <- findTracingsForAnnotation(annotation) ?~> "findTracingsForAnnotation.failed"
+      annotationWithTracingsAndMappings <- findEditableMappingsForAnnotation(
+        annotationId,
+        annotationWithTracings,
+        annotation.version,
+        version) // Note: this targetVersion is used for the updater buffers, and is overwritten for each update group, see annotation.withNewUpdaters
+      updated <- applyPendingUpdates(annotationWithTracingsAndMappings, annotationId, version, reportChangesToWk) ?~> "applyUpdates.failed"
     } yield updated
 
   def currentMaterializableVersion(annotationId: String): Fox[Long] =
@@ -184,10 +188,12 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     // Note: works only if revert actions are in separate update groups
     for {
       _ <- bool2Fox(revertAction.sourceVersion >= annotationWithTracings.annotation.earliestAccessibleVersion) ?~> f"Trying to revert to ${revertAction.sourceVersion}, but earliest accessible is ${annotationWithTracings.annotation.earliestAccessibleVersion}"
+      before = Instant.now
       sourceAnnotation: AnnotationWithTracings <- getWithTracings(annotationId, Some(revertAction.sourceVersion))
-      _ = logger.info(
-        s"reverting to suorceVersion ${revertAction.sourceVersion}. got sourceAnnotation with version ${sourceAnnotation.version} with ${sourceAnnotation.skeletonStats}")
       _ <- revertDistributedElements(annotationWithTracings, sourceAnnotation, revertAction.sourceVersion, newVersion)
+      _ = Instant.logSince(
+        before,
+        s"Reverting annotation $annotationId from v${annotationWithTracings.version} to v${revertAction.sourceVersion}")
     } yield sourceAnnotation
 
   private def resetToBase(annotationId: String, annotationWithTracings: AnnotationWithTracings, newVersion: Long)(
@@ -195,10 +201,11 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       tc: TokenContext): Fox[AnnotationWithTracings] = {
     // Note: works only if reset actions are in separate update groups
     val sourceVersion = 0L // Tasks are always created with as v0 currently
-    logger.info(s"Resetting annotation $annotationId to base (v$sourceVersion)")
+    val before = Instant.now
     for {
       sourceAnnotation: AnnotationWithTracings <- getWithTracings(annotationId, Some(sourceVersion))
       _ <- revertDistributedElements(annotationWithTracings, sourceAnnotation, sourceVersion, newVersion)
+      _ = Instant.logSince(before, s"Resetting annotation $annotationId to base (v$sourceVersion)")
     } yield sourceAnnotation
   }
 
@@ -263,19 +270,13 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     bool2Fox(!volumeTracing.mappingIsLocked.getOrElse(false)) ?~> "annotation.mappingIsLocked"
 
   private def applyPendingUpdates(
-      annotation: AnnotationProto,
+      annotationWithTracingsAndMappings: AnnotationWithTracings,
       annotationId: String,
       targetVersion: Long,
       reportChangesToWk: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
-      updateGroupsAsSaved <- findPendingUpdates(annotationId, annotation.version, targetVersion) ?~> "findPendingUpdates.failed"
+      updateGroupsAsSaved <- findPendingUpdates(annotationId, annotationWithTracingsAndMappings.version, targetVersion) ?~> "findPendingUpdates.failed"
       updatesGroupsRegrouped = regroupByIsolationSensitiveActions(updateGroupsAsSaved)
-      annotationWithTracings <- findTracingsForAnnotation(annotation) ?~> "findTracingsForAnnotation.failed"
-      annotationWithTracingsAndMappings <- findEditableMappingsForAnnotation(
-        annotationId,
-        annotationWithTracings,
-        annotation.version,
-        targetVersion) // Note: this targetVersion is overwritten for each update group, see annotation.withNewUpdaters
       updated <- applyUpdatesGrouped(annotationWithTracingsAndMappings,
                                      annotationId,
                                      updatesGroupsRegrouped,
@@ -317,7 +318,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       currentMaterializedVersion: Long,
       targetVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext) = {
     val volumeWithEditableMapping = annotationWithTracings.volumesThatHaveEditableMapping
-    logger.info(s"fetching editable mappings ${volumeWithEditableMapping.map(_._2).mkString(",")}")
     for {
       idInfoUpdaterTuples <- Fox.serialCombined(volumeWithEditableMapping) {
         case (volumeTracing, volumeTracingId) =>
@@ -407,8 +407,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       targetVersion: Long,
       reportChangesToWk: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] = {
 
-    logger.info(s"applying ${updates.length} to go from v${annotationWithTracings.version} to v$targetVersion")
-
     def updateIter(annotationWithTracingsFox: Fox[AnnotationWithTracings],
                    remainingUpdates: List[UpdateAction]): Fox[AnnotationWithTracings] =
       annotationWithTracingsFox.futureBox.flatMap {
@@ -429,7 +427,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           Some(annotationWithTracings.withNewUpdaters(annotationWithTracings.version, targetVersion)),
           updates)
         updatedWithNewVerson = updated.withVersion(targetVersion)
-        _ = logger.info(s"flushing v$targetVersion, with ${updated.skeletonStats}")
         _ <- updatedWithNewVerson.flushBufferedUpdates()
         _ <- flushUpdatedTracings(updatedWithNewVerson, updates)
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVerson)
@@ -860,8 +857,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                             0L,
                                             targetVersion)
         _ <- updater.applyUpdatesAndSave(editableMappingInfo, linearizedEditableMappingUpdates)
-        _ = logger.info(
-          s"Merging ${tracingsWithIds.length} editable mappings took ${Instant.since(before)} (applied ${linearizedEditableMappingUpdates.length} updates)")
+        _ = Instant.logSince(
+          before,
+          s"Merging ${tracingsWithIds.length} editable mappings by applying ${linearizedEditableMappingUpdates.length} updates")
       } yield targetVersion
     } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.getHasEditableMapping)) {
       Fox.empty

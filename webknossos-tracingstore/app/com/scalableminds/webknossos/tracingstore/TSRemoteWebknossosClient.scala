@@ -11,7 +11,12 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, DataSourceLike}
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, RemoteWebknossosClient, UserAccessAnswer, UserAccessRequest}
+import com.scalableminds.webknossos.datastore.services.{
+  AccessTokenService,
+  RemoteWebknossosClient,
+  UserAccessAnswer,
+  UserAccessRequest
+}
 import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
@@ -58,6 +63,7 @@ class TSRemoteWebknossosClient @Inject()(
       .addQueryString("tracingId" -> tracingId)
       .addQueryString("key" -> tracingStoreKey)
       .withTokenFromContext
+      .silent
       .getWithJsonResponse[DataSourceLike]
 
   def getDataStoreUriForDataSource(organizationId: String, datasetName: String): Fox[String] =
@@ -74,6 +80,7 @@ class TSRemoteWebknossosClient @Inject()(
         rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/dataSourceId")
           .addQueryString("tracingId" -> tracingId)
           .addQueryString("key" -> tracingStoreKey)
+          .silent
           .getWithJsonResponse[DataSourceId]
     )
 
@@ -92,6 +99,7 @@ class TSRemoteWebknossosClient @Inject()(
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/updateAnnotation")
       .addQueryString("annotationId" -> annotationId)
       .addQueryString("key" -> tracingStoreKey)
+      .silent
       .postProto(annotationProto)
 
   def createTracingFor(annotationId: String,

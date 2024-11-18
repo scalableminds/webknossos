@@ -251,12 +251,11 @@ class VolumeTracingService @Inject()(
                        sourceTracing: VolumeTracing,
                        newVersion: Long,
                        tracingBeforeRevert: VolumeTracing)(implicit tc: TokenContext): Fox[Unit] = {
+    val before = Instant.now
 
     val dataLayer = volumeTracingLayer(tracingId, tracingBeforeRevert)
     val bucketStreamBeforeRevert =
       dataLayer.volumeBucketProvider.bucketStreamWithVersion(version = Some(tracingBeforeRevert.version))
-
-    logger.info(s"reverting volume data from v${tracingBeforeRevert.version} to v$sourceVersion, creating v$newVersion")
 
     for {
       fallbackLayer <- getFallbackLayer(tracingId, tracingBeforeRevert)
@@ -306,6 +305,9 @@ class VolumeTracingService @Inject()(
           } else Fox.successful(())
       }
       _ <- segmentIndexBuffer.flush()
+      _ = Instant.logSince(
+        before,
+        s"Reverting volume data of $tracingId from v${tracingBeforeRevert.version} to v$sourceVersion, creating v$newVersion")
     } yield ()
   }
 
@@ -531,6 +533,7 @@ class VolumeTracingService @Inject()(
                           newTracingId: String,
                           newTracing: VolumeTracing)(implicit tc: TokenContext): Fox[Unit] = {
     var bucketCount = 0
+    val before = Instant.now
     for {
       isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(sourceTracingId)
       sourceDataLayer = volumeTracingLayer(sourceTracingId, sourceTracing, isTemporaryTracing)
@@ -567,8 +570,9 @@ class VolumeTracingService @Inject()(
             } yield ()
           } else Fox.successful(())
       }
-      _ = logger.info(
-        s"Duplicated $bucketCount volume buckets from $sourceTracingId v${sourceTracing.version} to $newTracingId v${newTracing.version}.")
+      _ = Instant.logSince(
+        before,
+        s"Duplicating $bucketCount volume buckets from $sourceTracingId v${sourceTracing.version} to $newTracingId v${newTracing.version}.")
       _ <- segmentIndexBuffer.flush()
     } yield ()
   }
@@ -724,6 +728,7 @@ class VolumeTracingService @Inject()(
       newId: String,
       newVersion: Long,
       toTemporaryStore: Boolean)(implicit mp: MessagesProvider, tc: TokenContext): Fox[MergedVolumeStats] = {
+    val before = Instant.now
     val elementClass = tracings.headOption.map(_.elementClass).getOrElse(elementClassToProto(ElementClass.uint8))
 
     val magSets = new mutable.HashSet[Set[Vec3Int]]()
@@ -740,9 +745,6 @@ class VolumeTracingService @Inject()(
     }
 
     val shouldCreateSegmentIndex = volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(tracings)
-
-    logger.info(
-      s"Merging ${tracings.length} volume tracings into new $newId. CreateSegmentIndex = $shouldCreateSegmentIndex")
 
     // If none of the tracings contained any volume data. Do not save buckets, do not touch mag list
     if (magSets.isEmpty)
@@ -804,6 +806,9 @@ class VolumeTracingService @Inject()(
           } yield ()
         }
         _ <- segmentIndexBuffer.flush()
+        _ = Instant.logSince(
+          before,
+          s"Merging buckets from ${tracings.length} volume tracings into new $newId, with createSegmentIndex = $shouldCreateSegmentIndex")
       } yield mergedVolume.stats(shouldCreateSegmentIndex)
     }
   }

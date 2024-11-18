@@ -4,15 +4,8 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
-  UnusableDataSource,
-  InboxDataSourceLike => InboxDataSource
-}
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  GenericDataSource,
-  DataSourceId,
-  DataLayerLike => DataLayer
-}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, GenericDataSource, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
@@ -64,6 +57,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } yield ()
 
   def createPreliminaryDataset(datasetName: String, organizationId: String, dataStore: DataStore): Fox[Dataset] = {
+    // TODO resolve unique datasetDirectoryName here, pass to createDataset
     val unreportedDatasource = UnusableDataSource(DataSourceId(datasetName, organizationId), notYetUploadedStatus)
     createDataset(dataStore, organizationId, datasetName, unreportedDatasource)
   }
@@ -102,9 +96,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     for {
       organization <- organizationDAO.findOne(owningOrganization)
       organizationRootFolder <- folderDAO.findOne(organization._rootFolder)
+      // TODO doesn’t this cause problems in updateDatasource case?
       datasetDirectoryName <- datasetDAO
         .doesDatasetDirectoryExistInOrganization(datasetName, organization._id)
-        .map(if (_) s"${datasetName}-${newId.toString}" else datasetName)
+        .map(if (_) s"$datasetName-${newId.toString}" else datasetName)
       newDataSource = dataSource.withUpdatedId(dataSource.id.copy(directoryName = datasetDirectoryName))
       dataset = Dataset(
         newId,

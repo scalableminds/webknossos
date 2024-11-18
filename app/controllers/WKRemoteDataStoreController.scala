@@ -11,8 +11,6 @@ import com.scalableminds.webknossos.datastore.services.DataStoreStatus
 import com.scalableminds.webknossos.datastore.services.uploading.{LinkedLayerIdentifier, ReserveUploadInformation}
 import com.typesafe.scalalogging.LazyLogging
 import mail.{MailchimpClient, MailchimpTag}
-
-import javax.inject.Inject
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.annotation.AnnotationDAO
 import models.dataset._
@@ -31,6 +29,7 @@ import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironm
 import telemetry.SlackNotificationService
 import utils.WkConf
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class WKRemoteDataStoreController @Inject()(
@@ -83,6 +82,7 @@ class WKRemoteDataStoreController @Inject()(
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))
           // Update newDatasetId and directoryName according to the newly created dataset.
+          // TODO instead of sending back a copy, send only the new information as separate case class
           updatedInfo = uploadInfo.copy(newDatasetId = Some(dataset._id.toString),
                                         directoryName = Some(dataset.directoryName),
                                         layersToLink = Some(layersToLinkWithDatasetId))

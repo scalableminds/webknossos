@@ -85,7 +85,10 @@ class WKRemoteDataStoreController @Inject()(
           _ <- datasetDAO.updateFolder(dataset._id, folderId)(GlobalAccessContext)
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))
-          additionalInfo = ReserveAdditionalInformation(dataset._id, dataset.directoryName, if(layersToLinkWithDatasetId.isEmpty) None else Some(layersToLinkWithDatasetId))
+          additionalInfo = ReserveAdditionalInformation(dataset._id,
+                                                        dataset.directoryName,
+                                                        if (layersToLinkWithDatasetId.isEmpty) None
+                                                        else Some(layersToLinkWithDatasetId))
         } yield Ok(Json.toJson(additionalInfo))
       }
     }

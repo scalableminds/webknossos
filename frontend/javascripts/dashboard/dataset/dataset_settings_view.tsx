@@ -228,7 +228,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         this.props.datasetId,
       );
       enforceValidatedDatasetViewConfiguration(datasetDefaultConfiguration, dataset, true);
-      // TODOM: extract x, y, z rotation from datasetDefaultConfiguration
       form.setFieldsValue({
         defaultConfiguration: datasetDefaultConfiguration,
         defaultConfigurationLayersJson: JSON.stringify(

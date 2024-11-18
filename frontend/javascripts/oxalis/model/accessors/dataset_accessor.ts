@@ -44,6 +44,7 @@ import {
   type Transform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
+import * as THREE from "three";
 
 function _getMagInfo(magnifications: Array<Vector3>): MagInfo {
   return new MagInfo(magnifications);
@@ -719,7 +720,6 @@ function _getOriginalTransformsForLayerOrNull(
 
   const transforms = coordinateTransformations.map((coordTransformation) => {
     const { type } = coordTransformation;
-
     if (type === "affine") {
       const nestedMatrix = coordTransformation.matrix;
       return createAffineTransformFromMatrix(nestedMatrix);
@@ -734,9 +734,29 @@ function _getOriginalTransformsForLayerOrNull(
     );
     return IdentityTransform;
   });
-  debugger;
   console.log(`layer ${layer.name} has transforms.`, transforms);
-  return transforms.reduce(chainTransforms, null);
+  debugMe();
+  return transforms.reduce(
+    (prevTransforms, transform) => chainTransforms(transform, prevTransforms),
+    IdentityTransform,
+  );
+}
+
+function debugMe() {
+  const matrix = new THREE.Matrix4().makeTranslation(-128, -128, -128);
+  console.log("three matrix", matrix);
+  let bla = new THREE.Matrix4().makeRotationX(Math.PI);
+  const matrix2 = new THREE.Matrix4().multiplyMatrices(bla, matrix);
+  console.log("three matrix", matrix2);
+  bla = new THREE.Matrix4().makeRotationY(0);
+  const matrix3 = new THREE.Matrix4().multiplyMatrices(bla, matrix2);
+  console.log("three matrix", matrix3);
+  bla = new THREE.Matrix4().makeRotationZ(0);
+  const matrix4 = new THREE.Matrix4().multiplyMatrices(bla, matrix3);
+  console.log("three matrix", matrix4);
+  bla = new THREE.Matrix4().makeTranslation(128, 128, 128);
+  const matrix5 = new THREE.Matrix4().multiplyMatrices(bla, matrix4);
+  console.log("three matrix", matrix5);
 }
 
 function _getTransformsForLayerOrNull(
@@ -748,6 +768,7 @@ function _getTransformsForLayerOrNull(
     return getTransformsForSkeletonLayerOrNull(dataset, nativelyRenderedLayerName);
   }
   const layerTransforms = _getOriginalTransformsForLayerOrNull(dataset, layer);
+  console.log({ layerTransforms });
 
   if (nativelyRenderedLayerName == null) {
     // No layer is requested to be rendered natively. Just use the transforms

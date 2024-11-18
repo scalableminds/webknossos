@@ -261,11 +261,13 @@ class PlaneMaterialFactory {
         value: 0,
       };
       const layer = getLayerByName(dataset, dataLayer.name);
+      const res = invertAndTranspose(
+        getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
+      );
 
+      // TODOM: Seems to be the correct matrix passed to the shader
       this.uniforms[`${layerName}_transform`] = {
-        value: invertAndTranspose(
-          getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
-        ),
+        value: res,
       };
       this.uniforms[`${layerName}_has_transform`] = {
         value: !_.isEqual(

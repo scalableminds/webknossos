@@ -92,15 +92,18 @@ export function chainTransforms(transformsA: Transform | null, transformsB: Tran
    * effectively transforms points using transformsA and *then* transformsB.
    */
   if (transformsA == null) {
+    console.log("real matrix is", transformsB.affineMatrix);
     return transformsB;
   }
 
   if (transformsA.type === "affine" && transformsB.type === "affine") {
-    return {
+    const a = {
       type: "affine",
       affineMatrix: M4x4.mul(transformsA.affineMatrix, transformsB.affineMatrix),
       affineMatrixInv: M4x4.mul(transformsB.affineMatrixInv, transformsA.affineMatrixInv),
     };
+    console.log("real matrix is", a.affineMatrix);
+    return a;
   }
 
   if (transformsA.type === "thin_plate_spline" && transformsB.type === "thin_plate_spline") {

@@ -338,8 +338,7 @@ function isRotationOnly(transformation?: AffineTransformation) {
 /* This function checks if all layers have the same transformation settings that represent
  * a translation to the dataset center and a rotation around each axis and a translation back.
  * All together this makes 5 affine transformation matrices. */
-export function haveAllLayersSameRotation(dataLayers: Array<APIDataLayer>) {
-  debugger;
+export function haveAllLayersSameRotation(dataLayers: Array<APIDataLayer>): boolean {
   const firstDataLayerTransformations = dataLayers[0]?.coordinateTransformations;
   if (firstDataLayerTransformations == null || firstDataLayerTransformations.length === 0) {
     // No transformations in all layers compatible with setting a rotation for the whole dataset.
@@ -380,6 +379,7 @@ export function haveAllLayersSameRotation(dataLayers: Array<APIDataLayer>) {
       return false;
     }
   }
+  return true;
 }
 
 export const AxisRotationSettingForDataset: React.FC<AxisRotationSettingForDatasetProps> = ({

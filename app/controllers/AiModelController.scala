@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.aimodels.{AiInference, AiInferenceDAO, AiInferenceService, AiModel, AiModelDAO, AiModelService}
@@ -18,6 +19,7 @@ import scala.concurrent.ExecutionContext
 import com.scalableminds.util.time.Instant
 import models.aimodels.AiModelCategory.AiModelCategory
 import models.organization.OrganizationDAO
+import play.api.i18n.Messages
 
 case class TrainingAnnotationSpecification(annotationId: ObjectId,
                                            colorLayerName: String,
@@ -41,6 +43,7 @@ object RunTrainingParameters {
 case class RunInferenceParameters(annotationId: Option[ObjectId],
                                   aiModelId: ObjectId,
                                   datasetName: String,
+                                  organizationId: String,
                                   colorLayerName: String,
                                   boundingBox: String,
                                   newDatasetName: String,
@@ -135,6 +138,7 @@ class AiModelController @Inject()(
         firstAnnotationId <- trainingAnnotations.headOption.map(_.annotationId).toFox
         annotation <- annotationDAO.findOne(firstAnnotationId)
         dataset <- datasetDAO.findOne(annotation._dataset)
+        _ <- bool2Fox(request.identity._organization == dataset._organization) ?~> "job.trainModel.notAllowed.organization" ~> FORBIDDEN
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         _ <- Fox
           .serialCombined(request.body.trainingAnnotations.map(_.annotationId))(annotationDAO.findOne) ?~> "annotation.notFound"
@@ -172,8 +176,13 @@ class AiModelController @Inject()(
     sil.SecuredAction.async(validateJson[RunInferenceParameters]) { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity)
-        organization <- organizationDAO.findOne(request.identity._organization)
-        dataset <- datasetDAO.findOneByNameAndOrganization(request.body.datasetName, organization._id)
+        organization <- organizationDAO.findOne(request.body.organizationId)(GlobalAccessContext) ?~> Messages(
+          "organization.notFound",
+          request.body.organizationId)
+        _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
+        dataset <- datasetDAO.findOneByNameAndOrganization(request.body.datasetName, organization._id) ?~> Messages(
+          "dataset.notFound",
+          request.body.datasetName)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         _ <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)

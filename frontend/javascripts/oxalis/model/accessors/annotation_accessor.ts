@@ -50,6 +50,7 @@ export function getStats(tracing: Tracing): CombinedTracingStats {
   const { skeleton, volumes } = tracing;
   let totalSegmentCount = 0;
   for (const volumeTracing of volumes) {
+    // TODOM: Update annotation stats according to the JSON and always send all layers
     totalSegmentCount += volumeTracing.segments.size();
   }
   let stats: TracingStats = {

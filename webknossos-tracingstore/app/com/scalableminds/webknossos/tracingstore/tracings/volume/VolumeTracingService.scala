@@ -126,7 +126,6 @@ class VolumeTracingService @Inject()(
             Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
           } else
             updateBucket(tracingId, tracing, a, segmentIndexBuffer, newVersion) ?~> "Failed to save volume data."
-        //case a: RevertToVersionVolumeAction => revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, tracing, userToken)
         case a: DeleteSegmentDataVolumeAction =>
           if (!tracing.getHasSegmentIndex) {
             Fox.failure("Cannot delete segment data for annotations without segment index.")
@@ -328,7 +327,7 @@ class VolumeTracingService @Inject()(
         }
         mappingName <- selectMappingName(tracing)
         mags <-
-        // if none of the tracings contained any volume data do not save buckets, use full resolution list, as already initialized on wk-side
+        // if none of the tracings contained any volume data do not save buckets, use full mag list, as already initialized on wk-side
         if (magSets.isEmpty)
           Fox.successful(tracing.mags.map(vec3IntFromProto).toSet)
         else {

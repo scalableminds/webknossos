@@ -136,7 +136,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         case a: AddLayerAnnotationAction =>
           addLayer(annotationId, annotationWithTracings, a, targetVersion)
         case a: DeleteLayerAnnotationAction =>
-          Fox.successful(annotationWithTracings.deleteTracing(a))
+          Fox.successful(annotationWithTracings.deleteLayer(a))
         case a: UpdateLayerMetadataAnnotationAction =>
           Fox.successful(annotationWithTracings.updateLayerMetadata(a))
         case a: UpdateMetadataAnnotationAction =>

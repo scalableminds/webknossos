@@ -91,7 +91,7 @@ case class AnnotationWithTracings(
       tracingsById = tracingsById.updated(tracingId, tracing)
     )
 
-  def deleteTracing(a: DeleteLayerAnnotationAction): AnnotationWithTracings =
+  def deleteLayer(a: DeleteLayerAnnotationAction): AnnotationWithTracings =
     this.copy(
       annotation = annotation.copy(annotationLayers = annotation.annotationLayers.filter(_.tracingId != a.tracingId)),
       tracingsById = tracingsById.removed(a.tracingId)
@@ -156,8 +156,5 @@ case class AnnotationWithTracings(
       _ <- Fox.serialCombined(updaters)(updater => updater.flushBuffersToFossil())
     } yield ()
   }
-
-  def skeletonStats: String =
-    f"skeleton with ${getSkeletons.map(_._2).map(_.trees.map(_.nodes.length).sum).mkString} nodes"
 
 }

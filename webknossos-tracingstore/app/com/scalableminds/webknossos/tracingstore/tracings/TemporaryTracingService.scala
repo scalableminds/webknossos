@@ -12,8 +12,8 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-// This temporary store is for temporary tracings only (e.g. compound projects)
-// and cannot be used for download or versioning
+// This services holds temporary stores, meant for temporary tracings only (e.g. compound projects)
+// They cannot be used for download or updating/versioning
 class TemporaryTracingService @Inject()(
     skeletonStore: TemporaryTracingStore[SkeletonTracing],
     volumeStore: TemporaryTracingStore[VolumeTracing],
@@ -80,7 +80,7 @@ class TemporaryTracingService @Inject()(
   def isTemporaryTracing(tracingId: String): Fox[Boolean] =
     temporaryTracingIdStore.contains(temporaryTracingIdKey(tracingId))
 
-  def assertTracingStillInCache(tracingId: String)(implicit ec: ExecutionContext): Fox[Unit] =
+  def assertTracingStillPresent(tracingId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- bool2Fox(volumeStore.contains(tracingId)) ?~> "Temporary Volume Tracing expired"
     } yield ()

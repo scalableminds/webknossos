@@ -1,7 +1,6 @@
 package models.annotation
 
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.time.Instant
@@ -20,7 +19,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   SegmentationLayerLike => SegmentationLayer
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationLayerParameters, AnnotationWithTracings}
+import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   MagRestrictions,
@@ -479,7 +478,6 @@ class AnnotationService @Inject()(
         earliestAccessibleVersion = 0L
       )
       _ <- tracingStoreClient.saveAnnotationProto(annotationBase._id, annotationBaseProto)
-      _ = logger.info(s"inserting base annotation ${annotationBase._id} for task ${task._id}")
       _ <- annotationDAO.insertOne(annotationBase)
     } yield ()
 

@@ -20,23 +20,3 @@ message AnnotationLayerProto {
   required string name = 2;
   required AnnotationLayerTypeProto type = 4;
 }
-
-message AddLayerAnnotationUpdateAction {
-  required string name = 1;
-  required string tracingId = 2;
-  required AnnotationLayerTypeProto type = 5;
-}
-
-message DeleteLayerAnnotationUpdateAction {
-  required string tracingId = 1;
-}
-
-message UpdateLayerMetadataAnnotationUpdateAction {
-  required string tracingId = 1;
-  required string name = 2;
-}
-
-message UpdateMetadataAnnotationUpdateAction {
-  optional string name = 1;
-  optional string description = 2;
-}

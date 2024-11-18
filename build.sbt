@@ -33,6 +33,9 @@ Compile / console / scalacOptions -= "-Xlint:unused"
 scapegoatIgnoredFiles := Seq(".*/Tables.scala", ".*/Routes.scala", ".*/.*mail.*template\\.scala")
 scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
 
+routesImport += "utils.Binders._"
+routesImport += "utils.ObjectId"
+
 lazy val commonSettings = Seq(
   resolvers ++= DependencyResolvers.dependencyResolvers,
   Compile / doc / sources := Seq.empty,

@@ -3,6 +3,7 @@ package utils
 import com.scalableminds.util.tools.TextUtils.parseCommaSeparated
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.json._
+import play.api.mvc.PathBindable
 import reactivemongo.api.bson.BSONObjectID
 
 import scala.concurrent.ExecutionContext
@@ -18,7 +19,7 @@ object ObjectId extends FoxImplicits {
   def fromCommaSeparated(idsStrOpt: Option[String])(implicit ec: ExecutionContext): Fox[List[ObjectId]] =
     parseCommaSeparated(idsStrOpt)(fromString)
   private def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
-  private def fromStringSync(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption
+  def fromStringSync(input: String): Option[ObjectId] = BSONObjectID.parse(input).map(fromBsonId).toOption
   def dummyId: ObjectId = ObjectId("dummyObjectId")
 
   implicit object ObjectIdFormat extends Format[ObjectId] {
@@ -33,4 +34,12 @@ object ObjectId extends FoxImplicits {
 
     override def writes(o: ObjectId): JsValue = JsString(o.id)
   }
+
+  implicit def pathBinder: PathBindable[ObjectId] =
+    new PathBindable[ObjectId] {
+      override def bind(key: String, value: String): Either[String, ObjectId] =
+        fromStringSync(value).toRight(s"Cannot parse parameter $key as ObjectId: $value")
+
+      override def unbind(key: String, value: ObjectId): String = value.id
+    }
 }

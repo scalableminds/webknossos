@@ -43,11 +43,11 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
-  def user(userId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def user(userId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     log() {
       for {
-        userIdValidated <- ObjectId.fromString(userId) ?~> "user.id.invalid"
-        user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
+        //userIdValidated <- ObjectId.fromString(userId) ?~> "user.id.invalid"
+        user <- userDAO.findOne(userId) ?~> "user.notFound" ~> NOT_FOUND
         _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
         js <- userService.publicWrites(user, request.identity)
       } yield Ok(js)

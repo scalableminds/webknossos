@@ -19,6 +19,6 @@ class TracingDataSourceTemporaryStore @Inject()(temporaryStore: TemporaryStore[S
     temporaryStore.insert(tracingId, dataSource, Some(timeOut))
 
   def find(tracingId: String): Option[DataSourceLike] =
-    temporaryStore.find(tracingId)
+    temporaryStore.get(tracingId)
 
 }

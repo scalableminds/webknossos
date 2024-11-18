@@ -7,47 +7,17 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
-import com.scalableminds.webknossos.datastore.Annotation.{
-  AnnotationLayerProto,
-  AnnotationLayerTypeProto,
-  AnnotationProto
-}
+import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
-  EditableMappingLayer,
-  EditableMappingService,
-  EditableMappingUpdateAction,
-  EditableMappingUpdater
-}
+import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{EditableMappingLayer, EditableMappingService, EditableMappingUpdateAction, EditableMappingUpdater}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{
-  CreateNodeSkeletonAction,
-  DeleteNodeSkeletonAction,
-  SkeletonUpdateAction,
-  UpdateTracingSkeletonAction
-}
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  ApplyableVolumeUpdateAction,
-  BucketMutatingVolumeUpdateAction,
-  MagRestrictions,
-  UpdateMappingNameVolumeAction,
-  VolumeTracingService
-}
-import com.scalableminds.webknossos.tracingstore.tracings.{
-  FallbackDataHelper,
-  KeyValueStoreImplicits,
-  RemoteFallbackLayer,
-  SkeletonTracingMigrationService,
-  TracingDataStore,
-  TracingId,
-  TracingSelector,
-  VersionedKeyValuePair,
-  VolumeTracingMigrationService
-}
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{CreateNodeSkeletonAction, DeleteNodeSkeletonAction, SkeletonUpdateAction, UpdateTracingSkeletonAction}
+import com.scalableminds.webknossos.tracingstore.tracings.volume._
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Full}
@@ -62,6 +32,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                     skeletonTracingService: SkeletonTracingService,
                                     skeletonTracingMigrationService: SkeletonTracingMigrationService,
                                     volumeTracingMigrationService: VolumeTracingMigrationService,
+                                    temporaryTracingService: TemporaryTracingService,
                                     val remoteDatastoreClient: TSRemoteDatastoreClient,
                                     tracingDataStore: TracingDataStore)
     extends KeyValueStoreImplicits
@@ -78,8 +49,13 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   def get(annotationId: String, version: Option[Long])(implicit ec: ExecutionContext,
                                                        tc: TokenContext): Fox[AnnotationProto] =
     for {
-      withTracings <- getWithTracings(annotationId, version)
-    } yield withTracings.annotation
+      isTemporaryTracing <- temporaryTracingService.isTemporaryAnnotation(annotationId)
+      annotation <- if (isTemporaryTracing) temporaryTracingService.getAnnotation(annotationId)
+      else
+        for {
+          withTracings <- getWithTracings(annotationId, version)
+        } yield withTracings.annotation
+    } yield annotation
 
   def getMultiple(annotationIds: Seq[String])(implicit ec: ExecutionContext,
                                               tc: TokenContext): Fox[Seq[AnnotationProto]] =
@@ -205,6 +181,15 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       _ <- revertDistributedElements(annotationWithTracings, sourceAnnotation, sourceVersion, newVersion)
     } yield sourceAnnotation
   }
+
+  def saveAnnotationProto(annotationId: String,
+                          version: Long,
+                          annotationProto: AnnotationProto,
+                          toTemporaryStore: Boolean = false): Fox[Unit] =
+    if (toTemporaryStore)
+      temporaryTracingService.saveAnnotationProto(annotationId, annotationProto)
+    else
+      tracingDataStore.annotations.put(annotationId, version, annotationProto)
 
   def updateActionLog(annotationId: String, newestVersion: Long, oldestVersion: Long)(
       implicit ec: ExecutionContext): Fox[JsValue] = {
@@ -474,7 +459,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   }
 
   private def flushAnnotationInfo(annotationId: String, annotationWithTracings: AnnotationWithTracings) =
-    tracingDataStore.annotations.put(annotationId, annotationWithTracings.version, annotationWithTracings.annotation)
+    saveAnnotationProto(annotationId, annotationWithTracings.version, annotationWithTracings.annotation)
 
   private def determineTargetVersion(annotationId: String,
                                      newestMaterializedAnnotation: AnnotationProto,
@@ -552,31 +537,38 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     tracingDataStore.skeletons
       .get[SkeletonTracing](tracingId, version, mayBeEmpty = Some(true))(fromProtoBytes[SkeletonTracing])
 
-  def findVolume(annotationId: String,
-                 tracingId: String,
-                 version: Option[Long] = None,
-                 fromTemporaryStore: Boolean = true // TODO
-  )(implicit tc: TokenContext, ec: ExecutionContext): Fox[VolumeTracing] =
+  def findVolume(annotationId: String, tracingId: String, version: Option[Long] = None)(
+      implicit tc: TokenContext,
+      ec: ExecutionContext): Fox[VolumeTracing] =
     for {
-      annotation <- getWithTracings(annotationId, version)
-      tracing <- annotation.getVolume(tracingId).toFox
-      migrated <- volumeTracingMigrationService.migrateTracing(tracing)
-    } yield migrated
+      isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
+      tracing <- if (isTemporaryTracing) temporaryTracingService.getVolume(tracingId)
+      else
+        for {
+          annotation <- getWithTracings(annotationId, version)
+          tracing <- annotation.getVolume(tracingId).toFox
+          migrated <- volumeTracingMigrationService.migrateTracing(tracing)
+        } yield migrated
+    } yield tracing
 
   def findSkeleton(
       annotationId: String,
       tracingId: String,
-      version: Option[Long] = None,
-      fromTemporaryStoreu: Boolean = true // TODO
+      version: Option[Long] = None
   )(implicit tc: TokenContext, ec: ExecutionContext): Fox[SkeletonTracing] =
     if (tracingId == TracingId.dummy)
       Fox.successful(skeletonTracingService.dummyTracing)
     else {
       for {
-        annotation <- getWithTracings(annotationId, version)
-        tracing <- annotation.getSkeleton(tracingId).toFox
-        migrated <- skeletonTracingMigrationService.migrateTracing(tracing)
-      } yield migrated
+        isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
+        tracing <- if (isTemporaryTracing) temporaryTracingService.getSkeleton(tracingId)
+        else
+          for {
+            annotation <- getWithTracings(annotationId, version)
+            tracing <- annotation.getSkeleton(tracingId).toFox
+            migrated <- skeletonTracingMigrationService.migrateTracing(tracing)
+          } yield migrated
+      } yield tracing
     }
 
   def findMultipleVolumes(selectors: Seq[Option[TracingSelector]])(
@@ -629,14 +621,14 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       v0DuplicatedAnnotation = v0Annotation.copy(annotationLayers = v0NewLayers,
                                                  earliestAccessibleVersion = v0Annotation.version)
 
-      _ <- tracingDataStore.annotations.put(newAnnotationId, v0Annotation.version, v0DuplicatedAnnotation)
+      _ <- saveAnnotationProto(newAnnotationId, v0Annotation.version, v0DuplicatedAnnotation)
 
       // Duplicate current
       newLayers <- Fox.serialCombined(currentAnnotation.annotationLayers)(layer =>
         duplicateLayer(annotationId, layer, tracingIdMap, currentAnnotation.version, isFromTask, datasetBoundingBox))
       duplicatedAnnotation = currentAnnotation.copy(annotationLayers = newLayers,
                                                     earliestAccessibleVersion = currentAnnotation.version)
-      _ <- tracingDataStore.annotations.put(newAnnotationId, currentAnnotation.version, duplicatedAnnotation)
+      _ <- saveAnnotationProto(newAnnotationId, currentAnnotation.version, duplicatedAnnotation)
 
     } yield duplicatedAnnotation
 

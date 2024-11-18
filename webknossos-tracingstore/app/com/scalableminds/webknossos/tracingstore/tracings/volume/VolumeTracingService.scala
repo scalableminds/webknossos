@@ -590,17 +590,13 @@ class VolumeTracingService @Inject()(
       additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes)
     )
 
-  def updateMagList(tracingId: String,
-                    tracing: VolumeTracing,
-                    mags: Set[Vec3Int],
-                    toTemporaryStore: Boolean = false): Fox[String] =
+  def updateMagList(tracingId: String, tracing: VolumeTracing, mags: Set[Vec3Int]): Fox[String] =
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
       _ <- bool2Fox(mags.nonEmpty) ?~> "Initializing without any mags. No data or mag restrictions too tight?"
       id <- saveVolume(tracing.copy(mags = mags.toList.sortBy(_.maxDim).map(vec3IntToProto)),
                        Some(tracingId),
-                       tracing.version,
-                       toTemporaryStore)
+                       tracing.version)
     } yield id
 
   def volumeBucketsAreEmpty(tracingId: String): Boolean =
@@ -743,7 +739,8 @@ class VolumeTracingService @Inject()(
         }
     }
 
-    val shouldCreateSegmentIndex = volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(tracings)
+    val shouldCreateSegmentIndex = !toTemporaryStore && volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(
+      tracings)
 
     logger.info(
       s"Merging ${tracings.length} volume tracings into new $newId. CreateSegmentIndex = $shouldCreateSegmentIndex")

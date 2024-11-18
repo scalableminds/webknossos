@@ -27,9 +27,7 @@ class TSAnnotationController @Inject()(
     annotationService: TSAnnotationService,
     annotationTransactionService: AnnotationTransactionService,
     skeletonTracingService: SkeletonTracingService,
-    temporaryTracingService: TemporaryTracingService,
-    volumeTracingService: VolumeTracingService,
-    tracingDataStore: TracingDataStore)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    volumeTracingService: VolumeTracingService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with KeyValueStoreImplicits {
 
@@ -38,10 +36,7 @@ class TSAnnotationController @Inject()(
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
-            _ <- if (toTemporaryStore)
-              temporaryTracingService.saveAnnotationProto(annotationId, request.body)
-            else
-              tracingDataStore.annotations.put(annotationId, 0L, request.body)
+            _ <- annotationService.saveAnnotationProto(annotationId, 0L, request.body, toTemporaryStore)
           } yield Ok
         }
       }
@@ -216,7 +211,10 @@ class TSAnnotationController @Inject()(
               .withVersion(newTargetVersion)
             _ <- Fox.runOptional(mergedSkeletonOpt)(
               skeletonTracingService.saveSkeleton(_, Some(newSkeletonId), version = newTargetVersion, toTemporaryStore))
-            _ <- tracingDataStore.annotations.put(newAnnotationId, newTargetVersion, mergedAnnotation) // TODO toTemporaryStore
+            _ <- annotationService.saveAnnotationProto(newAnnotationId,
+                                                       newTargetVersion,
+                                                       mergedAnnotation,
+                                                       toTemporaryStore)
           } yield Ok(mergedAnnotation.toByteArray).as(protobufMimeType)
         }
       }

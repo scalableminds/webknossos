@@ -3,25 +3,10 @@ package com.scalableminds.webknossos.datastore.services.uploading
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.layers.{
-  N5DataLayer,
-  N5SegmentationLayer,
-  PrecomputedDataLayer,
-  PrecomputedSegmentationLayer,
-  WKWDataLayer,
-  WKWSegmentationLayer,
-  Zarr3DataLayer,
-  Zarr3SegmentationLayer,
-  ZarrDataLayer,
-  ZarrSegmentationLayer
-}
+import com.scalableminds.webknossos.datastore.dataformats.layers._
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.services.{
-  DSRemoteWebknossosClient,
-  DataSourceRepository,
-  DataSourceService
-}
+import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceRepository, DataSourceService}
 import play.api.libs.json.{Json, OFormat}
 
 import java.nio.charset.StandardCharsets
@@ -91,7 +76,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
     for {
       dataSourceId <- Fox.successful(
         DataSourceId(composeLayer.datasetId.name, composeLayer.datasetId.owningOrganization))
-      dataSource <- Fox.option2Fox(dataSourceRepository.find(dataSourceId))
+      dataSource <- Fox.option2Fox(dataSourceRepository.get(dataSourceId))
       ds <- Fox.option2Fox(dataSource.toUsable)
       layer <- Fox.option2Fox(ds.dataLayers.find(_.name == composeLayer.sourceName))
       applyCoordinateTransformations = (cOpt: Option[List[CoordinateTransformation]]) =>

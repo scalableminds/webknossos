@@ -39,11 +39,17 @@ class TemporaryTracingService @Inject()(
   private def temporaryAnnotationIdKey(tracingId: String) =
     s"temporaryTracingId___$tracingId"
 
-  def findVolumeBucket(bucketKey: String): Fox[Array[Byte]] =
-    volumeDataStore.find(bucketKey)
+  def getAnnotation(annotationId: String): Fox[AnnotationProto] = annotationStore.get(annotationId)
 
-  def findAllVolumeBucketsWithPrefix(bucketPrefix: String): collection.Map[String, Array[Byte]] =
-    volumeDataStore.findAllConditionalWithKey(key => key.startsWith(bucketPrefix))
+  def getVolume(tracingId: String): Fox[VolumeTracing] = volumeStore.get(tracingId)
+
+  def getSkeleton(tracingId: String): Fox[SkeletonTracing] = skeletonStore.get(tracingId)
+
+  def getVolumeBucket(bucketKey: String): Fox[Array[Byte]] =
+    volumeDataStore.get(bucketKey)
+
+  def getAllVolumeBucketsWithPrefix(bucketPrefix: String): collection.Map[String, Array[Byte]] =
+    volumeDataStore.getAllConditionalWithKey(key => key.startsWith(bucketPrefix))
 
   def saveSkeleton(tracingId: String, skeletonTracing: SkeletonTracing): Fox[Unit] = {
     skeletonStore.insert(tracingId, skeletonTracing, Some(temporaryStoreTimeout))
@@ -67,6 +73,9 @@ class TemporaryTracingService @Inject()(
     registerAnnotationId(annotationId)
     Fox.successful(())
   }
+
+  def isTemporaryAnnotation(annotationId: String): Fox[Boolean] =
+    temporaryTracingIdStore.contains(temporaryAnnotationIdKey(annotationId))
 
   def isTemporaryTracing(tracingId: String): Fox[Boolean] =
     temporaryTracingIdStore.contains(temporaryTracingIdKey(tracingId))

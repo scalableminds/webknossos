@@ -4,44 +4,26 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
-import com.scalableminds.webknossos.datastore.explore.{
-  ExploreRemoteDatasetRequest,
-  ExploreRemoteDatasetResponse,
-  ExploreRemoteLayerService
-}
-import com.scalableminds.webknossos.datastore.helpers.{
-  GetMultipleSegmentIndexParameters,
-  GetSegmentIndexParameters,
-  SegmentIndexData,
-  SegmentStatisticsParameters
-}
+import com.scalableminds.webknossos.datastore.explore.{ExploreRemoteDatasetRequest, ExploreRemoteDatasetResponse, ExploreRemoteLayerService}
+import com.scalableminds.webknossos.datastore.helpers.{GetMultipleSegmentIndexParameters, GetSegmentIndexParameters, SegmentIndexData, SegmentStatisticsParameters}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.services._
-import com.scalableminds.webknossos.datastore.services.uploading.{
-  CancelUploadInformation,
-  ComposeRequest,
-  ComposeService,
-  ReserveManualUploadInformation,
-  ReserveUploadInformation,
-  UploadInformation,
-  UploadService
-}
+import com.scalableminds.webknossos.datastore.services.uploading._
+import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages
+import play.api.libs.Files
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File
-import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService}
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import play.api.libs.Files
-
 import java.net.URI
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 class DataSourceController @Inject()(
     dataSourceRepository: DataSourceRepository,
@@ -398,7 +380,7 @@ class DataSourceController @Inject()(
         UserAccessRequest.writeDataSource(DataSourceId(datasetName, organizationId))) {
         for {
           _ <- Fox.successful(())
-          dataSource <- dataSourceRepository.find(DataSourceId(datasetName, organizationId)).toFox ?~> Messages(
+          dataSource <- dataSourceRepository.get(DataSourceId(datasetName, organizationId)).toFox ?~> Messages(
             "dataSource.notFound") ~> NOT_FOUND
           _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id), expectExisting = true)
         } yield Ok
@@ -410,7 +392,7 @@ class DataSourceController @Inject()(
     Action.async(validateJson[DataSource]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources) {
         for {
-          _ <- bool2Fox(dataSourceRepository.find(DataSourceId(datasetName, organizationId)).isEmpty) ?~> Messages(
+          _ <- bool2Fox(dataSourceRepository.get(DataSourceId(datasetName, organizationId)).isEmpty) ?~> Messages(
             "dataSource.alreadyPresent")
           _ <- remoteWebknossosClient.reserveDataSourceUpload(
             ReserveUploadInformation(

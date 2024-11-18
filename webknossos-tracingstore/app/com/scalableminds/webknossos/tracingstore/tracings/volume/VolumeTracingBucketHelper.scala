@@ -182,7 +182,7 @@ trait VolumeTracingBucketHelper
 
     val dataFox =
       if (volumeTracingLayer.isTemporaryTracing)
-        temporaryTracingService.findVolumeBucket(bucketKey).map(VersionedKeyValuePair(VersionedKey(bucketKey, 0), _))
+        temporaryTracingService.getVolumeBucket(bucketKey).map(VersionedKeyValuePair(VersionedKey(bucketKey, 0), _))
       else
         volumeDataStore.get(bucketKey, version, mayBeEmpty = Some(true))
 
@@ -275,7 +275,7 @@ trait VolumeTracingBucketHelper
 
   def bucketStreamFromTemporaryStore(dataLayer: VolumeTracingLayer): Iterator[(BucketPosition, Array[Byte])] = {
     val keyPrefix = buildKeyPrefix(dataLayer.name)
-    val keyValuePairs = temporaryTracingService.findAllVolumeBucketsWithPrefix(keyPrefix)
+    val keyValuePairs = temporaryTracingService.getAllVolumeBucketsWithPrefix(keyPrefix)
     keyValuePairs.flatMap {
       case (bucketKey, data) =>
         parseBucketKey(bucketKey, dataLayer.additionalAxes).map(tuple => (tuple._2, data))

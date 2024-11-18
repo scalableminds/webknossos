@@ -35,21 +35,21 @@ jobs:
 
       - name: Install dependencies and wait
         run: |
-            corepack enable && yarn install --immutable & 
+            corepack enable && yarn install --immutable &
             sleep 180 &
             wait
 
       - name: Refresh datasets
         run: |
-          curl -X POST --fail https://master.webknossos.xyz/data/triggers/checkInboxBlocking?token=${{ secrets.WK_AUTH_TOKEN }}
+          curl -X POST --fail https://allowdatasetrenaming.webknossos.xyz/data/triggers/checkInboxBlocking?token=${{ secrets.WK_AUTH_TOKEN }}
 
       - name: Run screenshot tests
         run: |
-          URL=https://master.webknossos.xyz/ \
+          URL=https://allowdatasetrenaming.webknossos.xyz/ \
           timeout 3000 \
           yarn test-screenshot
         env:
-          URL: https://master.webknossos.xyz/
+          URL: https://allowdatasetrenaming.webknossos.xyz/
           WK_AUTH_TOKEN: ${{ secrets.WK_AUTH_TOKEN }}
           BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
           BROWSERSTACK_ACCESS_KEY : ${{ secrets.BROWSERSTACK_ACCESS_KEY }}

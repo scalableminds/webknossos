@@ -1,12 +1,6 @@
 package controllers
 
 import collections.SequenceUtils
-
-import java.io.{BufferedOutputStream, File, FileOutputStream}
-import java.util.zip.Deflater
-import org.apache.pekko.actor.ActorSystem
-import org.apache.pekko.stream.Materializer
-import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
@@ -14,47 +8,36 @@ import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.annotation.{
-  AnnotationLayer,
-  AnnotationLayerStatistics,
-  AnnotationLayerType,
-  FetchedAnnotationLayer
-}
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  AbstractSegmentationLayer,
-  DataLayerLike,
-  DataSourceLike,
-  GenericDataSource,
-  SegmentationLayer
-}
+import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerStatistics, AnnotationLayerType, FetchedAnnotationLayer}
+import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  VolumeDataZipFormat,
-  VolumeTracingDefaults,
-  VolumeTracingMags
-}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{VolumeDataZipFormat, VolumeTracingDefaults, VolumeTracingMags}
 import com.typesafe.scalalogging.LazyLogging
-
-import javax.inject.Inject
 import models.analytics.{AnalyticsService, DownloadAnnotationEvent, UploadAnnotationEvent}
 import models.annotation.AnnotationState._
 import models.annotation._
 import models.annotation.nml.NmlResults.{NmlParseResult, NmlParseSuccess}
 import models.annotation.nml.{NmlResults, NmlWriter}
-import models.dataset.{DataStoreDAO, Dataset, DatasetDAO, DatasetService, WKRemoteDataStoreClient}
+import models.dataset._
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task._
 import models.user._
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData}
+import play.silhouette.api.Silhouette
 import security.WkEnv
 import utils.{ObjectId, WkConf}
 
+import java.io.{BufferedOutputStream, File, FileOutputStream}
+import java.util.zip.Deflater
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class AnnotationIOController @Inject()(
@@ -400,7 +383,7 @@ class AnnotationIOController @Inject()(
                           volumeDataZipFormat: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
-        annotation <- provider.provideAnnotation(id, request.identity)
+        annotation <- provider.provideAnnotation(id, request.identity) ?~> "annotation.notFound" ~> NOT_FOUND
         result <- download(annotation.typ.toString,
                            id,
                            skeletonVersion,

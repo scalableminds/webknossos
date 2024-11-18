@@ -56,6 +56,9 @@ class AnnotationStore @Inject()(
   private def getFromCache(annotationId: AnnotationIdentifier): Option[Fox[Annotation]] =
     temporaryAnnotationStore.get(annotationId.toUniqueString).map(Fox.successful(_))
 
+  def findInCache(annotationId: String): Box[Annotation] =
+    temporaryAnnotationStore.getAll.find(a => a._id.toString == annotationId)
+
   def findCachedByTracingId(tracingId: String): Box[Annotation] = {
     val annotationOpt = temporaryAnnotationStore.getAll.find(a => a.annotationLayers.exists(_.tracingId == tracingId))
     annotationOpt match {

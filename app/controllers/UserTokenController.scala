@@ -37,6 +37,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
                                     userService: UserService,
                                     organizationDAO: OrganizationDAO,
                                     annotationInformationProvider: AnnotationInformationProvider,
+                                    annotationStore: AnnotationStore,
                                     dataStoreService: DataStoreService,
                                     tracingStoreService: TracingStoreService,
                                     jobDAO: JobDAO,
@@ -181,7 +182,13 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
       Fox.successful(UserAccessAnswer(granted = true))
     } else {
       for {
-        annotation <- annotationInformationProvider.provideAnnotation(annotationId, userBox)(GlobalAccessContext) ?~> "annotation.notFound"
+        annotationBox <- annotationInformationProvider
+          .provideAnnotation(annotationId, userBox)(GlobalAccessContext)
+          .futureBox
+        annotation <- annotationBox match {
+          case Full(_) => annotationBox.toFox
+          case _       => annotationStore.findInCache(annotationId).toFox
+        }
         annotationAccessByToken <- token
           .map(annotationPrivateLinkDAO.findOneByAccessToken)
           .getOrElse(Fox.empty)

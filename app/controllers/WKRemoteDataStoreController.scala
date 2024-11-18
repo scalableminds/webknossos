@@ -8,7 +8,11 @@ import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
-import com.scalableminds.webknossos.datastore.services.uploading.{LinkedLayerIdentifier, ReserveUploadInformation}
+import com.scalableminds.webknossos.datastore.services.uploading.{
+  LinkedLayerIdentifier,
+  ReserveAdditionalInformation,
+  ReserveUploadInformation
+}
 import com.typesafe.scalalogging.LazyLogging
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
@@ -81,12 +85,8 @@ class WKRemoteDataStoreController @Inject()(
           _ <- datasetDAO.updateFolder(dataset._id, folderId)(GlobalAccessContext)
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))
-          // Update newDatasetId and directoryName according to the newly created dataset.
-          // TODO instead of sending back a copy, send only the new information as separate case class
-          updatedInfo = uploadInfo.copy(newDatasetId = Some(dataset._id.toString),
-                                        directoryName = Some(dataset.directoryName),
-                                        layersToLink = Some(layersToLinkWithDatasetId))
-        } yield Ok(Json.toJson(updatedInfo))
+          additionalInfo = ReserveAdditionalInformation(dataset._id, dataset.directoryName, if(layersToLinkWithDatasetId.isEmpty) None else Some(layersToLinkWithDatasetId))
+        } yield Ok(Json.toJson(additionalInfo))
       }
     }
 

@@ -4,8 +4,15 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, GenericDataSource, DataLayerLike => DataLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
+  UnusableDataSource,
+  InboxDataSourceLike => InboxDataSource
+}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataSourceId,
+  GenericDataSource,
+  DataLayerLike => DataLayer
+}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
@@ -57,9 +64,15 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } yield ()
 
   def createPreliminaryDataset(datasetName: String, organizationId: String, dataStore: DataStore): Fox[Dataset] = {
-    // TODO resolve unique datasetDirectoryName here, pass to createDataset
-    val unreportedDatasource = UnusableDataSource(DataSourceId(datasetName, organizationId), notYetUploadedStatus)
-    createDataset(dataStore, organizationId, datasetName, unreportedDatasource)
+    val newDatasetId = ObjectId.generate
+    for {
+      datasetDirectoryName <- datasetDAO
+        .doesDatasetDirectoryExistInOrganization(datasetName, organizationId)(GlobalAccessContext)
+        .map(if (_) s"$datasetName-${newDatasetId.toString}" else datasetName)
+      unreportedDatasource = UnusableDataSource(DataSourceId(datasetDirectoryName, organizationId),
+                                                notYetUploadedStatus)
+      newDataset <- createDataset(dataStore, newDatasetId, datasetName, unreportedDatasource)
+    } yield newDataset
   }
 
   def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: String)(
@@ -76,13 +89,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   private def createDataset(
       dataStore: DataStore,
-      owningOrganization: String,
+      datasetId: ObjectId,
       datasetName: String,
       dataSource: InboxDataSource,
       publication: Option[ObjectId] = None
   ): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
-    val newId = ObjectId.generate
     val metadata =
       if (publication.isDefined)
         Json.arr(
@@ -94,37 +106,32 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
     val dataSourceHash = if (dataSource.isUsable) Some(dataSource.hashCode()) else None
     for {
-      organization <- organizationDAO.findOne(owningOrganization)
+      organization <- organizationDAO.findOne(dataSource.id.organizationId)
       organizationRootFolder <- folderDAO.findOne(organization._rootFolder)
-      // TODO doesn’t this cause problems in updateDatasource case?
-      datasetDirectoryName <- datasetDAO
-        .doesDatasetDirectoryExistInOrganization(datasetName, organization._id)
-        .map(if (_) s"$datasetName-${newId.toString}" else datasetName)
-      newDataSource = dataSource.withUpdatedId(dataSource.id.copy(directoryName = datasetDirectoryName))
       dataset = Dataset(
-        newId,
+        datasetId,
         dataStore.name,
         organization._id,
         publication,
         None,
         organizationRootFolder._id,
         dataSourceHash,
-        newDataSource.defaultViewConfiguration,
+        dataSource.defaultViewConfiguration,
         adminViewConfiguration = None,
         description = None,
-        directoryName = datasetDirectoryName,
+        directoryName = dataSource.id.directoryName,
         isPublic = false,
-        isUsable = newDataSource.isUsable,
+        isUsable = dataSource.isUsable,
         name = datasetName,
-        voxelSize = newDataSource.voxelSizeOpt,
+        voxelSize = dataSource.voxelSizeOpt,
         sharingToken = None,
-        status = newDataSource.statusOpt.getOrElse(""),
+        status = dataSource.statusOpt.getOrElse(""),
         logoUrl = None,
         metadata = metadata
       )
       _ <- datasetDAO.insertOne(dataset)
-      _ <- datasetDataLayerDAO.updateLayers(newId, newDataSource)
-      _ <- teamDAO.updateAllowedTeamsForDataset(newId, List())
+      _ <- datasetDataLayerDAO.updateLayers(datasetId, dataSource)
+      _ <- teamDAO.updateAllowedTeamsForDataset(datasetId, List())
     } yield dataset
   }
 
@@ -219,7 +226,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   private def insertNewDataset(dataSource: InboxDataSource, datasetName: String, dataStore: DataStore) =
     publicationForFirstDataset.flatMap { publicationId: Option[ObjectId] =>
-      createDataset(dataStore, dataSource.id.organizationId, datasetName, dataSource, publicationId).map(_._id)
+      createDataset(dataStore, ObjectId.generate, datasetName, dataSource, publicationId).map(_._id)
     }.futureBox
 
   private def publicationForFirstDataset: Fox[Option[ObjectId]] =

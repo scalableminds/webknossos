@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services.uploading
 import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.layers.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
@@ -31,8 +32,6 @@ import scala.concurrent.ExecutionContext
 case class ReserveUploadInformation(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
     name: String, // dataset name
-    directoryName: Option[String], // dataset directory name
-    newDatasetId: Option[String],
     organization: String,
     totalFileCount: Long,
     filePaths: Option[List[String]],
@@ -50,6 +49,14 @@ case class ReserveManualUploadInformation(datasetName: String,
 object ReserveManualUploadInformation {
   implicit val reserveUploadInformation: OFormat[ReserveManualUploadInformation] =
     Json.format[ReserveManualUploadInformation]
+}
+
+case class ReserveAdditionalInformation(newDatasetId: ObjectId,
+                                        directoryName: String,
+                                        layersToLink: Option[List[LinkedLayerIdentifier]])
+object ReserveAdditionalInformation {
+  implicit val reserveAdditionalInformation: OFormat[ReserveAdditionalInformation] =
+    Json.format[ReserveAdditionalInformation]
 }
 
 case class LinkedLayerIdentifier(organizationId: Option[String],
@@ -150,25 +157,25 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   def getDataSourceIdByUploadId(uploadId: String): Fox[DataSourceId] =
     getObjectFromRedis[DataSourceId](redisKeyForDataSourceId(uploadId))
 
-  def reserveUpload(reservedInfoByWk: ReserveUploadInformation): Fox[Unit] =
+  def reserveUpload(reservedInfoByWk: ReserveUploadInformation,
+                    reservedAdditionalInfo: ReserveAdditionalInformation): Fox[Unit] =
     for {
-      directoryName <- reservedInfoByWk.directoryName.toFox ?~> s"Directory name was not provided by core backend"
       _ <- dataSourceService.assertDataDirWritable(reservedInfoByWk.organization)
       _ <- runningUploadMetadataStore.insert(redisKeyForFileCount(reservedInfoByWk.uploadId),
                                              String.valueOf(reservedInfoByWk.totalFileCount))
       _ <- runningUploadMetadataStore.insert(
         redisKeyForDataSourceId(reservedInfoByWk.uploadId),
-        Json.stringify(Json.toJson(DataSourceId(directoryName, reservedInfoByWk.organization)))
+        Json.stringify(Json.toJson(DataSourceId(reservedAdditionalInfo.directoryName, reservedInfoByWk.organization)))
       )
       _ <- runningUploadMetadataStore.insert(
-        redisKeyForUploadId(DataSourceId(directoryName, reservedInfoByWk.organization)),
+        redisKeyForUploadId(DataSourceId(reservedAdditionalInfo.directoryName, reservedInfoByWk.organization)),
         reservedInfoByWk.uploadId
       )
       filePaths = Json.stringify(Json.toJson(reservedInfoByWk.filePaths.getOrElse(List.empty)))
       _ <- runningUploadMetadataStore.insert(redisKeyForFilePaths(reservedInfoByWk.uploadId), filePaths)
       _ <- runningUploadMetadataStore.insert(
         redisKeyForLinkedLayerIdentifier(reservedInfoByWk.uploadId),
-        Json.stringify(Json.toJson(LinkedLayerIdentifiers(reservedInfoByWk.layersToLink)))
+        Json.stringify(Json.toJson(LinkedLayerIdentifiers(reservedAdditionalInfo.layersToLink)))
       )
       _ = logger.info(
         f"Reserving dataset upload of ${reservedInfoByWk.organization}/${reservedInfoByWk.name} with id ${reservedInfoByWk.uploadId}...")

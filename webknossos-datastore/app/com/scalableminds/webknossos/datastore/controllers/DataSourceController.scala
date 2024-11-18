@@ -4,8 +4,17 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
-import com.scalableminds.webknossos.datastore.explore.{ExploreRemoteDatasetRequest, ExploreRemoteDatasetResponse, ExploreRemoteLayerService}
-import com.scalableminds.webknossos.datastore.helpers.{GetMultipleSegmentIndexParameters, GetSegmentIndexParameters, SegmentIndexData, SegmentStatisticsParameters}
+import com.scalableminds.webknossos.datastore.explore.{
+  ExploreRemoteDatasetRequest,
+  ExploreRemoteDatasetResponse,
+  ExploreRemoteLayerService
+}
+import com.scalableminds.webknossos.datastore.helpers.{
+  GetMultipleSegmentIndexParameters,
+  GetSegmentIndexParameters,
+  SegmentIndexData,
+  SegmentStatisticsParameters
+}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.services._
@@ -111,8 +120,6 @@ class DataSourceController @Inject()(
             ReserveUploadInformation(
               "aManualUpload",
               request.body.datasetName,
-              Some(request.body.datasetDirectoryName),
-              Some("newDatasetIdSetByCoreBackend"),
               request.body.organization,
               0,
               List.empty,
@@ -204,12 +211,14 @@ class DataSourceController @Inject()(
             for {
               (dataSourceId, datasetSizeBytes) <- uploadService
                 .finishUpload(request.body) ?~> "dataset.upload.finishFailed"
-              uploadedDatasetIdJson <- dsRemoteWebknossosClient.reportUpload(
-                dataSourceId,
-                datasetSizeBytes,
-                request.body.needsConversion.getOrElse(false),
-                viaAddRoute = false,
-                userToken = urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
+              uploadedDatasetIdJson <- dsRemoteWebknossosClient
+                .reportUpload( // TODO: here optimize return value here (no js unpacking and packing again)
+                  dataSourceId,
+                  datasetSizeBytes,
+                  request.body.needsConversion.getOrElse(false),
+                  viaAddRoute = false,
+                  userToken = urlOrHeaderToken(token, request)
+                ) ?~> "reportUpload.failed"
             } yield Ok(Json.obj("newDatasetId" -> uploadedDatasetIdJson))
           }
         } yield response
@@ -427,12 +436,10 @@ class DataSourceController @Inject()(
     Action.async(validateJson[DataSource]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {
         for {
-          reservedInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(
+          reservedAdditionalInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(
             ReserveUploadInformation(
               uploadId = "", // Set by core backend
               name = datasetName,
-              directoryName = Some(""), // Set by core backend
-              newDatasetId = Some(""), // Set by core backend
               organization = organizationId,
               totalFileCount = 1,
               filePaths = None,
@@ -442,8 +449,7 @@ class DataSourceController @Inject()(
             ),
             urlOrHeaderToken(token, request)
           ) ?~> "dataset.upload.validation.failed"
-          directoryName <- reservedInfo.directoryName.toFox ?~> "Directory name was not provided by core backend"
-          datasourceId = DataSourceId(directoryName, organizationId)
+          datasourceId = DataSourceId(reservedAdditionalInfo.directoryName, organizationId)
           _ <- dataSourceService.updateDataSource(request.body.copy(id = datasourceId), expectExisting = false)
           uploadedDatasetId <- dsRemoteWebknossosClient.reportUpload(
             datasourceId,

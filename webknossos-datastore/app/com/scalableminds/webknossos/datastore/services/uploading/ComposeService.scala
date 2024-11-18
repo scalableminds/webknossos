@@ -67,8 +67,6 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
       reserveUploadInfo = ReserveUploadInformation(
         "",
         composeRequest.newDatasetName,
-        Some(""), // filled by core backend
-        Some(""), // filled by core backend
         composeRequest.organizationId,
         1,
         None,
@@ -76,15 +74,16 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
         List(),
         Some(composeRequest.targetFolderId)
       )
-      reservedInfo <- remoteWebknossosClient.reserveDataSourceUpload(reserveUploadInfo, userToken) ?~> "Failed to reserve upload."
-      directoryName <- reservedInfo.directoryName.toFox ?~> "Directory name was not provided by core backend"
-      newDatasetId <- reservedInfo.newDatasetId.toFox ?~> "New dataset id was not provided by core backend"
-      directory = uploadDirectory(reservedInfo.organization, directoryName)
+      reservedAdditionalInfo <- remoteWebknossosClient.reserveDataSourceUpload(reserveUploadInfo, userToken) ?~> "Failed to reserve upload."
+      directory = uploadDirectory(composeRequest.organizationId, reservedAdditionalInfo.directoryName)
       _ = PathUtils.ensureDirectory(directory)
-      dataSource <- createDatasource(composeRequest, directoryName, reservedInfo.organization, directory)
+      dataSource <- createDatasource(composeRequest,
+                                     reservedAdditionalInfo.directoryName,
+                                     composeRequest.organizationId,
+                                     directory)
       properties = Json.toJson(dataSource).toString().getBytes(StandardCharsets.UTF_8)
       _ = Files.write(directory.resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON), properties)
-    } yield (dataSource, newDatasetId)
+    } yield (dataSource, reservedAdditionalInfo.newDatasetId.toString)
 
   private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer, uploadDir: Path): Fox[DataLayer] =
     for {

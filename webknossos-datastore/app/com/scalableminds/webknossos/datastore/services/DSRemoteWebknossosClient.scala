@@ -13,7 +13,10 @@ import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.uploading.ReserveUploadInformation
+import com.scalableminds.webknossos.datastore.services.uploading.{
+  ReserveAdditionalInformation,
+  ReserveUploadInformation
+}
 import com.scalableminds.webknossos.datastore.storage.DataVaultCredential
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
@@ -102,13 +105,13 @@ class DSRemoteWebknossosClient @Inject()(
       .put(dataSources)
 
   def reserveDataSourceUpload(info: ReserveUploadInformation,
-                              userTokenOpt: Option[String]): Fox[ReserveUploadInformation] =
+                              userTokenOpt: Option[String]): Fox[ReserveAdditionalInformation] =
     for {
       userToken <- option2Fox(userTokenOpt) ?~> "reserveUpload.noUserToken"
       reserveUploadInfo <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("token" -> userToken)
-        .postWithJsonResponse[ReserveUploadInformation, ReserveUploadInformation](info)
+        .postWithJsonResponse[ReserveUploadInformation, ReserveAdditionalInformation](info)
     } yield reserveUploadInfo
 
   def deleteDataSource(id: DataSourceId): Fox[_] =

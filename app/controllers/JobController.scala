@@ -124,9 +124,10 @@ class JobController @Inject()(
           voxelSizeFactor <- Vec3Double.fromUriLiteral(scale).toFox
           voxelSizeUnit <- Fox.runOptional(unit)(u => LengthUnit.fromString(u).toFox)
           voxelSize = VoxelSize.fromFactorAndUnitWithDefault(voxelSizeFactor, voxelSizeUnit)
-          organization <- organizationDAO.findOne(dataset._organization) ?~> Messages("organization.notFound",
-                                                                                      dataset._organization)
-          _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
+          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            dataset._organization)
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.convertToWkw.notAllowed.organization" ~> FORBIDDEN
           command = JobCommand.convert_to_wkw
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
@@ -228,8 +229,9 @@ class JobController @Inject()(
         for {
           datasetIdValidated <- ObjectId.fromString(datasetId)
           dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
-          organization <- organizationDAO.findOne(dataset._organization) ?~> Messages("organization.notFound",
-                                                                                      dataset._organization)
+          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            dataset._organization)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferNeurons.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
@@ -259,8 +261,9 @@ class JobController @Inject()(
         for {
           datasetIdValidated <- ObjectId.fromString(datasetId)
           dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
-          organization <- organizationDAO.findOne(dataset._organization) ?~> Messages("organization.notFound",
-                                                                                      dataset._organization)
+          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            dataset._organization)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferMitochondria.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
@@ -291,8 +294,9 @@ class JobController @Inject()(
         for {
           datasetIdValidated <- ObjectId.fromString(datasetId)
           dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
-          organization <- organizationDAO.findOne(dataset._organization) ?~> Messages("organization.notFound",
-                                                                                      dataset._organization)
+          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            dataset._organization)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.alignSections.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
@@ -413,8 +417,9 @@ class JobController @Inject()(
         for {
           datasetIdValidated <- ObjectId.fromString(datasetId)
           dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
-          organization <- organizationDAO.findOne(dataset._organization) ?~> Messages("organization.notFound",
-                                                                                      dataset._organization)
+          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            dataset._organization)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.findLargestSegmentId.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidLayerNameLax(layerName)
           command = JobCommand.find_largest_segment_id
@@ -436,8 +441,9 @@ class JobController @Inject()(
         for {
           datasetIdValidated <- ObjectId.fromString(datasetId)
           dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
-          organization <- organizationDAO.findOne(dataset._organization) ?~> Messages("organization.notFound",
-                                                                                      dataset._organization)
+          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            dataset._organization)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.renderAnimation.notAllowed.organization" ~> FORBIDDEN
           userOrganization <- organizationDAO.findOne(request.identity._organization)
           animationJobOptions = request.body

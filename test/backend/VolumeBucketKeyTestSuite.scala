@@ -26,14 +26,14 @@ class VolumeBucketKeyTestSuite extends PlaySpec {
       val bucketPos = BucketPosition(32, 64, 96, Vec3Int(1, 1, 1), None)
       "match defined bucket key" in {
         val key = bucketKeyBuilder.build(layerName, bucketPos)
-        assert(key == s"$layerName/1/53-[1,2,3]")
+        assert(key == s"$layerName/1/[1,2,3]")
       }
       "expands mag when anisotropic" in {
         val key = bucketKeyBuilder.build(layerName, BucketPosition(32, 64, 96, Vec3Int(4, 4, 1), None))
-        assert(key == s"$layerName/4-4-1/36-[0,0,3]")
+        assert(key == s"$layerName/4-4-1/[0,0,3]")
       }
       "is parsed as the same bucket position" in {
-        bucketKeyBuilder.parse(s"$layerName/1/53-[1,2,3]", None) match {
+        bucketKeyBuilder.parse(s"$layerName/1/[1,2,3]", None) match {
           case Some((layer, parsedPos)) =>
             assert(layer == layerName)
             assert(parsedPos == bucketPos)
@@ -56,10 +56,10 @@ class VolumeBucketKeyTestSuite extends PlaySpec {
           bucketPos,
           Some(additionalAxes)
         )
-        assert(key == s"$layerName/1/53-[4,5][1,2,3]")
+        assert(key == s"$layerName/1/[4,5][1,2,3]")
       }
       "is parsed as the same bucket position" in {
-        bucketKeyBuilder.parse(s"$layerName/1/53-[4,5][1,2,3]", Some(additionalAxes)) match {
+        bucketKeyBuilder.parse(s"$layerName/1/[4,5][1,2,3]", Some(additionalAxes)) match {
           case Some((layer, parsedPos)) =>
             assert(layer == layerName)
             assert(parsedPos == bucketPos)
@@ -73,7 +73,7 @@ class VolumeBucketKeyTestSuite extends PlaySpec {
           BucketPosition(32, 64, 96, Vec3Int(1, 1, 1), Some(additionalCoordinates.reverse)),
           Some(additionalAxes)
         )
-        assert(key == s"$layerName/1/53-[4,5][1,2,3]")
+        assert(key == s"$layerName/1/[4,5][1,2,3]")
       }
     }
   }

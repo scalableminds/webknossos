@@ -7,16 +7,30 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
-import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto}
+import com.scalableminds.webknossos.datastore.Annotation.{
+  AnnotationLayerProto,
+  AnnotationLayerTypeProto,
+  AnnotationProto
+}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{EditableMappingLayer, EditableMappingService, EditableMappingUpdateAction, EditableMappingUpdater}
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
+  EditableMappingLayer,
+  EditableMappingService,
+  EditableMappingUpdateAction,
+  EditableMappingUpdater
+}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{CreateNodeSkeletonAction, DeleteNodeSkeletonAction, SkeletonUpdateAction, UpdateTracingSkeletonAction}
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{
+  CreateNodeSkeletonAction,
+  DeleteNodeSkeletonAction,
+  SkeletonUpdateAction,
+  UpdateTracingSkeletonAction
+}
 import com.scalableminds.webknossos.tracingstore.tracings.volume._
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
@@ -42,9 +56,13 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     with UpdateGroupHandling
     with LazyLogging {
 
+  // two-level caching: outer key: annotation id; inner key version
+  // This way we cache at most two versions of the same annotation, and at most 1000 different annotations
   private lazy val materializedAnnotationWithTracingCache =
-    // annotation id, version
-    AlfuCache[(String, Long), AnnotationWithTracings](maxCapacity = 1000)
+    AlfuCache[String, AlfuCache[Long, AnnotationWithTracings]](maxCapacity = 1000)
+
+  private def newInnerCache(implicit ec: ExecutionContext): Fox[AlfuCache[Long, AnnotationWithTracings]] =
+    Fox.successful(AlfuCache[Long, AnnotationWithTracings](maxCapacity = 2))
 
   def get(annotationId: String, version: Option[Long])(implicit ec: ExecutionContext,
                                                        tc: TokenContext): Fox[AnnotationProto] =
@@ -71,8 +89,10 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       targetVersion <- determineTargetVersion(annotationId, newestMaterialized, version) ?~> "determineTargetVersion.failed"
       // When requesting any other than the newest version, do not consider the changes final
       reportChangesToWk = version.isEmpty || version.contains(targetVersion)
-      updatedAnnotation <- materializedAnnotationWithTracingCache.getOrLoad(
-        (annotationId, targetVersion),
+      materializedAnnotationInnerCache <- materializedAnnotationWithTracingCache.getOrLoad(annotationId,
+                                                                                           _ => newInnerCache)
+      updatedAnnotation <- materializedAnnotationInnerCache.getOrLoad(
+        targetVersion,
         _ => getWithTracingsVersioned(annotationId, targetVersion, reportChangesToWk = reportChangesToWk)
       )
     } yield updatedAnnotation

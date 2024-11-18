@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer
 import com.scalableminds.webknossos.schema.Tables._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationState._
-import models.annotation.AnnotationType.AnnotationType
+import models.annotation.AnnotationType.{AnnotationType, Explorational}
 import play.api.libs.json._
 import slick.jdbc.GetResult._
 import slick.jdbc.PostgresProfile.api._
@@ -359,20 +359,34 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     // format: on
   }
 
+  /**
+    * Find all annotations which are listable by the user specified in 'forUser'
+    *
+    *  @param isFinished
+    *  If set to true, only finished annotations are returned. If set to false, only active annotations are returned.
+    *  If set to None, all non-cancelled annotations are returned.
+    *  @param forUser
+    *  If set, only annotations of this user are returned. If not set, all annotations are returned.
+    * @param filterOwnedOrShared
+    * In the dashboard, list only own + explicitly shared annotations (TRUE). When listing those of another user, list
+    * all of their annotations the viewer is allowed to see (FALSE).
+    * @param limit
+    * The maximum number of annotations to return.
+    * @param pageNumber
+    * The page number to return. The first page is 0.
+    */
   def findAllListableExplorationals(
       isFinished: Option[Boolean],
       forUser: Option[ObjectId],
-      // In dashboard, list only own + explicitly shared annotations. When listing those of another user, list all of their annotations the viewer is allowed to see
-      isForOwnDashboard: Boolean,
-      typ: AnnotationType,
+      filterOwnedOrShared: Boolean,
       limit: Int,
       pageNumber: Int = 0)(implicit ctx: DBAccessContext): Fox[List[AnnotationCompactInfo]] =
     for {
-      accessQuery <- if (isForOwnDashboard) accessQueryFromAccessQWithPrefix(listAccessQ, q"a.")
+      accessQuery <- if (filterOwnedOrShared) accessQueryFromAccessQWithPrefix(listAccessQ, q"a.")
       else accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, q"a.")
       stateQuery = getStateQuery(isFinished)
       userQuery = forUser.map(u => q"a._user = $u").getOrElse(q"TRUE")
-      typQuery = q"a.typ = $typ"
+      typQuery = q"a.typ = ${AnnotationType.Explorational}"
 
       query = q"""WITH
                     -- teams_agg is extracted to avoid left-join fanout.

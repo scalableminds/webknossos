@@ -546,7 +546,6 @@ class AnnotationController @Inject()(
           isFinished,
           None,
           isForOwnDashboard = true,
-          AnnotationType.Explorational,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
           pageNumber.getOrElse(0)
         )

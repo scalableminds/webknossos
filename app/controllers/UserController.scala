@@ -64,7 +64,6 @@ class UserController @Inject()(userService: UserService,
           isFinished,
           Some(request.identity._id),
           isForOwnDashboard = true,
-          AnnotationType.Explorational,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
           pageNumber.getOrElse(0)
         )
@@ -119,7 +118,6 @@ class UserController @Inject()(userService: UserService,
           isFinished,
           Some(userIdValidated),
           isForOwnDashboard = false,
-          AnnotationType.Explorational,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
           pageNumber.getOrElse(0)
         )

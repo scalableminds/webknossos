@@ -368,8 +368,8 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     *  @param forUser
     *  If set, only annotations of this user are returned. If not set, all annotations are returned.
     * @param filterOwnedOrShared
-    * In the dashboard, list only own + explicitly shared annotations (TRUE). When listing those of another user, list
-    * all of their annotations the viewer is allowed to see (FALSE).
+    * If `true`, the function lists only annotations owned by the user or explicitly shared with them (used for the
+    * user's own dashboard). If `false`, it lists all annotations the viewer is allowed to see.
     * @param limit
     * The maximum number of annotations to return.
     * @param pageNumber

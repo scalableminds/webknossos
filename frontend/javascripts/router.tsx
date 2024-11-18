@@ -69,6 +69,7 @@ import loadable from "libs/lazy_loader";
 import type { EmptyObject } from "types/globals";
 import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import AiModelListView from "admin/voxelytics/ai_model_list_view";
+import { CheckTermsOfServices } from "components/terms_of_services_check";
 
 const { Content } = Layout;
 
@@ -212,6 +213,7 @@ class ReactRouter extends React.Component<Props> {
       <Router history={browserHistory}>
         <Layout>
           <DisableGenericDnd />
+          <CheckTermsOfServices />
           <Navbar isAuthenticated={isAuthenticated} />
           <HelpButton />
           <Content>

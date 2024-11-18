@@ -113,7 +113,7 @@ test.before("Retrieve dataset ids", async () => {
       3,
       async () => {
         const response = await fetch(
-          `${URL}/api/datasets/disambiguate/sample_organization/${datasetName}/toId`,
+          `${URL}/api/datasets/disambiguate/sample_organization/${datasetName}/toId?token=${WK_AUTH_TOKEN}`,
         );
         const { datasetId } = await response.json();
         datasetNameToId[datasetName] = datasetId;

@@ -699,7 +699,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
               </div>
               <div className="flex-container">
                 <div className="flex-item" style={{ flexGrow: 0 }}>
-                  {teamTags.length > 0 ? <TeamOutlined /> : null}
+                  {teamTags.length > 0 ? <TeamOutlined className="icon-margin-right"/> : null}
                 </div>
                 <div className="flex-item">{teamTags}</div>
               </div>

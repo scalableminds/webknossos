@@ -23,7 +23,7 @@ import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import play.api.data.Form
 import play.api.data.Forms.{email, _}
 import play.api.data.validation.Constraints._
-import play.api.i18n.Messages
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, Cookie, PlayBodyParsers, Request, Result}
 import security.{
@@ -622,7 +622,7 @@ class AuthenticationController @Inject()(
                     _ <- organizationService
                       .createOrganizationDirectory(organization._id, dataStoreToken) ?~> "organization.folderCreation.failed"
                     _ <- Fox.runOptional(signUpData.acceptedTermsOfService)(version =>
-                      organizationService.acceptTermsOfService(organization._id, version))
+                      acceptTermsOfServiceForUser(user, version))
                   } yield {
                     Mailer ! Send(defaultMails
                       .newOrganizationMail(organization.name, email, request.headers.get("Host").getOrElse("")))
@@ -638,6 +638,13 @@ class AuthenticationController @Inject()(
         }
       )
   }
+
+  private def acceptTermsOfServiceForUser(user: User, termsOfServiceVersion: Int)(implicit m: MessagesProvider) =
+    for {
+      _ <- organizationService.acceptTermsOfService(user._organization, termsOfServiceVersion)(
+        DBAccessContext(Some(user)),
+        m)
+    } yield ()
 
   case class CreateUserInOrganizationParameters(firstName: String,
                                                 lastName: String,

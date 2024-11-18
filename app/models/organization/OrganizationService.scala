@@ -26,8 +26,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
                                     folderService: FolderService,
                                     userService: UserService,
                                     rpc: RPC,
-                                    conf: WkConf,
-)(implicit ec: ExecutionContext)
+                                    conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 
@@ -168,7 +167,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     fallbackOnOwnerEmail(organization.newUserMailingList, organization)
 
   def acceptTermsOfService(organizationId: String, version: Int)(implicit ctx: DBAccessContext,
-                                                                 mp: MessagesProvider): Fox[Unit] =
+                                                                 m: MessagesProvider): Fox[Unit] =
     for {
       _ <- bool2Fox(conf.WebKnossos.TermsOfService.enabled) ?~> "termsOfService.notEnabled"
       requiredVersion = conf.WebKnossos.TermsOfService.version

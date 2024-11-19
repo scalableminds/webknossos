@@ -9,8 +9,6 @@ import datetime
 import fossildbapi_pb2 as proto
 import fossildbapi_pb2_grpc as proto_rpc
 
-MAX_MESSAGE_LENGTH = 2147483647
-
 def main():
 
     listKeysBatchSize = 300
@@ -21,7 +19,53 @@ def main():
     test_health(src_stub, f"source fossildb at {src_host}")
     test_health(dst_stub, f"destination fossildb at {dst_host}")
 
+    annotations = read_annotation_list()
 
+    for annotation in annotations:
+        migrate_annotation(annotation)
+
+
+def migrate_annotation(annotation):
+    print(f"Migrating annotation {annotation}")
+    # layerId → {version_before → version_after}
+    layer_version_mapping = migrate_updates(annotation)
+    migrate_materialized_layers(annotation, layer_version_mapping)
+
+def migrate_updates(annotation):
+    layers = annotation.layers
+
+def migrate_materialized_layers(annotation):
+    for layer in annotation.layers:
+        migrate_materialized_layer(layer, layer_version_mapping)
+
+def migrate_materialized_layer(layer, layer_version_mapping):
+    if layer.type == "Skeleton":
+        migrate_skeleton_proto(layer, layer_version_mapping)
+    if layer_type == "Volume"
+        migrate_volume_proto(layer, layer_version_mapping)
+        migrate_volume_buckets(layer, layer_version_mapping)
+        migrate_segment_index(layer, layer_version_mapping)
+        migrate_editable_mapping(layer, layer_version_mapping)
+
+def migrate_editable_mapping(layer, layer_version_mapping):
+    migrate_editable_mapping_info(layer, layer_version_mapping)
+    migrate_editable_mapping_agglomerate_to_graph(layer, layer_version_mapping)
+    migrate_editable_mapping_segment_to_agglomerate(layer, layer_version_mapping)
+
+def migrate_editable_mapping_info(layer, layer_version_mapping):
+    pass
+
+def migrate_editable_mapping_agglomerate_to_graph(layer, layer_version_mapping):
+    pass
+
+def migrate_editable_mapping_segment_to_agglomerate(layer, layer_version_mapping):
+    pass
+
+def insert_annotation_protos(annotation, layer_version_mapping):
+    pass
+
+def read_annotation_list():
+    return []
 
 
 def connect(host):

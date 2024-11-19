@@ -872,13 +872,11 @@ class AnnotationService @Inject()(
     }
   }
 
-  def updateStatistics(annotationId: ObjectId, statistics: JsObject): Fox[Unit] = {
-    Fox.serialCombined(statistics.value.toSeq) {
+  def updateStatistics(annotationId: ObjectId, statistics: JsObject): Unit =
+    // Fail silently, because the layer may not (yet/anymore) be present in postgres at this time
+    statistics.value.toSeq.map {
       case (tracingId, statisticsForTracing) =>
         annotationLayerDAO.updateStatistics(annotationId, tracingId, statisticsForTracing)
     }
-    // TODO test + remove this line once frontend is adapted
-    Fox.successful(())
-  }
 
 }

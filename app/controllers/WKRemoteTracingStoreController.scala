@@ -88,8 +88,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           annotation <- annotationDAO.findOne(annotationId)
           _ <- ensureAnnotationNotFinished(annotation)
           _ <- annotationDAO.updateModified(annotation._id, Instant.now)
-          _ <- Fox.runOptional(report.statistics)(statistics =>
-            annotationService.updateStatistics(annotation._id, statistics))
+          _ = report.statistics.map(statistics => annotationService.updateStatistics(annotation._id, statistics))
           userBox <- bearerTokenService.userForTokenOpt(report.userToken).futureBox
           trackTime = report.significantChangesCount > 0 || !wkConf.WebKnossos.User.timeTrackingOnlyWithSignificantChanges
           _ <- Fox.runOptional(userBox)(user =>

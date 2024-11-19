@@ -8,4 +8,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ## Unreleased
 [Commits](https://github.com/scalableminds/webknossos/compare/24.11.1...HEAD)
 
+- The config option `googleAnalytics.trackingId` is no longer used and can be removed. [#8201](https://github.com/scalableminds/webknossos/pull/8201)
+
 ### Postgres Evolutions:

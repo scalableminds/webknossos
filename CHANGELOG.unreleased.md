@@ -21,6 +21,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fix a bug where trying to delete a non-existing node (via the API, for example) would delete the whole active tree. [#8176](https://github.com/scalableminds/webknossos/pull/8176)
 
 ### Removed
-- Removed Google Analytics integration. [#8201](https://github.com/scalableminds/webknossos/pull
+- Removed Google Analytics integration. [#8201](https://github.com/scalableminds/webknossos/pull/8201)
 
 ### Breaking Changes

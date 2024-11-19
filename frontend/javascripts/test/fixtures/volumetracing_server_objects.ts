@@ -1,4 +1,8 @@
-import type { ServerVolumeTracing, APIAnnotation } from "types/api_flow_types";
+import {
+  type ServerVolumeTracing,
+  type APIAnnotation,
+  AnnotationLayerType,
+} from "types/api_flow_types";
 export const tracing: ServerVolumeTracing = {
   typ: "Volume",
   activeSegmentId: 10000,
@@ -69,6 +73,7 @@ export const tracing: ServerVolumeTracing = {
 export const annotation: APIAnnotation = {
   description: "",
   state: "Active",
+  version: 0,
   id: "598b52293c00009906f043e7",
   visibility: "Internal",
   modified: 1529066010230,
@@ -86,8 +91,7 @@ export const annotation: APIAnnotation = {
     {
       name: "volume",
       tracingId: "tracingId-1234",
-      typ: "Volume",
-      stats: {},
+      typ: AnnotationLayerType.Volume,
     },
   ],
   dataSetName: "ROI2017_wkw",

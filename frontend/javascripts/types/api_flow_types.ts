@@ -9,10 +9,7 @@ import type {
   MeshInformation,
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
-import type {
-  SkeletonTracingStats,
-  TracingStats,
-} from "oxalis/model/accessors/annotation_accessor";
+import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
 import type {
   Vector3,
   Vector6,
@@ -472,7 +469,6 @@ export type AnnotationLayerDescriptor = {
   name: string;
   tracingId: string;
   typ: AnnotationLayerType;
-  stats: TracingStats | EmptyObject;
 };
 export type EditableLayerProperties = {
   name: string;
@@ -487,7 +483,7 @@ export type APIAnnotationInfo = {
   readonly name: string;
   // Not used by the front-end anymore, but the
   // backend still serves this for backward-compatibility reasons.
-  readonly stats?: SkeletonTracingStats | EmptyObject;
+  readonly stats?: TracingStats | EmptyObject | null | undefined;
   readonly state: string;
   readonly isLockedByOwner: boolean;
   readonly tags: Array<string>;
@@ -573,7 +569,7 @@ export type APITimeTrackingPerAnnotation = {
   task: string | undefined;
   projectName: string | undefined;
   timeMillis: number;
-  annotationLayerStats: Array<TracingStats>;
+  annotationLayerStats: TracingStats;
 };
 type APITracingStoreAnnotationLayer = {
   tracingId: string;

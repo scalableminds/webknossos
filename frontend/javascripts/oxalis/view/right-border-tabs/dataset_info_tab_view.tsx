@@ -13,7 +13,12 @@ import {
   getMagnificationUnion,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
-import { getStats, type CombinedTracingStats } from "oxalis/model/accessors/annotation_accessor";
+import {
+  getSkeletonStats,
+  getStats,
+  getVolumeStats,
+  type TracingStats,
+} from "oxalis/model/accessors/annotation_accessor";
 import {
   setAnnotationNameAction,
   setAnnotationDescriptionAction,
@@ -29,6 +34,7 @@ import { getOrganization } from "admin/admin_rest_api";
 import { MarkdownModal } from "../components/markdown_modal";
 import FastTooltip from "components/fast_tooltip";
 import messages from "messages";
+import type { EmptyObject } from "types/globals";
 
 type StateProps = {
   annotation: Tracing;
@@ -179,14 +185,24 @@ export function AnnotationStats({
   asInfoBlock,
   withMargin,
 }: {
-  stats: CombinedTracingStats;
+  stats: TracingStats | EmptyObject | null | undefined;
   asInfoBlock: boolean;
   withMargin?: boolean | null | undefined;
 }) {
+  if (!stats || Object.keys(stats).length === 0) return null;
   const formatLabel = (str: string) => (asInfoBlock ? str : "");
   const useStyleWithMargin = withMargin != null ? withMargin : true;
   const styleWithLargeMarginBottom = { marginBottom: 14 };
   const styleWithSmallMargin = { margin: 2 };
+  const skeletonStats = getSkeletonStats(stats);
+  const volumeStats = getVolumeStats(stats);
+  const totalSegmentCount = volumeStats.reduce((sum, [_, volume]) => sum + volume.segmentCount, 0);
+  const segmentCountDetails = volumeStats
+    .map(
+      ([layerName, volume]) =>
+        `<p>${layerName}: ${volume.segmentCount} ${pluralize("Segment", volume.segmentCount)}</p>`,
+    )
+    .join("");
 
   return (
     <div
@@ -196,14 +212,14 @@ export function AnnotationStats({
       {asInfoBlock && <p className="sidebar-label">Statistics</p>}
       <table className={asInfoBlock ? "annotation-stats-table" : "annotation-stats-table-slim"}>
         <tbody>
-          {"treeCount" in stats ? (
+          {skeletonStats && "treeCount" in skeletonStats ? (
             <FastTooltip
               placement="left"
               html={`
-                  <p>Trees: ${safeNumberToStr(stats.treeCount)}</p>
-                  <p>Nodes: ${safeNumberToStr(stats.nodeCount)}</p>
-                  <p>Edges: ${safeNumberToStr(stats.edgeCount)}</p>
-                  <p>Branchpoints: ${safeNumberToStr(stats.branchPointCount)}</p>
+                  <p>Trees: ${safeNumberToStr(skeletonStats.treeCount)}</p>
+                  <p>Nodes: ${safeNumberToStr(skeletonStats.nodeCount)}</p>
+                  <p>Edges: ${safeNumberToStr(skeletonStats.edgeCount)}</p>
+                  <p>Branchpoints: ${safeNumberToStr(skeletonStats.branchPointCount)}</p>
                 `}
               wrapper="tr"
             >
@@ -215,17 +231,18 @@ export function AnnotationStats({
                 />
               </td>
               <td>
-                {stats.treeCount} {formatLabel(pluralize("Tree", stats.treeCount))}
+                {skeletonStats.treeCount} {formatLabel(pluralize("Tree", skeletonStats.treeCount))}
               </td>
             </FastTooltip>
           ) : null}
-          {"segmentCount" in stats ? (
+          {volumeStats.length > 0 ? (
             <FastTooltip
               placement="left"
-              title={`${stats.segmentCount} ${pluralize("Segment", stats.segmentCount)} – Only segments that were manually registered (either brushed or
-                                      interacted with) are counted in this statistic. Segmentation layers
-                                      created from automated workflows (also known as fallback layers) are not
-                                      considered currently.`}
+              title={`${segmentCountDetails}
+                      Only segments that were manually registered (either brushed or
+                      interacted with) are counted in this statistic. Segmentation layers
+                      created from automated workflows (also known as fallback layers) are not
+                      considered currently.`}
               wrapper="tr"
             >
               <td>
@@ -236,7 +253,7 @@ export function AnnotationStats({
                 />
               </td>
               <td>
-                {stats.segmentCount} {formatLabel(pluralize("Segment", stats.segmentCount))}
+                {totalSegmentCount} {formatLabel(pluralize("Segment", totalSegmentCount))}
               </td>
             </FastTooltip>
           ) : null}

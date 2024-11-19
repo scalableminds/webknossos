@@ -36,9 +36,13 @@ import type {
   DeleteSegmentUpdateAction,
   MoveTreeComponentUpdateAction,
   MergeTreeUpdateAction,
+  UpdateAnnotationLayerNameUpdateAction,
   UpdateMappingNameUpdateAction,
   DeleteSegmentDataUpdateAction,
   UpdateActionWithTracingId,
+  AddLayerToAnnotationUpdateAction,
+  DeleteAnnotationLayerUpdateAction,
+  UpdateMetadataOfAnnotationUpdateAction,
 } from "oxalis/model/sagas/update_actions";
 import FormattedDate from "components/formatted_date";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
@@ -248,6 +252,29 @@ const descriptionFns: Record<
   }),
   updateSkeletonTracing: (): Description => updateTracingDescription,
   updateVolumeTracing: (): Description => updateTracingDescription,
+  addLayerToAnnotation: (action: AddLayerToAnnotationUpdateAction): Description => ({
+    description: `Added the layer ${action.value.layerParameters.name} to the annotation.`,
+    icon: <PlusOutlined />,
+  }),
+  deleteLayerFromAnnotation: (action: DeleteAnnotationLayerUpdateAction): Description => ({
+    description: `Deleted the layer with id ${action.value.layerName} (${action.value.tracingId}) from the annotation.`,
+    icon: <DeleteOutlined />,
+  }),
+  updateLayerMetadata: (action: UpdateAnnotationLayerNameUpdateAction): Description => ({
+    description: `Updated the name of the layer with id ${action.value.tracingId} to ${action.value.layerName}.`,
+    icon: <EditOutlined />,
+  }),
+  updateMetadataOfAnnotation: (action: UpdateMetadataOfAnnotationUpdateAction): Description => {
+    const updatedName = action.value.name != null;
+    const updatedDescription = action.value.description != null;
+    const updatedText =
+      updatedName && updatedDescription
+        ? "name and description"
+        : updatedName
+          ? "name"
+          : "description";
+    return { description: `Updated the ${updatedText} of the annotation.`, icon: <EditOutlined /> };
+  },
 } as const;
 
 function maybeGetReadableVolumeTracingName(tracing: HybridTracing, tracingId: string): string {

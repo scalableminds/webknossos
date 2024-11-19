@@ -71,7 +71,7 @@ test.serial(
       ],
       TIMESTAMP,
       TaskTracing.id,
-      getStats(state.tracing, "skeleton", "irrelevant_in_skeleton_case") || undefined,
+      getStats(state.tracing) || undefined,
     );
     // Reset the info field which is just for debugging purposes
     const actualSaveQueue = state.save.queue.map((entry) => {
@@ -89,7 +89,7 @@ test.serial("Save actions should not be chunked below the chunk limit (1/3)", (t
   const trees = generateDummyTrees(1000, 1);
   Store.dispatch(addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), []));
   t.is(Store.getState().save.queue.length, 1);
-  t.true(Store.getState().save.queue[0].actions.length < MAXIMUM_ACTION_COUNT_PER_BATCH.skeleton);
+  t.true(Store.getState().save.queue[0].actions.length < MAXIMUM_ACTION_COUNT_PER_BATCH);
 });
 
 test.serial("Save actions should be chunked above the chunk limit (2/3)", (t) => {
@@ -99,7 +99,7 @@ test.serial("Save actions should be chunked above the chunk limit (2/3)", (t) =>
   Store.dispatch(addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), []));
   const state = Store.getState();
   t.true(state.save.queue.length > 1);
-  t.is(state.save.queue[0].actions.length, MAXIMUM_ACTION_COUNT_PER_BATCH.skeleton);
+  t.is(state.save.queue[0].actions.length, MAXIMUM_ACTION_COUNT_PER_BATCH);
 });
 
 test.serial("Save actions should be chunked after compacting (3/3)", (t) => {
@@ -116,6 +116,6 @@ test.serial("Save actions should be chunked after compacting (3/3)", (t) => {
   const skeletonSaveQueue = Store.getState().save.queue;
   // There should only be one chunk
   t.is(skeletonSaveQueue.length, 1);
-  t.true(skeletonSaveQueue[0].actions.length < MAXIMUM_ACTION_COUNT_PER_BATCH.skeleton);
+  t.true(skeletonSaveQueue[0].actions.length < MAXIMUM_ACTION_COUNT_PER_BATCH);
   t.is(skeletonSaveQueue[0].actions[1].name, "moveTreeComponent");
 });

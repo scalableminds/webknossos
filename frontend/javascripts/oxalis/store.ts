@@ -28,7 +28,7 @@ import type {
   AdditionalAxis,
   MetadataEntryProto,
 } from "types/api_flow_types";
-import type { CombinedTracingStats } from "oxalis/model/accessors/annotation_accessor";
+import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import type {
   BoundingBoxType,
@@ -196,6 +196,7 @@ export type Annotation = {
   readonly visibility: AnnotationVisibility;
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
   readonly tags: Array<string>;
+  readonly stats: TracingStats | null | undefined;
   readonly description: string;
   readonly name: string;
   readonly tracingStore: APITracingStore;
@@ -450,7 +451,7 @@ export type SaveQueueEntry = {
   transactionId: string;
   transactionGroupCount: number;
   transactionGroupIndex: number;
-  stats: CombinedTracingStats | null | undefined;
+  stats: TracingStats | null | undefined;
   info: string;
 };
 export type ProgressInfo = {

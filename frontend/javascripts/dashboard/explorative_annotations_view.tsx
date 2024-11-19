@@ -66,7 +66,6 @@ import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_acces
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import type { SearchProps } from "antd/lib/input";
-import { getCombinedStatsFromServerAnnotation } from "oxalis/model/accessors/annotation_accessor";
 import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import { updateMetadataOfAnnotation } from "oxalis/model/sagas/update_actions";
@@ -697,7 +696,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
               </div>
               <div className="flex-container">
                 <div className="flex-item" style={{ flexGrow: 0 }}>
-                  {teamTags.length > 0 ? <TeamOutlined className="icon-margin-right"/> : null}
+                  {teamTags.length > 0 ? <TeamOutlined className="icon-margin-right" /> : null}
                 </div>
                 <div className="flex-item">{teamTags}</div>
               </div>
@@ -709,11 +708,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         title: "Stats",
         width: 150,
         render: (__: any, annotation: APIAnnotationInfo) => (
-          <AnnotationStats
-            stats={getCombinedStatsFromServerAnnotation(annotation)}
-            asInfoBlock={false}
-            withMargin={false}
-          />
+          <AnnotationStats stats={annotation.stats} asInfoBlock={false} withMargin={false} />
         ),
       },
       {

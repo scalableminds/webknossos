@@ -820,7 +820,7 @@ export function createExplorational(
 
 export async function getTracingsForAnnotation(
   annotation: APIAnnotation,
-  version: number | null | undefined,
+  version?: number | null | undefined,
 ): Promise<Array<ServerTracing>> {
   const skeletonLayers = annotation.annotationLayers.filter(
     (layer) => layer.typ === AnnotationLayerType.Skeleton,

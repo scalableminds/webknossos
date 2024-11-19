@@ -4,7 +4,7 @@ import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, SaveState } from "oxalis/store";
 import type { SetVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
-import { type CombinedTracingStats, getStats } from "oxalis/model/accessors/annotation_accessor";
+import { type TracingStats, getStats } from "oxalis/model/accessors/annotation_accessor";
 import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
 import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import Date from "libs/date";
@@ -39,12 +39,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
       // update actions.
       const dispatchedAction = action;
       const { items, transactionId } = dispatchedAction;
-      const stats: CombinedTracingStats | null = _.some(
-        dispatchedAction.items,
-        (ua) => ua.name !== "updateSkeletonTracing" && ua.name !== "updateVolumeTracing",
-      )
-        ? getStats(state.tracing)
-        : null;
+      const stats: TracingStats = getStats(state.tracing);
       const { activeUser } = state;
       if (activeUser == null) {
         throw new Error("Tried to save something even though user is not logged in.");

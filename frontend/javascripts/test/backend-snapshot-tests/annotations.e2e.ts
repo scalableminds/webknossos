@@ -6,13 +6,10 @@ import {
   writeTypeCheckingFile,
 } from "test/e2e-setup";
 import type { APIAnnotation } from "types/api_flow_types";
-import { APIAnnotationTypeEnum } from "types/api_flow_types";
+import { AnnotationLayerType, APIAnnotationTypeEnum } from "types/api_flow_types";
 import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import {
-  getNullableSkeletonTracing,
-  getSkeletonDescriptor,
-} from "oxalis/model/accessors/skeletontracing_accessor";
+import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import { sendRequestWithToken, addVersionNumbers } from "oxalis/model/sagas/save_saga";
 import * as UpdateActions from "oxalis/model/sagas/update_actions";
@@ -79,27 +76,23 @@ test.serial("finishAnnotation() and reOpenAnnotation() for explorational", async
 test.serial("editAnnotation()", async (t) => {
   const annotationId = "68135c192faeb34c0081c05d";
   const originalAnnotation = await api.getMaybeOutdatedAnnotationInformation(annotationId);
-  const { name, visibility, description } = originalAnnotation;
+  const { visibility } = originalAnnotation;
   const newName = "new name";
   const newVisibility = "Public";
   const newDescription = "new description";
   await api.editAnnotation(annotationId, APIAnnotationTypeEnum.Explorational, {
-    name: newName,
     visibility: newVisibility,
-    description: newDescription,
   });
   const editedAnnotation = await api.getMaybeOutdatedAnnotationInformation(annotationId);
   t.is(editedAnnotation.name, newName);
   t.is(editedAnnotation.visibility, newVisibility);
   t.is(editedAnnotation.description, newDescription);
   t.is(editedAnnotation.id, annotationId);
-  t.is(editedAnnotation.annotationLayers[0].typ, "Skeleton");
+  t.is(editedAnnotation.annotationLayers[0].typ, AnnotationLayerType.Skeleton);
   t.is(editedAnnotation.annotationLayers[0].tracingId, "ae417175-f7bb-4a34-8187-d9c3b50143af");
   t.snapshot(replaceVolatileValues(editedAnnotation));
   await api.editAnnotation(annotationId, APIAnnotationTypeEnum.Explorational, {
-    name,
     visibility,
-    description,
   });
 });
 test.serial("finishAllAnnotations()", async (t) => {
@@ -151,7 +144,6 @@ test.serial("getTracingsForAnnotation() for hybrid", async (t) => {
 });
 
 async function sendUpdateActions(explorational: APIAnnotation, queue: SaveQueueEntry[]) {
-  console.log("explorational.annotationId:", explorational.annotationId);
   return sendRequestWithToken(
     `${explorational.tracingStore.url}/tracings/annotation/${explorational.id}/update?token=`,
     {
@@ -161,6 +153,8 @@ async function sendUpdateActions(explorational: APIAnnotation, queue: SaveQueueE
     },
   );
 }
+
+// TODOM: Add tests for new update actions added in this pr (including updateAnnotationMetadata as this part of testing was removed editAnnotation() test case)
 
 test.serial("Send update actions and compare resulting tracing", async (t) => {
   const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
@@ -243,7 +237,11 @@ test("Update Metadata for Skeleton Tracing", async (t) => {
   };
   const updateTreeAction = UpdateActions.updateTree(trees[1]);
   const [saveQueue] = addVersionNumbers(
-    createSaveQueueFromUpdateActions([createTreesUpdateActions, [updateTreeAction]], 123456789, createdExplorational.annotationLayers[0].tracingId),
+    createSaveQueueFromUpdateActions(
+      [createTreesUpdateActions, [updateTreeAction]],
+      123456789,
+      createdExplorational.annotationLayers[0].tracingId,
+    ),
     0,
   );
 

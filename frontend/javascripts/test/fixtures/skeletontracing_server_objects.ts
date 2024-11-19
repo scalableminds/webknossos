@@ -183,7 +183,6 @@ export const annotation: APIAnnotation = {
       name: AnnotationLayerType.Skeleton,
       tracingId: "47e37793-d0be-4240-a371-87ce68561a13",
       typ: AnnotationLayerType.Skeleton,
-      stats: {},
     },
   ],
   dataSetName: "ROI2017_wkw",

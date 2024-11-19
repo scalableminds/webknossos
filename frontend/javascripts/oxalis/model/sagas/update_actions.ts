@@ -55,10 +55,10 @@ export type RevertToVersionUpdateAction = ReturnType<typeof revertToVersion>;
 export type RemoveFallbackLayerUpdateAction = ReturnType<typeof removeFallbackLayer>;
 export type UpdateTdCameraUpdateAction = ReturnType<typeof updateTdCamera>;
 export type UpdateMappingNameUpdateAction = ReturnType<typeof updateMappingName>;
-type AddLayerToAnnotationUpdateAction = ReturnType<typeof addLayerToAnnotation>;
-type DeleteAnnotationLayerUpdateAction = ReturnType<typeof deleteAnnotationLayer>;
-type UpdateAnnotationLayerNameUpdateAction = ReturnType<typeof updateAnnotationLayerName>;
-type UpdateMetadataOfAnnotationUpdateAction = ReturnType<typeof updateMetadataOfAnnotation>;
+export type AddLayerToAnnotationUpdateAction = ReturnType<typeof addLayerToAnnotation>;
+export type DeleteAnnotationLayerUpdateAction = ReturnType<typeof deleteAnnotationLayer>;
+export type UpdateAnnotationLayerNameUpdateAction = ReturnType<typeof updateAnnotationLayerName>;
+export type UpdateMetadataOfAnnotationUpdateAction = ReturnType<typeof updateMetadataOfAnnotation>;
 export type SplitAgglomerateUpdateAction = ReturnType<typeof splitAgglomerate>;
 export type MergeAgglomerateUpdateAction = ReturnType<typeof mergeAgglomerate>;
 

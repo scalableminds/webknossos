@@ -172,12 +172,12 @@ const IDENTITY_TRANSFORM: CoordinateTransformation = {
 };
 
 const sinusLocationOfRotationInMatrix = {
-  x: [1, 2],
-  y: [2, 0],
-  z: [0, 1],
+  x: [2, 1],
+  y: [0, 2],
+  z: [1, 0],
 };
 
-const cosinusLocationOfRotationInMatrix = {
+const cosineLocationOfRotationInMatrix = {
   x: [1, 1],
   y: [0, 0],
   z: [0, 0],
@@ -197,10 +197,10 @@ export function getRotationFromTransformation(
     return 0;
   }
   const matrix = transformation ? transformation.matrix : IDENTITY_MATRIX;
-  const cosinusLocation = cosinusLocationOfRotationInMatrix[axis];
+  const cosineLocation = cosineLocationOfRotationInMatrix[axis];
   const sinusLocation = sinusLocationOfRotationInMatrix[axis];
   const sinOfAngle = matrix[sinusLocation[0]][sinusLocation[1]];
-  const cosOfAngle = matrix[cosinusLocation[0]][cosinusLocation[1]];
+  const cosOfAngle = matrix[cosineLocation[0]][cosineLocation[1]];
   const rotation =
     Math.abs(cosOfAngle) > 1e-6
       ? Math.atan2(sinOfAngle, cosOfAngle)
@@ -215,13 +215,17 @@ export function getRotationFromTransformation(
 
 function getTranslationToOrigin(bbox: BoundingBoxObject): CoordinateTransformation {
   const center = V3.add(bbox.topLeft, V3.scale([bbox.width, bbox.height, bbox.depth], 0.5));
-  const translationMatrix = new THREE.Matrix4().makeTranslation(-center[0], -center[1], -center[2]);
+  const translationMatrix = new THREE.Matrix4()
+    .makeTranslation(-center[0], -center[1], -center[2])
+    .transpose();
   return { type: "affine", matrix: flatToNestedMatrix(translationMatrix.toArray()) };
 }
 
 function getTranslationBackToOriginalPosition(bbox: BoundingBoxObject): CoordinateTransformation {
   const center = V3.add(bbox.topLeft, V3.scale([bbox.width, bbox.height, bbox.depth], 0.5));
-  const translationMatrix = new THREE.Matrix4().makeTranslation(center[0], center[1], center[2]);
+  const translationMatrix = new THREE.Matrix4()
+    .makeTranslation(center[0], center[1], center[2])
+    .transpose();
   return { type: "affine", matrix: flatToNestedMatrix(translationMatrix.toArray()) };
 }
 function getRotationMatrixAroundAxis(
@@ -230,7 +234,7 @@ function getRotationMatrixAroundAxis(
 ): CoordinateTransformation {
   const euler = new THREE.Euler();
   euler[axis] = angleInRadians;
-  const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(euler);
+  const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(euler).transpose();
   return { type: "affine", matrix: flatToNestedMatrix(rotationMatrix.toArray()) };
 }
 
@@ -249,11 +253,11 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
         const boundingBox = layer.boundingBox;
         if (transformations == null || transformations.length !== 5) {
           transformations = [
-            getTranslationToOrigin(boundingBox), // TODOM: Needs to be transposed; bug
+            getTranslationToOrigin(boundingBox),
             IDENTITY_TRANSFORM,
             IDENTITY_TRANSFORM,
             IDENTITY_TRANSFORM,
-            getTranslationBackToOriginalPosition(boundingBox), // TODOM: Needs to be transposed; bug
+            getTranslationBackToOriginalPosition(boundingBox),
           ];
         }
         transformations[AXIS_TO_TRANSFORM_INDEX[axis]] = rotationMatrix;
@@ -317,7 +321,9 @@ function isTranslationOnly(transformation?: AffineTransformation) {
   if (!transformation) {
     return false;
   }
-  const threeMatrix = new THREE.Matrix4().fromArray(nestedToFlatMatrix(transformation.matrix));
+  const threeMatrix = new THREE.Matrix4()
+    .fromArray(nestedToFlatMatrix(transformation.matrix))
+    .transpose();
   threeMatrix.decompose(translation, quaternion, scale);
   return (
     translation.length() !== 0 &&
@@ -330,7 +336,9 @@ function isRotationOnly(transformation?: AffineTransformation) {
   if (!transformation) {
     return false;
   }
-  const threeMatrix = new THREE.Matrix4().fromArray(nestedToFlatMatrix(transformation.matrix));
+  const threeMatrix = new THREE.Matrix4()
+    .fromArray(nestedToFlatMatrix(transformation.matrix))
+    .transpose();
   threeMatrix.decompose(translation, quaternion, scale);
   return translation.length() === 0 && scale.equals(NON_SCALED_VECTOR);
 }
@@ -358,11 +366,11 @@ export function haveAllLayersSameRotation(dataLayers: Array<APIDataLayer>): bool
   }
 
   if (
-    !isTranslationOnly(firstDataLayerTransformations[0] as AffineTransformation) || // TODOM: Should need to be checked, layers may have different bboxes
+    !isTranslationOnly(firstDataLayerTransformations[0] as AffineTransformation) ||
     !isRotationOnly(firstDataLayerTransformations[1] as AffineTransformation) ||
     !isRotationOnly(firstDataLayerTransformations[2] as AffineTransformation) ||
     !isRotationOnly(firstDataLayerTransformations[3] as AffineTransformation) ||
-    !isTranslationOnly(firstDataLayerTransformations[4] as AffineTransformation) // TODOM: Should need to be checked, layers may have different bboxes
+    !isTranslationOnly(firstDataLayerTransformations[4] as AffineTransformation)
   ) {
     return false;
   }
@@ -370,11 +378,11 @@ export function haveAllLayersSameRotation(dataLayers: Array<APIDataLayer>): bool
     const transformations = dataLayers[i].coordinateTransformations;
     if (
       transformations == null ||
-      !_.isEqual(transformations[0], firstDataLayerTransformations[0]) ||
+      // Not checking matrix 0 and 4 for equality as these are transformations depending on the layer's bounding box.
+      // The bounding box can be different for each layer.
       !_.isEqual(transformations[1], firstDataLayerTransformations[1]) ||
       !_.isEqual(transformations[2], firstDataLayerTransformations[2]) ||
-      !_.isEqual(transformations[3], firstDataLayerTransformations[3]) ||
-      !_.isEqual(transformations[4], firstDataLayerTransformations[4])
+      !_.isEqual(transformations[3], firstDataLayerTransformations[3])
     ) {
       return false;
     }

@@ -62,7 +62,7 @@ export type ServerAdditionalAxis = {
 
 export type AffineTransformation = {
   type: "affine";
-  matrix: NestedMatrix4;
+  matrix: NestedMatrix4; // Stored in row major order.
 };
 
 export type ThinPlateSplineTransformation = {

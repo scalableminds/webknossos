@@ -362,11 +362,11 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   /**
     * Find all annotations which are listable by the user specified in 'forUser'
     *
-    *  @param isFinished
-    *  If set to true, only finished annotations are returned. If set to false, only active annotations are returned.
-    *  If set to None, all non-cancelled annotations are returned.
-    *  @param forUser
-    *  If set, only annotations of this user are returned. If not set, all annotations are returned.
+    * @param isFinished
+    * If set to `true`, only finished annotations are returned. If set to `false`, only active annotations are returned.
+    * If set to `None`, all non-cancelled annotations are returned.
+    * @param forUser
+    * If set, only annotations of this user are returned. If not set, all annotations are returned.
     * @param filterOwnedOrShared
     * If `true`, the function lists only annotations owned by the user or explicitly shared with them (used for the
     * user's own dashboard). If `false`, it lists all annotations the viewer is allowed to see.

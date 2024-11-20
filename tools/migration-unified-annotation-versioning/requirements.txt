@@ -1,0 +1,4 @@
+grpcio
+argparse
+psycopg2
+protobuf

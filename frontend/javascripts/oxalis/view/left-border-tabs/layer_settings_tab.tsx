@@ -1034,7 +1034,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         volume.tracingId,
       );
 
-      if ((!position || !resolution) && volume.fallbackLayer) {
+      if ((!position || !mag) && volume.fallbackLayer) {
         await this.handleFindData(volume.fallbackLayer, true, volume);
         return;
       }

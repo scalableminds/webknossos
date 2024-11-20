@@ -35,7 +35,7 @@ jobs:
 
       - name: Install dependencies and wait
         run: |
-            corepack enable && yarn install --immutable &
+            corepack enable && yarn install --immutable & 
             sleep 180 &
             wait
 

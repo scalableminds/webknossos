@@ -171,6 +171,8 @@ class ReactRouter extends React.Component<Props> {
       return <h3>Invalid annotation URL.</h3>;
     }
     if (datasetName) {
+      // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
+      // The schema is something like <authority>/datasets/:datasetName/sandbox/<type>
       return (
         <AsyncRedirect
           redirectTo={async () => {
@@ -212,6 +214,8 @@ class ReactRouter extends React.Component<Props> {
       match.params.datasetNameAndId,
     );
     if (datasetName) {
+      // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
+      // The schema is something like <authority>/datasets/:datasetName/view
       return (
         <AsyncRedirect
           redirectTo={async () => {
@@ -491,6 +495,8 @@ class ReactRouter extends React.Component<Props> {
                     match.params.datasetNameAndId,
                   );
                   if (datasetName) {
+                    // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
+                    // The schema is something like <authority>/datasets/:datasetName/edit
                     return (
                       <AsyncRedirect
                         redirectTo={async () => {

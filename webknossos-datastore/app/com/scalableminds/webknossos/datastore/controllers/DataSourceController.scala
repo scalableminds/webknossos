@@ -212,7 +212,7 @@ class DataSourceController @Inject()(
               (dataSourceId, datasetSizeBytes) <- uploadService
                 .finishUpload(request.body) ?~> "dataset.upload.finishFailed"
               uploadedDatasetIdJson <- dsRemoteWebknossosClient
-                .reportUpload( // TODO: here optimize return value here (no js unpacking and packing again)
+                .reportUpload(
                   dataSourceId,
                   datasetSizeBytes,
                   request.body.needsConversion.getOrElse(false),

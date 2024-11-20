@@ -1430,16 +1430,16 @@ export async function findDataPositionForLayer(
   layerName: string,
 ): Promise<{
   position: Vector3 | null | undefined;
-  resolution: Vector3 | null | undefined;
+  mag: Vector3 | null | undefined;
 }> {
-  const { position, resolution } = await doWithToken((token) =>
+  const { position, mag } = await doWithToken((token) =>
     Request.receiveJSON(
       `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/findData?token=${token}`,
     ),
   );
   return {
     position,
-    resolution,
+    mag,
   };
 }
 
@@ -1448,14 +1448,14 @@ export async function findDataPositionForVolumeTracing(
   tracingId: string,
 ): Promise<{
   position: Vector3 | null | undefined;
-  resolution: Vector3 | null | undefined;
+  mag: Vector3 | null | undefined;
 }> {
-  const { position, resolution } = await doWithToken((token) =>
+  const { position, mag } = await doWithToken((token) =>
     Request.receiveJSON(`${tracingstoreUrl}/tracings/volume/${tracingId}/findData?token=${token}`),
   );
   return {
     position,
-    resolution,
+    mag,
   };
 }
 

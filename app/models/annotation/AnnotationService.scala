@@ -177,7 +177,8 @@ class AnnotationService @Inject()(
         mappingName = mappingName,
         mags = magsRestricted.map(vec3IntToProto),
         hasSegmentIndex = Some(fallbackLayer.isEmpty || fallbackLayerHasSegmentIndex),
-        additionalAxes = AdditionalAxis.toProto(additionalAxes)
+        additionalAxes = AdditionalAxis.toProto(additionalAxes),
+        volumeBucketDataHasChanged = Some(false)
       )
   }
 

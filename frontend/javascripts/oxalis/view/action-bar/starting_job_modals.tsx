@@ -111,6 +111,7 @@ type StartJobFormProps = Props & {
 type BoundingBoxSelectionProps = {
   isBoundingBoxConfigurable?: boolean;
   userBoundingBoxes: UserBoundingBox[];
+  isSuperUser: boolean;
   onChangeSelectedBoundingBox: (bBoxId: number | null) => void;
   value: number | null;
 };
@@ -183,6 +184,7 @@ export function BoundingBoxSelection({
 function BoundingBoxSelectionFormItem({
   isBoundingBoxConfigurable,
   userBoundingBoxes,
+  isSuperUser,
   onChangeSelectedBoundingBox,
   value: selectedBoundingBoxId,
 }: BoundingBoxSelectionProps): JSX.Element {
@@ -218,7 +220,7 @@ function BoundingBoxSelectionFormItem({
           },
           {
             validator: (_rule, value) => {
-              if (!isBoundingBoxConfigurable) return Promise.resolve();
+              if (!isBoundingBoxConfigurable || isSuperUser) return Promise.resolve();
 
               const selectedBoundingBox = userBoundingBoxes.find((bbox) => bbox.id === value);
               let rejectionReason = "";
@@ -533,6 +535,7 @@ function StartJobForm(props: StartJobFormProps) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const isActiveUserSuperUser = activeUser?.isSuperUser || false;
   const colorLayers = getColorLayers(dataset);
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : colorLayers;
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
@@ -643,6 +646,7 @@ function StartJobForm(props: StartJobFormProps) {
       <BoundingBoxSelectionFormItem
         isBoundingBoxConfigurable={isBoundingBoxConfigurable}
         userBoundingBoxes={userBoundingBoxes}
+        isSuperUser={isActiveUserSuperUser}
         onChangeSelectedBoundingBox={(bBoxId) => form.setFieldsValue({ boundingBoxId: bBoxId })}
         value={form.getFieldValue("boundingBoxId")}
       />

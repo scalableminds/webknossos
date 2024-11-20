@@ -483,6 +483,15 @@ function AddRemoteLayer({
   };
 
   function validateUrls(userInput: string) {
+    const removePrefix = (value: string, prefix: string) =>
+      value.startsWith(prefix) ? value.slice(prefix.length) : value;
+
+    // If pasted from neuroglancer, uris have these prefixes even before the protocol. The backend ignores them.
+    userInput = removePrefix(userInput, "zarr://");
+    userInput = removePrefix(userInput, "zarr3://");
+    userInput = removePrefix(userInput, "n5://");
+    userInput = removePrefix(userInput, "precomputed://");
+
     if (userInput.startsWith("https://") || userInput.startsWith("http://")) {
       setSelectedProtocol("https");
     } else if (userInput.startsWith("s3://")) {

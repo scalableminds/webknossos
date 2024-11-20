@@ -2,8 +2,12 @@ package com.scalableminds.webknossos.datastore.services
 
 import org.apache.pekko.actor.ActorSystem
 import com.google.inject.name.Named
+import com.scalableminds.util.tools.{Fox, TextUtils}
+import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.{Empty, Failure, Full}
 import play.api.inject.ApplicationLifecycle
 
 import javax.inject.Inject
@@ -41,4 +45,39 @@ class DatasetErrorLoggingService @Inject()(
     recentErrors.remove((organizationId, datasetName))
 
   override protected def tick(): Unit = recentErrors.clear()
+
+  def withErrorLogging(dataSourceId: DataSourceId,
+                       label: String,
+                       resultFox: Fox[Array[Byte]],
+                       onInternalError: InternalError => Unit = _ => ()): Fox[Array[Byte]] =
+    resultFox.futureBox.flatMap {
+      case Full(data) =>
+        if (data.length == 0) {
+          val msg = s"Zero-length array returned while $label for $dataSourceId"
+          if (shouldLog(dataSourceId.team, dataSourceId.name)) {
+            logger.warn(msg)
+            registerLogged(dataSourceId.team, dataSourceId.name)
+          }
+          Fox.failure(msg)
+        } else {
+          Fox.successful(data)
+        }
+      case Failure(msg, Full(e: InternalError), _) =>
+        logger.error(s"Caught internal error: $label for $dataSourceId", e)
+        onInternalError(e)
+        Fox.failure(msg, Full(e))
+      case Failure(msg, Full(exception), _) =>
+        if (shouldLog(dataSourceId.team, dataSourceId.name)) {
+          logger.error(s"Error while $label for $dataSourceId Stack trace: ${TextUtils.stackTraceAsString(exception)} ")
+          registerLogged(dataSourceId.team, dataSourceId.name)
+        }
+        Fox.failure(msg, Full(exception))
+      case Failure(msg, Empty, _) =>
+        if (shouldLog(dataSourceId.team, dataSourceId.name)) {
+          logger.error(s"Error while $label for $dataSourceId, Empty failure")
+          registerLogged(dataSourceId.team, dataSourceId.name)
+        }
+        Fox.failure(msg)
+      case other => other.toFox
+    }
 }

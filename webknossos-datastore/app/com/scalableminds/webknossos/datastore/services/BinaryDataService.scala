@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataL
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, EmptyBox, Failure, Full}
+import net.liftweb.common.{Box, Full}
 import ucar.ma2.{Array => MultiArray}
 import net.liftweb.common.Box.tryo
 
@@ -55,26 +55,11 @@ class BinaryDataService(val dataBaseDir: Path,
   def handleDataRequests(requests: List[DataServiceDataRequest]): Fox[(Array[Byte], List[Int])] = {
     def convertIfNecessary(isNecessary: Boolean,
                            inputArray: Array[Byte],
-                           conversionFunc: Array[Byte] => Box[Array[Byte]],
-                           request: DataServiceDataRequest): Box[Array[Byte]] =
-      if (isNecessary) conversionFunc(inputArray) match {
-        case Full(value) => Full(value)
-        case box: EmptyBox =>
-          box match {
-            case Empty =>
-              logError(
-                request,
-                s"Failed to convert data for layer ${request.dataLayer.name} of dataset ${request.dataSource.id.team}/${request.dataSource.id.name} at ${request.cuboid}, result is Empty"
-              )
-              Empty
-            case f: Failure =>
-              logError(
-                request,
-                s"Failed to convert data for layer ${request.dataLayer.name} of dataset ${request.dataSource.id.team}/${request.dataSource.id.name} at ${request.cuboid}, result is Failure: ${Fox
-                  .failureChainAsString(f, includeStackTraces = true)}"
-              )
-              f
-          }
+                           conversionFunc: Array[Byte] => Fox[Array[Byte]],
+                           request: DataServiceDataRequest): Fox[Array[Byte]] =
+      if (isNecessary) datasetErrorLoggingService match {
+        case Some(value) => value.withErrorLogging(request.dataSource.id, "Conversion", conversionFunc(inputArray))
+        case None        => conversionFunc(inputArray)
       } else Full(inputArray)
 
     val requestsCount = requests.length
@@ -82,14 +67,15 @@ class BinaryDataService(val dataBaseDir: Path,
       case (request, index) =>
         for {
           data <- handleDataRequest(request)
-          mappedData <- agglomerateServiceOpt.map { agglomerateService =>
+          mappedDataFox <- agglomerateServiceOpt.map { agglomerateService =>
             convertIfNecessary(
               request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
               data,
               agglomerateService.applyAgglomerate(request),
               request
             )
-          }.getOrElse(Full(data)) ?~> "Failed to apply agglomerate mapping"
+          }.fillEmpty(Fox.successful(data)) ?~> "Failed to apply agglomerate mapping"
+          mappedData <- mappedDataFox
           resultData <- convertIfNecessary(request.settings.halfByte, mappedData, convertToHalfByte, request)
         } yield (resultData, index)
     }
@@ -111,27 +97,15 @@ class BinaryDataService(val dataBaseDir: Path,
       val bucketProvider =
         bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.bucketProviderCacheKey))(_ =>
           request.dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
-      bucketProvider.load(readInstruction).futureBox.flatMap {
-        case Failure(msg, Full(e: InternalError), _) =>
-          applicationHealthService.foreach(a => a.pushError(e))
-          logger.error(
-            s"Caught internal error: $msg while loading a bucket for layer ${request.dataLayer.name} of dataset ${request.dataSource.id}")
-          Fox.failure(e.getMessage)
-        case f: Failure =>
-          logError(
-            request,
-            s"Bucket loading for layer ${request.dataLayer.name} of dataset ${request.dataSource.id.team}/${request.dataSource.id.name} at ${readInstruction.bucket} failed: ${Fox
-              .failureChainAsString(f, includeStackTraces = true)}"
+      datasetErrorLoggingService match {
+        case Some(d) =>
+          d.withErrorLogging(
+            request.dataSource.id,
+            s"Bucket loading for layer ${request.dataLayer.name} at ${readInstruction.bucket}, cuboid: ${request.cuboid}",
+            bucketProvider.load(readInstruction),
+            e => applicationHealthService.foreach(a => a.pushError(e))
           )
-          f.toFox
-        case Full(data) =>
-          if (data.length == 0) {
-            val msg =
-              s"Bucket provider returned Full, but data is zero-length array. Layer ${request.dataLayer.name} of dataset ${request.dataSource.id}, ${request.cuboid}"
-            logger.warn(msg)
-            Fox.failure(msg)
-          } else Fox.successful(data)
-        case other => other.toFox
+        case None => bucketProvider.load(readInstruction)
       }
     } else Fox.empty
 
@@ -216,11 +190,4 @@ class BinaryDataService(val dataBaseDir: Path,
 
     (closedAgglomerateFileHandleCount, clearedBucketProviderCount, removedChunksCount)
   }
-
-  def logError(request: DataServiceDataRequest, msg: String): Unit =
-    if (datasetErrorLoggingService.exists(_.shouldLog(request.dataSource.id.team, request.dataSource.id.name))) {
-      logger.error(msg)
-      datasetErrorLoggingService.foreach(_.registerLogged(request.dataSource.id.team, request.dataSource.id.name))
-    }
-
 }

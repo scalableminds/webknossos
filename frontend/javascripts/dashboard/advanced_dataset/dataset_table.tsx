@@ -13,7 +13,6 @@ import type {
 } from "types/api_flow_types";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import { stringToColor } from "libs/format_utils";
-import { trackAction } from "oxalis/model/helpers/analytics";
 import CategorizationLabel from "oxalis/view/components/categorization_label";
 import DatasetActionView, {
   getDatasetActionContextMenu,
@@ -798,7 +797,6 @@ export function DatasetTags({
       };
     }
 
-    trackAction("Edit dataset tag");
     updateDataset(dataset.id, updater);
   };
 

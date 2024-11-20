@@ -31,7 +31,6 @@ import {
   updateDatasetPartial,
 } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
-import { trackAction } from "oxalis/model/helpers/analytics";
 import Toast from "libs/toast";
 import messages from "messages";
 import features from "features";
@@ -403,7 +402,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       }
     }
 
-    trackAction(`Dataset ${verb}`);
     this.props.onComplete();
   };
 

@@ -53,7 +53,6 @@ import {
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
-import { trackAction } from "oxalis/model/helpers/analytics";
 import Zip from "libs/zipjs_wrapper";
 import {
   AllowedTeamsFormItem,
@@ -352,7 +351,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       });
       finishDatasetUpload(datastoreUrl, uploadInfo).then(
         async ({ newDatasetId }) => {
-          trackAction("Upload dataset");
           Toast.success(messages["dataset.upload_success"]);
           let maybeError;
 

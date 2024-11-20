@@ -6,6 +6,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import models.aimodels.{AiModel, AiModelCategory, AiModelDAO}
 import models.annotation.{TracingStore, TracingStoreDAO}
 import models.dataset._
 import models.folder.{Folder, FolderDAO, FolderService}
@@ -43,6 +44,7 @@ class InitialDataService @Inject()(userService: UserService,
                                    taskTypeDAO: TaskTypeDAO,
                                    dataStoreDAO: DataStoreDAO,
                                    folderDAO: FolderDAO,
+                                   aiModelDAO: AiModelDAO,
                                    folderService: FolderService,
                                    tracingStoreDAO: TracingStoreDAO,
                                    teamDAO: TeamDAO,
@@ -140,6 +142,19 @@ Samplecountry
     Some(
       "This is a wonderful dummy publication, it has authors, it has a link, it has a doi number, those could go here.\nLorem [ipsum](https://github.com/scalableminds/webknossos) dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.")
   )
+  private val defaultDataStore =
+    DataStore(conf.Datastore.name, conf.Http.uri, conf.Datastore.publicUri.getOrElse(conf.Http.uri), conf.Datastore.key)
+  private val defaultAiModel = AiModel(
+    ObjectId("66544a56d20000af0e42ba0f"),
+    defaultOrganization._id,
+    defaultDataStore.name,
+    defaultUser._id,
+    None,
+    List.empty,
+    "sample_ai_model",
+    Some("Works if model files are manually placed at binaryData/sample_organization/66544a56d20000af0e42ba0f/"),
+    Some(AiModelCategory.em_neurons)
+  )
 
   def insert: Fox[Unit] =
     for {
@@ -159,6 +174,7 @@ Samplecountry
       _ <- insertTaskType()
       _ <- insertProject()
       _ <- insertPublication()
+      _ <- insertAiModel()
     } yield ()
 
   private def assertInitialDataEnabled: Fox[Unit] =
@@ -267,16 +283,18 @@ Samplecountry
     } else Fox.successful(())
   }
 
+  private def insertAiModel(): Fox[Unit] = aiModelDAO.findAll.flatMap { aiModels =>
+    if (aiModels.isEmpty) {
+      aiModelDAO.insertOne(defaultAiModel)
+    } else Fox.successful(())
+  }
+
   def insertLocalDataStoreIfEnabled(): Fox[Unit] =
     if (storeModules.localDataStoreEnabled) {
       dataStoreDAO.findOneByUrl(conf.Http.uri).futureBox.flatMap { maybeStore =>
         if (maybeStore.isEmpty) {
           logger.info("Inserting local datastore")
-          dataStoreDAO.insertOne(
-            DataStore(conf.Datastore.name,
-                      conf.Http.uri,
-                      conf.Datastore.publicUri.getOrElse(conf.Http.uri),
-                      conf.Datastore.key))
+          dataStoreDAO.insertOne(defaultDataStore)
         } else Fox.successful(())
       }
     } else Fox.successful(())

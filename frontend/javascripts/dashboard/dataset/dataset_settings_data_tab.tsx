@@ -184,6 +184,8 @@ function SimpleDatasetForm({
             <Row gutter={48}>
               <Col span={24} xl={12}>
                 <FormItemWithInfo
+                  // The dataset name is not synced with the datasource.id.name in the advanced settings, because datasource.id represents a DataSourceId
+                  // where datasource.id.name represents the dataset's directoryName and not the dataset's name.
                   name={["dataset", "name"]}
                   label="Name"
                   info="The name of the dataset"

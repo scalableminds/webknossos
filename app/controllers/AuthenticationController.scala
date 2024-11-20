@@ -621,8 +621,8 @@ class AuthenticationController @Inject()(
                     dataStoreToken <- bearerTokenAuthenticatorService.createAndInitDataStoreTokenForUser(user)
                     _ <- organizationService
                       .createOrganizationDirectory(organization._id, dataStoreToken) ?~> "organization.folderCreation.failed"
-                    _ <- Fox.runOptional(signUpData.acceptedTermsOfService)(version =>
-                      acceptTermsOfServiceForUser(user, version))
+                    _ <- Fox.runIf(conf.WebKnossos.TermsOfService.enabled)(
+                      acceptTermsOfServiceForUser(user, signUpData.acceptedTermsOfService))
                   } yield {
                     Mailer ! Send(defaultMails
                       .newOrganizationMail(organization.name, email, request.headers.get("Host").getOrElse("")))
@@ -639,8 +639,12 @@ class AuthenticationController @Inject()(
       )
   }
 
-  private def acceptTermsOfServiceForUser(user: User, termsOfServiceVersion: Int)(implicit m: MessagesProvider) =
-    organizationService.acceptTermsOfService(user._organization, termsOfServiceVersion)(DBAccessContext(Some(user)), m)
+  private def acceptTermsOfServiceForUser(user: User, termsOfServiceVersion: Option[Int])(
+      implicit m: MessagesProvider): Fox[Unit] =
+    for {
+      acceptedVersion <- Fox.option2Fox(termsOfServiceVersion)
+      _ <- organizationService.acceptTermsOfService(user._organization, acceptedVersion)(DBAccessContext(Some(user)), m)
+    } yield ()
 
   case class CreateUserInOrganizationParameters(firstName: String,
                                                 lastName: String,

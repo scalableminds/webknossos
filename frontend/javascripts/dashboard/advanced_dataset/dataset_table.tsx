@@ -34,7 +34,11 @@ import { useSelector } from "react-redux";
 import type { DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
 import { Unicode } from "oxalis/constants";
 import type { DatasetUpdater } from "admin/admin_rest_api";
-import { generateSettingsForFolder, useDatasetDrop } from "dashboard/folders/folder_tree";
+import {
+  generateSettingsForFolder,
+  useDatasetDrop,
+  type DnDDropItemProps,
+} from "dashboard/folders/folder_tree";
 import classNames from "classnames";
 import type { EmptyObject } from "types/globals";
 import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
@@ -235,9 +239,10 @@ const DraggableDatasetRow = ({
   const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
   // @ts-ignore
 
-  const datasetName = restProps["data-row-key"];
+  const datasetId = restProps["data-row-key"];
+  const dragItem: DnDDropItemProps = { index, datasetId };
   const [, drag, preview] = useDrag({
-    item: { index, datasetName },
+    item: dragItem,
     type: DraggableDatasetType,
     canDrag: () => isADataset,
   });

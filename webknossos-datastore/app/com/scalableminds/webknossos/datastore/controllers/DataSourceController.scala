@@ -211,14 +211,13 @@ class DataSourceController @Inject()(
             for {
               (dataSourceId, datasetSizeBytes) <- uploadService
                 .finishUpload(request.body) ?~> "dataset.upload.finishFailed"
-              uploadedDatasetIdJson <- dsRemoteWebknossosClient
-                .reportUpload(
-                  dataSourceId,
-                  datasetSizeBytes,
-                  request.body.needsConversion.getOrElse(false),
-                  viaAddRoute = false,
-                  userToken = urlOrHeaderToken(token, request)
-                ) ?~> "reportUpload.failed"
+              uploadedDatasetIdJson <- dsRemoteWebknossosClient.reportUpload(
+                dataSourceId,
+                datasetSizeBytes,
+                request.body.needsConversion.getOrElse(false),
+                viaAddRoute = false,
+                userToken = urlOrHeaderToken(token, request)
+              ) ?~> "reportUpload.failed"
             } yield Ok(Json.obj("newDatasetId" -> uploadedDatasetIdJson))
           }
         } yield response

@@ -14,6 +14,7 @@ import {
   withRetry,
   WK_AUTH_TOKEN,
   checkBrowserstackCredentials,
+  getDefaultRequestOptions,
 } from "./dataset_rendering_helpers";
 
 if (!WK_AUTH_TOKEN) {
@@ -108,15 +109,15 @@ const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
 
 const datasetNameToId: Record<string, string> = {};
 test.before("Retrieve dataset ids", async () => {
-  for (const datasetName of datasetNames) {
+  for (const datasetName of datasetNames.concat(["test-agglomerate-file"])) {
     await withRetry(
       3,
       async () => {
-        const response = await fetch(
-          `${URL}/api/datasets/disambiguate/sample_organization/${datasetName}/toId?token=${WK_AUTH_TOKEN}`,
-        );
-        const { datasetId } = await response.json();
-        datasetNameToId[datasetName] = datasetId;
+        const options = getDefaultRequestOptions(URL);
+        const url = `${URL}/api/datasets/disambiguate/sample_organization/${datasetName}/toId`;
+        const response = await fetch(url, options);
+        const { id } = await response.json();
+        datasetNameToId[datasetName] = id;
         return true;
       },
       () => {},

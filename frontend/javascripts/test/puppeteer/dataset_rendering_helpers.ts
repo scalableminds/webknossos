@@ -21,7 +21,7 @@ type Screenshot = {
   height: number;
 };
 
-function getDefaultRequestOptions(baseUrl: string): RequestOptions {
+export function getDefaultRequestOptions(baseUrl: string): RequestOptions {
   if (!WK_AUTH_TOKEN) {
     throw new Error("No WK_AUTH_TOKEN specified.");
   }

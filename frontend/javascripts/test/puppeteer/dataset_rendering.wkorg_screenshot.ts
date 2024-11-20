@@ -48,7 +48,7 @@ test.serial(`it should render dataset ${demoDatasetName} correctly`, async (t) =
       const response = await fetch(
         `${URL}/api/datasets/disambiguate/${owningOrganization}/${demoDatasetName}/toId`,
       );
-      const { datasetId } = await response.json();
+      const { id: datasetId } = await response.json();
       const { screenshot, width, height } = await screenshotDatasetView(
         await getNewPage(t.context.browser),
         URL,

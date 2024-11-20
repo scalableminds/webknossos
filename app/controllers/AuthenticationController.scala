@@ -640,11 +640,7 @@ class AuthenticationController @Inject()(
   }
 
   private def acceptTermsOfServiceForUser(user: User, termsOfServiceVersion: Int)(implicit m: MessagesProvider) =
-    for {
-      _ <- organizationService.acceptTermsOfService(user._organization, termsOfServiceVersion)(
-        DBAccessContext(Some(user)),
-        m)
-    } yield ()
+    organizationService.acceptTermsOfService(user._organization, termsOfServiceVersion)(DBAccessContext(Some(user)), m)
 
   case class CreateUserInOrganizationParameters(firstName: String,
                                                 lastName: String,

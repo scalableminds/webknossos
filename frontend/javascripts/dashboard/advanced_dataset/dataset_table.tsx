@@ -310,13 +310,6 @@ class DatasetRenderer {
           >
             {this.data.name}
           </Link>
-          <Link
-            to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
-            title="View Dataset"
-            className="incognito-link dataset-table-name"
-          >
-            Test disambiguate
-          </Link>
 
           {this.renderTags()}
           {this.datasetTable.props.context.globalSearchQuery != null ? (

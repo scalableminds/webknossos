@@ -1,6 +1,6 @@
 import { Form, Input, Button, Row, Col, Checkbox } from "antd";
 import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
-import { memo } from "react";
+import { useRef, memo } from "react";
 import { loginUser } from "admin/admin_rest_api";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import Request from "libs/request";
@@ -17,33 +17,35 @@ type Props = {
   onRegistered: (isUserLoggedIn: true) => void;
 };
 
-function generateOrganizationId(firstName: string, lastName: string) {
-  return `${firstName.toLowerCase()}-${lastName.toLowerCase()}-lab`;
-}
+function generateOrganizationId() {
+  let output = "";
 
-function generateOrganizationName(firstName: string, lastName: string) {
-  return `${firstName} ${lastName} Lab`;
+  for (let i = 0; i < 8; i++) {
+    output += Math.floor(Math.random() * 255)
+      .toString(16)
+      .padStart(2, "0");
+  }
+
+  return output;
 }
 
 function RegistrationFormWKOrg(props: Props) {
   const [form] = Form.useForm();
+  const organizationId = useRef(generateOrganizationId());
   const terms = useFetch(getTermsOfService, null, []);
 
   async function onFinish(formValues: Record<string, any>) {
-    const { firstName, lastName } = formValues;
-    const trimmedFirstName = firstName.trim();
-    const trimmedLastName = lastName.trim();
     await Request.sendJSONReceiveJSON("/api/auth/createOrganizationWithAdmin", {
       data: {
         ...formValues,
-        firstName: trimmedFirstName,
-        lastName: trimmedLastName,
+        firstName: formValues.firstName.trim(),
+        lastName: formValues.lastName.trim(),
         password: {
           password1: formValues.password.password1,
           password2: formValues.password.password1,
         },
-        organization: generateOrganizationId(trimmedFirstName, trimmedLastName),
-        organizationName: generateOrganizationName(trimmedFirstName, trimmedLastName),
+        organization: organizationId.current,
+        organizationName: `${formValues.firstName.trim()} ${formValues.lastName.trim()} Lab`,
         acceptedTermsOfService: terms?.version,
       },
     });

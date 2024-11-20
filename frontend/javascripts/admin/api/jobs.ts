@@ -204,10 +204,10 @@ export function startNeuronInferralJob(
     layerName,
     bbox: bbox.join(","),
     newDatasetName,
-    doEvaluation: doEvaluation.toString()
+    doEvaluation: doEvaluation.toString(),
   });
   if (doEvaluation) {
-    urlParams.append("annotationId", `${annotationId}`)
+    urlParams.append("annotationId", `${annotationId}`);
     urlParams.append("evalUseSparseTracing", `${useSparseTracing}`);
     urlParams.append("evalMaxEdgeLength", `${evalMaxEdgeLength}`);
     urlParams.append("evalSparseTubeThresholdNm", `${evalSparseTubeThresholdNm}`);

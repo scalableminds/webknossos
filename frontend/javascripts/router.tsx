@@ -45,7 +45,6 @@ import window from "libs/window";
 import _ from "lodash";
 import Navbar from "navbar";
 import { ControlModeEnum } from "oxalis/constants";
-import { trackAction } from "oxalis/model/helpers/analytics";
 import type { OxalisState } from "oxalis/store";
 import HelpButton from "oxalis/view/help_modal";
 import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
@@ -85,26 +84,6 @@ type StateProps = {
 };
 type Props = StateProps;
 const browserHistory = createBrowserHistory();
-browserHistory.listen((location) => {
-  // @ts-ignore
-  if (typeof window.ga !== "undefined" && window.ga !== null && window.ga.getByName != null) {
-    // t0 is the default tracker name
-    // @ts-ignore
-    const tracker = window.ga.getByName("t0");
-    if (tracker == null) return;
-    const lastPage = tracker.get("page");
-    const newPage = location.pathname;
-
-    // The listener is called repeatedly for a single page change, don't send repeated pageviews
-    if (lastPage !== newPage) {
-      // Update the tracker state first, so that subsequent pageviews AND events use the correct page
-      // @ts-ignore
-      window.gtag("set", "page_path", newPage);
-      // @ts-ignore
-      window.gtag("event", "page_view");
-    }
-  }
-});
 
 function PageNotFoundView() {
   return (
@@ -673,7 +652,6 @@ class ReactRouter extends React.Component<Props> {
                         null,
                         resolutionRestrictions,
                       );
-                      trackAction(`Create ${type} tracing`);
                       return `/annotations/${annotation.id}`;
                     }}
                   />

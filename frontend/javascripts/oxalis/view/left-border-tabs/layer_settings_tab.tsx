@@ -1026,10 +1026,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const { tracingStore } = Store.getState().tracing;
     const { dataset } = this.props;
     let foundPosition;
-    let foundResolution;
+    let foundMag;
 
     if (volume && !isDataLayer) {
-      const { position, resolution } = await findDataPositionForVolumeTracing(
+      const { position, mag } = await findDataPositionForVolumeTracing(
         tracingStore.url,
         volume.tracingId,
       );
@@ -1040,18 +1040,18 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       }
 
       foundPosition = position;
-      foundResolution = resolution;
+      foundMag = mag;
     } else {
-      const { position, resolution } = await findDataPositionForLayer(
+      const { position, mag } = await findDataPositionForLayer(
         dataset.dataStore.url,
         dataset,
         layerName,
       );
       foundPosition = position;
-      foundResolution = resolution;
+      foundMag = mag;
     }
 
-    if (foundPosition && foundResolution) {
+    if (foundPosition && foundMag) {
       const layer = getLayerByName(dataset, layerName, true);
       const transformMatrix = getTransformsForLayerOrNull(
         dataset,
@@ -1073,7 +1073,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     }
 
     this.props.onSetPosition(foundPosition);
-    const zoomValue = this.props.onZoomToMag(layerName, foundResolution);
+    const zoomValue = this.props.onZoomToMag(layerName, foundMag);
     Toast.success(
       `Jumping to position ${foundPosition
         .map((el) => Math.floor(el))

@@ -583,6 +583,7 @@ export type APITimeTrackingSpan = {
   datasetOrganization: string;
   datasetName: string;
   annotationId: string;
+  annotationState: string;
   taskId: string | undefined;
   projectName: string | undefined;
   taskTypeId: string | undefined;
@@ -755,7 +756,7 @@ export type ServerNode = {
   rotation: Point3;
   bitDepth: number;
   viewport: number;
-  resolution: number;
+  mag: number;
   radius: number;
   createdTimestamp: number;
   interpolation: boolean;

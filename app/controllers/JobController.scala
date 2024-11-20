@@ -124,7 +124,7 @@ class JobController @Inject()(
           voxelSizeFactor <- Vec3Double.fromUriLiteral(scale).toFox
           voxelSizeUnit <- Fox.runOptional(unit)(u => LengthUnit.fromString(u).toFox)
           voxelSize = VoxelSize.fromFactorAndUnitWithDefault(voxelSizeFactor, voxelSizeUnit)
-          _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.convertToWkw.notAllowed.organization" ~> FORBIDDEN
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
@@ -236,7 +236,9 @@ class JobController @Inject()(
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          organization <- organizationDAO.findOne(organizationId) ?~> Messages("organization.notFound", organizationId)
+          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            organizationId)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferNeurons.notAllowed.organization" ~> FORBIDDEN
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
@@ -273,7 +275,9 @@ class JobController @Inject()(
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          organization <- organizationDAO.findOne(organizationId) ?~> Messages("organization.notFound", organizationId)
+          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            organizationId)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferMitochondria.notAllowed.organization" ~> FORBIDDEN
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
@@ -305,7 +309,9 @@ class JobController @Inject()(
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          organization <- organizationDAO.findOne(organizationId) ?~> Messages("organization.notFound", organizationId)
+          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            organizationId)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.alignSections.notAllowed.organization" ~> FORBIDDEN
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
@@ -424,7 +430,9 @@ class JobController @Inject()(
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          organization <- organizationDAO.findOne(organizationId) ?~> Messages("organization.notFound", organizationId)
+          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            organizationId)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.findLargestSegmentId.notAllowed.organization" ~> FORBIDDEN
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
@@ -446,9 +454,11 @@ class JobController @Inject()(
     sil.SecuredAction.async(validateJson[AnimationJobOptions]) { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          organization <- organizationDAO.findOne(organizationId) ?~> Messages("organization.notFound", organizationId)
-          userOrganization <- organizationDAO.findOne(request.identity._organization)
+          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            organizationId)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.renderAnimation.notAllowed.organization" ~> FORBIDDEN
+          userOrganization <- organizationDAO.findOne(request.identity._organization)
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND

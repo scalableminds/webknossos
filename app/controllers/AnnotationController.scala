@@ -366,8 +366,7 @@ class AnnotationController @Inject()(
         annotationInfos <- annotationDAO.findAllListableExplorationals(
           isFinished,
           None,
-          isForOwnDashboard = true,
-          AnnotationType.Explorational,
+          filterOwnedOrShared = true,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
           pageNumber.getOrElse(0)
         )

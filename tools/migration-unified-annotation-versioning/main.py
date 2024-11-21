@@ -36,6 +36,8 @@ def setup_logging():
     handler.setFormatter(formatter)
     root.addHandler(handler)
 
+LayerVersionMapping = Dict[str, Dict[int, int]]
+
 class Migration:
 
     def __init__(self, args):
@@ -56,9 +58,9 @@ class Migration:
         before = time.time()
         layer_version_mapping = self.migrate_updates(annotation)
         self.migrate_materialized_layers(annotation, layer_version_mapping)
-        logger.info(f"Took {time.time() - before} s")
+        log_since(before, "Migrating annotation")
 
-    def migrate_updates(self, annotation) -> Dict[str, Dict[int, int]]:
+    def migrate_updates(self, annotation) -> LayerVersionMapping:
         unified_version = 0
         version_mapping = {}
         for tracing_id, layer_type in annotation["layers"].items():
@@ -94,9 +96,9 @@ class Migration:
             return getReply.actualVersion
         return 0
 
-    def get_update_batch(self, tracing_id: str, collection: str, batch_start: int, batch_end: int) -> List[Tuple[int, str]]:
+    def get_update_batch(self, tracing_id: str, collection: str, batch_start: int, batch_end_inclusive: int) -> List[Tuple[int, str]]:
         reply = self.src_stub.GetMultipleVersions(
-            proto.GetMultipleVersionsRequest(collection=collection, key=tracing_id, oldestVersion=batch_start, newestVersion=batch_end-1)
+            proto.GetMultipleVersionsRequest(collection=collection, key=tracing_id, oldestVersion=batch_start, newestVersion=batch_end_inclusive)
         )
         assert_success(reply)
         reply.versions.reverse()
@@ -108,11 +110,11 @@ class Migration:
             return "skeletonUpdates"
         return "volumeUpdates"
 
-    def migrate_materialized_layers(self, annotation: RealDictRow, layer_version_mapping):
+    def migrate_materialized_layers(self, annotation: RealDictRow, layer_version_mapping: LayerVersionMapping):
         for tracing_id, tracing_type in annotation["layers"].items():
             self.migrate_materialized_layer(tracing_id, tracing_type, layer_version_mapping)
 
-    def migrate_materialized_layer(self, tracing_id, layer_type, layer_version_mapping):
+    def migrate_materialized_layer(self, tracing_id: str, layer_type: str, layer_version_mapping: LayerVersionMapping):
         if layer_type == "Skeleton":
             self.migrate_skeleton_proto(tracing_id, layer_version_mapping)
         if layer_type == "Volume":
@@ -121,19 +123,31 @@ class Migration:
             self.migrate_segment_index(tracing_id, layer_version_mapping)
             self.migrate_editable_mapping(tracing_id, layer_version_mapping)
 
+    def migrate_skeleton_proto(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
+        self.migrate_versions_untouched("skeletons", tracing_id, layer_version_mapping)
 
-    def migrate_skeleton_proto(self, tracing_id, layer_version_mapping):
-        materialized_versions = self.list_versions("skeletons", tracing_id)
-        print(materialized_versions)
+    def migrate_versions_untouched(self, collection: str, key: str, layer_version_mapping: LayerVersionMapping):
+        materialized_versions = self.list_versions(collection, key)
+        for materialized_version in materialized_versions:
+            value_bytes = self.get_bytes(collection, key, materialized_version)
+            self.save_bytes(collection, key, layer_version_mapping[key][materialized_version], value_bytes)
 
     def list_versions(self, collection, key) -> List[int]:
         reply = self.src_stub.ListVersions(proto.ListVersionsRequest(collection=collection, key=key))
         assert_success(reply)
         return reply.versions
 
-    def migrate_volume_proto(self, layer, layer_version_mapping):
-       pass
+    def get_bytes(self, collection: str, key: str, version: int) -> bytes:
+        reply = self.src_stub.Get(proto.GetRequest(collection=collection, key=key, version=version))
+        assert_success(reply)
+        return reply.value
 
+    def save_bytes(self, collection: str, key: str, version: int, value: bytes) -> None:
+        # TODO
+        pass
+
+    def migrate_volume_proto(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
+       self.migrate_versions_untouched("volumes", tracing_id, layer_version_mapping)
 
     def migrate_volume_buckets(self, layer, layer_version_mapping):
        pass
@@ -190,9 +204,13 @@ class Migration:
                 """
             cursor.execute(query)
             annotations += cursor.fetchall()
-        logger.info(f"Loading annotations took {time.time() - before} s")
+        log_since(before, "Loading annotations")
         return annotations
 
+
+def log_since(before, label) -> None:
+    diff = time.time() - before
+    logger.info(f"{label} took {diff:.2f} s")
 
 def batch_range(
     limit: int, batch_size: int

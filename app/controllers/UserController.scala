@@ -63,8 +63,7 @@ class UserController @Inject()(userService: UserService,
         annotations <- annotationDAO.findAllListableExplorationals(
           isFinished,
           Some(request.identity._id),
-          isForOwnDashboard = true,
-          AnnotationType.Explorational,
+          filterOwnedOrShared = true,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
           pageNumber.getOrElse(0)
         )
@@ -118,8 +117,7 @@ class UserController @Inject()(userService: UserService,
         annotations <- annotationDAO.findAllListableExplorationals(
           isFinished,
           Some(userIdValidated),
-          isForOwnDashboard = false,
-          AnnotationType.Explorational,
+          filterOwnedOrShared = false,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
           pageNumber.getOrElse(0)
         )

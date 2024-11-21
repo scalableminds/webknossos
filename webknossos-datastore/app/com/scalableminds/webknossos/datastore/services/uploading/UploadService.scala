@@ -157,28 +157,29 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   def getDataSourceIdByUploadId(uploadId: String): Fox[DataSourceId] =
     getObjectFromRedis[DataSourceId](redisKeyForDataSourceId(uploadId))
 
-  def reserveUpload(reservedInfoByWk: ReserveUploadInformation,
-                    reservedAdditionalInfo: ReserveAdditionalInformation): Fox[Unit] =
+  def reserveUpload(reserveUploadInfo: ReserveUploadInformation,
+                    reserveUploadAdditionalInfo: ReserveAdditionalInformation): Fox[Unit] =
     for {
-      _ <- dataSourceService.assertDataDirWritable(reservedInfoByWk.organization)
-      _ <- runningUploadMetadataStore.insert(redisKeyForFileCount(reservedInfoByWk.uploadId),
-                                             String.valueOf(reservedInfoByWk.totalFileCount))
+      _ <- dataSourceService.assertDataDirWritable(reserveUploadInfo.organization)
+      _ <- runningUploadMetadataStore.insert(redisKeyForFileCount(reserveUploadInfo.uploadId),
+                                             String.valueOf(reserveUploadInfo.totalFileCount))
       _ <- runningUploadMetadataStore.insert(
-        redisKeyForDataSourceId(reservedInfoByWk.uploadId),
-        Json.stringify(Json.toJson(DataSourceId(reservedAdditionalInfo.directoryName, reservedInfoByWk.organization)))
+        redisKeyForDataSourceId(reserveUploadInfo.uploadId),
+        Json.stringify(
+          Json.toJson(DataSourceId(reserveUploadAdditionalInfo.directoryName, reserveUploadInfo.organization)))
       )
       _ <- runningUploadMetadataStore.insert(
-        redisKeyForUploadId(DataSourceId(reservedAdditionalInfo.directoryName, reservedInfoByWk.organization)),
-        reservedInfoByWk.uploadId
+        redisKeyForUploadId(DataSourceId(reserveUploadAdditionalInfo.directoryName, reserveUploadInfo.organization)),
+        reserveUploadInfo.uploadId
       )
-      filePaths = Json.stringify(Json.toJson(reservedInfoByWk.filePaths.getOrElse(List.empty)))
-      _ <- runningUploadMetadataStore.insert(redisKeyForFilePaths(reservedInfoByWk.uploadId), filePaths)
+      filePaths = Json.stringify(Json.toJson(reserveUploadInfo.filePaths.getOrElse(List.empty)))
+      _ <- runningUploadMetadataStore.insert(redisKeyForFilePaths(reserveUploadInfo.uploadId), filePaths)
       _ <- runningUploadMetadataStore.insert(
-        redisKeyForLinkedLayerIdentifier(reservedInfoByWk.uploadId),
-        Json.stringify(Json.toJson(LinkedLayerIdentifiers(reservedAdditionalInfo.layersToLink)))
+        redisKeyForLinkedLayerIdentifier(reserveUploadInfo.uploadId),
+        Json.stringify(Json.toJson(LinkedLayerIdentifiers(reserveUploadAdditionalInfo.layersToLink)))
       )
       _ = logger.info(
-        f"Reserving dataset upload of ${reservedInfoByWk.organization}/${reservedInfoByWk.name} with id ${reservedInfoByWk.uploadId}...")
+        f"Reserving dataset upload of ${reserveUploadInfo.organization}/${reserveUploadInfo.name} with id ${reserveUploadInfo.uploadId}...")
     } yield ()
 
   def addUploadIdsToUnfinishedUploads(

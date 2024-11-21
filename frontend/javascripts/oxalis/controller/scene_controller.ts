@@ -458,7 +458,7 @@ class SceneController {
           const transformMatrix = getTransformsForLayerOrNull(
             dataset,
             layer,
-            state.datasetConfiguration.nativelyRenderedLayerName,
+            state.datasetConfiguration.nativelyRenderedLayerNames,
           )?.affineMatrix;
           if (transformMatrix) {
             const matrix = new THREE.Matrix4();

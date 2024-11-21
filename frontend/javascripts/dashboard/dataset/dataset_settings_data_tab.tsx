@@ -22,7 +22,6 @@ import {
   FormItemWithInfo,
   RetryingErrorBoundary,
   jsonEditStyle,
-  AxisRotationSettingForDataset,
 } from "dashboard/dataset/helper_components";
 import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
 import { jsonStringify, parseMaybe } from "libs/utils";
@@ -34,6 +33,7 @@ import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_flow_t
 import { useStartAndPollJob } from "admin/job/job_hooks";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
+import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
 
 const FormItem = Form.Item;
 

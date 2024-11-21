@@ -324,6 +324,7 @@ export type DatasetConfiguration = {
   readonly loadingStrategy: LoadingStrategy;
   readonly segmentationPatternOpacity: number;
   readonly blendMode: BLEND_MODES;
+  // TODO: update this comment
   // If nativelyRenderedLayerName is not-null, the layer with
   // that name (or id) should be rendered without any transforms.
   // This means, that all other layers should be transformed so that
@@ -333,7 +334,7 @@ export type DatasetConfiguration = {
   // Currently, the skeleton layer does not have transforms as a stored
   // property. So, to render the skeleton layer natively, nativelyRenderedLayerName
   // can be set to null.
-  readonly nativelyRenderedLayerName: string | null;
+  readonly nativelyRenderedLayerNames: string[];
 };
 
 export type PartialDatasetConfiguration = Partial<Omit<DatasetConfiguration, "layers">> & {

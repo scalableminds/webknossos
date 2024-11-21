@@ -36,19 +36,15 @@ import Toast from "libs/toast";
 import messages from "messages";
 import features from "features";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-import {
-  type DatasetRotation,
-  Hideable,
-  getRotationFromTransformation,
-  hasFormError,
-  haveAllLayersSameRotation,
-} from "./helper_components";
+import { Hideable, hasFormError } from "./helper_components";
 import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
 import DatasetSettingsMetadataTab from "./dataset_settings_metadata_tab";
 import DatasetSettingsSharingTab from "./dataset_settings_sharing_tab";
 import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
 import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
 import { defaultContext } from "@tanstack/react-query";
+import { haveAllLayersSameRotation } from "oxalis/model/accessors/dataset_accessor";
+import { type DatasetRotation, getRotationFromTransformation } from "./dataset_rotation_form_item";
 
 const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";

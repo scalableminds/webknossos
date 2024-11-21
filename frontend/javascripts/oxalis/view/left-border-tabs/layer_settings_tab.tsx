@@ -65,6 +65,7 @@ import {
   getLayerBoundingBox,
   getTransformsForLayer,
   hasDatasetTransforms,
+  haveAllLayersSameRotation,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForResolution, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -219,7 +220,13 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
       state.datasetConfiguration.nativelyRenderedLayerName,
     ),
   );
+  const isOneLayerRenderedNatively = useSelector(
+    (state: OxalisState) => state.datasetConfiguration.nativelyRenderedLayerName != null,
+  );
   const showIcon = useSelector((state: OxalisState) => hasDatasetTransforms(state.dataset));
+  const doAllLayersHaveTheSameTransform = useSelector((state: OxalisState) =>
+    haveAllLayersSameRotation(state.dataset.dataSource.dataLayers),
+  );
   if (!showIcon) {
     return null;
   }
@@ -1173,7 +1180,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const readableName = "Skeleton";
     const skeletonTracing = enforceSkeletonTracing(tracing);
     const isOnlyAnnotationLayer = tracing.annotationLayers.length === 1;
-    const { showSkeletons } = skeletonTracing;
+    const { showSkeletons, tracingId } = skeletonTracing;
     const activeNodeRadius = getActiveNode(skeletonTracing)?.radius ?? 0;
     return (
       <React.Fragment>
@@ -1223,7 +1230,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               paddingRight: 1,
             }}
           >
-            <TransformationIcon layer={{ category: "skeleton" }} />
+            <TransformationIcon layer={{ category: "skeleton", name: tracingId }} />
             {!isOnlyAnnotationLayer ? this.getDeleteAnnotationLayerButton(readableName) : null}
           </div>
         </div>

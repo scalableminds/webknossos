@@ -1185,6 +1185,16 @@ export function updateDatasetPartial(
   );
 }
 
+// This function migrates old DatasetConfigurations that have a nativelyRenderedLayerName
+// to the new more flexible format of using an array for this setting.
+function migrateNativelyRenderedLayerNameToNames(settings: any): DatasetConfiguration {
+  const { nativelyRenderedLayerName, nativelyRenderedLayerNames, ...rest } = settings;
+  if (nativelyRenderedLayerName) {
+    return { ...rest, nativelyRenderedLayerNames: [nativelyRenderedLayerName] };
+  }
+  return { ...rest, nativelyRenderedLayerNames: nativelyRenderedLayerNames || [] };
+}
+
 export async function getDatasetViewConfiguration(
   dataset: APIDataset,
   displayedVolumeTracings: Array<string>,
@@ -1198,7 +1208,8 @@ export async function getDatasetViewConfiguration(
       method: "POST",
     },
   );
-  enforceValidatedDatasetViewConfiguration(settings, dataset);
+  const migratedSettings = migrateNativelyRenderedLayerNameToNames(settings);
+  enforceValidatedDatasetViewConfiguration(migratedSettings, dataset);
   return settings;
 }
 

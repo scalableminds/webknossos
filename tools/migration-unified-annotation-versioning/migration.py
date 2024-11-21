@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import psycopg2
 import psycopg2.extras
 from psycopg2.extras import RealDictRow
@@ -12,10 +10,10 @@ from rich.progress import track
 
 import fossildbapi_pb2 as proto
 from utils import log_since, batch_range
-
 from connections import connect_to_fossildb, connect_to_postgres, assert_grpc_success
 
 logger = logging.getLogger(__name__)
+
 
 LayerVersionMapping = Dict[str, Dict[int, int]]
 
@@ -136,32 +134,25 @@ class Migration:
     def migrate_volume_buckets(self, layer, layer_version_mapping):
         pass
 
-
     def migrate_segment_index(self, layer, layer_version_mapping):
         pass
-
 
     def migrate_editable_mapping(self, layer, layer_version_mapping):
         self.migrate_editable_mapping_info(layer, layer_version_mapping)
         self.migrate_editable_mapping_agglomerate_to_graph(layer, layer_version_mapping)
         self.migrate_editable_mapping_segment_to_agglomerate(layer, layer_version_mapping)
 
-
     def migrate_editable_mapping_info(self, layer, layer_version_mapping):
         pass
-
 
     def migrate_editable_mapping_agglomerate_to_graph(self, layer, layer_version_mapping):
         pass
 
-
     def migrate_editable_mapping_segment_to_agglomerate(self, layer, layer_version_mapping):
         pass
 
-
     def insert_annotation_protos(self, annotation, layer_version_mapping):
         pass
-
 
     def read_annotation_list(self, start_time: datetime):
         before = time.time()

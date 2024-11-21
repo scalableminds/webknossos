@@ -85,8 +85,8 @@ import {
   getMagInfo,
   getVisibleSegmentationLayer,
   getMappingInfo,
-  flatToNestedMatrix,
 } from "oxalis/model/accessors/dataset_accessor";
+import { flatToNestedMatrix } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
 import {
   getPosition,
   getActiveMagIndexForLayer,

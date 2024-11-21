@@ -38,7 +38,7 @@ import { location } from "libs/window";
 import { coalesce } from "libs/utils";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getNodePosition } from "../accessors/skeletontracing_accessor";
-import { getTransformsForSkeletonLayer } from "../accessors/dataset_accessor";
+import { getTransformsForSkeletonLayer } from "../accessors/dataset_layer_rotation_accessor";
 
 // NML Defaults
 const DEFAULT_COLOR: Vector3 = [1, 0, 0];
@@ -312,7 +312,7 @@ function serializeParameters(
 function serializeTransform(state: OxalisState): string[] {
   const transform = getTransformsForSkeletonLayer(
     state.dataset,
-    state.datasetConfiguration.nativelyRenderedLayerName,
+    state.datasetConfiguration.nativelyRenderedLayerNames,
   );
 
   if (transform === IdentityTransform) {

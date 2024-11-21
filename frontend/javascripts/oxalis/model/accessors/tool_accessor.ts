@@ -9,10 +9,7 @@ import {
   hasAgglomerateMapping,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  getTransformsPerLayer,
-  getVisibleSegmentationLayer,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
 import type { APIOrganization, APIUser } from "types/api_flow_types";
 import {
@@ -22,6 +19,7 @@ import {
 } from "admin/organization/pricing_plan_utils";
 import { isSkeletonLayerTransformed } from "./skeletontracing_accessor";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
+import { getTransformsPerLayer } from "./dataset_layer_rotation_accessor";
 
 const zoomInToUseToolMessage =
   "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.";
@@ -282,7 +280,7 @@ function getDisabledVolumeInfo(state: OxalisState) {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const isSegmentationTracingTransformed =
     segmentationTracingLayer != null &&
-    getTransformsPerLayer(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName)[
+    getTransformsPerLayer(state.dataset, state.datasetConfiguration.nativelyRenderedLayerNames)[
       segmentationTracingLayer.tracingId
     ] !== IdentityTransform;
   const isSegmentationTracingVisible =

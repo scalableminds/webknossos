@@ -60,12 +60,8 @@ import {
   isColorLayer as getIsColorLayer,
   getLayerByName,
   getMagInfo,
-  getTransformsForLayerOrNull,
   getWidestMags,
   getLayerBoundingBox,
-  getTransformsForLayer,
-  hasDatasetTransforms,
-  haveAllLayersSameRotation,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForResolution, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -119,10 +115,6 @@ import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
-import {
-  invertTransform,
-  transformPointUnscaled,
-} from "oxalis/model/helpers/transformation_helpers";
 import FastTooltip from "components/fast_tooltip";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { DndContext, type DragEndEvent } from "@dnd-kit/core";
@@ -132,6 +124,16 @@ import {
   getDefaultLayerViewConfiguration,
 } from "types/schemas/dataset_view_configuration.schema";
 import defaultState from "oxalis/default_state";
+import {
+  getTransformsForLayerOrNull,
+  hasDatasetTransforms,
+  haveAllLayersSameRotation,
+  getTransformsForLayer,
+} from "oxalis/model/accessors/dataset_layer_rotation_accessor";
+import {
+  invertTransform,
+  transformPointUnscaled,
+} from "oxalis/model/helpers/transformation_helpers";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;
@@ -217,11 +219,11 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
     getTransformsForLayerOrNull(
       state.dataset,
       layer,
-      state.datasetConfiguration.nativelyRenderedLayerName,
+      state.datasetConfiguration.nativelyRenderedLayerNames,
     ),
   );
-  const isOneLayerRenderedNatively = useSelector(
-    (state: OxalisState) => state.datasetConfiguration.nativelyRenderedLayerName != null,
+  const isAtLeastOneLayerRenderedNatively = useSelector(
+    (state: OxalisState) => state.datasetConfiguration.nativelyRenderedLayerNames.length > 0,
   );
   const showIcon = useSelector((state: OxalisState) => hasDatasetTransforms(state.dataset));
   const doAllLayersHaveTheSameTransform = useSelector((state: OxalisState) =>
@@ -244,40 +246,65 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
 
   const toggleLayerTransforms = () => {
     const state = Store.getState();
-    const { nativelyRenderedLayerName } = state.datasetConfiguration;
-    if (
-      layer.category === "skeleton"
-        ? nativelyRenderedLayerName == null
-        : nativelyRenderedLayerName === layer.name
-    ) {
+    const { nativelyRenderedLayerNames } = state.datasetConfiguration;
+    const isLayerRenderedNatively = nativelyRenderedLayerNames.includes(layer.name);
+    if (isLayerRenderedNatively && !doAllLayersHaveTheSameTransform) {
+      // Cannot toggle transforms on a layer into whose coordinate system other layer transform.
       return;
     }
-    // Transform current position using the inverse transform
+    // TODOM: refactor the logic here. Works but is not easy to understand
+    let shouldInvertTransformation = true;
+    let getTransformsRegardlessOfSettings = false;
+    let updatedNativelyRenderedLayerNames: string[];
+    if (doAllLayersHaveTheSameTransform) {
+      if (isAtLeastOneLayerRenderedNatively) {
+        // As at least one layer is rendered natively, we can toggle on all transforms.
+        updatedNativelyRenderedLayerNames = [];
+        // As some transformations are now turned on do not invert the transform for flycam position change.
+        getTransformsRegardlessOfSettings = true;
+        // shouldInvertTransformation = false;
+      } else {
+        // As no layer is rendered natively, we toggle off all transforms.
+        updatedNativelyRenderedLayerNames = state.dataset.dataSource.dataLayers.map((l) => l.name);
+        if (state.tracing.skeleton) {
+          // The skeleton tracing's id represents it in the nativelyRenderedLayerNames array.
+          updatedNativelyRenderedLayerNames.push(state.tracing.skeleton.tracingId);
+        }
+        console.log("toggling on all transforms");
+      }
+    } else {
+      // As not all layers have the same transform, the current layer should now be rendered natively.
+      updatedNativelyRenderedLayerNames = [...nativelyRenderedLayerNames, layer.name];
+    }
+    dispatch(
+      updateDatasetSettingAction("nativelyRenderedLayerNames", updatedNativelyRenderedLayerNames),
+    );
+
+    // Transform current position using the (inverse) transform
     // so that the user will still look at the same data location.
     const currentPosition = getPosition(state.flycam);
     const currentTransforms = getTransformsForLayer(
       state.dataset,
       layer,
-      state.datasetConfiguration.nativelyRenderedLayerName,
+      getTransformsRegardlessOfSettings
+        ? []
+        : state.datasetConfiguration.nativelyRenderedLayerNames,
     );
-    const invertedTransform = invertTransform(currentTransforms);
-    const newPosition = transformPointUnscaled(invertedTransform)(currentPosition);
+    console.log("applying transformation", currentTransforms);
+    const maybeInvertedTransform = shouldInvertTransformation
+      ? invertTransform(currentTransforms)
+      : currentTransforms;
+    const newPosition = transformPointUnscaled(maybeInvertedTransform)(currentPosition);
 
     // Also transform a reference coordinate to determine how the scaling
     // changed. Then, adapt the zoom accordingly.
     const referenceOffset: Vector3 = [10, 10, 10];
     const secondPosition = V3.add(currentPosition, referenceOffset, [0, 0, 0]);
-    const newSecondPosition = transformPointUnscaled(invertedTransform)(secondPosition);
+    const newSecondPosition = transformPointUnscaled(maybeInvertedTransform)(secondPosition);
 
     const scaleChange = _.mean(
       // Only consider XY for now to determine the zoom change (by slicing from 0 to 2)
       V3.abs(V3.divide3(V3.sub(newPosition, newSecondPosition), referenceOffset)).slice(0, 2),
-    );
-    dispatch(
-      updateDatasetSettingAction(
-        "nativelyRenderedLayerName",
-        layer.category === "skeleton" ? null : layer.name,
-      ),
     );
     dispatch(setPositionAction(newPosition));
     dispatch(setZoomStepAction(state.flycam.zoomStep * scaleChange));
@@ -1063,7 +1090,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       const transformMatrix = getTransformsForLayerOrNull(
         dataset,
         layer,
-        Store.getState().datasetConfiguration.nativelyRenderedLayerName,
+        Store.getState().datasetConfiguration.nativelyRenderedLayerNames,
       )?.affineMatrix;
       if (transformMatrix) {
         const matrix = M4x4.transpose(transformMatrix);

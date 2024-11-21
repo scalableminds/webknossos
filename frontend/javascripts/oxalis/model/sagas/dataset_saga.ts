@@ -10,10 +10,12 @@ import {
   getLayerByName,
   getMaybeSegmentIndexAvailability,
   getMagInfo,
-  getTransformsForLayer,
-  invertAndTranspose,
   isLayerVisible,
 } from "../accessors/dataset_accessor";
+import {
+  getTransformsForLayer,
+  invertAndTranspose,
+} from "../accessors/dataset_layer_rotation_accessor";
 import { getCurrentMag } from "../accessors/flycam_accessor";
 import { getViewportExtents } from "../accessors/view_mode_accessor";
 import { V3 } from "libs/mjs";
@@ -91,7 +93,7 @@ export function* watchZ1Downsampling(): Saga<void> {
           getTransformsForLayer(
             state.dataset,
             dataLayer,
-            state.datasetConfiguration.nativelyRenderedLayerName,
+            state.datasetConfiguration.nativelyRenderedLayerNames,
           ).affineMatrix,
       );
       if (transformMatrix !== Identity4x4) {

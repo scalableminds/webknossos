@@ -11,8 +11,6 @@ import {
   isLayerVisible,
   getLayerByName,
   getMagInfo,
-  invertAndTranspose,
-  getTransformsForLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -32,6 +30,10 @@ import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import app from "app";
+import {
+  invertAndTranspose,
+  getTransformsForLayer,
+} from "../accessors/dataset_layer_rotation_accessor";
 
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
 // 256**2 (entries) * 0.25 (load capacity) / 8 (layers) == 2048 buckets/layer
@@ -198,7 +200,7 @@ export default class LayerRenderingManager {
 
     const resolutions = getMagInfo(layer.resolutions).getDenseMags();
     const layerMatrix = invertAndTranspose(
-      getTransformsForLayer(dataset, layer, datasetConfiguration.nativelyRenderedLayerName)
+      getTransformsForLayer(dataset, layer, datasetConfiguration.nativelyRenderedLayerNames)
         .affineMatrix,
     );
 

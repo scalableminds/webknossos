@@ -29,11 +29,8 @@ import {
   getMappingInfoForSupportedLayer,
   getVisibleSegmentationLayer,
   getLayerByName,
-  invertAndTranspose,
-  getTransformsForLayer,
   getMagInfoByLayer,
   getMagInfo,
-  getTransformsPerLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
@@ -53,6 +50,11 @@ import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
 import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { V3 } from "libs/mjs";
 import type TPS3D from "libs/thin_plate_spline";
+import {
+  invertAndTranspose,
+  getTransformsForLayer,
+  getTransformsPerLayer,
+} from "oxalis/model/accessors/dataset_layer_rotation_accessor";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;
@@ -242,8 +244,7 @@ class PlaneMaterialFactory {
     this.uniforms.activeMagIndices = {
       value: Object.values(activeMagIndices),
     };
-    const nativelyRenderedLayerName =
-      Store.getState().datasetConfiguration.nativelyRenderedLayerName;
+    const { nativelyRenderedLayerNames } = Store.getState().datasetConfiguration;
     const dataset = Store.getState().dataset;
     for (const dataLayer of Model.getAllLayers()) {
       const layerName = sanitizeName(dataLayer.name);
@@ -262,16 +263,15 @@ class PlaneMaterialFactory {
       };
       const layer = getLayerByName(dataset, dataLayer.name);
       const res = invertAndTranspose(
-        getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
+        getTransformsForLayer(dataset, layer, nativelyRenderedLayerNames).affineMatrix,
       );
 
-      // TODOM: Seems to be the correct matrix passed to the shader
       this.uniforms[`${layerName}_transform`] = {
         value: res,
       };
       this.uniforms[`${layerName}_has_transform`] = {
         value: !_.isEqual(
-          getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
+          getTransformsForLayer(dataset, layer, nativelyRenderedLayerNames).affineMatrix,
           Identity4x4,
         ),
       };
@@ -497,7 +497,7 @@ class PlaneMaterialFactory {
               getTransformsForLayer(
                 state.dataset,
                 layer,
-                state.datasetConfiguration.nativelyRenderedLayerName,
+                state.datasetConfiguration.nativelyRenderedLayerNames,
               ).affineMatrix,
               Identity4x4,
             );
@@ -885,7 +885,7 @@ class PlaneMaterialFactory {
         (storeState) =>
           getTransformsPerLayer(
             storeState.dataset,
-            storeState.datasetConfiguration.nativelyRenderedLayerName,
+            storeState.datasetConfiguration.nativelyRenderedLayerNames,
           ),
         (transformsPerLayer) => {
           this.scaledTpsInvPerLayer = {};

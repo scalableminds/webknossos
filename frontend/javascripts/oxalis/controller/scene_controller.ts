@@ -33,7 +33,6 @@ import {
   getDatasetBoundingBox,
   getLayerBoundingBox,
   getLayerNameToIsDisabled,
-  getTransformsForLayerOrNull,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveMagIndicesForLayers, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -47,6 +46,7 @@ import { Model } from "oxalis/singletons";
 import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import Store from "oxalis/store";
 import SegmentMeshController from "./segment_mesh_controller";
+import { getTransformsForLayerOrNull } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
 
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
@@ -554,7 +554,7 @@ class SceneController {
       () => this.updateLayerBoundingBoxes(),
     );
     listenToStoreProperty(
-      (storeState) => storeState.datasetConfiguration.nativelyRenderedLayerName,
+      (storeState) => storeState.datasetConfiguration.nativelyRenderedLayerNames,
       () => this.updateLayerBoundingBoxes(),
     );
     listenToStoreProperty(

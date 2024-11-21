@@ -324,16 +324,19 @@ export type DatasetConfiguration = {
   readonly loadingStrategy: LoadingStrategy;
   readonly segmentationPatternOpacity: number;
   readonly blendMode: BLEND_MODES;
-  // TODO: update this comment
-  // If nativelyRenderedLayerName is not-null, the layer with
-  // that name (or id) should be rendered without any transforms.
-  // This means, that all other layers should be transformed so that
+  // If a layer's name or id is included in  nativelyRenderedLayerNames,
+  // the layer with should be rendered without any transforms.
+  // This means, in case layers have different transformations that they reference another layers coordinate system .
+  // In such a case there should always be only one should layer in nativelyRenderedLayerNames.
+  // The other layers should be rendered with their transforms so that
   // they still correlated with each other.
-  // If nativelyRenderedLayerName is null, all layers are rendered
+  // If nativelyRenderedLayerNames is empty, all layers are rendered
   // as their transforms property signal it.
   // Currently, the skeleton layer does not have transforms as a stored
-  // property. So, to render the skeleton layer natively, nativelyRenderedLayerName
-  // can be set to null.
+  // property. So, to render the skeleton layer natively, add the layers tracingId to nativelyRenderedLayerNames.
+  // In case all layers have the same rotation setting, these should either be applied to all layers by setting
+  // nativelyRenderedLayerNames to [] or to render all layers natively, set nativelyRenderedLayerNames to include
+  // all layer names & the skeleton layers tracing id.
   readonly nativelyRenderedLayerNames: string[];
 };
 

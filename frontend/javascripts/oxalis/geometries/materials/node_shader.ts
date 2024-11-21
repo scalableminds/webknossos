@@ -8,13 +8,13 @@ import { Store } from "oxalis/singletons";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import _ from "lodash";
 import { formatNumberAsGLSLFloat } from "oxalis/shaders/utils.glsl";
-import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_accessor";
 import { M4x4 } from "libs/mjs";
 import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
 } from "oxalis/shaders/thin_plate_spline.glsl";
 import type TPS3D from "libs/thin_plate_spline";
+import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
 
 export const NodeTypes = {
   INVALID: 0.0,
@@ -118,10 +118,9 @@ class NodeShader {
     );
 
     const dataset = Store.getState().dataset;
-    const nativelyRenderedLayerName =
-      Store.getState().datasetConfiguration.nativelyRenderedLayerName;
+    const { nativelyRenderedLayerNames } = Store.getState().datasetConfiguration;
 
-    const { affineMatrix } = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
+    const { affineMatrix } = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerNames);
     this.uniforms["transform"] = {
       value: M4x4.transpose(affineMatrix),
     };
@@ -130,7 +129,7 @@ class NodeShader {
       (storeState) =>
         getTransformsForSkeletonLayer(
           storeState.dataset,
-          storeState.datasetConfiguration.nativelyRenderedLayerName,
+          storeState.datasetConfiguration.nativelyRenderedLayerNames,
         ),
       (skeletonTransforms) => {
         const transforms = skeletonTransforms;

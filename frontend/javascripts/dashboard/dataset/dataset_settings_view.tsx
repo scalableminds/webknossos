@@ -43,8 +43,11 @@ import DatasetSettingsSharingTab from "./dataset_settings_sharing_tab";
 import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
 import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
 import { defaultContext } from "@tanstack/react-query";
-import { haveAllLayersSameRotation } from "oxalis/model/accessors/dataset_accessor";
-import { type DatasetRotation, getRotationFromTransformation } from "./dataset_rotation_form_item";
+import type { DatasetRotation } from "./dataset_rotation_form_item";
+import {
+  haveAllLayersSameRotation,
+  getRotationFromTransformation,
+} from "oxalis/model/accessors/dataset_layer_rotation_accessor";
 
 const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";

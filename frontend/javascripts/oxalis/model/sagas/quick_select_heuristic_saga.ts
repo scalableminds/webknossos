@@ -57,8 +57,8 @@ import {
   getEnabledColorLayers,
   getLayerBoundingBox,
   getMagInfo,
-  getTransformsForLayer,
 } from "../accessors/dataset_accessor";
+import { getTransformsForLayer } from "../accessors/dataset_layer_rotation_accessor";
 import Dimensions, { type DimensionIndices } from "../dimensions";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
@@ -127,13 +127,13 @@ export function* prepareQuickSelect(
     getSegmentationLayerForTracing(state, volumeTracing),
   );
   const dataset = yield* select((state) => state.dataset);
-  const nativelyRenderedLayerName = yield* select(
-    (state) => state.datasetConfiguration.nativelyRenderedLayerName,
+  const nativelyRenderedLayerNames = yield* select(
+    (state) => state.datasetConfiguration.nativelyRenderedLayerNames,
   );
   if (
     !_.isEqual(
-      getTransformsForLayer(dataset, colorLayer, nativelyRenderedLayerName),
-      getTransformsForLayer(dataset, volumeLayer, nativelyRenderedLayerName),
+      getTransformsForLayer(dataset, colorLayer, nativelyRenderedLayerNames),
+      getTransformsForLayer(dataset, volumeLayer, nativelyRenderedLayerNames),
     )
   ) {
     Toast.warning(

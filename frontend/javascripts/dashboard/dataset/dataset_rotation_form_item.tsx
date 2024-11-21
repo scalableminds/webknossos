@@ -1,8 +1,7 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { type FormInstance, Row, Col, Slider, InputNumber, Tooltip, Typography } from "antd";
+import { type FormInstance, Row, Col, Slider, InputNumber, Tooltip, Typography, Form } from "antd";
 import FormItem from "antd/es/form/FormItem";
-import { haveAllLayersSameRotation } from "oxalis/model/accessors/dataset_accessor";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import type { APIDataLayer } from "types/api_flow_types";
 import { FormItemWithInfo } from "./helper_components";
 import {
@@ -11,7 +10,9 @@ import {
   IDENTITY_TRANSFORM,
   getTranslationBackToOriginalPosition,
   AXIS_TO_TRANSFORM_INDEX,
+  haveAllLayersSameRotation,
 } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 
 const { Text } = Typography;
 
@@ -20,26 +21,69 @@ type AxisRotationFormItemProps = {
   axis: "x" | "y" | "z";
 };
 
+function getDatasetBoundingBoxFromLayers(layer: APIDataLayer[]): BoundingBox | undefined {
+  if (layer.length === 0) {
+    return undefined;
+  }
+  let datasetBoundingBox = BoundingBox.fromBoundBoxObject(layer[0].boundingBox);
+  for (let i = 1; i < layer.length; i++) {
+    datasetBoundingBox = datasetBoundingBox.extend(
+      BoundingBox.fromBoundBoxObject(layer[i].boundingBox),
+    );
+  }
+  return datasetBoundingBox;
+}
+
 export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
   form,
   axis,
 }: AxisRotationFormItemProps) => {
+  const dataLayers: APIDataLayer[] = Form.useWatch(["dataSource", "dataLayers"], form);
+  const datasetBoundingBox = useMemo(
+    () => getDatasetBoundingBoxFromLayers(dataLayers),
+    [dataLayers],
+  );
+  // Update the transformations in case the user changes the dataset bounding box
+  useEffect(() => {
+    if (datasetBoundingBox == null || dataLayers[0].coordinateTransformations?.length !== 5) {
+      return;
+    }
+    const rotationValues = form?.getFieldValue(["datasetRotation"]);
+    const dataLayersWithUpdatedTransforms = dataLayers.map((layer) => {
+      const transformations = [
+        getTranslationToOrigin(datasetBoundingBox),
+        getRotationMatrixAroundAxis("x", rotationValues["x"]),
+        getRotationMatrixAroundAxis("y", rotationValues["y"]),
+        getRotationMatrixAroundAxis("z", rotationValues["z"]),
+        getTranslationBackToOriginalPosition(datasetBoundingBox),
+      ];
+      return {
+        ...layer,
+        coordinateTransformations: transformations,
+      };
+    });
+    form?.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
+  }, [datasetBoundingBox, dataLayers, form]);
+
   const setMatrixRotationsForAllLayer = useCallback(
     (rotationInDegrees: number): void => {
       const rotationInRadians = rotationInDegrees * (Math.PI / 180);
       const rotationMatrix = getRotationMatrixAroundAxis(axis, rotationInRadians);
       const dataLayers: APIDataLayer[] = form?.getFieldValue(["dataSource", "dataLayers"]);
+      const datasetBoundingBox = getDatasetBoundingBoxFromLayers(dataLayers);
+      if (datasetBoundingBox == null) {
+        return;
+      }
 
       const dataLayersWithUpdatedTransforms: APIDataLayer[] = dataLayers.map((layer) => {
         let transformations = layer.coordinateTransformations;
-        const boundingBox = layer.boundingBox; // TODOM: The bounding bix for the translation should eb the dataset bbox and not the layer's.
         if (transformations == null || transformations.length !== 5) {
           transformations = [
-            getTranslationToOrigin(boundingBox),
+            getTranslationToOrigin(datasetBoundingBox),
             IDENTITY_TRANSFORM,
             IDENTITY_TRANSFORM,
             IDENTITY_TRANSFORM,
-            getTranslationBackToOriginalPosition(boundingBox),
+            getTranslationBackToOriginalPosition(datasetBoundingBox),
           ];
         }
         transformations[AXIS_TO_TRANSFORM_INDEX[axis]] = rotationMatrix;

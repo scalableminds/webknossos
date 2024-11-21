@@ -5,12 +5,12 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import { Store } from "oxalis/singletons";
 import _ from "lodash";
-import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_accessor";
 import { M4x4 } from "libs/mjs";
 import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
 } from "oxalis/shaders/thin_plate_spline.glsl";
+import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
 import type TPS3D from "libs/thin_plate_spline";
 
 class EdgeShader {
@@ -42,11 +42,10 @@ class EdgeShader {
     };
 
     const dataset = Store.getState().dataset;
-    const nativelyRenderedLayerName =
-      Store.getState().datasetConfiguration.nativelyRenderedLayerName;
+    const { nativelyRenderedLayerNames } = Store.getState().datasetConfiguration;
     this.uniforms["transform"] = {
       value: M4x4.transpose(
-        getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName).affineMatrix,
+        getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerNames).affineMatrix,
       ),
     };
 
@@ -72,7 +71,7 @@ class EdgeShader {
       (storeState) =>
         getTransformsForSkeletonLayer(
           storeState.dataset,
-          storeState.datasetConfiguration.nativelyRenderedLayerName,
+          storeState.datasetConfiguration.nativelyRenderedLayerNames,
         ),
       (skeletonTransforms) => {
         const transforms = skeletonTransforms;

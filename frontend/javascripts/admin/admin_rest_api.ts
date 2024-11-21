@@ -1210,7 +1210,7 @@ export async function getDatasetViewConfiguration(
   );
   const migratedSettings = migrateNativelyRenderedLayerNameToNames(settings);
   enforceValidatedDatasetViewConfiguration(migratedSettings, dataset);
-  return settings;
+  return migratedSettings;
 }
 
 export function updateDatasetConfiguration(

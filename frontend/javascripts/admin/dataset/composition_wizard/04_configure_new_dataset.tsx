@@ -24,7 +24,7 @@ import Toast, { guardedWithErrorToast } from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import { flatToNestedMatrix } from "oxalis/model/accessors/dataset_accessor";
+import { flatToNestedMatrix } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
 import type { OxalisState } from "oxalis/store";
 import React, { useState } from "react";
 import { useSelector } from "react-redux";

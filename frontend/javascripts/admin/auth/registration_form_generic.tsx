@@ -301,7 +301,7 @@ function RegistrationFormGeneric(props: Props) {
             </Checkbox>
           </FormItem>
         )}
-        {terms != null && !terms.enabled ? null : (
+        {terms == null || terms.enabled ? (
           <FormItem
             name="tos_check"
             valuePropName="checked"
@@ -326,7 +326,7 @@ function RegistrationFormGeneric(props: Props) {
               .
             </Checkbox>
           </FormItem>
-        )}
+        ) : null}
       </div>
 
       <FormItem>

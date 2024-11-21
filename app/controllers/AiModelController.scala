@@ -192,6 +192,7 @@ class AiModelController @Inject()(
           "color_layer_name" -> request.body.colorLayerName,
           "bounding_box" -> boundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
+          "dataset_directory_name" -> request.body.datasetDirectoryName,
           "new_dataset_name" -> request.body.newDatasetName,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml
         )

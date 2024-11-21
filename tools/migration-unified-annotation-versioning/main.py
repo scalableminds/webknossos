@@ -10,7 +10,7 @@ import math
 import logging
 import datetime
 import time
-from typing import Dict
+from typing import Dict, Iterator, Tuple, List
 from rich.progress import track
 
 import fossildbapi_pb2 as proto
@@ -45,39 +45,63 @@ class Migration:
 
     def run(self):
         start_time = datetime.datetime.now()
-
         logger.info(f"Using start time {start_time}")
-
         annotations = self.read_annotation_list(start_time)
-
         for annotation in annotations:
             self.migrate_annotation(annotation)
 
-
-
-
     def migrate_annotation(self, annotation):
-        print(f"Migrating annotation {annotation['_id']} ...")
+        logger.info(f"Migrating annotation {annotation['_id']} ...")
         # layerId → {version_before → version_after}
+        before = time.time()
         layer_version_mapping = self.migrate_updates(annotation)
         self.migrate_materialized_layers(annotation, layer_version_mapping)
-
+        logger.info(f"Took {time.time() - before} s")
 
     def migrate_updates(self, annotation) -> Dict[str, Dict[int, int]]:
-        layers = annotation["layers"]
-        global_version = 0
-        for tracing_id, tracing_type in annotation["layers"].items():
-            old_newest_version = self.get_newest_version(tracing_id, tracing_type)
-        # TODO
-        return {}
+        unified_version = 0
+        version_mapping = {}
+        for tracing_id, layer_type in annotation["layers"].items():
+            collection = self.update_collection_for_layer_type(layer_type)
+            version_mapping_for_layer = {0: 0}
+            newest_version = self.get_newest_version(tracing_id, collection)
+            for batch_start, batch_end in batch_range(newest_version, 1000):
+                update_groups = self.get_update_batch(tracing_id, collection, batch_start, batch_end)
+                for version, update_group in update_groups:
+                    update_group = self.process_update_group(update_group)
+                    unified_version += 1
+                    version_mapping_for_layer[version] = unified_version
+                    self.save_update_group(unified_version, update_group)
+            version_mapping[tracing_id] = version_mapping_for_layer
 
-    def get_newest_version(self, tracing_id: str, layer_type: str) -> int:
-        collection = self.update_collection_for_layer_type(layer_type)
+        # TODO proofreading
+        # TODO interleave updates rather than concat
+        return version_mapping
+
+    def process_update_group(self, update_group_raw: str) -> str:
+        # TODO renamings, add actionTracingId
+        return update_group_raw
+
+    def save_update_group(self, version, update_group_raw: str) -> None:
+        # TODO save to dst_stub
+        return
+
+    def get_newest_version(self, tracing_id: str, collection: str) -> int:
         getReply = self.src_stub.Get(
             proto.GetRequest(collection=collection, key=tracing_id, mayBeEmpty=True)
         )
-        assert_success(getReply)
-        return getReply.actualVersion
+        if getReply.success:
+            return getReply.actualVersion
+        return 0
+
+    def get_update_batch(self, tracing_id: str, collection: str, batch_start: int, batch_end: int) -> List[Tuple[int, str]]:
+        reply = self.src_stub.GetMultipleVersions(
+            proto.GetMultipleVersionsRequest(collection=collection, key=tracing_id, oldestVersion=batch_start, newestVersion=batch_end-1)
+        )
+        assert_success(reply)
+        reply.versions.reverse()
+        reply.values.reverse()
+        return list(zip(reply.versions, reply.values))
 
     def update_collection_for_layer_type(self, layer_type):
         if layer_type == "Skeleton":
@@ -87,7 +111,6 @@ class Migration:
     def migrate_materialized_layers(self, annotation: RealDictRow, layer_version_mapping):
         for tracing_id, tracing_type in annotation["layers"].items():
             self.migrate_materialized_layer(tracing_id, tracing_type, layer_version_mapping)
-
 
     def migrate_materialized_layer(self, tracing_id, layer_type, layer_version_mapping):
         if layer_type == "Skeleton":
@@ -99,9 +122,14 @@ class Migration:
             self.migrate_editable_mapping(tracing_id, layer_version_mapping)
 
 
-    def migrate_skeleton_proto(self, layer, layer_version_mapping):
-        pass
+    def migrate_skeleton_proto(self, tracing_id, layer_version_mapping):
+        materialized_versions = self.list_versions("skeletons", tracing_id)
+        print(materialized_versions)
 
+    def list_versions(self, collection, key) -> List[int]:
+        reply = self.src_stub.ListVersions(proto.ListVersionsRequest(collection=collection, key=key))
+        assert_success(reply)
+        return reply.versions
 
     def migrate_volume_proto(self, layer, layer_version_mapping):
        pass
@@ -165,6 +193,17 @@ class Migration:
         logger.info(f"Loading annotations took {time.time() - before} s")
         return annotations
 
+
+def batch_range(
+    limit: int, batch_size: int
+) -> Iterator[Tuple[int, int]]:
+    full_range = range(limit)
+
+    for i in range(full_range.start, full_range.stop, batch_size):
+        yield (i, min(i + batch_size, full_range.stop))
+
+        if i + batch_size >= full_range.stop:
+            return
 
 def connect_to_fossildb(host):
     max_message_length = 2147483647

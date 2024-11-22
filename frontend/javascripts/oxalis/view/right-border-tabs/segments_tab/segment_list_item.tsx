@@ -5,6 +5,7 @@ import {
   VerticalAlignBottomOutlined,
   EllipsisOutlined,
   TagsOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
 import { List, type MenuProps, App } from "antd";
 import { useDispatch, useSelector } from "react-redux";
@@ -40,6 +41,7 @@ import { V4 } from "libs/mjs";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import type { MenuItemType } from "antd/es/menu/interface";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
+import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import {
   getAdditionalCoordinatesAsString,
@@ -79,8 +81,13 @@ const getLoadPrecomputedMeshMenuItem = (
   hideContextMenu: (_ignore?: any) => void,
   layerName: string | null | undefined,
   mappingInfo: ActiveMappingInfo,
+  activeVolumeTracing: VolumeTracing | null | undefined,
 ) => {
   const mappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
+  const showWarning =
+    activeVolumeTracing?.volumeBucketDataHasChanged ??
+    (!activeVolumeTracing?.hasEditableMapping && activeVolumeTracing?.mappingIsLocked);
+
   return {
     key: "loadPrecomputedMesh",
     disabled: !currentMeshFile,
@@ -112,18 +119,7 @@ const getLoadPrecomputedMeshMenuItem = (
       layerName,
       mappingInfo,
     ),
-    label: (
-      <FastTooltip
-        key="tooltip"
-        title={
-          currentMeshFile != null
-            ? `Load mesh for centered segment from file ${currentMeshFile.meshFileName}`
-            : "There is no mesh file."
-        }
-      >
-        Load Mesh (precomputed)
-      </FastTooltip>
-    ),
+    label: <LoadMeshMenuItemLabel currentMeshFile={currentMeshFile} volumeTracing={activeVolumeTracing} />,
   };
 };
 
@@ -428,6 +424,7 @@ function _SegmentListItem({
         hideContextMenu,
         visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
         mappingInfo,
+        activeVolumeTracing,
       ),
       getComputeMeshAdHocMenuItem(
         segment,

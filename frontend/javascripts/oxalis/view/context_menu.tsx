@@ -131,6 +131,7 @@ import {
 import { hideContextMenuAction, setActiveUserBoundingBoxId } from "oxalis/model/actions/ui_actions";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import FastTooltip from "components/fast_tooltip";
+import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -1179,7 +1180,12 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       segmentationLayerName,
       mappingInfo,
     ),
-    label: "Load Mesh (precomputed)",
+    label: (
+      <LoadMeshMenuItemLabel
+        currentMeshFile={currentMeshFile}
+        volumeTracing={volumeTracing}
+      />
+    ),
   };
   const computeMeshAdHocItem = {
     key: "compute-mesh-adhc",

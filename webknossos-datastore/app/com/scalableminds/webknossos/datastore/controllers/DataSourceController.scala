@@ -90,7 +90,8 @@ class DataSourceController @Inject()(
           isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
           _ <- if (!isKnownUpload) {
             (dsRemoteWebknossosClient.reserveDataSourceUpload(request.body, urlOrHeaderToken(token, request)) ?~> "dataset.upload.validation.failed")
-              .flatMap(reserveUploadAdditionalInfo => uploadService.reserveUpload(request.body, reserveUploadAdditionalInfo))
+              .flatMap(reserveUploadAdditionalInfo =>
+                uploadService.reserveUpload(request.body, reserveUploadAdditionalInfo))
           } else Fox.successful(())
         } yield Ok
       }

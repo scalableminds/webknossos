@@ -220,7 +220,7 @@ export function deleteEdge(treeId: number, sourceNodeId: number, targetNodeId: n
   } as const;
 }
 
-export type ActionCreateNode = Omit<Node, "untransformedPosition" | "mag"> & {
+export type CreateActionNode = Omit<Node, "untransformedPosition" | "mag"> & {
   position: Node["untransformedPosition"];
   treeId: number;
   resolution: number;
@@ -240,7 +240,7 @@ export function createNode(treeId: number, node: Node) {
       position: untransformedPosition,
       treeId,
       resolution: mag,
-    } as ActionCreateNode,
+    } as CreateActionNode,
   } as const;
 }
 export function updateNode(treeId: number, node: Node) {

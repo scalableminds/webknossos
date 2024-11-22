@@ -146,7 +146,7 @@ export function createNode(
     radius,
     rotation,
     viewport,
-    mag: mag,
+    mag,
     id: nextNewId,
     timestamp,
     bitDepth: state.datasetConfiguration.fourBit ? 4 : 8,

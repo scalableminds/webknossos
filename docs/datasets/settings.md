@@ -9,7 +9,9 @@ Editing these settings requires your account to have enough access rights and pe
 ## Data Tab
 The *Data* tab contains the settings for correctly reading the dataset as the correct data type (e.g., `uint8`), setting up, and configuring any layers.
 
-- `Scale`: The physical size of a voxel in nanometers, e.g., `11, 11, 24`
+- `Name`: The name of the dataset. Datasets can have duplicate names even within the same organization.
+- `Voxel Size`: The physical size of a voxel in the configured unit, e.g., `11, 11, 24`
+- `Unit`: The unit of the voxel size.
 
 For each detected layer:
 

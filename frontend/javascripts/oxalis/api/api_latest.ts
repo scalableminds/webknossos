@@ -625,8 +625,9 @@ class TracingApi {
    * @example
    * api.tracing.registerSegment(
    *   3,
-   *   "volume-layer-id"
    *   [1, 2, 3],
+   *   null,             // optional
+   *   "volume-layer-id" // optional
    * );
    */
   registerSegment(

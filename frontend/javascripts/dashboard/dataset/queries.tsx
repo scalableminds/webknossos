@@ -496,9 +496,11 @@ function diffDatasets(
     .map((id) => newDatasetsDict[id])
     .filter((newDataset) => {
       const oldDataset = oldDatasetsDict[newDataset.id];
-      return !_.isEqualWith(oldDataset, newDataset, (_objValue, _otherValue, key) => {
-        if (key === "lastUsedByUser") {
-          // Ignore the lastUsedByUser timestamp when diffing datasets.
+      return !_.isEqualWith(oldDataset, newDataset, (oldValue, newValue, key) => {
+        const didUpgradeToRenamableDS =
+          !("directoryName" in oldValue) && "directoryName" in newValue; // TODO: Can be remove after a few weeks / months.
+        if (key === "lastUsedByUser" || didUpgradeToRenamableDS) {
+          // Ignore the lastUsedByUser timestamp when diffing datasets and migrating datasets to new renamable version.
           return true;
         }
         // Fallback to lodash's isEqual check.

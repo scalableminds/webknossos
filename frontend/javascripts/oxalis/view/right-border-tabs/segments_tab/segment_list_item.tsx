@@ -441,7 +441,7 @@ function _SegmentListItem({
         hideContextMenu,
       ),
       {
-        key: "changeSegmentColor",
+        key: `changeSegmentColor-${segment.id}`,
         label: (
           <ChangeColorMenuItemContent
             isDisabled={false}

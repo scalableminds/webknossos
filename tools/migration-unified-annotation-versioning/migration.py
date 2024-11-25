@@ -190,7 +190,7 @@ class Migration:
 
     def save_bytes(self, collection: str, key: str, version: int, value: bytes) -> None:
         if self.dst_stub is not None:
-            reply = self.dst_stub.Put(proto.PutRequest(collection=collection, key=key, version=version))
+            reply = self.dst_stub.Put(proto.PutRequest(collection=collection, key=key, version=version, value=value))
             assert_grpc_success(reply)
 
     def migrate_volume_buckets(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
@@ -205,7 +205,7 @@ class Migration:
             list_keys_reply = self.src_stub.ListKeys(proto.ListKeysRequest(collection=collection, limit=list_keys_page_size, startAfterKey=current_start_after_key))
             assert_grpc_success(list_keys_reply)
             if len(list_keys_reply.keys) == 0:
-                # We iterated towards the very end of the volumeData collection
+                # We iterated towards the very end of the collection
                 return
             for key in list_keys_reply.keys:
                 if key.startswith(tracing_id):
@@ -220,26 +220,35 @@ class Migration:
                             self.save_bytes(collection, new_key, new_version, value)
                     current_start_after_key = key
                 else:
-                    # We iterated past the buckets of the current tracing
+                    # We iterated past the elements of the current tracing
                     return
 
     def migrate_segment_index(self, tracing_id, layer_version_mapping):
         self.migrate_all_versions_and_keys_with_prefix("volumeSegmentIndex", tracing_id, layer_version_mapping, transform_key=None)
 
-
-    def migrate_editable_mapping(self, layer, layer_version_mapping):
-        self.migrate_editable_mapping_info(layer, layer_version_mapping)
-        self.migrate_editable_mapping_agglomerate_to_graph(layer, layer_version_mapping)
-        self.migrate_editable_mapping_segment_to_agglomerate(layer, layer_version_mapping)
+    def migrate_editable_mapping(self, tracing_id, layer_version_mapping):
+        self.migrate_editable_mapping_info(tracing_id, layer_version_mapping)
+        self.migrate_editable_mapping_agglomerate_to_graph(tracing_id, layer_version_mapping)
+        self.migrate_editable_mapping_segment_to_agglomerate(tracing_id, layer_version_mapping)
 
     def migrate_editable_mapping_info(self, layer, layer_version_mapping):
         pass
 
-    def migrate_editable_mapping_agglomerate_to_graph(self, layer, layer_version_mapping):
-        pass
+    def migrate_editable_mapping_agglomerate_to_graph(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
+        self.migrate_all_versions_and_keys_with_prefix(
+            "editableMappingsAgglomerateToGraph",
+            tracing_id,
+            layer_version_mapping,
+            None
+        )
 
-    def migrate_editable_mapping_segment_to_agglomerate(self, layer, layer_version_mapping):
-        pass
+    def migrate_editable_mapping_segment_to_agglomerate(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
+        self.migrate_all_versions_and_keys_with_prefix(
+            "editableMappingsSegmentToAgglomerate",
+            tracing_id,
+            layer_version_mapping,
+            None
+        )
 
     def create_and_save_annotation_proto(self, annotation, latest_unified_version: int):
         version_step = 1000
@@ -260,7 +269,7 @@ class Migration:
                 annotationProto.annotationLayers.append(layer_proto)
             self.save_bytes(collection="annotations", key=annotation["_id"], version=version, value=annotationProto.SerializeToString())
 
-    def read_annotation_list(self, start_time: datetime):
+    def read_annotation_list(self, start_time):
         before = time.time()
         logger.info("Determining annotation count from postgres...")
         page_size = 10000

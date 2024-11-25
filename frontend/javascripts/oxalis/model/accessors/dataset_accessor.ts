@@ -345,6 +345,19 @@ export function getDatasetExtentAsString(
     formatNumberToLength(length, LongUnitToShortUnitMap[dataset.dataSource.scale.unit]),
   );
 }
+function getDataSetExtentAsProduct(extent: {
+  width: number;
+  height: number;
+  depth: number;
+}) {
+  return extent.width * extent.height * extent.depth;
+}
+export function getDatasetExtentInVoxelAsProduct(dataset: APIDataset) {
+  return getDataSetExtentAsProduct(getDatasetExtentInVoxel(dataset));
+}
+export function getDatasetExtentInUnitAsProduct(dataset: APIDataset) {
+  return getDataSetExtentAsProduct(getDatasetExtentInUnit(dataset));
+}
 export function determineAllowedModes(settings?: Settings): {
   preferredMode: APIAllowedMode | null | undefined;
   allowedModes: Array<APIAllowedMode>;

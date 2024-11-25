@@ -7,7 +7,7 @@ import React, { type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { ControlModeEnum, LongUnitToShortUnitMap } from "oxalis/constants";
-import { formatNumber, formatNumberToVolume, formatScale } from "libs/format_utils";
+import { formatNumberToVolume, formatScale, formatVoxels } from "libs/format_utils";
 import {
   getDatasetExtentAsString,
   getDatasetExtentInUnitAsProduct,
@@ -140,7 +140,7 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
       <div>
         Dataset extent:
         <br />
-        {formatNumber(extentProductInVx)} voxel
+        {formatVoxels(extentProductInVx)}
         <br />
         {formattedExtentinUnit}
       </div>

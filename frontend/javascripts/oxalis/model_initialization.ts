@@ -138,6 +138,7 @@ export async function initialize(
         maybeOutdatedAnnotation.tracingStore.url,
         maybeOutdatedAnnotation.id,
       );
+      // TODOP: potential updating the version of the annotation is needed. It is at least not done here.
       const layersWithStats = annotationFromTracingStore.annotationLayers.map((layer) => {
         return {
           tracingId: layer.tracingId,

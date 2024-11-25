@@ -133,20 +133,20 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
       dstArray
     }
 
-    def subVolumeContainsSegmentId[T](data: Array[T],
-                                      dataDimensions: Vec3Int,
-                                      boundingBox: BoundingBox,
-                                      segmentId: T): Boolean = {
-      for {
-        x <- boundingBox.topLeft.x until boundingBox.bottomRight.x
-        y <- boundingBox.topLeft.y until boundingBox.bottomRight.y
-        z <- boundingBox.topLeft.z until boundingBox.bottomRight.z
-      } {
-        val voxelOffset = x + y * dataDimensions.x + z * dataDimensions.x * dataDimensions.y
-        if (data(voxelOffset) == segmentId) return true
+    def subVolumeContainsSegmentId[T](
+        data: Array[T],
+        dataDimensions: Vec3Int,
+        boundingBox: BoundingBox,
+        segmentId: T
+    ): Boolean =
+      boundingBox.topLeft.x until boundingBox.bottomRight.x exists { x =>
+        boundingBox.topLeft.y until boundingBox.bottomRight.y exists { y =>
+          boundingBox.topLeft.z until boundingBox.bottomRight.z exists { z =>
+            val voxelOffset = x + y * dataDimensions.x + z * dataDimensions.x * dataDimensions.y
+            data(voxelOffset) == segmentId
+          }
+        }
       }
-      false
-    }
 
     def findNeighbors[T](data: Array[T], dataDimensions: Vec3Int, segmentId: T): List[Int] = {
       val x = dataDimensions.x - 1

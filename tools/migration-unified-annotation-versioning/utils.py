@@ -22,6 +22,7 @@ def log_since(before, label: str) -> None:
     logger.info(f"{label} took {diff:.2f} s")
 
 
+# TODO should we go to limit + 1?
 def batch_range(
     limit: int, batch_size: int
 ) -> Iterator[Tuple[int, int]]:

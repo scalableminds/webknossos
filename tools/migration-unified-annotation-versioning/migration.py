@@ -5,7 +5,7 @@ import math
 import logging
 import datetime
 import time
-from typing import Dict, Tuple, List, Optional
+from typing import Dict, Tuple, List, Optional, Callable
 from rich.progress import track
 import orjson
 
@@ -194,10 +194,13 @@ class Migration:
             assert_grpc_success(reply)
 
     def migrate_volume_buckets(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
-        collection = "volumeData"
+        self.migrate_all_versions_and_keys_with_prefix("volumeData", tracing_id, layer_version_mapping, transform_key=self.remove_morton_index)
+
+    def migrate_all_versions_and_keys_with_prefix(self, collection: str, tracing_id: str, layer_version_mapping: LayerVersionMapping, transform_key: Optional[Callable[[str], str]]):
         list_keys_page_size = 5000
         versions_page_size = 500
-        current_start_after_key = tracing_id + "/0" # lexicographically before /1 (or any /mag)
+        current_start_after_key = tracing_id + "." # . is lexicographically before /
+        newest_tracing_version = max(layer_version_mapping[tracing_id].keys())
         while True:
             list_keys_reply = self.src_stub.ListKeys(proto.ListKeysRequest(collection=collection, limit=list_keys_page_size, startAfterKey=current_start_after_key))
             assert_grpc_success(list_keys_reply)
@@ -206,20 +209,23 @@ class Migration:
                 return
             for key in list_keys_reply.keys:
                 if key.startswith(tracing_id):
-                    # TODO paginate versions
-                    get_versions_reply = self.src_stub.GetMultipleVersions(proto.GetMultipleVersionsRequest(collection=collection, key=key))
-                    assert_grpc_success(get_versions_reply)
-                    new_key = self.remove_morton_index(key)
-                    for version, value in zip(get_versions_reply.versions, get_versions_reply.values):
-                        new_version = layer_version_mapping[tracing_id][version]
-                        self.save_bytes(collection, new_key, new_version, value)
+                    for version_range_start, version_range_end in batch_range(newest_tracing_version, versions_page_size):
+                        get_versions_reply = self.src_stub.GetMultipleVersions(proto.GetMultipleVersionsRequest(collection=collection, key=key, oldestVersion=version_range_start, newestVersion=version_range_end))
+                        assert_grpc_success(get_versions_reply)
+                        new_key = key
+                        if transform_key is not None:
+                            new_key = transform_key(key)
+                        for version, value in zip(get_versions_reply.versions, get_versions_reply.values):
+                            new_version = layer_version_mapping[tracing_id][version]
+                            self.save_bytes(collection, new_key, new_version, value)
                     current_start_after_key = key
                 else:
                     # We iterated past the buckets of the current tracing
                     return
 
-    def migrate_segment_index(self, layer, layer_version_mapping):
-        pass
+    def migrate_segment_index(self, tracing_id, layer_version_mapping):
+        self.migrate_all_versions_and_keys_with_prefix("volumeSegmentIndex", tracing_id, layer_version_mapping, transform_key=None)
+
 
     def migrate_editable_mapping(self, layer, layer_version_mapping):
         self.migrate_editable_mapping_info(layer, layer_version_mapping)
@@ -246,7 +252,7 @@ class Migration:
             for tracing_id, tracing_type in annotation["layers"].items():
                 layer_proto = AnnotationProto.AnnotationLayerProto()
                 layer_proto.tracingId = tracing_id
-                layer_proto.name = "TODO"  # TODO fetch this from postgres also
+                layer_proto.name = annotation["layernames"][tracing_id]
                 layer_type_proto = AnnotationProto.AnnotationLayerTypeProto.Skeleton
                 if tracing_type == "Volume":
                     layer_type_proto = AnnotationProto.AnnotationLayerTypeProto.Volume
@@ -268,7 +274,7 @@ class Migration:
         page_count = math.ceil(annotation_count / page_size)
         for page_num in track(range(page_count), total=page_count, description=f"Loading annotation infos ..."):
             query = f"""
-                SELECT a._id, a.name, a.description, a.created, a.modified, JSON_OBJECT_AGG(al.tracingId, al.typ) AS layers
+                SELECT a._id, a.name, a.description, a.created, a.modified, JSON_OBJECT_AGG(al.tracingId, al.typ) AS layers, JSON_OBJECT_AGG(al.tracingId, al.name) AS layerNames
                 FROM webknossos.annotation_layers al
                 JOIN webknossos.annotations a on al._annotation = a._id
                 WHERE a.modified < {modified_str}

@@ -5,8 +5,9 @@ import math
 import logging
 import datetime
 import time
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional
 from rich.progress import track
+import orjson
 
 import fossildbapi_pb2 as proto
 from utils import log_since, batch_range
@@ -49,25 +50,45 @@ class Migration:
             collection = self.update_collection_for_layer_type(layer_type)
             version_mapping_for_layer = {0: 0}
             newest_version = self.get_newest_version(tracing_id, collection)
+            editable_mapping_id_opt = None # TODO parse from newest_version (value needs to be parsed as proto)
             for batch_start, batch_end in batch_range(newest_version, 1000):
                 update_groups = self.get_update_batch(tracing_id, collection, batch_start, batch_end)
                 for version, update_group in update_groups:
-                    update_group = self.process_update_group(update_group)
+                    update_group = self.process_update_group(tracing_id, layer_type, update_group)
                     unified_version += 1
                     version_mapping_for_layer[version] = unified_version
                     self.save_update_group(unified_version, update_group)
             version_mapping[tracing_id] = version_mapping_for_layer
+            if editable_mapping_id_opt is not None:
+                # TODO migrate editable mapping updates
+                pass
 
-        # TODO proofreading
         # TODO interleave updates rather than concat
+        # TODO handle existing revertToVersion update actions
         return version_mapping
 
-    def process_update_group(self, update_group_raw: str) -> str:
-        # TODO renamings, add actionTracingId
-        return update_group_raw
+    def process_update_group(self, tracing_id: str, layer_type: str, update_group_raw: bytes) -> bytes:
+        update_group_parsed = orjson.loads(update_group_raw)
 
-    def save_update_group(self, version, update_group_raw: str) -> None:
-        # TODO save to dst_stub
+        # TODO handle existing revertToVersion update actions
+
+        for update in update_group_parsed:
+            name = update["name"]
+
+            if name == "updateTracing":
+                update["name"] = f"update{layer_type}Tracing"
+            elif name == "updateUserBoundingBoxes":
+                update["name"] = f"updateUserBoundingBoxesIn{layer_type}Tracing"
+            elif name == "updateUserBoundingBoxVisibility":
+                update["name"] = f"updateUserBoundingBoxVisibilityIn{layer_type}Tracing"
+
+            if not name == "updateTdCamera":
+                update["value"]["actionTracinId"] = tracing_id
+
+        return orjson.dumps(update_group_parsed)
+
+    def save_update_group(self, version, update_group_raw: bytes) -> None:
+        print(f"saving update group: {update_group_raw}")
         return
 
     def get_newest_version(self, tracing_id: str, collection: str) -> int:
@@ -78,7 +99,7 @@ class Migration:
             return getReply.actualVersion
         return 0
 
-    def get_update_batch(self, tracing_id: str, collection: str, batch_start: int, batch_end_inclusive: int) -> List[Tuple[int, str]]:
+    def get_update_batch(self, tracing_id: str, collection: str, batch_start: int, batch_end_inclusive: int) -> List[Tuple[int, bytes]]:
         reply = self.src_stub.GetMultipleVersions(
             proto.GetMultipleVersionsRequest(collection=collection, key=tracing_id, oldestVersion=batch_start, newestVersion=batch_end_inclusive)
         )

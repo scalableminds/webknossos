@@ -16,6 +16,7 @@ import scala.concurrent.duration._
 
 class DatasetErrorLoggingService @Inject()(
     val lifecycle: ApplicationLifecycle,
+    val applicationHealthService: ApplicationHealthService,
     @Named("webknossos-datastore") val system: ActorSystem)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with LazyLogging {
@@ -46,10 +47,7 @@ class DatasetErrorLoggingService @Inject()(
 
   override protected def tick(): Unit = recentErrors.clear()
 
-  def withErrorLogging(dataSourceId: DataSourceId,
-                       label: String,
-                       resultFox: Fox[Array[Byte]],
-                       onInternalError: InternalError => Unit = _ => ()): Fox[Array[Byte]] =
+  def withErrorLogging(dataSourceId: DataSourceId, label: String, resultFox: Fox[Array[Byte]]): Fox[Array[Byte]] =
     resultFox.futureBox.flatMap {
       case Full(data) =>
         if (data.length == 0) {
@@ -64,7 +62,7 @@ class DatasetErrorLoggingService @Inject()(
         }
       case Failure(msg, Full(e: InternalError), _) =>
         logger.error(s"Caught internal error: $label for $dataSourceId", e)
-        onInternalError(e)
+        applicationHealthService.pushError(e)
         Fox.failure(msg, Full(e))
       case Failure(msg, Full(exception), _) =>
         if (shouldLog(dataSourceId.team, dataSourceId.name)) {

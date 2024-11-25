@@ -20,7 +20,6 @@ import scala.concurrent.ExecutionContext
 class BinaryDataService(val dataBaseDir: Path,
                         val agglomerateServiceOpt: Option[AgglomerateService],
                         remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                        val applicationHealthService: Option[ApplicationHealthService],
                         sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
                         datasetErrorLoggingService: Option[DatasetErrorLoggingService])(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -102,8 +101,7 @@ class BinaryDataService(val dataBaseDir: Path,
           d.withErrorLogging(
             request.dataSource.id,
             s"Bucket loading for layer ${request.dataLayer.name} at ${readInstruction.bucket}, cuboid: ${request.cuboid}",
-            bucketProvider.load(readInstruction),
-            e => applicationHealthService.foreach(a => a.pushError(e))
+            bucketProvider.load(readInstruction)
           )
         case None => bucketProvider.load(readInstruction)
       }

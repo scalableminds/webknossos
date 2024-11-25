@@ -11,6 +11,7 @@ import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
 import { useFetch } from "libs/react_helpers";
 import { getTermsOfService } from "admin/api/terms_of_service";
+import { TOSCheckFormItem } from "./tos_check_form_item";
 
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -301,32 +302,7 @@ function RegistrationFormGeneric(props: Props) {
             </Checkbox>
           </FormItem>
         )}
-        {terms == null || terms.enabled ? (
-          <FormItem
-            name="tos_check"
-            valuePropName="checked"
-            rules={[
-              {
-                validator: (_, value) =>
-                  value
-                    ? Promise.resolve()
-                    : Promise.reject(new Error(messages["auth.tos_check_required"])),
-              },
-            ]}
-          >
-            <Checkbox disabled={terms == null}>
-              I agree to the{" "}
-              {terms == null ? (
-                "terms of service"
-              ) : (
-                <a target="_blank" href={terms.url} rel="noopener noreferrer">
-                  terms of service
-                </a>
-              )}
-              .
-            </Checkbox>
-          </FormItem>
-        ) : null}
+        <TOSCheckFormItem terms={terms} />
       </div>
 
       <FormItem>

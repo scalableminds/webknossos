@@ -486,7 +486,7 @@ function checkBoundingBoxesForErrorsAndWarnings(
   type BoundingBoxWithAnnotationId = { boundingBox: Vector6; annotationId: string };
   const tooSmallBoxes: BoundingBoxWithAnnotationId[] = [];
   const nonMultipleBoxes: BoundingBoxWithAnnotationId[] = [];
-  userBoundingBoxes.map(({ boundingBox: box, annotationId }) => {
+  userBoundingBoxes.forEach(({ boundingBox: box, annotationId }) => {
     const arrayBox = computeArrayFromBoundingBox(box);
     const [_x, _y, _z, width, height, depth] = arrayBox;
     if (width < 10 || height < 10 || depth < 10) {

@@ -189,6 +189,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
 }
 
 const layerIndependentActions = new Set([
+  // TODOM: sync this with the backend. The backend currently has only two such actions that have this requirement.
   "updateTdCamera",
   "revertToVersion",
   "addLayerToAnnotation",

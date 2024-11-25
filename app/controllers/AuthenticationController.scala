@@ -642,7 +642,7 @@ class AuthenticationController @Inject()(
   private def acceptTermsOfServiceForUser(user: User, termsOfServiceVersion: Option[Int])(
       implicit m: MessagesProvider): Fox[Unit] =
     for {
-      acceptedVersion <- Fox.option2Fox(termsOfServiceVersion)
+      acceptedVersion <- Fox.option2Fox(termsOfServiceVersion) ?~> "Terms of service must be accepted."
       _ <- organizationService.acceptTermsOfService(user._organization, acceptedVersion)(DBAccessContext(Some(user)), m)
     } yield ()
 

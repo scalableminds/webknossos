@@ -1,5 +1,4 @@
 import { WarningOutlined } from "@ant-design/icons";
-import React from "react";
 import FastTooltip from "components/fast_tooltip";
 import type { VolumeTracing } from "oxalis/store";
 import type { APIMeshFile } from "types/api_flow_types";

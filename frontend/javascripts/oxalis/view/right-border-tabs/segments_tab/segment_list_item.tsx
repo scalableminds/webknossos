@@ -5,7 +5,6 @@ import {
   VerticalAlignBottomOutlined,
   EllipsisOutlined,
   TagsOutlined,
-  WarningOutlined,
 } from "@ant-design/icons";
 import { List, type MenuProps, App } from "antd";
 import { useDispatch, useSelector } from "react-redux";
@@ -84,9 +83,6 @@ const getLoadPrecomputedMeshMenuItem = (
   activeVolumeTracing: VolumeTracing | null | undefined,
 ) => {
   const mappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
-  const showWarning =
-    activeVolumeTracing?.volumeBucketDataHasChanged ??
-    (!activeVolumeTracing?.hasEditableMapping && activeVolumeTracing?.mappingIsLocked);
 
   return {
     key: "loadPrecomputedMesh",
@@ -119,7 +115,12 @@ const getLoadPrecomputedMeshMenuItem = (
       layerName,
       mappingInfo,
     ),
-    label: <LoadMeshMenuItemLabel currentMeshFile={currentMeshFile} volumeTracing={activeVolumeTracing} />,
+    label: (
+      <LoadMeshMenuItemLabel
+        currentMeshFile={currentMeshFile}
+        volumeTracing={activeVolumeTracing}
+      />
+    ),
   };
 };
 

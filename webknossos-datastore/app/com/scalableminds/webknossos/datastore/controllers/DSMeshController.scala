@@ -32,7 +32,11 @@ class DSMeshController @Inject()(
                                         urlOrHeaderToken(token, request)) {
         for {
           meshFiles <- meshFileService.exploreMeshFiles(organizationId, datasetName, dataLayerName)
-        } yield Ok(Json.toJson(meshFiles))
+          neuroglancerMeshFiles <- meshFileService.exploreNeuroglancerPrecomputedMeshes(organizationId,
+                                                                                        datasetName,
+                                                                                        dataLayerName)
+          allMeshFiles = meshFiles ++ neuroglancerMeshFiles
+        } yield Ok(Json.toJson(allMeshFiles))
       }
     }
 

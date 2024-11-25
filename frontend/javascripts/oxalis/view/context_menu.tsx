@@ -1440,12 +1440,13 @@ function ContextMenuInner(propsWithInputRef: Props) {
     maybeClickedMeshId != null ? maybeClickedMeshId : segmentIdAtPosition;
   const wasSegmentOrMeshClicked = clickedSegmentOrMeshId > 0;
 
-  const { dataset, tracing, flycam } = useSelector((state: OxalisState) => state);
+  const dataset = useSelector((state: OxalisState) => state.dataset);
   useEffect(() => {
     Store.dispatch(ensureSegmentIndexIsLoadedAction(visibleSegmentationLayer?.name));
   }, [visibleSegmentationLayer]);
-  const isSegmentIndexAvailable = useSelector((state: OxalisState) =>
-    getMaybeSegmentIndexAvailability(state.dataset, visibleSegmentationLayer?.name),
+  const isSegmentIndexAvailable = getMaybeSegmentIndexAvailability(
+    dataset,
+    visibleSegmentationLayer?.name,
   );
   const mappingName: string | null | undefined = useSelector((state: OxalisState) => {
     if (volumeTracing?.mappingName != null) return volumeTracing?.mappingName;
@@ -1459,6 +1460,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
   const isLoadingVolumeAndBB = [isLoadingMessage, isLoadingMessage];
   const [segmentVolumeLabel, boundingBoxInfoLabel] = useFetch(
     async () => {
+      const { tracing, flycam } = Store.getState();
       // The value that is returned if the context menu is closed is shown if it's still loading
       if (contextMenuPosition == null || !wasSegmentOrMeshClicked) return isLoadingVolumeAndBB;
       if (visibleSegmentationLayer == null || !isSegmentIndexAvailable) return [];

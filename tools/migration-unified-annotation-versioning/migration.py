@@ -9,7 +9,8 @@ from typing import Dict, Tuple, List, Optional
 from rich.progress import track
 import orjson
 
-import fossildbapi_pb2 as proto
+import generated.fossildbapi_pb2 as proto
+import generated.SkeletonTracing_pb2 as skeleton
 from utils import log_since, batch_range
 from connections import connect_to_fossildb, connect_to_postgres, assert_grpc_success
 

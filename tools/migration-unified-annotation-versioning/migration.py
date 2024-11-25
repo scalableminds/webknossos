@@ -190,11 +190,33 @@ class Migration:
 
     def save_bytes(self, collection: str, key: str, version: int, value: bytes) -> None:
         if self.dst_stub is not None:
-            reply = self.dst.stub.Put(proto.PutRequest(collection=collection, key=key, version=version))
+            reply = self.dst_stub.Put(proto.PutRequest(collection=collection, key=key, version=version))
             assert_grpc_success(reply)
 
-    def migrate_volume_buckets(self, layer, layer_version_mapping):
-        pass
+    def migrate_volume_buckets(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
+        collection = "volumeData"
+        list_keys_page_size = 5000
+        versions_page_size = 500
+        current_start_after_key = tracing_id + "/0" # lexicographically before /1 (or any /mag)
+        while True:
+            list_keys_reply = self.src_stub.ListKeys(proto.ListKeysRequest(collection=collection, limit=list_keys_page_size, startAfterKey=current_start_after_key))
+            assert_grpc_success(list_keys_reply)
+            if len(list_keys_reply.keys) == 0:
+                # We iterated towards the very end of the volumeData collection
+                return
+            for key in list_keys_reply.keys:
+                if key.startswith(tracing_id):
+                    # TODO paginate versions
+                    get_versions_reply = self.src_stub.GetMultipleVersions(proto.GetMultipleVersionsRequest(collection=collection, key=key))
+                    assert_grpc_success(get_versions_reply)
+                    new_key = self.remove_morton_index(key)
+                    for version, value in zip(get_versions_reply.versions, get_versions_reply.values):
+                        new_version = layer_version_mapping[tracing_id][version]
+                        self.save_bytes(collection, new_key, new_version, value)
+                    current_start_after_key = key
+                else:
+                    # We iterated past the buckets of the current tracing
+                    return
 
     def migrate_segment_index(self, layer, layer_version_mapping):
         pass
@@ -259,3 +281,7 @@ class Migration:
             annotations += cursor.fetchall()
         log_since(before, "Loading annotations")
         return annotations
+
+    def remove_morton_index(self, bucket_key: str) -> str:
+        # TODO
+        return bucket_key

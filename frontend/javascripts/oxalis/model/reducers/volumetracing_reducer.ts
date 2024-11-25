@@ -377,6 +377,12 @@ function VolumeTracingReducer(
       return expandSegmentParents(state, action);
     }
 
+    case "SET_VOLUME_BUCKET_DATA_HAS_CHANGED": {
+      return updateVolumeTracing(state, action.layerName, {
+        volumeBucketDataHasChanged: true,
+      });
+    }
+
     default: // pass
   }
 

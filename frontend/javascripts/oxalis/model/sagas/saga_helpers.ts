@@ -113,4 +113,36 @@ export function* ensureMaybeActiveMappingIsLocked(
   }
 }
 
+export function* requestBucketModificationInVolumeTracing(
+  volumeTracing: VolumeTracing,
+): Saga<boolean> {
+  /*
+   * Should be called when the modification of bucket data is about to happen. If
+   * the saga returns false, the modification should be cancelled (this happens if
+   * the user is not okay with locking the mapping).
+   *
+   * In detail: When the bucket data of a volume tracing is supposed to be mutated, we need to do
+   * two things:
+   * 1) ensure that the current mapping (or no mapping) is locked so that the mapping is not
+   *    changed later (this would lead to inconsistent data). If the mapping state is not yet
+   *    locked, the user is asked whether it is okay to lock it.
+   *    If the user confirms this, the mapping is locked and we can continue with (2). If the
+   *    user denies the locking request, the original bucket mutation will NOT be executed.
+   * 2) volumeTracing.volumeBucketDataHasChanged will bet set to true if the user didn't
+   *    deny the request for locking the mapping.
+   */
+
+  const { isMappingLockedIfNeeded } = yield* call(ensureMaybeActiveMappingIsLocked, volumeTracing);
+  if (!isMappingLockedIfNeeded) {
+    return false;
+  }
+
+  // Mark that bucket data has changed
+  yield* put({
+    type: "SET_VOLUME_BUCKET_DATA_HAS_CHANGED",
+    tracingId: volumeTracing.tracingId,
+  });
+  return true;
+}
+
 export default {};

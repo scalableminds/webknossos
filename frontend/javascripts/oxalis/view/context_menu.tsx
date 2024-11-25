@@ -1181,10 +1181,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       mappingInfo,
     ),
     label: (
-      <LoadMeshMenuItemLabel
-        currentMeshFile={currentMeshFile}
-        volumeTracing={volumeTracing}
-      />
+      <LoadMeshMenuItemLabel currentMeshFile={currentMeshFile} volumeTracing={volumeTracing} />
     ),
   };
   const computeMeshAdHocItem = {

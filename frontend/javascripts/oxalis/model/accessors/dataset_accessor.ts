@@ -345,18 +345,33 @@ export function getDatasetExtentAsString(
     formatNumberToLength(length, LongUnitToShortUnitMap[dataset.dataSource.scale.unit]),
   );
 }
-function getDataSetExtentAsProduct(extent: {
+function getDatasetExtentAsProduct(extent: {
   width: number;
   height: number;
   depth: number;
 }) {
-  return extent.width * extent.height * extent.depth;
+  const safeMultiply = (a: number, b: number) => {
+    const result = a * b;
+    if (!Number.isFinite(result)) {
+      throw new Error("Dataset extent product exceeds maximum safe number");
+    }
+    return result;
+  };
+  return safeMultiply(safeMultiply(extent.width, extent.height), extent.depth);
 }
 export function getDatasetExtentInVoxelAsProduct(dataset: APIDataset) {
-  return getDataSetExtentAsProduct(getDatasetExtentInVoxel(dataset));
+  try {
+    return getDatasetExtentAsProduct(getDatasetExtentInVoxel(dataset));
+  } catch (e) {
+    console.error(e);
+  }
 }
 export function getDatasetExtentInUnitAsProduct(dataset: APIDataset) {
-  return getDataSetExtentAsProduct(getDatasetExtentInUnit(dataset));
+  try {
+    return getDatasetExtentAsProduct(getDatasetExtentInUnit(dataset));
+  } catch (e) {
+    console.error(e);
+  }
 }
 export function determineAllowedModes(settings?: Settings): {
   preferredMode: APIAllowedMode | null | undefined;

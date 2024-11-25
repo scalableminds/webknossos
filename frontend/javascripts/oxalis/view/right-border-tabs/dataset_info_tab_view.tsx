@@ -130,17 +130,20 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
   const extentInLength = getDatasetExtentAsString(dataset, false);
   const extentProductInVx = getDatasetExtentInVoxelAsProduct(dataset);
   const extentProductInUnit = getDatasetExtentInUnitAsProduct(dataset);
-  const formattedExtentinUnit = formatNumberToVolume(
-    extentProductInUnit,
-    LongUnitToShortUnitMap[dataset.dataSource.scale.unit],
-  );
+  const formattedExtentinUnit =
+    extentProductInUnit != null
+      ? formatNumberToVolume(
+          extentProductInUnit,
+          LongUnitToShortUnitMap[dataset.dataSource.scale.unit],
+        )
+      : "Unable to calculate";
 
   const renderDSExtentTooltip = () => {
     return (
       <div>
         Dataset extent:
         <br />
-        {formatVoxels(extentProductInVx)}
+        {extentProductInVx != null ? formatVoxels(extentProductInVx) : "Unable to calculate"}
         <br />
         {formattedExtentinUnit}
       </div>

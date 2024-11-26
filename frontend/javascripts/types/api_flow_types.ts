@@ -153,7 +153,7 @@ export type APIPublicationAnnotation = {
   readonly name: string;
   readonly description: string;
   readonly tracingStore: APITracingStore;
-  readonly dataSet: APIDataset;
+  readonly dataset: APIDataset;
 };
 export type APIPublication = {
   readonly id: string;

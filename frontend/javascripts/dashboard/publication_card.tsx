@@ -192,13 +192,13 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
       .filter((dataset) => dataset.isActive)
       .map((dataset) => ({ type: PublicationItemType.DATASET, dataset }) as PublicationItem),
     ...publication.annotations
-      .filter((annotation) => annotation.dataSet.isActive)
+      .filter((annotation) => annotation.dataset.isActive)
       .map(
         (annotation) =>
           ({
             type: PublicationItemType.ANNOTATION,
             annotation,
-            dataset: annotation.dataSet,
+            dataset: annotation.dataset,
           }) as PublicationItem,
       ),
   ];

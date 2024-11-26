@@ -945,7 +945,7 @@ class AnnotationService @Inject()(
         "description" -> annotation.description,
         "typ" -> annotation.typ,
         "tracingStore" -> tracingStoreJs,
-        "dataSet" -> datasetJs
+        "dataset" -> datasetJs
       )
   }
 

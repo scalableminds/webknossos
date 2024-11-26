@@ -15,7 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 - Reading image files on datastore filesystem is now done asynchronously. [#8126](https://github.com/scalableminds/webknossos/pull/8126)
-- Dataset can now be renamed and can have duplicate names. [#8075](https://github.com/scalableminds/webknossos/pull/8075)
+- Datasets can now be renamed and can have duplicate names. [#8075](https://github.com/scalableminds/webknossos/pull/8075)
 - Improved error messages for starting jobs on datasets from other organizations. [#8181](https://github.com/scalableminds/webknossos/pull/8181)
 - Removed bounding box size restriction for inferral jobs for super users. [#8200](https://github.com/scalableminds/webknossos/pull/8200)
 
@@ -26,6 +26,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fix a bug where trying to delete a non-existing node (via the API, for example) would delete the whole active tree. [#8176](https://github.com/scalableminds/webknossos/pull/8176)
 
 ### Removed
+- Removed legacy routes for versions 2,3 and 4. [#8075](https://github.com/scalableminds/webknossos/pull/8075)
 - Removed Google Analytics integration. [#8201](https://github.com/scalableminds/webknossos/pull/8201)
 
 ### Breaking Changes

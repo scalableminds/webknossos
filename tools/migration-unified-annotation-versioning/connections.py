@@ -9,11 +9,11 @@ import fossildbapi_pb2_grpc as proto_rpc
 logger = logging.getLogger(__name__)
 
 
-def connect_to_fossildb(host):
+def connect_to_fossildb(host: str, label: str):
     max_message_length = 2147483647
     channel = grpc.insecure_channel(host, options=[("grpc.max_send_message_length", max_message_length), ("grpc.max_receive_message_length", max_message_length)])
     stub = proto_rpc.FossilDBStub(channel)
-    test_fossildb_health(stub, f"Fossildb at {host}")
+    test_fossildb_health(stub, f"{label} FossilDB at {host}")
     return stub
 
 

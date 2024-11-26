@@ -26,9 +26,12 @@ MappingIdMap = Dict[str, str] # tracing id to editable mapping id
 class Migration:
 
     def __init__(self, args):
+        logger.info(f"Initializing migration with args {args} ...")
         self.args = args
-        self.src_stub = connect_to_fossildb("localhost:7155")
-        self.dst_stub = None # TODO
+        self.src_stub = connect_to_fossildb(args.src, "source")
+        self.dst_stub = None
+        if not args.dry:
+            self.dst_stub = connect_to_fossildb(args.dst, "destination")
         self.json_encoder = msgspec.json.Encoder()
         self.json_decoder = msgspec.json.Decoder()
 
@@ -43,7 +46,6 @@ class Migration:
 
     def migrate_annotation(self, annotation):
         logger.info(f"Migrating annotation {annotation['_id']} ...")
-        # layerId → {version_before → version_after}
         before = time.time()
         mapping_id_map = self.build_mapping_id_map(annotation)
         layer_version_mapping, latest_unified_version = self.migrate_updates(annotation, mapping_id_map)
@@ -127,7 +129,7 @@ class Migration:
                 update["name"] = f"updateUserBoundingBoxVisibilityIn{layer_type}Tracing"
 
             if not name == "updateTdCamera":
-                update["value"]["actionTracinId"] = tracing_id
+                update["value"]["actionTracingId"] = tracing_id
 
         return self.json_encoder.encode(update_group_parsed)
 

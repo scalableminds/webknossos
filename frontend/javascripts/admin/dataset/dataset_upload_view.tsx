@@ -267,7 +267,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       return;
     }
 
-    Toast.info("Uploading dataset");
     this.setState({
       isUploading: true,
     });

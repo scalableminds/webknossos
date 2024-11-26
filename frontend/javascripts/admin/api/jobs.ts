@@ -193,7 +193,7 @@ export function startNeuronInferralJob(
   layerName: string,
   bbox: Vector6,
   newDatasetName: string,
-  doEvaluation: boolean,
+  doSplitMergerEvaluation: boolean,
   annotationId?: string,
   useSparseTracing?: boolean,
   evalMaxEdgeLength?: string,
@@ -204,14 +204,25 @@ export function startNeuronInferralJob(
     layerName,
     bbox: bbox.join(","),
     newDatasetName,
-    doEvaluation: doEvaluation.toString(),
+    doSplitMergerEvaluation: doSplitMergerEvaluation.toString(),
   });
-  if (doEvaluation) {
+  if (doSplitMergerEvaluation) {
+    if (!annotationId) {
+      throw new Error("annotationId is required when doEvaluation is true");
+    }
     urlParams.append("annotationId", `${annotationId}`);
-    urlParams.append("evalUseSparseTracing", `${useSparseTracing}`);
-    urlParams.append("evalMaxEdgeLength", `${evalMaxEdgeLength}`);
-    urlParams.append("evalSparseTubeThresholdNm", `${evalSparseTubeThresholdNm}`);
-    urlParams.append("evalMinMergerPathLengthNm", `${evalMinMergerPathLengthNm}`);
+    if (useSparseTracing != null) {
+      urlParams.append("evalUseSparseTracing", `${useSparseTracing}`);
+    }
+    if (evalMaxEdgeLength != null) {
+      urlParams.append("evalMaxEdgeLength", `${evalMaxEdgeLength}`);
+    }
+    if (evalSparseTubeThresholdNm != null) {
+      urlParams.append("evalSparseTubeThresholdNm", `${evalSparseTubeThresholdNm}`);
+    }
+    if (evalMinMergerPathLengthNm != null) {
+      urlParams.append("evalMinMergerPathLengthNm", `${evalMinMergerPathLengthNm}`);
+    }
   }
   return Request.receiveJSON(
     `/api/jobs/run/inferNeurons/${organizationId}/${datasetName}?${urlParams.toString()}`,

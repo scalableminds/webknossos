@@ -527,7 +527,7 @@ function ShouldUseTreesFormItem() {
   );
 }
 
-function CollapsibleEvaluationSettings({
+function CollapsibleSplitMergersplitMergerEvaluationSettings({
   isActive = false,
   setActive,
 }: { isActive: boolean; setActive: (active: boolean) => void }) {
@@ -545,9 +545,9 @@ function CollapsibleEvaluationSettings({
               <Col style={{ width: "100%" }}>
                 <Form.Item
                   label="Use sparse ground truth tracing"
-                  name={["evaluationSettings", "useSparseTracing"]}
+                  name={["splitMergerEvaluationSettings", "useSparseTracing"]}
                   valuePropName="checked"
-                  initialValue={false}
+                  initialValue={true}
                   tooltip="The evaluation mode can either be `dense`
     in case all processes in the volume are annotated in the ground-truth.
     If not, use the `sparse` mode."
@@ -556,7 +556,7 @@ function CollapsibleEvaluationSettings({
                 </Form.Item>
                 <Form.Item
                   label="Max edge length in nm"
-                  name={["evaluationSettings", "maxEdgeLength"]}
+                  name={["splitMergerEvaluationSettings", "maxEdgeLength"]}
                   tooltip="Ground truth tracings can be densified so that
     nodes are at most max_edge_length nm apart.
     However, this can also introduce wrong nodes in curved processes."
@@ -565,7 +565,7 @@ function CollapsibleEvaluationSettings({
                 </Form.Item>
                 <Form.Item
                   label="Sparse tube threshold in nm"
-                  name={["evaluationSettings", "sparseTubeThresholdInNm"]}
+                  name={["splitMergerEvaluationSettings", "sparseTubeThresholdInNm"]}
                   tooltip="Tube threshold for sparse evaluation,
     determining if a process is too far from the ground-truth."
                 >
@@ -573,7 +573,7 @@ function CollapsibleEvaluationSettings({
                 </Form.Item>
                 <Form.Item
                   label="Sparse minimum merger path length in nm"
-                  name={["evaluationSettings", "minimumMergerPathLengthInNm"]}
+                  name={["splitMergerEvaluationSettings", "minimumMergerPathLengthInNm"]}
                   tooltip="Minimum ground truth path length of a merger component
     to be counted as a relevant merger (for sparse evaluation).
     Note, the path length to neighboring nodes of a component is included for this comparison. This optimistic path length
@@ -581,7 +581,7 @@ function CollapsibleEvaluationSettings({
                 >
                   <InputNumber style={{ width: "100%" }} placeholder="800" />
                 </Form.Item>
-                <Form.Item name="useAnnotation" initialValue={true} />
+                <Form.Item name="useAnnotation" initialValue={true} hidden />
               </Col>
             </Row>
           ),
@@ -784,8 +784,9 @@ export function NucleiDetectionForm() {
 }
 export function NeuronSegmentationForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
+  const hasSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const dispatch = useDispatch();
-  const [useEvaluation, setUseEvaluation] = React.useState(false);
+  const [doSplitMergerEvaluation, setDoSplitMergerEvaluation] = React.useState(false);
   return (
     <StartJobForm
       handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
@@ -798,20 +799,23 @@ export function NeuronSegmentationForm() {
         { newDatasetName, selectedLayer: colorLayer, selectedBoundingBox, annotationId },
         form: FormInstance<any>,
       ) => {
-        const evaluationSettings = form.getFieldValue("evaluationSettings");
-        if (!selectedBoundingBox || (useEvaluation && evaluationSettings == null)) {
+        const splitMergerEvaluationSettings = form.getFieldValue("splitMergerEvaluationSettings");
+        if (
+          !selectedBoundingBox ||
+          (doSplitMergerEvaluation && splitMergerEvaluationSettings == null)
+        ) {
           return;
         }
 
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
-        if (!useEvaluation) {
+        if (!doSplitMergerEvaluation) {
           return startNeuronInferralJob(
             dataset.owningOrganization,
             dataset.name,
             colorLayer.name,
             bbox,
             newDatasetName,
-            useEvaluation,
+            doSplitMergerEvaluation,
           );
         }
         return startNeuronInferralJob(
@@ -820,12 +824,12 @@ export function NeuronSegmentationForm() {
           colorLayer.name,
           bbox,
           newDatasetName,
-          useEvaluation,
+          doSplitMergerEvaluation,
           annotationId,
-          evaluationSettings.useSparseTracing,
-          evaluationSettings.maxEdgeLength,
-          evaluationSettings.sparseTubeThresholdInNm,
-          evaluationSettings.minimumMergerPathLengthInNm,
+          splitMergerEvaluationSettings.useSparseTracing,
+          splitMergerEvaluationSettings.maxEdgeLength,
+          splitMergerEvaluationSettings.sparseTubeThresholdInNm,
+          splitMergerEvaluationSettings.minimumMergerPathLengthInNm,
         );
       }}
       description={
@@ -842,7 +846,12 @@ export function NeuronSegmentationForm() {
         </>
       }
       jobSpecificInputFields={
-        <CollapsibleEvaluationSettings isActive={useEvaluation} setActive={setUseEvaluation} />
+        hasSkeletonAnnotation && (
+          <CollapsibleSplitMergersplitMergerEvaluationSettings
+            isActive={doSplitMergerEvaluation}
+            setActive={setDoSplitMergerEvaluation}
+          />
+        )
       }
     />
   );

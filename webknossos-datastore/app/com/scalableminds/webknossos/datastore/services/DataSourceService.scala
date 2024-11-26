@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Box.tryo
 import net.liftweb.common._
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
@@ -53,8 +54,17 @@ class DataSourceService @Inject()(
     if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0
   }
 
-  def assertDataDirWritable(organizationId: String): Fox[Unit] =
-    Fox.bool2Fox(Files.isWritable(dataBaseDir.resolve(organizationId))) ?~> "Datastore cannot write to its data directory."
+  def assertDataDirWritable(organizationId: String): Fox[Unit] = {
+    val orgaPath = dataBaseDir.resolve(organizationId)
+    if (orgaPath.toFile.exists()) {
+      Fox.bool2Fox(Files.isWritable(dataBaseDir.resolve(organizationId))) ?~> "Datastore cannot write to organization data directory."
+    } else {
+      tryo {
+        Files.createDirectory(orgaPath)
+      }.map(_ => ()).toFox ?~> "Could not create organization directory on datastore server"
+    }
+
+  }
 
   def checkInbox(verbose: Boolean): Fox[Unit] = {
     if (verbose) logger.info(s"Scanning inbox ($dataBaseDir)...")

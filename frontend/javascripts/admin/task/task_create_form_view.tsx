@@ -542,7 +542,7 @@ function TaskCreateFormView({ taskId, history }: Props) {
         <Row gutter={8} align="middle" wrap={false}>
           <Col flex="auto">
             <FormItem
-              name="dataSet"
+              name="datasetId"
               label="Dataset"
               hasFeedback
               rules={[
@@ -564,7 +564,7 @@ function TaskCreateFormView({ taskId, history }: Props) {
                 loading={isFetchingData}
                 options={datasets.map((dataset: APIDataset) => ({
                   label: dataset.name,
-                  value: dataset.name,
+                  value: dataset.id,
                 }))}
               />
             </FormItem>

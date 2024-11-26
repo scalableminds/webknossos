@@ -19,7 +19,8 @@ from connections import connect_to_fossildb, connect_to_postgres, assert_grpc_su
 logger = logging.getLogger(__name__)
 
 
-LayerVersionMapping = Dict[str, Dict[int, int]]
+LayerVersionMapping = Dict[str, Dict[int, int]] # tracing id to (old version to new version)
+MappingIdMap = Dict[str, str] # tracing id to editable mapping id
 
 
 class Migration:
@@ -42,12 +43,22 @@ class Migration:
         logger.info(f"Migrating annotation {annotation['_id']} ...")
         # layerId → {version_before → version_after}
         before = time.time()
-        layer_version_mapping, latest_unified_version = self.migrate_updates(annotation)
-        self.migrate_materialized_layers(annotation, layer_version_mapping)
+        mapping_id_map = self.build_mapping_id_map(annotation)
+        layer_version_mapping, latest_unified_version = self.migrate_updates(annotation, mapping_id_map)
+        self.migrate_materialized_layers(annotation, layer_version_mapping, mapping_id_map)
         self.create_and_save_annotation_proto(annotation, latest_unified_version)
         log_since(before, "")
 
-    def migrate_updates(self, annotation) -> Tuple[LayerVersionMapping, int]:
+    def build_mapping_id_map(self, annotation) -> MappingIdMap:
+        mapping_id_map = {}
+        for tracing_id, layer_type in annotation["layers"].items():
+            if layer_type == "Volume":
+                editable_mapping_id = self.get_editable_mapping_id(tracing_id, layer_type)
+                if editable_mapping_id is not None:
+                    mapping_id_map[tracing_id] = editable_mapping_id
+        return mapping_id_map
+
+    def migrate_updates(self, annotation, mapping_id_map: MappingIdMap) -> Tuple[LayerVersionMapping, int]:
         batch_size = 1000
         unified_version = 0
         version_mapping = {}
@@ -55,7 +66,6 @@ class Migration:
             collection = self.update_collection_for_layer_type(layer_type)
             version_mapping_for_layer = {0: 0}
             newest_version = self.get_newest_version(tracing_id, collection)
-            editable_mapping_id = self.get_editable_mapping_name(tracing_id, layer_type)
             for batch_start, batch_end in batch_range(newest_version, batch_size):
                 update_groups = self.get_update_batch(tracing_id, collection, batch_start, batch_end)
                 for version, update_group in update_groups:
@@ -64,7 +74,8 @@ class Migration:
                     version_mapping_for_layer[version] = unified_version
                     self.save_update_group(annotation['_id'], unified_version, update_group)
             version_mapping[tracing_id] = version_mapping_for_layer
-            if editable_mapping_id is not None:
+            if tracing_id in mapping_id_map:
+                editable_mapping_id = mapping_id_map[tracing_id]
                 version_mapping_for_mapping = {0: 0}
                 for batch_start, batch_end in batch_range(newest_version, batch_size):
                     mapping_update_groups = self.get_update_batch(editable_mapping_id, "editableMappingUpdates", batch_start, batch_end)
@@ -78,7 +89,7 @@ class Migration:
         # TODO handle existing revertToVersion update actions
         return version_mapping, unified_version
 
-    def get_editable_mapping_name(self, tracing_id: str, layer_type: str) -> Optional[str]:
+    def get_editable_mapping_id(self, tracing_id: str, layer_type: str) -> Optional[str]:
         if layer_type == "Skeleton":
             return None
         tracing_raw = self.get_newest_tracing_raw(tracing_id, "volumes")
@@ -143,21 +154,22 @@ class Migration:
             return "skeletonUpdates"
         return "volumeUpdates"
 
-    def migrate_materialized_layers(self, annotation: RealDictRow, layer_version_mapping: LayerVersionMapping):
+    def migrate_materialized_layers(self, annotation: RealDictRow, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap):
         for tracing_id, tracing_type in annotation["layers"].items():
-            self.migrate_materialized_layer(tracing_id, tracing_type, layer_version_mapping)
+            self.migrate_materialized_layer(tracing_id, tracing_type, layer_version_mapping, mapping_id_map)
 
-    def migrate_materialized_layer(self, tracing_id: str, layer_type: str, layer_version_mapping: LayerVersionMapping):
+    def migrate_materialized_layer(self, tracing_id: str, layer_type: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap):
         if layer_type == "Skeleton":
             self.migrate_skeleton_proto(tracing_id, layer_version_mapping)
         if layer_type == "Volume":
             self.migrate_volume_proto(tracing_id, layer_version_mapping)
             self.migrate_volume_buckets(tracing_id, layer_version_mapping)
             self.migrate_segment_index(tracing_id, layer_version_mapping)
-            self.migrate_editable_mapping(tracing_id, layer_version_mapping)
+            self.migrate_editable_mapping(tracing_id, layer_version_mapping, mapping_id_map)
 
     def migrate_skeleton_proto(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
         collection = "skeletons"
+        # todo paginate
         materialized_versions = self.list_versions(collection, tracing_id)
         for materialized_version in materialized_versions:
             value_bytes = self.get_bytes(collection, tracing_id, materialized_version)
@@ -169,6 +181,7 @@ class Migration:
 
     def migrate_volume_proto(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
         collection = "volumes"
+        # todo paginate
         materialized_versions = self.list_versions(collection, tracing_id)
         for materialized_version in materialized_versions:
             value_bytes = self.get_bytes(collection, tracing_id, materialized_version)
@@ -226,13 +239,22 @@ class Migration:
     def migrate_segment_index(self, tracing_id, layer_version_mapping):
         self.migrate_all_versions_and_keys_with_prefix("volumeSegmentIndex", tracing_id, layer_version_mapping, transform_key=None)
 
-    def migrate_editable_mapping(self, tracing_id, layer_version_mapping):
-        self.migrate_editable_mapping_info(tracing_id, layer_version_mapping)
+    def migrate_editable_mapping(self, tracing_id: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap):
+        self.migrate_editable_mapping_info(tracing_id, layer_version_mapping, mapping_id_map)
         self.migrate_editable_mapping_agglomerate_to_graph(tracing_id, layer_version_mapping)
         self.migrate_editable_mapping_segment_to_agglomerate(tracing_id, layer_version_mapping)
 
-    def migrate_editable_mapping_info(self, layer, layer_version_mapping):
-        pass
+    def migrate_editable_mapping_info(self, tracing_id: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap):
+        if tracing_id not in mapping_id_map:
+            return
+        mapping_id = mapping_id_map[tracing_id]
+        collection = "editableMappingsInfo"
+        # todo paginate
+        materialized_versions = self.list_versions(collection, mapping_id)
+        for materialized_version in materialized_versions:
+            value_bytes = self.get_bytes(collection, mapping_id, materialized_version)
+            new_version = layer_version_mapping[mapping_id][materialized_version]
+            self.save_bytes(collection, mapping_id, new_version, value_bytes)
 
     def migrate_editable_mapping_agglomerate_to_graph(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
         self.migrate_all_versions_and_keys_with_prefix(
@@ -298,5 +320,7 @@ class Migration:
         return annotations
 
     def remove_morton_index(self, bucket_key: str) -> str:
-        # TODO
-        return bucket_key
+        first_slash_index = bucket_key.index('/')
+        second_slash_index = bucket_key.index('/', first_slash_index + 1)
+        first_bracket_index = bucket_key.index('[')
+        return bucket_key[:second_slash_index + 1] + bucket_key[first_bracket_index:]

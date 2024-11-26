@@ -3,4 +3,4 @@ argparse
 psycopg2
 protobuf
 rich
-orjson
+msgspec

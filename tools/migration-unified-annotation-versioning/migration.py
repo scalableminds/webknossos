@@ -7,7 +7,7 @@ import datetime
 import time
 from typing import Dict, Tuple, List, Optional, Callable
 from rich.progress import track
-import orjson
+import msgspec
 
 import fossildbapi_pb2 as proto
 import VolumeTracing_pb2 as Volume
@@ -29,6 +29,8 @@ class Migration:
         self.args = args
         self.src_stub = connect_to_fossildb("localhost:7155")
         self.dst_stub = None # TODO
+        self.json_encoder = msgspec.json.Encoder()
+        self.json_decoder = msgspec.json.Decoder()
 
     def run(self):
         start_time = datetime.datetime.now()
@@ -110,7 +112,7 @@ class Migration:
         return None
 
     def process_update_group(self, tracing_id: str, layer_type: str, update_group_raw: bytes) -> bytes:
-        update_group_parsed = orjson.loads(update_group_raw)
+        update_group_parsed = self.json_decoder.decode(update_group_raw)
 
         # TODO handle existing revertToVersion update actions
 
@@ -127,7 +129,7 @@ class Migration:
             if not name == "updateTdCamera":
                 update["value"]["actionTracinId"] = tracing_id
 
-        return orjson.dumps(update_group_parsed)
+        return self.json_encoder.encode(update_group_parsed)
 
     def save_update_group(self, annotation_id: str, version: int, update_group_raw: bytes) -> None:
         self.save_bytes(collection="annotationUpdates", key=annotation_id, version=version, value=update_group_raw)
@@ -169,7 +171,6 @@ class Migration:
 
     def migrate_skeleton_proto(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
         collection = "skeletons"
-        # todo paginate
         materialized_versions = self.list_versions(collection, tracing_id)
         for materialized_version in materialized_versions:
             value_bytes = self.get_bytes(collection, tracing_id, materialized_version)
@@ -181,7 +182,6 @@ class Migration:
 
     def migrate_volume_proto(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
         collection = "volumes"
-        # todo paginate
         materialized_versions = self.list_versions(collection, tracing_id)
         for materialized_version in materialized_versions:
             value_bytes = self.get_bytes(collection, tracing_id, materialized_version)
@@ -249,7 +249,6 @@ class Migration:
             return
         mapping_id = mapping_id_map[tracing_id]
         collection = "editableMappingsInfo"
-        # todo paginate
         materialized_versions = self.list_versions(collection, mapping_id)
         for materialized_version in materialized_versions:
             value_bytes = self.get_bytes(collection, mapping_id, materialized_version)

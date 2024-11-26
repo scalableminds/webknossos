@@ -449,7 +449,7 @@ function checkAnnotationsForErrorsAndWarnings<T extends HybridTracing | APIAnnot
     return {
       hasAnnotationErrors: true,
       errors: [
-        `All annotations must have at least one bounding box. Annotations without bounding boxes are: ${annotationIds.join(", ")}`,
+        `All annotations must have at least one bounding box. Annotations without bounding boxes are:\n${annotationIds.join(", ")}`,
       ],
     };
   }
@@ -483,14 +483,14 @@ function checkBoundingBoxesForErrorsAndWarnings(
   );
 
   // Validate minimum size and multiple requirements
-  type BoundingBoxWithAnnotationId = { boundingBox: Vector6; annotationId: string };
+  type BoundingBoxWithAnnotationId = { boundingBox: Vector6; name: string; annotationId: string };
   const tooSmallBoxes: BoundingBoxWithAnnotationId[] = [];
   const nonMultipleBoxes: BoundingBoxWithAnnotationId[] = [];
-  userBoundingBoxes.forEach(({ boundingBox: box, annotationId }) => {
+  userBoundingBoxes.forEach(({ boundingBox: box, name, annotationId }) => {
     const arrayBox = computeArrayFromBoundingBox(box);
     const [_x, _y, _z, width, height, depth] = arrayBox;
     if (width < 10 || height < 10 || depth < 10) {
-      tooSmallBoxes.push({ boundingBox: arrayBox, annotationId });
+      tooSmallBoxes.push({ boundingBox: arrayBox, name, annotationId });
     }
 
     if (
@@ -498,12 +498,12 @@ function checkBoundingBoxesForErrorsAndWarnings(
       height % minDimensions.y !== 0 ||
       depth % minDimensions.z !== 0
     ) {
-      nonMultipleBoxes.push({ boundingBox: arrayBox, annotationId });
+      nonMultipleBoxes.push({ boundingBox: arrayBox, name, annotationId });
     }
   });
 
-  const boxWithIdToString = ({ boundingBox, annotationId }: BoundingBoxWithAnnotationId) =>
-    boundingBox.join(", ") + ` (${annotationId})`;
+  const boxWithIdToString = ({ boundingBox, name, annotationId }: BoundingBoxWithAnnotationId) =>
+    `'${name}' of annotation ${annotationId}: ${boundingBox.join(", ")}`;
 
   if (tooSmallBoxes.length > 0) {
     hasBBoxWarnings = true;

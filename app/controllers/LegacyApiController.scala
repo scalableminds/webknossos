@@ -11,8 +11,7 @@ import models.dataset.{DatasetDAO, DatasetService}
 import models.organization.OrganizationDAO
 
 import javax.inject.Inject
-import models.project.ProjectDAO
-import models.task.{BaseAnnotation, TaskDAO, TaskParameters, TaskService}
+import models.task.{BaseAnnotation, TaskParameters}
 import models.user.{Experience, User}
 import net.liftweb.common.Box.tryo
 import play.api.http.HttpEntity
@@ -53,12 +52,9 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                     datasetController: DatasetController,
                                     projectController: ProjectController,
                                     taskController: TaskController,
-                                    projectDAO: ProjectDAO,
                                     organizationDAO: OrganizationDAO,
                                     datasetService: DatasetService,
-                                    taskDAO: TaskDAO,
                                     datasetDAO: DatasetDAO,
-                                    taskService: TaskService,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
@@ -251,8 +247,18 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   private def addLegacyDataSetFieldToTaskCreationResult(jsResult: JsObject) =
     for {
-      tasks <- tryo((jsResult \ "tasks").as[List[JsObject]]).toFox
-      adaptedTasks <- Fox.serialCombined(tasks)(addLegacyDataSetFieldToTask)
+      tasksResults <- tryo((jsResult \ "tasks").as[List[JsObject]]).toFox
+      adaptedTasks <- Fox.serialCombined(tasksResults)(taskResult => {
+        (taskResult \ "status").asOpt[JsNumber] match {
+          case Some(JsNumber(value)) if value == BigDecimal(200) =>
+            for {
+              task <- tryo((taskResult \ "success").as[JsObject]).toFox
+              adaptedTask <- addLegacyDataSetFieldToTask(task)
+              adaptedTaskResult <- tryo(taskResult - "success" + ("success" -> adaptedTask)).toFox
+            } yield adaptedTaskResult
+          case _ => Fox.successful(taskResult)
+        }
+      })
       adaptedJsResult <- tryo(jsResult - "tasks" + ("tasks" -> Json.toJson(adaptedTasks))).toFox
     } yield adaptedJsResult
 

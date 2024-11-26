@@ -52,6 +52,7 @@ case class Job(
   def datasetName: Option[String] = argAsStringOpt("dataset_name")
 
   private def argAsStringOpt(key: String) = (commandArgs \ key).toOption.flatMap(_.asOpt[String])
+  private def argAsBooleanOpt(key: String) = (commandArgs \ key).toOption.flatMap(_.asOpt[Boolean])
 
   def resultLink(organizationId: String): Option[String] =
     if (effectiveState != JobState.SUCCESS) None
@@ -63,6 +64,8 @@ case class Job(
           }
         case JobCommand.export_tiff | JobCommand.render_animation =>
           Some(s"/api/jobs/${this._id}/export")
+        case JobCommand.infer_neurons if this.argAsBooleanOpt("do_evaluation").getOrElse(false) =>
+          returnValue.map { resultAnnotationLink => resultAnnotationLink}
         case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation |
             JobCommand.infer_with_model | JobCommand.infer_mitochondria | JobCommand.align_sections =>
           returnValue.map { resultDatasetName =>

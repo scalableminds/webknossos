@@ -46,7 +46,6 @@ class TaskService @Inject()(conf: WkConf,
         "projectName" -> project.name,
         "team" -> team.name,
         "type" -> taskTypeJs,
-        "dataSet" -> dataset.name,
         "datasetName" -> dataset.name,
         "datasetId" -> dataset._id, // Only used for csv serialization in frontend.
         "neededExperience" -> task.neededExperience,

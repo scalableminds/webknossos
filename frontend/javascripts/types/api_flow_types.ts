@@ -449,7 +449,6 @@ export type APITask = {
   readonly boundingBoxVec6?: Vector6;
   readonly created: number;
   readonly creationInfo: string | null | undefined;
-  readonly dataSet: string;
   readonly datasetId: string;
   readonly datasetName: string;
   readonly editPosition: Vector3;

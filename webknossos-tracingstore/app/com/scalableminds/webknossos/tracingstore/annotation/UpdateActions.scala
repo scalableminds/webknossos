@@ -1,6 +1,9 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{MergeAgglomerateUpdateAction, SplitAgglomerateUpdateAction}
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
+  MergeAgglomerateUpdateAction,
+  SplitAgglomerateUpdateAction
+}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
 import com.scalableminds.webknossos.tracingstore.tracings.volume._
 import play.api.libs.json._
@@ -29,57 +32,62 @@ object UpdateAction {
   implicit object updateActionFormat extends Format[UpdateAction] {
     override def reads(json: JsValue): JsResult[UpdateAction] = {
       val jsonValue = (json \ "value").as[JsObject]
-      (json \ "name").as[String] match {
-        // Skeleton
-        case "createTree"                               => deserialize[CreateTreeSkeletonAction](jsonValue)
-        case "deleteTree"                               => deserialize[DeleteTreeSkeletonAction](jsonValue)
-        case "updateTree"                               => deserialize[UpdateTreeSkeletonAction](jsonValue)
-        case "mergeTree"                                => deserialize[MergeTreeSkeletonAction](jsonValue)
-        case "moveTreeComponent"                        => deserialize[MoveTreeComponentSkeletonAction](jsonValue)
-        case "createNode"                               => deserialize[CreateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
-        case "deleteNode"                               => deserialize[DeleteNodeSkeletonAction](jsonValue)
-        case "updateNode"                               => deserialize[UpdateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
-        case "createEdge"                               => deserialize[CreateEdgeSkeletonAction](jsonValue)
-        case "deleteEdge"                               => deserialize[DeleteEdgeSkeletonAction](jsonValue)
-        case "updateTreeGroups"                         => deserialize[UpdateTreeGroupsSkeletonAction](jsonValue)
-        case "updateSkeletonTracing"                    => deserialize[UpdateTracingSkeletonAction](jsonValue)
-        case "updateTreeVisibility"                     => deserialize[UpdateTreeVisibilitySkeletonAction](jsonValue)
-        case "updateTreeGroupVisibility"                => deserialize[UpdateTreeGroupVisibilitySkeletonAction](jsonValue)
-        case "updateTreeEdgesVisibility"                => deserialize[UpdateTreeEdgesVisibilitySkeletonAction](jsonValue)
-        case "updateUserBoundingBoxesInSkeletonTracing" => deserialize[UpdateUserBoundingBoxesSkeletonAction](jsonValue)
-        case "updateUserBoundingBoxVisibilityInSkeletonTracing" =>
-          deserialize[UpdateUserBoundingBoxVisibilitySkeletonAction](jsonValue)
+      if ((json \ "isCompacted").asOpt[Boolean].getOrElse(false)) {
+        deserialize[CompactVolumeUpdateAction](jsonValue)
+      } else {
+        (json \ "name").as[String] match {
+          // Skeleton
+          case "createTree"                => deserialize[CreateTreeSkeletonAction](jsonValue)
+          case "deleteTree"                => deserialize[DeleteTreeSkeletonAction](jsonValue)
+          case "updateTree"                => deserialize[UpdateTreeSkeletonAction](jsonValue)
+          case "mergeTree"                 => deserialize[MergeTreeSkeletonAction](jsonValue)
+          case "moveTreeComponent"         => deserialize[MoveTreeComponentSkeletonAction](jsonValue)
+          case "createNode"                => deserialize[CreateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
+          case "deleteNode"                => deserialize[DeleteNodeSkeletonAction](jsonValue)
+          case "updateNode"                => deserialize[UpdateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
+          case "createEdge"                => deserialize[CreateEdgeSkeletonAction](jsonValue)
+          case "deleteEdge"                => deserialize[DeleteEdgeSkeletonAction](jsonValue)
+          case "updateTreeGroups"          => deserialize[UpdateTreeGroupsSkeletonAction](jsonValue)
+          case "updateSkeletonTracing"     => deserialize[UpdateTracingSkeletonAction](jsonValue)
+          case "updateTreeVisibility"      => deserialize[UpdateTreeVisibilitySkeletonAction](jsonValue)
+          case "updateTreeGroupVisibility" => deserialize[UpdateTreeGroupVisibilitySkeletonAction](jsonValue)
+          case "updateTreeEdgesVisibility" => deserialize[UpdateTreeEdgesVisibilitySkeletonAction](jsonValue)
+          case "updateUserBoundingBoxesInSkeletonTracing" =>
+            deserialize[UpdateUserBoundingBoxesSkeletonAction](jsonValue)
+          case "updateUserBoundingBoxVisibilityInSkeletonTracing" =>
+            deserialize[UpdateUserBoundingBoxVisibilitySkeletonAction](jsonValue)
 
-        // Volume
-        case "updateBucket"        => deserialize[UpdateBucketVolumeAction](jsonValue)
-        case "updateVolumeTracing" => deserialize[UpdateTracingVolumeAction](jsonValue)
-        case "updateUserBoundingBoxesInVolumeTracing" =>
-          deserialize[UpdateUserBoundingBoxesVolumeAction](jsonValue)
-        case "updateUserBoundingBoxVisibilityInVolumeTracing" =>
-          deserialize[UpdateUserBoundingBoxVisibilityVolumeAction](jsonValue)
-        case "removeFallbackLayer" => deserialize[RemoveFallbackLayerVolumeAction](jsonValue)
-        case "importVolumeTracing" => deserialize[ImportVolumeDataVolumeAction](jsonValue)
-        case "createSegment"       => deserialize[CreateSegmentVolumeAction](jsonValue)
-        case "updateSegment"       => deserialize[UpdateSegmentVolumeAction](jsonValue)
-        case "updateSegmentGroups" => deserialize[UpdateSegmentGroupsVolumeAction](jsonValue)
-        case "deleteSegment"       => deserialize[DeleteSegmentVolumeAction](jsonValue)
-        case "deleteSegmentData"   => deserialize[DeleteSegmentDataVolumeAction](jsonValue)
-        case "updateMappingName"   => deserialize[UpdateMappingNameVolumeAction](jsonValue)
+          // Volume
+          case "updateBucket"        => deserialize[UpdateBucketVolumeAction](jsonValue)
+          case "updateVolumeTracing" => deserialize[UpdateTracingVolumeAction](jsonValue)
+          case "updateUserBoundingBoxesInVolumeTracing" =>
+            deserialize[UpdateUserBoundingBoxesVolumeAction](jsonValue)
+          case "updateUserBoundingBoxVisibilityInVolumeTracing" =>
+            deserialize[UpdateUserBoundingBoxVisibilityVolumeAction](jsonValue)
+          case "removeFallbackLayer" => deserialize[RemoveFallbackLayerVolumeAction](jsonValue)
+          case "importVolumeTracing" => deserialize[ImportVolumeDataVolumeAction](jsonValue)
+          case "createSegment"       => deserialize[CreateSegmentVolumeAction](jsonValue)
+          case "updateSegment"       => deserialize[UpdateSegmentVolumeAction](jsonValue)
+          case "updateSegmentGroups" => deserialize[UpdateSegmentGroupsVolumeAction](jsonValue)
+          case "deleteSegment"       => deserialize[DeleteSegmentVolumeAction](jsonValue)
+          case "deleteSegmentData"   => deserialize[DeleteSegmentDataVolumeAction](jsonValue)
+          case "updateMappingName"   => deserialize[UpdateMappingNameVolumeAction](jsonValue)
 
-        // Editable Mapping
-        case "mergeAgglomerate" => deserialize[MergeAgglomerateUpdateAction](jsonValue)
-        case "splitAgglomerate" => deserialize[SplitAgglomerateUpdateAction](jsonValue)
+          // Editable Mapping
+          case "mergeAgglomerate" => deserialize[MergeAgglomerateUpdateAction](jsonValue)
+          case "splitAgglomerate" => deserialize[SplitAgglomerateUpdateAction](jsonValue)
 
-        // Annotation
-        case "addLayerToAnnotation"       => deserialize[AddLayerAnnotationAction](jsonValue)
-        case "deleteLayerFromAnnotation"  => deserialize[DeleteLayerAnnotationAction](jsonValue)
-        case "updateLayerMetadata"        => deserialize[UpdateLayerMetadataAnnotationAction](jsonValue)
-        case "updateMetadataOfAnnotation" => deserialize[UpdateMetadataAnnotationAction](jsonValue)
-        case "revertToVersion"            => deserialize[RevertToVersionAnnotationAction](jsonValue)
-        case "resetToBase"                => deserialize[ResetToBaseAnnotationAction](jsonValue)
-        case "updateTdCamera"             => deserialize[UpdateTdCameraAnnotationAction](jsonValue)
+          // Annotation
+          case "addLayerToAnnotation"       => deserialize[AddLayerAnnotationAction](jsonValue)
+          case "deleteLayerFromAnnotation"  => deserialize[DeleteLayerAnnotationAction](jsonValue)
+          case "updateLayerMetadata"        => deserialize[UpdateLayerMetadataAnnotationAction](jsonValue)
+          case "updateMetadataOfAnnotation" => deserialize[UpdateMetadataAnnotationAction](jsonValue)
+          case "revertToVersion"            => deserialize[RevertToVersionAnnotationAction](jsonValue)
+          case "resetToBase"                => deserialize[ResetToBaseAnnotationAction](jsonValue)
+          case "updateTdCamera"             => deserialize[UpdateTdCameraAnnotationAction](jsonValue)
 
-        case unknownAction: String => JsError(s"Invalid update action s'$unknownAction'")
+          case unknownAction: String => JsError(s"Invalid update action s'$unknownAction'")
+        }
       }
     }
 

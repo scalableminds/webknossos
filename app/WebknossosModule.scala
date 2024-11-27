@@ -1,6 +1,7 @@
 import com.google.inject.AbstractModule
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import controllers.InitialDataService
+import controllers.AuthenticationController
 import files.TempFileService
 import mail.MailchimpTicker
 import models.analytics.AnalyticsSessionService
@@ -38,5 +39,7 @@ class WebknossosModule extends AbstractModule {
     bind(classOf[UsedStorageService]).asEagerSingleton()
     bind(classOf[ThumbnailCachingService]).asEagerSingleton()
     bind(classOf[TracingDataSourceTemporaryStore]).asEagerSingleton()
+    bind(classOf[AuthenticationController]).asEagerSingleton()
+    bind(classOf[WebAuthnService]).asEagerSingleton()
   }
 }

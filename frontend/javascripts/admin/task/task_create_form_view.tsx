@@ -479,17 +479,11 @@ function TaskCreateFormView({ taskId, history }: Props) {
                     return Promise.resolve();
                   }
 
-                  const annotationResponse =
-                    (await tryToAwaitPromise(
-                      getMaybeOutdatedAnnotationInformation(value, {
-                        showErrorToast: false,
-                      }),
-                    )) ||
-                    (await tryToAwaitPromise(
-                      getMaybeOutdatedAnnotationInformation(value, {
-                        showErrorToast: false,
-                      }),
-                    ));
+                  const annotationResponse = await tryToAwaitPromise(
+                    getMaybeOutdatedAnnotationInformation(value, {
+                      showErrorToast: false,
+                    }),
+                  );
 
                   if (annotationResponse?.dataSetName != null) {
                     form.setFieldsValue({

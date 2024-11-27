@@ -1,11 +1,12 @@
 package models.team
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
+
 import javax.inject.Inject
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import utils.ObjectId
 
 case class TeamMembership(teamId: ObjectId, isTeamManager: Boolean)
 

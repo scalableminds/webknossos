@@ -23,18 +23,18 @@ class DSMeshController @Inject()(
 
   override def allowRemoteOrigin: Boolean = true
 
-  def listMeshFiles(organizationId: String, datasetName: String, dataLayerName: String): Action[AnyContent] =
+  def listMeshFiles(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          meshFiles <- meshFileService.exploreMeshFiles(organizationId, datasetName, dataLayerName)
+          meshFiles <- meshFileService.exploreMeshFiles(organizationId, datasetDirectoryName, dataLayerName)
         } yield Ok(Json.toJson(meshFiles))
       }
     }
 
   def listMeshChunksForSegment(organizationId: String,
-                               datasetName: String,
+                               datasetDirectoryName: String,
                                dataLayerName: String,
                                /* If targetMappingName is set, assume that meshfile contains meshes for
                                             the oversegmentation. Collect mesh chunks of all *unmapped* segment ids
@@ -46,16 +46,16 @@ class DSMeshController @Inject()(
                                editableMappingTracingId: Option[String]): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
           _ <- Fox.successful(())
           mappingNameForMeshFile = meshFileService.mappingNameForMeshFile(organizationId,
-                                                                          datasetName,
+                                                                          datasetDirectoryName,
                                                                           dataLayerName,
                                                                           request.body.meshFile)
           segmentIds: List[Long] <- segmentIdsForAgglomerateIdIfNeeded(
             organizationId,
-            datasetName,
+            datasetDirectoryName,
             dataLayerName,
             targetMappingName,
             editableMappingTracingId,
@@ -64,7 +64,7 @@ class DSMeshController @Inject()(
             omitMissing = false
           )
           chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(organizationId,
-                                                                        datasetName,
+                                                                        datasetDirectoryName,
                                                                         dataLayerName,
                                                                         request.body.meshFile,
                                                                         segmentIds)
@@ -73,13 +73,16 @@ class DSMeshController @Inject()(
     }
 
   def readMeshChunk(organizationId: String,
-                    datasetName: String,
+                    datasetDirectoryName: String,
                     dataLayerName: String): Action[MeshChunkDataRequestList] =
     Action.async(validateJson[MeshChunkDataRequestList]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          (data, encoding) <- meshFileService.readMeshChunk(organizationId, datasetName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
+          (data, encoding) <- meshFileService.readMeshChunk(organizationId,
+                                                            datasetDirectoryName,
+                                                            dataLayerName,
+                                                            request.body) ?~> "mesh.file.loadChunk.failed"
         } yield {
           if (encoding.contains("gzip")) {
             Ok(data).withHeaders("Content-Encoding" -> "gzip")
@@ -88,12 +91,17 @@ class DSMeshController @Inject()(
       }
     }
 
-  def loadFullMeshStl(organizationId: String, datasetName: String, dataLayerName: String): Action[FullMeshRequest] =
+  def loadFullMeshStl(organizationId: String,
+                      datasetDirectoryName: String,
+                      dataLayerName: String): Action[FullMeshRequest] =
     Action.async(validateJson[FullMeshRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          data: Array[Byte] <- fullMeshService.loadFor(organizationId, datasetName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
+          data: Array[Byte] <- fullMeshService.loadFor(organizationId,
+                                                       datasetDirectoryName,
+                                                       dataLayerName,
+                                                       request.body) ?~> "mesh.file.loadChunk.failed"
 
         } yield Ok(data)
       }

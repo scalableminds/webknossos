@@ -34,7 +34,6 @@ import {
   pauseProject,
   resumeProject,
   downloadAnnotation,
-  getTasks,
   getTaskType,
 } from "admin/admin_rest_api";
 import Toast from "libs/toast";
@@ -45,6 +44,7 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 import FormattedDate from "components/formatted_date";
 import { useEffectOnlyOnce } from "libs/react_hooks";
+import { getTasks } from "admin/api/tasks";
 
 const { Column } = Table;
 const { Search } = Input;

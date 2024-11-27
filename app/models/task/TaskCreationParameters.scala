@@ -1,6 +1,8 @@
 package models.task
 
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
+import controllers.LegacyTaskParameters
 import models.user.Experience
 import play.api.libs.json.{Format, Json}
 
@@ -10,7 +12,7 @@ case class TaskParameters(taskTypeId: String,
                           projectName: String,
                           scriptId: Option[String],
                           boundingBox: Option[BoundingBox],
-                          dataSet: String,
+                          datasetId: ObjectId,
                           editPosition: Vec3Int,
                           editRotation: Vec3Double,
                           creationInfo: Option[String],
@@ -18,7 +20,23 @@ case class TaskParameters(taskTypeId: String,
                           baseAnnotation: Option[BaseAnnotation])
 
 object TaskParameters {
-  implicit val taskParametersFormat: Format[TaskParameters] = Json.format[TaskParameters]
+  implicit val taskParametersWithDatasetIdFormat: Format[TaskParameters] =
+    Json.format[TaskParameters]
+
+  def fromLegacyTaskParameters(t: LegacyTaskParameters, datasetId: ObjectId) = new TaskParameters(
+    t.taskTypeId,
+    t.neededExperience,
+    t.pendingInstances,
+    t.projectName,
+    t.scriptId,
+    t.boundingBox,
+    datasetId,
+    t.editPosition,
+    t.editRotation,
+    t.creationInfo,
+    t.description,
+    t.baseAnnotation
+  )
 }
 
 case class NmlTaskParameters(taskTypeId: String,

@@ -5,7 +5,7 @@ import com.scalableminds.util.time.Instant
 import models.job.JobState
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.SqlInterpolation.sqlInterpolation
 import utils.sql._
 

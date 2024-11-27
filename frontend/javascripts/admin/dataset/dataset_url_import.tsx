@@ -10,11 +10,8 @@ export function DatasetURLImport() {
   const datastores = useFetch(async () => await getDatastores(), null, []);
   const params = Utils.getUrlParamsObject();
   const datasetUri = _.has(params, "url") ? params.url : null;
-  const handleDatasetAdded = async (
-    datasetOrganization: string,
-    uploadedDatasetName: string,
-  ): Promise<void> => {
-    history.push(`/datasets/${datasetOrganization}/${uploadedDatasetName}/view`);
+  const handleDatasetAdded = async (addedDatasetId: string): Promise<void> => {
+    history.push(`/datasets/${addedDatasetId}/view`);
   };
 
   return datastores != null ? (

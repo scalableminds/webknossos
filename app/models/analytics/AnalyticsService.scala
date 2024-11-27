@@ -1,6 +1,7 @@
 package models.analytics
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox}
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -9,7 +10,7 @@ import models.user.{MultiUserDAO, UserDAO}
 import net.liftweb.common.Box.tryo
 import play.api.http.Status.UNAUTHORIZED
 import play.api.libs.json._
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

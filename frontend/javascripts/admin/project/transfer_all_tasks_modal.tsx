@@ -2,16 +2,13 @@ import { Modal, Table, Spin } from "antd";
 import { useState } from "react";
 import _ from "lodash";
 import type { APIUser, APIProject, APIActiveUser } from "types/api_flow_types";
-import {
-  getUsers,
-  getUsersWithActiveTasks,
-  transferActiveTasksOfProject,
-} from "admin/admin_rest_api";
+import { getUsers } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import UserSelectionComponent from "admin/user/user_selection_component";
 import messages from "messages";
 import { useFetch } from "libs/react_helpers";
+import { getUsersWithActiveTasks, transferActiveTasksOfProject } from "admin/api/tasks";
 
 type Props = {
   project: APIProject | null | undefined;

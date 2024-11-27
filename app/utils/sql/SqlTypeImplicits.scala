@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
 import play.api.libs.json.JsValue
 import slick.jdbc.{GetResult, PositionedResult}
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.duration.FiniteDuration
 

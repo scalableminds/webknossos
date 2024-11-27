@@ -1,9 +1,14 @@
 package controllers
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerStatistics, AnnotationLayerType}
+import com.scalableminds.webknossos.datastore.models.annotation.{
+  AnnotationLayer,
+  AnnotationLayerStatistics,
+  AnnotationLayerType
+}
 import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingType}
 import mail.{MailchimpClient, MailchimpTag}
@@ -24,7 +29,7 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.{URLSharing, UserAwareRequestLogging, WkEnv}
 import telemetry.SlackNotificationService
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -97,7 +102,7 @@ class AnnotationController @Inject()(
   }
 
   def infoWithoutType(id: String,
-                      // Timestamp in milliseconds (time at which the request is sent
+                      // Timestamp in milliseconds (time at which the request is sent)
                       timestamp: Option[Long]): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     log() {
       for {
@@ -173,15 +178,11 @@ class AnnotationController @Inject()(
       } yield JsonOk(json, Messages("annotation.isLockedByOwner.success"))
   }
 
-  def createExplorational(organizationId: String, datasetName: String): Action[List[AnnotationLayerParameters]] =
+  def createExplorational(datasetId: String): Action[List[AnnotationLayerParameters]] =
     sil.SecuredAction.async(validateJson[List[AnnotationLayerParameters]]) { implicit request =>
       for {
-        organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
-          "organization.notFound",
-          organizationId) ~> NOT_FOUND
-        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
-          "dataset.notFound",
-          datasetName) ~> NOT_FOUND
+        datasetIdValidated <- ObjectId.fromString(datasetId)
+        dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetIdValidated) ~> NOT_FOUND
         annotation <- annotationService.createExplorationalFor(
           request.identity,
           dataset._id,
@@ -193,19 +194,12 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
     }
 
-  def getSandbox(organization: String,
-                 datasetName: String,
-                 typ: String,
-                 sharingToken: Option[String]): Action[AnyContent] =
+  def getSandbox(datasetId: String, typ: String, sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken) // users with dataset sharing token may also get a sandbox annotation
       for {
-        organization <- organizationDAO.findOne(organization)(GlobalAccessContext) ?~> Messages(
-          "organization.notFound",
-          organization) ~> NOT_FOUND
-        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id)(ctx) ?~> Messages(
-          "dataset.notFound",
-          datasetName) ~> NOT_FOUND
+        datasetIdValidated <- ObjectId.fromString(datasetId)
+        dataset <- datasetDAO.findOne(datasetIdValidated)(ctx) ?~> Messages("dataset.notFound", datasetIdValidated) ~> NOT_FOUND
         tracingType <- TracingType.fromString(typ).toFox
         _ <- bool2Fox(tracingType == TracingType.skeleton) ?~> "annotation.sandbox.skeletonOnly"
         annotation = Annotation(

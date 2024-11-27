@@ -1,7 +1,6 @@
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type {
-  APIDatasetId,
   APIDatasetCompact,
   APIDatasetCompactWithoutStatusAndLayerNames,
   FolderItem,
@@ -30,11 +29,8 @@ export type DatasetCollectionContextValue = {
   isChecking: boolean;
   checkDatasets: () => Promise<void>;
   fetchDatasets: () => void;
-  reloadDataset: (
-    datasetId: APIDatasetId,
-    datasetsToUpdate?: Array<APIDatasetCompact>,
-  ) => Promise<void>;
-  updateCachedDataset: (id: APIDatasetId, updater: DatasetUpdater) => Promise<APIDataset>;
+  reloadDataset: (datasetId: string, datasetsToUpdate?: Array<APIDatasetCompact>) => Promise<void>;
+  updateCachedDataset: (datasetId: string, updater: DatasetUpdater) => Promise<APIDataset>;
   activeFolderId: string | null;
   setActiveFolderId: (id: string | null) => void;
   mostRecentlyUsedActiveFolderId: string | null;
@@ -157,12 +153,12 @@ export default function DatasetCollectionContextProvider({
     datasetSearchQuery.refetch();
   }
 
-  async function reloadDataset(datasetId: APIDatasetId) {
+  async function reloadDataset(datasetId: string) {
     await updateDatasetMutation.mutateAsync(datasetId);
   }
 
-  async function updateCachedDataset(id: APIDatasetId, updater: DatasetUpdater) {
-    return await updateDatasetMutation.mutateAsync([id, updater]);
+  async function updateCachedDataset(datasetId: string, updater: DatasetUpdater) {
+    return await updateDatasetMutation.mutateAsync([datasetId, updater]);
   }
 
   const getBreadcrumbs = (dataset: APIDatasetCompactWithoutStatusAndLayerNames) => {

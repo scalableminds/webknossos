@@ -755,12 +755,7 @@ export function NucleiDetectionForm() {
       title="AI Nuclei Segmentation"
       suggestedDatasetSuffix="with_nuclei"
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) =>
-        startNucleiInferralJob(
-          dataset.owningOrganization,
-          dataset.name,
-          colorLayer.name,
-          newDatasetName,
-        )
+        startNucleiInferralJob(dataset.id, colorLayer.name, newDatasetName)
       }
       description={
         <>
@@ -810,8 +805,7 @@ export function NeuronSegmentationForm() {
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
         if (!doSplitMergerEvaluation) {
           return startNeuronInferralJob(
-            dataset.owningOrganization,
-            dataset.name,
+            dataset.id,
             colorLayer.name,
             bbox,
             newDatasetName,
@@ -819,8 +813,7 @@ export function NeuronSegmentationForm() {
           );
         }
         return startNeuronInferralJob(
-          dataset.owningOrganization,
-          dataset.name,
+          dataset.id,
           colorLayer.name,
           bbox,
           newDatasetName,
@@ -874,13 +867,7 @@ export function MitochondriaSegmentationForm() {
         }
 
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
-        return startMitochondriaInferralJob(
-          dataset.owningOrganization,
-          dataset.name,
-          colorLayer.name,
-          bbox,
-          newDatasetName,
-        );
+        return startMitochondriaInferralJob(dataset.id, colorLayer.name, bbox, newDatasetName);
       }}
       description={
         <>
@@ -943,7 +930,7 @@ function CustomAiModelInferenceForm() {
           ...maybeAnnotationId,
           aiModelId: form.getFieldValue("aiModel"),
           workflowYaml: useCustomWorkflow ? form.getFieldValue("workflowYaml") : undefined,
-          datasetName: dataset.name,
+          datasetDirectoryName: dataset.directoryName,
           organizationId: dataset.owningOrganization,
           colorLayerName: colorLayer.name,
           boundingBox,
@@ -988,13 +975,7 @@ export function AlignSectionsForm() {
       isBoundingBoxConfigurable={false}
       isSkeletonSelectable={true}
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, annotationId }) =>
-        startAlignSectionsJob(
-          dataset.owningOrganization,
-          dataset.name,
-          colorLayer.name,
-          newDatasetName,
-          annotationId,
-        )
+        startAlignSectionsJob(dataset.id, colorLayer.name, newDatasetName, annotationId)
       }
       description={
         <Space direction="vertical" size="middle">
@@ -1103,8 +1084,7 @@ export function MaterializeVolumeAnnotationModal({
               : null;
           const baseSegmentationName = getBaseSegmentationName(segmentationLayer);
           return startMaterializingVolumeAnnotationJob(
-            dataset.owningOrganization,
-            dataset.name,
+            dataset.id,
             baseSegmentationName,
             volumeLayerName,
             newDatasetName,

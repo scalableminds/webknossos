@@ -19,7 +19,7 @@ import models.user.User
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.{Json, OFormat}
 import security.WkSilhouetteEnvironment
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import java.net.URI
 import javax.inject.Inject
@@ -111,7 +111,6 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
       organization <- organizationDAO.findOne(user._organization)
       dataStore <- dataStoreDAO.findOneWithUploadsAllowed
       _ <- datasetService.assertValidDatasetName(datasetName)
-      _ <- datasetService.assertNewDatasetName(datasetName, organization._id) ?~> "dataset.name.alreadyTaken"
       client = new WKRemoteDataStoreClient(dataStore, rpc)
       userToken <- bearerTokenService.createAndInitDataStoreTokenForUser(user)
       _ <- client.addDataSource(organization._id, datasetName, dataSource, folderId, userToken)

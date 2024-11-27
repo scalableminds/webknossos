@@ -1,4 +1,4 @@
-package utils
+package com.scalableminds.util.objectid
 
 import com.scalableminds.util.tools.TextUtils.parseCommaSeparated
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -18,7 +18,7 @@ object ObjectId extends FoxImplicits {
   def fromCommaSeparated(idsStrOpt: Option[String])(implicit ec: ExecutionContext): Fox[List[ObjectId]] =
     parseCommaSeparated(idsStrOpt)(fromString)
   private def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
-  private def fromStringSync(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption
+  def fromStringSync(input: String): Option[ObjectId] = BSONObjectID.parse(input).map(fromBsonId).toOption
   def dummyId: ObjectId = ObjectId("dummyObjectId")
 
   implicit object ObjectIdFormat extends Format[ObjectId] {

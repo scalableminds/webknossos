@@ -383,11 +383,14 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   renameTracing(tracing: APIAnnotationInfo, name: string) {
-    // todop: this does not work because there is no save saga in the dashboard
-    Store.dispatch(
-      pushSaveQueueTransaction([updateMetadataOfAnnotation(name)], "unused-tracing-id"),
-    );
-    this.updateTracingInLocalState(tracing, (t) => update(t, { name: { $set: name } }));
+    editAnnotation(tracing.id, tracing.typ, { name })
+      .then(() => {
+        Toast.success(messages["annotation.was_edited"]);
+        this.updateTracingInLocalState(tracing, (t) => update(t, { name: { $set: name } }));
+      })
+      .catch((error) => {
+        handleGenericError(error as Error, "Could not update the annotation name.");
+      });
   }
 
   archiveAll = () => {

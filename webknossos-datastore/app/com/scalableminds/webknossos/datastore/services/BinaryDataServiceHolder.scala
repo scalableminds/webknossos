@@ -22,7 +22,6 @@ import scala.concurrent.ExecutionContext
 class BinaryDataServiceHolder @Inject()(
     config: DataStoreConfig,
     agglomerateService: AgglomerateService,
-    applicationHealthService: ApplicationHealthService,
     remoteSourceDescriptorService: RemoteSourceDescriptorService,
     datasetErrorLoggingService: DatasetErrorLoggingService)(implicit ec: ExecutionContext)
     extends LazyLogging {
@@ -46,7 +45,6 @@ class BinaryDataServiceHolder @Inject()(
     Paths.get(config.Datastore.baseFolder),
     Some(agglomerateService),
     Some(remoteSourceDescriptorService),
-    Some(applicationHealthService),
     Some(sharedChunkContentsCache),
     Some(datasetErrorLoggingService)
   )

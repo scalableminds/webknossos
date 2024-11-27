@@ -276,7 +276,7 @@ function* createEditableMapping(): Saga<string> {
   const baseMappingName = volumeTracing.mappingName;
   yield* put(setMappingNameAction(layerName, volumeTracingId, "HDF5"));
   yield* put(setHasEditableMappingAction());
-  // Ensure the backend receives the correct mapping name, the fact that the mapping is locked and editable before doing the first proofreading operation.
+  // Ensure a saved state so that the mapping is locked and editable before doing the first proofreading operation.
   yield* call([Model, Model.ensureSavedState]);
   const editableMapping: ServerEditableMapping = {
     baseMappingName: baseMappingName,

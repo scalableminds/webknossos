@@ -100,6 +100,7 @@ export function* pushAnnotationUpdateAsync(action: Action) {
     yield* retry(
       SETTINGS_MAX_RETRY_COUNT,
       SETTINGS_RETRY_DELAY,
+      // todop: shouldn't this work via the save queue now?
       editAnnotation,
       tracing.annotationId,
       tracing.annotationType,

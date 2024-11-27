@@ -53,7 +53,7 @@ export async function previewVersion(version?: number) {
   Store.dispatch(setAnnotationAllowUpdateAction(false));
   const segmentationLayersToReload = [];
 
-  // TODO: properly determine which layers to reload.
+  // TODOp: properly determine which layers to reload.
   // No versions were passed which means that the newest annotation should be
   // shown. Therefore, reload all segmentation layers.
   segmentationLayersToReload.push(...Model.getSegmentationTracingLayers());
@@ -75,6 +75,7 @@ async function handleRestoreVersion(
     Store.dispatch(
       pushSaveQueueTransaction(
         [revertToVersion(version)],
+        // todop
         "experimental; leaving out tracingId as this should not be required",
       ),
     );
@@ -191,7 +192,7 @@ function InnerVersionList(props: Props & { newestVersion: number }) {
   const [initialVersion] = useState(tracing.version);
 
   function fetchPaginatedVersions({ pageParam }: { pageParam?: number }) {
-    // TODO: maybe refactor this so that this method is not calculated very rendering cycle
+    // TODOp: maybe refactor this so that this method is not calculated very rendering cycle
     if (pageParam == null) {
       pageParam = Math.floor((newestVersion - initialVersion) / ENTRIES_PER_PAGE);
     }

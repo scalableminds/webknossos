@@ -14,6 +14,7 @@ import { getDatastores } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import DatasetAddComposeView from "./dataset_add_compose_view";
 import type { History } from "history";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 
 const { Content, Sider } = Layout;
 
@@ -33,24 +34,24 @@ const addTypeToVerb: Record<DatasetAddType, string> = {
 
 function DatasetAddView({ history }: RouteComponentProps) {
   const datastores = useFetch<APIDataStore[]>(getDatastores, [], []);
-  const [datasetName, setDatasetName] = useState("");
-  const [organization, setOrganization] = useState("");
+  const [datasetId, setDatasetId] = useState("");
+  const [uploadedDatasetName, setUploadedDatasetName] = useState("");
   const [datasetNeedsConversion, setDatasetNeedsConversion] = useState(false);
   const [datasetAddType, setImportType] = useState<DatasetAddType>(DatasetAddType.UPLOAD);
 
   const handleDatasetAdded = async (
     datasetAddType: DatasetAddType,
-    datasetOrganization: string,
-    uploadedDatasetName: string,
+    datasetId: string,
+    datasetName: string,
     needsConversion: boolean | null | undefined,
   ): Promise<void> => {
-    setOrganization(datasetOrganization);
-    setDatasetName(uploadedDatasetName);
+    setDatasetId(datasetId);
     setImportType(datasetAddType);
+    setUploadedDatasetName(datasetName);
     if (needsConversion != null) setDatasetNeedsConversion(needsConversion);
   };
 
-  const showAfterUploadContent = datasetName !== "";
+  const showAfterUploadContent = datasetId !== "";
 
   const getAfterUploadModalContent = () => {
     if (!showAfterUploadContent) {
@@ -60,9 +61,9 @@ function DatasetAddView({ history }: RouteComponentProps) {
     return getPostUploadModal(
       datasetNeedsConversion,
       datasetAddType,
-      organization,
-      datasetName,
-      setDatasetName,
+      datasetId,
+      uploadedDatasetName,
+      setDatasetId,
       history,
     );
   };
@@ -270,9 +271,9 @@ export default connector(withRouter(DatasetAddView));
 const getPostUploadModal = (
   datasetNeedsConversion: boolean,
   datasetAddType: DatasetAddType,
-  organization: string,
-  datasetName: string,
-  setDatasetName: (arg0: string) => void,
+  datasetId: string,
+  uploadedDatasetName: string,
+  setDatasetId: (arg0: string) => void,
   history: History<unknown>,
 ) => {
   return (
@@ -291,8 +292,8 @@ const getPostUploadModal = (
           display: "none",
         },
       }}
-      onCancel={() => setDatasetName("")}
-      onOk={() => setDatasetName("")}
+      onCancel={() => setDatasetId("")}
+      onOk={() => setDatasetId("")}
       width={580}
     >
       <div
@@ -327,12 +328,20 @@ const getPostUploadModal = (
               <React.Fragment>
                 <Button
                   type="primary"
-                  onClick={() => history.push(`/datasets/${organization}/${datasetName}/view`)}
+                  onClick={() =>
+                    history.push(
+                      `/datasets/${getReadableURLPart({ name: uploadedDatasetName, id: datasetId })}/view`,
+                    )
+                  }
                 >
                   View the Dataset
                 </Button>
                 <Button
-                  onClick={() => history.push(`/datasets/${organization}/${datasetName}/edit`)}
+                  onClick={() =>
+                    history.push(
+                      `/datasets/${getReadableURLPart({ name: uploadedDatasetName, id: datasetId })}/edit`,
+                    )
+                  }
                 >
                   Go to Dataset Settings
                 </Button>

@@ -8,7 +8,7 @@ import models.task.TaskDAO
 import models.user.{User, UserService}
 import models.annotation.AnnotationState._
 import models.project.ProjectDAO
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 

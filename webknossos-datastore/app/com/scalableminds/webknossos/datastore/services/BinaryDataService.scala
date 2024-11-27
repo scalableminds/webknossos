@@ -57,8 +57,9 @@ class BinaryDataService(val dataBaseDir: Path,
                            conversionFunc: Array[Byte] => Fox[Array[Byte]],
                            request: DataServiceDataRequest): Fox[Array[Byte]] =
       if (isNecessary) datasetErrorLoggingService match {
-        case Some(value) => value.withErrorLogging(request.dataSource.id, "converting bucket data", conversionFunc(inputArray))
-        case None        => conversionFunc(inputArray)
+        case Some(value) =>
+          value.withErrorLogging(request.dataSource.id, "converting bucket data", conversionFunc(inputArray))
+        case None => conversionFunc(inputArray)
       } else Full(inputArray)
 
     val requestsCount = requests.length

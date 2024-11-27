@@ -131,7 +131,8 @@ case class ShardingSpecification(`@type`: String,
     if (shard_bits == 0) {
       base / "0.shard"
     } else {
-      val shardString = String.format(s"%1$$${(shard_bits / 4).ceil.toInt}s", shardNumber.toHexString).replace(' ', '0')
+      val shardString =
+        String.format(s"%1$$${(shard_bits.toFloat / 4).ceil.toInt}s", shardNumber.toHexString).replace(' ', '0')
       base / s"$shardString.shard"
     }
 

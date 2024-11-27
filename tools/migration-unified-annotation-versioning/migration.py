@@ -41,17 +41,13 @@ class Migration:
         self.total_count = None
 
     def run(self):
-        start_time = datetime.datetime.now()
         before = time.time()
-        logger.info(f"Using start time {start_time}")
-        annotations = self.read_annotation_list(start_time)
+        annotations = self.read_annotation_list()
         self.done_count = 0
         self.total_count = len(annotations)
 
-        before_submit = time.time()
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.args.num_threads) as executor:
             executor.map(self.migrate_annotation, annotations)
-            log_since(before_submit, f"Submitting {self.total_count} futures to ThreadPoolExecutor via map")
         log_since(before, "Migrating all the things")
 
     def migrate_annotation(self, annotation):
@@ -63,8 +59,7 @@ class Migration:
         self.create_and_save_annotation_proto(annotation, latest_unified_version)
         with self.done_count_lock:
             self.done_count += 1
-        log_since(before, "", self.get_progress())
-
+        log_since(before, f"Migrating annotation {annotation['_id']}", self.get_progress())
 
     def build_mapping_id_map(self, annotation) -> MappingIdMap:
         mapping_id_map = {}
@@ -309,14 +304,21 @@ class Migration:
                 annotationProto.annotationLayers.append(layer_proto)
             self.save_bytes(collection="annotations", key=annotation["_id"], version=version, value=annotationProto.SerializeToString())
 
-    def read_annotation_list(self, start_time):
+    def read_annotation_list(self):
         before = time.time()
+        start_time = datetime.datetime.now()
+        previous_start_label = ""
+        previous_start_query = ""
+        if self.args.previous_start is not None:
+            previous_start_label = f"and after previous start time {self.args.previous_start}"
+            previous_start_query = f" AND modified > '{self.args.previous_start}'"
+        logger.info(f"Looking only for annotations last modified before start time {start_time}{previous_start_label}.")
         logger.info("Determining annotation count from postgres...")
         page_size = 10000
         connection = connect_to_postgres(self.args.postgres)
         cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        modified_str = start_time.strftime("'%Y-%m-%d %H:%M:%S'")
-        cursor.execute(f"SELECT COUNT(*) FROM webknossos.annotations WHERE modified < {modified_str}")
+
+        cursor.execute(f"SELECT COUNT(*) FROM webknossos.annotations WHERE modified < '{start_time}'{previous_start_query}")
         annotation_count = cursor.fetchone()['count']
         logger.info(f"Loading infos of {annotation_count} annotations from postgres ...")
         annotations = []
@@ -325,7 +327,8 @@ class Migration:
             query = f"""
                 WITH annotations AS (
                     SELECT _id, name, description, created, modified FROM webknossos.annotations
-                    WHERE modified < {modified_str}
+                    WHERE modified < '{start_time}'
+                    {previous_start_query}
                     ORDER BY _id
                     LIMIT {page_size}
                     OFFSET {page_size * page_num}

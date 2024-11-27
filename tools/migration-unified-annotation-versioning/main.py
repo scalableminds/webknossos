@@ -18,6 +18,7 @@ def main():
     parser.add_argument("--dry", help="Only read and process data, do not write out results", action="store_true")
     parser.add_argument("--num_threads", help="Number of threads to migrate the annotations in parallel", type=int, default=1)
     parser.add_argument("--postgres", help="Postgres connection specifier.", type=str, default="postgres@localhost:5432/webknossos")
+    parser.add_argument("--previous_start", help="Previous run start time. Example: 2024-11-27 10:37:30.171083", type=str)
     args = parser.parse_args()
     if args.dst is None and not args.dry:
         parser.error("At least one of --dry or --dst is required")

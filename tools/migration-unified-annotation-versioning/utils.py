@@ -12,14 +12,14 @@ def setup_logging():
 
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
+    formatter = logging.Formatter("%(asctime)s %(levelname)-8s [%(threadName)s] %(message)s")
     handler.setFormatter(formatter)
     root.addHandler(handler)
 
 
-def log_since(before, label: str) -> None:
+def log_since(before, label: str, postfix: str = "") -> None:
     diff = time.time() - before
-    logger.info(f"{label} took {diff:.2f} s")
+    logger.info(f"{label} took {diff:.2f} s{postfix}")
 
 
 # TODO should we go to limit + 1?

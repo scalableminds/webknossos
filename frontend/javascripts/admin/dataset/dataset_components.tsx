@@ -41,8 +41,8 @@ export const layerNameRules = [
   },
   // Note that these rules are also checked by the backend
   {
-    pattern: /^[0-9a-zA-Z_.-]+$/,
-    message: "Only letters, digits and the following characters are allowed: . _ -",
+    pattern: /^[0-9a-zA-Z_.\-$.]+$/,
+    message: "Only letters, digits and the following characters are allowed: . _ - $",
   },
   {
     validator: syncValidator(

@@ -29,7 +29,6 @@ import DisableGenericDnd from "components/disable_generic_dnd";
 import { Imprint, Privacy } from "components/legal";
 import AsyncRedirect from "components/redirect";
 import SecuredRoute from "components/secured_route";
-import { CheckTermsOfServices } from "components/terms_of_services_check";
 import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
 import PublicationDetailView from "dashboard/publication_details_view";
@@ -64,6 +63,7 @@ import loadable from "libs/lazy_loader";
 import type { EmptyObject } from "types/globals";
 import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import AiModelListView from "admin/voxelytics/ai_model_list_view";
+import { CheckTermsOfServices } from "components/terms_of_services_check";
 import {
   getDatasetIdFromNameAndOrganization,
   getOrganizationForDataset,

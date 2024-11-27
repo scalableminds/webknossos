@@ -410,6 +410,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "auth.registration_org_input": "Please select an organization!",
   "auth.privacy_check_required":
     "Unfortunately, we cannot provide the service without your consent to the processing of your data.",
+  "auth.tos_check_required":
+    "Unfortunately, we cannot provide the service without your consent to our terms of service.",
   "auth.reset_logout": "You will be logged out, after successfully changing your password.",
   "auth.reset_old_password": "Please input your old password!",
   "auth.reset_new_password": "Please input your new password!",

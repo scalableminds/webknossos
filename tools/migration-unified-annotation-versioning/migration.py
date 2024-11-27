@@ -34,32 +34,41 @@ class Migration:
         self.dst_stub = None
         if not args.dry:
             self.dst_stub = connect_to_fossildb(args.dst, "destination")
-        self.json_encoder = msgspec.json.Encoder()
-        self.json_decoder = msgspec.json.Decoder()
         self.done_count = None
         self.done_count_lock = threading.Lock()
+        self.failure_count = 0
+        self.failure_count_lock = threading.Lock()
         self.total_count = None
 
     def run(self):
         before = time.time()
         annotations = self.read_annotation_list()
         self.done_count = 0
+        self.failure_count = 0
         self.total_count = len(annotations)
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.args.num_threads) as executor:
             executor.map(self.migrate_annotation, annotations)
+        if self.failure_count > 0:
+            logger.info(f"There were failures for {self.failure_count} annotations. See logs for details.")
         log_since(before, "Migrating all the things")
 
     def migrate_annotation(self, annotation):
-        logger.info(f"Migrating annotation {annotation['_id']} ...")
+        logger.info(f"Migrating annotation {annotation['_id']} (dry={self.args.dry}) ...")
         before = time.time()
-        mapping_id_map = self.build_mapping_id_map(annotation)
-        layer_version_mapping, latest_unified_version = self.migrate_updates(annotation, mapping_id_map)
-        self.migrate_materialized_layers(annotation, layer_version_mapping, mapping_id_map)
-        self.create_and_save_annotation_proto(annotation, latest_unified_version)
-        with self.done_count_lock:
-            self.done_count += 1
-        log_since(before, f"Migrating annotation {annotation['_id']}", self.get_progress())
+        try:
+            mapping_id_map = self.build_mapping_id_map(annotation)
+            layer_version_mapping, latest_unified_version = self.migrate_updates(annotation, mapping_id_map)
+            self.migrate_materialized_layers(annotation, layer_version_mapping, mapping_id_map)
+            self.create_and_save_annotation_proto(annotation, latest_unified_version)
+            log_since(before, f"Migrating annotation {annotation['_id']}", self.get_progress())
+        except Exception:
+            logger.exception(f"Exception while migrating annotation {annotation['_id']}:")
+            with self.failure_count_lock:
+                self.failure_count += 1
+        finally:
+            with self.done_count_lock:
+                self.done_count += 1
 
     def build_mapping_id_map(self, annotation) -> MappingIdMap:
         mapping_id_map = {}
@@ -71,6 +80,8 @@ class Migration:
         return mapping_id_map
 
     def migrate_updates(self, annotation, mapping_id_map: MappingIdMap) -> Tuple[LayerVersionMapping, int]:
+        json_encoder = msgspec.json.Encoder()
+        json_decoder = msgspec.json.Decoder()
         batch_size = 1000
         unified_version = 0
         version_mapping = {}
@@ -81,7 +92,7 @@ class Migration:
             for batch_start, batch_end in batch_range(newest_version, batch_size):
                 update_groups = self.get_update_batch(tracing_id, collection, batch_start, batch_end)
                 for version, update_group in update_groups:
-                    update_group = self.process_update_group(tracing_id, layer_type, update_group)
+                    update_group = self.process_update_group(tracing_id, layer_type, update_group, json_encoder, json_decoder)
                     unified_version += 1
                     version_mapping_for_layer[version] = unified_version
                     self.save_update_group(annotation['_id'], unified_version, update_group)
@@ -121,14 +132,15 @@ class Migration:
             return getReply.value
         return None
 
-    def process_update_group(self, tracing_id: str, layer_type: str, update_group_raw: bytes) -> bytes:
-        update_group_parsed = self.json_decoder.decode(update_group_raw)
+    def process_update_group(self, tracing_id: str, layer_type: str, update_group_raw: bytes, json_encoder, json_decoder) -> bytes:
+        update_group_parsed = json_decoder.decode(update_group_raw)
 
         # TODO handle existing revertToVersion update actions
 
         for update in update_group_parsed:
             name = update["name"]
 
+            # renamings
             if name == "updateTracing":
                 update["name"] = f"update{layer_type}Tracing"
             elif name == "updateUserBoundingBoxes":
@@ -136,10 +148,24 @@ class Migration:
             elif name == "updateUserBoundingBoxVisibility":
                 update["name"] = f"updateUserBoundingBoxVisibilityIn{layer_type}Tracing"
 
+            name = update["name"]
+
+            # add actionTracingId
             if not name == "updateTdCamera":
                 update["value"]["actionTracingId"] = tracing_id
 
-        return self.json_encoder.encode(update_group_parsed)
+            # identify compact update actions, and mark them
+            # Note: cannot identify compacted actions of the classes
+            #  CreateSegmentVolumeActions UpdateSegmentVolumeAction, UpdateMappingNameAction
+            #  as all their fields are optional
+            if (name == "updateBucket" and "position" not in update) \
+                or (name == "updateVolumeTracing" and "activeSegmentId" not in update["value"]) \
+                or (name == "updateUserBoundingBoxesInVolumeTracing" and "boundingBoxes" not in update) \
+                or (name == "updateUserBoundingBoxVisibilityInVolumeTracing" and "boundingBoxId" not in update) \
+                or (name == "deleteSegmentData" and "id" not in update):
+                update["isCompacted"] = True
+
+        return json_encoder.encode(update_group_parsed)
 
     def save_update_group(self, annotation_id: str, version: int, update_group_raw: bytes) -> None:
         self.save_bytes(collection="annotationUpdates", key=annotation_id, version=version, value=update_group_raw)
@@ -310,7 +336,7 @@ class Migration:
         previous_start_label = ""
         previous_start_query = ""
         if self.args.previous_start is not None:
-            previous_start_label = f"and after previous start time {self.args.previous_start}"
+            previous_start_label = f" and after previous start time {self.args.previous_start}"
             previous_start_query = f" AND modified > '{self.args.previous_start}'"
         logger.info(f"Looking only for annotations last modified before start time {start_time}{previous_start_label}.")
         logger.info("Determining annotation count from postgres...")
@@ -344,7 +370,7 @@ class Migration:
                 """
             cursor.execute(query)
             annotations += cursor.fetchall()
-        log_since(before, "Loading annotations")
+        log_since(before, "Loading annotation infos from postgres")
         return annotations
 
     def remove_morton_index(self, bucket_key: str) -> str:
@@ -357,4 +383,4 @@ class Migration:
         with self.done_count_lock:
             done_count = self.done_count
         percentage = 100.0 * done_count / self.total_count
-        return f". ({done_count}/{self.total_count}={percentage:.1f}% are done.)"
+        return f". ({done_count}/{self.total_count} = {percentage:.1f}% are done)"

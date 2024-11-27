@@ -338,6 +338,40 @@ case class UpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActionSegme
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 }
+
+// Only used to represent legacy update actions from the db where not all fields are set
+// This is from a time when volume actions were not applied lazily
+// (Before https://github.com/scalableminds/webknossos/pull/7917)
+case class CompactVolumeUpdateAction(name: String,
+                                     actionTracingId: String,
+                                     actionTimestamp: Option[Long],
+                                     actionAuthorId: Option[String] = None,
+                                     value: JsObject)
+    extends VolumeUpdateAction {
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): UpdateAction = this
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+}
+
+object CompactVolumeUpdateAction {
+  implicit object compactVolumeUpdateActionFormat extends Format[CompactVolumeUpdateAction] {
+    override def reads(json: JsValue): JsResult[CompactVolumeUpdateAction] =
+      for {
+        name <- (json \ "name").validate[String]
+        actionTracingId <- (json \ "value" \ "actionTracingId").validate[String]
+        actionTimestamp <- (json \ "value" \ "actionTimestamp").validateOpt[Long]
+        actionAuthorId <- (json \ "value" \ "actionAuthorId").validateOpt[String]
+        value <- (json \ "value").validate[JsObject].map(_ - "actionTracingId" - "actionTimestamp" - "actionAuthorId")
+      } yield CompactVolumeUpdateAction(name, actionTracingId, actionTimestamp, actionAuthorId, value)
+
+    override def writes(o: CompactVolumeUpdateAction): JsValue =
+      Json.obj("name" -> o.name, "value" -> (Json.obj("actionTimestamp" -> o.actionTimestamp) ++ o.value))
+  }
+}
+
 object UpdateBucketVolumeAction {
   implicit val jsonFormat: OFormat[UpdateBucketVolumeAction] = Json.format[UpdateBucketVolumeAction]
 }

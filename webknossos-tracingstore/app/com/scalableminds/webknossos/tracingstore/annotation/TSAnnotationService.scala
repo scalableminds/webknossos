@@ -158,6 +158,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           resetToBase(annotationId, annotationWithTracings, targetVersion)
         case _: BucketMutatingVolumeUpdateAction =>
           Fox.successful(annotationWithTracings) // No-op, as bucket-mutating actions are performed eagerly, so not here.
+        case _: CompactVolumeUpdateAction =>
+          Fox.successful(annotationWithTracings) // No-op, as legacy compacted update actions cannot be applied
         case _ => Fox.failure(s"Received unsupported AnnotationUpdateAction action ${Json.toJson(updateAction)}")
       }
     } yield updated

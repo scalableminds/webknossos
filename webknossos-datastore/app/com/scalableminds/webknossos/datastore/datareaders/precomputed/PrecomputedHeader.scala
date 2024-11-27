@@ -1,10 +1,12 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.tools.ByteUtils
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, Compressor, DatasetHeader, DimensionSeparator}
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
 import play.api.libs.json.Json.WithDefaultValues
@@ -79,11 +81,60 @@ case class ShardingSpecification(`@type`: String,
                                  minishard_bits: Int,
                                  shard_bits: Long,
                                  minishard_index_encoding: String = "raw",
-                                 data_encoding: String = "raw") {
+                                 data_encoding: String = "raw")
+    extends ByteUtils {
 
   def hashFunction(input: Long): Long =
-    if (hash == "identity") input
-    else ??? // not implemented: murmurhash3_x86_128
+    hash match {
+      case "identity"            => input
+      case "murmurhash3_x86_128" => applyMurmurHash3(input)
+      case _                     => throw new IllegalArgumentException(s"Unsupported hash function: $hash")
+    }
+
+  private def applyMurmurHash3(input: Long): Long = {
+    // he MurmurHash3_x86_128 hash function applied to the shifted chunk ID in little endian encoding. The low 8 bytes of the resultant hash code are treated as a little endian 64-bit number.
+    val bytes = longToBytes(input)
+    val hash = MurmurHash3_x86_128.hash(bytes, 0)
+    val result = hash(0) & 0xFFFFFFFFL | (hash(1) & 0xFFFFFFFFL) << 32
+    result
+  }
+
+  private lazy val minishardMask = {
+    if (minishard_bits == 0) {
+      0
+    } else {
+      var minishardMask = 1L
+      for (_ <- 0 until minishard_bits - 1) {
+        minishardMask <<= 1
+        minishardMask |= 1
+      }
+      minishardMask
+    }
+  }
+
+  private lazy val shardMask = {
+    val oneMask = Long.MinValue // 0xFFFFFFFFFFFFFFFF
+    val cursor = minishard_bits + shard_bits
+    val shardMask = ~((oneMask >> cursor) << cursor)
+    shardMask & (~minishardMask)
+  }
+
+  def getMinishardInfo(chunkHash: Long): (Long, Long) = {
+    val rawChunkIdentifier = chunkHash >> preshift_bits
+    val chunkIdentifier = hashFunction(rawChunkIdentifier)
+    val minishardNumber = chunkIdentifier & minishardMask
+    val shardNumber = (chunkIdentifier & shardMask) >> minishard_bits
+    (shardNumber, minishardNumber)
+  }
+
+  def getPathForShard(base: VaultPath, shardNumber: Long): VaultPath =
+    if (shard_bits == 0) {
+      base / "0.shard"
+    } else {
+      val shardString = String.format(s"%1$$${(shard_bits / 4).ceil.toInt}s", shardNumber.toHexString).replace(' ', '0')
+      base / s"$shardString.shard"
+    }
+
 }
 
 object ShardingSpecification extends JsonImplicits {
@@ -94,6 +145,8 @@ object ShardingSpecification extends JsonImplicits {
     override def writes(shardingSpecification: ShardingSpecification): JsValue =
       Json.writes[ShardingSpecification].writes(shardingSpecification)
   }
+
+  def empty: ShardingSpecification = ShardingSpecification("neuroglancer_uint64_sharded_v1", 0, "identity", 0, 0)
 }
 
 object PrecomputedScale extends JsonImplicits {

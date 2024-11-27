@@ -72,11 +72,14 @@ class DSMeshController @Inject()(
             omitMissing = false,
             urlOrHeaderToken(token, request)
           )
-          chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(organizationId,
-                                                                        datasetName,
-                                                                        dataLayerName,
-                                                                        request.body.meshFile,
-                                                                        segmentIds)
+          chunkInfos <- request.body.meshFileType match {
+            case Some("neuroglancerPrecomputed") => meshFileService.listMeshChunksForNeuroglancerPrecomputedMesh(request.body.meshFilePath, request.body.segmentId)
+            case _ => meshFileService.listMeshChunksForSegmentsMerged(organizationId,
+              datasetName,
+              dataLayerName,
+              request.body.meshFile,
+              segmentIds)
+          }
         } yield Ok(Json.toJson(chunkInfos))
       }
     }

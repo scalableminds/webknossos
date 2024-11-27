@@ -29,7 +29,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fix a bug where dataset uploads would fail if the organization directory on disk is missing. [#8230](https://github.com/scalableminds/webknossos/pull/8230)
 
 ### Removed
-- Removed legacy routes for versions 2,3 and 4. [#8075](https://github.com/scalableminds/webknossos/pull/8075)
+- Removed support for HTTP API versions 3 and 4. [#8075](https://github.com/scalableminds/webknossos/pull/8075)
 - Removed Google Analytics integration. [#8201](https://github.com/scalableminds/webknossos/pull/8201)
 
 ### Breaking Changes

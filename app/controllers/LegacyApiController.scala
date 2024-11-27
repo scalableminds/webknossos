@@ -57,7 +57,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  /* to provide v8, remove legacy routes */
+  /* provide v8 */
 
   def readDatasetV8(organizationId: String, datasetName: String, sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
@@ -160,7 +160,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       } yield adaptedResult
     }
 
-  /* to provide v7, remove legacy routes */
+  /* provide v7 */
 
   def listDatasetsV7(isActive: Option[Boolean],
                      isUnreported: Option[Boolean],
@@ -184,7 +184,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                            compact)(request)
   }
 
-  /* to provide v6, remove legacy routes */
+  /* provide v6 */
 
   def listDatasetsV6(isActive: Option[Boolean],
                      isUnreported: Option[Boolean],
@@ -220,7 +220,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       } yield adaptedResult
     }
 
-  /* to provide v5, remove legacy routes */
+  /* provide v5 */
 
   def assertValidNewNameV5(organizationName: String, datasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>

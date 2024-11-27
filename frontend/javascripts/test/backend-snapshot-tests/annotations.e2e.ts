@@ -154,7 +154,7 @@ async function sendUpdateActions(explorational: APIAnnotation, queue: SaveQueueE
   );
 }
 
-// TODOM: Add tests for new update actions added in this pr (including updateAnnotationMetadata as this part of testing was removed editAnnotation() test case)
+// TODOp: Add tests for new update actions added in this pr (including updateAnnotationMetadata as this part of testing was removed editAnnotation() test case)
 
 test.serial("Send update actions and compare resulting tracing", async (t) => {
   const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);

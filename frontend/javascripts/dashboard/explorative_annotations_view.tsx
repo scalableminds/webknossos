@@ -383,6 +383,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   renameTracing(tracing: APIAnnotationInfo, name: string) {
+    // todop: this does not work because there is no save saga in the dashboard
     Store.dispatch(
       pushSaveQueueTransaction([updateMetadataOfAnnotation(name)], "unused-tracing-id"),
     );

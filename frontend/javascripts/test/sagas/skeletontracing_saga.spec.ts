@@ -79,7 +79,7 @@ function testDiffing(
   );
 }
 
-// TODOM
+// TODOp not used?
 // biome-ignore lint/correctness/noUnusedVariables: <explanation>
 function compactSaveQueueWithUpdateActions(
   queue: Array<SaveQueueEntry>,

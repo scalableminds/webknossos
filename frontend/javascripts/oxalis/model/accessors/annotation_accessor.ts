@@ -67,6 +67,7 @@ export function getSkeletonStats(stats: TracingStats): SkeletonTracingStats | un
       return stats[tracingId];
     }
   }
+  return undefined;
 }
 
 export function getVolumeStats(stats: TracingStats): [string, VolumeTracingStats][] {

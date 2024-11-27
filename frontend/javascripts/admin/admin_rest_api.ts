@@ -730,12 +730,14 @@ export async function getMaybeOutdatedAnnotationInformation(
   return annotation;
 }
 
+// todop: not used anywhere yet
 export async function getNewestAnnotationInformation(
   annotationId: string,
   tracingstoreUrl: string,
 ): Promise<APIAnnotation> {
   const infoUrl = `${tracingstoreUrl}/tracings/annotation/${annotationId}`;
-  const annotationWithMessages = await Request.receiveJSON(infoUrl); // TODO adjust return type and implement proto type in frontend
+  // TODOp adjust return type and implement proto type in frontend
+  const annotationWithMessages = await Request.receiveJSON(infoUrl);
 
   // Extract the potential messages property before returning the task to avoid
   // failing e2e tests in annotations.e2e.ts
@@ -855,7 +857,7 @@ export async function acquireAnnotationMutex(
 export async function getTracingForAnnotationType(
   annotation: APIAnnotation,
   annotationLayerDescriptor: AnnotationLayerDescriptor,
-  version?: number | null | undefined, // TODOM: Use this parameter
+  version?: number | null | undefined, // TODOp: Use this parameter
 ): Promise<ServerTracing> {
   const { tracingId, typ } = annotationLayerDescriptor;
   const tracingType = typ.toLowerCase() as "skeleton" | "volume";
@@ -1019,7 +1021,7 @@ export async function downloadAnnotation(
   includeVolumeData: boolean = true,
 ) {
   const searchParams = new URLSearchParams();
-  // TODO: Use the version parameter
+  // TODOp: Use the version parameter
   /*Object.entries(versions).forEach(([key, val]) => {
     if (val != null) {
       searchParams.append(`${key}Version`, val.toString());

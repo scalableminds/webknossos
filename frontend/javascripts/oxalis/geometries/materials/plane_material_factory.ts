@@ -570,7 +570,7 @@ class PlaneMaterialFactory {
             resInfo.getDenseMags(),
           );
           const flatMags = _.flattenDeep(allDenseMags);
-          this.uniforms.allResolutions = {
+          this.uniforms.allMagnifications = {
             value: flatMags,
           };
 
@@ -581,7 +581,7 @@ class PlaneMaterialFactory {
             magCountCumSum.push(cumSum);
           }
 
-          this.uniforms.resolutionCountCumSum = {
+          this.uniforms.magnificationCountCumSum = {
             value: magCountCumSum,
           };
         },
@@ -1099,7 +1099,7 @@ class PlaneMaterialFactory {
       colorLayerNames,
       segmentationLayerNames,
       textureLayerInfos,
-      resolutionsCount: this.getTotalMagCount(),
+      magnificationsCount: this.getTotalMagCount(),
       voxelSizeFactor,
       isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
@@ -1134,7 +1134,7 @@ class PlaneMaterialFactory {
       colorLayerNames,
       segmentationLayerNames,
       textureLayerInfos,
-      resolutionsCount: this.getTotalMagCount(),
+      magnificationsCount: this.getTotalMagCount(),
       voxelSizeFactor,
       isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,

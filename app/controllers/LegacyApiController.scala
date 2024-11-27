@@ -148,7 +148,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     for {
       _ <- Fox.successful(logVersioned(request))
       result <- annotationController.infoWithoutType(id, timestamp)(request)
-      adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+      adaptedResult <- replaceInResult(addDataSetToTaskInAnnotation)(result)
     } yield adaptedResult
   }
 
@@ -264,18 +264,6 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   private def addLegacyDataSetFieldToTask(js: JsObject): Fox[JsObject] =
     tryo(js + ("dataSet" -> (js \ "datasetName").as[JsString]))
-
-  private def replaceAnnotationLayers(jsObject: JsObject) = {
-    val annotationLayers = (jsObject \ "annotationLayers").as[List[AnnotationLayer]]
-    val skeletonTracingId = annotationLayers.find(_.typ == AnnotationLayerType.Skeleton).map(_.tracingId)
-    val volumeTracingId = annotationLayers.find(_.typ == AnnotationLayerType.Volume).map(_.tracingId)
-    val newJson = jsObject + ("tracing" -> Json.obj("skeleton" -> Json.toJson(skeletonTracingId),
-                                                    "volume" -> Json.toJson(volumeTracingId)))
-    for {
-      _ <- bool2Fox(annotationLayers.count(_.typ == AnnotationLayerType.Skeleton) <= 1) ?~> "A requested annotation has more than one skeleton layer and cannot be served using the legacy api, please use api version v5 or newer"
-      _ <- bool2Fox(annotationLayers.count(_.typ == AnnotationLayerType.Volume) <= 1) ?~> "A requested annotation has more than one volume layer and cannot be served using the legacy api, please use api version v5 or newer"
-    } yield newJson - "annotationLayers"
-  }
 
   private def replaceVoxelSize(jsObject: JsObject) = {
     val voxelSizeOpt = (jsObject \ "dataSource" \ "scale").asOpt[VoxelSize]

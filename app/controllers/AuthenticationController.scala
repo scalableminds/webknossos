@@ -23,7 +23,7 @@ import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import play.api.data.Form
 import play.api.data.Forms.{email, _}
 import play.api.data.validation.Constraints._
-import play.api.i18n.Messages
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, Cookie, PlayBodyParsers, Request, Result}
 import security.{
@@ -621,6 +621,8 @@ class AuthenticationController @Inject()(
                     dataStoreToken <- bearerTokenAuthenticatorService.createAndInitDataStoreTokenForUser(user)
                     _ <- organizationService
                       .createOrganizationDirectory(organization._id, dataStoreToken) ?~> "organization.folderCreation.failed"
+                    _ <- Fox.runIf(conf.WebKnossos.TermsOfService.enabled)(
+                      acceptTermsOfServiceForUser(user, signUpData.acceptedTermsOfService))
                   } yield {
                     Mailer ! Send(defaultMails
                       .newOrganizationMail(organization.name, email, request.headers.get("Host").getOrElse("")))
@@ -636,6 +638,13 @@ class AuthenticationController @Inject()(
         }
       )
   }
+
+  private def acceptTermsOfServiceForUser(user: User, termsOfServiceVersion: Option[Int])(
+      implicit m: MessagesProvider): Fox[Unit] =
+    for {
+      acceptedVersion <- Fox.option2Fox(termsOfServiceVersion) ?~> "Terms of service must be accepted."
+      _ <- organizationService.acceptTermsOfService(user._organization, acceptedVersion)(DBAccessContext(Some(user)), m)
+    } yield ()
 
   case class CreateUserInOrganizationParameters(firstName: String,
                                                 lastName: String,
@@ -730,7 +739,8 @@ trait AuthForms {
                         firstName: String,
                         lastName: String,
                         password: String,
-                        inviteToken: Option[String])
+                        inviteToken: Option[String],
+                        acceptedTermsOfService: Option[Int])
 
   def signUpForm(implicit messages: Messages): Form[SignUpData] =
     Form(
@@ -745,8 +755,9 @@ trait AuthForms {
         "firstName" -> nonEmptyText,
         "lastName" -> nonEmptyText,
         "inviteToken" -> optional(nonEmptyText),
-      )((organization, organizationName, email, password, firstName, lastName, inviteToken) =>
-        SignUpData(organization, organizationName, email, firstName, lastName, password._1, inviteToken))(
+        "acceptedTermsOfService" -> optional(number)
+      )((organization, organizationName, email, password, firstName, lastName, inviteToken, acceptTos) =>
+        SignUpData(organization, organizationName, email, firstName, lastName, password._1, inviteToken, acceptTos))(
         signUpData =>
           Some(
             (signUpData.organization,
@@ -755,7 +766,8 @@ trait AuthForms {
              ("", ""),
              signUpData.firstName,
              signUpData.lastName,
-             signUpData.inviteToken))))
+             signUpData.inviteToken,
+             signUpData.acceptedTermsOfService))))
 
   // Sign in
   case class SignInData(email: String, password: String)

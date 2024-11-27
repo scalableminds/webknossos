@@ -61,7 +61,7 @@ class DatasetErrorLoggingService @Inject()(
           Fox.successful(data)
         }
       case Failure(msg, Full(e: InternalError), _) =>
-        logger.error(s"Caught internal error: $label for $dataSourceId", e)
+        logger.error(s"Caught internal error while $label for $dataSourceId:", e)
         applicationHealthService.pushError(e)
         Fox.failure(msg, Full(e))
       case Failure(msg, Full(exception), _) =>

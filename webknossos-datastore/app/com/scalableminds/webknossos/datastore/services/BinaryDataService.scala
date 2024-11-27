@@ -57,7 +57,7 @@ class BinaryDataService(val dataBaseDir: Path,
                            conversionFunc: Array[Byte] => Fox[Array[Byte]],
                            request: DataServiceDataRequest): Fox[Array[Byte]] =
       if (isNecessary) datasetErrorLoggingService match {
-        case Some(value) => value.withErrorLogging(request.dataSource.id, "Conversion", conversionFunc(inputArray))
+        case Some(value) => value.withErrorLogging(request.dataSource.id, "converting bucket data", conversionFunc(inputArray))
         case None        => conversionFunc(inputArray)
       } else Full(inputArray)
 
@@ -100,7 +100,7 @@ class BinaryDataService(val dataBaseDir: Path,
         case Some(d) =>
           d.withErrorLogging(
             request.dataSource.id,
-            s"Bucket loading for layer ${request.dataLayer.name} at ${readInstruction.bucket}, cuboid: ${request.cuboid}",
+            s"loading bucket for layer ${request.dataLayer.name} at ${readInstruction.bucket}, cuboid: ${request.cuboid}",
             bucketProvider.load(readInstruction)
           )
         case None => bucketProvider.load(readInstruction)

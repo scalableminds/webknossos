@@ -224,16 +224,31 @@ class DatasetController @Inject()(userService: UserService,
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[List[JsObject]] =
     for {
+      _ <- Fox.successful(())
+      _ = logger.info(s"datasets: $datasets, requestingUser: ${requestingUser.map(_._id)}")
       requestingUserTeamManagerMemberships <- Fox.runOptional(requestingUser)(user =>
-        userService.teamManagerMembershipsFor(user._id))
+        userService
+          .teamManagerMembershipsFor(user._id)) ?~> s"Could not find team manager memberships for user ${requestingUser
+        .map(_._id)}"
+      _ = logger.info(
+        s"requestingUserTeamManagerMemberships: ${requestingUserTeamManagerMemberships.map(_.map(_.toString))}")
       groupedByOrga = datasets.groupBy(_._organization).toList
       js <- Fox.serialCombined(groupedByOrga) { byOrgaTuple: (String, List[Dataset]) =>
         for {
-          organization <- organizationDAO.findOne(byOrgaTuple._1)
+          _ <- Fox.successful(())
+          _ = logger.info(s"byOrgaTuple orga: ${byOrgaTuple._1}, datasets: ${byOrgaTuple._2}")
+          organization <- organizationDAO.findOne(byOrgaTuple._1) ?~> s"Could not find organization ${byOrgaTuple._1}"
           groupedByDataStore = byOrgaTuple._2.groupBy(_._dataStore).toList
+          _ <- Fox.serialCombined(groupedByDataStore) { byDataStoreTuple: (String, List[Dataset]) =>
+            {
+              logger.info(s"datastore: ${byDataStoreTuple._1}, datasets: ${byDataStoreTuple._2}")
+              Fox.successful(())
+            }
+          }
           result <- Fox.serialCombined(groupedByDataStore) { byDataStoreTuple: (String, List[Dataset]) =>
             for {
-              dataStore <- dataStoreDAO.findOneByName(byDataStoreTuple._1.trim)(GlobalAccessContext)
+              dataStore <- dataStoreDAO.findOneByName(byDataStoreTuple._1.trim)(GlobalAccessContext) ?~>
+                s"Could not find data store ${byDataStoreTuple._1}"
               resultByDataStore: Seq[JsObject] <- Fox.serialCombined(byDataStoreTuple._2) { d =>
                 datasetService.publicWrites(
                   d,
@@ -241,11 +256,11 @@ class DatasetController @Inject()(userService: UserService,
                   Some(organization),
                   Some(dataStore),
                   requestingUserTeamManagerMemberships) ?~> Messages("dataset.list.writesFailed", d.name)
-              }
+              } ?~> "Could not find public writes for datasets"
             } yield resultByDataStore
-          }
+          } ?~> s"Could not group by datastore for datasets ${byOrgaTuple._2.map(_._id)}"
         } yield result.flatten
-      }
+      } ?~> s"Could not group by organization for datasets ${datasets.map(_._id)}"
     } yield js.flatten
 
   def accessList(datasetId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

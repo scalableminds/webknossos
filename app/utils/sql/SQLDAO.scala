@@ -1,15 +1,14 @@
 package utils.sql
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import slick.lifted.{AbstractTable, Rep, TableQuery}
-import utils.ObjectId
 
 import javax.inject.Inject
 import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
-
 import slick.jdbc.PostgresProfile.api._
 
 abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

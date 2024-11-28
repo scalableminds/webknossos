@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.organization.OrganizationDAO
@@ -10,7 +11,7 @@ import play.api.mvc._
 import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.SecuredRequest
 import security.WkEnv
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

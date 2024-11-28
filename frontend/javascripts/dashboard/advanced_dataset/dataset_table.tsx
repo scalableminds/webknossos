@@ -8,7 +8,6 @@ import { diceCoefficient as dice } from "dice-coefficient";
 import type { OxalisState } from "oxalis/store";
 import type {
   APIDatasetCompact,
-  APIDatasetId,
   APIMaybeUnimportedDataset,
   FolderItem,
 } from "types/api_flow_types";
@@ -35,9 +34,14 @@ import { useSelector } from "react-redux";
 import type { DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
 import { Unicode } from "oxalis/constants";
 import type { DatasetUpdater } from "admin/admin_rest_api";
-import { generateSettingsForFolder, useDatasetDrop } from "dashboard/folders/folder_tree";
+import {
+  generateSettingsForFolder,
+  useDatasetDrop,
+  type DnDDropItemProps,
+} from "dashboard/folders/folder_tree";
 import classNames from "classnames";
 import type { EmptyObject } from "types/globals";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 
 type FolderItemWithName = FolderItem & { name: string };
 export type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
@@ -56,8 +60,8 @@ type Props = {
   isUserAdmin: boolean;
   isUserDatasetManager: boolean;
   datasetFilteringMode: DatasetFilteringMode;
-  reloadDataset: (arg0: APIDatasetId) => Promise<void>;
-  updateDataset: (id: APIDatasetId, updater: DatasetUpdater) => void;
+  reloadDataset: (datasetId: string) => Promise<void>;
+  updateDataset: (datasetId: string, updater: DatasetUpdater) => void;
   addTagToSearch: (tag: string) => void;
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
@@ -235,9 +239,10 @@ const DraggableDatasetRow = ({
   const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
   // @ts-ignore
 
-  const datasetName = restProps["data-row-key"];
+  const datasetId = restProps["data-row-key"];
+  const dragItem: DnDDropItemProps = { index, datasetId };
   const [, drag, preview] = useDrag({
-    item: { index, datasetName },
+    item: dragItem,
     type: DraggableDatasetType,
     canDrag: () => isADataset,
   });
@@ -275,8 +280,11 @@ class DatasetRenderer {
     this.data = data;
     this.datasetTable = datasetTable;
   }
+  static getRowKey(dataset: APIDatasetCompact) {
+    return dataset.id;
+  }
   getRowKey() {
-    return this.data.name;
+    return DatasetRenderer.getRowKey(this.data);
   }
 
   renderTypeColumn() {
@@ -286,17 +294,12 @@ class DatasetRenderer {
     const selectedLayerName: string | null =
       this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0];
     const imgSrc = selectedLayerName
-      ? `/api/datasets/${this.data.owningOrganization}/${
-          this.data.name
-        }/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
+      ? `/api/datasets/${this.data.id}/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
       : "/assets/images/inactive-dataset-thumbnail.svg";
     const iconClassName = selectedLayerName ? "" : " icon-thumbnail";
     return (
       <>
-        <Link
-          to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
-          title="View Dataset"
-        >
+        <Link to={`/datasets/${getReadableURLPart(this.data)}/view`} title="View Dataset">
           <img
             src={imgSrc}
             className={`dataset-table-thumbnail ${iconClassName}`}
@@ -306,7 +309,7 @@ class DatasetRenderer {
         </Link>
         <div className="dataset-table-name-container">
           <Link
-            to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
+            to={`/datasets/${getReadableURLPart(this.data)}/view`}
             title="View Dataset"
             className="incognito-link dataset-table-name"
           >
@@ -362,8 +365,11 @@ class FolderRenderer {
     this.data = data;
     this.datasetTable = datasetTable;
   }
+  static getRowKey(folder: FolderItemWithName) {
+    return folder.key;
+  }
   getRowKey() {
-    return this.data.key;
+    return FolderRenderer.getRowKey(this.data);
   }
   renderNameColumn() {
     return (
@@ -432,8 +438,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
     });
   };
 
-  reloadSingleDataset = (datasetId: APIDatasetId): Promise<void> =>
-    this.props.reloadDataset(datasetId);
+  reloadSingleDataset = (datasetId: string): Promise<void> => this.props.reloadDataset(datasetId);
 
   getFilteredDatasets() {
     const filterByMode = (datasets: APIDatasetCompact[]) => {
@@ -572,9 +577,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
 
     let selectedRowKeys: string[] = [];
     if (selectedDatasets.length > 0) {
-      selectedRowKeys = selectedDatasets.map((ds) => ds.name);
-    } else if (context.selectedFolder) {
-      selectedRowKeys = [context.selectedFolder?.key];
+      selectedRowKeys = selectedDatasets.map(DatasetRenderer.getRowKey);
+    } else if (context.selectedFolder && "name" in context.selectedFolder) {
+      selectedRowKeys = [FolderRenderer.getRowKey(context.selectedFolder as FolderItemWithName)];
     }
 
     const columns: TableProps["columns"] = [
@@ -734,7 +739,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
               },
               onDoubleClick: () => {
                 if (isADataset) {
-                  window.location.href = `/datasets/${data.owningOrganization}/${data.name}/view`;
+                  window.location.href = `/datasets/${getReadableURLPart(data)}/view`;
                 } else {
                   context.setActiveFolderId(data.key);
                 }
@@ -761,7 +766,7 @@ export function DatasetTags({
 }: {
   dataset: APIDatasetCompact;
   onClickTag?: (t: string) => void;
-  updateDataset: (id: APIDatasetId, updater: DatasetUpdater) => void;
+  updateDataset: (datasetId: string, updater: DatasetUpdater) => void;
 }) {
   const editTagFromDataset = (
     shouldAddTag: boolean,
@@ -790,7 +795,7 @@ export function DatasetTags({
       };
     }
 
-    updateDataset(dataset, updater);
+    updateDataset(dataset.id, updater);
   };
 
   return (

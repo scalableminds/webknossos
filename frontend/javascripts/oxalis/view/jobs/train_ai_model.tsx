@@ -552,10 +552,7 @@ function AnnotationsCsvInput({
     const newAnnotationsWithDatasets = await Promise.all(
       newItems.map(async (item) => {
         const annotation = await getAnnotationInformation(item.annotationId);
-        const dataset = await getDataset({
-          owningOrganization: annotation.organization,
-          name: annotation.dataSetName,
-        });
+        const dataset = await getDataset(annotation.datasetId);
 
         const volumeServerTracings: ServerVolumeTracing[] = await Promise.all(
           annotation.annotationLayers

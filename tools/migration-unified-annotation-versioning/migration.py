@@ -10,6 +10,7 @@ from rich.progress import track
 import msgspec
 import concurrent.futures
 import threading
+from functools import partial
 
 import fossildbapi_pb2 as proto
 import VolumeTracing_pb2 as Volume
@@ -58,9 +59,9 @@ class Migration:
         before = time.time()
         try:
             mapping_id_map = self.build_mapping_id_map(annotation)
-            layer_version_mapping, latest_unified_version = self.migrate_updates(annotation, mapping_id_map)
-            self.migrate_materialized_layers(annotation, layer_version_mapping, mapping_id_map)
-            self.create_and_save_annotation_proto(annotation, latest_unified_version)
+            layer_version_mapping = self.migrate_updates(annotation, mapping_id_map)
+            materialized_versions = self.migrate_materialized_layers(annotation, layer_version_mapping, mapping_id_map)
+            self.create_and_save_annotation_proto(annotation, materialized_versions)
             log_since(before, f"Migrating annotation {annotation['_id']}", self.get_progress())
         except Exception:
             logger.exception(f"Exception while migrating annotation {annotation['_id']}:")
@@ -79,7 +80,7 @@ class Migration:
                     mapping_id_map[tracing_id] = editable_mapping_id
         return mapping_id_map
 
-    def migrate_updates(self, annotation, mapping_id_map: MappingIdMap) -> Tuple[LayerVersionMapping, int]:
+    def migrate_updates(self, annotation, mapping_id_map: MappingIdMap) -> LayerVersionMapping:
         json_encoder = msgspec.json.Encoder()
         json_decoder = msgspec.json.Decoder()
         batch_size = 1000
@@ -110,7 +111,7 @@ class Migration:
 
         # TODO interleave updates rather than concat
         # TODO handle existing revertToVersion update actions
-        return version_mapping, unified_version
+        return version_mapping
 
     def get_editable_mapping_id(self, tracing_id: str, layer_type: str) -> Optional[str]:
         if layer_type == "Skeleton":
@@ -193,21 +194,27 @@ class Migration:
             return "skeletonUpdates"
         return "volumeUpdates"
 
-    def migrate_materialized_layers(self, annotation: RealDictRow, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap):
+    def migrate_materialized_layers(self, annotation: RealDictRow, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap) -> List[int]:
+        materialized_versions = []
         for tracing_id, tracing_type in annotation["layers"].items():
-            self.migrate_materialized_layer(tracing_id, tracing_type, layer_version_mapping, mapping_id_map)
+            materialized_versions_of_layer = \
+                self.migrate_materialized_layer(tracing_id, tracing_type, layer_version_mapping, mapping_id_map)
+            materialized_versions += materialized_versions_of_layer
+        return materialized_versions
 
-    def migrate_materialized_layer(self, tracing_id: str, layer_type: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap):
+    def migrate_materialized_layer(self, tracing_id: str, layer_type: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap) -> List[int]:
         if layer_type == "Skeleton":
-            self.migrate_skeleton_proto(tracing_id, layer_version_mapping)
+            return self.migrate_skeleton_proto(tracing_id, layer_version_mapping)
         if layer_type == "Volume":
-            self.migrate_volume_proto(tracing_id, layer_version_mapping)
+            materialized_volume_versions = self.migrate_volume_proto(tracing_id, layer_version_mapping, mapping_id_map)
             self.migrate_volume_buckets(tracing_id, layer_version_mapping)
             self.migrate_segment_index(tracing_id, layer_version_mapping)
-            self.migrate_editable_mapping(tracing_id, layer_version_mapping, mapping_id_map)
+            materialized_mapping_versions = self.migrate_editable_mapping(tracing_id, layer_version_mapping, mapping_id_map)
+            return materialized_volume_versions + materialized_mapping_versions
 
-    def migrate_skeleton_proto(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
+    def migrate_skeleton_proto(self, tracing_id: str, layer_version_mapping: LayerVersionMapping) -> List[int]:
         collection = "skeletons"
+        materialized_versions_unified = []
         materialized_versions = self.list_versions(collection, tracing_id)
         for materialized_version in materialized_versions:
             new_version = layer_version_mapping[tracing_id][materialized_version]
@@ -217,20 +224,28 @@ class Migration:
                 skeleton.ParseFromString(value_bytes)
                 skeleton.version = new_version
                 value_bytes = skeleton.SerializeToString()
+            materialized_versions_unified.append(new_version)
             self.save_bytes(collection, tracing_id, new_version, value_bytes)
+        return materialized_versions_unified
 
-    def migrate_volume_proto(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
+    def migrate_volume_proto(self, tracing_id: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap):
         collection = "volumes"
+        materialized_versions_unified = []
         materialized_versions = self.list_versions(collection, tracing_id)
         for materialized_version in materialized_versions:
             new_version = layer_version_mapping[tracing_id][materialized_version]
             value_bytes = self.get_bytes(collection, tracing_id, materialized_version)
-            if materialized_version != new_version:
+            if materialized_version != new_version or tracing_id in mapping_id_map:
                 volume = Volume.VolumeTracing()
                 volume.ParseFromString(value_bytes)
                 volume.version = new_version
+                if tracing_id in mapping_id_map:
+                    print(f"setting mappingName to tracing id {tracing_id}")
+                    volume.mappingName = tracing_id
                 value_bytes = volume.SerializeToString()
+            materialized_versions_unified.append(new_version)
             self.save_bytes(collection, tracing_id, new_version, value_bytes)
+        return materialized_versions_unified
 
     def list_versions(self, collection, key) -> List[int]:
         reply = self.src_stub.ListVersions(proto.ListVersionsRequest(collection=collection, key=key))
@@ -269,6 +284,7 @@ class Migration:
                         new_key = key
                         if transform_key is not None:
                             new_key = transform_key(key)
+                            print(f"transformed key {key} to {new_key}")
                         for version, value in zip(get_versions_reply.versions, get_versions_reply.values):
                             new_version = layer_version_mapping[tracing_id][version]
                             self.save_bytes(collection, new_key, new_version, value)
@@ -280,41 +296,45 @@ class Migration:
     def migrate_segment_index(self, tracing_id, layer_version_mapping):
         self.migrate_all_versions_and_keys_with_prefix("volumeSegmentIndex", tracing_id, layer_version_mapping, transform_key=None)
 
-    def migrate_editable_mapping(self, tracing_id: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap):
-        self.migrate_editable_mapping_info(tracing_id, layer_version_mapping, mapping_id_map)
-        self.migrate_editable_mapping_agglomerate_to_graph(tracing_id, layer_version_mapping)
-        self.migrate_editable_mapping_segment_to_agglomerate(tracing_id, layer_version_mapping)
-
-    def migrate_editable_mapping_info(self, tracing_id: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap):
+    def migrate_editable_mapping(self, tracing_id: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap) -> List[int]:
         if tracing_id not in mapping_id_map:
-            return
+            return []
         mapping_id = mapping_id_map[tracing_id]
+        materialized_versions = self.migrate_editable_mapping_info(tracing_id, mapping_id, layer_version_mapping)
+        self.migrate_editable_mapping_agglomerate_to_graph(tracing_id, mapping_id, layer_version_mapping)
+        self.migrate_editable_mapping_segment_to_agglomerate(tracing_id, mapping_id, layer_version_mapping)
+        return materialized_versions
+
+    def migrate_editable_mapping_info(self, tracing_id: str, mapping_id: str, layer_version_mapping: LayerVersionMapping) -> List[int]:
         collection = "editableMappingsInfo"
         materialized_versions = self.list_versions(collection, mapping_id)
+        materialized_versions_unified = []
         for materialized_version in materialized_versions:
             value_bytes = self.get_bytes(collection, mapping_id, materialized_version)
             new_version = layer_version_mapping[mapping_id][materialized_version]
-            self.save_bytes(collection, mapping_id, new_version, value_bytes)
+            materialized_versions_unified.append(new_version)
+            self.save_bytes(collection, tracing_id, new_version, value_bytes)
+        return materialized_versions_unified
 
-    def migrate_editable_mapping_agglomerate_to_graph(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
+    def migrate_editable_mapping_agglomerate_to_graph(self, tracing_id: str, mapping_id: str, layer_version_mapping: LayerVersionMapping):
+        print(f"migrate_editable_mapping_agglomerate_to_graph, traicng id {tracing_id} mapping id {mapping_id}")
         self.migrate_all_versions_and_keys_with_prefix(
             "editableMappingsAgglomerateToGraph",
-            tracing_id,
+            mapping_id,
             layer_version_mapping,
-            None
+            transform_key=partial(self.replace_before_first_slash, tracing_id)
         )
 
-    def migrate_editable_mapping_segment_to_agglomerate(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
+    def migrate_editable_mapping_segment_to_agglomerate(self, tracing_id: str, mapping_id: str, layer_version_mapping: LayerVersionMapping):
         self.migrate_all_versions_and_keys_with_prefix(
             "editableMappingsSegmentToAgglomerate",
-            tracing_id,
+            mapping_id,
             layer_version_mapping,
-            None
+            transform_key=partial(self.replace_before_first_slash, tracing_id)
         )
 
-    def create_and_save_annotation_proto(self, annotation, latest_unified_version: int):
-        version_step = 1000
-        for version in range(0, latest_unified_version, version_step):
+    def create_and_save_annotation_proto(self, annotation, materialized_versions: List[int]):
+        for version in materialized_versions:
             annotationProto = AnnotationProto.AnnotationProto()
             annotationProto.name = annotation["name"]
             annotationProto.description = annotation["description"]
@@ -379,6 +399,10 @@ class Migration:
         second_slash_index = bucket_key.index('/', first_slash_index + 1)
         first_bracket_index = bucket_key.index('[')
         return bucket_key[:second_slash_index + 1] + bucket_key[first_bracket_index:]
+
+    def replace_before_first_slash(self, replacement_prefix: str, key) -> str:
+        slash_pos = key.find('/')
+        return replacement_prefix + key[slash_pos:]
 
     def get_progress(self) -> str:
         with self.done_count_lock:

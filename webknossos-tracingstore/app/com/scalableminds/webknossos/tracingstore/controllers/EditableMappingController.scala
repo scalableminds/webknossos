@@ -72,13 +72,14 @@ class EditableMappingController @Inject()(
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- annotationService.findVolume(annotationId, tracingId)
+            currentVersion <- annotationService.currentMaterializableVersion(annotationId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId, version = None)
             relevantMapping: Map[Long, Long] <- editableMappingService.generateCombinedMappingForSegmentIds(
               request.body.items.toSet,
               editableMappingInfo,
-              tracing.version,
+              currentVersion,
               tracingId,
               remoteFallbackLayer)
             agglomerateIdsSorted = relevantMapping.toSeq.sortBy(_._1).map(_._2)

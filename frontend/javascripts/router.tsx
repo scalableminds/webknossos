@@ -1,20 +1,8 @@
-<<<<<<< HEAD
 import {
   createExplorational,
   getMaybeOutdatedAnnotationInformation,
-  getOrganizationForDataset,
   getShortLink,
 } from "admin/admin_rest_api";
-||||||| 5d3d66d2ae
-import {
-  createExplorational,
-  getAnnotationInformation,
-  getOrganizationForDataset,
-  getShortLink,
-} from "admin/admin_rest_api";
-=======
-import { createExplorational, getAnnotationInformation, getShortLink } from "admin/admin_rest_api";
->>>>>>> master
 import AcceptInviteView from "admin/auth/accept_invite_view";
 import AuthTokenView from "admin/auth/auth_token_view";
 import ChangePasswordView from "admin/auth/change_password_view";

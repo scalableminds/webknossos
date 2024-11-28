@@ -55,28 +55,31 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
     Action.async(validateProto[AnnotationProto]) { implicit request =>
       // tracingstore only sends this request after ensuring write access
       implicit val ctx: DBAccessContext = GlobalAccessContext
-      for {
-        annotationIdValidated <- ObjectId.fromString(annotationId)
-        existingLayers <- annotationLayerDAO.findAnnotationLayersFor(annotationIdValidated)
-        newLayersProto = request.body.annotationLayers
-        existingLayerIds = existingLayers.map(_.tracingId).toSet
-        newLayerIds = newLayersProto.map(_.tracingId).toSet
-        layerIdsToDelete = existingLayerIds.diff(newLayerIds)
-        layerIdsToUpdate = existingLayerIds.intersect(newLayerIds)
-        layerIdsToInsert = newLayerIds.diff(existingLayerIds)
-        _ <- Fox.serialCombined(layerIdsToDelete.toList)(
-          annotationLayerDAO.deleteOneByTracingId(annotationIdValidated, _))
-        _ <- Fox.serialCombined(newLayersProto.filter(l => layerIdsToInsert.contains(l.tracingId))) { layerProto =>
-          annotationLayerDAO.insertOne(annotationIdValidated, AnnotationLayer.fromProto(layerProto))
-        }
-        _ <- Fox.serialCombined(newLayersProto.filter(l => layerIdsToUpdate.contains(l.tracingId)))(l =>
-          annotationLayerDAO.updateName(annotationIdValidated, l.tracingId, l.name))
-        // Layer stats are ignored here, they are sent eagerly when saving updates
-        _ <- annotationDAO.updateName(annotationIdValidated,
-                                      request.body.name.getOrElse(AnnotationDefaults.defaultName))
-        _ <- annotationDAO.updateDescription(annotationIdValidated,
-                                             request.body.description.getOrElse(AnnotationDefaults.defaultDescription))
-      } yield Ok
+      tracingStoreService.validateAccess(name, key) { _ =>
+        for {
+          annotationIdValidated <- ObjectId.fromString(annotationId)
+          existingLayers <- annotationLayerDAO.findAnnotationLayersFor(annotationIdValidated)
+          newLayersProto = request.body.annotationLayers
+          existingLayerIds = existingLayers.map(_.tracingId).toSet
+          newLayerIds = newLayersProto.map(_.tracingId).toSet
+          layerIdsToDelete = existingLayerIds.diff(newLayerIds)
+          layerIdsToUpdate = existingLayerIds.intersect(newLayerIds)
+          layerIdsToInsert = newLayerIds.diff(existingLayerIds)
+          _ <- Fox.serialCombined(layerIdsToDelete.toList)(
+            annotationLayerDAO.deleteOneByTracingId(annotationIdValidated, _))
+          _ <- Fox.serialCombined(newLayersProto.filter(l => layerIdsToInsert.contains(l.tracingId))) { layerProto =>
+            annotationLayerDAO.insertOne(annotationIdValidated, AnnotationLayer.fromProto(layerProto))
+          }
+          _ <- Fox.serialCombined(newLayersProto.filter(l => layerIdsToUpdate.contains(l.tracingId)))(l =>
+            annotationLayerDAO.updateName(annotationIdValidated, l.tracingId, l.name))
+          // Layer stats are ignored here, they are sent eagerly when saving updates
+          _ <- annotationDAO.updateName(annotationIdValidated,
+                                        request.body.name.getOrElse(AnnotationDefaults.defaultName))
+          _ <- annotationDAO.updateDescription(
+            annotationIdValidated,
+            request.body.description.getOrElse(AnnotationDefaults.defaultDescription))
+        } yield Ok
+      }
     }
 
   def handleTracingUpdateReport(name: String, key: String): Action[AnnotationUpdatesReport] =

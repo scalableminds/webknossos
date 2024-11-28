@@ -164,11 +164,7 @@ export function* sendSaveRequestToServer(): Saga<number> {
   const fullSaveQueue = yield* select((state) => state.save.queue);
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
   let compactedSaveQueue = compactSaveQueue(saveQueue);
-  const tracing = yield* select((state) => state.tracing);
-  const tracings = yield* select((state) =>
-    _.compact([state.tracing.skeleton, ...state.tracing.volumes]),
-  );
-  const version = _.max(tracings.map((t) => t.version).concat([tracing.version])) || 0;
+  const version = yield* select((state) => state.tracing.version);
   const annotationId = yield* select((state) => state.tracing.annotationId);
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
   let versionIncrement;

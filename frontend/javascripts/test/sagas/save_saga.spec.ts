@@ -295,13 +295,7 @@ test("SaveSaga should remove the correct update actions", (t) => {
   const saga = sendSaveRequestToServer();
   saga.next();
   saga.next(saveQueue);
-  saga.next([
-    {
-      version: LAST_VERSION,
-      type: TRACING_TYPE,
-      tracingId,
-    },
-  ]);
+  saga.next(LAST_VERSION);
   saga.next(annotationId);
   saga.next(TRACINGSTORE_URL);
   expectValueDeepEqual(t, saga.next(), put(SaveActions.setVersionNumberAction(3)));

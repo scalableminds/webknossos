@@ -303,7 +303,7 @@ function initializeTracing(
   // This method is not called for the View mode
   const { dataset } = Store.getState();
   let annotation = _annotation;
-  let version = annotation.version;
+  const version = annotation.version;
   const { allowedModes, preferredMode } = determineAllowedModes(annotation.settings);
 
   _.extend(annotation.settings, {
@@ -335,7 +335,6 @@ function initializeTracing(
         getSegmentationLayers(dataset).length > 0,
         messages["tracing.volume_missing_segmentation"],
       );
-      version = Math.max(version, volumeTracing.version);
       Store.dispatch(initializeVolumeTracingAction(volumeTracing));
     });
 
@@ -347,7 +346,6 @@ function initializeTracing(
       // To generate a huge amount of dummy trees, use:
       // import generateDummyTrees from "./model/helpers/generate_dummy_trees";
       // tracing.trees = generateDummyTrees(1, 200000);
-      version = Math.max(version, skeletonTracing.version);
       Store.dispatch(initializeSkeletonTracingAction(skeletonTracing));
     }
     Store.dispatch(setVersionNumberAction(version));

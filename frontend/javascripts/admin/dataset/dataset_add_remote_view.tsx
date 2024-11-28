@@ -252,13 +252,13 @@ function DatasetAddRemoteView(props: Props) {
     form.setFieldsValue({ dataSourceJson });
     // Since this function sets the JSON string, we have to update the
     // data which is rendered by the "simple" page.
-    syncDataSourceFields(form, "simple");
+    syncDataSourceFields(form, "simple", true);
     form.validateFields();
   };
 
   async function handleStoreDataset() {
     // Sync simple with advanced and get newest datasourceJson
-    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
+    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple", true);
     try {
       await form.validateFields();
     } catch (_e) {
@@ -515,7 +515,7 @@ function AddRemoteLayer({
     }
 
     // Sync simple with advanced and get newest datasourceJson
-    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
+    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple", true);
     const datasourceConfigStr = form.getFieldValue("dataSourceJson");
     const datastoreToUse = uploadableDatastores.find(
       (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,

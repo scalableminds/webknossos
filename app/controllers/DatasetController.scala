@@ -225,7 +225,7 @@ class DatasetController @Inject()(userService: UserService,
       m: MessagesProvider): Fox[List[JsObject]] =
     for {
       _ <- Fox.successful(())
-      _ = logger.info(s"datasets: ${datasets.map(_._id)}, requestingUser: ${requestingUser.map(_._id)}")
+      _ = logger.info(s"datasets: $datasets, requestingUser: ${requestingUser.map(_._id)}")
       requestingUserTeamManagerMemberships <- Fox.runOptional(requestingUser)(user =>
         userService
           .teamManagerMembershipsFor(user._id)) ?~> s"Could not find team manager memberships for user ${requestingUser
@@ -236,12 +236,12 @@ class DatasetController @Inject()(userService: UserService,
       js <- Fox.serialCombined(groupedByOrga) { byOrgaTuple: (String, List[Dataset]) =>
         for {
           _ <- Fox.successful(())
-          _ = logger.info(s"byOrgaTuple orga: ${byOrgaTuple._1}, datasets: ${byOrgaTuple._2.map(_._id)}")
+          _ = logger.info(s"byOrgaTuple orga: ${byOrgaTuple._1}, datasets: ${byOrgaTuple._2}")
           organization <- organizationDAO.findOne(byOrgaTuple._1) ?~> s"Could not find organization ${byOrgaTuple._1}"
           groupedByDataStore = byOrgaTuple._2.groupBy(_._dataStore).toList
           _ <- Fox.serialCombined(groupedByDataStore) { byDataStoreTuple: (String, List[Dataset]) =>
             {
-              logger.info(s"datastore: ${byDataStoreTuple._1}, datasets: ${byDataStoreTuple._2.map(_._id)}")
+              logger.info(s"datastore: ${byDataStoreTuple._1}, datasets: ${byDataStoreTuple._2}")
               Fox.successful(())
             }
           }

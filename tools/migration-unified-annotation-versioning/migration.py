@@ -16,7 +16,7 @@ import fossildbapi_pb2 as proto
 import VolumeTracing_pb2 as Volume
 import SkeletonTracing_pb2 as Skeleton
 import Annotation_pb2 as AnnotationProto
-from utils import log_since, batch_range
+from utils import log_since, batch_range, humanize_time_diff
 from connections import connect_to_fossildb, connect_to_postgres, assert_grpc_success
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ class Migration:
         self.total_count = None
 
     def run(self):
-        before = time.time()
+        self.before = time.time()
         annotations = self.read_annotation_list()
         self.done_count = 0
         self.failure_count = 0
@@ -52,7 +52,7 @@ class Migration:
             executor.map(self.migrate_annotation, annotations)
         if self.failure_count > 0:
             logger.info(f"There were failures for {self.failure_count} annotations. See logs for details.")
-        log_since(before, "Migrating all the things")
+        log_since(self.before, "Migrating all the things")
 
     def migrate_annotation(self, annotation):
         logger.info(f"Migrating annotation {annotation['_id']} (dry={self.args.dry}) ...")
@@ -62,7 +62,7 @@ class Migration:
             layer_version_mapping = self.migrate_updates(annotation, mapping_id_map)
             materialized_versions = self.migrate_materialized_layers(annotation, layer_version_mapping, mapping_id_map)
             self.create_and_save_annotation_proto(annotation, materialized_versions)
-            log_since(before, f"Migrating annotation {annotation['_id']}", self.get_progress())
+            log_since(before, f"Migrating annotation {annotation['_id']} ({len(materialized_versions)} materialized versions)", self.get_progress())
         except Exception:
             logger.exception(f"Exception while migrating annotation {annotation['_id']}:")
             with self.failure_count_lock:
@@ -240,7 +240,6 @@ class Migration:
                 volume.ParseFromString(value_bytes)
                 volume.version = new_version
                 if tracing_id in mapping_id_map:
-                    print(f"setting mappingName to tracing id {tracing_id}")
                     volume.mappingName = tracing_id
                 value_bytes = volume.SerializeToString()
             materialized_versions_unified.append(new_version)
@@ -284,7 +283,6 @@ class Migration:
                         new_key = key
                         if transform_key is not None:
                             new_key = transform_key(key)
-                            print(f"transformed key {key} to {new_key}")
                         for version, value in zip(get_versions_reply.versions, get_versions_reply.values):
                             new_version = layer_version_mapping[tracing_id][version]
                             self.save_bytes(collection, new_key, new_version, value)
@@ -317,7 +315,6 @@ class Migration:
         return materialized_versions_unified
 
     def migrate_editable_mapping_agglomerate_to_graph(self, tracing_id: str, mapping_id: str, layer_version_mapping: LayerVersionMapping):
-        print(f"migrate_editable_mapping_agglomerate_to_graph, traicng id {tracing_id} mapping id {mapping_id}")
         self.migrate_all_versions_and_keys_with_prefix(
             "editableMappingsAgglomerateToGraph",
             mapping_id,
@@ -408,4 +405,10 @@ class Migration:
         with self.done_count_lock:
             done_count = self.done_count
         percentage = 100.0 * done_count / self.total_count
-        return f". ({done_count}/{self.total_count} = {percentage:.1f}% are done)"
+        duration = time.time() - self.before
+        if done_count > 0:
+            etr = duration / done_count * (self.total_count - done_count)
+            etr_formatted = f" ETR {humanize_time_diff(etr)})"
+        else:
+            etr_formatted = ""
+        return f". ({done_count}/{self.total_count} = {percentage:.1f}% done.{etr_formatted}"

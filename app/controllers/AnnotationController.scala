@@ -16,7 +16,6 @@ import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotation
 import models.annotation.AnnotationState.Cancelled
 import models.annotation._
 import models.dataset.{DatasetDAO, DatasetService}
-import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.team.{TeamDAO, TeamService}
@@ -40,7 +39,6 @@ class AnnotationController @Inject()(
     annotationLayerDAO: AnnotationLayerDAO,
     taskDAO: TaskDAO,
     userDAO: UserDAO,
-    organizationDAO: OrganizationDAO,
     datasetDAO: DatasetDAO,
     datasetService: DatasetService,
     annotationService: AnnotationService,

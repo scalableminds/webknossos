@@ -4,22 +4,38 @@ import collections.SequenceUtils
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto}
+import com.scalableminds.webknossos.datastore.Annotation.{
+  AnnotationLayerProto,
+  AnnotationLayerTypeProto,
+  AnnotationProto
+}
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
-import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, ResetToBaseAnnotationAction, TSAnnotationService, UpdateActionGroup}
+import com.scalableminds.webknossos.tracingstore.annotation.{
+  AnnotationTransactionService,
+  ResetToBaseAnnotationAction,
+  TSAnnotationService,
+  UpdateActionGroup,
+  UpdateMetadataAnnotationAction
+}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import net.liftweb.common.{Empty, Failure, Full}
 import play.api.i18n.Messages
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
+
+case class UpdateAnnotationMetadataParameters(name: Option[String], description: Option[String])
+
+object UpdateAnnotationMetadataParameters {
+  implicit val jsonFormat: OFormat[UpdateAnnotationMetadataParameters] = Json.format[UpdateAnnotationMetadataParameters]
+}
 
 class TSAnnotationController @Inject()(
     accessTokenService: TracingStoreAccessTokenService,
@@ -49,6 +65,23 @@ class TSAnnotationController @Inject()(
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeAnnotation(annotationId)) {
             for {
               _ <- annotationTransactionService.handleUpdateGroups(annotationId, request.body)
+            } yield Ok
+          }
+        }
+      }
+    }
+
+  def updateMetadata(annotationId: String): Action[UpdateAnnotationMetadataParameters] =
+    Action.async(validateJson[UpdateAnnotationMetadataParameters]) { implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeAnnotation(annotationId)) {
+            for {
+              currentVersion <- annotationService.currentMaterializableVersion(annotationId)
+              _ <- annotationTransactionService.handleSingleUpdateAction(
+                annotationId,
+                currentVersion,
+                UpdateMetadataAnnotationAction(name = request.body.name, description = request.body.description))
             } yield Ok
           }
         }

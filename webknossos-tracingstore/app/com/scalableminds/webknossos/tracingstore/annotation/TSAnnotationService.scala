@@ -160,6 +160,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           Fox.successful(annotationWithTracings) // No-op, as bucket-mutating actions are performed eagerly, so not here.
         case _: CompactVolumeUpdateAction =>
           Fox.successful(annotationWithTracings) // No-op, as legacy compacted update actions cannot be applied
+        case _: UpdateTdCameraAnnotationAction =>
+          Fox.successful(annotationWithTracings) // No-op, exists just to mark these updates in the history / count times
         case _ => Fox.failure(s"Received unsupported AnnotationUpdateAction action ${Json.toJson(updateAction)}")
       }
     } yield updated

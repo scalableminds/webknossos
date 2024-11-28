@@ -139,6 +139,7 @@ class Migration:
 
         for update in update_group_parsed:
             name = update["name"]
+            update_value = update["value"]
 
             # renamings
             if name == "updateTracing":
@@ -155,14 +156,14 @@ class Migration:
                 update["value"]["actionTracingId"] = tracing_id
 
             # identify compact update actions, and mark them
-            # Note: cannot identify compacted actions of the classes
-            #  CreateSegmentVolumeActions UpdateSegmentVolumeAction, UpdateMappingNameAction
-            #  as all their fields are optional
-            if (name == "updateBucket" and "position" not in update) \
-                or (name == "updateVolumeTracing" and "activeSegmentId" not in update["value"]) \
-                or (name == "updateUserBoundingBoxesInVolumeTracing" and "boundingBoxes" not in update) \
-                or (name == "updateUserBoundingBoxVisibilityInVolumeTracing" and "boundingBoxId" not in update) \
-                or (name == "deleteSegmentData" and "id" not in update):
+            if (name == "updateBucket" and "position" not in update_value) \
+                or (name == "updateVolumeTracing" and "activeSegmentId" not in update_value) \
+                or (name == "updateUserBoundingBoxesInVolumeTracing" and "boundingBoxes" not in update_value) \
+                or (name == "updateUserBoundingBoxVisibilityInVolumeTracing" and "boundingBoxId" not in update_value) \
+                or (name == "deleteSegmentData" and "id" not in update_value) \
+                or (name == "createSegment" and "name" not in update_value) \
+                or (name == "updateSegment" and "name" not in update_value) \
+                or (name == "updateMappingName" and "mappingName" not in update_value):
                 update["isCompacted"] = True
 
         return json_encoder.encode(update_group_parsed)

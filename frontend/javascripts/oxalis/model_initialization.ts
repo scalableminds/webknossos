@@ -303,7 +303,7 @@ function initializeTracing(
   // This method is not called for the View mode
   const { dataset } = Store.getState();
   let annotation = _annotation;
-  let version = 0;
+  let version = annotation.version;
   const { allowedModes, preferredMode } = determineAllowedModes(annotation.settings);
 
   _.extend(annotation.settings, {

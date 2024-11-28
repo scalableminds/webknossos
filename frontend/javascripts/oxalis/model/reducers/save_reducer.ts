@@ -2,7 +2,6 @@ import _ from "lodash";
 import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, SaveState } from "oxalis/store";
-import type { SetVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 import { type TracingStats, getStats } from "oxalis/model/accessors/annotation_accessor";
 import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
@@ -24,12 +23,6 @@ const NOT_IDEMPOTENT_ACTIONS = [
 
 export function getTotalSaveQueueLength(queueObj: SaveState["queue"]) {
   return queueObj.length;
-}
-
-function updateVersion(state: OxalisState, action: SetVersionNumberAction) {
-  return updateKey(state, "tracing", {
-    version: action.version,
-  });
 }
 
 function SaveReducer(state: OxalisState, action: Action): OxalisState {
@@ -169,7 +162,9 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_VERSION_NUMBER": {
-      return updateVersion(state, action);
+      return updateKey(state, "tracing", {
+        version: action.version,
+      });
     }
 
     case "DISABLE_SAVING": {

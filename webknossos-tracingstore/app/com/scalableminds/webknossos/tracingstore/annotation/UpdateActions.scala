@@ -33,7 +33,7 @@ object UpdateAction {
     override def reads(json: JsValue): JsResult[UpdateAction] = {
       val jsonValue = (json \ "value").as[JsObject]
       if ((json \ "isCompacted").asOpt[Boolean].getOrElse(false)) {
-        deserialize[CompactVolumeUpdateAction](jsonValue)
+        deserialize[CompactVolumeUpdateAction](json)
       } else {
         (json \ "name").as[String] match {
           // Skeleton

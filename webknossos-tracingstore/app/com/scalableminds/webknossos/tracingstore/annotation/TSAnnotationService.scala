@@ -71,7 +71,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       annotation <- if (isTemporaryTracing) temporaryTracingService.getAnnotation(annotationId)
       else
         for {
-          withTracings <- getWithTracings(annotationId, version)
+          withTracings <- getWithTracings(annotationId, version) ?~> "annotation.notFound"
         } yield withTracings.annotation
     } yield annotation
 
@@ -85,7 +85,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
-      newestMaterialized <- getNewestMaterialized(annotationId)
+      newestMaterialized <- getNewestMaterialized(annotationId) ?~> "getNewestMaterialized.failed"
       targetVersion <- determineTargetVersion(annotationId, newestMaterialized, version) ?~> "determineTargetVersion.failed"
       // When requesting any other than the newest version, do not consider the changes final
       reportChangesToWk = version.isEmpty || version.contains(targetVersion)
@@ -109,7 +109,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         annotationId,
         annotationWithTracings,
         annotation.version,
-        version) // Note: this targetVersion is used for the updater buffers, and is overwritten for each update group, see annotation.withNewUpdaters
+        version // Note: this targetVersion is used for the updater buffers, and is overwritten for each update group, see annotation.withNewUpdaters
+      ) ?~> "findEditableMappingsForAnnotation.failed"
       updated <- applyPendingUpdates(annotationWithTracingsAndMappings, annotationId, version, reportChangesToWk) ?~> "applyUpdates.failed"
     } yield updated
 
@@ -160,6 +161,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           Fox.successful(annotationWithTracings) // No-op, as bucket-mutating actions are performed eagerly, so not here.
         case _: CompactVolumeUpdateAction =>
           Fox.successful(annotationWithTracings) // No-op, as legacy compacted update actions cannot be applied
+        case _: UpdateTdCameraAnnotationAction =>
+          Fox.successful(annotationWithTracings) // No-op, exists just to mark these updates in the history / count times
         case _ => Fox.failure(s"Received unsupported AnnotationUpdateAction action ${Json.toJson(updateAction)}")
       }
     } yield updated
@@ -324,13 +327,13 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       idInfoUpdaterTuples <- Fox.serialCombined(volumeWithEditableMapping) {
         case (volumeTracing, volumeTracingId) =>
           for {
-            editableMappingInfo <- getEditableMappingInfoRaw(volumeTracingId, annotationWithTracings.version)
+            editableMappingInfo <- getEditableMappingInfoRaw(volumeTracingId, annotationWithTracings.version) ?~> "getEditableMappingInfoRaw.failed"
             updater <- editableMappingUpdaterFor(annotationId,
                                                  volumeTracingId,
                                                  volumeTracing,
                                                  editableMappingInfo.value,
                                                  currentMaterializedVersion,
-                                                 targetVersion)
+                                                 targetVersion) ?~> "EditableMappingUpdater.initialize.failed"
           } yield (editableMappingInfo.key, (editableMappingInfo.value, updater))
       }
     } yield annotationWithTracings.copy(editableMappingsByTracingId = idInfoUpdaterTuples.toMap)

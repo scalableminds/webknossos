@@ -131,6 +131,7 @@ import {
   getDefaultLayerViewConfiguration,
 } from "types/schemas/dataset_view_configuration.schema";
 import defaultState from "oxalis/default_state";
+import { layerNameRules } from "admin/dataset/dataset_components";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;
@@ -748,6 +749,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                     });
                   }}
                   rules={[
+                    layerNameRules[0] as { min: number }, // Ensuring minimum length
                     {
                       validator: (newReadableLayerName) =>
                         validateReadableLayerName(
@@ -755,6 +757,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                           allReadableLayerNames,
                           readableName,
                         ),
+                    },
+                    {
+                      validator: (newReadableLayerName) => {
+                        const startsWithADot = newReadableLayerName.startsWith(".");
+                        return startsWithADot
+                          ? { isValid: false, message: "The name must not start with a dot." }
+                          : { isValid: true, message: "" };
+                      },
                     },
                   ]}
                   label="Volume Layer Name"

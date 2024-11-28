@@ -41,8 +41,8 @@ export function NewVolumeLayerSelection({
   const selectedSegmentationLayerIndex =
     selectedSegmentationLayerName != null
       ? segmentationLayers.indexOf(
-        getSegmentationLayerByName(dataset, selectedSegmentationLayerName),
-      )
+          getSegmentationLayerByName(dataset, selectedSegmentationLayerName),
+        )
       : -1;
   return (
     <div
@@ -186,8 +186,8 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
     const segmentationLayers = getSegmentationLayers(dataset);
     const selectedSegmentationLayer =
       annotationType !== "skeleton" &&
-        segmentationLayers.length > 0 &&
-        selectedSegmentationLayerName != null
+      segmentationLayers.length > 0 &&
+      selectedSegmentationLayerName != null
         ? getSegmentationLayerByName(dataset, selectedSegmentationLayerName)
         : null;
     const fallbackLayerGetParameter =

@@ -422,7 +422,7 @@ class DataCube {
     }
   }
 
-  async _labelVoxelInAllMags_DEPRECATED(
+  async _labelVoxelInAllResolutions_DEPRECATED(
     voxel: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | null,
     label: number,

@@ -2179,7 +2179,11 @@ class DataApi {
     const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();
     await Promise.all(
       voxels.map((voxel) =>
-        segmentationLayer.cube._labelVoxelInAllMags_DEPRECATED(voxel, additionalCoordinates, label),
+        segmentationLayer.cube._labelVoxelInAllResolutions_DEPRECATED(
+          voxel,
+          additionalCoordinates,
+          label,
+        ),
       ),
     );
     segmentationLayer.cube.pushQueue.push();

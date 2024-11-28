@@ -566,8 +566,8 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         (storeState) => getMagInfoByLayer(storeState.dataset),
         (magInfosByLayer) => {
-          const allDenseMags = Object.values(magInfosByLayer).map((resInfo) =>
-            resInfo.getDenseMags(),
+          const allDenseMags = Object.values(magInfosByLayer).map((magInfo) =>
+            magInfo.getDenseMags(),
           );
           const flatMags = _.flattenDeep(allDenseMags);
           this.uniforms.allMagnifications = {
@@ -1112,8 +1112,8 @@ class PlaneMaterialFactory {
 
   getTotalMagCount(): number {
     const storeState = Store.getState();
-    const allDenseMags = Object.values(getMagInfoByLayer(storeState.dataset)).map((resInfo) =>
-      resInfo.getDenseMags(),
+    const allDenseMags = Object.values(getMagInfoByLayer(storeState.dataset)).map((magInfo) =>
+      magInfo.getDenseMags(),
     );
     const flatMags = _.flatten(allDenseMags);
     return flatMags.length;

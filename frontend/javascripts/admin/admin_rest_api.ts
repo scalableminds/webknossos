@@ -486,6 +486,8 @@ export function reOpenAnnotation(
 }
 
 export type EditableAnnotation = {
+  name: string;
+  description: string;
   visibility: APIAnnotationVisibility;
   tags: Array<string>;
   viewConfiguration?: AnnotationViewConfiguration;

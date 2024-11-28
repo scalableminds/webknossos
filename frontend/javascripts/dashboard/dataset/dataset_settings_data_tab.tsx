@@ -50,6 +50,9 @@ export const syncDataSourceFields = (
     // Copy from simple to advanced: update json
     const dataSourceFromSimpleTab = form.getFieldValue("dataSource");
     if (syncDatasetName) {
+      if (dataSourceFromSimpleTab.id == null) {
+        dataSourceFromSimpleTab.id = {};
+      }
       dataSourceFromSimpleTab.id.name = form.getFieldValue(["dataset", "name"]);
     }
     form.setFieldsValue({

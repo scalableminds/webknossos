@@ -176,42 +176,48 @@ class DatasetController @Inject()(userService: UserService,
       // Change output format to return only a compact list with essential information on the datasets
       compact: Option[Boolean]
   ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    for {
-      folderIdValidated <- Fox.runOptional(folderId)(ObjectId.fromString)
-      uploaderIdValidated <- Fox.runOptional(uploaderId)(ObjectId.fromString)
-      organizationIdOpt = if (onlyMyOrganization.getOrElse(false))
-        request.identity.map(_._organization)
-      else
-        organizationId
-      js <- if (compact.getOrElse(false)) {
-        for {
-          datasetInfos <- datasetDAO.findAllCompactWithSearch(
-            isActive,
-            isUnreported,
-            organizationIdOpt,
-            folderIdValidated,
-            uploaderIdValidated,
-            searchQuery,
-            request.identity.map(_._id),
-            recursive.getOrElse(false),
-            limitOpt = limit
-          )
-        } yield Json.toJson(datasetInfos)
-      } else {
-        for {
-          datasets <- datasetDAO.findAllWithSearch(isActive,
-                                                   isUnreported,
-                                                   organizationIdOpt,
-                                                   folderIdValidated,
-                                                   uploaderIdValidated,
-                                                   searchQuery,
-                                                   recursive.getOrElse(false),
-                                                   limit) ?~> "dataset.list.failed"
-          js <- listGrouped(datasets, request.identity) ?~> "dataset.list.failed"
-        } yield Json.toJson(js)
-      }
-      _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
-    } yield addRemoteOriginHeaders(Ok(js))
+    log() {
+      for {
+        folderIdValidated <- Fox.runOptional(folderId)(ObjectId.fromString)
+        uploaderIdValidated <- Fox.runOptional(uploaderId)(ObjectId.fromString)
+        organizationIdOpt = if (onlyMyOrganization.getOrElse(false))
+          request.identity.map(_._organization)
+        else
+          organizationId
+        js <- if (compact.getOrElse(false)) {
+          for {
+            datasetInfos <- datasetDAO.findAllCompactWithSearch(
+              isActive,
+              isUnreported,
+              organizationIdOpt,
+              folderIdValidated,
+              uploaderIdValidated,
+              searchQuery,
+              request.identity.map(_._id),
+              recursive.getOrElse(false),
+              limitOpt = limit
+            )
+          } yield Json.toJson(datasetInfos)
+        } else {
+          for {
+            _ <- Fox.successful(())
+            _ = logger.info(
+              s"Requesting listing datasets with isActive '$isActive', isUnreported '$isUnreported', organizationId '$organizationIdOpt', folderId '$folderIdValidated', uploaderId '$uploaderIdValidated', searchQuery '$searchQuery', recursive '$recursive', limit '$limit'")
+            datasets <- datasetDAO.findAllWithSearch(isActive,
+                                                     isUnreported,
+                                                     organizationIdOpt,
+                                                     folderIdValidated,
+                                                     uploaderIdValidated,
+                                                     searchQuery,
+                                                     recursive.getOrElse(false),
+                                                     limit) ?~> "dataset.list.failed" ?~> "Dataset listing failed"
+            _ = logger.info(s"Found ${datasets.size} datasets successfully")
+            js <- listGrouped(datasets, request.identity) ?~> "dataset.list.failed" ?~> "Grouping datasets failed"
+          } yield Json.toJson(js)
+        }
+        _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
+      } yield addRemoteOriginHeaders(Ok(js))
+    }
   }
 
   private def listGrouped(datasets: List[Dataset], requestingUser: Option[User])(

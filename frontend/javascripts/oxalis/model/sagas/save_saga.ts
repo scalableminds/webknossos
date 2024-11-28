@@ -1,4 +1,4 @@
-import { doWithToken, getNewestVersionForTracing } from "admin/admin_rest_api";
+import { doWithToken, getNewestVersionForAnnotation } from "admin/admin_rest_api";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
 import type { RequestOptionsWithData } from "libs/request";
@@ -488,7 +488,11 @@ function* watchForSaveConflicts() {
       maybeSkeletonTracing,
     ]);
 
-    const versionOnServer = yield* call(getNewestVersionForTracing, tracingStoreUrl, annotationId);
+    const versionOnServer = yield* call(
+      getNewestVersionForAnnotation,
+      tracingStoreUrl,
+      annotationId,
+    );
 
     for (const tracing of tracings) {
       // Read the tracing version again from the store, since the

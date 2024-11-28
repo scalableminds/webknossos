@@ -178,7 +178,6 @@ export const annotation: APIAnnotation = {
     allowDownload: true,
     allowSave: true,
   },
-  version: 0,
   annotationLayers: [
     {
       name: AnnotationLayerType.Skeleton,

@@ -8,6 +8,7 @@ import type {
   EditableLayerProperties,
 } from "types/api_flow_types";
 import type {
+  Annotation,
   MappingType,
   UserBoundingBox,
   UserBoundingBoxWithoutId,
@@ -95,7 +96,7 @@ export const AllUserBoundingBoxActions = [
   "DELETE_USER_BOUNDING_BOX",
   "ADD_USER_BOUNDING_BOXES",
 ];
-export const initializeAnnotationAction = (annotation: APIAnnotation) =>
+export const initializeAnnotationAction = (annotation: Annotation) =>
   ({
     type: "INITIALIZE_ANNOTATION",
     annotation,

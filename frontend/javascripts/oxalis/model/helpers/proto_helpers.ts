@@ -67,7 +67,7 @@ export function parseProtoListOfLong<T extends number | bigint>(
   }).items;
 }
 
-export function parseProtoTracingStoreAnnotation(annotationArrayBuffer: ArrayBuffer): any {
+export function parseProtoAnnotation(annotationArrayBuffer: ArrayBuffer): any {
   const protoRoot = Root.fromJSON(AnnotationProto);
   const messageType = protoRoot.lookupType(`${PROTO_PACKAGE}.AnnotationProto`);
   const message = messageType.decode(new Uint8Array(annotationArrayBuffer));

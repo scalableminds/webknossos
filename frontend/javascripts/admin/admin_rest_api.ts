@@ -80,9 +80,9 @@ import type {
 import { V3 } from "libs/mjs";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import {
+  parseProtoAnnotation,
   parseProtoListOfLong,
   parseProtoTracing,
-  parseProtoTracingStoreAnnotation,
   serializeProtoListOfLong,
 } from "oxalis/model/helpers/proto_helpers";
 import type { RequestOptions } from "libs/request";
@@ -622,21 +622,6 @@ export async function getMaybeOutdatedAnnotationInformation(
   return annotation;
 }
 
-// todop: not used anywhere yet
-export async function getNewestAnnotationInformation(
-  annotationId: string,
-  tracingstoreUrl: string,
-): Promise<APIAnnotation> {
-  const infoUrl = `${tracingstoreUrl}/tracings/annotation/${annotationId}`;
-  // TODOp adjust return type and implement proto type in frontend
-  const annotationWithMessages = await Request.receiveJSON(infoUrl);
-
-  // Extract the potential messages property before returning the task to avoid
-  // failing e2e tests in annotations.e2e.ts
-  const { messages: _messages, ...annotation } = annotationWithMessages;
-  return annotation;
-}
-
 export async function getAnnotationCompoundInformation(
   annotationId: string,
   annotationType: APICompoundType,
@@ -749,7 +734,7 @@ export async function acquireAnnotationMutex(
 export async function getTracingForAnnotationType(
   annotation: APIAnnotation,
   annotationLayerDescriptor: AnnotationLayerDescriptor,
-  version?: number | null | undefined, // TODOp: Use this parameter
+  version?: number | null | undefined,
 ): Promise<ServerTracing> {
   const { tracingId, typ } = annotationLayerDescriptor;
   const tracingType = typ.toLowerCase() as "skeleton" | "volume";
@@ -806,7 +791,7 @@ export function getUpdateActionLog(
   });
 }
 
-export function getNewestVersionForTracing(
+export function getNewestVersionForAnnotation(
   tracingStoreUrl: string,
   annotationId: string,
 ): Promise<number> {
@@ -817,13 +802,15 @@ export function getNewestVersionForTracing(
   );
 }
 
-export async function getNewestVersionOfTracing(
+export async function getAnnotationProto(
   tracingStoreUrl: string,
   annotationId: string,
+  version?: number | null | undefined,
 ): Promise<APITracingStoreAnnotation> {
+  const possibleVersionString = version != null ? `&version=${version}` : "";
   const annotationArrayBuffer = await doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/annotation/${annotationId}?token=${token}`,
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}?token=${token}${possibleVersionString}`,
       {
         headers: {
           Accept: "application/x-protobuf",
@@ -831,7 +818,7 @@ export async function getNewestVersionOfTracing(
       },
     ),
   );
-  return parseProtoTracingStoreAnnotation(annotationArrayBuffer);
+  return parseProtoAnnotation(annotationArrayBuffer);
 }
 
 export function hasSegmentIndexInDataStore(

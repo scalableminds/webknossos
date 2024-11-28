@@ -74,7 +74,6 @@ export const annotation: APIAnnotation = {
   name: "",
   description: "",
   stats: {},
-  version: 0,
   typ: "Task",
   task: {
     id: "5b1fd1cb97000027049c67ec",

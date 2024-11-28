@@ -84,7 +84,10 @@ export function convertPointToVecInBoundingBox(boundingBox: ServerBoundingBox): 
     topLeft: Utils.point3ToVector3(boundingBox.topLeft),
   };
 }
-export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnotation): Annotation {
+export function convertServerAnnotationToFrontendAnnotation(
+  annotation: APIAnnotation,
+  version: number,
+): Annotation {
   const {
     id: annotationId,
     visibility,
@@ -99,7 +102,6 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     othersMayEdit,
     isLockedByOwner,
     annotationLayers,
-    version,
   } = annotation;
   const restrictions = { ...annotation.restrictions, ...annotation.settings };
   return {

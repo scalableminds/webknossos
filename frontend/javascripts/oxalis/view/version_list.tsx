@@ -7,7 +7,7 @@ import { chunkIntoTimeWindows } from "libs/utils";
 import {
   getUpdateActionLog,
   downloadAnnotation,
-  getNewestVersionForTracing,
+  getNewestVersionForAnnotation,
 } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import {
@@ -165,7 +165,7 @@ function VersionList(props: Props) {
   const annotationId = useSelector((state: OxalisState) => state.tracing.annotationId);
 
   const newestVersion = useFetch(
-    () => getNewestVersionForTracing(tracingStoreUrl, annotationId),
+    () => getNewestVersionForAnnotation(tracingStoreUrl, annotationId),
     null,
     [annotationId],
   );

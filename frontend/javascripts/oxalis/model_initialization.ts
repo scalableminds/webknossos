@@ -9,6 +9,7 @@ import type {
   ServerEditableMapping,
   APICompoundType,
   APISegmentationLayer,
+  APITracingStoreAnnotation,
 } from "types/api_flow_types";
 import {
   computeDataTexturesSetup,
@@ -42,7 +43,7 @@ import {
   getDatasetViewConfiguration,
   getEditableMappingInfo,
   getAnnotationCompoundInformation,
-  getNewestVersionOfTracing,
+  getAnnotationProto,
 } from "admin/admin_rest_api";
 import {
   dispatchMaybeFetchMeshFilesAsync,
@@ -104,7 +105,10 @@ import {
   PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
-import { convertServerAdditionalAxesToFrontEnd } from "./model/reducers/reducer_helpers";
+import {
+  convertServerAdditionalAxesToFrontEnd,
+  convertServerAnnotationToFrontendAnnotation,
+} from "./model/reducers/reducer_helpers";
 import { setVersionNumberAction } from "./model/actions/save_actions";
 
 export const HANDLED_ERROR = "error_was_handled";
@@ -125,6 +129,7 @@ export async function initialize(
 > {
   Store.dispatch(setControlModeAction(initialCommandType.type));
   let annotation: APIAnnotation | null | undefined;
+  let annotationProto: APITracingStoreAnnotation | null | undefined;
   let datasetId: string;
 
   if (initialCommandType.type === ControlModeEnum.TRACE) {
@@ -133,12 +138,12 @@ export async function initialize(
       annotation = await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType);
     } else {
       let maybeOutdatedAnnotation = await getMaybeOutdatedAnnotationInformation(annotationId);
-      const annotationFromTracingStore = await getNewestVersionOfTracing(
+      annotationProto = await getAnnotationProto(
         maybeOutdatedAnnotation.tracingStore.url,
         maybeOutdatedAnnotation.id,
+        version,
       );
-      // TODOP: potential updating the version of the annotation is needed. It is at least not done here.
-      const layersWithStats = annotationFromTracingStore.annotationLayers.map((layer) => {
+      const layersWithStats = annotationProto.annotationLayers.map((layer) => {
         return {
           tracingId: layer.tracingId,
           name: layer.name,
@@ -147,8 +152,8 @@ export async function initialize(
       });
       const completeAnnotation = {
         ...maybeOutdatedAnnotation,
-        name: annotationFromTracingStore.name,
-        description: annotationFromTracingStore.description,
+        name: annotationProto.name,
+        description: annotationProto.description,
         annotationLayers: layersWithStats,
       };
       annotation = completeAnnotation;
@@ -224,7 +229,11 @@ export async function initialize(
       annotation.tracingStore.url,
       serverVolumeTracings,
     );
-    initializeTracing(annotation, serverTracings, editableMappings);
+    if (annotationProto == null) {
+      // Satisfy TS. annotationProto should always exist if annotation exists.
+      throw new Error("Annotation protobuf should not be null.");
+    }
+    initializeAnnotation(annotation, annotationProto.version, serverTracings, editableMappings);
   } else {
     // In view only tracings we need to set the view mode too.
     const { allowedModes } = determineAllowedModes();
@@ -295,15 +304,15 @@ function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
   }
 }
 
-function initializeTracing(
+function initializeAnnotation(
   _annotation: APIAnnotation,
+  version: number,
   serverTracings: Array<ServerTracing>,
   editableMappings: Array<ServerEditableMapping>,
 ) {
   // This method is not called for the View mode
   const { dataset } = Store.getState();
   let annotation = _annotation;
-  const version = annotation.version;
   const { allowedModes, preferredMode } = determineAllowedModes(annotation.settings);
 
   _.extend(annotation.settings, {
@@ -329,7 +338,9 @@ function initializeTracing(
       };
     }
 
-    Store.dispatch(initializeAnnotationAction(annotation));
+    Store.dispatch(
+      initializeAnnotationAction(convertServerAnnotationToFrontendAnnotation(annotation, version)),
+    );
     getServerVolumeTracings(serverTracings).map((volumeTracing) => {
       ErrorHandling.assert(
         getSegmentationLayers(dataset).length > 0,

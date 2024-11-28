@@ -115,12 +115,14 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   protected def parse(r: DatasetsRow): Fox[Dataset] =
     for {
-      voxelSize <- parseVoxelSizeOpt(r.voxelsizefactor, r.voxelsizeunit)
+      voxelSize <- parseVoxelSizeOpt(r.voxelsizefactor, r.voxelsizeunit) ?~> "could not parse dataset voxel size"
       defaultViewConfigurationOpt <- Fox.runOptional(r.defaultviewconfiguration)(
-        JsonHelper.parseAndValidateJson[DatasetViewConfiguration](_))
+        JsonHelper
+          .parseAndValidateJson[DatasetViewConfiguration](_)) ?~> "could not parse dataset default view configuration"
       adminViewConfigurationOpt <- Fox.runOptional(r.adminviewconfiguration)(
-        JsonHelper.parseAndValidateJson[DatasetViewConfiguration](_))
-      metadata <- JsonHelper.parseAndValidateJson[JsArray](r.metadata)
+        JsonHelper
+          .parseAndValidateJson[DatasetViewConfiguration](_)) ?~> "could not parse dataset admin view configuration"
+      metadata <- JsonHelper.parseAndValidateJson[JsArray](r.metadata) ?~> "could not parse dataset metadata"
     } yield {
       Dataset(
         ObjectId(r._Id),
@@ -218,9 +220,11 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                                                       includeSubfolders,
                                                       None,
                                                       None)
+      _ = logger.info(s"Requesting datasets with selection predicates '$selectionPredicates'")
       limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
+      _ = logger.info("Requesting datasets with query")
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery".as[DatasetsRow])
-      parsed <- parseAll(r)
+      parsed <- parseAll(r) ?~> "Parsing datasets failed"
     } yield parsed
 
   def findAllCompactWithSearch(isActiveOpt: Option[Boolean] = None,

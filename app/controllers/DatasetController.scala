@@ -225,22 +225,23 @@ class DatasetController @Inject()(userService: UserService,
       m: MessagesProvider): Fox[List[JsObject]] =
     for {
       _ <- Fox.successful(())
-      _ = logger.info(s"datasets: $datasets, requestingUser: $requestingUser")
+      _ = logger.info(s"datasets: ${datasets.map(_._id)}, requestingUser: ${requestingUser.map(_._id)}")
       requestingUserTeamManagerMemberships <- Fox.runOptional(requestingUser)(user =>
         userService
           .teamManagerMembershipsFor(user._id)) ?~> s"Could not find team manager memberships for user ${requestingUser
         .map(_._id)}"
-      _ = logger.info(s"requestingUserTeamManagerMemberships: $requestingUserTeamManagerMemberships")
+      _ = logger.info(
+        s"requestingUserTeamManagerMemberships: ${requestingUserTeamManagerMemberships.map(_.map(_.toString))}")
       groupedByOrga = datasets.groupBy(_._organization).toList
       js <- Fox.serialCombined(groupedByOrga) { byOrgaTuple: (String, List[Dataset]) =>
         for {
           _ <- Fox.successful(())
-          _ = logger.info(s"byOrgaTuple: $byOrgaTuple")
+          _ = logger.info(s"byOrgaTuple orga: ${byOrgaTuple._1}, datasets: ${byOrgaTuple._2.map(_._id)}")
           organization <- organizationDAO.findOne(byOrgaTuple._1) ?~> s"Could not find organization ${byOrgaTuple._1}"
           groupedByDataStore = byOrgaTuple._2.groupBy(_._dataStore).toList
           _ <- Fox.serialCombined(groupedByDataStore) { byDataStoreTuple: (String, List[Dataset]) =>
             {
-              logger.info(s"datastore: ${byDataStoreTuple._1}, datasets: ${byDataStoreTuple._2}")
+              logger.info(s"datastore: ${byDataStoreTuple._1}, datasets: ${byDataStoreTuple._2.map(_._id)}")
               Fox.successful(())
             }
           }
@@ -257,9 +258,9 @@ class DatasetController @Inject()(userService: UserService,
                   requestingUserTeamManagerMemberships) ?~> Messages("dataset.list.writesFailed", d.name)
               } ?~> "Could not find public writes for datasets"
             } yield resultByDataStore
-          } ?~> s"Could not group by datastore for datasets ${byOrgaTuple._2.map(_.name)}"
+          } ?~> s"Could not group by datastore for datasets ${byOrgaTuple._2.map(_._id)}"
         } yield result.flatten
-      } ?~> s"Could not group by organization for datasets ${datasets.map(_.name)}"
+      } ?~> s"Could not group by organization for datasets ${datasets.map(_._id)}"
     } yield js.flatten
 
   def accessList(datasetId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

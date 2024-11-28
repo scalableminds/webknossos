@@ -351,28 +351,13 @@ function getDatasetExtentAsProduct(extent: {
   height: number;
   depth: number;
 }) {
-  const safeMultiply = (a: number, b: number) => {
-    const result = a * b;
-    if (!Number.isFinite(result)) {
-      throw new Error("Dataset extent product exceeds maximum safe number");
-    }
-    return result;
-  };
-  return safeMultiply(safeMultiply(extent.width, extent.height), extent.depth);
+  return extent.width * extent.height * extent.depth;
 }
 export function getDatasetExtentInVoxelAsProduct(dataset: APIDataset) {
-  try {
-    return getDatasetExtentAsProduct(getDatasetExtentInVoxel(dataset));
-  } catch (e) {
-    console.error(e);
-  }
+  return getDatasetExtentAsProduct(getDatasetExtentInVoxel(dataset));
 }
 export function getDatasetExtentInUnitAsProduct(dataset: APIDataset) {
-  try {
-    return getDatasetExtentAsProduct(getDatasetExtentInUnit(dataset));
-  } catch (e) {
-    console.error(e);
-  }
+  return getDatasetExtentAsProduct(getDatasetExtentInUnit(dataset));
 }
 export function determineAllowedModes(settings?: Settings): {
   preferredMode: APIAllowedMode | null | undefined;

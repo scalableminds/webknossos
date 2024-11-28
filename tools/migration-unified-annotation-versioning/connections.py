@@ -34,7 +34,7 @@ def assert_grpc_success(reply):
 def connect_to_postgres(postgres_config: str):
     parsed = parse_connection_string(postgres_config)
     password = os.environ.get("PG_PASSWORD", "postgres")
-    return psycopg2.connect(host=parsed["host"], port=parsed["port"], database=parsed["database"], user=parsed["user"], password="postgres")
+    return psycopg2.connect(host=parsed["host"], port=parsed["port"], database=parsed["database"], user=parsed["user"], password=password)
 
 
 def parse_connection_string(connection_string: str) -> Dict[str, Any]:

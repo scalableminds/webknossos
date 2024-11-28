@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import models.team.PricingPlan
 import models.team.PricingPlan.PricingPlan
 import slick.lifted.Rep
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
@@ -88,7 +88,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        q"select $columns from $existingCollectionName where _id = $organizationId and $accessQuery"
+        q"SELECT $columns FROM $existingCollectionName WHERE _id = $organizationId AND $accessQuery"
           .as[OrganizationsRow])
       parsed <- parseFirst(r, organizationId)
     } yield parsed
@@ -126,6 +126,15 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
                        JOIN webknossos.datasets_ d ON a._dataset = d._id
                        JOIN webknossos.organizations_ o ON d._organization = o._id
                        WHERE a._id = $annotationId""".as[String])
+      r <- rList.headOption.toFox
+    } yield r
+
+  def findOrganizationIdForDataset(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(q"""SELECT o._id FROM webknossos.organizations_ o
+                       JOIN webknossos.datasets_ d ON o._id = d._organization
+                       WHERE d._id = $datasetId  WHERE $accessQuery""".as[String])
       r <- rList.headOption.toFox
     } yield r
 

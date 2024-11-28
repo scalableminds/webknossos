@@ -6,7 +6,7 @@ import models.annotation.AnnotationDAO
 import models.mesh.{MeshDAO, MeshInfo, MeshInfoParameters, MeshService}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer}
 import security.WkEnv
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import javax.inject.Inject
 
 import scala.concurrent.ExecutionContext

@@ -1,5 +1,6 @@
 package models.dataset.credential
 
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{
   DataVaultCredential,
@@ -10,7 +11,6 @@ import com.scalableminds.webknossos.datastore.storage.{
 }
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.Json
-import utils.ObjectId
 
 import java.net.URI
 import javax.inject.Inject

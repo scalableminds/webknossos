@@ -9,7 +9,7 @@ import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
 import models.dataset.DatasetDAO
 import models.user.User
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 

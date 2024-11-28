@@ -3,6 +3,7 @@ package models.annotation
 import java.io.File
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.ZipIO
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
@@ -24,7 +25,6 @@ import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import models.dataset.Dataset
 import net.liftweb.common.Box
-import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 

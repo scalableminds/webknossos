@@ -52,9 +52,9 @@ class DatasetErrorLoggingService @Inject()(
       case Full(data) =>
         if (data.length == 0) {
           val msg = s"Zero-length array returned while $label for $dataSourceId"
-          if (shouldLog(dataSourceId.team, dataSourceId.name)) {
+          if (shouldLog(dataSourceId.organizationId, dataSourceId.directoryName)) {
             logger.warn(msg)
-            registerLogged(dataSourceId.team, dataSourceId.name)
+            registerLogged(dataSourceId.organizationId, dataSourceId.directoryName)
           }
           Fox.failure(msg)
         } else {
@@ -65,15 +65,15 @@ class DatasetErrorLoggingService @Inject()(
         applicationHealthService.pushError(e)
         Fox.failure(msg, Full(e))
       case Failure(msg, Full(exception), _) =>
-        if (shouldLog(dataSourceId.team, dataSourceId.name)) {
+        if (shouldLog(dataSourceId.organizationId, dataSourceId.directoryName)) {
           logger.error(s"Error while $label for $dataSourceId Stack trace: ${TextUtils.stackTraceAsString(exception)} ")
-          registerLogged(dataSourceId.team, dataSourceId.name)
+          registerLogged(dataSourceId.organizationId, dataSourceId.directoryName)
         }
         Fox.failure(msg, Full(exception))
       case Failure(msg, Empty, _) =>
-        if (shouldLog(dataSourceId.team, dataSourceId.name)) {
+        if (shouldLog(dataSourceId.organizationId, dataSourceId.directoryName)) {
           logger.error(s"Error while $label for $dataSourceId, Empty failure")
-          registerLogged(dataSourceId.team, dataSourceId.name)
+          registerLogged(dataSourceId.organizationId, dataSourceId.directoryName)
         }
         Fox.failure(msg)
       case other => other.toFox

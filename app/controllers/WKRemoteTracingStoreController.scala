@@ -1,6 +1,7 @@
 package controllers
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
@@ -23,7 +24,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import scalapb.GeneratedMessage
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -136,7 +137,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
           dataset <- datasetDAO.findOne(annotation._dataset)
           organization <- organizationDAO.findOne(dataset._organization)
-        } yield Ok(Json.toJson(DataSourceId(dataset.name, organization._id)))
+        } yield Ok(Json.toJson(DataSourceId(dataset.directoryName, organization._id)))
       }
     }
 
@@ -157,17 +158,17 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
   def dataStoreUriForDataset(name: String,
                              key: String,
                              organizationId: Option[String],
-                             datasetName: String): Action[AnyContent] =
+                             datasetDirectory: String): Action[AnyContent] =
     Action.async { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
           organizationIdWithFallback <- Fox.fillOption(organizationId) {
-            datasetDAO.getOrganizationIdForDataset(datasetName)(GlobalAccessContext)
-          } ?~> Messages("dataset.noAccess", datasetName) ~> FORBIDDEN
-          dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationIdWithFallback) ?~> Messages(
+            datasetDAO.getOrganizationIdForDataset(datasetDirectory)(GlobalAccessContext)
+          } ?~> Messages("dataset.noAccess", datasetDirectory) ~> FORBIDDEN
+          dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectory, organizationIdWithFallback) ?~> Messages(
             "dataset.noAccess",
-            datasetName) ~> FORBIDDEN
+            datasetDirectory) ~> FORBIDDEN
           dataStore <- datasetService.dataStoreFor(dataset)
         } yield Ok(Json.toJson(dataStore.url))
       }

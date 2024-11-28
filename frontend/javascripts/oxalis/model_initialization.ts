@@ -1,7 +1,6 @@
 import _ from "lodash";
 import type {
   APIAnnotation,
-  APIDatasetId,
   APIDataset,
   MutableAPIDataset,
   APIDataLayer,
@@ -126,10 +125,11 @@ export async function initialize(
 > {
   Store.dispatch(setControlModeAction(initialCommandType.type));
   let annotation: APIAnnotation | null | undefined;
-  let datasetId: APIDatasetId;
+  let datasetId: string;
 
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
+<<<<<<< HEAD
     if (initialMaybeCompoundType != null) {
       annotation = await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType);
     } else {
@@ -158,6 +158,22 @@ export async function initialize(
       name: annotation.dataSetName,
       owningOrganization: annotation.organization,
     };
+||||||| 5d3d66d2ae
+    annotation =
+      initialMaybeCompoundType != null
+        ? await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType)
+        : await getAnnotationInformation(annotationId);
+    datasetId = {
+      name: annotation.dataSetName,
+      owningOrganization: annotation.organization,
+    };
+=======
+    annotation =
+      initialMaybeCompoundType != null
+        ? await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType)
+        : await getAnnotationInformation(annotationId);
+    datasetId = annotation.datasetId;
+>>>>>>> master
 
     if (!annotation.restrictions.allowAccess) {
       Toast.error(messages["tracing.no_access"]);
@@ -169,22 +185,14 @@ export async function initialize(
     });
     Store.dispatch(setTaskAction(annotation.task));
   } else if (initialCommandType.type === ControlModeEnum.SANDBOX) {
-    const { name, owningOrganization } = initialCommandType;
-    datasetId = {
-      name,
-      owningOrganization,
-    };
+    datasetId = initialCommandType.datasetId;
     annotation = await getEmptySandboxAnnotationInformation(
       datasetId,
       initialCommandType.tracingType,
       getSharingTokenFromUrlParameters(),
     );
   } else {
-    const { name, owningOrganization } = initialCommandType;
-    datasetId = {
-      name,
-      owningOrganization,
-    };
+    datasetId = initialCommandType.datasetId;
   }
 
   const [dataset, initialUserSettings, serverTracings] = await fetchParallel(
@@ -257,8 +265,16 @@ export async function initialize(
 
 async function fetchParallel(
   annotation: APIAnnotation | null | undefined,
+<<<<<<< HEAD
   datasetId: APIDatasetId,
   version: number | undefined | null,
+||||||| 5d3d66d2ae
+  datasetId: APIDatasetId,
+  versions?: Versions,
+=======
+  datasetId: string,
+  versions?: Versions,
+>>>>>>> master
 ): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>]> {
   return Promise.all([
     getDataset(datasetId, getSharingTokenFromUrlParameters()),

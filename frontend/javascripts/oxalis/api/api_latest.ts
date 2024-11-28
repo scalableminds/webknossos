@@ -46,7 +46,6 @@ import {
   doWithToken,
   finishAnnotation,
   getMappingsForDatasetLayer,
-  requestTask,
   downsampleSegmentation,
   sendAnalyticsEvent,
 } from "admin/admin_rest_api";
@@ -182,6 +181,7 @@ import {
   createSkeletonNode,
   getOptionsForCreateSkeletonNode,
 } from "oxalis/controller/combinations/skeleton_handlers";
+import { requestTask } from "admin/api/tasks";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -2110,7 +2110,7 @@ class DataApi {
 
     const magString = magnification.join("-");
     return (
-      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/data?mag=${magString}&` +
+      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.directoryName}/layers/${layerName}/data?mag=${magString}&` +
       `token=${token}&` +
       `x=${Math.floor(topLeft[0])}&` +
       `y=${Math.floor(topLeft[1])}&` +

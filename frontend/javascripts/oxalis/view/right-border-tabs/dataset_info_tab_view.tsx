@@ -11,6 +11,7 @@ import { formatScale } from "libs/format_utils";
 import {
   getDatasetExtentAsString,
   getMagnificationUnion,
+  getReadableURLPart,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -312,19 +313,14 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   getDatasetName() {
-    const {
-      name: datasetName,
-      displayName,
-      description: datasetDescription,
-      owningOrganization,
-    } = this.props.dataset;
+    const { name: datasetName, description: datasetDescription } = this.props.dataset;
     const { activeUser } = this.props;
 
     const getEditSettingsIcon = () =>
       mayUserEditDataset(activeUser, this.props.dataset) ? (
         <FastTooltip title="Edit dataset settings">
           <Link
-            to={`/datasets/${owningOrganization}/${datasetName}/edit`}
+            to={`/datasets/${getReadableURLPart(this.props.dataset)}/edit`}
             style={{ paddingLeft: 3 }}
           >
             <Typography.Text type="secondary">
@@ -343,7 +339,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             }}
           >
             <Typography.Title level={5} style={{ display: "initial" }}>
-              {displayName || datasetName}
+              {datasetName}
             </Typography.Title>
             {getEditSettingsIcon()}
           </div>
@@ -364,7 +360,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
       <div className="info-tab-block">
         <p className="sidebar-label">Dataset {getEditSettingsIcon()}</p>
         <Link
-          to={`/datasets/${owningOrganization}/${datasetName}/view`}
+          to={`/datasets/${getReadableURLPart(this.props.dataset)}/view`}
           title={`Click to view dataset ${datasetName} without annotation`}
           style={{
             wordWrap: "break-word",

@@ -12,7 +12,7 @@ async function fetchDatasets(query: string): Promise<DatasetSelectionValue[]> {
 
   return datasets.map((d) => ({
     label: d.name,
-    value: d.name,
+    value: d.id,
   }));
 }
 

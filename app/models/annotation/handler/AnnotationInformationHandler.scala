@@ -6,7 +6,7 @@ import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation._
 import models.user.User
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.annotation.{nowarn, tailrec}
 import scala.concurrent.ExecutionContext

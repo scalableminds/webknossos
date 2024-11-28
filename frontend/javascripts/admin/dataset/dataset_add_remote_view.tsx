@@ -49,8 +49,8 @@ type FileList = UploadFile<any>[];
 
 type OwnProps = {
   onAdded: (
-    datasetOrganization: string,
-    uploadedDatasetName: string,
+    uploadedDatasetId: string,
+    updatedDatasetName: string,
     needsConversion?: boolean | null | undefined,
   ) => Promise<void>;
   datastores: APIDataStore[];
@@ -287,26 +287,23 @@ function DatasetAddRemoteView(props: Props) {
       let configJSON;
       try {
         configJSON = JSON.parse(dataSourceJsonStr);
-        const nameValidationResult = await isDatasetNameValid({
-          name: configJSON.id.name,
-          owningOrganization: activeUser.organization,
-        });
+        const nameValidationResult = await isDatasetNameValid(configJSON.id.name);
         if (nameValidationResult) {
           throw new Error(nameValidationResult);
         }
-        await storeRemoteDataset(
+        const { newDatasetId } = await storeRemoteDataset(
           datastoreToUse.url,
           configJSON.id.name,
           activeUser.organization,
           dataSourceJsonStr,
           targetFolderId,
         );
+        onAdded(newDatasetId, configJSON.id.name);
       } catch (e) {
         setShowLoadingOverlay(false);
         Toast.error(`The datasource config could not be stored. ${e}`);
         return;
       }
-      onAdded(activeUser.organization, configJSON.id.name);
     }
   }
 
@@ -376,7 +373,6 @@ function DatasetAddRemoteView(props: Props) {
             {/* Only the component's visibility is changed, so that the form is always rendered.
                 This is necessary so that the form's structure is always populated. */}
             <DatasetSettingsDataTab
-              allowRenamingDataset
               form={form}
               activeDataSourceEditMode={dataSourceEditMode}
               onChange={(activeEditMode) => {

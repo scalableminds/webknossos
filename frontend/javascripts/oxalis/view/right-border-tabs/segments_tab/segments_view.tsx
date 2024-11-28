@@ -859,8 +859,7 @@ class SegmentsView extends React.Component<Props, State> {
           : undefined;
 
       const job = await startComputeMeshFileJob(
-        this.props.organization,
-        this.props.datasetName,
+        this.props.dataset.id,
         getBaseSegmentationName(this.props.visibleSegmentationLayer),
         meshfileMag,
         maybeMappingName,

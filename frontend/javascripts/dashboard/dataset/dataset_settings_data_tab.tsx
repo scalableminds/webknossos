@@ -33,12 +33,14 @@ import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_flow_t
 import { useStartAndPollJob } from "admin/job/job_hooks";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
+import type { ArbitraryObject } from "types/globals";
 
 const FormItem = Form.Item;
 
 export const syncDataSourceFields = (
   form: FormInstance,
   syncTargetTabKey: "simple" | "advanced",
+  syncDatasetName = false,
 ): void => {
   if (!form) {
     return;
@@ -47,12 +49,24 @@ export const syncDataSourceFields = (
   if (syncTargetTabKey === "advanced") {
     // Copy from simple to advanced: update json
     const dataSourceFromSimpleTab = form.getFieldValue("dataSource");
+    if (syncDatasetName) {
+      dataSourceFromSimpleTab.id.name = form.getFieldValue(["dataset", "name"]);
+    }
     form.setFieldsValue({
       dataSourceJson: jsonStringify(dataSourceFromSimpleTab),
     });
   } else {
-    const dataSourceFromAdvancedTab = parseMaybe(form.getFieldValue("dataSourceJson"));
+    const dataSourceFromAdvancedTab = parseMaybe(
+      form.getFieldValue("dataSourceJson"),
+    ) as ArbitraryObject | null;
     // Copy from advanced to simple: update form values
+    if (syncDatasetName && dataSourceFromAdvancedTab?.id?.name) {
+      form.setFieldsValue({
+        dataset: {
+          name: dataSourceFromAdvancedTab.id.name,
+        },
+      });
+    }
     form.setFieldsValue({
       dataSource: dataSourceFromAdvancedTab,
     });

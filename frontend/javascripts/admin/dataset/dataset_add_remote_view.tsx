@@ -376,7 +376,7 @@ function DatasetAddRemoteView(props: Props) {
               form={form}
               activeDataSourceEditMode={dataSourceEditMode}
               onChange={(activeEditMode) => {
-                syncDataSourceFields(form, activeEditMode);
+                syncDataSourceFields(form, activeEditMode, true);
                 form.validateFields();
                 setDataSourceEditMode(activeEditMode);
               }}

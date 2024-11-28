@@ -40,6 +40,8 @@ const FormItem = Form.Item;
 export const syncDataSourceFields = (
   form: FormInstance,
   syncTargetTabKey: "simple" | "advanced",
+  // Syncing the dataset name is optional as this is needed for the add remote view, but not for the edit view.
+  // In the edit view, the datasource.id fields should never be changed and the backend will automatically ignore all changes to the id field.
   syncDatasetName = false,
 ): void => {
   if (!form) {

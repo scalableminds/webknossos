@@ -59,6 +59,14 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   /* provide v8 */
 
+  def isValidNewNameV8(datasetName: String, organizationId: String): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        _ <- Fox.successful(logVersioned(request))
+        result <- datasetController.isValidNewName(datasetName)(request)
+      } yield result
+  }
+
   def readDatasetV8(organizationId: String, datasetName: String, sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {

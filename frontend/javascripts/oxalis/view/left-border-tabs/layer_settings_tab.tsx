@@ -128,7 +128,10 @@ import {
   getDefaultLayerViewConfiguration,
 } from "types/schemas/dataset_view_configuration.schema";
 import defaultState from "oxalis/default_state";
-import { pushSaveQueueTransactionIsolated } from "oxalis/model/actions/save_actions";
+import {
+  pushSaveQueueTransaction,
+  pushSaveQueueTransactionIsolated,
+} from "oxalis/model/actions/save_actions";
 import { addLayerToAnnotation, deleteAnnotationLayer } from "oxalis/model/sagas/update_actions";
 
 type DatasetSettingsProps = {
@@ -1640,7 +1643,12 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 
   deleteAnnotationLayer(tracingId: string, type: AnnotationLayerType, layerName: string) {
-    dispatch(deleteAnnotationLayer(tracingId, layerName, type));
+    dispatch(
+      pushSaveQueueTransaction(
+        [deleteAnnotationLayer(tracingId, layerName, type)],
+        "unused-tracing-id",
+      ),
+    );
   },
 });
 

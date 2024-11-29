@@ -540,19 +540,6 @@ type AnnotationLayerCreateDescriptor = {
   magRestrictions?: APIMagRestrictions | null | undefined;
 };
 
-export function deleteAnnotationLayer(
-  annotationId: string,
-  annotationType: APIAnnotationType,
-  layerName: string,
-): Promise<void> {
-  return Request.receiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/deleteAnnotationLayer?layerName=${layerName}`,
-    {
-      method: "PATCH",
-    },
-  );
-}
-
 export function finishAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,

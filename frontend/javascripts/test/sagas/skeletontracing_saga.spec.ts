@@ -107,7 +107,6 @@ function createCompactedSaveQueueFromUpdateActions(
     createSaveQueueFromUpdateActions(
       updateActions.map((batch) => compactUpdateActions(batch, tracing)),
       timestamp,
-      tracing.tracingId,
       stats,
     ),
   );
@@ -238,11 +237,7 @@ test("SkeletonTracingSaga should do something if changed (saga test)", (t) => {
   saga.next(newState.flycam);
   const items = execCall(t, saga.next(newState.viewModeData.plane.tdCamera));
   t.true(withoutUpdateTracing(items).length > 0);
-  expectValueDeepEqual(
-    t,
-    saga.next(items),
-    put(pushSaveQueueTransaction(items, "skeleton", serverSkeletonTracing.id)),
-  );
+  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueTransaction(items, "skeleton")));
 });
 test("SkeletonTracingSaga should emit createNode update actions", (t) => {
   const newState = SkeletonTracingReducer(initialState, createNodeAction);
@@ -1153,11 +1148,7 @@ test("compactUpdateActions should do nothing if it cannot compact", (t) => {
     testState.flycam,
     newState.flycam,
   );
-  const saveQueueOriginal = createSaveQueueFromUpdateActions(
-    [updateActions],
-    TIMESTAMP,
-    skeletonTracing.tracingId,
-  );
+  const saveQueueOriginal = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
   const simplifiedUpdateActions = createCompactedSaveQueueFromUpdateActions(
     [updateActions],
     TIMESTAMP,

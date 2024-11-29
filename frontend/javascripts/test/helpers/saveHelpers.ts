@@ -1,5 +1,4 @@
 import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
-import { addTracingIdToActions } from "oxalis/model/reducers/save_reducer";
 import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
 import type { SaveQueueEntry } from "oxalis/store";
 import dummyUser from "test/fixtures/dummy_user";
@@ -7,14 +6,13 @@ import dummyUser from "test/fixtures/dummy_user";
 export function createSaveQueueFromUpdateActions(
   updateActions: UpdateActionWithoutIsolationRequirement[][],
   timestamp: number,
-  tracingId: string,
   stats: TracingStats | null = null,
 ): SaveQueueEntry[] {
   return updateActions.map((ua) => ({
     version: -1,
     timestamp,
     stats,
-    actions: addTracingIdToActions(ua, tracingId),
+    actions: ua,
     info: "[]",
     transactionGroupCount: 1,
     authorId: dummyUser.id,

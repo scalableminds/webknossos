@@ -86,7 +86,6 @@ test("SaveSaga should compact multiple updateTracing update actions", (t) => {
       [UpdateActions.updateSkeletonTracing(initialState.tracing, [2, 3, 4], [], [0, 0, 1], 2)],
     ],
     TIMESTAMP,
-    tracingId,
   );
   t.deepEqual(compactSaveQueue(saveQueue), [saveQueue[1]]);
 });
@@ -95,7 +94,7 @@ test("SaveSaga should send update actions", (t) => {
     [UpdateActions.createEdge(1, 0, 1, tracingId)],
     [UpdateActions.createEdge(1, 1, 2, tracingId)],
   ];
-  const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP, tracingId);
+  const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
   const saga = pushSaveQueueAsync();
   expectValueDeepEqual(t, saga.next(), call(ensureWkReady));
   saga.next(); // setLastSaveTimestampAction
@@ -131,7 +130,6 @@ test("SaveSaga should send request to server", (t) => {
       [UpdateActions.createEdge(1, 1, 2, tracingId)],
     ],
     TIMESTAMP,
-    tracingId,
   );
   const saga = sendSaveRequestToServer();
   saga.next();
@@ -168,7 +166,6 @@ test("SaveSaga should retry update actions", (t) => {
       [UpdateActions.createEdge(1, 1, 2, tracingId)],
     ],
     TIMESTAMP,
-    tracingId,
   );
   const [saveQueueWithVersions, versionIncrement] = addVersionNumbers(saveQueue, LAST_VERSION);
   t.is(versionIncrement, 2);
@@ -210,7 +207,6 @@ test("SaveSaga should escalate on permanent client error update actions", (t) =>
       [UpdateActions.createEdge(1, 1, 2, tracingId)],
     ],
     TIMESTAMP,
-    tracingId,
   );
   const saga = sendSaveRequestToServer();
   saga.next();
@@ -259,7 +255,7 @@ test("SaveSaga should send update actions right away and try to reach a state wh
     [UpdateActions.createEdge(1, 0, 1, tracingId)],
     [UpdateActions.createEdge(1, 1, 2, tracingId)],
   ];
-  const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP, tracingId);
+  const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
   const saga = pushSaveQueueAsync();
   expectValueDeepEqual(t, saga.next(), call(ensureWkReady));
   saga.next();
@@ -285,7 +281,7 @@ test("SaveSaga should not try to reach state with all actions being saved when s
     [UpdateActions.createEdge(1, 0, 1, tracingId)],
     [UpdateActions.createEdge(1, 1, 2, tracingId)],
   ];
-  const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP, tracingId);
+  const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
   const saga = pushSaveQueueAsync();
   expectValueDeepEqual(t, saga.next(), call(ensureWkReady));
   saga.next();
@@ -309,7 +305,6 @@ test("SaveSaga should remove the correct update actions", (t) => {
       [UpdateActions.updateSkeletonTracing(initialState.tracing, [2, 3, 4], [], [0, 0, 1], 2)],
     ],
     TIMESTAMP,
-    tracingId,
   );
   const saga = sendSaveRequestToServer();
   saga.next();
@@ -329,7 +324,6 @@ test("SaveSaga should set the correct version numbers", (t) => {
       [UpdateActions.createEdge(2, 3, 4, tracingId)],
     ],
     TIMESTAMP,
-    tracingId,
   );
   const saga = sendSaveRequestToServer();
   saga.next();
@@ -355,7 +349,6 @@ test("SaveSaga should set the correct version numbers if the save queue was comp
       [UpdateActions.updateSkeletonTracing(initialState.tracing, [3, 4, 5], [], [0, 0, 1], 3)],
     ],
     TIMESTAMP,
-    tracingId,
   );
   const saga = sendSaveRequestToServer();
   saga.next();
@@ -383,7 +376,6 @@ test("SaveSaga addVersionNumbers should set the correct version numbers", (t) =>
     ],
 
     TIMESTAMP,
-    tracingId,
   );
   const [saveQueueWithVersions, versionIncrement] = addVersionNumbers(saveQueue, LAST_VERSION);
   t.is(versionIncrement, 3);

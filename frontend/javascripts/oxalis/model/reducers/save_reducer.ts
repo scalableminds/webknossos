@@ -7,7 +7,6 @@ import { type TracingStats, getStats } from "oxalis/model/accessors/annotation_a
 import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
 import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import Date from "libs/date";
-import type { UpdateAction, UpdateActionWithTracingId } from "../sagas/update_actions";
 
 // These update actions are not idempotent. Having them
 // twice in the save queue causes a corruption of the current annotation.
@@ -52,7 +51,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
           transactionGroupIndex,
           timestamp: Date.now(),
           authorId: activeUser.id,
-          actions: addTracingIdToActions(actions, dispatchedAction.tracingId),
+          actions,
           stats,
           // Redux Action Log context for debugging purposes.
           info: actionLogInfo,
@@ -181,31 +180,6 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
     default:
       return state;
   }
-}
-
-const LAYER_INDEPENDENT_ACTIONS = new Set([
-  "updateTdCamera",
-  "revertToVersion",
-  "addLayerToAnnotation",
-  "updateMetadataOfAnnotation",
-]);
-
-export function addTracingIdToActions(
-  actions: UpdateAction[],
-  tracingId: string,
-): Array<UpdateActionWithTracingId | UpdateAction> {
-  return actions.map((action) => {
-    if (LAYER_INDEPENDENT_ACTIONS.has(action.name)) {
-      return action as UpdateAction;
-    }
-    return {
-      ...action,
-      value: {
-        ...action.value,
-        actionTracingId: tracingId,
-      },
-    } as UpdateActionWithTracingId;
-  });
 }
 
 export default SaveReducer;

@@ -12,7 +12,6 @@ export type SaveQueueType = "skeleton" | "volume" | "mapping";
 export type PushSaveQueueTransaction = {
   type: "PUSH_SAVE_QUEUE_TRANSACTION";
   items: UpdateAction[];
-  tracingId: string;
   transactionId: string;
 };
 type SaveNowAction = ReturnType<typeof saveNowAction>;
@@ -42,25 +41,21 @@ export type SaveAction =
 // From this point on, we can assume that the groups fulfil the isolation requirement.
 export const pushSaveQueueTransaction = (
   items: Array<UpdateActionWithoutIsolationRequirement>,
-  tracingId: string,
   transactionId: string = getUid(),
 ): PushSaveQueueTransaction =>
   ({
     type: "PUSH_SAVE_QUEUE_TRANSACTION",
     items,
-    tracingId,
     transactionId,
   }) as const;
 
 export const pushSaveQueueTransactionIsolated = (
   item: UpdateActionWithIsolationRequirement,
-  tracingId: string,
   transactionId: string = getUid(),
 ): PushSaveQueueTransaction =>
   ({
     type: "PUSH_SAVE_QUEUE_TRANSACTION",
     items: [item],
-    tracingId,
     transactionId,
   }) as const;
 

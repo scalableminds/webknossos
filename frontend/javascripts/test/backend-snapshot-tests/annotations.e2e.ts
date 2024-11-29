@@ -169,7 +169,6 @@ test.serial("Send update actions and compare resulting tracing", async (t) => {
         [UpdateActions.updateSkeletonTracing(initialSkeleton, [2, 3, 4], null, [1, 2, 3], 2)],
       ],
       123456789,
-      tracingId,
     ),
     0,
   );
@@ -205,7 +204,6 @@ test("Send complex update actions and compare resulting tracing", async (t) => {
     createSaveQueueFromUpdateActions(
       [createTreesUpdateActions, [updateTreeGroupsUpdateAction]],
       123456789,
-      createdExplorational.annotationLayers[0].tracingId,
     ),
     0,
   );
@@ -239,11 +237,7 @@ test("Update Metadata for Skeleton Tracing", async (t) => {
   const { tracingId } = createdExplorational.annotationLayers[0];
   const updateTreeAction = UpdateActions.updateTree(trees[1], tracingId);
   const [saveQueue] = addVersionNumbers(
-    createSaveQueueFromUpdateActions(
-      [createTreesUpdateActions, [updateTreeAction]],
-      123456789,
-      tracingId,
-    ),
+    createSaveQueueFromUpdateActions([createTreesUpdateActions, [updateTreeAction]], 123456789),
     0,
   );
 

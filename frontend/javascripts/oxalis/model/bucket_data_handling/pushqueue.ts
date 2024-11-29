@@ -154,7 +154,7 @@ class PushQueue {
       const items = await this.fifoResolver.orderedWaitFor(
         createCompressedUpdateBucketActions(batch),
       );
-      Store.dispatch(pushSaveQueueTransaction(items, this.tracingId, this.cube.layerName));
+      Store.dispatch(pushSaveQueueTransaction(items));
 
       this.compressingBucketCount -= batch.length;
     } catch (error) {

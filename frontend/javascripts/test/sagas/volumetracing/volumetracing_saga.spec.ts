@@ -177,11 +177,7 @@ test("VolumeTracingSaga should do something if changed (saga test)", (t) => {
   const items = execCall(t, saga.next(newState.viewModeData.plane.tdCamera));
   t.is(withoutUpdateTracing(items).length, 0);
   t.true(items[0].value.activeSegmentId === ACTIVE_CELL_ID);
-  expectValueDeepEqual(
-    t,
-    saga.next(items),
-    put(pushSaveQueueTransaction(items, "volume", volumeTracing.tracingId)),
-  );
+  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueTransaction(items, "volume")));
 });
 
 test("VolumeTracingSaga should create a volume layer (saga test)", (t) => {

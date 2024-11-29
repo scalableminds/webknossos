@@ -58,9 +58,7 @@ export function* pushAnnotationNameUpdateAction(action: SetAnnotationNameAction)
   if (!mayEdit) {
     return;
   }
-  yield* put(
-    pushSaveQueueTransaction([updateMetadataOfAnnotation(action.name)], "unused-tracing-id"),
-  );
+  yield* put(pushSaveQueueTransaction([updateMetadataOfAnnotation(action.name)]));
 }
 
 export function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDescriptionAction) {
@@ -68,12 +66,7 @@ export function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDesc
   if (!mayEdit) {
     return;
   }
-  yield* put(
-    pushSaveQueueTransaction(
-      [updateMetadataOfAnnotation(undefined, action.description)],
-      "unused-tracing-id",
-    ),
-  );
+  yield* put(pushSaveQueueTransaction([updateMetadataOfAnnotation(undefined, action.description)]));
 }
 
 export function* pushAnnotationUpdateAsync(action: Action) {

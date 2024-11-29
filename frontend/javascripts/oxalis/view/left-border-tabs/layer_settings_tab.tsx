@@ -1637,18 +1637,12 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
           name: "skeleton",
           fallbackLayerName: undefined,
         }),
-        "unused-tracing-id",
       ),
     );
   },
 
   deleteAnnotationLayer(tracingId: string, type: AnnotationLayerType, layerName: string) {
-    dispatch(
-      pushSaveQueueTransaction(
-        [deleteAnnotationLayer(tracingId, layerName, type)],
-        "unused-tracing-id",
-      ),
-    );
+    dispatch(pushSaveQueueTransaction([deleteAnnotationLayer(tracingId, layerName, type)]));
   },
 });
 

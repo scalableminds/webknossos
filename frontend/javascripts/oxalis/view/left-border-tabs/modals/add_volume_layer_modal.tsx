@@ -176,8 +176,6 @@ export default function AddVolumeLayerModal({
               max: maxResolutionAllowed,
             },
           }),
-
-          "unused-tracing-id",
         ),
       );
       await Model.ensureSavedState();
@@ -211,8 +209,6 @@ export default function AddVolumeLayerModal({
             },
             mappingName: maybeMappingName,
           }),
-
-          "unused-tracing-id",
         ),
       );
       await Model.ensureSavedState();

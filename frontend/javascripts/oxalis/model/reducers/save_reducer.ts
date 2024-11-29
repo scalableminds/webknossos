@@ -184,8 +184,6 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
 }
 
 const LAYER_INDEPENDENT_ACTIONS = new Set([
-  // todop: Related to IsolationSensitiveAction in backend?
-  // todop: sync this with the backend. The backend currently has only two such actions that have this requirement.
   "updateTdCamera",
   "revertToVersion",
   "addLayerToAnnotation",

@@ -883,17 +883,14 @@ export async function downloadAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
   showVolumeFallbackDownloadWarning: boolean = false,
-  _version: number | null | undefined = null,
+  version: number | null | undefined = null,
   downloadFileFormat: "zarr3" | "wkw" | "nml" = "wkw",
   includeVolumeData: boolean = true,
 ) {
   const searchParams = new URLSearchParams();
-  // TODOp: Use the version parameter
-  /*Object.entries(versions).forEach(([key, val]) => {
-    if (val != null) {
-      searchParams.append(`${key}Version`, val.toString());
-    }
-  });*/
+  if (version != null) {
+    searchParams.append("version", version.toString());
+  }
 
   if (includeVolumeData && showVolumeFallbackDownloadWarning) {
     Toast.info(messages["annotation.no_fallback_data_included"], {

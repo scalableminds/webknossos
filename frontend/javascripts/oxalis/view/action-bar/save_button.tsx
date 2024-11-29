@@ -175,12 +175,6 @@ function getOldestUnsavedTimestamp(saveQueue: SaveState["queue"]): number | null
   let oldestUnsavedTimestamp;
 
   if (saveQueue.length > 0) {
-    // todop: theoretically, could this be not the oldest one?
-    // e.g., items are added to the queue like that:
-    // SkelT=1, SkelT=2, SkelT=3, VolT=1
-    // now the first action is saved and the following remains:
-    // SkelT=2, SkelT=3, VolT=1
-    // even if it could happen, probably not critical for the current context?
     oldestUnsavedTimestamp = saveQueue[0].timestamp;
   }
 

@@ -855,6 +855,7 @@ export async function importVolumeTracing(
   tracing: Tracing,
   volumeTracing: VolumeTracing,
   dataFile: File,
+  version: number,
 ): Promise<number> {
   return doWithToken((token) =>
     Request.sendMultipartFormReceiveJSON(
@@ -862,7 +863,7 @@ export async function importVolumeTracing(
       {
         data: {
           dataFile,
-          currentVersion: volumeTracing.version,
+          currentVersion: version,
         },
       },
     ),

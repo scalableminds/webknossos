@@ -176,48 +176,42 @@ class DatasetController @Inject()(userService: UserService,
       // Change output format to return only a compact list with essential information on the datasets
       compact: Option[Boolean]
   ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    log() {
-      for {
-        folderIdValidated <- Fox.runOptional(folderId)(ObjectId.fromString)
-        uploaderIdValidated <- Fox.runOptional(uploaderId)(ObjectId.fromString)
-        organizationIdOpt = if (onlyMyOrganization.getOrElse(false))
-          request.identity.map(_._organization)
-        else
-          organizationId
-        js <- if (compact.getOrElse(false)) {
-          for {
-            datasetInfos <- datasetDAO.findAllCompactWithSearch(
-              isActive,
-              isUnreported,
-              organizationIdOpt,
-              folderIdValidated,
-              uploaderIdValidated,
-              searchQuery,
-              request.identity.map(_._id),
-              recursive.getOrElse(false),
-              limitOpt = limit
-            )
-          } yield Json.toJson(datasetInfos)
-        } else {
-          for {
-            _ <- Fox.successful(())
-            _ = logger.info(
-              s"Requesting listing datasets with isActive '$isActive', isUnreported '$isUnreported', organizationId '$organizationIdOpt', folderId '$folderIdValidated', uploaderId '$uploaderIdValidated', searchQuery '$searchQuery', recursive '$recursive', limit '$limit'")
-            datasets <- datasetDAO.findAllWithSearch(isActive,
-                                                     isUnreported,
-                                                     organizationIdOpt,
-                                                     folderIdValidated,
-                                                     uploaderIdValidated,
-                                                     searchQuery,
-                                                     recursive.getOrElse(false),
-                                                     limit) ?~> "dataset.list.failed" ?~> "Dataset listing failed"
-            _ = logger.info(s"Found ${datasets.size} datasets successfully")
-            js <- listGrouped(datasets, request.identity) ?~> "dataset.list.failed" ?~> "Grouping datasets failed"
-          } yield Json.toJson(js)
-        }
-        _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
-      } yield addRemoteOriginHeaders(Ok(js))
-    }
+    for {
+      folderIdValidated <- Fox.runOptional(folderId)(ObjectId.fromString)
+      uploaderIdValidated <- Fox.runOptional(uploaderId)(ObjectId.fromString)
+      organizationIdOpt = if (onlyMyOrganization.getOrElse(false))
+        request.identity.map(_._organization)
+      else
+        organizationId
+      js <- if (compact.getOrElse(false)) {
+        for {
+          datasetInfos <- datasetDAO.findAllCompactWithSearch(
+            isActive,
+            isUnreported,
+            organizationIdOpt,
+            folderIdValidated,
+            uploaderIdValidated,
+            searchQuery,
+            request.identity.map(_._id),
+            recursive.getOrElse(false),
+            limitOpt = limit
+          )
+        } yield Json.toJson(datasetInfos)
+      } else {
+        for {
+          datasets <- datasetDAO.findAllWithSearch(isActive,
+                                                   isUnreported,
+                                                   organizationIdOpt,
+                                                   folderIdValidated,
+                                                   uploaderIdValidated,
+                                                   searchQuery,
+                                                   recursive.getOrElse(false),
+                                                   limit) ?~> "dataset.list.failed"
+          js <- listGrouped(datasets, request.identity) ?~> "dataset.list.failed"
+        } yield Json.toJson(js)
+      }
+      _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
+    } yield addRemoteOriginHeaders(Ok(js))
   }
 
   private def listGrouped(datasets: List[Dataset], requestingUser: Option[User])(
@@ -235,9 +229,7 @@ class DatasetController @Inject()(userService: UserService,
       groupedByOrga = datasets.groupBy(_._organization).toList
       js <- Fox.serialCombined(groupedByOrga) { byOrgaTuple: (String, List[Dataset]) =>
         for {
-          _ <- Fox.successful(())
-          _ = logger.info(s"byOrgaTuple orga: ${byOrgaTuple._1}, datasets: ${byOrgaTuple._2}")
-          organization <- organizationDAO.findOne(byOrgaTuple._1) ?~> s"Could not find organization ${byOrgaTuple._1}"
+          organization <- organizationDAO.findOne(byOrgaTuple._1)(GlobalAccessContext)
           groupedByDataStore = byOrgaTuple._2.groupBy(_._dataStore).toList
           _ <- Fox.serialCombined(groupedByDataStore) { byDataStoreTuple: (String, List[Dataset]) =>
             {

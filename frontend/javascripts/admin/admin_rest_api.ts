@@ -927,21 +927,6 @@ export async function downloadAnnotation(
   await downloadWithFilename(downloadUrl);
 }
 
-// When the annotation is open, please use the corresponding method
-// in api_latest.js. It will take care of saving the annotation and
-// reloading it.
-export async function downsampleSegmentation(
-  annotationId: string,
-  annotationType: APIAnnotationType,
-  tracingId: string,
-): Promise<void> {
-  await Request.receiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/downsample?tracingId=${tracingId}`,
-    {
-      method: "PATCH",
-    },
-  );
-}
 // ### Datasets
 export async function getDatasets(
   isUnreported: boolean | null | undefined = null,

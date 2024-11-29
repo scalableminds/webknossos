@@ -88,7 +88,6 @@ import { userSettings } from "types/schemas/user_settings.schema";
 import type { Vector3, ControlMode } from "oxalis/constants";
 import Constants, { ControlModeEnum, MappingStatusEnum } from "oxalis/constants";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import LinkButton from "components/link_button";
 import { Model } from "oxalis/singletons";
 import type {
   VolumeTracing,
@@ -113,7 +112,6 @@ import {
 } from "messages";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
 import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_volume_layer_modal";
-import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
@@ -164,9 +162,6 @@ type DatasetSettingsProps = {
 };
 
 type State = {
-  // If this is set to not-null, the downsampling modal
-  // is shown for that VolumeTracing
-  volumeTracingToDownsample: VolumeTracing | null | undefined;
   isAddVolumeLayerModalVisible: boolean;
   preselectedSegmentationLayerName: string | undefined;
   segmentationLayerWasPreselected: boolean | undefined;
@@ -369,7 +364,6 @@ function LayerInfoIconWithTooltip({
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   onChangeUser: Record<keyof UserConfiguration, (...args: Array<any>) => any>;
   state: State = {
-    volumeTracingToDownsample: null,
     isAddVolumeLayerModalVisible: false,
     preselectedSegmentationLayerName: undefined,
     segmentationLayerWasPreselected: false,
@@ -1157,21 +1151,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     }
 
     return (
-      <FastTooltip title="Open Dialog to Downsample Volume Data">
-        <LinkButton onClick={() => this.showDownsampleVolumeModal(volumeTracing)}>
-          <img
-            src="/assets/images/icon-downsampling.svg"
-            style={{
-              width: 20,
-              height: 20,
-              filter:
-                "invert(47%) sepia(52%) saturate(1836%) hue-rotate(352deg) brightness(99%) contrast(105%)",
-              verticalAlign: "top",
-              cursor: "pointer",
-            }}
-            alt="Magnification Icon"
-          />
-        </LinkButton>
+      <FastTooltip title="This volume tracing does not have data at all magnifications.">
+        <WarningOutlined
+          style={{
+            color: "var(--ant-color-warning)",
+          }}
+        />
       </FastTooltip>
     );
   };
@@ -1317,18 +1302,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         ) : null}
       </React.Fragment>
     );
-  };
-
-  showDownsampleVolumeModal = (volumeTracing: VolumeTracing) => {
-    this.setState({
-      volumeTracingToDownsample: volumeTracing,
-    });
-  };
-
-  hideDownsampleVolumeModal = () => {
-    this.setState({
-      volumeTracingToDownsample: null,
-    });
   };
 
   showAddVolumeLayerModal = () => {
@@ -1568,14 +1541,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               </Button>
             </FastTooltip>
           </Row>
-        ) : null}
-
-        {this.state.volumeTracingToDownsample != null ? (
-          <DownsampleVolumeModal
-            hideDownsampleVolumeModal={this.hideDownsampleVolumeModal}
-            volumeTracing={this.state.volumeTracingToDownsample}
-            magsToDownsample={this.getVolumeMagsToDownsample(this.state.volumeTracingToDownsample)}
-          />
         ) : null}
 
         {this.state.layerToMergeWithFallback != null ? (

@@ -37,7 +37,7 @@ import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import {
   splitAgglomerate,
   mergeAgglomerate,
-  type UpdateAction,
+  type UpdateActionWithoutIsolationRequirement,
 } from "oxalis/model/sagas/update_actions";
 import { Model, api, Store } from "oxalis/singletons";
 import {
@@ -395,7 +395,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
 
-  const items: UpdateAction[] = [];
+  const items: UpdateActionWithoutIsolationRequirement[] = [];
   if (action.type === "MERGE_TREES") {
     if (sourceAgglomerateId === targetAgglomerateId) {
       Toast.error("Segments that should be merged need to be in different agglomerates.");
@@ -533,7 +533,7 @@ function* performMinCut(
   editableMappingId: string,
   volumeTracingId: string,
   sourceTree: Tree | null,
-  items: UpdateAction[],
+  items: UpdateActionWithoutIsolationRequirement[],
 ): Saga<boolean> {
   if (sourceAgglomerateId !== targetAgglomerateId) {
     Toast.error(
@@ -599,7 +599,7 @@ function* performCutFromNeighbors(
   editableMappingId: string,
   volumeTracingId: string,
   sourceTree: Tree | null | undefined,
-  items: UpdateAction[],
+  items: UpdateActionWithoutIsolationRequirement[],
 ): Saga<
   { didCancel: false; neighborInfo: NeighborInfo } | { didCancel: true; neighborInfo?: null }
 > {
@@ -717,7 +717,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
 
-  const items: UpdateAction[] = [];
+  const items: UpdateActionWithoutIsolationRequirement[] = [];
 
   if (action.type === "PROOFREAD_MERGE") {
     if (sourceAgglomerateId === targetAgglomerateId) {
@@ -928,7 +928,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
 
-  const items: UpdateAction[] = [];
+  const items: UpdateActionWithoutIsolationRequirement[] = [];
 
   const { didCancel, neighborInfo } = yield* call(
     performCutFromNeighbors,

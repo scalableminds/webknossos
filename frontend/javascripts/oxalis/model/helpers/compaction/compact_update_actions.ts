@@ -6,7 +6,7 @@ import type {
   DeleteEdgeUpdateAction,
   DeleteNodeUpdateAction,
   DeleteTreeUpdateAction,
-  UpdateAction,
+  UpdateActionWithoutIsolationRequirement,
 } from "oxalis/model/sagas/update_actions";
 import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
 import compactToggleActions from "oxalis/model/helpers/compaction/compact_toggle_actions";
@@ -17,7 +17,7 @@ function cantor(a: number, b: number): number {
   return 0.5 * (a + b) * (a + b + 1) + b;
 }
 
-function compactMovedNodesAndEdges(updateActions: Array<UpdateAction>) {
+function compactMovedNodesAndEdges(updateActions: Array<UpdateActionWithoutIsolationRequirement>) {
   // This function detects tree merges and splits.
   // It does so by identifying nodes and edges that were deleted in one tree only to be created
   // in another tree again afterwards.
@@ -135,7 +135,7 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateAction>) {
   return compactedActions;
 }
 
-function compactDeletedTrees(updateActions: Array<UpdateAction>) {
+function compactDeletedTrees(updateActions: Array<UpdateActionWithoutIsolationRequirement>) {
   // This function detects deleted trees.
   // Instead of sending deleteNode/deleteEdge update actions for all nodes of a deleted tree,
   // just one deleteTree update action is sufficient for the server to delete the tree.
@@ -155,9 +155,9 @@ function compactDeletedTrees(updateActions: Array<UpdateAction>) {
 }
 
 export default function compactUpdateActions(
-  updateActions: Array<UpdateAction>,
+  updateActions: Array<UpdateActionWithoutIsolationRequirement>,
   tracing: SkeletonTracing | VolumeTracing,
-): Array<UpdateAction> {
+): Array<UpdateActionWithoutIsolationRequirement> {
   return compactToggleActions(
     compactDeletedTrees(compactMovedNodesAndEdges(updateActions)),
     tracing,

@@ -5,7 +5,7 @@ import { createDebouncedAbortableParameterlessCallable } from "libs/async/deboun
 import { call } from "redux-saga/effects";
 import Store from "oxalis/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
-import type { UpdateAction } from "../sagas/update_actions";
+import type { UpdateActionWithoutIsolationRequirement } from "../sagas/update_actions";
 import { AsyncFifoResolver } from "libs/async/async_fifo_resolver";
 import { escalateErrorAction } from "../actions/actions";
 
@@ -35,7 +35,7 @@ class PushQueue {
 
   // Helper to ensure the Store's save queue is filled in the correct
   // order.
-  private fifoResolver = new AsyncFifoResolver<UpdateAction[]>();
+  private fifoResolver = new AsyncFifoResolver<UpdateActionWithoutIsolationRequirement[]>();
 
   // If the timestamp is defined, it encodes when the first bucket
   // was added to the PushQueue that will be part of the next (to be created)

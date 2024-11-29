@@ -87,7 +87,7 @@ import {
 } from "oxalis/model/sagas/saga_helpers";
 import {
   deleteSegmentDataVolumeAction,
-  type UpdateAction,
+  type UpdateActionWithoutIsolationRequirement,
   updateSegmentGroups,
 } from "oxalis/model/sagas/update_actions";
 import {
@@ -641,7 +641,7 @@ export const cachedDiffSegmentLists = memoizeOne(
 function* uncachedDiffSegmentLists(
   prevSegments: SegmentMap,
   newSegments: SegmentMap,
-): Generator<UpdateAction, void, void> {
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   const {
     onlyA: deletedSegmentIds,
     onlyB: addedSegmentIds,
@@ -687,7 +687,7 @@ export function* diffVolumeTracing(
   volumeTracing: VolumeTracing,
   prevFlycam: Flycam,
   flycam: Flycam,
-): Generator<UpdateAction, void, void> {
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (updateTracingPredicate(prevVolumeTracing, volumeTracing, prevFlycam, flycam)) {
     yield updateVolumeTracing(
       volumeTracing,

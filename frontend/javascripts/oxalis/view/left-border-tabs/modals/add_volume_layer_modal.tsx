@@ -26,7 +26,7 @@ import InputComponent from "oxalis/view/components/input_component";
 import { api, Model } from "oxalis/singletons";
 import Toast from "libs/toast";
 import { MappingStatusEnum } from "oxalis/constants";
-import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
+import { pushSaveQueueTransactionIsolated } from "oxalis/model/actions/save_actions";
 import { useDispatch } from "react-redux";
 import { addLayerToAnnotation } from "oxalis/model/sagas/update_actions";
 
@@ -166,18 +166,17 @@ export default function AddVolumeLayerModal({
 
     if (selectedSegmentationLayerName == null) {
       dispatch(
-        pushSaveQueueTransaction(
-          [
-            addLayerToAnnotation({
-              typ: "Volume",
-              name: newLayerName,
-              fallbackLayerName: undefined,
-              magRestrictions: {
-                min: minResolutionAllowed,
-                max: maxResolutionAllowed,
-              },
-            }),
-          ],
+        pushSaveQueueTransactionIsolated(
+          addLayerToAnnotation({
+            typ: "Volume",
+            name: newLayerName,
+            fallbackLayerName: undefined,
+            magRestrictions: {
+              min: minResolutionAllowed,
+              max: maxResolutionAllowed,
+            },
+          }),
+
           "unused-tracing-id",
         ),
       );
@@ -201,19 +200,18 @@ export default function AddVolumeLayerModal({
       }
 
       dispatch(
-        pushSaveQueueTransaction(
-          [
-            addLayerToAnnotation({
-              typ: "Volume",
-              name: newLayerName,
-              fallbackLayerName,
-              magRestrictions: {
-                min: minResolutionAllowed,
-                max: maxResolutionAllowed,
-              },
-              mappingName: maybeMappingName,
-            }),
-          ],
+        pushSaveQueueTransactionIsolated(
+          addLayerToAnnotation({
+            typ: "Volume",
+            name: newLayerName,
+            fallbackLayerName,
+            magRestrictions: {
+              min: minResolutionAllowed,
+              max: maxResolutionAllowed,
+            },
+            mappingName: maybeMappingName,
+          }),
+
           "unused-tracing-id",
         ),
       );

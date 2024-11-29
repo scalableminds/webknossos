@@ -1,11 +1,20 @@
 import type { Dispatch } from "redux";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import type {
+  UpdateAction,
+  UpdateActionWithoutIsolationRequirement,
+  UpdateActionWithIsolationRequirement,
+} from "oxalis/model/sagas/update_actions";
 import { getUid } from "libs/uid_generator";
 import Date from "libs/date";
 import Deferred from "libs/async/deferred";
 export type SaveQueueType = "skeleton" | "volume" | "mapping";
 
-export type PushSaveQueueTransaction = ReturnType<typeof pushSaveQueueTransaction>;
+export type PushSaveQueueTransaction = {
+  type: "PUSH_SAVE_QUEUE_TRANSACTION";
+  items: UpdateAction[];
+  tracingId: string;
+  transactionId: string;
+};
 type SaveNowAction = ReturnType<typeof saveNowAction>;
 export type ShiftSaveQueueAction = ReturnType<typeof shiftSaveQueueAction>;
 type DiscardSaveQueuesAction = ReturnType<typeof discardSaveQueuesAction>;
@@ -28,14 +37,29 @@ export type SaveAction =
   | RedoAction
   | DisableSavingAction;
 
+// The action creators pushSaveQueueTransaction and pushSaveQueueTransactionIsolated
+// are typed so that update actions that need isolation are isolated in a group each.
+// From this point on, we can assume that the groups fulfil the isolation requirement.
 export const pushSaveQueueTransaction = (
-  items: Array<UpdateAction>,
+  items: Array<UpdateActionWithoutIsolationRequirement>,
   tracingId: string,
   transactionId: string = getUid(),
-) =>
+): PushSaveQueueTransaction =>
   ({
     type: "PUSH_SAVE_QUEUE_TRANSACTION",
     items,
+    tracingId,
+    transactionId,
+  }) as const;
+
+export const pushSaveQueueTransactionIsolated = (
+  item: UpdateActionWithIsolationRequirement,
+  tracingId: string,
+  transactionId: string = getUid(),
+): PushSaveQueueTransaction =>
+  ({
+    type: "PUSH_SAVE_QUEUE_TRANSACTION",
+    items: [item],
     tracingId,
     transactionId,
   }) as const;

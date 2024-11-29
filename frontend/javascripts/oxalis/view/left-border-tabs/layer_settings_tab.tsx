@@ -130,7 +130,7 @@ import {
   getDefaultLayerViewConfiguration,
 } from "types/schemas/dataset_view_configuration.schema";
 import defaultState from "oxalis/default_state";
-import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
+import { pushSaveQueueTransactionIsolated } from "oxalis/model/actions/save_actions";
 import { addLayerToAnnotation, deleteAnnotationLayer } from "oxalis/model/sagas/update_actions";
 
 type DatasetSettingsProps = {
@@ -1663,14 +1663,12 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   addSkeletonLayerToAnnotation() {
     dispatch(
-      pushSaveQueueTransaction(
-        [
-          addLayerToAnnotation({
-            typ: "Skeleton",
-            name: "skeleton",
-            fallbackLayerName: undefined,
-          }),
-        ],
+      pushSaveQueueTransactionIsolated(
+        addLayerToAnnotation({
+          typ: "Skeleton",
+          name: "skeleton",
+          fallbackLayerName: undefined,
+        }),
         "unused-tracing-id",
       ),
     );

@@ -66,8 +66,6 @@ import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import type { SearchProps } from "antd/lib/input";
 import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
-import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
-import { updateMetadataOfAnnotation } from "oxalis/model/sagas/update_actions";
 
 const { Search } = Input;
 const pageLength: number = 1000;

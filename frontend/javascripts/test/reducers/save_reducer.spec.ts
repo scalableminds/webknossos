@@ -4,7 +4,7 @@ import "test/reducers/save_reducer.mock";
 import dummyUser from "test/fixtures/dummy_user";
 import type { OxalisState } from "oxalis/store";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
 
 const TIMESTAMP = 1494695001688;
 const DateMock = {
@@ -64,7 +64,7 @@ test("Save should add more update actions to the queue", (t) => {
   t.deepEqual(newState.save.queue, saveQueue);
 });
 test("Save should add zero update actions to the queue", (t) => {
-  const items: UpdateAction[] = [];
+  const items: UpdateActionWithoutIsolationRequirement[] = [];
   const pushAction = SaveActions.pushSaveQueueTransaction(items, "skeleton", tracingId);
   const newState = SaveReducer(initialState, pushAction);
   t.deepEqual(newState.save.queue, []);

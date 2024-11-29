@@ -62,7 +62,16 @@ export type UpdateMetadataOfAnnotationUpdateAction = ReturnType<typeof updateMet
 export type SplitAgglomerateUpdateAction = ReturnType<typeof splitAgglomerate>;
 export type MergeAgglomerateUpdateAction = ReturnType<typeof mergeAgglomerate>;
 
+// There are two types of UpdateActions. The ones that *need* to be in a separate transaction
+// group. And the ones that don't have this requirement.
 export type UpdateAction =
+  | UpdateActionWithoutIsolationRequirement
+  | UpdateActionWithIsolationRequirement;
+
+export type UpdateActionWithIsolationRequirement =
+  | RevertToVersionUpdateAction
+  | AddLayerToAnnotationUpdateAction;
+export type UpdateActionWithoutIsolationRequirement =
   | UpdateTreeUpdateAction
   | DeleteTreeUpdateAction
   | MergeTreeUpdateAction
@@ -84,13 +93,11 @@ export type UpdateAction =
   | UpdateTreeVisibilityUpdateAction
   | UpdateTreeEdgesVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
-  | RevertToVersionUpdateAction
   | UpdateSegmentGroupsUpdateAction
   | UpdateTreeGroupsUpdateAction
   | RemoveFallbackLayerUpdateAction
   | UpdateTdCameraUpdateAction
   | UpdateMappingNameUpdateAction
-  | AddLayerToAnnotationUpdateAction
   | DeleteAnnotationLayerUpdateAction
   | UpdateAnnotationLayerNameUpdateAction
   | UpdateMetadataOfAnnotationUpdateAction

@@ -14,7 +14,7 @@ import {
   race,
 } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
 import { TreeTypeEnum } from "oxalis/constants";
 import {
   createEdge,
@@ -482,7 +482,7 @@ function* diffNodes(
   prevNodes: NodeMap,
   nodes: NodeMap,
   treeId: number,
-): Generator<UpdateAction, void, void> {
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevNodes === nodes) return;
   const {
     onlyA: deletedNodeIds,
@@ -517,7 +517,7 @@ function* diffEdges(
   prevEdges: EdgeCollection,
   edges: EdgeCollection,
   treeId: number,
-): Generator<UpdateAction, void, void> {
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevEdges === edges) return;
   const { onlyA: deletedEdges, onlyB: addedEdges } = diffEdgeCollections(prevEdges, edges);
 
@@ -559,7 +559,7 @@ function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
 export function* diffTrees(
   prevTrees: TreeMap,
   trees: TreeMap,
-): Generator<UpdateAction, void, void> {
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevTrees === trees) return;
   const {
     onlyA: deletedTreeIds,
@@ -615,7 +615,7 @@ export function* diffSkeletonTracing(
   skeletonTracing: SkeletonTracing,
   prevFlycam: Flycam,
   flycam: Flycam,
-): Generator<UpdateAction, void, void> {
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevSkeletonTracing !== skeletonTracing) {
     for (const action of cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees)) {
       yield action;

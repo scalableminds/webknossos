@@ -11,7 +11,7 @@ import {
 } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import {
-  pushSaveQueueTransaction,
+  pushSaveQueueTransactionIsolated,
   setVersionNumberAction,
 } from "oxalis/model/actions/save_actions";
 import {
@@ -73,9 +73,8 @@ async function handleRestoreVersion(
     const newestVersion = _.max(versions.map((batch) => batch.version)) || 0;
     Store.dispatch(setVersionNumberAction(newestVersion));
     Store.dispatch(
-      pushSaveQueueTransaction(
-        [revertToVersion(version)],
-        // todop
+      pushSaveQueueTransactionIsolated(
+        revertToVersion(version),
         "experimental; leaving out tracingId as this should not be required",
       ),
     );

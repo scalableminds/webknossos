@@ -38,7 +38,10 @@ import {
   SAVE_RETRY_WAITING_TIME,
 } from "oxalis/model/sagas/save_saga_constants";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
-import type { UpdateAction, UpdateActionWithTracingId } from "oxalis/model/sagas/update_actions";
+import type {
+  UpdateActionWithoutIsolationRequirement,
+  UpdateActionWithTracingId,
+} from "oxalis/model/sagas/update_actions";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import { ensureWkReady } from "oxalis/model/sagas/wk_ready_saga";
 import { Model } from "oxalis/singletons";
@@ -346,8 +349,8 @@ export function performDiffTracing(
   flycam: Flycam,
   _prevTdCamera: CameraData,
   _tdCamera: CameraData,
-): Array<UpdateAction> {
-  let actions: Array<UpdateAction> = [];
+): Array<UpdateActionWithoutIsolationRequirement> {
+  let actions: Array<UpdateActionWithoutIsolationRequirement> = [];
 
   if (prevTracing.type === "skeleton" && tracing.type === "skeleton") {
     actions = actions.concat(

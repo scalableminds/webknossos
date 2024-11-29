@@ -183,8 +183,9 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
   }
 }
 
-const layerIndependentActions = new Set([
-  // TODOp: sync this with the backend. The backend currently has only two such actions that have this requirement.
+const LAYER_INDEPENDENT_ACTIONS = new Set([
+  // todop: Related to IsolationSensitiveAction in backend?
+  // todop: sync this with the backend. The backend currently has only two such actions that have this requirement.
   "updateTdCamera",
   "revertToVersion",
   "addLayerToAnnotation",
@@ -198,7 +199,7 @@ export function addTracingIdToActions(
   tracingId: string,
 ): Array<UpdateActionWithTracingId | UpdateAction> {
   return actions.map((action) => {
-    if (layerIndependentActions.has(action.name)) {
+    if (LAYER_INDEPENDENT_ACTIONS.has(action.name)) {
       return action as UpdateAction;
     }
     return {

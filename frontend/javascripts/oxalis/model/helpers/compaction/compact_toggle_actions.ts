@@ -6,7 +6,7 @@
 import _ from "lodash";
 import type { SkeletonTracing, Tree, TreeGroup, TreeMap, VolumeTracing } from "oxalis/store";
 import type {
-  UpdateAction,
+  UpdateActionWithoutIsolationRequirement,
   UpdateTreeVisibilityUpdateAction,
 } from "oxalis/model/sagas/update_actions";
 import { updateTreeGroupVisibility, updateTreeVisibility } from "oxalis/model/sagas/update_actions";
@@ -137,9 +137,9 @@ function isCommonAncestorToggler(
 }
 
 export default function compactToggleActions(
-  updateActions: UpdateAction[],
+  updateActions: UpdateActionWithoutIsolationRequirement[],
   tracing: SkeletonTracing | VolumeTracing,
-): UpdateAction[] {
+): UpdateActionWithoutIsolationRequirement[] {
   if (tracing.type !== "skeleton") {
     // Don't do anything if this is not a skeleton tracing
     return updateActions;
@@ -148,7 +148,7 @@ export default function compactToggleActions(
   const skeletonTracing = tracing;
 
   // Extract the toggleActions which we are interested in
-  const [toggleActions, remainingActions] = _.partition<UpdateAction>(
+  const [toggleActions, remainingActions] = _.partition<UpdateActionWithoutIsolationRequirement>(
     updateActions,
     (ua) => ua.name === "updateTreeVisibility",
   );

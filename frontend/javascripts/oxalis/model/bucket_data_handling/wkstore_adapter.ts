@@ -13,7 +13,7 @@ import {
   needsLocalHdf5Mapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { parseMaybe } from "libs/utils";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
 import ByteArraysToLz4Base64Worker from "oxalis/workers/byte_arrays_to_lz4_base64.worker";
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
@@ -276,7 +276,7 @@ function sliceBufferIntoPieces(
 
 export async function createCompressedUpdateBucketActions(
   batch: Array<DataBucket>,
-): Promise<UpdateAction[]> {
+): Promise<UpdateActionWithoutIsolationRequirement[]> {
   return _.flatten(
     await Promise.all(
       _.chunk(batch, COMPRESSION_BATCH_SIZE).map(async (batchSubset) => {

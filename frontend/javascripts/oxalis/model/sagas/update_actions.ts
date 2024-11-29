@@ -149,10 +149,11 @@ export type ServerUpdateAction = AsServerAction<
   | CreateTracingUpdateAction
 >;
 
-export function createTree(tree: Tree) {
+export function createTree(tree: Tree, actionTracingId: string) {
   return {
     name: "createTree",
     value: {
+      actionTracingId,
       id: tree.treeId,
       updatedId: undefined,
       color: tree.color,
@@ -168,18 +169,20 @@ export function createTree(tree: Tree) {
     },
   } as const;
 }
-export function deleteTree(treeId: number) {
+export function deleteTree(treeId: number, actionTracingId: string) {
   return {
     name: "deleteTree",
     value: {
+      actionTracingId,
       id: treeId,
     },
   } as const;
 }
-export function updateTree(tree: Tree) {
+export function updateTree(tree: Tree, actionTracingId: string) {
   return {
     name: "updateTree",
     value: {
+      actionTracingId,
       id: tree.treeId,
       updatedId: tree.treeId,
       color: tree.color,
@@ -195,58 +198,78 @@ export function updateTree(tree: Tree) {
     },
   } as const;
 }
-export function updateTreeVisibility(tree: Tree) {
+export function updateTreeVisibility(tree: Tree, actionTracingId: string) {
   const { treeId, isVisible } = tree;
   return {
     name: "updateTreeVisibility",
     value: {
+      actionTracingId,
       treeId,
       isVisible,
     },
   } as const;
 }
-export function updateTreeEdgesVisibility(tree: Tree) {
+export function updateTreeEdgesVisibility(tree: Tree, actionTracingId: string) {
   const { treeId, edgesAreVisible } = tree;
   return {
     name: "updateTreeEdgesVisibility",
     value: {
+      actionTracingId,
       treeId,
       edgesAreVisible,
     },
   } as const;
 }
-export function updateTreeGroupVisibility(groupId: number | null | undefined, isVisible: boolean) {
+export function updateTreeGroupVisibility(
+  groupId: number | null | undefined,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
   return {
     name: "updateTreeGroupVisibility",
     value: {
+      actionTracingId,
       treeGroupId: groupId,
       isVisible,
     },
   } as const;
 }
-export function mergeTree(sourceTreeId: number, targetTreeId: number) {
+export function mergeTree(sourceTreeId: number, targetTreeId: number, actionTracingId: string) {
   return {
     name: "mergeTree",
     value: {
+      actionTracingId,
       sourceId: sourceTreeId,
       targetId: targetTreeId,
     },
   } as const;
 }
-export function createEdge(treeId: number, sourceNodeId: number, targetNodeId: number) {
+export function createEdge(
+  treeId: number,
+  sourceNodeId: number,
+  targetNodeId: number,
+  actionTracingId: string,
+) {
   return {
     name: "createEdge",
     value: {
+      actionTracingId,
       treeId,
       source: sourceNodeId,
       target: targetNodeId,
     },
   } as const;
 }
-export function deleteEdge(treeId: number, sourceNodeId: number, targetNodeId: number) {
+export function deleteEdge(
+  treeId: number,
+  sourceNodeId: number,
+  targetNodeId: number,
+  actionTracingId: string,
+) {
   return {
     name: "deleteEdge",
     value: {
+      actionTracingId,
       treeId,
       source: sourceNodeId,
       target: targetNodeId,
@@ -259,28 +282,35 @@ export type UpdateActionNode = Omit<Node, "untransformedPosition"> & {
   treeId: number;
 };
 
-export function createNode(treeId: number, node: Node) {
+export function createNode(treeId: number, node: Node, actionTracingId: string) {
   const { untransformedPosition, ...restNode } = node;
   return {
     name: "createNode",
-    value: { ...restNode, position: untransformedPosition, treeId } as UpdateActionNode,
-  } as const;
-}
-export function updateNode(treeId: number, node: Node) {
-  const { untransformedPosition, ...restNode } = node;
-  return {
-    name: "updateNode",
     value: {
+      actionTracingId,
       ...restNode,
       position: untransformedPosition,
       treeId,
     } as UpdateActionNode,
   } as const;
 }
-export function deleteNode(treeId: number, nodeId: number) {
+export function updateNode(treeId: number, node: Node, actionTracingId: string) {
+  const { untransformedPosition, ...restNode } = node;
+  return {
+    name: "updateNode",
+    value: {
+      actionTracingId,
+      ...restNode,
+      position: untransformedPosition,
+      treeId,
+    } as UpdateActionNode,
+  } as const;
+}
+export function deleteNode(treeId: number, nodeId: number, actionTracingId: string) {
   return {
     name: "deleteNode",
     value: {
+      actionTracingId,
       treeId,
       nodeId,
     },
@@ -288,6 +318,7 @@ export function deleteNode(treeId: number, nodeId: number) {
 }
 export function updateSkeletonTracing(
   tracing: {
+    tracingId: string;
     activeNodeId: number | null | undefined;
   },
   editPosition: Vector3,
@@ -298,6 +329,7 @@ export function updateSkeletonTracing(
   return {
     name: "updateSkeletonTracing",
     value: {
+      actionTracingId: tracing.tracingId,
       activeNode: tracing.activeNodeId,
       editPosition,
       editPositionAdditionalCoordinates,
@@ -310,10 +342,12 @@ export function moveTreeComponent(
   sourceTreeId: number,
   targetTreeId: number,
   nodeIds: Array<number>,
+  actionTracingId: string,
 ) {
   return {
     name: "moveTreeComponent",
     value: {
+      actionTracingId,
       sourceId: sourceTreeId,
       targetId: targetTreeId,
       nodeIds,
@@ -330,6 +364,7 @@ export function updateVolumeTracing(
   return {
     name: "updateVolumeTracing",
     value: {
+      actionTracingId: tracing.tracingId,
       activeSegmentId: tracing.activeCellId,
       editPosition: position,
       editPositionAdditionalCoordinates,
@@ -341,18 +376,24 @@ export function updateVolumeTracing(
 }
 export function updateUserBoundingBoxesInSkeletonTracing(
   userBoundingBoxes: Array<UserBoundingBox>,
+  actionTracingId: string,
 ) {
   return {
     name: "updateUserBoundingBoxesInSkeletonTracing",
     value: {
+      actionTracingId,
       boundingBoxes: convertUserBoundingBoxesFromFrontendToServer(userBoundingBoxes),
     },
   } as const;
 }
-export function updateUserBoundingBoxesInVolumeTracing(userBoundingBoxes: Array<UserBoundingBox>) {
+export function updateUserBoundingBoxesInVolumeTracing(
+  userBoundingBoxes: Array<UserBoundingBox>,
+  actionTracingId: string,
+) {
   return {
     name: "updateUserBoundingBoxesInVolumeTracing",
     value: {
+      actionTracingId,
       boundingBoxes: convertUserBoundingBoxesFromFrontendToServer(userBoundingBoxes),
     },
   } as const;
@@ -364,11 +405,13 @@ export function createSegmentVolumeAction(
   color: Vector3 | null,
   groupId: number | null | undefined,
   metadata: MetadataEntryProto[],
+  actionTracingId: string,
   creationTime: number | null | undefined = Date.now(),
 ) {
   return {
     name: "createSegment",
     value: {
+      actionTracingId,
       id,
       anchorPosition,
       name,
@@ -388,11 +431,13 @@ export function updateSegmentVolumeAction(
   color: Vector3 | null,
   groupId: number | null | undefined,
   metadata: Array<MetadataEntryProto>,
+  actionTracingId: string,
   creationTime: number | null | undefined = Date.now(),
 ) {
   return {
     name: "updateSegment",
     value: {
+      actionTracingId,
       id,
       anchorPosition,
       additionalCoordinates,
@@ -404,44 +449,54 @@ export function updateSegmentVolumeAction(
     },
   } as const;
 }
-export function deleteSegmentVolumeAction(id: number) {
+export function deleteSegmentVolumeAction(id: number, actionTracingId: string) {
   return {
     name: "deleteSegment",
     value: {
+      actionTracingId,
       id,
     },
   } as const;
 }
-export function deleteSegmentDataVolumeAction(id: number) {
+export function deleteSegmentDataVolumeAction(id: number, actionTracingId: string) {
   return {
     name: "deleteSegmentData",
     value: {
+      actionTracingId,
       id,
     },
   } as const;
 }
-export function updateBucket(bucketInfo: SendBucketInfo, base64Data: string) {
+export function updateBucket(
+  bucketInfo: SendBucketInfo,
+  base64Data: string,
+  actionTracingId: string,
+) {
   return {
     name: "updateBucket",
-    value: Object.assign({}, bucketInfo, {
+    value: {
+      actionTracingId,
+      ...bucketInfo,
       base64Data,
-    }),
+    },
   } as const;
 }
 
-export function updateSegmentGroups(segmentGroups: Array<SegmentGroup>) {
+export function updateSegmentGroups(segmentGroups: Array<SegmentGroup>, actionTracingId: string) {
   return {
     name: "updateSegmentGroups",
     value: {
+      actionTracingId,
       segmentGroups,
     },
   } as const;
 }
 
-export function updateTreeGroups(treeGroups: Array<TreeGroup>) {
+export function updateTreeGroups(treeGroups: Array<TreeGroup>, actionTracingId: string) {
   return {
     name: "updateTreeGroups",
     value: {
+      actionTracingId,
       treeGroups,
     },
   } as const;
@@ -454,10 +509,12 @@ export function revertToVersion(version: number) {
     },
   } as const;
 }
-export function removeFallbackLayer() {
+export function removeFallbackLayer(actionTracingId: string) {
   return {
     name: "removeFallbackLayer",
-    value: {},
+    value: {
+      actionTracingId,
+    },
   } as const;
 }
 export function updateTdCamera() {
@@ -478,10 +535,16 @@ export function updateMappingName(
   mappingName: string | null | undefined,
   isEditable: boolean | null | undefined,
   isLocked: boolean | undefined,
+  actionTracingId: string,
 ) {
   return {
     name: "updateMappingName",
-    value: { mappingName, isEditable, isLocked },
+    value: {
+      actionTracingId,
+      mappingName,
+      isEditable,
+      isLocked,
+    },
   } as const;
 }
 export function splitAgglomerate(
@@ -489,9 +552,11 @@ export function splitAgglomerate(
   segmentId1: NumberLike,
   segmentId2: NumberLike,
   mag: Vector3,
+  actionTracingId: string,
 ): {
   name: "splitAgglomerate";
   value: {
+    actionTracingId: string;
     agglomerateId: number;
     segmentId1: number | undefined;
     segmentId2: number | undefined;
@@ -506,6 +571,7 @@ export function splitAgglomerate(
   return {
     name: "splitAgglomerate",
     value: {
+      actionTracingId,
       // TODO: Proper 64 bit support (#6921)
       agglomerateId: Number(agglomerateId),
       segmentId1: Number(segmentId1),
@@ -520,9 +586,11 @@ export function mergeAgglomerate(
   segmentId1: NumberLike,
   segmentId2: NumberLike,
   mag: Vector3,
+  actionTracingId: string,
 ): {
   name: "mergeAgglomerate";
   value: {
+    actionTracingId: string;
     agglomerateId1: number;
     agglomerateId2: number;
     segmentId1: number | undefined;
@@ -538,6 +606,7 @@ export function mergeAgglomerate(
   return {
     name: "mergeAgglomerate",
     value: {
+      actionTracingId,
       // TODO: Proper 64 bit support (#6921)
       agglomerateId1: Number(agglomerateId1),
       agglomerateId2: Number(agglomerateId2),

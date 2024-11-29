@@ -406,6 +406,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
         sourceInfo.unmappedId,
         targetInfo.unmappedId,
         agglomerateFileMag,
+        volumeTracingId,
       ),
     );
     const mergedMapping = yield* call(
@@ -430,6 +431,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
         sourceInfo.unmappedId,
         targetInfo.unmappedId,
         agglomerateFileMag,
+        volumeTracingId,
       ),
     );
   } else if (action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS") {
@@ -580,7 +582,13 @@ function* performMinCut(
       edge.segmentId2,
     );
     items.push(
-      splitAgglomerate(sourceAgglomerateId, edge.segmentId1, edge.segmentId2, agglomerateFileMag),
+      splitAgglomerate(
+        sourceAgglomerateId,
+        edge.segmentId1,
+        edge.segmentId2,
+        agglomerateFileMag,
+        volumeTracingId,
+      ),
     );
   }
 
@@ -661,7 +669,13 @@ function* performCutFromNeighbors(
     }
 
     items.push(
-      splitAgglomerate(agglomerateId, edge.segmentId1, edge.segmentId2, agglomerateFileMag),
+      splitAgglomerate(
+        agglomerateId,
+        edge.segmentId1,
+        edge.segmentId2,
+        agglomerateFileMag,
+        volumeTracingId,
+      ),
     );
   }
 
@@ -727,6 +741,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
         sourceInfo.unmappedId,
         targetInfo.unmappedId,
         agglomerateFileMag,
+        volumeTracingId,
       ),
     );
 

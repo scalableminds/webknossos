@@ -78,6 +78,7 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateActionWithoutIsola
 
   // Create a moveTreeComponent update action for each of the groups and insert it at the right spot
   for (const movedPairings of _.values(groupedMovedNodesAndEdges)) {
+    const actionTracingId = movedPairings[0][1].value.actionTracingId;
     const oldTreeId = movedPairings[0][1].value.treeId;
     const newTreeId = movedPairings[0][0].value.treeId;
     // This could be done with a .filter(...).map(...), but flow cannot comprehend that
@@ -105,18 +106,18 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateActionWithoutIsola
       compactedActions.splice(
         createTreeUAIndex + 1,
         0,
-        moveTreeComponent(oldTreeId, newTreeId, nodeIds),
+        moveTreeComponent(oldTreeId, newTreeId, nodeIds, actionTracingId),
       );
     } else if (deleteTreeUAIndex > -1) {
       // Insert before the deleteTreeUA
       compactedActions.splice(
         deleteTreeUAIndex,
         0,
-        moveTreeComponent(oldTreeId, newTreeId, nodeIds),
+        moveTreeComponent(oldTreeId, newTreeId, nodeIds, actionTracingId),
       );
     } else {
       // Insert in front
-      compactedActions.unshift(moveTreeComponent(oldTreeId, newTreeId, nodeIds));
+      compactedActions.unshift(moveTreeComponent(oldTreeId, newTreeId, nodeIds, actionTracingId));
     }
 
     // Remove the original create/delete update actions of the moved nodes and edges.

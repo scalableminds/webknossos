@@ -176,8 +176,8 @@ export default function compactToggleActions(
   // If less than 50% of the toggled trees are exceptions, we should use the compaction
   const shouldUseToggleGroup = exceptions.length < 0.5 * affectedTreeCount;
   const compactedToggleActions = [
-    updateTreeGroupVisibility(commonAncestor, commonVisibility),
-    ...exceptions.map((tree) => updateTreeVisibility(tree)),
+    updateTreeGroupVisibility(commonAncestor, commonVisibility, tracing.tracingId),
+    ...exceptions.map((tree) => updateTreeVisibility(tree, tracing.tracingId)),
   ];
   const finalToggleActions = shouldUseToggleGroup ? compactedToggleActions : toggleActions;
   return remainingActions.concat(finalToggleActions);

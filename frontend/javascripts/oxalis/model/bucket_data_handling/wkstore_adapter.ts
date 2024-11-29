@@ -289,7 +289,7 @@ export async function createCompressedUpdateBucketActions(
         return compressedBase64Strings.map((compressedBase64, index) => {
           const bucket = batchSubset[index];
           const bucketInfo = createSendBucketInfo(bucket.zoomedAddress, bucket.cube.magInfo);
-          return updateBucket(bucketInfo, compressedBase64);
+          return updateBucket(bucketInfo, compressedBase64, bucket.getTracingId());
         });
       }),
     ),

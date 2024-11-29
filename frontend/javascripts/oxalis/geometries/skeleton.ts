@@ -316,7 +316,11 @@ class Skeleton {
    */
   refresh(skeletonTracing: SkeletonTracing) {
     const state = Store.getState();
-    const diff = cachedDiffTrees(this.prevTracing.trees, skeletonTracing.trees);
+    const diff = cachedDiffTrees(
+      skeletonTracing.tracingId,
+      this.prevTracing.trees,
+      skeletonTracing.trees,
+    );
 
     for (const update of diff) {
       switch (update.name) {

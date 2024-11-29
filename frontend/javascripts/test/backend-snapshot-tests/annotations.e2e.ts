@@ -156,9 +156,11 @@ async function sendUpdateActions(explorational: APIAnnotation, queue: SaveQueueE
 
 test.serial("Send update actions and compare resulting tracing", async (t) => {
   const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
+  const tracingId = createdExplorational.annotationLayers[0].tracingId;
   const initialSkeleton = {
     activeNodeId: undefined,
     userBoundingBoxes: [],
+    tracingId,
   };
   const [saveQueue] = addVersionNumbers(
     createSaveQueueFromUpdateActions(
@@ -167,7 +169,7 @@ test.serial("Send update actions and compare resulting tracing", async (t) => {
         [UpdateActions.updateSkeletonTracing(initialSkeleton, [2, 3, 4], null, [1, 2, 3], 2)],
       ],
       123456789,
-      createdExplorational.annotationLayers[0].tracingId,
+      tracingId,
     ),
     0,
   );
@@ -196,8 +198,9 @@ test("Send complex update actions and compare resulting tracing", async (t) => {
       ],
     },
   ];
-  const createTreesUpdateActions = Array.from(diffTrees({}, trees));
-  const updateTreeGroupsUpdateAction = UpdateActions.updateTreeGroups(treeGroups);
+  const someTracingId = "someTracingId";
+  const createTreesUpdateActions = Array.from(diffTrees(someTracingId, {}, trees));
+  const updateTreeGroupsUpdateAction = UpdateActions.updateTreeGroups(treeGroups, someTracingId);
   const [saveQueue] = addVersionNumbers(
     createSaveQueueFromUpdateActions(
       [createTreesUpdateActions, [updateTreeGroupsUpdateAction]],
@@ -214,7 +217,7 @@ test("Send complex update actions and compare resulting tracing", async (t) => {
 test("Update Metadata for Skeleton Tracing", async (t) => {
   const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
   const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 5));
-  const createTreesUpdateActions = Array.from(diffTrees({}, trees));
+  const createTreesUpdateActions = Array.from(diffTrees("someTracingId", {}, trees));
   const metadata = [
     {
       key: "city",
@@ -233,12 +236,13 @@ test("Update Metadata for Skeleton Tracing", async (t) => {
     ...trees[1],
     metadata,
   };
-  const updateTreeAction = UpdateActions.updateTree(trees[1]);
+  const { tracingId } = createdExplorational.annotationLayers[0];
+  const updateTreeAction = UpdateActions.updateTree(trees[1], tracingId);
   const [saveQueue] = addVersionNumbers(
     createSaveQueueFromUpdateActions(
       [createTreesUpdateActions, [updateTreeAction]],
       123456789,
-      createdExplorational.annotationLayers[0].tracingId,
+      tracingId,
     ),
     0,
   );

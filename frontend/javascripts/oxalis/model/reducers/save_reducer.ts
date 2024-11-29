@@ -187,8 +187,6 @@ const LAYER_INDEPENDENT_ACTIONS = new Set([
   "updateTdCamera",
   "revertToVersion",
   "addLayerToAnnotation",
-  "deleteLayerFromAnnotation",
-  "updateLayerMetadata",
   "updateMetadataOfAnnotation",
 ]);
 

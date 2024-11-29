@@ -634,11 +634,12 @@ function updateTracingPredicate(
 }
 
 export const cachedDiffSegmentLists = memoizeOne(
-  (prevSegments: SegmentMap, newSegments: SegmentMap) =>
-    Array.from(uncachedDiffSegmentLists(prevSegments, newSegments)),
+  (tracingId: string, prevSegments: SegmentMap, newSegments: SegmentMap) =>
+    Array.from(uncachedDiffSegmentLists(tracingId, prevSegments, newSegments)),
 );
 
 function* uncachedDiffSegmentLists(
+  tracingId: string,
   prevSegments: SegmentMap,
   newSegments: SegmentMap,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
@@ -649,7 +650,7 @@ function* uncachedDiffSegmentLists(
   } = diffDiffableMaps(prevSegments, newSegments);
 
   for (const segmentId of deletedSegmentIds) {
-    yield deleteSegmentVolumeAction(segmentId);
+    yield deleteSegmentVolumeAction(segmentId, tracingId);
   }
 
   for (const segmentId of addedSegmentIds) {
@@ -661,6 +662,7 @@ function* uncachedDiffSegmentLists(
       segment.color,
       segment.groupId,
       segment.metadata,
+      tracingId,
     );
   }
 
@@ -677,6 +679,7 @@ function* uncachedDiffSegmentLists(
         segment.color,
         segment.groupId,
         segment.metadata,
+        tracingId,
         segment.creationTime,
       );
     }
@@ -699,12 +702,16 @@ export function* diffVolumeTracing(
   }
 
   if (!_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes)) {
-    yield updateUserBoundingBoxesInVolumeTracing(volumeTracing.userBoundingBoxes);
+    yield updateUserBoundingBoxesInVolumeTracing(
+      volumeTracing.userBoundingBoxes,
+      volumeTracing.tracingId,
+    );
   }
 
   if (prevVolumeTracing !== volumeTracing) {
     if (prevVolumeTracing.segments !== volumeTracing.segments) {
       for (const action of cachedDiffSegmentLists(
+        volumeTracing.tracingId,
         prevVolumeTracing.segments,
         volumeTracing.segments,
       )) {
@@ -713,11 +720,11 @@ export function* diffVolumeTracing(
     }
 
     if (prevVolumeTracing.segmentGroups !== volumeTracing.segmentGroups) {
-      yield updateSegmentGroups(volumeTracing.segmentGroups);
+      yield updateSegmentGroups(volumeTracing.segmentGroups, volumeTracing.tracingId);
     }
 
     if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
-      yield removeFallbackLayer();
+      yield removeFallbackLayer(volumeTracing.tracingId);
     }
 
     if (
@@ -730,6 +737,7 @@ export function* diffVolumeTracing(
         volumeTracing.mappingName || null,
         volumeTracing.hasEditableMapping || null,
         volumeTracing.mappingIsLocked,
+        volumeTracing.tracingId,
       );
       yield action;
     }
@@ -947,7 +955,10 @@ function* handleDeleteSegmentData(): Saga<void> {
 
     yield* put(setBusyBlockingInfoAction(true, "Segment is being deleted."));
     yield* put(
-      pushSaveQueueTransaction([deleteSegmentDataVolumeAction(action.segmentId)], action.layerName),
+      pushSaveQueueTransaction(
+        [deleteSegmentDataVolumeAction(action.segmentId, action.layerName)],
+        action.layerName,
+      ),
     );
     yield* call([Model, Model.ensureSavedState]);
 

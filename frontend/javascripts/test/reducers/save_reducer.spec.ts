@@ -40,14 +40,17 @@ const initialState = {
   tracing: {},
 } as any as OxalisState;
 test("Save should add update actions to the queue", (t) => {
-  const items = [createEdge(0, 1, 2), createEdge(0, 2, 3)];
+  const items = [createEdge(0, 1, 2, tracingId), createEdge(0, 2, 3, tracingId)];
   const saveQueue = createSaveQueueFromUpdateActions([items], TIMESTAMP, tracingId);
   const pushAction = SaveActions.pushSaveQueueTransaction(items, "skeleton", tracingId);
   const newState = SaveReducer(initialState, pushAction);
   t.deepEqual(newState.save.queue, saveQueue);
 });
 test("Save should add more update actions to the queue", (t) => {
-  const getItems = (treeId: number) => [createEdge(treeId, 1, 2), createEdge(treeId, 2, 3)];
+  const getItems = (treeId: number) => [
+    createEdge(treeId, 1, 2, tracingId),
+    createEdge(treeId, 2, 3, tracingId),
+  ];
   const saveQueue = createSaveQueueFromUpdateActions(
     [getItems(0), getItems(1)],
     TIMESTAMP,
@@ -70,8 +73,8 @@ test("Save should add zero update actions to the queue", (t) => {
   t.deepEqual(newState.save.queue, []);
 });
 test("Save should remove one update actions from the queue", (t) => {
-  const firstItem = [createEdge(0, 1, 2)];
-  const secondItem = [createEdge(1, 2, 3)];
+  const firstItem = [createEdge(0, 1, 2, tracingId)];
+  const secondItem = [createEdge(1, 2, 3, tracingId)];
   const saveQueue = createSaveQueueFromUpdateActions([secondItem], TIMESTAMP, tracingId);
   const firstPushAction = SaveActions.pushSaveQueueTransaction(firstItem, "skeleton", tracingId);
   const secondPushAction = SaveActions.pushSaveQueueTransaction(secondItem, "skeleton", tracingId);
@@ -82,7 +85,7 @@ test("Save should remove one update actions from the queue", (t) => {
   t.deepEqual(newState.save.queue, saveQueue);
 });
 test("Save should remove zero update actions from the queue", (t) => {
-  const items = [createEdge(0, 1, 2), createEdge(1, 2, 3)];
+  const items = [createEdge(0, 1, 2, tracingId), createEdge(1, 2, 3, tracingId)];
   const saveQueue = createSaveQueueFromUpdateActions([items], TIMESTAMP, tracingId);
   const pushAction = SaveActions.pushSaveQueueTransaction(items, "skeleton", tracingId);
   const popAction = SaveActions.shiftSaveQueueAction(0);
@@ -91,7 +94,7 @@ test("Save should remove zero update actions from the queue", (t) => {
   t.deepEqual(newState.save.queue, saveQueue);
 });
 test("Save should remove all update actions from the queue (1/2)", (t) => {
-  const items = [createEdge(0, 1, 2), createEdge(0, 2, 3)];
+  const items = [createEdge(0, 1, 2, tracingId), createEdge(0, 2, 3, tracingId)];
   const pushAction = SaveActions.pushSaveQueueTransaction(items, "skeleton", tracingId);
   const popAction = SaveActions.shiftSaveQueueAction(2);
   let newState = SaveReducer(initialState, pushAction);
@@ -99,7 +102,7 @@ test("Save should remove all update actions from the queue (1/2)", (t) => {
   t.deepEqual(newState.save.queue, []);
 });
 test("Save should remove all update actions from the queue (2/2)", (t) => {
-  const items = [createEdge(0, 1, 2), createEdge(0, 2, 3)];
+  const items = [createEdge(0, 1, 2, tracingId), createEdge(0, 2, 3, tracingId)];
   const pushAction = SaveActions.pushSaveQueueTransaction(items, "skeleton", tracingId);
   const popAction = SaveActions.shiftSaveQueueAction(5);
   let newState = SaveReducer(initialState, pushAction);

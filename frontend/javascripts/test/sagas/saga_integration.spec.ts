@@ -50,7 +50,8 @@ test.serial(
   "watchTreeNames saga should rename empty trees in tasks and these updates should be persisted",
   (t) => {
     const state = Store.getState();
-    const treeWithEmptyName = enforceSkeletonTracing(state.tracing).trees[1];
+    const skeletonTracing = enforceSkeletonTracing(state.tracing);
+    const treeWithEmptyName = skeletonTracing.trees[1];
     const treeWithCorrectName = update(treeWithEmptyName, {
       name: {
         $set: generateTreeName(state, treeWithEmptyName.timestamp, treeWithEmptyName.treeId),
@@ -59,7 +60,7 @@ test.serial(
     const expectedSaveQueue = createSaveQueueFromUpdateActions(
       [
         [
-          UpdateActions.updateTree(treeWithCorrectName),
+          UpdateActions.updateTree(treeWithCorrectName, skeletonTracing.tracingId),
           UpdateActions.updateSkeletonTracing(
             enforceSkeletonTracing(Store.getState().tracing),
             [1, 2, 3],

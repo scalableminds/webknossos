@@ -28,6 +28,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fix a bug where changing the color of a segment via the menu in the segments tab would update the segment color of the previous segment, on which the context menu was opened. [#8225](https://github.com/scalableminds/webknossos/pull/8225)
 - Fix a bug where in the add remote dataset view the dataset name setting was not in sync with the datasource setting of the advanced tab making the form not submittable. [#8245](https://github.com/scalableminds/webknossos/pull/8245)
 - Fix a bug when importing an NML with groups when only groups but no trees exist in an annotation. [#8176](https://github.com/scalableminds/webknossos/pull/8176)
+- Added missing legacy support for `isValidNewName` route. [#8252](https://github.com/scalableminds/webknossos/pull/8252)
 - Fix a bug where trying to delete a non-existing node (via the API, for example) would delete the whole active tree. [#8176](https://github.com/scalableminds/webknossos/pull/8176)
 - Fix a bug where dataset uploads would fail if the organization directory on disk is missing. [#8230](https://github.com/scalableminds/webknossos/pull/8230)
 

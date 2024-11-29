@@ -131,7 +131,7 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
   const extentInLength = getDatasetExtentAsString(dataset, false);
   const extentProductInVx = getDatasetExtentInVoxelAsProduct(dataset);
   const extentProductInUnit = getDatasetExtentInUnitAsProduct(dataset);
-  const formattedExtentinUnit = formatNumberToVolume(
+  const formattedExtentInUnit = formatNumberToVolume(
     extentProductInUnit,
     LongUnitToShortUnitMap[dataset.dataSource.scale.unit],
   );
@@ -143,7 +143,7 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
         <br />
         {formatVoxels(extentProductInVx)}
         <br />
-        {formattedExtentinUnit}
+        {formattedExtentInUnit}
       </div>
     );
   };

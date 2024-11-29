@@ -93,14 +93,32 @@ const descriptionFns: Record<
         : "Deactivated the active mapping.",
     icon: <EyeOutlined />,
   }),
-  splitAgglomerate: (action: SplitAgglomerateUpdateAction): Description => ({
-    description: `Split agglomerate ${action.value.agglomerateId} by separating the segments at position ${action.value.segmentPosition1} and ${action.value.segmentPosition2}.`,
-    icon: <DeleteOutlined />,
-  }),
-  mergeAgglomerate: (action: MergeAgglomerateUpdateAction): Description => ({
-    description: `Merged agglomerates ${action.value.agglomerateId1} and ${action.value.agglomerateId2} by combining the segments at position ${action.value.segmentPosition1} and ${action.value.segmentPosition2}.`,
-    icon: <PlusOutlined />,
-  }),
+  splitAgglomerate: (action: SplitAgglomerateUpdateAction): Description => {
+    const segment1Description =
+      action.value.segmentPosition1 != null
+        ? `at position ${action.value.segmentPosition1}`
+        : action.value.segmentId1 ?? "unknown";
+    const segment2Description =
+      action.value.segmentPosition2 ?? action.value.segmentId1 ?? "unknown";
+    const description = `Split agglomerate ${action.value.agglomerateId} by separating the segments ${segment1Description} and ${segment2Description}.`;
+    return {
+      description,
+      icon: <DeleteOutlined />,
+    };
+  },
+  mergeAgglomerate: (action: MergeAgglomerateUpdateAction): Description => {
+    const segment1Description =
+      action.value.segmentPosition1 != null
+        ? `at position ${action.value.segmentPosition1}`
+        : action.value.segmentId1 ?? "unknown";
+    const segment2Description =
+      action.value.segmentPosition2 ?? action.value.segmentId1 ?? "unknown";
+    const description = `Merged agglomerates ${action.value.agglomerateId1} and ${action.value.agglomerateId2} by combining the segments  ${segment1Description} and ${segment2Description}.`;
+    return {
+      description,
+      icon: <PlusOutlined />,
+    };
+  },
   deleteTree: (action: DeleteTreeUpdateAction, count: number): Description => ({
     description:
       count > 1 ? `Deleted ${count} trees.` : `Deleted the tree with id ${action.value.id}.`,

@@ -382,14 +382,9 @@ class PlaneController extends React.PureComponent<Props> {
       }
     });
     document.addEventListener("keyup", (event: KeyboardEvent) => {
-      const { viewModeData, temporaryConfiguration } = Store.getState();
-      const { mousePosition } = temporaryConfiguration;
-      if (mousePosition == null) return;
-      highlightAndSetCursorOnHoveredBoundingBox(
-        { x: mousePosition[0], y: mousePosition[1] },
-        viewModeData.plane.activeViewport,
-        event,
-      );
+      if (event.key === "Control" || event.key === "Meta") {
+        this.handleUpdateCursor(event);
+      }
     });
     this.input.keyboard = new InputKeyboard({
       // Move
@@ -463,6 +458,17 @@ class PlaneController extends React.PureComponent<Props> {
     }
   }
 
+  handleUpdateCursor(event: KeyboardEvent) {
+    const { viewModeData, temporaryConfiguration } = Store.getState();
+    const { mousePosition } = temporaryConfiguration;
+    if (mousePosition == null) return;
+    highlightAndSetCursorOnHoveredBoundingBox(
+      { x: mousePosition[0], y: mousePosition[1] },
+      viewModeData.plane.activeViewport,
+      event,
+    );
+  }
+
   handleUpdateBrushSize(size: "small" | "medium" | "large") {
     const brushPresets = this.getBrushPresetsOrSetDefault();
     switch (size) {
@@ -515,22 +521,9 @@ class PlaneController extends React.PureComponent<Props> {
       q: downloadScreenshot,
       w: cycleTools,
       "shift + w": cycleToolsBackwards,
-      ctrl: () => {
-        // TODO_c add meta key, extract method
-        const { viewModeData, temporaryConfiguration } = Store.getState();
-        const mousePosition = temporaryConfiguration.mousePosition;
-        if (mousePosition == null) return;
-        const planeId = viewModeData.plane.activeViewport;
-        const hoveredEdgesInfo = getClosestHoveredBoundingBox(
-          { x: mousePosition[0], y: mousePosition[1] },
-          planeId,
-        );
-        const inputCatcher = document.getElementById(`inputcatcher_${planeId}`)?.parentElement;
-
-        if (hoveredEdgesInfo != null && inputCatcher != null) {
-          inputCatcher.style.cursor = "move";
-        }
-      },
+      meta: (event: KeyboardEvent) => this.handleUpdateCursor(event),
+      ctrl: (event: KeyboardEvent) => this.handleUpdateCursor(event),
+      // TODO_c add meta key, extract method,
     };
 
     let extendedControls = {

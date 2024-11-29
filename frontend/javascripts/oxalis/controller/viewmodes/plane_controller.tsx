@@ -66,10 +66,7 @@ import {
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
 import { getDefaultBrushSizes } from "oxalis/view/action-bar/toolbar_view";
 import { userSettings } from "types/schemas/user_settings.schema";
-import {
-  getClosestHoveredBoundingBox,
-  highlightAndSetCursorOnHoveredBoundingBox,
-} from "../combinations/bounding_box_handlers";
+import { highlightAndSetCursorOnHoveredBoundingBox } from "../combinations/bounding_box_handlers";
 
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,
@@ -192,28 +189,6 @@ class BoundingBoxKeybindings {
 
   static getExtendedKeyboardControls() {
     return { x: () => setTool(AnnotationToolEnum.BOUNDING_BOX) };
-  }
-
-  static getLoopedKeyboardControls() {
-    return {
-      ctrl: () => {
-        // TODO_c add meta key, check that ctrl is still pressed, extract method
-        console.log("ctrl");
-        const { viewModeData, temporaryConfiguration } = Store.getState();
-        const mousePosition = temporaryConfiguration.mousePosition;
-        if (mousePosition == null) return;
-        const planeId = viewModeData.plane.activeViewport;
-        const hoveredEdgesInfo = getClosestHoveredBoundingBox(
-          { x: mousePosition[0], y: mousePosition[1] },
-          planeId,
-        );
-        const inputCatcher = document.getElementById(`inputcatcher_${planeId}`)?.parentElement;
-
-        if (hoveredEdgesInfo != null && inputCatcher != null) {
-          inputCatcher.style.cursor = "move";
-        }
-      },
-    };
   }
 }
 
@@ -577,11 +552,9 @@ class PlaneController extends React.PureComponent<Props> {
   getLoopedKeyboardControls() {
     // Note that this code needs to be adapted in case the VolumeHandlers also starts to expose
     // looped keyboard controls. For the hybrid case, these two controls would need t be combined then.
-    if (this.props.tracing.skeleton != null) return SkeletonKeybindings.getLoopedKeyboardControls();
-    else if (this.props.activeTool === AnnotationToolEnum.BOUNDING_BOX) {
-      return BoundingBoxKeybindings.getLoopedKeyboardControls();
-    }
-    return {};
+    return this.props.tracing.skeleton != null
+      ? SkeletonKeybindings.getLoopedKeyboardControls()
+      : {};
   }
 
   init(): void {

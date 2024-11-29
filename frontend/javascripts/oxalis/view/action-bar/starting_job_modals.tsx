@@ -544,6 +544,7 @@ function CollapsibleSplitMergersplitMergerEvaluationSettings({
             <Row>
               <Col style={{ width: "100%" }}>
                 <Form.Item
+                  layout="horizontal"
                   label="Use sparse ground truth tracing"
                   name={["splitMergerEvaluationSettings", "useSparseTracing"]}
                   valuePropName="checked"

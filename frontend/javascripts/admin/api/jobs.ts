@@ -182,9 +182,9 @@ export function startNeuronInferralJob(
   doSplitMergerEvaluation: boolean,
   annotationId?: string,
   useSparseTracing?: boolean,
-  evalMaxEdgeLength?: string,
-  evalSparseTubeThresholdNm?: string,
-  evalMinMergerPathLengthNm?: string,
+  evalMaxEdgeLength?: number,
+  evalSparseTubeThresholdNm?: number,
+  evalMinMergerPathLengthNm?: number,
 ): Promise<APIJob> {
   const urlParams = new URLSearchParams({
     layerName,

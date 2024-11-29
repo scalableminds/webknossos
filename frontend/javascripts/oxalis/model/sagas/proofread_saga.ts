@@ -390,8 +390,6 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   const sourceAgglomerateId = sourceInfo.agglomerateId;
   const targetAgglomerateId = targetInfo.agglomerateId;
 
-  const editableMappingId = volumeTracing.mappingName;
-
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
 
@@ -442,7 +440,6 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       sourceInfo.unmappedId,
       targetInfo.unmappedId,
       agglomerateFileMag,
-      editableMappingId,
       volumeTracingId,
       sourceTree,
       items,
@@ -530,7 +527,6 @@ function* performMinCut(
   sourceSegmentId: number,
   targetSegmentId: number,
   agglomerateFileMag: Vector3,
-  editableMappingId: string,
   volumeTracingId: string,
   sourceTree: Tree | null,
   items: UpdateActionWithoutIsolationRequirement[],
@@ -548,7 +544,7 @@ function* performMinCut(
     segmentId2: targetSegmentId,
     mag: agglomerateFileMag,
     agglomerateId: sourceAgglomerateId,
-    editableMappingId,
+    editableMappingId: volumeTracingId,
   };
 
   const edgesToRemove = yield* call(
@@ -596,7 +592,6 @@ function* performCutFromNeighbors(
   segmentId: number,
   segmentPosition: Vector3 | null,
   agglomerateFileMag: Vector3,
-  editableMappingId: string,
   volumeTracingId: string,
   sourceTree: Tree | null | undefined,
   items: UpdateActionWithoutIsolationRequirement[],
@@ -608,7 +603,7 @@ function* performCutFromNeighbors(
     segmentId,
     mag: agglomerateFileMag,
     agglomerateId,
-    editableMappingId,
+    editableMappingId: volumeTracingId,
   };
 
   const neighborInfo = yield* call(
@@ -770,7 +765,6 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       sourceInfo.unmappedId,
       targetInfo.unmappedId,
       agglomerateFileMag,
-      volumeTracing.mappingName,
       volumeTracingId,
       null,
       items,
@@ -921,8 +915,6 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   const targetAgglomerateId = idInfos[0].agglomerateId;
   const targetSegmentId = idInfos[0].unmappedId;
 
-  const editableMappingId = volumeTracing.mappingName;
-
   const targetAgglomerate = volumeTracing.segments.getNullable(Number(targetAgglomerateId));
 
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
@@ -936,7 +928,6 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     targetSegmentId,
     targetPosition,
     agglomerateFileMag,
-    editableMappingId,
     volumeTracingId,
     action.tree,
     items,

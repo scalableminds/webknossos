@@ -11,6 +11,9 @@ type Props = {
 export function LoadMeshMenuItemLabel({ currentMeshFile, volumeTracing }: Props) {
   const showWarning =
     volumeTracing?.volumeBucketDataHasChanged ??
+    // For older annotations, volumeBucketDataHasChanged can be undefined.
+    // In that case, we still want to show a warning if no proofreading was
+    // done, but the mapping is still locked (i.e., the user brushed).
     (!volumeTracing?.hasEditableMapping && volumeTracing?.mappingIsLocked);
 
   return (

@@ -131,7 +131,7 @@ import {
 import { hideContextMenuAction, setActiveUserBoundingBoxId } from "oxalis/model/actions/ui_actions";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import FastTooltip from "components/fast_tooltip";
-import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item";
+import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);

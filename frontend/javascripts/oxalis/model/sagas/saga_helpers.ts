@@ -9,7 +9,10 @@ import { call, put, takeEvery } from "typed-redux-saga";
 import Toast from "libs/toast";
 import { Store } from "oxalis/singletons";
 import type { ActionPattern } from "@redux-saga/types";
-import { setMappingIsLockedAction } from "../actions/volumetracing_actions";
+import {
+  setMappingIsLockedAction,
+  setVolumeBucketDataHasChangedAction,
+} from "../actions/volumetracing_actions";
 import { MappingStatusEnum } from "oxalis/constants";
 
 export function* takeEveryUnlessBusy<P extends ActionPattern>(

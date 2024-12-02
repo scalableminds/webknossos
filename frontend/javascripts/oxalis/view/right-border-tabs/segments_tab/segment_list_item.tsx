@@ -40,7 +40,7 @@ import { V4 } from "libs/mjs";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import type { MenuItemType } from "antd/es/menu/interface";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
-import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item";
+import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import {
   getAdditionalCoordinatesAsString,

@@ -532,7 +532,7 @@ type SplitMergerEvaluationSettings = {
   maxEdgeLength?: number;
   sparseTubeThresholdInNm?: number;
   minimumMergerPathLengthInNm?: number;
-}
+};
 
 function CollapsibleSplitMergerEvaluationSettings({
   isActive = false,
@@ -802,7 +802,9 @@ export function NeuronSegmentationForm() {
         { newDatasetName, selectedLayer: colorLayer, selectedBoundingBox, annotationId },
         form: FormInstance<any>,
       ) => {
-        const splitMergerEvaluationSettings = form.getFieldValue("splitMergerEvaluationSettings") as SplitMergerEvaluationSettings;
+        const splitMergerEvaluationSettings = form.getFieldValue(
+          "splitMergerEvaluationSettings",
+        ) as SplitMergerEvaluationSettings;
         if (
           !selectedBoundingBox ||
           (doSplitMergerEvaluation && splitMergerEvaluationSettings == null)

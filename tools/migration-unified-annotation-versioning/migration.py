@@ -55,14 +55,23 @@ class Migration:
         log_since(self.before, "Migrating all the things")
 
     def migrate_annotation(self, annotation):
-        logger.info(f"Migrating annotation {annotation['_id']} (dry={self.args.dry}) ...")
         before = time.time()
         try:
-            mapping_id_map = self.build_mapping_id_map(annotation)
-            layer_version_mapping = self.migrate_updates(annotation, mapping_id_map)
-            materialized_versions = self.migrate_materialized_layers(annotation, layer_version_mapping, mapping_id_map)
-            self.create_and_save_annotation_proto(annotation, materialized_versions)
-            log_since(before, f"Migrating annotation {annotation['_id']} ({len(materialized_versions)} materialized versions)", self.get_progress())
+            if self.args.count_versions:
+                versions = 0
+                for tracing_id, layer_type in annotation["layers"].items():
+                    collection = self.update_collection_for_layer_type(layer_type)
+                    newest_version = self.get_newest_version(tracing_id, collection)
+                    versions += newest_version
+                if versions > 1:
+                    logger.info(f"{versions} versions for {annotation['_id']}{self.get_progress()}")
+            else:
+                logger.info(f"Migrating annotation {annotation['_id']} (dry={self.args.dry}) ...")
+                mapping_id_map = self.build_mapping_id_map(annotation)
+                layer_version_mapping = self.migrate_updates(annotation, mapping_id_map)
+                materialized_versions = self.migrate_materialized_layers(annotation, layer_version_mapping, mapping_id_map)
+                self.create_and_save_annotation_proto(annotation, materialized_versions)
+                log_since(before, f"Migrating annotation {annotation['_id']} ({len(materialized_versions)} materialized versions)", self.get_progress())
         except Exception:
             logger.exception(f"Exception while migrating annotation {annotation['_id']}:")
             with self.failure_count_lock:
@@ -388,6 +397,8 @@ class Migration:
                 """
             cursor.execute(query)
             annotations += cursor.fetchall()
+        if annotation_count != len(annotations):
+            logger.info(f"Note that only {len(annotations)} of the {annotation_count} annotations have layers. Skipping zero-layer annotations.")
         log_since(before, "Loading annotation infos from postgres")
         return annotations
 

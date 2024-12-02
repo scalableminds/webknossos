@@ -212,6 +212,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     } "${disallowedCharacters}". Please remove ${
       disallowedCharacters.length > 1 ? "them" : "it"
     } to set the layer name.`,
+  "tracing.volume_layer_name_too_short": "The layer name must be at least one character long.",
+  "tracing.volume_layer_name_starts_with_dot": "The layer name must not start with a dot.",
   "tracing.delete_initial_node": "Do you really want to delete the initial node?",
   "tracing.delete_tree": "Do you really want to delete the whole tree?",
   "tracing.delete_tree_with_initial_node":
@@ -316,7 +318,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Resets this task instance to its initial state, undoing any annotation work of the assigned user. The task will remain assigned to this user for further annotation work.",
   "task.tooltip_explain_reset_cancel":
     "Resets this task instance to its initial state, undoing any annotation work of the assigned user. Furthermore, the task assignment will be removed from the user’s account and recycled into the pool of available tasks for other users. The currently assigned user will not be assigned to this task again (unless they are an Admin).",
-  "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.upload_failed": "The dataset upload failed.",
   "dataset.upload_cancel": "The dataset upload was cancelled.",
   "dataset.unsupported_file_type":

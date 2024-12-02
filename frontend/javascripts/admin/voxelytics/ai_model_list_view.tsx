@@ -129,8 +129,8 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
       const volumeTracingIndex = volumeTracings.findIndex(
         (tracing) => tracing.tracingId === annotationLayer.tracingId,
       );
-      const resolutions = volumeTracingMags[volumeTracingIndex] || ([[1, 1, 1]] as Vector3[]);
-      return getMagInfo(resolutions).getFinestMag();
+      const mags = volumeTracingMags[volumeTracingIndex] || ([[1, 1, 1]] as Vector3[]);
+      return getMagInfo(mags).getFinestMag();
     } else {
       const segmentationLayer = getSegmentationLayerByName(dataset, layerName);
       return getMagInfo(segmentationLayer.resolutions).getFinestMag();

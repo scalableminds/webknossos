@@ -11,7 +11,7 @@ import {
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 import {
   getAbsoluteCoords,
-  getResolution,
+  getMagnification,
   getWorldCoordUVW,
   isOutsideOfBoundingBox,
 } from "./coords.glsl";
@@ -41,7 +41,7 @@ type Params = {
   orderedColorLayerNames: string[];
   segmentationLayerNames: string[];
   textureLayerInfos: Record<string, { packingDegree: number; dataTextureCount: number }>;
-  resolutionsCount: number;
+  magnificationsCount: number;
   voxelSizeFactor: Vector3;
   isOrthogonal: boolean;
   tpsTransformPerLayer: Record<string, TPS3D>;
@@ -52,8 +52,8 @@ uniform vec2 viewportExtent;
 
 uniform float activeMagIndices[<%= globalLayerCount %>];
 uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
-uniform vec3 allResolutions[<%= resolutionsCount %>];
-uniform uint resolutionCountCumSum[<%= globalLayerCount %>];
+uniform vec3 allMagnifications[<%= magnificationsCount %>];
+uniform uint magnificationCountCumSum[<%= globalLayerCount %>];
 
 uniform highp usampler2D lookup_texture;
 uniform highp uint lookup_seeds[3];
@@ -385,7 +385,7 @@ ${compileShader(
   isOutsideOfBoundingBox,
   getMaybeFilteredColorOrFallback,
   hasSegmentation ? getSegmentId : null,
-  getResolution,
+  getMagnification,
   almostEq,
 )}
 
@@ -442,7 +442,7 @@ void main() {
   // Invert vertical axis to make calculation more intuitive with top-left coordinates.
   index.y = PLANE_SUBDIVISION - index.y;
 
-  // d is the width/height of a bucket in the current resolution.
+  // d is the width/height of a bucket in the current magnification.
   vec2 d = transDim(vec3(bucketWidth) * representativeMagForVertexAlignment).xy;
 
   vec3 voxelSizeFactorUVW = transDim(voxelSizeFactor);

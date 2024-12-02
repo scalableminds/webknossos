@@ -35,7 +35,7 @@ const { initializeAnnotationAction } = mockRequire.reRequire(
 test.before((t) => {
   const rotation = [0.5, 0.5, 0.5];
   const viewport = 0;
-  const resolution = 0;
+  const mag = 0;
   tracing.trees = [];
   delete tracing.activeNodeId;
   Store.dispatch(initializeAnnotationAction(annotation));
@@ -47,7 +47,7 @@ test.before((t) => {
       Store.dispatch(createTreeAction());
     }
 
-    Store.dispatch(createNodeAction([i, i, i], null, rotation, viewport, resolution));
+    Store.dispatch(createNodeAction([i, i, i], null, rotation, viewport, mag));
   }
 
   getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {

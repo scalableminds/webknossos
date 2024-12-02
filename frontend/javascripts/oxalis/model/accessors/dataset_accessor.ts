@@ -5,6 +5,7 @@ import type {
   APIAllowedMode,
   APIDataLayer,
   APIDataset,
+  APIDatasetCompact,
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
   APISkeletonLayer,
@@ -345,6 +346,19 @@ export function getDatasetExtentAsString(
     formatNumberToLength(length, LongUnitToShortUnitMap[dataset.dataSource.scale.unit]),
   );
 }
+function getDatasetExtentAsProduct(extent: {
+  width: number;
+  height: number;
+  depth: number;
+}) {
+  return extent.width * extent.height * extent.depth;
+}
+export function getDatasetExtentInVoxelAsProduct(dataset: APIDataset) {
+  return getDatasetExtentAsProduct(getDatasetExtentInVoxel(dataset));
+}
+export function getDatasetExtentInUnitAsProduct(dataset: APIDataset) {
+  return getDatasetExtentAsProduct(getDatasetExtentInUnit(dataset));
+}
 export function determineAllowedModes(settings?: Settings): {
   preferredMode: APIAllowedMode | null | undefined;
   allowedModes: Array<APIAllowedMode>;
@@ -574,8 +588,6 @@ export function getEnabledColorLayers(
 }
 
 export function getThumbnailURL(dataset: APIDataset): string {
-  const datasetName = dataset.name;
-  const organizationId = dataset.owningOrganization;
   const layers = dataset.dataSource.dataLayers;
 
   const colorLayer = _.find(layers, {
@@ -583,18 +595,16 @@ export function getThumbnailURL(dataset: APIDataset): string {
   });
 
   if (colorLayer) {
-    return `/api/datasets/${organizationId}/${datasetName}/layers/${colorLayer.name}/thumbnail`;
+    return `/api/datasets/${dataset.id}/layers/${colorLayer.name}/thumbnail`;
   }
 
   return "";
 }
 export function getSegmentationThumbnailURL(dataset: APIDataset): string {
-  const datasetName = dataset.name;
-  const organizationId = dataset.owningOrganization;
   const segmentationLayer = getFirstSegmentationLayer(dataset);
 
   if (segmentationLayer) {
-    return `/api/datasets/${organizationId}/${datasetName}/layers/${segmentationLayer.name}/thumbnail`;
+    return `/api/datasets/${dataset.id}/layers/${segmentationLayer.name}/thumbnail`;
   }
 
   return "";
@@ -909,4 +919,22 @@ export function getMaybeSegmentIndexAvailability(
     return false;
   }
   return dataset.dataSource.dataLayers.find((layer) => layer.name === layerName)?.hasSegmentIndex;
+}
+
+function getURLSanitizedName(dataset: APIDataset | APIDatasetCompact | { name: string }) {
+  return dataset.name.replace(/[^A-Z|a-z|0-9|-|_]/g, "");
+}
+
+export function getReadableURLPart(
+  dataset: APIDataset | APIDatasetCompact | { name: string; id: string },
+) {
+  return `${getURLSanitizedName(dataset)}-${dataset.id}`;
+}
+
+export function getDatasetIdOrNameFromReadableURLPart(datasetNameAndId: string) {
+  const datasetIdOrName = datasetNameAndId.split("-").pop();
+  const isId = /^[a-f0-9]{24}$/.test(datasetIdOrName || "");
+  return isId
+    ? { datasetId: datasetIdOrName, datasetName: null }
+    : { datasetId: null, datasetName: datasetIdOrName };
 }

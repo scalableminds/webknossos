@@ -103,7 +103,7 @@ class EditableMappingService @Inject()(
 
   private def generateId: String = UUID.randomUUID.toString
 
-  val binaryDataService = new BinaryDataService(Paths.get(""), None, None, None, None, None)
+  val binaryDataService = new BinaryDataService(Paths.get(""), None, None, None, None)
   adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
   private val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService
 
@@ -502,7 +502,7 @@ class EditableMappingService @Inject()(
       ))
 
     val skeleton = SkeletonTracingDefaults.createInstance.copy(
-      datasetName = remoteFallbackLayer.datasetName,
+      datasetName = "",
       trees = trees
     )
     skeleton.toByteArray

@@ -267,8 +267,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         data: {
           nmlFile: files,
           createGroupForEachFile,
-          datasetName: this.props.datasetName,
-          organizationId: this.props.organization,
+          datasetId: this.props.datasetId,
         },
       });
       this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
@@ -403,7 +402,7 @@ function mapStateToProps(state: OxalisState) {
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
     isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
-    datasetName: state.dataset.name,
+    datasetId: state.dataset.id,
     is2d: is2dDataset(state.dataset),
     displayName: state.tracing.name ? state.tracing.name : state.dataset.name,
     organization: state.dataset.owningOrganization,

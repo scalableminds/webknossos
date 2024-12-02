@@ -36,7 +36,6 @@ import {
   type APITeam,
   type APIDataStore,
   type APIUser,
-  type APIDatasetId,
   type APIOrganization,
   APIJobType,
 } from "types/api_flow_types";
@@ -82,7 +81,11 @@ const logRetryToAnalytics = _.throttle((datasetName: string) => {
 type OwnProps = {
   datastores: Array<APIDataStore>;
   withoutCard?: boolean;
-  onUploaded: (arg0: string, arg1: string, arg2: boolean) => Promise<void> | void;
+  onUploaded: (
+    datasetId: string,
+    datasetName: string,
+    needsConversion: boolean,
+  ) => Promise<void> | void;
 };
 type StateProps = {
   activeUser: APIUser | null | undefined;
@@ -302,24 +305,23 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     this.unblock = this.props.history.block(beforeUnload);
     // @ts-ignore
     window.onbeforeunload = beforeUnload;
-    const datasetId: APIDatasetId = {
-      name: formValues.name,
-      owningOrganization: activeUser.organization,
-    };
 
     const getRandomString = () => {
       const randomBytes = window.crypto.getRandomValues(new Uint8Array(6));
       return Array.from(randomBytes, (byte) => `0${byte.toString(16)}`.slice(-2)).join("");
     };
+    const newDatasetName = formValues.name;
 
     const uploadId = unfinishedUploadToContinue
       ? unfinishedUploadToContinue.uploadId
-      : `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${datasetId.name}__${getRandomString()}`;
+      : `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${newDatasetName}__${getRandomString()}`;
     const filePaths = formValues.zipFile.map((file) => file.path || "");
     const reserveUploadInformation = {
       uploadId,
-      organization: datasetId.owningOrganization,
-      name: datasetId.name,
+      name: newDatasetName,
+      directoryName: "<filled by backend>",
+      newDatasetId: "<filled by backend>",
+      organization: activeUser.organization,
       totalFileCount: formValues.zipFile.length,
       filePaths: filePaths,
       layersToLink: [],
@@ -349,7 +351,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         isFinishing: true,
       });
       finishDatasetUpload(datastoreUrl, uploadInfo).then(
-        async () => {
+        async ({ newDatasetId }) => {
           let maybeError;
 
           if (this.state.needsConversion) {
@@ -361,8 +363,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               }
 
               await startConvertToWkwJob(
-                formValues.name,
-                activeUser.organization,
+                newDatasetId,
                 formValues.voxelSizeFactor,
                 formValues.voxelSizeUnit,
               );
@@ -388,16 +389,12 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               name: "",
               zipFile: [],
             });
-            this.props.onUploaded(
-              activeUser.organization,
-              formValues.name,
-              this.state.needsConversion,
-            );
+            this.props.onUploaded(newDatasetId, newDatasetName, this.state.needsConversion);
           }
         },
         (error) => {
           sendFailedRequestAnalyticsEvent("finish_dataset_upload", error, {
-            dataset_name: datasetId.name,
+            dataset_name: newDatasetName,
           });
           Toast.error(messages["dataset.upload_failed"]);
           this.setState({
@@ -427,7 +424,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       });
     });
     resumableUpload.on("fileRetry", () => {
-      logRetryToAnalytics(datasetId.name);
+      logRetryToAnalytics(newDatasetName);
       this.setState({
         isRetrying: true,
       });
@@ -747,7 +744,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 >
                   {unfinishedAndNotSelectedUploads.map((unfinishedUpload) => (
                     <Row key={unfinishedUpload.uploadId} gutter={16}>
-                      <Col span={8}>{unfinishedUpload.datasetId.name}</Col>
+                      <Col span={8}>{unfinishedUpload.datasetName}</Col>
                       <Col span={8}>
                         <Button
                           type="link"
@@ -757,7 +754,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                               return;
                             }
                             currentFormRef.setFieldsValue({
-                              name: unfinishedUpload.datasetId.name,
+                              name: unfinishedUpload.datasetName,
                               targetFolderId: unfinishedUpload.folderId,
                               initialTeams: this.state.possibleTeams.filter((team) =>
                                 unfinishedUpload.allowedTeams.includes(team.id),
@@ -823,7 +820,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 <DatasetNameFormItem
                   activeUser={activeUser}
                   disabled={continuingUnfinishedUpload}
-                  allowDuplicate={continuingUnfinishedUpload}
+                  allowDuplicate
                 />
               </Col>
               <Col span={12}>

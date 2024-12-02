@@ -8,7 +8,7 @@ import models.user.{User, UserDAO, UserService}
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SimpleSQLDAO, SqlClient}
 
 import javax.inject.Inject

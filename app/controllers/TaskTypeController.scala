@@ -11,7 +11,7 @@ import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import javax.inject.Inject
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv

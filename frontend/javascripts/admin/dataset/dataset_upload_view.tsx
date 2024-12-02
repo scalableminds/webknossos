@@ -20,6 +20,7 @@ import {
   FolderOutlined,
   InboxOutlined,
   HourglassOutlined,
+  LoadingOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
@@ -270,9 +271,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       return;
     }
 
-    Toast.info("Uploading dataset");
     this.setState({
       isUploading: true,
+      uploadProgress: 0,
     });
 
     const beforeUnload = (
@@ -351,7 +352,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       });
       finishDatasetUpload(datastoreUrl, uploadInfo).then(
         async ({ newDatasetId }) => {
-          Toast.success(messages["dataset.upload_success"]);
           let maybeError;
 
           if (this.state.needsConversion) {
@@ -371,25 +371,12 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               maybeError = error;
             }
 
-            if (maybeError == null) {
-              Toast.info(
-                <React.Fragment>
-                  The conversion for the uploaded dataset was started.
-                  <br />
-                  See{" "}
-                  <a target="_blank" href="/jobs" rel="noopener noreferrer">
-                    Processing Jobs
-                  </a>{" "}
-                  for an overview of running jobs.
-                </React.Fragment>,
-              );
-            } else {
+            if (maybeError != null) {
               Toast.error(
-                "The conversion for the uploaded dataset could not be started. Please try again or contact us if this issue occurs again.",
+                "The upload was successful, but the conversion for the dataset could not be started. Please try again or contact us if this issue occurs again.",
               );
             }
           }
-
           this.setState({
             isUploading: false,
             isFinishing: false,
@@ -509,26 +496,34 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             flexDirection: "column",
           }}
         >
-          <Spin spinning={isFinishing} style={{ marginTop: 4 }} tip="Processing uploaded files …">
-            <FolderOutlined
-              style={{
-                fontSize: 50,
-              }}
-            />
-            <br />
-            {isRetrying
-              ? `Upload of dataset ${form.getFieldValue("name")} froze.`
-              : `Uploading Dataset ${form.getFieldValue("name")}.`}
-            <br />
-            {isRetrying ? "Retrying to continue the upload …" : null}
-            <br />
-            <Progress
-              // Round to 1 digit after the comma, but use floor
-              // to avoid that 100% are displayed even though the progress is lower.
-              percent={Math.floor(uploadProgress * 1000) / 10}
-              status="active"
-            />
-          </Spin>
+          {isFinishing ? (
+            <>
+              <Spin indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} />
+              <br />
+              Processing uploaded files …
+            </>
+          ) : (
+            <>
+              <FolderOutlined
+                style={{
+                  fontSize: 50,
+                  marginBottom: 8,
+                }}
+              />
+              {isRetrying
+                ? `Upload of dataset ${form.getFieldValue("name")} froze.`
+                : `Uploading Dataset ${form.getFieldValue("name")}.`}
+              <br />
+              {isRetrying ? "Retrying to continue the upload …" : null}
+              <br />
+              <Progress
+                // Round to 1 digit after the comma, but use floor
+                // to avoid that 100% are displayed even though the progress is lower.
+                percent={Math.floor(uploadProgress * 1000) / 10}
+                status="active"
+              />
+            </>
+          )}
         </div>
       </Modal>
     );

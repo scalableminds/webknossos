@@ -188,11 +188,11 @@ export class DataBucket {
 
   getBoundingBox(): BoundingBoxType {
     const min = bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.magInfo);
-    const bucketResolution = this.cube.magInfo.getMagByIndexOrThrow(this.zoomedAddress[3]);
+    const bucketMag = this.cube.magInfo.getMagByIndexOrThrow(this.zoomedAddress[3]);
     const max: Vector3 = [
-      min[0] + Constants.BUCKET_WIDTH * bucketResolution[0],
-      min[1] + Constants.BUCKET_WIDTH * bucketResolution[1],
-      min[2] + Constants.BUCKET_WIDTH * bucketResolution[2],
+      min[0] + Constants.BUCKET_WIDTH * bucketMag[0],
+      min[1] + Constants.BUCKET_WIDTH * bucketMag[1],
+      min[2] + Constants.BUCKET_WIDTH * bucketMag[2],
     ];
     return {
       min,
@@ -521,7 +521,7 @@ export class DataBucket {
           const voxelToLabel = out;
           voxelToLabel[thirdDimensionIndex] =
             (voxelToLabel[thirdDimensionIndex] + sliceCount) % Constants.BUCKET_WIDTH;
-          // The voxelToLabel is already within the bucket and in the correct resolution.
+          // The voxelToLabel is already within the bucket and in the correct magnification.
           const voxelAddress = this.cube.getVoxelIndexByVoxelOffset(voxelToLabel);
           const currentSegmentId = Number(data[voxelAddress]);
 

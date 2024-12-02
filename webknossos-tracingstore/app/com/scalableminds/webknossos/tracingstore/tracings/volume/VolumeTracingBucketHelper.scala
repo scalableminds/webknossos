@@ -105,6 +105,7 @@ trait BucketKeys extends MortonEncoding with WKWDataFormatHelper with LazyLoggin
 
   private def parseBucketKeyXYZ(key: String) = {
     val keyRx = "([0-9a-z-]+)/(\\d+|\\d+-\\d+-\\d+)/-?\\d+-\\[(\\d+),(\\d+),(\\d+)]".r
+    logger.info(f"[debug-regex]: matching $key as volume tracing bucket key")
     key match {
       case keyRx(name, magStr, xStr, yStr, zStr) =>
         getBucketPosition(xStr, yStr, zStr, magStr, None).map(bucketPosition => (name, bucketPosition))
@@ -118,6 +119,7 @@ trait BucketKeys extends MortonEncoding with WKWDataFormatHelper with LazyLoggin
       additionalAxes: Seq[AdditionalAxis]): Option[(String, BucketPosition)] = {
     val additionalCoordinateCapture = Array.fill(additionalAxes.length)("(\\d+)").mkString(",")
     val keyRx = s"([0-9a-z-]+)/(\\d+|\\d+-\\d+-\\d+)/-?\\d+-\\[$additionalCoordinateCapture]\\[(\\d+),(\\d+),(\\d+)]".r
+    logger.info(f"[debug-regex]: matching $key as ND volume tracing bucket key")
     val matchOpt = keyRx.findFirstMatchIn(key)
     matchOpt match {
       case Some(aMatch) =>

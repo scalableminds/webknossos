@@ -79,7 +79,10 @@ object CumsumParser extends LazyLogging {
       reader.nextLong()
     }
     reader.endObject()
-    list.sorted.map { case formRx(x, y, z, w, h, d) => (x.toLong, y.toLong, z.toLong, w.toLong, h.toLong, d.toLong) }.toList
+    list.sorted.map { item =>
+      logger.info(f"[debug-regex]: matching $item as cumsum-json BoundingBox")
+      item match { case formRx(x, y, z, w, h, d) => (x.toLong, y.toLong, z.toLong, w.toLong, h.toLong, d.toLong) }
+    }.toList
   }
 
   private def parseCumSum(reader: JsonReader,

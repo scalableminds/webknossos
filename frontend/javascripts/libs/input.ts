@@ -23,7 +23,10 @@ const MOUSE_MOVE_DELTA_THRESHOLD = 5;
 export type ModifierKeys = "alt" | "shift" | "ctrlOrMeta";
 type KeyboardKey = string;
 type MouseButton = string;
-type KeyboardHandler = (event: KeyboardEvent) => void | Promise<void>;
+type KeyboardHandler = {
+  (event: KeyboardEvent): void | Promise<void>;
+  keyUpFn?: (event: KeyboardEvent) => void;
+};
 // Callable Object, see https://www.typescriptlang.org/docs/handbook/2/functions.html#call-signatures
 type KeyboardLoopHandler = {
   (arg0: number, isOriginalEvent: boolean): void;
@@ -169,7 +172,10 @@ export class InputKeyboardNoLoop {
           event.stopPropagation();
         }
       },
-      _.noop,
+      (event: KeyboardEvent) => {
+        console.log("key up");
+        if (callback.keyUpFn != null) callback.keyUpFn(event);
+      },
     ];
     if (isExtendedCommand) {
       KeyboardJS.withContext("extended", () => {

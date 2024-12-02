@@ -180,16 +180,36 @@ class VolumeKeybindings {
   }
 }
 
+const handleUpdateCursor = (event: KeyboardEvent) => {
+  console.log("handleUpdateCursor");
+  const { viewModeData, temporaryConfiguration } = Store.getState();
+  const { mousePosition } = temporaryConfiguration;
+  if (mousePosition == null) return;
+  highlightAndSetCursorOnHoveredBoundingBox(
+    { x: mousePosition[0], y: mousePosition[1] },
+    viewModeData.plane.activeViewport,
+    event,
+  );
+};
+
 class BoundingBoxKeybindings {
   static getKeyboardControls() {
     return {
       c: () => Store.dispatch(addUserBoundingBoxAction()),
+      meta: createKeyDownAndUpHandler(),
+      ctrl: createKeyDownAndUpHandler(),
     };
   }
 
   static getExtendedKeyboardControls() {
     return { x: () => setTool(AnnotationToolEnum.BOUNDING_BOX) };
   }
+}
+
+function createKeyDownAndUpHandler() {
+  const fn = (event: KeyboardEvent) => handleUpdateCursor(event);
+  fn.keyUpFn = (event: KeyboardEvent) => handleUpdateCursor(event);
+  return fn;
 }
 
 function createDelayAwareMoveHandler(multiplier: number) {
@@ -356,11 +376,6 @@ class PlaneController extends React.PureComponent<Props> {
         event.preventDefault();
       }
     });
-    document.addEventListener("keyup", (event: KeyboardEvent) => {
-      if (event.key === "Control" || event.key === "Meta") {
-        this.handleUpdateCursor(event);
-      }
-    });
     this.input.keyboard = new InputKeyboard({
       // Move
       left: (timeFactor) => MoveHandlers.moveU(-getMoveOffset(Store.getState(), timeFactor)),
@@ -371,7 +386,7 @@ class PlaneController extends React.PureComponent<Props> {
     const {
       baseControls: notLoopedKeyboardControls,
       extendedControls: extendedNotLoopedKeyboardControls,
-    } = this.getNotLoopedKeyboardControls();
+    } = this.getNotLoopedKeyboardControls(); //
     const loopedKeyboardControls = this.getLoopedKeyboardControls();
     ensureNonConflictingHandlers(notLoopedKeyboardControls, loopedKeyboardControls);
     this.input.keyboardLoopDelayed = new InputKeyboard(
@@ -433,17 +448,6 @@ class PlaneController extends React.PureComponent<Props> {
     }
   }
 
-  handleUpdateCursor(event: KeyboardEvent) {
-    const { viewModeData, temporaryConfiguration } = Store.getState();
-    const { mousePosition } = temporaryConfiguration;
-    if (mousePosition == null) return;
-    highlightAndSetCursorOnHoveredBoundingBox(
-      { x: mousePosition[0], y: mousePosition[1] },
-      viewModeData.plane.activeViewport,
-      event,
-    );
-  }
-
   handleUpdateBrushSize(size: "small" | "medium" | "large") {
     const brushPresets = this.getBrushPresetsOrSetDefault();
     switch (size) {
@@ -496,9 +500,6 @@ class PlaneController extends React.PureComponent<Props> {
       q: downloadScreenshot,
       w: cycleTools,
       "shift + w": cycleToolsBackwards,
-      meta: (event: KeyboardEvent) => this.handleUpdateCursor(event),
-      ctrl: (event: KeyboardEvent) => this.handleUpdateCursor(event),
-      // TODO_c add meta key, extract method,
     };
 
     let extendedControls = {
@@ -521,7 +522,11 @@ class PlaneController extends React.PureComponent<Props> {
       this.props.tracing.volumes.length > 0
         ? VolumeKeybindings.getKeyboardControls()
         : emptyDefaultHandler;
-    const { c: boundingBoxCHandler } = BoundingBoxKeybindings.getKeyboardControls();
+    const {
+      c: boundingBoxCHandler,
+      meta: boundingBoxMetaHandler,
+      ctrl: boundingBoxCtrlHandler,
+    } = BoundingBoxKeybindings.getKeyboardControls();
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
     const extendedSkeletonControls =
       this.props.tracing.skeleton != null ? SkeletonKeybindings.getExtendedKeyboardControls() : {};
@@ -544,6 +549,8 @@ class PlaneController extends React.PureComponent<Props> {
           volumeCHandler,
           boundingBoxCHandler,
         ),
+        ctrl: boundingBoxCtrlHandler,
+        meta: boundingBoxMetaHandler,
       },
       extendedControls,
     };

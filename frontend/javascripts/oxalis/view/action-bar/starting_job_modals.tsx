@@ -527,7 +527,14 @@ function ShouldUseTreesFormItem() {
   );
 }
 
-function CollapsibleSplitMergersplitMergerEvaluationSettings({
+type SplitMergerEvaluationSettings = {
+  useSparseTracing?: boolean;
+  maxEdgeLength?: number;
+  sparseTubeThresholdInNm?: number;
+  minimumMergerPathLengthInNm?: number;
+}
+
+function CollapsibleSplitMergerEvaluationSettings({
   isActive = false,
   setActive,
 }: { isActive: boolean; setActive: (active: boolean) => void }) {
@@ -795,7 +802,7 @@ export function NeuronSegmentationForm() {
         { newDatasetName, selectedLayer: colorLayer, selectedBoundingBox, annotationId },
         form: FormInstance<any>,
       ) => {
-        const splitMergerEvaluationSettings = form.getFieldValue("splitMergerEvaluationSettings");
+        const splitMergerEvaluationSettings = form.getFieldValue("splitMergerEvaluationSettings") as SplitMergerEvaluationSettings;
         if (
           !selectedBoundingBox ||
           (doSplitMergerEvaluation && splitMergerEvaluationSettings == null)
@@ -841,7 +848,7 @@ export function NeuronSegmentationForm() {
       }
       jobSpecificInputFields={
         hasSkeletonAnnotation && (
-          <CollapsibleSplitMergersplitMergerEvaluationSettings
+          <CollapsibleSplitMergerEvaluationSettings
             isActive={doSplitMergerEvaluation}
             setActive={setDoSplitMergerEvaluation}
           />

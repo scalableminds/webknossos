@@ -233,6 +233,7 @@ class JobController @Inject()(
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
+
           datasetIdValidated <- ObjectId.fromString(datasetId)
           dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
@@ -243,6 +244,7 @@ class JobController @Inject()(
           _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
+          annotation_id_parsed <- Fox.runOptional(doSplitMergerEvaluation)(annotationId.toFox)
           command = JobCommand.infer_neurons
           commandArgs = Json.obj(
             "organization_id" -> organization._id,

@@ -223,7 +223,7 @@ class DatasetController @Inject()(userService: UserService,
       groupedByOrga = datasets.groupBy(_._organization).toList
       js <- Fox.serialCombined(groupedByOrga) { byOrgaTuple: (String, List[Dataset]) =>
         for {
-          organization <- organizationDAO.findOne(byOrgaTuple._1)
+          organization <- organizationDAO.findOne(byOrgaTuple._1)(GlobalAccessContext)
           groupedByDataStore = byOrgaTuple._2.groupBy(_._dataStore).toList
           result <- Fox.serialCombined(groupedByDataStore) { byDataStoreTuple: (String, List[Dataset]) =>
             for {

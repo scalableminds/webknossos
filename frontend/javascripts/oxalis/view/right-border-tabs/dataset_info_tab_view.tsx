@@ -6,10 +6,12 @@ import Markdown from "libs/markdown_adapter";
 import React, { type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
-import { ControlModeEnum } from "oxalis/constants";
-import { formatScale } from "libs/format_utils";
+import { ControlModeEnum, LongUnitToShortUnitMap } from "oxalis/constants";
+import { formatNumberToVolume, formatScale, formatVoxels } from "libs/format_utils";
 import {
   getDatasetExtentAsString,
+  getDatasetExtentInUnitAsProduct,
+  getDatasetExtentInVoxelAsProduct,
   getMagnificationUnion,
   getReadableURLPart,
 } from "oxalis/model/accessors/dataset_accessor";
@@ -130,9 +132,27 @@ const shortcuts = [
 export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
   const extentInVoxel = getDatasetExtentAsString(dataset, true);
   const extentInLength = getDatasetExtentAsString(dataset, false);
+  const extentProductInVx = getDatasetExtentInVoxelAsProduct(dataset);
+  const extentProductInUnit = getDatasetExtentInUnitAsProduct(dataset);
+  const formattedExtentInUnit = formatNumberToVolume(
+    extentProductInUnit,
+    LongUnitToShortUnitMap[dataset.dataSource.scale.unit],
+  );
+
+  const renderDSExtentTooltip = () => {
+    return (
+      <div>
+        Dataset extent:
+        <br />
+        {formatVoxels(extentProductInVx)}
+        <br />
+        {formattedExtentInUnit}
+      </div>
+    );
+  };
 
   return (
-    <FastTooltip title="Dataset extent" placement="left" wrapper="tr">
+    <FastTooltip dynamicRenderer={renderDSExtentTooltip} placement="left" wrapper="tr">
       <td
         style={{
           paddingRight: 20,

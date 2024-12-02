@@ -87,11 +87,11 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     currentZoomStep: number,
     activePlane: OrthoView,
     areas: OrthoViewMap<Area>,
-    resolutions: Vector3[],
-    resolutionInfo: MagInfo,
+    mags: Vector3[],
+    magInfo: MagInfo,
     additionalCoordinates: AdditionalCoordinate[] | null,
   ): Array<PullQueueItem> {
-    const zoomStep = resolutionInfo.getIndexOrClosestHigherIndex(currentZoomStep);
+    const zoomStep = magInfo.getIndexOrClosestHigherIndex(currentZoomStep);
 
     if (zoomStep == null) {
       // The layer cannot be rendered at this zoom step, as necessary magnifications
@@ -99,7 +99,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       return [];
     }
 
-    const maxZoomStep = resolutionInfo.getCoarsestMagIndex();
+    const maxZoomStep = magInfo.getCoarsestMagIndex();
     const zoomStepDiff = currentZoomStep - zoomStep;
     const queueItemsForCurrentZoomStep = this.prefetchImpl(
       cube,
@@ -109,7 +109,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       zoomStepDiff,
       activePlane,
       areas,
-      resolutions,
+      mags,
       false,
       additionalCoordinates,
     );
@@ -125,7 +125,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
         zoomStepDiff - 1,
         activePlane,
         areas,
-        resolutions,
+        mags,
         true,
         additionalCoordinates,
       );
@@ -142,7 +142,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     zoomStepDiff: number,
     activePlane: OrthoView,
     areas: OrthoViewMap<Area>,
-    resolutions: Vector3[],
+    mags: Vector3[],
     isFallback: boolean,
     additionalCoordinates: AdditionalCoordinate[] | null,
   ): Array<PullQueueItem> {
@@ -169,7 +169,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       widthHeightVector[v] = areas[plane].bottom - areas[plane].top;
       const scaledWidthHeightVector = zoomedAddressToAnotherZoomStep(
         widthHeightVector,
-        resolutions,
+        mags,
         zoomStep,
       );
       const width = scaledWidthHeightVector[u];

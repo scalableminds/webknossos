@@ -544,10 +544,10 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     );
   }
 
-  renderResolutionsTooltip = () => {
-    const { dataset, annotation, activeMagInfo: activeResolutionInfo } = this.props;
-    const { activeMagOfEnabledLayers } = activeResolutionInfo;
-    const resolutionUnion = getMagnificationUnion(dataset);
+  renderMagsTooltip = () => {
+    const { dataset, annotation, activeMagInfo } = this.props;
+    const { activeMagOfEnabledLayers } = activeMagInfo;
+    const magUnion = getMagnificationUnion(dataset);
     return (
       <div style={{ width: 200 }}>
         Rendered magnification per layer:
@@ -564,7 +564,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
         </ul>
         Available magnifications:
         <ul>
-          {resolutionUnion.map((mags) => (
+          {magUnion.map((mags) => (
             <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
           ))}
         </ul>
@@ -573,12 +573,12 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     );
   };
 
-  getResolutionInfo() {
-    const { activeMagInfo: activeResolutionInfo } = this.props;
-    const { representativeResolution, isActiveResolutionGlobal } = activeResolutionInfo;
+  getMagInfo() {
+    const { activeMagInfo } = this.props;
+    const { representativeMag, isActiveMagGlobal } = activeMagInfo;
 
-    return representativeResolution != null ? (
-      <FastTooltip dynamicRenderer={this.renderResolutionsTooltip} placement="left" wrapper="tr">
+    return representativeMag != null ? (
+      <FastTooltip dynamicRenderer={this.renderMagsTooltip} placement="left" wrapper="tr">
         <td
           style={{
             paddingRight: 4,
@@ -597,8 +597,8 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             paddingTop: 8,
           }}
         >
-          {representativeResolution.join("-")}
-          {isActiveResolutionGlobal ? "" : "*"}{" "}
+          {representativeMag.join("-")}
+          {isActiveMagGlobal ? "" : "*"}{" "}
         </td>
       </FastTooltip>
     ) : null;
@@ -626,7 +626,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             <tbody>
               <VoxelSizeRow dataset={dataset} />
               <DatasetExtentRow dataset={dataset} />
-              {this.getResolutionInfo()}
+              {this.getMagInfo()}
             </tbody>
           </table>
         </div>

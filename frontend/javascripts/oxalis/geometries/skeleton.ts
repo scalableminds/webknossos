@@ -13,7 +13,7 @@ import NodeShader, {
 import Store from "oxalis/throttled_store";
 import * as Utils from "libs/utils";
 import type { AdditionalCoordinate } from "types/api_flow_types";
-import type { UpdateActionNode } from "oxalis/model/sagas/update_actions";
+import type { CreateActionNode, UpdateActionNode } from "oxalis/model/sagas/update_actions";
 
 const MAX_CAPACITY = 1000;
 
@@ -518,7 +518,7 @@ class Skeleton {
   /**
    * Creates a new node in a WebGL buffer.
    */
-  createNode(treeId: number, node: Node | UpdateActionNode) {
+  createNode(treeId: number, node: Node | UpdateActionNode | CreateActionNode) {
     const id = this.combineIds(node.id, treeId);
     this.create(
       id,

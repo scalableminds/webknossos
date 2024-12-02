@@ -36,7 +36,7 @@ type Props = {
 };
 
 type FormValues = {
-  isResolutionRestricted: boolean;
+  isMagRestricted: boolean;
   summary: string;
   teamId: string;
   description: string;
@@ -103,7 +103,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
     const taskType = taskTypeId ? await getTaskType(taskTypeId) : null;
 
     const defaultValues = {
-      isResolutionRestricted: false,
+      isMagRestricted: false,
       settings: {
         somaClickingAllowed: true,
         branchPointsAllowed: true,
@@ -131,7 +131,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
     }
 
     if (taskType?.settings.magRestrictions.min || taskType?.settings.magRestrictions.max)
-      form.setFieldValue(["isResolutionRestricted"], true);
+      form.setFieldValue(["isMagRestricted"], true);
   }
 
   async function onFinish(formValues: FormValues) {
@@ -139,7 +139,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
       settings,
       teamId,
       recommendedConfiguration,
-      isResolutionRestricted: _isResolutionRestricted,
+      isMagRestricted: _isMagRestricted,
       ...rest
     } = formValues;
     const teamName = teams.find((team) => team.id === teamId)!["name"];
@@ -411,7 +411,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
           </FormItem>
 
           <FormItem
-            name={["isResolutionRestricted"]}
+            name={["isMagRestricted"]}
             valuePropName="checked"
             style={{
               marginBottom: 6,
@@ -431,12 +431,12 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
           <FormItem
             noStyle
             shouldUpdate={(prevValues, curValues) =>
-              !prevValues.isResolutionRestricted ||
-              prevValues.isResolutionRestricted !== curValues.isResolutionRestricted
+              !prevValues.isMagRestricted ||
+              prevValues.isMagRestricted !== curValues.isMagRestricted
             }
           >
             {({ getFieldValue }) =>
-              getFieldValue(["isResolutionRestricted"]) ? (
+              getFieldValue(["isMagRestricted"]) ? (
                 <div
                   style={{
                     marginLeft: 24,

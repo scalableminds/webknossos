@@ -239,8 +239,8 @@ class DataCube {
   ): CubeEntry | null {
     const cubeKey = this.getCubeKey(zoomStep, coords);
     if (this.cubes[cubeKey] == null) {
-      const resolution = this.magInfo.getMagByIndex(zoomStep);
-      if (resolution == null) {
+      const mag = this.magInfo.getMagByIndex(zoomStep);
+      if (mag == null) {
         return null;
       }
 
@@ -254,9 +254,9 @@ class DataCube {
       }
 
       const zoomedCubeBoundary: Vector3 = [
-        Math.ceil(this.boundingBox.max[0] / (constants.BUCKET_WIDTH * resolution[0])) + 1,
-        Math.ceil(this.boundingBox.max[1] / (constants.BUCKET_WIDTH * resolution[1])) + 1,
-        Math.ceil(this.boundingBox.max[2] / (constants.BUCKET_WIDTH * resolution[2])) + 1,
+        Math.ceil(this.boundingBox.max[0] / (constants.BUCKET_WIDTH * mag[0])) + 1,
+        Math.ceil(this.boundingBox.max[1] / (constants.BUCKET_WIDTH * mag[1])) + 1,
+        Math.ceil(this.boundingBox.max[2] / (constants.BUCKET_WIDTH * mag[2])) + 1,
       ];
       this.cubes[cubeKey] = new CubeEntry(zoomedCubeBoundary);
     }
@@ -433,13 +433,13 @@ class DataCube {
     // Please make use of a LabeledVoxelsMap instead.
     const promises = [];
 
-    for (const [resolutionIndex] of this.magInfo.getMagsWithIndices()) {
+    for (const [magIndex] of this.magInfo.getMagsWithIndices()) {
       promises.push(
         this._labelVoxelInResolution_DEPRECATED(
           voxel,
           additionalCoordinates,
           label,
-          resolutionIndex,
+          magIndex,
           activeSegmentId,
         ),
       );
@@ -630,14 +630,14 @@ class DataCube {
       const currentLabeledVoxelMap =
         bucketsWithLabeledVoxelsMap.get(currentBucket.zoomedAddress) || new Map();
 
-      const currentResolution = this.magInfo.getMagByIndexOrThrow(currentBucket.zoomedAddress[3]);
+      const currentMag = this.magInfo.getMagByIndexOrThrow(currentBucket.zoomedAddress[3]);
 
       const markUvwInSliceAsLabeled = ([firstCoord, secondCoord, thirdCoord]: Vector3) => {
         // Convert bucket local W coordinate to global W (both mag-dependent)
         const w = dimensionIndices[2];
         thirdCoord += currentBucket.getTopLeftInMag()[w];
         // Convert mag-dependent W to mag-independent W
-        thirdCoord *= currentResolution[w];
+        thirdCoord *= currentMag[w];
 
         if (!currentLabeledVoxelMap.has(thirdCoord)) {
           currentLabeledVoxelMap.set(
@@ -697,7 +697,7 @@ class DataCube {
               labeledVoxelCount++;
               const currentGlobalPosition = V3.add(
                 currentGlobalBucketPosition,
-                V3.scale3(adjustedNeighbourVoxelXyz, currentResolution),
+                V3.scale3(adjustedNeighbourVoxelXyz, currentMag),
               );
               coveredBBoxMin = [
                 Math.min(coveredBBoxMin[0], currentGlobalPosition[0]),
@@ -821,12 +821,12 @@ class DataCube {
     additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number,
   ): number {
-    const resolutions = this.magInfo.getDenseMags();
+    const mags = this.magInfo.getDenseMags();
     let usableZoomStep = zoomStep;
 
     while (
       position &&
-      usableZoomStep < resolutions.length - 1 &&
+      usableZoomStep < mags.length - 1 &&
       !this.isZoomStepCurrentlyRenderableForVoxel(position, additionalCoordinates, usableZoomStep)
     ) {
       usableZoomStep++;
@@ -840,12 +840,12 @@ class DataCube {
     additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number,
   ): Promise<number> {
-    const resolutions = this.magInfo.getDenseMags();
+    const mags = this.magInfo.getDenseMags();
     let usableZoomStep = zoomStep;
 
     while (
       position &&
-      usableZoomStep < resolutions.length - 1 &&
+      usableZoomStep < mags.length - 1 &&
       !(await this.isZoomStepUltimatelyRenderableForVoxel(
         position,
         additionalCoordinates,
@@ -920,10 +920,10 @@ class DataCube {
   getVoxelOffset(voxel: Vector3, zoomStep: number = 0): Vector3 {
     // No `map` for performance reasons
     const voxelOffset: Vector3 = [0, 0, 0];
-    const resolution = this.magInfo.getMagByIndexOrThrow(zoomStep);
+    const mag = this.magInfo.getMagByIndexOrThrow(zoomStep);
 
     for (let i = 0; i < 3; i++) {
-      voxelOffset[i] = Math.floor(voxel[i] / resolution[i]) % constants.BUCKET_WIDTH;
+      voxelOffset[i] = Math.floor(voxel[i] / mag[i]) % constants.BUCKET_WIDTH;
     }
 
     return voxelOffset;

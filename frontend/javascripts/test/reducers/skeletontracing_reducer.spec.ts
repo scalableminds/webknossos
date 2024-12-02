@@ -838,7 +838,7 @@ test("SkeletonTracing should add a new tree", (t) => {
     branchPoints: [],
     nodes: new DiffableMap(),
     treeId: 2,
-    color: [0, 0, 1], // name: ...
+    color: [0, 0, 1],
   });
 });
 test("SkeletonTracing should add a several new trees", (t) => {

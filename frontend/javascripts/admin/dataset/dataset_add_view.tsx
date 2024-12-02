@@ -307,48 +307,42 @@ const getPostUploadModal = (
         {datasetNeedsConversion ? " and a conversion job was started" : null}.
         <br />
         <div
+          className="centered-items"
           style={{
-            display: "flex",
+            marginTop: 10,
           }}
         >
-          <div
-            className="centered-items"
-            style={{
-              marginTop: 10,
-            }}
-          >
-            {datasetNeedsConversion ? (
-              <React.Fragment>
-                <Button type="primary" onClick={() => history.push("/jobs")}>
-                  View the Jobs Queue
-                </Button>
-                <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
-              </React.Fragment>
-            ) : (
-              <React.Fragment>
-                <Button
-                  type="primary"
-                  onClick={() =>
-                    history.push(
-                      `/datasets/${getReadableURLPart({ name: uploadedDatasetName, id: datasetId })}/view`,
-                    )
-                  }
-                >
-                  View the Dataset
-                </Button>
-                <Button
-                  onClick={() =>
-                    history.push(
-                      `/datasets/${getReadableURLPart({ name: uploadedDatasetName, id: datasetId })}/edit`,
-                    )
-                  }
-                >
-                  Go to Dataset Settings
-                </Button>
-                <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
-              </React.Fragment>
-            )}
-          </div>
+          {datasetNeedsConversion ? (
+            <React.Fragment>
+              <Button type="primary" onClick={() => history.push("/jobs")}>
+                View the Jobs Queue
+              </Button>
+              <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
+            </React.Fragment>
+          ) : (
+            <React.Fragment>
+              <Button
+                type="primary"
+                onClick={() =>
+                  history.push(
+                    `/datasets/${getReadableURLPart({ name: uploadedDatasetName, id: datasetId })}/view`,
+                  )
+                }
+              >
+                View the Dataset
+              </Button>
+              <Button
+                onClick={() =>
+                  history.push(
+                    `/datasets/${getReadableURLPart({ name: uploadedDatasetName, id: datasetId })}/edit`,
+                  )
+                }
+              >
+                Go to Dataset Settings
+              </Button>
+              <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
+            </React.Fragment>
+          )}
         </div>
       </div>{" "}
     </Modal>

@@ -269,6 +269,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
     this.setState({
       isUploading: true,
+      uploadProgress: 0,
     });
 
     const beforeUnload = (

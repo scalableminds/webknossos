@@ -66,11 +66,11 @@ case class UpdateLayerMetadataAnnotationAction(tracingId: String,
     this.copy(actionAuthorId = authorId)
 }
 
-case class UpdateMetadataAnnotationAction(name: Option[String],
-                                          description: Option[String],
-                                          actionTimestamp: Option[Long] = None,
-                                          actionAuthorId: Option[String] = None,
-                                          info: Option[String] = None)
+case class UpdateMetadataAnnotationAction(
+    description: Option[String], // None means do not change description. Emptystring means set to empty
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[String] = None,
+    info: Option[String] = None)
     extends AnnotationUpdateAction
     with ApplyImmediatelyUpdateAction {
   override def addTimestamp(timestamp: Long): UpdateAction =

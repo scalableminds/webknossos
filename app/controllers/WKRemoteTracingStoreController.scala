@@ -73,11 +73,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           _ <- Fox.serialCombined(newLayersProto.filter(l => layerIdsToUpdate.contains(l.tracingId)))(l =>
             annotationLayerDAO.updateName(annotationIdValidated, l.tracingId, l.name))
           // Layer stats are ignored here, they are sent eagerly when saving updates
-          _ <- annotationDAO.updateName(annotationIdValidated,
-                                        request.body.name.getOrElse(AnnotationDefaults.defaultName))
-          _ <- annotationDAO.updateDescription(
-            annotationIdValidated,
-            request.body.description.getOrElse(AnnotationDefaults.defaultDescription))
+          _ <- annotationDAO.updateDescription(annotationIdValidated, request.body.description)
         } yield Ok
       }
     }

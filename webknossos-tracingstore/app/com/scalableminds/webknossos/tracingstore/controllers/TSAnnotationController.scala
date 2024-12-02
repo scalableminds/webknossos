@@ -17,8 +17,7 @@ import com.scalableminds.webknossos.tracingstore.annotation.{
   AnnotationTransactionService,
   ResetToBaseAnnotationAction,
   TSAnnotationService,
-  UpdateActionGroup,
-  UpdateMetadataAnnotationAction
+  UpdateActionGroup
 }
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings._
@@ -26,16 +25,10 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTraci
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import net.liftweb.common.{Empty, Failure, Full}
 import play.api.i18n.Messages
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
-
-case class UpdateAnnotationMetadataParameters(name: Option[String], description: Option[String])
-
-object UpdateAnnotationMetadataParameters {
-  implicit val jsonFormat: OFormat[UpdateAnnotationMetadataParameters] = Json.format[UpdateAnnotationMetadataParameters]
-}
 
 class TSAnnotationController @Inject()(
     accessTokenService: TracingStoreAccessTokenService,
@@ -65,23 +58,6 @@ class TSAnnotationController @Inject()(
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeAnnotation(annotationId)) {
             for {
               _ <- annotationTransactionService.handleUpdateGroups(annotationId, request.body)
-            } yield Ok
-          }
-        }
-      }
-    }
-
-  def updateMetadata(annotationId: String): Action[UpdateAnnotationMetadataParameters] =
-    Action.async(validateJson[UpdateAnnotationMetadataParameters]) { implicit request =>
-      log() {
-        logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeAnnotation(annotationId)) {
-            for {
-              currentVersion <- annotationService.currentMaterializableVersion(annotationId)
-              _ <- annotationTransactionService.handleSingleUpdateAction(
-                annotationId,
-                currentVersion,
-                UpdateMetadataAnnotationAction(name = request.body.name, description = request.body.description))
             } yield Ok
           }
         }

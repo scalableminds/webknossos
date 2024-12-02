@@ -8,11 +8,10 @@ enum AnnotationLayerTypeProto {
 }
 
 message AnnotationProto {
-  optional string name = 1;
-  optional string description = 2;
-  required int64 version = 3;
-  repeated AnnotationLayerProto annotationLayers = 4;
-  required int64 earliestAccessibleVersion = 5;
+  required string description = 1; // emptystring encodes no description
+  required int64 version = 2;
+  repeated AnnotationLayerProto annotationLayers = 3;
+  required int64 earliestAccessibleVersion = 4;
 }
 
 message AnnotationLayerProto {

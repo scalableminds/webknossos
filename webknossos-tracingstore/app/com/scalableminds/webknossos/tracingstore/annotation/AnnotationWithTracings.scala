@@ -102,7 +102,9 @@ case class AnnotationWithTracings(
       if (l.tracingId == a.tracingId) l.copy(name = a.layerName) else l)))
 
   def updateMetadata(a: UpdateMetadataAnnotationAction): AnnotationWithTracings =
-    this.copy(annotation = annotation.copy(name = a.name, description = a.description))
+    a.description.map { newDescription =>
+      this.copy(annotation = annotation.copy(description = newDescription))
+    }.getOrElse(this)
 
   def withVersion(newVersion: Long): AnnotationWithTracings = {
     val tracingsUpdated = tracingsById.view.mapValues {

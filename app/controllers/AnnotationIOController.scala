@@ -140,8 +140,7 @@ class AnnotationIOController @Inject()(
                                                      description,
                                                      ObjectId.generate)
           annotationProto = AnnotationProto(
-            name = Some(annotation.name),
-            description = Some(annotation.description),
+            description = annotation.description,
             version = 0L,
             annotationLayers = annotation.annotationLayers.map(_.toProto),
             earliestAccessibleVersion = 0L

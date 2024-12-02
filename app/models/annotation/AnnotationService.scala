@@ -276,8 +276,7 @@ class AnnotationService @Inject()(
         )
       }
       annotationProto = AnnotationProto(
-        name = Some(AnnotationDefaults.defaultName),
-        description = Some(AnnotationDefaults.defaultDescription),
+        description = AnnotationDefaults.defaultDescription,
         version = 0L,
         annotationLayers = layersProto,
         earliestAccessibleVersion = 0L
@@ -473,8 +472,7 @@ class AnnotationService @Inject()(
                                   description.getOrElse(""),
                                   typ = AnnotationType.TracingBase)
       annotationBaseProto = AnnotationProto(
-        name = Some(AnnotationDefaults.defaultName),
-        description = Some(AnnotationDefaults.defaultDescription),
+        description = AnnotationDefaults.defaultDescription,
         version = 0L,
         annotationLayers = annotationLayers.map(_.toProto),
         earliestAccessibleVersion = 0L

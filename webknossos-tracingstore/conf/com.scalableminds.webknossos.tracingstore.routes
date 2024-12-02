@@ -8,7 +8,6 @@ GET         /health                                                             
 POST        /annotation/save                                                        @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.save(annotationId: String)
 GET         /annotation/:annotationId                                               @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.get(annotationId: String, version: Option[Long])
 POST        /annotation/:annotationId/update                                        @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.update(annotationId: String)
-POST        /annotation/:annotationId/updateMetadata                                @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.updateMetadata(annotationId: String)
 GET         /annotation/:annotationId/updateActionLog                               @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.updateActionLog(annotationId: String, newestVersion: Option[Long], oldestVersion: Option[Long])
 GET         /annotation/:annotationId/updateActionStatistics                        @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.updateActionStatistics(annotationId: String)
 GET         /annotation/:annotationId/newestVersion                                 @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.newestVersion(annotationId: String)

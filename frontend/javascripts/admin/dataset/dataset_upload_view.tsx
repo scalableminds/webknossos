@@ -20,6 +20,7 @@ import {
   FolderOutlined,
   InboxOutlined,
   HourglassOutlined,
+  LoadingOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
@@ -491,34 +492,42 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         }}
         onCancel={this.cancelUpload}
       >
-        <Spin spinning={isFinishing} style={{ marginTop: 4 }} tip="Processing uploaded files …">
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              flexDirection: "column",
-            }}
-          >
-            <FolderOutlined
-              style={{
-                fontSize: 50,
-              }}
-            />
-            <br />
-            {isRetrying
-              ? `Upload of dataset ${form.getFieldValue("name")} froze.`
-              : `Uploading Dataset ${form.getFieldValue("name")}.`}
-            <br />
-            {isRetrying ? "Retrying to continue the upload …" : null}
-            <br />
-            <Progress
-              // Round to 1 digit after the comma, but use floor
-              // to avoid that 100% are displayed even though the progress is lower.
-              percent={Math.floor(uploadProgress * 1000) / 10}
-              status="active"
-            />
-          </div>
-        </Spin>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            flexDirection: "column",
+          }}
+        >
+          {isFinishing ? (
+            <>
+              <Spin indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} />
+              <br />
+              Processing uploaded files …
+            </>
+          ) : (
+            <>
+              <FolderOutlined
+                style={{
+                  fontSize: 50,
+                  marginBottom: 8,
+                }}
+              />
+              {isRetrying
+                ? `Upload of dataset ${form.getFieldValue("name")} froze.`
+                : `Uploading Dataset ${form.getFieldValue("name")}.`}
+              <br />
+              {isRetrying ? "Retrying to continue the upload …" : null}
+              <br />
+              <Progress
+                // Round to 1 digit after the comma, but use floor
+                // to avoid that 100% are displayed even though the progress is lower.
+                percent={Math.floor(uploadProgress * 1000) / 10}
+                status="active"
+              />
+            </>
+          )}
+        </div>
       </Modal>
     );
   };

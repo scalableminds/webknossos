@@ -25,15 +25,16 @@ class DSMeshController @Inject()(
 
   def listMeshFiles(token: Option[String],
                     organizationId: String,
-                    datasetName: String,
+                    datasetDirectoryName: String,
                     dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
+        urlOrHeaderToken(token, request)) {
         for {
-          meshFiles <- meshFileService.exploreMeshFiles(organizationId, datasetName, dataLayerName)
+          meshFiles <- meshFileService.exploreMeshFiles(organizationId, datasetDirectoryName, dataLayerName)
           neuroglancerMeshFiles <- meshFileService.exploreNeuroglancerPrecomputedMeshes(organizationId,
-                                                                                        datasetName,
+                                                                                        datasetDirectoryName,
                                                                                         dataLayerName)
           allMeshFiles = meshFiles ++ neuroglancerMeshFiles
         } yield Ok(Json.toJson(allMeshFiles))
@@ -42,7 +43,7 @@ class DSMeshController @Inject()(
 
   def listMeshChunksForSegment(token: Option[String],
                                organizationId: String,
-                               datasetName: String,
+                               datasetDirectoryName: String,
                                dataLayerName: String,
                                /* If targetMappingName is set, assume that meshfile contains meshes for
                                            the oversegmentation. Collect mesh chunks of all *unmapped* segment ids
@@ -53,17 +54,18 @@ class DSMeshController @Inject()(
                                targetMappingName: Option[String],
                                editableMappingTracingId: Option[String]): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
+        urlOrHeaderToken(token, request)) {
         for {
           _ <- Fox.successful(())
           mappingNameForMeshFile = meshFileService.mappingNameForMeshFile(organizationId,
-                                                                          datasetName,
+                                                                          datasetDirectoryName,
                                                                           dataLayerName,
                                                                           request.body.meshFile)
           segmentIds: List[Long] <- segmentIdsForAgglomerateIdIfNeeded(
             organizationId,
-            datasetName,
+            datasetDirectoryName,
             dataLayerName,
             targetMappingName,
             editableMappingTracingId,
@@ -73,12 +75,15 @@ class DSMeshController @Inject()(
             urlOrHeaderToken(token, request)
           )
           chunkInfos <- request.body.meshFileType match {
-            case Some("neuroglancerPrecomputed") => meshFileService.listMeshChunksForNeuroglancerPrecomputedMesh(request.body.meshFilePath, request.body.segmentId)
-            case _ => meshFileService.listMeshChunksForSegmentsMerged(organizationId,
-              datasetName,
-              dataLayerName,
-              request.body.meshFile,
-              segmentIds)
+            case Some("neuroglancerPrecomputed") =>
+              meshFileService.listMeshChunksForNeuroglancerPrecomputedMesh(request.body.meshFilePath,
+                                                                           request.body.segmentId)
+            case _ =>
+              meshFileService.listMeshChunksForSegmentsMerged(organizationId,
+                                                              datasetDirectoryName,
+                                                              dataLayerName,
+                                                              request.body.meshFile,
+                                                              segmentIds)
           }
         } yield Ok(Json.toJson(chunkInfos))
       }
@@ -86,13 +91,17 @@ class DSMeshController @Inject()(
 
   def readMeshChunk(token: Option[String],
                     organizationId: String,
-                    datasetName: String,
+                    datasetDirectoryName: String,
                     dataLayerName: String): Action[MeshChunkDataRequestList] =
     Action.async(validateJson[MeshChunkDataRequestList]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
+        urlOrHeaderToken(token, request)) {
         for {
-          (data, encoding) <- meshFileService.readMeshChunk(organizationId, datasetName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
+          (data, encoding) <- meshFileService.readMeshChunk(organizationId,
+                                                            datasetDirectoryName,
+                                                            dataLayerName,
+                                                            request.body) ?~> "mesh.file.loadChunk.failed"
         } yield {
           if (encoding.contains("gzip")) {
             Ok(data).withHeaders("Content-Encoding" -> "gzip")
@@ -103,15 +112,16 @@ class DSMeshController @Inject()(
 
   def loadFullMeshStl(token: Option[String],
                       organizationId: String,
-                      datasetName: String,
+                      datasetDirectoryName: String,
                       dataLayerName: String): Action[FullMeshRequest] =
     Action.async(validateJson[FullMeshRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
+        urlOrHeaderToken(token, request)) {
         for {
           data: Array[Byte] <- fullMeshService.loadFor(token: Option[String],
                                                        organizationId,
-                                                       datasetName,
+                                                       datasetDirectoryName,
                                                        dataLayerName,
                                                        request.body) ?~> "mesh.file.loadChunk.failed"
 

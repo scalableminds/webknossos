@@ -307,7 +307,7 @@ function _DownloadModalView({
 
   const selectedLayer = getLayerByName(dataset, selectedLayerName);
   const selectedLayerInfos = getExportLayerInfos(selectedLayer, tracing);
-  const selectedLayerResolutionInfo = getMagInfo(selectedLayer.resolutions);
+  const selectedLayerMagInfo = getMagInfo(selectedLayer.resolutions);
 
   const userBoundingBoxes = [
     ...rawUserBoundingBoxes,
@@ -323,8 +323,8 @@ function _DownloadModalView({
   const [selectedBoundingBoxId, setSelectedBoundingBoxId] = useState(
     initialBoundingBoxId ?? userBoundingBoxes[0].id,
   );
-  const [rawMag, setMag] = useState<Vector3>(selectedLayerResolutionInfo.getFinestMag());
-  const mag = selectedLayerResolutionInfo.getClosestExistingMag(rawMag);
+  const [rawMag, setMag] = useState<Vector3>(selectedLayerMagInfo.getFinestMag());
+  const mag = selectedLayerMagInfo.getClosestExistingMag(rawMag);
   const [exportFormat, setExportFormat] = useState<ExportFormat>(ExportFormat.OME_TIFF);
 
   const selectedBoundingBox = userBoundingBoxes.find(
@@ -364,8 +364,7 @@ function _DownloadModalView({
       await Model.ensureSavedState();
       await startJob(async () => {
         const job = await startExportTiffJob(
-          dataset.name,
-          dataset.owningOrganization,
+          dataset.id,
           computeArrayFromBoundingBox(selectedBoundingBox.boundingBox),
           currentAdditionalCoordinates,
           selectedLayerInfos.layerName,
@@ -673,11 +672,7 @@ function _DownloadModalView({
           </Divider>
           <Row>
             <Col span={19}>
-              <MagSlider
-                magnificationInfo={selectedLayerResolutionInfo}
-                value={mag}
-                onChange={setMag}
-              />
+              <MagSlider magnificationInfo={selectedLayerMagInfo} value={mag} onChange={setMag} />
             </Col>
             <Col
               span={5}

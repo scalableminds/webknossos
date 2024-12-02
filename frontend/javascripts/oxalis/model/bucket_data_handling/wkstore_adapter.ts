@@ -60,12 +60,12 @@ type RequestBucketInfo = SendBucketInfo & {
 // object as expected by the server on bucket request
 const createRequestBucketInfo = (
   zoomedAddress: BucketAddress,
-  resolutionInfo: MagInfo,
+  magInfo: MagInfo,
   fourBit: boolean,
   applyAgglomerate: string | null | undefined,
   version: number | null | undefined,
 ): RequestBucketInfo => ({
-  ...createSendBucketInfo(zoomedAddress, resolutionInfo),
+  ...createSendBucketInfo(zoomedAddress, magInfo),
   fourBit,
   ...(applyAgglomerate != null
     ? {
@@ -79,14 +79,11 @@ const createRequestBucketInfo = (
     : {}),
 });
 
-function createSendBucketInfo(
-  zoomedAddress: BucketAddress,
-  resolutionInfo: MagInfo,
-): SendBucketInfo {
+function createSendBucketInfo(zoomedAddress: BucketAddress, magInfo: MagInfo): SendBucketInfo {
   return {
-    position: bucketPositionToGlobalAddress(zoomedAddress, resolutionInfo),
+    position: bucketPositionToGlobalAddress(zoomedAddress, magInfo),
     additionalCoordinates: zoomedAddress[4],
-    mag: resolutionInfo.getMagByIndexOrThrow(zoomedAddress[3]),
+    mag: magInfo.getMagByIndexOrThrow(zoomedAddress[3]),
     cubeSize: constants.BUCKET_WIDTH,
   };
 }
@@ -100,13 +97,13 @@ export async function requestWithFallback(
   batch: Array<BucketAddress>,
 ): Promise<Array<Uint8Array | null | undefined>> {
   const state = Store.getState();
-  const datasetName = state.dataset.name;
+  const datasetDirectoryName = state.dataset.directoryName;
   const organization = state.dataset.owningOrganization;
   const dataStoreHost = state.dataset.dataStore.url;
   const tracingStoreHost = state.tracing.tracingStore.url;
 
   const getDataStoreUrl = (optLayerName?: string) =>
-    `${dataStoreHost}/data/datasets/${organization}/${datasetName}/layers/${
+    `${dataStoreHost}/data/datasets/${organization}/${datasetDirectoryName}/layers/${
       optLayerName || layerInfo.name
     }`;
 
@@ -198,7 +195,7 @@ export async function requestFromStore(
       : null;
   })();
 
-  const resolutionInfo = getMagInfo(layerInfo.resolutions);
+  const magInfo = getMagInfo(layerInfo.resolutions);
   const version =
     !isVolumeFallback && isSegmentation && maybeVolumeTracing != null
       ? maybeVolumeTracing.version
@@ -206,7 +203,7 @@ export async function requestFromStore(
   const bucketInfo = batch.map((zoomedAddress) =>
     createRequestBucketInfo(
       zoomedAddress,
-      resolutionInfo,
+      magInfo,
       fourBit,
       agglomerateMappingNameToApplyOnServer,
       version,

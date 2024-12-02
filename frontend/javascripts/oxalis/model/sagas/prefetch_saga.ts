@@ -103,14 +103,14 @@ export function* prefetchForPlaneMode(
 ): Saga<void> {
   const position = yield* select((state) => getPosition(state.flycam));
   const zoomStep = yield* select((state) => getActiveMagIndexForLayer(state, layer.name));
-  const resolutionInfo = getMagInfo(layer.resolutions);
+  const magInfo = getMagInfo(layer.mags);
   const activePlane = yield* select((state) => state.viewModeData.plane.activeViewport);
   const tracingTypes = yield* select(getTracingTypes);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const lastConnectionStats = getGlobalDataConnectionInfo().lastStats;
   const { lastPosition, lastDirection, lastZoomStep, lastBucketPickerTick } = previousProperties;
   const direction = getTraceDirection(position, lastPosition, lastDirection);
-  const resolutions = resolutionInfo.getDenseMags();
+  const mags = magInfo.getDenseMags();
   const layerRenderingManager = yield* call(
     [Model, Model.getLayerRenderingManagerByName],
     layer.name,
@@ -136,8 +136,8 @@ export function* prefetchForPlaneMode(
           zoomStep,
           activePlane,
           areas,
-          resolutions,
-          resolutionInfo,
+          mags,
+          magInfo,
           additionalCoordinates,
         );
 
@@ -171,8 +171,8 @@ export function* prefetchForArbitraryMode(
   const matrix = yield* select((state) => state.flycam.currentMatrix);
   const zoomStep = yield* select((state) => getActiveMagIndexForLayer(state, layer.name));
   const tracingTypes = yield* select(getTracingTypes);
-  const resolutionInfo = getMagInfo(layer.resolutions);
-  const resolutions = resolutionInfo.getDenseMags();
+  const magInfo = getMagInfo(layer.mags);
+  const mags = magInfo.getDenseMags();
   const layerRenderingManager = yield* call(
     [Model, Model.getLayerRenderingManagerByName],
     layer.name,
@@ -197,8 +197,8 @@ export function* prefetchForArbitraryMode(
           matrix,
           zoomStep,
           position,
-          resolutions,
-          resolutionInfo,
+          mags,
+          magInfo,
           additionalCoordinates,
         );
 

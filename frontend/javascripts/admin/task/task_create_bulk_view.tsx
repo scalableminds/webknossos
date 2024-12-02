@@ -5,7 +5,7 @@ import _ from "lodash";
 import type { APITask } from "types/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
-import { createTasks } from "admin/admin_rest_api";
+import { createTasks } from "admin/api/tasks";
 import { handleTaskCreationResponse } from "admin/task/task_create_form_view";
 import Messages from "messages";
 import Toast from "libs/toast";
@@ -16,7 +16,7 @@ const { TextArea } = Input;
 export const NUM_TASKS_PER_BATCH = 100;
 export type NewTask = {
   readonly boundingBox: BoundingBoxObject | null | undefined;
-  readonly dataSet: string;
+  readonly datasetId: string;
   readonly editPosition: Vector3;
   readonly editRotation: Vector3;
   readonly neededExperience: {
@@ -36,6 +36,16 @@ export type NewTask = {
     | null
     | undefined;
 };
+
+export type NewNmlTask = Pick<
+  NewTask,
+  | "taskTypeId"
+  | "neededExperience"
+  | "pendingInstances"
+  | "projectName"
+  | "scriptId"
+  | "boundingBox"
+>;
 
 export type TaskCreationResponse = {
   status: number;
@@ -75,7 +85,6 @@ function TaskCreateBulkView() {
 
     if (
       !_.isString(task.neededExperience.domain) ||
-      !_.isString(task.dataSet) ||
       !_.isString(task.taskTypeId) ||
       !_.isString(task.projectName) ||
       task.editPosition.some(Number.isNaN) ||
@@ -117,7 +126,7 @@ function TaskCreateBulkView() {
 
   function parseLine(line: string): NewTask {
     const words = splitToWords(line);
-    const dataSet = words[0];
+    const datasetId = words[0];
     const taskTypeId = words[1];
     const experienceDomain = words[2];
     const minExperience = Number.parseInt(words[3]);
@@ -156,7 +165,7 @@ function TaskCreateBulkView() {
             depth,
           };
     return {
-      dataSet,
+      datasetId,
       taskTypeId,
       scriptId,
       pendingInstances,
@@ -264,10 +273,10 @@ function TaskCreateBulkView() {
             Specify each new task on a separate line as comma separated values (CSV) in the
             following format:
             <br />
-            <a href="/dashboard">dataset</a>, <a href="/taskTypes">taskTypeId</a>, experienceDomain,
-            minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height,
-            depth, <a href="/projects">project</a>, <a href="/scripts">scriptId</a> (optional),
-            baseAnnotationId (optional)
+            <a href="/dashboard">datasetName, datasetId</a>, <a href="/taskTypes">taskTypeId</a>,
+            experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ,
+            width, height, depth, <a href="/projects">project</a>, <a href="/scripts">scriptId</a>{" "}
+            (optional), baseAnnotationId (optional)
             <br />
             If you want to define some (but not all) of the optional values, please list all
             optional values and use an empty value for the ones you do not want to set (e.g.,
@@ -306,7 +315,7 @@ function TaskCreateBulkView() {
             >
               <TextArea
                 className="input-monospace"
-                placeholder="dataset, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
+                placeholder="dataset, datasetId, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
                 autoSize={{
                   minRows: 6,
                 }}

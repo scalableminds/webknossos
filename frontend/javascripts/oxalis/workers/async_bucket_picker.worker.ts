@@ -40,7 +40,7 @@ function dequeueToArrayBuffer(bucketQueue: PriorityQueue<PriorityItem>): ArrayBu
 
 function pick(
   viewMode: ViewMode,
-  resolutions: Array<Vector3>,
+  mags: Array<Vector3>,
   position: Vector3,
   sphericalCapRadius: number,
   matrix: Matrix4x4,
@@ -64,7 +64,7 @@ function pick(
     determineBucketsForOblique(
       viewMode,
       loadingStrategy,
-      resolutions,
+      mags,
       position,
       enqueueFunction,
       matrix,
@@ -73,7 +73,7 @@ function pick(
     );
   } else if (viewMode === constants.MODE_ARBITRARY) {
     determineBucketsForFlight(
-      resolutions,
+      mags,
       position,
       sphericalCapRadius,
       enqueueFunction,
@@ -84,7 +84,7 @@ function pick(
     determineBucketsForOblique(
       viewMode,
       loadingStrategy,
-      resolutions,
+      mags,
       position,
       enqueueFunction,
       matrix,

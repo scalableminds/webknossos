@@ -78,16 +78,18 @@ export function BrainSpinnerWithError({
           <div style={{ textAlign: "center" }}>
             {gotUnhandledError ? messages["tracing.unhandled_initialization_error"] : message}
           </div>
-          {organizationToSwitchTo != null ? <div>{switchToOwningOrganizationButton}</div> : null}
-          <div>
-            <Link
-              to="/"
-              style={{
-                marginTop: 16,
-              }}
-            >
-              <Button type="primary">Return to dashboard</Button>
-            </Link>
+          <div className="flex-center-child" style={{ gap: 8 }}>
+            {organizationToSwitchTo != null ? <div>{switchToOwningOrganizationButton}</div> : null}
+            <div>
+              <Link
+                to="/"
+                style={{
+                  marginTop: 16,
+                }}
+              >
+                <Button type="primary">Return to dashboard</Button>
+              </Link>
+            </div>
           </div>
         </>
       }

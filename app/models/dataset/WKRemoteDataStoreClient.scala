@@ -16,7 +16,7 @@ import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import play.api.libs.json.JsObject
 import play.utils.UriEncoding
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
@@ -26,8 +26,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
   private lazy val hasSegmentIndexFileCache: AlfuCache[(String, String, String), Boolean] =
     AlfuCache(timeToLive = 1 minute)
 
-  def getDataLayerThumbnail(organizationId: String,
-                            dataset: Dataset,
+  def getDataLayerThumbnail(dataset: Dataset,
                             dataLayerName: String,
                             mag1BoundingBox: BoundingBox,
                             mag: Vec3Int,
@@ -35,8 +34,10 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
                             intensityRangeOpt: Option[(Double, Double)],
                             colorSettingsOpt: Option[ThumbnailColorSettings]): Fox[Array[Byte]] = {
     val targetMagBoundingBox = mag1BoundingBox / mag
-    logger.debug(s"Thumbnail called for: $organizationId/${dataset.name}, Layer: $dataLayerName")
-    rpc(s"${dataStore.url}/data/datasets/${urlEncode(organizationId)}/${dataset.urlEncodedName}/layers/$dataLayerName/thumbnail.jpg")
+    logger.debug(
+      s"Thumbnail called for: ${dataset._id}, organization: ${dataset._organization}, directoryName: ${dataset.directoryName}, Layer: $dataLayerName")
+    rpc(
+      s"${dataStore.url}/data/datasets/${urlEncode(dataset._organization)}/${urlEncode(dataset.directoryName)}/layers/$dataLayerName/thumbnail.jpg")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("mag" -> mag.toMagLiteral())
       .addQueryString("x" -> mag1BoundingBox.topLeft.x.toString)
@@ -52,8 +53,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .getWithBytesResponse
   }
 
-  def getLayerData(organizationId: String,
-                   dataset: Dataset,
+  def getLayerData(dataset: Dataset,
                    layerName: String,
                    mag1BoundingBox: BoundingBox,
                    mag: Vec3Int,
@@ -61,15 +61,15 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
     val targetMagBoundingBox = mag1BoundingBox / mag
     logger.debug(s"Fetching raw data. Mag $mag, mag1 bbox: $mag1BoundingBox, target-mag bbox: $targetMagBoundingBox")
     rpc(
-      s"${dataStore.url}/data/datasets/${urlEncode(organizationId)}/${dataset.urlEncodedName}/layers/$layerName/readData")
+      s"${dataStore.url}/data/datasets/${urlEncode(dataset._organization)}/${urlEncode(dataset.directoryName)}/layers/$layerName/readData")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .postJsonWithBytesResponse(
         RawCuboidRequest(mag1BoundingBox.topLeft, targetMagBoundingBox.size, mag, additionalCoordinates))
   }
 
-  def findPositionWithData(organizationId: String, dataset: Dataset, dataLayerName: String): Fox[JsObject] =
+  def findPositionWithData(dataset: Dataset, dataLayerName: String): Fox[JsObject] =
     rpc(
-      s"${dataStore.url}/data/datasets/${urlEncode(organizationId)}/${dataset.urlEncodedName}/layers/$dataLayerName/findData")
+      s"${dataStore.url}/data/datasets/${dataset._organization}/${dataset.directoryName}/layers/$dataLayerName/findData")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .getWithJsonResponse[JsObject]
 

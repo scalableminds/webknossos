@@ -362,7 +362,13 @@ function* handleSetMapping(
     return;
   }
 
-  if (showLoadingIndicator) {
+  const visibleSegmentationLayerName = yield* select(
+    (state) => getVisibleSegmentationLayer(state)?.name,
+  );
+  if (showLoadingIndicator && layerName === visibleSegmentationLayerName) {
+    // Only show the message if the mapping belongs to the currently visible
+    // segmentation layer. Otherwise, the message would stay as long as the
+    // actual layer not visible.
     message.loading({
       content: "Activating Mapping",
       key: MAPPING_MESSAGE_KEY,

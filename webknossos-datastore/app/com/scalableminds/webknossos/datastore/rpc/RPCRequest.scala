@@ -126,6 +126,12 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     performRequest
   }
 
+  def postWithJsonResponse[TW: Writes, TR: Reads](body: TW = Json.obj()): Fox[TR] = {
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
+    parseJsonResponse(performRequest)
+  }
+
   def put[T: Writes](body: T = Json.obj()): Fox[WSResponse] = {
     request =
       request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("PUT")

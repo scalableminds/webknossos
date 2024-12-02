@@ -828,17 +828,19 @@ class SegmentsView extends React.Component<Props, State> {
     const {
       mappingInfo,
       preferredQualityForMeshPrecomputation,
-      magInfoOfVisibleSegmentationLayer: resolutionInfo,
+      magInfoOfVisibleSegmentationLayer,
     } = this.props;
-    const defaultOrHigherIndex = resolutionInfo.getIndexOrClosestHigherIndex(
+    const defaultOrHigherIndex = magInfoOfVisibleSegmentationLayer.getIndexOrClosestHigherIndex(
       preferredQualityForMeshPrecomputation,
     );
-    const meshfileResolutionIndex =
+    const meshfileMagIndex =
       defaultOrHigherIndex != null
         ? defaultOrHigherIndex
-        : resolutionInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation);
-    const meshfileResolution = resolutionInfo.getMagByIndexWithFallback(
-      meshfileResolutionIndex,
+        : magInfoOfVisibleSegmentationLayer.getClosestExistingIndex(
+            preferredQualityForMeshPrecomputation,
+          );
+    const meshfileMag = magInfoOfVisibleSegmentationLayer.getMagByIndexWithFallback(
+      meshfileMagIndex,
       null,
     );
 
@@ -857,10 +859,9 @@ class SegmentsView extends React.Component<Props, State> {
           : undefined;
 
       const job = await startComputeMeshFileJob(
-        this.props.organization,
-        this.props.datasetName,
+        this.props.dataset.id,
         getBaseSegmentationName(this.props.visibleSegmentationLayer),
-        meshfileResolution,
+        meshfileMag,
         maybeMappingName,
       );
       this.setState({
@@ -891,21 +892,17 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
-  handleQualityChangeForPrecomputation = (resolutionIndex: number) =>
-    Store.dispatch(
-      updateTemporarySettingAction("preferredQualityForMeshPrecomputation", resolutionIndex),
-    );
+  handleQualityChangeForPrecomputation = (magIndex: number) =>
+    Store.dispatch(updateTemporarySettingAction("preferredQualityForMeshPrecomputation", magIndex));
 
-  handleQualityChangeForAdHocGeneration = (resolutionIndex: number) =>
+  handleQualityChangeForAdHocGeneration = (magIndex: number) =>
     Store.dispatch(
-      updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", resolutionIndex),
+      updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", magIndex),
     );
 
   getAdHocMeshSettings = () => {
-    const {
-      preferredQualityForMeshAdHocComputation,
-      magInfoOfVisibleSegmentationLayer: resolutionInfo,
-    } = this.props;
+    const { preferredQualityForMeshAdHocComputation, magInfoOfVisibleSegmentationLayer: magInfo } =
+      this.props;
     return (
       <div>
         <FastTooltip title="The higher the quality, the more computational resources are required">
@@ -916,10 +913,10 @@ class SegmentsView extends React.Component<Props, State> {
           style={{
             width: 220,
           }}
-          value={resolutionInfo.getClosestExistingIndex(preferredQualityForMeshAdHocComputation)}
+          value={magInfo.getClosestExistingIndex(preferredQualityForMeshAdHocComputation)}
           onChange={this.handleQualityChangeForAdHocGeneration}
         >
-          {resolutionInfo
+          {magInfo
             .getMagsWithIndices()
             .map(([log2Index, mag]: [number, Vector3], index: number) => (
               <Option value={log2Index} key={log2Index}>
@@ -933,10 +930,8 @@ class SegmentsView extends React.Component<Props, State> {
 
   getPreComputeMeshesPopover = () => {
     const { disabled, title } = this.getPrecomputeMeshesTooltipInfo();
-    const {
-      preferredQualityForMeshPrecomputation,
-      magInfoOfVisibleSegmentationLayer: resolutionInfo,
-    } = this.props;
+    const { preferredQualityForMeshPrecomputation, magInfoOfVisibleSegmentationLayer: magInfo } =
+      this.props;
     return (
       <div
         style={{
@@ -963,10 +958,10 @@ class SegmentsView extends React.Component<Props, State> {
             style={{
               width: 220,
             }}
-            value={resolutionInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation)}
+            value={magInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation)}
             onChange={this.handleQualityChangeForPrecomputation}
           >
-            {resolutionInfo
+            {magInfo
               .getMagsWithIndices()
               .map(([log2Index, mag]: [number, Vector3], index: number) => (
                 <Option value={log2Index} key={log2Index}>

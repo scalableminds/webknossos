@@ -1,6 +1,8 @@
 package models.organization
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
@@ -10,8 +12,9 @@ import models.dataset.{DataStore, DataStoreDAO}
 import models.folder.{Folder, FolderDAO, FolderService}
 import models.team.{PricingPlan, Team, TeamDAO}
 import models.user.{Invite, MultiUserDAO, User, UserDAO, UserService}
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsArray, JsObject, Json}
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -24,8 +27,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
                                     folderService: FolderService,
                                     userService: UserService,
                                     rpc: RPC,
-                                    conf: WkConf,
-)(implicit ec: ExecutionContext)
+                                    conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 
@@ -164,5 +166,14 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
 
   def newUserMailRecipient(organization: Organization)(implicit ctx: DBAccessContext): Fox[String] =
     fallbackOnOwnerEmail(organization.newUserMailingList, organization)
+
+  def acceptTermsOfService(organizationId: String, version: Int)(implicit ctx: DBAccessContext,
+                                                                 m: MessagesProvider): Fox[Unit] =
+    for {
+      _ <- bool2Fox(conf.WebKnossos.TermsOfService.enabled) ?~> "termsOfService.notEnabled"
+      requiredVersion = conf.WebKnossos.TermsOfService.version
+      _ <- bool2Fox(version == requiredVersion) ?~> Messages("termsOfService.versionMismatch", requiredVersion, version)
+      _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
+    } yield ()
 
 }

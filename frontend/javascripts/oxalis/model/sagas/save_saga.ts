@@ -291,18 +291,18 @@ export function* sendRequestToServer(
 
 function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>, tracingId: string) {
   const segmentationLayer = Model.getSegmentationTracingLayer(tracingId);
-  const segmentationResolutionInfo = yield* call(getMagInfo, segmentationLayer.resolutions);
+  const segmentationMagInfo = yield* call(getMagInfo, segmentationLayer.mags);
 
   if (segmentationLayer != null) {
     for (const saveEntry of saveQueue) {
       for (const updateAction of saveEntry.actions) {
         if (updateAction.name === "updateBucket") {
           const { position, mag, additionalCoordinates } = updateAction.value;
-          const resolutionIndex = segmentationResolutionInfo.getIndexByMag(mag);
+          const magIndex = segmentationMagInfo.getIndexByMag(mag);
           const zoomedBucketAddress = globalPositionToBucketPosition(
             position,
-            segmentationResolutionInfo.getDenseMags(),
-            resolutionIndex,
+            segmentationMagInfo.getDenseMags(),
+            magIndex,
             additionalCoordinates,
           );
           const bucket = segmentationLayer.cube.getOrCreateBucket(zoomedBucketAddress);

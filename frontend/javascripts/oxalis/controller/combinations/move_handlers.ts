@@ -49,9 +49,9 @@ export const moveW = (deltaW: number, oneSlide: boolean): void => {
     // The following logic might not always make sense when having layers
     // that are transformed each. Todo: Rethink / adapt the logic once
     // problems occur. Tracked in #6926.
-    const { representativeResolution } = getActiveMagInfo(Store.getState());
+    const { representativeMag } = getActiveMagInfo(Store.getState());
     const wDim = Dimensions.getIndices(activeViewport)[2];
-    const wStep = (representativeResolution || [1, 1, 1])[wDim];
+    const wStep = (representativeMag || [1, 1, 1])[wDim];
     Store.dispatch(
       moveFlycamOrthoAction(
         Dimensions.transDim([0, 0, Math.sign(deltaW) * Math.max(1, wStep)], activeViewport),

@@ -1465,31 +1465,28 @@ function ContextMenuInner(propsWithInputRef: Props) {
       const additionalCoordinates = flycam.additionalCoordinates;
       const requestUrl = getVolumeRequestUrl(dataset, tracing, tracingId, visibleSegmentationLayer);
       const magInfo = getMagInfo(visibleSegmentationLayer.resolutions);
-      const layersFinestResolution = magInfo.getFinestMag();
+      const layersFinestMag = magInfo.getFinestMag();
       const voxelSize = dataset.dataSource.scale;
 
       try {
         const [segmentSize] = await getSegmentVolumes(
           requestUrl,
-          layersFinestResolution,
+          layersFinestMag,
           [clickedSegmentOrMeshId],
           additionalCoordinates,
           mappingName,
         );
         const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
           requestUrl,
-          layersFinestResolution,
+          layersFinestMag,
           [clickedSegmentOrMeshId],
           additionalCoordinates,
           mappingName,
         );
-        const boundingBoxInMag1 = getBoundingBoxInMag1(
-          boundingBoxInRequestedMag,
-          layersFinestResolution,
-        );
+        const boundingBoxInMag1 = getBoundingBoxInMag1(boundingBoxInRequestedMag, layersFinestMag);
         const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
         const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
-        const volumeInUnit3 = voxelToVolumeInUnit(voxelSize, layersFinestResolution, segmentSize);
+        const volumeInUnit3 = voxelToVolumeInUnit(voxelSize, layersFinestMag, segmentSize);
         return [
           formatNumberToVolume(volumeInUnit3, LongUnitToShortUnitMap[voxelSize.unit]),
           `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,

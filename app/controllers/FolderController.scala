@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.objectid.ObjectId
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.dataset.DatasetDAO
@@ -10,7 +11,7 @@ import models.user.UserService
 import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
-import utils.{MetadataAssertions, ObjectId}
+import utils.MetadataAssertions
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

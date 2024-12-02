@@ -212,11 +212,11 @@ export function* editVolumeLayerAsync(): Saga<any> {
       continue;
     }
 
-    const maybeLabeledResolutionWithZoomStep = yield* select((state) =>
+    const maybeLabeledMagWithZoomStep = yield* select((state) =>
       getRenderableMagForSegmentationTracing(state, volumeTracing),
     );
 
-    if (!maybeLabeledResolutionWithZoomStep) {
+    if (!maybeLabeledMagWithZoomStep) {
       // Volume data is currently not rendered. Don't annotate anything.
       continue;
     }
@@ -251,13 +251,12 @@ export function* editVolumeLayerAsync(): Saga<any> {
         volumeTracing.tracingId,
       ),
     );
-    const { zoomStep: labeledZoomStep, resolution: labeledResolution } =
-      maybeLabeledResolutionWithZoomStep;
+    const { zoomStep: labeledZoomStep, mag: labeledMag } = maybeLabeledMagWithZoomStep;
     const currentLayer = yield* call(
       createVolumeLayer,
       volumeTracing,
       startEditingAction.planeId,
-      labeledResolution,
+      labeledMag,
     );
     const initialViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
@@ -431,8 +430,8 @@ export function* floodFill(): Saga<void> {
     const requestedZoomStep = yield* select((state) =>
       getActiveMagIndexForLayer(state, segmentationLayer.name),
     );
-    const resolutionInfo = yield* call(getMagInfo, segmentationLayer.resolutions);
-    const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
+    const magInfo = yield* call(getMagInfo, segmentationLayer.mags);
+    const labeledZoomStep = magInfo.getClosestExistingIndex(requestedZoomStep);
     const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
     const oldSegmentIdAtSeed = cube.getDataValue(
       seedPosition,
@@ -516,7 +515,7 @@ export function* floodFill(): Saga<void> {
         labeledVoxelMapFromFloodFill,
         labeledZoomStep,
         dimensionIndices,
-        resolutionInfo,
+        magInfo,
         cube,
         activeCellId,
         indexZ,
@@ -610,12 +609,12 @@ export function* ensureToolIsAllowedInMag(): Saga<any> {
 
   while (true) {
     yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP"]);
-    const isResolutionTooLow = yield* select((state) => {
+    const isMagTooLow = yield* select((state) => {
       const { activeTool } = state.uiInformation;
       return isVolumeAnnotationDisallowedForZoom(activeTool, state);
     });
 
-    if (isResolutionTooLow) {
+    if (isMagTooLow) {
       yield* put(setToolAction(AnnotationToolEnum.MOVE));
     }
   }

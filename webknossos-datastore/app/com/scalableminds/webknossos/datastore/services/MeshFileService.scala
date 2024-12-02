@@ -296,17 +296,6 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
         .toSet
   }
 
-  // TODOs:
-  // - Move all neuroglancer precomputed mesh handling to different service?
-  // - Add enum for mesh types
-  // - ??? Maybe change API to have a mesh object instead of different keys for name, path, type
-  // - Support tokens?
-  // - Can some sharding stuff be unified between array and mesh?
-  // - Support non sharding meshes?
-  // - Tests?
-  // - Caching
-  // - Extract stuff for LOD violations
-
   /*
    Note that null is a valid value here for once. Meshfiles with no information about the
    meshFilePath will return Fox.empty, while meshfiles with one marked as empty, will return Fox.successful(null)

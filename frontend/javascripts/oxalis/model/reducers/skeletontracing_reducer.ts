@@ -602,15 +602,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             // Don't create nodes if the skeleton layer is rendered with transforms.
             return state;
           }
-          const {
-            position,
-            rotation,
-            viewport,
-            resolution,
-            treeId,
-            timestamp,
-            additionalCoordinates,
-          } = action;
+          const { position, rotation, viewport, mag, treeId, timestamp, additionalCoordinates } =
+            action;
           return getOrCreateTree(state, skeletonTracing, treeId, timestamp, TreeTypeEnum.DEFAULT)
             .chain((tree) =>
               createNode(
@@ -621,7 +614,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                 additionalCoordinates,
                 rotation,
                 viewport,
-                resolution,
+                mag,
                 timestamp,
               ).map(([node, edges]) => {
                 const diffableNodeMap = tree.nodes;

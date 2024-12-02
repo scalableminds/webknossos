@@ -65,21 +65,21 @@ class EditableMappingController @Inject()(
       }
     }
 
-  def agglomerateIdsForSegments(tracingId: String): Action[ListOfLong] =
+  def agglomerateIdsForSegments(tracingId: String, version: Option[Long]): Action[ListOfLong] =
     Action.async(validateProto[ListOfLong]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- annotationService.findVolume(annotationId, tracingId)
-            currentVersion <- annotationService.currentMaterializableVersion(annotationId)
+            annotation <- annotationService.get(annotationId, version)
+            tracing <- annotationService.findVolume(annotationId, tracingId, version)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-            editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId, version = None)
+            editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId, version)
             relevantMapping: Map[Long, Long] <- editableMappingService.generateCombinedMappingForSegmentIds(
               request.body.items.toSet,
               editableMappingInfo,
-              currentVersion,
+              annotation.version,
               tracingId,
               remoteFallbackLayer)
             agglomerateIdsSorted = relevantMapping.toSeq.sortBy(_._1).map(_._2)

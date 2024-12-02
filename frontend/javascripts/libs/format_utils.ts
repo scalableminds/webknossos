@@ -513,8 +513,11 @@ export function formatBytes(nbytes: number) {
 }
 
 export function formatVoxels(voxelCount: number) {
-  if (voxelCount == null || !Number.isFinite(voxelCount)) {
+  if (voxelCount == null) {
     return "";
+  }
+  if (!Number.isFinite(voxelCount)) {
+    return "Infinity";
   }
   if (voxelCount > 2 ** 50) {
     return `${(voxelCount / 2 ** 50).toPrecision(4)} PVx`;

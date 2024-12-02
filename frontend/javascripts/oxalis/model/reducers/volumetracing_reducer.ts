@@ -269,6 +269,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     mappingName: tracing.mappingName,
     hasEditableMapping: tracing.hasEditableMapping,
     mappingIsLocked: tracing.mappingIsLocked,
+    volumeBucketDataHasChanged: tracing.volumeBucketDataHasChanged,
     hasSegmentIndex: tracing.hasSegmentIndex || false,
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
   };

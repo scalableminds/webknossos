@@ -875,6 +875,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
   hasEditableMapping?: boolean;
   mappingIsLocked?: boolean;
   hasSegmentIndex?: boolean;
+  volumeBucketDataHasChanged?: boolean;
 };
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
 export type ServerEditableMapping = {

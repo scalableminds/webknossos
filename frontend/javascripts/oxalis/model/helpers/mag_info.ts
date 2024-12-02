@@ -36,8 +36,8 @@ export class MagInfo {
       throw new Error("Max dimension in magnifications is not unique.");
     }
 
-    for (const resolution of mags) {
-      magnificationMap.set(maxValue(resolution), resolution);
+    for (const mag of mags) {
+      magnificationMap.set(maxValue(mag), mag);
     }
     return magnificationMap;
   }
@@ -49,10 +49,10 @@ export class MagInfo {
   getMagsWithIndices(): Array<[number, Vector3]> {
     return _.sortBy(
       Array.from(this.magnificationMap.entries()).map((entry) => {
-        const [powerOfTwo, resolution] = entry;
-        const resolutionIndex = Math.log2(powerOfTwo);
-        return [resolutionIndex, resolution];
-      }), // Sort by resolutionIndex
+        const [powerOfTwo, mag] = entry;
+        const magIndex = Math.log2(powerOfTwo);
+        return [magIndex, mag];
+      }), // Sort by magIndex
       (tuple) => tuple[0],
     );
   }
@@ -76,13 +76,13 @@ export class MagInfo {
   }
 
   getMagByIndexOrThrow(index: number): Vector3 {
-    const resolution = this.getMagByIndex(index);
+    const mag = this.getMagByIndex(index);
 
-    if (!resolution) {
+    if (!mag) {
       throw new Error(`Magnification with index ${index} does not exist.`);
     }
 
-    return resolution;
+    return mag;
   }
 
   getIndexByMag(magnification: Vector3): number {
@@ -90,26 +90,26 @@ export class MagInfo {
 
     // Assert that the index exists and that the mag at that index
     // equals the mag argument
-    const resolutionMaybe = this.getMagByIndex(index);
-    if (!_.isEqual(magnification, resolutionMaybe)) {
+    const magMaybe = this.getMagByIndex(index);
+    if (!_.isEqual(magnification, magMaybe)) {
       throw new Error(
-        `Magnification ${magnification} with index ${index} is not equal to existing magnification at that index: ${resolutionMaybe}.`,
+        `Magnification ${magnification} with index ${index} is not equal to existing magnification at that index: ${magMaybe}.`,
       );
     }
     return index;
   }
 
   getMagByIndexWithFallback(index: number, fallbackMagInfo: MagInfo | null | undefined): Vector3 {
-    let resolutionMaybe = this.getMagByIndex(index);
+    let magMaybe = this.getMagByIndex(index);
 
-    if (resolutionMaybe) {
-      return resolutionMaybe;
+    if (magMaybe) {
+      return magMaybe;
     }
 
-    resolutionMaybe = fallbackMagInfo != null ? fallbackMagInfo.getMagByIndex(index) : null;
+    magMaybe = fallbackMagInfo != null ? fallbackMagInfo.getMagByIndex(index) : null;
 
-    if (resolutionMaybe) {
-      return resolutionMaybe;
+    if (magMaybe) {
+      return magMaybe;
     }
 
     if (index === 0) {
@@ -236,22 +236,22 @@ export function convertToDenseMag(magnifications: Array<Vector3>): Array<Vector3
     throw new Error("Max dimension in magnifications is not unique.");
   }
 
-  const maxResolution = Math.log2(maxValue(magnifications.map((v) => maxValue(v))));
+  const maxMag = Math.log2(maxValue(magnifications.map((v) => maxValue(v))));
 
-  const resolutionsLookUp = _.keyBy(magnifications, maxValue);
+  const magnificationsLookUp = _.keyBy(magnifications, maxValue);
 
-  const maxResPower = 2 ** maxResolution;
-  let lastResolution = [maxResPower, maxResPower, maxResPower];
+  const maxResPower = 2 ** maxMag;
+  let lastMag = [maxResPower, maxResPower, maxResPower];
 
-  return _.range(maxResolution, -1, -1)
+  return _.range(maxMag, -1, -1)
     .map((exp) => {
       const resPower = 2 ** exp;
       // If the magnification does not exist, use the component-wise minimum of the next-higher
       // mag and an isotropic fallback mag. Otherwise for anisotropic mags,
       // the dense mags wouldn't be monotonously increasing.
-      const fallback = map3((i) => Math.min(lastResolution[i], resPower), [0, 1, 2]);
-      lastResolution = resolutionsLookUp[resPower] || fallback;
-      return lastResolution as Vector3;
+      const fallback = map3((i) => Math.min(lastMag[i], resPower), [0, 1, 2]);
+      lastMag = magnificationsLookUp[resPower] || fallback;
+      return lastMag as Vector3;
     })
     .reverse();
 }

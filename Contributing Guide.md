@@ -97,8 +97,8 @@ in the following sections:
 The [webknossos repository](https://github.com/scalableminds/webknossos) is structured in frontend and backend parts with different tooling.
 
 * **Frontend Tooling** We enforce coding styles and require all unit and integration tests to pass:
-    * `yarn pretty`: Code formatting with prettier
-    * `yarn lint`: Code linting with eslint
+    * `yarn fix-frontend`: Code formatting and linting with biome
+    * `yarn typecheck`: Code type checking with Typescript
     * `yarn test`: Unit tests with ava
     * `yarn test-e2e`: End-to-end, integration tests
 

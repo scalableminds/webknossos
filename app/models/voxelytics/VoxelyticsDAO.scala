@@ -4,7 +4,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import models.user.User
 import play.api.libs.json._
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SimpleSQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject

@@ -3,6 +3,7 @@ package models.job
 import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
@@ -15,7 +16,7 @@ import play.api.libs.json.{JsObject, Json}
 import slick.lifted.Rep
 import telemetry.SlackNotificationService
 import utils.sql.{SQLDAO, SqlClient}
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

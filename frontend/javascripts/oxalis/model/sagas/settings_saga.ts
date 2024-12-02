@@ -39,7 +39,7 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
       SETTINGS_MAX_RETRY_COUNT,
       SETTINGS_RETRY_DELAY,
       updateDatasetConfiguration,
-      dataset,
+      dataset.id,
       maybeMaskedDatasetConfiguration,
     );
   } catch (error) {

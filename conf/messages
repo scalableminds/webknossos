@@ -68,6 +68,7 @@ user.notAuthorised=You are not authorized to view this resource. Please log in.
 user.id.notFound=We could not find a user id in the request.
 user.id.invalid=The provided user id is invalid.
 user.creation.failed=Failed to create user
+user.team.memberships.failed=Failed to retrieve team memberships for user
 
 oidc.disabled=OIDC is disabled
 oidc.configuration.invalid=OIDC configuration is invalid
@@ -88,7 +89,8 @@ dataset.name.alreadyTaken=This name is already being used by a different dataset
 dataset.source.usableButNoScale=Dataset {0} is marked as active but has no scale.
 dataset.import.fileAccessDenied=Cannot create organization folder. Please make sure WEBKNOSSOS has write permissions in the “binaryData” directory
 dataset.type.invalid=External data set of type “{0}” is not supported
-dataset.list.failed=Failed to retrieve list of data sets.
+dataset.list.failed=Failed to retrieve list of datasets.
+dataset.list.grouping.failed=Failed group retrieved datasets.
 dataset.list.writesFailed=Failed to write json for dataset {0}
 dataset.noMags=Data layer does not contain mags
 dataset.sampledOnlyBlack=Sampled data positions contained only black data

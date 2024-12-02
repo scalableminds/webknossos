@@ -114,7 +114,7 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE name = $name AND $accessQuery".as[DatastoresRow])
-      parsed <- parseFirst(r, name)
+      parsed <- parseFirst(r, name) ?~> "dataStore.notFound"
     } yield parsed
 
   def findOneByUrl(url: String)(implicit ctx: DBAccessContext): Fox[DataStore] =

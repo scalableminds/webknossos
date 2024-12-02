@@ -349,7 +349,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         organizationDAO.findOne(dataset._organization) ?~> "organization.notFound"
       }
       dataStore <- Fox.fillOption(dataStore) {
-        dataStoreFor(dataset)
+        dataStoreFor(dataset) ?~> "dataStore.notFound"
       }
       teams <- teamService.allowedTeamsForDataset(dataset, cumulative = false, requestingUserOpt) ?~> "dataset.list.fetchAllowedTeamsFailed"
       teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t, Some(organization))) ?~> "dataset.list.teamWritesFailed"

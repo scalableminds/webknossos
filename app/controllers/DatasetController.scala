@@ -207,7 +207,7 @@ class DatasetController @Inject()(userService: UserService,
                                                    searchQuery,
                                                    recursive.getOrElse(false),
                                                    limit) ?~> "dataset.list.failed"
-          js <- listGrouped(datasets, request.identity) ?~> "dataset.list.failed"
+          js <- listGrouped(datasets, request.identity) ?~> "dataset.list.grouping.failed"
         } yield Json.toJson(js)
       }
       _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
@@ -223,7 +223,7 @@ class DatasetController @Inject()(userService: UserService,
       groupedByOrga = datasets.groupBy(_._organization).toList
       js <- Fox.serialCombined(groupedByOrga) { byOrgaTuple: (String, List[Dataset]) =>
         for {
-          organization <- organizationDAO.findOne(byOrgaTuple._1)(GlobalAccessContext)
+          organization <- organizationDAO.findOne(byOrgaTuple._1)(GlobalAccessContext) ?~> "organization.notFound"
           groupedByDataStore = byOrgaTuple._2.groupBy(_._dataStore).toList
           result <- Fox.serialCombined(groupedByDataStore) { byDataStoreTuple: (String, List[Dataset]) =>
             for {

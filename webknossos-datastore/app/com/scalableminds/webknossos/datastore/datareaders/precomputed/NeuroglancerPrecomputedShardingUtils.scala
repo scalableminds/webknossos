@@ -124,10 +124,20 @@ trait NeuroglancerPrecomputedShardingUtils {
   }
 
   def getChunkRange(chunkId: Long, minishardIndex: Array[(Long, Long, Long)])(
-    implicit ec: ExecutionContext): Fox[NumericRange.Exclusive[Long]] =
+      implicit ec: ExecutionContext): Fox[NumericRange.Exclusive[Long]] =
     for {
       chunkSpecification <- Fox.option2Fox(minishardIndex.find(_._1 == chunkId)) ?~> s"Could not find chunk id $chunkId in minishard index"
       chunkStart = (shardIndexRange.end) + chunkSpecification._2
       chunkEnd = (shardIndexRange.end) + chunkSpecification._2 + chunkSpecification._3
     } yield Range.Long(chunkStart, chunkEnd, 1)
+
+  def getChunk(chunkRange: NumericRange[Long], shardPath: VaultPath)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+    for {
+      rawBytes <- shardPath.readBytes(Some(chunkRange))
+      bytes = shardingSpecification.data_encoding match {
+        // Check for GZIP Magic bytes to check if it was already decompressed
+        case "gzip" if rawBytes(0) == 31 && rawBytes(1) == -117 => ZipIO.gunzip(rawBytes)
+        case _                                                  => rawBytes
+      }
+    } yield bytes
 }

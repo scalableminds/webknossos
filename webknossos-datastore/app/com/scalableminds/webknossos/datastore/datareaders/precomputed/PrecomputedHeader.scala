@@ -87,17 +87,9 @@ case class ShardingSpecification(`@type`: String,
   def hashFunction(input: Long): Long =
     hash match {
       case "identity"            => input
-      case "murmurhash3_x86_128" => applyMurmurHash3(input)
+      case "murmurhash3_x86_128" => MurmurHash3.hash64(longToBytes(input))
       case _                     => throw new IllegalArgumentException(s"Unsupported hash function: $hash")
     }
-
-  private def applyMurmurHash3(input: Long): Long = {
-    // he MurmurHash3_x86_128 hash function applied to the shifted chunk ID in little endian encoding. The low 8 bytes of the resultant hash code are treated as a little endian 64-bit number.
-    val bytes = longToBytes(input)
-    val hash = MurmurHash3_x86_128.hash(bytes, 0)
-    val result = hash(0) & 0xFFFFFFFFL | (hash(1) & 0xFFFFFFFFL) << 32
-    result
-  }
 
   private lazy val minishardMask = {
     if (minishard_bits == 0) {
@@ -113,7 +105,7 @@ case class ShardingSpecification(`@type`: String,
   }
 
   private lazy val shardMask = {
-    val oneMask = Long.MinValue // 0xFFFFFFFFFFFFFFFF
+    val oneMask = 0xFFFFFFFFFFFFFFFFL
     val cursor = minishard_bits + shard_bits
     val shardMask = ~((oneMask >> cursor) << cursor)
     shardMask & (~minishardMask)

@@ -304,7 +304,8 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
   // - Can some sharding stuff be unified between array and mesh?
   // - Support non sharding meshes?
   // - Tests?
-  // - Need to implement murmurhash3_x86_128
+  // - Caching
+  // - Extract stuff for LOD violations
 
   /*
    Note that null is a valid value here for once. Meshfiles with no information about the
@@ -482,7 +483,7 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
       shardUrl = mesh.shardingSpecification.getPathForShard(vaultPath, minishardInfo._1)
       minishardIndex <- mesh.getMinishardIndex(shardUrl, minishardInfo._2.toInt)
       chunkRange <- mesh.getChunkRange(segmentId, minishardIndex)
-      chunk <- shardUrl.readBytes(Some(chunkRange))
+      chunk <- mesh.getChunk(chunkRange, shardUrl)
       segmentManifest = NeuroglancerSegmentManifest.fromBytes(chunk)
       meshSegmentInfo = enrichSegmentInfo(segmentManifest, meshInfo.lod_scale_multiplier, chunkRange.start, segmentId)
       transform = meshInfo.transform2DArray

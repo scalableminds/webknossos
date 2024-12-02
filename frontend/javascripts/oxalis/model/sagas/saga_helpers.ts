@@ -141,10 +141,7 @@ export function* requestBucketModificationInVolumeTracing(
   }
 
   // Mark that bucket data has changed
-  yield* put({
-    type: "SET_VOLUME_BUCKET_DATA_HAS_CHANGED",
-    tracingId: volumeTracing.tracingId,
-  });
+  yield* put(setVolumeBucketDataHasChangedAction(volumeTracing.tracingId));
   return true;
 }
 

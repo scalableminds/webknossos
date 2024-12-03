@@ -40,6 +40,7 @@ class Migration:
         self.failure_count = 0
         self.failure_count_lock = threading.Lock()
         self.total_count = None
+        self.before = 0
 
     def run(self):
         self.before = time.time()
@@ -66,12 +67,14 @@ class Migration:
                 if versions > 1:
                     logger.info(f"{versions} versions for {annotation['_id']}{self.get_progress()}")
             else:
-                logger.info(f"Migrating annotation {annotation['_id']} (dry={self.args.dry}) ...")
+                if self.args.verbose:
+                    logger.info(f"Migrating annotation {annotation['_id']} (dry={self.args.dry}) ...")
                 mapping_id_map = self.build_mapping_id_map(annotation)
                 layer_version_mapping = self.migrate_updates(annotation, mapping_id_map)
                 materialized_versions = self.migrate_materialized_layers(annotation, layer_version_mapping, mapping_id_map)
                 self.create_and_save_annotation_proto(annotation, materialized_versions)
-                log_since(before, f"Migrating annotation {annotation['_id']} ({len(materialized_versions)} materialized versions)", self.get_progress())
+                if time.time() - before > 1 or self.args.verbose:
+                    log_since(before, f"Migrating annotation {annotation['_id']} ({len(materialized_versions)} materialized versions)", self.get_progress())
         except Exception:
             logger.exception(f"Exception while migrating annotation {annotation['_id']}:")
             with self.failure_count_lock:

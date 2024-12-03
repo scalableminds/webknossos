@@ -1,3 +1,4 @@
 counts.py
 *.log
 *.csv
+logs/

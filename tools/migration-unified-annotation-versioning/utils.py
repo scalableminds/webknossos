@@ -3,6 +3,8 @@ import time
 from typing import Iterator, Tuple
 import sys
 from math import floor, ceil
+from datetime import datetime
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -11,11 +13,22 @@ def setup_logging():
     root = logging.getLogger()
     root.setLevel(logging.DEBUG)
 
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter("%(asctime)s %(levelname)-8s [%(threadName)s] %(message)s")
-    handler.setFormatter(formatter)
-    root.addHandler(handler)
+    formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(threadName)-24s %(message)s")
+
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setLevel(logging.DEBUG)
+    stdout_handler.setFormatter(formatter)
+    root.addHandler(stdout_handler)
+
+    time_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S.%f")
+
+    logs_path = Path("logs")
+    logs_path.mkdir(exist_ok=True)
+
+    file_handler = logging.FileHandler(f"logs/{time_str}.log")
+    stdout_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(formatter)
+    root.addHandler(file_handler)
 
 
 def log_since(before, label: str, postfix: str = "") -> None:

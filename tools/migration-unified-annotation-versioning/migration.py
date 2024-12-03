@@ -387,7 +387,7 @@ class Migration:
                     SELECT _id, name, description, created, modified FROM webknossos.annotations
                     WHERE modified < '{start_time}'
                     {previous_start_query}
-                    ORDER BY _id
+                    ORDER BY MD5(_id)
                     LIMIT {page_size}
                     OFFSET {page_size * page_num}
                 )

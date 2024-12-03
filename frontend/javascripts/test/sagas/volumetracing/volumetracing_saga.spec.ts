@@ -53,7 +53,6 @@ const serverVolumeTracing: ServerVolumeTracing = {
   id: "tracingId",
   elementClass: "uint32",
   createdTimestamp: 0,
-  version: 0,
   boundingBox: {
     topLeft: {
       x: 0,

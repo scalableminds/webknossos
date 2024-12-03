@@ -35,7 +35,6 @@ export const tracing: ServerVolumeTracing = {
   elementClass: "uint16",
   id: "segmentation",
   largestSegmentId: 21890,
-  version: 0,
   zoomLevel: 0,
   mags: [
     {

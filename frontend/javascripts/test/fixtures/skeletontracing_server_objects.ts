@@ -158,7 +158,6 @@ export const tracing: ServerSkeletonTracing = {
   },
   additionalAxes: [],
   zoomLevel: 2,
-  version: 7,
 };
 export const annotation: APIAnnotation = {
   description: "",

@@ -218,7 +218,7 @@ export function getTransformsForLayer(
 
 function _getTransformsForSkeletonLayerOrNull(
   dataset: APIDataset,
-  layer: APIDataLayer | APISkeletonLayer,
+  _layer: APIDataLayer | APISkeletonLayer,
   nativelyRenderedLayerNames: string[],
 ): Transform | null {
   const layers = dataset.dataSource.dataLayers;

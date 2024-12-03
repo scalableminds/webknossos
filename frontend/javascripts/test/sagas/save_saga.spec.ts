@@ -123,6 +123,7 @@ test("SaveSaga should send update actions", (t) => {
   saga.next(); // select state
   expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
 });
+
 test("SaveSaga should send request to server", (t) => {
   const saveQueue = createSaveQueueFromUpdateActions(
     [
@@ -134,13 +135,7 @@ test("SaveSaga should send request to server", (t) => {
   const saga = sendSaveRequestToServer();
   saga.next();
   saga.next(saveQueue);
-  saga.next([
-    {
-      version: LAST_VERSION,
-      type: TRACING_TYPE,
-      tracingId,
-    },
-  ]);
+  saga.next(LAST_VERSION);
   saga.next(annotationId);
   const [saveQueueWithVersions, versionIncrement] = addVersionNumbers(saveQueue, LAST_VERSION);
   t.is(versionIncrement, 2);
@@ -182,13 +177,7 @@ test("SaveSaga should retry update actions", (t) => {
   const saga = sendSaveRequestToServer();
   saga.next();
   saga.next(saveQueue);
-  saga.next([
-    {
-      version: LAST_VERSION,
-      type: TRACING_TYPE,
-      tracingId,
-    },
-  ]);
+  saga.next(LAST_VERSION);
   saga.next(annotationId);
   expectValueDeepEqual(t, saga.next(TRACINGSTORE_URL), requestWithTokenCall);
   saga.throw("Timeout");
@@ -211,13 +200,7 @@ test("SaveSaga should escalate on permanent client error update actions", (t) =>
   const saga = sendSaveRequestToServer();
   saga.next();
   saga.next(saveQueue);
-  saga.next([
-    {
-      version: LAST_VERSION,
-      type: TRACING_TYPE,
-      tracingId,
-    },
-  ]);
+  saga.next(LAST_VERSION);
   saga.next(annotationId);
   const [saveQueueWithVersions, versionIncrement] = addVersionNumbers(saveQueue, LAST_VERSION);
   t.is(versionIncrement, 2);
@@ -328,13 +311,7 @@ test("SaveSaga should set the correct version numbers", (t) => {
   const saga = sendSaveRequestToServer();
   saga.next();
   saga.next(saveQueue);
-  saga.next([
-    {
-      version: LAST_VERSION,
-      type: TRACING_TYPE,
-      tracingId,
-    },
-  ]);
+  saga.next(LAST_VERSION);
   saga.next(annotationId);
   saga.next(TRACINGSTORE_URL);
   expectValueDeepEqual(t, saga.next(), put(SaveActions.setVersionNumberAction(LAST_VERSION + 3)));
@@ -353,13 +330,7 @@ test("SaveSaga should set the correct version numbers if the save queue was comp
   const saga = sendSaveRequestToServer();
   saga.next();
   saga.next(saveQueue);
-  saga.next([
-    {
-      version: LAST_VERSION,
-      type: TRACING_TYPE,
-      tracingId,
-    },
-  ]);
+  saga.next(LAST_VERSION);
   saga.next(annotationId);
   saga.next(TRACINGSTORE_URL);
   // two of the updateTracing update actions are removed by compactSaveQueue

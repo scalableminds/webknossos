@@ -101,15 +101,9 @@ const initialState: OxalisState = update(defaultState, {
 const position = [10, 10, 10] as Vector3;
 const rotation = [0.5, 0.5, 0.5] as Vector3;
 const viewport = 0;
-const resolution = 0;
+const mag = 0;
 test("SkeletonTracing should add a new node", (t) => {
-  const action = SkeletonTracingActions.createNodeAction(
-    position,
-    null,
-    rotation,
-    viewport,
-    resolution,
-  );
+  const action = SkeletonTracingActions.createNodeAction(position, null, rotation, viewport, mag);
   const newState = SkeletonTracingReducer(initialState, action);
   t.not(newState, initialState);
   const newSkeletonTracing = enforceSkeletonTracing(newState.tracing);
@@ -130,7 +124,7 @@ test("SkeletonTracing should add a new node", (t) => {
     untransformedPosition: position,
     rotation,
     viewport,
-    resolution,
+    mag,
     id: 1,
     radius: 1,
   });
@@ -141,7 +135,7 @@ test("SkeletonTracing should add a several nodes", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   // create three nodes
   let newState = SkeletonTracingReducer(initialState, createNodeAction);
@@ -175,7 +169,7 @@ test("SkeletonTracing should add nodes to a different tree", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createTreeAction = SkeletonTracingActions.createTreeAction();
   // add a node to initial tree, then create a second tree and add two nodes
@@ -226,7 +220,7 @@ test("SkeletonTracing should delete a node from a tree", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
   // Add two nodes, then delete one
@@ -244,7 +238,7 @@ test("SkeletonTracing should delete respective comments and branchpoints when de
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
   const createCommentAction = SkeletonTracingActions.createCommentAction("foo");
@@ -267,7 +261,7 @@ test("SkeletonTracing should not delete tree when last node is deleted from the 
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
   // Create tree, add two nodes, then delete them again so that the tree is removed, as well
@@ -295,7 +289,7 @@ test("SkeletonTracing should delete nodes and split the tree", (t) => {
     untransformedPosition: [0, 0, 0],
     additionalCoordinates: null,
     radius: 10,
-    resolution: 10,
+    mag: 10,
     rotation: [0, 0, 0],
     timestamp: 0,
     viewport: 1,
@@ -408,7 +402,7 @@ test("SkeletonTracing should not delete an edge if the two nodes are not neighbo
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const deleteEdgeAction = SkeletonTracingActions.deleteEdgeAction(0, 3);
   // Create a couple of nodes
@@ -432,7 +426,7 @@ test("SkeletonTracing should not delete any edge if the two nodes are in differe
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createTreeAction = SkeletonTracingActions.createTreeAction();
   const deleteEdgeAction = SkeletonTracingActions.deleteEdgeAction(0, 2);
@@ -453,7 +447,7 @@ test("SkeletonTracing should delete an edge and split the tree", (t) => {
     untransformedPosition: [0, 0, 0],
     additionalCoordinates: null,
     radius: 10,
-    resolution: 10,
+    mag: 10,
     rotation: [0, 0, 0],
     timestamp: 0,
     viewport: 1,
@@ -569,7 +563,7 @@ test("SkeletonTracing should set a new active node", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const setActiveNodeAction = SkeletonTracingActions.setActiveNodeAction(1);
   // Create two nodes, then set first one active
@@ -588,7 +582,7 @@ test("SkeletonTracing should set a new active node in a different tree", (t) => 
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const setActiveNodeAction = SkeletonTracingActions.setActiveNodeAction(1);
   // Create one node in the first tree, then set create second tree with two nodes
@@ -610,7 +604,7 @@ test("SkeletonTracing should set a new node radius", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const setNodeRadiusAction = SkeletonTracingActions.setNodeRadiusAction(newRadius);
   // Create a node and change its radius
@@ -626,7 +620,7 @@ test("SkeletonTracing should create a branchpoint", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
   // create a single node and then set it as branchpoint
@@ -652,7 +646,7 @@ test("SkeletonTracing shouldn't create a branchpoint without the correct permiss
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
 
@@ -673,7 +667,7 @@ test("SkeletonTracing shouldn't create more branchpoints than nodes", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
   // create one node and set it as branchpoint three times
@@ -694,7 +688,7 @@ test("SkeletonTracing should delete a branchpoint", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
   const deleteBranchPointAction = SkeletonTracingActions.deleteBranchPointAction();
@@ -716,7 +710,7 @@ test("SkeletonTracing should delete specific selected branchpoint", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
   // create one node and set it as branchpoint, create a second node and jump back to branchpoint
@@ -740,7 +734,7 @@ test("SkeletonTracing should delete several branchpoints", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
   const deleteBranchPointAction = SkeletonTracingActions.deleteBranchPointAction();
@@ -765,7 +759,7 @@ test("SkeletonTracing shouldn't delete more branchpoints than available", (t) =>
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
   const deleteBranchPointAction = SkeletonTracingActions.deleteBranchPointAction();
@@ -789,7 +783,7 @@ test("SkeletonTracing should delete a branchpoint from a different tree", (t) =>
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createTreeAction = SkeletonTracingActions.createTreeAction();
   const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
@@ -811,7 +805,7 @@ test("SkeletonTracing should delete a branchpoint from another tree than the act
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createTreeAction = SkeletonTracingActions.createTreeAction();
   const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
@@ -844,7 +838,7 @@ test("SkeletonTracing should add a new tree", (t) => {
     branchPoints: [],
     nodes: new DiffableMap(),
     treeId: 2,
-    color: [0, 0, 1], // name: ...
+    color: [0, 0, 1],
   });
 });
 test("SkeletonTracing should add a several new trees", (t) => {
@@ -921,7 +915,7 @@ test("SkeletonTracing should set a different active tree", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const setActiveTreeAction = SkeletonTracingActions.setActiveTreeAction(2);
   // create a second tree with two nodes and set it active
@@ -948,7 +942,7 @@ test("SkeletonTracing should merge two trees", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(3, 1);
   // create a node in first tree, then create a second tree with three nodes and merge them
@@ -985,7 +979,7 @@ test("SkeletonTracing shouldn't merge the same tree", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 3);
   // create a node in first tree, then create a second tree with three nodes and merge them
@@ -1004,7 +998,7 @@ test("SkeletonTracing should merge two trees with comments and branchPoints", (t
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(3, 1);
   const createCommentAction = SkeletonTracingActions.createCommentAction("foo");
@@ -1126,7 +1120,7 @@ test("SkeletonTracing should create a comment for the active node", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
   // create a single node with a comment
@@ -1155,7 +1149,7 @@ test("SkeletonTracing shouldn't create more than one comment for the active node
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
   // create a node and add the same comment three times
@@ -1177,7 +1171,7 @@ test("SkeletonTracing should create comments for several nodes", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   // create two nodes with a different comment each
   const newState = ChainReducer<OxalisState, Action>(initialState)
@@ -1201,7 +1195,7 @@ test("SkeletonTracing should create comments for a different tree", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
   const createTreeAction = SkeletonTracingActions.createTreeAction();
@@ -1222,7 +1216,7 @@ test("SkeletonTracing should delete a comment for a node", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
   const deleteCommentAction = SkeletonTracingActions.deleteCommentAction();
@@ -1244,7 +1238,7 @@ test("SkeletonTracing should only delete the comment for the active node", (t) =
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
   const deleteCommentAction = SkeletonTracingActions.deleteCommentAction();
@@ -1269,7 +1263,7 @@ test("SkeletonTracing should add a node in a specified tree", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
     2,
   );
   // create a few trees and add a node to a specific one
@@ -1290,7 +1284,7 @@ test("SkeletonTracing should delete a specified node (1/2)", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const deleteNodeAction = SkeletonTracingActions.deleteNodeAction(2, 1);
   // create three nodes and delete a specific one
@@ -1314,7 +1308,7 @@ test("SkeletonTracing should delete a specified node (2/2)", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const deleteNodeAction = SkeletonTracingActions.deleteNodeAction(2);
   // create three nodes and delete a specific one
@@ -1338,7 +1332,7 @@ test("SkeletonTracing should create a branchpoint for a specified node (1/2)", (
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(2, 1);
   // create some nodes and then set a specific one as branchpoint
@@ -1359,7 +1353,7 @@ test("SkeletonTracing should create a branchpoint for a specified node (2/2)", (
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(2, 1);
   // create some nodes and then set a specific one as branchpoint
@@ -1411,7 +1405,7 @@ test("SkeletonTracing should create a comment for a specified node", (t) => {
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createCommentAction = SkeletonTracingActions.createCommentAction(commentText, 2);
   // create a few nodes and adds one comment
@@ -1434,7 +1428,7 @@ test("SkeletonTracing should delete a comment for a specified node (1/2)", (t) =
     null,
     rotation,
     viewport,
-    resolution,
+    mag,
   );
   const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
   const deleteCommentAction = SkeletonTracingActions.deleteCommentAction(2);

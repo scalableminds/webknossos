@@ -2,7 +2,10 @@ import {
   type ServerVolumeTracing,
   type APIAnnotation,
   AnnotationLayerType,
+  APITracingStoreAnnotation,
 } from "types/api_flow_types";
+
+const TRACING_ID = "tracingId-1234";
 export const tracing: ServerVolumeTracing = {
   typ: "Volume",
   activeSegmentId: 10000,
@@ -89,7 +92,7 @@ export const annotation: APIAnnotation = {
   annotationLayers: [
     {
       name: "volume",
-      tracingId: "tracingId-1234",
+      tracingId: TRACING_ID,
       typ: AnnotationLayerType.Volume,
     },
   ],
@@ -120,4 +123,17 @@ export const annotation: APIAnnotation = {
   contributors: [],
   othersMayEdit: false,
   isLockedByOwner: false,
+};
+export const annotationProto: APITracingStoreAnnotation = {
+  name: "volume-annotation-name",
+  description: "volume-annotation-description",
+  version: 1,
+  earliestAccessibleVersion: 0,
+  annotationLayers: [
+    {
+      tracingId: TRACING_ID,
+      name: "volume",
+      type: AnnotationLayerType.Volume,
+    },
+  ],
 };

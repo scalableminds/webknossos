@@ -2,7 +2,10 @@ import {
   type ServerSkeletonTracing,
   type APIAnnotation,
   AnnotationLayerType,
+  APITracingStoreAnnotation,
 } from "types/api_flow_types";
+
+const TRACING_ID = "47e37793-d0be-4240-a371-87ce68561a13";
 export const tracing: ServerSkeletonTracing = {
   typ: AnnotationLayerType.Skeleton,
   id: "47e37793-d0be-4240-a371-87ce68561a13",
@@ -180,7 +183,7 @@ export const annotation: APIAnnotation = {
   annotationLayers: [
     {
       name: AnnotationLayerType.Skeleton,
-      tracingId: "47e37793-d0be-4240-a371-87ce68561a13",
+      tracingId: TRACING_ID,
       typ: AnnotationLayerType.Skeleton,
     },
   ],
@@ -211,4 +214,18 @@ export const annotation: APIAnnotation = {
   contributors: [],
   othersMayEdit: false,
   isLockedByOwner: false,
+};
+
+export const annotationProto: APITracingStoreAnnotation = {
+  name: "skeleton-annotation-name",
+  description: "skeleton-annotation-description",
+  version: 1,
+  earliestAccessibleVersion: 0,
+  annotationLayers: [
+    {
+      tracingId: TRACING_ID,
+      name: "skeleton layer name",
+      type: AnnotationLayerType.Skeleton,
+    },
+  ],
 };

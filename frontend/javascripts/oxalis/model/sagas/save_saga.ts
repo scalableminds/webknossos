@@ -440,7 +440,7 @@ export function* setupSavingForTracingType(
     );
 
     if (items.length > 0) {
-      yield* put(pushSaveQueueTransaction(items, tracingId));
+      yield* put(pushSaveQueueTransaction(items));
     }
 
     prevTracing = tracing;

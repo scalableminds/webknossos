@@ -131,6 +131,7 @@ const skeletonTracing: SkeletonTracing = {
   showSkeletons: true,
   additionalAxes: [],
 };
+
 const serverSkeletonTracing: ServerSkeletonTracing = {
   ...skeletonTracing,
   id: skeletonTracing.tracingId,
@@ -236,7 +237,7 @@ test("SkeletonTracingSaga should do something if changed (saga test)", (t) => {
   saga.next(newState.flycam);
   const items = execCall(t, saga.next(newState.viewModeData.plane.tdCamera));
   t.true(withoutUpdateTracing(items).length > 0);
-  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueTransaction(items, "skeleton")));
+  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueTransaction(items)));
 });
 test("SkeletonTracingSaga should emit createNode update actions", (t) => {
   const newState = SkeletonTracingReducer(initialState, createNodeAction);
@@ -268,6 +269,7 @@ test("SkeletonTracingSaga should emit createNode and createEdge update actions",
   t.like(updateActions[0], {
     name: "createNode",
     value: {
+      actionTracingId: "tracingId",
       id: 1,
       treeId: 1,
     },
@@ -275,6 +277,7 @@ test("SkeletonTracingSaga should emit createNode and createEdge update actions",
   t.like(updateActions[1], {
     name: "createNode",
     value: {
+      actionTracingId: "tracingId",
       id: 2,
       treeId: 1,
     },
@@ -282,6 +285,7 @@ test("SkeletonTracingSaga should emit createNode and createEdge update actions",
   t.deepEqual(updateActions[2], {
     name: "createEdge",
     value: {
+      actionTracingId: "tracingId",
       treeId: 1,
       source: 1,
       target: 2,
@@ -300,10 +304,17 @@ test("SkeletonTracingSaga should emit createNode and createTree update actions",
     initialState.flycam,
     newState.flycam,
   );
-  t.like(updateActions[0], { name: "createTree", value: { id: 2 } });
+  t.like(updateActions[0], {
+    name: "createTree",
+    value: {
+      actionTracingId: "tracingId",
+      id: 2,
+    },
+  });
   t.like(updateActions[1], {
     name: "createNode",
     value: {
+      actionTracingId: "tracingId",
       id: 2,
       treeId: 2,
     },
@@ -311,6 +322,7 @@ test("SkeletonTracingSaga should emit createNode and createTree update actions",
   t.like(updateActions[2], {
     name: "createNode",
     value: {
+      actionTracingId: "tracingId",
       id: 1,
       treeId: 1,
     },
@@ -333,14 +345,22 @@ test("SkeletonTracingSaga should emit first deleteNode and then createNode updat
   t.deepEqual(updateActions[0], {
     name: "deleteNode",
     value: {
+      actionTracingId: "tracingId",
       nodeId: 2,
       treeId: 2,
     },
   });
-  t.deepEqual(updateActions[1], { name: "deleteTree", value: { id: 2 } });
+  t.deepEqual(updateActions[1], {
+    name: "deleteTree",
+    value: {
+      actionTracingId: "tracingId",
+      id: 2,
+    },
+  });
   t.like(updateActions[2], {
     name: "createNode",
     value: {
+      actionTracingId: "tracingId",
       id: 2,
       treeId: 1,
     },
@@ -348,6 +368,7 @@ test("SkeletonTracingSaga should emit first deleteNode and then createNode updat
   t.deepEqual(updateActions[3], {
     name: "createEdge",
     value: {
+      actionTracingId: "tracingId",
       treeId: 1,
       source: 1,
       target: 2,
@@ -366,6 +387,7 @@ test("SkeletonTracingSaga should emit a deleteNode update action", (t) => {
   t.deepEqual(updateActions[0], {
     name: "deleteNode",
     value: {
+      actionTracingId: "tracingId",
       nodeId: 1,
       treeId: 1,
     },
@@ -386,6 +408,7 @@ test("SkeletonTracingSaga should emit a deleteEdge update action", (t) => {
   t.deepEqual(updateActions[0], {
     name: "deleteNode",
     value: {
+      actionTracingId: "tracingId",
       nodeId: 2,
       treeId: 1,
     },
@@ -393,6 +416,7 @@ test("SkeletonTracingSaga should emit a deleteEdge update action", (t) => {
   t.deepEqual(updateActions[1], {
     name: "deleteEdge",
     value: {
+      actionTracingId: "tracingId",
       treeId: 1,
       source: 1,
       target: 2,
@@ -408,7 +432,13 @@ test("SkeletonTracingSaga should emit a deleteTree update action", (t) => {
     testState.flycam,
     newState.flycam,
   );
-  t.like(updateActions[0], { name: "deleteTree", value: { id: 2 } });
+  t.like(updateActions[0], {
+    name: "deleteTree",
+    value: {
+      actionTracingId: "tracingId",
+      id: 2,
+    },
+  });
 });
 test("SkeletonTracingSaga should emit an updateNode update action", (t) => {
   const testState = SkeletonTracingReducer(initialState, createNodeAction);
@@ -422,6 +452,7 @@ test("SkeletonTracingSaga should emit an updateNode update action", (t) => {
   t.like(updateActions[0], {
     name: "updateNode",
     value: {
+      actionTracingId: "tracingId",
       id: 1,
       treeId: 1,
       radius: 12,
@@ -454,6 +485,7 @@ test("SkeletonTracingSaga should emit an updateTree update actions (comments)", 
   t.like(updateActions[0], {
     name: "updateTree",
     value: {
+      actionTracingId: "tracingId",
       id: 1,
       comments: [
         {
@@ -490,6 +522,7 @@ test("SkeletonTracingSaga should emit an updateTree update actions (branchpoints
   t.like(updateActions[0], {
     name: "updateTree",
     value: {
+      actionTracingId: "tracingId",
       id: 1,
       branchPoints: [
         {
@@ -520,6 +553,7 @@ test("SkeletonTracingSaga should emit update actions on merge tree", (t) => {
   t.deepEqual(updateActions[0], {
     name: "deleteNode",
     value: {
+      actionTracingId: "tracingId",
       treeId: 1,
       nodeId: 1,
     },
@@ -527,12 +561,14 @@ test("SkeletonTracingSaga should emit update actions on merge tree", (t) => {
   t.deepEqual(updateActions[1], {
     name: "deleteTree",
     value: {
+      actionTracingId: "tracingId",
       id: 1,
     },
   });
   t.like(updateActions[2], {
     name: "createNode",
     value: {
+      actionTracingId: "tracingId",
       id: 1,
       treeId: 2,
     },
@@ -540,6 +576,7 @@ test("SkeletonTracingSaga should emit update actions on merge tree", (t) => {
   t.deepEqual(updateActions[3], {
     name: "createEdge",
     value: {
+      actionTracingId: "tracingId",
       treeId: 2,
       source: 3,
       target: 1,
@@ -568,12 +605,14 @@ test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
   t.like(updateActions[0], {
     name: "createTree",
     value: {
+      actionTracingId: "tracingId",
       id: 3,
     },
   });
   t.like(updateActions[1], {
     name: "createNode",
     value: {
+      actionTracingId: "tracingId",
       id: 2,
       treeId: 3,
     },
@@ -581,12 +620,14 @@ test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
   t.like(updateActions[2], {
     name: "createTree",
     value: {
+      actionTracingId: "tracingId",
       id: 4,
     },
   });
   t.like(updateActions[3], {
     name: "createNode",
     value: {
+      actionTracingId: "tracingId",
       id: 4,
       treeId: 4,
     },
@@ -594,6 +635,7 @@ test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
   t.deepEqual(updateActions[4], {
     name: "deleteNode",
     value: {
+      actionTracingId: "tracingId",
       treeId: 2,
       nodeId: 2,
     },
@@ -601,6 +643,7 @@ test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
   t.deepEqual(updateActions[5], {
     name: "deleteNode",
     value: {
+      actionTracingId: "tracingId",
       treeId: 2,
       nodeId: 3,
     },
@@ -608,6 +651,7 @@ test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
   t.deepEqual(updateActions[6], {
     name: "deleteNode",
     value: {
+      actionTracingId: "tracingId",
       treeId: 2,
       nodeId: 4,
     },
@@ -615,6 +659,7 @@ test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
   t.deepEqual(updateActions[7], {
     name: "deleteEdge",
     value: {
+      actionTracingId: "tracingId",
       treeId: 2,
       source: 2,
       target: 3,
@@ -623,6 +668,7 @@ test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
   t.deepEqual(updateActions[8], {
     name: "deleteEdge",
     value: {
+      actionTracingId: "tracingId",
       treeId: 2,
       source: 3,
       target: 4,
@@ -631,6 +677,7 @@ test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
   t.deepEqual(updateActions[9], {
     name: "deleteEdge",
     value: {
+      actionTracingId: "tracingId",
       treeId: 2,
       source: 3,
       target: 1,

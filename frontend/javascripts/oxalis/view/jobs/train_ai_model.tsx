@@ -34,7 +34,6 @@ import _ from "lodash";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { formatVoxels } from "libs/format_utils";
 import * as Utils from "libs/utils";
-import { V3 } from "libs/mjs";
 import {
   AnnotationLayerType,
   type APIAnnotation,

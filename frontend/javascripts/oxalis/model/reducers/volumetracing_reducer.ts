@@ -379,7 +379,7 @@ function VolumeTracingReducer(
     }
 
     case "SET_VOLUME_BUCKET_DATA_HAS_CHANGED": {
-      return updateVolumeTracing(state, action.layerName, {
+      return updateVolumeTracing(state, action.tracingId, {
         volumeBucketDataHasChanged: true,
       });
     }

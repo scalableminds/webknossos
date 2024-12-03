@@ -442,8 +442,8 @@ export const cancelQuickSelectAction = () => ({ type: "CANCEL_QUICK_SELECT" }) a
 
 export const confirmQuickSelectAction = () => ({ type: "CONFIRM_QUICK_SELECT" }) as const;
 
-export const setVolumeBucketDataHasChangedAction = (layerName: string) =>
+export const setVolumeBucketDataHasChangedAction = (tracingId: string) =>
   ({
     type: "SET_VOLUME_BUCKET_DATA_HAS_CHANGED",
-    layerName,
+    tracingId,
   }) as const;

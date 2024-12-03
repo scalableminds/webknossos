@@ -2,7 +2,7 @@ import {
   type ServerVolumeTracing,
   type APIAnnotation,
   AnnotationLayerType,
-  APITracingStoreAnnotation,
+  type APITracingStoreAnnotation,
 } from "types/api_flow_types";
 
 const TRACING_ID = "tracingId-1234";

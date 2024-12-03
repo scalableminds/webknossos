@@ -78,7 +78,6 @@ const initialState = {
 };
 const LAST_VERSION = 2;
 const TRACINGSTORE_URL = "test.webknossos.xyz";
-const TRACING_TYPE = "skeleton";
 test("SaveSaga should compact multiple updateTracing update actions", (t) => {
   const saveQueue = createSaveQueueFromUpdateActions(
     [

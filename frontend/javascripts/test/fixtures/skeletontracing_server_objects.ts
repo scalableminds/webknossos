@@ -2,7 +2,7 @@ import {
   type ServerSkeletonTracing,
   type APIAnnotation,
   AnnotationLayerType,
-  APITracingStoreAnnotation,
+  type APITracingStoreAnnotation,
 } from "types/api_flow_types";
 
 const TRACING_ID = "47e37793-d0be-4240-a371-87ce68561a13";

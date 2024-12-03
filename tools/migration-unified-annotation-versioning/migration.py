@@ -53,7 +53,7 @@ class Migration:
             executor.map(self.migrate_annotation, annotations)
         if self.failure_count > 0:
             logger.info(f"There were failures for {self.failure_count} annotations. See logs for details.")
-        log_since(self.before, "Migrating all the things")
+        log_since(self.before, f"Migrating all the {self.total_count} things")
 
     def migrate_annotation(self, annotation):
         before = time.time()
@@ -72,6 +72,8 @@ class Migration:
                 mapping_id_map = self.build_mapping_id_map(annotation)
                 layer_version_mapping = self.migrate_updates(annotation, mapping_id_map)
                 materialized_versions = self.migrate_materialized_layers(annotation, layer_version_mapping, mapping_id_map)
+                if len(materialized_versions) == 0:
+                    raise ValueError(f"Zero materialized versions present in source FossilDB for annotation {annotation['_id']}.")
                 self.create_and_save_annotation_proto(annotation, materialized_versions)
                 if time.time() - before > 1 or self.args.verbose:
                     log_since(before, f"Migrating annotation {annotation['_id']} ({len(materialized_versions)} materialized versions)", self.get_progress())

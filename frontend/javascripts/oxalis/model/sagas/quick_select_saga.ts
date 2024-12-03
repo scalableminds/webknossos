@@ -15,7 +15,7 @@ import performQuickSelectML from "./quick_select_ml_saga";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { getActiveSegmentationTracing } from "../accessors/volumetracing_accessor";
 import type { VolumeTracing } from "oxalis/store";
-import { ensureMaybeActiveMappingIsLocked } from "./saga_helpers";
+import { requestBucketModificationInVolumeTracing } from "./saga_helpers";
 
 function* shouldUseHeuristic() {
   const useHeuristic = yield* select((state) => state.userConfiguration.quickSelect.useHeuristic);
@@ -32,11 +32,11 @@ export default function* listenToQuickSelect(): Saga<void> {
         );
         if (volumeTracing) {
           // As changes to the volume layer will be applied, the potentially existing mapping should be locked to ensure a consistent state.
-          const { isMappingLockedIfNeeded } = yield* call(
-            ensureMaybeActiveMappingIsLocked,
+          const isModificationAllowed = yield* call(
+            requestBucketModificationInVolumeTracing,
             volumeTracing,
           );
-          if (!isMappingLockedIfNeeded) {
+          if (!isModificationAllowed) {
             return;
           }
         }

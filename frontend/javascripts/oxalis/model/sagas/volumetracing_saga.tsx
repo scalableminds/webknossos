@@ -82,7 +82,7 @@ import { select, take } from "oxalis/model/sagas/effect-generators";
 import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
 import listenToQuickSelect from "oxalis/model/sagas/quick_select_saga";
 import {
-  ensureMaybeActiveMappingIsLocked,
+  requestBucketModificationInVolumeTracing,
   takeEveryUnlessBusy,
 } from "oxalis/model/sagas/saga_helpers";
 import {
@@ -223,11 +223,11 @@ export function* editVolumeLayerAsync(): Saga<any> {
 
     const activeCellId = yield* select((state) => enforceActiveVolumeTracing(state).activeCellId);
     // As changes to the volume layer will be applied, the potentially existing mapping should be locked to ensure a consistent state.
-    const { isMappingLockedIfNeeded } = yield* call(
-      ensureMaybeActiveMappingIsLocked,
+    const isModificationAllowed = yield* call(
+      requestBucketModificationInVolumeTracing,
       volumeTracing,
     );
-    if (!isMappingLockedIfNeeded) {
+    if (!isModificationAllowed) {
       continue;
     }
 
@@ -453,11 +453,11 @@ export function* floodFill(): Saga<void> {
     }
     // As the flood fill will be applied to the volume layer,
     // the potentially existing mapping should be locked to ensure a consistent state.
-    const { isMappingLockedIfNeeded } = yield* call(
-      ensureMaybeActiveMappingIsLocked,
+    const isModificationAllowed = yield* call(
+      requestBucketModificationInVolumeTracing,
       volumeTracing,
     );
-    if (!isMappingLockedIfNeeded) {
+    if (!isModificationAllowed) {
       continue;
     }
     yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
@@ -603,6 +603,7 @@ export function* finishLayer(
 
   yield* put(registerLabelPointAction(layer.getUnzoomedCentroid()));
 }
+
 export function* ensureToolIsAllowedInMag(): Saga<any> {
   yield* take("INITIALIZE_VOLUMETRACING");
 

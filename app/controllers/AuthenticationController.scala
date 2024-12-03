@@ -234,6 +234,8 @@ class AuthenticationController @Inject()(
    */
 
   def accessibleBySwitching(datasetId: Option[String],
+                            datasetDirectoryName: Option[String],
+                            organizationId: Option[String],
                             annotationId: Option[String],
                             workflowHash: Option[String]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
@@ -241,32 +243,48 @@ class AuthenticationController @Inject()(
         datasetIdValidated <- Fox.runOptional(datasetId)(ObjectId.fromString(_))
         isSuperUser <- multiUserDAO.findOne(request.identity._multiUser).map(_.isSuperUser)
         selectedOrganization <- if (isSuperUser)
-          accessibleBySwitchingForSuperUser(datasetIdValidated, annotationId, workflowHash)
+          accessibleBySwitchingForSuperUser(datasetIdValidated,
+                                            datasetDirectoryName,
+                                            organizationId,
+                                            annotationId,
+                                            workflowHash)
         else
-          accessibleBySwitchingForMultiUser(request.identity._multiUser, datasetIdValidated, annotationId, workflowHash)
+          accessibleBySwitchingForMultiUser(request.identity._multiUser,
+                                            datasetIdValidated,
+                                            datasetDirectoryName,
+                                            organizationId,
+                                            annotationId,
+                                            workflowHash)
         _ <- bool2Fox(selectedOrganization._id != request.identity._organization) // User is already in correct orga, but still could not see dataset. Assume this had a reason.
         selectedOrganizationJs <- organizationService.publicWrites(selectedOrganization)
       } yield Ok(selectedOrganizationJs)
   }
 
   private def accessibleBySwitchingForSuperUser(datasetIdOpt: Option[ObjectId],
+                                                datasetDirectoryNameOpt: Option[String],
+                                                organizationIdOpt: Option[String],
                                                 annotationIdOpt: Option[String],
                                                 workflowHashOpt: Option[String]): Fox[Organization] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
-    (datasetIdOpt, annotationIdOpt, workflowHashOpt) match {
-      case (Some(datasetId), None, None) =>
+    (datasetIdOpt, datasetDirectoryNameOpt, organizationIdOpt, annotationIdOpt, workflowHashOpt) match {
+      case (Some(datasetId), None, None, None, None) =>
         for {
           dataset <- datasetDAO.findOne(datasetId)
           organization <- organizationDAO.findOne(dataset._organization)
         } yield organization
-      case (None, Some(annotationId), None) =>
+      case (None, Some(datasetDirectoryName), Some(organizationId), None, None) =>
+        for {
+          dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)
+          organization <- organizationDAO.findOne(dataset._organization)
+        } yield organization
+      case (None, Some(annotationId), None, None, None) =>
         for {
           annotationObjectId <- ObjectId.fromString(annotationId)
           annotation <- annotationDAO.findOne(annotationObjectId) // Note: this does not work for compound annotations.
           user <- userDAO.findOne(annotation._user)
           organization <- organizationDAO.findOne(user._organization)
         } yield organization
-      case (None, None, Some(workflowHash)) =>
+      case (None, None, None, None, Some(workflowHash)) =>
         for {
           workflow <- voxelyticsDAO.findWorkflowByHash(workflowHash)
           organization <- organizationDAO.findOne(workflow._organization)
@@ -277,26 +295,38 @@ class AuthenticationController @Inject()(
 
   private def accessibleBySwitchingForMultiUser(multiUserId: ObjectId,
                                                 datasetIdOpt: Option[ObjectId],
+                                                datasetDirectoryNameOpt: Option[String],
+                                                organizationIdOpt: Option[String],
                                                 annotationIdOpt: Option[String],
                                                 workflowHashOpt: Option[String]): Fox[Organization] =
     for {
       identities <- userDAO.findAllByMultiUser(multiUserId)
-      selectedIdentity <- Fox.find(identities)(identity =>
-        canAccessDatasetOrAnnotationOrWorkflow(identity, datasetIdOpt, annotationIdOpt, workflowHashOpt))
+      selectedIdentity <- Fox.find(identities)(
+        identity =>
+          canAccessDatasetOrAnnotationOrWorkflow(identity,
+                                                 datasetIdOpt,
+                                                 datasetDirectoryNameOpt,
+                                                 organizationIdOpt,
+                                                 annotationIdOpt,
+                                                 workflowHashOpt))
       selectedOrganization <- organizationDAO.findOne(selectedIdentity._organization)(GlobalAccessContext)
     } yield selectedOrganization
 
   private def canAccessDatasetOrAnnotationOrWorkflow(user: User,
                                                      datasetIdOpt: Option[ObjectId],
+                                                     datasetDirectoryNameOpt: Option[String],
+                                                     organizationIdOpt: Option[String],
                                                      annotationIdOpt: Option[String],
                                                      workflowHashOpt: Option[String]): Fox[Boolean] = {
     val ctx = AuthorizedAccessContext(user)
-    (datasetIdOpt, annotationIdOpt, workflowHashOpt) match {
-      case (Some(datasetId), None, None) =>
+    (datasetIdOpt, datasetDirectoryNameOpt, organizationIdOpt, annotationIdOpt, workflowHashOpt) match {
+      case (Some(datasetId), None, None, None, None) =>
         canAccessDataset(ctx, datasetId)
-      case (None, Some(annotationId), None) =>
+      case (None, Some(datasetDirectoryName), Some(organizationId), None, None) =>
+        canAccessDatasetByDirectoryNameAndOrganization(ctx, datasetDirectoryName, organizationId)
+      case (None, Some(annotationId), None, None, None) =>
         canAccessAnnotation(user, ctx, annotationId)
-      case (None, None, Some(workflowHash)) =>
+      case (None, None, None, None, Some(workflowHash)) =>
         canAccessWorkflow(user, workflowHash)
       case _ => Fox.failure("Can either test access for dataset or annotation or workflow, not a combination")
     }
@@ -304,6 +334,13 @@ class AuthenticationController @Inject()(
 
   private def canAccessDataset(ctx: DBAccessContext, datasetId: ObjectId): Fox[Boolean] = {
     val foundFox = datasetDAO.findOne(datasetId)(ctx)
+    foundFox.futureBox.map(_.isDefined)
+  }
+
+  private def canAccessDatasetByDirectoryNameAndOrganization(ctx: DBAccessContext,
+                                                             datasetDirectoryName: String,
+                                                             organizationId: String): Fox[Boolean] = {
+    val foundFox = datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)(ctx)
     foundFox.futureBox.map(_.isDefined)
   }
 

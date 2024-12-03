@@ -1,46 +1,53 @@
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import React from "react";
+import type React from "react";
+import { useState } from "react";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 
 type Props = {
   redirectTo: () => Promise<string>;
   history: RouteComponentProps["history"];
   pushToHistory?: boolean;
+  errorComponent?: React.ReactNode;
 };
 
-class AsyncRedirect extends React.PureComponent<Props> {
-  static defaultProps = {
-    pushToHistory: true,
-  };
+const AsyncRedirect: React.FC<Props> = ({
+  redirectTo,
+  history,
+  pushToHistory = true,
+  errorComponent,
+}: Props) => {
+  const [hasError, setHasError] = useState(false);
+  useEffectOnlyOnce(() => {
+    const performRedirect = async () => {
+      try {
+        const newPath = await redirectTo();
 
-  componentDidMount() {
-    this.redirect();
-  }
+        if (newPath.startsWith(location.origin)) {
+          // The link is absolute which react-router does not support
+          // apparently. See https://stackoverflow.com/questions/42914666/react-router-external-link
+          if (pushToHistory) {
+            location.assign(newPath);
+          } else {
+            location.replace(newPath);
+          }
+          return;
+        }
 
-  async redirect() {
-    const newPath = await this.props.redirectTo();
-
-    if (newPath.startsWith(location.origin)) {
-      // The link is absolute which react-router does not support
-      // apparently. See https://stackoverflow.com/questions/42914666/react-router-external-link
-      if (this.props.pushToHistory) {
-        location.assign(newPath);
-      } else {
-        location.replace(newPath);
+        if (pushToHistory) {
+          history.push(newPath);
+        } else {
+          history.replace(newPath);
+        }
+      } catch (e) {
+        setHasError(true);
+        throw e;
       }
-      return;
-    }
+    };
+    performRedirect();
+  });
 
-    if (this.props.pushToHistory) {
-      this.props.history.push(newPath);
-    } else {
-      this.props.history.replace(newPath);
-    }
-  }
-
-  render() {
-    return null;
-  }
-}
+  return hasError && errorComponent ? errorComponent : null;
+};
 
 export default withRouter<RouteComponentProps & Props, any>(AsyncRedirect);

@@ -85,7 +85,9 @@ test.serial(
 test.serial("Save actions should not be chunked below the chunk limit (1/3)", (t) => {
   Store.dispatch(discardSaveQueuesAction());
   t.deepEqual(Store.getState().save.queue, []);
-  const trees = generateDummyTrees(1000, 1);
+  // This will create 250 trees with one node each. Thus, 500 update actions will
+  // be sent to the server (two per node).
+  const trees = generateDummyTrees(250, 1);
   Store.dispatch(addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), []));
   t.is(Store.getState().save.queue.length, 1);
   t.true(Store.getState().save.queue[0].actions.length < MAXIMUM_ACTION_COUNT_PER_BATCH);
@@ -94,7 +96,7 @@ test.serial("Save actions should not be chunked below the chunk limit (1/3)", (t
 test.serial("Save actions should be chunked above the chunk limit (2/3)", (t) => {
   Store.dispatch(discardSaveQueuesAction());
   t.deepEqual(Store.getState().save.queue, []);
-  const trees = generateDummyTrees(5000, 1);
+  const trees = generateDummyTrees(5000, 2);
   Store.dispatch(addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), []));
   const state = Store.getState();
   t.true(state.save.queue.length > 1);

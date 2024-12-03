@@ -178,7 +178,7 @@ test.serial("Send update actions and compare resulting tracing", async (t) => {
 });
 test("Send complex update actions and compare resulting tracing", async (t) => {
   const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
-  const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 5));
+  const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 6));
   const treeGroups = [
     {
       groupId: 1,
@@ -214,7 +214,7 @@ test("Send complex update actions and compare resulting tracing", async (t) => {
 
 test("Update Metadata for Skeleton Tracing", async (t) => {
   const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
-  const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 5));
+  const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 6));
   const createTreesUpdateActions = Array.from(diffTrees("someTracingId", {}, trees));
   const metadata = [
     {

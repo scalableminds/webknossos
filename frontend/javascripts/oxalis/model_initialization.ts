@@ -354,9 +354,6 @@ function initializeAnnotation(
     const skeletonTracing = getNullableSkeletonTracing(serverTracings);
 
     if (skeletonTracing != null) {
-      // To generate a huge amount of dummy trees, use:
-      // import generateDummyTrees from "./model/helpers/generate_dummy_trees";
-      // tracing.trees = generateDummyTrees(1, 200000);
       Store.dispatch(initializeSkeletonTracingAction(skeletonTracing));
     }
     Store.dispatch(setVersionNumberAction(version));

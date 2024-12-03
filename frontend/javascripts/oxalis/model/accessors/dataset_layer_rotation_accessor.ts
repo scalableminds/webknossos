@@ -22,7 +22,7 @@ import {
   nestedToFlatMatrix,
   type Transform,
 } from "../helpers/transformation_helpers";
-import { getDatasetBoundingBox, getLayerByName } from "./dataset_accessor";
+import { getLayerByName } from "./dataset_accessor";
 import type BoundingBox from "../bucket_data_handling/bounding_box";
 
 const IDENTITY_MATRIX = [
@@ -149,12 +149,12 @@ function _getTransformsForLayerOrNull(
   nativelyRenderedLayerNames: string[],
 ): Transform | null {
   if (layer.category === "skeleton") {
-    return getTransformsForSkeletonLayerOrNull(dataset, nativelyRenderedLayerNames);
+    return getTransformsForSkeletonLayerOrNull(dataset, layer, nativelyRenderedLayerNames);
   }
   const layerTransforms = _getOriginalTransformsForLayerOrNull(dataset, layer);
 
   const doAllLayersHaveTheSameRotation = haveAllLayersSameRotation(dataset.dataSource.dataLayers);
-  const shouldLayerBeRenderedNatively = nativelyRenderedLayerNames.includes(layer.name);
+  const shouldLayerBeRenderedNatively = nativelyRenderedLayerNames.length > 0;
 
   // Handling the case where all layers have the same rotation.
   if (doAllLayersHaveTheSameRotation) {
@@ -218,51 +218,29 @@ export function getTransformsForLayer(
 
 function _getTransformsForSkeletonLayerOrNull(
   dataset: APIDataset,
+  layer: APIDataLayer | APISkeletonLayer,
   nativelyRenderedLayerNames: string[],
 ): Transform | null {
+  const layers = dataset.dataSource.dataLayers;
+  const doAllLayersHaveTheSameRotation = haveAllLayersSameRotation(layers);
   if (nativelyRenderedLayerNames.length === 0) {
-    // No layer is requested to be rendered natively. We can use
-    // each layer's transforms as is.
-    // If the dataset's layers have a consistent rotation the skeleton layer should be rotated as well.
-    const layers = dataset.dataSource.dataLayers;
-    const doAllLayersHaveTheSameRotation = haveAllLayersSameRotation(layers);
+    // No layer is requested to be rendered natively. -> We can use each layer's transforms as is.
     if (!doAllLayersHaveTheSameRotation) {
-      // As there is no consistent rotation for all layers, we do no guess work on which layer's transforms to use and return null / do not transform the skeleton layer.
+      // If the dataset's layers do not have a consistent transformation (which only rotates the dataset),
+      // we cannot guess what transformation should be applied to the skeleton layer.
       return null;
     }
 
-    // The skeleton layer needs to be rotated as well and translated by the dataset center.
-    const someLayersTransforms = layers[0].coordinateTransformations;
-    if (someLayersTransforms == null) {
-      // Should never happen as haveAllLayersSameRotation ensure that all layers have transformations.
-      // In case no layer has transformations the skeleton layer also does not need to be transformed.
-      return null;
-    }
-    const datasetBoundingBox = getDatasetBoundingBox(dataset);
-    const translationToOrigin = getTranslationToOrigin(datasetBoundingBox);
-    const xRotation = getRotationMatrixAroundAxis(
-      "x",
-      getRotationFromTransformation(someLayersTransforms[1], "x"),
+    // The skeleton layer needs transformed just like the other layers. Thus, we simply duplicate the first layers transforms.
+    const someLayersTransforms = getTransformsForLayerOrNull(
+      dataset,
+      layers[0],
+      nativelyRenderedLayerNames,
     );
-    const yRotation = getRotationMatrixAroundAxis(
-      "y",
-      getRotationFromTransformation(someLayersTransforms[2], "y"),
-    );
-    const zRotation = getRotationMatrixAroundAxis(
-      "z",
-      getRotationFromTransformation(someLayersTransforms[3], "z"),
-    );
-    const translationBackToOriginalPosition =
-      getTranslationBackToOriginalPosition(datasetBoundingBox);
-    const transforms = [
-      createAffineTransformFromMatrix(translationToOrigin.matrix),
-      createAffineTransformFromMatrix(xRotation.matrix),
-      createAffineTransformFromMatrix(yRotation.matrix),
-      createAffineTransformFromMatrix(zRotation.matrix),
-      createAffineTransformFromMatrix(translationBackToOriginalPosition.matrix),
-    ];
-    const combinedTransforms = transforms.reduce(chainTransforms, IdentityTransform);
-    return combinedTransforms;
+    return someLayersTransforms;
+  } else if (nativelyRenderedLayerNames.length > 0 && doAllLayersHaveTheSameRotation) {
+    // If all layers have the same transformations and at least one is rendered natively, this means that all layer should be rendered natively.
+    return null;
   }
 
   const layerUsedAsReference = nativelyRenderedLayerNames[0];
@@ -282,10 +260,12 @@ export const getTransformsForSkeletonLayerOrNull = memoizeOne(_getTransformsForS
 
 export function getTransformsForSkeletonLayer(
   dataset: APIDataset,
+  layer: APIDataLayer | APISkeletonLayer,
   nativelyRenderedLayerNames: string[],
 ): Transform {
   return (
-    getTransformsForSkeletonLayerOrNull(dataset, nativelyRenderedLayerNames) || IdentityTransform
+    getTransformsForSkeletonLayerOrNull(dataset, layer, nativelyRenderedLayerNames) ||
+    IdentityTransform
   );
 }
 

@@ -12,6 +12,8 @@ import {
 } from "oxalis/shaders/thin_plate_spline.glsl";
 import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
 import type TPS3D from "libs/thin_plate_spline";
+import type { APISkeletonLayer } from "types/api_flow_types";
+import { getAPISkeletonLayer } from "oxalis/model/accessors/skeletontracing_accessor";
 
 class EdgeShader {
   material: THREE.RawShaderMaterial;
@@ -41,11 +43,16 @@ class EdgeShader {
       },
     };
 
-    const dataset = Store.getState().dataset;
+    const { dataset, tracing } = Store.getState();
+    const skeletonLayer = {
+      category: "skeleton",
+      name: tracing.skeleton?.tracingId,
+    } as APISkeletonLayer;
     const { nativelyRenderedLayerNames } = Store.getState().datasetConfiguration;
     this.uniforms["transform"] = {
       value: M4x4.transpose(
-        getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerNames).affineMatrix,
+        getTransformsForSkeletonLayer(dataset, skeletonLayer, nativelyRenderedLayerNames)
+          .affineMatrix,
       ),
     };
 
@@ -71,6 +78,7 @@ class EdgeShader {
       (storeState) =>
         getTransformsForSkeletonLayer(
           storeState.dataset,
+          getAPISkeletonLayer(storeState.tracing.skeleton),
           storeState.datasetConfiguration.nativelyRenderedLayerNames,
         ),
       (skeletonTransforms) => {

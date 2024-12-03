@@ -813,8 +813,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                 placement="left"
               >
                 <HoverIconButton
-                  icon={<LockOutlined />}
-                  hoveredIcon={<UnlockOutlined />}
+                  icon={<LockOutlined className="icon-margin-right" />}
+                  hoveredIcon={<UnlockOutlined className="icon-margin-right" />}
                   onClick={() => {
                     this.setState({
                       isAddVolumeLayerModalVisible: true,

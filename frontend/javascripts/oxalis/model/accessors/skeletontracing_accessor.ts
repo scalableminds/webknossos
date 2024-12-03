@@ -5,6 +5,7 @@ import type {
   ServerSkeletonTracing,
   APIAnnotation,
   AnnotationLayerDescriptor,
+  APISkeletonLayer,
 } from "types/api_flow_types";
 import type {
   Tracing,
@@ -35,6 +36,13 @@ export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
   }
 
   return Maybe.Nothing();
+}
+
+export function getAPISkeletonLayer(skeletonTracing?: SkeletonTracing | null): APISkeletonLayer {
+  return {
+    category: "skeleton",
+    name: skeletonTracing ? skeletonTracing.tracingId : "skeleton",
+  };
 }
 
 export function getSkeletonDescriptor(
@@ -220,6 +228,7 @@ export function isSkeletonLayerTransformed(state: OxalisState) {
   return (
     getTransformsForSkeletonLayerOrNull(
       state.dataset,
+      getAPISkeletonLayer(state.tracing.skeleton),
       state.datasetConfiguration.nativelyRenderedLayerNames,
     ) != null
   );
@@ -232,16 +241,24 @@ export function getNodePosition(node: Node, state: OxalisState): Vector3 {
 export function transformNodePosition(position: Vector3, state: OxalisState): Vector3 {
   const dataset = state.dataset;
   const { nativelyRenderedLayerNames } = state.datasetConfiguration;
-
-  const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerNames);
+  const apiSkeletonLayer = getAPISkeletonLayer(state.tracing.skeleton);
+  const currentTransforms = getTransformsForSkeletonLayer(
+    dataset,
+    apiSkeletonLayer,
+    nativelyRenderedLayerNames,
+  );
   return transformPointUnscaled(currentTransforms)(position);
 }
 
 export function untransformNodePosition(position: Vector3, state: OxalisState): Vector3 {
   const dataset = state.dataset;
   const { nativelyRenderedLayerNames } = state.datasetConfiguration;
-
-  const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerNames);
+  const apiSkeletonLayer = getAPISkeletonLayer(state.tracing.skeleton);
+  const currentTransforms = getTransformsForSkeletonLayer(
+    dataset,
+    apiSkeletonLayer,
+    nativelyRenderedLayerNames,
+  );
   return transformPointUnscaled(invertTransform(currentTransforms))(position);
 }
 

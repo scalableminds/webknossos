@@ -105,6 +105,7 @@ import {
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
 import { convertServerAdditionalAxesToFrontEnd } from "./model/reducers/reducer_helpers";
+import { haveAllLayersSameRotation } from "./model/accessors/dataset_layer_rotation_accessor";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
@@ -476,6 +477,7 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
 
   const originalLayers = dataset.dataSource.dataLayers;
   const newLayers = originalLayers.slice();
+  const doAllLayersHaveTheSameRotation = haveAllLayersSameRotation(originalLayers);
 
   for (const tracing of tracings) {
     // The tracing always contains the layer information for the user segmentation.
@@ -493,6 +495,16 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
     const boundingBox = getDatasetBoundingBox(dataset).asServerBoundingBox();
     const mags = tracing.mags || [];
     const tracingHasMagList = mags.length > 0;
+    let coordinateTransformsMaybe = {};
+    if (doAllLayersHaveTheSameRotation) {
+      coordinateTransformsMaybe = {
+        coordinateTransformations: originalLayers?.[0].coordinateTransformations,
+      };
+    } else if (fallbackLayer?.coordinateTransformations) {
+      coordinateTransformsMaybe = {
+        coordinateTransformations: fallbackLayer.coordinateTransformations,
+      };
+    }
     // Legacy tracings don't have the `tracing.mags` property
     // since they were created before WK started to maintain multiple magnifications
     // in volume annotations. Therefore, this code falls back to mag (1, 1, 1) for
@@ -514,6 +526,7 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
       fallbackLayer: tracing.fallbackLayer,
       fallbackLayerInfo: fallbackLayer,
       additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
+      ...coordinateTransformsMaybe,
     };
     if (fallbackLayerIndex > -1) {
       newLayers[fallbackLayerIndex] = tracingLayer;

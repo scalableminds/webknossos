@@ -21,14 +21,14 @@ type AxisRotationFormItemProps = {
   axis: "x" | "y" | "z";
 };
 
-function getDatasetBoundingBoxFromLayers(layer: APIDataLayer[]): BoundingBox | undefined {
-  if (layer.length === 0) {
+function getDatasetBoundingBoxFromLayers(layers: APIDataLayer[]): BoundingBox | undefined {
+  if (!layers || layers.length === 0) {
     return undefined;
   }
-  let datasetBoundingBox = BoundingBox.fromBoundBoxObject(layer[0].boundingBox);
-  for (let i = 1; i < layer.length; i++) {
+  let datasetBoundingBox = BoundingBox.fromBoundBoxObject(layers[0].boundingBox);
+  for (let i = 1; i < layers.length; i++) {
     datasetBoundingBox = datasetBoundingBox.extend(
-      BoundingBox.fromBoundBoxObject(layer[i].boundingBox),
+      BoundingBox.fromBoundBoxObject(layers[i].boundingBox),
     );
   }
   return datasetBoundingBox;
@@ -49,14 +49,14 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
       return;
     }
     const rotationValues = form?.getFieldValue(["datasetRotation"]);
+    const transformations = [
+      getTranslationToOrigin(datasetBoundingBox),
+      getRotationMatrixAroundAxis("x", rotationValues["x"]),
+      getRotationMatrixAroundAxis("y", rotationValues["y"]),
+      getRotationMatrixAroundAxis("z", rotationValues["z"]),
+      getTranslationBackToOriginalPosition(datasetBoundingBox),
+    ];
     const dataLayersWithUpdatedTransforms = dataLayers.map((layer) => {
-      const transformations = [
-        getTranslationToOrigin(datasetBoundingBox),
-        getRotationMatrixAroundAxis("x", rotationValues["x"]),
-        getRotationMatrixAroundAxis("y", rotationValues["y"]),
-        getRotationMatrixAroundAxis("z", rotationValues["z"]),
-        getTranslationBackToOriginalPosition(datasetBoundingBox),
-      ];
       return {
         ...layer,
         coordinateTransformations: transformations,

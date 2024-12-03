@@ -15,6 +15,7 @@ import {
 } from "oxalis/shaders/thin_plate_spline.glsl";
 import type TPS3D from "libs/thin_plate_spline";
 import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
+import { getAPISkeletonLayer } from "oxalis/model/accessors/skeletontracing_accessor";
 
 export const NodeTypes = {
   INVALID: 0.0,
@@ -118,9 +119,13 @@ class NodeShader {
     );
 
     const dataset = Store.getState().dataset;
-    const { nativelyRenderedLayerNames } = Store.getState().datasetConfiguration;
+    const { datasetConfiguration, tracing } = Store.getState();
 
-    const { affineMatrix } = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerNames);
+    const { affineMatrix } = getTransformsForSkeletonLayer(
+      dataset,
+      getAPISkeletonLayer(tracing.skeleton),
+      datasetConfiguration.nativelyRenderedLayerNames,
+    );
     this.uniforms["transform"] = {
       value: M4x4.transpose(affineMatrix),
     };
@@ -129,6 +134,7 @@ class NodeShader {
       (storeState) =>
         getTransformsForSkeletonLayer(
           storeState.dataset,
+          getAPISkeletonLayer(storeState.tracing.skeleton),
           storeState.datasetConfiguration.nativelyRenderedLayerNames,
         ),
       (skeletonTransforms) => {

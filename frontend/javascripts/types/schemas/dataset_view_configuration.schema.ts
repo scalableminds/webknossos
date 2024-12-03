@@ -149,6 +149,12 @@ export const datasetViewConfiguration = {
       type: "string",
     },
   },
+  nativelyRenderedLayerNames: {
+    type: "array",
+    items: {
+      type: "string",
+    },
+  },
 };
 export default {
   $schema: "http://json-schema.org/draft-06/schema#",

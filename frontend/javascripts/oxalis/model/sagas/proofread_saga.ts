@@ -455,7 +455,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     return;
   }
 
-  yield* put(pushSaveQueueTransaction(items, volumeTracingId));
+  yield* put(pushSaveQueueTransaction(items));
   yield* call([Model, Model.ensureSavedState]);
 
   if (action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS" || action.type === "DELETE_EDGE") {
@@ -793,7 +793,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     return;
   }
 
-  yield* put(pushSaveQueueTransaction(items, volumeTracingId));
+  yield* put(pushSaveQueueTransaction(items));
   yield* call([Model, Model.ensureSavedState]);
 
   if (action.type === "MIN_CUT_AGGLOMERATE") {
@@ -951,7 +951,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     return;
   }
 
-  yield* put(pushSaveQueueTransaction(items, volumeTracingId));
+  yield* put(pushSaveQueueTransaction(items));
   yield* call([Model, Model.ensureSavedState]);
 
   // Now that the changes are saved, we can split the mapping locally (because it requires

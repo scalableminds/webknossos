@@ -118,10 +118,7 @@ export function* pushAnnotationUpdateAsync(action: Action) {
 function* pushAnnotationLayerUpdateAsync(action: EditAnnotationLayerAction): Saga<void> {
   const { tracingId, layerProperties } = action;
   yield* put(
-    pushSaveQueueTransaction(
-      [updateAnnotationLayerName(tracingId, layerProperties.name)],
-      tracingId,
-    ),
+    pushSaveQueueTransaction([updateAnnotationLayerName(tracingId, layerProperties.name)]),
   );
 }
 

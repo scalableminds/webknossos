@@ -41,22 +41,20 @@ export type SaveAction =
 // From this point on, we can assume that the groups fulfil the isolation requirement.
 export const pushSaveQueueTransaction = (
   items: Array<UpdateActionWithoutIsolationRequirement>,
-  transactionId: string = getUid(),
 ): PushSaveQueueTransaction =>
   ({
     type: "PUSH_SAVE_QUEUE_TRANSACTION",
     items,
-    transactionId,
+    transactionId: getUid(),
   }) as const;
 
 export const pushSaveQueueTransactionIsolated = (
   item: UpdateActionWithIsolationRequirement,
-  transactionId: string = getUid(),
 ): PushSaveQueueTransaction =>
   ({
     type: "PUSH_SAVE_QUEUE_TRANSACTION",
     items: [item],
-    transactionId,
+    transactionId: getUid(),
   }) as const;
 
 export const saveNowAction = () =>

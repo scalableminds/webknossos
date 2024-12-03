@@ -72,12 +72,7 @@ async function handleRestoreVersion(
   if (props.allowUpdate) {
     const newestVersion = _.max(versions.map((batch) => batch.version)) || 0;
     Store.dispatch(setVersionNumberAction(newestVersion));
-    Store.dispatch(
-      pushSaveQueueTransactionIsolated(
-        revertToVersion(version),
-        "experimental; leaving out tracingId as this should not be required",
-      ),
-    );
+    Store.dispatch(pushSaveQueueTransactionIsolated(revertToVersion(version)));
     await Model.ensureSavedState();
     Store.dispatch(setVersionRestoreVisibilityAction(false));
     Store.dispatch(setAnnotationAllowUpdateAction(true));

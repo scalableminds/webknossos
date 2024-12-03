@@ -40,7 +40,10 @@ mockRequire("libs/toast", {
 const { setupSavingForTracingType } = require("oxalis/model/sagas/save_saga");
 
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
-const { ensureMaybeActiveMappingIsLocked } = require("oxalis/model/sagas/saga_helpers");
+const {
+  requestBucketModificationInVolumeTracing,
+  ensureMaybeActiveMappingIsLocked,
+} = require("oxalis/model/sagas/saga_helpers");
 
 const VolumeLayer = require("oxalis/model/volumetracing/volumelayer").default;
 
@@ -437,11 +440,11 @@ test("VolumeTracingSaga should lock an active mapping upon first volume annotati
     mag: [1, 1, 1],
     zoomStep: 0,
   });
-  // Test whether nested saga ensureMaybeActiveMappingIsLocked is called.
+  // Test whether nested saga requestBucketModificationInVolumeTracing is called.
   expectValueDeepEqual(
     t,
     saga.next(ACTIVE_CELL_ID),
-    call(ensureMaybeActiveMappingIsLocked, volumeTracing),
+    call(requestBucketModificationInVolumeTracing, volumeTracing),
   );
 });
 

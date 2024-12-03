@@ -26,9 +26,9 @@ trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHel
     val result = b match {
       case Full(result) =>
         result
-      case ParamFailure(msg, _, chain, statusCode: Int) =>
+      case ParamFailure(msg, h_, chain, statusCode: Int) =>
         new JsonResult(statusCode)(Messages(msg), formatChainOpt(chain))
-      case ParamFailure(_, _, _, msgs: JsArray) =>
+      case ParamFailure(_s, _b, _c, msgs: JsArray) =>
         new JsonResult(defaultErrorCode)(jsonMessages(msgs))
       case Failure(msg, _, chain) =>
         new JsonResult(defaultErrorCode)(Messages(msg), formatChainOpt(chain))

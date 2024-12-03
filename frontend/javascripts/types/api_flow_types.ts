@@ -100,7 +100,9 @@ export type APIDataLayer = APIColorLayer | APISegmentationLayer;
 export type APISkeletonLayer = { category: "skeleton"; name: string };
 
 export type LayerLink = {
-  datasetId: APIDatasetId;
+  datasetId: string;
+  dataSourceId: APIDataSourceId;
+  datasetName: string;
   sourceName: string;
   newName: string;
   transformations: CoordinateTransformation[];
@@ -153,7 +155,7 @@ export type APIPublicationAnnotation = {
   readonly name: string;
   readonly description: string;
   readonly tracingStore: APITracingStore;
-  readonly dataSet: APIDataset;
+  readonly dataset: APIDataset;
 };
 export type APIPublication = {
   readonly id: string;
@@ -165,14 +167,11 @@ export type APIPublication = {
   readonly datasets: Array<APIDataset>;
   readonly annotations: Array<APIPublicationAnnotation>;
 };
-export type MutableAPIDatasetId = {
+export type MutableAPIDataSourceId = {
   owningOrganization: string;
-  name: string;
+  directoryName: string;
 };
-export function areDatasetsIdentical(a: APIDatasetId, b: APIDatasetId) {
-  return a.owningOrganization === b.owningOrganization && a.name === b.name;
-}
-export type APIDatasetId = Readonly<MutableAPIDatasetId>;
+export type APIDataSourceId = Readonly<MutableAPIDataSourceId>;
 
 export enum APIMetadataEnum {
   STRING = "string",
@@ -197,7 +196,9 @@ export type APIMetadataEntry = {
   value: string | number | string[];
 };
 
-type MutableAPIDatasetBase = MutableAPIDatasetId & {
+type MutableAPIDatasetBase = MutableAPIDataSourceId & {
+  readonly id: string; // Should never be changed.
+  name: string;
   isUnreported: boolean;
   folderId: string;
   allowedTeams: Array<APITeam>;
@@ -208,7 +209,7 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   metadata: APIMetadataEntry[] | null | undefined;
   isEditable: boolean;
   isPublic: boolean;
-  displayName: string | null | undefined;
+  directoryName: string;
   logoUrl: string | null | undefined;
   lastUsedByUser: number;
   sortingKey: number;
@@ -242,7 +243,7 @@ export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   | "name"
   | "folderId"
   | "isActive"
-  | "displayName"
+  | "directoryName"
   | "created"
   | "isEditable"
   | "lastUsedByUser"
@@ -250,7 +251,7 @@ export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   | "isUnreported"
 >;
 export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
-  id?: string;
+  id: string;
   status: MutableAPIDataSourceBase["status"];
   colorLayerNames: Array<string>;
   segmentationLayerNames: Array<string>;
@@ -263,11 +264,12 @@ export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact 
   ).map((layers) => layers.map((layer) => layer.name).sort());
 
   return {
+    id: dataset.id,
     owningOrganization: dataset.owningOrganization,
     name: dataset.name,
     folderId: dataset.folderId,
     isActive: dataset.isActive,
-    displayName: dataset.displayName,
+    directoryName: dataset.directoryName,
     created: dataset.created,
     isEditable: dataset.isEditable,
     lastUsedByUser: dataset.lastUsedByUser,
@@ -449,7 +451,8 @@ export type APITask = {
   readonly boundingBoxVec6?: Vector6;
   readonly created: number;
   readonly creationInfo: string | null | undefined;
-  readonly dataSet: string;
+  readonly datasetId: string;
+  readonly datasetName: string;
   readonly editPosition: Vector3;
   readonly editRotation: Vector3;
   readonly id: string;
@@ -477,6 +480,7 @@ export type EditableLayerProperties = Partial<{
 }>;
 export type APIAnnotationInfo = {
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
+  readonly datasetId: string;
   readonly dataSetName: string;
   readonly organization: string;
   readonly description: string;
@@ -503,6 +507,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     description,
     modified,
     id,
+    datasetId,
     name,
     state,
     isLockedByOwner,
@@ -516,6 +521,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
   } = annotation;
 
   return {
+    datasetId,
     annotationLayers,
     dataSetName,
     organization,
@@ -714,8 +720,10 @@ export type WkLibsNdBoundingBox = BoundingBoxObject & {
 
 export type APIJob = {
   readonly id: string;
+  readonly datasetId: string | null | undefined;
   readonly owner: APIUserBase;
   readonly datasetName: string | null | undefined;
+  readonly datasetDirectoryName: string | null | undefined;
   readonly exportFileName: string | null | undefined;
   readonly layerName: string | null | undefined;
   readonly annotationLayerName: string | null | undefined;

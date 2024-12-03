@@ -22,8 +22,8 @@ trait MeshMappingHelper {
       editableMappingTracingId: Option[String],
       agglomerateId: Long,
       mappingNameForMeshFile: Option[String],
-      omitMissing: Boolean, // If true, failing lookups in the agglomerate file will just return empty list.
-      )(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Long]] =
+      omitMissing: Boolean // If true, failing lookups in the agglomerate file will just return empty list.
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Long]] =
     (targetMappingName, editableMappingTracingId) match {
       case (None, None) =>
         // No mapping selected, assume id matches meshfile

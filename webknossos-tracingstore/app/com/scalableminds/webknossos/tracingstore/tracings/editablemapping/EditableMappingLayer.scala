@@ -36,9 +36,10 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       remoteFallbackLayer <- layer.editableMappingService
         .remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.tracingId)
       // called here to ensure updates are applied
-      editableMappingInfo <- layer.annotationService.findEditableMappingInfo(layer.annotationId,
-                                                                            tracingId,
-                                                                            Some(layer.version))(ec, layer.tokenContext)
+      editableMappingInfo <- layer.annotationService.findEditableMappingInfo(
+        layer.annotationId,
+        tracingId,
+        Some(layer.version))(ec, layer.tokenContext)
       dataRequest: WebknossosDataRequest = WebknossosDataRequest(
         position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
         mag = bucket.mag,

@@ -277,7 +277,7 @@ class AuthenticationController @Inject()(
           dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)
           organization <- organizationDAO.findOne(dataset._organization)
         } yield organization
-      case (None, Some(annotationId), None, None, None) =>
+      case (None, None, None, Some(annotationId), None) =>
         for {
           annotationObjectId <- ObjectId.fromString(annotationId)
           annotation <- annotationDAO.findOne(annotationObjectId) // Note: this does not work for compound annotations.
@@ -324,7 +324,7 @@ class AuthenticationController @Inject()(
         canAccessDataset(ctx, datasetId)
       case (None, Some(datasetDirectoryName), Some(organizationId), None, None) =>
         canAccessDatasetByDirectoryNameAndOrganization(ctx, datasetDirectoryName, organizationId)
-      case (None, Some(annotationId), None, None, None) =>
+      case (None, None, None, Some(annotationId), None) =>
         canAccessAnnotation(user, ctx, annotationId)
       case (None, None, None, None, Some(workflowHash)) =>
         canAccessWorkflow(user, workflowHash)

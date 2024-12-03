@@ -208,7 +208,6 @@ export function __setupOxalis(
     .onCall(counter++)
     .returns(Promise.resolve(datasetClone));
 
-  console.log("mock parseProtoAnnotation with", modelData[mode].annotationProto);
   protoHelpers.parseProtoAnnotation.returns(_.cloneDeep(modelData[mode].annotationProto));
   protoHelpers.parseProtoTracing.returns(_.cloneDeep(modelData[mode].tracing));
   Request.receiveJSON

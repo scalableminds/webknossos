@@ -8,6 +8,7 @@ import sinon from "sinon";
 import test from "ava";
 import { MagInfo } from "oxalis/model/helpers/mag_info";
 import type { APIDataLayer } from "types/api_flow_types";
+import type { PushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 
 const RequestMock = {
   always: (promise: Promise<any>, func: (v: any) => any) => promise.then(func, func),
@@ -21,8 +22,10 @@ function setFourBit(bool: boolean) {
   _fourBit = bool;
 }
 
+const tracingId = "tracingId";
 const mockedCube = {
   isSegmentation: true,
+  layerName: tracingId,
   magInfo: new MagInfo([
     [1, 1, 1],
     [2, 2, 2],
@@ -232,6 +235,7 @@ test.serial(
     setFourBit(false);
   },
 );
+
 test.serial("sendToStore: Request Handling should send the correct request parameters", (t) => {
   const data = new Uint8Array(2);
   const bucket1 = new DataBucket("uint8", [0, 0, 0, 0], null, mockedCube);
@@ -243,13 +247,13 @@ test.serial("sendToStore: Request Handling should send the correct request param
   const batch = [bucket1, bucket2];
   const getBucketData = sinon.stub();
   getBucketData.returns(data);
-  const tracingId = "tracingId";
-  const expectedSaveQueueItems = {
+  const expectedSaveQueueItems: PushSaveQueueTransaction = {
     type: "PUSH_SAVE_QUEUE_TRANSACTION",
     items: [
       {
         name: "updateBucket",
         value: {
+          actionTracingId: tracingId,
           position: [0, 0, 0],
           additionalCoordinates: undefined,
           mag: [1, 1, 1],
@@ -260,6 +264,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
       {
         name: "updateBucket",
         value: {
+          actionTracingId: tracingId,
           position: [64, 64, 64],
           additionalCoordinates: undefined,
           mag: [2, 2, 2],
@@ -269,8 +274,6 @@ test.serial("sendToStore: Request Handling should send the correct request param
       },
     ],
     transactionId: "dummyRequestId",
-    saveQueueType: "volume",
-    tracingId,
   };
 
   const pushQueue = new PushQueue({ ...mockedCube, layerName: tracingId });

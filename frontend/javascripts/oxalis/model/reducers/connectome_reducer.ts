@@ -75,7 +75,6 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
         trees: {},
         treeGroups: [],
         tracingId: "connectome-tracing-data",
-        version: 1,
         boundingBox: null,
         userBoundingBoxes: [],
         navigationList: {

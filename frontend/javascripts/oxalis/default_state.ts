@@ -165,7 +165,6 @@ const defaultState: OxalisState = {
       boundingBox: null,
       createdTimestamp: 0,
       type: "readonly",
-      version: 0,
       tracingId: "",
       additionalAxes: [],
     },

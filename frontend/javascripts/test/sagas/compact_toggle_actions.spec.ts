@@ -62,7 +62,6 @@ const createState = (trees: Tree[], _treeGroups: TreeGroup[]): OxalisState => ({
     skeleton: {
       additionalAxes: [],
       createdTimestamp: 0,
-      version: 0,
       tracingId,
       boundingBox: null,
       userBoundingBoxes: [],

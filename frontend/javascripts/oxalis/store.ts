@@ -209,7 +209,6 @@ export type Annotation = {
 };
 type TracingBase = {
   readonly createdTimestamp: number;
-  readonly version: number;
   readonly tracingId: string;
   readonly boundingBox: BoundingBoxType | null | undefined;
   readonly userBoundingBoxes: Array<UserBoundingBox>;

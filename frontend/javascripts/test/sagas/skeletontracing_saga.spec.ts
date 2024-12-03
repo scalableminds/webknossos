@@ -116,7 +116,6 @@ const skeletonTracing: SkeletonTracing = {
   type: "skeleton",
   createdTimestamp: 0,
   tracingId: "tracingId",
-  version: 0,
   trees: {},
   treeGroups: [],
   activeGroupId: null,

@@ -201,7 +201,7 @@ export async function requestFromStore(
   const resolutionInfo = getMagInfo(layerInfo.resolutions);
   const version =
     !isVolumeFallback && isSegmentation && maybeVolumeTracing != null
-      ? maybeVolumeTracing.version
+      ? state.tracing.version
       : null;
   const bucketInfo = batch.map((zoomedAddress) =>
     createRequestBucketInfo(

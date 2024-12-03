@@ -854,7 +854,6 @@ export type ServerTracingBase = {
   editPositionAdditionalCoordinates: AdditionalCoordinate[] | null;
   editRotation: Point3;
   error?: string;
-  version: number;
   zoomLevel: number;
   additionalAxes: ServerAdditionalAxis[];
 };

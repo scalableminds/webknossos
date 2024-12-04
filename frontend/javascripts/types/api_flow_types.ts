@@ -892,6 +892,8 @@ export type APIMeshFile = {
   // 1-2 - the format should behave as v0 (refer to voxelytics for actual differences)
   // 3   - is the newer version with draco encoding.
   formatVersion: number;
+  meshFileType: string | null | undefined;
+  meshFilePath: string | null | undefined;
 };
 export type APIConnectomeFile = {
   connectomeFileName: string;

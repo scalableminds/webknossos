@@ -846,6 +846,7 @@ function* loadPrecomputedMeshForSegmentId(
     scale,
     additionalCoordinates,
     mergeChunks,
+    id,
   );
 
   try {
@@ -882,7 +883,7 @@ function* _getChunkLoadingDescriptors(
 
   const { segmentMeshController } = getSceneController();
   const version = meshFile.formatVersion;
-  const { meshFileName } = meshFile;
+  const { meshFileName, meshFileType, meshFilePath } = meshFile;
 
   const editableMapping = yield* select((state) =>
     getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId),
@@ -916,6 +917,8 @@ function* _getChunkLoadingDescriptors(
     // without a mapping.
     meshFile.mappingName == null ? mappingName : null,
     editableMapping != null && tracing ? tracing.tracingId : null,
+    meshFileType,
+    meshFilePath,
   );
   scale = [segmentInfo.transform[0][0], segmentInfo.transform[1][1], segmentInfo.transform[2][2]];
   segmentInfo.chunks.lods.forEach((chunks, lodIndex) => {
@@ -951,9 +954,10 @@ function _getLoadChunksTasks(
   scale: Vector3 | null,
   additionalCoordinates: AdditionalCoordinate[] | null,
   mergeChunks: boolean,
+  segmentId: number,
 ) {
   const { segmentMeshController } = getSceneController();
-  const { meshFileName } = meshFile;
+  const { meshFileName, meshFileType, meshFilePath } = meshFile;
   const loader = getDracoLoader();
   return _.compact(
     _.flatten(
@@ -981,8 +985,14 @@ function _getLoadChunksTasks(
                 getBaseSegmentationName(segmentationLayer),
                 {
                   meshFile: meshFileName,
+                  meshFileType,
+                  meshFilePath,
                   // Only extract the relevant properties
-                  requests: chunks.map(({ byteOffset, byteSize }) => ({ byteOffset, byteSize })),
+                  requests: chunks.map(({ byteOffset, byteSize }) => ({
+                    byteOffset,
+                    byteSize,
+                    segmentId: segmentId,
+                  })),
                 },
               );
 

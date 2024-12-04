@@ -37,7 +37,7 @@ import Constants from "oxalis/constants";
 import { location } from "libs/window";
 import { coalesce } from "libs/utils";
 import type { AdditionalCoordinate } from "types/api_flow_types";
-import { getAPISkeletonLayer, getNodePosition } from "../accessors/skeletontracing_accessor";
+import { getNodePosition } from "../accessors/skeletontracing_accessor";
 import { getTransformsForSkeletonLayer } from "../accessors/dataset_layer_rotation_accessor";
 
 // NML Defaults
@@ -313,8 +313,7 @@ function serializeParameters(
 function serializeTransform(state: OxalisState): string[] {
   const transform = getTransformsForSkeletonLayer(
     state.dataset,
-    getAPISkeletonLayer(state.tracing.skeleton),
-    state.datasetConfiguration.nativelyRenderedLayerNames,
+    state.datasetConfiguration.nativelyRenderedLayerName,
   );
 
   if (transform === IdentityTransform) {

@@ -129,6 +129,7 @@ import {
   hasDatasetTransforms,
   haveAllLayersSameRotation,
   getTransformsForLayer,
+  isIdentityTransform,
 } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
 import {
   invertTransform,
@@ -219,11 +220,8 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
     getTransformsForLayerOrNull(
       state.dataset,
       layer,
-      state.datasetConfiguration.nativelyRenderedLayerNames,
+      state.datasetConfiguration.nativelyRenderedLayerName,
     ),
-  );
-  const isAtLeastOneLayerRenderedNatively = useSelector(
-    (state: OxalisState) => state.datasetConfiguration.nativelyRenderedLayerNames.length > 0,
   );
   const showIcon = useSelector((state: OxalisState) => hasDatasetTransforms(state.dataset));
   const doAllLayersHaveTheSameTransform = useSelector((state: OxalisState) =>
@@ -232,6 +230,7 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
   if (!showIcon) {
     return null;
   }
+  const isRenderedNatively = transform == null || isIdentityTransform(transform);
 
   const typeToLabel = {
     affine: "an affine",
@@ -246,65 +245,44 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
 
   const toggleLayerTransforms = () => {
     const state = Store.getState();
-    const { nativelyRenderedLayerNames } = state.datasetConfiguration;
-    const isLayerRenderedNatively = nativelyRenderedLayerNames.includes(layer.name);
-    if (isLayerRenderedNatively && !doAllLayersHaveTheSameTransform) {
+    //TODO: fix for skeleton layer
+    if (isRenderedNatively && !doAllLayersHaveTheSameTransform) {
       // Cannot toggle transforms on a layer into whose coordinate system other layer transform.
       return;
     }
-    // TODOM: refactor the logic here. Works but is not easy to understand
-    let shouldInvertTransformation = true;
-    let getTransformsRegardlessOfSettings = false;
-    let updatedNativelyRenderedLayerNames: string[];
-    if (doAllLayersHaveTheSameTransform) {
-      if (isAtLeastOneLayerRenderedNatively) {
-        // As at least one layer is rendered natively, we can toggle on all transforms.
-        updatedNativelyRenderedLayerNames = [];
-        // As some transformations are now turned on do not invert the transform for flycam position change.
-        getTransformsRegardlessOfSettings = true;
-        // shouldInvertTransformation = false;
-      } else {
-        // As no layer is rendered natively, we toggle off all transforms.
-        updatedNativelyRenderedLayerNames = state.dataset.dataSource.dataLayers.map((l) => l.name);
-        if (state.tracing.skeleton) {
-          // The skeleton tracing's id represents it in the nativelyRenderedLayerNames array.
-          updatedNativelyRenderedLayerNames.push(state.tracing.skeleton.tracingId);
-        }
-        console.log("toggling on all transforms");
-      }
-    } else {
-      // As not all layers have the same transform, the current layer should now be rendered natively.
-      updatedNativelyRenderedLayerNames = [...nativelyRenderedLayerNames, layer.name];
+    if (layer.category === "skeleton" && isRenderedNatively) {
+      // Cannot turn on transformations on a skeleton layer as a skeleton layer cannot have transformations.
+      // A skeleton layer can only transform accordingly to other layers.
+      return;
     }
-    dispatch(
-      updateDatasetSettingAction("nativelyRenderedLayerNames", updatedNativelyRenderedLayerNames),
-    );
+    // Get transform of layer. null is passed as nativelyRenderedLayerName to
+    // get the layers transform even in case it is currently rendered natively.
+    const currentTransform = getTransformsForLayer(state.dataset, layer, null);
 
-    // Transform current position using the (inverse) transform
-    // so that the user will still look at the same data location.
+    // In case the layer is currently not rendered natively, the inverse of its transformation is going to be applied.
+    // Therefore, we need to invert the transformation to get the correct new position.
+    const transformWhichWillBeApplied = !isRenderedNatively
+      ? invertTransform(currentTransform)
+      : currentTransform;
+
     const currentPosition = getPosition(state.flycam);
-    const currentTransforms = getTransformsForLayer(
-      state.dataset,
-      layer,
-      getTransformsRegardlessOfSettings
-        ? []
-        : state.datasetConfiguration.nativelyRenderedLayerNames,
-    );
-    console.log("applying transformation", currentTransforms);
-    const maybeInvertedTransform = shouldInvertTransformation
-      ? invertTransform(currentTransforms)
-      : currentTransforms;
-    const newPosition = transformPointUnscaled(maybeInvertedTransform)(currentPosition);
+    const newPosition = transformPointUnscaled(transformWhichWillBeApplied)(currentPosition);
 
     // Also transform a reference coordinate to determine how the scaling
     // changed. Then, adapt the zoom accordingly.
     const referenceOffset: Vector3 = [10, 10, 10];
     const secondPosition = V3.add(currentPosition, referenceOffset, [0, 0, 0]);
-    const newSecondPosition = transformPointUnscaled(maybeInvertedTransform)(secondPosition);
+    const newSecondPosition = transformPointUnscaled(transformWhichWillBeApplied)(secondPosition);
 
     const scaleChange = _.mean(
       // Only consider XY for now to determine the zoom change (by slicing from 0 to 2)
       V3.abs(V3.divide3(V3.sub(newPosition, newSecondPosition), referenceOffset)).slice(0, 2),
+    );
+    dispatch(
+      updateDatasetSettingAction(
+        "nativelyRenderedLayerName",
+        isRenderedNatively ? null : layer.name,
+      ),
     );
     dispatch(setPositionAction(newPosition));
     dispatch(setZoomStepAction(state.flycam.zoomStep * scaleChange));
@@ -314,15 +292,15 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
     <div className="flex-item">
       <FastTooltip
         title={
-          transform != null
-            ? `This layer is rendered with ${
+          isRenderedNatively
+            ? "This layer is shown natively (i.e., without any transformations)."
+            : `This layer is rendered with ${
                 typeToLabel[transform.type]
               } transformation. Click to render this layer without any transforms.`
-            : "This layer is shown natively (i.e., without any transformations)."
         }
       >
         <img
-          src={`/assets/images/${typeToImage[transform?.type || "none"]}`}
+          src={`/assets/images/${typeToImage[isRenderedNatively ? "none" : transform.type]}`}
           alt="Transformed Layer Icon"
           style={{
             cursor: transform != null ? "pointer" : "default",
@@ -1086,7 +1064,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       const transformMatrix = getTransformsForLayerOrNull(
         dataset,
         layer,
-        Store.getState().datasetConfiguration.nativelyRenderedLayerNames,
+        Store.getState().datasetConfiguration.nativelyRenderedLayerName,
       )?.affineMatrix;
       if (transformMatrix) {
         const matrix = M4x4.transpose(transformMatrix);

@@ -88,7 +88,7 @@ export const defaultDatasetViewConfigurationWithoutNull: DatasetConfiguration = 
   layers: {},
   blendMode: BLEND_MODES.Additive,
   colorLayerOrder: [],
-  nativelyRenderedLayerNames: [],
+  nativelyRenderedLayerName: null,
 };
 export const defaultDatasetViewConfiguration = {
   ...defaultDatasetViewConfigurationWithoutNull,
@@ -149,11 +149,8 @@ export const datasetViewConfiguration = {
       type: "string",
     },
   },
-  nativelyRenderedLayerNames: {
-    type: "array",
-    items: {
-      type: "string",
-    },
+  nativelyRenderedLayerName: {
+    type: "string",
   },
 };
 export default {

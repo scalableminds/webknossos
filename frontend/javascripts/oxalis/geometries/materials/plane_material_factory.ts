@@ -244,7 +244,7 @@ class PlaneMaterialFactory {
     this.uniforms.activeMagIndices = {
       value: Object.values(activeMagIndices),
     };
-    const { nativelyRenderedLayerNames } = Store.getState().datasetConfiguration;
+    const { nativelyRenderedLayerName } = Store.getState().datasetConfiguration;
     const dataset = Store.getState().dataset;
     for (const dataLayer of Model.getAllLayers()) {
       const layerName = sanitizeName(dataLayer.name);
@@ -263,7 +263,7 @@ class PlaneMaterialFactory {
       };
       const layer = getLayerByName(dataset, dataLayer.name);
       const res = invertAndTranspose(
-        getTransformsForLayer(dataset, layer, nativelyRenderedLayerNames).affineMatrix,
+        getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
       );
 
       this.uniforms[`${layerName}_transform`] = {
@@ -271,7 +271,7 @@ class PlaneMaterialFactory {
       };
       this.uniforms[`${layerName}_has_transform`] = {
         value: !_.isEqual(
-          getTransformsForLayer(dataset, layer, nativelyRenderedLayerNames).affineMatrix,
+          getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
           Identity4x4,
         ),
       };
@@ -497,7 +497,7 @@ class PlaneMaterialFactory {
               getTransformsForLayer(
                 state.dataset,
                 layer,
-                state.datasetConfiguration.nativelyRenderedLayerNames,
+                state.datasetConfiguration.nativelyRenderedLayerName,
               ).affineMatrix,
               Identity4x4,
             );
@@ -885,7 +885,7 @@ class PlaneMaterialFactory {
         (storeState) =>
           getTransformsPerLayer(
             storeState.dataset,
-            storeState.datasetConfiguration.nativelyRenderedLayerNames,
+            storeState.datasetConfiguration.nativelyRenderedLayerName,
           ),
         (transformsPerLayer) => {
           this.scaledTpsInvPerLayer = {};

@@ -127,13 +127,13 @@ export function* prepareQuickSelect(
     getSegmentationLayerForTracing(state, volumeTracing),
   );
   const dataset = yield* select((state) => state.dataset);
-  const nativelyRenderedLayerNames = yield* select(
-    (state) => state.datasetConfiguration.nativelyRenderedLayerNames,
+  const nativelyRenderedLayerName = yield* select(
+    (state) => state.datasetConfiguration.nativelyRenderedLayerName,
   );
   if (
     !_.isEqual(
-      getTransformsForLayer(dataset, colorLayer, nativelyRenderedLayerNames),
-      getTransformsForLayer(dataset, volumeLayer, nativelyRenderedLayerNames),
+      getTransformsForLayer(dataset, colorLayer, nativelyRenderedLayerName),
+      getTransformsForLayer(dataset, volumeLayer, nativelyRenderedLayerName),
     )
   ) {
     Toast.warning(

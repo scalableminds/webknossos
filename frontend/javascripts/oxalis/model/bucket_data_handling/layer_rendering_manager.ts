@@ -200,7 +200,7 @@ export default class LayerRenderingManager {
 
     const mags = getMagInfo(layer.resolutions).getDenseMags();
     const layerMatrix = invertAndTranspose(
-      getTransformsForLayer(dataset, layer, datasetConfiguration.nativelyRenderedLayerNames)
+      getTransformsForLayer(dataset, layer, datasetConfiguration.nativelyRenderedLayerName)
         .affineMatrix,
     );
 

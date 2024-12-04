@@ -277,7 +277,7 @@ function getDisabledVolumeInfo(state: OxalisState) {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const isSegmentationTracingTransformed =
     segmentationTracingLayer != null &&
-    getTransformsPerLayer(state.dataset, state.datasetConfiguration.nativelyRenderedLayerNames)[
+    getTransformsPerLayer(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName)[
       segmentationTracingLayer.tracingId
     ] !== IdentityTransform;
   const isSegmentationTracingVisible =

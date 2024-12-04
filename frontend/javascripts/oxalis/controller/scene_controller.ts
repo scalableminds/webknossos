@@ -458,7 +458,7 @@ class SceneController {
           const transformMatrix = getTransformsForLayerOrNull(
             dataset,
             layer,
-            state.datasetConfiguration.nativelyRenderedLayerNames,
+            state.datasetConfiguration.nativelyRenderedLayerName,
           )?.affineMatrix;
           if (transformMatrix) {
             const matrix = new THREE.Matrix4();
@@ -554,7 +554,7 @@ class SceneController {
       () => this.updateLayerBoundingBoxes(),
     );
     listenToStoreProperty(
-      (storeState) => storeState.datasetConfiguration.nativelyRenderedLayerNames,
+      (storeState) => storeState.datasetConfiguration.nativelyRenderedLayerName,
       () => this.updateLayerBoundingBoxes(),
     );
     listenToStoreProperty(

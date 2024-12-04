@@ -1,5 +1,5 @@
 import { M4x4, type Matrix4x4 } from "libs/mjs";
-import { IdentityTransform, type NestedMatrix4, type Vector4 } from "oxalis/constants";
+import { Identity4x4, IdentityTransform, type NestedMatrix4, type Vector4 } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 import * as THREE from "three";
 import type {
@@ -110,7 +110,10 @@ export function getRotationMatrixAroundAxis(
   const euler = new THREE.Euler();
   euler[axis] = angleInRadians;
   const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(euler).transpose();
-  return { type: "affine", matrix: flatToNestedMatrix(rotationMatrix.toArray()) };
+  const matrixWithoutNearlyZeroValues = rotationMatrix
+    .toArray()
+    .map((value) => (Math.abs(value) < Number.EPSILON ? 0 : value)) as Matrix4x4;
+  return { type: "affine", matrix: flatToNestedMatrix(matrixWithoutNearlyZeroValues) };
 }
 
 // Returns the transforms (if they exist) for a layer as
@@ -143,45 +146,33 @@ function _getOriginalTransformsForLayerOrNull(
   return transforms.reduce(chainTransforms, IdentityTransform);
 }
 
+export const getOriginalTransformsForLayerOrNull = memoizeWithTwoKeys(
+  _getOriginalTransformsForLayerOrNull,
+);
+
 function _getTransformsForLayerOrNull(
   dataset: APIDataset,
   layer: APIDataLayer | APISkeletonLayer,
-  nativelyRenderedLayerNames: string[],
+  nativelyRenderedLayerName: string | null,
 ): Transform | null {
   if (layer.category === "skeleton") {
-    return getTransformsForSkeletonLayerOrNull(dataset, layer, nativelyRenderedLayerNames);
+    return getTransformsForSkeletonLayerOrNull(dataset, nativelyRenderedLayerName);
   }
-  const layerTransforms = _getOriginalTransformsForLayerOrNull(dataset, layer);
+  const layerTransforms = getOriginalTransformsForLayerOrNull(dataset, layer);
 
-  const doAllLayersHaveTheSameRotation = haveAllLayersSameRotation(dataset.dataSource.dataLayers);
-  const shouldLayerBeRenderedNatively = nativelyRenderedLayerNames.length > 0;
-
-  // Handling the case where all layers have the same rotation.
-  if (doAllLayersHaveTheSameRotation) {
-    if (shouldLayerBeRenderedNatively) {
-      return null;
-    }
-    return layerTransforms;
-  }
-
-  // Handling the case where layers have different transforms in order to transform them together in a multi modality scenario.
-  if (nativelyRenderedLayerNames.length === 0) {
-    // No layer is requested to be rendered natively. Just use the transforms
-    // as they are in the dataset.
-    return layerTransforms;
-  }
-
-  if (shouldLayerBeRenderedNatively) {
+  if (layer.name === nativelyRenderedLayerName) {
     // This layer should be rendered without any transforms.
     return null;
   }
+  if (nativelyRenderedLayerName == null) {
+    // No layer is requested to be rendered natively. -> We can use the layer's transforms as is.
+    return layerTransforms;
+  }
 
   // Apply the inverse of the layer that should be rendered natively
-  // to the current layers transforms
-  const layerUsedAsReference = nativelyRenderedLayerNames[0];
-  const nativeLayer = getLayerByName(dataset, layerUsedAsReference, true);
-
-  const transformsOfNativeLayer = _getOriginalTransformsForLayerOrNull(dataset, nativeLayer);
+  // to the current layer's transforms.
+  const nativeLayer = getLayerByName(dataset, nativelyRenderedLayerName, true);
+  const transformsOfNativeLayer = getOriginalTransformsForLayerOrNull(dataset, nativeLayer);
 
   if (transformsOfNativeLayer == null) {
     // The inverse of no transforms, are no transforms. Leave the layer
@@ -205,25 +196,40 @@ function memoizeWithThreeKeys<A, B, C, T>(fn: (a: A, b: B, c: C) => T) {
   };
 }
 
+function memoizeWithTwoKeys<A, B, T>(fn: (a: A, b: B) => T) {
+  const map = new MultiKeyMap<A | B, T, [A, B]>();
+  return (a: A, b: B): T => {
+    let res = map.get([a, b]);
+    if (res === undefined) {
+      res = fn(a, b);
+      map.set([a, b], res);
+    }
+    return res;
+  };
+}
+
 export const getTransformsForLayerOrNull = memoizeWithThreeKeys(_getTransformsForLayerOrNull);
 export function getTransformsForLayer(
   dataset: APIDataset,
   layer: APIDataLayer | APISkeletonLayer,
-  nativelyRenderedLayerNames: string[],
+  nativelyRenderedLayerName: string | null,
 ): Transform {
   return (
-    getTransformsForLayerOrNull(dataset, layer, nativelyRenderedLayerNames) || IdentityTransform
+    getTransformsForLayerOrNull(dataset, layer, nativelyRenderedLayerName) || IdentityTransform
   );
+}
+
+export function isIdentityTransform(transform: Transform) {
+  return transform.type === "affine" && _.isEqual(transform.affineMatrix, Identity4x4);
 }
 
 function _getTransformsForSkeletonLayerOrNull(
   dataset: APIDataset,
-  _layer: APIDataLayer | APISkeletonLayer,
-  nativelyRenderedLayerNames: string[],
+  nativelyRenderedLayerName: string | null,
 ): Transform | null {
   const layers = dataset.dataSource.dataLayers;
   const doAllLayersHaveTheSameRotation = haveAllLayersSameRotation(layers);
-  if (nativelyRenderedLayerNames.length === 0) {
+  if (nativelyRenderedLayerName == null) {
     // No layer is requested to be rendered natively. -> We can use each layer's transforms as is.
     if (!doAllLayersHaveTheSameRotation) {
       // If the dataset's layers do not have a consistent transformation (which only rotates the dataset),
@@ -235,18 +241,17 @@ function _getTransformsForSkeletonLayerOrNull(
     const someLayersTransforms = getTransformsForLayerOrNull(
       dataset,
       layers[0],
-      nativelyRenderedLayerNames,
+      nativelyRenderedLayerName,
     );
     return someLayersTransforms;
-  } else if (nativelyRenderedLayerNames.length > 0 && doAllLayersHaveTheSameRotation) {
+  } else if (nativelyRenderedLayerName != null && doAllLayersHaveTheSameRotation) {
     // If all layers have the same transformations and at least one is rendered natively, this means that all layer should be rendered natively.
     return null;
   }
 
-  const layerUsedAsReference = nativelyRenderedLayerNames[0];
   // Compute the inverse of the layer that should be rendered natively
-  const nativeLayer = getLayerByName(dataset, layerUsedAsReference, true);
-  const transformsOfNativeLayer = _getOriginalTransformsForLayerOrNull(dataset, nativeLayer);
+  const nativeLayer = getLayerByName(dataset, nativelyRenderedLayerName, true);
+  const transformsOfNativeLayer = getOriginalTransformsForLayerOrNull(dataset, nativeLayer);
 
   if (transformsOfNativeLayer == null) {
     // The inverse of no transforms, are no transforms
@@ -260,23 +265,21 @@ export const getTransformsForSkeletonLayerOrNull = memoizeOne(_getTransformsForS
 
 export function getTransformsForSkeletonLayer(
   dataset: APIDataset,
-  layer: APIDataLayer | APISkeletonLayer,
-  nativelyRenderedLayerNames: string[],
+  nativelyRenderedLayerName: string | null,
 ): Transform {
   return (
-    getTransformsForSkeletonLayerOrNull(dataset, layer, nativelyRenderedLayerNames) ||
-    IdentityTransform
+    getTransformsForSkeletonLayerOrNull(dataset, nativelyRenderedLayerName) || IdentityTransform
   );
 }
 
 function _getTransformsPerLayer(
   dataset: APIDataset,
-  nativelyRenderedLayerNames: string[],
+  nativelyRenderedLayerName: string | null,
 ): Record<string, Transform> {
   const transformsPerLayer: Record<string, Transform> = {};
   const layers = dataset.dataSource.dataLayers;
   for (const layer of layers) {
-    const transforms = getTransformsForLayer(dataset, layer, nativelyRenderedLayerNames);
+    const transforms = getTransformsForLayer(dataset, layer, nativelyRenderedLayerName);
     transformsPerLayer[layer.name] = transforms;
   }
 
@@ -290,15 +293,15 @@ export function getInverseSegmentationTransformer(
   segmentationLayerName: string,
 ) {
   const { dataset } = state;
-  const { nativelyRenderedLayerNames } = state.datasetConfiguration;
+  const { nativelyRenderedLayerName } = state.datasetConfiguration;
   const layer = getLayerByName(dataset, segmentationLayerName);
-  const segmentationTransforms = getTransformsForLayer(dataset, layer, nativelyRenderedLayerNames);
+  const segmentationTransforms = getTransformsForLayer(dataset, layer, nativelyRenderedLayerName);
   return transformPointUnscaled(invertTransform(segmentationTransforms));
 }
 
 export const hasDatasetTransforms = memoizeOne((dataset: APIDataset) => {
   const layers = dataset.dataSource.dataLayers;
-  return layers.some((layer) => _getOriginalTransformsForLayerOrNull(dataset, layer) != null);
+  return layers.some((layer) => getOriginalTransformsForLayerOrNull(dataset, layer) != null);
 });
 
 // Transposition is often needed so that the matrix has the right format

@@ -93,7 +93,7 @@ export function* watchZ1Downsampling(): Saga<void> {
           getTransformsForLayer(
             state.dataset,
             dataLayer,
-            state.datasetConfiguration.nativelyRenderedLayerNames,
+            state.datasetConfiguration.nativelyRenderedLayerName,
           ).affineMatrix,
       );
       if (transformMatrix !== Identity4x4) {

@@ -218,7 +218,7 @@ function getMaximumZoomForAllMagsFromStore(state: OxalisState, layerName: string
     getTransformsForLayer(
       state.dataset,
       layer,
-      state.datasetConfiguration.nativelyRenderedLayerNames,
+      state.datasetConfiguration.nativelyRenderedLayerName,
     ).affineMatrix,
   );
 

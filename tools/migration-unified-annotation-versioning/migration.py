@@ -132,25 +132,25 @@ class Migration:
         unified_version = 0
         version_mapping = {}
         for tracing_id, _ in layers:
-            version_mapping[tracing_id] = {0:0}
+            version_mapping[tracing_id] = {0: 0} # We always want to keep the initial version 0 of all layers, even if there are no updates at all.
 
         queue = []
-        for i, lst in enumerate(all_update_groups):
-            if lst:
-                heapq.heappush(queue, (lst[0], i, 0))
+        for i, update_groups_for_layer in enumerate(all_update_groups):
+            if update_groups_for_layer:
+                # The priority queue sorts tupley lexicographically, so timestamp is the main sorting key here
+                heapq.heappush(queue, (update_groups_for_layer[0], i, 0))
         while queue:
-            value, list_index, element_index = heapq.heappop(queue)
+            value, layer_index, element_index = heapq.heappop(queue)
             timestamp, version, update_group = value
-            timestamp_formatted = datetime.datetime.fromtimestamp(timestamp / 1000)
-            tracing_id = layers[list_index][0]
+            tracing_id = layers[layer_index][0]
 
             unified_version += 1
             version_mapping[tracing_id][version] = unified_version
             self.save_update_group(annotation['_id'], unified_version, update_group)
 
-            next_element = all_update_groups[list_index][element_index + 1] if element_index + 1 < len(all_update_groups[list_index]) else None
-            if next_element is not None:
-                heapq.heappush(queue, (next_element, list_index, element_index + 1))
+            if element_index + 1 < len(all_update_groups[layer_index]):
+                next_element = all_update_groups[layer_index][element_index + 1]
+                heapq.heappush(queue, (next_element, layer_index, element_index + 1))
 
         return version_mapping
 
@@ -320,7 +320,7 @@ class Migration:
     def migrate_all_versions_and_keys_with_prefix(self, collection: str, tracing_id: str, layer_version_mapping: LayerVersionMapping, transform_key: Optional[Callable[[str], str]]):
         list_keys_page_size = 5000
         versions_page_size = 500
-        current_start_after_key = tracing_id + "." # . is lexicographically before /
+        current_start_after_key = tracing_id + "."  # . is lexicographically before /
         newest_tracing_version = max(layer_version_mapping[tracing_id].keys())
         while True:
             list_keys_reply = self.src_stub.ListKeys(proto.ListKeysRequest(collection=collection, limit=list_keys_page_size, startAfterKey=current_start_after_key))
@@ -392,7 +392,7 @@ class Migration:
             annotationProto = AnnotationProto.AnnotationProto()
             annotationProto.description = annotation["description"] or ""
             annotationProto.version = version
-            annotationProto.earliestAccessibleVersion = 0 # TODO different for merged editable mappings
+            annotationProto.earliestAccessibleVersion = 0  # TODO different for merged editable mappings
             for tracing_id, tracing_type in annotation["layers"].items():
                 layer_proto = AnnotationProto.AnnotationLayerProto()
                 layer_proto.tracingId = tracing_id

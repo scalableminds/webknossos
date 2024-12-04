@@ -1,12 +1,27 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.google.common.io.LittleEndianDataInputStream
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.JsonHelper.bool2Box
-import com.scalableminds.util.tools.{ByteUtils, Fox, FoxImplicits}
+import com.scalableminds.util.tools.{ByteUtils, Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
+import com.scalableminds.webknossos.datastore.datareaders.precomputed.ShardingSpecification
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  Category,
+  DataFormat,
+  DataLayer,
+  DataLayerWithMagLocators,
+  GenericDataSource
+}
+import com.scalableminds.webknossos.datastore.storage.{
+  CachedHdf5File,
+  DataVaultService,
+  Hdf5FileCache,
+  RemoteSourceDescriptor
+}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
@@ -15,6 +30,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Json, OFormat}
 
 import java.io.ByteArrayInputStream
+import java.net.URI
 import java.nio.file.{Path, Paths}
 import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
@@ -22,6 +38,8 @@ import scala.concurrent.ExecutionContext
 
 case class ListMeshChunksRequest(
     meshFile: String,
+    meshFilePath: Option[String],
+    meshFileType: Option[String],
     segmentId: Long
 )
 
@@ -49,12 +67,27 @@ object MeshChunkDataRequestList {
 
 case class MeshFileInfo(
     meshFileName: String,
+    meshFilePath: Option[String],
+    meshFileType: Option[String],
     mappingName: Option[String],
     formatVersion: Long
 )
 
 object MeshFileInfo {
   implicit val jsonFormat: OFormat[MeshFileInfo] = Json.format[MeshFileInfo]
+}
+
+case class NeuroglancerPrecomputedMeshInfo(
+    lod_scale_multiplier: Double,
+    transform: Array[Double],
+    sharding: Option[ShardingSpecification],
+    vertex_quantization_bits: Int,
+) {
+  def transform2DArray: Array[Array[Double]] = transform.grouped(4).toArray
+}
+
+object NeuroglancerPrecomputedMeshInfo {
+  implicit val jsonFormat: OFormat[NeuroglancerPrecomputedMeshInfo] = Json.format[NeuroglancerPrecomputedMeshInfo]
 }
 
 case class NeuroglancerSegmentManifest(chunkShape: Vec3Float,
@@ -171,7 +204,8 @@ object WebknossosSegmentInfo {
 
 }
 
-class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
+class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataVaultService)(
+    implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
     with Hdf5HashedArrayUtils
@@ -209,7 +243,59 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
       mappingNameOptions = mappingNameBoxes.map(_.toOption)
       zipped = meshFileNames.lazyZip(mappingNameOptions).lazyZip(meshFileVersions)
-    } yield zipped.map(MeshFileInfo(_, _, _)).toSet
+    } yield
+      zipped
+        .map({
+          case (fileName, mappingName, fileVersion) =>
+            MeshFileInfo(fileName, None, Some("local"), mappingName, fileVersion)
+        })
+        .toSet
+  }
+
+  private lazy val neuroglancerPrecomputedMeshInfoCache = AlfuCache[VaultPath, NeuroglancerPrecomputedMeshInfo](100)
+
+  private def loadRemoteMeshInfo(meshPath: VaultPath): Fox[NeuroglancerPrecomputedMeshInfo] =
+    for {
+      _ <- Fox.successful(())
+      meshInfoPath = meshPath / "info"
+      meshInfo <- meshInfoPath.parseAsJson[NeuroglancerPrecomputedMeshInfo] ?~> "Failed to read mesh info"
+    } yield meshInfo
+
+  def exploreNeuroglancerPrecomputedMeshes(organizationId: String,
+                                           datasetName: String,
+                                           dataLayerName: String): Fox[Set[MeshFileInfo]] = {
+    def exploreMeshesForLayer(dataLayer: DataLayer): Fox[(NeuroglancerPrecomputedMeshInfo, VaultPath)] =
+      for {
+        _ <- Fox.successful(())
+        dataLayerWithMagLocators <- tryo(dataLayer.asInstanceOf[DataLayerWithMagLocators]).toFox
+        firstMag <- dataLayerWithMagLocators.mags.headOption.toFox ?~> "No mags found"
+        magPath <- firstMag.path.toFox ?~> "Mag has no path"
+        remotePath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(magPath), None))
+        // We are assuming that meshes will be placed in /mesh directory. To be precise, we would first need to check the root info file.
+        meshPath = remotePath.parent / "mesh"
+        meshInfo <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(meshPath, loadRemoteMeshInfo)
+      } yield (meshInfo, meshPath)
+
+    def isDataLayerValid(d: DataLayer) =
+      d.name == dataLayerName && d.category == Category.segmentation && d.dataFormat == DataFormat.neuroglancerPrecomputed
+
+    val datasetDir = dataBaseDir.resolve(organizationId).resolve(datasetName)
+    val datasetPropertiesFile = datasetDir.resolve("datasource-properties.json")
+    for {
+      datasetProperties <- JsonHelper
+        .validatedJsonFromFile[GenericDataSource[DataLayer]](datasetPropertiesFile, datasetDir)
+        .toFox
+      meshInfosAndInfoPaths = datasetProperties.dataLayers.filter(isDataLayerValid).map(exploreMeshesForLayer)
+      meshInfosResolved: List[(NeuroglancerPrecomputedMeshInfo, VaultPath)] <- Fox
+        .sequenceOfFulls(meshInfosAndInfoPaths)
+        .toFox
+    } yield
+      meshInfosResolved
+        .map({
+          case (_, vaultPath) =>
+            MeshFileInfo("mesh", Some(vaultPath.toString), Some("neuroglancerPrecomputed"), None, 7)
+        })
+        .toSet
   }
 
   /*
@@ -376,6 +462,25 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
     (neuroglancerStart, neuroglancerEnd)
   }
+
+  def listMeshChunksForNeuroglancerPrecomputedMesh(meshFilePathOpt: Option[String],
+                                                   segmentId: Long): Fox[WebknossosSegmentInfo] =
+    for {
+      meshFilePath <- meshFilePathOpt.toFox ?~> "No mesh file path provided"
+      vaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(meshFilePath), None))
+      meshInfo <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
+      mesh = NeuroglancerMesh(meshInfo)
+      minishardInfo = mesh.shardingSpecification.getMinishardInfo(segmentId)
+      shardUrl = mesh.shardingSpecification.getPathForShard(vaultPath, minishardInfo._1)
+      minishardIndex <- mesh.getMinishardIndex(shardUrl, minishardInfo._2.toInt)
+      chunkRange <- mesh.getChunkRange(segmentId, minishardIndex)
+      chunk <- mesh.getChunk(chunkRange, shardUrl)
+      segmentManifest = NeuroglancerSegmentManifest.fromBytes(chunk)
+      meshSegmentInfo = enrichSegmentInfo(segmentManifest, meshInfo.lod_scale_multiplier, chunkRange.start, segmentId)
+      transform = meshInfo.transform2DArray
+      encoding = "draco"
+      wkChunkInfos <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(List(meshSegmentInfo), encoding, transform)
+    } yield wkChunkInfos
 
   def readMeshChunk(organizationId: String,
                     datasetDirectoryName: String,

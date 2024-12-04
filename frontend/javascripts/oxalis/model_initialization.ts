@@ -523,14 +523,14 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
 
     const fallbackLayer = fallbackLayerIndex > -1 ? originalLayers[fallbackLayerIndex] : null;
     const boundingBox = getDatasetBoundingBox(dataset).asServerBoundingBox();
-    const resolutions = tracing.mags || [];
-    const tracingHasResolutionList = resolutions.length > 0;
+    const mags = tracing.mags || [];
+    const tracingHasMagList = mags.length > 0;
     // Legacy tracings don't have the `tracing.mags` property
     // since they were created before WK started to maintain multiple magnifications
     // in volume annotations. Therefore, this code falls back to mag (1, 1, 1) for
     // that case.
-    const tracingResolutions: Vector3[] = tracingHasResolutionList
-      ? resolutions.map(({ x, y, z }) => [x, y, z])
+    const tracingMags: Vector3[] = tracingHasMagList
+      ? mags.map(({ x, y, z }) => [x, y, z])
       : [[1, 1, 1]];
     const tracingLayer: APISegmentationLayer = {
       name: tracing.id,
@@ -539,7 +539,7 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
       category: "segmentation",
       largestSegmentId: tracing.largestSegmentId,
       boundingBox,
-      resolutions: tracingResolutions,
+      resolutions: tracingMags,
       mappings:
         fallbackLayer != null && "mappings" in fallbackLayer ? fallbackLayer.mappings : undefined,
       // Remember the name of the original layer (e.g., used to request mappings)

@@ -703,19 +703,19 @@ class ReactRouter extends React.Component<Props> {
                         coalesce(TracingTypeEnum, match.params.type) || TracingTypeEnum.skeleton;
                       const getParams = Utils.getUrlParamsObjectFromString(location.search);
                       const { autoFallbackLayer, fallbackLayerName } = getParams;
-                      const resolutionRestrictions: APIMagRestrictions = {};
+                      const magRestrictions: APIMagRestrictions = {};
 
                       if (getParams.minMag !== undefined) {
-                        resolutionRestrictions.min = Number.parseInt(getParams.minMag);
+                        magRestrictions.min = Number.parseInt(getParams.minMag);
 
-                        if (!_.isNumber(resolutionRestrictions.min)) {
+                        if (!_.isNumber(magRestrictions.min)) {
                           throw new Error("Invalid minMag parameter");
                         }
 
                         if (getParams.maxMag !== undefined) {
-                          resolutionRestrictions.max = Number.parseInt(getParams.maxMag);
+                          magRestrictions.max = Number.parseInt(getParams.maxMag);
 
-                          if (!_.isNumber(resolutionRestrictions.max)) {
+                          if (!_.isNumber(magRestrictions.max)) {
                             throw new Error("Invalid maxMag parameter");
                           }
                         }
@@ -727,7 +727,7 @@ class ReactRouter extends React.Component<Props> {
                         !!autoFallbackLayer,
                         fallbackLayerName,
                         null,
-                        resolutionRestrictions,
+                        magRestrictions,
                       );
                       return `/annotations/${annotation.id}`;
                     }}

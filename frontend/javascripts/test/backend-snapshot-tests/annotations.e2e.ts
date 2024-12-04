@@ -209,6 +209,7 @@ test("Send complex update actions and compare resulting tracing", async (t) => {
   );
   await sendUpdateActions(createdExplorational, saveQueue);
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
+  writeTypeCheckingFile(tracings[0], "tracing", "ServerSkeletonTracing");
   t.snapshot(replaceVolatileValues(tracings[0]));
 });
 

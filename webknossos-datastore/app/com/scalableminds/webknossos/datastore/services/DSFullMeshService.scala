@@ -166,7 +166,10 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
         organizationId,
         datasetDirectoryName,
         layerName,
-        MeshChunkDataRequestList(meshfileName, List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize)))
+        MeshChunkDataRequestList(meshfileName,
+                                 None,
+                                 None,
+                                 List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, None)))
       ) ?~> "mesh.file.loadChunk.failed"
       _ <- bool2Fox(encoding == "draco") ?~> s"meshfile encoding is $encoding, only draco is supported"
       scale <- tryo(Vec3Double(transform(0)(0), transform(1)(1), transform(2)(2))) ?~> "could not extract scale from meshfile transform attribute"

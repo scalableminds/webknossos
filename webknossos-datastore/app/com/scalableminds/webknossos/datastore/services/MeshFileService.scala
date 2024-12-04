@@ -49,11 +49,14 @@ object ListMeshChunksRequest {
 
 case class MeshChunkDataRequest(
     byteOffset: Long,
-    byteSize: Int
+    byteSize: Int,
+    segmentId: Option[Long] // Only relevant for neuroglancer precomputed meshes
 )
 
 case class MeshChunkDataRequestList(
     meshFile: String,
+    meshFilePath: Option[String],
+    meshFileType: Option[String],
     requests: Seq[MeshChunkDataRequest]
 )
 
@@ -529,5 +532,24 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
     val relevantPath = layerNameOpt.map(l => datasetPath.resolve(l)).getOrElse(datasetPath)
     meshFileCache.clear(key => key.startsWith(relevantPath.toString))
   }
+
+  def readMeshChunkForNeuroglancerPrecomputed(
+      meshFilePathOpt: Option[String],
+      meshChunkDataRequests: Seq[MeshChunkDataRequest]): Fox[(Array[Byte], String)] =
+    for {
+      meshFilePath <- meshFilePathOpt.toFox ?~> "Mesh file path is required"
+      vaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(meshFilePath), None))
+      meshInfo <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
+      mesh = NeuroglancerMesh(meshInfo)
+
+      segmentId <- Fox.option2Fox(meshChunkDataRequests.head.segmentId) ?~> "Segment id parameter is required" // This assumes that all requests are for the same segment
+
+      minishardInfo = mesh.shardingSpecification.getMinishardInfo(segmentId)
+      shardUrl = mesh.shardingSpecification.getPathForShard(vaultPath, minishardInfo._1)
+      chunks <- Fox.serialCombined(meshChunkDataRequests.toList)(request =>
+        shardUrl.readBytes(Some(request.byteOffset until request.byteOffset + request.byteSize)))
+      encoding = "identity"
+      output = chunks.flatten.toArray
+    } yield (output, encoding)
 
 }

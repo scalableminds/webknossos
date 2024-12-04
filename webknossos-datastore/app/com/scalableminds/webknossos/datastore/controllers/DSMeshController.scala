@@ -98,10 +98,12 @@ class DSMeshController @Inject()(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
         urlOrHeaderToken(token, request)) {
         for {
-          (data, encoding) <- meshFileService.readMeshChunk(organizationId,
-                                                            datasetDirectoryName,
-                                                            dataLayerName,
-                                                            request.body) ?~> "mesh.file.loadChunk.failed"
+          (data, encoding) <- request.body.meshFileType match {
+            case Some("neuroglancerPrecomputed") =>
+              meshFileService.readMeshChunkForNeuroglancerPrecomputed(request.body.meshFilePath, request.body.requests)
+            case _ =>
+              meshFileService.readMeshChunk(organizationId, datasetDirectoryName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
+          }
         } yield {
           if (encoding.contains("gzip")) {
             Ok(data).withHeaders("Content-Encoding" -> "gzip")

@@ -17,7 +17,7 @@ import loadHistogramDataSaga from "oxalis/model/sagas/load_histogram_data_saga";
 import listenToClipHistogramSaga from "oxalis/model/sagas/clip_histogram_saga";
 import MappingSaga from "oxalis/model/sagas/mapping_saga";
 import ProofreadSaga from "oxalis/model/sagas/proofread_saga";
-import { listenForWkReady } from "oxalis/model/sagas/wk_ready_saga";
+import ReadySagas, { setWkReadyToFalse } from "oxalis/model/sagas/ready_sagas";
 import { warnIfEmailIsUnverified } from "./user_saga";
 import type { EscalateErrorAction } from "../actions/actions";
 
@@ -28,6 +28,7 @@ export default function* rootSaga(): Saga<void> {
     const task = yield* fork(restartableSaga);
     yield* take("RESTART_SAGA");
     yield* cancel(task);
+    yield* call(setWkReadyToFalse);
   }
 }
 export function hasRootSagaCrashed() {
@@ -46,7 +47,7 @@ function* listenToErrorEscalation() {
 function* restartableSaga(): Saga<void> {
   try {
     yield* all([
-      call(listenForWkReady),
+      ...ReadySagas.map((saga) => call(saga)),
       call(warnAboutMagRestriction),
       call(SettingsSaga),
       ...SkeletontracingSagas.map((saga) => call(saga)),

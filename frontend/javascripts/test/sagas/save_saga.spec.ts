@@ -3,7 +3,7 @@ import { alert } from "libs/window";
 import { setSaveBusyAction } from "oxalis/model/actions/save_actions";
 import DiffableMap from "libs/diffable_map";
 import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue";
-import { ensureWkReady } from "oxalis/model/sagas/wk_ready_saga";
+import { ensureWkReady } from "oxalis/model/sagas/ready_sagas";
 import mockRequire from "mock-require";
 import test from "ava";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";

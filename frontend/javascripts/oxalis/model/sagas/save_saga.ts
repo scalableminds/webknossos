@@ -44,7 +44,7 @@ import {
   type UpdateActionWithTracingId,
 } from "oxalis/model/sagas/update_actions";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
-import { ensureWkReady } from "oxalis/model/sagas/wk_ready_saga";
+import { ensureWkReady } from "oxalis/model/sagas/ready_sagas";
 import { Model } from "oxalis/singletons";
 import type {
   CameraData,

@@ -1925,12 +1925,9 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   layerName: string,
   mappingId: string,
   segmentIds: Array<T>,
-  version?: number | null | undefined,
 ): Promise<Mapping> {
   const params = new URLSearchParams();
-  if (version != null) {
-    params.append("version", version.toString());
-  }
+
   const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     params.append("token", token);
@@ -1958,14 +1955,20 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   tracingStoreUrl: string,
   tracingId: string,
   segmentIds: Array<T>,
+  version?: number | null | undefined,
 ): Promise<Mapping> {
+  const params = new URLSearchParams();
+  if (version != null) {
+    params.append("version", version.toString());
+  }
   const segmentIdBuffer = serializeProtoListOfLong<T>(
     // The tracing store expects the ids to be sorted
     segmentIds.sort(<T extends NumberLike>(a: T, b: T) => Number(a - b)),
   );
-  const listArrayBuffer: ArrayBuffer = await doWithToken((token) =>
-    Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?token=${token}`,
+  const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
+    params.append("token", token);
+    return Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
       {
         method: "POST",
         body: segmentIdBuffer,
@@ -1973,8 +1976,8 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
           "Content-Type": "application/octet-stream",
         },
       },
-    ),
-  );
+    );
+  });
 
   // Ensure that the values are bigint if the keys are bigint
   const adaptToType = Utils.isBigInt(segmentIds[0])

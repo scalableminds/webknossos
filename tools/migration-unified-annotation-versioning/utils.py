@@ -36,14 +36,13 @@ def log_since(before, label: str, postfix: str = "") -> None:
     logger.info(f"{label} took {humanize_time_diff(diff)}{postfix}")
 
 
-# TODO should we go to limit + 1?
 def batch_range(
     limit: int, batch_size: int
 ) -> Iterator[Tuple[int, int]]:
     full_range = range(limit)
 
     for i in range(full_range.start, full_range.stop, batch_size):
-        yield (i, min(i + batch_size, full_range.stop))
+        yield i, min(i + batch_size, full_range.stop)
 
         if i + batch_size >= full_range.stop:
             return

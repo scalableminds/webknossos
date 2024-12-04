@@ -390,10 +390,9 @@ class Migration:
     def create_and_save_annotation_proto(self, annotation, materialized_versions: List[int]):
         for version in materialized_versions:
             annotationProto = AnnotationProto.AnnotationProto()
-            annotationProto.name = annotation["name"]
-            annotationProto.description = annotation["description"]
+            annotationProto.description = annotation["description"] or ""
             annotationProto.version = version
-            annotationProto.earliestAccessibleVersion = 0
+            annotationProto.earliestAccessibleVersion = 0 # TODO different for merged editable mappings
             for tracing_id, tracing_type in annotation["layers"].items():
                 layer_proto = AnnotationProto.AnnotationLayerProto()
                 layer_proto.tracingId = tracing_id

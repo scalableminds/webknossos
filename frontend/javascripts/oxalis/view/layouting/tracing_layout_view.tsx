@@ -32,7 +32,7 @@ import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import PresentModernControls from "oxalis/view/novel_user_experiences/01-present-modern-controls";
 import WelcomeToast from "oxalis/view/novel_user_experiences/welcome_toast";
-import { importTracingFiles } from "oxalis/view/right-border-tabs/skeleton_tab_view";
+import { importTracingFiles } from "oxalis/view/right-border-tabs/trees_tab/skeleton_tab_view";
 import TracingView from "oxalis/view/tracing_view";
 import VersionView from "oxalis/view/version_view";
 import * as React from "react";
@@ -194,13 +194,11 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     app.vent.emit("rerender");
 
     if (model != null) {
-      this.setState({
-        model,
+      this.setState({ model }, () => {
+        if (this.props.autoSaveLayouts) {
+          this.saveCurrentLayout(layoutName);
+        }
       });
-    }
-
-    if (this.props.autoSaveLayouts) {
-      this.saveCurrentLayout(layoutName);
     }
   };
 
@@ -269,8 +267,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         data: {
           nmlFile: files,
           createGroupForEachFile,
-          datasetName: this.props.datasetName,
-          organizationId: this.props.organization,
+          datasetId: this.props.datasetId,
         },
       });
       this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
@@ -405,7 +402,7 @@ function mapStateToProps(state: OxalisState) {
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
     isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
-    datasetName: state.dataset.name,
+    datasetId: state.dataset.id,
     is2d: is2dDataset(state.dataset),
     displayName: state.tracing.name ? state.tracing.name : state.dataset.name,
     organization: state.dataset.owningOrganization,

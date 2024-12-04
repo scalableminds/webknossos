@@ -122,7 +122,7 @@ export function createNode(
   additionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   viewport: number,
-  resolution: number,
+  mag: number,
   timestamp: number,
 ): Maybe<[Node, EdgeCollection]> {
   const activeNodeMaybe = getActiveNodeFromTree(skeletonTracing, tree);
@@ -146,7 +146,7 @@ export function createNode(
     radius,
     rotation,
     viewport,
-    mag: resolution,
+    mag,
     id: nextNewId,
     timestamp,
     bitDepth: state.datasetConfiguration.fourBit ? 4 : 8,
@@ -561,7 +561,10 @@ export function addTreesAndGroups(
   );
   const hasInvalidNodeIds = getMinimumNodeId(trees) < Constants.MIN_NODE_ID;
   const needsReassignedIds =
-    Object.keys(skeletonTracing.trees).length > 0 || hasInvalidTreeIds || hasInvalidNodeIds;
+    Object.keys(skeletonTracing.trees).length > 0 ||
+    skeletonTracing.treeGroups.length > 0 ||
+    hasInvalidTreeIds ||
+    hasInvalidNodeIds;
 
   if (!needsReassignedIds) {
     // Without reassigning ids, the code is considerably faster.
@@ -631,20 +634,22 @@ export function addTreesAndGroups(
 
   return Maybe.Just([newTrees, treeGroups, newNodeId - 1]);
 }
-export function deleteTree(
+export function deleteTrees(
   skeletonTracing: SkeletonTracing,
-  tree: Tree,
+  treeIds: number[],
   suppressActivatingNextNode: boolean = false,
 ): Maybe<[TreeMap, number | null | undefined, number | null | undefined, number]> {
-  // Delete tree
-  const newTrees = _.omit(skeletonTracing.trees, tree.treeId);
+  if (treeIds.length === 0) return Maybe.Nothing();
+  // Delete trees
+  const newTrees = _.omit(skeletonTracing.trees, treeIds);
 
   let newActiveTreeId = null;
   let newActiveNodeId = null;
 
   if (_.size(newTrees) > 0 && !suppressActivatingNextNode) {
-    // Setting the tree active whose id is the next highest compared to the id of the deleted tree.
-    newActiveTreeId = getNearestTreeId(tree.treeId, newTrees);
+    // Setting the tree active whose id is the next highest compared to the ids of the deleted trees.
+    const maximumTreeId = _.max(treeIds) || Constants.MIN_TREE_ID;
+    newActiveTreeId = getNearestTreeId(maximumTreeId, newTrees);
     // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
     newActiveNodeId = +_.first(Array.from(newTrees[newActiveTreeId].nodes.keys())) || null;
   }
@@ -846,7 +851,7 @@ function serverNodeToMutableNode(n: ServerNode): MutableNode {
     rotation: Utils.point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,
     viewport: n.viewport,
-    mag: n.resolution,
+    mag: n.mag,
     radius: n.radius,
     timestamp: n.createdTimestamp,
     interpolation: n.interpolation,

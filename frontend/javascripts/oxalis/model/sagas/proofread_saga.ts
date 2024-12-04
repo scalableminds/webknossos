@@ -270,7 +270,7 @@ function* createEditableMapping(): Saga<string> {
   // Get volume tracing again to make sure the version is up to date
   const upToDateVolumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (upToDateVolumeTracing == null) {
-    throw new Error("No active segmentation tracing layer. Cannot create editble mapping.");
+    throw new Error("No active segmentation tracing layer. Cannot create editable mapping.");
   }
 
   const volumeTracingId = upToDateVolumeTracing.tracingId;
@@ -1036,18 +1036,18 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
     }
   }
 
-  const resolutionInfo = getMagInfo(volumeTracingLayer.resolutions);
+  const magInfo = getMagInfo(volumeTracingLayer.resolutions);
   const currentMag = yield* select((state) => getCurrentMag(state, volumeTracingLayer.name));
 
   const agglomerateFileMag = isSkeletonProofreading
     ? // In case of skeleton proofreading, the finest mag should be used.
-      resolutionInfo.getFinestMag()
+      magInfo.getFinestMag()
     : // For non-skeleton proofreading, the active mag suffices
       currentMag;
   if (agglomerateFileMag == null) {
     return null;
   }
-  const agglomerateFileZoomstep = resolutionInfo.getIndexByMag(agglomerateFileMag);
+  const agglomerateFileZoomstep = magInfo.getIndexByMag(agglomerateFileMag);
 
   const getUnmappedDataValue = (position: Vector3): Promise<number> => {
     const { additionalCoordinates } = Store.getState().flycam;

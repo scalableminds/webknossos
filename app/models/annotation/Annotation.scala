@@ -15,7 +15,7 @@ import slick.jdbc.GetResult
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
@@ -359,20 +359,34 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     // format: on
   }
 
+  /**
+    * Find all annotations which are listable by the user specified in 'forUser'
+    *
+    * @param isFinished
+    * If set to `true`, only finished annotations are returned. If set to `false`, only active annotations are returned.
+    * If set to `None`, all non-cancelled annotations are returned.
+    * @param forUser
+    * If set, only annotations of this user are returned. If not set, all annotations are returned.
+    * @param filterOwnedOrShared
+    * If `true`, the function lists only annotations owned by the user or explicitly shared with them (used for the
+    * user's own dashboard). If `false`, it lists all annotations the viewer is allowed to see.
+    * @param limit
+    * The maximum number of annotations to return.
+    * @param pageNumber
+    * The page number to return. The first page is 0.
+    */
   def findAllListableExplorationals(
       isFinished: Option[Boolean],
       forUser: Option[ObjectId],
-      // In dashboard, list only own + explicitly shared annotations. When listing those of another user, list all of their annotations the viewer is allowed to see
-      isForOwnDashboard: Boolean,
-      typ: AnnotationType,
+      filterOwnedOrShared: Boolean,
       limit: Int,
       pageNumber: Int = 0)(implicit ctx: DBAccessContext): Fox[List[AnnotationCompactInfo]] =
     for {
-      accessQuery <- if (isForOwnDashboard) accessQueryFromAccessQWithPrefix(listAccessQ, q"a.")
+      accessQuery <- if (filterOwnedOrShared) accessQueryFromAccessQWithPrefix(listAccessQ, q"a.")
       else accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, q"a.")
       stateQuery = getStateQuery(isFinished)
       userQuery = forUser.map(u => q"a._user = $u").getOrElse(q"TRUE")
-      typQuery = q"a.typ = $typ"
+      typQuery = q"a.typ = ${AnnotationType.Explorational}"
 
       query = q"""WITH
                     -- teams_agg is extracted to avoid left-join fanout.

@@ -9,7 +9,6 @@ import {
   getLayoutConfig,
   addNewLayout,
 } from "oxalis/view/layouting/layout_persistence";
-import { trackAction } from "oxalis/model/helpers/analytics";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { type ViewMode, type ControlMode, MappingStatusEnum } from "oxalis/constants";
@@ -190,13 +189,12 @@ class ActionBarView extends React.PureComponent<Props, State> {
     }
 
     const annotation = await createExplorational(
-      dataset,
+      dataset.id,
       "hybrid",
       false,
       fallbackLayerName,
       maybeMappingName,
     );
-    trackAction("Create hybrid tracing (from view mode)");
     location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${location.hash}`;
   };
 

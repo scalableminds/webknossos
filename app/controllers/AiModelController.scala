@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.aimodels.{AiInference, AiInferenceDAO, AiInferenceService, AiModel, AiModelDAO, AiModelService}
@@ -11,13 +12,14 @@ import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.WkEnv
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import com.scalableminds.util.time.Instant
 import models.aimodels.AiModelCategory.AiModelCategory
 import models.organization.OrganizationDAO
+import play.api.i18n.Messages
 
 case class TrainingAnnotationSpecification(annotationId: ObjectId,
                                            colorLayerName: String,
@@ -40,7 +42,8 @@ object RunTrainingParameters {
 
 case class RunInferenceParameters(annotationId: Option[ObjectId],
                                   aiModelId: ObjectId,
-                                  datasetName: String,
+                                  datasetDirectoryName: String,
+                                  organizationId: String,
                                   colorLayerName: String,
                                   boundingBox: String,
                                   newDatasetName: String,
@@ -135,6 +138,7 @@ class AiModelController @Inject()(
         firstAnnotationId <- trainingAnnotations.headOption.map(_.annotationId).toFox
         annotation <- annotationDAO.findOne(firstAnnotationId)
         dataset <- datasetDAO.findOne(annotation._dataset)
+        _ <- bool2Fox(request.identity._organization == dataset._organization) ?~> "job.trainModel.notAllowed.organization" ~> FORBIDDEN
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         _ <- Fox
           .serialCombined(request.body.trainingAnnotations.map(_.annotationId))(annotationDAO.findOne) ?~> "annotation.notFound"
@@ -143,7 +147,7 @@ class AiModelController @Inject()(
         jobCommand = JobCommand.train_model
         commandArgs = Json.obj(
           "training_annotations" -> Json.toJson(trainingAnnotations),
-          "organization_name" -> organization._id,
+          "organization_id" -> organization._id,
           "model_id" -> modelId,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml
         )
@@ -172,20 +176,23 @@ class AiModelController @Inject()(
     sil.SecuredAction.async(validateJson[RunInferenceParameters]) { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity)
-        organization <- organizationDAO.findOne(request.identity._organization)
-        dataset <- datasetDAO.findOneByNameAndOrganization(request.body.datasetName, organization._id)
+        organization <- organizationDAO.findOne(request.body.organizationId)(GlobalAccessContext) ?~> Messages(
+          "organization.notFound",
+          request.body.organizationId)
+        _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
+        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body.datasetDirectoryName, organization._id)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         _ <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
-        _ <- datasetService.assertNewDatasetName(request.body.newDatasetName, organization._id)
         jobCommand = JobCommand.infer_with_model
         boundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
         commandArgs = Json.obj(
-          "organization_name" -> organization._id,
+          "organization_id" -> organization._id,
           "dataset_name" -> dataset.name,
           "color_layer_name" -> request.body.colorLayerName,
           "bounding_box" -> boundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
+          "dataset_directory_name" -> request.body.datasetDirectoryName,
           "new_dataset_name" -> request.body.newDatasetName,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml
         )

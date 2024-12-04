@@ -5,7 +5,6 @@ import {
 import { type Saga, take, select } from "oxalis/model/sagas/effect-generators";
 import { all, takeEvery, debounce, call, retry } from "typed-redux-saga";
 import type { UpdateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { trackAction } from "oxalis/model/helpers/analytics";
 import { updateUserConfiguration, updateDatasetConfiguration } from "admin/admin_rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
@@ -40,7 +39,7 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
       SETTINGS_MAX_RETRY_COUNT,
       SETTINGS_RETRY_DELAY,
       updateDatasetConfiguration,
-      dataset,
+      dataset.id,
       maybeMaskedDatasetConfiguration,
     );
   } catch (error) {
@@ -97,12 +96,6 @@ function* prepareDatasetSettingsForSaving(
   return maskedDatasetConfiguration;
 }
 
-function* trackUserSettingsAsync(action: UpdateUserSettingAction): Saga<void> {
-  if (action.propertyName === "newNodeNewTree") {
-    yield* call(trackAction, `${action.value ? "Enabled" : "Disabled"} soma clicking`);
-  }
-}
-
 function* showUserSettingToast(action: UpdateUserSettingAction): Saga<void> {
   const { propertyName } = action;
 
@@ -129,7 +122,6 @@ export default function* watchPushSettingsAsync(): Saga<void> {
       pushDatasetSettingsAsync(originalDatasetSettings),
     ),
     debounce(2500, "UPDATE_LAYER_SETTING", () => pushDatasetSettingsAsync(originalDatasetSettings)),
-    takeEvery("UPDATE_USER_SETTING", trackUserSettingsAsync),
     takeEvery("UPDATE_USER_SETTING", showUserSettingToast),
   ]);
 }

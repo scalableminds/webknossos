@@ -49,8 +49,8 @@ type FileList = UploadFile<any>[];
 
 type OwnProps = {
   onAdded: (
-    datasetOrganization: string,
-    uploadedDatasetName: string,
+    uploadedDatasetId: string,
+    updatedDatasetName: string,
     needsConversion?: boolean | null | undefined,
   ) => Promise<void>;
   datastores: APIDataStore[];
@@ -252,13 +252,13 @@ function DatasetAddRemoteView(props: Props) {
     form.setFieldsValue({ dataSourceJson });
     // Since this function sets the JSON string, we have to update the
     // data which is rendered by the "simple" page.
-    syncDataSourceFields(form, "simple");
+    syncDataSourceFields(form, "simple", true);
     form.validateFields();
   };
 
   async function handleStoreDataset() {
     // Sync simple with advanced and get newest datasourceJson
-    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
+    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple", true);
     try {
       await form.validateFields();
     } catch (_e) {
@@ -287,26 +287,23 @@ function DatasetAddRemoteView(props: Props) {
       let configJSON;
       try {
         configJSON = JSON.parse(dataSourceJsonStr);
-        const nameValidationResult = await isDatasetNameValid({
-          name: configJSON.id.name,
-          owningOrganization: activeUser.organization,
-        });
+        const nameValidationResult = await isDatasetNameValid(configJSON.id.name);
         if (nameValidationResult) {
           throw new Error(nameValidationResult);
         }
-        await storeRemoteDataset(
+        const { newDatasetId } = await storeRemoteDataset(
           datastoreToUse.url,
           configJSON.id.name,
           activeUser.organization,
           dataSourceJsonStr,
           targetFolderId,
         );
+        onAdded(newDatasetId, configJSON.id.name);
       } catch (e) {
         setShowLoadingOverlay(false);
         Toast.error(`The datasource config could not be stored. ${e}`);
         return;
       }
-      onAdded(activeUser.organization, configJSON.id.name);
     }
   }
 
@@ -376,11 +373,10 @@ function DatasetAddRemoteView(props: Props) {
             {/* Only the component's visibility is changed, so that the form is always rendered.
                 This is necessary so that the form's structure is always populated. */}
             <DatasetSettingsDataTab
-              allowRenamingDataset
               form={form}
               activeDataSourceEditMode={dataSourceEditMode}
               onChange={(activeEditMode) => {
-                syncDataSourceFields(form, activeEditMode);
+                syncDataSourceFields(form, activeEditMode, true);
                 form.validateFields();
                 setDataSourceEditMode(activeEditMode);
               }}
@@ -483,6 +479,15 @@ function AddRemoteLayer({
   };
 
   function validateUrls(userInput: string) {
+    const removePrefix = (value: string, prefix: string) =>
+      value.startsWith(prefix) ? value.slice(prefix.length) : value;
+
+    // If pasted from neuroglancer, uris have these prefixes even before the protocol. The backend ignores them.
+    userInput = removePrefix(userInput, "zarr://");
+    userInput = removePrefix(userInput, "zarr3://");
+    userInput = removePrefix(userInput, "n5://");
+    userInput = removePrefix(userInput, "precomputed://");
+
     if (userInput.startsWith("https://") || userInput.startsWith("http://")) {
       setSelectedProtocol("https");
     } else if (userInput.startsWith("s3://")) {
@@ -510,7 +515,7 @@ function AddRemoteLayer({
     }
 
     // Sync simple with advanced and get newest datasourceJson
-    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
+    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple", true);
     const datasourceConfigStr = form.getFieldValue("dataSourceJson");
     const datastoreToUse = uploadableDatastores.find(
       (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,

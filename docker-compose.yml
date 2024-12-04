@@ -199,7 +199,7 @@ services:
           -Ddatastore.redis.address=redis
           -Ddatastore.watchFileSystem.enabled=false"
     volumes:
-      - ./binaryData/Connectomics department:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
+      - ./binaryData/Organization_X:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
 
   screenshot-tests:
     image: scalableminds/puppeteer:master
@@ -220,7 +220,7 @@ services:
       POSTGRES_USER: webknossos_user
       POSTGRES_PASSWORD: secret_password
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1 -p 5432"]
+      test: ["CMD-SHELL", "pg_isready -d webknossos -U webknossos_user -h 127.0.0.1 -p 5432"]
       interval: 2s
       timeout: 5s
       retries: 30

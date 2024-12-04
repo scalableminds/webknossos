@@ -5,6 +5,7 @@ import org.apache.pekko.stream.Materializer
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
@@ -56,7 +57,7 @@ import net.liftweb.common.{Box, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 import javax.inject.Inject
@@ -73,7 +74,8 @@ case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
                               user: User,
                               taskOpt: Option[Task],
                               organizationId: String,
-                              datasetName: String)
+                              datasetName: String,
+                              datasetId: ObjectId)
 
 // Used to pass duplicate properties when creating a new tracing to avoid masking them.
 // Uses the proto-generated geometry classes, hence the full qualifiers.
@@ -156,7 +158,7 @@ class AnnotationService @Inject()(
       remoteDatastoreClient = new WKRemoteDataStoreClient(datasetDataStore, rpc)
       fallbackLayerHasSegmentIndex <- fallbackLayer match {
         case Some(layer) =>
-          remoteDatastoreClient.hasSegmentIndexFile(datasetOrganizationId, dataSource.id.name, layer.name)
+          remoteDatastoreClient.hasSegmentIndexFile(datasetOrganizationId, dataSource.id.directoryName, layer.name)
         case None => Fox.successful(false)
       }
     } yield
@@ -164,7 +166,7 @@ class AnnotationService @Inject()(
         None,
         boundingBoxToProto(boundingBox.getOrElse(dataSource.boundingBox)),
         System.currentTimeMillis(),
-        dataSource.id.name,
+        dataSource.id.directoryName,
         vec3IntToProto(startPosition.getOrElse(dataSource.center)),
         vec3DoubleToProto(startRotation.getOrElse(vec3DoubleFromProto(VolumeTracingDefaults.editRotation))),
         elementClassToProto(
@@ -177,7 +179,8 @@ class AnnotationService @Inject()(
         mappingName = mappingName,
         mags = magsRestricted.map(vec3IntToProto),
         hasSegmentIndex = Some(fallbackLayer.isEmpty || fallbackLayerHasSegmentIndex),
-        additionalAxes = AdditionalAxis.toProto(additionalAxes)
+        additionalAxes = AdditionalAxis.toProto(additionalAxes),
+        volumeBucketDataHasChanged = Some(false)
       )
   }
 
@@ -287,7 +290,7 @@ class AnnotationService @Inject()(
                 dataStore,
                 fallbackLayer,
                 magRestrictions = annotationLayerParameters.magRestrictions.getOrElse(MagRestrictions.empty),
-                mappingName = annotationLayerParameters.mappingName
+                mappingName = annotationLayerParameters.mappingName,
               )
               volumeTracingAdapted = oldPrecedenceLayerProperties.map { p =>
                 volumeTracing.copy(
@@ -391,7 +394,7 @@ class AnnotationService @Inject()(
       dataset <- datasetDAO.findOne(datasetId) ?~> "dataset.noAccessById"
       dataSource <- datasetService.dataSourceFor(dataset)
       datasetOrganization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      usableDataSource <- dataSource.toUsable ?~> Messages("dataset.notImported", dataSource.id.name)
+      usableDataSource <- dataSource.toUsable ?~> Messages("dataset.notImported", dataSource.id.directoryName)
       annotationLayers <- createTracingsForExplorational(dataset,
                                                          usableDataSource,
                                                          annotationLayerParameters,
@@ -523,10 +526,10 @@ class AnnotationService @Inject()(
     } yield result
   }
 
-  def createSkeletonTracingBase(datasetName: String,
+  def createSkeletonTracingBase(datasetId: ObjectId,
                                 boundingBox: Option[BoundingBox],
                                 startPosition: Vec3Int,
-                                startRotation: Vec3Double): SkeletonTracing = {
+                                startRotation: Vec3Double)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
     val initialNode = NodeDefaults.createInstance.withId(1).withPosition(startPosition).withRotation(startRotation)
     val initialTree = Tree(
       1,
@@ -538,30 +541,30 @@ class AnnotationService @Inject()(
       "",
       System.currentTimeMillis()
     )
-    SkeletonTracingDefaults.createInstance.copy(
-      datasetName = datasetName,
-      boundingBox = boundingBox.flatMap { box =>
-        if (box.isEmpty) None else Some(box)
-      },
-      editPosition = startPosition,
-      editRotation = startRotation,
-      activeNodeId = Some(1),
-      trees = Seq(initialTree)
-    )
+    for {
+      dataset <- datasetDAO.findOne(datasetId)
+    } yield
+      SkeletonTracingDefaults.createInstance.copy(
+        datasetName = dataset.name,
+        boundingBox = boundingBox.flatMap { box =>
+          if (box.isEmpty) None else Some(box)
+        },
+        editPosition = startPosition,
+        editRotation = startRotation,
+        activeNodeId = Some(1),
+        trees = Seq(initialTree)
+      )
   }
 
   def createVolumeTracingBase(
-      datasetName: String,
-      organizationId: String,
+      datasetId: ObjectId,
       boundingBox: Option[BoundingBox],
       startPosition: Vec3Int,
       startRotation: Vec3Double,
       volumeShowFallbackLayer: Boolean,
       magRestrictions: MagRestrictions)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[VolumeTracing] =
     for {
-      organization <- organizationDAO.findOne(organizationId)
-      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId) ?~> Messages("dataset.notFound",
-                                                                                                   datasetName)
+      dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
       dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)
       fallbackLayer = if (volumeShowFallbackLayer) {
@@ -574,7 +577,7 @@ class AnnotationService @Inject()(
 
       volumeTracing <- createVolumeTracing(
         dataSource,
-        organization._id,
+        dataset._organization,
         dataStore,
         fallbackLayer = fallbackLayer,
         boundingBox = boundingBox.flatMap { box =>
@@ -663,7 +666,8 @@ class AnnotationService @Inject()(
                                 user,
                                 taskOpt,
                                 organizationId,
-                                datasetName) =>
+                                datasetName,
+                                datasetId) =>
           for {
             fetchedAnnotationLayersForAnnotation <- FetchedAnnotationLayer.layersFromTracings(skeletonTracingIdOpt,
                                                                                               volumeTracingIdOpt,
@@ -678,6 +682,7 @@ class AnnotationService @Inject()(
               organizationId,
               conf.Http.uri,
               datasetName,
+              datasetId,
               Some(user),
               taskOpt,
               skipVolumeData,
@@ -714,7 +719,8 @@ class AnnotationService @Inject()(
                            user,
                            taskOpt,
                            organizationId,
-                           dataset.name)
+                           dataset.name,
+                           dataset._id)
 
     def getSkeletonTracings(datasetId: ObjectId, tracingIds: List[Option[String]]): Fox[List[Option[SkeletonTracing]]] =
       for {
@@ -908,6 +914,7 @@ class AnnotationService @Inject()(
         "stats" -> Json.obj(), // included for legacy parsers
         "restrictions" -> restrictionsJs,
         "annotationLayers" -> Json.toJson(annotation.annotationLayers),
+        "datasetId" -> dataset._id,
         "dataSetName" -> dataset.name,
         "organization" -> organization._id,
         "dataStore" -> dataStoreJs,
@@ -939,7 +946,7 @@ class AnnotationService @Inject()(
         "description" -> annotation.description,
         "typ" -> annotation.typ,
         "tracingStore" -> tracingStoreJs,
-        "dataSet" -> datasetJs
+        "dataset" -> datasetJs
       )
   }
 
@@ -953,7 +960,7 @@ class AnnotationService @Inject()(
       annotationSource = AnnotationSource(
         id = annotation.id,
         annotationLayers = annotation.annotationLayers,
-        datasetName = dataset.name,
+        datasetDirectoryName = dataset.directoryName,
         organizationId = organization._id,
         dataStoreUrl = dataStore.publicUrl,
         tracingStoreUrl = tracingStore.publicUrl,

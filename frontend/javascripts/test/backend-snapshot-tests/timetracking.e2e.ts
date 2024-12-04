@@ -10,6 +10,7 @@ import {
 import * as api from "admin/admin_rest_api";
 import test from "ava";
 import type { APITeam, APIUser } from "types/api_flow_types";
+import { AnnotationStateFilterEnum } from "oxalis/constants";
 
 let activeUser: APIUser;
 let firstTeam: APITeam;
@@ -32,6 +33,7 @@ test("getTimeTrackingForUserSpans", async (t) => {
     dayjs("20180101", "YYYYMMDD").valueOf(),
     dayjs("20181001", "YYYYMMDD").valueOf(),
     "Task",
+    AnnotationStateFilterEnum.ALL,
   );
   t.true(timeTrackingForUser.length > 0);
   t.snapshot(replaceVolatileValues(timeTrackingForUser));
@@ -44,6 +46,7 @@ test("getTimeTrackingForUser for a user other than the active user", async (t) =
     dayjs("20160401", "YYYYMMDD").valueOf(),
     dayjs("20160420", "YYYYMMDD").valueOf(),
     "Task",
+    AnnotationStateFilterEnum.ALL,
   );
   t.true(timeTrackingForUser.length > 0);
   t.snapshot(replaceVolatileValues(timeTrackingForUser));

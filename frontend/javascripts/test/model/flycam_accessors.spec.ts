@@ -80,7 +80,7 @@ test("Flycam Accessors should calculate the request log zoom step (2/2)", (t) =>
 
 test("Flycam Accessors should calculate appropriate zoom factors for datasets with many magnifications.", (t) => {
   const scale: Vector3 = [4, 4, 35];
-  const resolutions: Vector3[] = [
+  const mags: Vector3[] = [
     [1, 1, 1],
     [2, 2, 1],
     [4, 4, 1],
@@ -108,11 +108,11 @@ test("Flycam Accessors should calculate appropriate zoom factors for datasets wi
     TDView: rect,
   };
 
-  const maximumZoomPerResolution = accessors._getMaximumZoomForAllMags(
+  const maximumZoomPerMags = accessors._getMaximumZoomForAllMags(
     constants.MODE_PLANE_TRACING,
     "BEST_QUALITY_FIRST",
     scale,
-    resolutions,
+    mags,
     rects,
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
     Identity4x4,
@@ -138,5 +138,5 @@ test("Flycam Accessors should calculate appropriate zoom factors for datasets wi
     2726.4206856132723,
     6428.757360336458,
   ];
-  t.deepEqual(maximumZoomPerResolution, expectedZoomValues);
+  t.deepEqual(maximumZoomPerMags, expectedZoomValues);
 });

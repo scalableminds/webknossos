@@ -13,7 +13,7 @@ import {
   deleteBranchPoint,
   createNode,
   createTree,
-  deleteTree,
+  deleteTrees,
   deleteNode,
   deleteEdge,
   shuffleTreeColor,
@@ -602,15 +602,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             // Don't create nodes if the skeleton layer is rendered with transforms.
             return state;
           }
-          const {
-            position,
-            rotation,
-            viewport,
-            resolution,
-            treeId,
-            timestamp,
-            additionalCoordinates,
-          } = action;
+          const { position, rotation, viewport, mag, treeId, timestamp, additionalCoordinates } =
+            action;
           return getOrCreateTree(state, skeletonTracing, treeId, timestamp, TreeTypeEnum.DEFAULT)
             .chain((tree) =>
               createNode(
@@ -621,7 +614,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                 additionalCoordinates,
                 rotation,
                 viewport,
-                resolution,
+                mag,
                 timestamp,
               ).map(([node, edges]) => {
                 const diffableNodeMap = tree.nodes;
@@ -897,10 +890,16 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             .getOrElse(state);
         }
 
-        case "DELETE_TREE": {
-          const { treeId, suppressActivatingNextNode } = action;
-          return getTree(skeletonTracing, treeId)
-            .chain((tree) => deleteTree(skeletonTracing, tree, suppressActivatingNextNode))
+        case "DELETE_TREE":
+        case "DELETE_TREES": {
+          const { suppressActivatingNextNode } = action;
+          const treeIds =
+            action.type === "DELETE_TREE"
+              ? getTree(skeletonTracing, action.treeId) // The treeId in a DELETE_TREE action can be undefined which will select the active tree
+                  .map((tree) => [tree.treeId])
+                  .getOrElse([])
+              : action.treeIds;
+          return deleteTrees(skeletonTracing, treeIds, suppressActivatingNextNode)
             .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
               update(state, {
                 tracing: {

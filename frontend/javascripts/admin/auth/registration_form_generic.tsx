@@ -9,6 +9,9 @@ import Store from "oxalis/throttled_store";
 import messages from "messages";
 import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
+import { useFetch } from "libs/react_helpers";
+import { getTermsOfService } from "admin/api/terms_of_service";
+import { TOSCheckFormItem } from "./tos_check_form_item";
 
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -25,6 +28,8 @@ type Props = {
 
 function RegistrationFormGeneric(props: Props) {
   const [form] = Form.useForm();
+
+  const terms = useFetch(getTermsOfService, null, []);
 
   const onFinish = async (formValues: Record<string, any>) => {
     await Request.sendJSONReceiveJSON(
@@ -274,28 +279,32 @@ function RegistrationFormGeneric(props: Props) {
           </FormItem>
         </Col>
       </Row>
-      {props.hidePrivacyStatement ? null : (
-        <FormItem
-          name="privacy_check"
-          valuePropName="checked"
-          rules={[
-            {
-              validator: (_, value) =>
-                value
-                  ? Promise.resolve()
-                  : Promise.reject(new Error(messages["auth.privacy_check_required"])),
-            },
-          ]}
-        >
-          <Checkbox>
-            I agree to storage and processing of my personal data as described in the{" "}
-            <a target="_blank" href="/privacy" rel="noopener noreferrer">
-              privacy statement
-            </a>
-            .
-          </Checkbox>
-        </FormItem>
-      )}
+      <div className="registration-form-checkboxes">
+        {props.hidePrivacyStatement ? null : (
+          <FormItem
+            name="privacy_check"
+            valuePropName="checked"
+            rules={[
+              {
+                validator: (_, value) =>
+                  value
+                    ? Promise.resolve()
+                    : Promise.reject(new Error(messages["auth.privacy_check_required"])),
+              },
+            ]}
+          >
+            <Checkbox>
+              I agree to storage and processing of my personal data as described in the{" "}
+              <a target="_blank" href="/privacy" rel="noopener noreferrer">
+                privacy statement
+              </a>
+              .
+            </Checkbox>
+          </FormItem>
+        )}
+        <TOSCheckFormItem terms={terms} />
+      </div>
+
       <FormItem>
         <Button
           size="large"

@@ -54,7 +54,7 @@ class DiffableMap<K extends number, V> {
     if (value !== undefined) {
       return value;
     } else {
-      throw new Error("Get empty");
+      throw new Error(`Key '${key}' does not exist in diffable map.`);
     }
   }
 

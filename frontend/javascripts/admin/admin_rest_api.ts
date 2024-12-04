@@ -725,17 +725,21 @@ export async function getTracingForAnnotationType(
 ): Promise<ServerTracing> {
   const { tracingId, typ } = annotationLayerDescriptor;
   const tracingType = typ.toLowerCase() as "skeleton" | "volume";
-  const possibleVersionString = version != null ? `&version=${version}` : "";
-  const tracingArrayBuffer = await doWithToken((token) =>
-    Request.receiveArraybuffer(
-      `${annotation.tracingStore.url}/tracings/${tracingType}/${tracingId}?token=${token}${possibleVersionString}`,
+  const params = new URLSearchParams();
+  if (version != null) {
+    params.append("version", version.toString());
+  }
+  const tracingArrayBuffer = await doWithToken((token) => {
+    params.append("token", token);
+    return Request.receiveArraybuffer(
+      `${annotation.tracingStore.url}/tracings/${tracingType}/${tracingId}?${params}`,
       {
         headers: {
           Accept: "application/x-protobuf",
         },
       },
-    ),
-  );
+    );
+  });
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
 
   if (!process.env.IS_TESTING) {
@@ -794,17 +798,21 @@ export async function getAnnotationProto(
   annotationId: string,
   version?: number | null | undefined,
 ): Promise<APITracingStoreAnnotation> {
-  const possibleVersionString = version != null ? `&version=${version}` : "";
-  const annotationArrayBuffer = await doWithToken((token) =>
-    Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/annotation/${annotationId}?token=${token}${possibleVersionString}`,
+  const params = new URLSearchParams();
+  if (version != null) {
+    params.append("version", version.toString());
+  }
+  const annotationArrayBuffer = await doWithToken((token) => {
+    params.append("token", token);
+    return Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}?${params}`,
       {
         headers: {
           Accept: "application/x-protobuf",
         },
       },
-    ),
-  );
+    );
+  });
   return parseProtoAnnotation(annotationArrayBuffer);
 }
 
@@ -887,9 +895,9 @@ export async function downloadAnnotation(
   downloadFileFormat: "zarr3" | "wkw" | "nml" = "wkw",
   includeVolumeData: boolean = true,
 ) {
-  const searchParams = new URLSearchParams();
+  const params = new URLSearchParams();
   if (version != null) {
-    searchParams.append("version", version.toString());
+    params.append("version", version.toString());
   }
 
   if (includeVolumeData && showVolumeFallbackDownloadWarning) {
@@ -898,17 +906,17 @@ export async function downloadAnnotation(
     });
   }
   if (!includeVolumeData) {
-    searchParams.append("skipVolumeData", "true");
+    params.append("skipVolumeData", "true");
   } else {
     if (downloadFileFormat === "nml") {
       throw new Error(
         "Cannot download annotation with nml-only format while includeVolumeData is true",
       );
     }
-    searchParams.append("volumeDataZipFormat", downloadFileFormat);
+    params.append("volumeDataZipFormat", downloadFileFormat);
   }
 
-  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${searchParams}`;
+  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${params}`;
   await downloadWithFilename(downloadUrl);
 }
 
@@ -1300,17 +1308,20 @@ export async function triggerDatasetClearCache(
   dataSourceId: APIDataSourceId,
   layerName?: string,
 ): Promise<void> {
-  await doWithToken((token) =>
-    Request.triggerRequest(
-      `/data/triggers/reload/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}?token=${token}${
-        layerName ? `&layerName=${layerName}` : ""
-      }`,
+  await doWithToken((token) => {
+    const params = new URLSearchParams();
+    params.append("token", token);
+    if (layerName) {
+      params.append("layerName", layerName);
+    }
+    return Request.triggerRequest(
+      `/data/triggers/reload/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}?${params}`,
       {
         host: datastoreHost,
         method: "POST",
       },
-    ),
-  );
+    );
+  });
 }
 
 export async function deleteDatasetOnDisk(
@@ -1448,14 +1459,14 @@ export function getPositionForSegmentInAgglomerate(
   segmentId: number,
 ): Promise<Vector3> {
   return doWithToken(async (token) => {
-    const urlParams = new URLSearchParams({
+    const params = new URLSearchParams({
       token,
       segmentId: `${segmentId}`,
     });
     const position = await Request.receiveJSON(
       `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${
         dataSourceId.directoryName
-      }/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${urlParams.toString()}`,
+      }/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${params.toString()}`,
     );
     return position;
   });
@@ -1914,11 +1925,17 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   layerName: string,
   mappingId: string,
   segmentIds: Array<T>,
+  version?: number | null | undefined,
 ): Promise<Mapping> {
+  const params = new URLSearchParams();
+  if (version != null) {
+    params.append("version", version.toString());
+  }
   const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
-  const listArrayBuffer: ArrayBuffer = await doWithToken((token) =>
-    Request.receiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?token=${token}`,
+  const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
+    params.append("token", token);
+    return Request.receiveArraybuffer(
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
       {
         method: "POST",
         body: segmentIdBuffer,
@@ -1926,8 +1943,8 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
           "Content-Type": "application/octet-stream",
         },
       },
-    ),
-  );
+    );
+  });
   // Ensure that the values are bigint if the keys are bigint
   const adaptToType = Utils.isBigInt(segmentIds[0])
     ? (el: NumberLike) => BigInt(el)

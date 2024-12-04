@@ -76,8 +76,9 @@ class DSMeshController @Inject()(
           )
           chunkInfos <- request.body.meshFileType match {
             case Some("neuroglancerPrecomputed") =>
-              meshFileService.listMeshChunksForNeuroglancerPrecomputedMesh(request.body.meshFilePath,
-                                                                           request.body.segmentId)
+              meshFileService.listMeshChunksForNeuroglancerPrecomputedMesh(
+                request.body.meshFilePath,
+                request.body.segmentId) // TODO: Pass segmentIds here
             case _ =>
               meshFileService.listMeshChunksForSegmentsMerged(organizationId,
                                                               datasetDirectoryName,

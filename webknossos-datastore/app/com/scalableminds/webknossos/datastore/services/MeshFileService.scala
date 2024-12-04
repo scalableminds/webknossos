@@ -548,7 +548,7 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
       shardUrl = mesh.shardingSpecification.getPathForShard(vaultPath, minishardInfo._1)
       chunks <- Fox.serialCombined(meshChunkDataRequests.toList)(request =>
         shardUrl.readBytes(Some(request.byteOffset until request.byteOffset + request.byteSize)))
-      encoding = "identity"
+      encoding = "draco"
       output = chunks.flatten.toArray
     } yield (output, encoding)
 

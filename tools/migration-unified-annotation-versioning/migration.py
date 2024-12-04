@@ -71,6 +71,7 @@ class Migration:
                     logger.info(f"Migrating annotation {annotation['_id']} (dry={self.args.dry}) ...")
                 mapping_id_map = self.build_mapping_id_map(annotation)
                 layer_version_mapping = self.migrate_updates(annotation, mapping_id_map)
+                return
                 materialized_versions = self.migrate_materialized_layers(annotation, layer_version_mapping, mapping_id_map)
                 if len(materialized_versions) == 0:
                     raise ValueError(f"Zero materialized versions present in source FossilDB for annotation {annotation['_id']}.")
@@ -94,7 +95,7 @@ class Migration:
                     mapping_id_map[tracing_id] = editable_mapping_id
         return mapping_id_map
 
-    def migrate_updates(self, annotation, mapping_id_map: MappingIdMap) -> LayerVersionMapping:
+    def migrate_updates_concat(self, annotation, mapping_id_map: MappingIdMap) -> LayerVersionMapping:
         json_encoder = msgspec.json.Encoder()
         json_decoder = msgspec.json.Decoder()
         batch_size = 1000
@@ -107,7 +108,7 @@ class Migration:
             for batch_start, batch_end in batch_range(newest_version, batch_size):
                 update_groups = self.get_update_batch(tracing_id, collection, batch_start, batch_end)
                 for version, update_group in update_groups:
-                    update_group = self.process_update_group(tracing_id, layer_type, update_group, json_encoder, json_decoder)
+                    update_group, _, _ = self.process_update_group(tracing_id, layer_type, update_group, json_encoder, json_decoder)
                     unified_version += 1
                     version_mapping_for_layer[version] = unified_version
                     self.save_update_group(annotation['_id'], unified_version, update_group)
@@ -125,6 +126,49 @@ class Migration:
 
         # TODO interleave updates rather than concat
         # TODO handle existing revertToVersion update actions
+        return version_mapping
+
+    def fetch_updates(self, tracing_or_mapping_id: str, layer_type: str, collection: str, json_encoder, json_decoder) -> List[bytes]:
+        batch_size = 1000
+        newest_version = self.get_newest_version(tracing_or_mapping_id, collection)
+        updates_for_layer = []
+        next_version = newest_version
+        for batch_start, batch_end in track(reversed(list(batch_range(newest_version, batch_size))), total=(newest_version // batch_size), description=f"Fetching updates ..."):
+            if batch_start > next_version:
+                continue
+            update_groups = self.get_update_batch(tracing_or_mapping_id, collection, batch_start, batch_end)
+            for version, update_group in reversed(update_groups):
+                if version > next_version:
+                    continue
+                update_group, timestamp, revert_source_version = self.process_update_group(tracing_or_mapping_id, layer_type, update_group, json_encoder, json_decoder)
+                if revert_source_version is not None:
+                    next_version = revert_source_version
+                else:
+                    next_version -= 1
+                # todo save actionTimestamp
+                updates_for_layer.append(update_group)
+        logger.info(f"yielding {len(updates_for_layer)} updates")
+        updates_for_layer.reverse()
+        return updates_for_layer
+
+    def migrate_updates(self, annotation, mapping_id_map: MappingIdMap) -> LayerVersionMapping:
+        json_encoder = msgspec.json.Encoder()
+        json_decoder = msgspec.json.Decoder()
+
+        updates_per_layer = {}
+        for tracing_id, layer_type in annotation["layers"].items():
+            collection = self.update_collection_for_layer_type(layer_type)
+            updates_per_layer[tracing_id] = self.fetch_updates(tracing_id, layer_type, collection, json_encoder=json_encoder, json_decoder=json_decoder)
+            if tracing_id in mapping_id_map:
+                editable_mapping_id = mapping_id_map[tracing_id]
+                updates_per_layer[editable_mapping_id] = self.fetch_updates(editable_mapping_id, "editableMapping", "editableMappingUpdates", json_encoder=json_encoder, json_decoder=json_decoder)
+
+        unified_version = 0
+        version_mapping = {}
+
+        # TODO merge the updates lists by timestamp, store updates, build version mapping
+
+        logger.info(len(updates_per_layer))
         return version_mapping
 
     def get_editable_mapping_id(self, tracing_id: str, layer_type: str) -> Optional[str]:
@@ -147,10 +191,11 @@ class Migration:
             return getReply.value
         return None
 
-    def process_update_group(self, tracing_id: str, layer_type: str, update_group_raw: bytes, json_encoder, json_decoder) -> bytes:
+    def process_update_group(self, tracing_id: str, layer_type: str, update_group_raw: bytes, json_encoder, json_decoder) -> Tuple[bytes, int, Optional[int]]:
         update_group_parsed = json_decoder.decode(update_group_raw)
 
-        # TODO handle existing revertToVersion update actions
+        revert_source_version = None
+        action_timestamp = 0
 
         for update in update_group_parsed:
             name = update["name"]
@@ -181,7 +226,14 @@ class Migration:
                 or (name == "updateMappingName" and "mappingName" not in update_value):
                 update["isCompacted"] = True
 
-        return json_encoder.encode(update_group_parsed)
+            if name == "revertToVersion":
+                revert_source_version = update_value["sourceVersion"]
+                logger.info(f"revertToVersion! source: {revert_source_version}")
+
+            if "actionTimestamp" in update_value is not None:
+                action_timestamp = update_value["actionTimestamp"]
+
+        return json_encoder.encode(update_group_parsed), action_timestamp, revert_source_version
 
     def save_update_group(self, annotation_id: str, version: int, update_group_raw: bytes) -> None:
         self.save_bytes(collection="annotationUpdates", key=annotation_id, version=version, value=update_group_raw)
@@ -385,8 +437,9 @@ class Migration:
             query = f"""
                 WITH annotations AS (
                     SELECT _id, name, description, created, modified FROM webknossos.annotations
-                    WHERE modified < '{start_time}'
-                    {previous_start_query}
+                    -- WHERE modified < '{start_time}'
+                    -- {previous_start_query}
+                    WHERE _id = '5dc6d29d01000008d7fcb983'
                     ORDER BY MD5(_id)
                     LIMIT {page_size}
                     OFFSET {page_size * page_num}

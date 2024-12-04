@@ -264,6 +264,7 @@ export type VolumeTracing = TracingBase & {
   readonly hasEditableMapping?: boolean;
   readonly mappingIsLocked?: boolean;
   readonly hasSegmentIndex: boolean;
+  readonly volumeBucketDataHasChanged?: boolean;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";

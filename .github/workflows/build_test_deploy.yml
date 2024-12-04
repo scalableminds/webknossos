@@ -178,7 +178,7 @@ jobs:
       
       - name: Start webknossos, datastore, and tracingstore
         run: |
-          mkdir fossildb && chmod 999:999 fossildb
+          mkdir fossildb && chown 999:999 fossildb
           docker compose up -d webknossos
           docker compose up -d webknossos-datastore
           docker compose up -d webknossos-tracingstore

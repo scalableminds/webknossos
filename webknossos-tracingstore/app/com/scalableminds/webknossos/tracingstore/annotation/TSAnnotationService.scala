@@ -231,7 +231,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         "value" -> Json.toJson(tuple._2)
       )
 
-    val batchRanges = SequenceUtils.batchRangeInclusive(oldestVersion, newestVersion, batchSize = 100)
+    val batchRanges = SequenceUtils.batchRangeInclusive(oldestVersion, newestVersion, batchSize = 1000).reverse
     for {
       updateActionBatches <- Fox.serialCombined(batchRanges.toList) { batchRange =>
         val batchFrom = batchRange._1

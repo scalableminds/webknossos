@@ -5,7 +5,7 @@ import math
 import logging
 import datetime
 import time
-from typing import Dict, Tuple, List, Optional, Callable
+from typing import Dict, Tuple, List, Optional, Callable, Set
 from rich.progress import track
 import msgspec
 import concurrent.futures
@@ -62,8 +62,8 @@ class Migration:
             if self.args.count_versions:
                 versions = 0
                 for tracing_id, layer_type in annotation["layers"].items():
-                    collection = self.update_collection_for_layer_type(layer_type)
-                    newest_version = self.get_newest_version(tracing_id, collection)
+                    update_collection = self.update_collection_for_layer_type(layer_type)
+                    newest_version = self.get_newest_version(tracing_id, update_collection)
                     versions += newest_version
                 if versions > 1:
                     logger.info(f"{versions} versions for {annotation['_id']}{self.get_progress()}")
@@ -73,6 +73,7 @@ class Migration:
                 mapping_id_map = self.build_mapping_id_map(annotation)
                 layer_version_mapping = self.migrate_updates(annotation, mapping_id_map)
                 materialized_versions = self.migrate_materialized_layers(annotation, layer_version_mapping, mapping_id_map)
+                logger.info(f"saved materialized versions {materialized_versions}")
                 if len(materialized_versions) == 0:
                     raise ValueError(f"Zero materialized versions present in source FossilDB for annotation {annotation['_id']}.")
                 self.create_and_save_annotation_proto(annotation, materialized_versions)
@@ -146,6 +147,7 @@ class Migration:
 
             unified_version += 1
             version_mapping[tracing_id][version] = unified_version
+            logger.info(f"saving update v{unified_version}")
             self.save_update_group(annotation['_id'], unified_version, update_group)
 
             if element_index + 1 < len(all_update_groups[layer_index]):
@@ -243,13 +245,30 @@ class Migration:
             return "skeletonUpdates"
         return "volumeUpdates"
 
-    def migrate_materialized_layers(self, annotation: RealDictRow, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap) -> List[int]:
-        materialized_versions = []
+    def migrate_materialized_layers(self, annotation: RealDictRow, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap) -> Set[int]:
+        #newest_to_materialize = self.get_newest_to_materialize(annotation, layer_version_mapping, mapping_id_map)
+
+        materialized_versions = set()
         for tracing_id, tracing_type in annotation["layers"].items():
             materialized_versions_of_layer = \
                 self.migrate_materialized_layer(tracing_id, tracing_type, layer_version_mapping, mapping_id_map)
-            materialized_versions += materialized_versions_of_layer
+            materialized_versions.update(materialized_versions_of_layer)
         return materialized_versions
+
+    def get_newest_to_materialize(self, annotation, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap) -> int:
+        newest_to_materialize = 0
+        for tracing_id, tracing_type in annotation["layers"].items():
+            if tracing_type == "Skeleton":
+                collection = "skeletons"
+            else:
+                collection = "volumes"
+            # TODO what if the newest materialized is dropped because of a revert?
+            newest_materialized = layer_version_mapping[tracing_id][self.get_newest_version(tracing_id, collection)]
+            newest_to_materialize = min(newest_to_materialize, newest_materialized)
+        for editable_mapping_id in mapping_id_map.values():
+            newest_materialized = layer_version_mapping[editable_mapping_id][self.get_newest_version(editable_mapping_id, "editableMappingsInfo")]
+            newest_to_materialize = min(newest_to_materialize, newest_materialized)
+        return newest_to_materialize
 
     def migrate_materialized_layer(self, tracing_id: str, layer_type: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap) -> List[int]:
         if layer_type == "Skeleton":
@@ -276,6 +295,7 @@ class Migration:
                 skeleton.version = new_version
                 value_bytes = skeleton.SerializeToString()
             materialized_versions_unified.append(new_version)
+            logger.info(f"saving materialized skeleton {new_version}")
             self.save_bytes(collection, tracing_id, new_version, value_bytes)
         return materialized_versions_unified
 
@@ -296,6 +316,7 @@ class Migration:
                     volume.mappingName = tracing_id
                 value_bytes = volume.SerializeToString()
             materialized_versions_unified.append(new_version)
+            logger.info(f"saving materialized volume {new_version}")
             self.save_bytes(collection, tracing_id, new_version, value_bytes)
         return materialized_versions_unified
 
@@ -387,7 +408,7 @@ class Migration:
             transform_key=partial(self.replace_before_first_slash, tracing_id)
         )
 
-    def create_and_save_annotation_proto(self, annotation, materialized_versions: List[int]):
+    def create_and_save_annotation_proto(self, annotation, materialized_versions: Set[int]):
         for version in materialized_versions:
             annotationProto = AnnotationProto.AnnotationProto()
             annotationProto.description = annotation["description"] or ""

@@ -241,10 +241,7 @@ class AuthenticationController @Inject()(
     implicit request =>
       for {
         datasetIdValidated <- Fox.runOptional(datasetId)(ObjectId.fromString(_))
-        _ <- Fox
-          .runIf(datasetDirectoryName.isDefined)(bool2Fox(organizationId.isDefined)) ?~> "Organization id must be defined if dataset directory name is defined."
-        _ <- Fox
-          .runIf(organizationId.isDefined)(bool2Fox(datasetDirectoryName.isDefined)) ?~> "Directory name must be defined if dataset organization id is defined."
+        _ <- bool2Fox(datasetDirectoryName.isDefined == organizationId.isDefined) ?~> "Organization id and directory name must be defined together."
         isSuperUser <- multiUserDAO.findOne(request.identity._multiUser).map(_.isSuperUser)
         selectedOrganization <- if (isSuperUser)
           accessibleBySwitchingForSuperUser(datasetIdValidated,

@@ -19,7 +19,7 @@ WEBKNOSSOS is also a platform for [showcasing datasets](https://webknossos.org) 
 - User and task management for high-throughput collaboration in the lab or crowdsourcing
 - Easy Sharing. Share your [datasets](./sharing/dataset_sharing.md) and [annotations](./sharing/annotation_sharing.md) securely with others using web links
 - [Fine-grained access permission](./users/access_rights.md) and and user roles for secure collaboration
-- [AI Quick Select tool](./volume_annotation/index.md#ai-quick-select) to speed up segmentation
+- [AI Quick Select tool](./volume_annotation/tools.md#ai-quick-select) to speed up segmentation
 - [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
 - [Supported dataset formats: Zarr, WKW (Optimized), KNOSSOS cubes, Neuroglancer Precomputed, N5, and image stacks](./data/index.md) (some formats will be converted on upload)
 - [Supported image formats](./data/index.md): Grayscale, Segmentation Maps, RGB, Multi-Channel

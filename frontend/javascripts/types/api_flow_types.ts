@@ -875,6 +875,10 @@ export type ServerVolumeTracing = ServerTracingBase & {
   hasEditableMapping?: boolean;
   mappingIsLocked?: boolean;
   hasSegmentIndex?: boolean;
+  // volumeBucketDataHasChanged is automatically set to true by the back-end
+  // once a bucket was mutated. There is no need to send an explicit UpdateAction
+  // for that.
+  volumeBucketDataHasChanged?: boolean;
 };
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
 export type ServerEditableMapping = {

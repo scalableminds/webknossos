@@ -83,7 +83,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
             zoomLevel = nmlParams.zoomLevel,
             userBoundingBox = None,
             userBoundingBoxes = nmlParams.userBoundingBoxes,
-            organizationId = Some(nmlParams.organizationId),
+            organizationId = Some(dataset._organization),
             segments = v.segments,
             mappingName = v.mappingName,
             mappingIsLocked = v.mappingIsLocked,
@@ -113,7 +113,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
             None,
             nmlParams.treeGroupsAfterSplit,
             nmlParams.userBoundingBoxes,
-            Some(nmlParams.organizationId),
+            Some(dataset._organization),
             nmlParams.editPositionAdditionalCoordinates,
             additionalAxes = nmlParams.additionalAxisProtos
           )

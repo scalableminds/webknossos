@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(124);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(125);
 COMMIT TRANSACTION;
 
 
@@ -56,7 +56,7 @@ CREATE TABLE webknossos.annotation_layers(
   _annotation CHAR(24) NOT NULL,
   tracingId CHAR(36) NOT NULL UNIQUE,
   typ webknossos.ANNOTATION_LAYER_TYPE NOT NULL,
-  name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.]+$'),
+  name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.\$]+$'),
   statistics JSONB NOT NULL,
   UNIQUE (name, _annotation),
   PRIMARY KEY (_annotation, tracingId),

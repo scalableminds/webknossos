@@ -48,7 +48,7 @@ export function checkLayerNameForInvalidCharacters(readableLayerName: string): V
       message: messages["tracing.volume_layer_name_starts_with_dot"],
     };
   }
-  const uriSafeCharactersRegex = /[0-9a-zA-Z-._]+/g;
+  const uriSafeCharactersRegex = /[0-9a-zA-Z-._$]+/g;
   // Removing all URISaveCharacters from readableLayerName. The leftover chars are all invalid.
   const allInvalidChars = readableLayerName.replace(uriSafeCharactersRegex, "");
   const allUniqueInvalidCharsAsSet = new Set(allInvalidChars);

@@ -768,7 +768,7 @@ export function getUpdateActionLog(
   oldestVersion?: number,
   newestVersion?: number,
 ): Promise<Array<APIUpdateActionBatch>> {
-  return doWithToken(async (token) => {
+  return doWithToken((token) => {
     const params = new URLSearchParams();
     params.append("token", token);
     if (oldestVersion != null) {
@@ -777,14 +777,9 @@ export function getUpdateActionLog(
     if (newestVersion != null) {
       params.append("newestVersion", newestVersion.toString());
     }
-    const entries = (await Request.receiveJSON(
+    return Request.receiveJSON(
       `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
-    )) as APIUpdateActionBatch[];
-
-    // todop: should not be necessary soon
-    entries.sort((a, b) => b.version - a.version);
-
-    return entries;
+    );
   });
 }
 

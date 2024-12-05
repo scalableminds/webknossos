@@ -162,6 +162,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
       title="Add / Remove Users"
       className="edit-team-modal"
       footer={null}
+      width={800}
     >
       <Spin spinning={!usersHaveLoaded}>{usersHaveLoaded ? renderModalBody() : null}</Spin>
     </Modal>

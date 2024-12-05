@@ -249,8 +249,8 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     datasetName.zip(directoryName) match {
       case Some((name, dirName)) =>
         for {
-          dsWithOldNameField <- tryo(jsResult - "name" + ("name" -> Json.toJson(dirName))).toFox
-          dsWithOldDisplayNameField <- tryo(dsWithOldNameField - "displayName" + ("displayName" -> Json.toJson(name))).toFox
+          dsWithOldNameField <- tryo(jsResult - "directoryName" + ("name" -> Json.toJson(dirName))).toFox
+          dsWithOldDisplayNameField <- tryo(dsWithOldNameField + ("displayName" -> Json.toJson(name))).toFox
         } yield dsWithOldDisplayNameField
       case _ => Fox.successful(jsResult)
     }

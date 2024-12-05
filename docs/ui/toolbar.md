@@ -15,6 +15,7 @@ The save and undo functions help you manage your annotation work:
 
 ### Position Control
 The position control allows precise navigation within your dataset. You can:
+
 - Enter specific coordinates to jump directly to any location
 - Copy position values by clicking on the coordinate display
 - Adjust camera rotation in flight or oblique modes
@@ -26,9 +27,10 @@ The position control allows precise navigation within your dataset. You can:
 The menu provides several ways to manage your annotations:
 
 - **Download**: Export your work in standard formats:
-  - Skeleton annotations are saved as [NML files](../data/concepts.md#nml-files)
-  - Volume annotations are exported as [WKW files](../data/wkw.md)
-  - All associated data and metadata are included in the download
+
+    - Skeleton annotations are saved as [NML files](../data/concepts.md#nml-files)
+    - Volume annotations are exported as [WKW files](../data/wkw.md)
+    - All associated data and metadata are included in the download
 
 - **Archive**: When you need to declutter your dashboard, you can archive annotations you're not actively working on. Archived items remain accessible through the "Show Archived Annotations" filter on your dashboard. Note that this option isn't available for tasks.
 
@@ -60,13 +62,17 @@ WEBKNOSSOS offers multiple ways to share your work:
 ## Annotation Tools
 
 ### Navigation
+![Move Tool](./images/move-tool.jpg){align=left width="60"} 
 The **Move tool** serves as your primary means of navigating through the dataset. With it, you can:
+
 - Pan across slices using click and drag
 - Zoom in and out to focus on details or get an overview
 - Rotate the view in 3D mode
 
 ### Skeleton Annotation
+![Skeleton Tool](./images/skeleton-tool.jpg){align=left width="60"} 
 The **Skeleton tool** enables you to create and edit skeleton annotations:
+
 - Place nodes with precise positioning
 - Connect nodes to form tree structures
 - Add branches and create complex neural tracings
@@ -76,19 +82,27 @@ For detailed information, see the [skeleton annotation guide](../skeleton_annota
 ### Volume Annotation
 WEBKNOSSOS provides several tools for volume annotation:
 
-- **Trace Tool**: Create precise boundary definitions by drawing outlines around structures. This tool is particularly useful when accuracy is crucial.
+![Trace Tool](./images/trace-tool.jpg){align=left width="60"} 
+**Trace Tool**: Create precise boundary definitions by drawing outlines around structures. This tool is particularly useful when accuracy is crucial.
 
-- **Brush Tool**: Paint directly onto the dataset to mark regions of interest. The brush size is adjustable, and the tool supports pressure sensitivity for compatible input devices.
 
-- **AI Quick Select**: Annotate a segment automatically with our AI by drawing a rectangular selection over it.
+![Brush Tool](./images/brush-tool.jpg){align=left width="60"} 
+**Brush Tool**: Paint directly onto the dataset to mark regions of interest. The brush size is adjustable, and the tool supports pressure sensitivity for compatible input devices.
+
+
+![Quick Select Tool](./images/quickselect-tool.jpg){align=left width="60"} 
+**AI Quick Select**: Annotate a segment automatically with our AI by drawing a rectangular selection over it.
 
 And many other tools. For detailed information, see the [volume annotation guide](../volume_annotation/tools.md).
 
 ### Measurement and Analysis
-- **Measurement Tool**: Allows you to calculate distances between points of interest, measure surface areas of segmented structures, and place waypoints for complex measurements.
+![Measurement Tool](./images/measure-tool.jpg){align=left width="60"}
+**Measurement Tool**: Allows you to calculate distances between points of interest, measure surface areas of segmented structures, and place waypoints for complex measurements.
 
-- **AI Analysis**: Launch automated segmentation processes using various analysis workflows. The AI tools can significantly speed up your annotation work. Learn more about [AI-assisted analysis](../automation/ai_segmentation.md).
+**AI Analysis**: Launch automated segmentation processes using various analysis workflows. The AI tools can significantly speed up your annotation work. Learn more about [AI-assisted analysis](../automation/ai_segmentation.md).
 
-- **Bounding Box Tool**: Create a bounding box to define a region of interest for analysis, subdivide a dataset into smaller regions for the builtin automated workflows, or quickly export a region of interest.
+
+![Bounding Box Tool](./images/boundingbox-tool.jpg){align=left width="60"}
+**Bounding Box Tool**: Create a bounding box to define a region of interest for analysis, subdivide a dataset into smaller regions for the builtin automated workflows, or quickly export a region of interest.
 
 For detailed information, see the [Advanced Analysis Tools](../automation/ai_segmentation.md).

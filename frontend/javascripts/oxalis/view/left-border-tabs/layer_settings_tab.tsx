@@ -130,6 +130,7 @@ import {
   haveAllLayersSameRotation,
   getTransformsForLayer,
   isIdentityTransform,
+  isLayerWithoutTransformConfigSupport,
 } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
 import {
   invertTransform,
@@ -243,18 +244,17 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
     affine: "icon-affine-transformation.svg",
   };
 
+  const isDisabled =
+    (isRenderedNatively && !doAllLayersHaveTheSameTransform) ||
+    // Cannot toggle transforms on a layer into whose coordinate system other layer transform.
+    isLayerWithoutTransformConfigSupport(layer);
+  // Cannot toggle transformations on a skeleton layer as a skeleton layer cannot have transformations.
+  // Therefore, it cannot be used as a reference for other layers.
+  // The same goes for segmentation layers without fallback.
+  // Such layers can only transform according to transformations of other layers.
+
   const toggleLayerTransforms = () => {
     const state = Store.getState();
-    //TODO: fix for skeleton layer
-    if (isRenderedNatively && !doAllLayersHaveTheSameTransform) {
-      // Cannot toggle transforms on a layer into whose coordinate system other layer transform.
-      return;
-    }
-    if (layer.category === "skeleton" && isRenderedNatively) {
-      // Cannot turn on transformations on a skeleton layer as a skeleton layer cannot have transformations.
-      // A skeleton layer can only transform accordingly to other layers.
-      return;
-    }
     // Get transform of layer. null is passed as nativelyRenderedLayerName to
     // get the layers transform even in case it is currently rendered natively.
     const currentTransform = getTransformsForLayer(state.dataset, layer, null);
@@ -288,6 +288,15 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
     dispatch(setZoomStepAction(state.flycam.zoomStep * scaleChange));
   };
 
+  const style = {
+    cursor: transform != null ? "pointer" : "default",
+    width: 14,
+    height: 14,
+    marginBottom: 4,
+    marginRight: 5,
+    ...(isDisabled ? { cursor: "not-allowed", opacity: "0.5" } : {}),
+  };
+
   return (
     <div className="flex-item">
       <FastTooltip
@@ -296,20 +305,14 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
             ? "This layer is shown natively (i.e., without any transformations)."
             : `This layer is rendered with ${
                 typeToLabel[transform.type]
-              } transformation. Click to render this layer without any transforms.`
+              } transformation.${isDisabled ? "" : " Click to render this layer without any transforms."}`
         }
       >
         <img
           src={`/assets/images/${typeToImage[isRenderedNatively ? "none" : transform.type]}`}
           alt="Transformed Layer Icon"
-          style={{
-            cursor: transform != null ? "pointer" : "default",
-            width: 14,
-            height: 14,
-            marginBottom: 4,
-            marginRight: 5,
-          }}
-          onClick={toggleLayerTransforms}
+          style={style}
+          onClick={isDisabled ? () => {} : toggleLayerTransforms}
         />
       </FastTooltip>
     </div>

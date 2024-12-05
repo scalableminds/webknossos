@@ -150,15 +150,24 @@ export const getOriginalTransformsForLayerOrNull = memoizeWithTwoKeys(
   _getOriginalTransformsForLayerOrNull,
 );
 
+export function isLayerWithoutTransformConfigSupport(layer: APIDataLayer | APISkeletonLayer) {
+  return (
+    layer.category === "skeleton" || (layer.category === "segmentation" && !layer.fallbackLayer)
+  );
+}
+
 function _getTransformsForLayerOrNull(
   dataset: APIDataset,
   layer: APIDataLayer | APISkeletonLayer,
   nativelyRenderedLayerName: string | null,
 ): Transform | null {
-  if (layer.category === "skeleton") {
-    return getTransformsForSkeletonLayerOrNull(dataset, nativelyRenderedLayerName);
+  if (isLayerWithoutTransformConfigSupport(layer)) {
+    return getTransformsForLayerWithoutTransformationConfigOrNull(
+      dataset,
+      nativelyRenderedLayerName,
+    );
   }
-  const layerTransforms = getOriginalTransformsForLayerOrNull(dataset, layer);
+  const layerTransforms = getOriginalTransformsForLayerOrNull(dataset, layer as APIDataLayer);
 
   if (layer.name === nativelyRenderedLayerName) {
     // This layer should be rendered without any transforms.
@@ -223,7 +232,7 @@ export function isIdentityTransform(transform: Transform) {
   return transform.type === "affine" && _.isEqual(transform.affineMatrix, Identity4x4);
 }
 
-function _getTransformsForSkeletonLayerOrNull(
+function _getTransformsForLayerWithoutTransformationConfigOrNull(
   dataset: APIDataset,
   nativelyRenderedLayerName: string | null,
 ): Transform | null {
@@ -233,42 +242,50 @@ function _getTransformsForSkeletonLayerOrNull(
     // No layer is requested to be rendered natively. -> We can use each layer's transforms as is.
     if (!doAllLayersHaveTheSameRotation) {
       // If the dataset's layers do not have a consistent transformation (which only rotates the dataset),
-      // we cannot guess what transformation should be applied to the skeleton layer.
+      // we cannot guess what transformation should be applied to the layer.
+      // As skeleton layer and volume layer without fallback don't have a transforms property currently.
       return null;
     }
 
-    // The skeleton layer needs transformed just like the other layers. Thus, we simply duplicate the first layers transforms.
-    const someLayersTransforms = getTransformsForLayerOrNull(
-      dataset,
-      layers[0],
-      nativelyRenderedLayerName,
+    // The skeleton layer needs transformed just like the other layers. Thus, we simply use the first usable layer.
+    // Filtering for a layer that might actually have transforms prevents an infinite loop
+    // between cyclic calls of _getTransformsForLayerWithoutTransformationConfigOrNull and getTransformsForLayerOrNull.
+    const usableReferenceLayer = layers.find(
+      (layer) =>
+        layer.category === "color" || (layer.category === "segmentation" && layer.fallbackLayer),
     );
-    return someLayersTransforms;
+    const someLayersTransformsMaybe = usableReferenceLayer
+      ? getTransformsForLayerOrNull(dataset, usableReferenceLayer, nativelyRenderedLayerName)
+      : null;
+    return someLayersTransformsMaybe;
   } else if (nativelyRenderedLayerName != null && doAllLayersHaveTheSameRotation) {
     // If all layers have the same transformations and at least one is rendered natively, this means that all layer should be rendered natively.
     return null;
   }
 
-  // Compute the inverse of the layer that should be rendered natively
+  // Compute the inverse of the layer that should be rendered natively.
   const nativeLayer = getLayerByName(dataset, nativelyRenderedLayerName, true);
   const transformsOfNativeLayer = getOriginalTransformsForLayerOrNull(dataset, nativeLayer);
 
   if (transformsOfNativeLayer == null) {
-    // The inverse of no transforms, are no transforms
+    // The inverse of no transforms, are no transforms.
     return null;
   }
 
   return invertTransform(transformsOfNativeLayer);
 }
 
-export const getTransformsForSkeletonLayerOrNull = memoizeOne(_getTransformsForSkeletonLayerOrNull);
+export const getTransformsForLayerWithoutTransformationConfigOrNull = memoizeOne(
+  _getTransformsForLayerWithoutTransformationConfigOrNull,
+);
 
 export function getTransformsForSkeletonLayer(
   dataset: APIDataset,
   nativelyRenderedLayerName: string | null,
 ): Transform {
   return (
-    getTransformsForSkeletonLayerOrNull(dataset, nativelyRenderedLayerName) || IdentityTransform
+    getTransformsForLayerWithoutTransformationConfigOrNull(dataset, nativelyRenderedLayerName) ||
+    IdentityTransform
   );
 }
 

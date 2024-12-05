@@ -106,6 +106,7 @@ import {
 } from "admin/organization/pricing_plan_utils";
 import { convertServerAdditionalAxesToFrontEnd } from "./model/reducers/reducer_helpers";
 import { haveAllLayersSameRotation } from "./model/accessors/dataset_layer_rotation_accessor";
+import type { Mutable } from "types/globals";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
@@ -852,13 +853,32 @@ function applyAnnotationSpecificViewConfiguration(
    * Apply annotation-specific view configurations to the dataset settings which are persisted
    * per user per dataset. The AnnotationViewConfiguration currently only holds the "isDisabled"
    * information per layer which should override the isDisabled information in DatasetConfiguration.
+   * Moreover, due to another annotation nativelyRenderedLayerName might be set to a layer which does
+   * not exist in this view / annotation. In this case, the nativelyRenderedLayerName should be set to null.
    */
 
-  if (!annotation) {
-    return originalDatasetSettings;
+  const initialDatasetSettings: Mutable<DatasetConfiguration> =
+    _.cloneDeep(originalDatasetSettings);
+
+  if (originalDatasetSettings.nativelyRenderedLayerName) {
+    const isNativelyRenderedNamePresent =
+      dataset.dataSource.dataLayers.some(
+        (layer) =>
+          layer.name === originalDatasetSettings.nativelyRenderedLayerName ||
+          (layer.category === "segmentation" &&
+            layer.fallbackLayer === originalDatasetSettings.nativelyRenderedLayerName),
+      ) ||
+      annotation?.annotationLayers.some(
+        (layer) => layer.name === originalDatasetSettings.nativelyRenderedLayerName,
+      );
+    if (!isNativelyRenderedNamePresent) {
+      initialDatasetSettings.nativelyRenderedLayerName = null;
+    }
   }
 
-  const initialDatasetSettings: DatasetConfiguration = _.cloneDeep(originalDatasetSettings);
+  if (!annotation) {
+    return initialDatasetSettings;
+  }
 
   if (annotation.viewConfiguration) {
     // The annotation already contains a viewConfiguration. Merge that into the

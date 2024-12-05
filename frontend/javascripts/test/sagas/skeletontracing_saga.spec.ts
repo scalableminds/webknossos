@@ -79,24 +79,6 @@ function testDiffing(
   );
 }
 
-// TODOp not used?
-// biome-ignore lint/correctness/noUnusedVariables: <explanation>
-function compactSaveQueueWithUpdateActions(
-  queue: Array<SaveQueueEntry>,
-  tracing: SkeletonTracing,
-): Array<SaveQueueEntry> {
-  return compactSaveQueue(
-    // todop
-    // Do we really need compactSaveQueueWithUpdateActions? actually, compactUpdateActions
-    // is never called with a save queue in prod (instead, the function is called before
-    // filling the save queue). one could probably combine compactUpdateActions and
-    // createSaveQueueFromUpdateActions to have a createCompactedSaveQueueFromUpdateActions
-    // helper function and use that in this spec.
-    // @ts-ignore
-    queue.map((batch) => ({ ...batch, actions: compactUpdateActions(batch.actions, tracing) })),
-  );
-}
-
 function createCompactedSaveQueueFromUpdateActions(
   updateActions: UpdateActionWithoutIsolationRequirement[][],
   timestamp: number,

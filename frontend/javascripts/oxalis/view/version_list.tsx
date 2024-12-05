@@ -8,6 +8,8 @@ import {
   getUpdateActionLog,
   downloadAnnotation,
   getNewestVersionForAnnotation,
+  getAnnotationProto,
+  getTracingForAnnotationType,
 } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import {
@@ -48,14 +50,42 @@ const VERSION_LIST_PLACEHOLDER = {
 export async function previewVersion(version?: number) {
   const state = Store.getState();
   const { controlMode } = state.temporaryConfiguration;
-  const { annotationId } = state.tracing;
+  const { annotationId, tracingStore, annotationLayers } = state.tracing;
+
+  const annotationProto = await getAnnotationProto(tracingStore.url, annotationId, version);
+
+  if (
+    !_.isEqual(
+      annotationProto.annotationLayers.map((l) => l.tracingId),
+      annotationLayers.map((l) => l.tracingId),
+    )
+  ) {
+    const params = new URLSearchParams();
+    params.append("showVersionRestore", "true");
+    params.append("version", `${version}`);
+    // todop: do this
+    // location.href = `${location.origin}/annotations/${annotationId}?${params}${location.hash}`;
+
+    // todop: remove this (it's only for testing)
+    for (const layer of annotationProto.annotationLayers) {
+      await getTracingForAnnotationType(
+        state.tracing,
+        {
+          name: "irrelevant hopefully",
+          tracingId: layer.tracingId,
+          typ: layer.type,
+        },
+        version,
+      );
+    }
+
+    return;
+  }
+
   await api.tracing.restart(null, annotationId, controlMode, version);
   Store.dispatch(setAnnotationAllowUpdateAction(false));
   const segmentationLayersToReload = [];
 
-  // TODOp: properly determine which layers to reload.
-  // No versions were passed which means that the newest annotation should be
-  // shown. Therefore, reload all segmentation layers.
   segmentationLayersToReload.push(...Model.getSegmentationTracingLayers());
 
   for (const segmentationLayer of segmentationLayersToReload) {

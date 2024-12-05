@@ -719,7 +719,8 @@ export async function acquireAnnotationMutex(
 }
 
 export async function getTracingForAnnotationType(
-  annotation: APIAnnotation,
+  // todop: revert to APIAnnotation
+  annotation: { tracingStore: { url: string } },
   annotationLayerDescriptor: AnnotationLayerDescriptor,
   version?: number | null | undefined,
 ): Promise<ServerTracing> {
@@ -767,7 +768,7 @@ export function getUpdateActionLog(
   oldestVersion?: number,
   newestVersion?: number,
 ): Promise<Array<APIUpdateActionBatch>> {
-  return doWithToken((token) => {
+  return doWithToken(async (token) => {
     const params = new URLSearchParams();
     params.append("token", token);
     if (oldestVersion != null) {
@@ -776,9 +777,14 @@ export function getUpdateActionLog(
     if (newestVersion != null) {
       params.append("newestVersion", newestVersion.toString());
     }
-    return Request.receiveJSON(
+    const entries = (await Request.receiveJSON(
       `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
-    );
+    )) as APIUpdateActionBatch[];
+
+    // todop: should not be necessary soon
+    entries.sort((a, b) => b.version - a.version);
+
+    return entries;
   });
 }
 
@@ -813,7 +819,12 @@ export async function getAnnotationProto(
       },
     );
   });
-  return parseProtoAnnotation(annotationArrayBuffer);
+  const annotationProto = parseProtoAnnotation(annotationArrayBuffer);
+  if (!process.env.IS_TESTING) {
+    // Log to console as the decoded annotationProto is hard to inspect in the devtools otherwise.
+    console.log("Parsed protobuf annotation:", annotationProto);
+  }
+  return annotationProto;
 }
 
 export function hasSegmentIndexInDataStore(

@@ -577,17 +577,17 @@ export type APITimeTrackingPerAnnotation = {
   annotationLayerStats: TracingStats;
 };
 type APITracingStoreAnnotationLayer = {
-  tracingId: string;
-  name: string;
-  type: AnnotationLayerType;
+  readonly tracingId: string;
+  readonly name: string;
+  readonly type: AnnotationLayerType;
 };
 
 export type APITracingStoreAnnotation = {
-  name: string;
-  description: string;
-  version: number;
-  earliestAccessibleVersion: number;
-  annotationLayers: APITracingStoreAnnotationLayer[];
+  readonly name: string;
+  readonly description: string;
+  readonly version: number;
+  readonly earliestAccessibleVersion: number;
+  readonly annotationLayers: APITracingStoreAnnotationLayer[];
 };
 
 export type APITimeTrackingPerUser = {

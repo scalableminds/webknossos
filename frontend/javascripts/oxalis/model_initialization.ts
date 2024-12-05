@@ -137,6 +137,7 @@ export async function initialize(
     if (initialMaybeCompoundType != null) {
       annotation = await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType);
     } else {
+      // todop: can we improve this?
       let maybeOutdatedAnnotation = await getMaybeOutdatedAnnotationInformation(annotationId);
       annotationProto = await getAnnotationProto(
         maybeOutdatedAnnotation.tracingStore.url,

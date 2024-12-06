@@ -131,6 +131,7 @@ import {
 import { hideContextMenuAction, setActiveUserBoundingBoxId } from "oxalis/model/actions/ui_actions";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import FastTooltip from "components/fast_tooltip";
+import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -1179,7 +1180,9 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       segmentationLayerName,
       mappingInfo,
     ),
-    label: "Load Mesh (precomputed)",
+    label: (
+      <LoadMeshMenuItemLabel currentMeshFile={currentMeshFile} volumeTracing={volumeTracing} />
+    ),
   };
   const computeMeshAdHocItem = {
     key: "compute-mesh-adhc",
@@ -1434,12 +1437,13 @@ function ContextMenuInner(propsWithInputRef: Props) {
     maybeClickedMeshId != null ? maybeClickedMeshId : segmentIdAtPosition;
   const wasSegmentOrMeshClicked = clickedSegmentOrMeshId > 0;
 
-  const { dataset, tracing, flycam } = useSelector((state: OxalisState) => state);
+  const dataset = useSelector((state: OxalisState) => state.dataset);
   useEffect(() => {
     Store.dispatch(ensureSegmentIndexIsLoadedAction(visibleSegmentationLayer?.name));
   }, [visibleSegmentationLayer]);
-  const isSegmentIndexAvailable = useSelector((state: OxalisState) =>
-    getMaybeSegmentIndexAvailability(state.dataset, visibleSegmentationLayer?.name),
+  const isSegmentIndexAvailable = getMaybeSegmentIndexAvailability(
+    dataset,
+    visibleSegmentationLayer?.name,
   );
   const mappingName: string | null | undefined = useSelector((state: OxalisState) => {
     if (volumeTracing?.mappingName != null) return volumeTracing?.mappingName;
@@ -1453,6 +1457,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
   const isLoadingVolumeAndBB = [isLoadingMessage, isLoadingMessage];
   const [segmentVolumeLabel, boundingBoxInfoLabel] = useFetch(
     async () => {
+      const { tracing, flycam } = Store.getState();
       // The value that is returned if the context menu is closed is shown if it's still loading
       if (contextMenuPosition == null || !wasSegmentOrMeshClicked) return isLoadingVolumeAndBB;
       if (visibleSegmentationLayer == null || !isSegmentIndexAvailable) return [];

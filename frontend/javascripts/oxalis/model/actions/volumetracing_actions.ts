@@ -45,6 +45,9 @@ export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
 export type SetExpandedSegmentGroupsAction = ReturnType<typeof setExpandedSegmentGroupsAction>;
 export type SetHasEditableMappingAction = ReturnType<typeof setHasEditableMappingAction>;
 export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedAction>;
+export type SetVolumeBucketDataHasChangedAction = ReturnType<
+  typeof setVolumeBucketDataHasChangedAction
+>;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
 export type ComputeQuickSelectForPointAction = ReturnType<typeof computeQuickSelectForPointAction>;
@@ -99,6 +102,7 @@ export type VolumeTracingAction =
   | FineTuneQuickSelectAction
   | CancelQuickSelectAction
   | ConfirmQuickSelectAction
+  | SetVolumeBucketDataHasChangedAction
   | BatchUpdateGroupsAndSegmentsAction;
 
 export const VolumeTracingSaveRelevantActions = [
@@ -437,3 +441,9 @@ export const batchUpdateGroupsAndSegmentsAction = (actions: BatchableUpdateSegme
 export const cancelQuickSelectAction = () => ({ type: "CANCEL_QUICK_SELECT" }) as const;
 
 export const confirmQuickSelectAction = () => ({ type: "CONFIRM_QUICK_SELECT" }) as const;
+
+export const setVolumeBucketDataHasChangedAction = (tracingId: string) =>
+  ({
+    type: "SET_VOLUME_BUCKET_DATA_HAS_CHANGED",
+    tracingId,
+  }) as const;

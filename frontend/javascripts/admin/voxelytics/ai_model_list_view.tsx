@@ -109,7 +109,7 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
     AnnotationInfoForAIJob<APIAnnotation>[]
   >([]);
 
-  const getMagForSegmentationLayer = async (annotationId: string, layerName: string) => {
+  const getMagsForSegmentationLayer = async (annotationId: string, layerName: string) => {
     // The layer name is a human-readable one. It can either belong to an annotationLayer
     // (therefore, also to a volume tracing) or to the actual dataset.
     // Both are checked below. This won't be ambiguous because annotationLayers must not
@@ -130,10 +130,10 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
         (tracing) => tracing.tracingId === annotationLayer.tracingId,
       );
       const mags = volumeTracingMags[volumeTracingIndex] || ([[1, 1, 1]] as Vector3[]);
-      return getMagInfo(mags).getFinestMag();
+      return getMagInfo(mags);
     } else {
       const segmentationLayer = getSegmentationLayerByName(dataset, layerName);
-      return getMagInfo(segmentationLayer.resolutions).getFinestMag();
+      return getMagInfo(segmentationLayer.resolutions);
     }
   };
 
@@ -152,7 +152,7 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
       maskClosable={false}
     >
       <TrainAiModelTab
-        getMagForSegmentationLayer={getMagForSegmentationLayer}
+        getMagsForSegmentationLayer={getMagsForSegmentationLayer}
         onClose={onClose}
         annotationInfos={annotationInfosForAiJob}
         onAddAnnotationsInfos={(newItems) => {

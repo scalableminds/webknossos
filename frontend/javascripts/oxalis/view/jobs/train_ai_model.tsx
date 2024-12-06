@@ -39,6 +39,9 @@ import type { Vector3, Vector6 } from "oxalis/constants";
 import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
 import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import { computeArrayFromBoundingBox } from "libs/utils";
+import { MagSelectionFormItem } from "components/mag_selection";
+import type { MagInfo } from "oxalis/model/helpers/mag_info";
+import { useFetch } from "libs/react_helpers";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;
@@ -126,15 +129,15 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const dataset = useSelector((state: OxalisState) => state.dataset);
 
-  const getMagForSegmentationLayer = async (_annotationId: string, layerName: string) => {
+  const getMagsForSegmentationLayer = async (_annotationId: string, layerName: string) => {
     const segmentationLayer = getSegmentationLayerByHumanReadableName(dataset, tracing, layerName);
-    return getMagInfo(segmentationLayer.resolutions).getFinestMag();
+    return getMagInfo(segmentationLayer.resolutions);
   };
   const userBoundingBoxes = getSomeTracing(tracing).userBoundingBoxes;
 
   return (
     <TrainAiModelTab
-      getMagForSegmentationLayer={getMagForSegmentationLayer}
+      getMagsForSegmentationLayer={getMagsForSegmentationLayer}
       ensureSavedState={() => Model.ensureSavedState()}
       onClose={onClose}
       annotationInfos={[
@@ -151,13 +154,13 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
 }
 
 export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | HybridTracing>({
-  getMagForSegmentationLayer,
+  getMagsForSegmentationLayer,
   onClose,
   ensureSavedState,
   annotationInfos,
   onAddAnnotationsInfos,
 }: {
-  getMagForSegmentationLayer: (annotationId: string, layerName: string) => Promise<Vector3>;
+  getMagsForSegmentationLayer: (annotationId: string, layerName: string) => Promise<MagInfo>; // TODO_c rename method
   onClose: () => void;
   ensureSavedState?: (() => Promise<void>) | null;
   annotationInfos: Array<AnnotationInfoForAIJob<GenericAnnotation>>;
@@ -165,6 +168,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 }) {
   const [form] = Form.useForm();
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
+  const mags = useFetch(() => await getMagsForSegmentationLayer(annotationId, layerName)); // TODO_c
 
   const getTrainingAnnotations = async (values: any) => {
     return Promise.all(
@@ -179,7 +183,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
             annotationId,
             colorLayerName: imageDataLayer,
             segmentationLayerName: layerName,
-            mag: await getMagForSegmentationLayer(annotationId, layerName),
+            mag: null //TODO_c,
           };
         },
       ),
@@ -283,7 +287,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
         const annotationId = "id" in annotation ? annotation.id : annotation.annotationId;
         return (
           <Row key={annotationId} gutter={8}>
-            <Col span={8}>
+            <Col span={6}>
               <FormItem
                 hasFeedback
                 name={["trainingAnnotations", idx, "annotationId"]}
@@ -293,7 +297,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                 <Input disabled />
               </FormItem>
             </Col>
-            <Col span={8}>
+            <Col span={6}>
               <FormItem
                 hasFeedback
                 name={["trainingAnnotations", idx, "imageDataLayer"]}
@@ -314,7 +318,11 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                 />
               </FormItem>
             </Col>
-            <Col span={8}>
+            <Col span={6}>
+              <MagSelectionFormItem mags={ }
+              />
+            </Col>
+            <Col span={6}>
               <LayerSelectionFormItem
                 name={["trainingAnnotations", idx, "layerName"]}
                 chooseSegmentationLayer
@@ -346,31 +354,31 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 
       {hasErrors
         ? errors.map((error) => (
-            <Alert
-              key={error}
-              description={error}
-              style={{
-                marginBottom: 12,
-                whiteSpace: "pre-line",
-              }}
-              type="error"
-              showIcon
-            />
-          ))
+          <Alert
+            key={error}
+            description={error}
+            style={{
+              marginBottom: 12,
+              whiteSpace: "pre-line",
+            }}
+            type="error"
+            showIcon
+          />
+        ))
         : null}
       {hasWarnings
         ? warnings.map((warning) => (
-            <Alert
-              key={warning}
-              description={warning}
-              style={{
-                marginBottom: 12,
-                whiteSpace: "pre-line",
-              }}
-              type="warning"
-              showIcon
-            />
-          ))
+          <Alert
+            key={warning}
+            description={warning}
+            style={{
+              marginBottom: 12,
+              whiteSpace: "pre-line",
+            }}
+            type="warning"
+            showIcon
+          />
+        ))
         : null}
 
       <FormItem>
@@ -614,10 +622,10 @@ function AnnotationsCsvInput({
               return valid
                 ? Promise.resolve()
                 : Promise.reject(
-                    new Error(
-                      "Each line should only contain an annotation ID or URL (without # or ,)",
-                    ),
-                  );
+                  new Error(
+                    "Each line should only contain an annotation ID or URL (without # or ,)",
+                  ),
+                );
             },
           }),
         ]}

@@ -145,8 +145,8 @@ export class InputKeyboardNoLoop {
 
   attach(
     key: KeyboardKey,
-    callback: KeyboardHandler,
-    callbackKeyUp: KeyboardHandler = _.noop,
+    keyDownCallback: KeyboardHandler,
+    keyUpCallback: KeyboardHandler = _.noop,
     isExtendedCommand: boolean = false,
   ) {
     const binding = [
@@ -170,14 +170,14 @@ export class InputKeyboardNoLoop {
         }
 
         if (!event.repeat) {
-          callback(event);
+          keyDownCallback(event);
         } else {
           event.preventDefault();
           event.stopPropagation();
         }
       },
       (event: KeyboardEvent) => {
-        callbackKeyUp(event);
+        keyUpCallback(event);
       },
     ];
     if (isExtendedCommand) {

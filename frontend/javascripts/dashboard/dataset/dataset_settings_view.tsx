@@ -348,7 +348,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
             .validateFields()
             .then((formValues) => this.submit(formValues))
             .catch((errorInfo) => this.handleValidationFailed(errorInfo)),
-        1,
+        0,
       );
     };
 

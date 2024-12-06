@@ -1,7 +1,7 @@
 import type { Dispatch } from "redux";
 import { Typography, Tag } from "antd";
 import { SettingOutlined, InfoCircleOutlined, EditOutlined } from "@ant-design/icons";
-import { connect } from "react-redux";
+import { connect, useSelector } from "react-redux";
 import Markdown from "libs/markdown_adapter";
 import React, { type CSSProperties } from "react";
 import { Link } from "react-router-dom";
@@ -210,6 +210,8 @@ export function AnnotationStats({
   asInfoBlock: boolean;
   withMargin?: boolean | null | undefined;
 }) {
+  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const annotation = useSelector((state: OxalisState) => state.tracing);
   if (!stats || Object.keys(stats).length === 0) return null;
   const formatLabel = (str: string) => (asInfoBlock ? str : "");
   const useStyleWithMargin = withMargin != null ? withMargin : true;
@@ -221,7 +223,7 @@ export function AnnotationStats({
   const segmentCountDetails = volumeStats
     .map(
       ([layerName, volume]) =>
-        `<p>${layerName}: ${volume.segmentCount} ${pluralize("Segment", volume.segmentCount)}</p>`,
+        `<p>${getReadableNameForLayerName(dataset, annotation, layerName)}: ${volume.segmentCount} ${pluralize("Segment", volume.segmentCount)}</p>`,
     )
     .join("");
 
@@ -259,7 +261,7 @@ export function AnnotationStats({
           {volumeStats.length > 0 ? (
             <FastTooltip
               placement="left"
-              title={`${segmentCountDetails}
+              html={`${segmentCountDetails}
                       Only segments that were manually registered (either brushed or
                       interacted with) are counted in this statistic. Segmentation layers
                       created from automated workflows (also known as fallback layers) are not

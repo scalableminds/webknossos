@@ -8,4 +8,6 @@ UPDATE webknossos.annotation_layers SET name = regexp_replace(name, '\$', '', 'g
 ALTER TABLE webknossos.annotation_layers DROP CONSTRAINT IF EXISTS annotation_layers_name_check;
 ALTER TABLE webknossos.annotation_layers ADD CONSTRAINT annotation_layers_name_check  CHECK (name ~* '^[A-Za-z0-9\-_\.]+$');
 
+UPDATE webknossos.releaseInformation SET schemaVersion = 124;
+
 COMMIT TRANSACTION;

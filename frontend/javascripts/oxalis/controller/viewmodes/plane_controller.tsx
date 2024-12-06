@@ -181,7 +181,6 @@ class VolumeKeybindings {
 }
 
 const handleUpdateCursor = (event: KeyboardEvent) => {
-  console.log("handleUpdateCursor");
   const { viewModeData, temporaryConfiguration } = Store.getState();
   const { mousePosition } = temporaryConfiguration;
   if (mousePosition == null) return;
@@ -207,7 +206,6 @@ class BoundingBoxKeybindings {
 }
 
 function createKeyDownAndUpHandler() {
-  console.log("createKeyDownAndUpHandler");
   return (event: KeyboardEvent) => handleUpdateCursor(event);
 }
 

@@ -84,7 +84,7 @@ export class InputKeyboardNoLoop {
       supportInputElements?: boolean;
     },
     extendedCommands?: KeyBindingMap,
-    keyUpCommands?: KeyBindingMap,
+    keyUpBindings?: KeyBindingMap,
   ) {
     if (options) {
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
@@ -110,7 +110,7 @@ export class InputKeyboardNoLoop {
 
     for (const key of Object.keys(initialBindings)) {
       const callback = initialBindings[key];
-      const keyUpCallback = keyUpCommands != null ? keyUpCommands[key] : _.noop;
+      const keyUpCallback = keyUpBindings != null ? keyUpBindings[key] : _.noop;
       this.attach(key, callback, keyUpCallback);
     }
   }

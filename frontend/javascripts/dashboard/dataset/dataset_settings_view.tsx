@@ -339,12 +339,18 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       this.state.activeDataSourceEditMode === "simple" ? "advanced" : "simple",
     );
 
-    const afterForceUpdateCallback = () =>
+    const afterForceUpdateCallback = () => {
       // Trigger validation manually, because fields may have been updated
-      form
-        .validateFields()
-        .then((formValues) => this.submit(formValues))
-        .catch((errorInfo) => this.handleValidationFailed(errorInfo));
+      // and defer the validation as it is done asynchronously by antd or so.
+      setTimeout(
+        () =>
+          form
+            .validateFields()
+            .then((formValues) => this.submit(formValues))
+            .catch((errorInfo) => this.handleValidationFailed(errorInfo)),
+        1,
+      );
+    };
 
     // Need to force update of the SimpleAdvancedDataForm as removing a layer in the advanced tab does not update
     // the form items in the simple tab (only the values are updated). The form items automatically update once

@@ -192,6 +192,7 @@ export type RestrictionsAndSettings = Restrictions & Settings;
 export type Annotation = {
   readonly annotationId: string;
   readonly version: number;
+  readonly earliestAccessibleVersion: number;
   readonly restrictions: RestrictionsAndSettings;
   readonly visibility: AnnotationVisibility;
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;

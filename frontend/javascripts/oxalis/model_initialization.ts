@@ -155,6 +155,7 @@ export async function initialize(
         ...maybeOutdatedAnnotation,
         name: annotationProto.name,
         description: annotationProto.description,
+        annotationProto: annotationProto.earliestAccessibleVersion,
         annotationLayers: layersWithStats,
       };
       annotation = completeAnnotation;
@@ -234,7 +235,13 @@ export async function initialize(
       // Satisfy TS. annotationProto should always exist if annotation exists.
       throw new Error("Annotation protobuf should not be null.");
     }
-    initializeAnnotation(annotation, annotationProto.version, serverTracings, editableMappings);
+    initializeAnnotation(
+      annotation,
+      annotationProto.version,
+      annotationProto.earliestAccessibleVersion,
+      serverTracings,
+      editableMappings,
+    );
   } else {
     // In view only tracings we need to set the view mode too.
     const { allowedModes } = determineAllowedModes();
@@ -308,6 +315,7 @@ function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
 function initializeAnnotation(
   _annotation: APIAnnotation,
   version: number,
+  earliestAccessibleVersion: number,
   serverTracings: Array<ServerTracing>,
   editableMappings: Array<ServerEditableMapping>,
 ) {
@@ -340,7 +348,9 @@ function initializeAnnotation(
     }
 
     Store.dispatch(
-      initializeAnnotationAction(convertServerAnnotationToFrontendAnnotation(annotation, version)),
+      initializeAnnotationAction(
+        convertServerAnnotationToFrontendAnnotation(annotation, version, earliestAccessibleVersion),
+      ),
     );
     getServerVolumeTracings(serverTracings).map((volumeTracing) => {
       ErrorHandling.assert(

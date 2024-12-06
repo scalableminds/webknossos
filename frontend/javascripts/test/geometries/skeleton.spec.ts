@@ -40,7 +40,7 @@ test.before((t) => {
   tracing.trees = [];
   delete tracing.activeNodeId;
   Store.dispatch(
-    initializeAnnotationAction(convertServerAnnotationToFrontendAnnotation(annotation, 0)),
+    initializeAnnotationAction(convertServerAnnotationToFrontendAnnotation(annotation, 0, 0)),
   );
   Store.dispatch(initializeSkeletonTracingAction(tracing));
 

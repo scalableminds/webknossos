@@ -135,6 +135,7 @@ async function getUpdateActionLogPage(
   tracing: HybridTracing,
   tracingStoreUrl: string,
   annotationId: string,
+  earliestAccessibleVersion: number,
   newestVersion: number,
   // 0 is the "newest" page (i.e., the page in which the newest version is)
   relativePageNumber: number,
@@ -148,17 +149,20 @@ async function getUpdateActionLogPage(
   // For example, the following parameters would be a valid variable set
   // (assuming ENTRIES_PER_PAGE = 2):
   // newestVersion = 23
-  // relativePageNumber = 1
-  // absolutePageNumber = ⌊11.5⌋ - 1 = 10
-  // newestVersion = 22
-  // oldestVersion = 21
+  // relativePageNumber = 1 (0 is the newest, 1 is the second newest)
+  // absolutePageNumber = ⌊23/2⌋ - 1 = 10
+  // newestVersionInPage = 22
+  // oldestVersionInPage = 21
   // Thus, versions 21 and 22 will be fetched for the second newest page
   const absolutePageNumber = Math.floor(newestVersion / ENTRIES_PER_PAGE) - relativePageNumber;
   if (absolutePageNumber < 0) {
     throw new Error("Negative absolute page number received.");
   }
   const newestVersionInPage = (1 + absolutePageNumber) * ENTRIES_PER_PAGE;
-  const oldestVersionInPage = absolutePageNumber * ENTRIES_PER_PAGE + 1;
+  const oldestVersionInPage = Math.max(
+    absolutePageNumber * ENTRIES_PER_PAGE + 1,
+    earliestAccessibleVersion,
+  );
 
   const updateActionLog = await getUpdateActionLog(
     tracingStoreUrl,
@@ -177,7 +181,10 @@ async function getUpdateActionLogPage(
   }
 
   // nextPage will contain older versions
-  const nextPage = oldestVersionInPage > 1 ? relativePageNumber + 1 : undefined;
+  const nextPage =
+    oldestVersionInPage > Math.max(earliestAccessibleVersion, 1)
+      ? relativePageNumber + 1
+      : undefined;
   // previousPage will contain newer versions
   const previousPage = newestVersion > newestVersionInPage ? relativePageNumber - 1 : undefined;
 
@@ -216,14 +223,20 @@ function InnerVersionList(props: Props & { newestVersion: number }) {
   const [initialVersion] = useState(tracing.version);
 
   function fetchPaginatedVersions({ pageParam }: { pageParam?: number }) {
-    // TODOp: maybe refactor this so that this method is not calculated very rendering cycle
     if (pageParam == null) {
       pageParam = Math.floor((newestVersion - initialVersion) / ENTRIES_PER_PAGE);
     }
     const { url: tracingStoreUrl } = Store.getState().tracing.tracingStore;
-    const annotationId = Store.getState().tracing.annotationId;
+    const { annotationId, earliestAccessibleVersion } = Store.getState().tracing;
 
-    return getUpdateActionLogPage(tracing, tracingStoreUrl, annotationId, newestVersion, pageParam);
+    return getUpdateActionLogPage(
+      tracing,
+      tracingStoreUrl,
+      annotationId,
+      earliestAccessibleVersion,
+      newestVersion,
+      pageParam,
+    );
   }
 
   const queryKey = ["versions", tracing.annotationId];
@@ -329,13 +342,17 @@ function InnerVersionList(props: Props & { newestVersion: number }) {
           }
         />
       )}
-      {hasNextPage && (
+      {hasNextPage ? (
         <div style={{ display: "flex", justifyContent: "center", margin: 12 }}>
           <Button onClick={() => fetchNextPage()} disabled={!hasNextPage || isFetchingNextPage}>
             {isFetchingNextPage ? "Loading more..." : "Load More"}
           </Button>
         </div>
-      )}
+      ) : tracing.earliestAccessibleVersion > 0 ? (
+        <div style={{ textAlign: "center", marginTop: 8, marginBottom: 4 }}>
+          Cannot show versions earlier than {tracing.earliestAccessibleVersion}.
+        </div>
+      ) : null}
     </div>
   );
 }

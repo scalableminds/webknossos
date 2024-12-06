@@ -87,6 +87,7 @@ export function convertPointToVecInBoundingBox(boundingBox: ServerBoundingBox): 
 export function convertServerAnnotationToFrontendAnnotation(
   annotation: APIAnnotation,
   version: number,
+  earliestAccessibleVersion: number,
 ): Annotation {
   const {
     id: annotationId,
@@ -110,6 +111,7 @@ export function convertServerAnnotationToFrontendAnnotation(
     visibility,
     tags,
     version,
+    earliestAccessibleVersion,
     stats,
     description,
     name,

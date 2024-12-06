@@ -1,11 +1,5 @@
 import "test/sagas/skeletontracing_saga.mock.js";
-import type {
-  Flycam,
-  HybridTracing,
-  OxalisState,
-  SaveQueueEntry,
-  SkeletonTracing,
-} from "oxalis/store";
+import type { Flycam, HybridTracing, OxalisState, SkeletonTracing } from "oxalis/store";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";

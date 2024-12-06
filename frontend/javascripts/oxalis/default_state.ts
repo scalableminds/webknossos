@@ -178,6 +178,7 @@ const defaultState: OxalisState = {
     blockedByUser: null,
     annotationLayers: [],
     version: 0,
+    earliestAccessibleVersion: 0,
     stats: {},
   },
   save: {

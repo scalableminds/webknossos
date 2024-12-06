@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import javax.inject.Inject
-import models.annotation.{AnnotationUploadService, _}
+import models.annotation._
 import models.annotation.nml.NmlResults.TracingBoxContainer
 import models.project.ProjectDAO
 import models.task._
@@ -19,7 +19,7 @@ import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 
@@ -43,22 +43,24 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     } yield Ok(js)
   }
 
-  def create: Action[List[TaskParameters]] = sil.SecuredAction.async(validateJson[List[TaskParameters]]) {
-    implicit request =>
+  def create: Action[List[TaskParameters]] =
+    sil.SecuredAction.async(validateJson[List[TaskParameters]]) { implicit request =>
       for {
         _ <- taskCreationService.assertBatchLimit(request.body.length, request.body.map(_.taskTypeId))
         taskParameters <- taskCreationService.createTracingsFromBaseAnnotations(request.body,
                                                                                 request.identity._organization)
         skeletonBaseOpts: List[Option[SkeletonTracing]] <- taskCreationService.createTaskSkeletonTracingBases(
-          taskParameters)
-        volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- taskCreationService
-          .createTaskVolumeTracingBases(taskParameters, request.identity._organization)
+          taskParameters,
+          request.identity._organization)
+        volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- taskCreationService.createTaskVolumeTracingBases(
+          taskParameters,
+          request.identity._organization)
         paramsWithTracings = taskParameters.lazyZip(skeletonBaseOpts).lazyZip(volumeBaseOpts).map {
           case (params, skeletonOpt, volumeOpt) => Full((params, skeletonOpt, volumeOpt))
         }
         result <- taskCreationService.createTasks(paramsWithTracings, request.identity)
       } yield Ok(Json.toJson(result))
-  }
+    }
 
   /* Create new tasks from existing annotation files
     Expects:
@@ -86,12 +88,11 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       project <- projectDAO
         .findOneByNameAndOrganization(params.projectName, request.identity._organization) ?~> "project.notFound" ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
-      extractedFiles = nmlService.extractFromFiles(inputFiles.map(f => (f.ref.path.toFile, f.filename)),
-                                                   useZipName = false,
-                                                   isTaskUpload = true)
+      extractedFiles <- nmlService.extractFromFiles(inputFiles.map(f => (f.ref.path.toFile, f.filename)),
+                                                    SharedParsingParameters(useZipName = false, isTaskUpload = true))
       extractedTracingBoxesRaw: List[TracingBoxContainer] = extractedFiles.toBoxes
-      extractedTracingBoxes: List[TracingBoxContainer] <- taskCreationService
-        .addVolumeFallbackBoundingBoxes(extractedTracingBoxesRaw, request.identity._organization)
+      extractedTracingBoxes: List[TracingBoxContainer] <- taskCreationService.addVolumeFallbackBoundingBoxes(
+        extractedTracingBoxesRaw)
       fullParams: List[Box[TaskParameters]] = taskCreationService.buildFullParamsFromFiles(params,
                                                                                            extractedTracingBoxes)
       (skeletonBases, volumeBases) <- taskCreationService.fillInMissingTracings(
@@ -107,21 +108,20 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     } yield Ok(Json.toJson(result))
   }
 
-  def update(taskId: String): Action[TaskParameters] = sil.SecuredAction.async(validateJson[TaskParameters]) {
-    implicit request =>
+  def update(taskId: String): Action[TaskParameters] =
+    sil.SecuredAction.async(validateJson[TaskParameters]) { implicit request =>
       val params = request.body
       for {
         taskIdValidated <- ObjectId.fromString(taskId) ?~> "task.id.invalid"
         task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
         project <- projectDAO.findOne(task._project)
-        _ <- Fox
-          .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed" ~> FORBIDDEN
         _ <- taskDAO.updateTotalInstances(task._id,
                                           task.totalInstances + params.pendingInstances - task.pendingInstances)
         updatedTask <- taskDAO.findOne(taskIdValidated)
         json <- taskService.publicWrites(updatedTask)
       } yield JsonOk(json, Messages("task.editSuccess"))
-  }
+    }
 
   def delete(taskId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {

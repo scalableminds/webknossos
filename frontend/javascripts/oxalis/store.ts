@@ -9,7 +9,7 @@ import type {
   APIDataLayer,
   APIDataStore,
   APIDataset,
-  APIDatasetId,
+  APIDataSourceId,
   APIHistogramData,
   APIRestrictions,
   APIScript,
@@ -89,7 +89,7 @@ export type MutableNode = {
   rotation: Vector3;
   bitDepth: number;
   viewport: number;
-  resolution: number;
+  mag: number;
   radius: number;
   timestamp: number;
   interpolation: boolean;
@@ -264,6 +264,7 @@ export type VolumeTracing = TracingBase & {
   readonly hasEditableMapping?: boolean;
   readonly mappingIsLocked?: boolean;
   readonly hasSegmentIndex: boolean;
+  readonly volumeBucketDataHasChanged?: boolean;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
@@ -278,18 +279,23 @@ export type HybridTracing = Annotation & {
   readonly mappings: Array<EditableMapping>;
 };
 export type Tracing = HybridTracing;
+export type LegacyViewCommand = APIDataSourceId & {
+  readonly type: typeof ControlModeEnum.VIEW;
+};
 export type TraceOrViewCommand =
-  | (APIDatasetId & {
+  | {
+      readonly datasetId: string;
       readonly type: typeof ControlModeEnum.VIEW;
-    })
+    }
   | {
       readonly type: typeof ControlModeEnum.TRACE;
       readonly annotationId: string;
     }
-  | (APIDatasetId & {
+  | {
+      readonly datasetId: string;
       readonly type: typeof ControlModeEnum.SANDBOX;
       readonly tracingType: TracingType;
-    });
+    };
 export type DatasetLayerConfiguration = {
   readonly color: Vector3;
   readonly brightness?: number;

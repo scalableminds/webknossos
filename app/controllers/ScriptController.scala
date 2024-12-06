@@ -10,7 +10,7 @@ import play.api.libs.json.Reads._
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 

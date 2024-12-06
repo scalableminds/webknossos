@@ -1,6 +1,7 @@
 package controllers
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import models.aimodels.AiInferenceDAO
 import models.dataset.DatasetDAO
@@ -12,7 +13,7 @@ import models.voxelytics.VoxelyticsDAO
 import net.liftweb.common.{Empty, Failure, Full}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
@@ -109,7 +110,7 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
         _ <- workerDAO.findOneByKey(key) ?~> "jobs.worker.notFound"
         jobIdParsed <- ObjectId.fromString(id)
         organizationId <- jobDAO.organizationIdForJobId(jobIdParsed) ?~> "job.notFound"
-        dataset <- datasetDAO.findOneByNameAndOrganization(request.body, organizationId)
+        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body, organizationId)
         aiInference <- aiInferenceDAO.findOneByJobId(jobIdParsed) ?~> "aiInference.notFound"
         _ <- aiInferenceDAO.updateDataset(aiInference._id, dataset._id)
       } yield Ok

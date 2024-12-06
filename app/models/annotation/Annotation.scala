@@ -15,7 +15,7 @@ import slick.jdbc.GetResult
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject

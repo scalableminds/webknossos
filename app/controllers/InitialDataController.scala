@@ -2,6 +2,7 @@ package controllers
 
 import play.silhouette.api.{LoginInfo, Silhouette}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -15,7 +16,7 @@ import models.team._
 import models.user._
 import net.liftweb.common.{Box, Full}
 import play.api.libs.json.{JsArray, Json}
-import utils.{ObjectId, StoreModules, WkConf}
+import utils.{StoreModules, WkConf}
 
 import javax.inject.Inject
 import models.organization.{Organization, OrganizationDAO, OrganizationService}

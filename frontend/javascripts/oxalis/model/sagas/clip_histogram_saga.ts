@@ -28,7 +28,7 @@ async function getClippingValues(
   // Ideally, we want to avoid mags 1 and 2 to keep
   // the amount of data that has to be loaded small and
   // to de-noise the data
-  const desiredResolutionIndex = Math.max(2, getActiveMagIndexForLayer(state, layerName) + 1);
+  const desiredMagIndex = Math.max(2, getActiveMagIndexForLayer(state, layerName) + 1);
 
   let dataForAllViewPorts;
   try {
@@ -36,19 +36,19 @@ async function getClippingValues(
       api.data.getViewportData(
         OrthoViews.PLANE_XY,
         layerName,
-        desiredResolutionIndex,
+        desiredMagIndex,
         additionalCoordinates,
       ),
       api.data.getViewportData(
         OrthoViews.PLANE_XZ,
         layerName,
-        desiredResolutionIndex,
+        desiredMagIndex,
         additionalCoordinates,
       ),
       api.data.getViewportData(
         OrthoViews.PLANE_YZ,
         layerName,
-        desiredResolutionIndex,
+        desiredMagIndex,
         additionalCoordinates,
       ),
     ]);

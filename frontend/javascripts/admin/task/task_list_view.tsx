@@ -19,12 +19,12 @@ import _ from "lodash";
 import features from "features";
 import { AsyncLink } from "components/async_clickables";
 import type { APITask, APITaskType, TaskStatus } from "types/api_flow_types";
+import { downloadAnnotation as downloadAnnotationAPI } from "admin/admin_rest_api";
 import {
   deleteTask as deleteTaskAPI,
   getTasks,
-  downloadAnnotation as downloadAnnotationAPI,
   assignTaskToUser as assignTaskToUserAPI,
-} from "admin/admin_rest_api";
+} from "admin/api/tasks";
 import { formatTuple, formatSeconds } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";
 import FormattedDate from "components/formatted_date";
@@ -158,7 +158,7 @@ function TaskListView({ initialFieldValues }: Props) {
         "team",
         "projectName",
         "id",
-        "dataSet",
+        "datasetName",
         "created",
         "type",
         (task) => task.neededExperience.domain,
@@ -267,9 +267,9 @@ function TaskListView({ initialFieldValues }: Props) {
     },
     {
       title: "Dataset",
-      dataIndex: "dataSet",
-      key: "dataSet",
-      sorter: Utils.localeCompareBy<APITask>((task) => task.dataSet),
+      dataIndex: "datasetName",
+      key: "datasetName",
+      sorter: Utils.localeCompareBy<APITask>((task) => task.datasetName),
     },
     {
       title: "Stats",

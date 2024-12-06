@@ -9,11 +9,11 @@ export function globalPositionToBucketPosition(
   magIndex: number,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
 ): BucketAddress {
-  const resolution = magIndex < mags.length ? mags[magIndex] : upsampleMag(mags, magIndex);
+  const mag = magIndex < mags.length ? mags[magIndex] : upsampleMag(mags, magIndex);
   return [
-    Math.floor(x / (constants.BUCKET_WIDTH * resolution[0])),
-    Math.floor(y / (constants.BUCKET_WIDTH * resolution[1])),
-    Math.floor(z / (constants.BUCKET_WIDTH * resolution[2])),
+    Math.floor(x / (constants.BUCKET_WIDTH * mag[0])),
+    Math.floor(y / (constants.BUCKET_WIDTH * mag[1])),
+    Math.floor(z / (constants.BUCKET_WIDTH * mag[2])),
     magIndex,
     additionalCoordinates || [],
   ];
@@ -26,11 +26,8 @@ export function scaleGlobalPositionWithMagnification(
   const round = ceil ? Math.ceil : Math.floor;
   return [round(x / mag[0]), round(y / mag[1]), round(z / mag[2])];
 }
-export function zoomedPositionToGlobalPosition(
-  [x, y, z]: Vector3,
-  currentResolution: Vector3,
-): Vector3 {
-  return [x * currentResolution[0], y * currentResolution[1], z * currentResolution[2]];
+export function zoomedPositionToGlobalPosition([x, y, z]: Vector3, currentMag: Vector3): Vector3 {
+  return [x * currentMag[0], y * currentMag[1], z * currentMag[2]];
 }
 export function scaleGlobalPositionWithMagnificationFloat(
   [x, y, z]: Vector3,
@@ -43,34 +40,30 @@ export function globalPositionToBucketPositionFloat(
   mags: Array<Vector3>,
   magIndex: number,
 ): Vector4 {
-  const resolution = magIndex < mags.length ? mags[magIndex] : upsampleMag(mags, magIndex);
+  const mag = magIndex < mags.length ? mags[magIndex] : upsampleMag(mags, magIndex);
   return [
-    x / (constants.BUCKET_WIDTH * resolution[0]),
-    y / (constants.BUCKET_WIDTH * resolution[1]),
-    z / (constants.BUCKET_WIDTH * resolution[2]),
+    x / (constants.BUCKET_WIDTH * mag[0]),
+    y / (constants.BUCKET_WIDTH * mag[1]),
+    z / (constants.BUCKET_WIDTH * mag[2]),
     magIndex,
   ];
 }
-export function upsampleMag(resolutions: Array<Vector3>, resolutionIndex: number): Vector3 {
-  const lastResolutionIndex = resolutions.length - 1;
-  const lastResolution = resolutions[lastResolutionIndex];
-  const multiplier = Math.pow(2, resolutionIndex - lastResolutionIndex);
-  return [
-    lastResolution[0] * multiplier,
-    lastResolution[1] * multiplier,
-    lastResolution[2] * multiplier,
-  ];
+export function upsampleMag(mags: Array<Vector3>, magIndex: number): Vector3 {
+  const lastMagIndex = mags.length - 1;
+  const lastMag = mags[lastMagIndex];
+  const multiplier = Math.pow(2, magIndex - lastMagIndex);
+  return [lastMag[0] * multiplier, lastMag[1] * multiplier, lastMag[2] * multiplier];
 }
 export function bucketPositionToGlobalAddress(
   bucketPosition: BucketAddress,
-  resolutionInfo: MagInfo,
+  magInfo: MagInfo,
 ): Vector3 {
-  const [x, y, z, resolutionIndex, _additionalCoordinates] = bucketPosition;
-  const resolution = resolutionInfo.getMagByIndexOrThrow(resolutionIndex);
+  const [x, y, z, magIndex, _additionalCoordinates] = bucketPosition;
+  const mag = magInfo.getMagByIndexOrThrow(magIndex);
   return [
-    x * constants.BUCKET_WIDTH * resolution[0],
-    y * constants.BUCKET_WIDTH * resolution[1],
-    z * constants.BUCKET_WIDTH * resolution[2],
+    x * constants.BUCKET_WIDTH * mag[0],
+    y * constants.BUCKET_WIDTH * mag[1],
+    z * constants.BUCKET_WIDTH * mag[2],
   ];
 }
 export function getMagFactors(magA: Vector3, magB: Vector3): Vector3 {
@@ -101,9 +94,9 @@ export function zoomedAddressToAnotherZoomStep(
   mags: Array<Vector3>,
   targetMagIndex: number,
 ): Vector4 {
-  const currentResolution = mags[magIndex];
-  const targetResolution = mags[targetMagIndex];
-  const factors = getMagFactors(currentResolution, targetResolution);
+  const currentMag = mags[magIndex];
+  const targetMag = mags[targetMagIndex];
+  const factors = getMagFactors(currentMag, targetMag);
   return [
     Math.floor(x * factors[0]),
     Math.floor(y * factors[1]),
@@ -121,9 +114,9 @@ export function zoomedAddressToAnotherZoomStepWithInfo(
   magInfo: MagInfo,
   targetMagIndex: number,
 ): Vector4 {
-  const currentResolution = magInfo.getMagByIndexWithFallback(magIndex, null);
-  const targetResolution = magInfo.getMagByIndexWithFallback(targetMagIndex, null);
-  const factors = getMagFactors(currentResolution, targetResolution);
+  const currentMag = magInfo.getMagByIndexWithFallback(magIndex, null);
+  const targetMag = magInfo.getMagByIndexWithFallback(targetMagIndex, null);
+  const factors = getMagFactors(currentMag, targetMag);
   return [
     Math.floor(x * factors[0]),
     Math.floor(y * factors[1]),
@@ -152,15 +145,15 @@ export function getBaseBucketsForFallbackBucket(
     mags,
     betterZoomStep,
   );
-  // resolutionFactors is a [x, y, z] tuple with x, y, z being 1 or 2 each (because
-  // zoomStepDifference === 1). In the case of isotropic resolutions, it's simply [2, 2, 2]
-  const resolutionFactors = getMagFactors(mags[fallbackBucketZoomStep], mags[betterZoomStep]);
+  // magFactors is a [x, y, z] tuple with x, y, z being 1 or 2 each (because
+  // zoomStepDifference === 1). In the case of isotropic magnifications, it's simply [2, 2, 2]
+  const magFactors = getMagFactors(mags[fallbackBucketZoomStep], mags[betterZoomStep]);
   const bucketAddresses = [];
   const [baseX, baseY, baseZ] = betterBucketAddress;
 
-  for (let _x = 0; _x < resolutionFactors[0]; _x++) {
-    for (let _y = 0; _y < resolutionFactors[1]; _y++) {
-      for (let _z = 0; _z < resolutionFactors[2]; _z++) {
+  for (let _x = 0; _x < magFactors[0]; _x++) {
+    for (let _y = 0; _y < magFactors[1]; _y++) {
+      for (let _z = 0; _z < magFactors[2]; _z++) {
         const newAddress = [baseX + _x, baseY + _y, baseZ + _z, betterZoomStep];
         bucketAddresses.push(newAddress);
       }

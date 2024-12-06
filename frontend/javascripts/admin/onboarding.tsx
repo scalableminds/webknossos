@@ -39,7 +39,7 @@ type State = {
   currentStep: number;
   datastores: Array<APIDataStore>;
   organizationId: string;
-  datasetNameToImport: string | null | undefined;
+  datasetIdToImport: string | null | undefined;
   isDatasetUploadModalVisible: boolean;
   isInviteModalVisible: boolean;
 };
@@ -395,7 +395,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
     organizationId: "",
     isDatasetUploadModalVisible: false,
     isInviteModalVisible: false,
-    datasetNameToImport: null,
+    datasetIdToImport: null,
   };
 
   componentDidMount() {
@@ -416,7 +416,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       currentStep: prevState.currentStep + 1,
       isDatasetUploadModalVisible: false,
       isInviteModalVisible: false,
-      datasetNameToImport: null,
+      datasetIdToImport: null,
     }));
   };
   renderCreateOrganization = () => (
@@ -499,12 +499,12 @@ class OnboardingView extends React.PureComponent<Props, State> {
           <DatasetUploadView
             datastores={this.state.datastores}
             onUploaded={async (
-              _organization: string,
-              datasetName: string,
+              uploadedDatasetId: string,
+              _uploadedDatasetName: string,
               needsConversion: boolean,
             ) => {
               this.setState({
-                datasetNameToImport: datasetName,
+                datasetIdToImport: uploadedDatasetId,
                 isDatasetUploadModalVisible: false,
               });
 
@@ -517,14 +517,11 @@ class OnboardingView extends React.PureComponent<Props, State> {
           />
         </Modal>
       )}
-      {this.state.datasetNameToImport != null && (
+      {this.state.datasetIdToImport != null && (
         <Modal open width="85%" footer={null} maskClosable={false} onCancel={this.advanceStep}>
           <DatasetSettingsView
             isEditingMode={false}
-            datasetId={{
-              name: this.state.datasetNameToImport || "",
-              owningOrganization: this.state.organizationId || "",
-            }}
+            datasetId={this.state.datasetIdToImport}
             onComplete={this.advanceStep}
             onCancel={this.advanceStep}
           />

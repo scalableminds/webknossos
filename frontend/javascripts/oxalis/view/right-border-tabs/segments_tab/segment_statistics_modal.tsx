@@ -106,7 +106,7 @@ export function SegmentStatisticsModal({
 }: Props) {
   const { dataset, tracing, temporaryConfiguration } = useSelector((state: OxalisState) => state);
   const magInfo = getMagInfo(visibleSegmentationLayer.resolutions);
-  const layersFinestResolution = magInfo.getFinestMag();
+  const layersFinestMag = magInfo.getFinestMag();
   const voxelSize = dataset.dataSource.scale;
   // Omit checking that all prerequisites for segment stats (such as a segment index) are
   // met right here because that should happen before opening the modal.
@@ -141,14 +141,14 @@ export function SegmentStatisticsModal({
       const segmentStatisticsObjects = await Promise.all([
         getSegmentVolumes(
           requestUrl,
-          layersFinestResolution,
+          layersFinestMag,
           segments.map((segment) => segment.id),
           additionalCoordinates,
           maybeGetMappingName(),
         ),
         getSegmentBoundingBoxes(
           requestUrl,
-          layersFinestResolution,
+          layersFinestMag,
           segments.map((segment) => segment.id),
           additionalCoordinates,
           maybeGetMappingName(),
@@ -164,14 +164,11 @@ export function SegmentStatisticsModal({
             // Segments in request and their statistics in the response are in the same order
             const currentSegment = segments[i];
             const currentBoundingBox = boundingBoxes[i];
-            const boundingBoxInMag1 = getBoundingBoxInMag1(
-              currentBoundingBox,
-              layersFinestResolution,
-            );
+            const boundingBoxInMag1 = getBoundingBoxInMag1(currentBoundingBox, layersFinestMag);
             const currentSegmentSizeInVx = segmentSizes[i];
             const volumeInUnit3 = voxelToVolumeInUnit(
               voxelSize,
-              layersFinestResolution,
+              layersFinestMag,
               currentSegmentSizeInVx,
             );
             const currentGroupId = getGroupIdForSegment(currentSegment);

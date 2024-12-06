@@ -6,11 +6,14 @@ import Markdown from "libs/markdown_adapter";
 import React, { type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
-import { ControlModeEnum } from "oxalis/constants";
-import { formatScale } from "libs/format_utils";
+import { ControlModeEnum, LongUnitToShortUnitMap } from "oxalis/constants";
+import { formatNumberToVolume, formatScale, formatVoxels } from "libs/format_utils";
 import {
   getDatasetExtentAsString,
+  getDatasetExtentInUnitAsProduct,
+  getDatasetExtentInVoxelAsProduct,
   getMagnificationUnion,
+  getReadableURLPart,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -126,9 +129,27 @@ const shortcuts = [
 export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
   const extentInVoxel = getDatasetExtentAsString(dataset, true);
   const extentInLength = getDatasetExtentAsString(dataset, false);
+  const extentProductInVx = getDatasetExtentInVoxelAsProduct(dataset);
+  const extentProductInUnit = getDatasetExtentInUnitAsProduct(dataset);
+  const formattedExtentInUnit = formatNumberToVolume(
+    extentProductInUnit,
+    LongUnitToShortUnitMap[dataset.dataSource.scale.unit],
+  );
+
+  const renderDSExtentTooltip = () => {
+    return (
+      <div>
+        Dataset extent:
+        <br />
+        {formatVoxels(extentProductInVx)}
+        <br />
+        {formattedExtentInUnit}
+      </div>
+    );
+  };
 
   return (
-    <FastTooltip title="Dataset extent" placement="left" wrapper="tr">
+    <FastTooltip dynamicRenderer={renderDSExtentTooltip} placement="left" wrapper="tr">
       <td
         style={{
           paddingRight: 20,
@@ -312,19 +333,14 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   getDatasetName() {
-    const {
-      name: datasetName,
-      displayName,
-      description: datasetDescription,
-      owningOrganization,
-    } = this.props.dataset;
+    const { name: datasetName, description: datasetDescription } = this.props.dataset;
     const { activeUser } = this.props;
 
     const getEditSettingsIcon = () =>
       mayUserEditDataset(activeUser, this.props.dataset) ? (
         <FastTooltip title="Edit dataset settings">
           <Link
-            to={`/datasets/${owningOrganization}/${datasetName}/edit`}
+            to={`/datasets/${getReadableURLPart(this.props.dataset)}/edit`}
             style={{ paddingLeft: 3 }}
           >
             <Typography.Text type="secondary">
@@ -343,7 +359,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             }}
           >
             <Typography.Title level={5} style={{ display: "initial" }}>
-              {displayName || datasetName}
+              {datasetName}
             </Typography.Title>
             {getEditSettingsIcon()}
           </div>
@@ -364,7 +380,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
       <div className="info-tab-block">
         <p className="sidebar-label">Dataset {getEditSettingsIcon()}</p>
         <Link
-          to={`/datasets/${owningOrganization}/${datasetName}/view`}
+          to={`/datasets/${getReadableURLPart(this.props.dataset)}/view`}
           title={`Click to view dataset ${datasetName} without annotation`}
           style={{
             wordWrap: "break-word",
@@ -528,10 +544,10 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     );
   }
 
-  renderResolutionsTooltip = () => {
-    const { dataset, annotation, activeMagInfo: activeResolutionInfo } = this.props;
-    const { activeMagOfEnabledLayers } = activeResolutionInfo;
-    const resolutionUnion = getMagnificationUnion(dataset);
+  renderMagsTooltip = () => {
+    const { dataset, annotation, activeMagInfo } = this.props;
+    const { activeMagOfEnabledLayers } = activeMagInfo;
+    const magUnion = getMagnificationUnion(dataset);
     return (
       <div style={{ width: 200 }}>
         Rendered magnification per layer:
@@ -548,7 +564,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
         </ul>
         Available magnifications:
         <ul>
-          {resolutionUnion.map((mags) => (
+          {magUnion.map((mags) => (
             <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
           ))}
         </ul>
@@ -557,12 +573,12 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     );
   };
 
-  getResolutionInfo() {
-    const { activeMagInfo: activeResolutionInfo } = this.props;
-    const { representativeResolution, isActiveResolutionGlobal } = activeResolutionInfo;
+  getMagInfo() {
+    const { activeMagInfo } = this.props;
+    const { representativeMag, isActiveMagGlobal } = activeMagInfo;
 
-    return representativeResolution != null ? (
-      <FastTooltip dynamicRenderer={this.renderResolutionsTooltip} placement="left" wrapper="tr">
+    return representativeMag != null ? (
+      <FastTooltip dynamicRenderer={this.renderMagsTooltip} placement="left" wrapper="tr">
         <td
           style={{
             paddingRight: 4,
@@ -581,8 +597,8 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             paddingTop: 8,
           }}
         >
-          {representativeResolution.join("-")}
-          {isActiveResolutionGlobal ? "" : "*"}{" "}
+          {representativeMag.join("-")}
+          {isActiveMagGlobal ? "" : "*"}{" "}
         </td>
       </FastTooltip>
     ) : null;
@@ -610,7 +626,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             <tbody>
               <VoxelSizeRow dataset={dataset} />
               <DatasetExtentRow dataset={dataset} />
-              {this.getResolutionInfo()}
+              {this.getMagInfo()}
             </tbody>
           </table>
         </div>

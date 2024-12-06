@@ -15,7 +15,6 @@ import type {
   APIDataSource,
   APIDataset,
   MutableAPIDataset,
-  APIDatasetId,
   APIMessage,
 } from "types/api_flow_types";
 import { Unicode } from "oxalis/constants";
@@ -43,11 +42,12 @@ import DatasetSettingsSharingTab from "./dataset_settings_sharing_tab";
 import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
 import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
 import { defaultContext } from "@tanstack/react-query";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 
 const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";
 type OwnProps = {
-  datasetId: APIDatasetId;
+  datasetId: string;
   isEditingMode: boolean;
   onComplete: () => void;
   onCancel: () => void;
@@ -182,7 +182,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       form.setFieldsValue({
         dataSourceJson: jsonStringify(dataSource),
         dataset: {
-          displayName: dataset.displayName || undefined,
+          name: dataset.name,
           isPublic: dataset.isPublic || false,
           description: dataset.description || undefined,
           allowedTeams: dataset.allowedTeams || [],
@@ -282,6 +282,16 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     return _.size(diffObjects(dataSource, this.state.savedDataSourceOnServer || {})) > 0;
   }
 
+  didDatasourceIdChange(dataSource: Record<string, any>) {
+    const savedDatasourceId = this.state.savedDataSourceOnServer?.id;
+    if (!savedDatasourceId) {
+      return false;
+    }
+    return (
+      savedDatasourceId.name !== dataSource.id.name || savedDatasourceId.team !== dataSource.id.team
+    );
+  }
+
   isOnlyDatasourceIncorrectAndNotEdited() {
     const validationSummary = this.getFormValidationSummary();
     const form = this.formRef.current;
@@ -366,14 +376,17 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     const dataSource = JSON.parse(formValues.dataSourceJson);
 
     if (dataset != null && this.didDatasourceChange(dataSource)) {
-      await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
+      if (this.didDatasourceIdChange(dataSource)) {
+        Toast.warning(messages["dataset.settings.updated_datasource_id_warning"]);
+      }
+      await updateDatasetDatasource(dataset.directoryName, dataset.dataStore.url, dataSource);
       this.setState({
         savedDataSourceOnServer: dataSource,
       });
     }
 
     const verb = this.props.isEditingMode ? "updated" : "imported";
-    Toast.success(`Successfully ${verb} ${this.props.datasetId.name}.`);
+    Toast.success(`Successfully ${verb} ${dataset?.name || this.props.datasetId}.`);
     this.setState({
       hasUnsavedChanges: false,
     });
@@ -475,17 +488,26 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
 
   render() {
     const form = this.formRef.current;
+    const { dataset } = this.state;
+
+    const maybeStoredDatasetName = dataset?.name || this.props.datasetId;
+    const maybeDataSourceId = dataset
+      ? {
+          owningOrganization: dataset.owningOrganization,
+          directoryName: dataset.directoryName,
+        }
+      : null;
 
     const { isUserAdmin } = this.props;
     const titleString = this.props.isEditingMode ? "Settings for" : "Import";
     const datasetLinkOrName = this.props.isEditingMode ? (
       <Link
-        to={`/datasets/${this.props.datasetId.owningOrganization}/${this.props.datasetId.name}`}
+        to={`/datasets/${this.state.dataset ? getReadableURLPart(this.state.dataset) : this.props.datasetId}/view`}
       >
-        {this.props.datasetId.name}
+        {maybeStoredDatasetName}
       </Link>
     ) : (
-      this.props.datasetId.name
+      maybeStoredDatasetName
     );
     const confirmString =
       this.props.isEditingMode ||
@@ -519,7 +541,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
               <DatasetSettingsDataTab
                 key="SimpleAdvancedDataForm"
                 dataset={this.state.dataset}
-                allowRenamingDataset={false}
                 form={form}
                 activeDataSourceEditMode={this.state.activeDataSourceEditMode}
                 onChange={(activeEditMode) => {
@@ -573,10 +594,14 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         forceRender: true,
         children: (
           <Hideable hidden={this.state.activeTabKey !== "defaultConfig"}>
-            <DatasetSettingsViewConfigTab
-              datasetId={this.props.datasetId}
-              dataStoreURL={this.state.dataset?.dataStore.url}
-            />
+            {
+              maybeDataSourceId ? (
+                <DatasetSettingsViewConfigTab
+                  dataSourceId={maybeDataSourceId}
+                  dataStoreURL={this.state.dataset?.dataStore.url}
+                />
+              ) : null /* null case should never be rendered as tabs are only rendered when the dataset is loaded. */
+            }
           </Hideable>
         ),
       },

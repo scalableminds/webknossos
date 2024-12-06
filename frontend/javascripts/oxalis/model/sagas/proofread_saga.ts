@@ -1036,18 +1036,18 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
     }
   }
 
-  const resolutionInfo = getMagInfo(volumeTracingLayer.resolutions);
+  const magInfo = getMagInfo(volumeTracingLayer.resolutions);
   const currentMag = yield* select((state) => getCurrentMag(state, volumeTracingLayer.name));
 
   const agglomerateFileMag = isSkeletonProofreading
     ? // In case of skeleton proofreading, the finest mag should be used.
-      resolutionInfo.getFinestMag()
+      magInfo.getFinestMag()
     : // For non-skeleton proofreading, the active mag suffices
       currentMag;
   if (agglomerateFileMag == null) {
     return null;
   }
-  const agglomerateFileZoomstep = resolutionInfo.getIndexByMag(agglomerateFileMag);
+  const agglomerateFileZoomstep = magInfo.getIndexByMag(agglomerateFileMag);
 
   const getUnmappedDataValue = (position: Vector3): Promise<number> => {
     const { additionalCoordinates } = Store.getState().flycam;

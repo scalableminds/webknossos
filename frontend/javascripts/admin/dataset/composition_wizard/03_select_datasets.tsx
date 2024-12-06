@@ -4,7 +4,7 @@ import DatasetSelectionComponent, {
   type DatasetSelectionValue,
 } from "dashboard/dataset/dataset_selection_component";
 import { useState } from "react";
-import { tryToFetchDatasetsByName, type WizardComponentProps } from "./common";
+import { tryToFetchDatasetsByNameOrId, type WizardComponentProps } from "./common";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 
 export default function SelectDatasets({ wizardContext, setWizardContext }: WizardComponentProps) {
@@ -18,12 +18,13 @@ export default function SelectDatasets({ wizardContext, setWizardContext }: Wiza
     }));
   };
   const onNext = async () => {
-    const datasets = await tryToFetchDatasetsByName(
-      datasetValues.map((el) => el.value),
+    const datasets = await tryToFetchDatasetsByNameOrId(
+      [],
+      datasetValues.map((el) => el.value), // fetch by id
       "Could not find datasets. Please doublecheck your selection.",
     );
     if (datasets == null) {
-      // An error message was already shown in tryToFetchDatasetsByName
+      // An error message was already shown in tryToFetchDatasetsByNameOrId
       return;
     }
 
@@ -35,7 +36,7 @@ export default function SelectDatasets({ wizardContext, setWizardContext }: Wiza
   };
 
   useEffectOnlyOnce(() => {
-    setDatasetValues(wizardContext.datasets.map((ds) => ({ value: ds.name, label: ds.name })));
+    setDatasetValues(wizardContext.datasets.map((ds) => ({ value: ds.id, label: ds.name })));
   });
 
   // When not using any transforms,

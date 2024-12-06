@@ -66,7 +66,7 @@ import {
   getTransformsForLayer,
   hasDatasetTransforms,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getMaxZoomValueForResolution, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getMaxZoomValueForMag, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
@@ -310,15 +310,15 @@ function LayerInfoIconWithTooltip({
 }: { layer: APIDataLayer; dataset: APIDataset }) {
   const renderTooltipContent = useCallback(() => {
     const elementClass = getElementClass(dataset, layer.name);
-    const resolutionInfo = getMagInfo(layer.resolutions);
-    const resolutions = resolutionInfo.getMagList();
+    const magInfo = getMagInfo(layer.resolutions);
+    const mags = magInfo.getMagList();
     return (
       <div>
         <div>Data Type: {elementClass}</div>
         <div>
           Available magnifications:
           <ul>
-            {resolutions.map((r) => (
+            {mags.map((r) => (
               <li key={r.join()}>{r.join("-")}</li>
             ))}
           </ul>
@@ -529,11 +529,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     if (!(this.props.isSuperUser && isSegmentation)) return <></>;
 
     const triggerComputeSegmentIndexFileJob = async () => {
-      await startComputeSegmentIndexFileJob(
-        this.props.dataset.owningOrganization,
-        this.props.dataset.name,
-        layerName,
-      );
+      await startComputeSegmentIndexFileJob(this.props.dataset.id, layerName);
       Toast.info(
         <React.Fragment>
           Started a job for computating a segment index file.
@@ -1104,27 +1100,25 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
     const { fallbackLayerInfo } = segmentationLayer;
-    const volumeTargetResolutions =
+    const volumeTargetMag =
       fallbackLayerInfo != null
         ? fallbackLayerInfo.resolutions
         : // This is only a heuristic. At some point, user configuration
           // might make sense here.
           getWidestMags(this.props.dataset);
 
-    const getMaxDim = (resolution: Vector3) => Math.max(...resolution);
+    const getMaxDim = (mag: Vector3) => Math.max(...mag);
 
-    const volumeTracingResolutions = segmentationLayer.resolutions;
+    const volumeTracingMags = segmentationLayer.mags;
 
-    const sourceMag = _.minBy(volumeTracingResolutions, getMaxDim);
+    const sourceMag = _.minBy(volumeTracingMags, getMaxDim);
     if (sourceMag === undefined) {
       return [];
     }
 
-    const possibleMags = volumeTargetResolutions.filter(
-      (resolution) => getMaxDim(resolution) >= getMaxDim(sourceMag),
-    );
+    const possibleMags = volumeTargetMag.filter((mag) => getMaxDim(mag) >= getMaxDim(sourceMag));
 
-    const magsToDownsample = _.differenceWith(possibleMags, volumeTracingResolutions, _.isEqual);
+    const magsToDownsample = _.differenceWith(possibleMags, volumeTracingMags, _.isEqual);
 
     return magsToDownsample;
   };
@@ -1135,9 +1129,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     }
 
     const magsToDownsample = this.getVolumeMagsToDownsample(volumeTracing);
-    const hasExtensiveResolutions = magsToDownsample.length === 0;
+    const hasExtensiveMags = magsToDownsample.length === 0;
 
-    if (hasExtensiveResolutions) {
+    if (hasExtensiveMags) {
       return null;
     }
 
@@ -1418,7 +1412,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             ...completeDatasetConfiguration,
             layers: updatedLayers,
           };
-          await updateDatasetDefaultConfiguration(dataset, updatedConfiguration);
+          await updateDatasetDefaultConfiguration(dataset.id, updatedConfiguration);
           Toast.success("Successfully saved the current view configuration as default.");
         } catch (error) {
           Toast.error(
@@ -1626,8 +1620,8 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setShowSkeletonsAction(showSkeletons));
   },
 
-  onZoomToMag(layerName: string, resolution: Vector3) {
-    const targetZoomValue = getMaxZoomValueForResolution(Store.getState(), layerName, resolution);
+  onZoomToMag(layerName: string, mag: Vector3) {
+    const targetZoomValue = getMaxZoomValueForMag(Store.getState(), layerName, mag);
     dispatch(setZoomStepAction(targetZoomValue));
     return targetZoomValue;
   },

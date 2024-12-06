@@ -145,16 +145,16 @@ export function* prepareQuickSelect(
   const requestedZoomStep = yield* select((store) =>
     getActiveMagIndexForLayer(store, colorLayer.name),
   );
-  const resolutionInfo = getMagInfo(
+  const magInfo = getMagInfo(
     // Ensure that a magnification is used which exists in the color layer as well as the
     // target segmentation layer.
     _.intersectionBy(colorLayer.resolutions, volumeLayer.resolutions, (mag) => mag.join("-")),
   );
-  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(
+  const labeledZoomStep = magInfo.getClosestExistingIndex(
     requestedZoomStep,
     "The visible color layer and the active segmentation layer don't have any magnifications in common. Cannot select segment.",
   );
-  const labeledResolution = resolutionInfo.getMagByIndexOrThrow(labeledZoomStep);
+  const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
 
   return {
     labeledZoomStep,
@@ -164,7 +164,7 @@ export function* prepareQuickSelect(
     colorLayer,
     quickSelectConfig,
     activeViewport,
-    labeledMag: labeledResolution,
+    labeledMag,
     volumeTracing,
   };
 }
@@ -184,7 +184,7 @@ export default function* performQuickSelect(
     colorLayer,
     quickSelectConfig,
     activeViewport,
-    labeledMag: labeledResolution,
+    labeledMag,
     volumeTracing,
   } = preparation;
   const { startPosition, endPosition, quickSelectGeometry } = action;
@@ -204,7 +204,7 @@ export default function* performQuickSelect(
   const inclusiveMaxW = map3((el, idx) => (idx === thirdDim ? el - 1 : el), boundingBoxMag1.max);
   quickSelectGeometry.setCoordinates(boundingBoxMag1.min, inclusiveMaxW);
 
-  const boundingBoxInMag = boundingBoxMag1.fromMag1ToMag(labeledResolution);
+  const boundingBoxInMag = boundingBoxMag1.fromMag1ToMag(labeledMag);
 
   if (boundingBoxInMag.getVolume() === 0) {
     Toast.warning("The drawn rectangular had a width or height of zero.");
@@ -288,7 +288,7 @@ export default function* performQuickSelect(
       quickSelectGeometry,
       volumeTracing,
       activeViewport,
-      labeledResolution,
+      labeledMag,
       boundingBoxMag1,
       boundingBoxMag1.min[thirdDim],
       thresholdField,
@@ -358,7 +358,7 @@ export default function* performQuickSelect(
         quickSelectGeometry,
         volumeTracing,
         activeViewport,
-        labeledResolution,
+        labeledMag,
         boundingBoxMag1,
         boundingBoxMag1.min[thirdDim],
         thresholdField,

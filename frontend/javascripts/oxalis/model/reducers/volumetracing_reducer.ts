@@ -269,6 +269,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     mappingName: tracing.mappingName,
     hasEditableMapping: tracing.hasEditableMapping,
     mappingIsLocked: tracing.mappingIsLocked,
+    volumeBucketDataHasChanged: tracing.volumeBucketDataHasChanged,
     hasSegmentIndex: tracing.hasSegmentIndex || false,
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
   };
@@ -375,6 +376,12 @@ function VolumeTracingReducer(
 
     case "CLICK_SEGMENT": {
       return expandSegmentParents(state, action);
+    }
+
+    case "SET_VOLUME_BUCKET_DATA_HAS_CHANGED": {
+      return updateVolumeTracing(state, action.tracingId, {
+        volumeBucketDataHasChanged: true,
+      });
     }
 
     default: // pass

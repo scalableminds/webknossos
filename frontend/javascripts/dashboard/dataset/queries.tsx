@@ -18,7 +18,6 @@ import {
 import Toast from "libs/toast";
 import { useEffect, useRef } from "react";
 import {
-  type APIDatasetId,
   type APIDatasetCompact,
   type FlatFolderTreeItem,
   type Folder,
@@ -57,7 +56,7 @@ export function useFolderQuery(folderId: string | null) {
   );
 }
 
-export function useDatasetQuery(datasetId: APIDatasetId) {
+export function useDatasetQuery(datasetId: string) {
   const queryKey = ["datasetById", datasetId];
   return useQuery(
     queryKey,
@@ -395,15 +394,15 @@ export function useUpdateDatasetMutation(folderId: string | null) {
   const mutationKey = ["datasetsByFolder", folderId];
 
   return useMutation(
-    (params: [APIDatasetId, DatasetUpdater] | APIDatasetId) => {
+    (params: [string, DatasetUpdater] | string) => {
       // If a APIDatasetId is provided, simply refetch the dataset
       // without any mutation so that it gets reloaded effectively.
-      if ("owningOrganization" in params) {
-        const datasetId = params;
-        return getDataset(datasetId);
+      if (Array.isArray(params)) {
+        const [id, updater] = params;
+        return updateDatasetPartial(id, updater);
       }
-      const [id, updater] = params;
-      return updateDatasetPartial(id, updater);
+      const datasetId = params;
+      return getDataset(datasetId);
     },
     {
       mutationKey,
@@ -411,7 +410,7 @@ export function useUpdateDatasetMutation(folderId: string | null) {
         queryClient.setQueryData(mutationKey, (oldItems: APIDatasetCompact[] | undefined) =>
           (oldItems || [])
             .map((oldDataset: APIDatasetCompact) => {
-              return oldDataset.name === updatedDataset.name
+              return oldDataset.id === updatedDataset.id
                 ? // Don't update lastUsedByUser, since this can lead to annoying reorderings in the table.
                   convertDatasetToCompact({
                     ...updatedDataset,
@@ -421,12 +420,8 @@ export function useUpdateDatasetMutation(folderId: string | null) {
             })
             .filter((dataset: APIDatasetCompact) => dataset.folderId === folderId),
         );
-        const updatedDatasetId = {
-          name: updatedDataset.name,
-          owningOrganization: updatedDataset.owningOrganization,
-        };
         // Also update the cached dataset under the key "datasetById".
-        queryClient.setQueryData(["datasetById", updatedDatasetId], updatedDataset);
+        queryClient.setQueryData(["datasetById", updatedDataset.id], updatedDataset);
         const targetFolderId = updatedDataset.folderId;
         if (targetFolderId !== folderId) {
           // The dataset was moved to another folder. Add the dataset to that target folder
@@ -446,7 +441,7 @@ export function useUpdateDatasetMutation(folderId: string | null) {
                   // The dataset shouldn't be in oldItems, but if it should be
                   // for some reason (e.g., a bug), we filter it away to avoid
                   // duplicates.
-                  .filter((el) => el.name !== updatedDataset.name)
+                  .filter((el) => el.id !== updatedDataset.id)
                   .concat([convertDatasetToCompact(updatedDataset)])
               );
             },
@@ -490,20 +485,22 @@ function diffDatasets(
     onlyB: onlyInNew,
     both,
   } = Utils.diffArrays(
-    oldDatasets.map((ds) => ds.name),
-    newDatasets.map((ds) => ds.name),
+    oldDatasets.map((ds) => ds.id),
+    newDatasets.map((ds) => ds.id),
   );
 
-  const oldDatasetsDict = _.keyBy(oldDatasets, (ds) => ds.name);
-  const newDatasetsDict = _.keyBy(newDatasets, (ds) => ds.name);
+  const oldDatasetsDict = _.keyBy(oldDatasets, (ds) => ds.id);
+  const newDatasetsDict = _.keyBy(newDatasets, (ds) => ds.id);
 
   const changedDatasets = both
-    .map((name) => newDatasetsDict[name])
+    .map((id) => newDatasetsDict[id])
     .filter((newDataset) => {
-      const oldDataset = oldDatasetsDict[newDataset.name];
-      return !_.isEqualWith(oldDataset, newDataset, (_objValue, _otherValue, key) => {
-        if (key === "lastUsedByUser") {
-          // Ignore the lastUsedByUser timestamp when diffing datasets.
+      const oldDataset = oldDatasetsDict[newDataset.id];
+      return !_.isEqualWith(oldDataset, newDataset, (oldValue, newValue, key) => {
+        const didUpgradeToRenamableDS =
+          !("directoryName" in oldValue) && "directoryName" in newValue; // TODO: Can be remove after a few weeks / months.
+        if (key === "lastUsedByUser" || didUpgradeToRenamableDS) {
+          // Ignore the lastUsedByUser timestamp when diffing datasets and migrating datasets to new renamable version.
           return true;
         }
         // Fallback to lodash's isEqual check.
@@ -561,7 +558,7 @@ function getUnobtrusivelyUpdatedDatasets(
    * lastUsedByUser property, as this would change the ordering when the default sorting is used.
    */
 
-  const idFn = (dataset: APIDatasetCompact) => `${dataset.owningOrganization}#${dataset.name}`;
+  const idFn = (dataset: APIDatasetCompact) => dataset.id;
 
   const newDatasetsById = _.keyBy(newDatasets, idFn);
   return oldDatasets.map((oldDataset) => {

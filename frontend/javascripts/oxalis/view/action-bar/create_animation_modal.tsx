@@ -260,7 +260,7 @@ function CreateAnimationModal(props: Props) {
     )
       return;
 
-    startRenderAnimationJob(state.dataset.owningOrganization, state.dataset.name, animationOptions);
+    startRenderAnimationJob(state.dataset.id, animationOptions);
 
     Toast.info(
       <>

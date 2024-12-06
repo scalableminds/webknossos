@@ -175,14 +175,8 @@ export default function* performQuickSelect(
     EXPECTED_DURATION_PER_SLICE_MS,
   );
   try {
-    const {
-      labeledZoomStep,
-      labeledMag: labeledResolution,
-      thirdDim,
-      activeViewport,
-      volumeTracing,
-      colorLayer,
-    } = preparation;
+    const { labeledZoomStep, labeledMag, thirdDim, activeViewport, volumeTracing, colorLayer } =
+      preparation;
     const trans = (vec: Vector3) => Dimensions.transDim(vec, activeViewport);
 
     const { type, quickSelectGeometry } = action;
@@ -202,7 +196,7 @@ export default function* performQuickSelect(
     }
 
     // Effectively, zero the first and second dimension in the mag.
-    const depthSummand = V3.scale3(labeledResolution, trans([0, 0, 1]));
+    const depthSummand = V3.scale3(labeledMag, trans([0, 0, 1]));
     const unalignedUserBoxMag1 = new BoundingBox({
       min: V3.floor(V3.min(startPosition, endPosition)),
       max: V3.floor(V3.add(V3.max(startPosition, endPosition), depthSummand)),
@@ -215,7 +209,7 @@ export default function* performQuickSelect(
     );
     quickSelectGeometry.setCoordinates(unalignedUserBoxMag1.min, inclusiveMaxW);
 
-    const alignedUserBoxMag1 = unalignedUserBoxMag1.alignWithMag(labeledResolution, "floor");
+    const alignedUserBoxMag1 = unalignedUserBoxMag1.alignWithMag(labeledMag, "floor");
     const dataset = yield* select((state: OxalisState) => state.dataset);
     const layerConfiguration = yield* select(
       (state) => state.datasetConfiguration.layers[colorLayer.name],
@@ -230,7 +224,7 @@ export default function* performQuickSelect(
         dataset,
         colorLayer.name,
         alignedUserBoxMag1,
-        labeledResolution,
+        labeledMag,
         activeViewport,
         additionalCoordinates || [],
         colorLayer.elementClass === "uint8" ? null : intensityRange,
@@ -247,7 +241,7 @@ export default function* performQuickSelect(
 
     sendAnalyticsEvent("used_quick_select_with_ai");
 
-    let userBoxInMag = alignedUserBoxMag1.fromMag1ToMag(labeledResolution);
+    let userBoxInMag = alignedUserBoxMag1.fromMag1ToMag(labeledMag);
     if (action.type === "COMPUTE_QUICK_SELECT_FOR_POINT") {
       // In the point case, the bounding box will have a volume of zero which
       // prevents the estimateBBoxInMask call from inferring the correct bbox.
@@ -262,7 +256,7 @@ export default function* performQuickSelect(
       max: userBoxRelativeToMaskInMag.getMaxUV(activeViewport),
     };
     for (const mask of masks) {
-      const targetW = alignedUserBoxMag1.min[thirdDim] + labeledResolution[thirdDim] * wOffset;
+      const targetW = alignedUserBoxMag1.min[thirdDim] + labeledMag[thirdDim] * wOffset;
 
       const { min: minUV, max: maxUV } = estimateBBoxInMask(
         mask,
@@ -279,7 +273,7 @@ export default function* performQuickSelect(
       // bbox.
       const targetBox = new BoundingBox({
         min: trans([...minUV, 0]),
-        max: trans([...maxUV, labeledResolution[thirdDim]]),
+        max: trans([...maxUV, labeledMag[thirdDim]]),
       }).offset(maskBoxInMag.min);
 
       // Let the UI (especially the progress bar) update
@@ -288,8 +282,8 @@ export default function* performQuickSelect(
         quickSelectGeometry,
         volumeTracing,
         activeViewport,
-        labeledResolution,
-        targetBox.fromMagToMag1(labeledResolution),
+        labeledMag,
+        targetBox.fromMagToMag1(labeledMag),
         targetW,
         // a.hi(x,y) => a[:x, :y], // a.lo(x,y) => a[x:, y:]
         mask

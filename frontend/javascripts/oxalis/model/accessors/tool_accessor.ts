@@ -274,11 +274,8 @@ function getDisabledVolumeInfo(state: OxalisState) {
   const hasVolume = state.tracing.volumes.length > 0;
   const hasSkeleton = state.tracing.skeleton != null;
   const segmentationTracingLayer = getActiveSegmentationTracing(state);
-  const labeledResolution = getRenderableMagForSegmentationTracing(
-    state,
-    segmentationTracingLayer,
-  )?.resolution;
-  const isSegmentationTracingVisibleForMag = labeledResolution != null;
+  const labeledMag = getRenderableMagForSegmentationTracing(state, segmentationTracingLayer)?.mag;
+  const isSegmentationTracingVisibleForMag = labeledMag != null;
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const isSegmentationTracingTransformed =
     segmentationTracingLayer != null &&

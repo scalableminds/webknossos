@@ -866,12 +866,11 @@ export default function ToolbarView() {
     (state: OxalisState) => state.userConfiguration.useLegacyBindings,
   );
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
-  const maybeResolutionWithZoomStep = useSelector(getRenderableMagForActiveSegmentationTracing);
+  const maybeMagWithZoomStep = useSelector(getRenderableMagForActiveSegmentationTracing);
 
-  const labeledResolution =
-    maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
-  const hasResolutionWithHigherDimension = (labeledResolution || []).some((val) => val > 1);
-  const multiSliceAnnotationInfoIcon = hasResolutionWithHigherDimension ? (
+  const labeledMag = maybeMagWithZoomStep != null ? maybeMagWithZoomStep.mag : null;
+  const hasMagWithHigherDimension = (labeledMag || []).some((val) => val > 1);
+  const multiSliceAnnotationInfoIcon = hasMagWithHigherDimension ? (
     <FastTooltip title="You are annotating in a low magnification. Depending on the used viewport, you might be annotating multiple slices at once.">
       <i
         className="fas fa-layer-group"

@@ -40,6 +40,7 @@ import { V4 } from "libs/mjs";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import type { MenuItemType } from "antd/es/menu/interface";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
+import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import {
   getAdditionalCoordinatesAsString,
@@ -62,6 +63,7 @@ export function ColoredDotIcon({ colorRGBA }: { colorRGBA: Vector4 }) {
         backgroundColor: rgbaCss,
         alignSelf: "flex-start",
         marginTop: 5,
+        marginLeft: 1,
       }}
     />
   );
@@ -79,8 +81,10 @@ const getLoadPrecomputedMeshMenuItem = (
   hideContextMenu: (_ignore?: any) => void,
   layerName: string | null | undefined,
   mappingInfo: ActiveMappingInfo,
+  activeVolumeTracing: VolumeTracing | null | undefined,
 ) => {
   const mappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
+
   return {
     key: "loadPrecomputedMesh",
     disabled: !currentMeshFile,
@@ -113,16 +117,10 @@ const getLoadPrecomputedMeshMenuItem = (
       mappingInfo,
     ),
     label: (
-      <FastTooltip
-        key="tooltip"
-        title={
-          currentMeshFile != null
-            ? `Load mesh for centered segment from file ${currentMeshFile.meshFileName}`
-            : "There is no mesh file."
-        }
-      >
-        Load Mesh (precomputed)
-      </FastTooltip>
+      <LoadMeshMenuItemLabel
+        currentMeshFile={currentMeshFile}
+        volumeTracing={activeVolumeTracing}
+      />
     ),
   };
 };
@@ -428,6 +426,7 @@ function _SegmentListItem({
         hideContextMenu,
         visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
         mappingInfo,
+        activeVolumeTracing,
       ),
       getComputeMeshAdHocMenuItem(
         segment,

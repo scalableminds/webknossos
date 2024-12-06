@@ -2,6 +2,7 @@ package models.task
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
@@ -12,7 +13,6 @@ import models.user.Experience
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
-import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration

@@ -18,7 +18,6 @@ import type { OxalisState } from "oxalis/store";
 import { formatSeconds } from "libs/format_utils";
 import { AsyncLink } from "components/async_clickables";
 import {
-  getAnnotationsForTask,
   reOpenAnnotation as reOpenAnnotationAPI,
   finishAnnotation as finishAnnotationAPI,
   resetAnnotation as resetAnnotationAPI,
@@ -30,6 +29,7 @@ import Toast from "libs/toast";
 import TransferTaskModal from "dashboard/transfer_task_modal";
 import messages from "messages";
 import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
+import { getAnnotationsForTask } from "admin/api/tasks";
 
 type OwnProps = {
   task: APITask;

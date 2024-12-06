@@ -40,7 +40,10 @@ mockRequire("libs/toast", {
 const { setupSavingForTracingType } = require("oxalis/model/sagas/save_saga");
 
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
-const { ensureMaybeActiveMappingIsLocked } = require("oxalis/model/sagas/saga_helpers");
+const {
+  requestBucketModificationInVolumeTracing,
+  ensureMaybeActiveMappingIsLocked,
+} = require("oxalis/model/sagas/saga_helpers");
 
 const VolumeLayer = require("oxalis/model/volumetracing/volumelayer").default;
 
@@ -199,9 +202,9 @@ test("VolumeTracingSaga should create a volume layer (saga test)", (t) => {
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   saga.next(AnnotationToolEnum.BRUSH);
   saga.next(false);
-  // pass labeled resolution
+  // pass labeled mag
   saga.next({
-    resolution: [1, 1, 1],
+    mag: [1, 1, 1],
     zoomStep: 0,
   });
   saga.next(ACTIVE_CELL_ID); // pass active cell id
@@ -241,9 +244,9 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", (t) => {
   saga.next(AnnotationToolEnum.TRACE);
   saga.next(false);
   saga.next({
-    resolution: [1, 1, 1],
+    mag: [1, 1, 1],
     zoomStep: 0,
-  }); // pass labeled resolution
+  }); // pass labeled mag
 
   saga.next(ACTIVE_CELL_ID); // pass active cell id
   saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
@@ -292,9 +295,9 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", (t) => {
   saga.next(AnnotationToolEnum.TRACE);
   saga.next(false);
   saga.next({
-    resolution: [1, 1, 1],
+    mag: [1, 1, 1],
     zoomStep: 0,
-  }); // pass labeled resolution
+  }); // pass labeled mag
 
   saga.next(ACTIVE_CELL_ID); // pass active cell id
   saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
@@ -355,9 +358,9 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   saga.next(AnnotationToolEnum.TRACE);
   saga.next(false);
   saga.next({
-    resolution: [1, 1, 1],
+    mag: [1, 1, 1],
     zoomStep: 0,
-  }); // pass labeled resolution
+  }); // pass labeled mag
   saga.next(ACTIVE_CELL_ID); // pass active cell id
   saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
   expectValueDeepEqual(
@@ -432,16 +435,16 @@ test("VolumeTracingSaga should lock an active mapping upon first volume annotati
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   saga.next(AnnotationToolEnum.BRUSH);
   saga.next(false);
-  // pass labeled resolution
+  // pass labeled mag
   saga.next({
-    resolution: [1, 1, 1],
+    mag: [1, 1, 1],
     zoomStep: 0,
   });
-  // Test whether nested saga ensureMaybeActiveMappingIsLocked is called.
+  // Test whether nested saga requestBucketModificationInVolumeTracing is called.
   expectValueDeepEqual(
     t,
     saga.next(ACTIVE_CELL_ID),
-    call(ensureMaybeActiveMappingIsLocked, volumeTracing),
+    call(requestBucketModificationInVolumeTracing, volumeTracing),
   );
 });
 

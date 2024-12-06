@@ -5,6 +5,7 @@ import type {
   APIAllowedMode,
   APIDataLayer,
   APIDataset,
+  APIDatasetCompact,
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
   APISkeletonLayer,
@@ -78,46 +79,46 @@ export const getMagnificationUnion = memoizeOne((dataset: APIDataset): Array<Vec
    *    [[8, 8, 8], [8, 8, 2]],
    * ]
    */
-  const resolutionUnionDict: { [key: number]: Vector3[] } = {};
+  const magUnionDict: { [key: number]: Vector3[] } = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
-    for (const resolution of layer.resolutions) {
-      const key = maxValue(resolution);
+    for (const mag of layer.resolutions) {
+      const key = maxValue(mag);
 
-      if (resolutionUnionDict[key] == null) {
-        resolutionUnionDict[key] = [resolution];
+      if (magUnionDict[key] == null) {
+        magUnionDict[key] = [mag];
       } else {
-        resolutionUnionDict[key].push(resolution);
+        magUnionDict[key].push(mag);
       }
     }
   }
 
-  for (const keyStr of Object.keys(resolutionUnionDict)) {
+  for (const keyStr of Object.keys(magUnionDict)) {
     const key = Number(keyStr);
-    resolutionUnionDict[key] = _.uniqWith(resolutionUnionDict[key], V3.isEqual);
+    magUnionDict[key] = _.uniqWith(magUnionDict[key], V3.isEqual);
   }
 
-  const keys = Object.keys(resolutionUnionDict)
+  const keys = Object.keys(magUnionDict)
     .sort((a, b) => Number(a) - Number(b))
     .map((el) => Number(el));
 
-  return keys.map((key) => resolutionUnionDict[key]);
+  return keys.map((key) => magUnionDict[key]);
 });
 
 export function getWidestMags(dataset: APIDataset): Vector3[] {
-  const allLayerResolutions = dataset.dataSource.dataLayers.map((layer) =>
+  const allLayerMags = dataset.dataSource.dataLayers.map((layer) =>
     convertToDenseMag(layer.resolutions),
   );
 
-  return _.maxBy(allLayerResolutions, (resolutions) => resolutions.length) || [];
+  return _.maxBy(allLayerMags, (mags) => mags.length) || [];
 }
 
 export const getSomeMagInfoForDataset = memoizeOne((dataset: APIDataset): MagInfo => {
-  const resolutionUnion = getMagnificationUnion(dataset);
-  const areMagsDistinct = resolutionUnion.every((mags) => mags.length <= 1);
+  const magUnion = getMagnificationUnion(dataset);
+  const areMagsDistinct = magUnion.every((mags) => mags.length <= 1);
 
   if (areMagsDistinct) {
-    return new MagInfo(resolutionUnion.map((mags) => mags[0]));
+    return new MagInfo(magUnion.map((mags) => mags[0]));
   } else {
     return new MagInfo(getWidestMags(dataset));
   }
@@ -344,6 +345,19 @@ export function getDatasetExtentAsString(
   return formatExtentInUnitWithLength(extent, (length) =>
     formatNumberToLength(length, LongUnitToShortUnitMap[dataset.dataSource.scale.unit]),
   );
+}
+function getDatasetExtentAsProduct(extent: {
+  width: number;
+  height: number;
+  depth: number;
+}) {
+  return extent.width * extent.height * extent.depth;
+}
+export function getDatasetExtentInVoxelAsProduct(dataset: APIDataset) {
+  return getDatasetExtentAsProduct(getDatasetExtentInVoxel(dataset));
+}
+export function getDatasetExtentInUnitAsProduct(dataset: APIDataset) {
+  return getDatasetExtentAsProduct(getDatasetExtentInUnit(dataset));
 }
 export function determineAllowedModes(settings?: Settings): {
   preferredMode: APIAllowedMode | null | undefined;
@@ -574,8 +588,6 @@ export function getEnabledColorLayers(
 }
 
 export function getThumbnailURL(dataset: APIDataset): string {
-  const datasetName = dataset.name;
-  const organizationId = dataset.owningOrganization;
   const layers = dataset.dataSource.dataLayers;
 
   const colorLayer = _.find(layers, {
@@ -583,18 +595,16 @@ export function getThumbnailURL(dataset: APIDataset): string {
   });
 
   if (colorLayer) {
-    return `/api/datasets/${organizationId}/${datasetName}/layers/${colorLayer.name}/thumbnail`;
+    return `/api/datasets/${dataset.id}/layers/${colorLayer.name}/thumbnail`;
   }
 
   return "";
 }
 export function getSegmentationThumbnailURL(dataset: APIDataset): string {
-  const datasetName = dataset.name;
-  const organizationId = dataset.owningOrganization;
   const segmentationLayer = getFirstSegmentationLayer(dataset);
 
   if (segmentationLayer) {
-    return `/api/datasets/${organizationId}/${datasetName}/layers/${segmentationLayer.name}/thumbnail`;
+    return `/api/datasets/${dataset.id}/layers/${segmentationLayer.name}/thumbnail`;
   }
 
   return "";
@@ -909,4 +919,22 @@ export function getMaybeSegmentIndexAvailability(
     return false;
   }
   return dataset.dataSource.dataLayers.find((layer) => layer.name === layerName)?.hasSegmentIndex;
+}
+
+function getURLSanitizedName(dataset: APIDataset | APIDatasetCompact | { name: string }) {
+  return dataset.name.replace(/[^A-Z|a-z|0-9|-|_]/g, "");
+}
+
+export function getReadableURLPart(
+  dataset: APIDataset | APIDatasetCompact | { name: string; id: string },
+) {
+  return `${getURLSanitizedName(dataset)}-${dataset.id}`;
+}
+
+export function getDatasetIdOrNameFromReadableURLPart(datasetNameAndId: string) {
+  const datasetIdOrName = datasetNameAndId.split("-").pop();
+  const isId = /^[a-f0-9]{24}$/.test(datasetIdOrName || "");
+  return isId
+    ? { datasetId: datasetIdOrName, datasetName: null }
+    : { datasetId: null, datasetName: datasetIdOrName };
 }

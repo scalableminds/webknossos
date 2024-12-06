@@ -1,9 +1,4 @@
-import {
-  createExplorational,
-  getAnnotationInformation,
-  getOrganizationForDataset,
-  getShortLink,
-} from "admin/admin_rest_api";
+import { createExplorational, getAnnotationInformation, getShortLink } from "admin/admin_rest_api";
 import AcceptInviteView from "admin/auth/accept_invite_view";
 import AuthTokenView from "admin/auth/auth_token_view";
 import ChangePasswordView from "admin/auth/change_password_view";
@@ -69,6 +64,11 @@ import type { EmptyObject } from "types/globals";
 import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import AiModelListView from "admin/voxelytics/ai_model_list_view";
 import { CheckTermsOfServices } from "components/terms_of_services_check";
+import {
+  getDatasetIdFromNameAndOrganization,
+  getOrganizationForDataset,
+} from "admin/api/disambiguate_legacy_routes";
+import { getDatasetIdOrNameFromReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 
 const { Content } = Layout;
 
@@ -144,36 +144,101 @@ class ReactRouter extends React.Component<Props> {
     );
   };
 
+  tracingSandboxLegacy = ({ match }: ContextRouter) => {
+    const tracingType = coalesce(TracingTypeEnum, match.params.type);
+    if (tracingType == null) {
+      return <h3>Invalid annotation URL.</h3>;
+    }
+    return (
+      <AsyncRedirect
+        redirectTo={async () => {
+          const datasetName = match.params.datasetName || "";
+          const organizationId = match.params.organizationId || "";
+          const datasetId = await getDatasetIdFromNameAndOrganization(datasetName, organizationId);
+          return `/datasets/${datasetName}-${datasetId}/sandbox/:${tracingType}${location.search}${location.hash}`;
+        }}
+      />
+    );
+  };
+
   tracingSandbox = ({ match }: ContextRouter) => {
     const tracingType = coalesce(TracingTypeEnum, match.params.type);
+    const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(
+      match.params.datasetNameAndId,
+    );
 
-    if (tracingType != null) {
+    if (tracingType == null) {
+      return <h3>Invalid annotation URL.</h3>;
+    }
+    if (datasetName) {
+      // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
+      // The schema is something like <authority>/datasets/:datasetName/sandbox/<type>
       return (
-        <TracingLayoutView
-          initialMaybeCompoundType={null}
-          initialCommandType={{
-            type: ControlModeEnum.SANDBOX,
-            tracingType,
-            name: match.params.datasetName || "",
-            owningOrganization: match.params.organizationId || "",
+        <AsyncRedirect
+          redirectTo={async () => {
+            const organizationId = await getOrganizationForDataset(datasetName);
+            const datasetId = await getDatasetIdFromNameAndOrganization(
+              datasetName,
+              organizationId,
+            );
+            return `/datasets/${datasetName}-${datasetId}/sandbox/${tracingType}${location.search}${location.hash}`;
           }}
         />
       );
     }
-
-    return <h3>Invalid annotation URL.</h3>;
+    return (
+      <TracingLayoutView
+        initialMaybeCompoundType={null}
+        initialCommandType={{
+          type: ControlModeEnum.SANDBOX,
+          tracingType,
+          datasetId: datasetId || "",
+        }}
+      />
+    );
   };
 
-  tracingViewMode = ({ match }: ContextRouter) => (
-    <TracingLayoutView
-      initialMaybeCompoundType={null}
-      initialCommandType={{
-        type: ControlModeEnum.VIEW,
-        name: match.params.datasetName || "",
-        owningOrganization: match.params.organizationId || "",
+  tracingViewModeLegacy = ({ match, location }: ContextRouter) => (
+    <AsyncRedirect
+      redirectTo={async () => {
+        const datasetName = match.params.datasetName || "";
+        const organizationId = match.params.organizationId || "";
+        const datasetId = await getDatasetIdFromNameAndOrganization(datasetName, organizationId);
+        return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
       }}
     />
   );
+
+  tracingViewMode = ({ match }: ContextRouter) => {
+    const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(
+      match.params.datasetNameAndId,
+    );
+    if (datasetName) {
+      // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
+      // The schema is something like <authority>/datasets/:datasetName/view
+      return (
+        <AsyncRedirect
+          redirectTo={async () => {
+            const organizationId = await getOrganizationForDataset(datasetName);
+            const datasetId = await getDatasetIdFromNameAndOrganization(
+              datasetName,
+              organizationId,
+            );
+            return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
+          }}
+        />
+      );
+    }
+    return (
+      <TracingLayoutView
+        initialMaybeCompoundType={null}
+        initialCommandType={{
+          type: ControlModeEnum.VIEW,
+          datasetId: datasetId || "",
+        }}
+      />
+    );
+  };
 
   serverAuthenticationCallback = async ({ match }: ContextRouter) => {
     try {
@@ -423,19 +488,37 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:organizationId/:datasetName/edit"
+                path="/datasets/:datasetNameAndId/edit"
                 requiresAdminOrManagerRole
-                render={({ match }: ContextRouter) => (
-                  <DatasetSettingsView
-                    isEditingMode
-                    datasetId={{
-                      name: match.params.datasetName || "",
-                      owningOrganization: match.params.organizationId || "",
-                    }}
-                    onComplete={() => window.history.back()}
-                    onCancel={() => window.history.back()}
-                  />
-                )}
+                render={({ match }: ContextRouter) => {
+                  const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(
+                    match.params.datasetNameAndId,
+                  );
+                  if (datasetName) {
+                    // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
+                    // The schema is something like <authority>/datasets/:datasetName/edit
+                    return (
+                      <AsyncRedirect
+                        redirectTo={async () => {
+                          const organizationId = await getOrganizationForDataset(datasetName);
+                          const datasetId = await getDatasetIdFromNameAndOrganization(
+                            datasetName,
+                            organizationId,
+                          );
+                          return `/datasets/${datasetName}-${datasetId}/edit`;
+                        }}
+                      />
+                    );
+                  }
+                  return (
+                    <DatasetSettingsView
+                      isEditingMode
+                      datasetId={datasetId || ""}
+                      onComplete={() => window.history.back()}
+                      onCancel={() => window.history.back()}
+                    />
+                  );
+                }}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
@@ -582,75 +665,63 @@ class ReactRouter extends React.Component<Props> {
                   return <FinishResetPasswordView resetToken={params.token} />;
                 }}
               />
-              <Route
-                path="/datasets/:organizationId/:datasetName/view"
-                render={this.tracingViewMode}
-              />
+              {/* legacy view mode route */}
               <RouteWithErrorBoundary
-                path="/datasets/:id/view"
-                render={({ match, location }: ContextRouter) => (
-                  <AsyncRedirect
-                    redirectTo={async () => {
-                      const datasetName = match.params.id || "";
-                      const organizationId = await getOrganizationForDataset(datasetName);
-                      return `/datasets/${organizationId}/${datasetName}/view${location.search}${location.hash}`;
-                    }}
-                  />
-                )}
+                path="/datasets/:organizationId/:datasetName/view"
+                render={this.tracingViewModeLegacy}
               />
+              <Route path="/datasets/:datasetNameAndId/view" render={this.tracingViewMode} />
+              <RouteWithErrorBoundary
+                path="/datasets/:datasetNameAndId/sandbox/:type"
+                render={this.tracingSandbox}
+              />
+              {/* legacy sandbox route */}
               <RouteWithErrorBoundary
                 path="/datasets/:organizationId/:datasetName/sandbox/:type"
-                render={this.tracingSandbox}
+                render={this.tracingSandboxLegacy}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:organizationId/:datasetName/createExplorative/:type"
+                path="/datasets/:datasetId/createExplorative/:type"
                 render={({ match }: ContextRouter) => (
                   <AsyncRedirect
                     pushToHistory={false}
                     redirectTo={async () => {
-                      if (
-                        !match.params.organizationId ||
-                        !match.params.datasetName ||
-                        !match.params.type
-                      ) {
+                      if (!match.params.datasetId || !match.params.type) {
                         // Typehint for TS
                         throw new Error("Invalid URL");
                       }
 
-                      const dataset = {
-                        owningOrganization: match.params.organizationId,
-                        name: match.params.datasetName,
-                      };
+                      const datasetId = match.params.datasetId;
                       const type =
                         coalesce(TracingTypeEnum, match.params.type) || TracingTypeEnum.skeleton;
                       const getParams = Utils.getUrlParamsObjectFromString(location.search);
                       const { autoFallbackLayer, fallbackLayerName } = getParams;
-                      const resolutionRestrictions: APIMagRestrictions = {};
+                      const magRestrictions: APIMagRestrictions = {};
 
                       if (getParams.minMag !== undefined) {
-                        resolutionRestrictions.min = Number.parseInt(getParams.minMag);
+                        magRestrictions.min = Number.parseInt(getParams.minMag);
 
-                        if (!_.isNumber(resolutionRestrictions.min)) {
+                        if (!_.isNumber(magRestrictions.min)) {
                           throw new Error("Invalid minMag parameter");
                         }
 
                         if (getParams.maxMag !== undefined) {
-                          resolutionRestrictions.max = Number.parseInt(getParams.maxMag);
+                          magRestrictions.max = Number.parseInt(getParams.maxMag);
 
-                          if (!_.isNumber(resolutionRestrictions.max)) {
+                          if (!_.isNumber(magRestrictions.max)) {
                             throw new Error("Invalid maxMag parameter");
                           }
                         }
                       }
 
                       const annotation = await createExplorational(
-                        dataset,
+                        datasetId,
                         type,
                         !!autoFallbackLayer,
                         fallbackLayerName,
                         null,
-                        resolutionRestrictions,
+                        magRestrictions,
                       );
                       return `/annotations/${annotation.id}`;
                     }}
@@ -661,7 +732,12 @@ class ReactRouter extends React.Component<Props> {
                 // Note that this route has to be beneath all others sharing the same prefix,
                 // to avoid url mismatching
               }
-              <Route path="/datasets/:organizationId/:datasetName" render={this.tracingViewMode} />
+              {/*legacy view mode route */}
+              <RouteWithErrorBoundary
+                path="/datasets/:organizationId/:datasetName"
+                render={this.tracingViewModeLegacy}
+              />
+              <Route path="/datasets/:datasetNameAndId" render={this.tracingViewMode} />
               <RouteWithErrorBoundary
                 path="/publications/:id"
                 render={({ match }: ContextRouter) => (

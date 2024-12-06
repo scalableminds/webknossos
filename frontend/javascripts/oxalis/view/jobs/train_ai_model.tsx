@@ -34,11 +34,11 @@ import _ from "lodash";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { formatVoxels } from "libs/format_utils";
 import * as Utils from "libs/utils";
-import { V3 } from "libs/mjs";
 import type { APIAnnotation, APIDataset, ServerVolumeTracing } from "types/api_flow_types";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, Vector6 } from "oxalis/constants";
 import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
 import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reducers/reducer_helpers";
+import { computeArrayFromBoundingBox } from "libs/utils";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;
@@ -66,8 +66,8 @@ enum AiModelCategory {
 const ExperimentalWarning = () => (
   <Row style={{ display: "grid", marginBottom: 16 }}>
     <Alert
-      message="Please note that this feature is experimental. All bounding boxes must be the same size, with equal width and height. Ensure the size is not too small (we recommend at least 10 Vx per dimension) and choose boxes that represent the data well."
-      type="warning"
+      message="Please note that this feature is experimental. All bounding boxes should have equal dimensions or have dimensions which are multiples of the smallest bounding box. Ensure the size is not too small (we recommend at least 10 Vx per dimension) and choose boxes that represent the data well."
+      type="info"
       showIcon
     />
   </Row>
@@ -217,19 +217,29 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
     modelCategory: AiModelCategory.EM_NEURONS,
   };
 
-  const userBoundingBoxes = annotationInfos.flatMap(({ userBoundingBoxes }) => userBoundingBoxes);
+  const userBoundingBoxes = annotationInfos.flatMap(({ userBoundingBoxes, annotation }) =>
+    userBoundingBoxes.map((box) => ({
+      ...box,
+      annotationId: "id" in annotation ? annotation.id : annotation.annotationId,
+    })),
+  );
 
   const bboxesVoxelCount = _.sum(
     (userBoundingBoxes || []).map((bbox) => new BoundingBox(bbox.boundingBox).getVolume()),
   );
 
-  const { areSomeAnnotationsInvalid, invalidAnnotationsReason } =
-    areInvalidAnnotationsIncluded(annotationInfos);
-  const { areSomeBBoxesInvalid, invalidBBoxesReason } =
-    areInvalidBoundingBoxesIncluded(userBoundingBoxes);
-  const invalidReasons = [invalidAnnotationsReason, invalidBBoxesReason]
-    .filter((reason) => reason)
-    .join("\n");
+  const { hasAnnotationErrors, errors: annotationErrors } =
+    checkAnnotationsForErrorsAndWarnings(annotationInfos);
+  const {
+    hasBBoxErrors,
+    hasBBoxWarnings,
+    errors: bboxErrors,
+    warnings: bboxWarnings,
+  } = checkBoundingBoxesForErrorsAndWarnings(userBoundingBoxes);
+  const hasErrors = hasAnnotationErrors || hasBBoxErrors;
+  const hasWarnings = hasBBoxWarnings;
+  const errors = [...annotationErrors, ...bboxErrors];
+  const warnings = bboxWarnings;
 
   return (
     <Form
@@ -333,8 +343,38 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
           </div>
         </FormItem>
       ) : null}
+
+      {hasErrors
+        ? errors.map((error) => (
+            <Alert
+              key={error}
+              description={error}
+              style={{
+                marginBottom: 12,
+                whiteSpace: "pre-line",
+              }}
+              type="error"
+              showIcon
+            />
+          ))
+        : null}
+      {hasWarnings
+        ? warnings.map((warning) => (
+            <Alert
+              key={warning}
+              description={warning}
+              style={{
+                marginBottom: 12,
+                whiteSpace: "pre-line",
+              }}
+              type="warning"
+              showIcon
+            />
+          ))
+        : null}
+
       <FormItem>
-        <Tooltip title={invalidReasons}>
+        <Tooltip title={hasErrors ? "Solve the errors displayed above before continuing." : ""}>
           <Button
             size="large"
             type="primary"
@@ -342,7 +382,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
             style={{
               width: "100%",
             }}
-            disabled={areSomeBBoxesInvalid || areSomeAnnotationsInvalid}
+            disabled={hasErrors}
           >
             Start Training
           </Button>
@@ -385,16 +425,16 @@ export function CollapsibleWorkflowYamlEditor({
   );
 }
 
-function areInvalidAnnotationsIncluded<T extends HybridTracing | APIAnnotation>(
+function checkAnnotationsForErrorsAndWarnings<T extends HybridTracing | APIAnnotation>(
   annotationsWithDatasets: Array<AnnotationInfoForAIJob<T>>,
 ): {
-  areSomeAnnotationsInvalid: boolean;
-  invalidAnnotationsReason: string | null;
+  hasAnnotationErrors: boolean;
+  errors: string[];
 } {
   if (annotationsWithDatasets.length === 0) {
     return {
-      areSomeAnnotationsInvalid: true,
-      invalidAnnotationsReason: "At least one annotation must be defined.",
+      hasAnnotationErrors: true,
+      errors: ["At least one annotation must be defined."],
     };
   }
   const annotationsWithoutBoundingBoxes = annotationsWithDatasets.filter(
@@ -407,42 +447,81 @@ function areInvalidAnnotationsIncluded<T extends HybridTracing | APIAnnotation>(
       "id" in annotation ? annotation.id : annotation.annotationId,
     );
     return {
-      areSomeAnnotationsInvalid: true,
-      invalidAnnotationsReason: `All annotations must have at least one bounding box. Annotations without bounding boxes are: ${annotationIds.join(", ")}`,
+      hasAnnotationErrors: true,
+      errors: [
+        `All annotations must have at least one bounding box. Annotations without bounding boxes are:\n${annotationIds.join(", ")}`,
+      ],
     };
   }
-  return { areSomeAnnotationsInvalid: false, invalidAnnotationsReason: null };
+  return { hasAnnotationErrors: false, errors: [] };
 }
 
-function areInvalidBoundingBoxesIncluded(userBoundingBoxes: UserBoundingBox[]): {
-  areSomeBBoxesInvalid: boolean;
-  invalidBBoxesReason: string | null;
+function checkBoundingBoxesForErrorsAndWarnings(
+  userBoundingBoxes: (UserBoundingBox & { annotationId: string })[],
+): {
+  hasBBoxErrors: boolean;
+  hasBBoxWarnings: boolean;
+  errors: string[];
+  warnings: string[];
 } {
+  let hasBBoxErrors = false;
+  let hasBBoxWarnings = false;
+  const errors = [];
+  const warnings = [];
   if (userBoundingBoxes.length === 0) {
-    return {
-      areSomeBBoxesInvalid: true,
-      invalidBBoxesReason: "At least one bounding box must be defined.",
-    };
+    hasBBoxErrors = true;
+    errors.push("At least one bounding box must be defined.");
   }
-  const getSize = (bbox: UserBoundingBox) => V3.sub(bbox.boundingBox.max, bbox.boundingBox.min);
+  // Find smallest bounding box dimensions
+  const minDimensions = userBoundingBoxes.reduce(
+    (min, { boundingBox: box }) => ({
+      x: Math.min(min.x, box.max[0] - box.min[0]),
+      y: Math.min(min.y, box.max[1] - box.min[1]),
+      z: Math.min(min.z, box.max[2] - box.min[2]),
+    }),
+    { x: Number.POSITIVE_INFINITY, y: Number.POSITIVE_INFINITY, z: Number.POSITIVE_INFINITY },
+  );
 
-  const size = getSize(userBoundingBoxes[0]);
-  // width must equal height
-  if (size[0] !== size[1]) {
-    return {
-      areSomeBBoxesInvalid: true,
-      invalidBBoxesReason: "The bounding box width must equal its height.",
-    };
+  // Validate minimum size and multiple requirements
+  type BoundingBoxWithAnnotationId = { boundingBox: Vector6; name: string; annotationId: string };
+  const tooSmallBoxes: BoundingBoxWithAnnotationId[] = [];
+  const nonMultipleBoxes: BoundingBoxWithAnnotationId[] = [];
+  userBoundingBoxes.forEach(({ boundingBox: box, name, annotationId }) => {
+    const arrayBox = computeArrayFromBoundingBox(box);
+    const [_x, _y, _z, width, height, depth] = arrayBox;
+    if (width < 10 || height < 10 || depth < 10) {
+      tooSmallBoxes.push({ boundingBox: arrayBox, name, annotationId });
+    }
+
+    if (
+      width % minDimensions.x !== 0 ||
+      height % minDimensions.y !== 0 ||
+      depth % minDimensions.z !== 0
+    ) {
+      nonMultipleBoxes.push({ boundingBox: arrayBox, name, annotationId });
+    }
+  });
+
+  const boxWithIdToString = ({ boundingBox, name, annotationId }: BoundingBoxWithAnnotationId) =>
+    `'${name}' of annotation ${annotationId}: ${boundingBox.join(", ")}`;
+
+  if (tooSmallBoxes.length > 0) {
+    hasBBoxWarnings = true;
+    const tooSmallBoxesStrings = tooSmallBoxes.map(boxWithIdToString);
+    warnings.push(
+      `The following bounding boxes are not at least 10 Vx in each dimension which is suboptimal for the training:\n${tooSmallBoxesStrings.join("\n")}`,
+    );
   }
-  // all bounding boxes must have the same size
-  const areSizesIdentical = userBoundingBoxes.every((bbox) => V3.isEqual(getSize(bbox), size));
-  if (areSizesIdentical) {
-    return { areSomeBBoxesInvalid: false, invalidBBoxesReason: null };
+
+  if (nonMultipleBoxes.length > 0) {
+    hasBBoxWarnings = true;
+    const nonMultipleBoxesStrings = nonMultipleBoxes.map(boxWithIdToString);
+    warnings.push(
+      `The minimum bounding box dimensions are ${minDimensions.x} x ${minDimensions.y} x ${minDimensions.z}. The following bounding boxes have dimensions which are not a multiple of the minimum dimensions which is suboptimal for the training:\n${nonMultipleBoxesStrings.join("\n")}`,
+    );
   }
-  return {
-    areSomeBBoxesInvalid: true,
-    invalidBBoxesReason: "All bounding boxes must have the same size.",
-  };
+
+  return { hasBBoxErrors, hasBBoxWarnings, errors, warnings };
 }
 
 function AnnotationsCsvInput({
@@ -473,10 +552,7 @@ function AnnotationsCsvInput({
     const newAnnotationsWithDatasets = await Promise.all(
       newItems.map(async (item) => {
         const annotation = await getAnnotationInformation(item.annotationId);
-        const dataset = await getDataset({
-          owningOrganization: annotation.organization,
-          name: annotation.dataSetName,
-        });
+        const dataset = await getDataset(annotation.datasetId);
 
         const volumeServerTracings: ServerVolumeTracing[] = await Promise.all(
           annotation.annotationLayers
@@ -511,8 +587,8 @@ function AnnotationsCsvInput({
           annotation,
           dataset,
           volumeTracings,
-          volumeTracingMags: volumeServerTracings.map(({ mags: resolutions }) =>
-            resolutions ? resolutions.map(Utils.point3ToVector3) : ([[1, 1, 1]] as Vector3[]),
+          volumeTracingMags: volumeServerTracings.map(({ mags }) =>
+            mags ? mags.map(Utils.point3ToVector3) : ([[1, 1, 1]] as Vector3[]),
           ),
           userBoundingBoxes: userBoundingBoxes || [],
         };

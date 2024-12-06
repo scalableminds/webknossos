@@ -484,12 +484,12 @@ class PlaneMaterialFactory {
           const state = Store.getState();
           for (const [layerName, activeMagIndex] of Object.entries(activeMagIndices)) {
             const layer = getLayerByName(state.dataset, layerName);
-            const resolutionInfo = getMagInfo(layer.resolutions);
+            const magInfo = getMagInfo(layer.resolutions);
             // If the active mag doesn't exist, a fallback mag is likely rendered. Use that
             // to determine a representative mag.
-            const suitableMagIndex = resolutionInfo.getIndexOrClosestHigherIndex(activeMagIndex);
+            const suitableMagIndex = magInfo.getIndexOrClosestHigherIndex(activeMagIndex);
             const suitableMag =
-              suitableMagIndex != null ? resolutionInfo.getMagByIndex(suitableMagIndex) : null;
+              suitableMagIndex != null ? magInfo.getMagByIndex(suitableMagIndex) : null;
 
             const hasTransform = !_.isEqual(
               getTransformsForLayer(
@@ -565,24 +565,24 @@ class PlaneMaterialFactory {
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => getMagInfoByLayer(storeState.dataset),
-        (resolutionInfosByLayer) => {
-          const allDenseResolutions = Object.values(resolutionInfosByLayer).map((resInfo) =>
-            resInfo.getDenseMags(),
+        (magInfosByLayer) => {
+          const allDenseMags = Object.values(magInfosByLayer).map((magInfo) =>
+            magInfo.getDenseMags(),
           );
-          const flatResolutions = _.flattenDeep(allDenseResolutions);
-          this.uniforms.allResolutions = {
-            value: flatResolutions,
+          const flatMags = _.flattenDeep(allDenseMags);
+          this.uniforms.allMagnifications = {
+            value: flatMags,
           };
 
           let cumSum = 0;
-          const resolutionCountCumSum = [cumSum];
-          for (const denseResolutions of allDenseResolutions) {
-            cumSum += denseResolutions.length;
-            resolutionCountCumSum.push(cumSum);
+          const magCountCumSum = [cumSum];
+          for (const denseMags of allDenseMags) {
+            cumSum += denseMags.length;
+            magCountCumSum.push(cumSum);
           }
 
-          this.uniforms.resolutionCountCumSum = {
-            value: resolutionCountCumSum,
+          this.uniforms.magnificationCountCumSum = {
+            value: magCountCumSum,
           };
         },
         true,
@@ -1099,7 +1099,7 @@ class PlaneMaterialFactory {
       colorLayerNames,
       segmentationLayerNames,
       textureLayerInfos,
-      resolutionsCount: this.getTotalMagCount(),
+      magnificationsCount: this.getTotalMagCount(),
       voxelSizeFactor,
       isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
@@ -1112,11 +1112,11 @@ class PlaneMaterialFactory {
 
   getTotalMagCount(): number {
     const storeState = Store.getState();
-    const allDenseResolutions = Object.values(getMagInfoByLayer(storeState.dataset)).map(
-      (resInfo) => resInfo.getDenseMags(),
+    const allDenseMags = Object.values(getMagInfoByLayer(storeState.dataset)).map((magInfo) =>
+      magInfo.getDenseMags(),
     );
-    const flatResolutions = _.flatten(allDenseResolutions);
-    return flatResolutions.length;
+    const flatMags = _.flatten(allDenseMags);
+    return flatMags.length;
   }
 
   getVertexShader(): string {
@@ -1134,7 +1134,7 @@ class PlaneMaterialFactory {
       colorLayerNames,
       segmentationLayerNames,
       textureLayerInfos,
-      resolutionsCount: this.getTotalMagCount(),
+      magnificationsCount: this.getTotalMagCount(),
       voxelSizeFactor,
       isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,

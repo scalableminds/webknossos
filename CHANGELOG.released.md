@@ -474,7 +474,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Fixed
 - Fixed that some segment (group) actions were not properly disabled for non-editable segmentation layers. [#7207](https://github.com/scalableminds/webknossos/issues/7207)
 - Fixed a bug where data from zarr2 datasets that have a channel axis was broken. [#7374](https://github.com/scalableminds/webknossos/pull/7374)
-- Fixed a bug which changed the cursor position while editing the name of a tree or the comment of a node. [#7390](#https://github.com/scalableminds/webknossos/pull/7390)
+- Fixed a bug which changed the cursor position while editing the name of a tree or the comment of a node. [#7390](https://github.com/scalableminds/webknossos/pull/7390)
 - Streaming sharded zarr3 datasets from servers which do not respond with Accept-Ranges header is now possible. [#7392](https://github.com/scalableminds/webknossos/pull/7392)
 
 ## [23.10.2](https://github.com/scalableminds/webknossos/releases/tag/23.10.2) - 2023-09-26

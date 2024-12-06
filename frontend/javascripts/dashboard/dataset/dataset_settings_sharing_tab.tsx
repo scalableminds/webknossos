@@ -4,7 +4,7 @@ import { type RouteComponentProps, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import { Button, Input, Checkbox, Tooltip, type FormInstance, Collapse, Space } from "antd";
 import { CopyOutlined, InfoCircleOutlined, RetweetOutlined } from "@ant-design/icons";
-import type { APIDataset, APIDatasetId, APIUser } from "types/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
 import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/admin_rest_api";
 import Toast from "libs/toast";
@@ -16,10 +16,11 @@ import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/util
 import { FormItemWithInfo } from "./helper_components";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 
 type Props = {
   form: FormInstance | null;
-  datasetId: APIDatasetId;
+  datasetId: string;
   dataset: APIDataset | null | undefined;
   activeUser: APIUser | null | undefined;
 };
@@ -77,9 +78,7 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
 
     const doesNeedToken = !form.getFieldValue("dataset.isPublic");
     const tokenSuffix = `?token=${sharingToken}`;
-    return `${window.location.origin}/datasets/${datasetId.owningOrganization}/${
-      datasetId.name
-    }/view${doesNeedToken ? tokenSuffix : ""}`;
+    return `${window.location.origin}/datasets/${dataset ? getReadableURLPart(dataset) : datasetId}/view${doesNeedToken ? tokenSuffix : ""}`;
   }
 
   function getUserAccessList() {

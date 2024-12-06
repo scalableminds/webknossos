@@ -489,6 +489,10 @@ function* watchForSaveConflicts() {
       maybeSkeletonTracing,
     ]);
 
+    if (tracings.length === 0) {
+      return;
+    }
+
     const versionOnServer = yield* call(
       getNewestVersionForAnnotation,
       tracingStoreUrl,
@@ -547,6 +551,8 @@ function* watchForSaveConflicts() {
     // The current user is the only one who can edit the annotation.
     return VERSION_POLL_INTERVAL_SINGLE_EDITOR;
   }
+
+  yield* call(ensureWkReady);
 
   while (true) {
     const interval = yield* call(getPollInterval);

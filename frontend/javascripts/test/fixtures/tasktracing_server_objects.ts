@@ -184,7 +184,6 @@ export const annotation: APIAnnotation = {
   ],
 };
 export const annotationProto: APITracingStoreAnnotation = {
-  name: "task-annotation-name",
   description: "task-annotation-description",
   version: 1,
   earliestAccessibleVersion: 0,

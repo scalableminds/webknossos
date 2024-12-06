@@ -658,10 +658,10 @@ export function updateAnnotationLayerName(tracingId: string, newLayerName: strin
   } as const;
 }
 
-export function updateMetadataOfAnnotation(name?: string, description?: string) {
+export function updateMetadataOfAnnotation(description: string) {
   return {
     name: "updateMetadataOfAnnotation",
-    value: { name, description },
+    value: { description },
   } as const;
 }
 

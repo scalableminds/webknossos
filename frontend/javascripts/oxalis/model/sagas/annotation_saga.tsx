@@ -5,7 +5,6 @@ import {
   type EditAnnotationLayerAction,
   setAnnotationAllowUpdateAction,
   type SetAnnotationDescriptionAction,
-  type SetAnnotationNameAction,
   setBlockedByUserAction,
   type SetOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
@@ -53,20 +52,12 @@ import { updateAnnotationLayerName, updateMetadataOfAnnotation } from "./update_
  */
 const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
 
-export function* pushAnnotationNameUpdateAction(action: SetAnnotationNameAction) {
-  const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
-  if (!mayEdit) {
-    return;
-  }
-  yield* put(pushSaveQueueTransaction([updateMetadataOfAnnotation(action.name)]));
-}
-
 export function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDescriptionAction) {
   const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
   if (!mayEdit) {
     return;
   }
-  yield* put(pushSaveQueueTransaction([updateMetadataOfAnnotation(undefined, action.description)]));
+  yield* put(pushSaveQueueTransaction([updateMetadataOfAnnotation(action.description)]));
 }
 
 export function* pushAnnotationUpdateAsync(action: Action) {
@@ -86,6 +77,7 @@ export function* pushAnnotationUpdateAsync(action: Action) {
   };
   // The extra type annotation is needed here for flow
   const editObject: Partial<EditableAnnotation> = {
+    name: tracing.name,
     visibility: tracing.visibility,
     viewConfiguration,
   };
@@ -220,8 +212,10 @@ export function* watchAnnotationAsync(): Saga<void> {
   // name, only the latest action is relevant. If `_takeEvery` was used,
   // all updates to the annotation name would be retried regularly, which
   // would also cause race conditions.
-  yield* takeLatest("SET_ANNOTATION_NAME", pushAnnotationNameUpdateAction);
-  yield* takeLatest("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);
+  yield* takeLatest(
+    ["SET_ANNOTATION_NAME", "SET_ANNOTATION_VISIBILITY"],
+    pushAnnotationUpdateAsync,
+  );
   yield* takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationDescriptionUpdateAction);
   yield* takeLatest(
     ((action: Action) =>

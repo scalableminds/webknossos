@@ -125,7 +125,6 @@ export const annotation: APIAnnotation = {
   isLockedByOwner: false,
 };
 export const annotationProto: APITracingStoreAnnotation = {
-  name: "volume-annotation-name",
   description: "volume-annotation-description",
   version: 1,
   earliestAccessibleVersion: 0,

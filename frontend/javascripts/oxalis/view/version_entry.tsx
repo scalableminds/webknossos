@@ -283,15 +283,10 @@ const descriptionFns: Record<
     icon: <EditOutlined />,
   }),
   updateMetadataOfAnnotation: (action: UpdateMetadataOfAnnotationUpdateAction): Description => {
-    const updatedName = action.value.name != null;
-    const updatedDescription = action.value.description != null;
-    const updatedText =
-      updatedName && updatedDescription
-        ? "name and description"
-        : updatedName
-          ? "name"
-          : "description";
-    return { description: `Updated the ${updatedText} of the annotation.`, icon: <EditOutlined /> };
+    return {
+      description: `Updated the description of the annotation to: ${action.value.description.slice(0, 100) || ""}`,
+      icon: <EditOutlined />,
+    };
   },
 } as const;
 

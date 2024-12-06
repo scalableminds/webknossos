@@ -583,7 +583,6 @@ type APITracingStoreAnnotationLayer = {
 };
 
 export type APITracingStoreAnnotation = {
-  readonly name: string;
   readonly description: string;
   readonly version: number;
   readonly earliestAccessibleVersion: number;

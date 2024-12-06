@@ -217,7 +217,6 @@ export const annotation: APIAnnotation = {
 };
 
 export const annotationProto: APITracingStoreAnnotation = {
-  name: "skeleton-annotation-name",
   description: "skeleton-annotation-description",
   version: 1,
   earliestAccessibleVersion: 0,

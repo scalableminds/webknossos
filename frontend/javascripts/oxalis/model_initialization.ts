@@ -153,7 +153,6 @@ export async function initialize(
       });
       const completeAnnotation = {
         ...maybeOutdatedAnnotation,
-        name: annotationProto.name,
         description: annotationProto.description,
         annotationProto: annotationProto.earliestAccessibleVersion,
         annotationLayers: layersWithStats,

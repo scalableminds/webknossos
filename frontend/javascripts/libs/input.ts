@@ -23,10 +23,7 @@ const MOUSE_MOVE_DELTA_THRESHOLD = 5;
 export type ModifierKeys = "alt" | "shift" | "ctrlOrMeta";
 type KeyboardKey = string;
 type MouseButton = string;
-type KeyboardHandler = {
-  (event: KeyboardEvent): void | Promise<void>;
-  keyUpFn?: (event: KeyboardEvent) => void;
-};
+type KeyboardHandler = (event: KeyboardEvent) => void | Promise<void>;
 // Callable Object, see https://www.typescriptlang.org/docs/handbook/2/functions.html#call-signatures
 type KeyboardLoopHandler = {
   (arg0: number, isOriginalEvent: boolean): void;
@@ -87,6 +84,7 @@ export class InputKeyboardNoLoop {
       supportInputElements?: boolean;
     },
     extendedCommands?: KeyBindingMap,
+    keyUpCommands?: KeyBindingMap,
   ) {
     if (options) {
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
@@ -103,16 +101,17 @@ export class InputKeyboardNoLoop {
       document.addEventListener("keydown", this.preventBrowserSearchbarShortcut);
       this.attach(EXTENDED_COMMAND_KEYS, this.toggleExtendedMode);
       // Add empty callback in extended mode to deactivate the extended mode via the same EXTENDED_COMMAND_KEYS.
-      this.attach(EXTENDED_COMMAND_KEYS, _.noop, true);
+      this.attach(EXTENDED_COMMAND_KEYS, _.noop, _.noop, true);
       for (const key of Object.keys(extendedCommands)) {
         const callback = extendedCommands[key];
-        this.attach(key, callback, true);
+        this.attach(key, callback, _.noop, true);
       }
     }
 
     for (const key of Object.keys(initialBindings)) {
       const callback = initialBindings[key];
-      this.attach(key, callback);
+      const keyUpCallback = keyUpCommands != null ? keyUpCommands[key] : _.noop;
+      this.attach(key, callback, keyUpCallback);
     }
   }
 
@@ -144,7 +143,12 @@ export class InputKeyboardNoLoop {
     }
   }
 
-  attach(key: KeyboardKey, callback: KeyboardHandler, isExtendedCommand: boolean = false) {
+  attach(
+    key: KeyboardKey,
+    callback: KeyboardHandler,
+    callbackKeyUp: KeyboardHandler = _.noop,
+    isExtendedCommand: boolean = false,
+  ) {
     const binding = [
       key,
       (event: KeyboardEvent) => {
@@ -173,8 +177,7 @@ export class InputKeyboardNoLoop {
         }
       },
       (event: KeyboardEvent) => {
-        console.log("key up");
-        if (callback.keyUpFn != null) callback.keyUpFn(event);
+        callbackKeyUp(event);
       },
     ];
     if (isExtendedCommand) {

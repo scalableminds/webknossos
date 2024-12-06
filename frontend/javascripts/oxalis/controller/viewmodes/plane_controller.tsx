@@ -207,9 +207,8 @@ class BoundingBoxKeybindings {
 }
 
 function createKeyDownAndUpHandler() {
-  const fn = (event: KeyboardEvent) => handleUpdateCursor(event);
-  fn.keyUpFn = (event: KeyboardEvent) => handleUpdateCursor(event);
-  return fn;
+  console.log("createKeyDownAndUpHandler");
+  return (event: KeyboardEvent) => handleUpdateCursor(event);
 }
 
 function createDelayAwareMoveHandler(multiplier: number) {
@@ -385,8 +384,9 @@ class PlaneController extends React.PureComponent<Props> {
     });
     const {
       baseControls: notLoopedKeyboardControls,
+      keyUpControls,
       extendedControls: extendedNotLoopedKeyboardControls,
-    } = this.getNotLoopedKeyboardControls(); //
+    } = this.getNotLoopedKeyboardControls();
     const loopedKeyboardControls = this.getLoopedKeyboardControls();
     ensureNonConflictingHandlers(notLoopedKeyboardControls, loopedKeyboardControls);
     this.input.keyboardLoopDelayed = new InputKeyboard(
@@ -418,6 +418,7 @@ class PlaneController extends React.PureComponent<Props> {
       notLoopedKeyboardControls,
       {},
       extendedNotLoopedKeyboardControls,
+      keyUpControls,
     );
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
@@ -549,8 +550,12 @@ class PlaneController extends React.PureComponent<Props> {
           volumeCHandler,
           boundingBoxCHandler,
         ),
-        ctrl: boundingBoxCtrlHandler,
-        meta: boundingBoxMetaHandler,
+        ctrl: this.createToolDependentKeyboardHandler(null, null, boundingBoxCtrlHandler),
+        meta: this.createToolDependentKeyboardHandler(null, null, boundingBoxMetaHandler),
+      },
+      keyUpControls: {
+        ctrl: this.createToolDependentKeyboardHandler(null, null, boundingBoxCtrlHandler),
+        meta: this.createToolDependentKeyboardHandler(null, null, boundingBoxMetaHandler),
       },
       extendedControls,
     };

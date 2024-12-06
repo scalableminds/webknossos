@@ -43,6 +43,11 @@ import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
 import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
 import { defaultContext } from "@tanstack/react-query";
 import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
+import type { DatasetRotation } from "./dataset_rotation_form_item";
+import {
+  doAllLayersHaveTheSameRotation,
+  getRotationFromTransformation,
+} from "oxalis/model/accessors/dataset_layer_rotation_accessor";
 
 const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";
@@ -76,6 +81,7 @@ export type FormData = {
   dataset: APIDataset;
   defaultConfiguration: DatasetConfiguration;
   defaultConfigurationLayersJson: string;
+  datasetRotation?: DatasetRotation;
 };
 
 class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, State> {
@@ -194,6 +200,29 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       form.setFieldsValue({
         dataSource,
       });
+      // Retrieve the initial dataset rotation settings from the data source config.
+      if (doAllLayersHaveTheSameRotation(dataSource.dataLayers)) {
+        const firstLayerTransformations = dataSource.dataLayers[0].coordinateTransformations;
+        let initialDatasetRotationSettings: DatasetRotation;
+        if (!firstLayerTransformations || firstLayerTransformations.length !== 5) {
+          initialDatasetRotationSettings = {
+            x: 0,
+            y: 0,
+            z: 0,
+          };
+        } else {
+          initialDatasetRotationSettings = {
+            // First transformation is a translation to the coordinate system origin.
+            x: getRotationFromTransformation(firstLayerTransformations[1], "x"),
+            y: getRotationFromTransformation(firstLayerTransformations[2], "y"),
+            z: getRotationFromTransformation(firstLayerTransformations[3], "z"),
+            // Fifth transformation is a translation back to the original position.
+          };
+        }
+        form.setFieldsValue({
+          datasetRotation: initialDatasetRotationSettings,
+        });
+      }
       const datasetDefaultConfiguration = await getDatasetDefaultConfiguration(
         this.props.datasetId,
       );

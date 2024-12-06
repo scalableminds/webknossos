@@ -29,11 +29,8 @@ import {
   getMappingInfoForSupportedLayer,
   getVisibleSegmentationLayer,
   getLayerByName,
-  invertAndTranspose,
-  getTransformsForLayer,
   getMagInfoByLayer,
   getMagInfo,
-  getTransformsPerLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
@@ -53,6 +50,11 @@ import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
 import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { V3 } from "libs/mjs";
 import type TPS3D from "libs/thin_plate_spline";
+import {
+  invertAndTranspose,
+  getTransformsForLayer,
+  getTransformsPerLayer,
+} from "oxalis/model/accessors/dataset_layer_rotation_accessor";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;
@@ -242,8 +244,7 @@ class PlaneMaterialFactory {
     this.uniforms.activeMagIndices = {
       value: Object.values(activeMagIndices),
     };
-    const nativelyRenderedLayerName =
-      Store.getState().datasetConfiguration.nativelyRenderedLayerName;
+    const { nativelyRenderedLayerName } = Store.getState().datasetConfiguration;
     const dataset = Store.getState().dataset;
     for (const dataLayer of Model.getAllLayers()) {
       const layerName = sanitizeName(dataLayer.name);

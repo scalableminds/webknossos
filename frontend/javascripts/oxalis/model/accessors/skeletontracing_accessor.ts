@@ -23,11 +23,11 @@ import {
   MISSING_GROUP_ID,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import type { TreeType, Vector3 } from "oxalis/constants";
-import {
-  getTransformsForSkeletonLayer,
-  getTransformsForSkeletonLayerOrNull,
-} from "./dataset_accessor";
 import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
+import {
+  getTransformsForLayerWithoutTransformationConfigOrNull,
+  getTransformsForSkeletonLayer,
+} from "./dataset_layer_rotation_accessor";
 
 export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
   if (tracing.skeleton != null) {
@@ -218,7 +218,7 @@ export function getNodeAndTreeOrNull(
 
 export function isSkeletonLayerTransformed(state: OxalisState) {
   return (
-    getTransformsForSkeletonLayerOrNull(
+    getTransformsForLayerWithoutTransformationConfigOrNull(
       state.dataset,
       state.datasetConfiguration.nativelyRenderedLayerName,
     ) != null
@@ -231,16 +231,14 @@ export function getNodePosition(node: Node, state: OxalisState): Vector3 {
 
 export function transformNodePosition(position: Vector3, state: OxalisState): Vector3 {
   const dataset = state.dataset;
-  const nativelyRenderedLayerName = state.datasetConfiguration.nativelyRenderedLayerName;
-
+  const { nativelyRenderedLayerName } = state.datasetConfiguration;
   const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
   return transformPointUnscaled(currentTransforms)(position);
 }
 
 export function untransformNodePosition(position: Vector3, state: OxalisState): Vector3 {
   const dataset = state.dataset;
-  const nativelyRenderedLayerName = state.datasetConfiguration.nativelyRenderedLayerName;
-
+  const { nativelyRenderedLayerName } = state.datasetConfiguration;
   const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
   return transformPointUnscaled(invertTransform(currentTransforms))(position);
 }

@@ -96,7 +96,9 @@ const takeLatestMappingChange = (
       );
       const mapping = getMappingInfo(activeMappingByLayer, layerName);
 
-      console.log("Changed from", lastBucketRetrievalSource, "to", bucketRetrievalSource);
+      if (process.env.NODE_ENV === "production") {
+        console.log("Changed from", lastBucketRetrievalSource, "to", bucketRetrievalSource);
+      }
 
       if (lastWatcherTask) {
         console.log("Cancel old bucket watcher");
@@ -360,7 +362,13 @@ function* handleSetMapping(
     return;
   }
 
-  if (showLoadingIndicator) {
+  const visibleSegmentationLayerName = yield* select(
+    (state) => getVisibleSegmentationLayer(state)?.name,
+  );
+  if (showLoadingIndicator && layerName === visibleSegmentationLayerName) {
+    // Only show the message if the mapping belongs to the currently visible
+    // segmentation layer. Otherwise, the message would stay as long as the
+    // actual layer not visible.
     message.loading({
       content: "Activating Mapping",
       key: MAPPING_MESSAGE_KEY,
@@ -455,6 +463,7 @@ function* updateLocalHdf5Mapping(
           annotation.tracingStore.url,
           editableMapping.tracingId,
           Array.from(newSegmentIds),
+          annotation.version,
         )
       : yield* call(
           getAgglomeratesForSegmentsFromDatastore,

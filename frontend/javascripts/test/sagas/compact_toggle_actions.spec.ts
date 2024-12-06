@@ -54,7 +54,7 @@ const treeGroups: TreeGroup[] = [
   },
 ];
 const flycamMock = {} as any as Flycam;
-
+const tracingId = "someTracingId";
 const createState = (trees: Tree[], _treeGroups: TreeGroup[]): OxalisState => ({
   ...defaultState,
   tracing: {
@@ -62,8 +62,7 @@ const createState = (trees: Tree[], _treeGroups: TreeGroup[]): OxalisState => ({
     skeleton: {
       additionalAxes: [],
       createdTimestamp: 0,
-      version: 0,
-      tracingId: "tracingId",
+      tracingId,
       boundingBox: null,
       userBoundingBoxes: [],
       type: "skeleton",
@@ -119,7 +118,7 @@ function _updateTreeVisibility(treeId: number, isVisible: boolean) {
     treeId,
     isVisible,
   } as any as Tree;
-  return updateTreeVisibility(tree);
+  return updateTreeVisibility(tree, tracingId);
 }
 
 function getActions(initialState: OxalisState, newState: OxalisState) {
@@ -163,7 +162,7 @@ test("compactUpdateActions should compact when toggling all trees", (t) => {
   );
   const [compactedActions] = getActions(allVisible, testState);
   // Root group should be toggled
-  t.deepEqual(compactedActions, [updateTreeGroupVisibility(undefined, false)]);
+  t.deepEqual(compactedActions, [updateTreeGroupVisibility(undefined, false, tracingId)]);
 });
 test("compactUpdateActions should compact when toggling a group", (t) => {
   // Let's toggle group 3 (which contains group 4)
@@ -179,7 +178,7 @@ test("compactUpdateActions should compact when toggling a group", (t) => {
     treeGroups,
   );
   const [compactedActions] = getActions(allVisible, testState);
-  t.deepEqual(compactedActions, [updateTreeGroupVisibility(3, false)]);
+  t.deepEqual(compactedActions, [updateTreeGroupVisibility(3, false, tracingId)]);
 });
 test("compactUpdateActions should compact when toggling a group except for one tree", (t) => {
   // Let's make all trees invisible except for tree 3. Compaction should yield a toggle-root and toggle 3 action
@@ -196,7 +195,7 @@ test("compactUpdateActions should compact when toggling a group except for one t
   );
   const [compactedActions] = getActions(allVisible, testState);
   t.deepEqual(compactedActions, [
-    updateTreeGroupVisibility(undefined, false),
+    updateTreeGroupVisibility(undefined, false, tracingId),
     _updateTreeVisibility(3, true),
   ]);
 });

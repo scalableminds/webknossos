@@ -13,7 +13,7 @@ import {
   needsLocalHdf5Mapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { parseMaybe } from "libs/utils";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
 import ByteArraysToLz4Base64Worker from "oxalis/workers/byte_arrays_to_lz4_base64.worker";
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
@@ -198,7 +198,7 @@ export async function requestFromStore(
   const magInfo = getMagInfo(layerInfo.resolutions);
   const version =
     !isVolumeFallback && isSegmentation && maybeVolumeTracing != null
-      ? maybeVolumeTracing.version
+      ? state.tracing.version
       : null;
   const bucketInfo = batch.map((zoomedAddress) =>
     createRequestBucketInfo(
@@ -273,7 +273,7 @@ function sliceBufferIntoPieces(
 
 export async function createCompressedUpdateBucketActions(
   batch: Array<DataBucket>,
-): Promise<UpdateAction[]> {
+): Promise<UpdateActionWithoutIsolationRequirement[]> {
   return _.flatten(
     await Promise.all(
       _.chunk(batch, COMPRESSION_BATCH_SIZE).map(async (batchSubset) => {
@@ -286,7 +286,7 @@ export async function createCompressedUpdateBucketActions(
         return compressedBase64Strings.map((compressedBase64, index) => {
           const bucket = batchSubset[index];
           const bucketInfo = createSendBucketInfo(bucket.zoomedAddress, bucket.cube.magInfo);
-          return updateBucket(bucketInfo, compressedBase64);
+          return updateBucket(bucketInfo, compressedBase64, bucket.getTracingId());
         });
       }),
     ),

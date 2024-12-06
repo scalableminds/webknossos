@@ -44,6 +44,9 @@ trait RedisTemporaryStore extends LazyLogging {
       r.keys(pattern).map(_.flatten).getOrElse(List())
     }
 
+  def insertKey(id: String, expirationOpt: Option[FiniteDuration] = None): Fox[Unit] =
+    insert(id, "", expirationOpt)
+
   def insert(id: String, value: String, expirationOpt: Option[FiniteDuration] = None): Fox[Unit] =
     withExceptionHandler {
       expirationOpt

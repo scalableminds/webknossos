@@ -9,10 +9,7 @@ import type {
   MeshInformation,
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
-import type {
-  SkeletonTracingStats,
-  TracingStats,
-} from "oxalis/model/accessors/annotation_accessor";
+import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
 import type {
   Vector3,
   Vector6,
@@ -387,6 +384,10 @@ export enum TracingTypeEnum {
   volume = "volume",
   hybrid = "hybrid",
 }
+export enum AnnotationLayerType {
+  Skeleton = "Skeleton",
+  Volume = "Volume",
+}
 export type TracingType = keyof typeof TracingTypeEnum;
 export type APITaskType = {
   readonly id: string;
@@ -470,12 +471,11 @@ export type APITask = {
 export type AnnotationLayerDescriptor = {
   name: string;
   tracingId: string;
-  typ: "Skeleton" | "Volume";
-  stats: TracingStats | EmptyObject;
+  typ: AnnotationLayerType;
 };
-export type EditableLayerProperties = Partial<{
+export type EditableLayerProperties = {
   name: string;
-}>;
+};
 export type APIAnnotationInfo = {
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
   readonly datasetId: string;
@@ -487,7 +487,7 @@ export type APIAnnotationInfo = {
   readonly name: string;
   // Not used by the front-end anymore, but the
   // backend still serves this for backward-compatibility reasons.
-  readonly stats?: SkeletonTracingStats | EmptyObject;
+  readonly stats?: TracingStats | EmptyObject | null | undefined;
   readonly state: string;
   readonly isLockedByOwner: boolean;
   readonly tags: Array<string>;
@@ -574,8 +574,21 @@ export type APITimeTrackingPerAnnotation = {
   task: string | undefined;
   projectName: string | undefined;
   timeMillis: number;
-  annotationLayerStats: Array<TracingStats>;
+  annotationLayerStats: TracingStats;
 };
+type APITracingStoreAnnotationLayer = {
+  readonly tracingId: string;
+  readonly name: string;
+  readonly type: AnnotationLayerType;
+};
+
+export type APITracingStoreAnnotation = {
+  readonly description: string;
+  readonly version: number;
+  readonly earliestAccessibleVersion: number;
+  readonly annotationLayers: APITracingStoreAnnotationLayer[];
+};
+
 export type APITimeTrackingPerUser = {
   user: APIUserCompact & {
     email: string;
@@ -840,7 +853,6 @@ export type ServerTracingBase = {
   editPositionAdditionalCoordinates: AdditionalCoordinate[] | null;
   editRotation: Point3;
   error?: string;
-  version: number;
   zoomLevel: number;
   additionalAxes: ServerAdditionalAxis[];
 };
@@ -883,12 +895,11 @@ export type ServerVolumeTracing = ServerTracingBase & {
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
 export type ServerEditableMapping = {
   createdTimestamp: number;
-  version: number;
-  mappingName: string;
   baseMappingName: string;
   // The id of the volume tracing the editable mapping belongs to
   tracingId: string;
 };
+
 export type APIMeshFile = {
   meshFileName: string;
   mappingName?: string | null | undefined;

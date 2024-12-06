@@ -10,7 +10,6 @@ import {
   RestrictMagnificationSlider,
 } from "dashboard/advanced_dataset/create_explorative_modal";
 import Store, { type Tracing } from "oxalis/store";
-import { addAnnotationLayer } from "admin/admin_rest_api";
 import {
   getSomeMagInfoForDataset,
   getLayerByName,
@@ -24,9 +23,12 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import messages from "messages";
 import InputComponent from "oxalis/view/components/input_component";
-import { api } from "oxalis/singletons";
+import { api, Model } from "oxalis/singletons";
 import Toast from "libs/toast";
 import { MappingStatusEnum } from "oxalis/constants";
+import { pushSaveQueueTransactionIsolated } from "oxalis/model/actions/save_actions";
+import { useDispatch } from "react-redux";
+import { addLayerToAnnotation } from "oxalis/model/sagas/update_actions";
 
 export type ValidationResult = { isValid: boolean; message: string };
 export function checkForLayerNameDuplication(
@@ -114,6 +116,7 @@ export default function AddVolumeLayerModal({
   const [selectedSegmentationLayerName, setSelectedSegmentationLayerName] = useState<
     string | undefined
   >(preselectedLayerName);
+  const dispatch = useDispatch();
   const allReadableLayerNames = useMemo(
     () => getAllReadableLayerNames(dataset, tracing),
     [dataset, tracing],
@@ -171,15 +174,20 @@ export default function AddVolumeLayerModal({
     const maxMagAllowed = Math.max(...magInfo.getMagByIndexOrThrow(magIndices[1]));
 
     if (selectedSegmentationLayerName == null) {
-      await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
-        typ: "Volume",
-        name: newLayerName,
-        fallbackLayerName: undefined,
-        magRestrictions: {
-          min: minMagAllowed,
-          max: maxMagAllowed,
-        },
-      });
+      dispatch(
+        pushSaveQueueTransactionIsolated(
+          addLayerToAnnotation({
+            typ: "Volume",
+            name: newLayerName,
+            fallbackLayerName: undefined,
+            magRestrictions: {
+              min: minMagAllowed,
+              max: maxMagAllowed,
+            },
+          }),
+        ),
+      );
+      await Model.ensureSavedState();
     } else {
       if (selectedSegmentationLayer == null) {
         throw new Error("Segmentation layer is null");
@@ -198,16 +206,21 @@ export default function AddVolumeLayerModal({
         maybeMappingName = mappingInfo.mappingName;
       }
 
-      await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
-        typ: "Volume",
-        name: newLayerName,
-        fallbackLayerName,
-        magRestrictions: {
-          min: minMagAllowed,
-          max: maxMagAllowed,
-        },
-        mappingName: maybeMappingName,
-      });
+      dispatch(
+        pushSaveQueueTransactionIsolated(
+          addLayerToAnnotation({
+            typ: "Volume",
+            name: newLayerName,
+            fallbackLayerName,
+            magRestrictions: {
+              min: minMagAllowed,
+              max: maxMagAllowed,
+            },
+            mappingName: maybeMappingName,
+          }),
+        ),
+      );
+      await Model.ensureSavedState();
     }
 
     await api.tracing.hardReload();

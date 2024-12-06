@@ -2,14 +2,13 @@ package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-
-import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.AnnotationInformationHandlerSelector
 import models.user.User
 import net.liftweb.common.Full
 import com.scalableminds.util.objectid.ObjectId
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class AnnotationInformationProvider @Inject()(

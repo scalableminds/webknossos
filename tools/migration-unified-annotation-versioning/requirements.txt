@@ -1,0 +1,6 @@
+grpcio
+argparse
+psycopg2
+protobuf
+rich
+msgspec

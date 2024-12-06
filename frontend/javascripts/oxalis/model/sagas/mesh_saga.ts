@@ -82,6 +82,7 @@ import type { FlycamAction } from "../actions/flycam_actions";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import type { BufferGeometryWithInfo } from "oxalis/controller/segment_mesh_controller";
 import { WkDevFlags } from "oxalis/api/wk_dev";
+import { ensureSceneControllerReady, ensureWkReady } from "./ready_sagas";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
@@ -673,7 +674,7 @@ function* _refreshMeshWithMap(
 
 // Avoid redundant fetches of mesh files for the same layer by
 // storing Deferreds per layer lazily.
-const fetchDeferredsPerLayer: Record<string, Deferred<Array<APIMeshFile>, unknown>> = {};
+let fetchDeferredsPerLayer: Record<string, Deferred<Array<APIMeshFile>, unknown>> = {};
 function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   const { segmentationLayer, dataset, mustRequest, autoActivate, callback } = action;
 
@@ -1277,13 +1278,14 @@ function* handleBatchSegmentColorChange(
 }
 
 export default function* meshSaga(): Saga<void> {
+  fetchDeferredsPerLayer = {};
   // Buffer actions since they might be dispatched before WK_READY
   const loadAdHocMeshActionChannel = yield* actionChannel("LOAD_AD_HOC_MESH_ACTION");
   const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
   const maybeFetchMeshFilesActionChannel = yield* actionChannel("MAYBE_FETCH_MESH_FILES");
 
-  yield* take("SCENE_CONTROLLER_READY");
-  yield* take("WK_READY");
+  yield* call(ensureSceneControllerReady);
+  yield* call(ensureWkReady);
   yield* takeEvery(maybeFetchMeshFilesActionChannel, maybeFetchMeshFiles);
   yield* takeEvery(loadAdHocMeshActionChannel, loadAdHocMeshFromAction);
   yield* takeEvery(loadPrecomputedMeshActionChannel, loadPrecomputedMesh);

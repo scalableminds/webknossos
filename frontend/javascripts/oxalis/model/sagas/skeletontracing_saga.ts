@@ -14,7 +14,7 @@ import {
   race,
 } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
 import { TreeTypeEnum } from "oxalis/constants";
 import {
   createEdge,
@@ -27,7 +27,7 @@ import {
   updateTreeEdgesVisibility,
   updateNode,
   updateSkeletonTracing,
-  updateUserBoundingBoxes,
+  updateUserBoundingBoxesInSkeletonTracing,
   updateTree,
   updateTreeGroups,
 } from "oxalis/model/sagas/update_actions";
@@ -250,9 +250,7 @@ function* getAgglomerateSkeletonTracing(
   const annotation = yield* select((state) => state.tracing);
   const layerInfo = getLayerByName(dataset, layerName);
 
-  const editableMapping = annotation.mappings.find(
-    (mapping) => mapping.mappingName === mappingName,
-  );
+  const editableMapping = annotation.mappings.find((mapping) => mapping.tracingId === mappingName);
 
   try {
     let nmlProtoBuffer;
@@ -481,10 +479,11 @@ export function* watchSkeletonTracingAsync(): Saga<void> {
 }
 
 function* diffNodes(
+  tracingId: string,
   prevNodes: NodeMap,
   nodes: NodeMap,
   treeId: number,
-): Generator<UpdateAction, void, void> {
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevNodes === nodes) return;
   const {
     onlyA: deletedNodeIds,
@@ -493,12 +492,12 @@ function* diffNodes(
   } = diffDiffableMaps(prevNodes, nodes);
 
   for (const nodeId of deletedNodeIds) {
-    yield deleteNode(treeId, nodeId);
+    yield deleteNode(treeId, nodeId, tracingId);
   }
 
   for (const nodeId of addedNodeIds) {
     const node = nodes.getOrThrow(nodeId);
-    yield createNode(treeId, node);
+    yield createNode(treeId, node, tracingId);
   }
 
   for (const nodeId of changedNodeIds) {
@@ -506,7 +505,7 @@ function* diffNodes(
     const prevNode = prevNodes.getOrThrow(nodeId);
 
     if (updateNodePredicate(prevNode, node)) {
-      yield updateNode(treeId, node);
+      yield updateNode(treeId, node, tracingId);
     }
   }
 }
@@ -516,19 +515,20 @@ function updateNodePredicate(prevNode: Node, node: Node): boolean {
 }
 
 function* diffEdges(
+  tracingId: string,
   prevEdges: EdgeCollection,
   edges: EdgeCollection,
   treeId: number,
-): Generator<UpdateAction, void, void> {
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevEdges === edges) return;
   const { onlyA: deletedEdges, onlyB: addedEdges } = diffEdgeCollections(prevEdges, edges);
 
   for (const edge of deletedEdges) {
-    yield deleteEdge(treeId, edge.source, edge.target);
+    yield deleteEdge(treeId, edge.source, edge.target, tracingId);
   }
 
   for (const edge of addedEdges) {
-    yield createEdge(treeId, edge.source, edge.target);
+    yield createEdge(treeId, edge.source, edge.target, tracingId);
   }
 }
 
@@ -559,9 +559,10 @@ function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
 }
 
 export function* diffTrees(
+  tracingId: string,
   prevTrees: TreeMap,
   trees: TreeMap,
-): Generator<UpdateAction, void, void> {
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevTrees === trees) return;
   const {
     onlyA: deletedTreeIds,
@@ -574,16 +575,16 @@ export function* diffTrees(
 
   for (const treeId of deletedTreeIds) {
     const prevTree = prevTrees[treeId];
-    yield* diffNodes(prevTree.nodes, new DiffableMap(), treeId);
-    yield* diffEdges(prevTree.edges, new EdgeCollection(), treeId);
-    yield deleteTree(treeId);
+    yield* diffNodes(tracingId, prevTree.nodes, new DiffableMap(), treeId);
+    yield* diffEdges(tracingId, prevTree.edges, new EdgeCollection(), treeId);
+    yield deleteTree(treeId, tracingId);
   }
 
   for (const treeId of addedTreeIds) {
     const tree = trees[treeId];
-    yield createTree(tree);
-    yield* diffNodes(new DiffableMap(), tree.nodes, treeId);
-    yield* diffEdges(new EdgeCollection(), tree.edges, treeId);
+    yield createTree(tree, tracingId);
+    yield* diffNodes(tracingId, new DiffableMap(), tree.nodes, treeId);
+    yield* diffEdges(tracingId, new EdgeCollection(), tree.edges, treeId);
   }
 
   for (const treeId of bothTreeIds) {
@@ -591,25 +592,25 @@ export function* diffTrees(
     const prevTree: Tree = prevTrees[treeId];
 
     if (tree !== prevTree) {
-      yield* diffNodes(prevTree.nodes, tree.nodes, treeId);
-      yield* diffEdges(prevTree.edges, tree.edges, treeId);
+      yield* diffNodes(tracingId, prevTree.nodes, tree.nodes, treeId);
+      yield* diffEdges(tracingId, prevTree.edges, tree.edges, treeId);
 
       if (updateTreePredicate(prevTree, tree)) {
-        yield updateTree(tree);
+        yield updateTree(tree, tracingId);
       }
 
       if (prevTree.isVisible !== tree.isVisible) {
-        yield updateTreeVisibility(tree);
+        yield updateTreeVisibility(tree, tracingId);
       }
       if (prevTree.edgesAreVisible !== tree.edgesAreVisible) {
-        yield updateTreeEdgesVisibility(tree);
+        yield updateTreeEdgesVisibility(tree, tracingId);
       }
     }
   }
 }
 
-export const cachedDiffTrees = memoizeOne((prevTrees: TreeMap, trees: TreeMap) =>
-  Array.from(diffTrees(prevTrees, trees)),
+export const cachedDiffTrees = memoizeOne((tracingId: string, prevTrees: TreeMap, trees: TreeMap) =>
+  Array.from(diffTrees(tracingId, prevTrees, trees)),
 );
 
 export function* diffSkeletonTracing(
@@ -617,14 +618,18 @@ export function* diffSkeletonTracing(
   skeletonTracing: SkeletonTracing,
   prevFlycam: Flycam,
   flycam: Flycam,
-): Generator<UpdateAction, void, void> {
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevSkeletonTracing !== skeletonTracing) {
-    for (const action of cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees)) {
+    for (const action of cachedDiffTrees(
+      skeletonTracing.tracingId,
+      prevSkeletonTracing.trees,
+      skeletonTracing.trees,
+    )) {
       yield action;
     }
 
     if (prevSkeletonTracing.treeGroups !== skeletonTracing.treeGroups) {
-      yield updateTreeGroups(skeletonTracing.treeGroups);
+      yield updateTreeGroups(skeletonTracing.treeGroups, skeletonTracing.tracingId);
     }
   }
 
@@ -639,7 +644,10 @@ export function* diffSkeletonTracing(
   }
 
   if (!_.isEqual(prevSkeletonTracing.userBoundingBoxes, skeletonTracing.userBoundingBoxes)) {
-    yield updateUserBoundingBoxes(skeletonTracing.userBoundingBoxes);
+    yield updateUserBoundingBoxesInSkeletonTracing(
+      skeletonTracing.userBoundingBoxes,
+      skeletonTracing.tracingId,
+    );
   }
 }
 export default [

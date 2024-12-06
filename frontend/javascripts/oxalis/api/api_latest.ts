@@ -7,7 +7,6 @@ import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_flow_types";
 import { InputKeyboardNoLoop } from "libs/input";
 import { M4x4, type Matrix4x4, V3, type Vector16 } from "libs/mjs";
-import type { Versions } from "oxalis/view/version_view";
 import {
   addTreesAndGroupsAction,
   setActiveNodeAction,
@@ -46,7 +45,6 @@ import {
   doWithToken,
   finishAnnotation,
   getMappingsForDatasetLayer,
-  downsampleSegmentation,
   sendAnalyticsEvent,
 } from "admin/admin_rest_api";
 import {
@@ -1114,7 +1112,7 @@ class TracingApi {
     newMaybeCompoundType: APICompoundType | null,
     newAnnotationId: string,
     newControlMode: ControlMode,
-    versions?: Versions,
+    version?: number | undefined | null,
     keepUrlState: boolean = false,
   ) {
     if (newControlMode === ControlModeEnum.VIEW)
@@ -1133,7 +1131,7 @@ class TracingApi {
         type: newControlMode,
       },
       false,
-      versions,
+      version,
     );
     Store.dispatch(discardSaveQueuesAction());
     Store.dispatch(wkReadyAction());
@@ -1508,27 +1506,6 @@ class TracingApi {
    */
   setVolumeTool(tool: AnnotationTool) {
     this.setAnnotationTool(tool);
-  }
-
-  /**
-   * Use this method to create a complete magnification pyramid by downsampling the lowest present mag (e.g., mag 1).
-     This method will save the current changes and then reload the page after the downsampling
-     has finished.
-     This function can only be used for non-tasks.
-      Note that this invoking this method will not block the UI. Thus, user actions can be performed during the
-     downsampling. The caller should prohibit this (e.g., by showing a not-closable modal during the process).
-   */
-  async downsampleSegmentation(volumeTracingId: string) {
-    const state = Store.getState();
-    const { annotationId, annotationType } = state.tracing;
-
-    if (state.task != null) {
-      throw new Error("Cannot downsample segmentation for a task.");
-    }
-
-    await this.save();
-    await downsampleSegmentation(annotationId, annotationType, volumeTracingId);
-    await this.hardReload();
   }
 
   /**

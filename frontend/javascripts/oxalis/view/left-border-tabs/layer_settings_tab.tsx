@@ -127,10 +127,10 @@ import defaultState from "oxalis/default_state";
 import {
   getTransformsForLayerOrNull,
   hasDatasetTransforms,
-  haveAllLayersSameRotation,
+  doAllLayersHaveTheSameRotation,
   getTransformsForLayer,
   isIdentityTransform,
-  isLayerWithoutTransformConfigSupport,
+  isLayerWithoutTransformationConfigSupport,
 } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
 import {
   invertTransform,
@@ -226,7 +226,7 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
   );
   const showIcon = useSelector((state: OxalisState) => hasDatasetTransforms(state.dataset));
   const doAllLayersHaveTheSameTransform = useSelector((state: OxalisState) =>
-    haveAllLayersSameRotation(state.dataset.dataSource.dataLayers),
+    doAllLayersHaveTheSameRotation(state.dataset.dataSource.dataLayers),
   );
   if (!showIcon) {
     return null;
@@ -245,25 +245,25 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
   };
 
   const isDisabled =
-    (isRenderedNatively && !doAllLayersHaveTheSameTransform) ||
     // Cannot toggle transforms on a layer into whose coordinate system other layer transform.
-    isLayerWithoutTransformConfigSupport(layer);
-  // Cannot toggle transformations on a skeleton layer as a skeleton layer cannot have transformations.
-  // Therefore, it cannot be used as a reference for other layers.
-  // The same goes for segmentation layers without fallback.
-  // Such layers can only transform according to transformations of other layers.
+    (isRenderedNatively && !doAllLayersHaveTheSameTransform) ||
+    // Cannot toggle transformations on a skeleton layer as a skeleton layer cannot have transformations.
+    // Therefore, it cannot be used as a reference for other layers.
+    // The same goes for segmentation layers without fallback.
+    // Such layers can only transform according to transformations of other layers.
+    isLayerWithoutTransformationConfigSupport(layer);
 
   const toggleLayerTransforms = () => {
     const state = Store.getState();
     // Get transform of layer. null is passed as nativelyRenderedLayerName to
-    // get the layers transform even in case it is currently rendered natively.
-    const currentTransform = getTransformsForLayer(state.dataset, layer, null);
+    // get the layers transform even in case the is currently rendered natively.
+    const layersTransforms = getTransformsForLayer(state.dataset, layer, null);
 
     // In case the layer is currently not rendered natively, the inverse of its transformation is going to be applied.
     // Therefore, we need to invert the transformation to get the correct new position.
     const transformWhichWillBeApplied = !isRenderedNatively
-      ? invertTransform(currentTransform)
-      : currentTransform;
+      ? invertTransform(layersTransforms)
+      : layersTransforms;
 
     const currentPosition = getPosition(state.flycam);
     const newPosition = transformPointUnscaled(transformWhichWillBeApplied)(currentPosition);

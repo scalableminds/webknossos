@@ -262,12 +262,11 @@ class PlaneMaterialFactory {
         value: 0,
       };
       const layer = getLayerByName(dataset, dataLayer.name);
-      const res = invertAndTranspose(
-        getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
-      );
 
       this.uniforms[`${layerName}_transform`] = {
-        value: res,
+        value: invertAndTranspose(
+          getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
+        ),
       };
       this.uniforms[`${layerName}_has_transform`] = {
         value: !_.isEqual(

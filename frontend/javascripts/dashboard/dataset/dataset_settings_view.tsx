@@ -45,7 +45,7 @@ import { defaultContext } from "@tanstack/react-query";
 import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 import type { DatasetRotation } from "./dataset_rotation_form_item";
 import {
-  haveAllLayersSameRotation,
+  doAllLayersHaveTheSameRotation,
   getRotationFromTransformation,
 } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
 
@@ -200,7 +200,8 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       form.setFieldsValue({
         dataSource,
       });
-      if (haveAllLayersSameRotation(dataSource.dataLayers)) {
+      // Retrieve the initial dataset rotation settings from the data source config.
+      if (doAllLayersHaveTheSameRotation(dataSource.dataLayers)) {
         const firstLayerTransformations = dataSource.dataLayers[0].coordinateTransformations;
         let initialDatasetRotationSettings: DatasetRotation;
         if (!firstLayerTransformations || firstLayerTransformations.length !== 5) {

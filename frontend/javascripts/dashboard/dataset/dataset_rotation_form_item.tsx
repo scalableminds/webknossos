@@ -10,7 +10,7 @@ import {
   IDENTITY_TRANSFORM,
   getTranslationBackToOriginalPosition,
   AXIS_TO_TRANSFORM_INDEX,
-  haveAllLayersSameRotation,
+  doAllLayersHaveTheSameRotation,
 } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 
@@ -43,12 +43,16 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
     () => getDatasetBoundingBoxFromLayers(dataLayers),
     [dataLayers],
   );
-  // Update the transformations in case the user changes the dataset bounding box
+  // Update the transformations in case the user changes the dataset bounding box.
   useEffect(() => {
-    if (datasetBoundingBox == null || dataLayers[0].coordinateTransformations?.length !== 5) {
+    if (
+      datasetBoundingBox == null ||
+      dataLayers[0].coordinateTransformations?.length !== 5 ||
+      !form
+    ) {
       return;
     }
-    const rotationValues = form?.getFieldValue(["datasetRotation"]);
+    const rotationValues = form.getFieldValue(["datasetRotation"]);
     const transformations = [
       getTranslationToOrigin(datasetBoundingBox),
       getRotationMatrixAroundAxis("x", rotationValues["x"]),
@@ -62,19 +66,22 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
         coordinateTransformations: transformations,
       };
     });
-    form?.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
+    form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
   }, [datasetBoundingBox, dataLayers, form]);
 
   const setMatrixRotationsForAllLayer = useCallback(
     (rotationInDegrees: number): void => {
-      const rotationInRadians = rotationInDegrees * (Math.PI / 180);
-      const rotationMatrix = getRotationMatrixAroundAxis(axis, rotationInRadians);
-      const dataLayers: APIDataLayer[] = form?.getFieldValue(["dataSource", "dataLayers"]);
+      if (!form) {
+        return;
+      }
+      const dataLayers: APIDataLayer[] = form.getFieldValue(["dataSource", "dataLayers"]);
       const datasetBoundingBox = getDatasetBoundingBoxFromLayers(dataLayers);
       if (datasetBoundingBox == null) {
         return;
       }
 
+      const rotationInRadians = rotationInDegrees * (Math.PI / 180);
+      const rotationMatrix = getRotationMatrixAroundAxis(axis, rotationInRadians);
       const dataLayersWithUpdatedTransforms: APIDataLayer[] = dataLayers.map((layer) => {
         let transformations = layer.coordinateTransformations;
         if (transformations == null || transformations.length !== 5) {
@@ -92,7 +99,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
           coordinateTransformations: transformations,
         };
       });
-      form?.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
+      form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
     },
     [axis, form],
   );
@@ -112,7 +119,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
         <FormItem
           name={["datasetRotation", axis]}
           colon={false}
-          label=" " /* Empty label is useful for correct formatting*/
+          label=" " /* Whitespace label is needed for correct formatting*/
         >
           <InputNumber
             min={0}
@@ -141,7 +148,7 @@ export const AxisRotationSettingForDataset: React.FC<AxisRotationSettingForDatas
   form,
 }: AxisRotationSettingForDatasetProps) => {
   const dataLayers: APIDataLayer[] = form?.getFieldValue(["dataSource", "dataLayers"]);
-  const isRotationOnly = useMemo(() => haveAllLayersSameRotation(dataLayers), [dataLayers]);
+  const isRotationOnly = useMemo(() => doAllLayersHaveTheSameRotation(dataLayers), [dataLayers]);
 
   if (!isRotationOnly) {
     return (
@@ -158,7 +165,7 @@ export const AxisRotationSettingForDataset: React.FC<AxisRotationSettingForDatas
               <li>Translation back to the original position</li>
             </ul>
             To easily enable this setting, delete all coordinateTransformations of all layers in the
-            advanced tab, save and reload.
+            advanced tab, save and reload the dataset settings.
           </div>
         }
       >

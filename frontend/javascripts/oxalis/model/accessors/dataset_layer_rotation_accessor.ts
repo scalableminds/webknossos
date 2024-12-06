@@ -37,6 +37,7 @@ export const IDENTITY_TRANSFORM: CoordinateTransformation = {
   matrix: IDENTITY_MATRIX,
 };
 
+// cf. https://en.wikipedia.org/wiki/Rotation_matrix#In_three_dimensions
 const sinusLocationOfRotationInMatrix = {
   x: [2, 1],
   y: [0, 2],
@@ -77,7 +78,7 @@ export function getRotationFromTransformation(
   const sinOfAngle = matrix[sinusLocation[0]][sinusLocation[1]];
   const cosOfAngle = matrix[cosineLocation[0]][cosineLocation[1]];
   const rotation =
-    Math.abs(cosOfAngle) > 1e-6
+    Math.abs(cosOfAngle) > 1e-6 // Avoid division by zero
       ? Math.atan2(sinOfAngle, cosOfAngle)
       : sinOfAngle > 0
         ? Math.PI / 2
@@ -92,7 +93,7 @@ export function getTranslationToOrigin(bbox: BoundingBox): AffineTransformation 
   const center = bbox.getCenter();
   const translationMatrix = new THREE.Matrix4()
     .makeTranslation(-center[0], -center[1], -center[2])
-    .transpose();
+    .transpose(); // Column-major to row-major
   return { type: "affine", matrix: flatToNestedMatrix(translationMatrix.toArray()) };
 }
 
@@ -100,7 +101,7 @@ export function getTranslationBackToOriginalPosition(bbox: BoundingBox): AffineT
   const center = bbox.getCenter();
   const translationMatrix = new THREE.Matrix4()
     .makeTranslation(center[0], center[1], center[2])
-    .transpose();
+    .transpose(); // Column-major to row-major
   return { type: "affine", matrix: flatToNestedMatrix(translationMatrix.toArray()) };
 }
 export function getRotationMatrixAroundAxis(
@@ -109,11 +110,36 @@ export function getRotationMatrixAroundAxis(
 ): AffineTransformation {
   const euler = new THREE.Euler();
   euler[axis] = angleInRadians;
-  const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(euler).transpose();
+  const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(euler).transpose(); // Column-major to row-major
   const matrixWithoutNearlyZeroValues = rotationMatrix
     .toArray()
+    // Avoid nearly zero values due to floating point arithmetic inaccuracies.
     .map((value) => (Math.abs(value) < Number.EPSILON ? 0 : value)) as Matrix4x4;
   return { type: "affine", matrix: flatToNestedMatrix(matrixWithoutNearlyZeroValues) };
+}
+
+function memoizeWithThreeKeys<A, B, C, T>(fn: (a: A, b: B, c: C) => T) {
+  const map = new MultiKeyMap<A | B | C, T, [A, B, C]>();
+  return (a: A, b: B, c: C): T => {
+    let res = map.get([a, b, c]);
+    if (res === undefined) {
+      res = fn(a, b, c);
+      map.set([a, b, c], res);
+    }
+    return res;
+  };
+}
+
+function memoizeWithTwoKeys<A, B, T>(fn: (a: A, b: B) => T) {
+  const map = new MultiKeyMap<A | B, T, [A, B]>();
+  return (a: A, b: B): T => {
+    let res = map.get([a, b]);
+    if (res === undefined) {
+      res = fn(a, b);
+      map.set([a, b], res);
+    }
+    return res;
+  };
 }
 
 // Returns the transforms (if they exist) for a layer as
@@ -150,7 +176,7 @@ export const getOriginalTransformsForLayerOrNull = memoizeWithTwoKeys(
   _getOriginalTransformsForLayerOrNull,
 );
 
-export function isLayerWithoutTransformConfigSupport(layer: APIDataLayer | APISkeletonLayer) {
+export function isLayerWithoutTransformationConfigSupport(layer: APIDataLayer | APISkeletonLayer) {
   return (
     layer.category === "skeleton" || (layer.category === "segmentation" && !layer.fallbackLayer)
   );
@@ -161,7 +187,7 @@ function _getTransformsForLayerOrNull(
   layer: APIDataLayer | APISkeletonLayer,
   nativelyRenderedLayerName: string | null,
 ): Transform | null {
-  if (isLayerWithoutTransformConfigSupport(layer)) {
+  if (isLayerWithoutTransformationConfigSupport(layer)) {
     return getTransformsForLayerWithoutTransformationConfigOrNull(
       dataset,
       nativelyRenderedLayerName,
@@ -193,30 +219,6 @@ function _getTransformsForLayerOrNull(
   return chainTransforms(layerTransforms, inverseNativeTransforms);
 }
 
-function memoizeWithThreeKeys<A, B, C, T>(fn: (a: A, b: B, c: C) => T) {
-  const map = new MultiKeyMap<A | B | C, T, [A, B, C]>();
-  return (a: A, b: B, c: C): T => {
-    let res = map.get([a, b, c]);
-    if (res === undefined) {
-      res = fn(a, b, c);
-      map.set([a, b, c], res);
-    }
-    return res;
-  };
-}
-
-function memoizeWithTwoKeys<A, B, T>(fn: (a: A, b: B) => T) {
-  const map = new MultiKeyMap<A | B, T, [A, B]>();
-  return (a: A, b: B): T => {
-    let res = map.get([a, b]);
-    if (res === undefined) {
-      res = fn(a, b);
-      map.set([a, b], res);
-    }
-    return res;
-  };
-}
-
 export const getTransformsForLayerOrNull = memoizeWithThreeKeys(_getTransformsForLayerOrNull);
 export function getTransformsForLayer(
   dataset: APIDataset,
@@ -237,28 +239,26 @@ function _getTransformsForLayerWithoutTransformationConfigOrNull(
   nativelyRenderedLayerName: string | null,
 ): Transform | null {
   const layers = dataset.dataSource.dataLayers;
-  const doAllLayersHaveTheSameRotation = haveAllLayersSameRotation(layers);
+  const allLayersSameRotation = doAllLayersHaveTheSameRotation(layers);
   if (nativelyRenderedLayerName == null) {
     // No layer is requested to be rendered natively. -> We can use each layer's transforms as is.
-    if (!doAllLayersHaveTheSameRotation) {
+    if (!allLayersSameRotation) {
       // If the dataset's layers do not have a consistent transformation (which only rotates the dataset),
       // we cannot guess what transformation should be applied to the layer.
       // As skeleton layer and volume layer without fallback don't have a transforms property currently.
       return null;
     }
 
-    // The skeleton layer needs transformed just like the other layers. Thus, we simply use the first usable layer.
-    // Filtering for a layer that might actually have transforms prevents an infinite loop
-    // between cyclic calls of _getTransformsForLayerWithoutTransformationConfigOrNull and getTransformsForLayerOrNull.
+    // The skeleton layer / volume layer without fallback needs transformed just like the other layers.
+    // Thus, we simply use the first usable layer which supports transforms.
     const usableReferenceLayer = layers.find(
-      (layer) =>
-        layer.category === "color" || (layer.category === "segmentation" && layer.fallbackLayer),
+      (layer) => !isLayerWithoutTransformationConfigSupport(layer),
     );
     const someLayersTransformsMaybe = usableReferenceLayer
       ? getTransformsForLayerOrNull(dataset, usableReferenceLayer, nativelyRenderedLayerName)
       : null;
     return someLayersTransformsMaybe;
-  } else if (nativelyRenderedLayerName != null && doAllLayersHaveTheSameRotation) {
+  } else if (nativelyRenderedLayerName != null && allLayersSameRotation) {
     // If all layers have the same transformations and at least one is rendered natively, this means that all layer should be rendered natively.
     return null;
   }
@@ -303,7 +303,7 @@ function _getTransformsPerLayer(
   return transformsPerLayer;
 }
 
-export const getTransformsPerLayer = memoizeOne(_getTransformsPerLayer);
+export const getTransformsPerLayer = memoizeWithTwoKeys(_getTransformsPerLayer);
 
 export function getInverseSegmentationTransformer(
   state: OxalisState,
@@ -367,7 +367,7 @@ function isRotationOnly(transformation?: AffineTransformation) {
 /* This function checks if all layers have the same transformation settings that represent
  * a translation to the dataset center and a rotation around each axis and a translation back.
  * All together this makes 5 affine transformation matrices. */
-function _haveAllLayersSameRotation(dataLayers: Array<APIDataLayer>): boolean {
+function _doAllLayersHaveTheSameRotation(dataLayers: Array<APIDataLayer>): boolean {
   const firstDataLayerTransformations = dataLayers[0]?.coordinateTransformations;
   if (firstDataLayerTransformations == null || firstDataLayerTransformations.length === 0) {
     // No transformations in all layers compatible with setting a rotation for the whole dataset.
@@ -411,4 +411,4 @@ function _haveAllLayersSameRotation(dataLayers: Array<APIDataLayer>): boolean {
   return true;
 }
 
-export const haveAllLayersSameRotation = _.memoize(_haveAllLayersSameRotation);
+export const doAllLayersHaveTheSameRotation = _.memoize(_doAllLayersHaveTheSameRotation);

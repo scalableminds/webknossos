@@ -105,7 +105,7 @@ import {
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
 import { convertServerAdditionalAxesToFrontEnd } from "./model/reducers/reducer_helpers";
-import { haveAllLayersSameRotation } from "./model/accessors/dataset_layer_rotation_accessor";
+import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_rotation_accessor";
 import type { Mutable } from "types/globals";
 
 export const HANDLED_ERROR = "error_was_handled";
@@ -478,7 +478,7 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
 
   const originalLayers = dataset.dataSource.dataLayers;
   const newLayers = originalLayers.slice();
-  const doAllLayersHaveTheSameRotation = haveAllLayersSameRotation(originalLayers);
+  const allLayersSameRotation = doAllLayersHaveTheSameRotation(originalLayers);
 
   for (const tracing of tracings) {
     // The tracing always contains the layer information for the user segmentation.
@@ -497,7 +497,7 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
     const mags = tracing.mags || [];
     const tracingHasMagList = mags.length > 0;
     let coordinateTransformsMaybe = {};
-    if (doAllLayersHaveTheSameRotation) {
+    if (allLayersSameRotation) {
       coordinateTransformsMaybe = {
         coordinateTransformations: originalLayers?.[0].coordinateTransformations,
       };

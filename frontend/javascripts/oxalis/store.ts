@@ -339,9 +339,9 @@ export type DatasetConfiguration = {
   // layer cancel each other out.
   // If nativelyRenderedLayerName is null, all layers are rendered
   // as their transforms property signal it.
-  // Currently, the skeleton layer does not have transforms as a stored
-  // property. So, to render the skeleton layer natively, nativelyRenderedLayerName
-  // can be set to null.
+  // Currently, the skeleton layer and volume layer without fallback do not have transforms
+  // as a stored property. So, to render the skeleton layer natively,
+  // nativelyRenderedLayerName can be set to null.
   readonly nativelyRenderedLayerName: string | null;
 };
 

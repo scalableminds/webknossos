@@ -6,9 +6,7 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/24.11.1...HEAD)
-
-- The config option `googleAnalytics.trackingId` is no longer used and can be removed. [#8201](https://github.com/scalableminds/webknossos/pull/8201)
+[Commits](https://github.com/scalableminds/webknossos/compare/24.12.0...HEAD)
 - Removed support for HTTP API versions 3 and 4. [#8075](https://github.com/scalableminds/webknossos/pull/8075)
 
 ### Postgres Evolutions:

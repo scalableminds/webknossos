@@ -33,7 +33,11 @@ class DSMeshController @Inject()(
         urlOrHeaderToken(token, request)) {
         for {
           meshFiles <- meshFileService.exploreMeshFiles(organizationId, datasetDirectoryName, dataLayerName)
-        } yield Ok(Json.toJson(meshFiles))
+          neuroglancerMeshFiles <- meshFileService.exploreNeuroglancerPrecomputedMeshes(organizationId,
+                                                                                        datasetDirectoryName,
+                                                                                        dataLayerName)
+          allMeshFiles = meshFiles ++ neuroglancerMeshFiles
+        } yield Ok(Json.toJson(allMeshFiles))
       }
     }
 
@@ -70,11 +74,17 @@ class DSMeshController @Inject()(
             omitMissing = false,
             urlOrHeaderToken(token, request)
           )
-          chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(organizationId,
-                                                                        datasetDirectoryName,
-                                                                        dataLayerName,
-                                                                        request.body.meshFile,
-                                                                        segmentIds)
+          chunkInfos <- request.body.meshFileType match {
+            case Some("neuroglancerPrecomputed") =>
+              meshFileService.listMeshChunksForNeuroglancerPrecomputedMesh(request.body.meshFilePath,
+                                                                           request.body.segmentId)
+            case _ =>
+              meshFileService.listMeshChunksForSegmentsMerged(organizationId,
+                                                              datasetDirectoryName,
+                                                              dataLayerName,
+                                                              request.body.meshFile,
+                                                              segmentIds)
+          }
         } yield Ok(Json.toJson(chunkInfos))
       }
     }

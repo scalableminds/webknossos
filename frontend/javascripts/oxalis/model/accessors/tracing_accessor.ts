@@ -11,7 +11,7 @@ import type { ServerTracing, TracingType } from "types/api_flow_types";
 import { TracingTypeEnum } from "types/api_flow_types";
 import type { SaveQueueType } from "oxalis/model/actions/save_actions";
 import BoundingBox from "../bucket_data_handling/bounding_box";
-import { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 
 export function maybeGetSomeTracing(
   tracing: Tracing,

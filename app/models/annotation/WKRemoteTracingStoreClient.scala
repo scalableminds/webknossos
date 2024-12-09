@@ -37,12 +37,15 @@ class WKRemoteTracingStoreClient(
 
   private def baseInfo = s" Dataset: ${dataset.name} Tracingstore: ${tracingStore.url}"
 
-  def getSkeletonTracing(annotationLayer: AnnotationLayer, version: Option[Long]): Fox[FetchedAnnotationLayer] = {
+  def getSkeletonTracing(annotationId: ObjectId,
+                         annotationLayer: AnnotationLayer,
+                         version: Option[Long]): Fox[FetchedAnnotationLayer] = {
     logger.debug("Called to get SkeletonTracing." + baseInfo)
     for {
       _ <- bool2Fox(annotationLayer.typ == AnnotationLayerType.Skeleton) ?~> "annotation.download.fetch.notSkeleton"
       skeletonTracing <- rpc(s"${tracingStore.url}/tracings/skeleton/${annotationLayer.tracingId}")
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .addQueryString("annotationId" -> annotationId.toString)
         .addQueryStringOptional("version", version.map(_.toString))
         .withLongTimeout
         .getWithProtoResponse[SkeletonTracing](SkeletonTracing)
@@ -196,7 +199,8 @@ class WKRemoteTracingStoreClient(
     } yield tracingId
   }
 
-  def getVolumeTracing(annotationLayer: AnnotationLayer,
+  def getVolumeTracing(annotationId: ObjectId,
+                       annotationLayer: AnnotationLayer,
                        version: Option[Long] = None,
                        skipVolumeData: Boolean,
                        volumeDataZipFormat: VolumeDataZipFormat,
@@ -207,12 +211,14 @@ class WKRemoteTracingStoreClient(
       tracingId = annotationLayer.tracingId
       tracing <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId")
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .addQueryString("annotationId" -> annotationId.toString)
         .addQueryStringOptional("version", version.map(_.toString))
         .getWithProtoResponse[VolumeTracing](VolumeTracing)
       data <- Fox.runIf(!skipVolumeData) {
         rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataZip").withLongTimeout
           .addQueryString("token" -> RpcTokenHolder.webknossosToken)
           .addQueryString("volumeDataZipFormat" -> volumeDataZipFormat.toString)
+          .addQueryString("annotationId" -> annotationId.toString)
           .addQueryStringOptional("version", version.map(_.toString))
           .addQueryStringOptional("voxelSizeFactor", voxelSize.map(_.factor.toUriLiteral))
           .addQueryStringOptional("voxelSizeUnit", voxelSize.map(_.unit.toString))
@@ -223,7 +229,6 @@ class WKRemoteTracingStoreClient(
   }
 
   def getVolumeData(tracingId: String,
-                    version: Option[Long] = None,
                     volumeDataZipFormat: VolumeDataZipFormat,
                     voxelSize: Option[VoxelSize]): Fox[Array[Byte]] = {
     logger.debug("Called to get volume data." + baseInfo)
@@ -231,7 +236,6 @@ class WKRemoteTracingStoreClient(
       data <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataZip").withLongTimeout
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .addQueryString("volumeDataZipFormat" -> volumeDataZipFormat.toString)
-        .addQueryStringOptional("version", version.map(_.toString))
         .addQueryStringOptional("voxelSizeFactor", voxelSize.map(_.factor.toUriLiteral))
         .addQueryStringOptional("voxelSizeUnit", voxelSize.map(_.unit.toString))
         .getWithBytesResponse

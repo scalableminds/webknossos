@@ -1,6 +1,7 @@
 package com.scalableminds.util.geometry
 
 import com.scalableminds.util.tools.Math.ceilDiv
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Full
 import play.api.libs.json.{JsObject, Json}
 
@@ -76,7 +77,7 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
     Json.obj("topLeft" -> topLeft, "width" -> width, "height" -> height, "depth" -> depth)
 }
 
-object BoundingBox {
+object BoundingBox extends LazyLogging {
 
   import play.api.libs.json._
 
@@ -86,7 +87,8 @@ object BoundingBox {
   def empty: BoundingBox =
     BoundingBox(Vec3Int.zeros, 0, 0, 0)
 
-  def fromLiteral(s: String): Option[BoundingBox] =
+  def fromLiteral(s: String): Option[BoundingBox] = {
+    logger.info(f"[debug-regex]: matching $s as boundingbox")
     s match {
       case literalPattern(minX, minY, minZ, width, height, depth) =>
         try {
@@ -103,6 +105,7 @@ object BoundingBox {
       case _ =>
         None
     }
+  }
 
   def fromSQL(ints: List[Int]): Option[BoundingBox] =
     if (ints.length == 6)

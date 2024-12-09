@@ -3,8 +3,9 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr3
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayDataType, zarr3}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
+import com.typesafe.scalalogging.LazyLogging
 
-object Zarr3DataType extends ExtendedEnumeration {
+object Zarr3DataType extends ExtendedEnumeration with LazyLogging {
   type Zarr3DataType = Value
   val bool, int8, int16, int32, int64, uint8, uint16, uint32, uint64, float16, float32, float64, complex64, complex128,
   raw, extension = Value
@@ -14,12 +15,13 @@ object Zarr3DataType extends ExtendedEnumeration {
   override def fromString(s: String): Option[zarr3.Zarr3DataType.Value] = {
 
     val rawPattern = "(r\\d+)".r
-    super
-      .fromString(s)
-      .orElse(s match {
+    super.fromString(s).orElse {
+      logger.info(f"[debug-regex]: matching $s as Zarr3DataType")
+      s match {
         case rawPattern(_) => Some(Zarr3DataType.raw)
         case _             => None
-      })
+      }
+    }
   }
 
   def toArrayDataType(dataType: Zarr3DataType): ArrayDataType =

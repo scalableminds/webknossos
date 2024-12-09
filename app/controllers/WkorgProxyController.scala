@@ -58,6 +58,7 @@ class WkorgProxyController @Inject()(ws: WSClient,
 
   private def matchesPageWithWildcard(routeWithWildcard: String, actualRequest: String): Boolean = {
     val wildcardRegex = "^" + Regex.quote(routeWithWildcard).replace("*", "\\E.*\\Q") + "$"
+    logger.info(f"[debug-regex]: matching $actualRequest against regex $wildcardRegex")
     actualRequest.matches(wildcardRegex)
   }
 

@@ -354,9 +354,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                                      typ: UploadedDataSourceType.Value): Fox[Unit] =
     for {
       _ <- Fox.runIf(typ == UploadedDataSourceType.ZARR)(addLayerAndMagDirIfMissing(path, FILENAME_DOT_ZARRAY).toFox)
-      layers <- PathUtils.listDirectories(path, silent = true).toFox
-      _ <- bool2Fox(layers.nonEmpty) ~> s"Could not find a layer in $path"
-      explored <- exploreLocalLayerService.exploreLocal(path, dataSourceId, layers.head.getFileName.toString)
+      explored <- exploreLocalLayerService.exploreLocal(path, dataSourceId)
       _ <- exploreLocalLayerService.writeLocalDatasourceProperties(explored, path)
     } yield ()
 

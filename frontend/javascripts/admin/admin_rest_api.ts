@@ -1778,7 +1778,7 @@ export async function updateOrganization(
 }
 
 export async function isDatasetAccessibleBySwitching(
-  commandType: TraceOrViewCommand | { directoryName: string; organizationId: string; type: "VIEW" },
+  commandType: TraceOrViewCommand,
 ): Promise<APIOrganization | null | undefined> {
   if (commandType.type === ControlModeEnum.TRACE) {
     return Request.receiveJSON(
@@ -1787,16 +1787,9 @@ export async function isDatasetAccessibleBySwitching(
         showErrorToast: false,
       },
     );
-  } else if ("datasetId" in commandType) {
-    return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?datasetId=${commandType.datasetId}`,
-      {
-        showErrorToast: false,
-      },
-    );
   } else {
     return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?datasetDirectoryName=${commandType.directoryName}&organizationId=${commandType.organizationId}`,
+      `/api/auth/accessibleBySwitching?datasetId=${commandType.datasetId}`,
       {
         showErrorToast: false,
       },

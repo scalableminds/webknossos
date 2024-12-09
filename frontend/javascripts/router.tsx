@@ -1,9 +1,4 @@
-import {
-  createExplorational,
-  getAnnotationInformation,
-  getShortLink,
-  isDatasetAccessibleBySwitching,
-} from "admin/admin_rest_api";
+import { createExplorational, getAnnotationInformation, getShortLink } from "admin/admin_rest_api";
 import AcceptInviteView from "admin/auth/accept_invite_view";
 import AuthTokenView from "admin/auth/auth_token_view";
 import ChangePasswordView from "admin/auth/change_password_view";
@@ -49,7 +44,7 @@ import type { OxalisState } from "oxalis/store";
 import HelpButton from "oxalis/view/help_modal";
 import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import React from "react";
-import { connect, useSelector } from "react-redux";
+import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import { type ContextRouter, Link, type RouteProps } from "react-router-dom";
 import { Redirect, Route, Router, Switch } from "react-router-dom";
@@ -74,9 +69,6 @@ import {
   getOrganizationForDataset,
 } from "admin/api/disambiguate_legacy_routes";
 import { getDatasetIdOrNameFromReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import { useFetch } from "libs/react_helpers";
-import { BrainSpinnerWithError, CoverWithLogin } from "components/brain_spinner";
-import Toast from "libs/toast";
 
 const { Content } = Layout;
 
@@ -133,37 +125,6 @@ const SecuredRouteWithErrorBoundary: React.FC<GetComponentProps<typeof SecuredRo
     <ErrorBoundary key={props.location?.pathname}>
       <SecuredRoute {...props} />
     </ErrorBoundary>
-  );
-};
-
-const LegacyLinkDisambiguateErrorView: React.FC<{
-  directoryName: string;
-  organizationId: string;
-}> = ({ directoryName, organizationId }) => {
-  const user = useSelector((state: OxalisState) => state.activeUser);
-  const organizationToSwitchTo = useFetch(
-    async () => {
-      return user
-        ? isDatasetAccessibleBySwitching({ directoryName, organizationId, type: "VIEW" })
-        : null;
-    },
-    null,
-    [directoryName, organizationId, user],
-  );
-  return user ? (
-    <BrainSpinnerWithError
-      gotUnhandledError={false}
-      organizationToSwitchTo={organizationToSwitchTo}
-    />
-  ) : (
-    <CoverWithLogin
-      onLoggedIn={() => {
-        // Close existing error toasts for "Not Found" errors before trying again.
-        // If they get relevant again, they will be recreated anyway.
-        Toast.close("404");
-        location.reload();
-      }}
-    />
   );
 };
 
@@ -237,24 +198,16 @@ class ReactRouter extends React.Component<Props> {
     );
   };
 
-  tracingViewModeLegacy = ({ match, location }: ContextRouter) => {
-    const datasetName = match.params.datasetName || "";
-    const organizationId = match.params.organizationId || "";
-    return (
-      <AsyncRedirect
-        redirectTo={async () => {
-          const datasetId = await getDatasetIdFromNameAndOrganization(datasetName, organizationId);
-          return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
-        }}
-        errorComponent={
-          <LegacyLinkDisambiguateErrorView
-            directoryName={datasetName}
-            organizationId={organizationId}
-          />
-        }
-      />
-    );
-  };
+  tracingViewModeLegacy = ({ match, location }: ContextRouter) => (
+    <AsyncRedirect
+      redirectTo={async () => {
+        const datasetName = match.params.datasetName || "";
+        const organizationId = match.params.organizationId || "";
+        const datasetId = await getDatasetIdFromNameAndOrganization(datasetName, organizationId);
+        return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
+      }}
+    />
+  );
 
   tracingViewMode = ({ match }: ContextRouter) => {
     const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(

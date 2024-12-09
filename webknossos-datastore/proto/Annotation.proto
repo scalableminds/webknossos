@@ -12,7 +12,7 @@ message AnnotationProto {
   required int64 version = 2;
   repeated AnnotationLayerProto annotationLayers = 3;
   required int64 earliestAccessibleVersion = 4;
-  optional bool skeletonMayHavePendingUpdates = 5;
+  optional bool skeletonMayHavePendingUpdates = 5; // relevant only for annotations migrated by https://github.com/scalableminds/webknossos/pull/7917
 }
 
 message AnnotationLayerProto {

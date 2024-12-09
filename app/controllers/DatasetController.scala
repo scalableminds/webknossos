@@ -419,12 +419,17 @@ class DatasetController @Inject()(userService: UserService,
           case Empty =>
             for {
               dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(GlobalAccessContext)
-              isAccessibleResult <- authenticationController.accessibleBySwitching(Some(dataset._id.toString), None, None)(request)
+              isAccessibleResult <- authenticationController.accessibleBySwitching(Some(dataset._id.toString),
+                                                                                   None,
+                                                                                   None)(request)
               result <- isAccessibleResult.header.status match {
-                case 200 => Fox.successful(Ok(Json.obj("id" -> dataset._id,
-                                                      "name" -> dataset.name,
-                                                      "organization" -> dataset._organization,
-                                                      "directoryName" -> dataset.directoryName)))
+                case 200 =>
+                  Fox.successful(
+                    Ok(
+                      Json.obj("id" -> dataset._id,
+                               "name" -> dataset.name,
+                               "organization" -> dataset._organization,
+                               "directoryName" -> dataset.directoryName)))
                 case _ => Fox.failure(notFoundMessage(datasetName))
               }
             } yield result

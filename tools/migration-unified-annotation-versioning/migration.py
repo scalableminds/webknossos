@@ -414,6 +414,7 @@ class Migration:
             annotationProto.description = annotation["description"] or ""
             annotationProto.version = version
             annotationProto.earliestAccessibleVersion = 0  # TODO different for merged editable mappings
+            annotationProto.skeletonMayHavePendingUpdates = True # TODO set this to true less often (e.g. not on single-layer, or when there is no skeleton)
             for tracing_id, tracing_type in annotation["layers"].items():
                 layer_proto = AnnotationProto.AnnotationLayerProto()
                 layer_proto.tracingId = tracing_id

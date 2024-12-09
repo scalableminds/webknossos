@@ -13,17 +13,17 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10\x41nnotation.proto\x12&com.scalableminds.webknossos.datastore\"\xb2\x01\n\x0f\x41nnotationProto\x12\x13\n\x0b\x64\x65scription\x18\x01 \x02(\t\x12\x0f\n\x07version\x18\x02 \x02(\x03\x12V\n\x10\x61nnotationLayers\x18\x03 \x03(\x0b\x32<.com.scalableminds.webknossos.datastore.AnnotationLayerProto\x12!\n\x19\x65\x61rliestAccessibleVersion\x18\x04 \x02(\x03\"\x87\x01\n\x14\x41nnotationLayerProto\x12\x11\n\ttracingId\x18\x01 \x02(\t\x12\x0c\n\x04name\x18\x02 \x02(\t\x12N\n\x04type\x18\x04 \x02(\x0e\x32@.com.scalableminds.webknossos.datastore.AnnotationLayerTypeProto*4\n\x18\x41nnotationLayerTypeProto\x12\x0c\n\x08Skeleton\x10\x01\x12\n\n\x06Volume\x10\x02')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10\x41nnotation.proto\x12&com.scalableminds.webknossos.datastore\"\xd9\x01\n\x0f\x41nnotationProto\x12\x13\n\x0b\x64\x65scription\x18\x01 \x02(\t\x12\x0f\n\x07version\x18\x02 \x02(\x03\x12V\n\x10\x61nnotationLayers\x18\x03 \x03(\x0b\x32<.com.scalableminds.webknossos.datastore.AnnotationLayerProto\x12!\n\x19\x65\x61rliestAccessibleVersion\x18\x04 \x02(\x03\x12%\n\x1dskeletonMayHavePendingUpdates\x18\x05 \x01(\x08\"\x87\x01\n\x14\x41nnotationLayerProto\x12\x11\n\ttracingId\x18\x01 \x02(\t\x12\x0c\n\x04name\x18\x02 \x02(\t\x12N\n\x04type\x18\x04 \x02(\x0e\x32@.com.scalableminds.webknossos.datastore.AnnotationLayerTypeProto*4\n\x18\x41nnotationLayerTypeProto\x12\x0c\n\x08Skeleton\x10\x01\x12\n\n\x06Volume\x10\x02')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'Annotation_pb2', globals())
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _ANNOTATIONLAYERTYPEPROTO._serialized_start=379
-  _ANNOTATIONLAYERTYPEPROTO._serialized_end=431
+  _ANNOTATIONLAYERTYPEPROTO._serialized_start=418
+  _ANNOTATIONLAYERTYPEPROTO._serialized_end=470
   _ANNOTATIONPROTO._serialized_start=61
-  _ANNOTATIONPROTO._serialized_end=239
-  _ANNOTATIONLAYERPROTO._serialized_start=242
-  _ANNOTATIONLAYERPROTO._serialized_end=377
+  _ANNOTATIONPROTO._serialized_end=278
+  _ANNOTATIONLAYERPROTO._serialized_start=281
+  _ANNOTATIONLAYERPROTO._serialized_end=416
 # @@protoc_insertion_point(module_scope)

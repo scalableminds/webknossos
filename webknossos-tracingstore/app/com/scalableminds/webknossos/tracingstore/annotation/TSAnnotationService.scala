@@ -120,6 +120,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   def currentMaterializedVersion(annotationId: String): Fox[Long] =
     tracingDataStore.annotations.getVersion(annotationId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
 
+  def currentMaterializedSkeletonVersion(tracingId: String): Fox[Long] =
+    tracingDataStore.skeletons.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
+
   private def getNewestMaterialized(annotationId: String): Fox[AnnotationProto] =
     for {
       keyValuePair <- tracingDataStore.annotations.get[AnnotationProto](annotationId, mayBeEmpty = Some(true))(
@@ -280,22 +283,62 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       targetVersion: Long,
       reportChangesToWk: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
-      updateGroupsAsSaved <- findPendingUpdates(annotationId, annotationWithTracingsAndMappings.version, targetVersion) ?~> "findPendingUpdates.failed"
+      updateGroupsAsSaved <- findPendingUpdates(annotationId, annotationWithTracingsAndMappings, targetVersion) ?~> "findPendingUpdates.failed"
       updatesGroupsRegrouped = regroupByIsolationSensitiveActions(updateGroupsAsSaved)
       updated <- applyUpdatesGrouped(annotationWithTracingsAndMappings,
                                      annotationId,
                                      updatesGroupsRegrouped,
                                      reportChangesToWk) ?~> "applyUpdates.inner.failed"
-    } yield updated
+    } yield
+      updated.withVersion(targetVersion) // set version again, because extraSkeleton update filtering may skip latest version
 
-  private def findPendingUpdates(annotationId: String, existingVersion: Long, desiredVersion: Long)(
+  private def findPendingUpdates(annotationId: String, annotation: AnnotationWithTracings, desiredVersion: Long)(
       implicit ec: ExecutionContext): Fox[List[(Long, List[UpdateAction])]] =
-    if (desiredVersion == existingVersion) Fox.successful(List())
-    else {
-      tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
-        annotationId,
-        Some(desiredVersion),
-        Some(existingVersion + 1))(fromJsonBytes[List[UpdateAction]])
+    for {
+      extraSkeletonUpdates <- findExtraSkeletonUpdates(annotationId, annotation)
+      _ = logger.info(s"${extraSkeletonUpdates.length} extraSkeletonUpdates")
+      existingVersion = annotation.version
+      pendingAnnotationUpdates <- if (desiredVersion == existingVersion) Fox.successful(List.empty)
+      else {
+        tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
+          annotationId,
+          Some(desiredVersion),
+          Some(existingVersion + 1))(fromJsonBytes[List[UpdateAction]])
+      }
+    } yield extraSkeletonUpdates ++ pendingAnnotationUpdates
+
+  /*
+   * The migration of https://github.com/scalableminds/webknossos/pull/7917 does not guarantee that the skeleton layer
+   * is materialized at the same version as the annottation. So even if we have an existing annotation version,
+   * we may fetch skeleton updates *older* than it, in order to fully construct the state of that version.
+   * Only annotations from before that migration have this skeletonMayHavePendingUpdates=Some(true).
+   */
+  private def findExtraSkeletonUpdates(annotationId: String, annotation: AnnotationWithTracings)(
+      implicit ec: ExecutionContext): Fox[List[(Long, List[UpdateAction])]] =
+    if (annotation.annotation.skeletonMayHavePendingUpdates.getOrElse(false)) {
+      annotation.getSkeletonId.map { skeletonId =>
+        for {
+          materializedSkeletonVersion <- currentMaterializedSkeletonVersion(skeletonId)
+          extraUpdates <- if (materializedSkeletonVersion < annotation.version) {
+            tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
+              annotationId,
+              Some(annotation.version),
+              Some(materializedSkeletonVersion + 1))(fromJsonBytes[List[UpdateAction]])
+          } else Fox.successful(List.empty)
+          extraSkeletonUpdates = filterSkeletonUpdates(extraUpdates)
+        } yield extraSkeletonUpdates
+      }.getOrElse(Fox.successful(List.empty))
+    } else Fox.successful(List.empty)
+
+  private def filterSkeletonUpdates(
+      updateGroups: List[(Long, List[UpdateAction])]): List[(Long, List[SkeletonUpdateAction])] =
+    updateGroups.map {
+      case (version, updateGroup) =>
+        val updateGroupFiltered = updateGroup.flatMap {
+          case a: SkeletonUpdateAction => Some(a)
+          case _                       => None
+        }
+        (version, updateGroupFiltered)
     }
 
   private def findTracingsForAnnotation(annotation: AnnotationProto)(

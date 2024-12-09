@@ -45,6 +45,10 @@ case class AnnotationWithTracings(
       case _                               => None
     }.toList
 
+  // Assumes that there is at most one skeleton layer per annotation. This is true as of this writing
+  def getSkeletonId: Option[String] =
+    getSkeletons.headOption.map(_._1)
+
   def getEditableMappingsInfo: List[(String, EditableMappingInfo)] =
     editableMappingsByTracingId.view.flatMap {
       case (id, (info: EditableMappingInfo, _)) => Some(id, info)

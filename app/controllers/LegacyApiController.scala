@@ -72,7 +72,8 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       for {
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
         result <- datasetController.read(dataset._id.toString, sharingToken)(request)
-      } yield result
+        adaptedResult <- replaceInResult(migrateDatasetJsonToOldFormat)(result)
+      } yield adaptedResult
     }
 
   def updateDatasetV8(organizationId: String, datasetName: String): Action[JsValue] =
@@ -81,7 +82,8 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
         _ <- Fox.successful(logVersioned(request))
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
         result <- datasetController.update(dataset._id.toString)(request)
-      } yield result
+        adaptedResult <- replaceInResult(migrateDatasetJsonToOldFormat)(result)
+      } yield adaptedResult
     }
 
   def updateDatasetTeamsV8(organizationId: String, datasetName: String): Action[List[ObjectId]] =
@@ -241,6 +243,19 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     }
 
   /* private helper methods for legacy adaptation */
+
+  private def migrateDatasetJsonToOldFormat(jsResult: JsObject): Fox[JsObject] = {
+    val datasetName = (jsResult \ "name").asOpt[String]
+    val directoryName = (jsResult \ "directoryName").asOpt[String]
+    datasetName.zip(directoryName) match {
+      case Some((name, dirName)) =>
+        for {
+          dsWithOldNameField <- tryo(jsResult - "directoryName" + ("name" -> Json.toJson(dirName))).toFox
+          dsWithOldDisplayNameField <- tryo(dsWithOldNameField + ("displayName" -> Json.toJson(name))).toFox
+        } yield dsWithOldDisplayNameField
+      case _ => Fox.successful(jsResult)
+    }
+  }
 
   private def addDataSetToTaskInAnnotation(jsResult: JsObject): Fox[JsObject] = {
     val taskObjectOpt = (jsResult \ "task").asOpt[JsObject]

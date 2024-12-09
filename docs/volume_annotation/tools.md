@@ -2,11 +2,9 @@
 
 Volume annotation in WEBKNOSSOS allows you to label and segment 3D structures in your dataset. This page covers the available tools and best practices for efficient volume annotation.
 
-!!! tip "Keyboard Shortcuts"
-    For faster workflow, refer to the [keyboard shortcuts](../ui/keyboard_shortcuts.md) guide. Common shortcuts are mentioned alongside their respective tools below.
 
 ![Trace Tool](../ui/images/trace-tool.jpg){align=left width="60"}
-**Trace Tool**: Create precise boundary definitions by drawing outlines around structures. This tool is particularly useful when accuracy is crucial. For added precision consider using a [pen input device](../pen_tablets.md). 
+**Trace Tool**: Create precise boundary definitions by drawing outlines around structures. This tool is particularly useful when accuracy is crucial. For added precision consider using a [pen input device](./pen_tablets.md). 
 ![Adding labels with the Trace tool](../images/volume_trace.gif)
 
 ![Brush Tool](../ui/images/brush-tool.jpg){align=left width="60"} 
@@ -45,7 +43,9 @@ In the [Segments tab](./segments_list.md) on the right-hand side panel, you can 
 
 The active segment ID under the cursor can be found in the [status bar](../ui/status_bar.md) at the bottom of the screen or through the context-sensitive menu when right-clicking.
 
-More keyboard shortcuts can be found in the [keyboard shortcuts](../ui/keyboard_shortcuts.md) section.
+!!! tip "Keyboard Shortcuts"
+    For faster workflow, refer to the [keyboard shortcuts](../ui/keyboard_shortcuts.md) guide.
+
 
 ### Tool Modifiers
 The following interactions and modifiers become available when working with some of the volume annotation tools. They can be found in the toolbar:
@@ -64,7 +64,7 @@ The following interactions and modifiers become available when working with some
 
 ![2D Fill Modifier](./images/2d-modifier.jpg){align=left width="60"} 
 ![3D Fill Modifier](./images/3d-modifier.jpg){align=left width="60"} 
-**2D Fill`/ `3D Fill**: Modifies the flood filling tool to work in 2D (in-plane only) or 3D (volumetric fill/re-labeling). 3D flood fill is constrained to a small, regional bounding box for performance reasons. Read more about flood fills below.
+**2D/3D Fill**: Modifies the flood filling tool to work in 2D (in-plane only) or 3D (volumetric fill/re-labeling). 3D flood fill is constrained to a small, regional bounding box for performance reasons. Read more about [flood fills](#volume-flood-fills) below.
 
 
 ## Quick-select tool

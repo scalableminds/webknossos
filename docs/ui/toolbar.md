@@ -9,9 +9,9 @@ The toolbar is your primary interface for interacting with WEBKNOSSOS. Located a
 ### Save and Undo
 The save and undo functions help you manage your annotation work:
 
-- The **Save** button preserves your current work. While WEBKNOSSOS automatically saves every 30 seconds, you can manually save at any time using the keyboard shortcut `Ctrl/Cmd + S`.
+- The **Save** button preserves your current work. While WEBKNOSSOS automatically saves every 30 seconds, you can manually save at any time using the keyboard shortcut ++ctrl++ / ++cmd++ + ++s++.
 
-- The **Undo/Redo** buttons let you reverse or restore recent changes. The undo function (`Ctrl/Cmd + Z`) can revert any changes made in your current session, while redo (`Ctrl/Cmd + Y`) restores previously undone changes. For accessing older versions of your work, use the "Restore Older Version" feature in the menu.
+- The **Undo/Redo** buttons let you reverse or restore recent changes. The undo function (++ctrl++ / ++cmd++ + ++z++) can revert any changes made in your current session, while redo (++ctrl++ / ++cmd++ + ++y++) restores previously undone changes. For accessing older versions of your work, use the "Restore Older Version" feature in the menu.
 
 ### Position Control
 The position control allows precise navigation within your dataset. You can:
@@ -95,7 +95,7 @@ And many other tools. For detailed information, see the [volume annotation guide
 
 ### Measurement and Analysis
 ![Measurement Tool](./images/measure-tool.jpg){align=left width="60"}
-**Measurement Tool**: Allows you to calculate distances between points of interest, measure surface areas of segmented structures, and place waypoints for complex measurements.
+**Measurement Tool**: Allows you to calculate distances between points of interest, measure surface areas of segmented structures, and place waypoints for complex measurements. See also [statistics for volume annotations](../volume_annotation/segments_statistics.md). 
 
 ![AI Analysis Tools](./images/ai-analysis-tools.jpg){align=left width="60"}
 **AI Analysis**: Launch automated segmentation processes using various analysis workflows. The AI tools can significantly speed up your annotation work. Learn more about [AI-assisted analysis](../automation/ai_segmentation.md).

@@ -1,33 +1,67 @@
 # Skeleton Annotation Tools
 
-## Using the Skeleton Annotation tool
+Skeleton annotation in WEBKNOSSOS allows you to create graph-like structures by placing connected nodes in 3D space. This is particularly useful for tracing neurons and other branching structures.
 
-A skeleton annotation is a graph of connected nodes. Edges connect the nodes and form trees. Once the Skeleton Tool is activated in the toolbar, you can place nodes by left-clicking. The active node is always highlighted with a circle around it. Move the node by dragging. To create a new Tree, you can click the `Create a new Tree` icon in the toolbar or press the shortcut ++c++. 
+![New Tree Modifier](../ui/images/skeleton-tool.jpg){align=left width="60"} 
+The **Skeleton tool** enables you to create and edit skeleton annotations:
 
-Many organic structures do not follow a single, linear path but split into several individual branches instead. WEBKNOSSOS natively supports marking nodes as branch points. Any node can be marked as a branch point using the keyboard shortcut ++b++ or through the right-click menu. Branch points are highlighted using a slightly different color. All branch points are stored as a first-in, first-out (FIFO) stack. Press ++j++ to jump to the latest branch point in FIFO-order to continue working from there and remove it from the stack.
+- Place nodes with precise positioning
+- Connect nodes to form tree structures
+- Add branches and create complex neural tracings
 
-- `Skeleton`: Create skeleton annotations and place nodes with a left mouse click. Read more below.
+## Basic Concepts
 
-When the `Skeleton` tool is active, the following modifiers become available:
+A skeleton annotation consists of:
 
-- `Create new Tree`: Creates a new tree.
-- `Toggle single node tree mode`: This modifier makes the skeleton annotation tool create a new tree for each node instead of adding nodes to the current tree. You can use this mode to mark single objects or seeds, such as nuclei. This is also known as "Soma-clicking mode".
-- `Toggle merger mode`: This modifier activates the `Merger Mode` for the skeleton annotation tool. In merger mode, you can use skeletons to "collect" and merge volume segments from an over-segmentation. [Read more about `Merger Mode`](../proofreading/merger_mode.md).
+- **Nodes**: Individual points placed in 3D space (created with left-click)
+- **Edges**: Connections between nodes that form trees
+- **Trees**: Collections of connected nodes and edges
+- **Branch Points**: Special nodes marking where a structure splits into multiple paths
 
-![Skeleton Tool modifiers](../images/skeleton_tool_modifiers.jpeg)
+The active node is always highlighted with a circle and can be moved by dragging.
 
-- `Skeleton`: Create skeleton annotations and place nodes with a left mouse click. Read more below.
 
-When the `Skeleton` tool is active, the following modifiers become available:
+## Creating Annotations
 
-- `Create new Tree`: Creates a new tree.
-- `Toggle single node tree mode`: This modifier makes the skeleton annotation tool create a new tree for each node instead of adding nodes to the current tree. You can use this mode to mark single objects or seeds, such as nuclei. This is also known as "Soma-clicking mode".
-- `Toggle merger mode`: This modifier activates the `Merger Mode` for the skeleton annotation tool. In merger mode, you can use skeletons to "collect" and merge volume segments from an over-segmentation. [Read more about `Merger Mode`](../proofreading/merger_mode.md).
+### New Trees
+- Select the **Skeleton** tool from the toolbar
+- Create a new tree using the toolbar button or press ++c++
+- Each tree can represent a different structure or part of your annotation
+- Trees are listed and can be managed in the [right sidebar](trees_list.md)
 
-![Skeleton Tool modifiers](../images/skeleton_tool_modifiers.jpeg)
+### Branch Points
+- Mark any node as a branch point using ++b++ or the right-click menu
+- Branch points are highlighted with a distinct color
+- All branch points are stored in a first-in, first-out (FIFO) stack
+- Jump to the latest branch point using ++j++ to continue working from there
 
-## Controls & Keyboard Shortcuts for Skeleton Annotations
+### Tool Modifiers
 
+The following modifiers are available for the skeleton tool:
+
+![New Tree Modifier](./images/new-tree-modifier.jpg){align=left width="60"} 
+**Create new Tree**
+
+- Starts a fresh tree structure
+- Useful when annotating multiple separate structures
+
+![Single Node Tree Mode Modifier](./images/single-node-tree-mode-modifier.jpg){align=left width="60"} 
+**Single Node Tree Mode**
+
+- Creates a new tree for each placed node
+- Perfect for marking individual objects (e.g., cell nuclei)
+- Also known as "Soma-clicking mode"
+
+![Merger Mode Modifier](./images/merger-mode-modifier.jpg){align=left width="60"} 
+**Merger Mode**
+
+- Enables using skeletons to merge volume segments
+- Useful for correcting over-segmentation
+- Learn more about [Merger Mode](../proofreading/merger_mode.md)
+
+## Skeleton Keyboard Shortcuts 
+
+The following common keyboard shortcuts are handy for speeding up your annotation workflow:
 
 | Key Binding | Operation                                          |
 | ----------- | -------------------------------------------------- |
@@ -41,5 +75,5 @@ When the `Skeleton` tool is active, the following modifiers become available:
 | ++j++           | Jump to Last Branch Point                          |
 | ++c++           | Create New Tree                                    |
 
-
-A full list of keyboard shortcuts is [available here](../ui/keyboard_shortcuts.md).
+!!! tip "Keyboard Shortcuts"
+    For faster workflow, refer to the [keyboard shortcuts](../ui/keyboard_shortcuts.md) guide.

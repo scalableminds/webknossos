@@ -17,6 +17,7 @@ Volume annotation in WEBKNOSSOS allows you to label and segment 3D structures in
 
 ![Fill Tool](../ui/images/fill-tool.jpg){align=left width="60"} 
 **Fill Tool**: Fill regions with volume annotations up to segment boundaries or viewport edges. Useful for:
+
 - Filling holes in segments
 - Relabeling segments with different IDs/colors
 - Quick corrections of small areas
@@ -27,24 +28,21 @@ Volume annotation in WEBKNOSSOS allows you to label and segment 3D structures in
 
 ![Quick Select Tool](../ui/images/quickselect-tool.jpg){align=left width="60"} 
 **Quick Select**: Automatically annotate segments using either:
-- AI-based segmentation (powered by Segment Anything Model 2)
-- Threshold-based selection mode
 
-The AI mode works across various imaging modalities and can significantly speed up annotation workflows. See the [Quick-select tool](#quick-select-tool) section for detailed usage.
+  - Threshold-based selection mode
+  - AI-based segmentation (powered by Segment Anything Model 2)
+    The AI mode works across various imaging modalities and can significantly speed up annotation workflows. See the [Quick-select tool](#quick-select-tool) section for detailed usage.
 
-### Proof Reading Tool
 ![Proof Reading Tool](../ui/images/proofreading-tool.jpg){align=left width="60"} 
 **Proof Reading**: Fix merge and split errors in automated segmentations using the underlying super-voxel graph by combining and breaking apart segments. Read more about [proofreading](../proofreading/tools.md).
 
-![Interpolation/Extrusion Tool](../ui/images/interpolation-tool.jpg){align=left width="60"} 
-**Interpolation/Extrusion**: Annotate a segment, skip a few sections in the Z direction, and annotate it again. Now, you can interpolate between the two segments. Read more on the interpolation/extrusion tool below. 
 
 In the [Segments tab](./segments_list.md) on the right-hand side panel, you can find all segment IDs which are available in your annotation. You can rename and organize segments as needed.
 
 The active segment ID under the cursor can be found in the [status bar](../ui/status_bar.md) at the bottom of the screen or through the context-sensitive menu when right-clicking.
 
 !!! tip "Keyboard Shortcuts"
-    For faster workflow, refer to the [keyboard shortcuts](../ui/keyboard_shortcuts.md) guide.
+    For faster workflows, refer to the [keyboard shortcuts](../ui/keyboard_shortcuts.md) guide.
 
 
 ### Tool Modifiers
@@ -61,6 +59,9 @@ The following interactions and modifiers become available when working with some
 
 ![Overwrite Empty Voxels Modifier](./images/overwrite-empty-modifier.jpg){align=left width="60"} 
 **Only Overwrite Empty Areas**: In contrast to the `Overwrite Everything` modifier, the forces the brush & trace tools to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites.
+
+![Interpolation/Extrusion Modifier](./images/interpolation-modifier.jpg){align=left width="60"} 
+**Interpolation/Extrusion**: Annotate a segment, skip a few sections in the Z direction, and annotate it again. Now, you can interpolate between the two segments. Read more on the [interpolation/extrusion](#volume-interpolation) below. 
 
 ![2D Fill Modifier](./images/2d-modifier.jpg){align=left width="60"} 
 ![3D Fill Modifier](./images/3d-modifier.jpg){align=left width="60"} 

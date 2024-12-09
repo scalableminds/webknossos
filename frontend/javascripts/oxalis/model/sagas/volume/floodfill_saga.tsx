@@ -24,15 +24,30 @@ import { Model } from "oxalis/singletons";
 import { call, put } from "typed-redux-saga";
 import { getUserBoundingBoxesThatContainPosition } from "../../accessors/tracing_accessor";
 import { applyLabeledVoxelMapToAllMissingMags } from "./helpers";
+import _ from "lodash";
 
 function* getBoundingBoxForFloodFill(
   position: Vector3,
   currentViewport: OrthoView,
-): Saga<BoundingBoxType> {
-  // todop: make this optional somehow
-  const bboxes = yield* select((state) => getUserBoundingBoxesThatContainPosition(state, position));
-  if (bboxes.length > 0) {
-    return bboxes[0].boundingBox;
+): Saga<BoundingBoxType | { failureReason: string }> {
+  const isRestrictedToBoundingBox = yield* select(
+    (state) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
+  );
+  if (isRestrictedToBoundingBox) {
+    const bboxes = yield* select((state) =>
+      getUserBoundingBoxesThatContainPosition(state, position),
+    );
+    if (bboxes.length > 0) {
+      const smallestBbox = _.sortBy(bboxes, (bbox) =>
+        new BoundingBox(bbox.boundingBox).getVolume(),
+      )[0];
+      return smallestBbox.boundingBox;
+    } else {
+      return {
+        failureReason:
+          "No bounding box encloses the clicked position. Either disable the bounding box restriction or ensure a bounding box exists around the clicked position.",
+      };
+    }
   }
 
   const fillMode = yield* select((state) => state.userConfiguration.fillMode);
@@ -123,6 +138,10 @@ export function* floodFill(): Saga<void> {
     }
     yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
     const boundingBoxForFloodFill = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
+    if ("failureReason" in boundingBoxForFloodFill) {
+      Toast.warning(boundingBoxForFloodFill.failureReason);
+      return;
+    }
     const progressCallback = createProgressCallback({
       pauseDelay: 200,
       successMessageDelay: 2000,

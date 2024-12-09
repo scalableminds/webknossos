@@ -4,6 +4,7 @@ from psycopg2.extras import RealDictRow
 import math
 import logging
 import datetime
+from pathlib import Path
 import time
 from typing import Dict, Tuple, List, Optional, Callable, Set
 from rich.progress import track
@@ -17,10 +18,11 @@ import fossildbapi_pb2 as proto
 import VolumeTracing_pb2 as Volume
 import SkeletonTracing_pb2 as Skeleton
 import Annotation_pb2 as AnnotationProto
-from utils import log_since, batch_range, humanize_time_diff
+from utils import log_since, batch_range, format_duration, time_str
 from connections import connect_to_fossildb, connect_to_postgres, assert_grpc_success
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("migration-logs")
+checkpoint_logger = logging.getLogger("migration-checkpoints")
 
 
 LayerVersionMapping = Dict[str, Dict[int, int]] # tracing id to (old version to new version)
@@ -46,6 +48,7 @@ class Migration:
     def run(self):
         self.before = time.time()
         annotations = self.read_annotation_list()
+        self.setup_checkpoint_logging()
         self.done_count = 0
         self.failure_count = 0
         self.total_count = len(annotations)
@@ -78,6 +81,7 @@ class Migration:
                 self.create_and_save_annotation_proto(annotation, materialized_versions, mapping_id_map)
                 if time.time() - before > 1 or self.args.verbose:
                     log_since(before, f"Migrating annotation {annotation['_id']} ({len(materialized_versions)} materialized versions)", self.get_progress())
+                checkpoint_logger.info(annotation['_id'])
         except Exception:
             logger.exception(f"Exception while migrating annotation {annotation['_id']}:")
             with self.failure_count_lock:
@@ -244,29 +248,12 @@ class Migration:
         return "volumeUpdates"
 
     def migrate_materialized_layers(self, annotation: RealDictRow, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap) -> Set[int]:
-        #newest_to_materialize = self.get_newest_to_materialize(annotation, layer_version_mapping, mapping_id_map)
-
         materialized_versions = set()
         for tracing_id, tracing_type in annotation["layers"].items():
             materialized_versions_of_layer = \
                 self.migrate_materialized_layer(tracing_id, tracing_type, layer_version_mapping, mapping_id_map)
             materialized_versions.update(materialized_versions_of_layer)
         return materialized_versions
-
-    def get_newest_to_materialize(self, annotation, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap) -> int:
-        newest_to_materialize = 0
-        for tracing_id, tracing_type in annotation["layers"].items():
-            if tracing_type == "Skeleton":
-                collection = "skeletons"
-            else:
-                collection = "volumes"
-            # TODO what if the newest materialized is dropped because of a revert?
-            newest_materialized = layer_version_mapping[tracing_id][self.get_newest_version(tracing_id, collection)]
-            newest_to_materialize = min(newest_to_materialize, newest_materialized)
-        for editable_mapping_id in mapping_id_map.values():
-            newest_materialized = layer_version_mapping[editable_mapping_id][self.get_newest_version(editable_mapping_id, "editableMappingsInfo")]
-            newest_to_materialize = min(newest_to_materialize, newest_materialized)
-        return newest_to_materialize
 
     def migrate_materialized_layer(self, tracing_id: str, layer_type: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap) -> List[int]:
         if layer_type == "Skeleton":
@@ -444,6 +431,7 @@ class Migration:
         return "Skeleton" in annotation["layers"].values()
 
     def read_annotation_list(self):
+        checkpoint_set = self.read_checkpoints()
         before = time.time()
         start_time = datetime.datetime.now()
         previous_start_label = ""
@@ -482,9 +470,12 @@ class Migration:
                 GROUP BY a._id, a.name, a.description, a.created, a.modified
                 """
             cursor.execute(query)
-            annotations += cursor.fetchall()
+            rows = cursor.fetchall()
+            for row in rows:
+                if len(checkpoint_set) == 0 or row["_id"] not in checkpoint_set:
+                    annotations.append(row)
         if annotation_count != len(annotations):
-            logger.info(f"Note that only {len(annotations)} of the {annotation_count} annotations have layers. Skipping zero-layer annotations.")
+            logger.info(f"Using {len(annotations)} of the full {annotation_count} annotations (after filtering out zero-layer and already-checkpointed annotations).")
         log_since(before, "Loading annotation infos from postgres")
         return annotations
 
@@ -505,7 +496,30 @@ class Migration:
         duration = time.time() - self.before
         if done_count > 0:
             etr = duration / done_count * (self.total_count - done_count)
-            etr_formatted = f". ETR {humanize_time_diff(etr)})"
+            etr_formatted = f". ETR {format_duration(etr)})"
         else:
             etr_formatted = ")"
         return f". ({done_count}/{self.total_count} = {percentage:.1f}% done{etr_formatted}"
+
+    def read_checkpoints(self) -> Set[str]:
+        if self.args.previous_checkpoints is None:
+            return set()
+        with open(self.args.previous_checkpoints, 'r') as previous_checkpoints_file:
+            previous_checkpoints = set(line.strip() for line in previous_checkpoints_file)
+        logger.info(f"Using checkpoints from previous run with {len(previous_checkpoints)} entries.")
+        return previous_checkpoints
+
+    def setup_checkpoint_logging(self):
+        # We are abusing the logging module to write the checkpoints, as they are thread-safe and provide a file-handler
+        checkpoint_logger.setLevel(logging.INFO)
+        checkpoints_path = Path("checkpoints")
+        checkpoints_path.mkdir(exist_ok=True)
+        if self.args.previous_checkpoints is not None:
+            checkpoint_file = self.args.previous_checkpoints
+            logger.info(f"Appending to supplied checkpoint file at {checkpoint_file}")
+        else:
+            checkpoint_file = f"{checkpoints_path}/{time_str()}.log"
+            logger.info(f"Writing checkpoint file at {checkpoint_file}")
+        checkpoints_file_handler = logging.FileHandler(checkpoint_file)
+        checkpoint_logger.addHandler(checkpoints_file_handler)
+

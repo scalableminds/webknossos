@@ -20,6 +20,7 @@ def main():
     parser.add_argument("--postgres", help="Postgres connection specifier.", type=str, default="postgres@localhost:5432/webknossos")
     parser.add_argument("--previous_start", help="Previous run start time. Example: 2024-11-27 10:37:30.171083", type=str)
     parser.add_argument("--count_versions", help="Instead of migrating, only count materialized versions of the annotation", action="store_true")
+    parser.add_argument("--previous_checkpoints", help="Supply checkpoints file of a previous run to resume", type=str)
     parser.add_argument("--verbose", "-v", help="Print for every annotation", action="store_true")
     args = parser.parse_args()
     if args.dst is None and not args.dry:

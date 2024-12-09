@@ -6,34 +6,34 @@ from math import floor, ceil
 from datetime import datetime
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("migration-logs")
 
 
 def setup_logging():
-    root = logging.getLogger()
-    root.setLevel(logging.DEBUG)
+    logger.setLevel(logging.DEBUG)
 
     formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(threadName)-24s %(message)s")
 
     stdout_handler = logging.StreamHandler(sys.stdout)
     stdout_handler.setLevel(logging.DEBUG)
     stdout_handler.setFormatter(formatter)
-    root.addHandler(stdout_handler)
-
-    time_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S.%f")
+    logger.addHandler(stdout_handler)
 
     logs_path = Path("logs")
     logs_path.mkdir(exist_ok=True)
-
-    file_handler = logging.FileHandler(f"logs/{time_str}.log")
-    stdout_handler.setLevel(logging.DEBUG)
+    file_handler = logging.FileHandler(f"{logs_path}/{time_str()}.log")
+    file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
-    root.addHandler(file_handler)
+    logger.addHandler(file_handler)
+
+
+def time_str() -> str:
+    return datetime.now().strftime("%Y-%m-%d_%H-%M-%S.%f")
 
 
 def log_since(before, label: str, postfix: str = "") -> None:
     diff = time.time() - before
-    logger.info(f"{label} took {humanize_time_diff(diff)}{postfix}")
+    logger.info(f"{label} took {format_duration(diff)}{postfix}")
 
 
 def batch_range(
@@ -48,7 +48,7 @@ def batch_range(
             return
 
 
-def humanize_time_diff(seconds: float) -> str:
+def format_duration(seconds: float) -> str:
     def pluralize(string: str, amount: int) -> str:
         return string if amount == 1 else string + "s"
 

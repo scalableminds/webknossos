@@ -1,4 +1,11 @@
-import type { ServerVolumeTracing, APIAnnotation } from "types/api_flow_types";
+import {
+  type ServerVolumeTracing,
+  type APIAnnotation,
+  AnnotationLayerType,
+  type APITracingStoreAnnotation,
+} from "types/api_flow_types";
+
+const TRACING_ID = "tracingId-1234";
 export const tracing: ServerVolumeTracing = {
   typ: "Volume",
   activeSegmentId: 10000,
@@ -31,7 +38,6 @@ export const tracing: ServerVolumeTracing = {
   elementClass: "uint16",
   id: "segmentation",
   largestSegmentId: 21890,
-  version: 0,
   zoomLevel: 0,
   mags: [
     {
@@ -86,9 +92,8 @@ export const annotation: APIAnnotation = {
   annotationLayers: [
     {
       name: "volume",
-      tracingId: "tracingId-1234",
-      typ: "Volume",
-      stats: {},
+      tracingId: TRACING_ID,
+      typ: AnnotationLayerType.Volume,
     },
   ],
   dataSetName: "ROI2017_wkw",
@@ -118,4 +123,16 @@ export const annotation: APIAnnotation = {
   contributors: [],
   othersMayEdit: false,
   isLockedByOwner: false,
+};
+export const annotationProto: APITracingStoreAnnotation = {
+  description: "volume-annotation-description",
+  version: 1,
+  earliestAccessibleVersion: 0,
+  annotationLayers: [
+    {
+      tracingId: TRACING_ID,
+      name: "volume",
+      type: AnnotationLayerType.Volume,
+    },
+  ],
 };

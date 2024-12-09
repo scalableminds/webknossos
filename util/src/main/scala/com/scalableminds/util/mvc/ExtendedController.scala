@@ -1,6 +1,7 @@
 package com.scalableminds.util.mvc
 
 import com.google.protobuf.CodedInputStream
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
@@ -235,8 +236,8 @@ trait ValidationHelpers {
 }
 
 trait RequestTokenHelper {
-  protected def urlOrHeaderToken(token: Option[String], request: Request[Any]): Option[String] =
-    token.orElse(request.headers.get("X-Auth-Token"))
+  implicit def tokenContextForRequest(implicit request: Request[Any]): TokenContext =
+    TokenContext(request.target.getQueryParameter("token").orElse(request.headers.get("X-Auth-Token")))
 }
 
 trait ExtendedController

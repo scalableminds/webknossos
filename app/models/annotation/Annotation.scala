@@ -9,9 +9,9 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import play.api.libs.json._
+import slick.jdbc.GetResult
 import slick.jdbc.GetResult._
 import slick.jdbc.PostgresProfile.api._
-import slick.jdbc.GetResult
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
@@ -22,6 +22,11 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
+object AnnotationDefaults {
+  val defaultName: String = ""
+  val defaultDescription: String = ""
+}
+
 case class Annotation(
     _id: ObjectId,
     _dataset: ObjectId,
@@ -29,9 +34,9 @@ case class Annotation(
     _team: ObjectId,
     _user: ObjectId,
     annotationLayers: List[AnnotationLayer],
-    description: String = "",
+    description: String = AnnotationDefaults.defaultDescription,
     visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
-    name: String = "",
+    name: String = AnnotationDefaults.defaultName,
     viewConfiguration: Option[JsObject] = None,
     state: AnnotationState.Value = Active,
     isLockedByOwner: Boolean = false,
@@ -140,11 +145,18 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
     q"""INSERT INTO webknossos.annotation_layers(_annotation, tracingId, typ, name, statistics)
           VALUES($annotationId, ${a.tracingId}, ${a.typ}, ${a.name}, ${a.stats})""".asUpdate
 
-  def deleteOne(annotationId: ObjectId, layerName: String): Fox[Unit] =
+  def deleteOneByName(annotationId: ObjectId, layerName: String): Fox[Unit] =
     for {
       _ <- run(q"""DELETE FROM webknossos.annotation_layers
                    WHERE _annotation = $annotationId
                    AND name = $layerName""".asUpdate)
+    } yield ()
+
+  def deleteOneByTracingId(annotationId: ObjectId, tracingId: String): Fox[Unit] =
+    for {
+      _ <- run(q"""DELETE FROM webknossos.annotation_layers
+                   WHERE _annotation = $annotationId
+                   AND tracingId = $tracingId""".asUpdate)
     } yield ()
 
   def findAnnotationIdByTracingId(tracingId: String): Fox[ObjectId] =
@@ -180,7 +192,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
   def deleteAllForAnnotationQuery(annotationId: ObjectId): SqlAction[Int, NoStream, Effect] =
     q"DELETE FROM webknossos.annotation_layers WHERE _annotation = $annotationId".asUpdate
 
-  def updateStatistics(annotationId: ObjectId, tracingId: String, statistics: JsObject): Fox[Unit] =
+  def updateStatistics(annotationId: ObjectId, tracingId: String, statistics: JsValue): Fox[Unit] =
     for {
       _ <- run(q"""UPDATE webknossos.annotation_layers
                    SET statistics = $statistics
@@ -516,6 +528,18 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                    AND a.state = ${AnnotationState.Active}
                    AND a.typ = ${AnnotationType.Task} """.as[ObjectId])
     } yield r.toList
+
+  def findBaseIdForTask(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[ObjectId] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(q"""SELECT _id
+                   FROM $existingCollectionName
+                   WHERE _task = $taskId
+                   AND typ = ${AnnotationType.TracingBase}
+                   AND state != ${AnnotationState.Cancelled}
+                   AND $accessQuery""".as[ObjectId])
+      firstRow <- r.headOption
+    } yield firstRow
 
   def findAllByTaskIdAndType(taskId: ObjectId, typ: AnnotationType)(
       implicit ctx: DBAccessContext): Fox[List[Annotation]] =

@@ -165,7 +165,6 @@ const defaultState: OxalisState = {
       boundingBox: null,
       createdTimestamp: 0,
       type: "readonly",
-      version: 0,
       tracingId: "",
       additionalAxes: [],
     },
@@ -178,23 +177,14 @@ const defaultState: OxalisState = {
     othersMayEdit: false,
     blockedByUser: null,
     annotationLayers: [],
+    version: 0,
+    earliestAccessibleVersion: 0,
+    stats: {},
   },
   save: {
-    queue: {
-      skeleton: [],
-      volumes: {},
-      mappings: {},
-    },
-    isBusyInfo: {
-      skeleton: false,
-      volumes: {},
-      mappings: {},
-    },
-    lastSaveTimestamp: {
-      skeleton: 0,
-      volumes: {},
-      mappings: {},
-    },
+    queue: [],
+    isBusy: false,
+    lastSaveTimestamp: 0,
     progressInfo: {
       processedActionCount: 0,
       totalActionCount: 0,

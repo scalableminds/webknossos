@@ -56,7 +56,6 @@ const serverVolumeTracing: ServerVolumeTracing = {
   id: "tracingId",
   elementClass: "uint32",
   createdTimestamp: 0,
-  version: 0,
   boundingBox: {
     topLeft: {
       x: 0,
@@ -147,7 +146,6 @@ test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", (t) => 
   const saga = setupSavingForTracingType(
     VolumeTracingActions.initializeVolumeTracingAction(serverVolumeTracing),
   );
-  saga.next(); // forking pushSaveQueueAsync
 
   saga.next();
   saga.next(initialState.tracing.volumes[0]);
@@ -168,7 +166,6 @@ test("VolumeTracingSaga should do something if changed (saga test)", (t) => {
   const saga = setupSavingForTracingType(
     VolumeTracingActions.initializeVolumeTracingAction(serverVolumeTracing),
   );
-  saga.next(); // forking pushSaveQueueAsync
 
   saga.next();
   saga.next(initialState.tracing.volumes[0]);
@@ -182,11 +179,7 @@ test("VolumeTracingSaga should do something if changed (saga test)", (t) => {
   const items = execCall(t, saga.next(newState.viewModeData.plane.tdCamera));
   t.is(withoutUpdateTracing(items).length, 0);
   t.true(items[0].value.activeSegmentId === ACTIVE_CELL_ID);
-  expectValueDeepEqual(
-    t,
-    saga.next(items),
-    put(pushSaveQueueTransaction(items, "volume", volumeTracing.tracingId)),
-  );
+  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueTransaction(items)));
 });
 
 test("VolumeTracingSaga should create a volume layer (saga test)", (t) => {

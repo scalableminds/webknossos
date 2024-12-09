@@ -7,7 +7,6 @@ Choose a volume annotation drawing tool from the [toolbar](../ui/toolbar.md).
 **Trace Tool**: Create precise boundary definitions by drawing outlines around structures. This tool is particularly useful when accuracy is crucial. For added precision consider using a [pen input device](../pen_tablets.md). 
 ![Adding labels with the Trace tool](../images/volume_trace.gif)
 
-
 ![Brush Tool](../ui/images/brush-tool.jpg){align=left width="60"} 
 **Brush Tool**: Paint directly onto the dataset to mark regions of interest. The brush size is adjustable and . If you draw around objects in one continuous motion, the inside will be filled automatically. Use ++shift++ + _Mousewheel_ to change the brush size.
 ![Adding labels with the Brush tool](../images/volume_brush.gif)
@@ -20,7 +19,7 @@ Choose a volume annotation drawing tool from the [toolbar](../ui/toolbar.md).
 **Fill Tool**: Fill the clicked region with a volume annotation up to the next segment boundary (or the edge of your viewport). All neighboring voxels with the same voxel id as the clicked voxel will be labelled with the active segment ID. This is useful for filling a hole in a segment or relabeling a segment with a different ID/color. Read more about the fill tool below.
 
 ![Segment Picker Tool](../ui/images/segment-picker-tool.jpg){align=left width="60"} 
-**Segment Picker**: Click any segment to use its label ID as the active segment ID and keep annotating with that ID. This is alternative to selecting the segment ID from the sidebar or context menu.
+**Segment Picker**: Click any segment to use its label ID as the active segment ID and keep annotating with that ID. This is alternative to selecting the segment ID from the [Segments list](./segments_list.md) sidebar or context menu.
 
 ![Quick Select Tool](../ui/images/quickselect-tool.jpg){align=left width="60"} 
 **Quick Select**: Annotate a segment automatically by drawing a rectangular selection over it. By default this tools us our AI for segmentation but also has a threshold-based mode. Read more about the quick-select tool below.
@@ -32,17 +31,24 @@ Choose a volume annotation drawing tool from the [toolbar](../ui/toolbar.md).
 **Interpolation/Extrusion**: Annotate a segment, skip a few sections in the Z direction, and annotate it again. Now, you can interpolate between the two segments. Read more on the interpolation/extrusion tool below. 
 
 ### Tool Modifiers
-The following interactions and modifiers are available when working with the volume annotation tools:
+The following interactions and modifiers become available when working with some of the volume annotation tools. They can be found in the toolbar:
 
-- `Create New Segment ID`: Creates a new segment ID for labeling. Note the little color indicator in the top right corner of the button visualizing the current color of the active segment ID. Read the explanation for the largest segment id [here](../datasets/settings.md) to understand how new IDs are generated.
-- `Change Brush Size`: Changes the size of the brushing tool.
-- `Overwrite Everything`: When labeling with the brush/trace tool, you can annotate every available voxel without any regard if it was already labeled as a different segment or whether it is unlabelled. This allows you to draw over existing segments.
-- `Only Overwrite Empty Areas`: In contrast to the `Overwrite Everything` modifier, the forces the brush & trace tools to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites.
-- `2D Fill`/ `3D Fill`: Modifies the flood filling tool to work in 2D (in-plane only) or 3D (volumetric fill/re-labeling). 3D flood fill is constrained to a small, regional bounding box for performance reasons. Read more about flood fills below.
+![Create New Segment ID Modifier](./images/new-segment-modifier.jpg){align=left width="60"} 
+**Create New Segment ID**: Creates a new segment ID for labeling with a different color and identifier. New segments will be added to the [segments list](./segments_list.md) in the right sidebar automatically.
 
+![Change Brush Size Modifier](./images/brush-size-modifier.jpg){align=left width="60"} 
+**Change Brush Size**: Changes the size and radius of the brushing tool. Presets of small, medium and large brush sizes are available which can be modified to suite your workflows. ![youtube-video](https://www.youtube.com/embed/JkpSTKuNZKg)
 
+![Overwrite Everything Modifier](./images/overwrite-everything-modifier.jpg){align=left width="60"} 
+**Overwrite Everything**: When labeling with the brush/trace tool, you can annotate every available voxel without any regard if it was already labeled as a different segment or whether it is unlabelled. This allows you to draw over existing segments.
 
-![youtube-video](https://www.youtube.com/embed/JkpSTKuNZKg)
+![Overwrite Empty Voxels Modifier](./images/overwrite-empty-modifier.jpg){align=left width="60"} 
+**Only Overwrite Empty Areas**: In contrast to the `Overwrite Everything` modifier, the forces the brush & trace tools to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites.
+
+![2D Fill Modifier](./images/2d-modifier.jpg){align=left width="60"} 
+![3D Fill Modifier](./images/3d-modifier.jpg){align=left width="60"} 
+**2D Fill`/ `3D Fill**: Modifies the flood filling tool to work in 2D (in-plane only) or 3D (volumetric fill/re-labeling). 3D flood fill is constrained to a small, regional bounding box for performance reasons. Read more about flood fills below.
+
 
 In the `Segmentation` tab on the right-hand side panel, you can see the segment IDs which are available in your annotation. You can rename segments as needed.
 

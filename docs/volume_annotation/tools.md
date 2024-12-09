@@ -30,6 +30,12 @@ Choose a volume annotation drawing tool from the [toolbar](../ui/toolbar.md).
 ![Interpolation/Extrusion Tool](../ui/images/interpolation-tool.jpg){align=left width="60"} 
 **Interpolation/Extrusion**: Annotate a segment, skip a few sections in the Z direction, and annotate it again. Now, you can interpolate between the two segments. Read more on the interpolation/extrusion tool below. 
 
+In the [Segments tab](./segments_list.md) on the right-hand side panel, you can find all segment IDs which are available in your annotation. You can rename and organize segments as needed.
+
+The active segment ID under the cursor can be found in the [status bar](../ui/status_bar.md) at the bottom of the screen or through the context-sensitive menu when right-clicking.
+
+More keyboard shortcuts can be found in the [keyboard shortcuts](../ui/keyboard_shortcuts.md) section.
+
 ### Tool Modifiers
 The following interactions and modifiers become available when working with some of the volume annotation tools. They can be found in the toolbar:
 
@@ -49,10 +55,6 @@ The following interactions and modifiers become available when working with some
 ![3D Fill Modifier](./images/3d-modifier.jpg){align=left width="60"} 
 **2D Fill`/ `3D Fill**: Modifies the flood filling tool to work in 2D (in-plane only) or 3D (volumetric fill/re-labeling). 3D flood fill is constrained to a small, regional bounding box for performance reasons. Read more about flood fills below.
 
-
-In the `Segmentation` tab on the right-hand side panel, you can see the segment IDs which are available in your annotation. You can rename segments as needed.
-
-The active segment ID under the cursor can be found in the status bar at the bottom of the screen or through the context-sensitive menu on right-click.
 
 ## Quick-select tool
 The built-in quick select tools allows you draw a selection around a cell or object and WEBKNOSSOS will use machine-learning to automatically do the segmentation for you. The feature is based on the [Segment Anything Model 2](https://ai.meta.com/blog/segment-anything-2/) and works across a wide range of imaging modalities.

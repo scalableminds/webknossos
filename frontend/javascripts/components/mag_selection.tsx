@@ -1,9 +1,13 @@
 import { Form, Select } from "antd";
 import type { Vector3 } from "oxalis/constants";
 
-export function MagSelectionFormItem({ mags }: { mags: Vector3[] }): JSX.Element {
+export function MagSelectionFormItem({
+  name,
+  mags,
+}: { name: string; mags: Vector3[] }): JSX.Element {
   return (
     <Form.Item
+      name={name}
       label={"Magnification"}
       rules={[
         {

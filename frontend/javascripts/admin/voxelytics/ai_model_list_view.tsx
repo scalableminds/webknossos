@@ -109,7 +109,7 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
     AnnotationInfoForAIJob<APIAnnotation>[]
   >([]);
 
-  const getMagsForSegmentationLayer = async (annotationId: string, layerName: string) => {
+  const getMagsForSegmentationLayer = (annotationId: string, layerName: string) => {
     // The layer name is a human-readable one. It can either belong to an annotationLayer
     // (therefore, also to a volume tracing) or to the actual dataset.
     // Both are checked below. This won't be ambiguous because annotationLayers must not

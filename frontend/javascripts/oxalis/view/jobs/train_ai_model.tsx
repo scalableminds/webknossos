@@ -41,7 +41,6 @@ import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reduc
 import { computeArrayFromBoundingBox } from "libs/utils";
 import { MagSelectionFormItem } from "components/mag_selection";
 import type { MagInfo } from "oxalis/model/helpers/mag_info";
-import { useFetch } from "libs/react_helpers";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;
@@ -129,7 +128,7 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const dataset = useSelector((state: OxalisState) => state.dataset);
 
-  const getMagsForSegmentationLayer = async (_annotationId: string, layerName: string) => {
+  const getMagsForSegmentationLayer = (_annotationId: string, layerName: string) => {
     const segmentationLayer = getSegmentationLayerByHumanReadableName(dataset, tracing, layerName);
     return getMagInfo(segmentationLayer.resolutions);
   };
@@ -160,7 +159,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
   annotationInfos,
   onAddAnnotationsInfos,
 }: {
-  getMagsForSegmentationLayer: (annotationId: string, layerName: string) => Promise<MagInfo>; // TODO_c rename method
+  getMagsForSegmentationLayer: (annotationId: string, layerName: string) => MagInfo; // TODO_c rename method
   onClose: () => void;
   ensureSavedState?: (() => Promise<void>) | null;
   annotationInfos: Array<AnnotationInfoForAIJob<GenericAnnotation>>;
@@ -168,7 +167,6 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 }) {
   const [form] = Form.useForm();
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
-  const mags = useFetch(() => await getMagsForSegmentationLayer(annotationId, layerName)); // TODO_c
 
   const getTrainingAnnotations = async (values: any) => {
     return Promise.all(
@@ -183,7 +181,6 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
             annotationId,
             colorLayerName: imageDataLayer,
             segmentationLayerName: layerName,
-            mag: null //TODO_c,
           };
         },
       ),
@@ -285,6 +282,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
         );
         const fixedSelectedColorLayer = colorLayers.length === 1 ? colorLayers[0] : null;
         const annotationId = "id" in annotation ? annotation.id : annotation.annotationId;
+        const mags = getMagsForSegmentationLayer(annotationId, segmentationLayers[0].name);
         return (
           <Row key={annotationId} gutter={8}>
             <Col span={6}>
@@ -319,8 +317,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
               </FormItem>
             </Col>
             <Col span={6}>
-              <MagSelectionFormItem mags={ }
-              />
+              <MagSelectionFormItem name="mag" mags={mags.getMagList()} />
             </Col>
             <Col span={6}>
               <LayerSelectionFormItem
@@ -354,31 +351,31 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 
       {hasErrors
         ? errors.map((error) => (
-          <Alert
-            key={error}
-            description={error}
-            style={{
-              marginBottom: 12,
-              whiteSpace: "pre-line",
-            }}
-            type="error"
-            showIcon
-          />
-        ))
+            <Alert
+              key={error}
+              description={error}
+              style={{
+                marginBottom: 12,
+                whiteSpace: "pre-line",
+              }}
+              type="error"
+              showIcon
+            />
+          ))
         : null}
       {hasWarnings
         ? warnings.map((warning) => (
-          <Alert
-            key={warning}
-            description={warning}
-            style={{
-              marginBottom: 12,
-              whiteSpace: "pre-line",
-            }}
-            type="warning"
-            showIcon
-          />
-        ))
+            <Alert
+              key={warning}
+              description={warning}
+              style={{
+                marginBottom: 12,
+                whiteSpace: "pre-line",
+              }}
+              type="warning"
+              showIcon
+            />
+          ))
         : null}
 
       <FormItem>
@@ -622,10 +619,10 @@ function AnnotationsCsvInput({
               return valid
                 ? Promise.resolve()
                 : Promise.reject(
-                  new Error(
-                    "Each line should only contain an annotation ID or URL (without # or ,)",
-                  ),
-                );
+                    new Error(
+                      "Each line should only contain an annotation ID or URL (without # or ,)",
+                    ),
+                  );
             },
           }),
         ]}

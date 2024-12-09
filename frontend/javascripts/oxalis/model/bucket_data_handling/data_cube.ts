@@ -498,14 +498,15 @@ class DataCube {
   }> {
     // This flood-fill algorithm works in two nested levels and uses a list of buckets to flood fill.
     // On the inner level a bucket is flood-filled  and if the iteration of the buckets data
-    // reaches an neighbour bucket, this bucket is added to this list of buckets to flood fill.
+    // reaches a neighbour bucket, this bucket is added to this list of buckets to flood fill.
     // The outer level simply iterates over all  buckets in the list and triggers the bucket-wise flood fill.
     // Additionally a map is created that saves all labeled voxels for each bucket. This map is returned at the end.
     //
-    // Note: It is possible that a bucket is multiple times added to the list of buckets. This is intended
+    // Note: It is possible that a bucket is added multiple times to the list of buckets. This is intended
     // because a border of the "neighbour volume shape" might leave the neighbour bucket and enter it somewhere else.
     // If it would not be possible to have the same neighbour bucket in the list multiple times,
     // not all of the target area in the neighbour bucket might be filled.
+
     // Helper function to convert between xyz and uvw (both directions)
     const transpose = (voxel: Vector3): Vector3 =>
       Dimensions.transDimWithIndices(voxel, dimensionIndices);

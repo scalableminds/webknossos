@@ -75,7 +75,7 @@ class Migration:
                 materialized_versions = self.migrate_materialized_layers(annotation, layer_version_mapping, mapping_id_map)
                 if len(materialized_versions) == 0:
                     raise ValueError(f"Zero materialized versions present in source FossilDB for annotation {annotation['_id']}.")
-                self.create_and_save_annotation_proto(annotation, materialized_versions)
+                self.create_and_save_annotation_proto(annotation, materialized_versions, mapping_id_map)
                 if time.time() - before > 1 or self.args.verbose:
                     log_since(before, f"Migrating annotation {annotation['_id']} ({len(materialized_versions)} materialized versions)", self.get_progress())
         except Exception:
@@ -404,13 +404,21 @@ class Migration:
             transform_key=partial(self.replace_before_first_slash, tracing_id)
         )
 
-    def create_and_save_annotation_proto(self, annotation, materialized_versions: Set[int]):
+    def create_and_save_annotation_proto(self, annotation, materialized_versions: Set[int], mapping_id_map: MappingIdMap):
         skeleton_may_have_pending_updates = self.skeleton_may_have_pending_updates(annotation)
+        earliest_accessible_version = 0
+        if len(mapping_id_map) > 0:
+            # An editable mapping exists in this annotation.
+            # Merged editable mappings have updates in non-chronological order,
+            # so accessing their merged update history will lead to unexpected behavior.
+            # So we forbid it.
+            earliest_accessible_version = max(materialized_versions)
+        # We write an annotationProto object for every materialized version of every layer.
         for version in materialized_versions:
             annotationProto = AnnotationProto.AnnotationProto()
             annotationProto.description = annotation["description"] or ""
             annotationProto.version = version
-            annotationProto.earliestAccessibleVersion = 0  # TODO different for merged editable mappings
+            annotationProto.earliestAccessibleVersion = earliest_accessible_version
             if skeleton_may_have_pending_updates:
                 annotationProto.skeletonMayHavePendingUpdates = True
             for tracing_id, tracing_type in annotation["layers"].items():

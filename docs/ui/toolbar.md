@@ -86,7 +86,7 @@ WEBKNOSSOS provides several tools for volume annotation:
 **Trace Tool**: Create precise boundary definitions by drawing outlines around structures. This tool is particularly useful when accuracy is crucial. For added precision consider using a [pen input device](../pen_tablets.md). 
 
 ![Brush Tool](./images/brush-tool.jpg){align=left width="60"} 
-**Brush Tool**: Paint directly onto the dataset to mark regions of interest. The brush size is adjustable and . If you draw around objects in one continuous motion, the inside will be filled automatically.
+**Brush Tool**: Paint directly onto the dataset to mark regions of interest. The brush size is adjustable to match your needs. If you draw around objects in one continuous motion, the inside will be filled automatically.
 
 ![Quick Select Tool](./images/quickselect-tool.jpg){align=left width="60"} 
 **AI Quick Select**: Annotate a segment automatically with our AI by drawing a rectangular selection over it. Alternatively, single click in the center of a cell to automatically label it.

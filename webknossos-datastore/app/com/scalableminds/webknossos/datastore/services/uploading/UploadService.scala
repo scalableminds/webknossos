@@ -354,7 +354,9 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                                      typ: UploadedDataSourceType.Value): Fox[Unit] =
     for {
       _ <- Fox.runIf(typ == UploadedDataSourceType.ZARR)(addLayerAndMagDirIfMissing(path, FILENAME_DOT_ZARRAY).toFox)
-      explored <- exploreLocalLayerService.exploreLocal(path, dataSourceId)
+      layers <- PathUtils.listDirectories(path, silent = true).toFox
+      _ <- bool2Fox(layers.nonEmpty) ~> s"Could not find a layer in $path"
+      explored <- exploreLocalLayerService.exploreLocal(path, dataSourceId, layers.head.getFileName.toString)
       _ <- exploreLocalLayerService.writeLocalDatasourceProperties(explored, path)
     } yield ()
 
@@ -466,10 +468,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   }
 
   private def guessTypeOfUploadedDataSource(dataSourceDir: Path): UploadedDataSourceType.Value =
-    if (looksLikeZarrArray(dataSourceDir, maxDepth = 2).openOr(false)) {
-      UploadedDataSourceType.ZARR
-    } else if (looksLikeExploredDataSource(dataSourceDir).openOr(false)) {
+    if (looksLikeExploredDataSource(dataSourceDir).openOr(false)) {
       UploadedDataSourceType.EXPLORED
+    } else if (looksLikeZarrArray(dataSourceDir, maxDepth = 2).openOr(false)) {
+      UploadedDataSourceType.ZARR
     } else if (looksLikeZarrArray(dataSourceDir, maxDepth = 3).openOr(false)) {
       UploadedDataSourceType.ZARR_MULTILAYER
     } else if (looksLikeNeuroglancerPrecomputed(dataSourceDir, 1).openOr(false)) {

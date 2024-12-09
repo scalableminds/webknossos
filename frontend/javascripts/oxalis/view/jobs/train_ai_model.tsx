@@ -175,12 +175,14 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
           annotationId: string;
           imageDataLayer: string;
           layerName: string;
+          mag: string; //TODO_c Vector3
         }) => {
-          const { annotationId, imageDataLayer, layerName } = trainingAnnotation;
+          const { annotationId, imageDataLayer, layerName, mag } = trainingAnnotation;
           return {
             annotationId,
             colorLayerName: imageDataLayer,
             segmentationLayerName: layerName,
+            mag,
           };
         },
       ),
@@ -241,7 +243,6 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
   const hasWarnings = hasBBoxWarnings;
   const errors = [...annotationErrors, ...bboxErrors];
   const warnings = bboxWarnings;
-
   return (
     <Form
       onFinish={(values) => onFinish(form, useCustomWorkflow, values)}
@@ -282,7 +283,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
         );
         const fixedSelectedColorLayer = colorLayers.length === 1 ? colorLayers[0] : null;
         const annotationId = "id" in annotation ? annotation.id : annotation.annotationId;
-        const mags = getMagsForSegmentationLayer(annotationId, segmentationLayers[0].name);
+        const mags = getMagsForSegmentationLayer(annotationId, segmentationLayers[0].name); // TODO_c
         return (
           <Row key={annotationId} gutter={8}>
             <Col span={6}>
@@ -317,9 +318,6 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
               </FormItem>
             </Col>
             <Col span={6}>
-              <MagSelectionFormItem name="mag" mags={mags.getMagList()} />
-            </Col>
-            <Col span={6}>
               <LayerSelectionFormItem
                 name={["trainingAnnotations", idx, "layerName"]}
                 chooseSegmentationLayer
@@ -329,6 +327,12 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                 }}
                 fixedLayerName={fixedSelectedSegmentationLayer?.name || undefined}
                 label="Ground Truth Layer"
+              />
+            </Col>
+            <Col span={6}>
+              <MagSelectionFormItem
+                name={["trainingAnnotations", idx, "mag"]}
+                mags={mags.getMagList()}
               />
             </Col>
           </Row>

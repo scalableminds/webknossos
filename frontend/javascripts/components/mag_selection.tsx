@@ -4,7 +4,7 @@ import type { Vector3 } from "oxalis/constants";
 export function MagSelectionFormItem({
   name,
   mags,
-}: { name: string; mags: Vector3[] }): JSX.Element {
+}: { name: string | Array<string | number>; mags: Vector3[] }): JSX.Element {
   return (
     <Form.Item
       name={name}
@@ -21,10 +21,18 @@ export function MagSelectionFormItem({
   );
 }
 
-function MagSelection({ mags }: { mags: Vector3[] }): JSX.Element {
+function MagSelection({
+  mags,
+  value,
+  onChange,
+}: { mags: Vector3[]; value?: string | null; onChange?: (a: string) => void }): JSX.Element {
   return (
-    <Select>
+    <Select
       placeholder="Select a magnification"
+      defaultValue={mags[0].join("-")}
+      value={value}
+      onSelect={onChange}
+    >
       {mags.map((mag) => {
         const readableName = mag.join("-");
         return (

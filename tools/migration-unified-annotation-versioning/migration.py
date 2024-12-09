@@ -73,7 +73,6 @@ class Migration:
                 mapping_id_map = self.build_mapping_id_map(annotation)
                 layer_version_mapping = self.migrate_updates(annotation, mapping_id_map)
                 materialized_versions = self.migrate_materialized_layers(annotation, layer_version_mapping, mapping_id_map)
-                logger.info(f"saved materialized versions {materialized_versions}")
                 if len(materialized_versions) == 0:
                     raise ValueError(f"Zero materialized versions present in source FossilDB for annotation {annotation['_id']}.")
                 self.create_and_save_annotation_proto(annotation, materialized_versions)
@@ -147,7 +146,6 @@ class Migration:
 
             unified_version += 1
             version_mapping[tracing_id][version] = unified_version
-            logger.info(f"saving update v{unified_version}")
             self.save_update_group(annotation['_id'], unified_version, update_group)
 
             if element_index + 1 < len(all_update_groups[layer_index]):
@@ -295,7 +293,6 @@ class Migration:
                 skeleton.version = new_version
                 value_bytes = skeleton.SerializeToString()
             materialized_versions_unified.append(new_version)
-            logger.info(f"saving materialized skeleton {new_version}")
             self.save_bytes(collection, tracing_id, new_version, value_bytes)
         return materialized_versions_unified
 
@@ -316,7 +313,6 @@ class Migration:
                     volume.mappingName = tracing_id
                 value_bytes = volume.SerializeToString()
             materialized_versions_unified.append(new_version)
-            logger.info(f"saving materialized volume {new_version}")
             self.save_bytes(collection, tracing_id, new_version, value_bytes)
         return materialized_versions_unified
 
@@ -409,12 +405,14 @@ class Migration:
         )
 
     def create_and_save_annotation_proto(self, annotation, materialized_versions: Set[int]):
+        skeleton_may_have_pending_updates = self.skeleton_may_have_pending_updates(annotation)
         for version in materialized_versions:
             annotationProto = AnnotationProto.AnnotationProto()
             annotationProto.description = annotation["description"] or ""
             annotationProto.version = version
             annotationProto.earliestAccessibleVersion = 0  # TODO different for merged editable mappings
-            annotationProto.skeletonMayHavePendingUpdates = True # TODO set this to true less often (e.g. not on single-layer, or when there is no skeleton)
+            if skeleton_may_have_pending_updates:
+                annotationProto.skeletonMayHavePendingUpdates = True
             for tracing_id, tracing_type in annotation["layers"].items():
                 layer_proto = AnnotationProto.AnnotationLayerProto()
                 layer_proto.tracingId = tracing_id
@@ -425,6 +423,17 @@ class Migration:
                 layer_proto.type = layer_type_proto
                 annotationProto.annotationLayers.append(layer_proto)
             self.save_bytes(collection="annotations", key=annotation["_id"], version=version, value=annotationProto.SerializeToString())
+
+    def skeleton_may_have_pending_updates(self, annotation) -> bool:
+        # Skeletons in the old code had their updates applied lazily.
+        # Thus, the current materialized skeleton may not be up to date
+        # But since we are writing materialized annotationProto for every materialized version from every layer
+        # the skeleton must be marked as skeletonMayHavePendingUpdates
+        # We do this always, except if there is no skeleton,
+        # or if it is the only layer (then the materialized set matches)
+        if len(annotation["layers"]) < 2:
+            return False
+        return "Skeleton" in annotation["layers"].values()
 
     def read_annotation_list(self):
         before = time.time()

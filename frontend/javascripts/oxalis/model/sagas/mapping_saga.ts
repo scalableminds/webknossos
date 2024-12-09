@@ -463,6 +463,7 @@ function* updateLocalHdf5Mapping(
           annotation.tracingStore.url,
           editableMapping.tracingId,
           Array.from(newSegmentIds),
+          annotation.annotationId,
           annotation.version,
         )
       : yield* call(

@@ -63,21 +63,7 @@ export async function previewVersion(version?: number) {
     const params = new URLSearchParams();
     params.append("showVersionRestore", "true");
     params.append("version", `${version}`);
-    // todop: do this
-    // location.href = `${location.origin}/annotations/${annotationId}?${params}${location.hash}`;
-
-    // todop: remove this (it's only for testing)
-    for (const layer of annotationProto.annotationLayers) {
-      await getTracingForAnnotationType(
-        state.tracing,
-        {
-          name: "irrelevant hopefully",
-          tracingId: layer.tracingId,
-          typ: layer.type,
-        },
-        version,
-      );
-    }
+    location.href = `${location.origin}/annotations/${annotationId}?${params}${location.hash}`;
 
     return;
   }

@@ -719,14 +719,13 @@ export async function acquireAnnotationMutex(
 }
 
 export async function getTracingForAnnotationType(
-  // todop: revert to APIAnnotation
-  annotation: { tracingStore: { url: string } },
+  annotation: APIAnnotation,
   annotationLayerDescriptor: AnnotationLayerDescriptor,
   version?: number | null | undefined,
 ): Promise<ServerTracing> {
   const { tracingId, typ } = annotationLayerDescriptor;
   const tracingType = typ.toLowerCase() as "skeleton" | "volume";
-  const params = new URLSearchParams();
+  const params = new URLSearchParams({ annotationId: annotation.id });
   if (version != null) {
     params.append("version", version.toString());
   }
@@ -1451,10 +1450,15 @@ export function fetchMapping(
 export function getEditableMappingInfo(
   tracingStoreUrl: string,
   tracingId: string,
+  annotationId: string,
 ): Promise<ServerEditableMapping> {
-  return doWithToken((token) =>
-    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}/info?token=${token}`),
-  );
+  return doWithToken((token) => {
+    const params = new URLSearchParams({
+      token,
+      annotationId: `${annotationId}`,
+    });
+    return Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}/info?${params}`);
+  });
 }
 
 export function getPositionForSegmentInAgglomerate(
@@ -1961,9 +1965,10 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   tracingStoreUrl: string,
   tracingId: string,
   segmentIds: Array<T>,
+  annotationId: string,
   version?: number | null | undefined,
 ): Promise<Mapping> {
-  const params = new URLSearchParams();
+  const params = new URLSearchParams({ annotationId });
   if (version != null) {
     params.append("version", version.toString());
   }

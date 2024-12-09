@@ -229,6 +229,7 @@ export async function initialize(
     const editableMappings = await fetchEditableMappings(
       annotation.tracingStore.url,
       serverVolumeTracings,
+      annotation.id,
     );
     if (annotationProto == null) {
       // Satisfy TS. annotationProto should always exist if annotation exists.
@@ -274,10 +275,11 @@ async function fetchParallel(
 async function fetchEditableMappings(
   tracingStoreUrl: string,
   serverVolumeTracings: ServerVolumeTracing[],
+  annotationId: string,
 ): Promise<ServerEditableMapping[]> {
   const promises = serverVolumeTracings
     .filter((tracing) => tracing.hasEditableMapping)
-    .map((tracing) => getEditableMappingInfo(tracingStoreUrl, tracing.id));
+    .map((tracing) => getEditableMappingInfo(tracingStoreUrl, tracing.id, annotationId));
   return Promise.all(promises);
 }
 

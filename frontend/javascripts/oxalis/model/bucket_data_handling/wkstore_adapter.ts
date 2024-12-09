@@ -101,13 +101,15 @@ export async function requestWithFallback(
   const organization = state.dataset.owningOrganization;
   const dataStoreHost = state.dataset.dataStore.url;
   const tracingStoreHost = state.tracing.tracingStore.url;
+  const { annotationId } = state.tracing;
 
   const getDataStoreUrl = (optLayerName?: string) =>
     `${dataStoreHost}/data/datasets/${organization}/${datasetDirectoryName}/layers/${
       optLayerName || layerInfo.name
     }`;
 
-  const getTracingStoreUrl = () => `${tracingStoreHost}/tracings/volume/${layerInfo.name}`;
+  const getTracingStoreUrl = () =>
+    `${tracingStoreHost}/tracings/volume/${layerInfo.name}?annotationId=${annotationId}`;
 
   const maybeVolumeTracing =
     "tracingId" in layerInfo && layerInfo.tracingId != null

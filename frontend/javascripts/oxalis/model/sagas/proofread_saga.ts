@@ -1281,6 +1281,7 @@ function* splitAgglomerateInMapping(
     .filter(([_segmentId, agglomerateId]) => agglomerateId === comparableSourceAgglomerateId)
     .map(([segmentId, _agglomerateId]) => segmentId);
 
+  const annotationId = yield* select((state) => state.tracing.annotationId);
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
   // Ask the server to map the (split) segment ids. This creates a partial mapping
   // that only contains these ids.
@@ -1289,6 +1290,7 @@ function* splitAgglomerateInMapping(
     tracingStoreUrl,
     volumeTracingId,
     splitSegmentIds,
+    annotationId,
   );
 
   // Create a new mapping which is equal to the old one with the difference that

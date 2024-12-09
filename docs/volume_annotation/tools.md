@@ -1,29 +1,40 @@
-# Volume annotation tools
-## Tool overview
+# Volume Annotation Tools
 
-Choose a volume annotation drawing tool from the [toolbar](../ui/toolbar.md).
+Volume annotation in WEBKNOSSOS allows you to label and segment 3D structures in your dataset. This page covers the available tools and best practices for efficient volume annotation.
+
+!!! tip "Keyboard Shortcuts"
+    For faster workflow, refer to the [keyboard shortcuts](../ui/keyboard_shortcuts.md) guide. Common shortcuts are mentioned alongside their respective tools below.
 
 ![Trace Tool](../ui/images/trace-tool.jpg){align=left width="60"}
 **Trace Tool**: Create precise boundary definitions by drawing outlines around structures. This tool is particularly useful when accuracy is crucial. For added precision consider using a [pen input device](../pen_tablets.md). 
 ![Adding labels with the Trace tool](../images/volume_trace.gif)
 
 ![Brush Tool](../ui/images/brush-tool.jpg){align=left width="60"} 
-**Brush Tool**: Paint directly onto the dataset to mark regions of interest. The brush size is adjustable and . If you draw around objects in one continuous motion, the inside will be filled automatically. Use ++shift++ + _Mousewheel_ to change the brush size.
+**Brush Tool**: Paint directly onto the dataset to mark regions of interest. The brush size is adjustable using ++shift++ + _Mousewheel_. Drawing around objects in one continuous motion will automatically fill the inside area.
 ![Adding labels with the Brush tool](../images/volume_brush.gif)
 
 ![Eraser (Trace/Brush)](../ui/images/eraser-tool.jpg){align=left width="60"} 
- **Eraser (Trace/Brush)**: Erase voxels by drawing over them deleting any labels. Behaves identical to the Trace/Brush tools above. Use ++shift++ + _Mousewheel_ to change the brush size.
+ **Eraser (Trace/Brush)**: Remove existing labels by drawing over them. Functions identically to the Trace/Brush tools, with adjustable size using ++shift++ + _Mousewheel_.
 ![Removing labels with the Eraser tool](../images/volume_delete.gif)
 
 ![Fill Tool](../ui/images/fill-tool.jpg){align=left width="60"} 
-**Fill Tool**: Fill the clicked region with a volume annotation up to the next segment boundary (or the edge of your viewport). All neighboring voxels with the same voxel id as the clicked voxel will be labelled with the active segment ID. This is useful for filling a hole in a segment or relabeling a segment with a different ID/color. Read more about the fill tool below.
+**Fill Tool**: Fill regions with volume annotations up to segment boundaries or viewport edges. Useful for:
+- Filling holes in segments
+- Relabeling segments with different IDs/colors
+- Quick corrections of small areas
+- The fill behavior can be modified using the 2D/3D fill modifiers (see below).
 
 ![Segment Picker Tool](../ui/images/segment-picker-tool.jpg){align=left width="60"} 
 **Segment Picker**: Click any segment to use its label ID as the active segment ID and keep annotating with that ID. This is alternative to selecting the segment ID from the [Segments list](./segments_list.md) sidebar or context menu.
 
 ![Quick Select Tool](../ui/images/quickselect-tool.jpg){align=left width="60"} 
-**Quick Select**: Annotate a segment automatically by drawing a rectangular selection over it. By default this tools us our AI for segmentation but also has a threshold-based mode. Read more about the quick-select tool below.
+**Quick Select**: Automatically annotate segments using either:
+- AI-based segmentation (powered by Segment Anything Model 2)
+- Threshold-based selection mode
 
+The AI mode works across various imaging modalities and can significantly speed up annotation workflows. See the [Quick-select tool](#quick-select-tool) section for detailed usage.
+
+### Proof Reading Tool
 ![Proof Reading Tool](../ui/images/proofreading-tool.jpg){align=left width="60"} 
 **Proof Reading**: Fix merge and split errors in automated segmentations using the underlying super-voxel graph by combining and breaking apart segments. Read more about [proofreading](../proofreading/tools.md).
 
@@ -57,28 +68,60 @@ The following interactions and modifiers become available when working with some
 
 
 ## Quick-select tool
-The built-in quick select tools allows you draw a selection around a cell or object and WEBKNOSSOS will use machine-learning to automatically do the segmentation for you. The feature is based on the [Segment Anything Model 2](https://ai.meta.com/blog/segment-anything-2/) and works across a wide range of imaging modalities.
+The Quick Select tool offers AI-powered automatic segmentation, powered by [Segment Anything Model 2](https://ai.meta.com/blog/segment-anything-2/). Simply draw a selection around your target structure, and WEBKNOSSOS will automatically segment it for you.
 
-When the "AI" button in the toolbar is activated, a machine-learning model is used to infer the selection. When the AI button is disabled, the tool operates on the intensity data of the visible color layer and automatically fills out the segment starting from the center of the rectangle. Next to the tool, there is a settings button which allows to enable a preview mode and to tweak some other parameters. When the preview is enabled, you can fine-tuned the parameters and see the preview update instantly.
+### Operating Modes
 
-Choose the quick-select tool from the toolbar. Activate AI and go to the settings icon in the toolbar to set the number of sections for the prediction. Then, click a cell on your EM data or draw a rectangle around the cell to segment. WEBKNOSSOS will label the cell across the chosen number of sections. 
+**AI Mode** (Default)
+
+- Activate the "AI" button in the toolbar
+- Works across various imaging modalities
+- Segments structures based on machine learning
+
+**Threshold Mode**
+
+- Disable the "AI" button
+- Uses intensity-based segmentation
+- Fills from the center of your selection
+
+### Usage Steps
+
+1. Select the Quick Select tool from the toolbar
+2. Choose your preferred mode (AI or threshold)
+3. Click the settings icon to configure:
+    - Number of sections to process
+    - Preview mode for real-time parameter adjustment
+4. Draw a rectangle around your target structure or click on it directly
+5. WEBKNOSSOS will automatically segment the structure across your specified sections
+
 ![youtube-video](https://www.youtube.com/embed/FnIor77Dg8s)
 
 ## Volume Interpolation
 
-When using the brush or trace tool, you can use the `Volume Interpolation` feature for faster annotation speed (in a task context, this feature has to be enabled explicitly).
-Simply label a segment in one slice (e.g., z=10), move forward by a few slices (e.g., z=14) and label the segment there.
-Now, you can click the "Interpolate" button (or use the shortcut V) to interpolate the segment between the annotated slices (e.g., z=11, z=12, z=13).
+The Volume Interpolation feature accelerates your annotation workflow by automatically filling in intermediate slices:
 
-Note that it is recommended to proofread the interpolated slices afterward since the interpolation is a heuristic.
+1. Label your structure in one slice (e.g., at z=10)
+2. Skip several slices and label the structure again (e.g., at z=14)
+3. Press the "Interpolate" button or use shortcut ++v++ to automatically generate labels for the slices in between
 
-![youtube-video](https://www.youtube.com/embed/QqU72vHRR2I)
+!!! tip
+    When working with [tasks](../tasks_projects/tasks.md), this feature needs to be explicitly enabled by the task creator.
+
+!!! warning
+    Always review the interpolated slices, as the automated results are based on heuristics and may require adjustments.
 
 ## Volume Extrusion
 
-Similar to the above interpolation feature, you can also extrude the currently active segment.
-This means, that you can label a segment on one slice (e.g., z=10), move a few slices forward (e.g., z=12) and copy the segment to the relevant slices (e.g., z=11, z=12). In contrast to interpolation mode, WEBKNOSSOS will not adapt the shape/boundary of the extruded segments to fit between the source and target segment. Instead, the extruded volume will retain the shape of the source segment and extend that along the z-axis.
-The extrusion can be triggered by using the extrude button in the toolbar (also available as a dropdown next to the interpolation/extrusion button).
+Volume Extrusion is an alternative to interpolation that preserves the exact shape of your annotation across multiple slices:
+
+1. Label your structure in one slice (e.g., at z=10)
+2. Move to a target slice (e.g., z=12)
+3. Click the "Extrude" button in the toolbar to copy your annotation to all slices in between
+
+!!! note "Extrusion vs. Interpolation"
+    Unlike interpolation, extrusion maintains the exact shape of your source annotation. The structure is copied without any shape adaptation between slices.
+
+You can find the extrude button in the toolbar or use the dropdown menu next to the interpolation/extrusion button.
 
 ![youtube-video](https://www.youtube.com/embed/GucpEA6Wev8)
 
@@ -89,6 +132,5 @@ WEBKNOSSOS supports volumetric flood fills (3D) to relabel a segment with a new 
 - For split errors: Combine two segments by relabeling one segment with the ID of the other. Since this operation is fairly compute-intensive you might be better of with the [Merger Mode](../proofreading/merger_mode.md).
 - For merge errors: You have to manually split two segments at their intersection/border, e.g. a cell boundary. Use the eraser brush and make sure to establish a clear cut between both segments on a slice-by-slice basis. Both segments must not touch any longer. Create a new segment ID from the toolbar and apply it to one of the partial segments that you just divided.
 
-Note that due to performance reasons, 3D flood-fills only work in a small, local bounding box.
-For larger areas we recommend working with the [proofreading tool](../proofreading/tools.md) instead.
-
+!!! note "Performance Consideration"
+    For performance reasons, 3D flood-fills only work in a small, local bounding box. For large-scale modifications, consider using the [proofreading tool](../proofreading/tools.md) instead of 3D flood-fills, as it's optimized for handling larger volumes.

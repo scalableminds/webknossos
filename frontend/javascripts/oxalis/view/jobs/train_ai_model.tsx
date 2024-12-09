@@ -39,6 +39,8 @@ import type { Vector3, Vector6 } from "oxalis/constants";
 import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
 import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import { computeArrayFromBoundingBox } from "libs/utils";
+import { MagSelectionFormItem } from "components/mag_selection";
+import type { MagInfo } from "oxalis/model/helpers/mag_info";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;
@@ -126,15 +128,15 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const dataset = useSelector((state: OxalisState) => state.dataset);
 
-  const getMagForSegmentationLayer = async (_annotationId: string, layerName: string) => {
+  const getMagsForSegmentationLayer = (_annotationId: string, layerName: string) => {
     const segmentationLayer = getSegmentationLayerByHumanReadableName(dataset, tracing, layerName);
-    return getMagInfo(segmentationLayer.resolutions).getFinestMag();
+    return getMagInfo(segmentationLayer.resolutions);
   };
   const userBoundingBoxes = getSomeTracing(tracing).userBoundingBoxes;
 
   return (
     <TrainAiModelTab
-      getMagForSegmentationLayer={getMagForSegmentationLayer}
+      getMagsForSegmentationLayer={getMagsForSegmentationLayer}
       ensureSavedState={() => Model.ensureSavedState()}
       onClose={onClose}
       annotationInfos={[
@@ -151,13 +153,13 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
 }
 
 export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | HybridTracing>({
-  getMagForSegmentationLayer,
+  getMagsForSegmentationLayer,
   onClose,
   ensureSavedState,
   annotationInfos,
   onAddAnnotationsInfos,
 }: {
-  getMagForSegmentationLayer: (annotationId: string, layerName: string) => Promise<Vector3>;
+  getMagsForSegmentationLayer: (annotationId: string, layerName: string) => MagInfo; // TODO_c rename method
   onClose: () => void;
   ensureSavedState?: (() => Promise<void>) | null;
   annotationInfos: Array<AnnotationInfoForAIJob<GenericAnnotation>>;
@@ -173,13 +175,14 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
           annotationId: string;
           imageDataLayer: string;
           layerName: string;
+          mag: string; //TODO_c Vector3
         }) => {
-          const { annotationId, imageDataLayer, layerName } = trainingAnnotation;
+          const { annotationId, imageDataLayer, layerName, mag } = trainingAnnotation;
           return {
             annotationId,
             colorLayerName: imageDataLayer,
             segmentationLayerName: layerName,
-            mag: await getMagForSegmentationLayer(annotationId, layerName),
+            mag,
           };
         },
       ),
@@ -240,7 +243,6 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
   const hasWarnings = hasBBoxWarnings;
   const errors = [...annotationErrors, ...bboxErrors];
   const warnings = bboxWarnings;
-
   return (
     <Form
       onFinish={(values) => onFinish(form, useCustomWorkflow, values)}
@@ -281,9 +283,10 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
         );
         const fixedSelectedColorLayer = colorLayers.length === 1 ? colorLayers[0] : null;
         const annotationId = "id" in annotation ? annotation.id : annotation.annotationId;
+        const mags = getMagsForSegmentationLayer(annotationId, segmentationLayers[0].name); // TODO_c
         return (
           <Row key={annotationId} gutter={8}>
-            <Col span={8}>
+            <Col span={6}>
               <FormItem
                 hasFeedback
                 name={["trainingAnnotations", idx, "annotationId"]}
@@ -293,7 +296,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                 <Input disabled />
               </FormItem>
             </Col>
-            <Col span={8}>
+            <Col span={6}>
               <FormItem
                 hasFeedback
                 name={["trainingAnnotations", idx, "imageDataLayer"]}
@@ -314,7 +317,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                 />
               </FormItem>
             </Col>
-            <Col span={8}>
+            <Col span={6}>
               <LayerSelectionFormItem
                 name={["trainingAnnotations", idx, "layerName"]}
                 chooseSegmentationLayer
@@ -324,6 +327,12 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                 }}
                 fixedLayerName={fixedSelectedSegmentationLayer?.name || undefined}
                 label="Ground Truth Layer"
+              />
+            </Col>
+            <Col span={6}>
+              <MagSelectionFormItem
+                name={["trainingAnnotations", idx, "mag"]}
+                mags={mags.getMagList()}
               />
             </Col>
           </Row>

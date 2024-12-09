@@ -22,12 +22,19 @@ import { select, take } from "oxalis/model/sagas/effect-generators";
 import { requestBucketModificationInVolumeTracing } from "oxalis/model/sagas/saga_helpers";
 import { Model } from "oxalis/singletons";
 import { call, put } from "typed-redux-saga";
+import { getUserBoundingBoxesThatContainPosition } from "../../accessors/tracing_accessor";
 import { applyLabeledVoxelMapToAllMissingMags } from "./helpers";
 
 function* getBoundingBoxForFloodFill(
   position: Vector3,
   currentViewport: OrthoView,
 ): Saga<BoundingBoxType> {
+  // todop: make this optional somehow
+  const bboxes = yield* select((state) => getUserBoundingBoxesThatContainPosition(state, position));
+  if (bboxes.length > 0) {
+    return bboxes[0].boundingBox;
+  }
+
   const fillMode = yield* select((state) => state.userConfiguration.fillMode);
   const halfBoundingBoxSizeUVW = V3.scale(Constants.FLOOD_FILL_EXTENTS[fillMode], 0.5);
   const currentViewportBounding = {

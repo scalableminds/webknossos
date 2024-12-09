@@ -487,7 +487,7 @@ class DataCube {
     additionalCoordinates: AdditionalCoordinate[] | null,
     segmentIdNumber: number,
     dimensionIndices: DimensionMap,
-    floodfillBoundingBox: BoundingBoxType,
+    _floodfillBoundingBox: BoundingBoxType,
     zoomStep: number,
     progressCallback: ProgressCallback,
     use3D: boolean,
@@ -506,6 +506,8 @@ class DataCube {
     // because a border of the "neighbour volume shape" might leave the neighbour bucket and enter it somewhere else.
     // If it would not be possible to have the same neighbour bucket in the list multiple times,
     // not all of the target area in the neighbour bucket might be filled.
+
+    const floodfillBoundingBox = new BoundingBox(_floodfillBoundingBox);
 
     // Helper function to convert between xyz and uvw (both directions)
     const transpose = (voxel: Vector3): Vector3 =>
@@ -690,16 +692,19 @@ class DataCube {
           } else {
             // Label the current neighbour and add it to the neighbourVoxelStackUvw to iterate over its neighbours.
             const neighbourVoxelIndex = this.getVoxelIndexByVoxelOffset(neighbourVoxelXyz);
+            const currentGlobalPosition = V3.add(
+              currentGlobalBucketPosition,
+              V3.scale3(adjustedNeighbourVoxelXyz, currentMag),
+            );
 
-            if (bucketData[neighbourVoxelIndex] === sourceSegmentId) {
+            if (
+              bucketData[neighbourVoxelIndex] === sourceSegmentId &&
+              floodfillBoundingBox.containsPoint(currentGlobalPosition)
+            ) {
               bucketData[neighbourVoxelIndex] = segmentId;
               markUvwInSliceAsLabeled(neighbourVoxelUvw);
               neighbourVoxelStackUvw.pushVoxel(neighbourVoxelUvw);
               labeledVoxelCount++;
-              const currentGlobalPosition = V3.add(
-                currentGlobalBucketPosition,
-                V3.scale3(adjustedNeighbourVoxelXyz, currentMag),
-              );
               coveredBBoxMin = [
                 Math.min(coveredBBoxMin[0], currentGlobalPosition[0]),
                 Math.min(coveredBBoxMin[1], currentGlobalPosition[1]),

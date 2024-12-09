@@ -28,11 +28,12 @@ class EditableMappingController @Inject()(
     editableMappingService: EditableMappingService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  def editableMappingInfo(tracingId: String, annotationId: String, version: Option[Long]): Action[AnyContent] =
+  def editableMappingInfo(tracingId: String, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- annotationService.findVolume(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId, version)
@@ -64,11 +65,12 @@ class EditableMappingController @Inject()(
       }
     }
 
-  def agglomerateIdsForSegments(tracingId: String, annotationId: String, version: Option[Long]): Action[ListOfLong] =
+  def agglomerateIdsForSegments(tracingId: String, version: Option[Long]): Action[ListOfLong] =
     Action.async(validateProto[ListOfLong]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             annotation <- annotationService.get(annotationId, version)
             tracing <- annotationService.findVolume(annotationId, tracingId, version)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)

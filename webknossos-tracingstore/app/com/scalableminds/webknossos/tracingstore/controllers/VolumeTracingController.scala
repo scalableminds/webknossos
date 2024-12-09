@@ -102,11 +102,12 @@ class VolumeTracingController @Inject()(
     }
   }
 
-  def get(tracingId: String, annotationId: String, version: Option[Long]): Action[AnyContent] =
+  def get(tracingId: String, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- annotationService.findVolume(annotationId, tracingId, version) ?~> Messages("tracing.notFound")
           } yield Ok(tracing.toByteArray).as(protobufMimeType)
         }
@@ -186,6 +187,7 @@ class VolumeTracingController @Inject()(
 
   def allDataZip(tracingId: String,
                  volumeDataZipFormat: String,
+                 version: Option[Long],
                  voxelSizeFactor: Option[String],
                  voxelSizeUnit: Option[String]): Action[AnyContent] =
     Action.async { implicit request =>
@@ -193,7 +195,7 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
+            tracing <- annotationService.findVolume(annotationId, tracingId, version) ?~> Messages("tracing.notFound")
             volumeDataZipFormatParsed <- VolumeDataZipFormat.fromString(volumeDataZipFormat).toFox
             voxelSizeFactorParsedOpt <- Fox.runOptional(voxelSizeFactor)(Vec3Double.fromUriLiteral)
             voxelSizeUnitParsedOpt <- Fox.runOptional(voxelSizeUnit)(LengthUnit.fromString)

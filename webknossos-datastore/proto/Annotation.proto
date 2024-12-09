@@ -12,7 +12,6 @@ message AnnotationProto {
   required int64 version = 2;
   repeated AnnotationLayerProto annotationLayers = 3;
   required int64 earliestAccessibleVersion = 4;
-  optional bool skeletonMayHavePendingUpdates = 5;
 }
 
 message AnnotationLayerProto {

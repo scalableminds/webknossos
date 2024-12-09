@@ -165,7 +165,6 @@ class AnnotationService @Inject()(
 
   def createTracingForExplorational(dataset: Dataset,
                                     params: AnnotationLayerParameters,
-                                    existingAnnotationId: Option[ObjectId],
                                     existingAnnotationLayers: List[AnnotationLayer],
                                     previousVersion: Option[Long])(
       implicit ctx: DBAccessContext,
@@ -210,8 +209,7 @@ class AnnotationService @Inject()(
         We do this for *every* new layer, since we only later get its ID which determines the actual precedence.
         All of this is skipped if existingAnnotationLayers is empty.
        */
-      oldPrecedenceLayerProperties <- getOldPrecedenceLayerProperties(existingAnnotationId,
-                                                                      existingAnnotationLayers,
+      oldPrecedenceLayerProperties <- getOldPrecedenceLayerProperties(existingAnnotationLayers,
                                                                       previousVersion,
                                                                       dataset,
                                                                       tracingStoreClient)
@@ -247,7 +245,8 @@ class AnnotationService @Inject()(
 
   private def createLayersForExplorational(dataset: Dataset,
                                            annotationId: ObjectId,
-                                           allAnnotationLayerParameters: List[AnnotationLayerParameters])(
+                                           allAnnotationLayerParameters: List[AnnotationLayerParameters],
+                                           existingAnnotationLayers: List[AnnotationLayer])(
       implicit ctx: DBAccessContext,
       mp: MessagesProvider): Fox[List[AnnotationLayer]] =
     for {
@@ -256,8 +255,7 @@ class AnnotationService @Inject()(
         for {
           tracing <- createTracingForExplorational(dataset,
                                                    annotationLayerParameters,
-                                                   existingAnnotationId = None,
-                                                   existingAnnotationLayers = List.empty,
+                                                   existingAnnotationLayers,
                                                    previousVersion = None)
           layerName = annotationLayerParameters.name.getOrElse(
             AnnotationLayer.defaultNameForType(annotationLayerParameters.typ))
@@ -295,7 +293,11 @@ class AnnotationService @Inject()(
     for {
       dataset <- datasetDAO.findOne(datasetId) ?~> "dataset.noAccessById"
       newAnnotationId = ObjectId.generate
-      annotationLayers <- createLayersForExplorational(dataset, newAnnotationId, annotationLayerParameters) ?~> "annotation.createTracings.failed"
+      annotationLayers <- createLayersForExplorational(
+        dataset,
+        newAnnotationId,
+        annotationLayerParameters,
+        existingAnnotationLayers = List.empty) ?~> "annotation.createTracings.failed"
       teamId <- selectSuitableTeam(user, dataset) ?~> "annotation.create.forbidden"
       annotation = Annotation(newAnnotationId, datasetId, None, teamId, user._id, annotationLayers)
       _ <- annotationDAO.insertOne(annotation)
@@ -608,7 +610,10 @@ class AnnotationService @Inject()(
           case Some(_) if skipVolumeData => Fox.successful(None)
           case Some(tracingId) =>
             tracingStoreClient
-              .getVolumeData(tracingId, volumeDataZipFormat = volumeDataZipFormat, voxelSize = dataset.voxelSize)
+              .getVolumeData(tracingId,
+                             version = None,
+                             volumeDataZipFormat = volumeDataZipFormat,
+                             voxelSize = dataset.voxelSize)
               .map(Some(_))
         }
       } yield tracingDataObjects

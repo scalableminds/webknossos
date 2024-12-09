@@ -1,6 +1,5 @@
 package models.annotation
 
-import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -70,15 +69,13 @@ trait AnnotationLayerPrecedence {
       )
     }.getOrElse(volumeTracing)
 
-  protected def getOldPrecedenceLayerProperties(existingAnnotationId: Option[ObjectId],
-                                                existingAnnotationLayers: List[AnnotationLayer],
+  protected def getOldPrecedenceLayerProperties(existingAnnotationLayers: List[AnnotationLayer],
                                                 previousVersion: Option[Long],
                                                 dataset: Dataset,
                                                 tracingStoreClient: WKRemoteTracingStoreClient)(
       implicit ec: ExecutionContext): Fox[Option[RedundantTracingProperties]] =
     for {
-      oldPrecedenceLayer <- fetchOldPrecedenceLayer(existingAnnotationId,
-                                                    existingAnnotationLayers,
+      oldPrecedenceLayer <- fetchOldPrecedenceLayer(existingAnnotationLayers,
                                                     previousVersion,
                                                     dataset,
                                                     tracingStoreClient)
@@ -107,8 +104,7 @@ trait AnnotationLayerPrecedence {
     } else Fox.failure("Trying to select precedence layer from empty layer list.")
   }
 
-  private def fetchOldPrecedenceLayer(existingAnnotationIdOpt: Option[ObjectId],
-                                      existingAnnotationLayers: List[AnnotationLayer],
+  private def fetchOldPrecedenceLayer(existingAnnotationLayers: List[AnnotationLayer],
                                       previousVersion: Option[Long],
                                       dataset: Dataset,
                                       tracingStoreClient: WKRemoteTracingStoreClient)(
@@ -116,13 +112,11 @@ trait AnnotationLayerPrecedence {
     if (existingAnnotationLayers.isEmpty) Fox.successful(None)
     else
       for {
-        existingAnnotationId <- existingAnnotationIdOpt.toFox ?~> "fetchOldPrecedenceLayer.needsAnnotationId"
         oldPrecedenceLayer <- selectLayerWithPrecedence(existingAnnotationLayers)
         oldPrecedenceLayerFetched <- if (oldPrecedenceLayer.typ == AnnotationLayerType.Skeleton)
-          tracingStoreClient.getSkeletonTracing(existingAnnotationId, oldPrecedenceLayer, previousVersion)
+          tracingStoreClient.getSkeletonTracing(oldPrecedenceLayer, previousVersion)
         else
-          tracingStoreClient.getVolumeTracing(existingAnnotationId,
-                                              oldPrecedenceLayer,
+          tracingStoreClient.getVolumeTracing(oldPrecedenceLayer,
                                               previousVersion,
                                               skipVolumeData = true,
                                               volumeDataZipFormat = VolumeDataZipFormat.wkw,

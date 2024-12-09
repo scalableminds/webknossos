@@ -401,7 +401,7 @@ class AnnotationIOController @Inject()(
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataset)
         fetchedAnnotationLayers <- Fox.serialCombined(annotation.skeletonAnnotationLayers)(
-          tracingStoreClient.getSkeletonTracing(annotation._id, _, version))
+          tracingStoreClient.getSkeletonTracing(_, version))
         user <- userService.findOneCached(annotation._user)(GlobalAccessContext)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
         nmlStream = nmlWriter.toNmlStream(
@@ -433,8 +433,7 @@ class AnnotationIOController @Inject()(
         tracingStoreClient <- tracingStoreService.clientFor(dataset)
         fetchedVolumeLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.volumeAnnotationLayers) {
           volumeAnnotationLayer =>
-            tracingStoreClient.getVolumeTracing(annotation._id,
-                                                volumeAnnotationLayer,
+            tracingStoreClient.getVolumeTracing(volumeAnnotationLayer,
                                                 version,
                                                 skipVolumeData,
                                                 volumeDataZipFormat,
@@ -442,7 +441,7 @@ class AnnotationIOController @Inject()(
         } ?~> "annotation.download.fetchVolumeLayer.failed"
         fetchedSkeletonLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.skeletonAnnotationLayers) {
           skeletonAnnotationLayer =>
-            tracingStoreClient.getSkeletonTracing(annotation._id, skeletonAnnotationLayer, version)
+            tracingStoreClient.getSkeletonTracing(skeletonAnnotationLayer, version)
         } ?~> "annotation.download.fetchSkeletonLayer.failed"
         user <- userService.findOneCached(annotation._user)(GlobalAccessContext) ?~> "annotation.download.findUser.failed"
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne(_)(GlobalAccessContext)) ?~> "task.notFound"

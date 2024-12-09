@@ -186,7 +186,6 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           dataset <- datasetDAO.findOne(annotation._dataset)
           tracingEither <- annotationService.createTracingForExplorational(dataset,
                                                                            request.body,
-                                                                           Some(annotation._id),
                                                                            annotation.annotationLayers,
                                                                            Some(previousVersion))
           tracing: GeneratedMessage = tracingEither match {

@@ -63,7 +63,7 @@ WEBKNOSSOS offers multiple ways to share your work:
 
 ### Navigation
 ![Move Tool](./images/move-tool.jpg){align=left width="60"} 
-The **Move tool** serves as your primary means of navigating through the dataset. With it, you can:
+The **Move tool** serves as your primary means of navigating through the dataset:
 
 - Pan across slices using click and drag
 - Zoom in and out to focus on details or get an overview
@@ -83,15 +83,13 @@ For detailed information, see the [skeleton annotation guide](../skeleton_annota
 WEBKNOSSOS provides several tools for volume annotation:
 
 ![Trace Tool](./images/trace-tool.jpg){align=left width="60"} 
-**Trace Tool**: Create precise boundary definitions by drawing outlines around structures. This tool is particularly useful when accuracy is crucial.
-
+**Trace Tool**: Create precise boundary definitions by drawing outlines around structures. This tool is particularly useful when accuracy is crucial. For added precision consider using a [pen input device](../pen_tablets.md). 
 
 ![Brush Tool](./images/brush-tool.jpg){align=left width="60"} 
-**Brush Tool**: Paint directly onto the dataset to mark regions of interest. The brush size is adjustable, and the tool supports pressure sensitivity for compatible input devices.
-
+**Brush Tool**: Paint directly onto the dataset to mark regions of interest. The brush size is adjustable and . If you draw around objects in one continuous motion, the inside will be filled automatically.
 
 ![Quick Select Tool](./images/quickselect-tool.jpg){align=left width="60"} 
-**AI Quick Select**: Annotate a segment automatically with our AI by drawing a rectangular selection over it.
+**AI Quick Select**: Annotate a segment automatically with our AI by drawing a rectangular selection over it. Alternatively, single click in the center of a cell to automatically label it.
 
 And many other tools. For detailed information, see the [volume annotation guide](../volume_annotation/tools.md).
 
@@ -99,6 +97,7 @@ And many other tools. For detailed information, see the [volume annotation guide
 ![Measurement Tool](./images/measure-tool.jpg){align=left width="60"}
 **Measurement Tool**: Allows you to calculate distances between points of interest, measure surface areas of segmented structures, and place waypoints for complex measurements.
 
+![AI Analysis Tools](./images/ai-analysis-tools.jpg){align=left width="60"}
 **AI Analysis**: Launch automated segmentation processes using various analysis workflows. The AI tools can significantly speed up your annotation work. Learn more about [AI-assisted analysis](../automation/ai_segmentation.md).
 
 

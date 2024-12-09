@@ -1,23 +1,37 @@
 # Volume annotation tools
 ## Tool overview
 
-Choose a drawing tool from the toolbar or press _W_ to switch between them.
+Choose a volume annotation drawing tool from the [toolbar](../ui/toolbar.md).
 
-- `Move`: Navigate around the dataset.
-- `Trace`: Draw an outline around the voxel you want to label.
-- `Brush`: Paint over the voxels you would like to label. Use _SHIFT + Mousewheel_ to change the brush size.
-- `Erase (Trace/Brush)`: Erase voxels by drawing over them. Use _SHIFT + Mousewheel_ to change the brush size.
-- `Fill Tool`: Fill the clicked region with a volume annotation up to the next segment boundary (or the edge of your viewport). All neighboring voxels with the same voxel id as the clicked voxel will be labelled with the active segment ID. This is useful for filling a hole in a segment or relabeling a segment with a different ID/color. Read more about the fill tool below.
-- `Segment Picker`: Click a segment to use its label ID as the active segment ID and keep annotating with that ID.
-- `Quick Select`: Annotate a segment automatically by drawing a rectangular selection over it. The tool operates in two different modes. Read more about the quick-select tool below.
-- `Proof Reading`: Fix merge and split errors in automated segmentation. Read more about [proofreading](../proofreading/tools.md).
-- `Interpolation/Extrusion`: Annotate a segment, skip a few sections in the Z direction, and annotate it again. Now, you can interpolate between the two segments. Read more on the interpolation/extrusion tool below. 
+![Trace Tool](../ui/images/trace-tool.jpg){align=left width="60"}
+**Trace Tool**: Create precise boundary definitions by drawing outlines around structures. This tool is particularly useful when accuracy is crucial. For added precision consider using a [pen input device](../pen_tablets.md). 
+![Adding labels with the Trace tool](../images/volume_trace.gif)
 
-When using the trace or brush tool, a label can be added with _Left Mouse Drag_.
-Erasing is possible with the dedicated erase tools or with _CTRL + Shift + Left Mouse Drag_.
 
-If you have enabled _Classic Controls_ in the settings sidebar, erasing is also possible with _Right Mouse Drag_ within the brush and trace tool (otherwise, right-clicking is mapped to open a context menu).
+![Brush Tool](../ui/images/brush-tool.jpg){align=left width="60"} 
+**Brush Tool**: Paint directly onto the dataset to mark regions of interest. The brush size is adjustable and . If you draw around objects in one continuous motion, the inside will be filled automatically. Use ++shift++ + _Mousewheel_ to change the brush size.
+![Adding labels with the Brush tool](../images/volume_brush.gif)
 
+![Eraser (Trace/Brush)](../ui/images/eraser-tool.jpg){align=left width="60"} 
+ **Eraser (Trace/Brush)**: Erase voxels by drawing over them deleting any labels. Behaves identical to the Trace/Brush tools above. Use ++shift++ + _Mousewheel_ to change the brush size.
+![Removing labels with the Eraser tool](../images/volume_delete.gif)
+
+![Fill Tool](../ui/images/fill-tool.jpg){align=left width="60"} 
+**Fill Tool**: Fill the clicked region with a volume annotation up to the next segment boundary (or the edge of your viewport). All neighboring voxels with the same voxel id as the clicked voxel will be labelled with the active segment ID. This is useful for filling a hole in a segment or relabeling a segment with a different ID/color. Read more about the fill tool below.
+
+![Segment Picker Tool](../ui/images/segment-picker-tool.jpg){align=left width="60"} 
+**Segment Picker**: Click any segment to use its label ID as the active segment ID and keep annotating with that ID. This is alternative to selecting the segment ID from the sidebar or context menu.
+
+![Quick Select Tool](../ui/images/quickselect-tool.jpg){align=left width="60"} 
+**Quick Select**: Annotate a segment automatically by drawing a rectangular selection over it. By default this tools us our AI for segmentation but also has a threshold-based mode. Read more about the quick-select tool below.
+
+![Proof Reading Tool](../ui/images/proofreading-tool.jpg){align=left width="60"} 
+**Proof Reading**: Fix merge and split errors in automated segmentations using the underlying super-voxel graph by combining and breaking apart segments. Read more about [proofreading](../proofreading/tools.md).
+
+![Interpolation/Extrusion Tool](../ui/images/interpolation-tool.jpg){align=left width="60"} 
+**Interpolation/Extrusion**: Annotate a segment, skip a few sections in the Z direction, and annotate it again. Now, you can interpolate between the two segments. Read more on the interpolation/extrusion tool below. 
+
+### Tool Modifiers
 The following interactions and modifiers are available when working with the volume annotation tools:
 
 - `Create New Segment ID`: Creates a new segment ID for labeling. Note the little color indicator in the top right corner of the button visualizing the current color of the active segment ID. Read the explanation for the largest segment id [here](../datasets/settings.md) to understand how new IDs are generated.
@@ -26,9 +40,7 @@ The following interactions and modifiers are available when working with the vol
 - `Only Overwrite Empty Areas`: In contrast to the `Overwrite Everything` modifier, the forces the brush & trace tools to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites.
 - `2D Fill`/ `3D Fill`: Modifies the flood filling tool to work in 2D (in-plane only) or 3D (volumetric fill/re-labeling). 3D flood fill is constrained to a small, regional bounding box for performance reasons. Read more about flood fills below.
 
-![Adding labels with the Trace tool](../images/volume_trace.gif)
-![Adding labels with the Brush tool](../images/volume_brush.gif)
-![Removing labels with the Brush tool](../images/volume_delete.gif)
+
 
 ![youtube-video](https://www.youtube.com/embed/JkpSTKuNZKg)
 

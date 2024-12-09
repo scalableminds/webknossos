@@ -38,7 +38,7 @@ The menu provides several ways to manage your annotations:
 
 - **Merge Annotations**: Combine multiple annotations into one either by project or by annotation ID.
 
-- **Disable Saving**: Temporarily disable automatic saving in WEBKNOSSOS. Any changes you make will not be saved. This can save a lot of bandwith and resources when dealing with very large annotation which don't need to be persisted.
+- **Disable Saving**: Temporarily disable automatic saving in WEBKNOSSOS. Any changes you make will not be saved. This can reduce bandwidth and resource usage when working with large annotations that don't need to be persisted.
 
 - **Lock Annotation**: Lock your current annotation in a read-only mode to protect it from any accidental changes. The annotation remains read-only until you unlock it (from the [Annotation dashboard](../dashboard/annotations.md)). This can be useful when publishing your work or sharing with larger communities.
 
@@ -86,7 +86,7 @@ WEBKNOSSOS provides several tools for volume annotation:
 **Trace Tool**: Create precise boundary definitions by drawing outlines around structures. This tool is particularly useful when accuracy is crucial. For added precision consider using a [pen input device](../pen_tablets.md). 
 
 ![Brush Tool](./images/brush-tool.jpg){align=left width="60"} 
-**Brush Tool**: Paint directly onto the dataset to mark regions of interest. The brush size is adjustable and . If you draw around objects in one continuous motion, the inside will be filled automatically.
+**Brush Tool**: Paint directly onto the dataset to mark regions of interest. The brush size is adjustable to match your needs. If you draw around objects in one continuous motion, the inside will be filled automatically.
 
 ![Quick Select Tool](./images/quickselect-tool.jpg){align=left width="60"} 
 **AI Quick Select**: Annotate a segment automatically with our AI by drawing a rectangular selection over it. Alternatively, single click in the center of a cell to automatically label it.

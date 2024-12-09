@@ -169,6 +169,7 @@ case class ImportVolumeDataVolumeAction(actionTracingId: String,
     tracing.copy(largestSegmentId = largestSegmentId)
 }
 
+// The current code no longer creates these actions, but they are in the history of some volume annotations.
 case class AddSegmentIndexVolumeAction(actionTracingId: String,
                                        actionTimestamp: Option[Long] = None,
                                        actionAuthorId: Option[String] = None,

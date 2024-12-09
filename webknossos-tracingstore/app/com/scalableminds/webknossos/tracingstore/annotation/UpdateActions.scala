@@ -72,6 +72,7 @@ object UpdateAction {
           case "deleteSegment"       => deserialize[DeleteSegmentVolumeAction](jsonValue)
           case "deleteSegmentData"   => deserialize[DeleteSegmentDataVolumeAction](jsonValue)
           case "updateMappingName"   => deserialize[UpdateMappingNameVolumeAction](jsonValue)
+          case "addSegmentIndex"     => deserialize[AddSegmentIndexVolumeAction](jsonValue)
 
           // Editable Mapping
           case "mergeAgglomerate" => deserialize[MergeAgglomerateUpdateAction](jsonValue)
@@ -168,6 +169,10 @@ object UpdateAction {
         Json.obj("name" -> "updateSegmentGroups", "value" -> Json.toJson(s)(UpdateSegmentGroupsVolumeAction.jsonFormat))
       case s: UpdateMappingNameVolumeAction =>
         Json.obj("name" -> "updateMappingName", "value" -> Json.toJson(s)(UpdateMappingNameVolumeAction.jsonFormat))
+      case s: AddSegmentIndexVolumeAction =>
+        Json.obj("name" -> "addSegmentIndex", "value" -> Json.toJson(s)(AddSegmentIndexVolumeAction.jsonFormat))
+      case s: CompactVolumeUpdateAction =>
+        Json.toJson(s)
 
       // Editable Mapping
       case s: SplitAgglomerateUpdateAction =>

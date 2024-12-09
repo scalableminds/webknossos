@@ -67,12 +67,11 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
     }
   }
 
-  def get(tracingId: String, version: Option[Long]): Action[AnyContent] =
+  def get(tracingId: String, annotationId: String, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
-            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- annotationService.findSkeleton(annotationId, tracingId, version) ?~> Messages("tracing.notFound")
           } yield Ok(tracing.toByteArray).as(protobufMimeType)
         }

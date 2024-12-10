@@ -33,6 +33,7 @@ function* getBoundingBoxForFloodFill(
   const isRestrictedToBoundingBox = yield* select(
     (state) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
   );
+  console.log("########################### isRestrictedToBoundingBox", isRestrictedToBoundingBox);
   if (isRestrictedToBoundingBox) {
     const bboxes = yield* select((state) =>
       getUserBoundingBoxesThatContainPosition(state, position),
@@ -147,7 +148,7 @@ export function* floodFill(): Saga<void> {
       successMessageDelay: 2000,
       // Since only one floodfill operation can be active at any time,
       // a hardcoded key is sufficient.
-      key: "FLOODFILL_PROGRESS_KEY",
+      key: FLOODFILL_PROGRESS_KEY,
     });
     yield* call(progressCallback, false, "Performing floodfill...");
     console.time("cube.floodFill");

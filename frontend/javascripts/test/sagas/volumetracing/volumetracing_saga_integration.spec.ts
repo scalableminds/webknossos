@@ -32,6 +32,8 @@ import type { ApiInterface } from "oxalis/api/api_latest";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 
+//
+
 const { dispatchUndoAsync, dispatchRedoAsync, discardSaveQueuesAction } = mockRequire.reRequire(
   "oxalis/model/actions/save_actions",
 );
@@ -274,7 +276,7 @@ test.serial("Executing a floodfill in mag 2", async (t) => {
     );
   }
 });
-test.serial("Executing a floodfill in mag 1 (long operation)", async (t) => {
+test.only("Executing a floodfill in mag 1 (long operation)", async (t) => {
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,
     0,

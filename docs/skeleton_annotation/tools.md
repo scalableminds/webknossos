@@ -48,7 +48,7 @@ The following modifiers are available for the skeleton tool:
 ![Single Node Tree Mode Modifier](./images/single-node-tree-mode-modifier.jpg){align=left width="60"} 
 **Single Node Tree Mode**
 
-- Creates a new tree for each placed node
+- When enabled, creates a new tree for each placed node
 - Perfect for marking individual objects (e.g., cell nuclei)
 - Also known as "Soma-clicking mode"
 

@@ -210,7 +210,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def data(annotationId: String, tracingId: String): Action[List[WebknossosDataRequest]] =
+  def data(tracingId: String, annotationId: String): Action[List[WebknossosDataRequest]] =
     Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {

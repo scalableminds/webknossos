@@ -105,7 +105,7 @@ class VolumeTracingController @Inject()(
   def get(tracingId: String, annotationId: String, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
           for {
             tracing <- annotationService.findVolume(annotationId, tracingId, version) ?~> Messages("tracing.notFound")
           } yield Ok(tracing.toByteArray).as(protobufMimeType)
@@ -213,7 +213,7 @@ class VolumeTracingController @Inject()(
   def data(annotationId: String, tracingId: String): Action[List[WebknossosDataRequest]] =
     Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
       log() {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
           for {
             tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
             (data, indices) <- if (tracing.getHasEditableMapping) {

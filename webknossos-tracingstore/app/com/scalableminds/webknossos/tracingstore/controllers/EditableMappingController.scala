@@ -31,7 +31,7 @@ class EditableMappingController @Inject()(
   def editableMappingInfo(tracingId: String, annotationId: String, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
           for {
             tracing <- annotationService.findVolume(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
@@ -67,7 +67,7 @@ class EditableMappingController @Inject()(
   def agglomerateIdsForSegments(tracingId: String, annotationId: String, version: Option[Long]): Action[ListOfLong] =
     Action.async(validateProto[ListOfLong]) { implicit request =>
       log() {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
           for {
             annotation <- annotationService.get(annotationId, version)
             tracing <- annotationService.findVolume(annotationId, tracingId, version)

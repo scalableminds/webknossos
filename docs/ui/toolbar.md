@@ -17,7 +17,7 @@ The save and undo functions help you manage your annotation work:
 The position control allows precise navigation within your dataset. You can:
 
 - Enter specific coordinates to jump directly to any location
-- Copy position values by clicking on the coordinate display
+- Copy position values by clicking on the pushpin icon.
 - Adjust camera rotation in flight or oblique modes
 - The position information is automatically included when sharing your view with colleagues
 

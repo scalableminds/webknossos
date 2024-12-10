@@ -52,7 +52,7 @@ The following interactions and modifiers become available when working with some
 **Create New Segment ID**: Creates a new segment ID for labeling with a different color and identifier. New segments will be added to the [segments list](./segments_list.md) in the right sidebar automatically.
 
 ![Change Brush Size Modifier](./images/brush-size-modifier.jpg){align=left width="60"} 
-**Change Brush Size**: Changes the size and radius of the brushing tool. Presets of small, medium and large brush sizes are available which can be modified to suite your workflows. ![youtube-video](https://www.youtube.com/embed/JkpSTKuNZKg)
+**Change Brush Size**: Changes the size and radius of the brushing tool. Presets of small, medium and large brush sizes are available which can be modified to suit your workflows. ![youtube-video](https://www.youtube.com/embed/JkpSTKuNZKg)
 
 ![Overwrite Everything Modifier](./images/overwrite-everything-modifier.jpg){align=left width="60"} 
 **Overwrite Everything**: When labeling with the brush/trace tool, you can annotate every available voxel without any regard if it was already labeled as a different segment or whether it is unlabelled. This allows you to draw over existing segments.

@@ -296,7 +296,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       implicit ec: ExecutionContext): Fox[List[(Long, List[UpdateAction])]] =
     for {
       extraSkeletonUpdates <- findExtraSkeletonUpdates(annotationId, annotation)
-      _ = logger.info(s"${extraSkeletonUpdates.length} extraSkeletonUpdates")
       existingVersion = annotation.version
       pendingAnnotationUpdates <- if (desiredVersion == existingVersion) Fox.successful(List.empty)
       else {

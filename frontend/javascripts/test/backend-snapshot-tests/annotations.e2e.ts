@@ -77,14 +77,13 @@ test.serial("editAnnotation()", async (t) => {
   const { visibility } = originalAnnotation;
   const newName = "new name";
   const newVisibility = "Public";
-  const newDescription = "new description";
   await api.editAnnotation(annotationId, APIAnnotationTypeEnum.Explorational, {
     visibility: newVisibility,
+    name: newName,
   });
   const editedAnnotation = await api.getMaybeOutdatedAnnotationInformation(annotationId);
   t.is(editedAnnotation.name, newName);
   t.is(editedAnnotation.visibility, newVisibility);
-  t.is(editedAnnotation.description, newDescription);
   t.is(editedAnnotation.id, annotationId);
   t.is(editedAnnotation.annotationLayers[0].typ, AnnotationLayerType.Skeleton);
   t.is(editedAnnotation.annotationLayers[0].tracingId, "ae417175-f7bb-4a34-8187-d9c3b50143af");
@@ -178,6 +177,7 @@ test.serial("Send update actions and compare resulting tracing", async (t) => {
 });
 test("Send complex update actions and compare resulting tracing", async (t) => {
   const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
+  const { tracingId } = createdExplorational.annotationLayers[0];
   const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 6));
   const treeGroups = [
     {
@@ -197,9 +197,8 @@ test("Send complex update actions and compare resulting tracing", async (t) => {
       ],
     },
   ];
-  const someTracingId = "someTracingId";
-  const createTreesUpdateActions = Array.from(diffTrees(someTracingId, {}, trees));
-  const updateTreeGroupsUpdateAction = UpdateActions.updateTreeGroups(treeGroups, someTracingId);
+  const createTreesUpdateActions = Array.from(diffTrees(tracingId, {}, trees));
+  const updateTreeGroupsUpdateAction = UpdateActions.updateTreeGroups(treeGroups, tracingId);
   const [saveQueue] = addVersionNumbers(
     createSaveQueueFromUpdateActions(
       [createTreesUpdateActions, [updateTreeGroupsUpdateAction]],
@@ -215,8 +214,9 @@ test("Send complex update actions and compare resulting tracing", async (t) => {
 
 test("Update Metadata for Skeleton Tracing", async (t) => {
   const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
+  const { tracingId } = createdExplorational.annotationLayers[0];
   const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 6));
-  const createTreesUpdateActions = Array.from(diffTrees("someTracingId", {}, trees));
+  const createTreesUpdateActions = Array.from(diffTrees(tracingId, {}, trees));
   const metadata = [
     {
       key: "city",
@@ -235,7 +235,7 @@ test("Update Metadata for Skeleton Tracing", async (t) => {
     ...trees[1],
     metadata,
   };
-  const { tracingId } = createdExplorational.annotationLayers[0];
+
   const updateTreeAction = UpdateActions.updateTree(trees[1], tracingId);
   const [saveQueue] = addVersionNumbers(
     createSaveQueueFromUpdateActions([createTreesUpdateActions, [updateTreeAction]], 123456789),

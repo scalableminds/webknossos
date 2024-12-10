@@ -210,12 +210,11 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def data(tracingId: String): Action[List[WebknossosDataRequest]] =
+  def data(annotationId: String, tracingId: String): Action[List[WebknossosDataRequest]] =
     Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
-            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
             (data, indices) <- if (tracing.getHasEditableMapping) {
               val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)

@@ -10,7 +10,6 @@ import models.dataset.DatasetDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.user.{MultiUserDAO, User, UserDAO}
 import models.voxelytics.VoxelyticsDAO
-import utils.sql.SqlEscaping
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

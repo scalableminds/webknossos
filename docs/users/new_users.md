@@ -13,7 +13,7 @@ To add or modify team assignments for users:
 1. Navigate to `Admin > Users` in the navigation bar
 2. Select one or more users from the user list
 3. Click on `Edit Teams and Permissions`
-   - This opens a modal showing all available teams and user permissions
+   - This opens a dialog showing all available teams and user permissions
 4. Select or deselect teams as desired for the selected users
    - For each team, you can choose the user's role:
      - **Member** (default): Basic team membership with standard permissions

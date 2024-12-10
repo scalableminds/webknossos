@@ -20,13 +20,13 @@ import models.folder.FolderService
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
-import net.liftweb.common.{Failure, Full}
+import net.liftweb.common.{Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
-import security.{URLSharing, WkEnv}
+import security.{AccessibleBySwitchingService, URLSharing, WkEnv}
 import utils.{MetadataAssertions, WkConf}
 
 import javax.inject.Inject
@@ -85,6 +85,7 @@ class DatasetController @Inject()(userService: UserService,
                                   thumbnailService: ThumbnailService,
                                   thumbnailCachingService: ThumbnailCachingService,
                                   conf: WkConf,
+                                  authenticationService: AccessibleBySwitchingService,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
                                   wkExploreRemoteLayerService: WKExploreRemoteLayerService,
@@ -317,7 +318,7 @@ class DatasetController @Inject()(userService: UserService,
   def update(datasetId: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyUsing(datasetPublicReads) {
-        case (description, datasetName, legacyDatasetDisplayName, sortingKey, isPublic, tags, metadata, folderId) => {
+        case (description, datasetName, legacyDatasetDisplayName, sortingKey, isPublic, tags, metadata, folderId) =>
           val name = if (legacyDatasetDisplayName.isDefined) legacyDatasetDisplayName else datasetName
           for {
             datasetIdValidated <- ObjectId.fromString(datasetId)
@@ -339,7 +340,6 @@ class DatasetController @Inject()(userService: UserService,
             _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
             js <- datasetService.publicWrites(updated, Some(request.identity))
           } yield Ok(Json.toJson(js))
-        }
       }
     }
 
@@ -406,13 +406,30 @@ class DatasetController @Inject()(userService: UserService,
   def getDatasetIdFromNameAndOrganization(datasetName: String, organizationId: String): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
-        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId) ?~> notFoundMessage(datasetName) ~> NOT_FOUND
-      } yield
-        Ok(
-          Json.obj("id" -> dataset._id,
-                   "name" -> dataset.name,
-                   "organization" -> dataset._organization,
-                   "directoryName" -> dataset.directoryName))
+        datasetBox <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId).futureBox
+        result <- (datasetBox match {
+          case Full(dataset) =>
+            Fox.successful(
+              Ok(
+                Json.obj("id" -> dataset._id,
+                         "name" -> dataset.name,
+                         "organization" -> dataset._organization,
+                         "directoryName" -> dataset.directoryName)))
+          case Empty =>
+            for {
+              user <- request.identity.toFox ~> Unauthorized
+              dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(GlobalAccessContext)
+              // Just checking if the user can switch to an organization to access the dataset.
+              _ <- authenticationService.getOrganizationToSwitchTo(user, Some(dataset._id), None, None)
+            } yield
+              Ok(
+                Json.obj("id" -> dataset._id,
+                         "name" -> dataset.name,
+                         "organization" -> dataset._organization,
+                         "directoryName" -> dataset.directoryName))
+          case _ => Fox.failure(notFoundMessage(datasetName))
+        }) ?~> notFoundMessage(datasetName) ~> NOT_FOUND
+      } yield result
     }
 
   private def notFoundMessage(datasetName: String)(implicit ctx: DBAccessContext, m: MessagesProvider): String =

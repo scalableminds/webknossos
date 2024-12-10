@@ -466,10 +466,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   }
 
   private def guessTypeOfUploadedDataSource(dataSourceDir: Path): UploadedDataSourceType.Value =
-    if (looksLikeZarrArray(dataSourceDir, maxDepth = 2).openOr(false)) {
-      UploadedDataSourceType.ZARR
-    } else if (looksLikeExploredDataSource(dataSourceDir).openOr(false)) {
+    if (looksLikeExploredDataSource(dataSourceDir).openOr(false)) {
       UploadedDataSourceType.EXPLORED
+    } else if (looksLikeZarrArray(dataSourceDir, maxDepth = 2).openOr(false)) {
+      UploadedDataSourceType.ZARR
     } else if (looksLikeZarrArray(dataSourceDir, maxDepth = 3).openOr(false)) {
       UploadedDataSourceType.ZARR_MULTILAYER
     } else if (looksLikeNeuroglancerPrecomputed(dataSourceDir, 1).openOr(false)) {

@@ -266,6 +266,13 @@ export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 const VIEWPORT_WIDTH = 376;
 
+export enum AnnotationMutexStateEnum {
+  NOT_NEEDED = "NOT_NEEDED",
+  ACQUIRED_FROM_BEGINNING = "ACQUIRED_FROM_BEGINNING",
+  PENDING = "PENDING",
+  ACQUIRED = "ACQUIRED",
+}
+
 // ARBITRARY_CAM_DISTANCE has to be calculated such that with cam
 // angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the
 // viewport.

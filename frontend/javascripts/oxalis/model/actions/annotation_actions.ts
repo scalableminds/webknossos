@@ -13,7 +13,7 @@ import type {
   UserBoundingBoxWithoutId,
   UserBoundingBoxWithoutIdMaybe,
 } from "oxalis/store";
-import type { Vector3 } from "oxalis/constants";
+import type { AnnotationMutexStateEnum, Vector3 } from "oxalis/constants";
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import Deferred from "libs/async/deferred";
@@ -25,6 +25,7 @@ type SetAnnotationVisibilityAction = ReturnType<typeof setAnnotationVisibilityAc
 export type EditAnnotationLayerAction = ReturnType<typeof editAnnotationLayerAction>;
 type SetAnnotationDescriptionAction = ReturnType<typeof setAnnotationDescriptionAction>;
 type SetAnnotationAllowUpdateAction = ReturnType<typeof setAnnotationAllowUpdateAction>;
+type SetAnnotationMutexStateAction = ReturnType<typeof setAnnotationMutexStateAction>;
 type SetBlockedByUserAction = ReturnType<typeof setBlockedByUserAction>;
 type SetUserBoundingBoxesAction = ReturnType<typeof setUserBoundingBoxesAction>;
 type FinishedResizingUserBoundingBoxAction = ReturnType<
@@ -58,6 +59,7 @@ export type AnnotationActionTypes =
   | EditAnnotationLayerAction
   | SetAnnotationDescriptionAction
   | SetAnnotationAllowUpdateAction
+  | SetAnnotationMutexStateAction
   | SetBlockedByUserAction
   | SetUserBoundingBoxesAction
   | ChangeUserBoundingBoxAction
@@ -134,7 +136,11 @@ export const setAnnotationAllowUpdateAction = (allowUpdate: boolean) =>
     type: "SET_ANNOTATION_ALLOW_UPDATE",
     allowUpdate,
   }) as const;
-
+export const setAnnotationMutexStateAction = (mutexState: AnnotationMutexStateEnum) =>
+  ({
+    type: "SET_ANNOTATION_MUTEX_STATE",
+    mutexState,
+  }) as const;
 export const setBlockedByUserAction = (blockedByUser: APIUserCompact | null | undefined) =>
   ({
     type: "SET_BLOCKED_BY_USER",

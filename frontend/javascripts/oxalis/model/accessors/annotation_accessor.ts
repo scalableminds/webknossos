@@ -3,6 +3,7 @@ import type { OxalisState, Tracing } from "oxalis/store";
 import { getVolumeTracingById } from "./volumetracing_accessor";
 import type { APIAnnotationInfo } from "types/api_flow_types";
 import type { EmptyObject } from "types/globals";
+import { AnnotationMutexStateEnum } from "oxalis/constants";
 
 export function mayEditAnnotationProperties(state: OxalisState) {
   const { owner, restrictions } = state.tracing;
@@ -13,7 +14,22 @@ export function mayEditAnnotationProperties(state: OxalisState) {
     restrictions.allowSave &&
     activeUser &&
     owner?.id === activeUser.id &&
-    !state.tracing.isLockedByOwner
+    !state.tracing.isLockedByOwner &&
+    !(state.tracing.annotationMutexState === AnnotationMutexStateEnum.PENDING)
+  );
+}
+
+export function isAnnotationEditingAllowed(
+  allowUpdate: boolean,
+  isLockedByOwner: boolean,
+  annotationMutexState: AnnotationMutexStateEnum,
+) {
+  return (
+    allowUpdate &&
+    !isLockedByOwner &&
+    [AnnotationMutexStateEnum.PENDING, AnnotationMutexStateEnum.ACQUIRED].includes(
+      annotationMutexState,
+    )
   );
 }
 

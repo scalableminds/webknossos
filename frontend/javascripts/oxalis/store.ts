@@ -47,6 +47,7 @@ import type {
   OrthoViewWithoutTD,
   InterpolationMode,
   TreeType,
+  AnnotationMutexStateEnum,
 } from "oxalis/constants";
 import type { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -204,6 +205,7 @@ export type Annotation = {
   readonly othersMayEdit: boolean;
   readonly blockedByUser: APIUserCompact | null | undefined;
   readonly isLockedByOwner: boolean;
+  readonly annotationMutexState: AnnotationMutexStateEnum;
 };
 type TracingBase = {
   readonly createdTimestamp: number;

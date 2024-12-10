@@ -39,7 +39,7 @@ Volume annotation in WEBKNOSSOS allows you to label and segment 3D structures in
 
 In the [Segments tab](./segments_list.md) on the right-hand side panel, you can find all segment IDs which are available in your annotation. You can rename and organize segments as needed.
 
-The active segment ID under the cursor can be found in the [status bar](../ui/status_bar.md) at the bottom of the screen or through the context-sensitive menu when right-clicking.
+The active segment ID under the cursor can be found in the [status bar](../ui/status_bar.md) at the bottom of the screen or through the context menu when right-clicking.
 
 !!! tip "Keyboard Shortcuts"
     For faster workflows, refer to the [keyboard shortcuts](../ui/keyboard_shortcuts.md) guide.

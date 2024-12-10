@@ -73,6 +73,7 @@ import { fastDiffSetAndMap, sleep } from "libs/utils";
 import type { Action } from "../actions/actions";
 import type { ActionPattern } from "redux-saga/effects";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
+import { ensureWkReady } from "./ready_sagas";
 
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
@@ -139,7 +140,7 @@ export default function* watchActivatedMappings(): Saga<void> {
   };
   // Buffer actions since they might be dispatched before WK_READY
   const setMappingActionChannel = yield* actionChannel("SET_MAPPING");
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   yield* takeLatest(setMappingActionChannel, handleSetMapping, oldActiveMappingByLayer);
   yield* takeEvery(
     "ENSURE_LAYER_MAPPINGS_ARE_LOADED",

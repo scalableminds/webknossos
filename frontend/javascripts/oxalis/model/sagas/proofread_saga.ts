@@ -79,6 +79,7 @@ import { takeEveryUnlessBusy } from "./saga_helpers";
 import type { Action } from "../actions/actions";
 import { isBigInt, isNumberMap, SoftError } from "libs/utils";
 import { getCurrentMag } from "../accessors/flycam_accessor";
+import { ensureWkReady } from "./ready_sagas";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -96,7 +97,8 @@ function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
 
 export default function* proofreadRootSaga(): Saga<void> {
   yield* take("INITIALIZE_SKELETONTRACING");
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
+
   yield* takeEveryUnlessBusy(
     ["DELETE_EDGE", "MERGE_TREES", "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS"],
     runSagaAndCatchSoftError(handleSkeletonProofreadingAction),

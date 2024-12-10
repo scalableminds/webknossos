@@ -10,9 +10,10 @@ import { getHistogramForLayer } from "admin/admin_rest_api";
 import type DataLayer from "oxalis/model/data_layer";
 import { Model } from "oxalis/singletons";
 import type { Vector2 } from "oxalis/constants";
+import { ensureWkReady } from "./ready_sagas";
 
 export default function* loadHistogramDataSaga(): Saga<void> {
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   yield* takeEvery("RELOAD_HISTOGRAM", reloadHistogramForLayer);
 
   const dataLayers: Array<DataLayer> = yield* call([Model, Model.getColorLayers]);

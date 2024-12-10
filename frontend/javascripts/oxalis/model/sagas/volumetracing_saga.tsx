@@ -113,11 +113,12 @@ import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_sag
 import messages from "messages";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import type { ActionPattern } from "redux-saga/effects";
+import { ensureWkReady } from "./ready_sagas";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   yield* takeEveryUnlessBusy(
     "INTERPOLATE_SEGMENTATION_LAYER",
     maybeInterpolateSegmentationLayer,

@@ -21,6 +21,7 @@ import { Model } from "oxalis/singletons";
 import type { Vector3 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import { WkDevFlags } from "oxalis/api/wk_dev";
+import { ensureWkReady } from "./ready_sagas";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
@@ -28,7 +29,8 @@ const prefetchStrategiesArbitrary = [new PrefetchStrategyArbitrary()];
 const prefetchStrategiesPlane = [new PrefetchStrategySkeleton(), new PrefetchStrategyVolume()];
 
 export function* watchDataRelevantChanges(): Saga<void> {
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
+
   const previousProperties = {};
   // Initiate the prefetching once and then only for data relevant changes
   yield* call(triggerDataPrefetching, previousProperties);

@@ -394,7 +394,7 @@ export function* setupSavingForTracingType(
     | SkeletonTracing;
   let prevFlycam = yield* select((state) => state.flycam);
   let prevTdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
 
   while (true) {
     if (saveQueueType === "skeleton") {

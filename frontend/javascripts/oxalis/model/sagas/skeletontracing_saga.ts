@@ -57,7 +57,6 @@ import {
   setPositionAction,
   setRotationAction,
 } from "oxalis/model/actions/flycam_actions";
-import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import EdgeCollection, { diffEdgeCollections } from "oxalis/model/edge_collection";
 import ErrorHandling from "libs/error_handling";
@@ -86,6 +85,7 @@ import {
 } from "oxalis/model/actions/connectome_actions";
 import type { ServerSkeletonTracing } from "types/api_flow_types";
 import memoizeOne from "memoize-one";
+import { ensureWkReady } from "./ready_sagas";
 
 function* centerActiveNode(action: Action): Saga<void> {
   if ("suppressCentering" in action && action.suppressCentering) {
@@ -215,18 +215,12 @@ export function* watchTreeNames(): Saga<void> {
     }
   }
 }
-export function* checkVersionRestoreParam(): Saga<void> {
-  const showVersionRestore = yield* call(Utils.hasUrlParam, "showVersionRestore");
 
-  if (showVersionRestore) {
-    yield* put(setVersionRestoreVisibilityAction(true));
-  }
-}
 export function* watchAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_READY
   const channel = yield* actionChannel("LOAD_AGGLOMERATE_SKELETON");
   yield* take("INITIALIZE_SKELETONTRACING");
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   yield* takeEvery(channel, loadAgglomerateSkeletonWithId);
 }
 export function* watchConnectomeAgglomerateLoading(): Saga<void> {
@@ -475,7 +469,6 @@ export function* watchSkeletonTracingAsync(): Saga<void> {
   yield* throttle(5000, "PUSH_SAVE_QUEUE_TRANSACTION", watchTracingConsistency);
   yield* fork(watchFailedNodeCreations);
   yield* fork(watchBranchPointDeletion);
-  yield* fork(checkVersionRestoreParam);
 }
 
 function* diffNodes(

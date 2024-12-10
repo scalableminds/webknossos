@@ -8,6 +8,7 @@ import {
   setBlockedByUserAction,
   type SetOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
+import * as Utils from "libs/utils";
 import type { EditableAnnotation } from "admin/admin_rest_api";
 import type { ActionPattern } from "redux-saga/effects";
 import { editAnnotation, acquireAnnotationMutex } from "admin/admin_rest_api";
@@ -46,6 +47,8 @@ import { is3dViewportMaximized } from "oxalis/view/layouting/flex_layout_helper"
 import { needsLocalHdf5Mapping } from "../accessors/volumetracing_accessor";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { updateAnnotationLayerName, updateMetadataOfAnnotation } from "./update_actions";
+import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
+import { ensureWkReady } from "./ready_sagas";
 
 /* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping
   compare https://github.com/scalableminds/webknossos/issues/5223.
@@ -112,6 +115,14 @@ function* pushAnnotationLayerUpdateAsync(action: EditAnnotationLayerAction): Sag
   yield* put(
     pushSaveQueueTransaction([updateAnnotationLayerName(tracingId, layerProperties.name)]),
   );
+}
+
+export function* checkVersionRestoreParam(): Saga<void> {
+  const showVersionRestore = yield* call(Utils.hasUrlParam, "showVersionRestore");
+
+  if (showVersionRestore) {
+    yield* put(setVersionRestoreVisibilityAction(true));
+  }
 }
 
 function shouldDisplaySegmentationData(): boolean {
@@ -181,7 +192,7 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
     }
   }
 
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   // Wait before showing the initial warning. Due to initialization lag it may only be visible very briefly, otherwise.
   yield* delay(5000);
   yield* warnMaybe();
@@ -227,7 +238,7 @@ export function* watchAnnotationAsync(): Saga<void> {
 }
 
 export function* acquireAnnotationMutexMaybe(): Saga<void> {
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   const annotationId = yield* select((storeState) => storeState.tracing.annotationId);
   if (!allowUpdate) {
@@ -334,4 +345,9 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   }
   yield* takeEvery("SET_OTHERS_MAY_EDIT_FOR_ANNOTATION", reactToOthersMayEditChanges);
 }
-export default [warnAboutSegmentationZoom, watchAnnotationAsync, acquireAnnotationMutexMaybe];
+export default [
+  warnAboutSegmentationZoom,
+  watchAnnotationAsync,
+  acquireAnnotationMutexMaybe,
+  checkVersionRestoreParam,
+];

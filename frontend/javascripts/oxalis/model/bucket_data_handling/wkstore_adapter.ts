@@ -101,15 +101,13 @@ export async function requestWithFallback(
   const organization = state.dataset.owningOrganization;
   const dataStoreHost = state.dataset.dataStore.url;
   const tracingStoreHost = state.tracing.tracingStore.url;
-  const { annotationId } = state.tracing;
 
   const getDataStoreUrl = (optLayerName?: string) =>
     `${dataStoreHost}/data/datasets/${organization}/${datasetDirectoryName}/layers/${
       optLayerName || layerInfo.name
     }`;
 
-  const getTracingStoreUrl = () =>
-    `${tracingStoreHost}/tracings/volume/${layerInfo.name}?annotationId=${annotationId}`;
+  const getTracingStoreUrl = () => `${tracingStoreHost}/tracings/volume/${layerInfo.name}`;
 
   const maybeVolumeTracing =
     "tracingId" in layerInfo && layerInfo.tracingId != null
@@ -126,7 +124,13 @@ export async function requestWithFallback(
   const requestUrl = shouldUseDataStore
     ? getDataStoreUrl(maybeVolumeTracing?.fallbackLayer)
     : getTracingStoreUrl();
-  const bucketBuffers = await requestFromStore(requestUrl, layerInfo, batch, maybeVolumeTracing);
+  const bucketBuffers = await requestFromStore(
+    requestUrl,
+    layerInfo,
+    batch,
+    maybeVolumeTracing,
+    maybeVolumeTracing != null ? state.tracing.annotationId : undefined,
+  );
   const missingBucketIndices = getNullIndices(bucketBuffers);
 
   // If buckets could not be found on the tracing store (e.g. this happens when the buckets
@@ -156,6 +160,7 @@ export async function requestWithFallback(
     layerInfo,
     fallbackBatch,
     maybeVolumeTracing,
+    maybeVolumeTracing != null ? state.tracing.annotationId : undefined,
     true,
   );
   return bucketBuffers.map((bucket, idx) => {
@@ -172,6 +177,7 @@ export async function requestFromStore(
   layerInfo: DataLayerType,
   batch: Array<BucketAddress>,
   maybeVolumeTracing: VolumeTracing | null | undefined,
+  maybeAnnotationId: string | undefined,
   isVolumeFallback: boolean = false,
 ): Promise<Array<Uint8Array | null | undefined>> {
   const state = Store.getState();
@@ -215,8 +221,14 @@ export async function requestFromStore(
   try {
     return await doWithToken(async (token) => {
       const startingTime = window.performance.now();
+      const params = new URLSearchParams({
+        token,
+      });
+      if (maybeAnnotationId != null) {
+        params.append("annotationId", maybeAnnotationId);
+      }
       const { buffer: responseBuffer, headers } =
-        await Request.sendJSONReceiveArraybufferWithHeaders(`${dataUrl}/data?token=${token}`, {
+        await Request.sendJSONReceiveArraybufferWithHeaders(`${dataUrl}/data?${params}`, {
           data: bucketInfo,
           timeout: REQUEST_TIMEOUT,
           showErrorToast: false,

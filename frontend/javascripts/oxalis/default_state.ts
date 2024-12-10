@@ -8,6 +8,7 @@ import Constants, {
   TDViewDisplayModeEnum,
   InterpolationModeEnum,
   UnitLong,
+  AnnotationMutexStateEnum,
 } from "oxalis/constants";
 import type {
   APIAllowedMode,
@@ -48,6 +49,7 @@ const initialAnnotationInfo = {
   },
   annotationType: "View" as APIAnnotationType,
   meshes: [],
+  AnnotationMutexStateEnum: AnnotationMutexStateEnum.NOT_NEEDED,
 };
 
 const defaultState: OxalisState = {

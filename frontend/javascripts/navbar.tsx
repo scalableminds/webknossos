@@ -60,11 +60,14 @@ import messages from "messages";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
-import constants from "oxalis/constants";
+import constants, { type AnnotationMutexStateEnum } from "oxalis/constants";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import { getAntdTheme, getSystemColorTheme } from "theme";
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
-import { isAnnotationOwner as isAnnotationOwnerAccessor } from "oxalis/model/accessors/annotation_accessor";
+import {
+  isAnnotationEditingAllowed,
+  isAnnotationOwner as isAnnotationOwnerAccessor,
+} from "oxalis/model/accessors/annotation_accessor";
 
 const { Header } = Layout;
 
@@ -84,6 +87,7 @@ type StateProps = {
   hasOrganizations: boolean;
   othersMayEdit: boolean;
   allowUpdate: boolean;
+  annotationMutexState: AnnotationMutexStateEnum;
   isLockedByOwner: boolean;
   isAnnotationOwner: boolean;
   annotationOwnerName: string;
@@ -811,6 +815,7 @@ function Navbar({
   othersMayEdit,
   blockedByUser,
   allowUpdate,
+  annotationMutexState,
   annotationOwnerName,
   isLockedByOwner,
   navbarHeight,
@@ -877,7 +882,10 @@ function Navbar({
       menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
     }
 
-    if (othersMayEdit && !allowUpdate && !isLockedByOwner) {
+    if (
+      othersMayEdit &&
+      !isAnnotationEditingAllowed(allowUpdate, isLockedByOwner, annotationMutexState)
+    ) {
       trailingNavItems.push(
         <AnnotationLockedByUserTag
           key="locked-by-user-tag"
@@ -1005,6 +1013,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   othersMayEdit: state.tracing.othersMayEdit,
   blockedByUser: state.tracing.blockedByUser,
   allowUpdate: state.tracing.restrictions.allowUpdate,
+  annotationMutexState: state.tracing.annotationMutexState,
   isLockedByOwner: state.tracing.isLockedByOwner,
   annotationOwnerName: formatUserName(state.activeUser, state.tracing.owner),
   isAnnotationOwner: isAnnotationOwnerAccessor(state),

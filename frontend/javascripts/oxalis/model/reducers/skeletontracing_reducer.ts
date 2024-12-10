@@ -48,6 +48,7 @@ import {
   getNodeKey,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import type { MetadataEntryProto } from "types/api_flow_types";
+import { isAnnotationEditingAllowedByFullState } from "../accessors/annotation_accessor";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
@@ -590,11 +591,10 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
       }
 
       /**
-       * ATTENTION: The following actions are only executed if allowUpdate is true!
+       * ATTENTION: The following actions are only executed if isAnnotationEditingAllowed is true!
        */
       const { restrictions } = state.tracing;
-      const { allowUpdate } = restrictions;
-      if (!allowUpdate) return state;
+      if (!isAnnotationEditingAllowedByFullState(state)) return state;
 
       switch (action.type) {
         case "CREATE_NODE": {

@@ -22,6 +22,7 @@ import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 import { updateKey } from "oxalis/model/helpers/deep_update";
 import { mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
 import { getMaximumSegmentIdForLayer } from "../accessors/dataset_accessor";
+import { isAnnotationEditingAllowedByFullState } from "../accessors/annotation_accessor";
 
 export function updateVolumeTracing(
   state: OxalisState,
@@ -114,9 +115,10 @@ export function addToLayerReducer(
   volumeTracing: VolumeTracing,
   position: Vector3,
 ) {
-  const { allowUpdate } = state.tracing.restrictions;
-
-  if (!allowUpdate || isVolumeAnnotationDisallowedForZoom(state.uiInformation.activeTool, state)) {
+  if (
+    !isAnnotationEditingAllowedByFullState(state) ||
+    isVolumeAnnotationDisallowedForZoom(state.uiInformation.activeTool, state)
+  ) {
     return state;
   }
 

@@ -119,6 +119,12 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         allowUpdate,
       });
     }
+    case "SET_ANNOTATION_MUTEX_STATE": {
+      const { mutexState } = action;
+      return updateKey(state, "tracing", {
+        annotationMutexState: mutexState,
+      });
+    }
 
     case "SET_BLOCKED_BY_USER": {
       const { blockedByUser } = action;

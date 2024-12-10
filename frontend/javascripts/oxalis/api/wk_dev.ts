@@ -10,6 +10,7 @@ import _ from "lodash";
 // Can be accessed via window.webknossos.DEV.flags. Only use this
 // for debugging or one off scripts.
 export const WkDevFlags = {
+  logActions: false,
   sam: {
     useLocalMask: true,
   },

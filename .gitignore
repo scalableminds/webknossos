@@ -24,6 +24,7 @@ RUNNING_PID
 .bloop
 .metals
 metals.sbt
+__pycache__/
 
 
 # Webknossos

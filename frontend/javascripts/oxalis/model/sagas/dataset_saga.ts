@@ -1,4 +1,4 @@
-import { call, put, take, takeEvery, takeLatest } from "typed-redux-saga";
+import { call, put, takeEvery, takeLatest } from "typed-redux-saga";
 import { sum } from "lodash";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
@@ -23,6 +23,7 @@ import {
   type EnsureSegmentIndexIsLoadedAction,
   setLayerHasSegmentIndexAction,
 } from "../actions/dataset_actions";
+import { ensureWkReady } from "./ready_sagas";
 
 export function* watchMaximumRenderableLayers(): Saga<void> {
   function* warnMaybe(): Saga<void> {
@@ -148,7 +149,8 @@ export function* watchZ1Downsampling(): Saga<void> {
       Toast.close("DOWNSAMPLING_CAUSES_BAD_QUALITY");
     }
   }
-  yield* take("WK_READY");
+
+  yield* call(ensureWkReady);
   yield* call(maybeShowWarning);
   yield* takeLatest(
     ["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP", "SET_STORED_LAYOUTS"],

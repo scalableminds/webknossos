@@ -26,6 +26,7 @@ import Store, { type RecommendedConfiguration } from "oxalis/store";
 import Toast from "libs/toast";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
+import { ensureWkReady } from "./ready_sagas";
 
 function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
   // Users can acquire new tasks directly in the tracing view. Occasionally,
@@ -130,7 +131,7 @@ function* maybeActivateMergerMode(taskType: APITaskType): Saga<void> {
 }
 
 export default function* watchTasksAsync(): Saga<void> {
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   const task = yield* select((state) => state.task);
   const activeUser = yield* select((state) => state.activeUser);
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
@@ -201,7 +202,7 @@ export function* warnAboutMagRestriction(): Saga<void> {
     }
   }
 
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   // Wait before showing the initial warning. Due to initialization lag it may only be visible very briefly, otherwise.
   yield* delay(5000);
   yield* warnMaybe();

@@ -11,8 +11,10 @@ import { getNextTool } from "oxalis/model/reducers/reducer_helpers";
 import { getToolClassForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { AnnotationToolEnum, MeasurementTools } from "oxalis/constants";
+import { ensureWkReady } from "./ready_sagas";
+
 export function* watchToolDeselection(): Saga<void> {
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   let previousTool = yield* select((state) => state.uiInformation.activeTool);
 
   while (true) {

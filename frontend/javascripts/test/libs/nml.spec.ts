@@ -45,7 +45,6 @@ const initialSkeletonTracing: SkeletonTracing = {
   type: "skeleton",
   createdTimestamp: 0,
   tracingId: "tracingId",
-  version: 0,
   cachedMaxNodeId: 7,
   trees: {
     "1": {

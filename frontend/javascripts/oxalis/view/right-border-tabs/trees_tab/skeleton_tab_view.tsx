@@ -134,12 +134,12 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
       }
     };
 
-    const tryParsingFileAsNml = async (file: File) => {
+    const tryParsingFileAsNml = async (file: File, warnAboutVolumes: boolean = true) => {
       try {
         const nmlString = await readFileAsText(file);
         const { trees, treeGroups, userBoundingBoxes, datasetName, containedVolumes } =
           await parseNml(nmlString);
-        if (containedVolumes) {
+        if (containedVolumes && warnAboutVolumes) {
           Toast.warning(
             "The NML file contained volume information which was ignored. Please upload the NML into the dashboard to create a new annotation which also contains the volume data.",
           );
@@ -210,7 +210,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         const nmlBlob = await nmlFileEntry.getData!(new BlobWriter());
         const nmlFile = new File([nmlBlob], nmlFileEntry.filename);
 
-        const nmlImportActions = await tryParsingFileAsNml(nmlFile);
+        const nmlImportActions = await tryParsingFileAsNml(nmlFile, false);
 
         const dataFileEntry = entries.find((entry: Entry) =>
           Utils.isFileExtensionEqualTo(entry.filename, "zip"),
@@ -240,21 +240,14 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
             tracing,
             oldVolumeTracing,
             dataFile,
+            tracing.version,
           );
 
-          if (oldVolumeTracing) {
-            Store.dispatch(importVolumeTracingAction());
-            Store.dispatch(
-              setVersionNumberAction(
-                oldVolumeTracing.version + 1,
-                "volume",
-                oldVolumeTracing.tracingId,
-              ),
-            );
-            Store.dispatch(setLargestSegmentIdAction(newLargestSegmentId));
-            await clearCache(dataset, oldVolumeTracing.tracingId);
-            await api.data.reloadBuckets(oldVolumeTracing.tracingId);
-          }
+          Store.dispatch(importVolumeTracingAction());
+          Store.dispatch(setVersionNumberAction(tracing.version + 1));
+          Store.dispatch(setLargestSegmentIdAction(newLargestSegmentId));
+          await clearCache(dataset, oldVolumeTracing.tracingId);
+          await api.data.reloadBuckets(oldVolumeTracing.tracingId);
         }
 
         await reader.close();

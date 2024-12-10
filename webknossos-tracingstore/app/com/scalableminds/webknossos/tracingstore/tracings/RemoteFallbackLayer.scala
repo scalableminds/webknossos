@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.option2Fox
@@ -36,10 +37,9 @@ trait FallbackDataHelper {
       datasetId <- remoteWebknossosClient.getDataSourceIdForTracing(tracingId)
     } yield RemoteFallbackLayer(datasetId.organizationId, datasetId.directoryName, layerName, tracing.elementClass)
 
-  def getFallbackDataFromDatastore(
-      remoteFallbackLayer: RemoteFallbackLayer,
-      dataRequests: List[WebknossosDataRequest],
-      userToken: Option[String])(implicit ec: ExecutionContext): Fox[(Array[Byte], List[Int])] =
-    fallbackDataCache.getOrLoad(FallbackDataKey(remoteFallbackLayer, dataRequests, userToken),
-                                k => remoteDatastoreClient.getData(k.remoteFallbackLayer, k.dataRequests, k.userToken))
+  def getFallbackDataFromDatastore(remoteFallbackLayer: RemoteFallbackLayer, dataRequests: List[WebknossosDataRequest])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[(Array[Byte], List[Int])] =
+    fallbackDataCache.getOrLoad(FallbackDataKey(remoteFallbackLayer, dataRequests, tc.userTokenOpt),
+                                k => remoteDatastoreClient.getData(k.remoteFallbackLayer, k.dataRequests))
 }

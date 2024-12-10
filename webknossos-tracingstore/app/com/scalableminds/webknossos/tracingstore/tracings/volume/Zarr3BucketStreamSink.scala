@@ -28,7 +28,7 @@ import scala.concurrent.{ExecutionContext, Future}
 // Creates data zip from volume tracings
 class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLayer: Boolean)
     extends ProtoGeometryImplicits
-    with VolumeBucketReversionHelper
+    with ReversionHelper
     with Zarr3OutputHelper
     with ByteUtils {
 
@@ -44,7 +44,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
     val header = Zarr3ArrayHeader.fromDataLayer(layer, mags.headOption.getOrElse(Vec3Int.ones))
     bucketStream.flatMap {
       case (bucket, data) =>
-        val skipBucket = if (tracingHasFallbackLayer) isAllZero(data) else isRevertedBucket(data)
+        val skipBucket = if (tracingHasFallbackLayer) isAllZero(data) else isRevertedElement(data)
         if (skipBucket) {
           // If the tracing has no fallback segmentation, all-zero buckets can be omitted entirely
           None

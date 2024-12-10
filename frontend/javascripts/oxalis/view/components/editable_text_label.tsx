@@ -15,7 +15,7 @@ type Rule = {
 };
 export type EditableTextLabelProp = {
   value: string;
-  onChange: (...args: Array<any>) => any;
+  onChange: (newValue: string) => any;
   rules?: Rule[];
   rows?: number;
   markdown?: boolean;

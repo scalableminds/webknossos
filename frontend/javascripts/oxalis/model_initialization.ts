@@ -9,8 +9,8 @@ import type {
   ServerEditableMapping,
   APICompoundType,
   APISegmentationLayer,
+  APITracingStoreAnnotation,
 } from "types/api_flow_types";
-import type { Versions } from "oxalis/view/version_view";
 import {
   computeDataTexturesSetup,
   getSupportedTextureSpecs,
@@ -35,7 +35,7 @@ import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_ac
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getTracingsForAnnotation,
-  getAnnotationInformation,
+  getMaybeOutdatedAnnotationInformation,
   getEmptySandboxAnnotationInformation,
   getDataset,
   getSharingTokenFromUrlParameters,
@@ -43,6 +43,7 @@ import {
   getDatasetViewConfiguration,
   getEditableMappingInfo,
   getAnnotationCompoundInformation,
+  getAnnotationProto,
 } from "admin/admin_rest_api";
 import {
   dispatchMaybeFetchMeshFilesAsync,
@@ -104,7 +105,11 @@ import {
   PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
-import { convertServerAdditionalAxesToFrontEnd } from "./model/reducers/reducer_helpers";
+import {
+  convertServerAdditionalAxesToFrontEnd,
+  convertServerAnnotationToFrontendAnnotation,
+} from "./model/reducers/reducer_helpers";
+import { setVersionNumberAction } from "./model/actions/save_actions";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
@@ -113,7 +118,7 @@ export async function initialize(
   initialMaybeCompoundType: APICompoundType | null,
   initialCommandType: TraceOrViewCommand,
   initialFetch: boolean,
-  versions?: Versions,
+  version?: number | undefined | null,
 ): Promise<
   | {
       dataLayers: DataLayerCollection;
@@ -124,14 +129,36 @@ export async function initialize(
 > {
   Store.dispatch(setControlModeAction(initialCommandType.type));
   let annotation: APIAnnotation | null | undefined;
+  let annotationProto: APITracingStoreAnnotation | null | undefined;
   let datasetId: string;
 
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
-    annotation =
-      initialMaybeCompoundType != null
-        ? await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType)
-        : await getAnnotationInformation(annotationId);
+    if (initialMaybeCompoundType != null) {
+      annotation = await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType);
+    } else {
+      // todop: can we improve this?
+      let maybeOutdatedAnnotation = await getMaybeOutdatedAnnotationInformation(annotationId);
+      annotationProto = await getAnnotationProto(
+        maybeOutdatedAnnotation.tracingStore.url,
+        maybeOutdatedAnnotation.id,
+        version,
+      );
+      const layersWithStats = annotationProto.annotationLayers.map((layer) => {
+        return {
+          tracingId: layer.tracingId,
+          name: layer.name,
+          typ: layer.type,
+        };
+      });
+      const completeAnnotation = {
+        ...maybeOutdatedAnnotation,
+        description: annotationProto.description,
+        annotationProto: annotationProto.earliestAccessibleVersion,
+        annotationLayers: layersWithStats,
+      };
+      annotation = completeAnnotation;
+    }
     datasetId = annotation.datasetId;
 
     if (!annotation.restrictions.allowAccess) {
@@ -157,7 +184,7 @@ export async function initialize(
   const [dataset, initialUserSettings, serverTracings] = await fetchParallel(
     annotation,
     datasetId,
-    versions,
+    version,
   );
   const serverVolumeTracings = getServerVolumeTracings(serverTracings);
   const serverVolumeTracingIds = serverVolumeTracings.map((volumeTracing) => volumeTracing.id);
@@ -202,8 +229,19 @@ export async function initialize(
     const editableMappings = await fetchEditableMappings(
       annotation.tracingStore.url,
       serverVolumeTracings,
+      annotation.id,
     );
-    initializeTracing(annotation, serverTracings, editableMappings);
+    if (annotationProto == null) {
+      // Satisfy TS. annotationProto should always exist if annotation exists.
+      throw new Error("Annotation protobuf should not be null.");
+    }
+    initializeAnnotation(
+      annotation,
+      annotationProto.version,
+      annotationProto.earliestAccessibleVersion,
+      serverTracings,
+      editableMappings,
+    );
   } else {
     // In view only tracings we need to set the view mode too.
     const { allowedModes } = determineAllowedModes();
@@ -225,22 +263,23 @@ export async function initialize(
 async function fetchParallel(
   annotation: APIAnnotation | null | undefined,
   datasetId: string,
-  versions?: Versions,
+  version: number | undefined | null,
 ): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>]> {
   return Promise.all([
     getDataset(datasetId, getSharingTokenFromUrlParameters()),
     getUserConfiguration(), // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
-    annotation ? getTracingsForAnnotation(annotation, versions) : [],
+    annotation ? getTracingsForAnnotation(annotation, version) : [],
   ]);
 }
 
 async function fetchEditableMappings(
   tracingStoreUrl: string,
   serverVolumeTracings: ServerVolumeTracing[],
+  annotationId: string,
 ): Promise<ServerEditableMapping[]> {
   const promises = serverVolumeTracings
     .filter((tracing) => tracing.hasEditableMapping)
-    .map((tracing) => getEditableMappingInfo(tracingStoreUrl, tracing.id));
+    .map((tracing) => getEditableMappingInfo(tracingStoreUrl, tracing.id, annotationId));
   return Promise.all(promises);
 }
 
@@ -274,8 +313,10 @@ function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
   }
 }
 
-function initializeTracing(
+function initializeAnnotation(
   _annotation: APIAnnotation,
+  version: number,
+  earliestAccessibleVersion: number,
   serverTracings: Array<ServerTracing>,
   editableMappings: Array<ServerEditableMapping>,
 ) {
@@ -307,7 +348,11 @@ function initializeTracing(
       };
     }
 
-    Store.dispatch(initializeAnnotationAction(annotation));
+    Store.dispatch(
+      initializeAnnotationAction(
+        convertServerAnnotationToFrontendAnnotation(annotation, version, earliestAccessibleVersion),
+      ),
+    );
     getServerVolumeTracings(serverTracings).map((volumeTracing) => {
       ErrorHandling.assert(
         getSegmentationLayers(dataset).length > 0,
@@ -321,11 +366,9 @@ function initializeTracing(
     const skeletonTracing = getNullableSkeletonTracing(serverTracings);
 
     if (skeletonTracing != null) {
-      // To generate a huge amount of dummy trees, use:
-      // import generateDummyTrees from "./model/helpers/generate_dummy_trees";
-      // tracing.trees = generateDummyTrees(1, 200000);
       Store.dispatch(initializeSkeletonTracingAction(skeletonTracing));
     }
+    Store.dispatch(setVersionNumberAction(version));
   }
 
   // Initialize 'flight', 'oblique' or 'orthogonal' mode
@@ -452,6 +495,7 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
       layer,
       textureInformation.textureSize,
       textureInformation.textureCount,
+      layer.name, // In case of a volume tracing layer the layer name will equal its tracingId.
     );
   }
 

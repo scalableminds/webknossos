@@ -9,7 +9,6 @@ import {
   downloadAnnotation,
   getNewestVersionForAnnotation,
   getAnnotationProto,
-  getTracingForAnnotationType,
 } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import {

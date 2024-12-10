@@ -20,13 +20,13 @@ import models.folder.FolderService
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
-import net.liftweb.common.{Failure, Full, Empty}
+import net.liftweb.common.{Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
-import security.{URLSharing, WkEnv}
+import security.{AuthenticationService, URLSharing, WkEnv}
 import utils.{MetadataAssertions, WkConf}
 
 import javax.inject.Inject
@@ -85,7 +85,7 @@ class DatasetController @Inject()(userService: UserService,
                                   thumbnailService: ThumbnailService,
                                   thumbnailCachingService: ThumbnailCachingService,
                                   conf: WkConf,
-                                  authenticationController: AuthenticationController,
+                                  authenticationService: AuthenticationService,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
                                   wkExploreRemoteLayerService: WKExploreRemoteLayerService,
@@ -418,21 +418,16 @@ class DatasetController @Inject()(userService: UserService,
                          "directoryName" -> dataset.directoryName)))
           case Empty =>
             for {
+              user <- request.identity.toFox ~> Unauthorized
               dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(GlobalAccessContext)
-              isAccessibleResult <- authenticationController.accessibleBySwitching(Some(dataset._id.toString),
-                                                                                   None,
-                                                                                   None)(request)
-              result <- isAccessibleResult.header.status match {
-                case 200 =>
-                  Fox.successful(
-                    Ok(
-                      Json.obj("id" -> dataset._id,
-                               "name" -> dataset.name,
-                               "organization" -> dataset._organization,
-                               "directoryName" -> dataset.directoryName)))
-                case _ => Fox.failure(notFoundMessage(datasetName))
-              }
-            } yield result
+              // Just checking if the user can switch to an organization to access the dataset.
+              _ <- authenticationService.getOrganizationToSwitchTo(user, Some(dataset._id), None, None)
+            } yield
+              Ok(
+                Json.obj("id" -> dataset._id,
+                         "name" -> dataset.name,
+                         "organization" -> dataset._organization,
+                         "directoryName" -> dataset.directoryName))
           case _ => Fox.failure(notFoundMessage(datasetName))
         }) ?~> notFoundMessage(datasetName) ~> NOT_FOUND
       } yield result

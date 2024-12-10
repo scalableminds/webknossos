@@ -8,7 +8,7 @@ import {
 } from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { throttle, call, take } from "typed-redux-saga";
+import { throttle, call } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import {
   getPosition,

@@ -1,4 +1,4 @@
-import { call, put, take, takeEvery, takeLatest } from "typed-redux-saga";
+import { call, put, takeEvery, takeLatest } from "typed-redux-saga";
 import { sum } from "lodash";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";

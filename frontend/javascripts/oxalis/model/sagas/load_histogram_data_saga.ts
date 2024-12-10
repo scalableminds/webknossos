@@ -1,6 +1,6 @@
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { call, take, takeEvery, put } from "typed-redux-saga";
+import { call, takeEvery, put } from "typed-redux-saga";
 import {
   setHistogramDataForLayerAction,
   updateLayerSettingAction,

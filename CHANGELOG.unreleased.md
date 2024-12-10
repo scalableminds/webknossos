@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 - Renamed "resolution" to "magnification" in more places within the codebase, including local variables. [#8168](https://github.com/scalableminds/webknossos/pull/8168)
+- Layer names are now allowed to contain `$` as special characters. [#8241](https://github.com/scalableminds/webknossos/pull/8241)
 - Datasets can now be renamed and can have duplicate names. [#8075](https://github.com/scalableminds/webknossos/pull/8075)
 - Improved the default colors for skeleton trees. [#8228](https://github.com/scalableminds/webknossos/pull/8228)
 - Allowed to train an AI model using differently sized bounding boxes. We recommend all bounding boxes to have equal dimensions or to have dimensions which are multiples of the smallest bounding box. [#8222](https://github.com/scalableminds/webknossos/pull/8222)

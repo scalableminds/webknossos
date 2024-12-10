@@ -1,42 +1,29 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
+import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
+import models.organization.{Organization, OrganizationDAO, OrganizationService}
+import models.user._
+import net.liftweb.common.{Box, Empty, Failure, Full}
+import org.apache.commons.codec.binary.Base64
+import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import org.apache.pekko.actor.ActorSystem
+import play.api.data.Form
+import play.api.data.Forms._
+import play.api.data.validation.Constraints._
+import play.api.i18n.{Messages, MessagesProvider}
+import play.api.libs.json._
+import play.api.mvc._
 import play.silhouette.api.actions.SecuredRequest
 import play.silhouette.api.exceptions.ProviderException
 import play.silhouette.api.services.AuthenticatorResult
 import play.silhouette.api.util.{Credentials, PasswordInfo}
 import play.silhouette.api.{LoginInfo, Silhouette}
 import play.silhouette.impl.providers.CredentialsProvider
-import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
-import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
-import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
-import models.annotation.AnnotationState.Cancelled
-import models.annotation.{AnnotationDAO, AnnotationIdentifier, AnnotationInformationProvider}
-import models.dataset.DatasetDAO
-import models.organization.{Organization, OrganizationDAO, OrganizationService}
-import models.user._
-import models.voxelytics.VoxelyticsDAO
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import org.apache.commons.codec.binary.Base64
-import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
-import play.api.data.Form
-import play.api.data.Forms._
-import play.api.data.validation.Constraints._
-import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, Cookie, PlayBodyParsers, Request, Result}
-import security.{
-  AuthenticationService,
-  CombinedAuthenticator,
-  OpenIdConnectClient,
-  OpenIdConnectUserInfo,
-  PasswordHasher,
-  TokenType,
-  WkEnv,
-  WkSilhouetteEnvironment
-}
+import security._
 import utils.WkConf
 
 import java.net.URLEncoder
@@ -50,7 +37,6 @@ class AuthenticationController @Inject()(
     credentialsProvider: CredentialsProvider,
     passwordHasher: PasswordHasher,
     userService: UserService,
-    annotationProvider: AnnotationInformationProvider,
     authenticationService: AuthenticationService,
     organizationService: OrganizationService,
     inviteService: InviteService,
@@ -59,12 +45,9 @@ class AuthenticationController @Inject()(
     organizationDAO: OrganizationDAO,
     analyticsService: AnalyticsService,
     userDAO: UserDAO,
-    datasetDAO: DatasetDAO,
     multiUserDAO: MultiUserDAO,
     defaultMails: DefaultMails,
     conf: WkConf,
-    annotationDAO: AnnotationDAO,
-    voxelyticsDAO: VoxelyticsDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     openIdConnectClient: OpenIdConnectClient,
     initialDataService: InitialDataService,

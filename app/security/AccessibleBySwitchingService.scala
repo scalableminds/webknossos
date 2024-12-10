@@ -15,7 +15,7 @@ import utils.sql.SqlEscaping
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class AuthenticationService @Inject()(
+class AccessibleBySwitchingService @Inject()(
     userDAO: UserDAO,
     multiUserDAO: MultiUserDAO,
     annotationDAO: AnnotationDAO,
@@ -23,8 +23,7 @@ class AuthenticationService @Inject()(
     datasetDAO: DatasetDAO,
     annotationProvider: AnnotationInformationProvider,
     voxelyticsDAO: VoxelyticsDAO,
-)(implicit ec: ExecutionContext)
-    extends SqlEscaping {
+)(implicit ec: ExecutionContext) {
 
   /*
    superadmin - can definitely switch, find organization via global access context

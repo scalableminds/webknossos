@@ -37,7 +37,7 @@ class AuthenticationController @Inject()(
     credentialsProvider: CredentialsProvider,
     passwordHasher: PasswordHasher,
     userService: UserService,
-    authenticationService: AuthenticationService,
+    authenticationService: AccessibleBySwitchingService,
     organizationService: OrganizationService,
     inviteService: InviteService,
     inviteDAO: InviteDAO,

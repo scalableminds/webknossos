@@ -7,6 +7,7 @@ import {
   getPreviousTool,
 } from "oxalis/model/reducers/reducer_helpers";
 import { hideBrushReducer } from "oxalis/model/reducers/volumetracing_reducer_helpers";
+import { isAnnotationEditingAllowedByFullState } from "../accessors/annotation_accessor";
 
 function UiReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
@@ -54,7 +55,7 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_TOOL": {
-      if (!state.tracing.restrictions.allowUpdate) {
+      if (!isAnnotationEditingAllowedByFullState(state)) {
         return state;
       }
 
@@ -62,7 +63,7 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "CYCLE_TOOL": {
-      if (!state.tracing.restrictions.allowUpdate) {
+      if (!isAnnotationEditingAllowedByFullState(state)) {
         return state;
       }
 

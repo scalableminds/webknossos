@@ -19,6 +19,14 @@ export function mayEditAnnotationProperties(state: OxalisState) {
   );
 }
 
+export function isAnnotationEditingAllowedByFullState(state: OxalisState) {
+  return isAnnotationEditingAllowed(
+    state.tracing.restrictions.allowUpdate,
+    state.tracing.isLockedByOwner,
+    state.tracing.annotationMutexState,
+  );
+}
+
 export function isAnnotationEditingAllowed(
   allowUpdate: boolean,
   isLockedByOwner: boolean,

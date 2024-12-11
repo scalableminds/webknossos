@@ -185,6 +185,8 @@ class VolumeTracingController @Inject()(
     }
 
   def allDataZip(tracingId: String,
+                 annotationId: Option[String],
+                 version: Option[Long],
                  volumeDataZipFormat: String,
                  voxelSizeFactor: Option[String],
                  voxelSizeUnit: Option[String]): Action[AnyContent] =
@@ -192,8 +194,11 @@ class VolumeTracingController @Inject()(
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
-            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
+            _ <- bool2Fox(if (version.isDefined) annotationId.isDefined else true) ?~> "Volume data request with version needs passed annotationId"
+            annotationIdFilled <- Fox.fillOption(annotationId)(
+              remoteWebknossosClient.getAnnotationIdForTracing(tracingId))
+            tracing <- annotationService.findVolume(annotationIdFilled, tracingId, version) ?~> Messages(
+              "tracing.notFound")
             volumeDataZipFormatParsed <- VolumeDataZipFormat.fromString(volumeDataZipFormat).toFox
             voxelSizeFactorParsedOpt <- Fox.runOptional(voxelSizeFactor)(Vec3Double.fromUriLiteral)
             voxelSizeUnitParsedOpt <- Fox.runOptional(voxelSizeUnit)(LengthUnit.fromString)

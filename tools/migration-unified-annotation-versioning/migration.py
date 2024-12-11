@@ -393,6 +393,7 @@ class Migration:
 
     def create_and_save_annotation_proto(self, annotation, materialized_versions: Set[int], mapping_id_map: MappingIdMap):
         skeleton_may_have_pending_updates = self.skeleton_may_have_pending_updates(annotation)
+        editable_mapping_may_have_pending_updates = bool(mapping_id_map) # same problem as with skeletons, see comment there
         earliest_accessible_version = 0
         if len(mapping_id_map) > 0:
             # An editable mapping exists in this annotation.
@@ -408,6 +409,8 @@ class Migration:
             annotationProto.earliestAccessibleVersion = earliest_accessible_version
             if skeleton_may_have_pending_updates:
                 annotationProto.skeletonMayHavePendingUpdates = True
+            if editable_mapping_may_have_pending_updates:
+                annotationProto.editableMappingMayHavePendingUpdates = True
             for tracing_id, tracing_type in annotation["layers"].items():
                 layer_proto = AnnotationProto.AnnotationLayerProto()
                 layer_proto.tracingId = tracing_id
@@ -433,7 +436,9 @@ class Migration:
     def read_annotation_list(self):
         checkpoint_set = self.read_checkpoints()
         before = time.time()
-        start_time = datetime.datetime.now()
+        start_time = str(datetime.datetime.now())
+        if self.args.start is not None:
+            start_time = self.args.start
         previous_start_label = ""
         previous_start_query = ""
         if self.args.previous_start is not None:
@@ -522,4 +527,3 @@ class Migration:
             logger.info(f"Writing checkpoint file at {checkpoint_file}")
         checkpoints_file_handler = logging.FileHandler(checkpoint_file)
         checkpoint_logger.addHandler(checkpoints_file_handler)
-

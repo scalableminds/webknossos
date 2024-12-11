@@ -49,6 +49,8 @@ case class AnnotationWithTracings(
   def getSkeletonId: Option[String] =
     getSkeletons.headOption.map(_._1)
 
+  def getEditableMappingTracingIds: List[String] = editableMappingsByTracingId.keys.toList
+
   def getEditableMappingsInfo: List[(String, EditableMappingInfo)] =
     editableMappingsByTracingId.view.flatMap {
       case (id, (info: EditableMappingInfo, _)) => Some(id, info)

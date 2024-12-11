@@ -201,7 +201,7 @@ class WKRemoteTracingStoreClient(
 
   def getVolumeTracing(annotationId: ObjectId,
                        annotationLayer: AnnotationLayer,
-                       version: Option[Long] = None,
+                       version: Option[Long],
                        skipVolumeData: Boolean,
                        volumeDataZipFormat: VolumeDataZipFormat,
                        voxelSize: Option[VoxelSize]): Fox[FetchedAnnotationLayer] = {

@@ -120,8 +120,11 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   def currentMaterializedVersion(annotationId: String): Fox[Long] =
     tracingDataStore.annotations.getVersion(annotationId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
 
-  def currentMaterializedSkeletonVersion(tracingId: String): Fox[Long] =
+  private def currentMaterializedSkeletonVersion(tracingId: String): Fox[Long] =
     tracingDataStore.skeletons.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
+
+  private def currentMaterializedEditableMappingVersion(tracingId: String): Fox[Long] =
+    tracingDataStore.editableMappingsInfo.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
 
   private def getNewestMaterialized(annotationId: String): Fox[AnnotationProto] =
     for {
@@ -296,6 +299,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       implicit ec: ExecutionContext): Fox[List[(Long, List[UpdateAction])]] =
     for {
       extraSkeletonUpdates <- findExtraSkeletonUpdates(annotationId, annotation)
+      extraEditableMappingUpdates <- findExtraEditableMappingUpdates(annotationId, annotation)
       existingVersion = annotation.version
       pendingAnnotationUpdates <- if (desiredVersion == existingVersion) Fox.successful(List.empty)
       else {
@@ -304,7 +308,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           Some(desiredVersion),
           Some(existingVersion + 1))(fromJsonBytes[List[UpdateAction]])
       }
-    } yield extraSkeletonUpdates ++ pendingAnnotationUpdates
+    } yield extraSkeletonUpdates ++ extraEditableMappingUpdates ++ pendingAnnotationUpdates
 
   /*
    * The migration of https://github.com/scalableminds/webknossos/pull/7917 does not guarantee that the skeleton layer
@@ -336,6 +340,39 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         val updateGroupFiltered = updateGroup.flatMap {
           case a: SkeletonUpdateAction => Some(a)
           case _                       => None
+        }
+        (version, updateGroupFiltered)
+    }
+
+  // Same problem as with skeletons, see comment above
+  // Note that the EditableMappingUpdaters are passed only the “oldVersion” that is the materialized annotation version
+  // not the actual materialized editableMapping version, but that should yield the same data when loading from fossil.
+  private def findExtraEditableMappingUpdates(annotationId: String, annotation: AnnotationWithTracings)(
+      implicit ec: ExecutionContext): Fox[List[(Long, List[UpdateAction])]] =
+    if (annotation.annotation.skeletonMayHavePendingUpdates.getOrElse(false)) {
+      for {
+        updatesByEditableMapping <- Fox.serialCombined(annotation.getEditableMappingTracingIds) { tracingId =>
+          for {
+            materializedEditableMappingVersion <- currentMaterializedEditableMappingVersion(tracingId)
+            extraUpdates <- if (materializedEditableMappingVersion < annotation.version) {
+              tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
+                annotationId,
+                Some(annotation.version),
+                Some(materializedEditableMappingVersion + 1))(fromJsonBytes[List[UpdateAction]])
+            } else Fox.successful(List.empty)
+            extraUpdatesForThisMapping = filterEditableMappingUpdates(extraUpdates, tracingId)
+          } yield extraUpdatesForThisMapping
+        }
+      } yield updatesByEditableMapping.flatten
+    } else Fox.successful(List.empty)
+
+  private def filterEditableMappingUpdates(updateGroups: List[(Long, List[UpdateAction])],
+                                           tracingId: String): List[(Long, List[EditableMappingUpdateAction])] =
+    updateGroups.map {
+      case (version, updateGroup) =>
+        val updateGroupFiltered = updateGroup.flatMap {
+          case a: EditableMappingUpdateAction if a.actionTracingId == tracingId => Some(a)
+          case _                                                                => None
         }
         (version, updateGroupFiltered)
     }

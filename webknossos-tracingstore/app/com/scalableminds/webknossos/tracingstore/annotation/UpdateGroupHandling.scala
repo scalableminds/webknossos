@@ -50,13 +50,11 @@ trait UpdateGroupHandling extends LazyLogging {
             (collectedAndNextVersion: (Seq[Seq[UpdateAction]], Long), updateGroupWithVersion) =>
               val collected = collectedAndNextVersion._1
               val nextVersion = collectedAndNextVersion._2
-              logger.info(s"nextVersion: $nextVersion")
               if (updateGroupWithVersion._1 > nextVersion) {
                 // We have not yet reached nextVersion. Skip to next element, Do not collect, do not change nextVersion
                 (collected, nextVersion)
               } else {
                 val revertSourceVersionOpt = revertSourceVersionFromUpdates(updateGroupWithVersion._2)
-                logger.info(f"revertSourceVersionOpt: $revertSourceVersionOpt")
                 revertSourceVersionOpt match {
                   // This group is a revert action. Set nextVersion to revertSourceVersion, do not collect this group
                   case Some(revertSourceVersion) => (collected, revertSourceVersion)

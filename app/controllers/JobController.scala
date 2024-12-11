@@ -244,7 +244,7 @@ class JobController @Inject()(
           _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
-          annotation_id_parsed <- Fox.runOptional(doSplitMergerEvaluation)(annotationId.toFox)
+          annotation_id_parsed <- Fox.runIf(doSplitMergerEvaluation)(annotationId.toFox)
           command = JobCommand.infer_neurons
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
@@ -254,7 +254,7 @@ class JobController @Inject()(
             "layer_name" -> layerName,
             "bbox" -> bbox,
             "do_split_merger_evaluation" -> doSplitMergerEvaluation,
-            "annotation_id" -> annotationId,
+            "annotation_id" -> annotation_id_parsed,
             "eval_use_sparse_tracing" -> evalUseSparseTracing,
             "eval_max_edge_length" -> evalMaxEdgeLength,
             "eval_sparse_tube_threshold_nm" -> evalSparseTubeThresholdNm,

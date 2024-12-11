@@ -194,7 +194,7 @@ class VolumeTracingController @Inject()(
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
-            _ <- bool2Fox(version.isDefined == annotationId.isDefined) ?~> "Volume data request with version needs passed annotationId"
+            _ <- bool2Fox(if (version.isDefined) annotationId.isDefined else true) ?~> "Volume data request with version needs passed annotationId"
             annotationIdFilled <- Fox.fillOption(annotationId)(
               remoteWebknossosClient.getAnnotationIdForTracing(tracingId))
             tracing <- annotationService.findVolume(annotationIdFilled, tracingId, version) ?~> Messages(

@@ -18,7 +18,7 @@ type State = {
 };
 type OwnProps = {
   children: React.ReactNode;
-  isUpdateAllowed: boolean;
+  isEditingAllowed: boolean;
   onImport: (files: Array<File>, createGroupForEachFile: boolean) => Promise<void>;
 };
 type StateProps = {
@@ -181,7 +181,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   renderDropzoneModal() {
     return (
       <Modal open footer={null} onCancel={this.props.hideDropzoneModal}>
-        {this.props.isUpdateAllowed ? (
+        {this.props.isEditingAllowed ? (
           <Alert
             message="Did you know that you do can just drag-and-drop NML files directly into this view? You don't have to explicitly open this dialog first."
             style={{
@@ -194,7 +194,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
             <div {...getRootProps()}>
               <NmlDropArea
                 isClickAllowed
-                isUpdateAllowed={this.props.isUpdateAllowed}
+                isUpdateAllowed={this.props.isEditingAllowed}
                 getInputProps={getInputProps}
               />
             </div>
@@ -243,7 +243,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
               {newGroupMsg}
             </Checkbox>
             <Button key="submit" type="primary" onClick={this.importTracingFiles}>
-              {this.props.isUpdateAllowed ? "Import" : "Create New Annotation"}
+              {this.props.isEditingAllowed ? "Import" : "Create New Annotation"}
             </Button>
           </React.Fragment>
         }
@@ -282,7 +282,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
               <OverlayDropZone>
                 <NmlDropArea
                   isClickAllowed={false}
-                  isUpdateAllowed={this.props.isUpdateAllowed}
+                  isUpdateAllowed={this.props.isEditingAllowed}
                   getInputProps={getInputProps}
                 />
               </OverlayDropZone>

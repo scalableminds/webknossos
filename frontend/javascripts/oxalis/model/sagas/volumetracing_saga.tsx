@@ -113,6 +113,7 @@ import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_sag
 import messages from "messages";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import type { ActionPattern } from "redux-saga/effects";
+import { isAnnotationEditingAllowedByFullState } from "../accessors/annotation_accessor";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
@@ -176,9 +177,9 @@ function* warnTooLargeSegmentId(): Saga<void> {
 
 export function* editVolumeLayerAsync(): Saga<any> {
   yield* take("INITIALIZE_VOLUMETRACING");
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const allowEditing = yield* select((state) => isAnnotationEditingAllowedByFullState(state));
 
-  while (allowUpdate) {
+  while (allowEditing) {
     const startEditingAction = yield* take("START_EDITING");
     const wroteVoxelsBox = { value: false };
     const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
@@ -402,9 +403,9 @@ function* getBoundingBoxForFloodFill(
 const FLOODFILL_PROGRESS_KEY = "FLOODFILL_PROGRESS_KEY";
 export function* floodFill(): Saga<void> {
   yield* take("INITIALIZE_VOLUMETRACING");
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const allowEditing = yield* select((state) => isAnnotationEditingAllowedByFullState(state));
 
-  while (allowUpdate) {
+  while (allowEditing) {
     const floodFillAction = yield* take("FLOOD_FILL");
 
     if (floodFillAction.type !== "FLOOD_FILL") {

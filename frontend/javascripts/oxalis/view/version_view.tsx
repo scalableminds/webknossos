@@ -18,12 +18,12 @@ type StateProps = {
   tracing: Tracing;
 };
 type OwnProps = {
-  allowUpdate: boolean;
+  allowEditing: boolean;
 };
 type Props = StateProps & OwnProps;
 type State = {
   activeTracingType: TracingType;
-  initialAllowUpdate: boolean;
+  initialAllowEditing: boolean;
 };
 
 class VersionView extends React.Component<Props, State> {
@@ -31,18 +31,19 @@ class VersionView extends React.Component<Props, State> {
     activeTracingType:
       this.props.tracing.skeleton != null ? TracingTypeEnum.skeleton : TracingTypeEnum.volume,
     // Remember whether the tracing could originally be updated
-    initialAllowUpdate: this.props.allowUpdate,
+    initialAllowEditing: this.props.allowEditing,
   };
 
   componentWillUnmount() {
-    Store.dispatch(setAnnotationAllowUpdateAction(this.state.initialAllowUpdate));
+    // TODOM: Fix this. It does not set the allow update correctly as allow editing is a combination of setting.
+    Store.dispatch(setAnnotationAllowUpdateAction(this.state.initialAllowEditing));
   }
 
   handleClose = async () => {
     // This will load the newest version of both skeleton and volume tracings
     await previewVersion();
     Store.dispatch(setVersionRestoreVisibilityAction(false));
-    Store.dispatch(setAnnotationAllowUpdateAction(this.state.initialAllowUpdate));
+    Store.dispatch(setAnnotationAllowUpdateAction(this.state.initialAllowEditing));
   };
 
   onChangeTab = (activeKey: string) => {
@@ -62,7 +63,7 @@ class VersionView extends React.Component<Props, State> {
           <VersionList
             versionedObjectType="skeleton"
             tracing={this.props.tracing.skeleton}
-            allowUpdate={this.state.initialAllowUpdate}
+            allowEditing={this.state.initialAllowEditing}
           />
         ),
       });
@@ -75,7 +76,7 @@ class VersionView extends React.Component<Props, State> {
           <VersionList
             versionedObjectType="volume"
             tracing={volumeTracing}
-            allowUpdate={this.state.initialAllowUpdate}
+            allowEditing={this.state.initialAllowEditing}
           />
         ),
       })),
@@ -92,7 +93,7 @@ class VersionView extends React.Component<Props, State> {
           <VersionList
             versionedObjectType="mapping"
             tracing={mapping}
-            allowUpdate={this.state.initialAllowUpdate}
+            allowEditing={this.state.initialAllowEditing}
           />
         ),
       })),

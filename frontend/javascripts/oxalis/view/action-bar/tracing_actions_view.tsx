@@ -79,6 +79,7 @@ import { withAuthentication } from "admin/auth/authentication_modal";
 import { PrivateLinksModal } from "./private_links_view";
 import type { ItemType, SubMenuType } from "antd/es/menu/interface";
 import CreateAnimationModal from "./create_animation_modal";
+import { isAnnotationEditingAllowedByFullState } from "oxalis/model/accessors/annotation_accessor";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -91,6 +92,7 @@ type StateProps = {
   annotationType: APIAnnotationType;
   annotationId: string;
   restrictions: RestrictionsAndSettings;
+  allowEditing: boolean;
   task: Task | null | undefined;
   activeUser: APIUser | null | undefined;
   hasTracing: boolean;
@@ -479,6 +481,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     const {
       hasTracing,
       restrictions,
+      allowEditing,
       task,
       annotationType,
       annotationId,
@@ -491,7 +494,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
     const copyAnnotationText = isAnnotationOwner ? "Duplicate" : "Copy To My Account";
     const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
-    const saveButton = restrictions.allowUpdate
+    const saveButton = allowEditing
       ? [
           hasTracing
             ? [
@@ -748,6 +751,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     annotationType: state.tracing.annotationType,
     annotationId: state.tracing.annotationId,
     restrictions: state.tracing.restrictions,
+    allowEditing: isAnnotationEditingAllowedByFullState(state),
     annotationOwner: state.tracing.owner,
     task: state.task,
     activeUser: state.activeUser,

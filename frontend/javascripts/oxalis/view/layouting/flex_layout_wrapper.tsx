@@ -44,6 +44,7 @@ import {
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
 import BorderToggleButton from "../components/border_toggle_button";
 import FastTooltip from "components/fast_tooltip";
+import { isAnnotationEditingAllowedByFullState } from "oxalis/model/accessors/annotation_accessor";
 
 const { Footer } = Layout;
 
@@ -51,7 +52,7 @@ type Model = InstanceType<typeof FlexLayout.Model>;
 type Action = InstanceType<typeof FlexLayout.Action>;
 type StateProps = {
   displayScalebars: boolean;
-  isUpdateTracingAllowed: boolean;
+  isEditingTracingAllowed: boolean;
   busyBlockingInfo: BusyBlockingInfo;
 };
 type OwnProps = {
@@ -315,7 +316,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   renderViewport(id: string): React.ReactNode | null | undefined {
-    const { displayScalebars, isUpdateTracingAllowed, busyBlockingInfo } = this.props;
+    const { displayScalebars, isEditingTracingAllowed, busyBlockingInfo } = this.props;
 
     switch (id) {
       case OrthoViews.PLANE_XY:
@@ -348,7 +349,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
             busyBlockingInfo={busyBlockingInfo}
             viewportID={ArbitraryViews.arbitraryViewport}
           >
-            {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
+            {isEditingTracingAllowed ? <RecordingSwitch /> : null}
           </InputCatcher>
         );
       }
@@ -577,7 +578,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 function mapStateToProps(state: OxalisState): StateProps {
   return {
     displayScalebars: state.userConfiguration.displayScalebars,
-    isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
+    isEditingTracingAllowed: isAnnotationEditingAllowedByFullState(state),
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
   };
 }

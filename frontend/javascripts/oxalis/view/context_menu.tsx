@@ -132,6 +132,7 @@ import { hideContextMenuAction, setActiveUserBoundingBoxId } from "oxalis/model/
 import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import FastTooltip from "components/fast_tooltip";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
+import { isAnnotationEditingAllowedByFullState } from "oxalis/model/accessors/annotation_accessor";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -162,7 +163,7 @@ type StateProps = {
   useLegacyBindings: boolean;
   userBoundingBoxes: Array<UserBoundingBox>;
   mappingInfo: ActiveMappingInfo;
-  allowUpdate: boolean;
+  allowEditing: boolean;
   segments: SegmentMap | null | undefined;
 };
 type Props = OwnProps & StateProps;
@@ -557,7 +558,7 @@ function getNodeContextMenuOptions({
   useLegacyBindings,
   volumeTracing,
   infoRows,
-  allowUpdate,
+  allowEditing,
   currentMeshFile,
 }: NodeContextMenuOptionsProps): ItemType[] {
   const state = Store.getState();
@@ -611,7 +612,7 @@ function getNodeContextMenuOptions({
       label: "Select this Node",
     },
     getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, isVolumeModificationAllowed),
-    ...(allowUpdate
+    ...(allowEditing
       ? [
           {
             key: "merge-trees",
@@ -742,7 +743,7 @@ function getNodeContextMenuOptions({
         measureAndShowFullTreeLength(clickedTree.treeId, clickedTree.name, voxelSize.unit),
       label: "Path Length of this Tree",
     },
-    allowUpdate
+    allowEditing
       ? {
           key: "hide-tree",
           onClick: () => Store.dispatch(setTreeVisibilityAction(clickedTree.treeId, false)),
@@ -761,7 +762,7 @@ function getBoundingBoxMenuOptions({
   clickedBoundingBoxId,
   userBoundingBoxes,
   hideContextMenu,
-  allowUpdate,
+  allowEditing,
 }: NoNodeContextMenuProps): ItemType[] {
   if (globalPosition == null) return [];
 
@@ -779,7 +780,7 @@ function getBoundingBoxMenuOptions({
     ),
   };
 
-  if (!allowUpdate && clickedBoundingBoxId != null) {
+  if (!allowEditing && clickedBoundingBoxId != null) {
     const hideBoundingBoxMenuItem: MenuItemType = {
       key: "hide-bounding-box",
       onClick: () => {
@@ -790,7 +791,7 @@ function getBoundingBoxMenuOptions({
     return [hideBoundingBoxMenuItem];
   }
 
-  if (!allowUpdate) {
+  if (!allowEditing) {
     return [];
   }
 
@@ -926,7 +927,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     currentConnectomeFile,
     mappingInfo,
     infoRows,
-    allowUpdate,
+    allowEditing,
   } = props;
 
   const state = Store.getState();
@@ -1016,7 +1017,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
   const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
   const skeletonActions: ItemType[] =
-    skeletonTracing != null && globalPosition != null && allowUpdate
+    skeletonTracing != null && globalPosition != null && allowEditing
       ? [
           {
             key: "create-node",
@@ -1216,7 +1217,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
           focusInSegmentListItem,
           loadPrecomputedMeshItem,
           computeMeshAdHocItem,
-          allowUpdate && !disabledVolumeInfo.FILL_CELL.isDisabled
+          allowEditing && !disabledVolumeInfo.FILL_CELL.isDisabled
             ? {
                 key: "fill-cell",
                 onClick: () => handleFloodFillFromGlobalPosition(globalPosition, viewport),
@@ -1353,7 +1354,7 @@ function WkContextMenu() {
       voxelSize: state.dataset.dataSource.scale,
       activeTool: state.uiInformation.activeTool,
       dataset: state.dataset,
-      allowUpdate: state.tracing.restrictions.allowUpdate,
+      allowEditing: isAnnotationEditingAllowedByFullState(state),
       visibleSegmentationLayer,
       currentMeshFile:
         visibleSegmentationLayer != null

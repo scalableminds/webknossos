@@ -26,6 +26,7 @@ import Store, { type RecommendedConfiguration } from "oxalis/store";
 import Toast from "libs/toast";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
+import { isAnnotationEditingAllowedByFullState } from "../accessors/annotation_accessor";
 
 function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
   // Users can acquire new tasks directly in the tracing view. Occasionally,
@@ -133,8 +134,8 @@ export default function* watchTasksAsync(): Saga<void> {
   yield* take("WK_READY");
   const task = yield* select((state) => state.task);
   const activeUser = yield* select((state) => state.activeUser);
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
-  if (task == null || activeUser == null || !allowUpdate) return;
+  const allowEditing = yield* select((state) => isAnnotationEditingAllowedByFullState(state));
+  if (task == null || activeUser == null || !allowEditing) return;
   yield* call(maybeActivateMergerMode, task.type);
   const { lastTaskTypeId } = activeUser;
   const isDifferentTaskType = lastTaskTypeId == null || lastTaskTypeId !== task.type.id;
@@ -148,9 +149,9 @@ export default function* watchTasksAsync(): Saga<void> {
 }
 export function* warnAboutMagRestriction(): Saga<void> {
   function* warnMaybe(): Saga<void> {
-    const { allowUpdate } = yield* select((state) => state.tracing.restrictions);
+    const allowEditing = yield* select((state) => isAnnotationEditingAllowedByFullState(state));
 
-    if (!allowUpdate) {
+    if (!allowEditing) {
       // If updates are not allowed in general, we return here, since we don't
       // want to show any warnings when the user cannot edit the annotation in the first
       // place (e.g., when viewing the annotation of another user).

@@ -44,7 +44,7 @@ type StateProps = {
   editableMapping: EditableMapping | null | undefined;
   isMappingLocked: boolean;
   isMergerModeEnabled: boolean;
-  allowUpdate: boolean;
+  allowUpdate: boolean; // TODOM: Mal mit philipp quatschen, ob das wirklich so ok ist diesen weg einzuschlagen
   isEditableMappingActive: boolean;
   isAnnotationLockedByOwner: boolean;
   isOwner: boolean;

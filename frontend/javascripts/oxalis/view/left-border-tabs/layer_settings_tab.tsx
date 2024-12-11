@@ -131,6 +131,7 @@ import {
   getDefaultLayerViewConfiguration,
 } from "types/schemas/dataset_view_configuration.schema";
 import defaultState from "oxalis/default_state";
+import { isAnnotationEditingAllowedByFullState } from "oxalis/model/accessors/annotation_accessor";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;
@@ -151,6 +152,7 @@ type DatasetSettingsProps = {
   onChangeUser: (key: keyof UserConfiguration, value: any) => void;
   reloadHistogram: (layerName: string) => void;
   tracing: Tracing;
+  allowEditing: boolean;
   task: Task | null | undefined;
   onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void;
   controlMode: ControlMode;
@@ -1505,8 +1507,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         {segmentationLayerSettings}
         {this.getSkeletonLayer()}
 
-        {this.props.tracing.restrictions.allowUpdate &&
-        this.props.controlMode === ControlModeEnum.TRACE ? (
+        {this.props.allowEditing && this.props.controlMode === ControlModeEnum.TRACE ? (
           <>
             <Divider />
             <Row justify="center" align="middle">
@@ -1518,7 +1519,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </>
         ) : null}
 
-        {this.props.tracing.restrictions.allowUpdate && canBeMadeHybrid ? (
+        {this.props.allowEditing && canBeMadeHybrid ? (
           <Row justify="center" align="middle">
             <Button
               onClick={this.addSkeletonAnnotationLayer}
@@ -1579,6 +1580,7 @@ const mapStateToProps = (state: OxalisState) => ({
   dataset: state.dataset,
   tracing: state.tracing,
   task: state.task,
+  allowEditing: isAnnotationEditingAllowedByFullState(state),
   controlMode: state.temporaryConfiguration.controlMode,
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
   isAdminOrDatasetManager:

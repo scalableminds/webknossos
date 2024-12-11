@@ -49,7 +49,7 @@ const initialAnnotationInfo = {
   },
   annotationType: "View" as APIAnnotationType,
   meshes: [],
-  AnnotationMutexStateEnum: AnnotationMutexStateEnum.NOT_NEEDED,
+  annotationMutexState: AnnotationMutexStateEnum.NOT_NEEDED,
 };
 
 const defaultState: OxalisState = {

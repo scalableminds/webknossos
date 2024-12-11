@@ -39,6 +39,7 @@ import type { OxalisState } from "oxalis/store";
 import { call, put } from "typed-redux-saga";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
 import { requestBucketModificationInVolumeTracing } from "../saga_helpers";
+import { isAnnotationEditingAllowedByFullState } from "oxalis/model/accessors/annotation_accessor";
 
 /*
  * This saga is capable of doing segment interpolation between two slices.
@@ -263,8 +264,8 @@ function signedDist(arr: ndarray.NdArray) {
 }
 
 export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
-  if (!allowUpdate) return;
+  const allowEditing = yield* select((state) => isAnnotationEditingAllowedByFullState(state));
+  if (!allowEditing) return;
 
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
   if (!ToolsWithInterpolationCapabilities.includes(activeTool)) {

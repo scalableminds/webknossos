@@ -40,6 +40,7 @@ import ButtonComponent from "./components/button_component";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import { type StartAIJobModalState, StartAIJobModal } from "./action-bar/starting_job_modals";
 import { isUserAdminOrTeamManager } from "libs/utils";
+import { isAnnotationEditingAllowedByFullState } from "oxalis/model/accessors/annotation_accessor";
 
 const VersionRestoreWarning = (
   <Alert
@@ -322,7 +323,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   controlMode: state.temporaryConfiguration.controlMode,
   showVersionRestore: state.uiInformation.showVersionRestore,
   hasSkeleton: state.tracing.skeleton != null,
-  isReadOnly: !state.tracing.restrictions.allowUpdate,
+  isReadOnly: !isAnnotationEditingAllowedByFullState(state),
   is2d: is2dDataset(state.dataset),
   viewMode: state.temporaryConfiguration.viewMode,
   aiJobModalState: state.uiInformation.aIJobModalState,

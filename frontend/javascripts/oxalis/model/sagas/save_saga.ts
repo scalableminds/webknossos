@@ -55,6 +55,7 @@ import type {
   VolumeTracing,
 } from "oxalis/store";
 import { call, delay, fork, put, race, take, takeEvery } from "typed-redux-saga";
+import { isAnnotationEditingAllowedByFullState } from "../accessors/annotation_accessor";
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
 
@@ -430,11 +431,9 @@ export function* setupSavingForTracingType(
       ]);
     }
 
-    // The allowUpdate setting could have changed in the meantime
-    const allowUpdate = yield* select(
-      (state) => state.tracing.restrictions.allowUpdate && state.tracing.restrictions.allowSave,
-    );
-    if (!allowUpdate) continue;
+    // The allowEditing setting could have changed in the meantime
+    const allowEditing = yield* select((state) => isAnnotationEditingAllowedByFullState(state));
+    if (!allowEditing) continue;
     const tracing = (yield* select((state) => selectTracing(state, saveQueueType, tracingId))) as
       | VolumeTracing
       | SkeletonTracing;
@@ -472,7 +471,8 @@ const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
 function* watchForSaveConflicts() {
   function* checkForNewVersion() {
     const allowSave = yield* select(
-      (state) => state.tracing.restrictions.allowSave && state.tracing.restrictions.allowUpdate,
+      (state) =>
+        state.tracing.restrictions.allowSave && isAnnotationEditingAllowedByFullState(state),
     );
     if (allowSave) {
       // The active user is currently the only one that is allowed to mutate the annotation.

@@ -83,6 +83,7 @@ import { takeEveryUnlessBusy } from "./saga_helpers";
 import type { Action } from "../actions/actions";
 import { isBigInt, isNumberMap, SoftError } from "libs/utils";
 import { getCurrentMag } from "../accessors/flycam_accessor";
+import { isAnnotationEditingAllowedByFullState } from "../accessors/annotation_accessor";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -319,8 +320,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     return;
   }
 
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
-  if (!allowUpdate) return;
+  const allowEditing = yield* select((state) => isAnnotationEditingAllowedByFullState(state));
+  if (!allowEditing) return;
 
   const { sourceNodeId, targetNodeId } = action;
   const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
@@ -691,8 +692,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     return;
   }
 
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
-  if (!allowUpdate) return;
+  const allowEditing = yield* select((state) => isAnnotationEditingAllowedByFullState(state));
+  if (!allowEditing) return;
 
   const preparation = yield* call(prepareSplitOrMerge, false);
   if (!preparation) {
@@ -884,8 +885,8 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   // This action does not depend on the active agglomerate. Instead, it
   // only depends on the rightclicked agglomerate.
 
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
-  if (!allowUpdate) return;
+  const allowEditing = yield* select((state) => isAnnotationEditingAllowedByFullState(state));
+  if (!allowEditing) return;
 
   const preparation = yield* call(prepareSplitOrMerge, false);
   if (!preparation) {

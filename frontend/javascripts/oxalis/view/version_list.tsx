@@ -39,7 +39,7 @@ const ENTRIES_PER_PAGE = 5000;
 type Props = {
   versionedObjectType: SaveQueueType;
   tracing: SkeletonTracing | VolumeTracing | EditableMapping;
-  allowUpdate: boolean;
+  allowEditing: boolean;
 };
 
 // The string key is a date string
@@ -54,6 +54,7 @@ export async function previewVersion(versions?: Versions) {
   const { controlMode } = state.temporaryConfiguration;
   const { annotationId } = state.tracing;
   await api.tracing.restart(null, annotationId, controlMode, versions);
+  // TODOM: test whether it is possible to recover from this allow update = false in case the version restore view is closed.
   Store.dispatch(setAnnotationAllowUpdateAction(false));
   const segmentationLayersToReload = [];
 
@@ -81,7 +82,7 @@ async function handleRestoreVersion(
   version: number,
 ) {
   const getNewestVersion = () => _.max(versions.map((batch) => batch.version)) || 0;
-  if (props.allowUpdate) {
+  if (props.allowEditing) {
     Store.dispatch(
       setVersionNumberAction(
         getNewestVersion(),
@@ -336,7 +337,7 @@ function InnerVersionList(props: Props & { newestVersion: number }) {
             ) : (
               <VersionEntryGroup
                 batches={batchesOrDateString}
-                allowUpdate={props.allowUpdate}
+                allowEditing={props.allowEditing}
                 newestVersion={flattenedVersions[0].version}
                 activeVersion={props.tracing.version}
                 onRestoreVersion={(version) =>

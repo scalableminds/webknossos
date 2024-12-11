@@ -8,7 +8,7 @@ import { CaretDownOutlined, CaretRightOutlined } from "@ant-design/icons";
 
 type Props = {
   batches: APIUpdateActionBatch[];
-  allowUpdate: boolean;
+  allowEditing: boolean;
   newestVersion: number;
   activeVersion: number;
   onRestoreVersion: (arg0: number) => Promise<void>;
@@ -65,7 +65,7 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
   render() {
     const {
       batches,
-      allowUpdate,
+      allowEditing,
       newestVersion,
       activeVersion,
       onRestoreVersion,
@@ -85,7 +85,7 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
         {this.state.expanded || !containsMultipleBatches
           ? batches.map((batch) => (
               <VersionEntry
-                allowUpdate={allowUpdate}
+                allowEditing={allowEditing}
                 isIndented={containsMultipleBatches}
                 actions={batch.value}
                 version={batch.version}

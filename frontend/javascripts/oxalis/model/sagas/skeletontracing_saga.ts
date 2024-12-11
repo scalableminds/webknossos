@@ -86,6 +86,7 @@ import {
 } from "oxalis/model/actions/connectome_actions";
 import type { ServerSkeletonTracing } from "types/api_flow_types";
 import memoizeOne from "memoize-one";
+import { isAnnotationEditingAllowedByFullState } from "../accessors/annotation_accessor";
 
 function* centerActiveNode(action: Action): Saga<void> {
   if ("suppressCentering" in action && action.suppressCentering) {
@@ -347,8 +348,8 @@ function handleAgglomerateLoadingError(
 export function* loadAgglomerateSkeletonWithId(
   action: LoadAgglomerateSkeletonAction,
 ): Saga<[string, number] | null> {
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
-  if (!allowUpdate) return null;
+  const allowEditing = yield* select((state) => isAnnotationEditingAllowedByFullState(state));
+  if (!allowEditing) return null;
   const { layerName, mappingName, agglomerateId } = action;
 
   if (agglomerateId === 0) {

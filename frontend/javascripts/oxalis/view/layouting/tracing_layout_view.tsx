@@ -46,6 +46,7 @@ import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { FloatingMobileControls } from "./floating_mobile_controls";
 import app from "app";
+import { isAnnotationEditingAllowedByFullState } from "oxalis/model/accessors/annotation_accessor";
 
 const { Sider } = Layout;
 
@@ -256,8 +257,11 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       this.props.is2d,
     );
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { isDatasetOnScratchVolume, isUpdateTracingAllowed, distanceMeasurementTooltipPosition } =
-      this.props;
+    const {
+      isDatasetOnScratchVolume,
+      isEditingTracingAllowed,
+      distanceMeasurementTooltipPosition,
+    } = this.props;
 
     const createNewTracing = async (
       files: Array<File>,
@@ -285,8 +289,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         )}
 
         <NmlUploadZoneContainer
-          onImport={isUpdateTracingAllowed ? importTracingFiles : createNewTracing}
-          isUpdateAllowed={isUpdateTracingAllowed}
+          onImport={isEditingTracingAllowed ? importTracingFiles : createNewTracing}
+          isEditingAllowed={isEditingTracingAllowed}
         >
           <TabTitle title={this.getTabTitle()} />
           <OxalisController
@@ -377,7 +381,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
               </div>
               {this.props.showVersionRestore ? (
                 <Sider id="version-restore-sider" width={400} theme={this.props.UITheme}>
-                  <VersionView allowUpdate={isUpdateTracingAllowed} />
+                  <VersionView allowEditing={isEditingTracingAllowed} />
                 </Sider>
               ) : null}
             </Layout>
@@ -398,7 +402,7 @@ function mapStateToProps(state: OxalisState) {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
     autoSaveLayouts: state.userConfiguration.autoSaveLayouts,
-    isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
+    isEditingTracingAllowed: isAnnotationEditingAllowedByFullState(state),
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
     isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,

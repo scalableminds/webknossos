@@ -21,8 +21,9 @@ import _ from "lodash";
 import classnames from "classnames";
 import update from "immutability-helper";
 import {
-  AnnotationLayerType,
+  type AnnotationLayerType,
   APIAnnotationTypeEnum,
+  AnnotationLayerEnum,
   type APIDataLayer,
   type APIDataset,
   type APISkeletonLayer,
@@ -629,7 +630,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const layer = getLayerByName(dataset, layerName);
     const isSegmentation = layer.category === "segmentation";
     const layerType =
-      layer.category === "segmentation" ? AnnotationLayerType.Volume : AnnotationLayerType.Skeleton;
+      layer.category === "segmentation" ? AnnotationLayerEnum.Volume : AnnotationLayerEnum.Skeleton;
     const canBeMadeEditable =
       isSegmentation && layer.tracingId == null && this.props.controlMode === "TRACE";
     const isVolumeTracing = isSegmentation ? layer.tracingId != null : false;
@@ -1228,7 +1229,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             {!isOnlyAnnotationLayer
               ? this.getDeleteAnnotationLayerButton(
                   readableName,
-                  AnnotationLayerType.Skeleton,
+                  AnnotationLayerEnum.Skeleton,
                   tracingId,
                 )
               : null}

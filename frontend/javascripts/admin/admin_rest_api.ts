@@ -61,7 +61,7 @@ import {
   type LayerLink,
   type VoxelSize,
   type APITimeTrackingPerUser,
-  AnnotationLayerType,
+  AnnotationLayerEnum,
   type APITracingStoreAnnotation,
 } from "types/api_flow_types";
 import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector2, Vector3 } from "oxalis/constants";
@@ -532,7 +532,7 @@ export function setOthersMayEditForAnnotation(
 }
 
 type AnnotationLayerCreateDescriptor = {
-  typ: AnnotationLayerType;
+  typ: AnnotationLayerEnum;
   name: string | null | undefined;
   autoFallbackLayer?: boolean;
   fallbackLayerName?: string | null | undefined;
@@ -596,6 +596,7 @@ export function duplicateAnnotation(
   });
 }
 
+// todop: rename to getUnversionedAnnotationInformation
 export async function getMaybeOutdatedAnnotationInformation(
   annotationId: string,
   options: RequestOptions = {},
@@ -649,14 +650,14 @@ export function createExplorational(
   if (typ === "skeleton") {
     layers = [
       {
-        typ: AnnotationLayerType.Skeleton,
+        typ: AnnotationLayerEnum.Skeleton,
         name: "Skeleton",
       },
     ];
   } else if (typ === "volume") {
     layers = [
       {
-        typ: AnnotationLayerType.Volume,
+        typ: AnnotationLayerEnum.Volume,
         name: fallbackLayerName,
         fallbackLayerName,
         autoFallbackLayer,
@@ -667,11 +668,11 @@ export function createExplorational(
   } else {
     layers = [
       {
-        typ: AnnotationLayerType.Skeleton,
+        typ: AnnotationLayerEnum.Skeleton,
         name: "Skeleton",
       },
       {
-        typ: AnnotationLayerType.Volume,
+        typ: AnnotationLayerEnum.Volume,
         name: fallbackLayerName,
         fallbackLayerName,
         autoFallbackLayer,
@@ -689,7 +690,7 @@ export async function getTracingsForAnnotation(
   version?: number | null | undefined,
 ): Promise<Array<ServerTracing>> {
   const skeletonLayers = annotation.annotationLayers.filter(
-    (layer) => layer.typ === AnnotationLayerType.Skeleton,
+    (layer) => layer.typ === AnnotationLayerEnum.Skeleton,
   );
   const fullAnnotationLayers = await Promise.all(
     annotation.annotationLayers.map((layer) =>

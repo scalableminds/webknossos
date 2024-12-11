@@ -6,7 +6,7 @@ import {
   writeTypeCheckingFile,
 } from "test/e2e-setup";
 import type { APIAnnotation } from "types/api_flow_types";
-import { AnnotationLayerType, APIAnnotationTypeEnum } from "types/api_flow_types";
+import { AnnotationLayerEnum, APIAnnotationTypeEnum } from "types/api_flow_types";
 import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -85,7 +85,7 @@ test.serial("editAnnotation()", async (t) => {
   t.is(editedAnnotation.name, newName);
   t.is(editedAnnotation.visibility, newVisibility);
   t.is(editedAnnotation.id, annotationId);
-  t.is(editedAnnotation.annotationLayers[0].typ, AnnotationLayerType.Skeleton);
+  t.is(editedAnnotation.annotationLayers[0].typ, AnnotationLayerEnum.Skeleton);
   t.is(editedAnnotation.annotationLayers[0].tracingId, "ae417175-f7bb-4a34-8187-d9c3b50143af");
   t.snapshot(replaceVolatileValues(editedAnnotation));
   await api.editAnnotation(annotationId, APIAnnotationTypeEnum.Explorational, {

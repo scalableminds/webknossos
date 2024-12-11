@@ -5,7 +5,7 @@ import {
   type ServerSkeletonTracing,
   type APIAnnotation,
   type AnnotationLayerDescriptor,
-  AnnotationLayerType,
+  AnnotationLayerEnum,
 } from "types/api_flow_types";
 import type {
   Tracing,
@@ -42,7 +42,7 @@ export function getSkeletonDescriptor(
   annotation: APIAnnotation,
 ): AnnotationLayerDescriptor | null | undefined {
   const skeletonLayers = annotation.annotationLayers.filter(
-    (descriptor) => descriptor.typ === AnnotationLayerType.Skeleton,
+    (descriptor) => descriptor.typ === AnnotationLayerEnum.Skeleton,
   );
 
   if (skeletonLayers.length > 0) {

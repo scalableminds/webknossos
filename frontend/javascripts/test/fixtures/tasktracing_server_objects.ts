@@ -1,7 +1,7 @@
 import {
   type ServerSkeletonTracing,
   type APIAnnotation,
-  AnnotationLayerType,
+  AnnotationLayerEnum,
   type APITracingStoreAnnotation,
 } from "types/api_flow_types";
 
@@ -128,7 +128,8 @@ export const annotation: APIAnnotation = {
     {
       name: "Skeleton",
       tracingId: TRACING_ID,
-      typ: AnnotationLayerType.Skeleton,
+      typ: AnnotationLayerEnum.Skeleton,
+      stats: {},
     },
   ],
   dataSetName: "ROI2017_wkw",
@@ -191,7 +192,7 @@ export const annotationProto: APITracingStoreAnnotation = {
     {
       tracingId: TRACING_ID,
       name: "Skeleton",
-      type: AnnotationLayerType.Skeleton,
+      type: AnnotationLayerEnum.Skeleton,
     },
   ],
 };

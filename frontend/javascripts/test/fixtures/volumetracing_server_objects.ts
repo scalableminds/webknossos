@@ -1,7 +1,7 @@
 import {
   type ServerVolumeTracing,
   type APIAnnotation,
-  AnnotationLayerType,
+  AnnotationLayerEnum,
   type APITracingStoreAnnotation,
 } from "types/api_flow_types";
 
@@ -93,7 +93,8 @@ export const annotation: APIAnnotation = {
     {
       name: "volume",
       tracingId: TRACING_ID,
-      typ: AnnotationLayerType.Volume,
+      typ: AnnotationLayerEnum.Volume,
+      stats: {},
     },
   ],
   dataSetName: "ROI2017_wkw",
@@ -132,7 +133,7 @@ export const annotationProto: APITracingStoreAnnotation = {
     {
       tracingId: TRACING_ID,
       name: "volume",
-      type: AnnotationLayerType.Volume,
+      type: AnnotationLayerEnum.Volume,
     },
   ],
 };

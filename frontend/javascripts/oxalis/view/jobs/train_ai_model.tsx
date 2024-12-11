@@ -35,7 +35,7 @@ import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { formatVoxels } from "libs/format_utils";
 import * as Utils from "libs/utils";
 import {
-  AnnotationLayerType,
+  AnnotationLayerEnum,
   type APIAnnotation,
   type APIDataset,
   type ServerVolumeTracing,
@@ -574,7 +574,7 @@ function AnnotationsCsvInput({
         let userBoundingBoxes = volumeTracings[0]?.userBoundingBoxes;
         if (!userBoundingBoxes) {
           const skeletonLayer = annotation.annotationLayers.find(
-            (layer) => layer.typ === AnnotationLayerType.Skeleton,
+            (layer) => layer.typ === AnnotationLayerEnum.Skeleton,
           );
           if (skeletonLayer) {
             const skeletonTracing = await getTracingForAnnotationType(annotation, skeletonLayer);

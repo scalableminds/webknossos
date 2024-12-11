@@ -707,6 +707,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         title: "Stats",
         width: 150,
         render: (__: any, annotation: APIAnnotationInfo) => (
+          // todop: don't use annotation.stats
           <AnnotationStats stats={annotation.stats} asInfoBlock={false} withMargin={false} />
         ),
       },

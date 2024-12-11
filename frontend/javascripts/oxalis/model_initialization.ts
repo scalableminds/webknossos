@@ -138,21 +138,30 @@ export async function initialize(
       annotation = await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType);
     } else {
       // todop: can we improve this?
-      let maybeOutdatedAnnotation = await getMaybeOutdatedAnnotationInformation(annotationId);
+      let unversionedAnnotation = await getMaybeOutdatedAnnotationInformation(annotationId);
       annotationProto = await getAnnotationProto(
-        maybeOutdatedAnnotation.tracingStore.url,
-        maybeOutdatedAnnotation.id,
+        unversionedAnnotation.tracingStore.url,
+        unversionedAnnotation.id,
         version,
       );
-      const layersWithStats = annotationProto.annotationLayers.map((layer) => {
+      const layersWithStats = annotationProto.annotationLayers.map((protoLayer) => {
         return {
-          tracingId: layer.tracingId,
-          name: layer.name,
-          typ: layer.type,
+          tracingId: protoLayer.tracingId,
+          name: protoLayer.name,
+          typ: protoLayer.type,
+          stats:
+            // Only when the newest version is requested (version==null),
+            // the stats are available in unversionedAnnotation.
+            version == null
+              ? _.find(
+                  unversionedAnnotation.annotationLayers,
+                  (layer) => layer.tracingId === protoLayer.tracingId,
+                )?.stats ?? {}
+              : {},
         };
       });
       const completeAnnotation = {
-        ...maybeOutdatedAnnotation,
+        ...unversionedAnnotation,
         description: annotationProto.description,
         annotationProto: annotationProto.earliestAccessibleVersion,
         annotationLayers: layersWithStats,

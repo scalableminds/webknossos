@@ -384,11 +384,12 @@ export enum TracingTypeEnum {
   volume = "volume",
   hybrid = "hybrid",
 }
-export enum AnnotationLayerType {
+export enum AnnotationLayerEnum {
   Skeleton = "Skeleton",
   Volume = "Volume",
 }
-export type TracingType = keyof typeof TracingTypeEnum;
+export type TracingType = "skeleton" | "volume" | "hybrid";
+export type AnnotationLayerType = "Skeleton" | "Volume";
 export type APITaskType = {
   readonly id: string;
   readonly summary: string;
@@ -472,6 +473,7 @@ export type AnnotationLayerDescriptor = {
   name: string;
   tracingId: string;
   typ: AnnotationLayerType;
+  stats: TracingStats | EmptyObject;
 };
 export type EditableLayerProperties = {
   name: string;

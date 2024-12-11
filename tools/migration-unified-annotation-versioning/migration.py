@@ -433,7 +433,9 @@ class Migration:
     def read_annotation_list(self):
         checkpoint_set = self.read_checkpoints()
         before = time.time()
-        start_time = datetime.datetime.now()
+        start_time = str(datetime.datetime.now())
+        if self.args.start is not None:
+            start_time = self.args.start
         previous_start_label = ""
         previous_start_query = ""
         if self.args.previous_start is not None:

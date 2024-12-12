@@ -82,7 +82,7 @@ For detailed information, see the [skeleton annotation guide](../skeleton_annota
 WEBKNOSSOS provides several tools for volume annotation:
 
 ![Trace Tool](./images/trace-tool.jpg){align=left width="60"} 
-**Trace Tool**: Create precise boundary definitions by drawing outlines around structures. This tool is particularly useful when accuracy is crucial. For added precision consider using a [pen input device](../pen_tablets.md). 
+**Trace Tool**: Create precise boundary definitions by drawing outlines around structures. This tool is particularly useful when accuracy is crucial. For added precision consider using a [pen input device](../volume_annotation/pen_tablets.md). 
 
 ![Brush Tool](./images/brush-tool.jpg){align=left width="60"} 
 **Brush Tool**: Paint directly onto the dataset to mark regions of interest. The brush size is adjustable to match your needs. If you draw around objects in one continuous motion, the inside will be filled automatically.

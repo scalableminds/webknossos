@@ -67,8 +67,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   def get(annotationId: String, version: Option[Long])(implicit ec: ExecutionContext,
                                                        tc: TokenContext): Fox[AnnotationProto] =
     for {
-      isTemporaryTracing <- temporaryTracingService.isTemporaryAnnotation(annotationId)
-      annotation <- if (isTemporaryTracing) temporaryTracingService.getAnnotation(annotationId)
+      isTemporaryAnnotation <- temporaryTracingService.isTemporaryAnnotation(annotationId)
+      annotation <- if (isTemporaryAnnotation) temporaryTracingService.getAnnotation(annotationId)
       else
         for {
           withTracings <- getWithTracings(annotationId, version) ?~> "annotation.notFound"
@@ -101,8 +101,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
-      annotationWithVersion <- tracingDataStore.annotations.get(annotationId, Some(version))(
-        fromProtoBytes[AnnotationProto]) ?~> "getAnnotation.failed"
+      annotationWithVersion <- tracingDataStore.annotations.get(annotationId, Some(version))(fromProtoBytes[
+        AnnotationProto]) ?~> "getAnnotation.failed" // TODO pass this in here from caller? isn’t it newestMaterialized?
       annotation = annotationWithVersion.value
       annotationWithTracings <- findTracingsForAnnotation(annotation) ?~> "findTracingsForAnnotation.failed"
       annotationWithTracingsAndMappings <- findEditableMappingsForAnnotation(

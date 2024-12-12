@@ -3,7 +3,7 @@ import _ from "lodash";
 import mockRequire from "mock-require";
 import type { OxalisState } from "oxalis/store";
 import { createMockTask } from "@redux-saga/testing-utils";
-import { take, put } from "redux-saga/effects";
+import { take, put, call } from "redux-saga/effects";
 import dummyUser from "test/fixtures/dummy_user";
 import defaultState from "oxalis/default_state";
 import { expectValueDeepEqual } from "test/helpers/sagaHelpers";
@@ -12,6 +12,7 @@ import {
   setBlockedByUserAction,
   setOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
+import { ensureWkReady } from "oxalis/model/sagas/ready_sagas";
 
 const createInitialState = (othersMayEdit: boolean, allowUpdate: boolean = true): OxalisState => ({
   ...defaultState,
@@ -62,7 +63,7 @@ function prepareTryAcquireMutexSaga(t: ExecutionContext, othersMayEdit: boolean)
   const listenForOthersMayEditMocked = createMockTask();
   const storeState = createInitialState(othersMayEdit);
   const saga = acquireAnnotationMutexMaybe();
-  expectValueDeepEqual(t, saga.next(), take("WK_READY"));
+  expectValueDeepEqual(t, saga.next(), call(ensureWkReady));
   t.deepEqual(
     saga.next(wkReadyAction()).value.type,
     "SELECT",

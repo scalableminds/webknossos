@@ -180,33 +180,33 @@ class VolumeKeybindings {
   }
 }
 
-const handleUpdateCursor = (event: KeyboardEvent) => {
-  const { viewModeData, temporaryConfiguration } = Store.getState();
-  const { mousePosition } = temporaryConfiguration;
-  if (mousePosition == null) return;
-  highlightAndSetCursorOnHoveredBoundingBox(
-    { x: mousePosition[0], y: mousePosition[1] },
-    viewModeData.plane.activeViewport,
-    event,
-  );
-};
-
 class BoundingBoxKeybindings {
   static getKeyboardControls() {
     return {
       c: () => Store.dispatch(addUserBoundingBoxAction()),
-      meta: createKeyDownAndUpHandler(),
-      ctrl: createKeyDownAndUpHandler(),
+      meta: BoundingBoxKeybindings.createKeyDownAndUpHandler(),
+      ctrl: BoundingBoxKeybindings.createKeyDownAndUpHandler(),
     };
   }
+
+  static handleUpdateCursor = (event: KeyboardEvent) => {
+    const { viewModeData, temporaryConfiguration } = Store.getState();
+    const { mousePosition } = temporaryConfiguration;
+    if (mousePosition == null) return;
+    highlightAndSetCursorOnHoveredBoundingBox(
+      { x: mousePosition[0], y: mousePosition[1] },
+      viewModeData.plane.activeViewport,
+      event,
+    );
+  };
 
   static getExtendedKeyboardControls() {
     return { x: () => setTool(AnnotationToolEnum.BOUNDING_BOX) };
   }
-}
 
-function createKeyDownAndUpHandler() {
-  return (event: KeyboardEvent) => handleUpdateCursor(event);
+  static createKeyDownAndUpHandler() {
+    return (event: KeyboardEvent) => BoundingBoxKeybindings.handleUpdateCursor(event);
+  }
 }
 
 function createDelayAwareMoveHandler(multiplier: number) {

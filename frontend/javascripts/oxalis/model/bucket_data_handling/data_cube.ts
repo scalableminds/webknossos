@@ -508,7 +508,6 @@ class DataCube {
     // not all of the target area in the neighbour bucket might be filled.
 
     const floodfillBoundingBox = new BoundingBox(_floodfillBoundingBox);
-    console.log("floodfillBoundingBox", floodfillBoundingBox);
 
     // Helper function to convert between xyz and uvw (both directions)
     const transpose = (voxel: Vector3): Vector3 =>

@@ -219,12 +219,16 @@ export function* floodFill(): Saga<void> {
     console.timeEnd("applyLabeledVoxelMapToAllMissingMags");
 
     if (wasBoundingBoxExceeded) {
-      const warningDetails = fillMode === FillModeEnum._2D ? "Please check the borders of the filled area manually and use the fill tool again if necessary." : "A bounding box that represents the labeled volume was added so that you can check the borders manually."
+      const warningDetails =
+        fillMode === FillModeEnum._2D
+          ? "Please check the borders of the filled area manually and use the fill tool again if necessary."
+          : "A bounding box that represents the labeled volume was added so that you can check the borders manually.";
       yield* call(
         progressCallback,
         true,
         <>
-          Floodfill is done, but terminated since the labeled volume got too large. ${warningDetails} {Unicode.NonBreakingSpace}
+          Floodfill is done, but terminated since the labeled volume got too large. $
+          {warningDetails} {Unicode.NonBreakingSpace}
           <a href="#" onClick={() => message.destroy(FLOODFILL_PROGRESS_KEY)}>
             Close
           </a>

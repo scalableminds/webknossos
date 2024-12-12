@@ -8,7 +8,12 @@ import type { MagInfo } from "oxalis/model/helpers/mag_info";
 export function MagSelectionFormItem({
   name,
   magInfo,
-}: { name: string | Array<string | number>; magInfo: MagInfo }): JSX.Element {
+  value,
+}: {
+  name: string | Array<string | number>;
+  magInfo: MagInfo | undefined;
+  value?: Vector3;
+}): JSX.Element {
   return (
     <Form.Item
       name={name}
@@ -20,7 +25,7 @@ export function MagSelectionFormItem({
         },
       ]}
     >
-      <MagSelection magInfo={magInfo} />
+      <MagSelection magInfo={magInfo} value={value} />
     </Form.Item>
   );
 }
@@ -29,15 +34,19 @@ function MagSelection({
   magInfo,
   value,
   onChange,
-}: { magInfo: MagInfo; value?: Vector3 | null; onChange?: (a: Vector3) => void }): JSX.Element {
-  const allMags = magInfo.getMagsWithIndices();
+}: {
+  magInfo: MagInfo | undefined;
+  value?: Vector3;
+  onChange?: (a: Vector3) => void;
+}): JSX.Element {
+  const allMags = magInfo != null ? magInfo.getMagsWithIndices() : [];
 
   return (
     <Select
       placeholder="Select a magnification"
       value={
         // using the index of the mag as value internally
-        value == null
+        value == null || magInfo == null
           ? null
           : clamp(
               0,
@@ -50,6 +59,7 @@ function MagSelection({
       {allMags.map((mag) => {
         const readableName = mag[1].join("-");
         const index = mag[0];
+        console.log("mag", mag);
         return (
           <Select.Option key={index} value={index}>
             {readableName}

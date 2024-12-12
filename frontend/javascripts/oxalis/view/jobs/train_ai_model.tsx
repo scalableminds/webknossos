@@ -167,6 +167,14 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 }) {
   const [form] = Form.useForm();
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
+  const [mags, setMags] = useState<MagInfo>();
+  const [chosenMag, setChosenMag] = useState<Vector3 | undefined>();
+
+  const getAvailableMags = (groundTruthLayerName: string, annotationId: string) => {
+    console.log("getAvailableMags", groundTruthLayerName, annotationId);
+    setChosenMag(undefined); // TODO_c doesnt work
+    return getMagsForSegmentationLayer(annotationId, groundTruthLayerName);
+  };
 
   const getTrainingAnnotations = async (values: any) => {
     return Promise.all(
@@ -175,7 +183,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
           annotationId: string;
           imageDataLayer: string;
           layerName: string;
-          mag: string; //TODO_c Vector3
+          mag: Vector3;
         }) => {
           const { annotationId, imageDataLayer, layerName, mag } = trainingAnnotation;
           return {
@@ -283,7 +291,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
         );
         const fixedSelectedColorLayer = colorLayers.length === 1 ? colorLayers[0] : null;
         const annotationId = "id" in annotation ? annotation.id : annotation.annotationId;
-        const mags = getMagsForSegmentationLayer(annotationId, segmentationLayers[0].name); // TODO_c
+        //const mags = getMagsForSegmentationLayer(annotationId, form.getFieldValue(["trainingAnnotations", idx, "layerName"])); // TODO_c
         return (
           <Row key={annotationId} gutter={8}>
             <Col span={6}>
@@ -327,10 +335,18 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                 }}
                 fixedLayerName={fixedSelectedSegmentationLayer?.name || undefined}
                 label="Ground Truth Layer"
+                onChange={(newLayerName) => {
+                  setMags(getAvailableMags(newLayerName, annotationId));
+                  setChosenMag(undefined);
+                }}
               />
             </Col>
             <Col span={6}>
-              <MagSelectionFormItem name={["trainingAnnotations", idx, "mag"]} magInfo={mags} />
+              <MagSelectionFormItem
+                name={["trainingAnnotations", idx, "mag"]}
+                magInfo={mags}
+                value={chosenMag}
+              />
             </Col>
           </Row>
         );

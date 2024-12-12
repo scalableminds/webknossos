@@ -1,6 +1,6 @@
 # The Toolbar
 
-The toolbar is your primary interface for interacting with WEBKNOSSOS. Located at the top of the screen, it provides quick access to essential functions for viewing, annotating, and sharing your work. This guide explains each component and its purpose in your workflow.
+The toolbar is your primary interface for switching between different tools and modes within WEBKNOSSOS. Located at the top of the screen, it provides quick access to essential functions for viewing, annotating, and sharing your work. This guide explains each component and its purpose in your workflow.
 
 ![The WEBKNOSSOS toolbar contains many useful features for quick access such as Saving und Undo/Redo](../images/ui_toolbar_menu.png)
 
@@ -20,6 +20,7 @@ The position control allows precise navigation within your dataset. You can:
 - Copy position values by clicking on the pushpin icon.
 - Adjust camera rotation in flight or oblique modes
 - The position information is automatically included when sharing your view with colleagues
+- Quick Share: Generate an immediate sharing link that includes your current view settings. This is ideal for rapid collaboration or when you need to quickly show something to a colleague.
 
 ## Menu Functions
 
@@ -46,8 +47,6 @@ The menu provides several ways to manage your annotations:
 WEBKNOSSOS offers multiple ways to share your work:
 
 - **Share**: Create customized sharing links that capture your current view, including position, rotation, and zoom level. You can set specific access permissions to control who can view or edit your work. Learn more about [sharing options](../sharing/annotation_sharing.md).
-
-- **Quick Share**: Generate an immediate sharing link that includes your current view settings. This is ideal for rapid collaboration or when you need to quickly show something to a colleague.
 
 - **Screenshots**: Capture and download a snapshot of your current viewports as a JPEG image. 
 

@@ -22,6 +22,7 @@ Volume annotation in WEBKNOSSOS allows you to label and segment 3D structures in
 - Relabeling segments with different IDs/colors
 - Quick corrections of small areas
 - The fill behavior can be modified using the 2D/3D fill modifiers (see below).
+- This tool only takes existing labels into account and does not look at any other underlying (microscopy) layers. Have a look at the [quick-select-tool](./quick_select.md) for quickly annotating new structures.
 
 ![Segment Picker Tool](../ui/images/segment-picker-tool.jpg){align=left width="60"} 
 **Segment Picker**: Click any segment to use its label ID as the active segment ID and keep annotating with that ID. This is alternative to selecting the segment ID from the [Segments list](./segments_list.md) sidebar or context menu.
@@ -33,8 +34,8 @@ Volume annotation in WEBKNOSSOS allows you to label and segment 3D structures in
   - AI-based segmentation (powered by Segment Anything Model 2)
     The AI mode works across various imaging modalities and can significantly speed up annotation workflows. See the [Quick-select tool](#quick-select-tool) section for detailed usage.
 
-![Proof Reading Tool](../ui/images/proofreading-tool.jpg){align=left width="60"} 
-**Proof Reading**: Fix merge and split errors in automated segmentations using the underlying super-voxel graph by combining and breaking apart segments. Read more about [proofreading](../proofreading/tools.md).
+![Proofreading Tool](../ui/images/proofreading-tool.jpg){align=left width="60"} 
+**Proofreading**: Fix merge and split errors in automated segmentations using the underlying super-voxel graph by combining and breaking apart segments. Read more about [proofreading](../proofreading/tools.md).
 
 
 In the [Segments tab](./segments_list.md) on the right-hand side panel, you can find all segment IDs which are available in your annotation. You can rename and organize segments as needed.

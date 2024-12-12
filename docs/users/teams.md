@@ -13,10 +13,10 @@ To create a new team for your organization:
 
 1. Navigate to `Admin > Teams` in the navigation bar
 2. Click the `Add Team` button in the upper right corner
-3. In the modal that appears:
+3. In the dialog that appears:
    - Enter a unique team name
    - Select users to add to this team (optional)
-4. Close the team assignment modal
+4. Close the team assignment dialog
 
 After creating a team, you can manage its members and permissions through the [Users page](./new_users.md#adding-users-to-teams).
 

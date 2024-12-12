@@ -22,7 +22,7 @@ To add or modify team assignments for users:
 
 Users can be members of multiple teams simultaneously. Team managers have additional permissions to manage team members and team-specific settings. For more information about user roles and permissions, see [User Roles](./access_rights.md).
 
-![Teams and Permissions Modal](../images/users_team_assignment.jpg)
+![Teams and Permissions dialog](../images/users_team_assignment.jpg)
 
 
 ## Experience Levels

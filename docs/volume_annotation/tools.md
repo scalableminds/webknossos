@@ -46,22 +46,22 @@ The active segment ID under the cursor can be found in the [status bar](../ui/st
     For faster workflows, refer to the [keyboard shortcuts](../ui/keyboard_shortcuts.md) guide.
 
 
-### Tool Modifiers
-The following interactions and modifiers become available when working with some of the volume annotation tools. They can be found in the toolbar:
+### Tool Modes and Extras
+The following interactions and modes become available when working with some of the volume annotation tools. They can be found in the toolbar:
 
-![Create New Segment ID Modifier](./images/new-segment-modifier.jpg){align=left width="60"} 
+![Create New Segment ID Button](./images/new-segment-modifier.jpg){align=left width="60"} 
 **Create New Segment ID**: Creates a new segment ID for labeling with a different color and identifier. New segments will be added to the [segments list](./segments_list.md) in the right sidebar automatically.
 
-![Change Brush Size Modifier](./images/brush-size-modifier.jpg){align=left width="60"} 
+![Change Brush Size](./images/brush-size-modifier.jpg){align=left width="60"} 
 **Change Brush Size**: Changes the size and radius of the brushing tool. Presets of small, medium and large brush sizes are available which can be modified to suit your workflows. ![youtube-video](https://www.youtube.com/embed/JkpSTKuNZKg)
 
 ![Overwrite Everything Modifier](./images/overwrite-everything-modifier.jpg){align=left width="60"} 
-**Overwrite Everything**: When labeling with the brush/trace tool, you can annotate every available voxel without any regard if it was already labeled as a different segment or whether it is unlabelled. This allows you to draw over existing segments.
+**Overwrite Everything**: When using the brush or trace tool for labeling, you can annotate any voxel without considering whether it has already been labeled as a different segment or if it is unlabelled. This allows you to draw over existing segments.
 
 ![Overwrite Empty Voxels Modifier](./images/overwrite-empty-modifier.jpg){align=left width="60"} 
-**Only Overwrite Empty Areas**: In contrast to the `Overwrite Everything` modifier, the forces the brush & trace tools to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites.
+**Only Overwrite Empty Areas**: In contrast to the `Overwrite Everything` modifier, this modifier forces the brush & trace tools to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites.
 
-![Interpolation/Extrusion Modifier](./images/interpolation-modifier.jpg){align=left width="60"} 
+![Interpolation/Extrusion Button](./images/interpolation-modifier.jpg){align=left width="60"} 
 **Interpolation/Extrusion**: Annotate a segment, skip a few sections in the Z direction, and annotate it again. Now, you can interpolate between the two segments. Read more on the [interpolation/extrusion](#volume-interpolation) below. 
 
 ![2D Fill Modifier](./images/2d-modifier.jpg){align=left width="60"} 
@@ -91,7 +91,7 @@ The Quick Select tool offers AI-powered automatic segmentation, powered by [Segm
 1. Select the Quick Select tool from the toolbar
 2. Choose your preferred mode (AI or threshold)
 3. Click the settings icon to configure:
-    - Number of sections to process
+    - Number of sections to process (only AI mode)
     - Preview mode for real-time parameter adjustment
 4. Draw a rectangle around your target structure or click on it directly
 5. WEBKNOSSOS will automatically segment the structure across your specified sections

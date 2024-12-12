@@ -35,24 +35,24 @@ The active node is always highlighted with a circle and can be moved by dragging
 - All branch points are stored in a first-in, first-out (FIFO) stack
 - Jump to the latest branch point using ++j++ to continue working from there
 
-### Tool Modifiers
+### Tool Modes
 
-The following modifiers are available for the skeleton tool:
+The following additional modes are available for the skeleton tool beyond the basic functionality:
 
-![New Tree Modifier](./images/new-tree-modifier.jpg){align=left width="60"} 
+![New Tree Mode](./images/new-tree-modifier.jpg){align=left width="60"} 
 **Create new Tree**
 
 - Starts a fresh tree structure
 - Useful when annotating multiple separate structures
 
-![Single Node Tree Mode Modifier](./images/single-node-tree-mode-modifier.jpg){align=left width="60"} 
+![Single Node Tree Mode Mode](./images/single-node-tree-mode-modifier.jpg){align=left width="60"} 
 **Single Node Tree Mode**
 
 - When enabled, creates a new tree for each placed node
 - Perfect for marking individual objects (e.g., cell nuclei)
 - Also known as "Soma-clicking mode"
 
-![Merger Mode Modifier](./images/merger-mode-modifier.jpg){align=left width="60"} 
+![Merger Mode](./images/merger-mode-modifier.jpg){align=left width="60"} 
 **Merger Mode**
 
 - Enables using skeletons to merge volume segments

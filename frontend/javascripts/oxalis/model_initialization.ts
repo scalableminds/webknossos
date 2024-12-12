@@ -239,14 +239,10 @@ export async function initialize(
       serverVolumeTracings,
       annotation.id,
     );
-    if (annotationProto == null) {
-      // Satisfy TS. annotationProto should always exist if annotation exists.
-      throw new Error("Annotation protobuf should not be null.");
-    }
     initializeAnnotation(
       annotation,
-      annotationProto.version,
-      annotationProto.earliestAccessibleVersion,
+      annotationProto?.version ?? 1,
+      annotationProto?.earliestAccessibleVersion ?? 0,
       serverTracings,
       editableMappings,
     );

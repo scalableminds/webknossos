@@ -206,7 +206,7 @@ export function AnnotationStats({
   asInfoBlock,
   withMargin,
 }: {
-  stats: TracingStats | EmptyObject | null | undefined;
+  stats: TracingStats | EmptyObject;
   asInfoBlock: boolean;
   withMargin?: boolean | null | undefined;
 }) {

@@ -708,7 +708,14 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         width: 150,
         render: (__: any, annotation: APIAnnotationInfo) => (
           // todop: don't use annotation.stats
-          <AnnotationStats stats={annotation.stats} asInfoBlock={false} withMargin={false} />
+          <AnnotationStats
+            stats={_.mapValues(
+              _.keyBy(annotation.annotationLayers, (layer) => layer.tracingId),
+              (layer) => layer.stats,
+            )}
+            asInfoBlock={false}
+            withMargin={false}
+          />
         ),
       },
       {

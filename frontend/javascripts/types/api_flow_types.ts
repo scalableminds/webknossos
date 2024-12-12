@@ -9,7 +9,11 @@ import type {
   MeshInformation,
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
-import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
+import type {
+  SkeletonTracingStats,
+  TracingStats,
+  VolumeTracingStats,
+} from "oxalis/model/accessors/annotation_accessor";
 import type {
   Vector3,
   Vector6,
@@ -473,7 +477,7 @@ export type AnnotationLayerDescriptor = {
   name: string;
   tracingId: string;
   typ: AnnotationLayerType;
-  stats: TracingStats | EmptyObject;
+  stats: SkeletonTracingStats | VolumeTracingStats | EmptyObject;
 };
 export type EditableLayerProperties = {
   name: string;

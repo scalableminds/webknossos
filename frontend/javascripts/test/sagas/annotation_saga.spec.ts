@@ -3,7 +3,7 @@ import _ from "lodash";
 import mockRequire from "mock-require";
 import type { OxalisState } from "oxalis/store";
 import { createMockTask } from "@redux-saga/testing-utils";
-import { take, put, call } from "redux-saga/effects";
+import { put, call } from "redux-saga/effects";
 import dummyUser from "test/fixtures/dummy_user";
 import defaultState from "oxalis/default_state";
 import { expectValueDeepEqual } from "test/helpers/sagaHelpers";

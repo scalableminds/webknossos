@@ -1,5 +1,6 @@
 import _ from "lodash";
 import type { OxalisState, Tracing } from "oxalis/store";
+import type { EmptyObject } from "types/globals";
 
 export function mayEditAnnotationProperties(state: OxalisState) {
   const { owner, restrictions } = state.tracing;
@@ -32,7 +33,7 @@ export type VolumeTracingStats = {
   segmentCount: number;
 };
 
-export type TracingStats = Record<string, SkeletonTracingStats | VolumeTracingStats>;
+export type TracingStats = Record<string, SkeletonTracingStats | VolumeTracingStats | EmptyObject>;
 
 export function getStats(tracing: Tracing): TracingStats {
   const stats: TracingStats = {};
@@ -64,7 +65,9 @@ export function getCreationTimestamp(tracing: Tracing) {
 export function getSkeletonStats(stats: TracingStats): SkeletonTracingStats | undefined {
   for (const tracingId in stats) {
     if ("treeCount" in stats[tracingId]) {
-      return stats[tracingId];
+      // TS thinks the return value could be EmptyObject even though
+      // we just checked that treeCount is a property.
+      return stats[tracingId] as SkeletonTracingStats;
     }
   }
   return undefined;

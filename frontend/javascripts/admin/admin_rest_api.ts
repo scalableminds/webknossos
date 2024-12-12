@@ -487,13 +487,11 @@ export function reOpenAnnotation(
 
 export type EditableAnnotation = {
   name: string;
-  description: string;
   visibility: APIAnnotationVisibility;
   tags: Array<string>;
   viewConfiguration?: AnnotationViewConfiguration;
 };
 
-// todop: does this still work? discussion at https://github.com/scalableminds/webknossos/pull/7917#discussion_r1860594474
 export function editAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,

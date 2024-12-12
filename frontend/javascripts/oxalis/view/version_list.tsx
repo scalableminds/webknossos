@@ -181,11 +181,15 @@ function VersionList(props: Props) {
   const annotationId = useSelector((state: OxalisState) => state.tracing.annotationId);
 
   const newestVersion = useFetch(
-    () => getNewestVersionForAnnotation(tracingStoreUrl, annotationId),
+    async () => {
+      if (annotationId === "") {
+        return null;
+      }
+      return getNewestVersionForAnnotation(tracingStoreUrl, annotationId);
+    },
     null,
     [annotationId],
   );
-  console.log("newestVersion", newestVersion);
 
   if (newestVersion == null) {
     return (

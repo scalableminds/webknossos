@@ -25,7 +25,6 @@ export function isAnnotationOwner(state: OxalisState) {
 }
 
 export function isAnnotationFromDifferentOrganization(state: OxalisState) {
-  debugger;
   const activeUser = state.activeUser;
 
   return !!(activeUser && activeUser?.organization !== state.tracing.organization);

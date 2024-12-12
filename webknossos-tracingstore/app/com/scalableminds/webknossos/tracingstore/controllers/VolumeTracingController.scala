@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
+import collections.SequenceUtils
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
@@ -220,7 +221,11 @@ class VolumeTracingController @Inject()(
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
           for {
-            tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
+            requestedVersion <- SequenceUtils
+              .findUniqueElement(request.body.map(_.version))
+              .toFox ?~> "All data requests must request the same volume version"
+            tracing <- annotationService.findVolume(annotationId, tracingId, requestedVersion) ?~> Messages(
+              "tracing.notFound")
             (data, indices) <- if (tracing.getHasEditableMapping) {
               val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
               editableMappingService.volumeData(mappingLayer, request.body)

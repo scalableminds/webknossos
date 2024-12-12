@@ -330,10 +330,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
               />
             </Col>
             <Col span={6}>
-              <MagSelectionFormItem
-                name={["trainingAnnotations", idx, "mag"]}
-                mags={mags.getMagList()}
-              />
+              <MagSelectionFormItem name={["trainingAnnotations", idx, "mag"]} magInfo={mags} />
             </Col>
           </Row>
         );

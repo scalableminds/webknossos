@@ -1,41 +1,106 @@
 # The Toolbar
 
-The toolbar contains frequently used commands, such as saving and sharing, your current position within the dataset, and the ability to switch between various modes for viewing. Further, it provides access to all the tools for annotation, navigation, and more.
+The toolbar is your primary interface for switching between different tools and modes within WEBKNOSSOS. Located at the top of the screen, it provides quick access to essential functions for viewing, annotating, and sharing your work. This guide explains each component and its purpose in your workflow.
 
 ![The WEBKNOSSOS toolbar contains many useful features for quick access such as Saving und Undo/Redo](../images/ui_toolbar_menu.png)
 
-Here is a list of the buttons and their functionality:
+## Basic Operations
 
-- `Undo` / `Redo`: Undoes the last operation or redoes it if no new changes have been made in the meantime. Undo can only revert changes made in this session (since the moment the annotation view was opened). To revert to older versions use the "Restore Older Version" functionality described later in this list.
-- `Save`: Saves your annotation work. WEBKNOSSOS automatically saves every 30 seconds.
-- `Menu`: 
-    - `Archive`: Closes the annotation and archives it, removing it from a user's dashboard. Archived annotations can be found on a user's dashboard under "Annotations" and by clicking on "Show Archived Annotations". Use this to declutter your dashboard. (Not available for tasks)
-    - `Download`: Starts a download of the current annotation including any skeleton and volume data. Skeleton annotations are downloaded as [NML](../data/concepts.md#nml-files) files. Volume annotation downloads contain the raw segmentation data as [WKW](../data/wkw.md) files.
-    - `Share`: Create a customizable, shareable link to your dataset containing the current position, rotation, zoom level etc. with fine-grained access controls. Use this to collaboratively work with colleagues. Read more about [data sharing](../sharing/annotation_sharing.md).
-    - `Zarr Links`: Create Zarr streaming links to allow other tools to load the image data of the annotation.
-    - `Duplicate`: Create a duplicate of this annotation. The duplicate will be created in your account, even if the original annotation belongs to somebody else.
-    - `Screenshot`: Takes a screenshot of current datasets/annotation from each of the three viewports and downloads them as PNG files.
-    - `Create Animation`: Creates an eye-catching animation of the dataset as a video clip. [Read more about animations](../automation/animations.md).
-    - `Add Script`: Using the [WEBKNOSSOS frontend API](https://webknossos.org/assets/docs/frontend-api/index.html) users can script and automate WEBKNOSSOS interactions. Enter and execute your user scripts (Javascript) from here. Admins can curate a collection of frequently used scripts for your organization and make them available for quick selection to all users.
-    - `Merge Annotations`: Combines the skeletons and segments from one or more individual annotations into a new annotation.
-    - `Restore Older Version`: Opens a window that shows all previous versions of an annotation. WEBKNOSSOS keeps a complete version history of all your changes to an annotation (separate for skeleton/volume). From this window, any older version can be selected, previewed, and restored.
-    - `Layout`: The WEBKNOSSOS annotation user interface can be resized, reordered, and customized to suite your workflows. Use the mouse to drag, move and resize any viewport. You can save these layout arrangements or restore the default viewport state.
-    - `Disable saving`: You can choose to disable the automatic saving of an annotation. Only use this for large, temporary annotations to save resources.
-    - `Lock Annotation`: Lock a (shared) annotation to make sure no one, even you, makes any changes. You can unlock it in the [Annotation dashboard](../dashboard/annotations.md).
-- `Position` : A user can directly jump to any position within their datasets by entering them in the position input field. The same is true for the camera rotation in flight/oblique modes. Clicking on the position or rotation labels copies the values to the clipboard.
-- `Quick Share`: Create a shareable link to your dataset containing the current position, rotation, zoom level etc. Use this to collaboratively work with colleagues. Read more about [data sharing](../sharing/annotation_sharing.md).
-- `AI Analysis`: Starts an AI segmentation of the datasets. Choose between several automated analysis workflows. Read more about [AI analysis](../automation/ai_segmentation.md).
+### Save and Undo
+The save and undo functions help you manage your annotation work:
 
-The toolbar further features all available navigation and annotation tools for quick access:
+- The **Save** button preserves your current work. While WEBKNOSSOS automatically saves every 30 seconds, you can manually save at any time using the keyboard shortcut ++ctrl++ / ++cmd++ + ++s++.
 
-- `Move`: Navigate around the dataset.
-- `Skeleton`: Create skeleton annotations and place nodes. [Read more about skeleton annotations](../skeleton_annotation/tools.md).
-- `Trace`: Creates volume annotations by drawing outlines around the voxels you would like to label. [Read more about volume annotations](../volume_annotation/tools.md).
-- `Brush`: Creates volume annotations by drawing over the voxels you would like to label.
-- `Erase (Trace/Brush)`: Removes voxels from a volume annotation by drawing over the voxels you would like to erase.
-- `Fill Tool`: Flood-fills the clicked region with a volume annotation until it hits the next segment boundary (or the outer edge of your viewport). Used to fill holes in a volume annotation or to relabel a segment with a different id.
-- `Segment Picker`: Select the volume annotation ID of a segment to make it the active cell id to continue labeling with that ID/color.
-- `Bounding Box`: Creates and resizes any bounding box. See also the [Bounding Box (BB) panel](../ui/object_info.md) below.
-- `Measurement Tool`: Measure distances between structures or the surface areas of segments by placing waypoints with the mouse.
+- The **Undo/Redo** buttons let you reverse or restore recent changes. The undo function (++ctrl++ / ++cmd++ + ++z++) can revert any changes made in your current session, while redo (++ctrl++ / ++cmd++ + ++y++) restores previously undone changes. For accessing older versions of your work, use the "Restore Older Version" feature in the menu.
 
-Please see the detailed documentation on [skeleton](../skeleton_annotation/tools.md) and [volume annotation](../volume_annotation/tools.md) tools for a for explanation of all context-sensitve modifiers that are available to some tools.
+### Position Control
+The position control allows precise navigation within your dataset. You can:
+
+- Enter specific coordinates to jump directly to any location
+- Copy position values by clicking on the pushpin icon.
+- Adjust camera rotation in flight or oblique modes
+- The position information is automatically included when sharing your view with colleagues
+- Quick Share: Generate an immediate sharing link that includes your current view settings. This is ideal for rapid collaboration or when you need to quickly show something to a colleague.
+
+## Menu Functions
+
+### File Operations
+The menu provides several ways to manage your annotations:
+
+- **Download**: Export your work in standard formats:
+
+    - Skeleton annotations are saved as [NML files](../data/concepts.md#nml-files)
+    - Volume annotations are exported as [WKW files](../data/wkw.md)
+    - All associated data and metadata are included in the download
+
+- **Archive**: When you need to declutter your dashboard, you can archive annotations you're not actively working on. Archived items remain accessible through the "Show Archived Annotations" filter on your dashboard. Note that this option isn't available for tasks.
+
+- **Restore Older Version**: WEBKNOSSOS maintains a complete history of your annotations with version control. You can access previous versions of your work and preview changes before restoring them.
+
+- **Merge Annotations**: Combine multiple annotations into one either by project or by annotation ID.
+
+- **Disable Saving**: Temporarily disable automatic saving in WEBKNOSSOS. Any changes you make will not be saved. This can reduce bandwidth and resource usage when working with large annotations that don't need to be persisted.
+
+- **Lock Annotation**: Lock your current annotation in a read-only mode to protect it from any accidental changes. The annotation remains read-only until you unlock it (from the [Annotation dashboard](../dashboard/annotations.md)). This can be useful when publishing your work or sharing with larger communities.
+
+### Collaboration Tools
+WEBKNOSSOS offers multiple ways to share your work:
+
+- **Share**: Create customized sharing links that capture your current view, including position, rotation, and zoom level. You can set specific access permissions to control who can view or edit your work. Learn more about [sharing options](../sharing/annotation_sharing.md).
+
+- **Screenshots**: Capture and download a snapshot of your current viewports as a JPEG image. 
+
+### Advanced Features
+
+- **Zarr Links**: Generate streaming links that allow other applications to access your annotation's image data. This is particularly useful when integrating WEBKNOSSOS with external analysis tools.
+
+- **Create Animation**: Produce professional video clips that showcase your dataset. These animations can be valuable for presentations or documentation. Read more about [creating animations](../automation/animations.md).
+
+- **Layout**: Modify the layout of the WEBKNOSSOS user interface and resize, reorder and adjust viewports and panels to your preferences. Customize the number of columns, show or hide specific tabs, and adjust the size of the sidebar. Save and restore your preferred configurations. 
+
+## Annotation Tools
+
+### Navigation
+![Move Tool](./images/move-tool.jpg){align=left width="60"} 
+The **Move tool** serves as your primary means of navigating through the dataset:
+
+- Pan across slices using click and drag
+- Zoom in and out to focus on details or get an overview
+- Rotate the view in 3D mode
+
+### Skeleton Annotation
+![Skeleton Tool](./images/skeleton-tool.jpg){align=left width="60"} 
+The **Skeleton tool** enables you to create and edit skeleton annotations:
+
+- Place nodes with precise positioning
+- Connect nodes to form tree structures
+- Add branches and create complex neural tracings
+
+For detailed information, see the [skeleton annotation guide](../skeleton_annotation/tools.md).
+
+### Volume Annotation
+WEBKNOSSOS provides several tools for volume annotation:
+
+![Trace Tool](./images/trace-tool.jpg){align=left width="60"} 
+**Trace Tool**: Create precise boundary definitions by drawing outlines around structures. This tool is particularly useful when accuracy is crucial. For added precision consider using a [pen input device](../pen_tablets.md). 
+
+![Brush Tool](./images/brush-tool.jpg){align=left width="60"} 
+**Brush Tool**: Paint directly onto the dataset to mark regions of interest. The brush size is adjustable to match your needs. If you draw around objects in one continuous motion, the inside will be filled automatically.
+
+![Quick Select Tool](./images/quickselect-tool.jpg){align=left width="60"} 
+**AI Quick Select**: Annotate a segment automatically with our AI by drawing a rectangular selection over it. Alternatively, single click in the center of a cell to automatically label it.
+
+And many other tools. For detailed information, see the [volume annotation guide](../volume_annotation/tools.md).
+
+### Measurement and Analysis
+![Measurement Tool](./images/measure-tool.jpg){align=left width="60"}
+**Measurement Tool**: Allows you to calculate distances between points of interest, measure surface areas of segmented structures, and place waypoints for complex measurements. See also [statistics for volume annotations](../volume_annotation/segments_statistics.md). 
+
+![AI Analysis Tools](./images/ai-analysis-tools.jpg){align=left width="60"}
+**AI Analysis**: Launch automated segmentation processes using various analysis workflows. The AI tools can significantly speed up your annotation work. Learn more about [AI-assisted analysis](../automation/ai_segmentation.md).
+
+
+![Bounding Box Tool](./images/boundingbox-tool.jpg){align=left width="60"}
+**Bounding Box Tool**: Create a bounding box to define a region of interest for analysis, subdivide a dataset into smaller regions for the builtin automated workflows, or quickly export a region of interest.
+
+For detailed information, see the [Advanced Analysis Tools](../automation/ai_segmentation.md).

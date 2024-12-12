@@ -219,13 +219,12 @@ export function* floodFill(): Saga<void> {
     console.timeEnd("applyLabeledVoxelMapToAllMissingMags");
 
     if (wasBoundingBoxExceeded) {
+      const warningDetails = fillMode === FillModeEnum._2D ? "Please check the borders of the filled area manually and use the fill tool again if necessary." : "A bounding box that represents the labeled volume was added so that you can check the borders manually."
       yield* call(
         progressCallback,
         true,
         <>
-          Floodfill is done, but terminated since the labeled volume got too large. A bounding box
-          <br />
-          that represents the labeled volume was added.{Unicode.NonBreakingSpace}
+          Floodfill is done, but terminated since the labeled volume got too large. ${warningDetails} {Unicode.NonBreakingSpace}
           <a href="#" onClick={() => message.destroy(FLOODFILL_PROGRESS_KEY)}>
             Close
           </a>
@@ -234,16 +233,20 @@ export function* floodFill(): Saga<void> {
           successMessageDelay: 10000,
         },
       );
-      yield* put(
-        addUserBoundingBoxAction({
-          boundingBox: coveredBoundingBox,
-          name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
-            ",",
-          )}, timestamp=${new Date().getTime()})`,
-          color: Utils.getRandomColor(),
-          isVisible: true,
-        }),
-      );
+      if (fillMode === FillModeEnum._3D) {
+        // The bounding box is overkill for the 2D mode because in that case,
+        // it's trivial to check the borders manually.
+        yield* put(
+          addUserBoundingBoxAction({
+            boundingBox: coveredBoundingBox,
+            name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
+              ",",
+            )}, timestamp=${new Date().getTime()})`,
+            color: Utils.getRandomColor(),
+            isVisible: true,
+          }),
+        );
+      }
     } else {
       yield* call(progressCallback, true, "Floodfill done.");
     }

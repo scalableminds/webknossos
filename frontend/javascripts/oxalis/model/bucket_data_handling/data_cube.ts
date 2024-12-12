@@ -698,33 +698,34 @@ class DataCube {
               V3.scale3(adjustedNeighbourVoxelXyz, currentMag),
             );
 
-            if (
-              bucketData[neighbourVoxelIndex] === sourceSegmentId &&
-              floodfillBoundingBox.containsPoint(currentGlobalPosition)
-            ) {
-              bucketData[neighbourVoxelIndex] = segmentId;
-              markUvwInSliceAsLabeled(neighbourVoxelUvw);
-              neighbourVoxelStackUvw.pushVoxel(neighbourVoxelUvw);
-              labeledVoxelCount++;
-              coveredBBoxMin = [
-                Math.min(coveredBBoxMin[0], currentGlobalPosition[0]),
-                Math.min(coveredBBoxMin[1], currentGlobalPosition[1]),
-                Math.min(coveredBBoxMin[2], currentGlobalPosition[2]),
-              ];
-              // The maximum is exclusive which is why we add 1 to the position
-              coveredBBoxMax = [
-                Math.max(coveredBBoxMax[0], currentGlobalPosition[0] + 1),
-                Math.max(coveredBBoxMax[1], currentGlobalPosition[1] + 1),
-                Math.max(coveredBBoxMax[2], currentGlobalPosition[2] + 1),
-              ];
+            if (bucketData[neighbourVoxelIndex] === sourceSegmentId) {
+              if (floodfillBoundingBox.containsPoint(currentGlobalPosition)) {
+                bucketData[neighbourVoxelIndex] = segmentId;
+                markUvwInSliceAsLabeled(neighbourVoxelUvw);
+                neighbourVoxelStackUvw.pushVoxel(neighbourVoxelUvw);
+                labeledVoxelCount++;
+                coveredBBoxMin = [
+                  Math.min(coveredBBoxMin[0], currentGlobalPosition[0]),
+                  Math.min(coveredBBoxMin[1], currentGlobalPosition[1]),
+                  Math.min(coveredBBoxMin[2], currentGlobalPosition[2]),
+                ];
+                // The maximum is exclusive which is why we add 1 to the position
+                coveredBBoxMax = [
+                  Math.max(coveredBBoxMax[0], currentGlobalPosition[0] + 1),
+                  Math.max(coveredBBoxMax[1], currentGlobalPosition[1] + 1),
+                  Math.max(coveredBBoxMax[2], currentGlobalPosition[2] + 1),
+                ];
 
-              if (labeledVoxelCount % 1000000 === 0) {
-                console.log(`Labeled ${labeledVoxelCount} Vx. Continuing...`);
+                if (labeledVoxelCount % 1000000 === 0) {
+                  console.log(`Labeled ${labeledVoxelCount} Vx. Continuing...`);
 
-                await progressCallback(
-                  false,
-                  `Labeled ${labeledVoxelCount / 1000000} MVx. Continuing...`,
-                );
+                  await progressCallback(
+                    false,
+                    `Labeled ${labeledVoxelCount / 1000000} MVx. Continuing...`,
+                  );
+                }
+              } else {
+                wasBoundingBoxExceeded = true;
               }
             }
           }

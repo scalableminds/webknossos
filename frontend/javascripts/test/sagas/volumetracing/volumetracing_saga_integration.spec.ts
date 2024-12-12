@@ -1,7 +1,7 @@
 /* eslint-disable no-await-in-loop */
 import "test/sagas/saga_integration.mock";
 import _ from "lodash";
-import {
+import Constants, {
   AnnotationToolEnum,
   ContourModeEnum,
   FillModeEnum,
@@ -276,6 +276,7 @@ test.serial("Executing a floodfill in mag 2", async (t) => {
     );
   }
 });
+
 test.only("Executing a floodfill in mag 1 (long operation)", async (t) => {
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,
@@ -293,6 +294,8 @@ test.only("Executing a floodfill in mag 1 (long operation)", async (t) => {
   Store.dispatch(updateUserSettingAction("fillMode", FillModeEnum._3D));
   await dispatchFloodfillAsync(Store.dispatch, paintCenter, OrthoViews.PLANE_XY);
 
+  const EXPECTED_HALF_EXTENT = V3.scale(Constants.FLOOD_FILL_EXTENTS[FillModeEnum._3D], 0.5);
+
   async function assertFloodFilledState() {
     t.is(
       await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter, 0),
@@ -300,8 +303,8 @@ test.only("Executing a floodfill in mag 1 (long operation)", async (t) => {
     );
     t.false(hasRootSagaCrashed());
     const cuboidData = await t.context.api.data.getDataForBoundingBox(volumeTracingLayerName, {
-      min: [128 - 64, 128 - 64, 128 - 32],
-      max: [128 + 64, 128 + 64, 128 + 32],
+      min: V3.sub(paintCenter, EXPECTED_HALF_EXTENT),
+      max: V3.add(paintCenter, EXPECTED_HALF_EXTENT),
     });
     // There should be no item which does not equal floodingCellId
     t.is(
@@ -326,7 +329,7 @@ test.only("Executing a floodfill in mag 1 (long operation)", async (t) => {
 
   // Assert state after flood-fill
   await assertFloodFilledState();
-  // Undo created bounding box by flood fill and flood fill and assert initial state.
+  // Undo [the bounding box created by the flood fill] and [the flood fill itself] and assert initial state.
   await dispatchUndoAsync(Store.dispatch);
   await dispatchUndoAsync(Store.dispatch);
   await assertInitialState();

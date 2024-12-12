@@ -277,7 +277,7 @@ test.serial("Executing a floodfill in mag 2", async (t) => {
   }
 });
 
-test.only("Executing a floodfill in mag 1 (long operation)", async (t) => {
+test.serial("Executing a floodfill in mag 1 (long operation)", async (t) => {
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,
     0,

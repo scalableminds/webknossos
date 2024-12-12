@@ -861,6 +861,10 @@ export type ServerTracingBase = {
   error?: string;
   zoomLevel: number;
   additionalAxes: ServerAdditionalAxis[];
+  // The backend sends the version property, but the front-end should
+  // not care about it. To ensure this, parseProtoTracing will remove
+  // the property.
+  version?: number;
 };
 export type ServerSkeletonTracing = ServerTracingBase & {
   // The following property is added when fetching the

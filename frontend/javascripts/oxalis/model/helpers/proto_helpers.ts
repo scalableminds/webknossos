@@ -27,12 +27,14 @@ export function parseProtoTracing(
   const protoRoot = Root.fromJSON(PROTO_FILES[annotationType]);
   const messageType = protoRoot.lookupType(PROTO_TYPES[annotationType]);
   const message = messageType.decode(new Uint8Array(tracingArrayBuffer));
-  return messageType.toObject(message, {
+  const tracing = messageType.toObject(message, {
     arrays: true,
     objects: true,
     enums: String,
     longs: Number,
   }) as ServerTracing;
+  delete tracing.version;
+  return tracing;
 }
 
 export function serializeProtoListOfLong<T extends number | bigint>(

@@ -13,7 +13,8 @@ export const SETTINGS_MAX_RETRY_COUNT = 20; // 20 * 15s == 5m
 
 export const MAXIMUM_ACTION_COUNT_PER_BATCH = 1000;
 
-// todop: should this be smarter?
+// See #8274.
+// This constant used to be the following:
 // export const MAXIMUM_ACTION_COUNT_PER_SAVE = {
 //   skeleton: 15000,
 //   volume: 3000,

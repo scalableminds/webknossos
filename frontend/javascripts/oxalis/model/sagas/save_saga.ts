@@ -41,7 +41,6 @@ import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import {
   updateTdCamera,
   type UpdateActionWithoutIsolationRequirement,
-  type UpdateActionWithTracingId,
 } from "oxalis/model/sagas/update_actions";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import { ensureWkReady } from "oxalis/model/sagas/ready_sagas";
@@ -284,10 +283,7 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
   for (const saveEntry of saveQueue) {
     for (const updateAction of saveEntry.actions) {
       if (updateAction.name === "updateBucket") {
-        // The ID must belong to a segmentation layer because we are handling an updateBucket
-        // action. Moreover, updateBucket is layer dependent and thus has an actionTracingId.
-        const { actionTracingId: tracingId } =
-          updateAction.value as UpdateActionWithTracingId["value"];
+        const { actionTracingId: tracingId } = updateAction.value;
         const segmentationLayer = Model.getSegmentationTracingLayer(tracingId);
         const segmentationMagInfo = yield* call(getMagInfo, segmentationLayer.mags);
 

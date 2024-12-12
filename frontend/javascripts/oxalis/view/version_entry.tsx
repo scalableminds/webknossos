@@ -39,10 +39,13 @@ import type {
   UpdateAnnotationLayerNameUpdateAction,
   UpdateMappingNameUpdateAction,
   DeleteSegmentDataUpdateAction,
-  UpdateActionWithTracingId,
+  UpdateAction,
   AddLayerToAnnotationUpdateAction,
   DeleteAnnotationLayerUpdateAction,
   UpdateMetadataOfAnnotationUpdateAction,
+  UpdateBucketUpdateAction,
+  UpdateSegmentGroupsUpdateAction,
+  AddSegmentIndexUpdateAction,
 } from "oxalis/model/sagas/update_actions";
 import FormattedDate from "components/formatted_date";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
@@ -150,7 +153,7 @@ const descriptionFns: Record<
     icon: <EditOutlined />,
   }),
   updateBucket: (
-    firstAction: UpdateActionWithTracingId,
+    firstAction: UpdateBucketUpdateAction,
     _actionCount: number,
     tracing: HybridTracing,
   ): Description => {
@@ -161,7 +164,7 @@ const descriptionFns: Record<
     };
   },
   updateSegmentGroups: (
-    firstAction: UpdateActionWithTracingId,
+    firstAction: UpdateSegmentGroupsUpdateAction,
     _actionCount: number,
     tracing: HybridTracing,
   ): Description => {
@@ -202,7 +205,7 @@ const descriptionFns: Record<
     icon: <CodeSandboxOutlined />,
   }),
   createSegment: (
-    firstAction: UpdateActionWithTracingId & CreateSegmentUpdateAction,
+    firstAction: CreateSegmentUpdateAction,
     _actionCount: number,
     tracing: HybridTracing,
   ): Description => {
@@ -213,7 +216,7 @@ const descriptionFns: Record<
     };
   },
   updateSegment: (
-    firstAction: UpdateActionWithTracingId & UpdateSegmentUpdateAction,
+    firstAction: UpdateSegmentUpdateAction,
     _actionCount: number,
     tracing: HybridTracing,
   ): Description => {
@@ -224,7 +227,7 @@ const descriptionFns: Record<
     };
   },
   deleteSegment: (
-    firstAction: UpdateActionWithTracingId & DeleteSegmentUpdateAction,
+    firstAction: DeleteSegmentUpdateAction,
     _actionCount: number,
     tracing: HybridTracing,
   ): Description => {
@@ -235,7 +238,7 @@ const descriptionFns: Record<
     };
   },
   deleteSegmentData: (
-    firstAction: UpdateActionWithTracingId & DeleteSegmentDataUpdateAction,
+    firstAction: DeleteSegmentDataUpdateAction,
     _actionCount: number,
     tracing: HybridTracing,
   ): Description => {
@@ -246,7 +249,7 @@ const descriptionFns: Record<
     };
   },
   addSegmentIndex: (
-    firstAction: UpdateActionWithTracingId,
+    firstAction: AddSegmentIndexUpdateAction,
     _actionCount: number,
     tracing: HybridTracing,
   ): Description => {

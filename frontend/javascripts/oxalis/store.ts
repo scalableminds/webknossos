@@ -50,7 +50,7 @@ import type {
 } from "oxalis/constants";
 import type { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
-import type { UpdateAction, UpdateActionWithTracingId } from "oxalis/model/sagas/update_actions";
+import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
 import type DiffableMap from "libs/diffable_map";
@@ -453,7 +453,7 @@ export type SaveQueueEntry = {
   version: number;
   timestamp: number;
   authorId: string;
-  actions: Array<UpdateActionWithTracingId | UpdateAction>;
+  actions: Array<UpdateAction>;
   transactionId: string;
   transactionGroupCount: number;
   transactionGroupIndex: number;

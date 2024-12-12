@@ -45,7 +45,7 @@ type UpdateUserBoundingBoxesInVolumeTracingUpdateAction = ReturnType<
   typeof updateUserBoundingBoxesInVolumeTracing
 >;
 export type UpdateBucketUpdateAction = ReturnType<typeof updateBucket>;
-type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
+export type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
 
 type UpdateTreeGroupsUpdateAction = ReturnType<typeof updateTreeGroups>;
 
@@ -104,12 +104,6 @@ export type UpdateActionWithoutIsolationRequirement =
   | SplitAgglomerateUpdateAction
   | MergeAgglomerateUpdateAction;
 
-export type UpdateActionWithTracingId = UpdateAction & {
-  value: UpdateAction["value"] & {
-    actionTracingId: string;
-  };
-};
-
 // This update action is only created in the frontend for display purposes
 type CreateTracingUpdateAction = {
   name: "createTracing";
@@ -123,11 +117,13 @@ type ImportVolumeTracingUpdateAction = {
   value: {
     largestSegmentId: number;
   };
-}; // This update action is only created by the backend
-type AddSegmentIndexUpdateAction = {
+};
+// This update action is only created by the backend
+export type AddSegmentIndexUpdateAction = {
   name: "addSegmentIndex";
   value: {
     actionTimestamp: number;
+    actionTracingId: string;
   };
 };
 type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {

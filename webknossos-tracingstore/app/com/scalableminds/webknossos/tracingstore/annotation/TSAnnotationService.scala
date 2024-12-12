@@ -67,8 +67,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   def get(annotationId: String, version: Option[Long])(implicit ec: ExecutionContext,
                                                        tc: TokenContext): Fox[AnnotationProto] =
     for {
-      isTemporaryTracing <- temporaryTracingService.isTemporaryAnnotation(annotationId)
-      annotation <- if (isTemporaryTracing) temporaryTracingService.getAnnotation(annotationId)
+      isTemporaryAnnotation <- temporaryTracingService.isTemporaryAnnotation(annotationId)
+      annotation <- if (isTemporaryAnnotation) temporaryTracingService.getAnnotation(annotationId)
       else
         for {
           withTracings <- getWithTracings(annotationId, version) ?~> "annotation.notFound"
@@ -93,22 +93,25 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                                                                            _ => newInnerCache)
       updatedAnnotation <- materializedAnnotationInnerCache.getOrLoad(
         targetVersion,
-        _ => getWithTracingsVersioned(annotationId, targetVersion, reportChangesToWk = reportChangesToWk)
+        _ =>
+          getWithTracingsVersioned(annotationId,
+                                   newestMaterialized,
+                                   targetVersion,
+                                   reportChangesToWk = reportChangesToWk)
       )
     } yield updatedAnnotation
 
-  private def getWithTracingsVersioned(annotationId: String, version: Long, reportChangesToWk: Boolean)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[AnnotationWithTracings] =
+  private def getWithTracingsVersioned(
+      annotationId: String,
+      newestMaterializedAnnotation: AnnotationProto,
+      version: Long,
+      reportChangesToWk: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
-      annotationWithVersion <- tracingDataStore.annotations.get(annotationId, Some(version))(
-        fromProtoBytes[AnnotationProto]) ?~> "getAnnotation.failed"
-      annotation = annotationWithVersion.value
-      annotationWithTracings <- findTracingsForAnnotation(annotation) ?~> "findTracingsForAnnotation.failed"
+      annotationWithTracings <- findTracingsForAnnotation(newestMaterializedAnnotation) ?~> "findTracingsForAnnotation.failed"
       annotationWithTracingsAndMappings <- findEditableMappingsForAnnotation(
         annotationId,
         annotationWithTracings,
-        annotation.version,
+        newestMaterializedAnnotation.version,
         version // Note: this targetVersion is used for the updater buffers, and is overwritten for each update group, see annotation.withNewUpdaters
       ) ?~> "findEditableMappingsForAnnotation.failed"
       updated <- applyPendingUpdates(annotationWithTracingsAndMappings, annotationId, version, reportChangesToWk) ?~> "applyUpdates.failed"

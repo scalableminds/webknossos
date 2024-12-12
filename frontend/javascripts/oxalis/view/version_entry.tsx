@@ -39,7 +39,6 @@ import type {
   UpdateAnnotationLayerNameUpdateAction,
   UpdateMappingNameUpdateAction,
   DeleteSegmentDataUpdateAction,
-  UpdateAction,
   AddLayerToAnnotationUpdateAction,
   DeleteAnnotationLayerUpdateAction,
   UpdateMetadataOfAnnotationUpdateAction,

@@ -149,8 +149,6 @@ async function sendUpdateActions(explorational: APIAnnotation, queue: SaveQueueE
   );
 }
 
-// TODOp: Add tests for new update actions added in this pr (including updateAnnotationMetadata as this part of testing was removed editAnnotation() test case)
-
 test.serial("Send update actions and compare resulting tracing", async (t) => {
   const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
   const tracingId = createdExplorational.annotationLayers[0].tracingId;
@@ -243,4 +241,22 @@ test("Update Metadata for Skeleton Tracing", async (t) => {
   await sendUpdateActions(createdExplorational, saveQueue);
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
   t.snapshot(replaceVolatileValues(tracings[0]));
+});
+
+test.serial("Send update actions for updating metadata", async (t) => {
+  const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
+  const newDescription = "new description";
+  const [saveQueue] = addVersionNumbers(
+    createSaveQueueFromUpdateActions(
+      [[UpdateActions.updateMetadataOfAnnotation(newDescription)]],
+      123456789,
+    ),
+    0,
+  );
+  await sendUpdateActions(createdExplorational, saveQueue);
+  const annotation = await api.getAnnotationProto(
+    createdExplorational.tracingStore.url,
+    createdExplorational.id,
+  );
+  t.is(annotation.description, newDescription);
 });

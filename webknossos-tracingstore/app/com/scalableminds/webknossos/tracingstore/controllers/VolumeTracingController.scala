@@ -193,7 +193,8 @@ class VolumeTracingController @Inject()(
                  voxelSizeUnit: Option[String]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+        accessTokenService.validateAccessFromTokenContext(
+          annotationId.map(UserAccessRequest.readAnnotation).getOrElse(UserAccessRequest.readTracing(tracingId))) {
           for {
             _ <- bool2Fox(if (version.isDefined) annotationId.isDefined else true) ?~> "Volume data request with version needs passed annotationId"
             annotationIdFilled <- Fox.fillOption(annotationId)(

@@ -14,7 +14,7 @@ We would love to integrate analysis solutions for more modalities and use cases.
 ## Neuron Segmentation
 As a first trial, WEBKNOSSOS includes neuron segmentation. This analysis is designed to work with serial block-face electron microscopy (SBEM) data of neural tissue (brain/cortex) and will segment all neurons within the dataset.
 
-You can launch the AI analysis modal using the `AI Analysis` button in the toolbar at the top. Use the `Start AI neuron segmentation` button in the modal to start the analysis.
+You can launch the AI analysis dialog using the `AI Analysis` button in the toolbar at the top. Use the `Start AI neuron segmentation` button in the dialog to start the analysis.
 
 ![Neuron segmentations can be launched from the tool bar.](../images/process_dataset.jpg)
 
@@ -26,7 +26,7 @@ The finished analysis will be available as a new dataset from your dashboard. Yo
 ![Monitor the segmentation progress from the Jobs page.](../images/nuclei_segmentation_job.jpeg)
 
 ## Mitochondria detection
-Similarly to the neuron segmentation, you can now start a mitochondria detection in WEBKNOSSOS. In the AI analysis modal, choose `Mitochondria detection`, select a bounding box, and go to `Processing Jobs` to look at the result. 
+Similarly to the neuron segmentation, you can now start a mitochondria detection in WEBKNOSSOS. In the AI analysis dialog, choose `Mitochondria detection`, select a bounding box, and go to `Processing Jobs` to look at the result. 
 
 ## Custom Analysis
 You'll soon be able to train custom classifiers directly in WEBKNOSSOS. [Contact us](mailto:hello@webknossos.org) for an invite to join the beta program.

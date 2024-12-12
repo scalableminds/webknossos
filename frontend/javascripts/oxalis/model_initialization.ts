@@ -307,6 +307,7 @@ function initializeTracing(
       };
     }
 
+    debugger;
     Store.dispatch(initializeAnnotationAction(annotation));
     getServerVolumeTracings(serverTracings).map((volumeTracing) => {
       ErrorHandling.assert(

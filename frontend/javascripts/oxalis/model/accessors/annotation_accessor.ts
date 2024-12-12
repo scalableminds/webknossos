@@ -24,6 +24,13 @@ export function isAnnotationOwner(state: OxalisState) {
   return !!(activeUser && owner?.id === activeUser.id);
 }
 
+export function isAnnotationFromDifferentOrganization(state: OxalisState) {
+  debugger;
+  const activeUser = state.activeUser;
+
+  return !!(activeUser && activeUser?.organization !== state.tracing.organization);
+}
+
 export type SkeletonTracingStats = {
   treeCount: number;
   nodeCount: number;

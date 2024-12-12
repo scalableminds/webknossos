@@ -34,7 +34,7 @@ import { Vector3Input, Vector6Input } from "libs/vector_input";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import {
   getActiveDatasetsOfMyOrganization,
-  getMaybeOutdatedAnnotationInformation,
+  getUnversionedAnnotationInformation,
   getProjects,
   getScripts,
   getTaskTypes,
@@ -486,7 +486,7 @@ function TaskCreateFormView({ taskId, history }: Props) {
                   }
 
                   const annotationResponse = await tryToAwaitPromise(
-                    getMaybeOutdatedAnnotationInformation(value, {
+                    getUnversionedAnnotationInformation(value, {
                       showErrorToast: false,
                     }),
                   );

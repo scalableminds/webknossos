@@ -8,7 +8,7 @@ import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_ac
 import { getSkeletonDescriptor } from "oxalis/model/accessors/skeletontracing_accessor";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
-  getMaybeOutdatedAnnotationInformation,
+  getUnversionedAnnotationInformation,
   getAnnotationCompoundInformation,
   getTracingForAnnotationType,
 } from "admin/admin_rest_api";
@@ -145,7 +145,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
     const { selectedExplorativeAnnotation } = this.state;
 
     if (selectedExplorativeAnnotation != null) {
-      const annotation = await getMaybeOutdatedAnnotationInformation(selectedExplorativeAnnotation);
+      const annotation = await getUnversionedAnnotationInformation(selectedExplorativeAnnotation);
       this.mergeAnnotationIntoActiveTracing(annotation);
     }
   };

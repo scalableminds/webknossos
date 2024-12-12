@@ -21,7 +21,7 @@ import {
   getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
-  getMaybeOutdatedAnnotationInformation,
+  getUnversionedAnnotationInformation,
   getDataset,
   getTracingForAnnotationType,
   runTraining,
@@ -556,7 +556,7 @@ function AnnotationsCsvInput({
 
     const newAnnotationsWithDatasets = await Promise.all(
       newItems.map(async (item) => {
-        const annotation = await getMaybeOutdatedAnnotationInformation(item.annotationId);
+        const annotation = await getUnversionedAnnotationInformation(item.annotationId);
         const dataset = await getDataset(annotation.datasetId);
 
         const volumeServerTracings: ServerVolumeTracing[] = await Promise.all(

@@ -594,8 +594,7 @@ export function duplicateAnnotation(
   });
 }
 
-// todop: rename to getUnversionedAnnotationInformation
-export async function getMaybeOutdatedAnnotationInformation(
+export async function getUnversionedAnnotationInformation(
   annotationId: string,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {

@@ -35,7 +35,7 @@ import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_ac
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getTracingsForAnnotation,
-  getMaybeOutdatedAnnotationInformation,
+  getUnversionedAnnotationInformation,
   getEmptySandboxAnnotationInformation,
   getDataset,
   getSharingTokenFromUrlParameters,
@@ -137,8 +137,7 @@ export async function initialize(
     if (initialMaybeCompoundType != null) {
       annotation = await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType);
     } else {
-      // todop: can we improve this?
-      let unversionedAnnotation = await getMaybeOutdatedAnnotationInformation(annotationId);
+      let unversionedAnnotation = await getUnversionedAnnotationInformation(annotationId);
       annotationProto = await getAnnotationProto(
         unversionedAnnotation.tracingStore.url,
         unversionedAnnotation.id,

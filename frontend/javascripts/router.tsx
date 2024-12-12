@@ -1,6 +1,6 @@
 import {
   createExplorational,
-  getMaybeOutdatedAnnotationInformation,
+  getUnversionedAnnotationInformation,
   getShortLink,
 } from "admin/admin_rest_api";
 import AcceptInviteView from "admin/auth/accept_invite_view";
@@ -246,7 +246,7 @@ class ReactRouter extends React.Component<Props> {
 
   serverAuthenticationCallback = async ({ match }: ContextRouter) => {
     try {
-      const annotationInformation = await getMaybeOutdatedAnnotationInformation(
+      const annotationInformation = await getUnversionedAnnotationInformation(
         match.params.id || "",
       );
       return annotationInformation.visibility === "Public";

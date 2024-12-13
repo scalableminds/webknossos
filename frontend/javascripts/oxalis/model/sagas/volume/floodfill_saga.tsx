@@ -77,6 +77,7 @@ function* getBoundingBoxForFloodFill(
 }
 
 const FLOODFILL_PROGRESS_KEY = "FLOODFILL_PROGRESS_KEY";
+const NO_FLOODFILL_BBOX_TOAST_KEY = "NO_FLOODFILL_BBOX";
 export function* floodFill(): Saga<void> {
   yield* take("INITIALIZE_VOLUMETRACING");
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
@@ -137,12 +138,16 @@ export function* floodFill(): Saga<void> {
     if (!isModificationAllowed) {
       continue;
     }
-    yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
     const boundingBoxForFloodFill = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
     if ("failureReason" in boundingBoxForFloodFill) {
-      Toast.warning(boundingBoxForFloodFill.failureReason);
-      return;
+      Toast.warning(boundingBoxForFloodFill.failureReason, {
+        key: NO_FLOODFILL_BBOX_TOAST_KEY,
+      });
+      continue;
+    } else {
+      Toast.close(NO_FLOODFILL_BBOX_TOAST_KEY);
     }
+    yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
     const progressCallback = createProgressCallback({
       pauseDelay: 200,
       successMessageDelay: 2000,
@@ -227,7 +232,8 @@ export function* floodFill(): Saga<void> {
         progressCallback,
         true,
         <>
-          Floodfill is done, but terminated since the labeled volume got too large. $
+          Floodfill is done, but terminated since the labeled volume got too large.
+          <br />
           {warningDetails} {Unicode.NonBreakingSpace}
           <a href="#" onClick={() => message.destroy(FLOODFILL_PROGRESS_KEY)}>
             Close

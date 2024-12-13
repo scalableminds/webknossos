@@ -1388,16 +1388,13 @@ function FloodFillSettings() {
           opacity: isRestrictedToBoundingBox ? 1 : 0.5,
           marginLeft: 12,
         }}
+        type={isRestrictedToBoundingBox ? "primary" : "default"}
         onClick={toggleRestrictFloodfillToBoundingBox}
         title={
           "When enabled, the floodfill will be restricted to the bounding box enclosed by the clicked position. If multiple bounding boxes enclose that position, the smallest is used."
         }
       >
-        <img
-          src="/assets/images/bounding-box.svg"
-          alt="Bounding Box Icon"
-          style={imgStyleForSpaceyIcons}
-        />
+        Restrict to BBox
       </ButtonComponent>
     </div>
   );

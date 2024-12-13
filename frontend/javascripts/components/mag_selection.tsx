@@ -8,11 +8,9 @@ import type { MagInfo } from "oxalis/model/helpers/mag_info";
 export function MagSelectionFormItem({
   name,
   magInfo,
-  value,
 }: {
   name: string | Array<string | number>;
   magInfo: MagInfo | undefined;
-  value?: Vector3;
 }): JSX.Element {
   return (
     <Form.Item
@@ -25,7 +23,7 @@ export function MagSelectionFormItem({
         },
       ]}
     >
-      <MagSelection magInfo={magInfo} value={value} />
+      <MagSelection magInfo={magInfo} />
     </Form.Item>
   );
 }

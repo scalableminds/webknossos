@@ -131,7 +131,6 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
       );
       const mags = volumeTracingMags[volumeTracingIndex] || ([[1, 1, 1]] as Vector3[]);
       return getMagInfo(mags);
-      // TODO_c check that they exist in ground truth layer and image data layer.
     } else {
       const segmentationLayer = getSegmentationLayerByName(dataset, layerName);
       return getMagInfo(segmentationLayer.resolutions);

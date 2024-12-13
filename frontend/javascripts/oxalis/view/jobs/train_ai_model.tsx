@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Form,
@@ -40,7 +40,7 @@ import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumet
 import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import { MagSelectionFormItem } from "components/mag_selection";
-import type { MagInfo } from "oxalis/model/helpers/mag_info";
+import { MagInfo } from "oxalis/model/helpers/mag_info";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;
@@ -167,12 +167,23 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 }) {
   const [form] = Form.useForm();
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
-  const [mags, setMags] = useState<MagInfo>();
-  const [chosenMag, setChosenMag] = useState<Vector3 | undefined>();
+  const [mags, setMags] = useState<Map<string, MagInfo>>(); // maps annotationId to MagInfo
+  const [groundTruthLayerMags, setGroundTruthLayerMags] = useState<string, MagInfo>();
+  const [dataLayerMags, setDataLayerMags] = useState<string, MagInfo>();
 
-  const getAvailableMags = (groundTruthLayerName: string, annotationId: string) => {
-    console.log("getAvailableMags", groundTruthLayerName, annotationId);
-    setChosenMag(undefined); // TODO_c doesnt work
+  useEffect(() => {
+    // TODO make this mag specific
+    const intersectingMags = groundTruthLayerMags
+      ?.getMagList()
+      .filter((mag) => dataLayerMags?.includes(mag));
+    console.log("updating", dataLayerMags, groundTruthLayerMags);
+    setMags(intersectingMags != null ? new MagInfo(intersectingMags) : undefined);
+  }, [dataLayerMags, groundTruthLayerMags]);
+
+  const getAvailableMagsForGroundTruthLayer = (
+    groundTruthLayerName: string,
+    annotationId: string,
+  ) => {
     return getMagsForSegmentationLayer(annotationId, groundTruthLayerName);
   };
 
@@ -291,7 +302,9 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
         );
         const fixedSelectedColorLayer = colorLayers.length === 1 ? colorLayers[0] : null;
         const annotationId = "id" in annotation ? annotation.id : annotation.annotationId;
-        //const mags = getMagsForSegmentationLayer(annotationId, form.getFieldValue(["trainingAnnotations", idx, "layerName"])); // TODO_c
+        const dataLayerMags =
+          fixedSelectedColorLayer != null ? fixedSelectedColorLayer.resolutions : [];
+
         return (
           <Row key={annotationId} gutter={8}>
             <Col span={6}>
@@ -322,6 +335,12 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                   getReadableNameForLayer={(layer) => layer.name}
                   fixedLayerName={fixedSelectedColorLayer?.name || undefined}
                   style={{ width: "100%" }}
+                  onChange={(newLayerName) => {
+                    setDataLayerMags(
+                      colorLayers.filter((layer) => layer.name === newLayerName)[0].resolutions,
+                    );
+                    form.setFieldValue(["trainingAnnotations", idx, "mag"], undefined);
+                  }}
                 />
               </FormItem>
             </Col>
@@ -332,21 +351,22 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                 layers={segmentationLayers}
                 getReadableNameForLayer={(layer) => {
                   return layer.name;
+                  //TODO_c fix that fallback layers are shown at least with the correct name?
+                  // eg. name (fallbacklayer)
+                  // remember to check-in with P
                 }}
                 fixedLayerName={fixedSelectedSegmentationLayer?.name || undefined}
                 label="Ground Truth Layer"
                 onChange={(newLayerName) => {
-                  setMags(getAvailableMags(newLayerName, annotationId));
-                  setChosenMag(undefined);
+                  setGroundTruthLayerMags(
+                    getAvailableMagsForGroundTruthLayer(newLayerName, annotationId),
+                  );
+                  form.setFieldValue(["trainingAnnotations", idx, "mag"], undefined);
                 }}
               />
             </Col>
             <Col span={6}>
-              <MagSelectionFormItem
-                name={["trainingAnnotations", idx, "mag"]}
-                magInfo={mags}
-                value={chosenMag}
-              />
+              <MagSelectionFormItem name={["trainingAnnotations", idx, "mag"]} magInfo={mags} />
             </Col>
           </Row>
         );
@@ -368,31 +388,31 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 
       {hasErrors
         ? errors.map((error) => (
-            <Alert
-              key={error}
-              description={error}
-              style={{
-                marginBottom: 12,
-                whiteSpace: "pre-line",
-              }}
-              type="error"
-              showIcon
-            />
-          ))
+          <Alert
+            key={error}
+            description={error}
+            style={{
+              marginBottom: 12,
+              whiteSpace: "pre-line",
+            }}
+            type="error"
+            showIcon
+          />
+        ))
         : null}
       {hasWarnings
         ? warnings.map((warning) => (
-            <Alert
-              key={warning}
-              description={warning}
-              style={{
-                marginBottom: 12,
-                whiteSpace: "pre-line",
-              }}
-              type="warning"
-              showIcon
-            />
-          ))
+          <Alert
+            key={warning}
+            description={warning}
+            style={{
+              marginBottom: 12,
+              whiteSpace: "pre-line",
+            }}
+            type="warning"
+            showIcon
+          />
+        ))
         : null}
 
       <FormItem>
@@ -636,10 +656,10 @@ function AnnotationsCsvInput({
               return valid
                 ? Promise.resolve()
                 : Promise.reject(
-                    new Error(
-                      "Each line should only contain an annotation ID or URL (without # or ,)",
-                    ),
-                  );
+                  new Error(
+                    "Each line should only contain an annotation ID or URL (without # or ,)",
+                  ),
+                );
             },
           }),
         ]}

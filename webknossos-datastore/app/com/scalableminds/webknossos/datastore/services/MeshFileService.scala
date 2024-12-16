@@ -4,7 +4,6 @@ import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.JsonHelper.bool2Box
 import com.scalableminds.util.tools.{ByteUtils, Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.ShardingSpecification
@@ -25,6 +24,7 @@ import com.scalableminds.webknossos.datastore.storage.{
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
+import net.liftweb.common.Full
 import org.apache.commons.io.FilenameUtils
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Json, OFormat}
@@ -480,7 +480,8 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
       chunk <- mesh.getChunk(chunkRange, shardUrl)
       segmentManifest = NeuroglancerSegmentManifest.fromBytes(chunk)
       meshSegmentInfo = enrichSegmentInfo(segmentManifest, meshInfo.lod_scale_multiplier, chunkRange.start, segmentId)
-      transform = meshInfo.transform2DArray
+      transform = meshInfo.transform2DArray // Something is going wrong here, the meshes are far outside the other data
+      //transform = Array(Array(2.0, 0.0, 0.0, 0.0), Array(0.0, 2.0, 0.0, 0.0), Array(0.0, 0.0, 2.0, 0.0))
       encoding = "draco"
       wkChunkInfos <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(List(meshSegmentInfo), encoding, transform)
     } yield wkChunkInfos
@@ -511,20 +512,16 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
     // Sort the requests by byte offset to optimize for spinning disk access
     val requestsReordered =
       meshChunkDataRequests.requests.zipWithIndex.sortBy(requestAndIndex => requestAndIndex._1.byteOffset).toList
-    val data: List[(Array[Byte], String, Int)] = requestsReordered.map { requestAndIndex =>
+    val data: List[(Array[Byte], Int)] = requestsReordered.map { requestAndIndex =>
       val meshChunkDataRequest = requestAndIndex._1
       val data =
         cachedMeshFile.uint8Reader.readArrayBlockWithOffset("neuroglancer",
                                                             meshChunkDataRequest.byteSize,
                                                             meshChunkDataRequest.byteOffset)
-      (data, meshFormat, requestAndIndex._2)
+      (data, requestAndIndex._2)
     }
-    val dataSorted = data.sortBy(d => d._3)
-    for {
-      _ <- bool2Box(data.map(d => d._2).toSet.size == 1) ?~! "Different encodings for the same mesh chunk request found."
-      encoding <- data.map(d => d._2).headOption
-      output = dataSorted.flatMap(d => d._1).toArray
-    } yield (output, encoding)
+    val dataSorted = data.sortBy(d => d._2)
+    Full((dataSorted.flatMap(d => d._1).toArray, meshFormat))
   }
 
   def clearCache(organizationId: String, datasetDirectoryName: String, layerNameOpt: Option[String]): Int = {

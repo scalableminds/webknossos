@@ -178,7 +178,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
             meshFilePath,
             Seq(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, segmentId))
           ) ?~> "mesh.file.loadChunk.failed"
-        case None =>
+        case _ =>
           meshFileService.readMeshChunk(
             organizationId,
             datasetDirectoryName,
@@ -212,7 +212,8 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
         fullMeshRequest.meshFilePath,
         fullMeshRequest.segmentId
       )
-      allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods.head.chunks
+      selectedLod = fullMeshRequest.lod.getOrElse(0)
+      allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods(selectedLod).chunks
       stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { chunkRange: MeshChunk =>
         readMeshChunkAsStl(
           organizationId,
@@ -220,7 +221,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
           layerName,
           fullMeshRequest.meshFileName.get,
           chunkRange,
-          chunkInfos.transform,
+          Array(Array(1, 0, 0), Array(0, 1, 0), Array(0, 0, 1)),
           fullMeshRequest.meshFileType,
           fullMeshRequest.meshFilePath,
           Some(fullMeshRequest.segmentId)

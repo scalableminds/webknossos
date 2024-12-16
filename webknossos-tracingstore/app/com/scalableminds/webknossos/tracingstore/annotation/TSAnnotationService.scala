@@ -332,6 +332,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
               Some(materializedSkeletonVersion + 1))(fromJsonBytes[List[UpdateAction]])
           } else Fox.successful(List.empty)
           extraSkeletonUpdates = filterSkeletonUpdates(extraUpdates)
+          _ = logger.info(s"${extraSkeletonUpdates.length} extraSkeletonUpdates")
         } yield extraSkeletonUpdates
       }.getOrElse(Fox.successful(List.empty))
     } else Fox.successful(List.empty)

@@ -76,9 +76,9 @@ class Migration:
                 if self.args.verbose:
                     logger.info(f"Migrating annotation {annotation['_id']} (dry={self.args.dry}) ...")
                 mapping_id_map = self.build_mapping_id_map(annotation)
-                layer_version_mapping, included_revert = self.migrate_updates(annotation, mapping_id_map)
-                # if included_revert and self.args.previous_start is not None:
-                self.clean_up_previously_migrated(annotation, mapping_id_map)
+                if self.includes_revert(annotation) and self.args.previous_start is not None:
+                    self.clean_up_previously_migrated(annotation, mapping_id_map)
+                layer_version_mapping = self.migrate_updates(annotation, mapping_id_map)
                 materialized_versions = self.migrate_materialized_layers(annotation, layer_version_mapping, mapping_id_map)
                 if len(materialized_versions) == 0:
                     raise ValueError(f"Zero materialized versions present in source FossilDB for annotation {annotation['_id']}.")
@@ -127,17 +127,26 @@ class Migration:
         updates_for_layer.reverse()
         return updates_for_layer, included_revert
 
-    def migrate_updates(self, annotation, mapping_id_map: MappingIdMap) -> Tuple[LayerVersionMapping, bool]:
+    def includes_revert(self, annotation) -> bool:
+        json_encoder = msgspec.json.Encoder()
+        json_decoder = msgspec.json.Decoder()
+        layers = list(annotation["layers"].items())
+        for tracing_id, layer_type in layers:
+            collection = self.update_collection_for_layer_type(layer_type)
+            _, layer_included_revert = self.fetch_updates(tracing_id, layer_type, collection, json_encoder=json_encoder, json_decoder=json_decoder)
+            if layer_included_revert:
+                return True
+        return False
+
+    def migrate_updates(self, annotation, mapping_id_map: MappingIdMap) -> LayerVersionMapping:
         all_update_groups = []
         json_encoder = msgspec.json.Encoder()
         json_decoder = msgspec.json.Decoder()
         layers = list(annotation["layers"].items())
-        included_revert = False
         for tracing_id, layer_type in layers:
             collection = self.update_collection_for_layer_type(layer_type)
-            batch_updates, layer_included_revert = self.fetch_updates(tracing_id, layer_type, collection, json_encoder=json_encoder, json_decoder=json_decoder)
+            batch_updates, _ = self.fetch_updates(tracing_id, layer_type, collection, json_encoder=json_encoder, json_decoder=json_decoder)
             all_update_groups.append(batch_updates)
-            included_revert = included_revert or layer_included_revert
             if tracing_id in mapping_id_map:
                 editable_mapping_id = mapping_id_map[tracing_id]
                 batch_updates, _ = self.fetch_updates(editable_mapping_id, "editableMapping", "editableMappingUpdates", json_encoder=json_encoder, json_decoder=json_decoder)
@@ -168,7 +177,7 @@ class Migration:
                 next_element = all_update_groups[layer_index][element_index + 1]
                 heapq.heappush(queue, (next_element, layer_index, element_index + 1))
 
-        return version_mapping, included_revert
+        return version_mapping
 
     def get_editable_mapping_id(self, tracing_id: str, layer_type: str) -> Optional[str]:
         if layer_type == "Skeleton":
@@ -477,7 +486,7 @@ class Migration:
         assert_grpc_success(reply)
 
     def delete_all_with_prefix(self, collection: str, prefix: str) -> None:
-        reply = self.dst_stub.DeleteAllByPrefix(proto.DeleteAllByPrefixRequest(collection=collection, prefix=id))
+        reply = self.dst_stub.DeleteAllByPrefix(proto.DeleteAllByPrefixRequest(collection=collection, prefix=prefix))
         assert_grpc_success(reply)
 
     def read_annotation_list(self):

@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalAxisProto, Vec2IntProto}
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, FetchedAnnotationLayer}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat
+import models.annotation.SharedParsingParameters
 import models.annotation.nml.{NmlParseSuccessWithoutFile, NmlParser, NmlWriter}
 import net.liftweb.common.{Box, Full}
 import org.apache.commons.io.output.ByteArrayOutputStream
@@ -54,8 +55,10 @@ class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
         .parse(
           "",
           new ByteArrayInputStream(array),
-          overwritingDatasetId = None,
-          isTaskUpload = true,
+          SharedParsingParameters(useZipName = false,
+                                  overwritingDatasetId = None,
+                                  userOrganizationId = "testOrganization",
+                                  isTaskUpload = true),
           basePath = None
         )(messagesProvider, scala.concurrent.ExecutionContext.global, GlobalAccessContext)
         .futureBox,

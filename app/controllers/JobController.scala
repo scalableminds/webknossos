@@ -280,7 +280,7 @@ class JobController @Inject()(
   def runAlignSectionsJob(datasetId: ObjectId,
                           layerName: String,
                           newDatasetName: String,
-                          annotationId: Option[String] = None): Action[AnyContent] =
+                          annotationId: Option[ObjectId] = None): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -291,7 +291,6 @@ class JobController @Inject()(
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.alignSections.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
-          _ <- Fox.runOptional(annotationId)(ObjectId.fromString)
           command = JobCommand.align_sections
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
@@ -313,7 +312,7 @@ class JobController @Inject()(
                        layerName: Option[String],
                        mag: Option[String],
                        annotationLayerName: Option[String],
-                       annotationId: Option[String],
+                       annotationId: Option[ObjectId],
                        asOmeTiff: Boolean): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
@@ -364,7 +363,7 @@ class JobController @Inject()(
 
   def runMaterializeVolumeAnnotationJob(datasetId: ObjectId,
                                         fallbackLayerName: String,
-                                        annotationId: String,
+                                        annotationId: ObjectId,
                                         annotationType: String,
                                         newDatasetName: String,
                                         outputSegmentationLayerName: String,

@@ -381,9 +381,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
     nodes.headOption.map(node => getSingleAttribute(node, "wkUrl"))
 
   private def parseOrganizationId(nodes: NodeSeq, fallbackOrganization: String): String =
-    nodes.headOption
-      .map(node => getSingleAttributeOpt(node, "organization").getOrElse(fallbackOrganization))
-      .getOrElse(fallbackOrganization)
+    nodes.headOption.flatMap(node => getSingleAttributeOpt(node, "organization")).getOrElse(fallbackOrganization)
 
   private def parseActiveNode(nodes: NodeSeq): Option[Int] =
     nodes.headOption.flatMap(node => getSingleAttribute(node, "id").toIntOpt)

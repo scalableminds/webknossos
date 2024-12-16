@@ -66,6 +66,7 @@ import {
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
 import { getDefaultBrushSizes } from "oxalis/view/action-bar/toolbar_view";
 import { userSettings } from "types/schemas/user_settings.schema";
+import { highlightAndSetCursorOnHoveredBoundingBox } from "../combinations/bounding_box_handlers";
 
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,
@@ -183,11 +184,28 @@ class BoundingBoxKeybindings {
   static getKeyboardControls() {
     return {
       c: () => Store.dispatch(addUserBoundingBoxAction()),
+      meta: BoundingBoxKeybindings.createKeyDownAndUpHandler(),
+      ctrl: BoundingBoxKeybindings.createKeyDownAndUpHandler(),
     };
   }
 
+  static handleUpdateCursor = (event: KeyboardEvent) => {
+    const { viewModeData, temporaryConfiguration } = Store.getState();
+    const { mousePosition } = temporaryConfiguration;
+    if (mousePosition == null) return;
+    highlightAndSetCursorOnHoveredBoundingBox(
+      { x: mousePosition[0], y: mousePosition[1] },
+      viewModeData.plane.activeViewport,
+      event,
+    );
+  };
+
   static getExtendedKeyboardControls() {
     return { x: () => setTool(AnnotationToolEnum.BOUNDING_BOX) };
+  }
+
+  static createKeyDownAndUpHandler() {
+    return (event: KeyboardEvent) => BoundingBoxKeybindings.handleUpdateCursor(event);
   }
 }
 
@@ -364,6 +382,7 @@ class PlaneController extends React.PureComponent<Props> {
     });
     const {
       baseControls: notLoopedKeyboardControls,
+      keyUpControls,
       extendedControls: extendedNotLoopedKeyboardControls,
     } = this.getNotLoopedKeyboardControls();
     const loopedKeyboardControls = this.getLoopedKeyboardControls();
@@ -397,6 +416,7 @@ class PlaneController extends React.PureComponent<Props> {
       notLoopedKeyboardControls,
       {},
       extendedNotLoopedKeyboardControls,
+      keyUpControls,
     );
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
@@ -501,7 +521,11 @@ class PlaneController extends React.PureComponent<Props> {
       this.props.tracing.volumes.length > 0
         ? VolumeKeybindings.getKeyboardControls()
         : emptyDefaultHandler;
-    const { c: boundingBoxCHandler } = BoundingBoxKeybindings.getKeyboardControls();
+    const {
+      c: boundingBoxCHandler,
+      meta: boundingBoxMetaHandler,
+      ctrl: boundingBoxCtrlHandler,
+    } = BoundingBoxKeybindings.getKeyboardControls();
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
     const extendedSkeletonControls =
       this.props.tracing.skeleton != null ? SkeletonKeybindings.getExtendedKeyboardControls() : {};
@@ -524,6 +548,12 @@ class PlaneController extends React.PureComponent<Props> {
           volumeCHandler,
           boundingBoxCHandler,
         ),
+        ctrl: this.createToolDependentKeyboardHandler(null, null, boundingBoxCtrlHandler),
+        meta: this.createToolDependentKeyboardHandler(null, null, boundingBoxMetaHandler),
+      },
+      keyUpControls: {
+        ctrl: this.createToolDependentKeyboardHandler(null, null, boundingBoxCtrlHandler),
+        meta: this.createToolDependentKeyboardHandler(null, null, boundingBoxMetaHandler),
       },
       extendedControls,
     };

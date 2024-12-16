@@ -176,8 +176,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
   const [mags, setMags] = useState<MagInfoPerAnnotation[]>(); // maps annotationId to MagInfo of intersection of
 
-  // this should be a hook. depending on both layer names. TODO_c
-  const setIntersectingMags = (
+  const getIntersectingMagList = (
     annotationId: string,
     dataset: APIDataset,
     groundTruthLayerName: string,
@@ -191,7 +190,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
     ).getMagList();
     const dataLayerMags = getMagsForColorLayer(colorLayers, imageDataLayerName);
 
-    const intersectingMags = groundTruthLayerMags?.filter((groundTruthMag) =>
+    return groundTruthLayerMags?.filter((groundTruthMag) =>
       dataLayerMags?.find(
         (mag) =>
           mag[0] === groundTruthMag[0] &&
@@ -199,18 +198,38 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
           mag[2] === groundTruthMag[2],
       ),
     );
+  };
+
+  const getIntersectingMags = (
+    annotationId: string,
+    dataset: APIDataset,
+    groundTruthLayerName: string,
+    imageDataLayerName: string,
+  ) => {
+    const intersectingMags = getIntersectingMagList(
+      annotationId,
+      dataset,
+      groundTruthLayerName,
+      imageDataLayerName,
+    );
     if (mags == null) {
-      setMags([{ annotationId, magInfo: new MagInfo(intersectingMags) }]);
+      return [{ annotationId, magInfo: new MagInfo(intersectingMags) }];
     } else {
-      setMags(
-        mags.map((mag) =>
-          mag.annotationId === annotationId
-            ? { annotationId, magInfo: new MagInfo(intersectingMags) }
-            : mag,
-        ),
+      return mags.map((mag) =>
+        mag.annotationId === annotationId
+          ? { annotationId, magInfo: new MagInfo(intersectingMags) }
+          : mag,
       );
     }
   };
+
+  const setIntersectingMags = (
+    annotationId: string,
+    dataset: APIDataset,
+    groundTruthLayerName: string,
+    imageDataLayerName: string,
+  ) =>
+    setMags(getIntersectingMags(annotationId, dataset, groundTruthLayerName, imageDataLayerName));
 
   const getMagsForColorLayer = (colorLayers: APIDataLayer[], layerName: string) => {
     const colorLayer = colorLayers.find((layer) => layer.name === layerName);
@@ -333,6 +352,17 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
         const fixedSelectedColorLayer = colorLayers.length === 1 ? colorLayers[0] : null;
         const annotationId = "id" in annotation ? annotation.id : annotation.annotationId;
 
+        const initialMags =
+          fixedSelectedColorLayer != null && fixedSelectedSegmentationLayer != null
+            ? getIntersectingMagList(
+                annotationId,
+                dataset,
+                fixedSelectedSegmentationLayer.name,
+                fixedSelectedColorLayer.name,
+              )
+            : [];
+        const initialMagInfo = new MagInfo(initialMags);
+
         return (
           <Row key={annotationId} gutter={8}>
             <Col span={6}>
@@ -381,6 +411,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                 chooseSegmentationLayer
                 layers={segmentationLayers}
                 getReadableNameForLayer={(layer) => {
+                  console.log(layer);
                   return layer.name;
                   //TODO_c fix that fallback layers are shown at least with the correct name?
                   // eg. name (fallbacklayer)
@@ -403,8 +434,10 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
               <MagSelectionFormItem
                 name={["trainingAnnotations", idx, "mag"]}
                 magInfo={
-                  mags?.find((magInfoPerAnno) => magInfoPerAnno.annotationId === annotationId)
-                    ?.magInfo
+                  mags != null
+                    ? mags.find((magInfoPerAnno) => magInfoPerAnno.annotationId === annotationId)
+                        ?.magInfo
+                    : initialMagInfo
                 }
               />
             </Col>

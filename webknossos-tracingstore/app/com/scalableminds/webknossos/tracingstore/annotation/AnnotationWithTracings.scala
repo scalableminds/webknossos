@@ -117,8 +117,12 @@ case class AnnotationWithTracings(
       case Left(t: SkeletonTracing) => Left(t.withVersion(newVersion))
       case Right(t: VolumeTracing)  => Right(t.withVersion(newVersion))
     }
-    this.copy(annotation = annotation.copy(version = newVersion, skeletonMayHavePendingUpdates = None),
-              tracingsById = tracingsUpdated.toMap)
+    this.copy(
+      annotation = annotation.copy(version = newVersion,
+                                   skeletonMayHavePendingUpdates = None,
+                                   editableMappingsMayHavePendingUpdates = None),
+      tracingsById = tracingsUpdated.toMap
+    )
   }
 
   def withNewUpdaters(materializedVersion: Long, targetVersion: Long): AnnotationWithTracings = {

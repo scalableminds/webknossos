@@ -153,12 +153,13 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       } yield replacedResults
     }
 
-  def annotationInfoV8(id: String, timestamp: Long): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      _ <- Fox.successful(logVersioned(request))
-      result <- annotationController.infoWithoutType(id, timestamp)(request)
-      adaptedResult <- replaceInResult(addDataSetToTaskInAnnotation)(result)
-    } yield adaptedResult
+  def annotationInfoV8(id: ObjectId, timestamp: Long): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        _ <- Fox.successful(logVersioned(request))
+        result <- annotationController.infoWithoutType(id, timestamp)(request)
+        adaptedResult <- replaceInResult(addDataSetToTaskInAnnotation)(result)
+      } yield adaptedResult
   }
 
   def annotationsForTaskV8(taskId: ObjectId): Action[AnyContent] =

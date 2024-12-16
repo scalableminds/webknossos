@@ -185,7 +185,7 @@ class ProjectController @Inject()(projectService: ProjectService,
       activeAnnotations <- annotationDAO.findAllActiveForProject(project._id)
       _ <- Fox.serialCombined(activeAnnotations) { id =>
         annotationService.transferAnnotationToUser(AnnotationType.Task.toString,
-                                                   id.toString,
+                                                   id,
                                                    newUserIdValidated,
                                                    request.identity)
       }

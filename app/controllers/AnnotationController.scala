@@ -90,7 +90,7 @@ class AnnotationController @Inject()(
   def info( // Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType
            typ: String,
            // For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id
-           id: String,
+           id: ObjectId,
            // Timestamp in milliseconds (time at which the request is sent)
            timestamp: Long): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     log() {
@@ -118,7 +118,7 @@ class AnnotationController @Inject()(
     }
   }
 
-  def infoWithoutType(id: String,
+  def infoWithoutType(id: ObjectId,
                       // Timestamp in milliseconds (time at which the request is sent
                       timestamp: Long): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     log() {
@@ -130,7 +130,7 @@ class AnnotationController @Inject()(
     }
   }
 
-  def merge(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
+  def merge(typ: String, id: ObjectId, mergedTyp: String, mergedId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         annotationA <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
@@ -143,7 +143,7 @@ class AnnotationController @Inject()(
       } yield JsonOk(js, Messages("annotation.merge.success"))
     }
 
-  def mergeWithoutType(id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
+  def mergeWithoutType(id: ObjectId, mergedTyp: String, mergedId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
@@ -151,7 +151,7 @@ class AnnotationController @Inject()(
       } yield result
     }
 
-  def reset(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def reset(typ: String, id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, annotation._team))
@@ -161,7 +161,7 @@ class AnnotationController @Inject()(
     } yield JsonOk(json, Messages("annotation.reset.success"))
   }
 
-  def reopen(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def reopen(typ: String, id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     def isReopenAllowed(user: User, annotation: Annotation) =
       for {
         isAdminOrTeamManager <- userService.isTeamManagerOrAdminOf(user, annotation._team)
@@ -181,8 +181,8 @@ class AnnotationController @Inject()(
     } yield JsonOk(json, Messages("annotation.reopened"))
   }
 
-  def editLockedState(typ: String, id: String, isLockedByOwner: Boolean): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
+  def editLockedState(typ: String, id: ObjectId, isLockedByOwner: Boolean): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(typ, id, request.identity)
         _ <- bool2Fox(annotation._user == request.identity._id) ?~> "annotation.isLockedByOwner.notAllowed"
@@ -193,9 +193,9 @@ class AnnotationController @Inject()(
         updatedAnnotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
         json <- annotationService.publicWrites(updatedAnnotation, Some(request.identity)) ?~> "annotation.write.failed"
       } yield JsonOk(json, Messages("annotation.isLockedByOwner.success"))
-  }
+    }
 
-  def addAnnotationLayer(typ: String, id: String): Action[AnnotationLayerParameters] =
+  def addAnnotationLayer(typ: String, id: ObjectId): Action[AnnotationLayerParameters] =
     sil.SecuredAction.async(validateJson[AnnotationLayerParameters]) { implicit request =>
       for {
         _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.addLayer.explorationalsOnly"
@@ -211,7 +211,7 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
     }
 
-  def addAnnotationLayerWithoutType(id: String): Action[AnnotationLayerParameters] =
+  def addAnnotationLayerWithoutType(id: ObjectId): Action[AnnotationLayerParameters] =
     sil.SecuredAction.async(validateJson[AnnotationLayerParameters]) { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
@@ -219,7 +219,7 @@ class AnnotationController @Inject()(
       } yield result
     }
 
-  def deleteAnnotationLayer(typ: String, id: String, layerName: String): Action[AnyContent] =
+  def deleteAnnotationLayer(typ: String, id: ObjectId, layerName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.deleteLayer.explorationalsOnly"
@@ -235,7 +235,7 @@ class AnnotationController @Inject()(
       } yield Ok
     }
 
-  def deleteAnnotationLayerWithoutType(id: String, layerName: String): Action[AnyContent] =
+  def deleteAnnotationLayerWithoutType(id: ObjectId, layerName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
@@ -281,7 +281,7 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
     }
 
-  def makeHybrid(typ: String, id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
+  def makeHybrid(typ: String, id: ObjectId, fallbackLayerName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.addLayer.explorationalsOnly"
@@ -295,7 +295,7 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
     }
 
-  def makeHybridWithoutType(id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
+  def makeHybridWithoutType(id: ObjectId, fallbackLayerName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
@@ -303,7 +303,7 @@ class AnnotationController @Inject()(
       } yield result
     }
 
-  def downsample(typ: String, id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
+  def downsample(typ: String, id: ObjectId, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
         _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.downsample.explorationalsOnly"
@@ -319,7 +319,7 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
   }
 
-  def downsampleWithoutType(id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
+  def downsampleWithoutType(id: ObjectId, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
@@ -391,7 +391,7 @@ class AnnotationController @Inject()(
     f"$value%1.1f %%"
   }
 
-  private def finishAnnotation(typ: String, id: String, issuingUser: User, timestamp: Instant)(
+  private def finishAnnotation(typ: String, id: ObjectId, issuingUser: User, timestamp: Instant)(
       implicit ctx: DBAccessContext): Fox[(Annotation, String)] =
     for {
       annotation <- provider.provideAnnotation(typ, id, issuingUser) ~> NOT_FOUND
@@ -401,7 +401,7 @@ class AnnotationController @Inject()(
       _ <- timeSpanService.logUserInteractionIfTheyArePotentialContributor(timestamp, issuingUser, annotation) // log time on tracing end
     } yield (updated, message)
 
-  def finish(typ: String, id: String, timestamp: Long): Action[AnyContent] = sil.SecuredAction.async {
+  def finish(typ: String, id: ObjectId, timestamp: Long): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       log() {
         for {
@@ -417,7 +417,10 @@ class AnnotationController @Inject()(
       log() {
         withJsonAs[JsArray](request.body \ "annotations") { annotationIds =>
           val results = Fox.serialSequence(annotationIds.value.toList) { jsValue =>
-            jsValue.asOpt[String].toFox.flatMap(id => finishAnnotation(typ, id, request.identity, Instant(timestamp)))
+            jsValue
+              .asOpt[String]
+              .toFox
+              .flatMap(id => finishAnnotation(typ, ObjectId(id), request.identity, Instant(timestamp)))
           }
 
           results.map { _ =>
@@ -427,7 +430,7 @@ class AnnotationController @Inject()(
       }
   }
 
-  def editAnnotation(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
+  def editAnnotation(typ: String, id: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
       for {
         annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
@@ -451,7 +454,7 @@ class AnnotationController @Inject()(
       } yield JsonOk(Messages("annotation.edit.success"))
   }
 
-  def editAnnotationLayer(typ: String, id: String, tracingId: String): Action[JsValue] =
+  def editAnnotationLayer(typ: String, id: ObjectId, tracingId: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
       for {
         annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
@@ -473,7 +476,7 @@ class AnnotationController @Inject()(
       } yield Ok(JsArray(jsons.flatten))
     }
 
-  def cancel(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def cancel(typ: String, id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     def tryToCancel(annotation: Annotation) =
       annotation match {
         case t if t.typ == AnnotationType.Task =>
@@ -493,14 +496,14 @@ class AnnotationController @Inject()(
     } yield result
   }
 
-  def cancelWithoutType(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def cancelWithoutType(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
       result <- cancel(annotation.typ.toString, id)(request)
     } yield result
   }
 
-  def transfer(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
+  def transfer(typ: String, id: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     for {
       restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
       _ <- restrictions.allowFinish(request.identity) ?~> "notAllowed" ~> FORBIDDEN
@@ -511,7 +514,7 @@ class AnnotationController @Inject()(
     } yield JsonOk(json)
   }
 
-  def duplicate(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def duplicate(typ: String, id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
       newAnnotation <- duplicateAnnotation(annotation, request.identity)
@@ -550,7 +553,7 @@ class AnnotationController @Inject()(
 
     }
 
-  def getSharedTeams(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def getSharedTeams(typ: String, id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity)
       _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
@@ -559,7 +562,7 @@ class AnnotationController @Inject()(
     } yield Ok(Json.toJson(json))
   }
 
-  def updateSharedTeams(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
+  def updateSharedTeams(typ: String, id: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
       withJsonBodyAs[List[String]] { teams =>
         for {
@@ -573,7 +576,7 @@ class AnnotationController @Inject()(
       }
   }
 
-  def updateOthersMayEdit(typ: String, id: String, othersMayEdit: Boolean): Action[AnyContent] =
+  def updateOthersMayEdit(typ: String, id: ObjectId, othersMayEdit: Boolean): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(typ, id, request.identity)
@@ -620,14 +623,13 @@ class AnnotationController @Inject()(
       }
     } yield annotationLayer.copy(tracingId = newTracingId)
 
-  def tryAcquiringAnnotationMutex(id: String): Action[AnyContent] =
+  def tryAcquiringAnnotationMutex(id: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
         for {
-          idValidated <- ObjectId.fromString(id)
           annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
           _ <- bool2Fox(annotation.othersMayEdit) ?~> "notAllowed" ~> FORBIDDEN
-          restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, idValidated)) ?~> "restrictions.notFound" ~> NOT_FOUND
+          restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, id)) ?~> "restrictions.notFound" ~> NOT_FOUND
           _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
           mutexResult <- annotationMutexService.tryAcquiringAnnotationMutex(annotation._id, request.identity._id) ?~> "annotation.mutex.failed"
           resultJson <- annotationMutexService.publicWrites(mutexResult)

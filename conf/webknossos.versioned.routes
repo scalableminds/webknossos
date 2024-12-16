@@ -26,7 +26,7 @@ GET      /v8/tasks/:id                                                        co
 POST     /v8/tasks                                                            controllers.LegacyApiController.createTaskV8()
 PUT      /v8/tasks/:id                                                        controllers.LegacyApiController.updateTaskV8(id: ObjectId)
 GET      /v8/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: ObjectId, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET      /v8/annotations/:id/info                                             controllers.LegacyApiController.annotationInfoV8(id: String, timestamp: Long)
+GET      /v8/annotations/:id/info                                             controllers.LegacyApiController.annotationInfoV8(id: ObjectId, timestamp: Long)
 GET      /v8/tasks/:id/annotations                                            controllers.LegacyApiController.annotationsForTaskV8(id: ObjectId)
 
 ->       /v8/                                                                 webknossos.latest.Routes
@@ -40,7 +40,7 @@ GET      /v7/tasks/:id                                                        co
 POST     /v7/tasks                                                            controllers.LegacyApiController.createTaskV8()
 PUT      /v7/tasks/:id                                                        controllers.LegacyApiController.updateTaskV8(id: ObjectId)
 GET      /v7/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: ObjectId, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET      /v7/annotations/:id/info                                             controllers.LegacyApiController.annotationInfoV8(id: String, timestamp: Long)
+GET      /v7/annotations/:id/info                                             controllers.LegacyApiController.annotationInfoV8(id: ObjectId, timestamp: Long)
 GET      /v7/tasks/:id/annotations                                            controllers.LegacyApiController.annotationsForTaskV8(id: ObjectId)
 
 # v7: support changes to v8
@@ -57,7 +57,7 @@ GET      /v6/tasks/:id                                                        co
 POST     /v6/tasks                                                            controllers.LegacyApiController.createTaskV8()
 PUT      /v6/tasks/:id                                                        controllers.LegacyApiController.updateTaskV8(id: ObjectId)
 GET      /v6/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: ObjectId, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET      /v6/annotations/:id/info                                             controllers.LegacyApiController.annotationInfoV8(id: String, timestamp: Long)
+GET      /v6/annotations/:id/info                                             controllers.LegacyApiController.annotationInfoV8(id: ObjectId, timestamp: Long)
 GET      /v6/tasks/:id/annotations                                            controllers.LegacyApiController.annotationsForTaskV8(id: ObjectId)
 
 
@@ -77,7 +77,7 @@ GET      /v5/tasks/:id                                                        co
 POST     /v5/tasks                                                            controllers.LegacyApiController.createTaskV8()
 PUT      /v5/tasks/:id                                                        controllers.LegacyApiController.updateTaskV8(id: ObjectId)
 GET      /v5/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: ObjectId, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET      /v5/annotations/:id/info                                             controllers.LegacyApiController.annotationInfoV8(id: String, timestamp: Long)
+GET      /v5/annotations/:id/info                                             controllers.LegacyApiController.annotationInfoV8(id: ObjectId, timestamp: Long)
 GET      /v5/tasks/:id/annotations                                            controllers.LegacyApiController.annotationsForTaskV8(id: ObjectId)
 
 # v5: support changes to v7

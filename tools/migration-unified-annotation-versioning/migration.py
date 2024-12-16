@@ -26,7 +26,7 @@ logger = logging.getLogger("migration-logs")
 checkpoint_logger = logging.getLogger("migration-checkpoints")
 
 
-LayerVersionMapping = Dict[str, Dict[int, int]] # tracing id to (old version to new version)
+LayerVersionMapping = Dict[str, Dict[int, int]] # tracing id OR old mapping id to (old version to new version)
 MappingIdMap = Dict[str, str] # tracing id to editable mapping id
 
 
@@ -143,19 +143,22 @@ class Migration:
         json_encoder = msgspec.json.Encoder()
         json_decoder = msgspec.json.Decoder()
         layers = list(annotation["layers"].items())
+        tracing_ids_and_mapping_ids = []
         for tracing_id, layer_type in layers:
             collection = self.update_collection_for_layer_type(layer_type)
-            batch_updates, _ = self.fetch_updates(tracing_id, layer_type, collection, json_encoder=json_encoder, json_decoder=json_decoder)
-            all_update_groups.append(batch_updates)
+            layer_updates, _ = self.fetch_updates(tracing_id, layer_type, collection, json_encoder=json_encoder, json_decoder=json_decoder)
+            all_update_groups.append(layer_updates)
+            tracing_ids_and_mapping_ids.append(tracing_id)
             if tracing_id in mapping_id_map:
-                editable_mapping_id = mapping_id_map[tracing_id]
-                batch_updates, _ = self.fetch_updates(editable_mapping_id, "editableMapping", "editableMappingUpdates", json_encoder=json_encoder, json_decoder=json_decoder)
-                all_update_groups.append(batch_updates)
+                mapping_id = mapping_id_map[tracing_id]
+                layer_updates, _ = self.fetch_updates(mapping_id, "editableMapping", "editableMappingUpdates", json_encoder=json_encoder, json_decoder=json_decoder)
+                all_update_groups.append(layer_updates)
+                tracing_ids_and_mapping_ids.append(mapping_id)
 
         unified_version = 0
         version_mapping = {}
-        for tracing_id, _ in layers:
-            version_mapping[tracing_id] = {0: 0} # We always want to keep the initial version 0 of all layers, even if there are no updates at all.
+        for tracing_or_mapping_id in tracing_ids_and_mapping_ids:
+            version_mapping[tracing_or_mapping_id] = {0: 0} # We always want to keep the initial version 0 of all layers, even if there are no updates at all.
 
         # We use a priority queue to efficiently select which tracing each next update should come from.
         # This effectively implements a merge sort
@@ -167,10 +170,10 @@ class Migration:
         while queue:
             value, layer_index, element_index = heapq.heappop(queue)
             timestamp, version, update_group = value
-            tracing_id = layers[layer_index][0]
+            tracing_or_mapping_id = tracing_ids_and_mapping_ids[layer_index]
 
             unified_version += 1
-            version_mapping[tracing_id][version] = unified_version
+            version_mapping[tracing_or_mapping_id][version] = unified_version
             self.save_update_group(annotation['_id'], unified_version, update_group)
 
             if element_index + 1 < len(all_update_groups[layer_index]):
@@ -347,11 +350,11 @@ class Migration:
     def migrate_volume_buckets(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
         self.migrate_all_versions_and_keys_with_prefix("volumeData", tracing_id, layer_version_mapping, transform_key=self.remove_morton_index)
 
-    def migrate_all_versions_and_keys_with_prefix(self, collection: str, tracing_id: str, layer_version_mapping: LayerVersionMapping, transform_key: Optional[Callable[[str], str]]):
+    def migrate_all_versions_and_keys_with_prefix(self, collection: str, tracing_or_mapping_id: str, layer_version_mapping: LayerVersionMapping, transform_key: Optional[Callable[[str], str]]):
         list_keys_page_size = 5000
         versions_page_size = 500
-        current_start_after_key = tracing_id + "."  # . is lexicographically before /
-        newest_tracing_version = max(layer_version_mapping[tracing_id].keys())
+        current_start_after_key = tracing_or_mapping_id + "."  # . is lexicographically before /
+        newest_tracing_version = max(layer_version_mapping[tracing_or_mapping_id].keys())
         while True:
             list_keys_reply = self.src_stub.ListKeys(proto.ListKeysRequest(collection=collection, limit=list_keys_page_size, startAfterKey=current_start_after_key))
             assert_grpc_success(list_keys_reply)
@@ -359,7 +362,7 @@ class Migration:
                 # We iterated towards the very end of the collection
                 return
             for key in list_keys_reply.keys:
-                if key.startswith(tracing_id):
+                if key.startswith(tracing_or_mapping_id):
                     for version_range_start, version_range_end in batch_range(newest_tracing_version, versions_page_size):
                         get_versions_reply = self.src_stub.GetMultipleVersions(proto.GetMultipleVersionsRequest(collection=collection, key=key, oldestVersion=version_range_start, newestVersion=version_range_end))
                         assert_grpc_success(get_versions_reply)
@@ -369,9 +372,9 @@ class Migration:
                         versions_to_save = []
                         values_to_save = []
                         for version, value in zip(get_versions_reply.versions, get_versions_reply.values):
-                            if version not in layer_version_mapping[tracing_id]:
+                            if version not in layer_version_mapping[tracing_or_mapping_id]:
                                 continue
-                            new_version = layer_version_mapping[tracing_id][version]
+                            new_version = layer_version_mapping[tracing_or_mapping_id][version]
                             versions_to_save.append(new_version)
                             values_to_save.append(value)
                         self.save_multiple_versions(collection, new_key, versions_to_save, values_to_save)
@@ -440,7 +443,7 @@ class Migration:
             if skeleton_may_have_pending_updates:
                 annotationProto.skeletonMayHavePendingUpdates = True
             if editable_mapping_may_have_pending_updates:
-                annotationProto.editableMappingMayHavePendingUpdates = True
+                annotationProto.editableMappingsMayHavePendingUpdates = True
             for tracing_id, tracing_type in annotation["layers"].items():
                 layer_proto = AnnotationProto.AnnotationLayerProto()
                 layer_proto.tracingId = tracing_id

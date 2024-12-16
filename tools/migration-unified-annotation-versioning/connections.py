@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def connect_to_fossildb(host: str, label: str):
-    max_message_length = 2147483647
+    max_message_length = 2147483647  # 2G
     channel = grpc.insecure_channel(host, options=[("grpc.max_send_message_length", max_message_length), ("grpc.max_receive_message_length", max_message_length)])
     stub = proto_rpc.FossilDBStub(channel)
     test_fossildb_health(stub, f"{label} FossilDB at {host}")
@@ -40,7 +40,7 @@ def connect_to_postgres(postgres_config: str):
 def parse_connection_string(connection_string: str) -> Dict[str, Any]:
     pattern = r"^(?P<user>\w+)@(?!.*@)(?P<host>[^:/]+)(?::(?P<port>\d+))?(?P<database>/[^ ]*)?$"
 
-    match = re.match(pattern, connection_string)
+    match = re.match(pattern, connection_string.removeprefix("postgresql://"))
     if match:
         return {
             "user": match.group("user"),
@@ -49,4 +49,4 @@ def parse_connection_string(connection_string: str) -> Dict[str, Any]:
             "database": match.group("database").lstrip("/")
         }
     else:
-        raise ValueError("Invalid postgres connection string, needs to be user@host:port/database.")
+        raise ValueError("Invalid postgres connection string, needs to be postgresql://user@host:port/database.")

@@ -17,7 +17,7 @@ def main():
     parser.add_argument("--dst", type=str, help="Destination fossildb host and port", required=False)
     parser.add_argument("--dry", help="Only read and process data, do not write out results", action="store_true")
     parser.add_argument("--num_threads", help="Number of threads to migrate the annotations in parallel", type=int, default=1)
-    parser.add_argument("--postgres", help="Postgres connection specifier.", type=str, default="postgres@localhost:5432/webknossos")
+    parser.add_argument("--postgres", help="Postgres connection specifier, default is postgresql://postgres@localhost:5432/webknossos", type=str, default="postgresql://postgres@localhost:5432/webknossos")
     parser.add_argument("--previous_start", help="Previous run start time. Only annotations last modified after that time will be migrated. Use for second run in incremental migration. Example: 2024-11-27 10:37:30.171083", type=str)
     parser.add_argument("--start", help="Run “start time”. Only annotations last modified before that time will be migrated. Defaults to now. Change if FossilDB content is not up to date with postgres. Example: 2024-11-27 10:37:30.171083", type=str)
     parser.add_argument("--count_versions", help="Instead of migrating, only count materialized versions of the annotation", action="store_true")

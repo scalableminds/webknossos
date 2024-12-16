@@ -13,6 +13,7 @@ import concurrent.futures
 import threading
 from functools import partial
 import heapq
+import sys
 
 import fossildbapi_pb2 as proto
 import VolumeTracing_pb2 as Volume
@@ -55,9 +56,10 @@ class Migration:
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.args.num_threads) as executor:
             executor.map(self.migrate_annotation, annotations)
+        log_since(self.before, f"Migrating all the {self.total_count} things")
         if self.failure_count > 0:
             logger.info(f"There were failures for {self.failure_count} annotations. See logs for details.")
-        log_since(self.before, f"Migrating all the {self.total_count} things")
+            sys.exit(1)
 
     def migrate_annotation(self, annotation):
         before = time.time()
@@ -138,10 +140,12 @@ class Migration:
         for tracing_id, _ in layers:
             version_mapping[tracing_id] = {0: 0} # We always want to keep the initial version 0 of all layers, even if there are no updates at all.
 
+        # We use a priority queue to efficiently select which tracing each next update should come from.
+        # This effectively implements a merge sort
         queue = []
         for i, update_groups_for_layer in enumerate(all_update_groups):
             if update_groups_for_layer:
-                # The priority queue sorts tupley lexicographically, so timestamp is the main sorting key here
+                # The priority queue sorts tuples lexicographically, so timestamp is the main sorting key here
                 heapq.heappush(queue, (update_groups_for_layer[0], i, 0))
         while queue:
             value, layer_index, element_index = heapq.heappop(queue)

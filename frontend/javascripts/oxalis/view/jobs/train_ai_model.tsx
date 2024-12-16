@@ -369,7 +369,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
               <FormItem
                 hasFeedback
                 name={["trainingAnnotations", idx, "annotationId"]}
-                label="Annotation ID"
+                label={<div style={{ minHeight: 24 }}>Annotation ID</div>} // balance height with labels of required fields
                 initialValue={annotationId}
               >
                 <Input disabled />

@@ -34,7 +34,7 @@ function MagSelection({
 }: {
   magInfo: MagInfo | undefined;
   value?: Vector3;
-  onChange?: (a: Vector3) => void;
+  onChange?: (newValue: Vector3) => void;
 }): JSX.Element {
   const allMags = magInfo != null ? magInfo.getMagList() : [];
 
@@ -48,8 +48,8 @@ function MagSelection({
     <Select
       placeholder="Select a magnification"
       value={
-        // using the index of the mag *in the mag list* as value internally
-        // NB: this is different from the mag index
+        // Using the index of the mag *in the mag list* as value internally,
+        // this is different from the mag index.
         value == null || magInfo == null
           ? null
           : clamp(

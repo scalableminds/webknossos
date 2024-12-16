@@ -46,6 +46,7 @@ import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reduc
 import { computeArrayFromBoundingBox } from "libs/utils";
 import { MagSelectionFormItem } from "components/mag_selection";
 import { MagInfo } from "oxalis/model/helpers/mag_info";
+import { V3 } from "libs/mjs";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;
@@ -166,7 +167,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
   annotationInfos,
   onAddAnnotationsInfos,
 }: {
-  getMagsForSegmentationLayer: (annotationId: string, layerName: string) => MagInfo; // TODO_c rename method
+  getMagsForSegmentationLayer: (annotationId: string, layerName: string) => MagInfo;
   onClose: () => void;
   ensureSavedState?: (() => Promise<void>) | null;
   annotationInfos: Array<AnnotationInfoForAIJob<GenericAnnotation>>;
@@ -174,7 +175,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 }) {
   const [form] = Form.useForm();
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
-  const [mags, setMags] = useState<MagInfoPerAnnotation[]>(); // maps annotationId to MagInfo of intersection of
+  const [mags, setMags] = useState<MagInfoPerAnnotation[]>();
 
   const getIntersectingMagList = (
     annotationId: string,
@@ -183,20 +184,14 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
     imageDataLayerName: string,
   ) => {
     const colorLayers = getColorLayers(dataset);
-    console.log("updating", imageDataLayerName, groundTruthLayerName);
+    const dataLayerMags = getMagsForColorLayer(colorLayers, imageDataLayerName);
     const groundTruthLayerMags = getMagsForSegmentationLayer(
       annotationId,
       groundTruthLayerName,
     ).getMagList();
-    const dataLayerMags = getMagsForColorLayer(colorLayers, imageDataLayerName);
 
     return groundTruthLayerMags?.filter((groundTruthMag) =>
-      dataLayerMags?.find(
-        (mag) =>
-          mag[0] === groundTruthMag[0] &&
-          mag[1] === groundTruthMag[1] &&
-          mag[2] === groundTruthMag[2],
-      ),
+      dataLayerMags?.find((mag) => V3.equals(mag, groundTruthMag)),
     );
   };
 
@@ -411,11 +406,9 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                 chooseSegmentationLayer
                 layers={segmentationLayers}
                 getReadableNameForLayer={(layer) => {
-                  console.log(layer);
                   return layer.name;
                   //TODO_c fix that fallback layers are shown at least with the correct name?
-                  // eg. name (fallbacklayer)
-                  // remember to check-in with P
+                  // eg. name (active layer)
                 }}
                 fixedLayerName={fixedSelectedSegmentationLayer?.name || undefined}
                 label="Ground Truth Layer"

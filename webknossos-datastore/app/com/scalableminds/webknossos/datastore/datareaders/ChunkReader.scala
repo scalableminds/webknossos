@@ -26,11 +26,11 @@ class ChunkReader(header: DatasetHeader) {
         case Full(chunkBytes) if useSkipTypingShortcut =>
           shortcutChunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> "chunk.shortcutWrapAndType.failed"
         case Empty if useSkipTypingShortcut =>
-          shortcutChunkTyper.createFromFillValue(chunkShape).toFox ?~> "chunk.shortcutCreateFromFillValue.failed"
+          shortcutChunkTyper.createFromFillValueCached(chunkShape).toFox ?~> "chunk.shortcutCreateFromFillValue.failed"
         case Full(chunkBytes) =>
           chunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> "chunk.wrapAndType.failed"
         case Empty =>
-          chunkTyper.createFromFillValue(chunkShape).toFox ?~> "chunk.createFromFillValue.failed"
+          chunkTyper.createFromFillValueCached(chunkShape).toFox ?~> "chunk.createFromFillValue.failed"
         case f: Failure =>
           f.toFox ?~> s"Reading chunk at $path failed"
       }

@@ -243,11 +243,10 @@ class AnnotationController @Inject()(
       } yield result
     }
 
-  def createExplorational(datasetId: String): Action[List[AnnotationLayerParameters]] =
+  def createExplorational(datasetId: ObjectId): Action[List[AnnotationLayerParameters]] =
     sil.SecuredAction.async(validateJson[List[AnnotationLayerParameters]]) { implicit request =>
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetIdValidated) ~> NOT_FOUND
+        dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
         annotation <- annotationService.createExplorationalFor(
           request.identity,
           dataset._id,
@@ -259,12 +258,11 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
     }
 
-  def getSandbox(datasetId: String, typ: String, sharingToken: Option[String]): Action[AnyContent] =
+  def getSandbox(datasetId: ObjectId, typ: String, sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken) // users with dataset sharing token may also get a sandbox annotation
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        dataset <- datasetDAO.findOne(datasetIdValidated)(ctx) ?~> Messages("dataset.notFound", datasetIdValidated) ~> NOT_FOUND
+        dataset <- datasetDAO.findOne(datasetId)(ctx) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
         tracingType <- TracingType.fromString(typ).toFox
         _ <- bool2Fox(tracingType == TracingType.skeleton) ?~> "annotation.sandbox.skeletonOnly"
         annotation = Annotation(
@@ -464,11 +462,10 @@ class AnnotationController @Inject()(
       } yield JsonOk(Messages("annotation.edit.success"))
     }
 
-  def annotationsForTask(taskId: String): Action[AnyContent] =
+  def annotationsForTask(taskId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        taskIdValidated <- ObjectId.fromString(taskId)
-        task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
+        task <- taskDAO.findOne(taskId) ?~> "task.notFound" ~> NOT_FOUND
         project <- projectDAO.findOne(task._project)
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
         annotations <- annotationService.annotationsFor(task._id) ?~> "task.annotation.failed"

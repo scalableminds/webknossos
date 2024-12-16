@@ -3,6 +3,7 @@ package com.scalableminds.util.objectid
 import com.scalableminds.util.tools.TextUtils.parseCommaSeparated
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.json._
+import play.api.mvc.{PathBindable, QueryStringBindable}
 import reactivemongo.api.bson.BSONObjectID
 
 import scala.concurrent.ExecutionContext
@@ -33,4 +34,33 @@ object ObjectId extends FoxImplicits {
 
     override def writes(o: ObjectId): JsValue = JsString(o.id)
   }
+
+  implicit def pathBinder: PathBindable[ObjectId] =
+    new PathBindable[ObjectId] {
+      override def bind(key: String, value: String): Either[String, ObjectId] =
+        fromStringSync(value).toRight(s"Cannot parse parameter $key as ObjectId: $value")
+
+      override def unbind(key: String, value: ObjectId): String = value.id
+    }
+
+  implicit def queryBinder: QueryStringBindable[ObjectId] =
+    new QueryStringBindable[ObjectId] {
+      override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, ObjectId]] =
+        params.get(key).flatMap(_.headOption).map { value =>
+          fromStringSync(value).toRight(s"Cannot parse parameter $key as ObjectId: $value")
+        }
+
+      override def unbind(key: String, value: ObjectId): String = value.id
+    }
+
+  implicit def optQueryBinder: QueryStringBindable[Option[ObjectId]] =
+    new QueryStringBindable[Option[ObjectId]] {
+      override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, Option[ObjectId]]] =
+        params.get(key).flatMap(_.headOption).map { value =>
+          if (value.isEmpty) Right(None)
+          else fromStringSync(value).map(Some(_)).toRight(s"Cannot parse parameter $key as ObjectId: $value")
+        }
+
+      override def unbind(key: String, value: Option[ObjectId]): String = value.map(_.id).getOrElse("")
+    }
 }

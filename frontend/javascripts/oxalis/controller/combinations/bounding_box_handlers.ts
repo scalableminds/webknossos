@@ -265,7 +265,7 @@ export function createBoundingBoxAndGetEdges(
 }
 
 export const highlightAndSetCursorOnHoveredBoundingBox = _.throttle(
-  (position: Point2, planeId: OrthoView, event: MouseEvent) => {
+  (position: Point2, planeId: OrthoView, event: MouseEvent | KeyboardEvent) => {
     const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, planeId);
     // Access the parent element as that is where the cursor style property is set
     const inputCatcher = document.getElementById(`inputcatcher_${planeId}`)?.parentElement;

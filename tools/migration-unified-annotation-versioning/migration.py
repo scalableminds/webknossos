@@ -451,7 +451,7 @@ class Migration:
                 layer_type_proto = AnnotationProto.AnnotationLayerTypeProto.Skeleton
                 if tracing_type == "Volume":
                     layer_type_proto = AnnotationProto.AnnotationLayerTypeProto.Volume
-                layer_proto.type = layer_type_proto
+                layer_proto.typ = layer_type_proto
                 annotationProto.annotationLayers.append(layer_proto)
             self.save_bytes(collection="annotations", key=annotation["_id"], version=version, value=annotationProto.SerializeToString())
 

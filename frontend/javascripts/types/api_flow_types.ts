@@ -585,7 +585,7 @@ export type APITimeTrackingPerAnnotation = {
 type APITracingStoreAnnotationLayer = {
   readonly tracingId: string;
   readonly name: string;
-  readonly type: AnnotationLayerType;
+  readonly typ: AnnotationLayerType;
 };
 
 export type APITracingStoreAnnotation = {

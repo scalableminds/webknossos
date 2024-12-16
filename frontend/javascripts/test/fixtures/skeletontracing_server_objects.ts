@@ -225,7 +225,7 @@ export const annotationProto: APITracingStoreAnnotation = {
     {
       tracingId: TRACING_ID,
       name: "skeleton layer name",
-      type: AnnotationLayerEnum.Skeleton,
+      typ: AnnotationLayerEnum.Skeleton,
     },
   ],
 };

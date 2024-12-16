@@ -187,7 +187,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           .exists(_.name == action.layerParameters.getNameWithDefault)) ?~> "addLayer.nameInUse"
       _ <- bool2Fox(
         !annotationWithTracings.annotation.annotationLayers.exists(
-          _.`type` == AnnotationLayerTypeProto.Skeleton && action.layerParameters.typ == AnnotationLayerType.Skeleton)) ?~> "addLayer.onlyOneSkeletonAllowed"
+          _.typ == AnnotationLayerTypeProto.Skeleton && action.layerParameters.typ == AnnotationLayerType.Skeleton)) ?~> "addLayer.onlyOneSkeletonAllowed"
       tracing <- remoteWebknossosClient.createTracingFor(annotationId,
                                                          action.layerParameters,
                                                          previousVersion = targetVersion - 1)
@@ -384,9 +384,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   private def findTracingsForAnnotation(annotation: AnnotationProto)(
       implicit ec: ExecutionContext): Fox[AnnotationWithTracings] = {
     val skeletonTracingIds =
-      annotation.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Skeleton).map(_.tracingId)
+      annotation.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Skeleton).map(_.tracingId)
     val volumeTracingIds =
-      annotation.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Volume).map(_.tracingId)
+      annotation.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Volume).map(_.tracingId)
     for {
       skeletonTracings <- Fox.serialCombined(skeletonTracingIds.toList)(id =>
         findSkeletonRaw(id, Some(annotation.version))) ?~> "findSkeletonRaw.failed"
@@ -799,7 +799,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                                                       tc: TokenContext): Fox[AnnotationLayerProto] =
     for {
       newTracingId <- tracingIdMap.get(layer.tracingId) ?~> "duplicate unknown layer"
-      _ <- layer.`type` match {
+      _ <- layer.typ match {
         case AnnotationLayerTypeProto.Volume =>
           duplicateVolumeTracing(annotationId,
                                  layer.tracingId,

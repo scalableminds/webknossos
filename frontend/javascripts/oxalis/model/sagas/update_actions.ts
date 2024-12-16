@@ -639,11 +639,11 @@ export function addLayerToAnnotation(parameters: AnnotationLayerCreationParamete
 export function deleteAnnotationLayer(
   tracingId: string,
   layerName: string,
-  type: "Skeleton" | "Volume",
+  typ: "Skeleton" | "Volume",
 ) {
   return {
     name: "deleteLayerFromAnnotation",
-    value: { tracingId, layerName, type },
+    value: { tracingId, layerName, typ },
   } as const;
 }
 

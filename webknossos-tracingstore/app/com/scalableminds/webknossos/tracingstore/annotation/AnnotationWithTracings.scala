@@ -92,7 +92,7 @@ case class AnnotationWithTracings(
         annotationLayers = annotation.annotationLayers :+ AnnotationLayerProto(
           tracingId,
           a.layerParameters.name.getOrElse(AnnotationLayer.defaultNameForType(a.layerParameters.typ)),
-          `type` = AnnotationLayerType.toProto(a.layerParameters.typ)
+          typ = AnnotationLayerType.toProto(a.layerParameters.typ)
         )),
       tracingsById = tracingsById.updated(tracingId, tracing)
     )

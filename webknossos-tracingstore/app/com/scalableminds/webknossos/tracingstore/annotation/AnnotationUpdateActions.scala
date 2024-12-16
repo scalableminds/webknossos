@@ -39,7 +39,7 @@ case class AddLayerAnnotationAction(layerParameters: AnnotationLayerParameters,
 
 case class DeleteLayerAnnotationAction(tracingId: String,
                                        layerName: String, // Just stored for nicer-looking history
-                                       `type`: AnnotationLayerType, // Just stored for nicer-looking history
+                                       typ: AnnotationLayerType, // Just stored for nicer-looking history
                                        actionTimestamp: Option[Long] = None,
                                        actionAuthorId: Option[String] = None,
                                        info: Option[String] = None)

@@ -157,9 +157,8 @@ class TSAnnotationController @Inject()(
           for {
             annotations: Seq[AnnotationProto] <- annotationService.getMultiple(request.body) ?~> Messages(
               "annotation.notFound")
-            skeletonLayers = annotations.flatMap(
-              _.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Skeleton))
-            volumeLayers = annotations.flatMap(_.annotationLayers.filter(_.`type` == AnnotationLayerTypeProto.Volume))
+            skeletonLayers = annotations.flatMap(_.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Skeleton))
+            volumeLayers = annotations.flatMap(_.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Volume))
             newSkeletonId = TracingId.generate
             newVolumeId = TracingId.generate
             mergedSkeletonName = SequenceUtils
@@ -206,12 +205,12 @@ class TSAnnotationController @Inject()(
               _ =>
                 AnnotationLayerProto(name = mergedSkeletonName,
                                      tracingId = newSkeletonId,
-                                     `type` = AnnotationLayerTypeProto.Skeleton))
+                                     typ = AnnotationLayerTypeProto.Skeleton))
             mergedVolumeLayerOpt = mergedVolumeOpt.map(
               _ =>
                 AnnotationLayerProto(name = mergedVolumeName,
                                      tracingId = newVolumeId,
-                                     `type` = AnnotationLayerTypeProto.Volume))
+                                     typ = AnnotationLayerTypeProto.Volume))
             mergedLayers = Seq(mergedSkeletonLayerOpt, mergedVolumeLayerOpt).flatten
             firstAnnotation <- annotations.headOption.toFox
             mergedAnnotation = firstAnnotation

@@ -25,7 +25,7 @@ object AnnotationLayer extends FoxImplicits {
   implicit val jsonFormat: OFormat[AnnotationLayer] = Json.format[AnnotationLayer]
 
   def fromProto(p: AnnotationLayerProto): AnnotationLayer =
-    AnnotationLayer(p.tracingId, AnnotationLayerType.fromProto(p.`type`), p.name, AnnotationLayerStatistics.unknown)
+    AnnotationLayer(p.tracingId, AnnotationLayerType.fromProto(p.typ), p.name, AnnotationLayerStatistics.unknown)
 
   val defaultSkeletonLayerName: String = "Skeleton"
   val defaultVolumeLayerName: String = "Volume"

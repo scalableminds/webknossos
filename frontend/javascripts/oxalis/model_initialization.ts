@@ -147,7 +147,7 @@ export async function initialize(
         return {
           tracingId: protoLayer.tracingId,
           name: protoLayer.name,
-          typ: protoLayer.type,
+          typ: protoLayer.typ,
           stats:
             // Only when the newest version is requested (version==null),
             // the stats are available in unversionedAnnotation.

@@ -19,5 +19,5 @@ message AnnotationProto {
 message AnnotationLayerProto {
   required string tracingId = 1;
   required string name = 2;
-  required AnnotationLayerTypeProto type = 3;
+  required AnnotationLayerTypeProto typ = 3;
 }

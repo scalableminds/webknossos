@@ -133,7 +133,7 @@ export const annotationProto: APITracingStoreAnnotation = {
     {
       tracingId: TRACING_ID,
       name: "volume",
-      type: AnnotationLayerEnum.Volume,
+      typ: AnnotationLayerEnum.Volume,
     },
   ],
 };

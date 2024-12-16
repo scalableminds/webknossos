@@ -156,11 +156,11 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
         taskBoundingBox: Option[BoundingBox] = if (sharedParsingParameters.isTaskUpload)
           parseTaskBoundingBox(parameters \ "taskBoundingBox")
         else None
-        userBoundingBoxes = parseBoundingBoxes(parameters \ "userBoundingBox")
       } yield {
+        var userBoundingBoxes = parseBoundingBoxes(parameters \ "userBoundingBox")
         if (!sharedParsingParameters.isTaskUpload) {
           parseTaskBoundingBoxAsUserBoundingBox(parameters \ "taskBoundingBox", userBoundingBoxes)
-            .map(asUserBoundingBox => userBoundingBoxes :+ asUserBoundingBox)
+            .foreach(asUserBoundingBox => userBoundingBoxes = userBoundingBoxes :+ asUserBoundingBox)
         }
         NmlParsedParameters(
           datasetIdOpt,

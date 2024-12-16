@@ -211,6 +211,7 @@ object Zarr3ArrayHeader extends JsonImplicits {
       val codecSpecs = rawCodecSpecs.map(c => {
         for {
           spec: CodecConfiguration <- c("name") match {
+            // BytesCodec may have no "configuration" key
             case JsString(BytesCodecConfiguration.name) =>
               (c \ configurationKey).toOption
                 .map(_.validate[BytesCodecConfiguration])

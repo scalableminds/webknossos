@@ -132,33 +132,8 @@ import {
 } from "types/schemas/dataset_view_configuration.schema";
 import defaultState from "oxalis/default_state";
 
-type DatasetSettingsProps = {
-  userConfiguration: UserConfiguration;
-  datasetConfiguration: DatasetConfiguration;
-  dataset: APIDataset;
-  onChange: (propertyName: keyof DatasetConfiguration, value: any) => void;
-  onChangeLayer: (
-    layerName: string,
-    propertyName: keyof DatasetLayerConfiguration,
-    value: any,
-  ) => void;
-  onClipHistogram: (layerName: string, shouldAdjustClipRange: boolean) => Promise<void>;
-  histogramData: HistogramDataForAllLayers;
-  onChangeRadius: (value: number) => void;
-  onChangeShowSkeletons: (arg0: boolean) => void;
-  onSetPosition: (arg0: Vector3) => void;
-  onZoomToMag: (layerName: string, arg0: Vector3) => number;
-  onChangeUser: (key: keyof UserConfiguration, value: any) => void;
-  reloadHistogram: (layerName: string) => void;
-  tracing: Tracing;
-  task: Task | null | undefined;
-  onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void;
-  controlMode: ControlMode;
-  isArbitraryMode: boolean;
-  isAdminOrDatasetManager: boolean;
-  isAdminOrManager: boolean;
-  isSuperUser: boolean;
-};
+type DatasetSettingsProps = ReturnType<typeof mapStateToProps> &
+  ReturnType<typeof mapDispatchToProps>;
 
 type State = {
   // If this is set to not-null, the downsampling modal
@@ -927,9 +902,37 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         defaultValue={defaultDatasetViewConfigurationWithoutNull.segmentationPatternOpacity}
       />
     );
+
+    const isProofreadingMode = this.props.activeTool === "PROOFREAD";
+    const isSelectiveVisibilityDisabled = isProofreadingMode;
+
+    const selectiveVisibilitySwitch = (
+      <FastTooltip
+        title={
+          isSelectiveVisibilityDisabled
+            ? "This behavior is overriden by the 'selective segment visibility' button in the toolbar, because the proofreading tool is active."
+            : "When enabled, only hovered or active segments will be shown."
+        }
+      >
+        <div
+          style={{
+            marginBottom: 6,
+          }}
+        >
+          <SwitchSetting
+            onChange={_.partial(this.props.onChange, "selectiveSegmentVisibility")}
+            value={this.props.datasetConfiguration.selectiveSegmentVisibility}
+            label="Selective Visibility"
+            disabled={isSelectiveVisibilityDisabled}
+          />
+        </div>
+      </FastTooltip>
+    );
+
     return (
       <div>
         {segmentationOpacitySetting}
+        {selectiveVisibilitySwitch}
         <MappingSettingsView layerName={layerName} />
       </div>
     );
@@ -1338,6 +1341,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         "loadingStrategy",
         "segmentationPatternOpacity",
         "blendMode",
+        "selectiveSegmentVisibility",
       ] as Array<keyof RecommendedConfiguration>
     ).map((key) => ({
       name: settings[key] as string,
@@ -1585,6 +1589,7 @@ const mapStateToProps = (state: OxalisState) => ({
     state.activeUser != null ? Utils.isUserAdminOrDatasetManager(state.activeUser) : false,
   isAdminOrManager: state.activeUser != null ? Utils.isUserAdminOrManager(state.activeUser) : false,
   isSuperUser: state.activeUser?.isSuperUser || false,
+  activeTool: state.uiInformation.activeTool,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

@@ -86,7 +86,7 @@ import {
   reloadHistogramAction,
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
-import type { Vector3, ControlMode } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import Constants, { ControlModeEnum, MappingStatusEnum } from "oxalis/constants";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import LinkButton from "components/link_button";
@@ -97,9 +97,6 @@ import type {
   DatasetLayerConfiguration,
   OxalisState,
   UserConfiguration,
-  HistogramDataForAllLayers,
-  Tracing,
-  Task,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import Toast from "libs/toast";

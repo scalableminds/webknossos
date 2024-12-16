@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11\x66ossildbapi.proto\x12 com.scalableminds.fossildb.proto\"\x0f\n\rHealthRequest\"4\n\x0bHealthReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\"R\n\nGetRequest\x12\x12\n\ncollection\x18\x01 \x02(\t\x12\x0b\n\x03key\x18\x02 \x02(\t\x12\x0f\n\x07version\x18\x03 \x01(\x04\x12\x12\n\nmayBeEmpty\x18\x04 \x01(\x08\"W\n\x08GetReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\x12\r\n\x05value\x18\x03 \x02(\x0c\x12\x15\n\ractualVersion\x18\x04 \x02(\x04\"M\n\nPutRequest\x12\x12\n\ncollection\x18\x01 \x02(\t\x12\x0b\n\x03key\x18\x02 \x02(\t\x12\x0f\n\x07version\x18\x03 \x01(\x04\x12\r\n\x05value\x18\x04 \x02(\x0c\"1\n\x08PutReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\"A\n\rDeleteRequest\x12\x12\n\ncollection\x18\x01 \x02(\t\x12\x0b\n\x03key\x18\x02 \x02(\t\x12\x0f\n\x07version\x18\x03 \x02(\x04\"4\n\x0b\x44\x65leteReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\"k\n\x1aGetMultipleVersionsRequest\x12\x12\n\ncollection\x18\x01 \x02(\t\x12\x0b\n\x03key\x18\x02 \x02(\t\x12\x15\n\rnewestVersion\x18\x04 \x01(\x04\x12\x15\n\roldestVersion\x18\x03 \x01(\x04\"c\n\x18GetMultipleVersionsReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\x12\x0e\n\x06values\x18\x03 \x03(\x0c\x12\x10\n\x08versions\x18\x04 \x03(\x04\"s\n\x16GetMultipleKeysRequest\x12\x12\n\ncollection\x18\x01 \x02(\t\x12\x15\n\rstartAfterKey\x18\x02 \x01(\t\x12\x0e\n\x06prefix\x18\x03 \x01(\t\x12\x0f\n\x07version\x18\x04 \x01(\x04\x12\r\n\x05limit\x18\x05 \x01(\r\"s\n\x14GetMultipleKeysReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\x12\x0c\n\x04keys\x18\x03 \x03(\t\x12\x0e\n\x06values\x18\x04 \x03(\x0c\x12\x16\n\x0e\x61\x63tualVersions\x18\x05 \x03(\x04\"n\n\x1d\x44\x65leteMultipleVersionsRequest\x12\x12\n\ncollection\x18\x01 \x02(\t\x12\x0b\n\x03key\x18\x02 \x02(\t\x12\x15\n\rnewestVersion\x18\x04 \x01(\x04\x12\x15\n\roldestVersion\x18\x03 \x01(\x04\"D\n\x1b\x44\x65leteMultipleVersionsReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\"K\n\x0fListKeysRequest\x12\x12\n\ncollection\x18\x01 \x02(\t\x12\r\n\x05limit\x18\x02 \x01(\r\x12\x15\n\rstartAfterKey\x18\x03 \x01(\t\"D\n\rListKeysReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\x12\x0c\n\x04keys\x18\x03 \x03(\t\"U\n\x13ListVersionsRequest\x12\x12\n\ncollection\x18\x01 \x02(\t\x12\x0b\n\x03key\x18\x02 \x02(\t\x12\r\n\x05limit\x18\x03 \x01(\r\x12\x0e\n\x06offset\x18\x04 \x01(\r\"L\n\x11ListVersionsReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\x12\x10\n\x08versions\x18\x03 \x03(\x04\"\x0f\n\rBackupRequest\"a\n\x0b\x42\x61\x63kupReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\x12\n\n\x02id\x18\x03 \x02(\r\x12\x11\n\ttimestamp\x18\x04 \x02(\x04\x12\x0c\n\x04size\x18\x05 \x02(\x04\"\x1a\n\x18RestoreFromBackupRequest\"?\n\x16RestoreFromBackupReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\"\x17\n\x15\x43ompactAllDataRequest\"<\n\x13\x43ompactAllDataReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\":\n\x0f\x45xportDBRequest\x12\x12\n\nnewDataDir\x18\x01 \x02(\t\x12\x13\n\x0boptionsFile\x18\x02 \x01(\t\"6\n\rExportDBReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t2\xc2\x0c\n\x08\x46ossilDB\x12j\n\x06Health\x12/.com.scalableminds.fossildb.proto.HealthRequest\x1a-.com.scalableminds.fossildb.proto.HealthReply\"\x00\x12\x61\n\x03Get\x12,.com.scalableminds.fossildb.proto.GetRequest\x1a*.com.scalableminds.fossildb.proto.GetReply\"\x00\x12\x91\x01\n\x13GetMultipleVersions\x12<.com.scalableminds.fossildb.proto.GetMultipleVersionsRequest\x1a:.com.scalableminds.fossildb.proto.GetMultipleVersionsReply\"\x00\x12\x85\x01\n\x0fGetMultipleKeys\x12\x38.com.scalableminds.fossildb.proto.GetMultipleKeysRequest\x1a\x36.com.scalableminds.fossildb.proto.GetMultipleKeysReply\"\x00\x12\x61\n\x03Put\x12,.com.scalableminds.fossildb.proto.PutRequest\x1a*.com.scalableminds.fossildb.proto.PutReply\"\x00\x12j\n\x06\x44\x65lete\x12/.com.scalableminds.fossildb.proto.DeleteRequest\x1a-.com.scalableminds.fossildb.proto.DeleteReply\"\x00\x12\x9a\x01\n\x16\x44\x65leteMultipleVersions\x12?.com.scalableminds.fossildb.proto.DeleteMultipleVersionsRequest\x1a=.com.scalableminds.fossildb.proto.DeleteMultipleVersionsReply\"\x00\x12p\n\x08ListKeys\x12\x31.com.scalableminds.fossildb.proto.ListKeysRequest\x1a/.com.scalableminds.fossildb.proto.ListKeysReply\"\x00\x12|\n\x0cListVersions\x12\x35.com.scalableminds.fossildb.proto.ListVersionsRequest\x1a\x33.com.scalableminds.fossildb.proto.ListVersionsReply\"\x00\x12j\n\x06\x42\x61\x63kup\x12/.com.scalableminds.fossildb.proto.BackupRequest\x1a-.com.scalableminds.fossildb.proto.BackupReply\"\x00\x12\x8b\x01\n\x11RestoreFromBackup\x12:.com.scalableminds.fossildb.proto.RestoreFromBackupRequest\x1a\x38.com.scalableminds.fossildb.proto.RestoreFromBackupReply\"\x00\x12\x82\x01\n\x0e\x43ompactAllData\x12\x37.com.scalableminds.fossildb.proto.CompactAllDataRequest\x1a\x35.com.scalableminds.fossildb.proto.CompactAllDataReply\"\x00\x12p\n\x08\x45xportDB\x12\x31.com.scalableminds.fossildb.proto.ExportDBRequest\x1a/.com.scalableminds.fossildb.proto.ExportDBReply\"\x00')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11\x66ossildbapi.proto\x12 com.scalableminds.fossildb.proto\"\x0f\n\rHealthRequest\"4\n\x0bHealthReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\"R\n\nGetRequest\x12\x12\n\ncollection\x18\x01 \x02(\t\x12\x0b\n\x03key\x18\x02 \x02(\t\x12\x0f\n\x07version\x18\x03 \x01(\x04\x12\x12\n\nmayBeEmpty\x18\x04 \x01(\x08\"W\n\x08GetReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\x12\r\n\x05value\x18\x03 \x02(\x0c\x12\x15\n\ractualVersion\x18\x04 \x02(\x04\"M\n\nPutRequest\x12\x12\n\ncollection\x18\x01 \x02(\t\x12\x0b\n\x03key\x18\x02 \x02(\t\x12\x0f\n\x07version\x18\x03 \x01(\x04\x12\r\n\x05value\x18\x04 \x02(\x0c\"1\n\x08PutReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\"_\n\x1aPutMultipleVersionsRequest\x12\x12\n\ncollection\x18\x01 \x02(\t\x12\x0b\n\x03key\x18\x02 \x02(\t\x12\x10\n\x08versions\x18\x03 \x03(\x04\x12\x0e\n\x06values\x18\x04 \x03(\x0c\"A\n\x18PutMultipleVersionsReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\"A\n\rDeleteRequest\x12\x12\n\ncollection\x18\x01 \x02(\t\x12\x0b\n\x03key\x18\x02 \x02(\t\x12\x0f\n\x07version\x18\x03 \x02(\x04\"4\n\x0b\x44\x65leteReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\">\n\x18\x44\x65leteAllByPrefixRequest\x12\x12\n\ncollection\x18\x01 \x02(\t\x12\x0e\n\x06prefix\x18\x02 \x02(\t\"?\n\x16\x44\x65leteAllByPrefixReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\"k\n\x1aGetMultipleVersionsRequest\x12\x12\n\ncollection\x18\x01 \x02(\t\x12\x0b\n\x03key\x18\x02 \x02(\t\x12\x15\n\rnewestVersion\x18\x04 \x01(\x04\x12\x15\n\roldestVersion\x18\x03 \x01(\x04\"c\n\x18GetMultipleVersionsReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\x12\x0e\n\x06values\x18\x03 \x03(\x0c\x12\x10\n\x08versions\x18\x04 \x03(\x04\"s\n\x16GetMultipleKeysRequest\x12\x12\n\ncollection\x18\x01 \x02(\t\x12\x15\n\rstartAfterKey\x18\x02 \x01(\t\x12\x0e\n\x06prefix\x18\x03 \x01(\t\x12\x0f\n\x07version\x18\x04 \x01(\x04\x12\r\n\x05limit\x18\x05 \x01(\r\"s\n\x14GetMultipleKeysReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\x12\x0c\n\x04keys\x18\x03 \x03(\t\x12\x0e\n\x06values\x18\x04 \x03(\x0c\x12\x16\n\x0e\x61\x63tualVersions\x18\x05 \x03(\x04\"n\n\x1d\x44\x65leteMultipleVersionsRequest\x12\x12\n\ncollection\x18\x01 \x02(\t\x12\x0b\n\x03key\x18\x02 \x02(\t\x12\x15\n\rnewestVersion\x18\x04 \x01(\x04\x12\x15\n\roldestVersion\x18\x03 \x01(\x04\"D\n\x1b\x44\x65leteMultipleVersionsReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\"K\n\x0fListKeysRequest\x12\x12\n\ncollection\x18\x01 \x02(\t\x12\r\n\x05limit\x18\x02 \x01(\r\x12\x15\n\rstartAfterKey\x18\x03 \x01(\t\"D\n\rListKeysReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\x12\x0c\n\x04keys\x18\x03 \x03(\t\"U\n\x13ListVersionsRequest\x12\x12\n\ncollection\x18\x01 \x02(\t\x12\x0b\n\x03key\x18\x02 \x02(\t\x12\r\n\x05limit\x18\x03 \x01(\r\x12\x0e\n\x06offset\x18\x04 \x01(\r\"L\n\x11ListVersionsReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\x12\x10\n\x08versions\x18\x03 \x03(\x04\"\x0f\n\rBackupRequest\"a\n\x0b\x42\x61\x63kupReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\x12\n\n\x02id\x18\x03 \x02(\r\x12\x11\n\ttimestamp\x18\x04 \x02(\x04\x12\x0c\n\x04size\x18\x05 \x02(\x04\"\x1a\n\x18RestoreFromBackupRequest\"?\n\x16RestoreFromBackupReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\"\x17\n\x15\x43ompactAllDataRequest\"<\n\x13\x43ompactAllDataReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\":\n\x0f\x45xportDBRequest\x12\x12\n\nnewDataDir\x18\x01 \x02(\t\x12\x13\n\x0boptionsFile\x18\x02 \x01(\t\"6\n\rExportDBReply\x12\x0f\n\x07success\x18\x01 \x02(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t2\xe4\x0e\n\x08\x46ossilDB\x12j\n\x06Health\x12/.com.scalableminds.fossildb.proto.HealthRequest\x1a-.com.scalableminds.fossildb.proto.HealthReply\"\x00\x12\x61\n\x03Get\x12,.com.scalableminds.fossildb.proto.GetRequest\x1a*.com.scalableminds.fossildb.proto.GetReply\"\x00\x12\x91\x01\n\x13GetMultipleVersions\x12<.com.scalableminds.fossildb.proto.GetMultipleVersionsRequest\x1a:.com.scalableminds.fossildb.proto.GetMultipleVersionsReply\"\x00\x12\x85\x01\n\x0fGetMultipleKeys\x12\x38.com.scalableminds.fossildb.proto.GetMultipleKeysRequest\x1a\x36.com.scalableminds.fossildb.proto.GetMultipleKeysReply\"\x00\x12\x61\n\x03Put\x12,.com.scalableminds.fossildb.proto.PutRequest\x1a*.com.scalableminds.fossildb.proto.PutReply\"\x00\x12\x91\x01\n\x13PutMultipleVersions\x12<.com.scalableminds.fossildb.proto.PutMultipleVersionsRequest\x1a:.com.scalableminds.fossildb.proto.PutMultipleVersionsReply\"\x00\x12j\n\x06\x44\x65lete\x12/.com.scalableminds.fossildb.proto.DeleteRequest\x1a-.com.scalableminds.fossildb.proto.DeleteReply\"\x00\x12\x9a\x01\n\x16\x44\x65leteMultipleVersions\x12?.com.scalableminds.fossildb.proto.DeleteMultipleVersionsRequest\x1a=.com.scalableminds.fossildb.proto.DeleteMultipleVersionsReply\"\x00\x12\x8b\x01\n\x11\x44\x65leteAllByPrefix\x12:.com.scalableminds.fossildb.proto.DeleteAllByPrefixRequest\x1a\x38.com.scalableminds.fossildb.proto.DeleteAllByPrefixReply\"\x00\x12p\n\x08ListKeys\x12\x31.com.scalableminds.fossildb.proto.ListKeysRequest\x1a/.com.scalableminds.fossildb.proto.ListKeysReply\"\x00\x12|\n\x0cListVersions\x12\x35.com.scalableminds.fossildb.proto.ListVersionsRequest\x1a\x33.com.scalableminds.fossildb.proto.ListVersionsReply\"\x00\x12j\n\x06\x42\x61\x63kup\x12/.com.scalableminds.fossildb.proto.BackupRequest\x1a-.com.scalableminds.fossildb.proto.BackupReply\"\x00\x12\x8b\x01\n\x11RestoreFromBackup\x12:.com.scalableminds.fossildb.proto.RestoreFromBackupRequest\x1a\x38.com.scalableminds.fossildb.proto.RestoreFromBackupReply\"\x00\x12\x82\x01\n\x0e\x43ompactAllData\x12\x37.com.scalableminds.fossildb.proto.CompactAllDataRequest\x1a\x35.com.scalableminds.fossildb.proto.CompactAllDataReply\"\x00\x12p\n\x08\x45xportDB\x12\x31.com.scalableminds.fossildb.proto.ExportDBRequest\x1a/.com.scalableminds.fossildb.proto.ExportDBReply\"\x00')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'fossildbapi_pb2', globals())
@@ -32,46 +32,54 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _PUTREQUEST._serialized_end=376
   _PUTREPLY._serialized_start=378
   _PUTREPLY._serialized_end=427
-  _DELETEREQUEST._serialized_start=429
-  _DELETEREQUEST._serialized_end=494
-  _DELETEREPLY._serialized_start=496
-  _DELETEREPLY._serialized_end=548
-  _GETMULTIPLEVERSIONSREQUEST._serialized_start=550
-  _GETMULTIPLEVERSIONSREQUEST._serialized_end=657
-  _GETMULTIPLEVERSIONSREPLY._serialized_start=659
-  _GETMULTIPLEVERSIONSREPLY._serialized_end=758
-  _GETMULTIPLEKEYSREQUEST._serialized_start=760
-  _GETMULTIPLEKEYSREQUEST._serialized_end=875
-  _GETMULTIPLEKEYSREPLY._serialized_start=877
-  _GETMULTIPLEKEYSREPLY._serialized_end=992
-  _DELETEMULTIPLEVERSIONSREQUEST._serialized_start=994
-  _DELETEMULTIPLEVERSIONSREQUEST._serialized_end=1104
-  _DELETEMULTIPLEVERSIONSREPLY._serialized_start=1106
-  _DELETEMULTIPLEVERSIONSREPLY._serialized_end=1174
-  _LISTKEYSREQUEST._serialized_start=1176
-  _LISTKEYSREQUEST._serialized_end=1251
-  _LISTKEYSREPLY._serialized_start=1253
-  _LISTKEYSREPLY._serialized_end=1321
-  _LISTVERSIONSREQUEST._serialized_start=1323
-  _LISTVERSIONSREQUEST._serialized_end=1408
-  _LISTVERSIONSREPLY._serialized_start=1410
-  _LISTVERSIONSREPLY._serialized_end=1486
-  _BACKUPREQUEST._serialized_start=1488
-  _BACKUPREQUEST._serialized_end=1503
-  _BACKUPREPLY._serialized_start=1505
-  _BACKUPREPLY._serialized_end=1602
-  _RESTOREFROMBACKUPREQUEST._serialized_start=1604
-  _RESTOREFROMBACKUPREQUEST._serialized_end=1630
-  _RESTOREFROMBACKUPREPLY._serialized_start=1632
-  _RESTOREFROMBACKUPREPLY._serialized_end=1695
-  _COMPACTALLDATAREQUEST._serialized_start=1697
-  _COMPACTALLDATAREQUEST._serialized_end=1720
-  _COMPACTALLDATAREPLY._serialized_start=1722
-  _COMPACTALLDATAREPLY._serialized_end=1782
-  _EXPORTDBREQUEST._serialized_start=1784
-  _EXPORTDBREQUEST._serialized_end=1842
-  _EXPORTDBREPLY._serialized_start=1844
-  _EXPORTDBREPLY._serialized_end=1898
-  _FOSSILDB._serialized_start=1901
-  _FOSSILDB._serialized_end=3503
+  _PUTMULTIPLEVERSIONSREQUEST._serialized_start=429
+  _PUTMULTIPLEVERSIONSREQUEST._serialized_end=524
+  _PUTMULTIPLEVERSIONSREPLY._serialized_start=526
+  _PUTMULTIPLEVERSIONSREPLY._serialized_end=591
+  _DELETEREQUEST._serialized_start=593
+  _DELETEREQUEST._serialized_end=658
+  _DELETEREPLY._serialized_start=660
+  _DELETEREPLY._serialized_end=712
+  _DELETEALLBYPREFIXREQUEST._serialized_start=714
+  _DELETEALLBYPREFIXREQUEST._serialized_end=776
+  _DELETEALLBYPREFIXREPLY._serialized_start=778
+  _DELETEALLBYPREFIXREPLY._serialized_end=841
+  _GETMULTIPLEVERSIONSREQUEST._serialized_start=843
+  _GETMULTIPLEVERSIONSREQUEST._serialized_end=950
+  _GETMULTIPLEVERSIONSREPLY._serialized_start=952
+  _GETMULTIPLEVERSIONSREPLY._serialized_end=1051
+  _GETMULTIPLEKEYSREQUEST._serialized_start=1053
+  _GETMULTIPLEKEYSREQUEST._serialized_end=1168
+  _GETMULTIPLEKEYSREPLY._serialized_start=1170
+  _GETMULTIPLEKEYSREPLY._serialized_end=1285
+  _DELETEMULTIPLEVERSIONSREQUEST._serialized_start=1287
+  _DELETEMULTIPLEVERSIONSREQUEST._serialized_end=1397
+  _DELETEMULTIPLEVERSIONSREPLY._serialized_start=1399
+  _DELETEMULTIPLEVERSIONSREPLY._serialized_end=1467
+  _LISTKEYSREQUEST._serialized_start=1469
+  _LISTKEYSREQUEST._serialized_end=1544
+  _LISTKEYSREPLY._serialized_start=1546
+  _LISTKEYSREPLY._serialized_end=1614
+  _LISTVERSIONSREQUEST._serialized_start=1616
+  _LISTVERSIONSREQUEST._serialized_end=1701
+  _LISTVERSIONSREPLY._serialized_start=1703
+  _LISTVERSIONSREPLY._serialized_end=1779
+  _BACKUPREQUEST._serialized_start=1781
+  _BACKUPREQUEST._serialized_end=1796
+  _BACKUPREPLY._serialized_start=1798
+  _BACKUPREPLY._serialized_end=1895
+  _RESTOREFROMBACKUPREQUEST._serialized_start=1897
+  _RESTOREFROMBACKUPREQUEST._serialized_end=1923
+  _RESTOREFROMBACKUPREPLY._serialized_start=1925
+  _RESTOREFROMBACKUPREPLY._serialized_end=1988
+  _COMPACTALLDATAREQUEST._serialized_start=1990
+  _COMPACTALLDATAREQUEST._serialized_end=2013
+  _COMPACTALLDATAREPLY._serialized_start=2015
+  _COMPACTALLDATAREPLY._serialized_end=2075
+  _EXPORTDBREQUEST._serialized_start=2077
+  _EXPORTDBREQUEST._serialized_end=2135
+  _EXPORTDBREPLY._serialized_start=2137
+  _EXPORTDBREPLY._serialized_end=2191
+  _FOSSILDB._serialized_start=2194
+  _FOSSILDB._serialized_end=4086
 # @@protoc_insertion_point(module_scope)

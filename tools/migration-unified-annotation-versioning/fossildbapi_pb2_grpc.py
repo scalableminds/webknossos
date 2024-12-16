@@ -39,6 +39,11 @@ class FossilDBStub(object):
                 request_serializer=fossildbapi__pb2.PutRequest.SerializeToString,
                 response_deserializer=fossildbapi__pb2.PutReply.FromString,
                 )
+        self.PutMultipleVersions = channel.unary_unary(
+                '/com.scalableminds.fossildb.proto.FossilDB/PutMultipleVersions',
+                request_serializer=fossildbapi__pb2.PutMultipleVersionsRequest.SerializeToString,
+                response_deserializer=fossildbapi__pb2.PutMultipleVersionsReply.FromString,
+                )
         self.Delete = channel.unary_unary(
                 '/com.scalableminds.fossildb.proto.FossilDB/Delete',
                 request_serializer=fossildbapi__pb2.DeleteRequest.SerializeToString,
@@ -48,6 +53,11 @@ class FossilDBStub(object):
                 '/com.scalableminds.fossildb.proto.FossilDB/DeleteMultipleVersions',
                 request_serializer=fossildbapi__pb2.DeleteMultipleVersionsRequest.SerializeToString,
                 response_deserializer=fossildbapi__pb2.DeleteMultipleVersionsReply.FromString,
+                )
+        self.DeleteAllByPrefix = channel.unary_unary(
+                '/com.scalableminds.fossildb.proto.FossilDB/DeleteAllByPrefix',
+                request_serializer=fossildbapi__pb2.DeleteAllByPrefixRequest.SerializeToString,
+                response_deserializer=fossildbapi__pb2.DeleteAllByPrefixReply.FromString,
                 )
         self.ListKeys = channel.unary_unary(
                 '/com.scalableminds.fossildb.proto.FossilDB/ListKeys',
@@ -114,6 +124,12 @@ class FossilDBServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def PutMultipleVersions(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def Delete(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -121,6 +137,12 @@ class FossilDBServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def DeleteMultipleVersions(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DeleteAllByPrefix(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -190,6 +212,11 @@ def add_FossilDBServicer_to_server(servicer, server):
                     request_deserializer=fossildbapi__pb2.PutRequest.FromString,
                     response_serializer=fossildbapi__pb2.PutReply.SerializeToString,
             ),
+            'PutMultipleVersions': grpc.unary_unary_rpc_method_handler(
+                    servicer.PutMultipleVersions,
+                    request_deserializer=fossildbapi__pb2.PutMultipleVersionsRequest.FromString,
+                    response_serializer=fossildbapi__pb2.PutMultipleVersionsReply.SerializeToString,
+            ),
             'Delete': grpc.unary_unary_rpc_method_handler(
                     servicer.Delete,
                     request_deserializer=fossildbapi__pb2.DeleteRequest.FromString,
@@ -199,6 +226,11 @@ def add_FossilDBServicer_to_server(servicer, server):
                     servicer.DeleteMultipleVersions,
                     request_deserializer=fossildbapi__pb2.DeleteMultipleVersionsRequest.FromString,
                     response_serializer=fossildbapi__pb2.DeleteMultipleVersionsReply.SerializeToString,
+            ),
+            'DeleteAllByPrefix': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteAllByPrefix,
+                    request_deserializer=fossildbapi__pb2.DeleteAllByPrefixRequest.FromString,
+                    response_serializer=fossildbapi__pb2.DeleteAllByPrefixReply.SerializeToString,
             ),
             'ListKeys': grpc.unary_unary_rpc_method_handler(
                     servicer.ListKeys,
@@ -326,6 +358,23 @@ class FossilDB(object):
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
+    def PutMultipleVersions(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/com.scalableminds.fossildb.proto.FossilDB/PutMultipleVersions',
+            fossildbapi__pb2.PutMultipleVersionsRequest.SerializeToString,
+            fossildbapi__pb2.PutMultipleVersionsReply.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
     def Delete(request,
             target,
             options=(),
@@ -356,6 +405,23 @@ class FossilDB(object):
         return grpc.experimental.unary_unary(request, target, '/com.scalableminds.fossildb.proto.FossilDB/DeleteMultipleVersions',
             fossildbapi__pb2.DeleteMultipleVersionsRequest.SerializeToString,
             fossildbapi__pb2.DeleteMultipleVersionsReply.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def DeleteAllByPrefix(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/com.scalableminds.fossildb.proto.FossilDB/DeleteAllByPrefix',
+            fossildbapi__pb2.DeleteAllByPrefixRequest.SerializeToString,
+            fossildbapi__pb2.DeleteAllByPrefixReply.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

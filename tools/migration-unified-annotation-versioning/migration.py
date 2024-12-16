@@ -76,7 +76,9 @@ class Migration:
                 if self.args.verbose:
                     logger.info(f"Migrating annotation {annotation['_id']} (dry={self.args.dry}) ...")
                 mapping_id_map = self.build_mapping_id_map(annotation)
-                layer_version_mapping = self.migrate_updates(annotation, mapping_id_map)
+                layer_version_mapping, included_revert = self.migrate_updates(annotation, mapping_id_map)
+                # if included_revert and self.args.previous_start is not None:
+                self.clean_up_previously_migrated(annotation, mapping_id_map)
                 materialized_versions = self.migrate_materialized_layers(annotation, layer_version_mapping, mapping_id_map)
                 if len(materialized_versions) == 0:
                     raise ValueError(f"Zero materialized versions present in source FossilDB for annotation {annotation['_id']}.")
@@ -101,10 +103,11 @@ class Migration:
                     mapping_id_map[tracing_id] = editable_mapping_id
         return mapping_id_map
 
-    def fetch_updates(self, tracing_or_mapping_id: str, layer_type: str, collection: str, json_encoder, json_decoder) -> List[Tuple[int, int, bytes]]:
+    def fetch_updates(self, tracing_or_mapping_id: str, layer_type: str, collection: str, json_encoder, json_decoder) -> Tuple[List[Tuple[int, int, bytes]], bool]:
         batch_size = 1000
         newest_version = self.get_newest_version(tracing_or_mapping_id, collection)
         updates_for_layer = []
+        included_revert = False
         next_version = newest_version
         for batch_start, batch_end in reversed(list(batch_range(newest_version, batch_size))):
             if batch_start > next_version:
@@ -116,24 +119,29 @@ class Migration:
                 update_group, timestamp, revert_source_version = self.process_update_group(tracing_or_mapping_id, layer_type, update_group, json_encoder, json_decoder)
                 if revert_source_version is not None:
                     next_version = revert_source_version
+                    included_revert = True
                 else:
                     next_version -= 1
                 if revert_source_version is None:  # skip the revert itself too, since we’re ironing them out
                     updates_for_layer.append((timestamp, version, update_group))
         updates_for_layer.reverse()
-        return updates_for_layer
+        return updates_for_layer, included_revert
 
-    def migrate_updates(self, annotation, mapping_id_map: MappingIdMap) -> LayerVersionMapping:
+    def migrate_updates(self, annotation, mapping_id_map: MappingIdMap) -> Tuple[LayerVersionMapping, bool]:
         all_update_groups = []
         json_encoder = msgspec.json.Encoder()
         json_decoder = msgspec.json.Decoder()
         layers = list(annotation["layers"].items())
+        included_revert = False
         for tracing_id, layer_type in layers:
             collection = self.update_collection_for_layer_type(layer_type)
-            all_update_groups.append(self.fetch_updates(tracing_id, layer_type, collection, json_encoder=json_encoder, json_decoder=json_decoder))
+            batch_updates, layer_included_revert = self.fetch_updates(tracing_id, layer_type, collection, json_encoder=json_encoder, json_decoder=json_decoder)
+            all_update_groups.append(batch_updates)
+            included_revert = included_revert or layer_included_revert
             if tracing_id in mapping_id_map:
                 editable_mapping_id = mapping_id_map[tracing_id]
-                all_update_groups.append(self.fetch_updates(editable_mapping_id, "editableMapping", "editableMappingUpdates", json_encoder=json_encoder, json_decoder=json_decoder))
+                batch_updates, _ = self.fetch_updates(editable_mapping_id, "editableMapping", "editableMappingUpdates", json_encoder=json_encoder, json_decoder=json_decoder)
+                all_update_groups.append(batch_updates)
 
         unified_version = 0
         version_mapping = {}
@@ -160,7 +168,7 @@ class Migration:
                 next_element = all_update_groups[layer_index][element_index + 1]
                 heapq.heappush(queue, (next_element, layer_index, element_index + 1))
 
-        return version_mapping
+        return version_mapping, included_revert
 
     def get_editable_mapping_id(self, tracing_id: str, layer_type: str) -> Optional[str]:
         if layer_type == "Skeleton":
@@ -322,6 +330,11 @@ class Migration:
             reply = self.dst_stub.Put(proto.PutRequest(collection=collection, key=key, version=version, value=value))
             assert_grpc_success(reply)
 
+    def save_multiple_versions(self, collection: str, key: str, versions: List[int], values: List[bytes]) -> None:
+        if self.dst_stub is not None:
+            reply = self.dst_stub.PutMultipleVersions(proto.PutMultipleVersionsRequest(collection=collection, key=key, versions=versions, values=values))
+            assert_grpc_success(reply)
+
     def migrate_volume_buckets(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
         self.migrate_all_versions_and_keys_with_prefix("volumeData", tracing_id, layer_version_mapping, transform_key=self.remove_morton_index)
 
@@ -344,11 +357,15 @@ class Migration:
                         new_key = key
                         if transform_key is not None:
                             new_key = transform_key(key)
+                        versions_to_save = []
+                        values_to_save = []
                         for version, value in zip(get_versions_reply.versions, get_versions_reply.values):
                             if version not in layer_version_mapping[tracing_id]:
                                 continue
                             new_version = layer_version_mapping[tracing_id][version]
-                            self.save_bytes(collection, new_key, new_version, value)
+                            versions_to_save.append(new_version)
+                            values_to_save.append(value)
+                        self.save_multiple_versions(collection, new_key, versions_to_save, values_to_save)
                     current_start_after_key = key
                 else:
                     # We iterated past the elements of the current tracing
@@ -436,6 +453,32 @@ class Migration:
         if len(annotation["layers"]) < 2:
             return False
         return "Skeleton" in annotation["layers"].values()
+
+    def clean_up_previously_migrated(self, annotation, mapping_id_map: MappingIdMap) -> None:
+        before = time.time()
+        logger.info(f"Cleaning up previously migrated annotation {annotation['_id']}...")
+        self.delete_all_versions("annotations", annotation["_id"])
+        self.delete_all_versions("annotationUpdates", annotation["_id"])
+        for tracing_id, layer_type in annotation["layers"].items():
+            if layer_type == "Skeleton":
+                self.delete_all_versions("skeletons", tracing_id)
+            elif layer_type == "Volume":
+                self.delete_all_versions("volumes", tracing_id)
+                self.delete_all_with_prefix("volumeData", tracing_id)
+                self.delete_all_with_prefix("volumeSegmentIndex", tracing_id)
+        for mapping_id in mapping_id_map.values():
+            self.delete_all_versions("editableMappingsInfo", mapping_id)
+            self.delete_all_with_prefix("editableMappingsAgglomerateToGraph", mapping_id)
+            self.delete_all_with_prefix("editableMappingsSegmentToAgglomerate", mapping_id)
+        log_since(before, f"Cleaning up previously migrated annotation {annotation['_id']}")
+
+    def delete_all_versions(self, collection: str, id: str) -> None:
+        reply = self.dst_stub.DeleteMultipleVersions(proto.DeleteMultipleVersionsRequest(collection=collection, key=id))
+        assert_grpc_success(reply)
+
+    def delete_all_with_prefix(self, collection: str, prefix: str) -> None:
+        reply = self.dst_stub.DeleteAllByPrefix(proto.DeleteAllByPrefixRequest(collection=collection, prefix=id))
+        assert_grpc_success(reply)
 
     def read_annotation_list(self):
         checkpoint_set = self.read_checkpoints()

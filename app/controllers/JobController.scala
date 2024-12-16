@@ -396,6 +396,9 @@ class JobController @Inject()(
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
           selectedBoundingBoxParsed <- Fox.runIf(includesProofreading)(selectedBoundingBox.toFox)
+          multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+          _ <- Fox.runIf(!multiUser.isSuperUser && selectedBoundingBoxParsed.isDefined)(
+            jobService.assertBoundingBoxLimits(selectedBoundingBoxParsed, None))
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   Form,
@@ -34,7 +34,12 @@ import _ from "lodash";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { formatVoxels } from "libs/format_utils";
 import * as Utils from "libs/utils";
-import type { APIAnnotation, APIDataset, ServerVolumeTracing } from "types/api_flow_types";
+import type {
+  APIAnnotation,
+  APIDataLayer,
+  APIDataset,
+  ServerVolumeTracing,
+} from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
 import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reducers/reducer_helpers";
@@ -152,6 +157,8 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
   );
 }
 
+type MagInfoPerAnnotation = { annotationId: string; magInfo: MagInfo };
+
 export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | HybridTracing>({
   getMagsForSegmentationLayer,
   onClose,
@@ -167,24 +174,47 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 }) {
   const [form] = Form.useForm();
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
-  const [mags, setMags] = useState<Map<string, MagInfo>>(); // maps annotationId to MagInfo
-  const [groundTruthLayerMags, setGroundTruthLayerMags] = useState<string, MagInfo>();
-  const [dataLayerMags, setDataLayerMags] = useState<string, MagInfo>();
+  const [mags, setMags] = useState<MagInfoPerAnnotation[]>(); // maps annotationId to MagInfo of intersection of
 
-  useEffect(() => {
-    // TODO make this mag specific
-    const intersectingMags = groundTruthLayerMags
-      ?.getMagList()
-      .filter((mag) => dataLayerMags?.includes(mag));
-    console.log("updating", dataLayerMags, groundTruthLayerMags);
-    setMags(intersectingMags != null ? new MagInfo(intersectingMags) : undefined);
-  }, [dataLayerMags, groundTruthLayerMags]);
-
-  const getAvailableMagsForGroundTruthLayer = (
-    groundTruthLayerName: string,
+  // this should be a hook. depending on both layer names. TODO_c
+  const setIntersectingMags = (
     annotationId: string,
+    dataset: APIDataset,
+    groundTruthLayerName: string,
+    imageDataLayerName: string,
   ) => {
-    return getMagsForSegmentationLayer(annotationId, groundTruthLayerName);
+    const colorLayers = getColorLayers(dataset);
+    console.log("updating", imageDataLayerName, groundTruthLayerName);
+    const groundTruthLayerMags = getMagsForSegmentationLayer(
+      annotationId,
+      groundTruthLayerName,
+    ).getMagList();
+    const dataLayerMags = getMagsForColorLayer(colorLayers, imageDataLayerName);
+
+    const intersectingMags = groundTruthLayerMags?.filter((groundTruthMag) =>
+      dataLayerMags?.find(
+        (mag) =>
+          mag[0] === groundTruthMag[0] &&
+          mag[1] === groundTruthMag[1] &&
+          mag[2] === groundTruthMag[2],
+      ),
+    );
+    if (mags == null) {
+      setMags([{ annotationId, magInfo: new MagInfo(intersectingMags) }]);
+    } else {
+      setMags(
+        mags.map((mag) =>
+          mag.annotationId === annotationId
+            ? { annotationId, magInfo: new MagInfo(intersectingMags) }
+            : mag,
+        ),
+      );
+    }
+  };
+
+  const getMagsForColorLayer = (colorLayers: APIDataLayer[], layerName: string) => {
+    const colorLayer = colorLayers.find((layer) => layer.name === layerName);
+    return colorLayer != null ? getMagInfo(colorLayer.resolutions).getMagList() : null;
   };
 
   const getTrainingAnnotations = async (values: any) => {
@@ -302,8 +332,6 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
         );
         const fixedSelectedColorLayer = colorLayers.length === 1 ? colorLayers[0] : null;
         const annotationId = "id" in annotation ? annotation.id : annotation.annotationId;
-        const dataLayerMags =
-          fixedSelectedColorLayer != null ? fixedSelectedColorLayer.resolutions : [];
 
         return (
           <Row key={annotationId} gutter={8}>
@@ -335,9 +363,12 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                   getReadableNameForLayer={(layer) => layer.name}
                   fixedLayerName={fixedSelectedColorLayer?.name || undefined}
                   style={{ width: "100%" }}
-                  onChange={(newLayerName) => {
-                    setDataLayerMags(
-                      colorLayers.filter((layer) => layer.name === newLayerName)[0].resolutions,
+                  onChange={() => {
+                    setIntersectingMags(
+                      annotationId,
+                      dataset,
+                      form.getFieldValue(["trainingAnnotations", idx, "layerName"]),
+                      form.getFieldValue(["trainingAnnotations", idx, "imageDataLayer"]),
                     );
                     form.setFieldValue(["trainingAnnotations", idx, "mag"], undefined);
                   }}
@@ -357,16 +388,25 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                 }}
                 fixedLayerName={fixedSelectedSegmentationLayer?.name || undefined}
                 label="Ground Truth Layer"
-                onChange={(newLayerName) => {
-                  setGroundTruthLayerMags(
-                    getAvailableMagsForGroundTruthLayer(newLayerName, annotationId),
+                onChange={() => {
+                  setIntersectingMags(
+                    annotationId,
+                    dataset,
+                    form.getFieldValue(["trainingAnnotations", idx, "layerName"]),
+                    form.getFieldValue(["trainingAnnotations", idx, "imageDataLayer"]),
                   );
                   form.setFieldValue(["trainingAnnotations", idx, "mag"], undefined);
                 }}
               />
             </Col>
             <Col span={6}>
-              <MagSelectionFormItem name={["trainingAnnotations", idx, "mag"]} magInfo={mags} />
+              <MagSelectionFormItem
+                name={["trainingAnnotations", idx, "mag"]}
+                magInfo={
+                  mags?.find((magInfoPerAnno) => magInfoPerAnno.annotationId === annotationId)
+                    ?.magInfo
+                }
+              />
             </Col>
           </Row>
         );
@@ -388,31 +428,31 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 
       {hasErrors
         ? errors.map((error) => (
-          <Alert
-            key={error}
-            description={error}
-            style={{
-              marginBottom: 12,
-              whiteSpace: "pre-line",
-            }}
-            type="error"
-            showIcon
-          />
-        ))
+            <Alert
+              key={error}
+              description={error}
+              style={{
+                marginBottom: 12,
+                whiteSpace: "pre-line",
+              }}
+              type="error"
+              showIcon
+            />
+          ))
         : null}
       {hasWarnings
         ? warnings.map((warning) => (
-          <Alert
-            key={warning}
-            description={warning}
-            style={{
-              marginBottom: 12,
-              whiteSpace: "pre-line",
-            }}
-            type="warning"
-            showIcon
-          />
-        ))
+            <Alert
+              key={warning}
+              description={warning}
+              style={{
+                marginBottom: 12,
+                whiteSpace: "pre-line",
+              }}
+              type="warning"
+              showIcon
+            />
+          ))
         : null}
 
       <FormItem>
@@ -656,10 +696,10 @@ function AnnotationsCsvInput({
               return valid
                 ? Promise.resolve()
                 : Promise.reject(
-                  new Error(
-                    "Each line should only contain an annotation ID or URL (without # or ,)",
-                  ),
-                );
+                    new Error(
+                      "Each line should only contain an annotation ID or URL (without # or ,)",
+                    ),
+                  );
             },
           }),
         ]}

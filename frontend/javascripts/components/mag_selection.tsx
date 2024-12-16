@@ -1,7 +1,6 @@
 import { Form, Select } from "antd";
 import { V3 } from "libs/mjs";
 import { clamp } from "libs/utils";
-import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import type { MagInfo } from "oxalis/model/helpers/mag_info";
 
@@ -37,27 +36,32 @@ function MagSelection({
   value?: Vector3;
   onChange?: (a: Vector3) => void;
 }): JSX.Element {
-  const allMags = magInfo != null ? magInfo.getMagsWithIndices() : [];
+  const allMags = magInfo != null ? magInfo.getMagList() : [];
+
+  const onSelect = (index: number | undefined) => {
+    if (onChange == null || index == null) return;
+    const newMag = allMags[index];
+    if (newMag != null) onChange(newMag);
+  };
 
   return (
     <Select
       placeholder="Select a magnification"
       value={
-        // using the index of the mag as value internally
+        // using the index of the mag *in the mag list* as value internally
+        // NB: this is different from the mag index
         value == null || magInfo == null
           ? null
           : clamp(
               0,
-              allMags.findIndex(([, v]) => V3.equals(v, value)),
+              allMags.findIndex((v) => V3.equals(v, value)),
               allMags.length - 1,
             )
       }
-      onSelect={onChange != null ? (value) => onChange(allMags[value][1]) : _.noop}
+      onSelect={onSelect}
     >
-      {allMags.map((mag) => {
-        const readableName = mag[1].join("-");
-        const index = mag[0];
-        console.log("mag", mag);
+      {allMags.map((mag, index) => {
+        const readableName = mag.join("-");
         return (
           <Select.Option key={index} value={index}>
             {readableName}

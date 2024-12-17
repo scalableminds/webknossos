@@ -5,6 +5,26 @@ As an admin or team manager, you can invite users to join your WEBKNOSSOS organi
 
 ![Send an invite link to new users](../images/users_invite.jpeg)
 
+## Adding Users to Teams
+Teams help organize users into logical groups for better collaboration and access control. By assigning users to specific teams, you can manage dataset permissions, coordinate tasks, and streamline project workflows more efficiently.
+
+To add or modify team assignments for users:
+
+1. Navigate to `Admin > Users` in the navigation bar
+2. Select one or more users from the user list
+3. Click on `Edit Teams and Permissions`
+   - This opens a dialog showing all available teams and user permissions
+4. Select or deselect teams as desired for the selected users
+   - For each team, you can choose the user's role:
+     - **Member** (default): Basic team membership with standard permissions
+     - **Team Manager**: Extended permissions for team management
+5. Click `Set Teams & Permissions` to confirm your changes
+
+Users can be members of multiple teams simultaneously. Team managers have additional permissions to manage team members and team-specific settings. For more information about user roles and permissions, see [User Roles](./access_rights.md).
+
+![Teams and Permissions dialog](../images/users_team_assignment.jpg)
+
+
 ## Experience Levels
 For a fine-grained assignment to [annotation tasks](../tasks_projects/tasks.md), each user can have one or more experience levels assigned to them. Based on their respective experience level, tasks may or may not be distributed to them.
 

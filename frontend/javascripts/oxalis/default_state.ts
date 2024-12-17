@@ -180,6 +180,7 @@ const defaultState: OxalisState = {
     version: 0,
     earliestAccessibleVersion: 0,
     stats: {},
+    organization: "",
   },
   save: {
     queue: [],

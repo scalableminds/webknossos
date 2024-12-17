@@ -200,6 +200,7 @@ export type Annotation = {
   readonly stats: TracingStats | null | undefined;
   readonly description: string;
   readonly name: string;
+  readonly organization: string;
   readonly tracingStore: APITracingStore;
   readonly annotationType: APIAnnotationType;
   readonly owner: APIUserBase | null | undefined;

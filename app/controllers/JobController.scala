@@ -395,10 +395,9 @@ class JobController @Inject()(
           command = JobCommand.materialize_volume_annotation
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
-          selectedBoundingBoxParsed <- Fox.runIf(includesProofreading)(selectedBoundingBox.toFox)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-          _ <- Fox.runIf(!multiUser.isSuperUser && selectedBoundingBoxParsed.isDefined)(
-            jobService.assertBoundingBoxLimits(selectedBoundingBoxParsed.get, None))
+          _ <- Fox.runIf(!multiUser.isSuperUser && includesProofreading)(Fox.runOptional(selectedBoundingBox)(bbox =>
+            jobService.assertBoundingBoxLimits(bbox, None)))
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
@@ -411,7 +410,7 @@ class JobController @Inject()(
             "merge_segments" -> mergeSegments,
             "volume_layer_name" -> volumeLayerName,
             "includes_proofreading" -> includesProofreading,
-            "selected_bounding_box" -> selectedBoundingBoxParsed
+            "selected_bounding_box" -> selectedBoundingBox
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunApplyMergerMode"
           js <- jobService.publicWrites(job)

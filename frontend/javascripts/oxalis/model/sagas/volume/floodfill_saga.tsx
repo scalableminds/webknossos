@@ -1,9 +1,15 @@
 import { message } from "antd";
-import { V3 } from "libs/mjs";
+import { V2, V3 } from "libs/mjs";
 import createProgressCallback from "libs/progress_callback";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import type { BoundingBoxType, LabeledVoxelsMap, OrthoView, Vector3 } from "oxalis/constants";
+import type {
+  BoundingBoxType,
+  LabeledVoxelsMap,
+  OrthoView,
+  Vector2,
+  Vector3,
+} from "oxalis/constants";
 import Constants, { FillModeEnum, Unicode } from "oxalis/constants";
 
 import { getDatasetBoundingBox, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
@@ -33,7 +39,7 @@ function* getBoundingBoxForFloodFill(
   const isRestrictedToBoundingBox = yield* select(
     (state) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
   );
-  console.log("########################### isRestrictedToBoundingBox", isRestrictedToBoundingBox);
+  const fillMode = yield* select((state) => state.userConfiguration.fillMode);
   if (isRestrictedToBoundingBox) {
     const bboxes = yield* select((state) =>
       getUserBoundingBoxesThatContainPosition(state, position),
@@ -42,6 +48,26 @@ function* getBoundingBoxForFloodFill(
       const smallestBbox = _.sortBy(bboxes, (bbox) =>
         new BoundingBox(bbox.boundingBox).getVolume(),
       )[0];
+
+      const maximumVoxelSize =
+        Constants.FLOOD_FILL_MULTIPLIER_FOR_BBOX_RESTRICTION *
+        V3.prod(Constants.FLOOD_FILL_EXTENTS[fillMode]);
+      const bboxObj = new BoundingBox(smallestBbox.boundingBox);
+
+      const bboxVolume =
+        fillMode === FillModeEnum._3D
+          ? bboxObj.getVolume()
+          : // Only consider the 2D projection of the bounding box onto the current viewport
+            V2.prod(
+              Dimensions.getIndices(currentViewport).map(
+                (idx) => bboxObj.getSize()[idx],
+              ) as Vector2,
+            );
+      if (bboxVolume > maximumVoxelSize) {
+        return {
+          failureReason: `The bounding box that encloses the clicked position is too large. Shrink its size so that it does not contain more than ${maximumVoxelSize} voxels.`,
+        };
+      }
       return smallestBbox.boundingBox;
     } else {
       return {
@@ -51,7 +77,6 @@ function* getBoundingBoxForFloodFill(
     }
   }
 
-  const fillMode = yield* select((state) => state.userConfiguration.fillMode);
   const halfBoundingBoxSizeUVW = V3.scale(Constants.FLOOD_FILL_EXTENTS[fillMode], 0.5);
   const currentViewportBounding = {
     min: V3.sub(position, halfBoundingBoxSizeUVW),

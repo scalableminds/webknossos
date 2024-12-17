@@ -85,7 +85,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
-      newestMaterialized <- getNewestMaterialized(annotationId) ?~> "getNewestMaterialized.failed"
+      // First, fetch the very newest materialized (even if an older one was requested), to determine correct targetVersion
+      newestMaterialized <- getNewestMatchingMaterializedAnnotation(annotationId, version = None) ?~> "getNewestMaterialized.failed"
       targetVersion <- determineTargetVersion(annotationId, newestMaterialized, version) ?~> "determineTargetVersion.failed"
       // When requesting any other than the newest version, do not consider the changes final
       reportChangesToWk = version.isEmpty || version.contains(targetVersion)
@@ -93,28 +94,23 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                                                                            _ => newInnerCache)
       updatedAnnotation <- materializedAnnotationInnerCache.getOrLoad(
         targetVersion,
-        _ =>
-          getWithTracingsVersioned(annotationId,
-                                   newestMaterialized,
-                                   targetVersion,
-                                   reportChangesToWk = reportChangesToWk)
+        _ => getWithTracingsVersioned(annotationId, targetVersion, reportChangesToWk = reportChangesToWk)
       )
     } yield updatedAnnotation
 
-  private def getWithTracingsVersioned(
-      annotationId: String,
-      newestMaterializedAnnotation: AnnotationProto,
-      version: Long,
-      reportChangesToWk: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
+  private def getWithTracingsVersioned(annotationId: String, targetVersion: Long, reportChangesToWk: Boolean)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
-      annotationWithTracings <- findTracingsForAnnotation(newestMaterializedAnnotation) ?~> "findTracingsForAnnotation.failed"
+      materializedAnnotation <- getNewestMatchingMaterializedAnnotation(annotationId, Some(targetVersion))
+      annotationWithTracings <- findTracingsForAnnotation(materializedAnnotation) ?~> "findTracingsForAnnotation.failed"
       annotationWithTracingsAndMappings <- findEditableMappingsForAnnotation(
         annotationId,
         annotationWithTracings,
-        newestMaterializedAnnotation.version,
-        version // Note: this targetVersion is used for the updater buffers, and is overwritten for each update group, see annotation.withNewUpdaters
+        materializedAnnotation.version,
+        targetVersion // Note: this targetVersion is used for the updater buffers, and is overwritten for each update group, see annotation.withNewUpdaters
       ) ?~> "findEditableMappingsForAnnotation.failed"
-      updated <- applyPendingUpdates(annotationWithTracingsAndMappings, annotationId, version, reportChangesToWk) ?~> "applyUpdates.failed"
+      updated <- applyPendingUpdates(annotationWithTracingsAndMappings, annotationId, targetVersion, reportChangesToWk) ?~> "applyUpdates.failed"
     } yield updated
 
   def currentMaterializableVersion(annotationId: String): Fox[Long] =
@@ -123,16 +119,25 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   def currentMaterializedVersion(annotationId: String): Fox[Long] =
     tracingDataStore.annotations.getVersion(annotationId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
 
-  private def currentMaterializedSkeletonVersion(tracingId: String): Fox[Long] =
-    tracingDataStore.skeletons.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
+  private def newestMatchingMaterializedSkeletonVersion(tracingId: String, targetVersion: Long): Fox[Long] =
+    tracingDataStore.skeletons.getVersion(tracingId,
+                                          version = Some(targetVersion),
+                                          mayBeEmpty = Some(true),
+                                          emptyFallback = Some(0L))
 
-  private def currentMaterializedEditableMappingVersion(tracingId: String): Fox[Long] =
-    tracingDataStore.editableMappingsInfo.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
+  private def newestMatchingMaterializedEditableMappingVersion(tracingId: String, targetVersion: Long): Fox[Long] =
+    tracingDataStore.editableMappingsInfo.getVersion(tracingId,
+                                                     version = Some(targetVersion),
+                                                     mayBeEmpty = Some(true),
+                                                     emptyFallback = Some(0L))
 
-  private def getNewestMaterialized(annotationId: String): Fox[AnnotationProto] =
+  private def getNewestMatchingMaterializedAnnotation(annotationId: String,
+                                                      version: Option[Long]): Fox[AnnotationProto] =
     for {
-      keyValuePair <- tracingDataStore.annotations.get[AnnotationProto](annotationId, mayBeEmpty = Some(true))(
-        fromProtoBytes[AnnotationProto]) ?~> "getAnnotation.failed"
+      keyValuePair <- tracingDataStore.annotations.get[AnnotationProto](
+        annotationId,
+        mayBeEmpty = Some(true),
+        version = version)(fromProtoBytes[AnnotationProto]) ?~> "getAnnotation.failed"
     } yield keyValuePair.value
 
   private def applyUpdate(
@@ -301,8 +306,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   private def findPendingUpdates(annotationId: String, annotation: AnnotationWithTracings, desiredVersion: Long)(
       implicit ec: ExecutionContext): Fox[List[(Long, List[UpdateAction])]] =
     for {
-      extraSkeletonUpdates <- findExtraSkeletonUpdates(annotationId, annotation)
-      extraEditableMappingUpdates <- findExtraEditableMappingUpdates(annotationId, annotation)
+      extraSkeletonUpdates <- findExtraSkeletonUpdates(annotationId, annotation, desiredVersion)
+      extraEditableMappingUpdates <- findExtraEditableMappingUpdates(annotationId, annotation, desiredVersion)
       existingVersion = annotation.version
       pendingAnnotationUpdates <- if (desiredVersion == existingVersion) Fox.successful(List.empty)
       else {
@@ -319,12 +324,12 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
    * we may fetch skeleton updates *older* than it, in order to fully construct the state of that version.
    * Only annotations from before that migration have this skeletonMayHavePendingUpdates=Some(true).
    */
-  private def findExtraSkeletonUpdates(annotationId: String, annotation: AnnotationWithTracings)(
+  private def findExtraSkeletonUpdates(annotationId: String, annotation: AnnotationWithTracings, targetVersion: Long)(
       implicit ec: ExecutionContext): Fox[List[(Long, List[UpdateAction])]] =
     if (annotation.annotation.skeletonMayHavePendingUpdates.getOrElse(false)) {
       annotation.getSkeletonId.map { skeletonId =>
         for {
-          materializedSkeletonVersion <- currentMaterializedSkeletonVersion(skeletonId)
+          materializedSkeletonVersion <- newestMatchingMaterializedSkeletonVersion(skeletonId, targetVersion)
           extraUpdates <- if (materializedSkeletonVersion < annotation.version) {
             tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
               annotationId,
@@ -339,25 +344,30 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
 
   private def filterSkeletonUpdates(
       updateGroups: List[(Long, List[UpdateAction])]): List[(Long, List[SkeletonUpdateAction])] =
-    updateGroups.map {
+    updateGroups.flatMap {
       case (version, updateGroup) =>
         val updateGroupFiltered = updateGroup.flatMap {
           case a: SkeletonUpdateAction => Some(a)
           case _                       => None
         }
-        (version, updateGroupFiltered)
+        if (updateGroupFiltered.nonEmpty) {
+          Some((version, updateGroupFiltered))
+        } else None
     }
 
   // Same problem as with skeletons, see comment above
   // Note that the EditableMappingUpdaters are passed only the “oldVersion” that is the materialized annotation version
   // not the actual materialized editableMapping version, but that should yield the same data when loading from fossil.
-  private def findExtraEditableMappingUpdates(annotationId: String, annotation: AnnotationWithTracings)(
-      implicit ec: ExecutionContext): Fox[List[(Long, List[UpdateAction])]] =
+  private def findExtraEditableMappingUpdates(
+      annotationId: String,
+      annotation: AnnotationWithTracings,
+      targetVersion: Long)(implicit ec: ExecutionContext): Fox[List[(Long, List[UpdateAction])]] =
     if (annotation.annotation.skeletonMayHavePendingUpdates.getOrElse(false)) {
       for {
         updatesByEditableMapping <- Fox.serialCombined(annotation.getEditableMappingTracingIds) { tracingId =>
           for {
-            materializedEditableMappingVersion <- currentMaterializedEditableMappingVersion(tracingId)
+            materializedEditableMappingVersion <- newestMatchingMaterializedEditableMappingVersion(tracingId,
+                                                                                                   targetVersion)
             extraUpdates <- if (materializedEditableMappingVersion < annotation.version) {
               tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
                 annotationId,

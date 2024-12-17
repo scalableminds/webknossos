@@ -4,16 +4,14 @@ import type { Action } from "oxalis/model/actions/actions";
 import {
   type EditAnnotationLayerAction,
   setAnnotationAllowUpdateAction,
+  type SetAnnotationDescriptionAction,
   setBlockedByUserAction,
   type SetOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
+import * as Utils from "libs/utils";
 import type { EditableAnnotation } from "admin/admin_rest_api";
 import type { ActionPattern } from "redux-saga/effects";
-import {
-  editAnnotation,
-  updateAnnotationLayer,
-  acquireAnnotationMutex,
-} from "admin/admin_rest_api";
+import { editAnnotation, acquireAnnotationMutex } from "admin/admin_rest_api";
 import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,
@@ -47,11 +45,23 @@ import { determineLayout } from "oxalis/view/layouting/default_layout_configs";
 import { getLastActiveLayout, getLayoutConfig } from "oxalis/view/layouting/layout_persistence";
 import { is3dViewportMaximized } from "oxalis/view/layouting/flex_layout_helper";
 import { needsLocalHdf5Mapping } from "../accessors/volumetracing_accessor";
+import { pushSaveQueueTransaction } from "../actions/save_actions";
+import { updateAnnotationLayerName, updateMetadataOfAnnotation } from "./update_actions";
+import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
+import { ensureWkReady } from "./ready_sagas";
 
 /* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping
   compare https://github.com/scalableminds/webknossos/issues/5223.
  */
 const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
+
+export function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDescriptionAction) {
+  const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
+  if (!mayEdit) {
+    return;
+  }
+  yield* put(pushSaveQueueTransaction([updateMetadataOfAnnotation(action.description)]));
+}
 
 export function* pushAnnotationUpdateAsync(action: Action) {
   const tracing = yield* select((state) => state.tracing);
@@ -72,7 +82,6 @@ export function* pushAnnotationUpdateAsync(action: Action) {
   const editObject: Partial<EditableAnnotation> = {
     name: tracing.name,
     visibility: tracing.visibility,
-    description: tracing.description,
     viewConfiguration,
   };
   try {
@@ -103,17 +112,17 @@ export function* pushAnnotationUpdateAsync(action: Action) {
 
 function* pushAnnotationLayerUpdateAsync(action: EditAnnotationLayerAction): Saga<void> {
   const { tracingId, layerProperties } = action;
-  const annotationId = yield* select((storeState) => storeState.tracing.annotationId);
-  const annotationType = yield* select((storeState) => storeState.tracing.annotationType);
-  yield* retry(
-    SETTINGS_MAX_RETRY_COUNT,
-    SETTINGS_RETRY_DELAY,
-    updateAnnotationLayer,
-    annotationId,
-    annotationType,
-    tracingId,
-    layerProperties,
+  yield* put(
+    pushSaveQueueTransaction([updateAnnotationLayerName(tracingId, layerProperties.name)]),
   );
+}
+
+export function* checkVersionRestoreParam(): Saga<void> {
+  const showVersionRestore = yield* call(Utils.hasUrlParam, "showVersionRestore");
+
+  if (showVersionRestore) {
+    yield* put(setVersionRestoreVisibilityAction(true));
+  }
 }
 
 function shouldDisplaySegmentationData(): boolean {
@@ -183,7 +192,7 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
     }
   }
 
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   // Wait before showing the initial warning. Due to initialization lag it may only be visible very briefly, otherwise.
   yield* delay(5000);
   yield* warnMaybe();
@@ -214,9 +223,11 @@ export function* watchAnnotationAsync(): Saga<void> {
   // name, only the latest action is relevant. If `_takeEvery` was used,
   // all updates to the annotation name would be retried regularly, which
   // would also cause race conditions.
-  yield* takeLatest("SET_ANNOTATION_NAME", pushAnnotationUpdateAsync);
-  yield* takeLatest("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);
-  yield* takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
+  yield* takeLatest(
+    ["SET_ANNOTATION_NAME", "SET_ANNOTATION_VISIBILITY"],
+    pushAnnotationUpdateAsync,
+  );
+  yield* takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationDescriptionUpdateAction);
   yield* takeLatest(
     ((action: Action) =>
       action.type === "UPDATE_LAYER_SETTING" &&
@@ -227,7 +238,7 @@ export function* watchAnnotationAsync(): Saga<void> {
 }
 
 export function* acquireAnnotationMutexMaybe(): Saga<void> {
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   const annotationId = yield* select((storeState) => storeState.tracing.annotationId);
   if (!allowUpdate) {
@@ -334,4 +345,9 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   }
   yield* takeEvery("SET_OTHERS_MAY_EDIT_FOR_ANNOTATION", reactToOthersMayEditChanges);
 }
-export default [warnAboutSegmentationZoom, watchAnnotationAsync, acquireAnnotationMutexMaybe];
+export default [
+  warnAboutSegmentationZoom,
+  watchAnnotationAsync,
+  acquireAnnotationMutexMaybe,
+  checkVersionRestoreParam,
+];

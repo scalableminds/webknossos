@@ -65,7 +65,6 @@ import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_acces
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import type { SearchProps } from "antd/lib/input";
-import { getCombinedStatsFromServerAnnotation } from "oxalis/model/accessors/annotation_accessor";
 import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 
 const { Search } = Input;
@@ -709,7 +708,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         width: 150,
         render: (__: any, annotation: APIAnnotationInfo) => (
           <AnnotationStats
-            stats={getCombinedStatsFromServerAnnotation(annotation)}
+            stats={_.mapValues(
+              _.keyBy(annotation.annotationLayers, (layer) => layer.tracingId),
+              (layer) => layer.stats,
+            )}
             asInfoBlock={false}
             withMargin={false}
           />

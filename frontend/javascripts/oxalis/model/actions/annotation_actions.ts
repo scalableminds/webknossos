@@ -1,5 +1,4 @@
 import type {
-  APIAnnotation,
   APIAnnotationVisibility,
   APIDataLayer,
   APIDataset,
@@ -8,6 +7,7 @@ import type {
   EditableLayerProperties,
 } from "types/api_flow_types";
 import type {
+  Annotation,
   MappingType,
   UserBoundingBox,
   UserBoundingBoxWithoutId,
@@ -20,10 +20,10 @@ import Deferred from "libs/async/deferred";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 
 type InitializeAnnotationAction = ReturnType<typeof initializeAnnotationAction>;
-type SetAnnotationNameAction = ReturnType<typeof setAnnotationNameAction>;
+export type SetAnnotationNameAction = ReturnType<typeof setAnnotationNameAction>;
 type SetAnnotationVisibilityAction = ReturnType<typeof setAnnotationVisibilityAction>;
 export type EditAnnotationLayerAction = ReturnType<typeof editAnnotationLayerAction>;
-type SetAnnotationDescriptionAction = ReturnType<typeof setAnnotationDescriptionAction>;
+export type SetAnnotationDescriptionAction = ReturnType<typeof setAnnotationDescriptionAction>;
 type SetAnnotationAllowUpdateAction = ReturnType<typeof setAnnotationAllowUpdateAction>;
 type SetBlockedByUserAction = ReturnType<typeof setBlockedByUserAction>;
 type SetUserBoundingBoxesAction = ReturnType<typeof setUserBoundingBoxesAction>;
@@ -95,7 +95,7 @@ export const AllUserBoundingBoxActions = [
   "DELETE_USER_BOUNDING_BOX",
   "ADD_USER_BOUNDING_BOXES",
 ];
-export const initializeAnnotationAction = (annotation: APIAnnotation) =>
+export const initializeAnnotationAction = (annotation: Annotation) =>
   ({
     type: "INITIALIZE_ANNOTATION",
     annotation,

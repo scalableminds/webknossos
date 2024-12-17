@@ -1,16 +1,11 @@
 package controllers
 
 import collections.SequenceUtils
-
-import java.io.{BufferedOutputStream, File, FileOutputStream}
-import java.util.zip.Deflater
-import org.apache.pekko.actor.ActorSystem
-import org.apache.pekko.stream.Materializer
-import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -20,42 +15,42 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayerType,
   FetchedAnnotationLayer
 }
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  AbstractSegmentationLayer,
-  DataLayerLike,
-  DataSourceLike,
-  GenericDataSource,
-  SegmentationLayer
-}
+import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeDataZipFormat,
   VolumeTracingDefaults,
-  VolumeTracingDownsampling
+  VolumeTracingMags
 }
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Empty
 
 import javax.inject.Inject
+import net.liftweb.common.Empty
+
 import models.analytics.{AnalyticsService, DownloadAnnotationEvent, UploadAnnotationEvent}
 import models.annotation.AnnotationState._
 import models.annotation._
 import models.annotation.nml.NmlResults.{NmlParseResult, NmlParseSuccess}
 import models.annotation.nml.{NmlResults, NmlWriter}
-import models.dataset.{DataStoreDAO, Dataset, DatasetDAO, DatasetService, WKRemoteDataStoreClient}
+import models.dataset._
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task._
 import models.user._
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData}
+import play.silhouette.api.Silhouette
 import security.WkEnv
 import utils.WkConf
 
+import java.io.{BufferedOutputStream, File, FileOutputStream}
+import java.util.zip.Deflater
 import scala.concurrent.ExecutionContext
 
 class AnnotationIOController @Inject()(
@@ -81,6 +76,7 @@ class AnnotationIOController @Inject()(
     extends Controller
     with FoxImplicits
     with ProtoGeometryImplicits
+    with AnnotationLayerPrecedence
     with LazyLogging {
   implicit val actorSystem: ActorSystem = ActorSystem()
 
@@ -143,7 +139,16 @@ class AnnotationIOController @Inject()(
                                                      mergedSkeletonLayers ::: mergedVolumeLayers,
                                                      AnnotationType.Explorational,
                                                      name,
-                                                     description)
+                                                     description,
+                                                     ObjectId.generate)
+          annotationProto = AnnotationProto(
+            description = annotation.description,
+            version = 0L,
+            annotationLayers = annotation.annotationLayers.map(_.toProto),
+            earliestAccessibleVersion = 0L
+          )
+          _ <- tracingStoreClient.saveAnnotationProto(annotation._id, annotationProto)
+          _ <- annotationDAO.insertOne(annotation)
           _ = analyticsService.track(UploadAnnotationEvent(request.identity, annotation))
         } yield
           JsonOk(
@@ -183,8 +188,7 @@ class AnnotationIOController @Inject()(
         mergedTracingId <- client.mergeVolumeTracingsByContents(
           VolumeTracings(uploadedVolumeLayersFlat.map(v => VolumeTracingOpt(Some(v.tracing)))),
           dataSource,
-          uploadedVolumeLayersFlat.map(v => v.getDataZipFrom(otherFiles)),
-          persistTracing = true
+          uploadedVolumeLayersFlat.map(v => v.getDataZipFrom(otherFiles))
         )
       } yield
         List(
@@ -203,8 +207,7 @@ class AnnotationIOController @Inject()(
     else {
       for {
         mergedTracingId <- tracingStoreClient.mergeSkeletonTracingsByContents(
-          SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
-          persistTracing = true)
+          SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))))
       } yield
         List(
           AnnotationLayer(mergedTracingId,
@@ -327,10 +330,9 @@ class AnnotationIOController @Inject()(
         boundingBox = bbox,
         elementClass = elementClass,
         fallbackLayer = fallbackLayerOpt.map(_.name),
-        largestSegmentId =
-          annotationService.combineLargestSegmentIdsByPrecedence(volumeTracing.largestSegmentId,
-                                                                 fallbackLayerOpt.map(_.largestSegmentId)),
-        mags = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayerOpt).map(vec3IntToProto),
+        largestSegmentId = combineLargestSegmentIdsByPrecedence(volumeTracing.largestSegmentId,
+                                                                fallbackLayerOpt.map(_.largestSegmentId)),
+        mags = VolumeTracingMags.magsForVolumeTracing(dataSource, fallbackLayerOpt).map(vec3IntToProto),
         hasSegmentIndex = Some(tracingCanHaveSegmentIndex)
       )
   }
@@ -350,8 +352,7 @@ class AnnotationIOController @Inject()(
   // NML or Zip file containing skeleton and/or volume data of this annotation. In case of Compound annotations, multiple such annotations wrapped in another zip
   def download(typ: String,
                id: String,
-               skeletonVersion: Option[Long],
-               volumeVersion: Option[Long],
+               version: Option[Long],
                skipVolumeData: Option[Boolean],
                volumeDataZipFormat: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
@@ -371,8 +372,7 @@ class AnnotationIOController @Inject()(
               id,
               typ,
               request.identity,
-              skeletonVersion,
-              volumeVersion,
+              version,
               skipVolumeData.getOrElse(false),
               volumeDataZipFormatParsed.getOrElse(VolumeDataZipFormat.wkw)) ?~> "annotation.download.failed"
         }
@@ -380,27 +380,20 @@ class AnnotationIOController @Inject()(
     }
 
   def downloadWithoutType(id: String,
-                          skeletonVersion: Option[Long],
-                          volumeVersion: Option[Long],
+                          version: Option[Long],
                           skipVolumeData: Option[Boolean],
                           volumeDataZipFormat: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
-        annotation <- provider.provideAnnotation(id, request.identity)
-        result <- download(annotation.typ.toString,
-                           id,
-                           skeletonVersion,
-                           volumeVersion,
-                           skipVolumeData,
-                           volumeDataZipFormat)(request)
+        annotation <- provider.provideAnnotation(id, request.identity) ?~> "annotation.notFound" ~> NOT_FOUND
+        result <- download(annotation.typ.toString, id, version, skipVolumeData, volumeDataZipFormat)(request)
       } yield result
     }
 
   private def downloadExplorational(annotationId: String,
                                     typ: String,
                                     issuingUser: Option[User],
-                                    skeletonVersion: Option[Long],
-                                    volumeVersion: Option[Long],
+                                    version: Option[Long],
                                     skipVolumeData: Boolean,
                                     volumeDataZipFormat: VolumeDataZipFormat)(implicit ctx: DBAccessContext) = {
 
@@ -410,7 +403,7 @@ class AnnotationIOController @Inject()(
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataset)
         fetchedAnnotationLayers <- Fox.serialCombined(annotation.skeletonAnnotationLayers)(
-          tracingStoreClient.getSkeletonTracing(_, skeletonVersion))
+          tracingStoreClient.getSkeletonTracing(annotation._id, _, version))
         user <- userService.findOneCached(annotation._user)(GlobalAccessContext)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
         nmlStream = nmlWriter.toNmlStream(
@@ -442,15 +435,16 @@ class AnnotationIOController @Inject()(
         tracingStoreClient <- tracingStoreService.clientFor(dataset)
         fetchedVolumeLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.volumeAnnotationLayers) {
           volumeAnnotationLayer =>
-            tracingStoreClient.getVolumeTracing(volumeAnnotationLayer,
-                                                volumeVersion,
+            tracingStoreClient.getVolumeTracing(annotation._id,
+                                                volumeAnnotationLayer,
+                                                version,
                                                 skipVolumeData,
                                                 volumeDataZipFormat,
                                                 dataset.voxelSize)
         } ?~> "annotation.download.fetchVolumeLayer.failed"
         fetchedSkeletonLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.skeletonAnnotationLayers) {
           skeletonAnnotationLayer =>
-            tracingStoreClient.getSkeletonTracing(skeletonAnnotationLayer, skeletonVersion)
+            tracingStoreClient.getSkeletonTracing(annotation._id, skeletonAnnotationLayer, version)
         } ?~> "annotation.download.fetchSkeletonLayer.failed"
         user <- userService.findOneCached(annotation._user)(GlobalAccessContext) ?~> "annotation.download.findUser.failed"
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne(_)(GlobalAccessContext)) ?~> "task.notFound"

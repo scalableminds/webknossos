@@ -40,7 +40,7 @@ type ContextMenuProps = {
   contextMenuPosition: [number, number] | null | undefined;
   hideContextMenu: () => void;
   menu: MenuProps | null | undefined;
-  className: string; // todop: should be unique?
+  className: string;
 };
 
 export function ContextMenuContainer(props: ContextMenuProps) {

@@ -195,7 +195,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
       fallbackLayerName,
       maybeMappingName,
     );
-    location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${location.hash}`;
+    location.href = `${location.origin}/annotations/${annotation.id}${location.hash}`;
   };
 
   renderStartAIJobButton(disabled: boolean, tooltipTextIfDisabled: string): React.ReactNode {

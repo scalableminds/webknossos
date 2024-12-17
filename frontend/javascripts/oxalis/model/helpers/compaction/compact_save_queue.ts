@@ -3,11 +3,18 @@ import type { SaveQueueEntry } from "oxalis/store";
 
 function removeAllButLastUpdateTracingAction(updateActionsBatches: Array<SaveQueueEntry>) {
   // This part of the code removes all entries from the save queue that consist only of
-  // one updateTracing update action, except for the last one
-  const updateTracingOnlyBatches = updateActionsBatches.filter(
-    (batch) => batch.actions.length === 1 && batch.actions[0].name === "updateTracing",
+  // one update{Skeleton,Volume}Tracing update action, except for the last one
+  const updateSkeletonTracingOnlyBatches = updateActionsBatches.filter(
+    (batch) => batch.actions.length === 1 && batch.actions[0].name === "updateSkeletonTracing",
   );
-  return _.without(updateActionsBatches, ...updateTracingOnlyBatches.slice(0, -1));
+  const updateVolumeTracingOnlyBatches = updateActionsBatches.filter(
+    (batch) => batch.actions.length === 1 && batch.actions[0].name === "updateVolumeTracing",
+  );
+  return _.without(
+    updateActionsBatches,
+    ...updateSkeletonTracingOnlyBatches.slice(0, -1),
+    ...updateVolumeTracingOnlyBatches.slice(0, -1),
+  );
 }
 
 function removeAllButLastUpdateTdCameraAction(updateActionsBatches: Array<SaveQueueEntry>) {

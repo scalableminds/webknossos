@@ -355,7 +355,7 @@ function _DownloadModalView({
         tracing.annotationId,
         tracing.annotationType,
         hasVolumeFallback,
-        {},
+        undefined,
         fileFormatToDownload,
         includeVolumeData,
       );

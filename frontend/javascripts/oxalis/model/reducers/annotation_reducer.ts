@@ -6,7 +6,6 @@ import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import * as Utils from "libs/utils";
 import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
-import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 import _ from "lodash";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
@@ -75,8 +74,7 @@ const maybeAddAdditionalCoordinatesToMeshState = (
 function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "INITIALIZE_ANNOTATION": {
-      const annotationInfo = convertServerAnnotationToFrontendAnnotation(action.annotation);
-      return updateTracing(state, annotationInfo);
+      return updateTracing(state, action.annotation);
     }
 
     case "SET_ANNOTATION_NAME": {

@@ -82,14 +82,16 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       _ <- bool2Fox(inputFiles.nonEmpty) ?~> "nml.file.notFound"
       jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> "format.json.missing"
       params <- JsonHelper.parseAndValidateJson[NmlTaskParameters](jsonString) ?~> "task.create.failed"
+      userOrganizationId = request.identity._organization
       _ <- taskCreationService.assertBatchLimit(inputFiles.length, List(params.taskTypeId))
       taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
       project <- projectDAO
         .findOneByNameAndOrganization(params.projectName, request.identity._organization) ?~> "project.notFound" ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
-      extractedFiles <- nmlService.extractFromFiles(inputFiles.map(f => (f.ref.path.toFile, f.filename)),
-                                                    SharedParsingParameters(useZipName = false, isTaskUpload = true))
+      extractedFiles <- nmlService.extractFromFiles(
+        inputFiles.map(f => (f.ref.path.toFile, f.filename)),
+        SharedParsingParameters(useZipName = false, isTaskUpload = true, userOrganizationId = userOrganizationId))
       extractedTracingBoxesRaw: List[TracingBoxContainer] = extractedFiles.toBoxes
       extractedTracingBoxes: List[TracingBoxContainer] <- taskCreationService.addVolumeFallbackBoundingBoxes(
         extractedTracingBoxesRaw)

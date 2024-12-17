@@ -179,6 +179,7 @@ const defaultState: OxalisState = {
     othersMayEdit: false,
     blockedByUser: null,
     annotationLayers: [],
+    organization: "",
   },
   save: {
     queue: {

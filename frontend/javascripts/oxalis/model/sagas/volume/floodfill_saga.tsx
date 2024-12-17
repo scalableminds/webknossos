@@ -224,18 +224,29 @@ export function* floodFill(): Saga<void> {
     console.timeEnd("applyLabeledVoxelMapToAllMissingMags");
 
     if (wasBoundingBoxExceeded) {
-      const warningDetails =
-        fillMode === FillModeEnum._2D
-          ? "Please check the borders of the filled area manually and use the fill tool again if necessary."
-          : "A bounding box that represents the labeled volume was added so that you can check the borders manually.";
+      const isRestrictedToBoundingBox = yield* select(
+        (state) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
+      );
+      const createNewBoundingBox = fillMode === FillModeEnum._3D && !isRestrictedToBoundingBox;
+      const warningDetails = createNewBoundingBox
+        ? "A bounding box that represents the labeled volume was added so that you can check the borders manually."
+        : "Please check the borders of the filled area manually and use the fill tool again if necessary.";
       yield* call(
         progressCallback,
         true,
         <>
-          Floodfill is done, but terminated since the labeled volume got too large.
+          Floodfill is done, but terminated because{" "}
+          {isRestrictedToBoundingBox
+            ? "the labeled volume touched the bounding box to which the floodfill was restricted"
+            : "the labeled volume got too large"}
+          .
           <br />
           {warningDetails} {Unicode.NonBreakingSpace}
-          <a href="#" onClick={() => message.destroy(FLOODFILL_PROGRESS_KEY)}>
+          <a
+            href="#"
+            style={{ pointerEvents: "auto" }}
+            onClick={() => message.destroy(FLOODFILL_PROGRESS_KEY)}
+          >
             Close
           </a>
         </>,
@@ -243,9 +254,10 @@ export function* floodFill(): Saga<void> {
           successMessageDelay: 10000,
         },
       );
-      if (fillMode === FillModeEnum._3D) {
+      if (createNewBoundingBox) {
         // The bounding box is overkill for the 2D mode because in that case,
-        // it's trivial to check the borders manually.
+        // it's trivial to check the borders manually. Also, don't create a bounding
+        // box if the user restricted the floodfill to a user bounding box, anyway.
         yield* put(
           addUserBoundingBoxAction({
             boundingBox: coveredBoundingBox,

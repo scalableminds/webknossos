@@ -1394,7 +1394,11 @@ function FloodFillSettings() {
           "When enabled, the floodfill will be restricted to the bounding box enclosed by the clicked position. If multiple bounding boxes enclose that position, the smallest is used."
         }
       >
-        Restrict to BBox
+        <img
+          src="/assets/images/icon-restrict-floodfill-to-bbox.svg"
+          alt="Restrict floodfill"
+          style={imgStyleForSpaceyIcons}
+        />
       </ButtonComponent>
     </div>
   );

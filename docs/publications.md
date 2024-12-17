@@ -4,7 +4,8 @@ The following publications used WEBKNOSSOS for exploring large 3D electron-micro
 ## 2024
 * Andrea Nathansen, Matthis Clausen, Manuel Berning, Ethan MacKenzie, Yuxin Zhang, Alexandra Pacureanu, Andreas T. Schaefer, Norman Rzepka, & Carles Bosch.  
   Cell nuclei segmentation in mm-scale x-ray holographic nanotomography images of mouse brain tissue.  
-  [Developments in X-Ray Tomography XV. Vol. 13152. SPIE (2024). DOI: 10.1117/12.3028309](https://doi.org/10.1117/12.3028309)
+  [Developments in X-Ray Tomography XV. Vol. 13152. SPIE (2024). DOI: 10.1117/12.3028309](https://doi.org/10.1117/12.3028309)  
+  **View data [#1](https://wklink.org/9238) [#2](https://wklink.org/9123)** in WEBKNOSSOS 
 
 * Anja Günther, Silke Haverkamp, Stephan Irsen, Paul V. Watkins, Karin Dedek, Henrik Mouritsen & Kevin L. Briggman.  
   Species–specific circuitry of double cone photoreceptors in two avian retinas.  
@@ -96,8 +97,8 @@ The following publications used WEBKNOSSOS for exploring large 3D electron-micro
   [bioRxiv (2024). DOI: 10.1101/2024.03.07.583776](https://doi.org/10.1101/2024.03.07.583776)
 
 * Norman Rzepka.  
-  OME-Zarr Specification. RFC-2: Zarr v3  
-  [Next-generation file formats (NGFF) RFC 2 (2024)](https://ngff.openmicroscopy.org/rfc/2/index.html).
+  Next-generation file formats (NGFF), RFC 2:  Specification for using Zarr v3 in OME-Zarr
+  [NGFF RFC 2 (2024)](https://ngff.openmicroscopy.org/rfc/2/index.html).
 
 ## 2023
 * Tri M. Nguyen, Logan A. Thomas, Jeff L. Rhoades, Ilaria Ricchi, Xintong Cindy Yuan, Arlo Sheridan, David G. C. Hildebrand, Jan Funke, Wade G. Regehr & Wei-Chung Allen Lee.  

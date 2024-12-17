@@ -25,7 +25,7 @@ import {
 import type { TreeType, Vector3 } from "oxalis/constants";
 import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
 import {
-  getTransformsForLayerWithoutTransformationConfigOrNull,
+  getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull,
   getTransformsForSkeletonLayer,
 } from "./dataset_layer_rotation_accessor";
 
@@ -218,7 +218,7 @@ export function getNodeAndTreeOrNull(
 
 export function isSkeletonLayerTransformed(state: OxalisState) {
   return (
-    getTransformsForLayerWithoutTransformationConfigOrNull(
+    getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
       state.dataset,
       state.datasetConfiguration.nativelyRenderedLayerName,
     ) != null

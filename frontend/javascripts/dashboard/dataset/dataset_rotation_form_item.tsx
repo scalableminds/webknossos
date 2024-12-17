@@ -6,9 +6,9 @@ import type { APIDataLayer } from "types/api_flow_types";
 import { FormItemWithInfo } from "./helper_components";
 import {
   getRotationMatrixAroundAxis,
-  getTranslationToOrigin,
+  fromCenterToOrigin,
   IDENTITY_TRANSFORM,
-  getTranslationBackToOriginalPosition,
+  fromOriginToCenter,
   AXIS_TO_TRANSFORM_INDEX,
   doAllLayersHaveTheSameRotation,
 } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
@@ -54,11 +54,11 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
     }
     const rotationValues = form.getFieldValue(["datasetRotation"]);
     const transformations = [
-      getTranslationToOrigin(datasetBoundingBox),
+      fromCenterToOrigin(datasetBoundingBox),
       getRotationMatrixAroundAxis("x", rotationValues["x"]),
       getRotationMatrixAroundAxis("y", rotationValues["y"]),
       getRotationMatrixAroundAxis("z", rotationValues["z"]),
-      getTranslationBackToOriginalPosition(datasetBoundingBox),
+      fromOriginToCenter(datasetBoundingBox),
     ];
     const dataLayersWithUpdatedTransforms = dataLayers.map((layer) => {
       return {
@@ -86,11 +86,11 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
         let transformations = layer.coordinateTransformations;
         if (transformations == null || transformations.length !== 5) {
           transformations = [
-            getTranslationToOrigin(datasetBoundingBox),
+            fromCenterToOrigin(datasetBoundingBox),
             IDENTITY_TRANSFORM,
             IDENTITY_TRANSFORM,
             IDENTITY_TRANSFORM,
-            getTranslationBackToOriginalPosition(datasetBoundingBox),
+            fromOriginToCenter(datasetBoundingBox),
           ];
         }
         transformations[AXIS_TO_TRANSFORM_INDEX[axis]] = rotationMatrix;
@@ -126,7 +126,9 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
             max={270}
             step={90}
             precision={0}
-            onChange={(value: number | null) => value && setMatrixRotationsForAllLayer(value)}
+            onChange={(value: number | null) =>
+              value != null && setMatrixRotationsForAllLayer(value)
+            }
           />
         </FormItem>
       </Col>

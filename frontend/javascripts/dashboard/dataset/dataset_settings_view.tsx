@@ -46,7 +46,7 @@ import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 import type { DatasetRotation } from "./dataset_rotation_form_item";
 import {
   doAllLayersHaveTheSameRotation,
-  getRotationFromTransformation,
+  getRotationFromTransformationIn90DegreeSteps,
 } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
 
 const FormItem = Form.Item;
@@ -213,9 +213,9 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         } else {
           initialDatasetRotationSettings = {
             // First transformation is a translation to the coordinate system origin.
-            x: getRotationFromTransformation(firstLayerTransformations[1], "x"),
-            y: getRotationFromTransformation(firstLayerTransformations[2], "y"),
-            z: getRotationFromTransformation(firstLayerTransformations[3], "z"),
+            x: getRotationFromTransformationIn90DegreeSteps(firstLayerTransformations[1], "x"),
+            y: getRotationFromTransformationIn90DegreeSteps(firstLayerTransformations[2], "y"),
+            z: getRotationFromTransformationIn90DegreeSteps(firstLayerTransformations[3], "z"),
             // Fifth transformation is a translation back to the original position.
           };
         }

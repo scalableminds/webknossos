@@ -84,7 +84,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { Vector3, ControlMode } from "oxalis/constants";
-import Constants, { ControlModeEnum, MappingStatusEnum } from "oxalis/constants";
+import Constants, { ControlModeEnum, IdentityTransform, MappingStatusEnum } from "oxalis/constants";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import LinkButton from "components/link_button";
 import { Model } from "oxalis/singletons";
@@ -128,9 +128,9 @@ import {
   getTransformsForLayerOrNull,
   hasDatasetTransforms,
   doAllLayersHaveTheSameRotation,
-  getTransformsForLayer,
   isIdentityTransform,
   isLayerWithoutTransformationConfigSupport,
+  getOriginalTransformsForLayerOrNull,
 } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
 import {
   invertTransform,
@@ -254,10 +254,14 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
     isLayerWithoutTransformationConfigSupport(layer);
 
   const toggleLayerTransforms = () => {
+    if (layer.category === "skeleton") {
+      return;
+    }
     const state = Store.getState();
     // Get transform of layer. null is passed as nativelyRenderedLayerName to
-    // get the layers transform even in case the is currently rendered natively.
-    const layersTransforms = getTransformsForLayer(state.dataset, layer, null);
+    // get the layers transform even in case where it is currently rendered natively.
+    const layersTransforms =
+      getOriginalTransformsForLayerOrNull(state.dataset, layer) || IdentityTransform;
 
     // In case the layer is currently not rendered natively, the inverse of its transformation is going to be applied.
     // Therefore, we need to invert the transformation to get the correct new position.

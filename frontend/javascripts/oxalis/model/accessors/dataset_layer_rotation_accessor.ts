@@ -65,7 +65,9 @@ export function flatToNestedMatrix(matrix: Matrix4x4): NestedMatrix4 {
   ];
 }
 
-export function getRotationFromTransformation(
+// This function extracts the rotation in 90 degree steps a the transformation matrix.
+// The transformation matrix must only include a rotation around one of the main axis.
+export function getRotationFromTransformationIn90DegreeSteps(
   transformation: CoordinateTransformation | undefined,
   axis: "x" | "y" | "z",
 ) {
@@ -89,7 +91,7 @@ export function getRotationFromTransformation(
   return roundedRotation;
 }
 
-export function getTranslationToOrigin(bbox: BoundingBox): AffineTransformation {
+export function fromCenterToOrigin(bbox: BoundingBox): AffineTransformation {
   const center = bbox.getCenter();
   const translationMatrix = new THREE.Matrix4()
     .makeTranslation(-center[0], -center[1], -center[2])
@@ -97,7 +99,7 @@ export function getTranslationToOrigin(bbox: BoundingBox): AffineTransformation 
   return { type: "affine", matrix: flatToNestedMatrix(translationMatrix.toArray()) };
 }
 
-export function getTranslationBackToOriginalPosition(bbox: BoundingBox): AffineTransformation {
+export function fromOriginToCenter(bbox: BoundingBox): AffineTransformation {
   const center = bbox.getCenter();
   const translationMatrix = new THREE.Matrix4()
     .makeTranslation(center[0], center[1], center[2])
@@ -188,17 +190,17 @@ function _getTransformsForLayerOrNull(
   nativelyRenderedLayerName: string | null,
 ): Transform | null {
   if (isLayerWithoutTransformationConfigSupport(layer)) {
-    return getTransformsForLayerWithoutTransformationConfigOrNull(
+    return getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
       dataset,
       nativelyRenderedLayerName,
     );
   }
-  const layerTransforms = getOriginalTransformsForLayerOrNull(dataset, layer as APIDataLayer);
 
   if (layer.name === nativelyRenderedLayerName) {
     // This layer should be rendered without any transforms.
     return null;
   }
+  const layerTransforms = getOriginalTransformsForLayerOrNull(dataset, layer as APIDataLayer);
   if (nativelyRenderedLayerName == null) {
     // No layer is requested to be rendered natively. -> We can use the layer's transforms as is.
     return layerTransforms;
@@ -234,7 +236,7 @@ export function isIdentityTransform(transform: Transform) {
   return transform.type === "affine" && _.isEqual(transform.affineMatrix, Identity4x4);
 }
 
-function _getTransformsForLayerWithoutTransformationConfigOrNull(
+function _getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
   dataset: APIDataset,
   nativelyRenderedLayerName: string | null,
 ): Transform | null {
@@ -275,8 +277,8 @@ function _getTransformsForLayerWithoutTransformationConfigOrNull(
   return invertTransform(transformsOfNativeLayer);
 }
 
-export const getTransformsForLayerWithoutTransformationConfigOrNull = memoizeOne(
-  _getTransformsForLayerWithoutTransformationConfigOrNull,
+export const getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull = memoizeOne(
+  _getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull,
 );
 
 export function getTransformsForSkeletonLayer(
@@ -284,8 +286,10 @@ export function getTransformsForSkeletonLayer(
   nativelyRenderedLayerName: string | null,
 ): Transform {
   return (
-    getTransformsForLayerWithoutTransformationConfigOrNull(dataset, nativelyRenderedLayerName) ||
-    IdentityTransform
+    getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
+      dataset,
+      nativelyRenderedLayerName,
+    ) || IdentityTransform
   );
 }
 
@@ -335,6 +339,7 @@ export const invertAndTranspose = _.memoize((mat: Matrix4x4) => {
 const translation = new THREE.Vector3();
 const scale = new THREE.Vector3();
 const quaternion = new THREE.Quaternion();
+const IDENTITY_QUATERNION = new THREE.Quaternion();
 
 const NON_SCALED_VECTOR = new THREE.Vector3(1, 1, 1);
 
@@ -346,11 +351,7 @@ function isTranslationOnly(transformation?: AffineTransformation) {
     .fromArray(nestedToFlatMatrix(transformation.matrix))
     .transpose();
   threeMatrix.decompose(translation, quaternion, scale);
-  return (
-    translation.length() !== 0 &&
-    scale.equals(NON_SCALED_VECTOR) &&
-    quaternion.equals(new THREE.Quaternion())
-  );
+  return scale.equals(NON_SCALED_VECTOR) && quaternion.equals(IDENTITY_QUATERNION);
 }
 
 function isRotationOnly(transformation?: AffineTransformation) {

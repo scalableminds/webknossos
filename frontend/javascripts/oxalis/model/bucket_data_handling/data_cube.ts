@@ -520,12 +520,12 @@ class DataCube {
       zoomStep,
     );
     const seedBucket = this.getOrCreateBucket(seedBucketAddress);
-    let coveredBBoxMin: Vector3 = [
+    const coveredBBoxMin: Vector3 = [
       Number.POSITIVE_INFINITY,
       Number.POSITIVE_INFINITY,
       Number.POSITIVE_INFINITY,
     ];
-    let coveredBBoxMax: Vector3 = [0, 0, 0];
+    const coveredBBoxMax: Vector3 = [0, 0, 0];
 
     if (seedBucket.type === "null") {
       return {
@@ -703,17 +703,15 @@ class DataCube {
                 markUvwInSliceAsLabeled(neighbourVoxelUvw);
                 neighbourVoxelStackUvw.pushVoxel(neighbourVoxelUvw);
                 labeledVoxelCount++;
-                coveredBBoxMin = [
-                  Math.min(coveredBBoxMin[0], currentGlobalPosition[0]),
-                  Math.min(coveredBBoxMin[1], currentGlobalPosition[1]),
-                  Math.min(coveredBBoxMin[2], currentGlobalPosition[2]),
-                ];
+
+                coveredBBoxMin[0] = Math.min(coveredBBoxMin[0], currentGlobalPosition[0]);
+                coveredBBoxMin[1] = Math.min(coveredBBoxMin[1], currentGlobalPosition[1]);
+                coveredBBoxMin[2] = Math.min(coveredBBoxMin[2], currentGlobalPosition[2]);
+
                 // The maximum is exclusive which is why we add 1 to the position
-                coveredBBoxMax = [
-                  Math.max(coveredBBoxMax[0], currentGlobalPosition[0] + 1),
-                  Math.max(coveredBBoxMax[1], currentGlobalPosition[1] + 1),
-                  Math.max(coveredBBoxMax[2], currentGlobalPosition[2] + 1),
-                ];
+                coveredBBoxMax[0] = Math.max(coveredBBoxMax[0], currentGlobalPosition[0] + 1);
+                coveredBBoxMax[1] = Math.max(coveredBBoxMax[1], currentGlobalPosition[1] + 1);
+                coveredBBoxMax[2] = Math.max(coveredBBoxMax[2], currentGlobalPosition[2] + 1);
 
                 if (labeledVoxelCount % 1000000 === 0) {
                   console.log(`Labeled ${labeledVoxelCount} Vx. Continuing...`);

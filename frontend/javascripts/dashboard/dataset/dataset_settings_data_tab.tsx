@@ -405,10 +405,9 @@ function SimpleLayerForm({
               {
                 validator: syncValidator(
                   (value: string) =>
-                    (dataLayers &&
-                      dataLayers.filter((someLayer: APIDataLayer) => someLayer.name === value)
-                        .length <= 1) ||
-                    dataLayers == null,
+                    form
+                      .getFieldValue(["dataSource", "dataLayers"])
+                      .filter((someLayer: APIDataLayer) => someLayer.name === value).length <= 1,
                   "Layer names must be unique.",
                 ),
               },

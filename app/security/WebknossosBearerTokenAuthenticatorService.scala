@@ -64,13 +64,8 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
         case e => throw new AuthenticatorInitializationException(InitError.format(ID, authenticator), Some(e))
       }
 
-  def createAndInitDataStoreTokenForUser(user: User): Fox[String] = {
-    val before = Instant.now
-    for {
-      res <- createAndInit(user.loginInfo, TokenType.DataStore, deleteOld = false)
-      _ = Instant.logSince(before, "createAndInit")
-    } yield res
-  }
+  def createAndInitDataStoreTokenForUser(user: User): Fox[String] =
+    createAndInit(user.loginInfo, TokenType.DataStore, deleteOld = false)
 
   def createAndInit(loginInfo: LoginInfo, tokenType: TokenType, deleteOld: Boolean): Future[String] =
     for {

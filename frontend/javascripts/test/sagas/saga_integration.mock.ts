@@ -14,10 +14,11 @@ mockRequire("antd", {
   ...antd,
   Dropdown: {},
   message: {
-    show: () => {},
     hide: () => {},
-    loading: () => {},
-    success: () => {},
+    // These return a "hide function"
+    show: () => () => {},
+    loading: () => () => {},
+    success: () => () => {},
   },
 });
 

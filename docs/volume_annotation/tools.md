@@ -68,6 +68,8 @@ The following interactions and modes become available when working with some of 
 ![3D Fill Modifier](./images/3d-modifier.jpg){align=left width="60"} 
 **2D/3D Fill**: Modifies the flood filling tool to work in 2D (in-plane only) or 3D (volumetric fill/re-labeling). 3D flood fill is constrained to a small, regional bounding box for performance reasons. Read more about [flood fills](#volume-flood-fills) below.
 
+![Restrict Fill](./images/icon_restricted_floodfill.jpg){align=left width="60"} 
+**Restrict Fill by Bounding Box**: When enabled, the fill operation will be restricted by the smallest bounding box that encloses the clicked position. This feature can be useful when correcting segmentation in a small bounding box (e.g., when curating training data).
 
 ## Quick-select tool
 The Quick Select tool offers AI-powered automatic segmentation, powered by [Segment Anything Model 2](https://ai.meta.com/blog/segment-anything-2/). Simply draw a selection around your target structure, and WEBKNOSSOS will automatically segment it for you.

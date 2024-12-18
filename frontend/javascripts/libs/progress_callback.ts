@@ -1,6 +1,8 @@
 import { message } from "antd";
 import { sleep } from "libs/utils";
+
 type HideFn = () => void;
+
 export type ProgressCallback = (
   isDone: boolean,
   progressState: string | React.ReactNode,
@@ -9,11 +11,14 @@ export type ProgressCallback = (
 ) => Promise<{
   hideFn: HideFn;
 }>;
+
 type Options = {
   pauseDelay: number;
   successMessageDelay: number;
   key?: string;
-}; // This function returns another function which can be called within a longer running
+};
+
+// This function returns another function which can be called within a longer running
 // process to update the UI with progress information. Example usage:
 // const progressCallback = createProgressCallback({ pauseDelay: 100, successMessageDelay: 5000 });
 // await progressCallback(false, "Beginning work...")

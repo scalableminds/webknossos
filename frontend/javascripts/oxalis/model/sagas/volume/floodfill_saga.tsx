@@ -1,4 +1,3 @@
-import { message } from "antd";
 import { V2, V3 } from "libs/mjs";
 import createProgressCallback from "libs/progress_callback";
 import Toast from "libs/toast";
@@ -31,6 +30,9 @@ import { call, put } from "typed-redux-saga";
 import { getUserBoundingBoxesThatContainPosition } from "../../accessors/tracing_accessor";
 import { applyLabeledVoxelMapToAllMissingMags } from "./helpers";
 import _ from "lodash";
+
+const NO_FLOODFILL_BBOX_TOAST_KEY = "NO_FLOODFILL_BBOX";
+const NO_SUCCESS_MSG_WHEN_WITHIN_MS = 500;
 
 function* getBoundingBoxForFloodFill(
   position: Vector3,
@@ -101,7 +103,6 @@ function* getBoundingBoxForFloodFill(
   };
 }
 
-const NO_FLOODFILL_BBOX_TOAST_KEY = "NO_FLOODFILL_BBOX";
 export function* floodFill(): Saga<void> {
   yield* take("INITIALIZE_VOLUMETRACING");
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
@@ -178,6 +179,7 @@ export function* floodFill(): Saga<void> {
     });
     yield* call(progressCallback, false, "Performing floodfill...");
     console.time("cube.floodFill");
+    const startTimeOfFloodfill = performance.now();
     const fillMode = yield* select((state) => state.userConfiguration.fillMode);
 
     const {
@@ -244,6 +246,7 @@ export function* floodFill(): Saga<void> {
 
     console.timeEnd("applyLabeledVoxelMapToAllMissingMags");
 
+    let hideSuccessMsgFnBox: { hideFn: () => void } | undefined;
     if (wasBoundingBoxExceeded) {
       const isRestrictedToBoundingBox = yield* select(
         (state) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
@@ -297,10 +300,17 @@ export function* floodFill(): Saga<void> {
           );
         }
       } else {
-        yield* call(progressCallback, true, "Floodfill done.");
+        hideSuccessMsgFnBox = yield* call(progressCallback, true, "Floodfill done.");
       }
     } else {
-      yield* call(progressCallback, true, "Floodfill done.");
+      hideSuccessMsgFnBox = yield* call(progressCallback, true, "Floodfill done.");
+    }
+
+    const floodfillDuration = performance.now() - startTimeOfFloodfill;
+    const wasFloodfillQuick = floodfillDuration < NO_SUCCESS_MSG_WHEN_WITHIN_MS;
+
+    if (hideSuccessMsgFnBox != null && wasFloodfillQuick) {
+      hideSuccessMsgFnBox.hideFn();
     }
 
     cube.triggerPushQueue();

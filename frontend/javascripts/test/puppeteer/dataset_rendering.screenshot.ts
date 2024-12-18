@@ -1,3 +1,4 @@
+import urljoin from "url-join";
 import "test/mocks/lz4";
 import type { PartialDatasetConfiguration } from "oxalis/store";
 import path from "node:path";
@@ -114,7 +115,8 @@ test.before("Retrieve dataset ids", async () => {
       3,
       async () => {
         const options = getDefaultRequestOptions(URL);
-        const url = `${URL}api/datasets/disambiguate/sample_organization/${datasetName}/toId`;
+        const path = `/api/datasets/disambiguate/sample_organization/${datasetName}/toId`;
+        const url = urljoin(URL, path);
         const response = await fetch(url, options);
         const { id } = await response.json();
         datasetNameToId[datasetName] = id;

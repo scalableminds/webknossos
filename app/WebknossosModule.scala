@@ -1,6 +1,6 @@
 import com.google.inject.AbstractModule
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import controllers.InitialDataService
+import controllers.{Application, InitialDataService}
 import files.TempFileService
 import mail.MailchimpTicker
 import models.analytics.AnalyticsSessionService
@@ -17,6 +17,7 @@ import utils.sql.SqlClient
 
 class WebknossosModule extends AbstractModule {
   override def configure(): Unit = {
+    bind(classOf[Application]).asEagerSingleton()
     bind(classOf[Startup]).asEagerSingleton()
     bind(classOf[SqlClient]).asEagerSingleton()
     bind(classOf[InitialDataService]).asEagerSingleton()

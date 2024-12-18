@@ -7,7 +7,7 @@ import models.organization.OrganizationDAO
 import models.user.UserService
 import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, Result}
 import play.silhouette.api.Silhouette
 import security.WkEnv
 import utils.sql.{SimpleSQLDAO, SqlClient}
@@ -51,9 +51,12 @@ class Application @Inject()(actorSystem: ActorSystem,
     }
   }
 
+  // This only changes on server restart, so we can cache the full result.
+  private lazy val cachedFeaturesResult: Result = addNoCacheHeaderFallback(
+    Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise())).as(jsonMimeType))
+
   def features: Action[AnyContent] = sil.UserAwareAction {
-    addNoCacheHeaderFallback(
-      Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise())).as(jsonMimeType))
+    cachedFeaturesResult
   }
 
   def health: Action[AnyContent] = Action {

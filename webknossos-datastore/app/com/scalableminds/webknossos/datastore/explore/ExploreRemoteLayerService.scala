@@ -104,8 +104,8 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
 
   private def assertLocalPathInWhitelist(uri: URI)(implicit ec: ExecutionContext): Fox[Unit] =
     if (uri.getScheme == DataVaultService.schemeFile) {
-      bool2Fox(dataStoreConfig.Datastore.localFolderWhitelist.exists(whitelistEntry =>
-        uri.getPath.startsWith(whitelistEntry))) ?~> s"Absolute path ${uri.getPath} in local file system is not in path whitelist. Consider adding it to datastore.localFolderWhitelist"
+      bool2Fox(dataStoreConfig.Datastore.localDirectoryWhitelist.exists(whitelistEntry =>
+        uri.getPath.startsWith(whitelistEntry))) ?~> s"Absolute path ${uri.getPath} in local file system is not in path whitelist. Consider adding it to datastore.localDirectoryWhitelist"
     } else Fox.successful(())
 
   private val MAX_RECURSIVE_SEARCH_DEPTH = 3

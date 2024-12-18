@@ -29,7 +29,7 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig)(implicit ec: Execu
     extends FoxImplicits
     with LazyLogging {
 
-  private val baseDir: Path = Paths.get(config.Datastore.baseFolder)
+  private val baseDir: Path = Paths.get(config.Datastore.baseDirectory)
 
   private def noSymlinksFilter(p: Path) = !Files.isSymbolicLink(p)
 

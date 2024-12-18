@@ -41,7 +41,7 @@ class DataSourceService @Inject()(
 
   override protected def tickerInitialDelay: FiniteDuration = config.Datastore.WatchFileSystem.initialDelay
 
-  val dataBaseDir: Path = Paths.get(config.Datastore.baseFolder)
+  val dataBaseDir: Path = Paths.get(config.Datastore.baseDirectory)
 
   private val propertiesFileName = Paths.get(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
   private val logFileName = Paths.get("datasource-properties-backups.log")

@@ -20,7 +20,7 @@ class MappingService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionCo
 
   def handleMappingRequest(request: DataServiceMappingRequest): Fox[Array[Byte]] = {
     val readInstruction =
-      MappingReadInstruction(Paths.get(config.Datastore.baseFolder), request.dataSource, request.mapping)
+      MappingReadInstruction(Paths.get(config.Datastore.baseDirectory), request.dataSource, request.mapping)
     request.dataLayer.mappingProvider.load(readInstruction)
   }
 

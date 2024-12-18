@@ -74,19 +74,19 @@ class DSRemoteTracingstoreClient @Inject()(
       .addQueryStringOptional("token", token)
       .getWithBytesResponse
 
-  def getDataLayerMagFolderContents(tracingId: String,
-                                    mag: String,
-                                    tracingStoreUri: String,
-                                    token: Option[String],
-                                    zarrVersion: Int): Fox[List[String]] =
+  def getDataLayerMagDirectoryContents(tracingId: String,
+                                       mag: String,
+                                       tracingStoreUri: String,
+                                       token: Option[String],
+                                       zarrVersion: Int): Fox[List[String]] =
     rpc(s"$tracingStoreUri/tracings/volume/${getZarrVersionDependantSubPath(zarrVersion)}/json/$tracingId/$mag")
       .addQueryStringOptional("token", token)
       .getWithJsonResponse[List[String]]
 
-  def getDataLayerFolderContents(tracingId: String,
-                                 tracingStoreUri: String,
-                                 token: Option[String],
-                                 zarrVersion: Int): Fox[List[String]] =
+  def getDataLayerDirectoryContents(tracingId: String,
+                                    tracingStoreUri: String,
+                                    token: Option[String],
+                                    zarrVersion: Int): Fox[List[String]] =
     rpc(s"$tracingStoreUri/tracings/volume/${getZarrVersionDependantSubPath(zarrVersion)}/json/$tracingId")
       .addQueryStringOptional("token", token)
       .getWithJsonResponse[List[String]]

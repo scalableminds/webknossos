@@ -589,7 +589,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- if (shallowFileList.length == 1 && shallowFileList.headOption.exists(
                  _.toString.toLowerCase.endsWith(".zip"))) {
         firstFile.toFox.flatMap { file =>
-          ZipIO.unzipToFolder(
+          ZipIO.unzipToDirectory(
             new File(file.toString),
             unpackToDir,
             includeHiddenFiles = false,

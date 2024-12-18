@@ -101,7 +101,6 @@ function* getBoundingBoxForFloodFill(
   };
 }
 
-const FLOODFILL_PROGRESS_KEY = "FLOODFILL_PROGRESS_KEY";
 const NO_FLOODFILL_BBOX_TOAST_KEY = "NO_FLOODFILL_BBOX";
 export function* floodFill(): Saga<void> {
   yield* take("INITIALIZE_VOLUMETRACING");
@@ -176,9 +175,6 @@ export function* floodFill(): Saga<void> {
     const progressCallback = createProgressCallback({
       pauseDelay: 200,
       successMessageDelay: 2000,
-      // Since only one floodfill operation can be active at any time,
-      // a hardcoded key is sufficient.
-      key: FLOODFILL_PROGRESS_KEY,
     });
     yield* call(progressCallback, false, "Performing floodfill...");
     console.time("cube.floodFill");
@@ -252,47 +248,56 @@ export function* floodFill(): Saga<void> {
       const isRestrictedToBoundingBox = yield* select(
         (state) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
       );
-      const createNewBoundingBox = fillMode === FillModeEnum._3D && !isRestrictedToBoundingBox;
-      const warningDetails = createNewBoundingBox
-        ? "A bounding box that represents the labeled volume was added so that you can check the borders manually."
-        : "Please check the borders of the filled area manually and use the fill tool again if necessary.";
-      yield* call(
-        progressCallback,
-        true,
-        <>
-          Floodfill is done, but terminated because{" "}
-          {isRestrictedToBoundingBox
-            ? "the labeled volume touched the bounding box to which the floodfill was restricted"
-            : "the labeled volume got too large"}
-          .
-          <br />
-          {warningDetails} {Unicode.NonBreakingSpace}
-          <a
-            href="#"
-            style={{ pointerEvents: "auto" }}
-            onClick={() => message.destroy(FLOODFILL_PROGRESS_KEY)}
-          >
-            Close
-          </a>
-        </>,
-        {
-          successMessageDelay: 10000,
-        },
-      );
-      if (createNewBoundingBox) {
+      // Don't notify the user about early-terminated floodfills if the floodfill
+      // was configured to be restricted, anyway. Also, don't create a new bounding
+      // box in that case.
+      if (!isRestrictedToBoundingBox) {
         // The bounding box is overkill for the 2D mode because in that case,
-        // it's trivial to check the borders manually. Also, don't create a bounding
-        // box if the user restricted the floodfill to a user bounding box, anyway.
-        yield* put(
-          addUserBoundingBoxAction({
-            boundingBox: coveredBoundingBox,
-            name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
-              ",",
-            )}, timestamp=${new Date().getTime()})`,
-            color: Utils.getRandomColor(),
-            isVisible: true,
-          }),
+        // it's trivial to check the borders manually.
+        const createNewBoundingBox = fillMode === FillModeEnum._3D;
+        const warningDetails = createNewBoundingBox
+          ? "A bounding box that represents the labeled volume was added so that you can check the borders manually."
+          : "Please check the borders of the filled area manually and use the fill tool again if necessary.";
+
+        // Pre-declare a variable for the hide function so that we can refer
+        // to that var within the toast content. We don't want to use message.destroy
+        // because this ignores the setTimeout within the progress callback utility.
+        // Without this, hide functions for older toasts could still be triggered (due to
+        // timeout) that act on new ones then.
+        let hideBox: { hideFn: () => void } | undefined;
+        hideBox = yield* call(
+          progressCallback,
+          true,
+          <>
+            Floodfill is done, but terminated because{" "}
+            {isRestrictedToBoundingBox
+              ? "the labeled volume touched the bounding box to which the floodfill was restricted"
+              : "the labeled volume got too large"}
+            .
+            <br />
+            {warningDetails} {Unicode.NonBreakingSpace}
+            <a href="#" style={{ pointerEvents: "auto" }} onClick={() => hideBox?.hideFn()}>
+              Close
+            </a>
+          </>,
+          {
+            successMessageDelay: 10000,
+          },
         );
+        if (createNewBoundingBox) {
+          yield* put(
+            addUserBoundingBoxAction({
+              boundingBox: coveredBoundingBox,
+              name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
+                ",",
+              )}, timestamp=${new Date().getTime()})`,
+              color: Utils.getRandomColor(),
+              isVisible: true,
+            }),
+          );
+        }
+      } else {
+        yield* call(progressCallback, true, "Floodfill done.");
       }
     } else {
       yield* call(progressCallback, true, "Floodfill done.");

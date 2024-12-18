@@ -242,27 +242,25 @@ class WKRemoteDataStoreController @Inject()(
     }
   }
 
-  def jobExportProperties(name: String, key: String, jobId: String): Action[AnyContent] = Action.async {
+  def jobExportProperties(name: String, key: String, jobId: ObjectId): Action[AnyContent] = Action.async {
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          jobIdValidated <- ObjectId.fromString(jobId)
-          job <- jobDAO.findOne(jobIdValidated)(GlobalAccessContext)
+          job <- jobDAO.findOne(jobId)(GlobalAccessContext)
           jobOwner <- userDAO.findOne(job._owner)(GlobalAccessContext)
           organization <- organizationDAO.findOne(jobOwner._organization)(GlobalAccessContext)
           latestRunId <- job.latestRunId.toFox ?~> "job.notRun"
           exportFileName <- job.exportFileName.toFox ?~> "job.noExportFileName"
-          jobExportProperties = JobExportProperties(jobId, latestRunId, organization._id, exportFileName)
+          jobExportProperties = JobExportProperties(jobId.toString, latestRunId, organization._id, exportFileName)
         } yield Ok(Json.toJson(jobExportProperties))
       }
   }
 
-  def findCredential(name: String, key: String, credentialId: String): Action[AnyContent] = Action.async {
+  def findCredential(name: String, key: String, credentialId: ObjectId): Action[AnyContent] = Action.async {
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          credentialIdValidated <- ObjectId.fromString(credentialId)
-          credential <- credentialDAO.findOne(credentialIdValidated)
+          credential <- credentialDAO.findOne(credentialId)
         } yield Ok(Json.toJson(credential))
       }
   }

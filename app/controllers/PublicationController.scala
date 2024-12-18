@@ -22,10 +22,10 @@ class PublicationController @Inject()(publicationService: PublicationService,
 
   override def allowRemoteOrigin: Boolean = true
 
-  def read(publicationId: String): Action[AnyContent] =
+  def read(publicationId: ObjectId): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
-        publication <- publicationDAO.findOne(ObjectId(publicationId)) ?~> "publication.notFound" ~> NOT_FOUND
+        publication <- publicationDAO.findOne(publicationId) ?~> "publication.notFound" ~> NOT_FOUND
         js <- publicationService.publicWrites(publication)
       } yield Ok(js)
     }

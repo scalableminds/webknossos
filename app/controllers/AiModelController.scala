@@ -86,23 +86,21 @@ class AiModelController @Inject()(
     extends Controller
     with FoxImplicits {
 
-  def readAiModelInfo(aiModelId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def readAiModelInfo(aiModelId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     {
       for {
         _ <- userService.assertIsSuperUser(request.identity)
-        aiModelIdValidated <- ObjectId.fromString(aiModelId)
-        aiModel <- aiModelDAO.findOne(aiModelIdValidated) ?~> "aiModel.notFound" ~> NOT_FOUND
+        aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
         jsResult <- aiModelService.publicWrites(aiModel)
       } yield Ok(jsResult)
     }
   }
 
-  def readAiInferenceInfo(aiInferenceId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def readAiInferenceInfo(aiInferenceId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     {
       for {
         _ <- userService.assertIsSuperUser(request.identity)
-        aiInferenceIdValidated <- ObjectId.fromString(aiInferenceId)
-        aiInference <- aiInferenceDAO.findOne(aiInferenceIdValidated) ?~> "aiInference.notFound" ~> NOT_FOUND
+        aiInference <- aiInferenceDAO.findOne(aiInferenceId) ?~> "aiInference.notFound" ~> NOT_FOUND
         jsResult <- aiInferenceService.publicWrites(aiInference, request.identity)
       } yield Ok(jsResult)
     }
@@ -213,15 +211,14 @@ class AiModelController @Inject()(
       } yield Ok(newAiModelJs)
     }
 
-  def updateAiModelInfo(aiModelId: String): Action[UpdateAiModelParameters] =
+  def updateAiModelInfo(aiModelId: ObjectId): Action[UpdateAiModelParameters] =
     sil.SecuredAction.async(validateJson[UpdateAiModelParameters]) { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity)
-        aiModelIdValidated <- ObjectId.fromString(aiModelId)
-        aiModel <- aiModelDAO.findOne(aiModelIdValidated) ?~> "aiModel.notFound" ~> NOT_FOUND
+        aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
         _ <- aiModelDAO.updateOne(
           aiModel.copy(name = request.body.name, comment = request.body.comment, modified = Instant.now))
-        updatedAiModel <- aiModelDAO.findOne(aiModelIdValidated) ?~> "aiModel.notFound" ~> NOT_FOUND
+        updatedAiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
         jsResult <- aiModelService.publicWrites(updatedAiModel)
       } yield Ok(jsResult)
     }
@@ -248,15 +245,14 @@ class AiModelController @Inject()(
       } yield Ok
     }
 
-  def deleteAiModel(aiModelId: String): Action[AnyContent] =
+  def deleteAiModel(aiModelId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity)
-        aiModelIdValidated <- ObjectId.fromString(aiModelId)
-        referencesCount <- aiInferenceDAO.countForModel(aiModelIdValidated)
+        referencesCount <- aiInferenceDAO.countForModel(aiModelId)
         _ <- bool2Fox(referencesCount == 0) ?~> "aiModel.delete.referencedByInferences"
-        _ <- aiModelDAO.findOne(aiModelIdValidated) ?~> "aiModel.notFound" ~> NOT_FOUND
-        _ <- aiModelDAO.deleteOne(aiModelIdValidated)
+        _ <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
+        _ <- aiModelDAO.deleteOne(aiModelId)
       } yield Ok
     }
 

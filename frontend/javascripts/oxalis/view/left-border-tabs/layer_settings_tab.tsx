@@ -127,7 +127,6 @@ import defaultState from "oxalis/default_state";
 import {
   getTransformsForLayerOrNull,
   hasDatasetTransforms,
-  doAllLayersHaveTheSameRotation,
   isIdentityTransform,
   isLayerWithoutTransformationConfigSupport,
   getOriginalTransformsForLayerOrNull,
@@ -224,10 +223,10 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
       state.datasetConfiguration.nativelyRenderedLayerName,
     ),
   );
-  const showIcon = useSelector((state: OxalisState) => hasDatasetTransforms(state.dataset));
-  const doAllLayersHaveTheSameTransform = useSelector((state: OxalisState) =>
-    doAllLayersHaveTheSameRotation(state.dataset.dataSource.dataLayers),
+  const hasLayerTransformsConfigured = useSelector(
+    (state: OxalisState) => getTransformsForLayerOrNull(state.dataset, layer, null) != null,
   );
+  const showIcon = useSelector((state: OxalisState) => hasDatasetTransforms(state.dataset));
   if (!showIcon) {
     return null;
   }
@@ -245,8 +244,10 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
   };
 
   const isDisabled =
-    // Cannot toggle transforms on a layer into whose coordinate system other layer transform.
-    (isRenderedNatively && !doAllLayersHaveTheSameTransform) ||
+    // Cannot toggle transforms on for a layer that has no transforms.
+    // Layers that cannot have transformations like skeleton layer and volume tracing layers without fallback
+    // automatically copy to the dataset transformation if all other layers have the same transformation.
+    (isRenderedNatively && !hasLayerTransformsConfigured) ||
     // Cannot toggle transformations on a skeleton layer as a skeleton layer cannot have transformations.
     // Therefore, it cannot be used as a reference for other layers.
     // The same goes for segmentation layers without fallback.
@@ -274,6 +275,9 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
 
     // Also transform a reference coordinate to determine how the scaling
     // changed. Then, adapt the zoom accordingly.
+    // TODOM: Fix behaviour is broken!!!
+
+    //TODOM: Make the identification what transformation will be applied to keep the position an own function to make the code less complex
     const referenceOffset: Vector3 = [10, 10, 10];
     const secondPosition = V3.add(currentPosition, referenceOffset, [0, 0, 0]);
     const newSecondPosition = transformPointUnscaled(transformWhichWillBeApplied)(secondPosition);
@@ -353,8 +357,8 @@ function LayerInfoIconWithTooltip({
             </tr>
             <tr>
               <td style={{ fontSize: 10 }}>Min</td>
-              <td>{layer.boundingBox.topLeft[0]} </td>
-              <td>{layer.boundingBox.topLeft[1]} </td>
+              <td>{layer.boundingBox.topLeft[0]}</td>
+              <td>{layer.boundingBox.topLeft[1]}</td>
               <td>{layer.boundingBox.topLeft[2]}</td>
             </tr>
             <tr>

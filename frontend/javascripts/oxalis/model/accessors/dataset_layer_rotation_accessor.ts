@@ -180,7 +180,8 @@ export const getOriginalTransformsForLayerOrNull = memoizeWithTwoKeys(
 
 export function isLayerWithoutTransformationConfigSupport(layer: APIDataLayer | APISkeletonLayer) {
   return (
-    layer.category === "skeleton" || (layer.category === "segmentation" && !layer.fallbackLayer)
+    layer.category === "skeleton" ||
+    (layer.category === "segmentation" && "tracingId" in layer && !layer.fallbackLayer)
   );
 }
 
@@ -365,9 +366,26 @@ function isRotationOnly(transformation?: AffineTransformation) {
   return translation.length() === 0 && scale.equals(NON_SCALED_VECTOR);
 }
 
-/* This function checks if all layers have the same transformation settings that represent
- * a translation to the dataset center and a rotation around each axis and a translation back.
- * All together this makes 5 affine transformation matrices. */
+function hasValidTransformationCount(dataLayers: Array<APIDataLayer>): boolean {
+  return dataLayers.every((layer) => layer.coordinateTransformations?.length === 5);
+}
+
+function hasOnlyAffineTransformations(dataLayers: Array<APIDataLayer>): boolean {
+  return dataLayers.every((layer) =>
+    layer.coordinateTransformations?.every((transformation) => transformation.type === "affine"),
+  );
+}
+
+function hasValidTransformationPattern(transformations: CoordinateTransformation[]): boolean {
+  return (
+    isTranslationOnly(transformations[0] as AffineTransformation) &&
+    isRotationOnly(transformations[1] as AffineTransformation) &&
+    isRotationOnly(transformations[2] as AffineTransformation) &&
+    isRotationOnly(transformations[3] as AffineTransformation) &&
+    isTranslationOnly(transformations[4] as AffineTransformation)
+  );
+}
+
 function _doAllLayersHaveTheSameRotation(dataLayers: Array<APIDataLayer>): boolean {
   const firstDataLayerTransformations = dataLayers[0]?.coordinateTransformations;
   if (firstDataLayerTransformations == null || firstDataLayerTransformations.length === 0) {
@@ -378,33 +396,22 @@ function _doAllLayersHaveTheSameRotation(dataLayers: Array<APIDataLayer>): boole
     );
   }
   // There should be a translation to the origin, one transformation for each axis and one translation back. => A total of 5 affine transformations.
-  if (
-    dataLayers.some((layer) => layer.coordinateTransformations?.length !== 5) ||
-    dataLayers.some((layer) =>
-      layer.coordinateTransformations?.some((transformation) => transformation.type !== "affine"),
-    )
-  ) {
+  if (!hasValidTransformationCount(dataLayers) || !hasOnlyAffineTransformations(dataLayers)) {
     return false;
   }
 
-  if (
-    !isTranslationOnly(firstDataLayerTransformations[0] as AffineTransformation) ||
-    !isRotationOnly(firstDataLayerTransformations[1] as AffineTransformation) ||
-    !isRotationOnly(firstDataLayerTransformations[2] as AffineTransformation) ||
-    !isRotationOnly(firstDataLayerTransformations[3] as AffineTransformation) ||
-    !isTranslationOnly(firstDataLayerTransformations[4] as AffineTransformation)
-  ) {
+  if (!hasValidTransformationPattern(firstDataLayerTransformations)) {
     return false;
   }
   for (let i = 1; i < dataLayers.length; i++) {
     const transformations = dataLayers[i].coordinateTransformations;
     if (
       transformations == null ||
-      // Not checking matrix 0 and 4 for equality as these are transformations depending on the layer's bounding box.
-      // The bounding box can be different for each layer.
+      !_.isEqual(transformations[0], firstDataLayerTransformations[0]) ||
       !_.isEqual(transformations[1], firstDataLayerTransformations[1]) ||
       !_.isEqual(transformations[2], firstDataLayerTransformations[2]) ||
-      !_.isEqual(transformations[3], firstDataLayerTransformations[3])
+      !_.isEqual(transformations[3], firstDataLayerTransformations[3]) ||
+      !_.isEqual(transformations[4], firstDataLayerTransformations[4])
     ) {
       return false;
     }

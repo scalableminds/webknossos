@@ -10,6 +10,7 @@ import FastTooltip from "components/fast_tooltip";
 type Rule = {
   message?: string;
   type?: string;
+  min?: number;
   validator?: (arg0: string) => ValidationResult;
 };
 export type EditableTextLabelProp = {
@@ -116,6 +117,11 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
         const validationResult = rule.validator(this.state.value);
         if (!validationResult.isValid) {
           Toast.error(validationResult.message);
+          return false;
+        }
+      } else if (rule.min != null) {
+        if (this.state.value.length < rule.min) {
+          Toast.error(`Length must at least be ${rule.min}.`);
           return false;
         }
       }

@@ -279,11 +279,11 @@ class UserService @Inject()(conf: WkConf,
     userExperiencesDAO.findAllExperiencesForUser(_user)
 
   def teamMembershipsFor(_user: ObjectId): Fox[List[TeamMembership]] =
-    userDAO.findTeamMembershipsForUser(_user)
+    userDAO.findTeamMembershipsForUser(_user) ?~> "user.team.memberships.failed"
 
   def teamManagerMembershipsFor(_user: ObjectId): Fox[List[TeamMembership]] =
     for {
-      teamMemberships <- teamMembershipsFor(_user)
+      teamMemberships <- teamMembershipsFor(_user) ?~> "user.team.memberships.failed"
     } yield teamMemberships.filter(_.isTeamManager)
 
   def teamManagerTeamIdsFor(_user: ObjectId): Fox[List[ObjectId]] =

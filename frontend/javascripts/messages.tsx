@@ -212,6 +212,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     } "${disallowedCharacters}". Please remove ${
       disallowedCharacters.length > 1 ? "them" : "it"
     } to set the layer name.`,
+  "tracing.volume_layer_name_too_short": "The layer name must be at least one character long.",
+  "tracing.volume_layer_name_starts_with_dot": "The layer name must not start with a dot.",
   "tracing.delete_initial_node": "Do you really want to delete the initial node?",
   "tracing.delete_tree": "Do you really want to delete the whole tree?",
   "tracing.delete_tree_with_initial_node":

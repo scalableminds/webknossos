@@ -210,7 +210,7 @@ class VolumeTracingService @Inject()(
           ) ?~> "failed to update segment index"
         } yield ()
       }
-    } yield volumeTracing
+    } yield volumeTracing.copy(volumeBucketDataHasChanged = Some(true))
 
   override def editableMappingTracingId(tracing: VolumeTracing, tracingId: String): Option[String] =
     if (tracing.getHasEditableMapping) Some(tracingId) else None
@@ -281,7 +281,7 @@ class VolumeTracingService @Inject()(
           } yield ()
         }))
       _ <- segmentIndexBuffer.flush()
-    } yield volumeTracing
+    } yield volumeTracing.copy(volumeBucketDataHasChanged = Some(true))
 
   private def assertMagIsValid(tracing: VolumeTracing, mag: Vec3Int): Fox[Unit] =
     if (tracing.mags.nonEmpty) {

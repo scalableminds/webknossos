@@ -197,6 +197,7 @@ export type Annotation = {
   readonly tags: Array<string>;
   readonly description: string;
   readonly name: string;
+  readonly organization: string;
   readonly tracingStore: APITracingStore;
   readonly annotationType: APIAnnotationType;
   readonly owner: APIUserBase | null | undefined;
@@ -264,6 +265,7 @@ export type VolumeTracing = TracingBase & {
   readonly hasEditableMapping?: boolean;
   readonly mappingIsLocked?: boolean;
   readonly hasSegmentIndex: boolean;
+  readonly volumeBucketDataHasChanged?: boolean;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";

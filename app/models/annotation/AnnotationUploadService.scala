@@ -27,6 +27,7 @@ case class UploadedVolumeLayer(tracing: VolumeTracing, dataZipLocation: String, 
 
 case class SharedParsingParameters(useZipName: Boolean,
                                    overwritingDatasetId: Option[String] = None,
+                                   userOrganizationId: String,
                                    isTaskUpload: Boolean = false)
 
 class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlParser: NmlParser) extends LazyLogging {
@@ -53,8 +54,7 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
       nmlParser.parse(
         name,
         inputStream,
-        sharedParsingParameters.overwritingDatasetId,
-        sharedParsingParameters.isTaskUpload,
+        sharedParsingParameters,
         basePath
       )
     parserOutput.futureBox.map {

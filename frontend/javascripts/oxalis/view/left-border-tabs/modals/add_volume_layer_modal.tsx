@@ -41,9 +41,16 @@ export function checkForLayerNameDuplication(
 }
 
 export function checkLayerNameForInvalidCharacters(readableLayerName: string): ValidationResult {
-  const uriSafeCharactersRegex = /[0-9a-zA-Z-._]+/g;
+  // A layer name is not allowed to start with a dot.
+  if (readableLayerName.startsWith(".")) {
+    return {
+      isValid: false,
+      message: messages["tracing.volume_layer_name_starts_with_dot"],
+    };
+  }
+  const validLayerNameCharactersRegex = /[0-9a-zA-Z-._$]+/g;
   // Removing all URISaveCharacters from readableLayerName. The leftover chars are all invalid.
-  const allInvalidChars = readableLayerName.replace(uriSafeCharactersRegex, "");
+  const allInvalidChars = readableLayerName.replace(validLayerNameCharactersRegex, "");
   const allUniqueInvalidCharsAsSet = new Set(allInvalidChars);
   const allUniqueInvalidCharsAsString = "".concat(...allUniqueInvalidCharsAsSet.values());
   const isValid = allUniqueInvalidCharsAsString.length === 0;
@@ -62,6 +69,12 @@ export function validateReadableLayerName(
   allReadableLayerNames: string[],
   nameNotToCount?: string,
 ): ValidationResult {
+  if (readableLayerName.length < 1) {
+    return {
+      isValid: false,
+      message: messages["tracing.volume_layer_name_too_short"],
+    };
+  }
   if (nameNotToCount) {
     // nameNotToCount needs to be removed once if it is included in allReadableLayerNames.
     // This is needed in case of saving an existing volume layer's name when the name was not modified.

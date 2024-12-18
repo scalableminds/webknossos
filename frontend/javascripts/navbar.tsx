@@ -64,7 +64,10 @@ import constants from "oxalis/constants";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import { getAntdTheme, getSystemColorTheme } from "theme";
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
-import { isAnnotationOwner as isAnnotationOwnerAccessor } from "oxalis/model/accessors/annotation_accessor";
+import {
+  isAnnotationFromDifferentOrganization,
+  isAnnotationOwner as isAnnotationOwnerAccessor,
+} from "oxalis/model/accessors/annotation_accessor";
 
 const { Header } = Layout;
 
@@ -85,6 +88,7 @@ type StateProps = {
   othersMayEdit: boolean;
   allowUpdate: boolean;
   isLockedByOwner: boolean;
+  isAnnotationFromDifferentOrganization: boolean;
   isAnnotationOwner: boolean;
   annotationOwnerName: string;
   blockedByUser: APIUserCompact | null | undefined;
@@ -813,6 +817,7 @@ function Navbar({
   allowUpdate,
   annotationOwnerName,
   isLockedByOwner,
+  isAnnotationFromDifferentOrganization,
   navbarHeight,
   isAnnotationOwner,
 }: Props) {
@@ -877,7 +882,12 @@ function Navbar({
       menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
     }
 
-    if (othersMayEdit && !allowUpdate && !isLockedByOwner) {
+    if (
+      othersMayEdit &&
+      !allowUpdate &&
+      !isLockedByOwner &&
+      !isAnnotationFromDifferentOrganization
+    ) {
       trailingNavItems.push(
         <AnnotationLockedByUserTag
           key="locked-by-user-tag"
@@ -1008,6 +1018,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   isLockedByOwner: state.tracing.isLockedByOwner,
   annotationOwnerName: formatUserName(state.activeUser, state.tracing.owner),
   isAnnotationOwner: isAnnotationOwnerAccessor(state),
+  isAnnotationFromDifferentOrganization: isAnnotationFromDifferentOrganization(state),
   navbarHeight: state.uiInformation.navbarHeight,
 });
 

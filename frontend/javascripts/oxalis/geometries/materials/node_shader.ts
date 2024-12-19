@@ -14,7 +14,7 @@ import {
   generateTpsInitialization,
 } from "oxalis/shaders/thin_plate_spline.glsl";
 import type TPS3D from "libs/thin_plate_spline";
-import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
+import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 
 export const NodeTypes = {
   INVALID: 0.0,

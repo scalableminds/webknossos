@@ -105,7 +105,7 @@ import {
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
 import { convertServerAdditionalAxesToFrontEnd } from "./model/reducers/reducer_helpers";
-import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_rotation_accessor";
+import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
 import type { Mutable } from "types/globals";
 
 export const HANDLED_ERROR = "error_was_handled";

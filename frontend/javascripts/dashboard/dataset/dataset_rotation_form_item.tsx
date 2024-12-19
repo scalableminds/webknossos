@@ -11,7 +11,7 @@ import {
   fromOriginToCenter,
   AXIS_TO_TRANSFORM_INDEX,
   doAllLayersHaveTheSameRotation,
-} from "oxalis/model/accessors/dataset_layer_rotation_accessor";
+} from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 
 const { Text } = Typography;

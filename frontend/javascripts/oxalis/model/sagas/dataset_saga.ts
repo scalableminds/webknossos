@@ -15,7 +15,7 @@ import {
 import {
   getTransformsForLayer,
   invertAndTranspose,
-} from "../accessors/dataset_layer_rotation_accessor";
+} from "../accessors/dataset_layer_transformation_accessor";
 import { getCurrentMag } from "../accessors/flycam_accessor";
 import { getViewportExtents } from "../accessors/view_mode_accessor";
 import { V3 } from "libs/mjs";

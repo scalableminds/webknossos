@@ -46,7 +46,7 @@ import { Model } from "oxalis/singletons";
 import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import Store from "oxalis/store";
 import SegmentMeshController from "./segment_mesh_controller";
-import { getTransformsForLayerOrNull } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
+import { getTransformsForLayerOrNull } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;

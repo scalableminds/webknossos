@@ -47,7 +47,7 @@ import type { DatasetRotation } from "./dataset_rotation_form_item";
 import {
   doAllLayersHaveTheSameRotation,
   getRotationFromTransformationIn90DegreeSteps,
-} from "oxalis/model/accessors/dataset_layer_rotation_accessor";
+} from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 
 const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";

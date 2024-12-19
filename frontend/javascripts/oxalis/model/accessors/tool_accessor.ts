@@ -19,7 +19,7 @@ import {
 } from "admin/organization/pricing_plan_utils";
 import { isSkeletonLayerTransformed } from "./skeletontracing_accessor";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
-import { getTransformsPerLayer } from "./dataset_layer_rotation_accessor";
+import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
 
 const zoomInToUseToolMessage =
   "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.";

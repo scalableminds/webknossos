@@ -84,7 +84,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { Vector3, ControlMode } from "oxalis/constants";
-import Constants, { ControlModeEnum, IdentityTransform, MappingStatusEnum } from "oxalis/constants";
+import Constants, { ControlModeEnum, MappingStatusEnum } from "oxalis/constants";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import LinkButton from "components/link_button";
 import { Model } from "oxalis/singletons";
@@ -128,13 +128,9 @@ import {
   getTransformsForLayerOrNull,
   hasDatasetTransforms,
   isIdentityTransform,
-  isLayerWithoutTransformationConfigSupport,
-  getOriginalTransformsForLayerOrNull,
-} from "oxalis/model/accessors/dataset_layer_rotation_accessor";
-import {
-  invertTransform,
-  transformPointUnscaled,
-} from "oxalis/model/helpers/transformation_helpers";
+  getTransformsForLayer,
+  getNewPositionAndZoomChangeFromTransformationChange,
+} from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;
@@ -243,66 +239,45 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
     affine: "icon-affine-transformation.svg",
   };
 
-  const isDisabled =
-    // Cannot toggle transforms on for a layer that has no transforms.
-    // Layers that cannot have transformations like skeleton layer and volume tracing layers without fallback
-    // automatically copy to the dataset transformation if all other layers have the same transformation.
-    (isRenderedNatively && !hasLayerTransformsConfigured) ||
-    // Cannot toggle transformations on a skeleton layer as a skeleton layer cannot have transformations.
-    // Therefore, it cannot be used as a reference for other layers.
-    // The same goes for segmentation layers without fallback.
-    // Such layers can only transform according to transformations of other layers.
-    isLayerWithoutTransformationConfigSupport(layer);
+  // Cannot toggle transforms on for a layer that has no transforms.
+  // Layers that cannot have transformations like skeleton layer and volume tracing layers without fallback
+  // automatically copy to the dataset transformation if all other layers have the same transformation.
+  const isDisabled = isRenderedNatively && !hasLayerTransformsConfigured;
 
   const toggleLayerTransforms = () => {
-    if (layer.category === "skeleton") {
-      return;
-    }
     const state = Store.getState();
-    // Get transform of layer. null is passed as nativelyRenderedLayerName to
-    // get the layers transform even in case where it is currently rendered natively.
-    const layersTransforms =
-      getOriginalTransformsForLayerOrNull(state.dataset, layer) || IdentityTransform;
-
-    // In case the layer is currently not rendered natively, the inverse of its transformation is going to be applied.
-    // Therefore, we need to invert the transformation to get the correct new position.
-    const transformWhichWillBeApplied = !isRenderedNatively
-      ? invertTransform(layersTransforms)
-      : layersTransforms;
-
-    const currentPosition = getPosition(state.flycam);
-    const newPosition = transformPointUnscaled(transformWhichWillBeApplied)(currentPosition);
-
-    // Also transform a reference coordinate to determine how the scaling
-    // changed. Then, adapt the zoom accordingly.
-    // TODOM: Fix behaviour is broken!!!
-
-    //TODOM: Make the identification what transformation will be applied to keep the position an own function to make the code less complex
-    const referenceOffset: Vector3 = [10, 10, 10];
-    const secondPosition = V3.add(currentPosition, referenceOffset, [0, 0, 0]);
-    const newSecondPosition = transformPointUnscaled(transformWhichWillBeApplied)(secondPosition);
-
-    const scaleChange = _.mean(
-      // Only consider XY for now to determine the zoom change (by slicing from 0 to 2)
-      V3.abs(V3.divide3(V3.sub(newPosition, newSecondPosition), referenceOffset)).slice(0, 2),
+    // Get getOriginalTransformsForLayerOrNull is not used to handle layers that do not support configuring a transformation.
+    const nextNativelyRenderedLayerName = isRenderedNatively ? null : layer.name;
+    const activeTransformation = getTransformsForLayer(
+      state.dataset,
+      layer,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
+    const nextTransform = getTransformsForLayer(
+      state.dataset,
+      layer,
+      nextNativelyRenderedLayerName,
+    );
+    const { scaleChange, newPosition } = getNewPositionAndZoomChangeFromTransformationChange(
+      activeTransformation,
+      nextTransform,
+      state,
     );
     dispatch(
-      updateDatasetSettingAction(
-        "nativelyRenderedLayerName",
-        isRenderedNatively ? null : layer.name,
-      ),
+      updateDatasetSettingAction("nativelyRenderedLayerName", nextNativelyRenderedLayerName),
     );
     dispatch(setPositionAction(newPosition));
     dispatch(setZoomStepAction(state.flycam.zoomStep * scaleChange));
   };
 
   const style = {
-    cursor: transform != null ? "pointer" : "default",
     width: 14,
     height: 14,
     marginBottom: 4,
     marginRight: 5,
-    ...(isDisabled ? { cursor: "not-allowed", opacity: "0.5" } : {}),
+    ...(isDisabled
+      ? { cursor: "not-allowed", opacity: "0.5" }
+      : { cursor: "pointer", opacity: "1.0" }),
   };
 
   return (

@@ -1,5 +1,11 @@
-import { M4x4, type Matrix4x4 } from "libs/mjs";
-import { Identity4x4, IdentityTransform, type NestedMatrix4, type Vector4 } from "oxalis/constants";
+import { M4x4, V3, type Matrix4x4 } from "libs/mjs";
+import {
+  Identity4x4,
+  IdentityTransform,
+  type Vector3,
+  type NestedMatrix4,
+  type Vector4,
+} from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 import * as THREE from "three";
 import type {
@@ -24,6 +30,7 @@ import {
 } from "../helpers/transformation_helpers";
 import { getLayerByName } from "./dataset_accessor";
 import type BoundingBox from "../bucket_data_handling/bounding_box";
+import { getPosition } from "./flycam_accessor";
 
 const IDENTITY_MATRIX = [
   [1, 0, 0, 0],
@@ -420,3 +427,30 @@ function _doAllLayersHaveTheSameRotation(dataLayers: Array<APIDataLayer>): boole
 }
 
 export const doAllLayersHaveTheSameRotation = _.memoize(_doAllLayersHaveTheSameRotation);
+
+export function getNewPositionAndZoomChangeFromTransformationChange(
+  activeTransformation: Transform,
+  nextTransform: Transform,
+  state: OxalisState,
+) {
+  // Calculate the difference between the current and the next transformation.
+  const currentTransformInverted = invertTransform(activeTransformation);
+  const changeInAppliedTransformation = chainTransforms(currentTransformInverted, nextTransform);
+
+  const currentPosition = getPosition(state.flycam);
+  const newPosition = transformPointUnscaled(changeInAppliedTransformation)(currentPosition);
+
+  // Also transform a reference coordinate to determine how the scaling
+  // changed. Then, adapt the zoom accordingly.
+
+  const referenceOffset: Vector3 = [10, 10, 10];
+  const secondPosition = V3.add(currentPosition, referenceOffset, [0, 0, 0]);
+  const newSecondPosition = transformPointUnscaled(changeInAppliedTransformation)(secondPosition);
+
+  const scaleChange = _.mean(
+    // Only consider XY for now to determine the zoom change (by slicing from 0 to 2)
+    V3.abs(V3.divide3(V3.sub(newPosition, newSecondPosition), referenceOffset)).slice(0, 2),
+  );
+
+  return { newPosition, scaleChange };
+}

@@ -8,7 +8,7 @@ import type { TreeMap, SkeletonTracing, OxalisState, StoreType } from "oxalis/st
 import type { Vector3 } from "oxalis/constants";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
-import { getInverseSegmentationTransformer } from "oxalis/model/accessors/dataset_layer_rotation_accessor";
+import { getInverseSegmentationTransformer } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import {
   getNodePosition,
   getSkeletonTracing,

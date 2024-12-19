@@ -33,7 +33,7 @@ import app from "app";
 import {
   invertAndTranspose,
   getTransformsForLayer,
-} from "../accessors/dataset_layer_rotation_accessor";
+} from "../accessors/dataset_layer_transformation_accessor";
 
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
 // 256**2 (entries) * 0.25 (load capacity) / 8 (layers) == 2048 buckets/layer

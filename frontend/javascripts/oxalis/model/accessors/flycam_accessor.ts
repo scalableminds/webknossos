@@ -35,7 +35,7 @@ import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
 import type { SmallerOrHigherInfo } from "../helpers/mag_info";
 import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
 import type { AdditionalCoordinate, VoxelSize } from "types/api_flow_types";
-import { invertAndTranspose, getTransformsForLayer } from "./dataset_layer_rotation_accessor";
+import { invertAndTranspose, getTransformsForLayer } from "./dataset_layer_transformation_accessor";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 

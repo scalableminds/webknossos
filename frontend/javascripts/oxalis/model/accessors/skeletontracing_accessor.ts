@@ -27,7 +27,7 @@ import { invertTransform, transformPointUnscaled } from "../helpers/transformati
 import {
   getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull,
   getTransformsForSkeletonLayer,
-} from "./dataset_layer_rotation_accessor";
+} from "./dataset_layer_transformation_accessor";
 
 export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
   if (tracing.skeleton != null) {

@@ -211,12 +211,19 @@ object Zarr3ArrayHeader extends JsonImplicits {
       val codecSpecs = rawCodecSpecs.map(c => {
         for {
           spec: CodecConfiguration <- c("name") match {
-            case JsString(BytesCodecConfiguration.name)       => c(configurationKey).validate[BytesCodecConfiguration]
-            case JsString(BytesCodecConfiguration.legacyName) => c(configurationKey).validate[BytesCodecConfiguration]
-            case JsString(TransposeCodecConfiguration.name)   => c(configurationKey).validate[TransposeCodecConfiguration]
-            case JsString(GzipCodecConfiguration.name)        => c(configurationKey).validate[GzipCodecConfiguration]
-            case JsString(BloscCodecConfiguration.name)       => c(configurationKey).validate[BloscCodecConfiguration]
-            case JsString(ZstdCodecConfiguration.name)        => c(configurationKey).validate[ZstdCodecConfiguration]
+            // BytesCodec may have no "configuration" key
+            case JsString(BytesCodecConfiguration.name) =>
+              (c \ configurationKey).toOption
+                .map(_.validate[BytesCodecConfiguration])
+                .getOrElse(JsSuccess(BytesCodecConfiguration(None)))
+            case JsString(BytesCodecConfiguration.legacyName) =>
+              (c \ configurationKey).toOption
+                .map(_.validate[BytesCodecConfiguration])
+                .getOrElse(JsSuccess(BytesCodecConfiguration(None)))
+            case JsString(TransposeCodecConfiguration.name) => c(configurationKey).validate[TransposeCodecConfiguration]
+            case JsString(GzipCodecConfiguration.name)      => c(configurationKey).validate[GzipCodecConfiguration]
+            case JsString(BloscCodecConfiguration.name)     => c(configurationKey).validate[BloscCodecConfiguration]
+            case JsString(ZstdCodecConfiguration.name)      => c(configurationKey).validate[ZstdCodecConfiguration]
             case JsString(Crc32CCodecConfiguration.name) =>
               JsSuccess(Crc32CCodecConfiguration) // Crc32 codec has no configuration
             case JsString(ShardingCodecConfiguration.name) => readShardingCodecConfiguration(c(configurationKey))

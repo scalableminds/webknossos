@@ -84,6 +84,7 @@ export class InputKeyboardNoLoop {
       supportInputElements?: boolean;
     },
     extendedCommands?: KeyBindingMap,
+    keyUpBindings?: KeyBindingMap,
   ) {
     if (options) {
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
@@ -100,16 +101,17 @@ export class InputKeyboardNoLoop {
       document.addEventListener("keydown", this.preventBrowserSearchbarShortcut);
       this.attach(EXTENDED_COMMAND_KEYS, this.toggleExtendedMode);
       // Add empty callback in extended mode to deactivate the extended mode via the same EXTENDED_COMMAND_KEYS.
-      this.attach(EXTENDED_COMMAND_KEYS, _.noop, true);
+      this.attach(EXTENDED_COMMAND_KEYS, _.noop, _.noop, true);
       for (const key of Object.keys(extendedCommands)) {
         const callback = extendedCommands[key];
-        this.attach(key, callback, true);
+        this.attach(key, callback, _.noop, true);
       }
     }
 
     for (const key of Object.keys(initialBindings)) {
       const callback = initialBindings[key];
-      this.attach(key, callback);
+      const keyUpCallback = keyUpBindings != null ? keyUpBindings[key] : _.noop;
+      this.attach(key, callback, keyUpCallback);
     }
   }
 
@@ -141,7 +143,12 @@ export class InputKeyboardNoLoop {
     }
   }
 
-  attach(key: KeyboardKey, callback: KeyboardHandler, isExtendedCommand: boolean = false) {
+  attach(
+    key: KeyboardKey,
+    keyDownCallback: KeyboardHandler,
+    keyUpCallback: KeyboardHandler = _.noop,
+    isExtendedCommand: boolean = false,
+  ) {
     const binding = [
       key,
       (event: KeyboardEvent) => {
@@ -163,13 +170,15 @@ export class InputKeyboardNoLoop {
         }
 
         if (!event.repeat) {
-          callback(event);
+          keyDownCallback(event);
         } else {
           event.preventDefault();
           event.stopPropagation();
         }
       },
-      _.noop,
+      (event: KeyboardEvent) => {
+        keyUpCallback(event);
+      },
     ];
     if (isExtendedCommand) {
       KeyboardJS.withContext("extended", () => {

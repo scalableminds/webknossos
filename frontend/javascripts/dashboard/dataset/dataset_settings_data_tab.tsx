@@ -33,6 +33,7 @@ import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_flow_t
 import { useStartAndPollJob } from "admin/job/job_hooks";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
+import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
 import type { ArbitraryObject } from "types/globals";
 
 const FormItem = Form.Item;
@@ -265,6 +266,12 @@ function SimpleDatasetForm({
                     }))}
                   />
                 </FormItemWithInfo>
+              </Col>
+            </Row>
+            <Row gutter={48}>
+              <Col span={24} xl={12} />
+              <Col span={24} xl={6}>
+                <AxisRotationSettingForDataset form={form} />
               </Col>
             </Row>
           </div>

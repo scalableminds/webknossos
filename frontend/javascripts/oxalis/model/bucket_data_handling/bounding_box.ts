@@ -5,6 +5,7 @@ import type { BoundingBoxType, OrthoView, Vector2, Vector3, Vector4 } from "oxal
 import constants, { Vector3Indicies } from "oxalis/constants";
 import type { MagInfo } from "../helpers/mag_info";
 import Dimensions from "../dimensions";
+import type { BoundingBoxObject } from "oxalis/store";
 
 class BoundingBox {
   min: Vector3;
@@ -22,6 +23,13 @@ class BoundingBox {
         this.max[i] = Math.min(this.max[i], boundingBox.max[i]);
       }
     }
+  }
+
+  static fromBoundBoxObject(boundingBox: BoundingBoxObject): BoundingBox {
+    return new BoundingBox({
+      min: boundingBox.topLeft,
+      max: V3.add(boundingBox.topLeft, [boundingBox.width, boundingBox.height, boundingBox.depth]),
+    });
   }
 
   getMinUV(activeViewport: OrthoView): Vector2 {

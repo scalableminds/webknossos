@@ -1,6 +1,7 @@
 package com.scalableminds.util.geometry
 
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Json._
 import play.api.libs.json._
 
@@ -80,7 +81,7 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
   def hasNegativeComponent: Boolean = x < 0 || y < 0 || z < 0
 }
 
-object Vec3Int {
+object Vec3Int extends LazyLogging {
   private val magLiteralRegex = """(\d+)-(\d+)-(\d+)""".r
   private val uriLiteralRegex = """(\d+),(\d+),(\d+)""".r
 
@@ -88,6 +89,7 @@ object Vec3Int {
     s.toIntOpt match {
       case Some(scalar) if allowScalar => Some(Vec3Int.full(scalar))
       case _ =>
+        logger.info(f"[debug-regex]: matching $s as mag literal in Vec3Int")
         s match {
           case magLiteralRegex(x, y, z) =>
             try {
@@ -100,14 +102,17 @@ object Vec3Int {
         }
     }
 
-  def fromUriLiteral(s: String): Option[Vec3Int] = s match {
-    case uriLiteralRegex(x, y, z) =>
-      try {
-        Some(Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)))
-      } catch {
-        case _: NumberFormatException => None
-      }
-    case _ => None
+  def fromUriLiteral(s: String): Option[Vec3Int] = {
+    logger.info(f"[debug-regex]: matching $s as mag Vec3Int uri literal")
+    s match {
+      case uriLiteralRegex(x, y, z) =>
+        try {
+          Some(Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)))
+        } catch {
+          case _: NumberFormatException => None
+        }
+      case _ => None
+    }
   }
 
   def fromList(l: List[Int]): Option[Vec3Int] =

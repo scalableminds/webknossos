@@ -34,11 +34,19 @@ import _ from "lodash";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { formatVoxels } from "libs/format_utils";
 import * as Utils from "libs/utils";
-import type { APIAnnotation, APIDataset, ServerVolumeTracing } from "types/api_flow_types";
+import type {
+  APIAnnotation,
+  APIDataLayer,
+  APIDataset,
+  ServerVolumeTracing,
+} from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
 import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import { computeArrayFromBoundingBox } from "libs/utils";
+import { MagSelectionFormItem } from "components/mag_selection";
+import { MagInfo } from "oxalis/model/helpers/mag_info";
+import { V3 } from "libs/mjs";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;
@@ -126,15 +134,15 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const dataset = useSelector((state: OxalisState) => state.dataset);
 
-  const getMagForSegmentationLayer = async (_annotationId: string, layerName: string) => {
+  const getMagsForSegmentationLayer = (_annotationId: string, layerName: string) => {
     const segmentationLayer = getSegmentationLayerByHumanReadableName(dataset, tracing, layerName);
-    return getMagInfo(segmentationLayer.resolutions).getFinestMag();
+    return getMagInfo(segmentationLayer.resolutions);
   };
   const userBoundingBoxes = getSomeTracing(tracing).userBoundingBoxes;
 
   return (
     <TrainAiModelTab
-      getMagForSegmentationLayer={getMagForSegmentationLayer}
+      getMagsForSegmentationLayer={getMagsForSegmentationLayer}
       ensureSavedState={() => Model.ensureSavedState()}
       onClose={onClose}
       annotationInfos={[
@@ -150,14 +158,16 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
   );
 }
 
+type MagInfoPerAnnotation = { annotationId: string; magInfo: MagInfo };
+
 export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | HybridTracing>({
-  getMagForSegmentationLayer,
+  getMagsForSegmentationLayer,
   onClose,
   ensureSavedState,
   annotationInfos,
   onAddAnnotationsInfos,
 }: {
-  getMagForSegmentationLayer: (annotationId: string, layerName: string) => Promise<Vector3>;
+  getMagsForSegmentationLayer: (annotationId: string, layerName: string) => MagInfo;
   onClose: () => void;
   ensureSavedState?: (() => Promise<void>) | null;
   annotationInfos: Array<AnnotationInfoForAIJob<GenericAnnotation>>;
@@ -165,6 +175,61 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 }) {
   const [form] = Form.useForm();
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
+  const [mags, setMags] = useState<MagInfoPerAnnotation[]>();
+
+  const getIntersectingMagList = (
+    annotationId: string,
+    dataset: APIDataset,
+    groundTruthLayerName: string,
+    imageDataLayerName: string,
+  ) => {
+    const colorLayers = getColorLayers(dataset);
+    const dataLayerMags = getMagsForColorLayer(colorLayers, imageDataLayerName);
+    const groundTruthLayerMags = getMagsForSegmentationLayer(
+      annotationId,
+      groundTruthLayerName,
+    ).getMagList();
+
+    return groundTruthLayerMags?.filter((groundTruthMag) =>
+      dataLayerMags?.find((mag) => V3.equals(mag, groundTruthMag)),
+    );
+  };
+
+  const getIntersectingMags = (
+    annotationId: string,
+    dataset: APIDataset,
+    groundTruthLayerName: string,
+    imageDataLayerName: string,
+  ) => {
+    const intersectingMags = getIntersectingMagList(
+      annotationId,
+      dataset,
+      groundTruthLayerName,
+      imageDataLayerName,
+    );
+    if (mags == null) {
+      return [{ annotationId, magInfo: new MagInfo(intersectingMags) }];
+    } else {
+      return mags.map((mag) =>
+        mag.annotationId === annotationId
+          ? { annotationId, magInfo: new MagInfo(intersectingMags) }
+          : mag,
+      );
+    }
+  };
+
+  const setIntersectingMags = (
+    annotationId: string,
+    dataset: APIDataset,
+    groundTruthLayerName: string,
+    imageDataLayerName: string,
+  ) =>
+    setMags(getIntersectingMags(annotationId, dataset, groundTruthLayerName, imageDataLayerName));
+
+  const getMagsForColorLayer = (colorLayers: APIDataLayer[], layerName: string) => {
+    const colorLayer = colorLayers.find((layer) => layer.name === layerName);
+    return colorLayer != null ? getMagInfo(colorLayer.resolutions).getMagList() : null;
+  };
 
   const getTrainingAnnotations = async (values: any) => {
     return Promise.all(
@@ -173,13 +238,14 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
           annotationId: string;
           imageDataLayer: string;
           layerName: string;
+          mag: Vector3;
         }) => {
-          const { annotationId, imageDataLayer, layerName } = trainingAnnotation;
+          const { annotationId, imageDataLayer, layerName, mag } = trainingAnnotation;
           return {
             annotationId,
             colorLayerName: imageDataLayer,
             segmentationLayerName: layerName,
-            mag: await getMagForSegmentationLayer(annotationId, layerName),
+            mag,
           };
         },
       ),
@@ -240,7 +306,6 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
   const hasWarnings = hasBBoxWarnings;
   const errors = [...annotationErrors, ...bboxErrors];
   const warnings = bboxWarnings;
-
   return (
     <Form
       onFinish={(values) => onFinish(form, useCustomWorkflow, values)}
@@ -281,19 +346,31 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
         );
         const fixedSelectedColorLayer = colorLayers.length === 1 ? colorLayers[0] : null;
         const annotationId = "id" in annotation ? annotation.id : annotation.annotationId;
+
+        const initialMags =
+          fixedSelectedColorLayer != null && fixedSelectedSegmentationLayer != null
+            ? getIntersectingMagList(
+                annotationId,
+                dataset,
+                fixedSelectedSegmentationLayer.name,
+                fixedSelectedColorLayer.name,
+              )
+            : [];
+        const initialMagInfo = new MagInfo(initialMags);
+
         return (
           <Row key={annotationId} gutter={8}>
-            <Col span={8}>
+            <Col span={6}>
               <FormItem
                 hasFeedback
                 name={["trainingAnnotations", idx, "annotationId"]}
-                label="Annotation ID"
+                label={<div style={{ minHeight: 24 }}>Annotation ID</div>} // balance height with labels of required fields
                 initialValue={annotationId}
               >
                 <Input disabled />
               </FormItem>
             </Col>
-            <Col span={8}>
+            <Col span={6}>
               <FormItem
                 hasFeedback
                 name={["trainingAnnotations", idx, "imageDataLayer"]}
@@ -311,19 +388,50 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                   getReadableNameForLayer={(layer) => layer.name}
                   fixedLayerName={fixedSelectedColorLayer?.name || undefined}
                   style={{ width: "100%" }}
+                  onChange={() => {
+                    setIntersectingMags(
+                      annotationId,
+                      dataset,
+                      form.getFieldValue(["trainingAnnotations", idx, "layerName"]),
+                      form.getFieldValue(["trainingAnnotations", idx, "imageDataLayer"]),
+                    );
+                    form.setFieldValue(["trainingAnnotations", idx, "mag"], undefined);
+                  }}
                 />
               </FormItem>
             </Col>
-            <Col span={8}>
+            <Col span={6}>
               <LayerSelectionFormItem
                 name={["trainingAnnotations", idx, "layerName"]}
                 chooseSegmentationLayer
                 layers={segmentationLayers}
                 getReadableNameForLayer={(layer) => {
                   return layer.name;
+                  //TODO_c fix that fallback layers are shown at least with the correct name?
+                  // eg. name (active layer)
                 }}
                 fixedLayerName={fixedSelectedSegmentationLayer?.name || undefined}
                 label="Ground Truth Layer"
+                onChange={() => {
+                  setIntersectingMags(
+                    annotationId,
+                    dataset,
+                    form.getFieldValue(["trainingAnnotations", idx, "layerName"]),
+                    form.getFieldValue(["trainingAnnotations", idx, "imageDataLayer"]),
+                  );
+                  form.setFieldValue(["trainingAnnotations", idx, "mag"], undefined);
+                }}
+              />
+            </Col>
+            <Col span={6}>
+              <MagSelectionFormItem
+                name={["trainingAnnotations", idx, "mag"]}
+                magInfo={
+                  mags != null
+                    ? mags.find((magInfoPerAnno) => magInfoPerAnno.annotationId === annotationId)
+                        ?.magInfo
+                    : initialMagInfo
+                }
               />
             </Col>
           </Row>

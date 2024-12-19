@@ -330,6 +330,7 @@ export type DatasetConfiguration = {
   readonly renderMissingDataBlack: boolean;
   readonly loadingStrategy: LoadingStrategy;
   readonly segmentationPatternOpacity: number;
+  readonly selectiveSegmentVisibility: boolean;
   readonly blendMode: BLEND_MODES;
   // If nativelyRenderedLayerName is not-null, the layer with
   // that name (or id) should be rendered without any transforms.

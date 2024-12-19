@@ -137,6 +137,20 @@ export class MoveTool {
         }
         handleClickSegment(pos);
       },
+      leftDoubleClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent, _isTouch: boolean) => {
+        const { uiInformation } = Store.getState();
+        const isMoveToolActive = uiInformation.activeTool === AnnotationToolEnum.MOVE;
+
+        if (isMoveToolActive) {
+          // We want to select the clicked segment ID only in the MOVE tool. This method is
+          // implemented within the Move tool, but other tool controls will fall back to this one
+          // if they didn't define the double click hook. However, for most other tools, this behavior
+          // would be suboptimal, because when doing a double click, the first click will also be registered
+          // as a simple left click. For example, doing a double click with the brush tool would brush something
+          // and then immediately select the id again which is weird.
+          VolumeHandlers.handlePickCell(pos);
+        }
+      },
       middleClick: (pos: Point2, _plane: OrthoView, event: MouseEvent) => {
         if (event.shiftKey) {
           handleAgglomerateSkeletonAtClick(pos);

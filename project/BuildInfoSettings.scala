@@ -13,8 +13,8 @@ object BuildInfoSettings {
     }
 
   val ciBuild: String =
-    if (System.getenv().containsKey("CIRCLE_BUILD_NUM")) System.getenv().get("CIRCLE_BUILD_NUM") else ""
-  val ciTag: String = if (System.getenv().containsKey("CIRCLE_TAG")) System.getenv().get("CIRCLE_TAG") else ""
+    if (System.getenv().containsKey("CI_BUILD_NUM")) System.getenv().get("CI_BUILD_NUM") else ""
+  val ciTag: String = if (System.getenv().containsKey("CI_TAG")) System.getenv().get("CI_TAG") else ""
 
   def commitHash: String = getStdoutFromCommand("git rev-parse HEAD", "<getting commit hash failed>")
   def commitDate: String = getStdoutFromCommand("git log -1 --format=%cd ", "<getting git date failed>")

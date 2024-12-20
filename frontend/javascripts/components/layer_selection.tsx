@@ -8,6 +8,7 @@ type LayerSelectionProps<L extends { name: string }> = {
   getReadableNameForLayer: (layer: L) => string;
   fixedLayerName?: string;
   label?: string;
+  onChange?: (a: string) => void;
 };
 
 export function LayerSelection<L extends { name: string }>({
@@ -65,6 +66,7 @@ export function LayerSelectionFormItem<L extends { name: string }>({
   getReadableNameForLayer,
   fixedLayerName,
   label,
+  onChange,
 }: LayerSelectionProps<L>): JSX.Element {
   const layerType = chooseSegmentationLayer ? "segmentation" : "color";
   return (
@@ -85,6 +87,7 @@ export function LayerSelectionFormItem<L extends { name: string }>({
         fixedLayerName={fixedLayerName}
         layerType={layerType}
         getReadableNameForLayer={getReadableNameForLayer}
+        onChange={onChange}
       />
     </Form.Item>
   );

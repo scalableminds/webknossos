@@ -54,7 +54,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
     }
   }
 
-  def init(authenticator: BearerTokenAuthenticator, tokenType: TokenType, deleteOld: Boolean = true): Future[String] =
+  def init(authenticator: BearerTokenAuthenticator, tokenType: TokenType, deleteOld: Boolean): Future[String] =
     repository
       .add(authenticator, tokenType, deleteOld)
       .map { a =>
@@ -67,7 +67,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
   def createAndInitDataStoreTokenForUser(user: User): Fox[String] =
     createAndInit(user.loginInfo, TokenType.DataStore, deleteOld = false)
 
-  def createAndInit(loginInfo: LoginInfo, tokenType: TokenType, deleteOld: Boolean = true): Future[String] =
+  def createAndInit(loginInfo: LoginInfo, tokenType: TokenType, deleteOld: Boolean): Future[String] =
     for {
       tokenAuthenticator <- create(loginInfo, tokenType)
       tokenId <- init(tokenAuthenticator, tokenType, deleteOld)

@@ -39,14 +39,14 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
 
   private val cookieSigner = new JcaSigner(JcaSignerSettings(conf.Silhouette.CookieAuthenticator.signerSecret))
 
-  val cookieAuthenticatorService = new CookieAuthenticatorService(cookieSettings,
-                                                                  None,
-                                                                  cookieSigner,
-                                                                  cookieHeaderEncoding,
-                                                                  new Base64AuthenticatorEncoder,
-                                                                  fingerprintGenerator,
-                                                                  idGenerator,
-                                                                  clock)
+  private val cookieAuthenticatorService = new CookieAuthenticatorService(cookieSettings,
+                                                                          None,
+                                                                          cookieSigner,
+                                                                          cookieHeaderEncoding,
+                                                                          new Base64AuthenticatorEncoder,
+                                                                          fingerprintGenerator,
+                                                                          idGenerator,
+                                                                          clock)
 
   val tokenAuthenticatorService =
     new WebknossosBearerTokenAuthenticatorService(tokenSettings, tokenDao, idGenerator, clock, userService, conf)
@@ -55,9 +55,9 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
   override def create(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] =
     cookieAuthenticatorService.create(loginInfo).map(CombinedAuthenticator(_))
 
-  def createToken(loginInfo: LoginInfo): Future[CombinedAuthenticator] = {
+  private def createToken(loginInfo: LoginInfo): Future[CombinedAuthenticator] = {
     val tokenAuthenticator = tokenAuthenticatorService.create(loginInfo, TokenType.Authentication)
-    tokenAuthenticator.map(tokenAuthenticatorService.init(_, TokenType.Authentication))
+    tokenAuthenticator.map(tokenAuthenticatorService.init(_, TokenType.Authentication, deleteOld = true))
     tokenAuthenticator.map(CombinedAuthenticator(_))
   }
 

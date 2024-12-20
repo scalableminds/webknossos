@@ -983,7 +983,6 @@ function Navbar({
           paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         }}
       />
-
       <div
         style={{
           display: "flex",

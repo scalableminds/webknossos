@@ -158,7 +158,7 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
   );
 }
 
-type MagInfoPerAnnotation = { annotationId: string; magInfo: MagInfo };
+type MagInfoWithAnnotationId = { annotationId: string; magInfo: MagInfo };
 
 export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | HybridTracing>({
   getMagsForSegmentationLayer,
@@ -175,7 +175,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 }) {
   const [form] = Form.useForm();
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
-  const [mags, setMags] = useState<MagInfoPerAnnotation[]>();
+  const [mags, setMags] = useState<MagInfoWithAnnotationId[]>();
 
   const getIntersectingMagList = (
     annotationId: string,
@@ -358,6 +358,16 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
             : [];
         const initialMagInfo = new MagInfo(initialMags);
 
+        const onChangeLayer = () => {
+          setIntersectingMags(
+            annotationId,
+            dataset,
+            form.getFieldValue(["trainingAnnotations", idx, "layerName"]),
+            form.getFieldValue(["trainingAnnotations", idx, "imageDataLayer"]),
+          );
+          form.setFieldValue(["trainingAnnotations", idx, "mag"], undefined);
+        };
+
         return (
           <Row key={annotationId} gutter={8}>
             <Col span={6}>
@@ -388,15 +398,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                   getReadableNameForLayer={(layer) => layer.name}
                   fixedLayerName={fixedSelectedColorLayer?.name || undefined}
                   style={{ width: "100%" }}
-                  onChange={() => {
-                    setIntersectingMags(
-                      annotationId,
-                      dataset,
-                      form.getFieldValue(["trainingAnnotations", idx, "layerName"]),
-                      form.getFieldValue(["trainingAnnotations", idx, "imageDataLayer"]),
-                    );
-                    form.setFieldValue(["trainingAnnotations", idx, "mag"], undefined);
-                  }}
+                  onChange={onChangeLayer}
                 />
               </FormItem>
             </Col>
@@ -412,15 +414,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                 }}
                 fixedLayerName={fixedSelectedSegmentationLayer?.name || undefined}
                 label="Ground Truth Layer"
-                onChange={() => {
-                  setIntersectingMags(
-                    annotationId,
-                    dataset,
-                    form.getFieldValue(["trainingAnnotations", idx, "layerName"]),
-                    form.getFieldValue(["trainingAnnotations", idx, "imageDataLayer"]),
-                  );
-                  form.setFieldValue(["trainingAnnotations", idx, "mag"], undefined);
-                }}
+                onChange={onChangeLayer}
               />
             </Col>
             <Col span={6}>
@@ -428,7 +422,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
                 name={["trainingAnnotations", idx, "mag"]}
                 magInfo={
                   mags != null
-                    ? mags.find((magInfoPerAnno) => magInfoPerAnno.annotationId === annotationId)
+                    ? mags.find((magInfoForAnno) => magInfoForAnno.annotationId === annotationId)
                         ?.magInfo
                     : initialMagInfo
                 }

@@ -7,6 +7,7 @@ import window from "libs/window";
 import type { OxalisState, Theme } from "oxalis/store";
 import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
 import { ToastContextMountRoot } from "libs/toast";
+import _ from "lodash";
 
 const ColorWKBlue = "#5660ff"; // WK ~blue/purple
 const ColorWKLinkHover = "#a8b4ff"; // slightly brighter WK Blue
@@ -14,7 +15,7 @@ const ColorWKDarkGrey = "#1f1f1f";
 const ColorWhite = "white";
 const ColorBlack = "black";
 
-export const NavAndStatusBarTheme = {
+export const NavAndStatusBarTheme = _.merge(getAntdTheme("dark"), {
   components: {
     Radio: {
       buttonCheckedBg: ColorWKBlue,
@@ -24,14 +25,16 @@ export const NavAndStatusBarTheme = {
   },
   token: {
     colorBgContainer: "#383d48",
-    colorBgContainerDisabled: "#313131", // Otherwise the erase-buttons which hide under their neighbors would not hide properly
     colorBorder: "#4e4e4e",
     // lineWidth: 0,
     // controlOutlineWidth: 0,
     // lineWidthFocus: 0,
     // colorBorder: "transparent",
+    // Use a non-transparent color for disabled backgrounds. Otherwise the
+    // erase-buttons which hide under their neighbors would not hide properly.
+    colorBgContainerDisabled: "#313131",
   },
-};
+});
 
 export function getSystemColorTheme(): Theme {
   // @ts-ignore

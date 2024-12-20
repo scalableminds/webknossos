@@ -1,7 +1,7 @@
 import type React from "react";
 import { useEffect } from "react";
 import { useSelector } from "react-redux";
-import { App, ConfigProvider, theme, ThemeConfig } from "antd";
+import { App, ConfigProvider, theme, type ThemeConfig } from "antd";
 import type { APIUser } from "types/api_flow_types";
 import window from "libs/window";
 import type { OxalisState, Theme } from "oxalis/store";

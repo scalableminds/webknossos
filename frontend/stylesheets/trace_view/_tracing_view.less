@@ -353,9 +353,7 @@ img.keyboard-mouse-icon:first-child {
   .ant-input-number,
   .ant-radio-button-wrapper,
   .ant-select > .ant-select-selector{
-    // background-color: @dark-bg !important;
     color: @dark-fg !important;
-    // border-color: @dark-border;
 
     &.upgrade-banner-button {
         background-color: var(--ant-button-primary-color) !important;
@@ -366,75 +364,18 @@ img.keyboard-mouse-icon:first-child {
       }
 
     &:hover {
-      // border-color: var(--color-blue-zircon) !important;
       z-index: 1 !important;
     }
-
-    // &:not(:first-child):hover::before {
-    //   background-color: var(--color-blue-zircon) !important;
-    // }
-
-    &.ant-btn-disabled,
-    &.ant-input-disabled,
-    &.ant-input-number-disabled,
-    &.ant-radio-button-wrapper-disabled,
-    &.ant-select-selector-disabled {
-      color: fade(@dark-fg, 50%);
-      // border-color: @dark-border !important;
-
-      // &:hover::before {
-      //   background-color: @dark-border !important;
-      // }
-    }
-    
   }
 
   .ant-btn[disabled],
   .ant-btn[disabled]:hover {
     color: fade(@dark-fg, 50%) !important;
-    // border-color: @dark-border !important;
-    // background-color: @dark-bg !important;
   }
 
   .ant-select-arrow {
     color: @dark-fg;
   }
-
-  // .ant-btn-primary {
-  //   background-color: var(--ant-color-primary) !important;
-  // }
-
-  // Radio button
-  // .ant-radio-button-wrapper:first-child {
-  //   border-left: 1px solid @dark-border;
-  //   &:hover {
-  //     border-left: 1px solid var(--color-blue-zircon);
-  //   }
-  // }
-
-  .ant-radio-button-wrapper-checked,
-  .ant-radio-button-wrapper-checked:first-child {
-    // border-color: var(--ant-color-primary);
-    // color: var(--ant-color-primary);
-
-    // &::before {
-    //   background-color: var(--ant-color-primary) !important;
-    // }
-  }
-
-  // .ant-radio-button-wrapper:not(:first-child)::before {
-  //   background-color: @dark-border;
-  // }
-
-  // .ant-radio-button-wrapper-checked:not([class*=" ant-radio-button-wrapper-disabled"]).ant-radio-button-wrapper:first-child {
-  //   border-right-color: var(--ant-color-primary);
-  // }
-
-  // Primary button in button group
-  // .ant-btn-group .ant-btn-primary:not(:first-child):not(:last-child) {
-  //   border-right-color: @dark-border;
-  //   border-left-color: @dark-border;
-  // }
 
   .ant-btn-danger {
     background: var(--ant-color-error-bg);
@@ -467,7 +408,7 @@ img.keyboard-mouse-icon:first-child {
       color: var(--ant-color-text-primary); 
       font-weight: bold;
 
-      &:hover{
+      &:hover {
         color: var(--color-blue-zircon);
       }
     }

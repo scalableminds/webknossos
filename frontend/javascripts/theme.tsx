@@ -1,7 +1,7 @@
 import type React from "react";
 import { useEffect } from "react";
 import { useSelector } from "react-redux";
-import { App, ConfigProvider, theme } from "antd";
+import { App, ConfigProvider, theme, ThemeConfig } from "antd";
 import type { APIUser } from "types/api_flow_types";
 import window from "libs/window";
 import type { OxalisState, Theme } from "oxalis/store";
@@ -15,17 +15,24 @@ const ColorWKDarkGrey = "#1f1f1f";
 const ColorWhite = "white";
 const ColorBlack = "black";
 
-export const NavAndStatusBarTheme = _.merge(getAntdTheme("dark"), {
+const OverridesForNavbarAndStatusBarTheme: ThemeConfig = {
   components: {
     Radio: {
       buttonCheckedBg: ColorWKBlue,
       buttonSolidCheckedBg: ColorWKBlue,
       buttonBg: "#383d48",
     },
+    Button: {
+      primaryColor: ColorWKBlue,
+      primaryShadow: "none",
+    },
   },
   token: {
+    colorPrimary: ColorWKBlue,
+
     colorBgContainer: "#383d48",
     colorBorder: "#4e4e4e",
+    colorPrimaryBorder: "#4e4e4e",
     // lineWidth: 0,
     // controlOutlineWidth: 0,
     // lineWidthFocus: 0,
@@ -34,7 +41,11 @@ export const NavAndStatusBarTheme = _.merge(getAntdTheme("dark"), {
     // erase-buttons which hide under their neighbors would not hide properly.
     colorBgContainerDisabled: "#313131",
   },
-});
+};
+export const NavAndStatusBarTheme = _.merge(
+  getAntdTheme("dark"),
+  OverridesForNavbarAndStatusBarTheme,
+);
 
 export function getSystemColorTheme(): Theme {
   // @ts-ignore

@@ -1076,24 +1076,28 @@ export default function ToolbarView() {
                 }}
               />
             </ToolRadioButton>
+            <ToolRadioButton
+              name={TOOL_NAMES.QUICK_SELECT}
+              description="Click on a segment or draw a rectangle around it to automatically detect it"
+              disabledExplanation={
+                disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].explanation
+              }
+              disabled={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled}
+              value={AnnotationToolEnum.QUICK_SELECT}
+            >
+              <img
+                src="/assets/images/quick-select-tool.svg"
+                alt="Quick Select Icon"
+                style={{
+                  opacity: disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled
+                    ? 0.5
+                    : 1,
+                  ...imgStyleForSpaceyIcons,
+                }}
+              />
+            </ToolRadioButton>
           </React.Fragment>
         ) : null}
-        <ToolRadioButton
-          name={TOOL_NAMES.QUICK_SELECT}
-          description="Click on a segment or draw a rectangle around it to automatically detect it"
-          disabledExplanation={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].explanation}
-          disabled={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled}
-          value={AnnotationToolEnum.QUICK_SELECT}
-        >
-          <img
-            src="/assets/images/quick-select-tool.svg"
-            alt="Quick Select Icon"
-            style={{
-              opacity: disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled ? 0.5 : 1,
-              ...imgStyleForSpaceyIcons,
-            }}
-          />
-        </ToolRadioButton>
         <ToolRadioButton
           name={TOOL_NAMES.BOUNDING_BOX}
           description="Create, resize and modify bounding boxes."

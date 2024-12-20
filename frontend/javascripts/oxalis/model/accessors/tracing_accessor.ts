@@ -10,6 +10,8 @@ import type {
 import type { ServerTracing, TracingType } from "types/api_flow_types";
 import { TracingTypeEnum } from "types/api_flow_types";
 import type { SaveQueueType } from "oxalis/model/actions/save_actions";
+import BoundingBox from "../bucket_data_handling/bounding_box";
+import type { Vector3 } from "oxalis/constants";
 
 export function maybeGetSomeTracing(
   tracing: Tracing,
@@ -86,7 +88,17 @@ export function selectTracing(
 
   return tracing;
 }
+
 export const getUserBoundingBoxesFromState = (state: OxalisState): Array<UserBoundingBox> => {
   const maybeSomeTracing = maybeGetSomeTracing(state.tracing);
   return maybeSomeTracing != null ? maybeSomeTracing.userBoundingBoxes : [];
+};
+
+export const getUserBoundingBoxesThatContainPosition = (
+  state: OxalisState,
+  position: Vector3,
+): Array<UserBoundingBox> => {
+  const bboxes = getUserBoundingBoxesFromState(state);
+
+  return bboxes.filter((el) => new BoundingBox(el.boundingBox).containsPoint(position));
 };

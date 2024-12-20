@@ -39,6 +39,10 @@ const warnMergeWithoutPendingOperations = _.throttle(() => {
   );
 }, WARNING_THROTTLE_THRESHOLD);
 
+const warnAwaitedMissingBucket = _.throttle(() => {
+  ErrorHandling.notify(new Error("Awaited missing bucket"));
+}, WARNING_THROTTLE_THRESHOLD);
+
 export function assertNonNullBucket(bucket: Bucket): asserts bucket is DataBucket {
   if (bucket.type === "null") {
     throw new Error("Unexpected null bucket.");
@@ -773,7 +777,7 @@ export class DataBucket {
       // In the past, ensureLoaded() never returned if the bucket
       // was MISSING. This log might help to discover potential
       // bugs which could arise in combination with MISSING buckets.
-      console.warn("Awaited missing bucket.");
+      warnAwaitedMissingBucket();
     }
   }
 }

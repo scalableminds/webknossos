@@ -180,9 +180,8 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 }) {
   const [form] = Form.useForm();
 
-  const magInfoPerLayer: Array<MagInfo> | null = Form.useWatch(() => {
+  const magInfoPerLayer: Array<MagInfo> = Form.useWatch(() => {
     const getIntersectingMags = (idx: number, annotationId: string, dataset: APIDataset) => {
-      console.log("getIntersectingMags");
       const segmentationLayerName = form.getFieldValue(["trainingAnnotations", idx, "layerName"]);
       const imageDataLayerName = form.getFieldValue(["trainingAnnotations", idx, "imageDataLayer"]);
       if (segmentationLayerName != null && imageDataLayerName != null) {
@@ -193,7 +192,11 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
       return new MagInfo([]);
     };
 
-    return form.getFieldValue("trainingAnnotations").map((_: TrainingAnnotation, idx: number) => {
+    const annotationInfos = form.getFieldValue("trainingAnnotations");
+    if (annotationInfos == null) {
+      return [];
+    }
+    return annotationInfos.map((_: TrainingAnnotation, idx: number) => {
       const annotation = annotationInfos[idx].annotation;
       const annotationId = "id" in annotation ? annotation.id : annotation.annotationId;
       return getIntersectingMags(idx, annotationId, annotationInfos[idx].dataset);

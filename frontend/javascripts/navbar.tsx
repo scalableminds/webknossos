@@ -942,62 +942,57 @@ function Navbar({
   const separator = <div className="navbar-separator" />;
 
   return (
-    <ConfigProvider theme={NavAndStatusBarTheme}>
-      <Header
-        className={classnames("navbar-header", {
-          "collapsed-nav-header": collapseAllNavItems,
-        })}
+    <Header
+      className={classnames("navbar-header", {
+        "collapsed-nav-header": collapseAllNavItems,
+      })}
+    >
+      <GlobalProgressBar />
+      <MaintenanceBanner />
+      <ConfigProvider theme={{ ...getAntdTheme("light") }}>
+        <UpgradeVersionBanner />
+      </ConfigProvider>
+      <Menu
+        mode="horizontal"
+        selectedKeys={selectedKeys}
+        onOpenChange={(openKeys) => setIsHelpMenuOpen(openKeys.includes(HELP_MENU_KEY))}
+        style={{
+          paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
+          lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
+        }}
+        theme="dark"
+        subMenuCloseDelay={subMenuCloseDelay}
+        triggerSubMenuAction="click"
+        // There is a bug where the last menu entry disappears behind the overflow indicator
+        // although there is ample space available, see https://github.com/ant-design/ant-design/issues/32277
+        disabledOverflow
+        items={menuItems}
+      />
+
+      {isInAnnotationView ? separator : null}
+      <HelpModal
+        isModalOpen={isHelpModalOpen}
+        onCancel={() => setIsHelpModalOpen(false)}
+        centeredLayout
+      />
+      <PortalTarget
+        portalId="navbarTracingSlot"
+        style={{
+          flex: 1,
+          display: "flex",
+          paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
+        }}
+      />
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginRight: 12,
+        }}
       >
-        <GlobalProgressBar />
-        <MaintenanceBanner />
-        <ConfigProvider theme={{ ...getAntdTheme("light") }}>
-          <UpgradeVersionBanner />
-        </ConfigProvider>
-        <Menu
-          mode="horizontal"
-          selectedKeys={selectedKeys}
-          onOpenChange={(openKeys) => setIsHelpMenuOpen(openKeys.includes(HELP_MENU_KEY))}
-          style={{
-            paddingTop:
-              navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
-            lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
-          }}
-          theme="dark"
-          subMenuCloseDelay={subMenuCloseDelay}
-          triggerSubMenuAction="click"
-          // There is a bug where the last menu entry disappears behind the overflow indicator
-          // although there is ample space available, see https://github.com/ant-design/ant-design/issues/32277
-          disabledOverflow
-          items={menuItems}
-        />
-
-        {isInAnnotationView ? separator : null}
-        <HelpModal
-          isModalOpen={isHelpModalOpen}
-          onCancel={() => setIsHelpModalOpen(false)}
-          centeredLayout
-        />
-        <PortalTarget
-          portalId="navbarTracingSlot"
-          style={{
-            flex: 1,
-            display: "flex",
-            paddingTop:
-              navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
-          }}
-        />
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            marginRight: 12,
-          }}
-        >
-          {trailingNavItems}
-        </div>
-      </Header>
-    </ConfigProvider>
+        {trailingNavItems}
+      </div>
+    </Header>
   );
 }
 

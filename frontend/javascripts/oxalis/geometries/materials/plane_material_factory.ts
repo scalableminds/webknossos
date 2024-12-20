@@ -146,6 +146,9 @@ class PlaneMaterialFactory {
       selectiveVisibilityInProofreading: {
         value: true,
       },
+      selectiveSegmentVisibility: {
+        value: false,
+      },
       is3DViewBeingRendered: {
         value: true,
       },
@@ -562,6 +565,17 @@ class PlaneMaterialFactory {
         true,
       ),
     );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => storeState.datasetConfiguration.selectiveSegmentVisibility,
+        (selectiveSegmentVisibility) => {
+          this.uniforms.selectiveSegmentVisibility.value = selectiveSegmentVisibility;
+        },
+        true,
+      ),
+    );
+
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => getMagInfoByLayer(storeState.dataset),

@@ -340,7 +340,7 @@ export class InputKeyboard {
 }
 
 // The mouse module.
-// Events: over, out, leftClick, rightClick, leftDownMove
+// Events: over, out, {left,right}Click, {left,right}DownMove, {left,right}DoubleClick
 class InputMouseButton {
   mouse: InputMouse;
   name: MouseButtonString;
@@ -390,6 +390,24 @@ class InputMouseButton {
       }
 
       this.down = false;
+    }
+  }
+
+  handleDoubleClick(event: MouseEvent, triggeredByTouch: boolean): void {
+    // event.which is 0 on touch devices as there are no mouse buttons, interpret that as the left mouse button
+    // Safari doesn't support evt.buttons, but only evt.which is non-standardized
+    const eventWhich = event.which !== 0 ? event.which : 1;
+
+    if (eventWhich === this.which) {
+      if (this.moveDelta <= MOUSE_MOVE_DELTA_THRESHOLD) {
+        this.mouse.emitter.emit(
+          `${this.name}DoubleClick`,
+          this.mouse.lastPosition,
+          this.id,
+          event,
+          triggeredByTouch,
+        );
+      }
     }
   }
 
@@ -446,6 +464,7 @@ export class InputMouse {
     document.addEventListener("mousemove", this.mouseMove);
     document.addEventListener("mouseup", this.mouseUp);
     document.addEventListener("touchend", this.touchEnd);
+    document.addEventListener("dblclick", this.doubleClick);
 
     this.delegatedEvents = {
       ...Utils.addEventListenerWithDelegation(
@@ -498,6 +517,7 @@ export class InputMouse {
     document.removeEventListener("mousemove", this.mouseMove);
     document.removeEventListener("mouseup", this.mouseUp);
     document.removeEventListener("touchend", this.touchEnd);
+    document.removeEventListener("dblclick", this.doubleClick);
 
     for (const [eventName, eventHandler] of Object.entries(this.delegatedEvents)) {
       document.removeEventListener(eventName, eventHandler);
@@ -548,6 +568,12 @@ export class InputMouse {
 
     if (this.isHit(event)) {
       this.mouseOver();
+    }
+  };
+
+  doubleClick = (event: MouseEvent): void => {
+    if (this.isHit(event)) {
+      this.leftMouseButton.handleDoubleClick(event, false);
     }
   };
 

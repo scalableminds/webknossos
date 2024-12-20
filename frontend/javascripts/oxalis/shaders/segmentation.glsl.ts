@@ -351,3 +351,44 @@ export const getSegmentId: ShaderModule = {
 <% }) %>
   `,
 };
+
+export const getSegmentationAlphaIncrement: ShaderModule = {
+  requirements: [],
+  code: `
+    float getSegmentationAlphaIncrement(float alpha, bool isHoveredSegment, bool isHoveredUnmappedSegment, bool isActiveCell) {
+      // Highlight segment only if
+      // - it's hovered or
+      // - active during proofreading
+      // Also, make segments invisible if selective visibility is turned on (unless the segment
+      // is active or hovered).
+
+      if (isProofreading) {
+        if (isActiveCell) {
+          return (isHoveredUnmappedSegment
+            ? 0.4     // Highlight the hovered super-voxel of the active segment
+            : (isHoveredSegment
+              ? 0.15  // Highlight the not-hovered super-voxels of the hovered segment
+              : 0.0
+            )
+          );
+        } else {
+          return (isHoveredSegment
+            ? 0.2
+            // We are in proofreading mode, but the current voxel neither belongs
+            // to the active segment nor is it hovered. When selective visibility
+            // is enabled, lower the opacity.
+            : (selectiveVisibilityInProofreading ? -alpha : 0.0)
+          );
+        }
+      }
+
+      if (isHoveredSegment) {
+        return 0.2;
+      } else if (selectiveSegmentVisibility) {
+        return isActiveCell ? 0.15 : -alpha;
+      } else {
+        return 0.;
+      }
+    }
+  `,
+};

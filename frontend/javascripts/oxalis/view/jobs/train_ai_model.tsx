@@ -158,7 +158,12 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
   );
 }
 
-type MagInfoWithAnnotationId = { annotationId: string; magInfo: MagInfo };
+type TrainingAnnotation = {
+  annotationId: string;
+  imageDataLayer: string;
+  layerName: string;
+  mag: Vector3;
+};
 
 export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | HybridTracing>({
   getMagsForSegmentationLayer,
@@ -174,8 +179,28 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
   onAddAnnotationsInfos?: (newItems: Array<AnnotationInfoForAIJob<APIAnnotation>>) => void;
 }) {
   const [form] = Form.useForm();
+
+  const magInfoPerLayer: Array<MagInfo> | null = Form.useWatch(() => {
+    const getIntersectingMags = (idx: number, annotationId: string, dataset: APIDataset) => {
+      console.log("getIntersectingMags");
+      const segmentationLayerName = form.getFieldValue(["trainingAnnotations", idx, "layerName"]);
+      const imageDataLayerName = form.getFieldValue(["trainingAnnotations", idx, "imageDataLayer"]);
+      if (segmentationLayerName != null && imageDataLayerName != null) {
+        return new MagInfo(
+          getIntersectingMagList(annotationId, dataset, segmentationLayerName, imageDataLayerName),
+        );
+      }
+      return new MagInfo([]);
+    };
+
+    return form.getFieldValue("trainingAnnotations").map((_: TrainingAnnotation, idx: number) => {
+      const annotation = annotationInfos[idx].annotation;
+      const annotationId = "id" in annotation ? annotation.id : annotation.annotationId;
+      return getIntersectingMags(idx, annotationId, annotationInfos[idx].dataset);
+    });
+  }, form);
+
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
-  const [mags, setMags] = useState<MagInfoWithAnnotationId[]>();
 
   const getIntersectingMagList = (
     annotationId: string,
@@ -195,37 +220,6 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
     );
   };
 
-  const getIntersectingMags = (
-    annotationId: string,
-    dataset: APIDataset,
-    groundTruthLayerName: string,
-    imageDataLayerName: string,
-  ) => {
-    const intersectingMags = getIntersectingMagList(
-      annotationId,
-      dataset,
-      groundTruthLayerName,
-      imageDataLayerName,
-    );
-    if (mags == null) {
-      return [{ annotationId, magInfo: new MagInfo(intersectingMags) }];
-    } else {
-      return mags.map((mag) =>
-        mag.annotationId === annotationId
-          ? { annotationId, magInfo: new MagInfo(intersectingMags) }
-          : mag,
-      );
-    }
-  };
-
-  const setIntersectingMags = (
-    annotationId: string,
-    dataset: APIDataset,
-    groundTruthLayerName: string,
-    imageDataLayerName: string,
-  ) =>
-    setMags(getIntersectingMags(annotationId, dataset, groundTruthLayerName, imageDataLayerName));
-
   const getMagsForColorLayer = (colorLayers: APIDataLayer[], layerName: string) => {
     const colorLayer = colorLayers.find((layer) => layer.name === layerName);
     return colorLayer != null ? getMagInfo(colorLayer.resolutions).getMagList() : null;
@@ -233,22 +227,15 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 
   const getTrainingAnnotations = async (values: any) => {
     return Promise.all(
-      values.trainingAnnotations.map(
-        async (trainingAnnotation: {
-          annotationId: string;
-          imageDataLayer: string;
-          layerName: string;
-          mag: Vector3;
-        }) => {
-          const { annotationId, imageDataLayer, layerName, mag } = trainingAnnotation;
-          return {
-            annotationId,
-            colorLayerName: imageDataLayer,
-            segmentationLayerName: layerName,
-            mag,
-          };
-        },
-      ),
+      values.trainingAnnotations.map(async (trainingAnnotation: TrainingAnnotation) => {
+        const { annotationId, imageDataLayer, layerName, mag } = trainingAnnotation;
+        return {
+          annotationId,
+          colorLayerName: imageDataLayer,
+          segmentationLayerName: layerName,
+          mag,
+        };
+      }),
     );
   };
 
@@ -347,24 +334,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
         const fixedSelectedColorLayer = colorLayers.length === 1 ? colorLayers[0] : null;
         const annotationId = "id" in annotation ? annotation.id : annotation.annotationId;
 
-        const initialMags =
-          fixedSelectedColorLayer != null && fixedSelectedSegmentationLayer != null
-            ? getIntersectingMagList(
-                annotationId,
-                dataset,
-                fixedSelectedSegmentationLayer.name,
-                fixedSelectedColorLayer.name,
-              )
-            : [];
-        const initialMagInfo = new MagInfo(initialMags);
-
         const onChangeLayer = () => {
-          setIntersectingMags(
-            annotationId,
-            dataset,
-            form.getFieldValue(["trainingAnnotations", idx, "layerName"]),
-            form.getFieldValue(["trainingAnnotations", idx, "imageDataLayer"]),
-          );
           form.setFieldValue(["trainingAnnotations", idx, "mag"], undefined);
         };
 
@@ -421,10 +391,9 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
               <MagSelectionFormItem
                 name={["trainingAnnotations", idx, "mag"]}
                 magInfo={
-                  mags != null
-                    ? mags.find((magInfoForAnno) => magInfoForAnno.annotationId === annotationId)
-                        ?.magInfo
-                    : initialMagInfo
+                  magInfoPerLayer != null && magInfoPerLayer[idx] != null
+                    ? magInfoPerLayer[idx]
+                    : new MagInfo([])
                 }
               />
             </Col>

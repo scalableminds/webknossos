@@ -32,10 +32,6 @@ const OverridesForNavbarAndStatusBarTheme: ThemeConfig = {
     colorBgContainer: "#383d48",
     colorBorder: "#4e4e4e",
     colorPrimaryBorder: "#4e4e4e",
-    // lineWidth: 0,
-    // controlOutlineWidth: 0,
-    // lineWidthFocus: 0,
-    // colorBorder: "transparent",
     // Use a non-transparent color for disabled backgrounds. Otherwise the
     // erase-buttons which hide under their neighbors would not hide properly.
     colorBgContainerDisabled: "#313131",

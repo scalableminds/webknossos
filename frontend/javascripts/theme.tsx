@@ -14,6 +14,25 @@ const ColorWKDarkGrey = "#1f1f1f";
 const ColorWhite = "white";
 const ColorBlack = "black";
 
+export const NavAndStatusBarTheme = {
+  components: {
+    Radio: {
+      buttonCheckedBg: ColorWKBlue,
+      buttonSolidCheckedBg: ColorWKBlue,
+      buttonBg: "#383d48",
+    },
+  },
+  token: {
+    colorBgContainer: "#383d48",
+    colorBgContainerDisabled: "#313131", // Otherwise the erase-buttons which hide under their neighbors would not hide properly
+    colorBorder: "#4e4e4e",
+    // lineWidth: 0,
+    // controlOutlineWidth: 0,
+    // lineWidthFocus: 0,
+    // colorBorder: "transparent",
+  },
+};
+
 export function getSystemColorTheme(): Theme {
   // @ts-ignore
   return window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&

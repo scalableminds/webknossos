@@ -353,9 +353,9 @@ img.keyboard-mouse-icon:first-child {
   .ant-input-number,
   .ant-radio-button-wrapper,
   .ant-select > .ant-select-selector{
-    background-color: @dark-bg !important;
+    // background-color: @dark-bg !important;
     color: @dark-fg !important;
-    border-color: @dark-border;
+    // border-color: @dark-border;
 
     &.upgrade-banner-button{
         background-color: var(--ant-button-primary-color) !important;
@@ -366,13 +366,13 @@ img.keyboard-mouse-icon:first-child {
       }
 
     &:hover {
-      border-color: var(--color-blue-zircon) !important;
+      // border-color: var(--color-blue-zircon) !important;
       z-index: 1 !important;
     }
 
-    &:not(:first-child):hover::before {
-      background-color: var(--color-blue-zircon) !important;
-    }
+    // &:not(:first-child):hover::before {
+    //   background-color: var(--color-blue-zircon) !important;
+    // }
 
     &.ant-btn-disabled,
     &.ant-input-disabled,
@@ -380,11 +380,11 @@ img.keyboard-mouse-icon:first-child {
     &.ant-radio-button-wrapper-disabled,
     &.ant-select-selector-disabled {
       color: fade(@dark-fg, 50%);
-      border-color: @dark-border !important;
+      // border-color: @dark-border !important;
 
-      &:hover::before {
-        background-color: @dark-border !important;
-      }
+      // &:hover::before {
+      //   background-color: @dark-border !important;
+      // }
     }
     
   }
@@ -392,8 +392,8 @@ img.keyboard-mouse-icon:first-child {
   .ant-btn[disabled],
   .ant-btn[disabled]:hover {
     color: fade(@dark-fg, 50%) !important;
-    border-color: @dark-border !important;
-    background-color: @dark-bg !important;
+    // border-color: @dark-border !important;
+    // background-color: @dark-bg !important;
   }
 
   .ant-select-arrow {
@@ -405,26 +405,26 @@ img.keyboard-mouse-icon:first-child {
   }
 
   // Radio button
-  .ant-radio-button-wrapper:first-child {
-    border-left: 1px solid @dark-border;
-    &:hover {
-      border-left: 1px solid var(--color-blue-zircon);
-    }
-  }
+  // .ant-radio-button-wrapper:first-child {
+  //   border-left: 1px solid @dark-border;
+  //   &:hover {
+  //     border-left: 1px solid var(--color-blue-zircon);
+  //   }
+  // }
 
   .ant-radio-button-wrapper-checked,
   .ant-radio-button-wrapper-checked:first-child {
-    border-color: var(--ant-color-primary);
+    // border-color: var(--ant-color-primary);
     color: var(--ant-color-primary);
 
-    &::before {
-      background-color: var(--ant-color-primary) !important;
-    }
+    // &::before {
+    //   background-color: var(--ant-color-primary) !important;
+    // }
   }
 
-  .ant-radio-button-wrapper:not(:first-child)::before {
-    background-color: @dark-border;
-  }
+  // .ant-radio-button-wrapper:not(:first-child)::before {
+  //   background-color: @dark-border;
+  // }
 
   .ant-radio-button-wrapper-checked:not([class*=" ant-radio-button-wrapper-disabled"]).ant-radio-button-wrapper:first-child {
     border-right-color: var(--ant-color-primary);
@@ -442,14 +442,6 @@ img.keyboard-mouse-icon:first-child {
     &:hover {
       background: var(--ant-color-error-bg);
       color: white;
-    }
-  }
-
-  // Settings icon
-  .highlight-togglable-button.ant-btn {
-    background-color: var(--ant-color-primary) !important;
-    &:not(:hover) {
-      border-color: var(--ant-color-primary) !important;
     }
   }
 

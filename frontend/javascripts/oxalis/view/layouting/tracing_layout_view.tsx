@@ -1,5 +1,5 @@
 import { WarningFilled } from "@ant-design/icons";
-import { Alert, Layout, Tooltip } from "antd";
+import { Alert, ConfigProvider, Layout, Tooltip } from "antd";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import Toast from "libs/toast";
@@ -46,6 +46,7 @@ import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { FloatingMobileControls } from "./floating_mobile_controls";
 import app from "app";
+import { NavAndStatusBarTheme } from "theme";
 
 const { Sider } = Layout;
 
@@ -298,57 +299,59 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
           <CrossOriginApi />
           <Layout className="tracing-layout">
             <RenderToPortal portalId="navbarTracingSlot">
-              {status === "loaded" ? (
-                <div
-                  style={{
-                    flex: "0 1 auto",
-                    zIndex: 210,
-                    display: "flex",
-                  }}
-                >
-                  <ActionBarView
-                    layoutProps={{
-                      storedLayoutNamesForView: currentLayoutNames,
-                      activeLayout: activeLayoutName,
-                      layoutKey: layoutType,
-                      setCurrentLayout: (layoutName) => {
-                        this.setState({
-                          activeLayoutName: layoutName,
-                        });
-                        setActiveLayout(layoutType, layoutName);
-                      },
-                      saveCurrentLayout: this.saveCurrentLayout,
-                      setAutoSaveLayouts: this.props.setAutoSaveLayouts,
-                      autoSaveLayouts: this.props.autoSaveLayouts,
+              <ConfigProvider theme={NavAndStatusBarTheme}>
+                {status === "loaded" ? (
+                  <div
+                    style={{
+                      flex: "0 1 auto",
+                      zIndex: 210,
+                      display: "flex",
                     }}
-                  />
-                  {isDatasetOnScratchVolume ? (
-                    <Tooltip title={messages["dataset.is_scratch"]}>
-                      <Alert
-                        className="hide-on-small-screen"
-                        style={{
-                          height: 30,
-                          paddingTop: 4,
-                          backgroundColor: "var(--ant-color-warning)",
-                          border: "none",
-                          color: "white",
-                        }}
-                        message={
-                          <span>
-                            Dataset is on tmpscratch!{" "}
-                            <WarningFilled
-                              style={{
-                                margin: "0 0 0 6px",
-                              }}
-                            />
-                          </span>
-                        }
-                        type="error"
-                      />
-                    </Tooltip>
-                  ) : null}
-                </div>
-              ) : null}
+                  >
+                    <ActionBarView
+                      layoutProps={{
+                        storedLayoutNamesForView: currentLayoutNames,
+                        activeLayout: activeLayoutName,
+                        layoutKey: layoutType,
+                        setCurrentLayout: (layoutName) => {
+                          this.setState({
+                            activeLayoutName: layoutName,
+                          });
+                          setActiveLayout(layoutType, layoutName);
+                        },
+                        saveCurrentLayout: this.saveCurrentLayout,
+                        setAutoSaveLayouts: this.props.setAutoSaveLayouts,
+                        autoSaveLayouts: this.props.autoSaveLayouts,
+                      }}
+                    />
+                    {isDatasetOnScratchVolume ? (
+                      <Tooltip title={messages["dataset.is_scratch"]}>
+                        <Alert
+                          className="hide-on-small-screen"
+                          style={{
+                            height: 30,
+                            paddingTop: 4,
+                            backgroundColor: "var(--ant-color-warning)",
+                            border: "none",
+                            color: "white",
+                          }}
+                          message={
+                            <span>
+                              Dataset is on tmpscratch!{" "}
+                              <WarningFilled
+                                style={{
+                                  margin: "0 0 0 6px",
+                                }}
+                              />
+                            </span>
+                          }
+                          type="error"
+                        />
+                      </Tooltip>
+                    ) : null}
+                  </div>
+                ) : null}
+              </ConfigProvider>
             </RenderToPortal>
             <Layout
               style={{

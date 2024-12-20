@@ -10,6 +10,7 @@ import {
   Row,
   Divider,
   Popconfirm,
+  ConfigProvider,
 } from "antd";
 import {
   ClearOutlined,
@@ -173,7 +174,7 @@ function RadioButtonWithTooltip({
   disabledTitle?: string;
   disabled?: boolean;
   children: React.ReactNode;
-  style: React.CSSProperties;
+  style?: React.CSSProperties;
   value: string;
   onClick?: (event: React.MouseEvent) => void;
   onMouseEnter?: () => void;
@@ -219,7 +220,7 @@ function ToolRadioButton({
   disabledExplanation?: string;
   disabled?: boolean;
   children: React.ReactNode;
-  style: React.CSSProperties;
+  style?: React.CSSProperties;
   value: string;
   onClick?: (event: React.MouseEvent) => void;
   onMouseEnter?: () => void;
@@ -297,7 +298,6 @@ function OverwriteModeSwitch({
     >
       <RadioButtonWithTooltip
         title="Overwrite everything. This setting can be toggled by holding CTRL."
-        style={NARROW_BUTTON_STYLE}
         value={OverwriteModeEnum.OVERWRITE_ALL}
       >
         <img
@@ -308,7 +308,6 @@ function OverwriteModeSwitch({
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
         title="Only overwrite empty areas. In case of erasing, only the current segment ID is overwritten. This setting can be toggled by holding CTRL."
-        style={NARROW_BUTTON_STYLE}
         value={OverwriteModeEnum.OVERWRITE_EMPTY}
       >
         <img
@@ -435,6 +434,7 @@ function AdditionalSkeletonModesButtons() {
       <ButtonComponent
         style={newNodeNewTreeModeButtonStyle}
         onClick={toggleNewNodeNewTreeMode}
+        type={isNewNodeNewTreeModeOn ? "primary" : "default"}
         title="Toggle the Single node Tree (soma clicking) mode - If enabled, each node creation will create a new tree."
       >
         <img
@@ -940,7 +940,6 @@ export default function ToolbarView() {
           description="Use left-click to move around and right-click to open a context menu."
           disabledExplanation=""
           disabled={false}
-          style={NARROW_BUTTON_STYLE}
           value={AnnotationToolEnum.MOVE}
         >
           <i className="fas fa-arrows-alt" />
@@ -952,7 +951,6 @@ export default function ToolbarView() {
             description={skeletonToolDescription}
             disabledExplanation={disabledInfosForTools[AnnotationToolEnum.SKELETON].explanation}
             disabled={disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled}
-            style={NARROW_BUTTON_STYLE}
             value={AnnotationToolEnum.SKELETON}
           >
             <i
@@ -973,7 +971,6 @@ export default function ToolbarView() {
               }
               disabledExplanation={disabledInfosForTools[AnnotationToolEnum.BRUSH].explanation}
               disabled={disabledInfosForTools[AnnotationToolEnum.BRUSH].isDisabled}
-              style={NARROW_BUTTON_STYLE}
               value={AnnotationToolEnum.BRUSH}
             >
               <i
@@ -993,7 +990,6 @@ export default function ToolbarView() {
               }
               disabled={disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].isDisabled}
               style={{
-                ...NARROW_BUTTON_STYLE,
                 marginLeft: showEraseBrushTool ? 0 : -38,
                 zIndex: showEraseBrushTool ? "initial" : -10,
                 transition: "margin 0.3s",
@@ -1018,7 +1014,6 @@ export default function ToolbarView() {
               description="Draw outlines around the voxels you would like to label."
               disabledExplanation={disabledInfosForTools[AnnotationToolEnum.TRACE].explanation}
               disabled={disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled}
-              style={NARROW_BUTTON_STYLE}
               value={AnnotationToolEnum.TRACE}
             >
               <img
@@ -1041,7 +1036,6 @@ export default function ToolbarView() {
               }
               disabled={disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled}
               style={{
-                ...NARROW_BUTTON_STYLE,
                 marginLeft: showEraseTraceTool ? 0 : -38,
                 zIndex: showEraseTraceTool ? "initial" : -10,
                 transition: "margin 0.3s",
@@ -1066,7 +1060,6 @@ export default function ToolbarView() {
               description="Flood-fill the clicked region."
               disabledExplanation={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].explanation}
               disabled={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled}
-              style={NARROW_BUTTON_STYLE}
               value={AnnotationToolEnum.FILL_CELL}
             >
               <i
@@ -1085,7 +1078,6 @@ export default function ToolbarView() {
               description="Click on a voxel to make its segment id the active segment id."
               disabledExplanation={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].explanation}
               disabled={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].isDisabled}
-              style={NARROW_BUTTON_STYLE}
               value={AnnotationToolEnum.PICK_CELL}
             >
               <i
@@ -1102,7 +1094,6 @@ export default function ToolbarView() {
           description="Click on a segment or draw a rectangle around it to automatically detect it"
           disabledExplanation={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].explanation}
           disabled={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled}
-          style={NARROW_BUTTON_STYLE}
           value={AnnotationToolEnum.QUICK_SELECT}
         >
           <img
@@ -1119,7 +1110,6 @@ export default function ToolbarView() {
           description="Create, resize and modify bounding boxes."
           disabledExplanation={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].explanation}
           disabled={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled}
-          style={NARROW_BUTTON_STYLE}
           value={AnnotationToolEnum.BOUNDING_BOX}
         >
           <img
@@ -1144,7 +1134,6 @@ export default function ToolbarView() {
               !isAgglomerateMappingEnabled.value ||
               disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled
             }
-            style={NARROW_BUTTON_STYLE}
             value={AnnotationToolEnum.PROOFREAD}
             onMouseEnter={() => {
               dispatch(ensureLayerMappingsAreLoadedAction());
@@ -1163,7 +1152,6 @@ export default function ToolbarView() {
           description="Use to measure distances or areas."
           disabledExplanation=""
           disabled={false}
-          style={NARROW_BUTTON_STYLE}
           value={AnnotationToolEnum.LINE_MEASUREMENT}
         >
           <i className="fas fa-ruler" />

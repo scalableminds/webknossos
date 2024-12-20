@@ -275,21 +275,21 @@ object ZipIO extends LazyLogging {
     result
   }
 
-  def unzipToFolder(file: File,
-                    targetDir: Path,
-                    includeHiddenFiles: Boolean,
-                    hiddenFilesWhitelist: List[String],
-                    truncateCommonPrefix: Boolean,
-                    excludeFromPrefix: Option[List[String]]): Box[List[Path]] =
+  def unzipToDirectory(file: File,
+                       targetDir: Path,
+                       includeHiddenFiles: Boolean,
+                       hiddenFilesWhitelist: List[String],
+                       truncateCommonPrefix: Boolean,
+                       excludeFromPrefix: Option[List[String]]): Box[List[Path]] =
     tryo(new java.util.zip.ZipFile(file)).flatMap(
-      unzipToFolder(_, targetDir, includeHiddenFiles, hiddenFilesWhitelist, truncateCommonPrefix, excludeFromPrefix))
+      unzipToDirectory(_, targetDir, includeHiddenFiles, hiddenFilesWhitelist, truncateCommonPrefix, excludeFromPrefix))
 
-  def unzipToFolder(zip: ZipFile,
-                    targetDir: Path,
-                    includeHiddenFiles: Boolean,
-                    hiddenFilesWhitelist: List[String],
-                    truncateCommonPrefix: Boolean,
-                    excludeFromPrefix: Option[List[String]]): Box[List[Path]] =
+  def unzipToDirectory(zip: ZipFile,
+                       targetDir: Path,
+                       includeHiddenFiles: Boolean,
+                       hiddenFilesWhitelist: List[String],
+                       truncateCommonPrefix: Boolean,
+                       excludeFromPrefix: Option[List[String]]): Box[List[Path]] =
     withUnziped(zip, includeHiddenFiles, hiddenFilesWhitelist, truncateCommonPrefix, excludeFromPrefix) { (name, in) =>
       val path = targetDir.resolve(name)
       if (path.getParent != null) {

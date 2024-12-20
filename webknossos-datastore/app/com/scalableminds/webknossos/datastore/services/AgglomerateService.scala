@@ -26,7 +26,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   private val agglomerateDir = "agglomerates"
   private val agglomerateFileExtension = "hdf5"
   private val datasetName = "/segment_to_agglomerate"
-  private val dataBaseDir = Paths.get(config.Datastore.baseFolder)
+  private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
   private val cumsumFileName = "cumsum.json"
 
   lazy val agglomerateFileCache = new AgglomerateFileCache(config.Datastore.Cache.AgglomerateFile.maxFileHandleEntries)

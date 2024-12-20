@@ -62,7 +62,7 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
     }
     // Skip unzipping if the test dataset is already present
     if (!dataDirectory.listFiles().exists(_.getName == "test-dataset"))
-      ZipIO.unzipToFolder(
+      ZipIO.unzipToDirectory(
         testDatasetZip,
         Paths.get(dataDirectory.toPath.toString, "test-dataset"),
         includeHiddenFiles = true,

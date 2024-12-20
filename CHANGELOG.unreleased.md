@@ -39,5 +39,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Removed
 - Removed support for HTTP API versions 3 and 4. [#8075](https://github.com/scalableminds/webknossos/pull/8075)
+- Removed that a warning is shown when a dataset is served from a datastore that was marked with isScratch=true. [#8296](https://github.com/scalableminds/webknossos/pull/8296)
 
 ### Breaking Changes

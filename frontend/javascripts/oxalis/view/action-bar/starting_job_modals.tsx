@@ -891,6 +891,7 @@ export function MaterializeVolumeAnnotationModal({
 }: MaterializeVolumeAnnotationModalProps) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
+  let includesProofreading = false;
   const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
   const fixedSelectedLayer = selectedVolumeLayer || activeSegmentationTracingLayer;
   const readableVolumeLayerName =
@@ -925,6 +926,8 @@ export function MaterializeVolumeAnnotationModal({
         output dataset and the output segmentation layer.
       </p>
     );
+  } else {
+    includesProofreading = tracing.volumes.some((v) => v.hasEditableMapping === true);
   }
   const jobImage =
     jobNameToImagePath[jobName] != null ? (
@@ -954,8 +957,13 @@ export function MaterializeVolumeAnnotationModal({
         jobName={"materialize_volume_annotation"}
         suggestedDatasetSuffix="with_merged_segmentation"
         chooseSegmentationLayer
+        isBoundingBoxConfigurable={includesProofreading}
         fixedSelectedLayer={fixedSelectedLayer}
-        jobApiCall={async ({ newDatasetName, selectedLayer: segmentationLayer }) => {
+        jobApiCall={async ({
+          newDatasetName,
+          selectedLayer: segmentationLayer,
+          selectedBoundingBox,
+        }) => {
           // There are 3 cases for the value assignments to volumeLayerName and baseSegmentationName for the job:
           // 1. There is a volume annotation with a fallback layer. volumeLayerName will reference the volume layer
           // and baseSegmentationName will reference the fallback layer. The job will merge those layers.
@@ -968,6 +976,9 @@ export function MaterializeVolumeAnnotationModal({
               ? getReadableNameOfVolumeLayer(segmentationLayer, tracing)
               : null;
           const baseSegmentationName = getBaseSegmentationName(segmentationLayer);
+          const bbox = selectedBoundingBox?.boundingBox
+            ? computeArrayFromBoundingBox(selectedBoundingBox.boundingBox)
+            : undefined;
           return startMaterializingVolumeAnnotationJob(
             dataset.id,
             baseSegmentationName,
@@ -976,6 +987,8 @@ export function MaterializeVolumeAnnotationModal({
             tracing.annotationId,
             tracing.annotationType,
             isMergerModeEnabled,
+            includesProofreading,
+            bbox,
           );
         }}
         description={

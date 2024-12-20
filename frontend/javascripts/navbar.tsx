@@ -62,7 +62,7 @@ import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import constants from "oxalis/constants";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
-import { getAntdTheme, getSystemColorTheme, NavAndStatusBarTheme } from "theme";
+import { getAntdTheme, getSystemColorTheme } from "theme";
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import {
   isAnnotationFromDifferentOrganization,

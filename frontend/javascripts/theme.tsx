@@ -23,7 +23,6 @@ const OverridesForNavbarAndStatusBarTheme: ThemeConfig = {
       buttonBg: "#383d48",
     },
     Button: {
-      primaryColor: ColorWKBlue,
       primaryShadow: "none",
     },
   },
@@ -92,6 +91,7 @@ export function getAntdTheme(userTheme: Theme) {
     borderRadius: 4,
     fontFamily:
       '"Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;',
+    colorPrimaryBg: ColorWKBlue,
   };
 
   if (userTheme === "dark") {

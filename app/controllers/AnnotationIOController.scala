@@ -349,7 +349,7 @@ class AnnotationIOController @Inject()(
 
   // NML or Zip file containing skeleton and/or volume data of this annotation. In case of Compound annotations, multiple such annotations wrapped in another zip
   def download(typ: String,
-               id: String,
+               id: ObjectId,
                skeletonVersion: Option[Long],
                volumeVersion: Option[Long],
                skipVolumeData: Option[Boolean],
@@ -359,7 +359,7 @@ class AnnotationIOController @Inject()(
       for {
         identifier <- AnnotationIdentifier.parse(typ, id)
         volumeDataZipFormatParsed = volumeDataZipFormat.flatMap(VolumeDataZipFormat.fromString)
-        _ = request.identity.foreach(user => analyticsService.track(DownloadAnnotationEvent(user, id, typ)))
+        _ = request.identity.foreach(user => analyticsService.track(DownloadAnnotationEvent(user, id.toString, typ)))
         result <- identifier.annotationType match {
           case AnnotationType.View            => Fox.failure("Cannot download View annotation")
           case AnnotationType.CompoundProject => downloadProject(id, request.identity, skipVolumeData.getOrElse(false))
@@ -379,7 +379,7 @@ class AnnotationIOController @Inject()(
       } yield result
     }
 
-  def downloadWithoutType(id: String,
+  def downloadWithoutType(id: ObjectId,
                           skeletonVersion: Option[Long],
                           volumeVersion: Option[Long],
                           skipVolumeData: Option[Boolean],
@@ -396,7 +396,7 @@ class AnnotationIOController @Inject()(
       } yield result
     }
 
-  private def downloadExplorational(annotationId: String,
+  private def downloadExplorational(annotationId: ObjectId,
                                     typ: String,
                                     issuingUser: Option[User],
                                     skeletonVersion: Option[Long],
@@ -523,15 +523,14 @@ class AnnotationIOController @Inject()(
     }
   }
 
-  private def downloadProject(projectId: String, userOpt: Option[User], skipVolumeData: Boolean)(
+  private def downloadProject(projectId: ObjectId, userOpt: Option[User], skipVolumeData: Boolean)(
       implicit ctx: DBAccessContext,
       m: MessagesProvider) =
     for {
       user <- userOpt.toFox ?~> Messages("notAllowed") ~> FORBIDDEN
-      projectIdValidated <- ObjectId.fromString(projectId)
-      project <- projectDAO.findOne(projectIdValidated) ?~> Messages("project.notFound", projectId) ~> NOT_FOUND
+      project <- projectDAO.findOne(projectId) ?~> Messages("project.notFound", projectId) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> "notAllowed" ~> FORBIDDEN
-      annotations <- annotationDAO.findAllFinishedForProject(projectIdValidated)
+      annotations <- annotationDAO.findAllFinishedForProject(projectId)
       zip <- annotationService.zipAnnotations(annotations,
                                               project.name,
                                               skipVolumeData,
@@ -541,7 +540,7 @@ class AnnotationIOController @Inject()(
       Ok.sendFile(file, inline = false, fileName = _ => Some(TextUtils.normalize(project.name + "_nmls.zip")))
     }
 
-  private def downloadTask(taskId: String, userOpt: Option[User], skipVolumeData: Boolean)(
+  private def downloadTask(taskId: ObjectId, userOpt: Option[User], skipVolumeData: Boolean)(
       implicit ctx: DBAccessContext,
       m: MessagesProvider) = {
     def createTaskZip(task: Task): Fox[TemporaryFile] = annotationService.annotationsFor(task._id).flatMap {
@@ -553,7 +552,7 @@ class AnnotationIOController @Inject()(
 
     for {
       user <- userOpt.toFox ?~> Messages("notAllowed") ~> FORBIDDEN
-      task <- taskDAO.findOne(ObjectId(taskId)).toFox ?~> Messages("task.notFound") ~> NOT_FOUND
+      task <- taskDAO.findOne(taskId).toFox ?~> Messages("task.notFound") ~> NOT_FOUND
       project <- projectDAO.findOne(task._project) ?~> Messages("project.notFound") ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> Messages("notAllowed") ~> FORBIDDEN
       zip <- createTaskZip(task)
@@ -563,7 +562,7 @@ class AnnotationIOController @Inject()(
     }
   }
 
-  private def downloadTaskType(taskTypeId: String, userOpt: Option[User], skipVolumeData: Boolean)(
+  private def downloadTaskType(taskTypeId: ObjectId, userOpt: Option[User], skipVolumeData: Boolean)(
       implicit ctx: DBAccessContext,
       m: MessagesProvider) = {
     def createTaskTypeZip(taskType: TaskType) =
@@ -582,8 +581,7 @@ class AnnotationIOController @Inject()(
 
     for {
       user <- userOpt.toFox ?~> Messages("notAllowed") ~> FORBIDDEN
-      taskTypeIdValidated <- ObjectId.fromString(taskTypeId) ?~> "taskType.id.invalid"
-      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
+      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound" ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN
       zip <- createTaskTypeZip(taskType)
     } yield {

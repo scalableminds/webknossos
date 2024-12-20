@@ -33,6 +33,9 @@ Compile / console / scalacOptions -= "-Xlint:unused"
 scapegoatIgnoredFiles := Seq(".*/Tables.scala", ".*/Routes.scala", ".*/.*mail.*template\\.scala")
 scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
 
+// Allow path binding for ObjectId
+routesImport += "com.scalableminds.util.objectid.ObjectId"
+
 lazy val commonSettings = Seq(
   resolvers ++= DependencyResolvers.dependencyResolvers,
   Compile / doc / sources := Seq.empty,

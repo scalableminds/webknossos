@@ -40,10 +40,9 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
     }
   }
 
-  def get(scriptId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def get(scriptId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      scriptIdValidated <- ObjectId.fromString(scriptId)
-      script <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound" ~> NOT_FOUND
+      script <- scriptDAO.findOne(scriptId) ?~> "script.notFound" ~> NOT_FOUND
       js <- scriptService.publicWrites(script) ?~> "script.write.failed"
     } yield {
       Ok(js)
@@ -59,11 +58,10 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
     }
   }
 
-  def update(scriptId: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
+  def update(scriptId: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { scriptFromForm =>
       for {
-        scriptIdValidated <- ObjectId.fromString(scriptId)
-        oldScript <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound" ~> NOT_FOUND
+        oldScript <- scriptDAO.findOne(scriptId) ?~> "script.notFound" ~> NOT_FOUND
         _ <- bool2Fox(oldScript._owner == request.identity._id) ?~> "script.notOwner" ~> FORBIDDEN
         _ <- scriptService.assertValidScriptName(scriptFromForm.name)
         updatedScript = scriptFromForm.copy(_id = oldScript._id)
@@ -75,13 +73,12 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
     }
   }
 
-  def delete(scriptId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def delete(scriptId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      scriptIdValidated <- ObjectId.fromString(scriptId)
-      oldScript <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound" ~> NOT_FOUND
+      oldScript <- scriptDAO.findOne(scriptId) ?~> "script.notFound" ~> NOT_FOUND
       _ <- bool2Fox(oldScript._owner == request.identity._id) ?~> "script.notOwner" ~> FORBIDDEN
-      _ <- scriptDAO.deleteOne(scriptIdValidated) ?~> "script.removalFailed"
-      _ <- taskDAO.removeScriptFromAllTasks(scriptIdValidated) ?~> "script.removalFailed"
+      _ <- scriptDAO.deleteOne(scriptId) ?~> "script.removalFailed"
+      _ <- taskDAO.removeScriptFromAllTasks(scriptId) ?~> "script.removalFailed"
     } yield {
       Ok
     }

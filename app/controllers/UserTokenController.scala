@@ -2,6 +2,7 @@ package controllers
 
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.AccessMode.AccessMode
@@ -23,14 +24,14 @@ import net.liftweb.common.{Box, Full}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import security.{RandomIDGenerator, URLSharing, WkEnv, WkSilhouetteEnvironment}
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
 object RpcTokenHolder {
   /*
    * This token is used to tell the datastore or tracing store “I am WEBKNOSSOS”.
-   * The respective module asks the remote webKnossos to validate that.
+   * The respective module asks the remote WEBKNOSSOS to validate that.
    * The token is refreshed on every wK restart.
    * Keep it secret!
    */
@@ -81,7 +82,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     }
 
   /* token may be
-       - the global webKnossosToken (allow everything)
+       - the global webknossosToken (allow everything)
        - a user token (allow what that user may do)
        - a dataset sharing token (allow seeing dataset / annotations that token belongs to)
    */
@@ -97,9 +98,9 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
           case AccessResourceType.datasource =>
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(sharingTokenAccessCtx)
           case AccessResourceType.tracing =>
-            handleTracingAccess(accessRequest.resourceId.name, accessRequest.mode, userBox, token)
+            handleTracingAccess(accessRequest.resourceId.directoryName, accessRequest.mode, userBox, token)
           case AccessResourceType.jobExport =>
-            handleJobExportAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)
+            handleJobExportAccess(accessRequest.resourceId.directoryName, accessRequest.mode, userBox)
           case _ =>
             Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
         }
@@ -113,7 +114,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
 
     def tryRead: Fox[UserAccessAnswer] =
       for {
-        dataSourceBox <- datasetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team).futureBox
+        dataSourceBox <- datasetDAO.findOneByDataSourceId(dataSourceId).futureBox
       } yield
         dataSourceBox match {
           case Full(_) => UserAccessAnswer(granted = true)
@@ -122,7 +123,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
 
     def tryWrite: Fox[UserAccessAnswer] =
       for {
-        dataset <- datasetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team) ?~> "datasource.notFound"
+        dataset <- datasetDAO.findOneByDataSourceId(dataSourceId) ?~> "datasource.notFound"
         user <- userBox.toFox ?~> "auth.token.noUser"
         isAllowed <- datasetService.isEditableBy(dataset, Some(user))
       } yield UserAccessAnswer(isAllowed)
@@ -132,9 +133,9 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
         case Full(user) =>
           for {
             // if dataSourceId is empty, the request asks if the user may administrate in *any* (i.e. their own) organization
-            relevantOrganization <- if (dataSourceId.team.isEmpty)
+            relevantOrganization <- if (dataSourceId.organizationId.isEmpty)
               Fox.successful(user._organization)
-            else organizationDAO.findOneByName(dataSourceId.team).map(_._id)
+            else organizationDAO.findOne(dataSourceId.organizationId).map(_._id)
             isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, relevantOrganization)
           } yield UserAccessAnswer(isTeamManagerOrAdmin || user.isDatasetManager)
         case _ => Fox.successful(UserAccessAnswer(granted = false, Some("invalid access token")))
@@ -143,8 +144,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     def tryDelete: Fox[UserAccessAnswer] =
       for {
         _ <- bool2Fox(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
-        dataset <- datasetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team)(
-          GlobalAccessContext) ?~> "datasource.notFound"
+        dataset <- datasetDAO.findOneByDataSourceId(dataSourceId)(GlobalAccessContext) ?~> "datasource.notFound"
         user <- userBox.toFox ?~> "auth.token.noUser"
       } yield UserAccessAnswer(user._organization == dataset._organization && user.isAdmin)
 

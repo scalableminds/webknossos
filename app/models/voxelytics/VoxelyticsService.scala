@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.User
 import models.voxelytics.VoxelyticsRunState.VoxelyticsRunState
 import play.api.libs.json.{JsArray, JsObject, Json, OFormat}
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -13,12 +13,12 @@ import scala.util.Try
 
 case class RunEntry(id: ObjectId,
                     name: String,
-                    username: String,
-                    hostname: String,
+                    hostUserName: String,
+                    hostName: String,
                     voxelyticsVersion: String,
-                    workflow_hash: String,
-                    workflow_yamlContent: String,
-                    workflow_config: JsObject,
+                    workflowHash: String,
+                    workflowYamlContent: String,
+                    workflowConfig: JsObject,
                     state: VoxelyticsRunState,
                     beginTime: Option[Instant],
                     endTime: Option[Instant])
@@ -50,7 +50,7 @@ object CombinedTaskRunEntry {
 case class WorkflowEntry(
     name: String,
     hash: String,
-    _organization: ObjectId
+    _organization: String
 )
 
 object WorkflowEntry {
@@ -77,14 +77,16 @@ object ChunkCounts {
 
 case class WorkflowListingRunEntry(id: ObjectId,
                                    name: String,
-                                   username: String,
-                                   hostname: String,
+                                   hostUserName: String,
+                                   hostName: String,
                                    voxelyticsVersion: String,
-                                   workflow_hash: String,
+                                   workflowHash: String,
                                    state: VoxelyticsRunState,
                                    beginTime: Option[Instant],
                                    endTime: Option[Instant],
-                                   taskCounts: TaskCounts)
+                                   taskCounts: TaskCounts,
+                                   userFirstName: Option[String],
+                                   userLastName: Option[String])
 
 object WorkflowListingRunEntry {
   implicit val jsonFormat: OFormat[WorkflowListingRunEntry] = Json.format[WorkflowListingRunEntry]
@@ -98,7 +100,8 @@ case class ArtifactEntry(artifactId: ObjectId,
                          inodeCount: Long,
                          version: String,
                          metadata: JsObject,
-                         taskName: String)
+                         taskName: String,
+                         foreignWorkflow: Option[(String, String)])
 
 object ArtifactEntry {
   implicit val jsonFormat: OFormat[ArtifactEntry] = Json.format[ArtifactEntry]

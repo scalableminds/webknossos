@@ -10,25 +10,17 @@ import {
   UserAddOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { connect } from "react-redux";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
-import Markdown from "react-remarkable";
+import Markdown from "libs/markdown_adapter";
 import * as React from "react";
 
 import classNames from "classnames";
 import type { APITaskWithAnnotation, APIUser, APIAnnotation } from "types/api_flow_types";
 import { AsyncButton, AsyncLink } from "components/async_clickables";
 import type { OxalisState } from "oxalis/store";
-import {
-  deleteAnnotation,
-  resetAnnotation,
-  finishTask,
-  requestTask,
-  peekNextTasks,
-  downloadAnnotation,
-} from "admin/admin_rest_api";
+import { deleteAnnotation, resetAnnotation, downloadAnnotation } from "admin/admin_rest_api";
+import { finishTask, requestTask, peekNextTasks } from "admin/api/tasks";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { getSkeletonDescriptor } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
@@ -44,7 +36,6 @@ import messages from "messages";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
-const typeHint: APITaskWithAnnotation[] = [];
 const pageLength: number = 1000;
 
 export type TaskModeState = {
@@ -236,18 +227,18 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         .includes(task.team);
     const label = this.props.isAdminView ? (
       <span>
-        <EyeOutlined />
+        <EyeOutlined className="icon-margin-right" />
         View
       </span>
     ) : (
       <span>
-        <PlayCircleOutlined />
+        <PlayCircleOutlined className="icon-margin-right" />
         Open
       </span>
     );
     return task.annotation.state === "Finished" ? (
       <div>
-        <CheckCircleOutlined />
+        <CheckCircleOutlined className="icon-margin-right" />
         Finished
         <br />
       </div>
@@ -258,7 +249,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         {isAdmin || this.props.isAdminView ? (
           <div>
             <LinkButton onClick={() => this.openTransferModal(annotation.id)}>
-              <TeamOutlined />
+              <TeamOutlined className="icon-margin-right" />
               Transfer
             </LinkButton>
             <br />
@@ -272,21 +263,21 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
                 const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
                 return downloadAnnotation(annotation.id, "Task", isVolumeIncluded);
               }}
-              icon={<DownloadOutlined />}
+              icon={<DownloadOutlined className="icon-margin-right" />}
             >
               Download
             </AsyncLink>
             <br />
             <LinkButton onClick={() => this.resetTask(annotation)}>
               <Tooltip title={messages["task.tooltip_explain_reset"]} placement="left">
-                <RollbackOutlined />
+                <RollbackOutlined className="icon-margin-right" />
                 Reset
               </Tooltip>
             </LinkButton>
             <br />
             <LinkButton onClick={() => this.cancelAnnotation(annotation)}>
               <Tooltip title={messages["task.tooltip_explain_reset_cancel"]} placement="left">
-                <DeleteOutlined />
+                <DeleteOutlined className="icon-margin-right" />
                 Reset and Cancel
               </Tooltip>
             </LinkButton>
@@ -295,7 +286,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         ) : null}
         {this.props.isAdminView ? null : (
           <LinkButton onClick={() => this.confirmFinish(task)}>
-            <CheckCircleOutlined />
+            <CheckCircleOutlined className="icon-margin-right" />
             Finish
           </LinkButton>
         )}
@@ -400,6 +391,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           <Card
             bordered={false}
             cover={<i className="drawing drawing-empty-list-tasks" style={{ translate: "15%" }} />}
+            style={{ maxWidth: 460 }}
           >
             <Card.Meta
               title="Request a New Task"
@@ -416,7 +408,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
                         as part of the WEBKNOSSOS project management.{" "}
                       </p>
                       <a
-                        href="https://docs.webknossos.org/webknossos/tasks.html"
+                        href="https://docs.webknossos.org/webknossos/tasks_projects/index.html"
                         rel="noopener noreferrer"
                         target="_blank"
                       >
@@ -440,8 +432,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   renderTaskList() {
     const tasks = this.getCurrentTasks().sort(
-      Utils.compareBy(
-        typeHint,
+      Utils.compareBy<APITaskWithAnnotation>(
         (task) => (this.state.showFinishedTasks ? task.annotation.modified : task.created),
         false,
       ),
@@ -501,14 +492,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           <Row gutter={16}>
             <Col span={16}>
               <div className={descriptionClassName}>
-                <Markdown
-                  source={task.type.description}
-                  options={{
-                    html: false,
-                    breaks: true,
-                    linkify: true,
-                  }}
-                />
+                <Markdown>{task.type.description}</Markdown>
               </div>
             </Col>
             <Col span={8}>

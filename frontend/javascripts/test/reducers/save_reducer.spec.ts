@@ -1,17 +1,17 @@
-import Maybe from "data.maybe";
 import mockRequire from "mock-require";
 import test from "ava";
 import "test/reducers/save_reducer.mock";
 import dummyUser from "test/fixtures/dummy_user";
 import type { SaveState } from "oxalis/store";
-import { APIUser } from "types/api_flow_types";
+import type { APIUser } from "types/api_flow_types";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
+import type { EmptyObject } from "types/globals";
 const TIMESTAMP = 1494695001688;
 const DateMock = {
   now: () => TIMESTAMP,
 };
 const AccessorMock = {
-  getStats: () => Maybe.Nothing(),
+  getStats: () => null,
 };
 mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/accessors/skeletontracing_accessor", AccessorMock);
@@ -19,13 +19,13 @@ const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const SaveReducer = mockRequire.reRequire("oxalis/model/reducers/save_reducer").default;
 const { createEdge } = mockRequire.reRequire("oxalis/model/sagas/update_actions");
 
-const initialState: { save: SaveState; activeUser: APIUser } = {
+const initialState: { save: SaveState; activeUser: APIUser; tracing: EmptyObject } = {
   activeUser: dummyUser,
   save: {
     isBusyInfo: {
       skeleton: false,
-      volume: false,
-      mapping: false,
+      volumes: {},
+      mappings: {},
     },
     queue: {
       skeleton: [],
@@ -42,6 +42,7 @@ const initialState: { save: SaveState; activeUser: APIUser } = {
       totalActionCount: 0,
     },
   },
+  tracing: {},
 };
 test("Save should add update actions to the queue", (t) => {
   const items = [createEdge(0, 1, 2), createEdge(0, 2, 3)];
@@ -51,11 +52,16 @@ test("Save should add update actions to the queue", (t) => {
   t.deepEqual(newState.save.queue.skeleton, saveQueue);
 });
 test("Save should add more update actions to the queue", (t) => {
-  const items = [createEdge(0, 1, 2), createEdge(1, 2, 3)];
-  const saveQueue = createSaveQueueFromUpdateActions([items, items], TIMESTAMP);
-  const pushAction = SaveActions.pushSaveQueueTransaction(items, "skeleton");
-  const testState = SaveReducer(initialState, pushAction);
-  const newState = SaveReducer(testState, pushAction);
+  const getItems = (treeId: number) => [createEdge(treeId, 1, 2), createEdge(treeId, 2, 3)];
+  const saveQueue = createSaveQueueFromUpdateActions([getItems(0), getItems(1)], TIMESTAMP);
+  const testState = SaveReducer(
+    initialState,
+    SaveActions.pushSaveQueueTransaction(getItems(0), "skeleton"),
+  );
+  const newState = SaveReducer(
+    testState,
+    SaveActions.pushSaveQueueTransaction(getItems(1), "skeleton"),
+  );
   t.deepEqual(newState.save.queue.skeleton, saveQueue);
 });
 test("Save should add zero update actions to the queue", (t) => {

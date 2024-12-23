@@ -28,7 +28,7 @@
 }
 
 .welcome-header-wrapper {
-  background: @background-blue-neurons;
+  background: var(--background-blue-neurons);
 
   button {
     color: white;
@@ -68,7 +68,7 @@
       padding-inline-start: 0;
 
       a {
-        color: @black;
+        color: var(--color-black);
         flex: 0 1 400px; /*  No stretching: */
         margin: 20px;
         margin-left: 0;
@@ -90,35 +90,35 @@
         h2 {
           font-size: 16px;
           line-height: 18px;
-          color: @black;
+          color: var(--color-black);
           margin-bottom: 8px;
         }
 
         p {
           font-size: 14px;
           line-height: 18px;
-          color: @black;
+          color: var(--color-black);
           margin: 0;
         }
 
         background: white;
-        border-radius: 3px;
+        border-radius: var(--ant-border-radius);
         border: white 2px solid;
       }
 
       a:hover {
-        background: @primary-color;
+        background: var(--ant-color-primary);
 
         i {
           filter: brightness(100);
         }
 
         h2 {
-          color: @text-color-dark;
+          color: var(--ant-color-text);
         }
 
         p {
-          color: @text-color-secondary-dark;
+          color: var(--ant-color-text);
         }
       }
 
@@ -151,15 +151,15 @@ pre.dataset-import-folder-structure-hint {
   text-align: left;
   display: inline-block;
   line-height: 16px;
-  color: @text-color-secondary;
-  background: @layout-body-background;
+  color: var(--ant-color-text-secondary);
+  background: var(--ant-color-bg-container);
   border-radius: 2px;
   box-shadow: inset 0em 0em 4px 0px #9e9e9e6b;
   padding: 4px;
 }
 
 .incognito-link {
-  color: @text-color;
+  color: var(--ant-color-text);
 }
 
 .propagate-flex-height {
@@ -212,11 +212,25 @@ pre.dataset-import-folder-structure-hint {
   font-size: 16px;
   font-weight: 500;
   display: block;
-  min-height: 30px
+  min-height: 30px;
 }
 
 .dataset-table-name-container {
   display: inline-block;
   vertical-align: middle;
   max-width: 520px;
+}
+
+.top-aligned-column {
+  vertical-align: top;
+}
+
+.dashboard-metadata-table-wrapper {
+  th {
+    font-weight: bold !important;
+  }
+  .empty-metadata-placeholder {
+    padding: 16px;
+    text-align: center;
+  }
 }

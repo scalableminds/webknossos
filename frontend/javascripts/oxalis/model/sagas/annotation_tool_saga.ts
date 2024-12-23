@@ -4,7 +4,6 @@ import { take, call, put } from "typed-redux-saga";
 import {
   type SetToolAction,
   type CycleToolAction,
-  type EscapeAction,
   hideMeasurementTooltipAction,
   setIsMeasuringAction,
 } from "oxalis/model/actions/ui_actions";
@@ -39,7 +38,7 @@ export function* watchToolDeselection(): Saga<void> {
 
 export function* watchToolReset(): Saga<void> {
   while (true) {
-    (yield* take("ESCAPE") as any) as EscapeAction;
+    yield* take("ESCAPE");
     const activeTool = yield* select((state) => state.uiInformation.activeTool);
     if (MeasurementTools.indexOf(activeTool) >= 0) {
       const sceneController = yield* call(() => getSceneController());

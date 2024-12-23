@@ -1,22 +1,43 @@
-import { Popover, Avatar, Form, Button, Col, Row, Modal, Progress, Alert, List, Spin } from "antd";
-import { Location as HistoryLocation, Action as HistoryAction } from "history";
-import { InfoCircleOutlined, FileOutlined, FolderOutlined, InboxOutlined } from "@ant-design/icons";
+import {
+  Popover,
+  Avatar,
+  Form,
+  Button,
+  Col,
+  Row,
+  Modal,
+  Progress,
+  Alert,
+  List,
+  Spin,
+  Select,
+  Tooltip,
+} from "antd";
+import type { Location as HistoryLocation, Action as HistoryAction } from "history";
+import {
+  InfoCircleOutlined,
+  FileOutlined,
+  FolderOutlined,
+  InboxOutlined,
+  HourglassOutlined,
+  LoadingOutlined,
+} from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
 import dayjs from "dayjs";
 
 import classnames from "classnames";
 import _ from "lodash";
-import { useDropzone, FileWithPath } from "react-dropzone";
+import { useDropzone, type FileWithPath } from "react-dropzone";
 import ErrorHandling from "libs/error_handling";
-import { Link, RouteComponentProps } from "react-router-dom";
+import { Link, type RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import type {
-  APITeam,
-  APIDataStore,
-  APIUser,
-  APIDatasetId,
-  APIOrganization,
+import {
+  type APITeam,
+  type APIDataStore,
+  type APIUser,
+  type APIOrganization,
+  APIJobType,
 } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import {
@@ -27,23 +48,24 @@ import {
   startConvertToWkwJob,
   sendAnalyticsEvent,
   sendFailedRequestAnalyticsEvent,
+  getUnfinishedUploads,
+  type UnfinishedUpload,
 } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
-import { trackAction } from "oxalis/model/helpers/analytics";
 import Zip from "libs/zipjs_wrapper";
 import {
+  AllowedTeamsFormItem,
   CardContainer,
   DatasetNameFormItem,
   DatastoreFormItem,
 } from "admin/dataset/dataset_components";
 import { Vector3Input } from "libs/vector_input";
-import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import features from "features";
 import { syncValidator } from "types/validation";
-import { FormInstance } from "antd/lib/form";
-import type { Vector3 } from "oxalis/constants";
+import type { FormInstance } from "antd/lib/form";
+import { AllUnits, UnitLong, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
 import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
 import { hasPricingPlanExceededStorage } from "admin/organization/pricing_plan_utils";
@@ -59,7 +81,11 @@ const logRetryToAnalytics = _.throttle((datasetName: string) => {
 type OwnProps = {
   datastores: Array<APIDataStore>;
   withoutCard?: boolean;
-  onUploaded: (arg0: string, arg1: string, arg2: boolean, arg3: boolean) => Promise<void> | void;
+  onUploaded: (
+    datasetId: string,
+    datasetName: string,
+    needsConversion: boolean,
+  ) => Promise<void> | void;
 };
 type StateProps = {
   activeUser: APIUser | null | undefined;
@@ -76,9 +102,12 @@ type State = {
   isRetrying: boolean;
   uploadProgress: number;
   selectedTeams: APITeam | Array<APITeam>;
-  uploadId: string;
+  possibleTeams: Array<APITeam>;
+  uploadId: string | undefined;
+  unfinishedUploadToContinue: UnfinishedUpload | null;
   resumableUpload: any;
   datastoreUrl: string;
+  unfinishedUploads: UnfinishedUpload[];
 };
 
 function WkwExample() {
@@ -107,7 +136,7 @@ function WkwExample() {
 
 function SingleLayerImageStackExample() {
   const description = `
-  great_dataset          # Root folder or zip archive (this outer container be omitted)
+  great_dataset          # Root folder or zip archive (this outer container may be omitted)
   ├─ file1.tif           # The files don't have to follow a certain naming pattern.
   ├─ file2.tif           # However, the files are sorted to obtain the final z-order.
   └─ file3.tif
@@ -122,7 +151,7 @@ function SingleLayerImageStackExample() {
 
 function MultiLayerImageStackExample() {
   const description = `
-  great_dataset          # Root folder or zip archive (this outer container be omitted)
+  great_dataset          # Root folder or zip archive (this outer container may be omitted)
   ├─ color               # 1st dataset layer (name may be arbitrary, e.g., color or segmentation)
   │  ├─ file1.tif        # The files don't have to follow a certain naming pattern.
   │  ├─ file2.tif        # However, the files are sorted to obtain the final z-order.
@@ -140,6 +169,17 @@ function MultiLayerImageStackExample() {
   );
 }
 
+type UploadFormFieldTypes = {
+  name: string;
+  initialTeams: Array<APITeam>;
+  voxelSizeFactor: Vector3;
+  zipFile: Array<FileWithPath>;
+  targetFolderId: string;
+  voxelSizeUnit: UnitLong;
+  continuingOldUpload: boolean;
+  datastoreUrl: string;
+};
+
 class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   state: State = {
     isUploading: false,
@@ -148,14 +188,17 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     isRetrying: false,
     uploadProgress: 0,
     selectedTeams: [],
-    uploadId: "",
+    possibleTeams: [],
+    uploadId: undefined,
     resumableUpload: {},
     datastoreUrl: "",
+    unfinishedUploads: [],
+    unfinishedUploadToContinue: null,
   };
 
   unblock: ((...args: Array<any>) => any) | null | undefined;
   blockTimeoutId: number | null = null;
-  formRef = React.createRef<FormInstance>();
+  formRef: React.RefObject<FormInstance<UploadFormFieldTypes>> = React.createRef<FormInstance>();
 
   componentDidMount() {
     sendAnalyticsEvent("open_upload_view");
@@ -178,6 +221,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         currentFormRef.setFieldsValue({
           datastoreUrl: uploadableDatastores[0].url,
         });
+        this.setState({ datastoreUrl: uploadableDatastores[0].url });
+        this.updateUnfinishedUploads();
       }
     }
   }
@@ -185,6 +230,19 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   componentWillUnmount() {
     this.unblockHistory();
   }
+
+  updateUnfinishedUploads = async () => {
+    const currentFormRef = this.formRef.current;
+    const datastoreUrl = currentFormRef?.getFieldValue("datastoreUrl");
+    const activeOrga = this.props.activeUser?.organization;
+    if (!datastoreUrl || !activeOrga) {
+      return;
+    }
+    const unfinishedUploads = await getUnfinishedUploads(datastoreUrl, activeOrga);
+    // Sort so that most-recent uploads come first
+    unfinishedUploads.sort((a, b) => b.created - a.created);
+    this.setState({ unfinishedUploads: unfinishedUploads });
+  };
 
   unblockHistory() {
     window.onbeforeunload = null;
@@ -206,187 +264,172 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     return uploadableDatastores.find((ds) => ds.url === url);
   }
 
-  handleSubmit = async (formValues: Record<string, any>) => {
+  handleSubmit = async (formValues: UploadFormFieldTypes) => {
     const { activeUser } = this.props;
 
-    if (activeUser != null) {
-      Toast.info("Uploading dataset");
-      this.setState({
-        isUploading: true,
-      });
+    if (activeUser == null) {
+      return;
+    }
 
-      const beforeUnload = (
-        newLocation: HistoryLocation<unknown>,
-        action: HistoryAction,
-      ): string | false | void => {
-        // Only show the prompt if this is a proper beforeUnload event from the browser
-        // or the pathname changed
-        // This check has to be done because history.block triggers this function even if only the url hash changed
-        if (action === undefined || newLocation.pathname !== window.location.pathname) {
-          const { isUploading } = this.state;
+    this.setState({
+      isUploading: true,
+      uploadProgress: 0,
+    });
 
-          if (isUploading) {
-            window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+    const beforeUnload = (
+      newLocation: HistoryLocation<unknown>,
+      action: HistoryAction,
+    ): string | false | void => {
+      // Only show the prompt if this is a proper beforeUnload event from the browser
+      // or the pathname changed
+      // This check has to be done because history.block triggers this function even if only the url hash changed
+      if (action === undefined || newLocation.pathname !== window.location.pathname) {
+        const { isUploading } = this.state;
 
-            this.blockTimeoutId = window.setTimeout(() => {
-              // restore the event handler in case a user chose to stay on the page
-              // @ts-ignore
-              window.onbeforeunload = beforeUnload;
-            }, 500);
-            return messages["dataset.leave_during_upload"];
-          }
+        if (isUploading) {
+          window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+
+          this.blockTimeoutId = window.setTimeout(() => {
+            // restore the event handler in case a user chose to stay on the page
+            // @ts-ignore
+            window.onbeforeunload = beforeUnload;
+          }, 500);
+          return messages["dataset.leave_during_upload"];
         }
+      }
 
-        // eslint-disable-next-line no-useless-return, consistent-return
-        return;
-      };
+      return;
+    };
+    const { unfinishedUploadToContinue } = this.state;
 
-      this.unblock = this.props.history.block(beforeUnload);
-      // @ts-ignore
-      window.onbeforeunload = beforeUnload;
-      const datasetId: APIDatasetId = {
-        name: formValues.name,
-        owningOrganization: activeUser.organization,
-      };
+    this.unblock = this.props.history.block(beforeUnload);
+    // @ts-ignore
+    window.onbeforeunload = beforeUnload;
 
-      const getRandomString = () => {
-        const randomBytes = window.crypto.getRandomValues(new Uint8Array(6));
-        return Array.from(randomBytes, (byte) => `0${byte.toString(16)}`.slice(-2)).join("");
-      };
+    const getRandomString = () => {
+      const randomBytes = window.crypto.getRandomValues(new Uint8Array(6));
+      return Array.from(randomBytes, (byte) => `0${byte.toString(16)}`.slice(-2)).join("");
+    };
+    const newDatasetName = formValues.name;
 
-      const uploadId = `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${
-        datasetId.name
-      }__${getRandomString()}`;
-      const reserveUploadInformation = {
+    const uploadId = unfinishedUploadToContinue
+      ? unfinishedUploadToContinue.uploadId
+      : `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${newDatasetName}__${getRandomString()}`;
+    const filePaths = formValues.zipFile.map((file) => file.path || "");
+    const reserveUploadInformation = {
+      uploadId,
+      name: newDatasetName,
+      directoryName: "<filled by backend>",
+      newDatasetId: "<filled by backend>",
+      organization: activeUser.organization,
+      totalFileCount: formValues.zipFile.length,
+      filePaths: filePaths,
+      layersToLink: [],
+      initialTeams: formValues.initialTeams.map((team: APITeam) => team.id),
+      folderId: formValues.targetFolderId,
+    };
+    const datastoreUrl = formValues.datastoreUrl;
+    await reserveDatasetUpload(datastoreUrl, reserveUploadInformation);
+    const resumableUpload = await createResumableUpload(datastoreUrl, uploadId);
+    this.setState({
+      uploadId,
+      resumableUpload,
+      datastoreUrl,
+    });
+    resumableUpload.on("complete", () => {
+      const newestForm = this.formRef.current;
+
+      if (!newestForm) {
+        throw new Error("Form couldn't be initialized.");
+      }
+
+      const uploadInfo = {
         uploadId,
-        organization: datasetId.owningOrganization,
-        name: datasetId.name,
-        totalFileCount: formValues.zipFile.length,
-        layersToLink: [],
-        initialTeams: formValues.initialTeams.map((team: APITeam) => team.id),
-        folderId: formValues.targetFolderId,
+        needsConversion: this.state.needsConversion,
       };
-      const datastoreUrl = formValues.datastoreUrl;
-      await reserveDatasetUpload(datastoreUrl, reserveUploadInformation);
-      const resumableUpload = await createResumableUpload(datastoreUrl, uploadId);
       this.setState({
-        uploadId,
-        resumableUpload,
-        datastoreUrl,
+        isFinishing: true,
       });
-      resumableUpload.on("complete", () => {
-        const newestForm = this.formRef.current;
+      finishDatasetUpload(datastoreUrl, uploadInfo).then(
+        async ({ newDatasetId }) => {
+          let maybeError;
 
-        if (!newestForm) {
-          throw new Error("Form couldn't be initialized.");
-        }
+          if (this.state.needsConversion) {
+            try {
+              const datastore = this.getDatastoreForUrl(datastoreUrl);
 
-        const uploadInfo = {
-          uploadId,
-          needsConversion: this.state.needsConversion,
-        };
-        this.setState({
-          isFinishing: true,
-        });
-        finishDatasetUpload(datastoreUrl, uploadInfo).then(
-          async () => {
-            trackAction("Upload dataset");
-            await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
-
-            Toast.success(messages["dataset.upload_success"]);
-            let maybeError;
-
-            if (this.state.needsConversion) {
-              try {
-                const datastore = this.getDatastoreForUrl(datastoreUrl);
-
-                if (!datastore) {
-                  throw new Error("Selected datastore does not match available datastores");
-                }
-
-                await startConvertToWkwJob(
-                  formValues.name,
-                  activeUser.organization,
-                  formValues.scale,
-                );
-              } catch (error) {
-                maybeError = error;
+              if (!datastore) {
+                throw new Error("Selected datastore does not match available datastores");
               }
 
-              if (maybeError == null) {
-                Toast.info(
-                  <React.Fragment>
-                    The conversion for the uploaded dataset was started.
-                    <br />
-                    See{" "}
-                    <a target="_blank" href="/jobs" rel="noopener noreferrer">
-                      Processing Jobs
-                    </a>{" "}
-                    for an overview of running jobs.
-                  </React.Fragment>,
-                );
-              } else {
-                Toast.error(
-                  "The conversion for the uploaded dataset could not be started. Please try again or contact us if this issue occurs again.",
-                );
-              }
+              await startConvertToWkwJob(
+                newDatasetId,
+                formValues.voxelSizeFactor,
+                formValues.voxelSizeUnit,
+              );
+            } catch (error) {
+              maybeError = error;
             }
 
-            this.setState({
-              isUploading: false,
-              isFinishing: false,
-            });
-
-            if (maybeError == null) {
-              newestForm.setFieldsValue({
-                name: null,
-                zipFile: [],
-              });
-              this.props.onUploaded(
-                activeUser.organization,
-                formValues.name,
-                false,
-                this.state.needsConversion,
+            if (maybeError != null) {
+              Toast.error(
+                "The upload was successful, but the conversion for the dataset could not be started. Please try again or contact us if this issue occurs again.",
               );
             }
-          },
-          (error) => {
-            sendFailedRequestAnalyticsEvent("finish_dataset_upload", error, {
-              dataset_name: datasetId.name,
+          }
+          this.setState({
+            isUploading: false,
+            isFinishing: false,
+            unfinishedUploadToContinue: null,
+            uploadId: undefined,
+          });
+
+          if (maybeError == null) {
+            newestForm.setFieldsValue({
+              name: "",
+              zipFile: [],
             });
-            Toast.error(messages["dataset.upload_failed"]);
-            this.setState({
-              isUploading: false,
-              isFinishing: false,
-              isRetrying: false,
-              uploadProgress: 0,
-            });
-          },
-        );
+            this.props.onUploaded(newDatasetId, newDatasetName, this.state.needsConversion);
+          }
+        },
+        (error) => {
+          sendFailedRequestAnalyticsEvent("finish_dataset_upload", error, {
+            dataset_name: newDatasetName,
+          });
+          Toast.error(messages["dataset.upload_failed"]);
+          this.setState({
+            isUploading: false,
+            isFinishing: false,
+            isRetrying: false,
+            unfinishedUploadToContinue: null,
+            uploadId: undefined,
+            uploadProgress: 0,
+          });
+        },
+      );
+    });
+    resumableUpload.on("filesAdded", () => {
+      resumableUpload.upload();
+    });
+    resumableUpload.on("fileError", (_file: FileWithPath, message: string) => {
+      Toast.error(message);
+      this.setState({
+        isUploading: false,
       });
-      resumableUpload.on("filesAdded", () => {
-        resumableUpload.upload();
+    });
+    resumableUpload.on("progress", () => {
+      this.setState({
+        isRetrying: false,
+        uploadProgress: resumableUpload.progress(),
       });
-      resumableUpload.on("fileError", (_file: FileWithPath, message: string) => {
-        Toast.error(message);
-        this.setState({
-          isUploading: false,
-        });
+    });
+    resumableUpload.on("fileRetry", () => {
+      logRetryToAnalytics(newDatasetName);
+      this.setState({
+        isRetrying: true,
       });
-      resumableUpload.on("progress", () => {
-        this.setState({
-          isRetrying: false,
-          uploadProgress: resumableUpload.progress(),
-        });
-      });
-      resumableUpload.on("fileRetry", () => {
-        logRetryToAnalytics(datasetId.name);
-        this.setState({
-          isRetrying: true,
-        });
-      });
-      resumableUpload.addFiles(formValues.zipFile);
-    }
+    });
+    resumableUpload.addFiles(formValues.zipFile);
   };
 
   cancelUpload = async () => {
@@ -405,13 +448,16 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     }
 
     resumableUpload.cancel();
-    await cancelDatasetUpload(datastoreUrl, {
-      uploadId,
-    });
+    if (uploadId) {
+      await cancelDatasetUpload(datastoreUrl, {
+        uploadId,
+      });
+    }
     this.setState({
       isUploading: false,
       isFinishing: false,
       isRetrying: false,
+      uploadId: undefined,
       uploadProgress: 0,
     });
     Toast.success(messages["dataset.upload_cancel"]);
@@ -450,23 +496,34 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             flexDirection: "column",
           }}
         >
-          <FolderOutlined
-            style={{
-              fontSize: 50,
-            }}
-          />
-          <br />
-          {isRetrying
-            ? `Upload of dataset ${form.getFieldValue("name")} froze.`
-            : `Uploading Dataset ${form.getFieldValue("name")}.`}
-          <br />
-          {isRetrying ? "Retrying to continue the upload …" : null}
-          <br />
-          <Progress // Round to 1 digit after the comma.
-            percent={Math.round(uploadProgress * 1000) / 10}
-            status="active"
-          />
-          {isFinishing ? <Spin style={{ marginTop: 4 }} tip="Processing uploaded files …" /> : null}
+          {isFinishing ? (
+            <>
+              <Spin indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} />
+              <br />
+              Processing uploaded files …
+            </>
+          ) : (
+            <>
+              <FolderOutlined
+                style={{
+                  fontSize: 50,
+                  marginBottom: 8,
+                }}
+              />
+              {isRetrying
+                ? `Upload of dataset ${form.getFieldValue("name")} froze.`
+                : `Uploading Dataset ${form.getFieldValue("name")}.`}
+              <br />
+              {isRetrying ? "Retrying to continue the upload …" : null}
+              <br />
+              <Progress
+                // Round to 1 digit after the comma, but use floor
+                // to avoid that 100% are displayed even though the progress is lower.
+                percent={Math.floor(uploadProgress * 1000) / 10}
+                status="active"
+              />
+            </>
+          )}
         </div>
       </Modal>
     );
@@ -512,9 +569,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             zipFile: [],
           });
         }
-        // We return here since not more than 1 zip archive is supported anyway. This is guarded
-        // against via form validation.
-        return;
+        // The loop breaks here in case of zip because at most one zip archive is supported anyway.
+        // Form validation takes care of that assertion.
+        break;
       }
     }
 
@@ -528,11 +585,14 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     }
 
     let needsConversion = true;
+    const fileBaseNames = fileNames.map((name) => name.split(/[\\/]/).pop());
     if (
       containsExtension("wkw") ||
-      containsExtension("zarray") ||
-      fileNames.includes("datasource-properties.json") ||
-      fileNames.includes("zarr.json")
+      containsExtension("zarray") || // zarr2
+      fileBaseNames.includes("datasource-properties.json") || // wk-ready dataset
+      fileBaseNames.includes("zarr.json") || // zarr 3
+      fileBaseNames.includes("info") || // neuroglancer precomputed
+      fileBaseNames.includes("attributes.json") // n5
     ) {
       needsConversion = false;
     }
@@ -556,7 +616,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       needsConversion,
     });
 
-    if (needsConversion && !features().jobsEnabled) {
+    if (needsConversion && !this.isDatasetConversionEnabled()) {
       form.setFieldsValue({
         zipFile: [],
       });
@@ -564,18 +624,14 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         content: (
           <div>
             The selected dataset does not seem to be in the WKW or Zarr format. Please convert the
-            dataset using{" "}
-            <a
-              target="_blank"
-              href="https://github.com/scalableminds/webknossos-libs/tree/master/wkcuber#webknossos-cuber-wkcuber"
-              rel="noopener noreferrer"
-            >
-              webknossos-cuber
+            dataset using the{" "}
+            <a target="_blank" href="https://docs.webknossos.org/cli" rel="noopener noreferrer">
+              webknossos CLI
             </a>
             , the{" "}
             <a
               target="_blank"
-              href="https://github.com/scalableminds/webknossos-libs/tree/master/webknossos#webknossos-python-library"
+              href="https://docs.webknossos.org/webknossos-py"
               rel="noopener noreferrer"
             >
               webknossos Python library
@@ -608,14 +664,42 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     }
   };
 
+  isDatasetConversionEnabled = () => {
+    const uploadableDatastores = this.props.datastores.filter(
+      (datastore) => datastore.allowsUpload,
+    );
+    const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;
+
+    const selectedDatastore = hasOnlyOneDatastoreOrNone
+      ? uploadableDatastores[0]
+      : this.getDatastoreForUrl(this.state.datastoreUrl);
+
+    return (
+      selectedDatastore?.jobsSupportedByAvailableWorkers.includes(APIJobType.CONVERT_TO_WKW) ||
+      false
+    );
+  };
+
+  onFormValueChange = (changedValues: UploadFormFieldTypes) => {
+    if (changedValues.datastoreUrl) {
+      this.setState({ datastoreUrl: changedValues.datastoreUrl });
+      this.updateUnfinishedUploads();
+    }
+  };
+
   render() {
-    const form = this.formRef.current;
     const { activeUser, withoutCard, datastores } = this.props;
     const isDatasetManagerOrAdmin = Utils.isUserAdminOrDatasetManager(this.props.activeUser);
 
-    const { needsConversion } = this.state;
+    const { needsConversion, unfinishedUploadToContinue } = this.state;
     const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
     const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;
+
+    const unfinishedAndNotSelectedUploads = this.state.unfinishedUploads.filter(
+      (unfinishedUploads) => unfinishedUploads.uploadId !== unfinishedUploadToContinue?.uploadId,
+    );
+    const continuingUnfinishedUpload = unfinishedUploadToContinue != null;
+
     return (
       <div
         className="dataset-administration"
@@ -631,9 +715,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 <>
                   Your organization has exceeded the available storage. Uploading new datasets is
                   disabled. Visit the{" "}
-                  <Link to={`/organizations/${this.props.organization.name}`}>
-                    organization page
-                  </Link>{" "}
+                  <Link to={`/organizations/${this.props.organization.id}`}>organization page</Link>{" "}
                   for details.
                 </>
               }
@@ -641,15 +723,79 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             />
           ) : null}
 
+          {unfinishedAndNotSelectedUploads.length > 0 && (
+            <Alert
+              message={
+                <>
+                  Unfinished Dataset Uploads{" "}
+                  <Tooltip
+                    title="This list shows all uploads from the past two weeks that were started by you but not completed. You can try continuing these uploads."
+                    placement="right"
+                  >
+                    <InfoCircleOutlined />
+                  </Tooltip>
+                </>
+              }
+              description={
+                <div
+                  style={{
+                    paddingTop: 8,
+                  }}
+                >
+                  {unfinishedAndNotSelectedUploads.map((unfinishedUpload) => (
+                    <Row key={unfinishedUpload.uploadId} gutter={16}>
+                      <Col span={8}>{unfinishedUpload.datasetName}</Col>
+                      <Col span={8}>
+                        <Button
+                          type="link"
+                          onClick={() => {
+                            const currentFormRef = this.formRef.current;
+                            if (!currentFormRef) {
+                              return;
+                            }
+                            currentFormRef.setFieldsValue({
+                              name: unfinishedUpload.datasetName,
+                              targetFolderId: unfinishedUpload.folderId,
+                              initialTeams: this.state.possibleTeams.filter((team) =>
+                                unfinishedUpload.allowedTeams.includes(team.id),
+                              ),
+                            });
+                            this.setState({
+                              unfinishedUploadToContinue: unfinishedUpload,
+                            });
+                            Toast.info(
+                              "To continue the selected upload please make sure to select the same file(s) as before. Otherwise, the upload may be corrupted.",
+                            );
+                          }}
+                        >
+                          Continue upload
+                        </Button>
+                      </Col>
+                    </Row>
+                  ))}
+                </div>
+              }
+              type="info"
+              style={{
+                marginTop: 12,
+                marginBottom: 12,
+              }}
+              showIcon
+              icon={<HourglassOutlined />}
+            />
+          )}
+
           <Form
             onFinish={this.handleSubmit}
+            onValuesChange={this.onFormValueChange}
             layout="vertical"
             ref={this.formRef}
             initialValues={{
               initialTeams: [],
-              scale: [0, 0, 0],
+              voxelSize: [0, 0, 0],
               zipFile: [],
               targetFolderId: new URLSearchParams(location.search).get("to"),
+              unit: UnitLong.nm,
             }}
           >
             {features().isWkorgInstance && (
@@ -671,57 +817,21 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             )}
             <Row gutter={8}>
               <Col span={12}>
-                <DatasetNameFormItem activeUser={activeUser} />
+                <DatasetNameFormItem
+                  activeUser={activeUser}
+                  disabled={continuingUnfinishedUpload}
+                  allowDuplicate
+                />
               </Col>
               <Col span={12}>
-                <FormItemWithInfo
-                  name="initialTeams"
-                  label="Teams allowed to access this dataset"
-                  info="The dataset can be seen by administrators, dataset managers and by teams that have access to the folder to which the dataset is uploaded. If you want to grant additional teams access, define these teams here."
-                  hasFeedback
-                >
-                  <TeamSelectionComponent
-                    mode="multiple"
-                    value={this.state.selectedTeams}
-                    allowNonEditableTeams={isDatasetManagerOrAdmin}
-                    onChange={(selectedTeams) => {
-                      if (this.formRef.current == null) return;
-
-                      if (!Array.isArray(selectedTeams)) {
-                        // Making sure that we always have an array even when only one team is selected.
-                        selectedTeams = [selectedTeams];
-                      }
-
-                      this.formRef.current.setFieldsValue({
-                        initialTeams: selectedTeams,
-                      });
-                      this.setState({
-                        selectedTeams,
-                      });
-                    }}
-                    afterFetchedTeams={(fetchedTeams) => {
-                      if (!features().isWkorgInstance) {
-                        return;
-                      }
-
-                      const teamOfOrganization = fetchedTeams.find(
-                        (team) => team.name === team.organization,
-                      );
-
-                      if (teamOfOrganization == null) {
-                        return;
-                      }
-
-                      if (this.formRef.current == null) return;
-                      this.formRef.current.setFieldsValue({
-                        initialTeams: [teamOfOrganization],
-                      });
-                      this.setState({
-                        selectedTeams: [teamOfOrganization],
-                      });
-                    }}
-                  />
-                </FormItemWithInfo>
+                <AllowedTeamsFormItem
+                  isDatasetManagerOrAdmin={isDatasetManagerOrAdmin}
+                  selectedTeams={this.state.selectedTeams}
+                  setSelectedTeams={(selectedTeams) => this.setState({ selectedTeams })}
+                  afterFetchedTeams={(possibleTeams) => this.setState({ possibleTeams })}
+                  formRef={this.formRef}
+                  disabled={continuingUnfinishedUpload}
+                />
               </Col>
             </Row>
 
@@ -737,49 +847,77 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 },
               ]}
             >
-              <FolderSelection width="50%" disableNotEditableFolders />
+              <FolderSelection
+                width="50%"
+                disableNotEditableFolders
+                disabled={continuingUnfinishedUpload}
+              />
             </FormItemWithInfo>
 
             <DatastoreFormItem
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ form: FormInstance<any> | null; datastores... Remove this comment to see the full error message
-              form={form}
               datastores={uploadableDatastores}
               hidden={hasOnlyOneDatastoreOrNone}
+              disabled={continuingUnfinishedUpload}
             />
-            {features().jobsEnabled && needsConversion ? (
-              <FormItemWithInfo
-                name="scale"
-                label="Voxel Size"
-                info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
-                // @ts-ignore
-                disabled={this.state.needsConversion}
-                help="Your dataset is not yet in WKW Format. Therefore you need to define the voxel size."
-                rules={[
-                  {
-                    required: this.state.needsConversion,
-                    message: "Please provide a scale for the dataset.",
-                  },
-                  {
-                    validator: syncValidator(
-                      (value: Vector3) => value?.every((el) => el > 0),
-                      "Each component of the scale must be larger than 0.",
-                    ),
-                  },
-                ]}
-              >
-                <Vector3Input
-                  style={{
-                    width: 400,
-                  }}
-                  allowDecimals
-                  onChange={(scale: Vector3) => {
-                    if (this.formRef.current == null) return;
-                    this.formRef.current.setFieldsValue({
-                      scale,
-                    });
-                  }}
-                />
-              </FormItemWithInfo>
+            {this.isDatasetConversionEnabled() && needsConversion ? (
+              <Row gutter={8}>
+                <Col span={12}>
+                  <FormItemWithInfo
+                    name="voxelSizeFactor"
+                    label="Voxel Size"
+                    info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
+                    // @ts-ignore
+                    disabled={this.state.needsConversion}
+                    help="Your dataset is not yet in WKW Format. Therefore you need to define the voxel size."
+                    rules={[
+                      {
+                        required: this.state.needsConversion,
+                        message: "Please provide a voxel size for the dataset.",
+                      },
+                      {
+                        validator: syncValidator(
+                          (value: Vector3) => value?.every((el) => el > 0),
+                          "Each component of the voxel size must be larger than 0.",
+                        ),
+                      },
+                    ]}
+                  >
+                    <Vector3Input
+                      allowDecimals
+                      onChange={(voxelSizeFactor: Vector3) => {
+                        if (this.formRef.current == null) return;
+                        this.formRef.current.setFieldsValue({
+                          voxelSizeFactor,
+                        });
+                      }}
+                    />
+                  </FormItemWithInfo>
+                </Col>
+                <Col span={12}>
+                  <FormItemWithInfo
+                    name="voxelSizeUnit"
+                    label="Unit"
+                    info="The unit in which the voxel size is defined."
+                    rules={[
+                      {
+                        required: true,
+                        message: "Please provide a unit for the voxel size of the dataset.",
+                      },
+                    ]}
+                  >
+                    <Select
+                      options={AllUnits.map((unit) => ({
+                        value: unit,
+                        label: (
+                          <span>
+                            <Tooltip title={unit}>{LongUnitToShortUnitMap[unit]}</Tooltip>
+                          </span>
+                        ),
+                      }))}
+                    />
+                  </FormItemWithInfo>
+                </Col>
+              </Row>
             ) : null}
 
             <FormItem
@@ -864,6 +1002,30 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     return wkwFiles.length === 0 || imageFiles.length === 0;
                   }, "WKW files should not be mixed with image files."),
                 },
+                {
+                  validator: syncValidator(
+                    (files: FileWithPath[]) => {
+                      const { unfinishedUploadToContinue } = this.state;
+                      if (
+                        !unfinishedUploadToContinue ||
+                        unfinishedUploadToContinue.filePaths == null
+                      ) {
+                        return true;
+                      }
+                      const filePaths = files.map((file) => file.path || "");
+                      return (
+                        unfinishedUploadToContinue.filePaths.length === filePaths.length &&
+                        _.difference(unfinishedUploadToContinue.filePaths, filePaths).length === 0
+                      );
+                    },
+                    "The selected files do not match the files of the unfinished upload. Please select the same files as before." +
+                      (unfinishedUploadToContinue?.filePaths != null
+                        ? `The file names are: ${unfinishedUploadToContinue?.filePaths?.join(
+                            ", ",
+                          )}.`
+                        : ""),
+                  ),
+                },
               ]}
               valuePropName="fileList"
             >
@@ -873,6 +1035,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   this.validateFiles(files);
                 }}
                 fileList={[]}
+                isDatasetConversionEnabled={this.isDatasetConversionEnabled()}
               />
             </FormItem>
             <FormItem
@@ -904,9 +1067,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 function FileUploadArea({
   fileList,
   onChange,
+  isDatasetConversionEnabled,
 }: {
   fileList: FileWithPath[];
   onChange: (files: FileWithPath[]) => void;
+  isDatasetConversionEnabled: boolean;
 }) {
   const onDropAccepted = (acceptedFiles: FileWithPath[]) => {
     // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
@@ -925,6 +1090,7 @@ function FileUploadArea({
     <li key={file.path}>{file.path}</li>
   ));
   const showSmallFileList = files.length > 10;
+
   const list = (
     <List
       itemLayout="horizontal"
@@ -962,6 +1128,7 @@ function FileUploadArea({
       )}
     />
   );
+
   return (
     <div>
       <div
@@ -977,26 +1144,55 @@ function FileUploadArea({
         <InboxOutlined
           style={{
             fontSize: 48,
-            color: "var(--ant-primary)",
+            color: "var(--ant-color-primary)",
           }}
         />
-        <p
+        <div
           style={{
-            maxWidth: 800,
             textAlign: "center",
+            display: "inline-block",
             marginTop: 8,
+            lineHeight: "1.7em",
           }}
         >
-          Drag your file(s) to this area to upload them. Either add individual image files, a zip
-          archive or a folder.{" "}
-          {features().jobsEnabled ? (
+          {features().recommendWkorgInstance && !isDatasetConversionEnabled ? (
             <>
-              <br />
-              <br />
+              Drag and drop your files in WKW format.
+              <div
+                style={{
+                  textAlign: "left",
+                  display: "list-item",
+                  maxWidth: 475,
+                  marginTop: 10,
+                }}
+              >
+                Need to upload files in other formats? Switch to{" "}
+                <a href="https://webknossos.org" onClick={(e) => e.stopPropagation()}>
+                  webknossos.org
+                </a>{" "}
+                for more file types support and automatic conversion.
+                <a
+                  href="https://webknossos.org/self-hosted-upgrade"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {" "}
+                  Learn more!
+                </a>
+              </div>
+            </>
+          ) : (
+            <div style={{ marginTop: 8 }}>
+              Drag your file(s) to this area to upload them. Either add individual image files, a
+              zip archive or a folder.
+            </div>
+          )}
+          {isDatasetConversionEnabled ? (
+            <>
               <div
                 style={{
                   textAlign: "left",
                   display: "inline-block",
+                  marginTop: 10,
                 }}
               >
                 The following file formats are supported:
@@ -1014,7 +1210,7 @@ function FileUploadArea({
 
                   <li>
                     <Popover content={<SingleLayerImageStackExample />} trigger="hover">
-                      Single-Layer Image File Sequence (tif, jpg, png, dm3, dm4)
+                      Single-Layer Image File Sequence (tif, jpg, png, dm3, dm4 etc.)
                       <InfoCircleOutlined
                         style={{
                           marginLeft: 4,
@@ -1037,7 +1233,7 @@ function FileUploadArea({
                     <Popover
                       content={
                         <a
-                          href="https://docs.webknossos.org/webknossos/zarr.html"
+                          href="https://docs.webknossos.org/webknossos/data/zarr.html"
                           target="_blank"
                           rel="noreferrer"
                           onClick={(e) => e.stopPropagation()}
@@ -1055,19 +1251,64 @@ function FileUploadArea({
                       />
                     </Popover>
                   </li>
-                  <li>Single-file images (tif, czi, nifti, raw)</li>
-
-                  <li>KNOSSOS file hierarchy</li>
+                  <li>
+                    <Popover
+                      content={
+                        <a
+                          href="https://docs.webknossos.org/webknossos/data/neuroglancer_precomputed.html"
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Read more in docs
+                        </a>
+                      }
+                      trigger="hover"
+                    >
+                      Neuroglancer Precomputed datasets{" "}
+                      <InfoCircleOutlined
+                        style={{
+                          marginLeft: 4,
+                        }}
+                      />
+                    </Popover>
+                  </li>
+                  <li>
+                    <Popover
+                      content={
+                        <a
+                          href="https://docs.webknossos.org/webknossos/data/n5.html"
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Read more in docs
+                        </a>
+                      }
+                      trigger="hover"
+                    >
+                      N5 datasets{" "}
+                      <InfoCircleOutlined
+                        style={{
+                          marginLeft: 4,
+                        }}
+                      />
+                    </Popover>
+                  </li>
+                  <li>Single-file images (tif, czi, nifti, raw, ims etc.)</li>
                 </ul>
                 Have a look at{" "}
-                <a href="https://docs.webknossos.org/webknossos/data_formats.html">
+                <a
+                  href="https://docs.webknossos.org/webknossos/data/image_stacks.html"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   our documentation
                 </a>{" "}
                 to learn more.
               </div>
             </>
           ) : null}
-        </p>
+        </div>
       </div>
 
       {files.length > 0 ? (

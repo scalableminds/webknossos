@@ -1,21 +1,19 @@
 import features from "features";
 import { getJob, getJobs } from "admin/admin_rest_api";
-import { useEffect, useState } from "react";
-import { APIJob } from "types/api_flow_types";
-import { usePolling } from "libs/react_hooks";
+import { useState } from "react";
+import type { APIJob } from "types/api_flow_types";
+import { useEffectOnlyOnce, usePolling } from "libs/react_hooks";
 
 type JobInfo = [jobKey: string, jobId: string];
 
 export function useStartAndPollJob({
   onSuccess = () => {},
   onFailure = () => {},
-  onManual = () => {},
   initialJobKeyExtractor,
   interval = 2000,
 }: {
   onSuccess?: (job: APIJob) => void;
   onFailure?: (job: APIJob) => void;
-  onManual?: (job: APIJob) => void;
   initialJobKeyExtractor?: (job: APIJob) => string | null;
   interval?: number;
 }): {
@@ -28,7 +26,7 @@ export function useStartAndPollJob({
   const [runningJobs, setRunningJobs] = useState<Array<JobInfo>>([]);
   const [mostRecentSuccessfulJob, setMostRecentSuccessfulJob] = useState<APIJob | null>(null);
 
-  useEffect(() => {
+  useEffectOnlyOnce(() => {
     if (initialJobKeyExtractor != null && areJobsEnabled) {
       (async () => {
         const jobs = await getJobs();
@@ -42,7 +40,7 @@ export function useStartAndPollJob({
         }
       })();
     }
-  }, []);
+  });
 
   async function checkForJobs() {
     for (const [, jobId] of runningJobs) {
@@ -55,9 +53,6 @@ export function useStartAndPollJob({
         }
       } else if (job.state === "FAILURE") {
         onFailure(job);
-        setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
-      } else if (job.state === "MANUAL") {
-        onManual(job);
         setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
       }
     }

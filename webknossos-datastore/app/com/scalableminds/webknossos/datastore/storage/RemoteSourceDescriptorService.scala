@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.services.DSRemoteWebKnossosClient
+import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
 
@@ -17,7 +17,7 @@ import scala.concurrent.ExecutionContext
 
 case class RemoteSourceDescriptor(uri: URI, credential: Option[DataVaultCredential])
 
-class RemoteSourceDescriptorService @Inject()(dSRemoteWebKnossosClient: DSRemoteWebKnossosClient,
+class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemoteWebknossosClient,
                                               dataStoreConfig: DataStoreConfig,
                                               dataVaultService: DataVaultService) {
 
@@ -50,7 +50,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebKnossosClient: DSRemote
                                dataSourceId: DataSourceId,
                                layerName: String,
                                magLocator: MagLocator): Box[URI] = tryo {
-    val localDatasetDir = baseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
+    val localDatasetDir = baseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
     val localLayerDir = localDatasetDir.resolve(layerName)
     magLocator.path match {
       case Some(magLocatorPath) =>
@@ -65,7 +65,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebKnossosClient: DSRemote
               uri
             else
               throw new Exception(
-                s"Absolute path $localPath in local file system is not in path whitelist. Consider adding it to datastore.pathWhitelist")
+                s"Absolute path $localPath in local file system is not in path whitelist. Consider adding it to datastore.localFolderWhitelist")
           } else { // relative local path, resolve in dataset dir
             val magPathRelativeToDataset = localDatasetDir.resolve(localPath)
             val magPathRelativeToLayer = localDatasetDir.resolve(layerName).resolve(localPath)
@@ -88,12 +88,12 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebKnossosClient: DSRemote
   }
 
   private def localFileUriFromPath(path: Path) =
-    new URI(DataVaultService.schemeFile + "://" + path.toAbsolutePath.toString)
+    path.toAbsolutePath.toUri
 
   private def credentialFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[DataVaultCredential] =
     magLocator.credentialId match {
       case Some(credentialId) =>
-        dSRemoteWebKnossosClient.getCredential(credentialId)
+        dSRemoteWebknossosClient.getCredential(credentialId)
       case None =>
         magLocator.credentials match {
           case Some(credential) => Fox.successful(credential)

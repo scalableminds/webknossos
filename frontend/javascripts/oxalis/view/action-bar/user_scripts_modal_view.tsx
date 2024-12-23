@@ -103,6 +103,7 @@ class _UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProp
 
   handleClick = () => {
     try {
+      // biome-ignore lint/security/noGlobalEval: Loads a user provided frontend API script.
       eval(this.state.code);
       // close modal if the script executed successfully
       return this.props.onOK();

@@ -5,14 +5,14 @@ import { M4x4, V3 } from "libs/mjs";
 import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import PolyhedronRasterizer from "oxalis/model/bucket_data_handling/polyhedron_rasterizer";
-import { ResolutionInfo } from "../helpers/resolution_info";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { MagInfo } from "../helpers/mag_info";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
   velocityRangeStart = 0;
-  velocityRangeEnd = Infinity;
+  velocityRangeEnd = Number.POSITIVE_INFINITY;
   roundTripTimeRangeStart = 0;
-  roundTripTimeRangeEnd = Infinity;
+  roundTripTimeRangeEnd = Number.POSITIVE_INFINITY;
   name = "ARBITRARY";
   // @ts-expect-error ts-migrate(2702) FIXME: 'PolyhedronRasterizer' only refers to a type, but ... Remove this comment to see the full error message
   prefetchPolyhedron: PolyhedronRasterizer.Master = PolyhedronRasterizer.Master.squareFrustum(
@@ -57,12 +57,12 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
     matrix: Matrix4x4,
     activeZoomStep: number,
     position: Vector3,
-    resolutions: Array<Vector3>,
-    resolutionInfo: ResolutionInfo,
+    mags: Array<Vector3>,
+    magInfo: MagInfo,
     additionalCoordinates: AdditionalCoordinate[] | null,
   ): Array<PullQueueItem> {
     const pullQueue: PullQueueItem[] = [];
-    const zoomStep = resolutionInfo.getIndexOrClosestHigherIndex(activeZoomStep);
+    const zoomStep = magInfo.getIndexOrClosestHigherIndex(activeZoomStep);
 
     if (zoomStep == null) {
       // The layer cannot be rendered at this zoom step, as necessary magnifications
@@ -82,7 +82,7 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
       const bucketZ = testAddresses[i++];
       const positionBucketWithZoomStep = globalPositionToBucketPosition(
         position,
-        resolutions,
+        mags,
         zoomStep,
         null,
       );

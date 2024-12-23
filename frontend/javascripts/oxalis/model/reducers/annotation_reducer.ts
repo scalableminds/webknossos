@@ -10,7 +10,9 @@ import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reduce
 import _ from "lodash";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
-import { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
+import { getDatasetBoundingBox } from "../accessors/dataset_accessor";
+import BoundingBox from "../bucket_data_handling/bounding_box";
 
 const updateTracing = (state: OxalisState, shape: Partial<OxalisState["tracing"]>): OxalisState =>
   updateKey(state, "tracing", shape);
@@ -146,7 +148,10 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
             }
           : bbox,
       );
-      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      const updatedState = updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      return updateKey(updatedState, "uiInformation", {
+        activeUserBoundingBoxId: action.id,
+      });
     }
 
     case "ADD_NEW_USER_BOUNDING_BOX": {
@@ -178,18 +183,31 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
           max: V3.toArray(V3.round(V3.add(action.center, halfBoxExtent))),
         };
       }
-      let newBoundingBox: UserBoundingBox;
+      let newUserBoundingBox: UserBoundingBox;
       if (action.newBoundingBox != null) {
-        newBoundingBox = {
+        newUserBoundingBox = {
           ...newBoundingBoxTemplate,
           ...action.newBoundingBox,
         };
       } else {
-        newBoundingBox = newBoundingBoxTemplate;
+        newUserBoundingBox = newBoundingBoxTemplate;
       }
 
-      const updatedUserBoundingBoxes = [...userBoundingBoxes, newBoundingBox];
-      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      // Ensure the new bounding box is within the dataset bounding box.
+      const datasetBoundingBox = getDatasetBoundingBox(state.dataset);
+      const newBoundingBox = new BoundingBox(newUserBoundingBox.boundingBox);
+      const newBoundingBoxWithinDataset = newBoundingBox.intersectedWith(datasetBoundingBox);
+      // Only update the bounding box if the bounding box overlaps with the dataset bounds.
+      // Else the bounding box is completely outside the dataset bounds -> in that case just keep the bounding box and let the user cook.
+      if (newBoundingBoxWithinDataset.getVolume() > 0) {
+        newUserBoundingBox.boundingBox = newBoundingBoxWithinDataset.toBoundingBoxType();
+      }
+
+      const updatedUserBoundingBoxes = [...userBoundingBoxes, newUserBoundingBox];
+      const updatedState = updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      return updateKey(updatedState, "uiInformation", {
+        activeUserBoundingBoxId: newUserBoundingBox.id,
+      });
     }
 
     case "ADD_USER_BOUNDING_BOXES": {
@@ -225,7 +243,13 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       const updatedUserBoundingBoxes = tracing.userBoundingBoxes.filter(
         (bbox) => bbox.id !== action.id,
       );
-      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      const updatedState = updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      if (action.id === state.uiInformation.activeUserBoundingBoxId) {
+        return updateKey(updatedState, "uiInformation", {
+          activeUserBoundingBoxId: null,
+        });
+      }
+      return updatedState;
     }
 
     case "UPDATE_MESH_VISIBILITY": {
@@ -258,10 +282,8 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         additionalCoordinates,
         layerName,
       );
-      if (maybeMeshes == null) {
-        throw Error("No mesh data found in state.localSegmentationData.");
-      }
-      if (maybeMeshes[segmentId] == null) {
+      if (maybeMeshes == null || maybeMeshes[segmentId] == null) {
+        // No meshes exist for the segment id. No need to do anything.
         return state;
       }
       const { [segmentId]: _, ...remainingMeshes } = maybeMeshes as Record<number, MeshInformation>;
@@ -323,8 +345,15 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "ADD_PRECOMPUTED_MESH": {
-      const { layerName, segmentId, seedPosition, seedAdditionalCoordinates, meshFileName } =
-        action;
+      const {
+        layerName,
+        segmentId,
+        seedPosition,
+        seedAdditionalCoordinates,
+        meshFileName,
+        areChunksMerged,
+        mappingName,
+      } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
         seedPosition,
@@ -333,6 +362,8 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         isVisible: true,
         isPrecomputed: true,
         meshFileName,
+        areChunksMerged,
+        mappingName,
       };
       const additionalCoordinates = state.flycam.additionalCoordinates;
       const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
@@ -418,6 +449,13 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       const meshFile = availableMeshFiles.find((el) => el.meshFileName === meshFileName);
       return updateKey2(state, "localSegmentationData", layerName, {
         currentMeshFile: meshFile,
+      });
+    }
+
+    case "SET_SELECTED_SEGMENTS_OR_GROUP": {
+      const { selectedSegments, selectedGroup, layerName } = action;
+      return updateKey2(state, "localSegmentationData", layerName, {
+        selectedIds: { segments: selectedSegments, group: selectedGroup },
       });
     }
 

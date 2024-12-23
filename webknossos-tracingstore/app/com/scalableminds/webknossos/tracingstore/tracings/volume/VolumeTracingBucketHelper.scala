@@ -2,12 +2,11 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{MortonEncoding, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
-import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebKnossosDataRequest}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.services.DataConverter
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.wrap.WKWMortonHelper
 import com.typesafe.scalalogging.LazyLogging
 import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
 import net.liftweb.common.{Empty, Failure, Full}
@@ -17,9 +16,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 trait VolumeBucketReversionHelper {
-  private def isRevertedBucket(data: Array[Byte]): Boolean = data sameElements Array[Byte](0)
+  protected def isRevertedBucket(data: Array[Byte]): Boolean = data sameElements Array[Byte](0)
 
-  def isRevertedBucket(bucket: VersionedKeyValuePair[Array[Byte]]): Boolean = isRevertedBucket(bucket.value)
+  protected def isRevertedBucket(bucket: VersionedKeyValuePair[Array[Byte]]): Boolean = isRevertedBucket(bucket.value)
 }
 
 trait VolumeBucketCompression extends LazyLogging {
@@ -64,20 +63,31 @@ trait VolumeBucketCompression extends LazyLogging {
   }
 }
 
-trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLogging {
+trait AdditionalCoordinateKey {
+  protected def additionalCoordinatesKeyPart(additionalCoordinates: Seq[AdditionalCoordinate],
+                                             additionalAxes: Seq[AdditionalAxis],
+                                             prefix: String = ""): String = {
+    // Bucket key additional coordinates need to be ordered to be found later.
+    val valueMap = additionalCoordinates.map(a => a.name -> a.value).toMap
+    val sortedValues = additionalAxes.sortBy(_.index).map(a => valueMap(a.name))
+    if (sortedValues.nonEmpty) {
+      f"$prefix${sortedValues.map(_.toString).mkString(",")}"
+    } else {
+      ""
+    }
+  }
+}
+
+trait BucketKeys extends MortonEncoding with WKWDataFormatHelper with LazyLogging with AdditionalCoordinateKey {
   protected def buildBucketKey(dataLayerName: String,
                                bucket: BucketPosition,
                                additionalAxes: Option[Seq[AdditionalAxis]]): String = {
     val mortonIndex = mortonEncode(bucket.bucketX, bucket.bucketY, bucket.bucketZ)
     (bucket.additionalCoordinates, additionalAxes, bucket.hasAdditionalCoordinates) match {
       case (Some(additionalCoordinates), Some(axes), true) =>
-        // Bucket key additional coordinates need to be ordered to be found later.
-        val valueMap = additionalCoordinates.map(a => a.name -> a.value).toMap
-        val sortedValues = axes.sortBy(_.index).map(a => valueMap(a.name))
-
-        s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${sortedValues
-          .map(_.toString)
-          .mkString(",")}][${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
+        s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${additionalCoordinatesKeyPart(
+          additionalCoordinates,
+          axes)}][${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
       case _ =>
         s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
     }
@@ -96,8 +106,8 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
   private def parseBucketKeyXYZ(key: String) = {
     val keyRx = "([0-9a-z-]+)/(\\d+|\\d+-\\d+-\\d+)/-?\\d+-\\[(\\d+),(\\d+),(\\d+)]".r
     key match {
-      case keyRx(name, resolutionStr, xStr, yStr, zStr) =>
-        getBucketPosition(xStr, yStr, zStr, resolutionStr, None).map(bucketPosition => (name, bucketPosition))
+      case keyRx(name, magStr, xStr, yStr, zStr) =>
+        getBucketPosition(xStr, yStr, zStr, magStr, None).map(bucketPosition => (name, bucketPosition))
       case _ =>
         None
     }
@@ -112,7 +122,7 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
     matchOpt match {
       case Some(aMatch) =>
         val name = aMatch.group(1)
-        val resolutionStr = aMatch.group(2)
+        val magStr = aMatch.group(2)
         val xStr = aMatch.group(additionalAxes.length + 3)
         val yStr = aMatch.group(additionalAxes.length + 4)
         val zStr = aMatch.group(additionalAxes.length + 5)
@@ -124,7 +134,7 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
               AdditionalCoordinate(additionalAxesIndexSorted(groupIndexAndAxisIndex._2).name,
                                    aMatch.group(groupIndexAndAxisIndex._1).toInt))
 
-        getBucketPosition(xStr, yStr, zStr, resolutionStr, Some(additionalCoordinates)).map(bucketPosition =>
+        getBucketPosition(xStr, yStr, zStr, magStr, Some(additionalCoordinates)).map(bucketPosition =>
           (name, bucketPosition))
 
       case _ =>
@@ -135,23 +145,20 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
   private def getBucketPosition(xStr: String,
                                 yStr: String,
                                 zStr: String,
-                                resolutionStr: String,
+                                magStr: String,
                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]]): Option[BucketPosition] = {
-    val resolutionOpt = Vec3Int.fromMagLiteral(resolutionStr, allowScalar = true)
-    resolutionOpt match {
-      case Some(resolution) =>
-        val x = xStr.toInt
-        val y = yStr.toInt
-        val z = zStr.toInt
-        val bucket = BucketPosition(
-          x * resolution.x * DataLayer.bucketLength,
-          y * resolution.y * DataLayer.bucketLength,
-          z * resolution.z * DataLayer.bucketLength,
-          resolution,
-          additionalCoordinates
-        )
-        Some(bucket)
-      case _ => None
+    val magnOpt = Vec3Int.fromMagLiteral(magStr, allowScalar = true)
+    magnOpt.map { mag =>
+      val x = xStr.toInt
+      val y = yStr.toInt
+      val z = zStr.toInt
+      BucketPosition(
+        x * mag.x * DataLayer.bucketLength,
+        y * mag.y * DataLayer.bucketLength,
+        z * mag.z * DataLayer.bucketLength,
+        mag,
+        additionalCoordinates
+      )
     }
   }
 
@@ -205,7 +212,7 @@ trait VolumeTracingBucketHelper
   }
 
   private def loadFallbackBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition): Fox[Array[Byte]] = {
-    val dataRequest: WebKnossosDataRequest = WebKnossosDataRequest(
+    val dataRequest: WebknossosDataRequest = WebknossosDataRequest(
       position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
       mag = bucket.mag,
       cubeSize = dataLayer.lengthOfUnderlyingCubes(bucket.mag),

@@ -1,6 +1,5 @@
 import type { OxalisState } from "oxalis/store";
 import { defaultDatasetViewConfigurationWithoutNull } from "types/schemas/dataset_view_configuration.schema";
-import { document } from "libs/window";
 import Constants, {
   ControlModeEnum,
   OrthoViews,
@@ -8,9 +7,16 @@ import Constants, {
   FillModeEnum,
   TDViewDisplayModeEnum,
   InterpolationModeEnum,
+  UnitLong,
 } from "oxalis/constants";
-import { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_flow_types";
+import type {
+  APIAllowedMode,
+  APIAnnotationType,
+  APIAnnotationVisibility,
+} from "types/api_flow_types";
 import constants from "oxalis/constants";
+import { getSystemColorTheme } from "theme";
+
 const defaultViewportRect = {
   top: 0,
   left: 0,
@@ -30,7 +36,7 @@ const initialAnnotationInfo = {
     mergerMode: false,
     volumeInterpolationAllowed: false,
     allowedModes: ["orthogonal", "oblique", "flight"] as APIAllowedMode[],
-    resolutionRestrictions: {},
+    magRestrictions: {},
   },
   visibility: "Internal" as APIAnnotationVisibility,
   tags: [],
@@ -44,14 +50,12 @@ const initialAnnotationInfo = {
   meshes: [],
 };
 
-const primaryStylesheetElement: HTMLLinkElement | null | undefined = document.getElementById(
-  "primary-stylesheet",
-) as HTMLLinkElement;
 const defaultState: OxalisState = {
   datasetConfiguration: defaultDatasetViewConfigurationWithoutNull,
   userConfiguration: {
     autoSaveLayouts: true,
     autoRenderMeshInProofreading: true,
+    selectiveVisibilityInProofreading: true,
     brushSize: 50,
     clippingDistance: 50,
     clippingDistanceArbitrary: 64,
@@ -84,6 +88,7 @@ const defaultState: OxalisState = {
     useLegacyBindings: false,
     quickSelect: {
       useHeuristic: false,
+      predictionDepth: 1,
       showPreview: false,
       segmentMode: "light",
       threshold: 128,
@@ -101,6 +106,7 @@ const defaultState: OxalisState = {
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,
     hoveredSegmentId: 0,
+    hoveredUnmappedSegmentId: 0,
     activeMappingByLayer: {},
     isMergerModeEnabled: false,
     gpuSetup: {
@@ -115,19 +121,20 @@ const defaultState: OxalisState = {
   },
   task: null,
   dataset: {
-    name: "Test Dataset",
+    id: "dummy-dataset-id",
+    name: "Loading",
     folderId: "dummy-folder-id",
     isUnreported: false,
     created: 123,
     dataSource: {
       dataLayers: [],
-      scale: [5, 5, 5],
+      scale: { factor: [5, 5, 5], unit: UnitLong.nm },
       id: {
-        name: "Test Dataset",
+        name: "Loading",
         team: "",
       },
     },
-    details: null,
+    metadata: null,
     tags: [],
     isPublic: false,
     isActive: true,
@@ -137,17 +144,19 @@ const defaultState: OxalisState = {
       url: "http://localhost:9000",
       isScratch: false,
       allowsUpload: true,
+      jobsEnabled: false,
+      jobsSupportedByAvailableWorkers: [],
     },
-    owningOrganization: "Connectomics department",
+    owningOrganization: "",
     description: null,
-    displayName: "Awesome Test Dataset",
+    directoryName: "Loading",
     allowedTeams: [],
     allowedTeamsCumulative: [],
     logoUrl: null,
     lastUsedByUser: 0,
-    jobsEnabled: false,
     sortingKey: 123,
     publication: null,
+    usedStorageBytes: null,
   },
   tracing: {
     ...initialAnnotationInfo,
@@ -164,10 +173,12 @@ const defaultState: OxalisState = {
     mappings: [],
     skeleton: null,
     owner: null,
+    isLockedByOwner: false,
     contributors: [],
     othersMayEdit: false,
     blockedByUser: null,
     annotationLayers: [],
+    organization: "",
   },
   save: {
     queue: {
@@ -177,8 +188,8 @@ const defaultState: OxalisState = {
     },
     isBusyInfo: {
       skeleton: false,
-      volume: false,
-      mapping: false,
+      volumes: {},
+      mappings: {},
     },
     lastSaveTimestamp: {
       skeleton: 0,
@@ -208,7 +219,6 @@ const defaultState: OxalisState = {
         top: 0,
         bottom: 0,
         up: [0, 0, 0],
-        lookAt: [0, 0, 0],
         position: [0, 0, 0],
       },
       inputCatcherRects: {
@@ -225,7 +235,9 @@ const defaultState: OxalisState = {
   activeUser: null,
   activeOrganization: null,
   uiInformation: {
+    globalProgress: 0,
     activeTool: "MOVE",
+    activeUserBoundingBoxId: null,
     showDropzoneModal: false,
     showVersionRestore: false,
     showDownloadModal: false,
@@ -241,7 +253,7 @@ const defaultState: OxalisState = {
       right: false,
       left: false,
     },
-    theme: primaryStylesheetElement?.href.includes("dark.css") ? "dark" : "light",
+    theme: getSystemColorTheme(),
     busyBlockingInfo: {
       isBusy: false,
     },
@@ -252,6 +264,16 @@ const defaultState: OxalisState = {
       isMeasuring: false,
     },
     navbarHeight: constants.DEFAULT_NAVBAR_HEIGHT,
+    contextInfo: {
+      contextMenuPosition: null,
+      clickedNodeId: null,
+      meshId: null,
+      meshIntersectionPosition: null,
+      clickedBoundingBoxId: null,
+      globalPosition: null,
+      viewport: null,
+      unmappedSegmentId: null,
+    },
   },
   localSegmentationData: {},
 };

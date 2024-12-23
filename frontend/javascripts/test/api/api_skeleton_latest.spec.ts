@@ -137,18 +137,6 @@ test("User Api: setConfiguration should clamp a user configuration value if it i
   api.user.setConfiguration("moveValue", MOVE_VALUE);
   t.is(api.user.getConfiguration("moveValue"), userSettings.moveValue.minimum);
 });
-test.serial.cb("Utils Api: sleep should sleep", (t) => {
-  const { api } = t.context;
-  let bool = false;
-  api.utils.sleep(200).then(() => {
-    bool = true;
-  });
-  t.false(bool);
-  setTimeout(() => {
-    t.true(bool);
-    t.end();
-  }, 400);
-});
 test("Utils Api: registerKeyHandler should register a key handler and return a handler to unregister it again", (t) => {
   const { api } = t.context;
   // Unfortunately this is not properly testable as KeyboardJS doesn't work without a DOM

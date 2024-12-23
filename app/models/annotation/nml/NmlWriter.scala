@@ -1,13 +1,15 @@
 package models.annotation.nml
 
-import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.io.NamedFunctionStream
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup}
 import com.scalableminds.webknossos.datastore.geometry._
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayerType, FetchedAnnotationLayer}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
@@ -20,11 +22,12 @@ import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
 import scala.concurrent.ExecutionContext
 
 case class NmlParameters(
-    dataSetName: String,
-    organizationName: String,
+    datasetId: ObjectId,
+    datasetName: String,
+    organizationId: String,
     description: Option[String],
     wkUrl: String,
-    scale: Option[Vec3Double],
+    voxelSize: Option[VoxelSize],
     createdTimestamp: Long,
     editPosition: Vec3IntProto,
     editRotation: Vec3DoubleProto,
@@ -42,11 +45,12 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
   def toNmlStream(name: String,
                   annotationLayers: List[FetchedAnnotationLayer],
                   annotation: Option[Annotation],
-                  scale: Option[Vec3Double],
+                  scale: Option[VoxelSize],
                   volumeFilename: Option[String],
-                  organizationName: String,
+                  organizationId: String,
                   wkUrl: String,
                   datasetName: String,
+                  datasetId: ObjectId,
                   annotationOwner: Option[User],
                   annotationTask: Option[Task],
                   skipVolumeData: Boolean = false,
@@ -58,17 +62,20 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
 
         for {
-          nml <- toNmlWithImplicitWriter(annotationLayers,
-                                         annotation,
-                                         scale,
-                                         volumeFilename,
-                                         organizationName,
-                                         wkUrl,
-                                         datasetName,
-                                         annotationOwner,
-                                         annotationTask,
-                                         skipVolumeData,
-                                         volumeDataZipFormat)
+          nml <- toNmlWithImplicitWriter(
+            annotationLayers,
+            annotation,
+            scale,
+            volumeFilename,
+            organizationId,
+            wkUrl,
+            datasetName,
+            datasetId,
+            annotationOwner,
+            annotationTask,
+            skipVolumeData,
+            volumeDataZipFormat
+          )
         } yield nml
       }
     )
@@ -76,11 +83,12 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
   private def toNmlWithImplicitWriter(
       annotationLayers: List[FetchedAnnotationLayer],
       annotation: Option[Annotation],
-      scale: Option[Vec3Double],
+      voxelSize: Option[VoxelSize],
       volumeFilename: Option[String],
-      organizationName: String,
+      organizationId: String,
       wkUrl: String,
       datasetName: String,
+      datasetId: ObjectId,
       annotationOwner: Option[User],
       annotationTask: Option[Task],
       skipVolumeData: Boolean,
@@ -96,10 +104,11 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           parameters <- extractTracingParameters(skeletonLayers,
                                                  volumeLayers,
                                                  annotation: Option[Annotation],
-                                                 organizationName,
+                                                 organizationId,
                                                  wkUrl,
                                                  datasetName,
-                                                 scale)
+                                                 datasetId,
+                                                 voxelSize)
           _ = writeParameters(parameters)
           _ = annotationLayers.filter(_.typ == AnnotationLayerType.Skeleton).map(_.tracing).foreach {
             case Left(skeletonTracing) => writeSkeletonThings(skeletonTracing)
@@ -123,20 +132,22 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
   private def extractTracingParameters(skeletonLayers: List[FetchedAnnotationLayer],
                                        volumeLayers: List[FetchedAnnotationLayer],
                                        annotation: Option[Annotation],
-                                       organizationName: String,
+                                       organizationId: String,
                                        wkUrl: String,
                                        datasetName: String,
-                                       scale: Option[Vec3Double]): Fox[NmlParameters] =
+                                       datasetId: ObjectId,
+                                       voxelSize: Option[VoxelSize]): Fox[NmlParameters] =
     for {
       parameterSourceAnnotationLayer <- selectLayerWithPrecedence(skeletonLayers, volumeLayers)
       nmlParameters = parameterSourceAnnotationLayer.tracing match {
         case Left(s) =>
           NmlParameters(
+            datasetId,
             datasetName,
-            organizationName,
+            organizationId,
             annotation.map(_.description),
             wkUrl,
-            scale,
+            voxelSize,
             s.createdTimestamp,
             s.editPosition,
             s.editRotation,
@@ -149,11 +160,12 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           )
         case Right(v) =>
           NmlParameters(
+            datasetId,
             datasetName,
-            organizationName,
+            organizationId,
             annotation.map(_.description),
             wkUrl,
-            scale,
+            voxelSize,
             v.createdTimestamp,
             v.editPosition,
             v.editRotation,
@@ -179,15 +191,19 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
   private def writeParameters(parameters: NmlParameters)(implicit writer: XMLStreamWriter): Unit =
     Xml.withinElementSync("parameters") {
       Xml.withinElementSync("experiment") {
-        writer.writeAttribute("name", parameters.dataSetName)
-        writer.writeAttribute("organization", parameters.organizationName)
+        writer.writeAttribute("name", parameters.datasetName)
+        writer.writeAttribute("organization", parameters.organizationId)
+        writer.writeAttribute("datasetId", parameters.datasetId.toString)
         parameters.description.foreach(writer.writeAttribute("description", _))
         writer.writeAttribute("wkUrl", parameters.wkUrl)
       }
       Xml.withinElementSync("scale") {
-        writer.writeAttribute("x", parameters.scale.map(_.x).getOrElse(-1).toString)
-        writer.writeAttribute("y", parameters.scale.map(_.y).getOrElse(-1).toString)
-        writer.writeAttribute("z", parameters.scale.map(_.z).getOrElse(-1).toString)
+        writer.writeAttribute("x", parameters.voxelSize.map(_.factor.x).getOrElse(-1).toString)
+        writer.writeAttribute("y", parameters.voxelSize.map(_.factor.y).getOrElse(-1).toString)
+        writer.writeAttribute("z", parameters.voxelSize.map(_.factor.z).getOrElse(-1).toString)
+        parameters.voxelSize.foreach { scale =>
+          writer.writeAttribute("unit", scale.unit.toString)
+        }
       }
       Xml.withinElementSync("offset") {
         writer.writeAttribute("x", "0")
@@ -234,8 +250,8 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             Xml.withinElementSync("additionalAxis") {
               writer.writeAttribute("name", a.name)
               writer.writeAttribute("index", a.index.toString)
-              writer.writeAttribute("min", a.bounds.x.toString)
-              writer.writeAttribute("max", a.bounds.y.toString)
+              writer.writeAttribute("start", a.bounds.x.toString)
+              writer.writeAttribute("end", a.bounds.y.toString)
             }
           })
         }
@@ -260,16 +276,24 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         case Right(volumeTracing) =>
           volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
           volumeTracing.largestSegmentId.foreach(id => writer.writeAttribute("largestSegmentId", id.toString))
+          if (!volumeTracing.hasEditableMapping.getOrElse(false)) {
+            volumeTracing.mappingName.foreach { mappingName =>
+              writer.writeAttribute("mappingName", mappingName)
+            }
+            if (volumeTracing.mappingIsLocked.getOrElse(false)) {
+              writer.writeAttribute("mappingIsLocked", true.toString)
+            }
+          }
           if (skipVolumeData) {
             writer.writeComment(f"Note that volume data was omitted when downloading this annotation.")
           }
-          writeVolumeSegmentMetadata(volumeTracing.segments)
+          writeVolumeSegmentInfos(volumeTracing.segments)
           Xml.withinElementSync("groups")(writeSegmentGroupsAsXml(volumeTracing.segmentGroups))
         case _ => ()
       }
     }
 
-  private def writeVolumeSegmentMetadata(segments: Seq[Segment])(implicit writer: XMLStreamWriter): Unit =
+  private def writeVolumeSegmentInfos(segments: Seq[Segment])(implicit writer: XMLStreamWriter): Unit =
     Xml.withinElementSync("segments") {
       segments.foreach { s =>
         Xml.withinElementSync("segment") {
@@ -288,7 +312,27 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           }
           s.color.foreach(_ => writeColor(s.color))
           s.groupId.foreach(groupId => writer.writeAttribute("groupId", groupId.toString))
+          if (s.metadata.nonEmpty)
+            Xml.withinElementSync("metadata")(s.metadata.foreach(writeMetadataEntry))
         }
+      }
+    }
+
+  private def writeMetadataEntry(p: MetadataEntryProto)(implicit writer: XMLStreamWriter): Unit =
+    Xml.withinElementSync("metadataEntry") {
+      writer.writeAttribute("key", p.key)
+      p.stringValue.foreach { v =>
+        writer.writeAttribute("stringValue", v)
+      }
+      p.boolValue.foreach { v =>
+        writer.writeAttribute("boolValue", v.toString)
+      }
+      p.numberValue.foreach { v =>
+        writer.writeAttribute("numberValue", v.toString)
+      }
+      p.stringListValue.zipWithIndex.foreach {
+        case (v, index) =>
+          writer.writeAttribute(s"stringListValue-$index", v)
       }
     }
 
@@ -310,6 +354,8 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         t.`type`.foreach(t => writer.writeAttribute("type", t.toString))
         Xml.withinElementSync("nodes")(writeNodesAsXml(t.nodes.sortBy(_.id)))
         Xml.withinElementSync("edges")(writeEdgesAsXml(t.edges))
+        if (t.metadata.nonEmpty)
+          Xml.withinElementSync("metadata")(t.metadata.foreach(writeMetadataEntry))
       }
     }
 
@@ -325,7 +371,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         writer.writeAttribute("rotY", n.rotation.y.toString)
         writer.writeAttribute("rotZ", n.rotation.z.toString)
         writer.writeAttribute("inVp", n.viewport.toString)
-        writer.writeAttribute("inMag", n.resolution.toString)
+        writer.writeAttribute("inMag", n.mag.toString)
         writer.writeAttribute("bitDepth", n.bitDepth.toString)
         writer.writeAttribute("interpolation", n.interpolation.toString)
         writer.writeAttribute("time", n.createdTimestamp.toString)
@@ -362,6 +408,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
       Xml.withinElementSync("group") {
         writer.writeAttribute("name", t.name)
         writer.writeAttribute("id", t.groupId.toString)
+        writer.writeAttribute("isExpanded", t.isExpanded.getOrElse(true).toString)
         writeTreeGroupsAsXml(t.children)
       }
     }

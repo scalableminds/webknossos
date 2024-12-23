@@ -2,6 +2,7 @@ import memoizeOne from "memoize-one";
 import type {
   APIAnnotation,
   APIAnnotationInfo,
+  APIDataLayer,
   APIDataset,
   APISegmentationLayer,
   AdditionalCoordinate,
@@ -14,16 +15,23 @@ import type {
   HybridTracing,
   LabelAction,
   OxalisState,
+  Segment,
   SegmentGroup,
   SegmentMap,
   Tracing,
   VolumeTracing,
 } from "oxalis/store";
-import { AnnotationTool, ContourMode, MappingStatusEnum, Vector3, Vector4 } from "oxalis/constants";
+import {
+  type AnnotationTool,
+  type ContourMode,
+  MappingStatusEnum,
+  type Vector3,
+  type Vector4,
+} from "oxalis/constants";
 import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
 import {
   getMappingInfo,
-  getResolutionInfo,
+  getMagInfo,
   getSegmentationLayerByName,
   getSegmentationLayers,
   getVisibleSegmentationLayer,
@@ -41,8 +49,16 @@ import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers
 import { V3 } from "libs/mjs";
 import { jsConvertCellIdToRGBA } from "oxalis/shaders/segmentation.glsl";
 import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
-import { ResolutionInfo } from "../helpers/resolution_info";
+import { MagInfo } from "../helpers/mag_info";
 import messages from "messages";
+import {
+  MISSING_GROUP_ID,
+  getGroupByIdWithSubgroups,
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { Store } from "oxalis/singletons";
+import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
+import _ from "lodash";
+import type { SegmentHierarchyNode } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 
 export function getVolumeTracings(tracing: Tracing): Array<VolumeTracing> {
   return tracing.volumes;
@@ -103,7 +119,32 @@ export function getReadableNameByVolumeTracingId(
   tracingId: string,
 ) {
   const volumeDescriptor = getVolumeDescriptorById(annotation, tracingId);
-  return volumeDescriptor.name || "Volume";
+  return volumeDescriptor.name;
+}
+
+export function getSegmentationLayerByHumanReadableName(
+  dataset: APIDataset,
+  annotation: APIAnnotation | HybridTracing,
+  name: string,
+) {
+  try {
+    const layer = getSegmentationLayerByName(dataset, name);
+    return layer;
+  } catch {}
+
+  const layer = getVolumeTracingLayers(dataset).find((currentLayer) => {
+    if (currentLayer.tracingId == null) {
+      throw new Error("getVolumeTracingLayers must return tracing.");
+    }
+    const readableName = getReadableNameByVolumeTracingId(annotation, currentLayer.tracingId);
+    return readableName === name;
+  });
+
+  if (layer == null) {
+    throw new Error("Could not find segmentation layer with the name: " + name);
+  }
+
+  return layer;
 }
 
 export function getAllReadableLayerNames(dataset: APIDataset, tracing: Tracing) {
@@ -120,7 +161,7 @@ export function getAllReadableLayerNames(dataset: APIDataset, tracing: Tracing) 
 
 export function getReadableNameForLayerName(
   dataset: APIDataset,
-  tracing: Tracing,
+  tracing: APIAnnotation | HybridTracing,
   layerName: string,
 ): string {
   const layer = getLayerByName(dataset, layerName, true);
@@ -139,27 +180,24 @@ export function getSegmentationLayerForTracing(
   return getSegmentationLayerByName(state.dataset, volumeTracing.tracingId);
 }
 
-function _getResolutionInfoOfActiveSegmentationTracingLayer(state: OxalisState): ResolutionInfo {
+function _getMagInfoOfActiveSegmentationTracingLayer(state: OxalisState): MagInfo {
   const volumeTracing = getActiveSegmentationTracing(state);
 
   if (!volumeTracing) {
-    return new ResolutionInfo([]);
+    return new MagInfo([]);
   }
 
   const segmentationLayer = getSegmentationLayerForTracing(state, volumeTracing);
-  return getResolutionInfo(segmentationLayer.resolutions);
+  return getMagInfo(segmentationLayer.resolutions);
 }
 
-const getResolutionInfoOfActiveSegmentationTracingLayer = memoizeOne(
-  _getResolutionInfoOfActiveSegmentationTracingLayer,
+const getMagInfoOfActiveSegmentationTracingLayer = memoizeOne(
+  _getMagInfoOfActiveSegmentationTracingLayer,
 );
 export function getServerVolumeTracings(
   tracings: Array<ServerTracing> | null | undefined,
 ): Array<ServerVolumeTracing> {
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'ServerTracing[]' is not assignable to type '... Remove this comment to see the full error message
-  const volumeTracings: Array<ServerVolumeTracing> = (tracings || []).filter(
-    (tracing) => tracing.typ === "Volume",
-  );
+  const volumeTracings = (tracings || []).filter((tracing) => tracing.typ === "Volume");
   return volumeTracings;
 }
 
@@ -174,9 +212,9 @@ export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode
 }
 
 const MAG_THRESHOLDS_FOR_ZOOM: Partial<Record<AnnotationTool, number>> = {
-  // Note that these are relative to the lowest existing resolution index.
+  // Note that these are relative to the lowest existing mag index.
   // A threshold of 1 indicates that the respective tool can be used in the
-  // lowest existing resolution as well as the next highest one.
+  // lowest existing magnification as well as the next highest one.
   [AnnotationToolEnum.TRACE]: 1,
   [AnnotationToolEnum.ERASE_TRACE]: 1,
   [AnnotationToolEnum.BRUSH]: 3,
@@ -205,28 +243,28 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
     return true;
   }
 
-  const volumeResolutions = getResolutionInfoOfActiveSegmentationTracingLayer(state);
-  const lowestExistingResolutionIndex = volumeResolutions.getFinestResolutionIndex();
-  // The current resolution is too high for the tool
+  const volumeMags = getMagInfoOfActiveSegmentationTracingLayer(state);
+  const lowestExistingMagIndex = volumeMags.getFinestMagIndex();
+  // The current mag is too high for the tool
   // because too many voxels could be annotated at the same time.
   const isZoomStepTooHigh =
     getActiveMagIndexForLayer(state, activeSegmentation.tracingId) >
-    threshold + lowestExistingResolutionIndex;
+    threshold + lowestExistingMagIndex;
   return isZoomStepTooHigh;
 }
 
 const MAX_BRUSH_SIZE_FOR_MAG1 = 300;
 export function getMaximumBrushSize(state: OxalisState) {
-  const volumeResolutions = getResolutionInfoOfActiveSegmentationTracingLayer(state);
+  const volumeMags = getMagInfoOfActiveSegmentationTracingLayer(state);
 
-  if (volumeResolutions.resolutions.length === 0) {
+  if (volumeMags.mags.length === 0) {
     return MAX_BRUSH_SIZE_FOR_MAG1;
   }
 
-  const lowestExistingResolutionIndex = volumeResolutions.getFinestResolutionIndex();
+  const lowestExistingMagIndex = volumeMags.getFinestMagIndex();
   // For each leading magnification which does not exist,
   // we double the maximum brush size.
-  return MAX_BRUSH_SIZE_FOR_MAG1 * 2 ** lowestExistingResolutionIndex;
+  return MAX_BRUSH_SIZE_FOR_MAG1 * 2 ** lowestExistingMagIndex;
 }
 
 export function getRequestedOrVisibleSegmentationLayer(
@@ -345,6 +383,7 @@ export function getSegmentsForLayer(state: OxalisState, layerName: string): Segm
   return state.localSegmentationData[layer.name].segments;
 }
 
+const EMPTY_SEGMENT_GROUPS: SegmentGroup[] = [];
 export function getVisibleSegments(state: OxalisState): {
   segments: SegmentMap | null | undefined;
   segmentGroups: Array<SegmentGroup>;
@@ -362,8 +401,64 @@ export function getVisibleSegments(state: OxalisState): {
 
   // There aren't any segment groups for view-only layers
   const { segments } = state.localSegmentationData[layer.name];
-  return { segments, segmentGroups: [] };
+  return { segments, segmentGroups: EMPTY_SEGMENT_GROUPS };
 }
+
+// Next to returning a clean list of selected segments or group, this method returns
+// a callback function that updates the selectedIds in store if segments are stored
+// there that are not visible in the segments view tab.
+// The returned segment and group ids are all visible in the segments view tab.
+function _getSelectedIds(state: OxalisState): [
+  {
+    segments: number[];
+    group: number | null;
+  },
+  (() => void) | null,
+] {
+  // Ensure that the ids of previously selected segments are removed
+  // if these segments aren't visible in the segments tab anymore.
+  const nothingSelectedObject = { segments: [], group: null };
+  let maybeSetSelectedSegmentsOrGroupsAction = null;
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  if (visibleSegmentationLayer == null) {
+    return [nothingSelectedObject, maybeSetSelectedSegmentsOrGroupsAction];
+  }
+  const segmentationLayerData = state.localSegmentationData[visibleSegmentationLayer.name];
+  const { segments, group } = segmentationLayerData.selectedIds;
+  if (segments.length === 0 && group == null) {
+    return [nothingSelectedObject, maybeSetSelectedSegmentsOrGroupsAction];
+  }
+  const currentVisibleSegments = getVisibleSegments(state);
+  const currentSegmentIds = new Set(currentVisibleSegments?.segments?.map((segment) => segment.id));
+  let cleanedSelectedGroup = null;
+  if (group != null) {
+    const availableGroups = currentVisibleSegments.segmentGroups.flatMap((group) =>
+      getGroupByIdWithSubgroups(currentVisibleSegments.segmentGroups, group.groupId),
+    );
+    availableGroups.push(MISSING_GROUP_ID);
+    cleanedSelectedGroup = availableGroups.includes(group) ? group : null;
+  }
+  const selectedIds = {
+    segments: segments.filter((id) => currentSegmentIds.has(id)),
+    group: cleanedSelectedGroup,
+  };
+  const haveSegmentsOrGroupBeenRemovedFromList =
+    selectedIds.segments.length !== segments.length || selectedIds.group !== group;
+  if (haveSegmentsOrGroupBeenRemovedFromList) {
+    maybeSetSelectedSegmentsOrGroupsAction = () => {
+      Store.dispatch(
+        setSelectedSegmentsOrGroupAction(
+          selectedIds.segments,
+          selectedIds.group,
+          visibleSegmentationLayer.name,
+        ),
+      );
+    };
+  }
+  return [selectedIds, maybeSetSelectedSegmentsOrGroupsAction];
+}
+
+export const getSelectedIds = reuseInstanceOnEquality(_getSelectedIds);
 
 export function getActiveSegmentPosition(state: OxalisState): Vector3 | null | undefined {
   const layer = getVisibleSegmentationLayer(state);
@@ -380,16 +475,16 @@ export function getActiveSegmentPosition(state: OxalisState): Vector3 | null | u
 }
 
 /*
-  This function returns the resolution and zoom step in which the given segmentation
+  This function returns the magnification and zoom step in which the given segmentation
   tracing layer is currently rendered (if it is rendered). These properties should be used
   when labeling volume data.
  */
-function _getRenderableResolutionForSegmentationTracing(
+function _getRenderableMagForSegmentationTracing(
   state: OxalisState,
   segmentationTracing: VolumeTracing | null | undefined,
 ):
   | {
-      resolution: Vector3;
+      mag: Vector3;
       zoomStep: number;
     }
   | null
@@ -402,7 +497,7 @@ function _getRenderableResolutionForSegmentationTracing(
 
   const requestedZoomStep = getActiveMagIndexForLayer(state, segmentationLayer.name);
   const { renderMissingDataBlack } = state.datasetConfiguration;
-  const resolutionInfo = getResolutionInfo(segmentationLayer.resolutions);
+  const magInfo = getMagInfo(segmentationLayer.resolutions);
   // Check whether the segmentation layer is enabled
   const segmentationSettings = state.datasetConfiguration.layers[segmentationLayer.name];
 
@@ -411,20 +506,20 @@ function _getRenderableResolutionForSegmentationTracing(
   }
 
   // Check whether the requested zoom step exists
-  if (resolutionInfo.hasIndex(requestedZoomStep)) {
+  if (magInfo.hasIndex(requestedZoomStep)) {
     return {
       zoomStep: requestedZoomStep,
-      resolution: resolutionInfo.getResolutionByIndexOrThrow(requestedZoomStep),
+      mag: magInfo.getMagByIndexOrThrow(requestedZoomStep),
     };
   }
 
-  // Since `renderMissingDataBlack` is enabled, the fallback resolutions
+  // Since `renderMissingDataBlack` is enabled, the fallback mags
   // should not be considered.
   if (renderMissingDataBlack) {
     return null;
   }
 
-  // The current resolution is missing and fallback rendering
+  // The current mag is missing and fallback rendering
   // is activated. Thus, check whether one of the fallback
   // zoomSteps can be rendered.
   for (
@@ -432,10 +527,10 @@ function _getRenderableResolutionForSegmentationTracing(
     fallbackZoomStep <= requestedZoomStep + MAX_ZOOM_STEP_DIFF;
     fallbackZoomStep++
   ) {
-    if (resolutionInfo.hasIndex(fallbackZoomStep)) {
+    if (magInfo.hasIndex(fallbackZoomStep)) {
       return {
         zoomStep: fallbackZoomStep,
-        resolution: resolutionInfo.getResolutionByIndexOrThrow(fallbackZoomStep),
+        mag: magInfo.getMagByIndexOrThrow(fallbackZoomStep),
       };
     }
   }
@@ -443,36 +538,36 @@ function _getRenderableResolutionForSegmentationTracing(
   return null;
 }
 
-export const getRenderableResolutionForSegmentationTracing = reuseInstanceOnEquality(
-  _getRenderableResolutionForSegmentationTracing,
+export const getRenderableMagForSegmentationTracing = reuseInstanceOnEquality(
+  _getRenderableMagForSegmentationTracing,
 );
 
-function _getRenderableResolutionForActiveSegmentationTracing(state: OxalisState):
+function _getRenderableMagForActiveSegmentationTracing(state: OxalisState):
   | {
-      resolution: Vector3;
+      mag: Vector3;
       zoomStep: number;
     }
   | null
   | undefined {
   const activeSegmentationTracing = getActiveSegmentationTracing(state);
-  return getRenderableResolutionForSegmentationTracing(state, activeSegmentationTracing);
+  return getRenderableMagForSegmentationTracing(state, activeSegmentationTracing);
 }
 
-export const getRenderableResolutionForActiveSegmentationTracing = reuseInstanceOnEquality(
-  _getRenderableResolutionForActiveSegmentationTracing,
+export const getRenderableMagForActiveSegmentationTracing = reuseInstanceOnEquality(
+  _getRenderableMagForActiveSegmentationTracing,
 );
 
 export function getMappingInfoForVolumeTracing(
   state: OxalisState,
-  tracingId: string | null | undefined,
+  tracingIdOrLayerName: string | null | undefined,
 ): ActiveMappingInfo {
-  return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId);
+  return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingIdOrLayerName);
 }
 
-export function hasEditableMapping(
+function getVolumeTracingForLayerName(
   state: OxalisState,
   layerName?: string | null | undefined,
-): boolean {
+): VolumeTracing | null | undefined {
   if (layerName != null) {
     // This needs to be checked before calling getRequestedOrDefaultSegmentationTracingLayer,
     // as the function will throw an error if layerName is given but a corresponding tracing layer
@@ -480,14 +575,34 @@ export function hasEditableMapping(
     const layer = getSegmentationLayerByName(state.dataset, layerName);
     const tracing = getTracingForSegmentationLayer(state, layer);
 
-    if (tracing == null) return false;
+    if (tracing == null) return null;
   }
 
   const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
 
+  return volumeTracing;
+}
+
+export function hasEditableMapping(
+  state: OxalisState,
+  layerName?: string | null | undefined,
+): boolean {
+  const volumeTracing = getVolumeTracingForLayerName(state, layerName);
+
   if (volumeTracing == null) return false;
 
-  return !!volumeTracing.mappingIsEditable;
+  return !!volumeTracing.hasEditableMapping;
+}
+
+export function isMappingLocked(
+  state: OxalisState,
+  layerName?: string | null | undefined,
+): boolean {
+  const volumeTracing = getVolumeTracingForLayerName(state, layerName);
+
+  if (volumeTracing == null) return false;
+
+  return !!volumeTracing.mappingIsLocked;
 }
 
 export function isMappingActivationAllowed(
@@ -496,8 +611,9 @@ export function isMappingActivationAllowed(
   layerName?: string | null | undefined,
 ): boolean {
   const isEditableMappingActive = hasEditableMapping(state, layerName);
+  const isActiveMappingLocked = isMappingLocked(state, layerName);
 
-  if (!isEditableMappingActive) return true;
+  if (!isEditableMappingActive && !isActiveMappingLocked) return true;
 
   const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
 
@@ -526,18 +642,26 @@ export function getLastLabelAction(volumeTracing: VolumeTracing): LabelAction | 
 export function getLabelActionFromPreviousSlice(
   state: OxalisState,
   volumeTracing: VolumeTracing,
-  resolution: Vector3,
+  mag: Vector3,
   dim: 0 | 1 | 2,
 ): LabelAction | undefined {
   // Gets the last label action which was performed on a different slice.
   // Note that in coarser mags (e.g., 8-8-2), the comparison of the coordinates
-  // is done while respecting how the coordinates are clipped due to that resolution.
-  const adapt = (vec: Vector3) => V3.roundElementToResolution(vec, resolution, dim);
+  // is done while respecting how the coordinates are clipped due to that mag.
+  const adapt = (vec: Vector3) => V3.roundElementToMag(vec, mag, dim);
   const position = adapt(getFlooredPosition(state.flycam));
 
   return volumeTracing.lastLabelActions.find(
     (el) => Math.floor(adapt(el.centroid)[dim]) !== position[dim],
   );
+}
+
+export function getSegmentName(
+  segment: Segment | SegmentHierarchyNode,
+  fallbackToId: boolean = false,
+): string {
+  const fallback = fallbackToId ? `${segment.id}` : `Segment ${segment.id}`;
+  return segment.name || fallback;
 }
 
 // Output is in [0,1] for R, G, B, and A
@@ -634,7 +758,7 @@ export function hasConnectomeFile(state: OxalisState) {
   return CONNECTOME_STATES.YES;
 }
 
-export type AgglomerateState = typeof AGGLOMERATE_STATES[keyof typeof AGGLOMERATE_STATES];
+export type AgglomerateState = (typeof AGGLOMERATE_STATES)[keyof typeof AGGLOMERATE_STATES];
 
 export function hasAgglomerateMapping(state: OxalisState) {
   const segmentation = getVisibleSegmentationLayer(state);
@@ -697,4 +821,59 @@ export function getMeshInfoForSegment(
   );
   if (meshesForAddCoords == null) return null;
   return meshesForAddCoords[segmentId];
+}
+
+export function needsLocalHdf5Mapping(state: OxalisState, layerName: string) {
+  const volumeTracing = getVolumeTracingByLayerName(state.tracing, layerName);
+  if (volumeTracing == null) {
+    return false;
+  }
+
+  return (
+    // An annotation that has an editable mapping is likely proofread a lot.
+    // Switching between tools should not require a reload which is why
+    // needsLocalHdf5Mapping() will always return true in that case.
+    volumeTracing.hasEditableMapping ||
+    state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD
+  );
+}
+
+export type BucketRetrievalSource =
+  | ["REQUESTED-WITHOUT-MAPPING", "NO-LOCAL-MAPPING-APPLIED"]
+  | ["REQUESTED-WITHOUT-MAPPING", "LOCAL-MAPPING-APPLIED", string]
+  | ["REQUESTED-WITH-MAPPING", string];
+
+export const getBucketRetrievalSourceFn =
+  // The function that is passed to memoize will only be executed once
+  // per layerName. This is important since the function uses reuseInstanceOnEquality
+  // to create a function that ensures that identical BucketRetrievalSource tuples will be re-used between
+  // consecutive calls.
+  _.memoize((layerName: string) =>
+    reuseInstanceOnEquality((state: OxalisState): BucketRetrievalSource => {
+      const usesLocalHdf5Mapping = needsLocalHdf5Mapping(state, layerName);
+
+      const mappingInfo = getMappingInfoForVolumeTracing(state, layerName);
+
+      if (
+        mappingInfo.mappingStatus === MappingStatusEnum.DISABLED ||
+        mappingInfo.mappingName == null
+      ) {
+        return ["REQUESTED-WITHOUT-MAPPING", "NO-LOCAL-MAPPING-APPLIED"];
+      }
+
+      if (usesLocalHdf5Mapping || mappingInfo.mappingType === "JSON") {
+        return ["REQUESTED-WITHOUT-MAPPING", "LOCAL-MAPPING-APPLIED", mappingInfo.mappingName];
+      }
+
+      return ["REQUESTED-WITH-MAPPING", mappingInfo.mappingName];
+    }),
+  );
+
+export function getReadableNameOfVolumeLayer(
+  layer: APIDataLayer,
+  tracing: APIAnnotation | HybridTracing,
+): string | null {
+  return "tracingId" in layer && layer.tracingId != null
+    ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
+    : null;
 }

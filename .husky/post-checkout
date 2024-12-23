@@ -1,0 +1,2 @@
+#! /usr/bin/env bash
+echo '.husky/post-checkout: Deleting auto-generated typescript files...' && rm -f frontend/javascripts/test/snapshots/type-check/*.ts

@@ -1,6 +1,12 @@
+---
+hide:
+  - navigation
+  - toc
+---
+
 # Today I learned
 
-We reguarly publish tips and tricks videos for beginners and pros on YouTube to share new features, highlight efficient workflows, and show you hidden gems.
+We regularly publish tips and tricks videos for beginners and pros on YouTube to share new features, highlight efficient workflows, and show you hidden gems.
 
 Subscribe to our YouTube channel [@webknossos](https://www.youtube.com/@webknossos) or [@webknossos](https://twitter.com/webknossos) on Twitter to stay up-to-date. 
 

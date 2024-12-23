@@ -4,9 +4,9 @@ import TWEEN from "tween.js";
 import _ from "lodash";
 import type { Bucket, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
-import { APICompoundType, APICompoundTypeEnum, ElementClass } from "types/api_flow_types";
+import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_flow_types";
 import { InputKeyboardNoLoop } from "libs/input";
-import { M4x4, Matrix4x4, V3, Vector16 } from "libs/mjs";
+import { M4x4, type Matrix4x4, V3, type Vector16 } from "libs/mjs";
 import type { Versions } from "oxalis/view/version_view";
 import {
   addTreesAndGroupsAction,
@@ -25,12 +25,13 @@ import {
   setTreeVisibilityAction,
   setTreeGroupAction,
   setTreeGroupsAction,
-  setTreeEdgeVisibilityAction as setTreeEdgeVisibilityAction,
+  setTreeEdgeVisibilityAction,
+  createTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   bucketPositionToGlobalAddress,
   globalPositionToBucketPosition,
-  scaleGlobalPositionWithResolution,
+  scaleGlobalPositionWithMagnification,
   zoomedAddressToZoomedPosition,
 } from "oxalis/model/helpers/position_converter";
 import {
@@ -40,12 +41,11 @@ import {
   moveGroupsHelper,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
-import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
+import { disableSavingAction, discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
   doWithToken,
   finishAnnotation,
   getMappingsForDatasetLayer,
-  requestTask,
   downsampleSegmentation,
   sendAnalyticsEvent,
 } from "admin/admin_rest_api";
@@ -60,6 +60,7 @@ import {
   getFlatTreeGroups,
   getTreeGroupsMap,
   mapGroups,
+  getNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getActiveCellId,
@@ -69,17 +70,18 @@ import {
   getRequestedOrVisibleSegmentationLayer,
   getRequestedOrVisibleSegmentationLayerEnforced,
   getSegmentColorAsRGBA,
+  getSegmentsForLayer,
   getVolumeDescriptors,
   getVolumeTracingById,
   getVolumeTracingByLayerName,
   getVolumeTracings,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/saga_selectors";
+import { getHalfViewportExtentsInUnitFromState } from "oxalis/model/sagas/saga_selectors";
 import {
   getLayerBoundingBox,
   getLayerByName,
-  getResolutionInfo,
+  getMagInfo,
   getVisibleSegmentationLayer,
   getMappingInfo,
   flatToNestedMatrix,
@@ -98,7 +100,7 @@ import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middlewar
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import {
-  BatchableUpdateSegmentAction,
+  type BatchableUpdateSegmentAction,
   batchUpdateGroupsAndSegmentsAction,
   clickSegmentAction,
   removeSegmentAction,
@@ -141,9 +143,9 @@ import Constants, {
   MappingStatusEnum,
   EMPTY_OBJECT,
 } from "oxalis/constants";
-import DataLayer from "oxalis/model/data_layer";
+import type DataLayer from "oxalis/model/data_layer";
 import type { OxalisModel } from "oxalis/model";
-import { Model } from "oxalis/singletons";
+import { Model, api } from "oxalis/singletons";
 import Request from "libs/request";
 import type {
   MappingType,
@@ -159,6 +161,7 @@ import type {
   OxalisState,
   SegmentGroup,
   Segment,
+  MutableNode,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import type { ToastStyle } from "libs/toast";
@@ -171,9 +174,14 @@ import messages from "messages";
 import window, { location } from "libs/window";
 import { coalesce } from "libs/utils";
 import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import { MagInfo } from "oxalis/model/helpers/mag_info";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import {
+  createSkeletonNode,
+  getOptionsForCreateSkeletonNode,
+} from "oxalis/controller/combinations/skeleton_handlers";
+import { requestTask } from "admin/api/tasks";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -244,9 +252,7 @@ class TracingApi {
    */
   getActiveNodeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return getActiveNode(tracing)
-      .map((node) => node.id)
-      .getOrElse(null);
+    return getActiveNode(tracing)?.id ?? null;
   }
 
   /**
@@ -254,9 +260,7 @@ class TracingApi {
    */
   getActiveTreeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return getActiveTree(tracing)
-      .map((tree) => tree.treeId)
-      .getOrElse(null);
+    return getActiveTree(tracing)?.treeId ?? null;
   }
 
   /**
@@ -318,11 +322,60 @@ class TracingApi {
   }
 
   /**
+   * Creates a new and empty tree. Returns the
+   * id of that tree.
+   */
+  createTree() {
+    assertSkeleton(Store.getState().tracing);
+    let treeId = null;
+    Store.dispatch(
+      createTreeAction((id) => {
+        treeId = id;
+      }),
+    );
+    if (treeId == null) {
+      throw new Error("Could not create tree.");
+    }
+    return treeId;
+  }
+
+  /**
    * Deletes the tree with the given treeId.
    */
   deleteTree(treeId: number) {
     assertSkeleton(Store.getState().tracing);
     Store.dispatch(deleteTreeAction(treeId));
+  }
+
+  /**
+   * Creates a new node in the current tree. If the active tree
+   * is not empty, the node will be connected with an edge to
+   * the currently active node.
+   */
+  createNode(
+    position: Vector3,
+    options?: {
+      additionalCoordinates?: AdditionalCoordinate[];
+      rotation?: Vector3;
+      center?: boolean;
+      branchpoint?: boolean;
+      activate?: boolean;
+      skipCenteringAnimationInThirdDimension?: boolean;
+    },
+  ) {
+    assertSkeleton(Store.getState().tracing);
+    const defaultOptions = getOptionsForCreateSkeletonNode();
+    createSkeletonNode(
+      position,
+      options?.additionalCoordinates ?? defaultOptions.additionalCoordinates,
+      options?.rotation ?? defaultOptions.rotation,
+      options?.center ?? defaultOptions.center,
+      options?.branchpoint ?? defaultOptions.branchpoint,
+      options?.activate ?? defaultOptions.activate,
+      // This is the only parameter where we don't fall back to the default option,
+      // as the parameter mostly makes sense when the user creates a node *manually*.
+      options?.skipCenteringAnimationInThirdDimension ?? false,
+    );
   }
 
   /**
@@ -376,7 +429,10 @@ class TracingApi {
     if (treeId != null) {
       tree = skeletonTracing.trees[treeId];
       assertExists(tree, `Couldn't find tree ${treeId}.`);
-      assertExists(tree.nodes.get(nodeId), `Couldn't find node ${nodeId} in tree ${treeId}.`);
+      assertExists(
+        tree.nodes.getOrThrow(nodeId),
+        `Couldn't find node ${nodeId} in tree ${treeId}.`,
+      );
     } else {
       tree = _.values(skeletonTracing.trees).find((__) => __.nodes.has(nodeId));
       assertExists(tree, `Couldn't find node ${nodeId}.`);
@@ -569,8 +625,9 @@ class TracingApi {
    * @example
    * api.tracing.registerSegment(
    *   3,
-   *   "volume-layer-id"
    *   [1, 2, 3],
+   *   null,             // optional
+   *   "volume-layer-id" // optional
    * );
    */
   registerSegment(
@@ -582,6 +639,135 @@ class TracingApi {
     Store.dispatch(
       clickSegmentAction(segmentId, somePosition, someAdditionalCoordinates, layerName),
     );
+  }
+
+  /**
+   * Registers all segments that exist at least partially in the given bounding box.
+   *
+   * @example
+   * api.tracing.registerSegmentsForBoundingBox(
+   *   [0, 0, 0],
+   *   [10, 10, 10],
+   *   "My Bounding Box"
+   * );
+   */
+  registerSegmentsForBoundingBox = async (
+    min: Vector3,
+    max: Vector3,
+    bbName: string,
+    options?: { maximumSegmentCount?: number; maximumVolume?: number },
+  ) => {
+    const state = Store.getState();
+    const maximumVolume = options?.maximumVolume ?? Constants.REGISTER_SEGMENTS_BB_MAX_VOLUME_VX;
+    const maximumSegmentCount =
+      options?.maximumSegmentCount ?? Constants.REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT;
+    const shape = Utils.computeShapeFromBoundingBox({ min, max });
+
+    const segmentationLayerName = api.data.getVisibleSegmentationLayerName();
+    if (segmentationLayerName == null) {
+      throw new Error(
+        "No segmentation layer is currently visible. Enable the one you want to register segments for.",
+      );
+    }
+
+    const magInfo = getMagInfo(getLayerByName(state.dataset, segmentationLayerName).resolutions);
+    const theoreticalMagIndex = getActiveMagIndexForLayer(state, segmentationLayerName);
+    const existingMagIndex = magInfo.getIndexOrClosestHigherIndex(theoreticalMagIndex);
+    if (existingMagIndex == null) {
+      throw new Error("The index of the current mag could not be found.");
+    }
+    const currentMag = magInfo.getMagByIndex(existingMagIndex);
+    if (currentMag == null) {
+      throw new Error("No mag could be found.");
+    }
+
+    const volume =
+      Math.ceil(shape[0] / currentMag[0]) *
+      Math.ceil(shape[1] / currentMag[1]) *
+      Math.ceil(shape[2] / currentMag[2]);
+    if (volume > maximumVolume) {
+      throw new Error(
+        `The volume of the bounding box exceeds ${maximumVolume} vx, please make it smaller. Currently, the bounding box has a volume of ${volume} vx in the active magnification (${currentMag.join("-")}).`,
+      );
+    } else if (volume > maximumVolume / 8) {
+      Toast.warning(
+        "The volume of the bounding box is very large, registering all segments might take a while.",
+      );
+    }
+
+    const data = await api.data.getDataForBoundingBox(
+      segmentationLayerName,
+      {
+        min,
+        max,
+      },
+      existingMagIndex,
+    );
+    const [dx, dy, dz] = currentMag;
+
+    const segmentIdToPosition = new Map();
+    let idx = 0;
+    for (let z = min[2]; z < max[2]; z += dz) {
+      for (let y = min[1]; y < max[1]; y += dy) {
+        for (let x = min[0]; x < max[0]; x += dx) {
+          const id = data[idx];
+          if (id !== 0 && !segmentIdToPosition.has(id)) {
+            segmentIdToPosition.set(id, [x, y, z]);
+          }
+          idx++;
+        }
+      }
+    }
+
+    const segmentIdCount = Array.from(segmentIdToPosition.entries()).length;
+    const halfMaxNoSegments = maximumSegmentCount / 2;
+    if (segmentIdCount > maximumSegmentCount) {
+      throw new Error(
+        `The given bounding box contains ${segmentIdCount} segments, but only ${maximumSegmentCount} segments can be registered at once. Please reduce the size of the bounding box.`,
+      );
+    } else if (segmentIdCount > halfMaxNoSegments) {
+      Toast.warning(
+        `The bounding box contains more than ${halfMaxNoSegments} segments. Registering all segments might take a while.`,
+      );
+    }
+
+    let groupId = MISSING_GROUP_ID;
+    try {
+      groupId = api.tracing.createSegmentGroup(`Segments for ${bbName}`, -1, segmentationLayerName);
+    } catch (_e) {
+      console.info(
+        `Volume tracing could not be found for the currently visible segmentation layer, registering segments for ${bbName} within root group.`,
+      );
+      Toast.warning(
+        "The current segmentation layer is not editable and the segment list will not be persisted across page reloads. You can make it editable by clicking on the lock symbol to the right of the layer name.",
+      );
+    }
+    const updateSegmentActions: BatchableUpdateSegmentAction[] = [];
+    for (const [segmentId, position] of segmentIdToPosition.entries()) {
+      api.tracing.registerSegment(segmentId, position, undefined, segmentationLayerName);
+      updateSegmentActions.push(
+        updateSegmentAction(segmentId, { groupId, id: segmentId }, segmentationLayerName),
+      );
+    }
+    if (updateSegmentActions.length > 0)
+      Store.dispatch(batchUpdateGroupsAndSegmentsAction(updateSegmentActions));
+  };
+
+  /**
+   * Gets a segment object within the referenced volume layer. Note that this object
+   * does not support any modifications made to it.
+   *
+   * @example
+   * const segment = api.tracing.getSegment(
+   *   3,
+   *   "volume-layer-id"
+   * );
+   * console.log(segment.groupId)
+   */
+  getSegment(segmentId: number, layerName: string): Segment {
+    const segment = getSegmentsForLayer(Store.getState(), layerName).getOrThrow(segmentId);
+    // Return a copy to avoid mutations by third-party code.
+    return { ...segment };
   }
 
   /**
@@ -635,7 +821,7 @@ class TracingApi {
   }
 
   /**
-   * Renames the segment group referenced by the provided id.
+   * Creates a new segment group and returns its id.
    *
    * @example
    * api.tracing.createSegmentGroup(
@@ -648,7 +834,7 @@ class TracingApi {
     name: string | null = null,
     parentGroupId: number = MISSING_GROUP_ID,
     volumeLayerName?: string,
-  ) {
+  ): number {
     if (parentGroupId == null) {
       // Guard against explicitly passed null or undefined.
       parentGroupId = MISSING_GROUP_ID;
@@ -667,6 +853,7 @@ class TracingApi {
       name: name || `Group ${newGroupId}`,
       groupId: newGroupId,
       children: [],
+      isExpanded: false,
     };
 
     if (parentGroupId === MISSING_GROUP_ID) {
@@ -678,6 +865,8 @@ class TracingApi {
     }
 
     Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeTracing.tracingId));
+
+    return newGroupId;
   }
 
   /**
@@ -766,7 +955,7 @@ class TracingApi {
               { groupId: parentGroupId === MISSING_GROUP_ID ? null : parentGroupId },
               volumeTracing.tracingId,
               // The parameter createsNewUndoState is not passed, since the action
-              // is added to a batch and batch updates always crate a new undo state.
+              // is added to a batch and batch updates always create a new undo state.
             ),
           );
         }
@@ -986,9 +1175,9 @@ class TracingApi {
    */
   centerNode = (nodeId?: number): void => {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
-    getNodeAndTree(skeletonTracing, nodeId).map(([, node]) =>
-      Store.dispatch(setPositionAction(node.position)),
-    );
+    getNodeAndTree(skeletonTracing, nodeId).map(([, node]) => {
+      return Store.dispatch(setPositionAction(getNodePosition(node, Store.getState())));
+    });
   };
 
   /**
@@ -1032,26 +1221,28 @@ class TracingApi {
    * Measures the length of the given tree and returns the length in nanometer and in voxels.
    */
   measureTreeLength(treeId: number): [number, number] {
-    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const state = Store.getState();
+    const skeletonTracing = assertSkeleton(state.tracing);
     const tree = skeletonTracing.trees[treeId];
 
     if (!tree) {
       throw new Error(`Tree with id ${treeId} not found.`);
     }
 
-    const datasetScale = Store.getState().dataset.dataSource.scale;
+    const voxelSizeFactor = state.dataset.dataSource.scale.factor;
     // Pre-allocate vectors
-    let lengthNmAcc = 0;
-    let lengthVxAcc = 0;
+    let lengthInUnitAcc = 0;
+    let lengthInVxAcc = 0;
+
+    const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
 
     for (const edge of tree.edges.all()) {
-      const sourceNode = tree.nodes.get(edge.source);
-      const targetNode = tree.nodes.get(edge.target);
-      lengthNmAcc += V3.scaledDist(sourceNode.position, targetNode.position, datasetScale);
-      lengthVxAcc += V3.length(V3.sub(sourceNode.position, targetNode.position));
+      const sourceNode = tree.nodes.getOrThrow(edge.source);
+      const targetNode = tree.nodes.getOrThrow(edge.target);
+      lengthInUnitAcc += V3.scaledDist(getPos(sourceNode), getPos(targetNode), voxelSizeFactor);
+      lengthInVxAcc += V3.length(V3.sub(getPos(sourceNode), getPos(targetNode)));
     }
-
-    return [lengthNmAcc, lengthVxAcc];
+    return [lengthInUnitAcc, lengthInVxAcc];
   }
 
   /**
@@ -1059,16 +1250,16 @@ class TracingApi {
    */
   measureAllTrees(): [number, number] {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
-    let totalLengthNm = 0;
-    let totalLengthVx = 0;
+    let totalLengthInUnit = 0;
+    let totalLengthInVx = 0;
 
     _.values(skeletonTracing.trees).forEach((currentTree) => {
-      const [lengthNm, lengthVx] = this.measureTreeLength(currentTree.treeId);
-      totalLengthNm += lengthNm;
-      totalLengthVx += lengthVx;
+      const [lengthInUnit, lengthInVx] = this.measureTreeLength(currentTree.treeId);
+      totalLengthInUnit += lengthInUnit;
+      totalLengthInVx += lengthInVx;
     });
 
-    return [totalLengthNm, totalLengthVx];
+    return [totalLengthInUnit, totalLengthInVx];
   }
 
   /**
@@ -1079,8 +1270,8 @@ class TracingApi {
     sourceNodeId: number,
     targetNodeId: number,
   ): {
-    lengthNm: number;
-    lengthVx: number;
+    lengthInUnit: number;
+    lengthInVx: number;
     shortestPath: number[];
   } {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
@@ -1101,7 +1292,7 @@ class TracingApi {
       throw new Error("The nodes are not within the same tree.");
     }
 
-    const datasetScale = Store.getState().dataset.dataSource.scale;
+    const voxelSizeFactor = Store.getState().dataset.dataSource.scale.factor;
     // We use the Dijkstra algorithm to get the shortest path between the nodes.
     const distanceMap: Record<number, number> = {};
     // The distance map is also maintained in voxel space. This information is only
@@ -1125,27 +1316,29 @@ class TracingApi {
     });
     priorityQueue.queue([sourceNodeId, 0]);
 
+    const state = Store.getState();
+    const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
+
     while (priorityQueue.length > 0) {
       const [nextNodeId, distance] = priorityQueue.dequeue();
-      const nextNodePosition = sourceTree.nodes.get(nextNodeId).position;
+      const nextNodePosition = getPos(sourceTree.nodes.getOrThrow(nextNodeId));
 
       // Calculate the distance to all neighbours and update the distances.
       for (const { source, target } of sourceTree.edges.getEdgesForNode(nextNodeId)) {
         const neighbourNodeId = source === nextNodeId ? target : source;
-        const neighbourPosition = sourceTree.nodes.get(neighbourNodeId).position;
+        const neighbourPosition = getPos(sourceTree.nodes.getOrThrow(neighbourNodeId));
         const neighbourDistance =
-          distance + V3.scaledDist(nextNodePosition, neighbourPosition, datasetScale);
+          distance + V3.scaledDist(nextNodePosition, neighbourPosition, voxelSizeFactor);
 
         if (neighbourDistance < getDistance(neighbourNodeId)) {
           distanceMap[neighbourNodeId] = neighbourDistance;
           parentMap[neighbourNodeId] = source === nextNodeId ? source : target;
           const neighbourDistanceVx = V3.length(V3.sub(nextNodePosition, neighbourPosition));
-          distanceMapVx[neighbourNodeId] = neighbourDistanceVx;
+          distanceMapVx[neighbourNodeId] = neighbourDistanceVx + distanceMapVx[nextNodeId];
           priorityQueue.queue([neighbourNodeId, neighbourDistance]);
         }
       }
     }
-
     // Retrace the shortest path from the target node.
     let nodeId = targetNodeId;
     const shortestPath = [targetNodeId];
@@ -1155,8 +1348,8 @@ class TracingApi {
     }
 
     return {
-      lengthNm: distanceMap[targetNodeId],
-      lengthVx: distanceMapVx[targetNodeId],
+      lengthInUnit: distanceMap[targetNodeId],
+      lengthInVx: distanceMapVx[targetNodeId],
       shortestPath,
     };
   }
@@ -1165,28 +1358,34 @@ class TracingApi {
    * Returns the length of the shortest path between two nodes in nanometer and in voxels.
    */
   measurePathLengthBetweenNodes(sourceNodeId: number, targetNodeId: number): [number, number] {
-    const { lengthNm, lengthVx } = this.findShortestPathBetweenNodes(sourceNodeId, targetNodeId);
-    return [lengthNm, lengthVx];
+    const { lengthInUnit, lengthInVx } = this.findShortestPathBetweenNodes(
+      sourceNodeId,
+      targetNodeId,
+    );
+    return [lengthInUnit, lengthInVx];
   }
 
   /**
    * Starts an animation to center the given position. See setCameraPosition for a non-animated version of this function.
    *
    * @param position - Vector3
-   * @param skipDimensions - Boolean which decides whether the third dimension shall also be animated (defaults to true)
+   * @param skipCenteringAnimationInThirdDimension -
+   *        Boolean which decides whether the third dimension shall also be animated (defaults to true)
+   *        When true, this lets the user still manipulate the "third dimension"
+   *        during the animation (important because otherwise the user cannot continue to trace until
+   *        the animation is over).
    * @param rotation - Vector3 (optional) - Will only be noticeable in flight or oblique mode.
    * @example
    * api.tracing.centerPositionAnimated([0, 0, 0])
    */
   centerPositionAnimated(
     position: Vector3,
-    skipDimensions: boolean = true,
+    skipCenteringAnimationInThirdDimension: boolean = true,
     rotation?: Vector3,
   ): void {
-    // Let the user still manipulate the "third dimension" during animation
     const { activeViewport } = Store.getState().viewModeData.plane;
     const dimensionToSkip =
-      skipDimensions && activeViewport !== OrthoViews.TDView
+      skipCenteringAnimationInThirdDimension && activeViewport !== OrthoViews.TDView
         ? dimensions.thirdDimensionForPlane(activeViewport)
         : null;
     const curPosition = getPosition(Store.getState().flycam);
@@ -1312,7 +1511,7 @@ class TracingApi {
   }
 
   /**
-   * Use this method to create a complete resolution pyramid by downsampling the lowest present mag (e.g., mag 1).
+   * Use this method to create a complete magnification pyramid by downsampling the lowest present mag (e.g., mag 1).
      This method will save the current changes and then reload the page after the downsampling
      has finished.
      This function can only be used for non-tasks.
@@ -1330,6 +1529,14 @@ class TracingApi {
     await this.save();
     await downsampleSegmentation(annotationId, annotationType, volumeTracingId);
     await this.hardReload();
+  }
+
+  /**
+   * Disables the saving for the current annotation.
+   * WARNING: Cannot be undone. Only do this if you know what you are doing.
+   */
+  disableSaving() {
+    Store.dispatch(disableSavingAction());
   }
 }
 /**
@@ -1470,7 +1677,7 @@ class DataApi {
    */
   setMapping(
     layerName: string,
-    mapping: Mapping,
+    mapping: Mapping | Record<number, number>,
     options: {
       colors?: Array<number>;
       hideUnmappedIds?: boolean;
@@ -1490,10 +1697,12 @@ class DataApi {
       sendAnalyticsEvent("setMapping called with custom colors");
     }
     const mappingProperties = {
-      mapping: _.clone(mapping),
-      // Object.keys is sorted for numerical keys according to the spec:
-      // http://www.ecma-international.org/ecma-262/6.0/#sec-ordinary-object-internal-methods-and-internal-slots-ownpropertykeys
-      mappingKeys: Object.keys(mapping).map((x) => parseInt(x, 10)),
+      mapping:
+        mapping instanceof Map
+          ? (new Map(mapping as Map<unknown, unknown>) as Mapping)
+          : new Map(
+              Object.entries(mapping).map(([key, value]) => [Number.parseInt(key, 10), value]),
+            ),
       mappingColors,
       hideUnmappedIds,
       showLoadingIndicator,
@@ -1606,9 +1815,9 @@ class DataApi {
 
   /**
    * Returns raw binary data for a given layer, position and zoom level. If the zoom
-   * level is not provided, the first resolution will be used. If this
-   * resolution does not exist, the next existing resolution will be used.
-   * If the zoom level is provided and points to a not existent resolution,
+   * level is not provided, the first magnification will be used. If this
+   * mag does not exist, the next existing mag will be used.
+   * If the zoom level is provided and points to a not existent mag,
    * 0 will be returned.
    *
    * @example // Return the greyscale value for a bucket
@@ -1633,8 +1842,8 @@ class DataApi {
       zoomStep = _zoomStep;
     } else {
       const layer = getLayerByName(Store.getState().dataset, layerName);
-      const resolutionInfo = getResolutionInfo(layer.resolutions);
-      zoomStep = resolutionInfo.getFinestResolutionIndex();
+      const magInfo = getMagInfo(layer.resolutions);
+      zoomStep = magInfo.getFinestMagIndex();
     }
 
     const cube = this.model.getCubeByLayerName(layerName);
@@ -1690,26 +1899,26 @@ class DataApi {
     additionalCoordinates: AdditionalCoordinate[] | null = null,
   ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
-    const resolutionInfo = getResolutionInfo(layer.resolutions);
+    const magInfo = getMagInfo(layer.resolutions);
     let zoomStep;
 
     if (_zoomStep != null) {
       zoomStep = _zoomStep;
     } else {
-      zoomStep = resolutionInfo.getFinestResolutionIndex();
+      zoomStep = magInfo.getFinestMagIndex();
     }
 
-    const resolutions = resolutionInfo.getDenseResolutions();
+    const mags = magInfo.getDenseMags();
     const bucketAddresses = this.getBucketAddressesInCuboid(
       mag1Bbox,
-      resolutions,
+      mags,
       zoomStep,
       additionalCoordinates,
     );
 
     if (bucketAddresses.length > 15000) {
       console.warn(
-        "More than 15000 buckets need to be requested for the given bounding box. Consider passing a smaller bounding box or using another resolution.",
+        "More than 15000 buckets need to be requested for the given bounding box. Consider passing a smaller bounding box or using another magnification.",
       );
     }
 
@@ -1717,13 +1926,13 @@ class DataApi {
       bucketAddresses.map((addr) => this.getLoadedBucket(layerName, addr)),
     );
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
-    return this.cutOutCuboid(buckets, mag1Bbox, elementClass, resolutions, zoomStep);
+    return this.cutOutCuboid(buckets, mag1Bbox, elementClass, mags, zoomStep);
   }
 
   async getViewportData(
     viewport: OrthoView,
     layerName: string,
-    maybeResolutionIndex: number | null | undefined,
+    maybeMagIndex: number | null | undefined,
     additionalCoordinates: AdditionalCoordinate[] | null,
   ) {
     const state = Store.getState();
@@ -1731,16 +1940,16 @@ class DataApi {
       dimensions.roundCoordinate(getPosition(state.flycam)),
       viewport,
     );
-    const [halfViewportExtentU, halfViewportExtentV] = getHalfViewportExtentsFromState(
+    const [halfViewportExtentU, halfViewportExtentV] = getHalfViewportExtentsInUnitFromState(
       state,
       viewport,
     );
     const layer = getLayerByName(state.dataset, layerName);
-    const resolutionInfo = getResolutionInfo(layer.resolutions);
-    if (maybeResolutionIndex == null) {
-      maybeResolutionIndex = getActiveMagIndexForLayer(state, layerName);
+    const magInfo = getMagInfo(layer.resolutions);
+    if (maybeMagIndex == null) {
+      maybeMagIndex = getActiveMagIndexForLayer(state, layerName);
     }
-    const zoomStep = resolutionInfo.getClosestExistingIndex(maybeResolutionIndex);
+    const zoomStep = magInfo.getClosestExistingIndex(maybeMagIndex);
 
     const min = dimensions.transDim(
       V3.sub([curU, curV, curW], [halfViewportExtentU, halfViewportExtentV, 0]),
@@ -1751,13 +1960,13 @@ class DataApi {
       viewport,
     );
 
-    const resolution = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
-    const resolutionUVX = dimensions.transDim(resolution, viewport);
-    const widthInVoxel = Math.ceil(halfViewportExtentU / resolutionUVX[0]);
-    const heightInVoxel = Math.ceil(halfViewportExtentV / resolutionUVX[1]);
+    const mag = magInfo.getMagByIndexOrThrow(zoomStep);
+    const magUVX = dimensions.transDim(mag, viewport);
+    const widthInVoxel = Math.ceil(halfViewportExtentU / magUVX[0]);
+    const heightInVoxel = Math.ceil(halfViewportExtentV / magUVX[1]);
     if (widthInVoxel * heightInVoxel > 1024 ** 2) {
       throw new Error(
-        "Requested data for viewport cannot be loaded, since the amount of data is too large for the available resolution. Please zoom in further or ensure that coarser magnifications are available.",
+        "Requested data for viewport cannot be loaded, since the amount of data is too large for the available magnification. Please zoom in further or ensure that coarser magnifications are available.",
       );
     }
 
@@ -1775,7 +1984,7 @@ class DataApi {
 
   getBucketAddressesInCuboid(
     bbox: BoundingBoxType,
-    resolutions: Array<Vector3>,
+    magnifications: Array<Vector3>,
     zoomStep: number,
     additionalCoordinates: AdditionalCoordinate[] | null,
   ): Array<BucketAddress> {
@@ -1783,13 +1992,13 @@ class DataApi {
     const bottomRight = bbox.max;
     const minBucket = globalPositionToBucketPosition(
       bbox.min,
-      resolutions,
+      magnifications,
       zoomStep,
       additionalCoordinates,
     );
 
     const topLeft = (bucketAddress: BucketAddress) =>
-      bucketPositionToGlobalAddress(bucketAddress, new ResolutionInfo(resolutions));
+      bucketPositionToGlobalAddress(bucketAddress, new MagInfo(magnifications));
 
     const nextBucketInDim = (bucket: BucketAddress, dim: 0 | 1 | 2) => {
       const copy = bucket.slice() as BucketAddress;
@@ -1823,15 +2032,15 @@ class DataApi {
     buckets: Array<Bucket>,
     bbox: BoundingBoxType,
     elementClass: ElementClass,
-    resolutions: Array<Vector3>,
+    magnifications: Array<Vector3>,
     zoomStep: number,
   ): TypedArray {
-    const resolution = resolutions[zoomStep];
+    const mag = magnifications[zoomStep];
     // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
-    // by the resolution
-    const topLeft = scaleGlobalPositionWithResolution(bbox.min, resolution);
+    // by the mag
+    const topLeft = scaleGlobalPositionWithMagnification(bbox.min, mag);
     // Ceil the bounding box bottom right instead of flooring, because it is exclusive
-    const bottomRight = scaleGlobalPositionWithResolution(bbox.max, resolution, true);
+    const bottomRight = scaleGlobalPositionWithMagnification(bbox.max, mag, true);
     const extent: Vector3 = V3.sub(bottomRight, topLeft);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(elementClass);
     const result = new TypedArrayClass(channelCount * extent[0] * extent[1] * extent[2]);
@@ -1894,15 +2103,15 @@ class DataApi {
     topLeft: Vector3,
     bottomRight: Vector3,
     token: string,
-    resolution?: Vector3,
+    magnification?: Vector3,
   ): string {
     const { dataset } = Store.getState();
-    const resolutionInfo = getResolutionInfo(getLayerByName(dataset, layerName, true).resolutions);
-    resolution = resolution || resolutionInfo.getFinestResolution();
+    const magInfo = getMagInfo(getLayerByName(dataset, layerName, true).resolutions);
+    magnification = magnification || magInfo.getFinestMag();
 
-    const magString = resolution.join("-");
+    const magString = magnification.join("-");
     return (
-      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/data?mag=${magString}&` +
+      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.directoryName}/layers/${layerName}/data?mag=${magString}&` +
       `token=${token}&` +
       `x=${Math.floor(topLeft[0])}&` +
       `y=${Math.floor(topLeft[1])}&` +
@@ -1938,7 +2147,7 @@ class DataApi {
     layerName: string,
     topLeft: Vector3,
     bottomRight: Vector3,
-    resolution?: Vector3,
+    magnification?: Vector3,
   ): Promise<ArrayBuffer> {
     return doWithToken((token) => {
       const downloadUrl = this._getDownloadUrlForRawDataCuboid(
@@ -1946,7 +2155,7 @@ class DataApi {
         topLeft,
         bottomRight,
         token,
-        resolution,
+        magnification,
       );
       return Request.receiveArraybuffer(downloadUrl);
     });
@@ -2147,15 +2356,12 @@ class DataApi {
 
     if (
       state.localSegmentationData[effectiveLayerName].availableMeshFiles == null ||
-      // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
       !state.localSegmentationData[effectiveLayerName].availableMeshFiles.find(
         (el) => el.meshFileName === meshFileName,
       )
     ) {
       throw new Error(
-        `The provided mesh file (${meshFileName}) is not available for this dataset. Available mesh files are: ${(
-          state.localSegmentationData[effectiveLayerName].availableMeshFiles || []
-        ).join(", ")}`,
+        `The provided mesh file (${meshFileName}) is not available for this dataset. Available mesh files are: ${(state.localSegmentationData[effectiveLayerName].availableMeshFiles || []).join(", ")}`,
       );
     }
 
@@ -2369,7 +2575,7 @@ class DataApi {
       M4x4.mul(
         M4x4.mul(
           makeTranslation(pos[0], pos[1], pos[2]),
-          // prettier-ignore
+          // biome-ignore format: don't format array
           new Float32Array([
             Math.cos(thetaInRad), Math.sin(thetaInRad), 0, 0,
             -Math.sin(thetaInRad), Math.cos(thetaInRad), 0, 0,
@@ -2606,11 +2812,7 @@ class UtilsApi {
    */
   registerOverwrite<S, A>(
     actionName: string,
-    overwriteFunction: (
-      store: S,
-      next: (action: A) => void,
-      originalAction: A,
-    ) => void | Promise<void>,
+    overwriteFunction: (store: S, next: (action: A) => void, originalAction: A) => A | Promise<A>,
   ) {
     return overwriteAction(actionName, overwriteFunction);
   }

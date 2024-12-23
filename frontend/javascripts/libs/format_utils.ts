@@ -1,5 +1,5 @@
 import { presetPalettes } from "@ant-design/colors";
-import type { Vector3, Vector6 } from "oxalis/constants";
+import { LongUnitToShortUnitMap, UnitShort, type Vector3, type Vector6 } from "oxalis/constants";
 import { Unicode } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import _ from "lodash";
@@ -8,6 +8,7 @@ import duration from "dayjs/plugin/duration";
 import updateLocale from "dayjs/plugin/updateLocale";
 import relativeTime from "dayjs/plugin/relativeTime";
 import localizedFormat from "dayjs/plugin/localizedFormat";
+import customParseFormat from "dayjs/plugin/customParseFormat";
 import calendar from "dayjs/plugin/calendar";
 import utc from "dayjs/plugin/utc";
 import weekday from "dayjs/plugin/weekday";
@@ -15,6 +16,7 @@ import localeData from "dayjs/plugin/localeData";
 
 import type { BoundingBoxObject } from "oxalis/store";
 import type { Duration } from "dayjs/plugin/duration";
+import type { VoxelSize, WkLibsNdBoundingBox } from "types/api_flow_types";
 
 dayjs.extend(updateLocale);
 dayjs.extend(duration);
@@ -22,6 +24,7 @@ dayjs.extend(relativeTime);
 dayjs.extend(utc);
 dayjs.extend(calendar);
 dayjs.extend(weekday);
+dayjs.extend(customParseFormat);
 dayjs.extend(localeData);
 dayjs.extend(localizedFormat);
 dayjs.updateLocale("en", {
@@ -47,6 +50,60 @@ const COLOR_MAP: Array<string> = [
   "#FF9364",
   "#750790",
 ];
+
+export const UnitsMap: Record<UnitShort, number> = {
+  ym: 1e-15,
+  zm: 1e-12,
+  am: 1e-9,
+  fm: 1e-6,
+  pm: 1e-3,
+  nm: 1.0,
+  µm: 1e3,
+  mm: 1e6,
+  cm: 1e7,
+  dm: 1e8,
+  m: 1e9,
+  hm: 1e11,
+  km: 1e12,
+  Mm: 1e15,
+  Gm: 1e18,
+  Tm: 1e21,
+  Pm: 1e24,
+  Em: 1e27,
+  Zm: 1e30,
+  Ym: 1e33,
+  Å: 0.1,
+  in: 25400000.0,
+  ft: 304800000.0,
+  yd: 914400000.0,
+  mi: 1609344000000.0,
+  pc: 3.085677581e25,
+};
+
+const uncommonUnitsToCommon: Map<UnitShort, UnitShort> = new Map([
+  [UnitShort.cm, UnitShort.mm],
+  [UnitShort.dm, UnitShort.mm],
+  [UnitShort.hm, UnitShort.m],
+  [UnitShort.Å, UnitShort.pm],
+  [UnitShort.in, UnitShort.mm],
+  [UnitShort.ft, UnitShort.mm],
+  [UnitShort.yd, UnitShort.mm],
+  [UnitShort.mi, UnitShort.km],
+  [UnitShort.pc, UnitShort.Pm],
+]);
+
+function getFactorToNextSmallestCommonUnit(
+  unit: UnitShort,
+  dimensionsCount: number = 1,
+): [number, UnitShort] {
+  const commonUnit = uncommonUnitsToCommon.get(unit);
+  if (commonUnit == null) {
+    return [1, unit];
+  }
+  const conversionFactor = (UnitsMap[unit] / UnitsMap[commonUnit]) ** dimensionsCount;
+  return [conversionFactor, commonUnit];
+}
+
 // Specifying a preset color makes an antd <Tag/> appear more lightweight, see https://ant.design/components/tag/
 const COLOR_MAP_ANTD: Array<string> = Object.keys(presetPalettes);
 export function stringToColor(string: string): string {
@@ -82,131 +139,263 @@ export function formatTuple(tuple: (Array<number> | Vector3 | Vector6) | null | 
     return "";
   }
 }
-export function formatScale(scaleArr: Vector3 | null | undefined, roundTo: number = 2): string {
-  if (scaleArr != null && scaleArr.length > 0) {
-    let unit = "nm³";
-    let scaleArrAdjusted = scaleArr;
-    const smallestValue = Math.min(...scaleArr);
-
-    if (smallestValue > 1000000) {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
-      scaleArrAdjusted = scaleArr.map((value) => value / 1000000);
-      unit = "mm³";
-    } else if (smallestValue > 1000) {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
-      scaleArrAdjusted = scaleArr.map((value) => value / 1000);
-      unit = "µm³";
-    }
-
-    const scaleArrRounded = scaleArrAdjusted.map((value) => Utils.roundTo(value, roundTo));
-    return `${scaleArrRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${unit}/voxel`;
-  } else {
+export function formatScale(scale: VoxelSize | null | undefined, roundTo: number = 2): string {
+  if (scale == null) {
     return "";
   }
+  const scaleFactor = scale.factor;
+  const smallestScaleFactor = Math.min(...scaleFactor);
+  const unitDimension = { unit: LongUnitToShortUnitMap[scale.unit], dimension: 1 };
+  const [conversionFactor, newUnit] = findBestUnitForFormatting(
+    smallestScaleFactor,
+    unitDimension,
+    nmFactorToUnit,
+    false,
+    roundTo,
+  );
+  const scaleInNmRounded = Utils.map3(
+    (value) => Utils.roundTo(value / conversionFactor, roundTo),
+    scaleFactor,
+  );
+  return `${scaleInNmRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${newUnit}³/voxel`;
 }
 
-export function formatNumberToUnit(
+function toOptionalFixed(num: number, decimalPrecision: number): string {
+  const roundedValue = Number.parseFloat(num.toFixed(decimalPrecision));
+  const isInt = roundedValue % 1 === 0;
+  return isInt ? roundedValue.toFixed(Math.min(decimalPrecision, 1)) : roundedValue.toString();
+}
+
+function formatNumberInUnit(
   number: number,
+  unitDimension: UnitDimension,
   unitMap: Map<number, string>,
   preferShorterDecimals: boolean = false,
   decimalPrecision: number = 1,
 ): string {
-  const closestFactor = findClosestToUnitFactor(
-    number,
-    unitMap,
-    preferShorterDecimals,
-    decimalPrecision,
-  );
-  const unit = unitMap.get(closestFactor);
+  let maybeAdjustedUnit;
+  let valueInUnit = number;
+  if (number === 0) {
+    maybeAdjustedUnit = adjustUnitToDimension(unitDimension.unit, unitDimension.dimension);
+  } else {
+    const [conversionFactor, newUnit] = findBestUnitForFormatting(
+      number,
+      unitDimension,
+      unitMap,
+      preferShorterDecimals,
+      decimalPrecision,
+    );
 
-  if (unit == null) {
-    throw new Error("Couldn't look up appropriate unit.");
+    valueInUnit = number / conversionFactor;
+    maybeAdjustedUnit = newUnit;
   }
-
-  const valueInUnit = number / closestFactor;
-
-  if (valueInUnit !== Math.floor(valueInUnit)) {
-    return `${valueInUnit.toFixed(decimalPrecision)}${ThinSpace}${unit}`;
-  }
-
-  return `${valueInUnit}${ThinSpace}${unit}`;
+  return `${toOptionalFixed(valueInUnit, decimalPrecision)}${ThinSpace}${maybeAdjustedUnit}`;
 }
 
-const nmFactorToUnit = new Map([
+export const nmFactorToUnit = new Map([
+  [1e-15, "ym"],
+  [1e-12, "zm"],
+  [1e-9, "am"],
+  [1e-6, "fm"],
   [1e-3, "pm"],
   [1, "nm"],
   [1e3, "µm"],
   [1e6, "mm"],
+  [1e7, "cm"],
   [1e9, "m"],
   [1e12, "km"],
+  [1e15, "Mm"],
+  [1e18, "Gm"],
+  [1e21, "Tm"],
+  [1e24, "Pm"],
+  [1e27, "Em"],
+  [1e30, "Zm"],
+  [1e33, "Ym"],
 ]);
-export function formatNumberToLength(lengthInNm: number, decimalPrecision: number = 1): string {
-  return formatNumberToUnit(lengthInNm, nmFactorToUnit, true, decimalPrecision);
+
+// Accepts a length that is interpreted in the given unit and returns a string
+// that uses a readable unit to represent the length.
+// E.g. formatNumberToLength(0.003, Unit.m) == "3.0 mm"
+export function formatNumberToLength(
+  length: number,
+  unit: UnitShort,
+  decimalPrecision: number = 1,
+  preferShorterDecimals: boolean = false,
+): string {
+  const unitDimension = { unit, dimension: 1 };
+  return formatNumberInUnit(
+    length,
+    unitDimension,
+    nmFactorToUnit,
+    preferShorterDecimals,
+    decimalPrecision,
+  );
 }
 
-const nmFactorToUnit2D = new Map([
+export const nmFactorToUnit2D = new Map([
+  [1e-30, "ym²"],
+  [1e-24, "zm²"],
+  [1e-18, "am²"],
+  [1e-12, "fm²"],
   [1e-6, "pm²"],
   [1, "nm²"],
   [1e6, "µm²"],
   [1e12, "mm²"],
+  [1e14, "cm²"],
   [1e18, "m²"],
   [1e24, "km²"],
+  [1e30, "Mm²"],
+  [1e36, "Gm²"],
+  [1e42, "Tm²"],
+  [1e48, "Pm²"],
+  [1e54, "Em²"],
+  [1e60, "Zm²"],
+  [1e66, "Ym²"],
 ]);
 
-export function formatNumberToArea(lengthInNm2: number, decimalPrecision: number = 1): string {
-  return formatNumberToUnit(lengthInNm2, nmFactorToUnit2D, true, decimalPrecision);
+// Accepts an area that is interpreted in the given unit and returns a string
+// that uses a readable unit to represent the area.
+// E.g. formatNumberToArea(0.003, Unit.m) == "30.0 cm²"
+export function formatNumberToArea(
+  lengthInUnit2: number,
+  unit: UnitShort,
+  decimalPrecision: number = 1,
+  preferShorterDecimals: boolean = false,
+): string {
+  const unitDimension = { unit, dimension: 2 };
+  return formatNumberInUnit(
+    lengthInUnit2,
+    unitDimension,
+    nmFactorToUnit2D,
+    preferShorterDecimals,
+    decimalPrecision,
+  );
 }
 
-const nmFactorToUnit3D = new Map([
+export const nmFactorToUnit3D = new Map([
+  [1e-45, "ym³"],
+  [1e-36, "zm³"],
+  [1e-27, "am³"],
+  [1e-18, "fm³"],
   [1e-9, "pm³"],
   [1, "nm³"],
   [1e9, "µm³"],
   [1e18, "mm³"],
+  [1e21, "cm³"],
   [1e27, "m³"],
   [1e36, "km³"],
+  [1e45, "Mm³"],
+  [1e54, "Gm³"],
+  [1e63, "Tm³"],
+  [1e72, "Pm³"],
+  [1e81, "Em³"],
+  [1e90, "Zm³"],
+  [1e99, "Ym³"],
 ]);
-export function formatNumberToVolume(lengthInNm3: number, decimalPrecision: number = 1): string {
-  return formatNumberToUnit(lengthInNm3, nmFactorToUnit3D, true, decimalPrecision);
+
+// Accepts an volume that is interpreted in the given unit and returns a string
+// that uses a readable unit to represent the volume.
+// E.g. formatNumberToVolume(0.003, Unit.m) == "3000.0 cm³"
+export function formatNumberToVolume(
+  lengthInUnit3: number,
+  unit: UnitShort,
+  decimalPrecision: number = 1,
+  preferShorterDecimals: boolean = false,
+): string {
+  const unitDimension = { unit, dimension: 3 };
+  return formatNumberInUnit(
+    lengthInUnit3,
+    unitDimension,
+    nmFactorToUnit3D,
+    preferShorterDecimals,
+    decimalPrecision,
+  );
 }
 
-const byteFactorToUnit = new Map([
-  [1, "B"],
-  [1e3, "KB"],
-  [1e6, "MB"],
-  [1e9, "GB"],
-  [1e12, "TB"],
+enum ByteUnit {
+  B = "B",
+  KB = "KB",
+  MB = "MB",
+  GB = "GB",
+  TB = "TB",
+}
+
+const byteFactorToUnit: Map<number, ByteUnit> = new Map([
+  [1, ByteUnit.B],
+  [1e3, ByteUnit.KB],
+  [1e6, ByteUnit.MB],
+  [1e9, ByteUnit.GB],
+  [1e12, ByteUnit.TB],
 ]);
+
+// Formats a byte count into a readable string.
+// E.g. formatCountToDataAmountUnit(40000000000) == "40.0 GB"
 export function formatCountToDataAmountUnit(
   count: number,
   preferShorterDecimals: boolean = false,
   decimalPrecision: number = 1,
 ): string {
-  return formatNumberToUnit(count, byteFactorToUnit, preferShorterDecimals, decimalPrecision);
+  const unitDimension = { unit: ByteUnit.B, dimension: 1 };
+  return formatNumberInUnit(
+    count,
+    unitDimension,
+    byteFactorToUnit,
+    preferShorterDecimals,
+    decimalPrecision,
+  );
 }
 
-const getSortedFactors = _.memoize((unitMap: Map<number, string>) =>
-  Array.from(unitMap.keys()).sort((a, b) => a - b),
+const getSortedFactorsAndUnits = _.memoize((unitMap: Map<number, string>) =>
+  Array.from(unitMap.entries()).sort((a, b) => a[0] - b[0]),
 );
 
-export function findClosestToUnitFactor(
+// This tuple represents the unit and the dimension the unit is in.
+type UnitDimension = { unit: UnitShort | ByteUnit; dimension: number };
+
+function adjustUnitToDimension(unit: UnitShort | ByteUnit, dimension: number): string {
+  return dimension === 1 ? unit : dimension === 2 ? `${unit}²` : `${unit}³`;
+}
+
+function findBestUnitForFormatting(
   number: number,
+  { unit, dimension }: UnitDimension,
   unitMap: Map<number, string>,
   preferShorterDecimals: boolean = false,
   decimalPrecision: number = 1,
-): number {
-  const sortedFactors = getSortedFactors(unitMap);
-  let closestFactor = sortedFactors[0];
-  const minumumToRoundUpToOne = 0.95;
+): [number, string] {
+  const isLengthUnit = unit in UnitsMap;
+  let factorToNextSmallestCommonUnit = 1;
+  if (isLengthUnit) {
+    // In case of a length unit, ensure it is among the common length units that we support conversion for.
+    [factorToNextSmallestCommonUnit, unit] = getFactorToNextSmallestCommonUnit(
+      unit as UnitShort,
+      dimension,
+    );
+  }
+  const adjustedUnit = adjustUnitToDimension(unit, dimension);
+  const sortedFactorsAndUnits = getSortedFactorsAndUnits(unitMap);
+  const currentFactor =
+    sortedFactorsAndUnits.find((entry) => entry[1] === adjustedUnit)?.[0] || undefined;
+  if (currentFactor == null) {
+    throw new Error(`Couldn't look up appropriate unit for ${adjustedUnit}.`);
+  }
+  const currentFactorFromSmallestCommonUnit = currentFactor * factorToNextSmallestCommonUnit;
+  let closestConversionFactor = sortedFactorsAndUnits[0][0] / currentFactorFromSmallestCommonUnit; // The default is 1 as in this case there is no conversion.
+  let closestUnit = sortedFactorsAndUnits[0][1];
 
-  for (const factor of sortedFactors) {
+  const minimumToRoundUpToOne = 0.95;
+  for (const [factor, unit] of sortedFactorsAndUnits) {
+    const currentConversionFactor = factor / currentFactorFromSmallestCommonUnit;
     if (
       number >=
-      factor * (preferShorterDecimals ? minumumToRoundUpToOne * 10 ** -decimalPrecision : 1)
+      currentConversionFactor *
+        (preferShorterDecimals ? minimumToRoundUpToOne * 10 ** -decimalPrecision : 1)
     ) {
-      closestFactor = factor;
+      closestConversionFactor = currentConversionFactor;
+      closestUnit = unit;
     }
   }
-  return closestFactor;
+  return [closestConversionFactor, closestUnit];
 }
 export function formatLengthAsVx(lengthInVx: number, roundTo: number = 2): string {
   const roundedLength = Utils.roundTo(lengthInVx, roundTo);
@@ -215,13 +404,15 @@ export function formatLengthAsVx(lengthInVx: number, roundTo: number = 2): strin
 export function formatAreaAsVx(areaInVx: number, roundTo: number = 2): string {
   return `${formatLengthAsVx(areaInVx, roundTo)}²`;
 }
-export function formatExtentWithLength(
+export function formatExtentInUnitWithLength(
   extent: BoundingBoxObject,
-  formattingFunction: (arg0: number) => string,
+  formattingFunction: (length: number) => string,
 ): string {
-  return `${formattingFunction(extent.width)}${ThinSpace}×${ThinSpace}${formattingFunction(
-    extent.height,
-  )}${ThinSpace}×${ThinSpace}${formattingFunction(extent.depth)}`;
+  return [
+    formattingFunction(extent.width),
+    formattingFunction(extent.height),
+    formattingFunction(extent.depth),
+  ].join(`${ThinSpace}×${ThinSpace}`);
 }
 export function formatMilliseconds(durationMilliSeconds: number): string {
   return formatSeconds(durationMilliSeconds / 1000);
@@ -247,6 +438,12 @@ export function formatDurationToMinutesAndSeconds(durationInMillisecons: number)
   const duration = dayjs.duration(durationInMillisecons);
   return duration.format("mm:ss");
 }
+
+export function formatDurationToSeconds(durationInMillisecons: number) {
+  const duration = dayjs.duration(durationInMillisecons);
+  return duration.format("s");
+}
+
 export function formatHash(id: string): string {
   return id.slice(-6);
 }
@@ -254,10 +451,10 @@ export function formatHash(id: string): string {
 export function formatDateMedium(date: Date | number): string {
   return dayjs(date).format("lll");
 }
-export function formatDistance(start: Date | number, end: Date | number): string {
+export function formatTimeInterval(start: Date | number, end: Date | number): string {
   return dayjs.duration(dayjs(start).diff(dayjs(end))).humanize(true);
 }
-export function formatDistanceStrict(start: Date | number, end: Date | number): string {
+export function formatTimeIntervalStrict(start: Date | number, end: Date | number): string {
   const duration = dayjs.duration(dayjs(start).diff(dayjs(end)));
   return formatDurationStrict(duration);
 }
@@ -315,6 +512,46 @@ export function formatBytes(nbytes: number) {
   return `${nbytes} B`;
 }
 
+export function formatVoxels(voxelCount: number) {
+  if (voxelCount == null) {
+    return "";
+  }
+  if (!Number.isFinite(voxelCount)) {
+    return "Infinity";
+  }
+  if (voxelCount > 2 ** 50) {
+    return `${(voxelCount / 2 ** 50).toPrecision(4)} PVx`;
+  }
+  if (voxelCount > 2 ** 40) {
+    return `${(voxelCount / 2 ** 40).toPrecision(4)} TVx`;
+  }
+  if (voxelCount > 2 ** 30) {
+    return `${(voxelCount / 2 ** 30).toPrecision(4)} GVx`;
+  }
+  if (voxelCount > 2 ** 20) {
+    return `${(voxelCount / 2 ** 20).toPrecision(4)} MVx`;
+  }
+  if (voxelCount > 2 ** 10) {
+    return `${(voxelCount / 2 ** 10).toPrecision(4)} KVx`;
+  }
+  return `${voxelCount} B`;
+}
+
 export function formatNumber(num: number): string {
   return new Intl.NumberFormat("en-US").format(num);
+}
+
+export function formatWkLibsNdBBox(ndBBox: WkLibsNdBoundingBox): string {
+  let bboxString = ndBBox.topLeft.join(", ");
+  bboxString += ` ${ndBBox.width}, ${ndBBox.height}, ${ndBBox.depth}`;
+  let additionalAxisStrings = ndBBox.additionalAxes.map((axis) => {
+    const boundsString =
+      axis.bounds[1] - 1 > axis.bounds[0]
+        ? `${axis.bounds[0]}-${axis.bounds[1]}`
+        : `${axis.bounds[0]}`;
+    return `${axis.name}=${boundsString}`;
+  });
+  return additionalAxisStrings.length > 0
+    ? `${bboxString} (${additionalAxisStrings.join(", ")})`
+    : bboxString;
 }

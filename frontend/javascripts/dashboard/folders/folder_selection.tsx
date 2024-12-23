@@ -1,9 +1,9 @@
 import _ from "lodash";
 import { TreeSelect } from "antd";
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 import { useFolderHierarchyQuery } from "dashboard/dataset/queries";
-import { FolderItem } from "types/api_flow_types";
+import type { FolderItem } from "types/api_flow_types";
 
 function addDisabledProperty(tree: FolderItem[]) {
   const newTree = _.cloneDeep(tree);
@@ -47,7 +47,7 @@ export default function FolderSelection({
     } else {
       setTreeData([]);
     }
-  }, [hierarchy]);
+  }, [hierarchy, disableNotEditableFolders]);
 
   return (
     <TreeSelect
@@ -57,8 +57,9 @@ export default function FolderSelection({
       value={folderId || undefined}
       dropdownStyle={{ maxHeight: 500, overflow: "auto" }}
       placeholder="Select Folder"
+      treeNodeFilterProp={"title"}
       allowClear
-      dropdownMatchSelectWidth={false}
+      popupMatchSelectWidth={false}
       treeDefaultExpandAll
       onChange={onChange}
       treeData={treeData}

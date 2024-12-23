@@ -1,4 +1,3 @@
-import React from "react";
 import _ from "lodash";
 import { document } from "libs/window";
 import constants from "oxalis/constants";
@@ -316,6 +315,7 @@ export function computeDataTexturesSetup<
 
 export function getGpuFactorsWithLabels() {
   return [
+    ["16", "Ultra"],
     ["12", "Very High"],
     ["6", "High"],
     ["4", "Medium"],

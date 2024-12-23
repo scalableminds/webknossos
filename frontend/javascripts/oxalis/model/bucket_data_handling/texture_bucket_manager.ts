@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import _ from "lodash";
-import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
+import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import {
   getBucketCapacity,
@@ -9,12 +9,13 @@ import {
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getRenderer } from "oxalis/controller/renderer";
 import { waitForCondition } from "libs/utils";
-import UpdatableTexture from "libs/UpdatableTexture";
+import type UpdatableTexture from "libs/UpdatableTexture";
 import constants from "oxalis/constants";
 import window from "libs/window";
 import type { ElementClass } from "types/api_flow_types";
-import { CuckooTableVec5 } from "./cuckoo_table_vec5";
+import type { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 import app from "app";
+import { WkDevFlags } from "oxalis/api/wk_dev";
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
@@ -126,7 +127,7 @@ export default class TextureBucketManager {
       return;
     }
 
-    if (bucketDebuggingFlags.visualizeBucketsOnGPU) {
+    if (WkDevFlags.bucketDebugging.visualizeBucketsOnGPU) {
       bucket.unvisualize();
     }
 
@@ -182,7 +183,7 @@ export default class TextureBucketManager {
   // Commit "active" buckets by writing these to the dataTexture.
   processWriterQueue() {
     // uniqBy removes multiple write-buckets-requests for the same index.
-    // It preserves the first occurence of each duplicate, which is why
+    // It preserves the first occurrence of each duplicate, which is why
     // this queue has to be filled from the front (via unshift) und read from the
     // back (via pop). This ensures that the newest bucket "wins" if there are
     // multiple buckets for the same index.
@@ -209,7 +210,7 @@ export default class TextureBucketManager {
         continue;
       }
 
-      if (bucketDebuggingFlags.visualizeBucketsOnGPU) {
+      if (WkDevFlags.bucketDebugging.visualizeBucketsOnGPU) {
         bucket.visualize();
       }
 

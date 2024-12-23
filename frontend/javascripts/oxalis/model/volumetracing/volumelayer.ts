@@ -1,11 +1,11 @@
 import _ from "lodash";
 import { V2, V3 } from "libs/mjs";
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import {
-  scaleGlobalPositionWithResolution,
-  scaleGlobalPositionWithResolutionFloat,
+  scaleGlobalPositionWithMagnification,
+  scaleGlobalPositionWithMagnificationFloat,
   zoomedPositionToGlobalPosition,
 } from "oxalis/model/helpers/position_converter";
 import type { OrthoView, Vector2, Vector3, AnnotationTool } from "oxalis/constants";
@@ -138,9 +138,9 @@ export class VoxelNeighborQueue2D extends VoxelNeighborQueue3D {
 class VolumeLayer {
   /*
   From the outside, the VolumeLayer accepts only global positions. Internally,
-  these are converted to the actual used resolution (activeResolution).
-  Therefore, members of this class are in the resolution space of
-  `activeResolution`.
+  these are converted to the actual used mags (activeMag).
+  Therefore, members of this class are in the mag space of
+  `activeMag`.
   */
   volumeTracingId: string;
   plane: OrthoView;
@@ -150,21 +150,21 @@ class VolumeLayer {
   minCoord: Vector3 | null | undefined;
   maxCoord: Vector3 | null | undefined;
 
-  activeResolution: Vector3;
+  activeMag: Vector3;
 
   constructor(
     volumeTracingId: string,
     plane: OrthoView,
     thirdDimensionValue: number,
-    activeResolution: Vector3,
+    activeMag: Vector3,
   ) {
     this.volumeTracingId = volumeTracingId;
     this.plane = plane;
     this.maxCoord = null;
     this.minCoord = null;
-    this.activeResolution = activeResolution;
+    this.activeMag = activeMag;
     const thirdDim = Dimensions.thirdDimensionForPlane(this.plane);
-    this.thirdDimensionValue = Math.floor(thirdDimensionValue / this.activeResolution[thirdDim]);
+    this.thirdDimensionValue = Math.floor(thirdDimensionValue / this.activeMag[thirdDim]);
   }
 
   addContour(globalPos: Vector3): void {
@@ -172,7 +172,7 @@ class VolumeLayer {
   }
 
   updateArea(globalPos: Vector3): void {
-    const pos = scaleGlobalPositionWithResolution(globalPos, this.activeResolution);
+    const pos = scaleGlobalPositionWithMagnification(globalPos, this.activeMag);
     let [maxCoord, minCoord] = [this.maxCoord, this.minCoord];
 
     if (maxCoord == null || minCoord == null) {
@@ -204,8 +204,8 @@ class VolumeLayer {
     if (this.minCoord == null || this.maxCoord == null) {
       return null;
     }
-    const min = zoomedPositionToGlobalPosition(this.minCoord, this.activeResolution);
-    const max = zoomedPositionToGlobalPosition(this.maxCoord, this.activeResolution);
+    const min = zoomedPositionToGlobalPosition(this.minCoord, this.activeMag);
+    const max = zoomedPositionToGlobalPosition(this.maxCoord, this.activeMag);
     return new BoundingBox({ min, max });
   }
 
@@ -220,7 +220,7 @@ class VolumeLayer {
     }
 
     return globalContourList.map<Vector3>((point) =>
-      scaleGlobalPositionWithResolutionFloat(point, this.activeResolution),
+      scaleGlobalPositionWithMagnificationFloat(point, this.activeMag),
     );
   }
 
@@ -378,19 +378,16 @@ class VolumeLayer {
     lastUnzoomedPosition: Vector3,
     unzoomedPosition: Vector3,
   ): VoxelBuffer2D | null {
-    const lastPosition = scaleGlobalPositionWithResolution(
-      lastUnzoomedPosition,
-      this.activeResolution,
-    );
-    const position = scaleGlobalPositionWithResolution(unzoomedPosition, this.activeResolution);
+    const lastPosition = scaleGlobalPositionWithMagnification(lastUnzoomedPosition, this.activeMag);
+    const position = scaleGlobalPositionWithMagnification(unzoomedPosition, this.activeMag);
     const state = Store.getState();
     const { brushSize } = state.userConfiguration;
     const radius = Math.round(brushSize / 2);
     // Use the baseVoxelFactors to scale the rectangle, otherwise it'll become deformed
     const scale = this.get2DCoordinate(
-      scaleGlobalPositionWithResolutionFloat(
-        getBaseVoxelFactors(state.dataset.dataSource.scale),
-        this.activeResolution,
+      scaleGlobalPositionWithMagnificationFloat(
+        getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
+        this.activeMag,
       ),
     );
     const floatingCoord2dLastPosition = this.get2DCoordinate(lastPosition);
@@ -440,7 +437,7 @@ class VolumeLayer {
 
   globalCoordToMag2DFloat(position: Vector3): Vector2 {
     return this.get2DCoordinate(
-      scaleGlobalPositionWithResolutionFloat(position, this.activeResolution),
+      scaleGlobalPositionWithMagnificationFloat(position, this.activeMag),
     );
   }
 
@@ -449,8 +446,8 @@ class VolumeLayer {
     const { brushSize } = state.userConfiguration;
     const dimIndices = Dimensions.getIndices(this.plane);
     const unzoomedRadius = Math.round(brushSize / 2);
-    const width = Math.floor((2 * unzoomedRadius) / this.activeResolution[dimIndices[0]]);
-    const height = Math.floor((2 * unzoomedRadius) / this.activeResolution[dimIndices[1]]);
+    const width = Math.floor((2 * unzoomedRadius) / this.activeMag[dimIndices[0]]);
+    const height = Math.floor((2 * unzoomedRadius) / this.activeMag[dimIndices[1]]);
     const floatingCoord2d = this.globalCoordToMag2DFloat(position);
 
     const radiusOffset = Dimensions.transDim([unzoomedRadius, unzoomedRadius, 0], this.plane);
@@ -467,7 +464,7 @@ class VolumeLayer {
     const buffer2D = this.createVoxelBuffer2D(minCoord2d, width, height);
     // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
     const [scaleX, scaleY] = this.get2DCoordinate(
-      getBaseVoxelFactors(state.dataset.dataSource.scale),
+      getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
     );
 
     const setMap = (x: number, y: number) => {
@@ -475,12 +472,12 @@ class VolumeLayer {
     };
 
     Drawing.fillCircle(
-      Math.floor(unzoomedRadius / this.activeResolution[dimIndices[0]]),
-      Math.floor(unzoomedRadius / this.activeResolution[dimIndices[1]]), // the unzoomedRadius is adapted to the correct resolution by the
+      Math.floor(unzoomedRadius / this.activeMag[dimIndices[0]]),
+      Math.floor(unzoomedRadius / this.activeMag[dimIndices[1]]), // the unzoomedRadius is adapted to the correct mag by the
       // following scale parameters
       unzoomedRadius,
-      scaleX / this.activeResolution[dimIndices[0]],
-      scaleY / this.activeResolution[dimIndices[1]],
+      scaleX / this.activeMag[dimIndices[0]],
+      scaleY / this.activeMag[dimIndices[1]],
       setMap,
     );
     return buffer2D;
@@ -545,13 +542,13 @@ class VolumeLayer {
 
     const area = sumArea / 2;
     if (area === 0) {
-      return zoomedPositionToGlobalPosition(contourList[0], this.activeResolution);
+      return zoomedPositionToGlobalPosition(contourList[0], this.activeMag);
     }
 
     const cx = sumCx / 6 / area;
     const cy = sumCy / 6 / area;
     const zoomedPosition = this.get3DCoordinate([cx, cy]);
-    const pos = zoomedPositionToGlobalPosition(zoomedPosition, this.activeResolution);
+    const pos = zoomedPositionToGlobalPosition(zoomedPosition, this.activeMag);
     return pos;
   }
 }

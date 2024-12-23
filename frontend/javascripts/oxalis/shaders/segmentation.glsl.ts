@@ -7,11 +7,11 @@ import {
   colormapJet,
   jsColormapJet,
 } from "oxalis/shaders/utils.glsl";
-import { Vector3, Vector4 } from "oxalis/constants";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import type { ShaderModule } from "./shader_module_system";
-import { binarySearchIndex } from "./mappings.glsl";
 import { getRgbaAtIndex } from "./texture_access.glsl";
 import { hashCombine } from "./hashing.glsl";
+import { attemptMappingLookUp } from "./mappings.glsl";
 
 export const convertCellIdToRGB: ShaderModule = {
   requirements: [
@@ -23,16 +23,28 @@ export const convertCellIdToRGB: ShaderModule = {
     hashCombine,
   ],
   code: `
-    uint vec4ToUint(vec4 idLow) {
+    highp uint vec4ToUint(vec4 idLow) {
       uint integerValue = (uint(idLow.a) << 24) | (uint(idLow.b) << 16) | (uint(idLow.g) << 8) | uint(idLow.r);
       return integerValue;
     }
 
+    vec4 uintToVec4(uint integerValue) {
+      float r = float(integerValue & uint(0xFF));
+      float g = float((integerValue >> 8) & uint(0xFF));
+      float b = float((integerValue >> 16) & uint(0xFF));
+      float a = float((integerValue >> 24) & uint(0xFF));
+
+      vec4 id = vec4(r, g, b, a);
+      return id;
+    }
+
     vec3 attemptCustomColorLookUp(uint integerValue, uint seed) {
-      highp uint h0 = hashCombine(seed, integerValue) % CUCKOO_ENTRY_CAPACITY;
-      h0 = uint(h0 * CUCKOO_ELEMENTS_PER_ENTRY / CUCKOO_ELEMENTS_PER_TEXEL);
-      highp uint x = h0 % CUCKOO_TWIDTH;
-      highp uint y = h0 / CUCKOO_TWIDTH;
+      highp uint h0 = hashCombine(seed, integerValue);
+      // See getDiminishedEntryCapacity() for an explanation about the -1
+      h0 = h0 % (COLOR_CUCKOO_ENTRY_CAPACITY - 1u);
+      h0 = uint(h0 * COLOR_CUCKOO_ELEMENTS_PER_ENTRY / COLOR_CUCKOO_ELEMENTS_PER_TEXEL);
+      highp uint x = h0 % COLOR_CUCKOO_TWIDTH;
+      highp uint y = h0 / COLOR_CUCKOO_TWIDTH;
 
       uvec4 customEntry = texelFetch(custom_color_texture, ivec2(x, y), 0);
       uvec3 customColor = customEntry.gba;
@@ -41,8 +53,9 @@ export const convertCellIdToRGB: ShaderModule = {
          return vec3(-1);
       }
 
-      return vec3(customEntry.gba) / 255.;
+      return vec3(customColor) / 255.;
     }
+
     vec3 convertCellIdToRGB(vec4 idHigh, vec4 idLow) {
       /*
       This function maps from a segment id to a color with a pattern.
@@ -71,9 +84,6 @@ export const convertCellIdToRGB: ShaderModule = {
       float colorHue = rgb2hsv(colormapJet(colorValueDecimal)).x;
       float colorSaturation = 1.;
       float colorValue = 1.;
-      // For historical reference: the old color generation was:
-      // float lastEightBits = id.r;
-      // float colorHue = mod(lastEightBits * (golden_ratio - 1.0), 1.0);
 
       uint integerValue = vec4ToUint(idLow);
       vec3 customColor = attemptCustomColorLookUp(integerValue, custom_color_seeds[0]);
@@ -106,8 +116,8 @@ export const convertCellIdToRGB: ShaderModule = {
       float zoomAdaption = ceil(zoomValue);
       vec3 worldCoordUVW = coordScaling * getWorldCoordUVW()  / zoomAdaption;
 
-      float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
-      vec3 anisotropyFactorUVW = transDim(datasetScale) / baseVoxelSize;
+      float baseVoxelSize = min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
+      vec3 anisotropyFactorUVW = transDim(voxelSizeFactor) / baseVoxelSize;
       worldCoordUVW.x = worldCoordUVW.x * anisotropyFactorUVW.x;
       worldCoordUVW.y = worldCoordUVW.y * anisotropyFactorUVW.y;
 
@@ -212,8 +222,8 @@ export const getBrushOverlay: ShaderModule = {
 
       // Compute the anisotropy of the dataset so that the brush looks the same in
       // each viewport
-      float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
-      vec3 anisotropyFactorUVW = transDim(datasetScale) / baseVoxelSize;
+      float baseVoxelSize = min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
+      vec3 anisotropyFactorUVW = transDim(voxelSizeFactor) / baseVoxelSize;
 
       float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * anisotropyFactorUVW.xy);
 
@@ -240,8 +250,8 @@ export const getCrossHairOverlay: ShaderModule = {
 
       // Compute the anisotropy of the dataset so that the cross hair looks the same in
       // each viewport
-      float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
-      vec3 anisotropyFactorUVW = transDim(datasetScale) / baseVoxelSize;
+      float baseVoxelSize = min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
+      vec3 anisotropyFactorUVW = transDim(voxelSizeFactor) / baseVoxelSize;
 
       // Compute the distance in screen coordinate space to show a zoom-independent cross hair
       vec2 distanceVector = (worldCoordUVW.xy - activeSegmentPosUVW.xy) * anisotropyFactorUVW.xy / zoomValue;
@@ -250,6 +260,9 @@ export const getCrossHairOverlay: ShaderModule = {
       crossHairColor.a = float(
         // Only show the cross hair in proofreading mode ...
         isProofreading &&
+        // ... when no supervoxel is highlighted in 3D viewport (the cross
+        // position might not reflect the selected supervoxel which can be confusing).
+        !isUnmappedSegmentHighlighted &&
         // ... on the exact w-slice ...
         flooredGlobalPosUVW.z == floor(activeSegmentPosUVW.z) &&
         // ... with this extent ...
@@ -265,19 +278,23 @@ export const getCrossHairOverlay: ShaderModule = {
   `,
 };
 
-export const getSegmentationId: ShaderModule = {
-  requirements: [binarySearchIndex, getRgbaAtIndex],
+export const getSegmentId: ShaderModule = {
+  requirements: [getRgbaAtIndex, convertCellIdToRGB, attemptMappingLookUp],
   code: `
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
-    vec4[2] getSegmentationId_<%= segmentationName %>(vec3 worldPositionUVW) {
-      vec4[2] volume_color;
+    void getSegmentId_<%= segmentationName %>(vec3 worldPositionUVW, out vec4[2] segment_id, out vec4[2] mapped_id) {
       vec3 transformedCoordUVW = transDim((<%= segmentationName %>_transform * vec4(transDim(worldPositionUVW), 1.0)).xyz);
       if (isOutsideOfBoundingBox(transformedCoordUVW)) {
-        return volume_color;
+        // Some GPUs don't null-initialize the variables.
+        segment_id[0] = vec4(0.);
+        segment_id[1] = vec4(0.);
+        mapped_id[0] = vec4(0.);
+        mapped_id[1] = vec4(0.);
+        return;
       }
 
-      volume_color =
+      segment_id =
         getSegmentIdOrFallback(
           <%= formatNumberAsGLSLFloat(colorLayerNames.length + layerIndex) %>,
           <%= segmentationName %>_data_texture_width,
@@ -288,38 +305,48 @@ export const getSegmentationId: ShaderModule = {
         );
 
       // Depending on the packing degree, the returned volume color contains extra values
-      // which should be ignored (in the binary search as well as when comparing
-      // a cell id with the hovered cell passed via uniforms, for example).
+      // which should be ignored (e.g., when comparing a cell id with the hovered cell
+      // passed via uniforms).
 
       <% if (textureLayerInfos[segmentationName].packingDegree === 4) { %>
-        volume_color[1] = vec4(volume_color[1].r, 0.0, 0.0, 0.0);
+        segment_id[1] = vec4(segment_id[1].r, 0.0, 0.0, 0.0);
       <% } else if (textureLayerInfos[segmentationName].packingDegree === 2) { %>
-        volume_color[1] = vec4(volume_color[1].r, volume_color[1].g, 0.0, 0.0);
+        segment_id[1] = vec4(segment_id[1].r, segment_id[1].g, 0.0, 0.0);
       <% } %>
 
-      if (isMappingEnabled) {
-        // Note that currently only the lower 32 bits of the segmentation
-        // are used for applying the JSON mapping.
+      mapped_id[0] = 255. * segment_id[0]; // High
+      mapped_id[1] = 255. * segment_id[1]; // Low
 
-        float index = binarySearchIndex(
-          segmentation_mapping_lookup_texture,
-          mappingSize,
-          volume_color[1]
-        );
-        if (index != -1.0) {
-          volume_color[1] = getRgbaAtIndex(
-            segmentation_mapping_texture,
-            <%= mappingTextureWidth %>,
-            index
-          );
-        } else if (hideUnmappedIds) {
-          volume_color[1] = vec4(0.0);
+      uint high_integer = vec4ToUint(mapped_id[0]);
+      uint low_integer = vec4ToUint(mapped_id[1]);
+
+      if (shouldApplyMappingOnGPU) {
+        ivec2 mapped_entry = is_mapping_64bit
+          ? attemptMappingLookUp64(high_integer, low_integer, mapping_seeds[0])
+          : attemptMappingLookUp32(low_integer, mapping_seeds[0]);
+        if (mapped_entry.r == -1) {
+          mapped_entry = is_mapping_64bit
+          ? attemptMappingLookUp64(high_integer, low_integer, mapping_seeds[1])
+          : attemptMappingLookUp32(low_integer, mapping_seeds[1]);
+        }
+        if (mapped_entry.r == -1) {
+          mapped_entry = is_mapping_64bit
+            ? attemptMappingLookUp64(high_integer, low_integer, mapping_seeds[2])
+            : attemptMappingLookUp32(low_integer, mapping_seeds[2]);
+        }
+        if (mapped_entry.r != -1) {
+          mapped_id[0] = uintToVec4(uint(mapped_entry[0]));
+          mapped_id[1] = uintToVec4(uint(mapped_entry[1]));
+        } else if (hideUnmappedIds || mappingIsPartial) {
+          // If the mapping is partially known to the front-end (this is the case for HDF5 mappings),
+          // we hide unmapped ids. As soon as they are loaded, the segments will appear.
+          mapped_id[0] = vec4(0.0);
+          mapped_id[1] = vec4(0.0);
         }
       }
 
-      volume_color[0] *= 255.0;
-      volume_color[1] *= 255.0;
-      return volume_color;
+      segment_id[0] *= 255.0;
+      segment_id[1] *= 255.0;
     }
 <% }) %>
   `,

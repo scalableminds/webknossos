@@ -1,28 +1,23 @@
-import { AutoSizer, List } from "react-virtualized";
-import type { Dispatch } from "redux";
-import { Input, Dropdown, Tooltip } from "antd";
+import { Dropdown, Tooltip, Space, Tree as AntdTree, type TreeProps, type GetRef } from "antd";
 import {
   ArrowLeftOutlined,
   ArrowRightOutlined,
+  DownOutlined,
   EditOutlined,
   InfoCircleOutlined,
   SearchOutlined,
   ShrinkOutlined,
 } from "@ant-design/icons";
-import { connect } from "react-redux";
-import Maybe from "data.maybe";
-import * as React from "react";
+import { useDispatch, useSelector } from "react-redux";
+import React, { useEffect, useRef, useState } from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import update from "immutability-helper";
 import { Comment, commentListId } from "oxalis/view/right-border-tabs/comment_tab/comment";
-import { Comparator, toNullable, compareBy, localeCompareBy, zipMaybe } from "libs/utils";
+import { compareBy, localeCompareBy } from "libs/utils";
 import { InputKeyboard } from "libs/input";
 import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import { getActiveTree, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { makeSkeletonTracingGuard } from "oxalis/view/guards";
+import { getActiveNode, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setActiveNodeAction,
   createCommentAction,
@@ -31,66 +26,52 @@ import {
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import InputComponent from "oxalis/view/components/input_component";
-import type { CommentType, OxalisState, SkeletonTracing, Tree, TreeMap } from "oxalis/store";
-import Store from "oxalis/store";
-import TreeWithComments from "oxalis/view/right-border-tabs/comment_tab/tree_with_comments";
+import type {
+  CommentType,
+  MutableCommentType,
+  OxalisState,
+  SkeletonTracing,
+  Tree,
+  TreeMap,
+} from "oxalis/store";
 import messages from "messages";
 import AdvancedSearchPopover from "../advanced_search_popover";
-import { MenuProps } from "rc-menu";
-const InputGroup = Input.Group;
-const treeTypeHint = [] as Array<Tree>;
-const commentTypeHint = [] as Array<CommentType>;
+import type { MenuProps } from "rc-menu";
+import type { Comparator } from "types/globals";
+import type { EventDataNode } from "antd/es/tree";
+import AutoSizer from "react-virtualized-auto-sizer";
+import { useEffectOnlyOnce } from "libs/react_hooks";
+import { ColoredDotIcon } from "../segments_tab/segment_list_item";
+import { useLifecycle } from "beautiful-react-hooks";
+import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
+
 const commentTabId = "commentTabId";
-const enum SortByEnum {
+enum SortByEnum {
   NAME = "NAME",
   ID = "ID",
   NATURAL = "NATURAL",
 }
-type SortByEnumType = keyof typeof SortByEnum;
-type SortOptions = {
-  sortBy: SortByEnumType;
-  isSortedAscending: boolean;
-};
 
-function getTreeSorter({ sortBy, isSortedAscending }: SortOptions): Comparator<Tree> {
+function getTreeSorter(sortBy: SortByEnum, isSortedAscending: boolean): Comparator<Tree> {
   return sortBy === SortByEnum.ID
-    ? compareBy(treeTypeHint, (tree) => tree.treeId, isSortedAscending)
-    : localeCompareBy(
-        treeTypeHint,
+    ? compareBy<Tree>((tree) => tree.treeId, isSortedAscending)
+    : localeCompareBy<Tree>(
         (tree) => `${tree.name}_${tree.treeId}`,
         isSortedAscending,
         sortBy === SortByEnum.NATURAL,
       );
 }
 
-function getCommentSorter({ sortBy, isSortedAscending }: SortOptions): Comparator<CommentType> {
+function getCommentSorter(sortBy: SortByEnum, isSortedAscending: boolean): Comparator<CommentType> {
   return sortBy === SortByEnum.ID
-    ? compareBy([] as Array<CommentType>, (comment) => comment.nodeId, isSortedAscending)
-    : localeCompareBy(
-        commentTypeHint,
+    ? compareBy<CommentType>((comment) => comment.nodeId, isSortedAscending)
+    : localeCompareBy<CommentType>(
         (comment) => `${comment.content}_${comment.nodeId}`,
         isSortedAscending,
         sortBy === SortByEnum.NATURAL,
       );
 }
 
-type StateProps = {
-  skeletonTracing: SkeletonTracing | null | undefined;
-  allowUpdate: boolean;
-  setActiveNode: (nodeId: number) => void;
-  deleteComment: () => void;
-  createComment: (text: string) => void;
-};
-type Props = StateProps;
-type PropsWithSkeleton = Props & {
-  skeletonTracing: SkeletonTracing;
-};
-type CommentTabState = {
-  isSortedAscending: boolean;
-  sortBy: SortByEnumType;
-  collapsedTreeIds: Record<number, boolean>;
-  isMarkdownModalOpen: boolean;
-};
 const RELEVANT_ACTIONS_FOR_COMMENTS = [
   "updateTree",
   "deleteTree",
@@ -99,131 +80,130 @@ const RELEVANT_ACTIONS_FOR_COMMENTS = [
   "deleteEdge",
   "revertToVersion",
 ];
+
 const memoizedDeriveData = memoizeOne(
-  (trees: TreeMap, state: CommentTabState): Array<Tree | CommentType> => {
+  (trees: TreeMap, sortBy: SortByEnum, isSortedAscending: boolean): Tree[] => {
     const sortedTrees = _.values(trees)
       .filter((tree) => tree.comments.length > 0)
-      .sort(getTreeSorter(state));
+      .sort(getTreeSorter(sortBy, isSortedAscending));
 
-    const commentSorter = getCommentSorter(state);
-    const data = [];
-
-    for (const tree of sortedTrees) {
-      data.push(tree);
-      const isCollapsed = state.collapsedTreeIds[tree.treeId];
-
-      if (!isCollapsed && tree.comments.length > 0) {
-        const sortedComments = tree.comments.slice().sort(commentSorter);
-
-        // Don't use concat to avoid creating a new `data` array for each tree
-        for (const comment of sortedComments) {
-          data.push(comment);
-        }
-      }
-    }
-
-    return data;
+    return sortedTrees;
   },
 );
 
-class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState> {
-  listRef: List | null | undefined;
-  storePropertyUnsubscribers: Array<() => void> = [];
-  keyboard = new InputKeyboard(
-    {
-      n: () => this.nextComment(),
-      p: () => this.previousComment(),
+type Props = {
+  skeletonTracing: SkeletonTracing;
+};
+
+function CommentTabView(props: Props) {
+  const treeRef = useRef<GetRef<typeof AntdTree>>(null);
+
+  const [isSortedAscending, setIsSortedAscending] = useState(true);
+  const [sortBy, setSortBy] = useState(SortByEnum.NAME);
+  const [expandedTreeIds, setExpandedTreeIds] = useState<React.Key[]>([]);
+  const [highlightedNodeIds, setHighlightedNodeIds] = useState<React.Key[]>([]);
+  const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState(false);
+  const [isVisibleInDom, setIsVisibleInDom] = useState(true);
+
+  const [keyboard, setKeyboard] = useState<InputKeyboard | null>(null);
+  const nextCommentRef = useRef<(arg0?: boolean) => void>();
+  const previousCommentRef = useRef<() => void>();
+
+  const dispatch = useDispatch();
+
+  const allowUpdate = useSelector((state: OxalisState) => state.tracing.restrictions.allowUpdate);
+  const keyboardDelay = useSelector((state: OxalisState) => state.userConfiguration.keyboardDelay);
+
+  const isAnnotationLockedByUser = useSelector(
+    (state: OxalisState) => state.tracing.isLockedByOwner,
+  );
+  const isOwner = useSelector((state: OxalisState) => isAnnotationOwner(state));
+
+  const activeComment = useSelector((_state: OxalisState) => getActiveComment());
+
+  useEffectOnlyOnce(() => {
+    // expand all trees by default
+    const defaultCollapsedTreeIds = getData().map((tree) => tree.treeId.toString());
+    setExpandedTreeIds(defaultCollapsedTreeIds);
+  });
+
+  useLifecycle(
+    () => {
+      // This keyboard handler is created only once on the very first render.
+      // Instead of directly attaching callback function, we need to rely on React.refs instead
+      // to prevent the callbacks from becoming stale and outdated as the component changes
+      // its state or props.
+      const newKeyboard = new InputKeyboard(
+        {
+          n: () => {
+            if (nextCommentRef?.current) nextCommentRef.current();
+          },
+          p: () => {
+            if (previousCommentRef?.current) previousCommentRef.current();
+          },
+        },
+        {
+          delay: keyboardDelay,
+        },
+      );
+      if (keyboard === null) setKeyboard(newKeyboard);
     },
-    {
-      delay: Store.getState().userConfiguration.keyboardDelay,
+    () => {
+      keyboard?.destroy();
     },
   );
 
-  state: CommentTabState = {
-    isSortedAscending: true,
-    sortBy: SortByEnum.NAME,
-    collapsedTreeIds: {},
-    isMarkdownModalOpen: false,
-  };
+  useEffect(() => {
+    if (keyboard) keyboard.delay = keyboardDelay;
+  }, [keyboard, keyboardDelay]);
 
-  componentDidMount() {
-    this.storePropertyUnsubscribers.push(
-      listenToStoreProperty(
-        (state) => state.userConfiguration.keyboardDelay,
-        (keyboardDelay) => {
-          if (this.keyboard != null) {
-            this.keyboard.delay = keyboardDelay;
-          }
-        },
-      ),
-    );
+  useEffect(() => {
+    // If the activeNode has a comment, scroll to it,
+    // otherwise scroll to the activeTree
+    if (isVisibleInDom) {
+      scrollToActiveCommentOrTree(activeComment, props.skeletonTracing.activeTreeId);
+    }
+  }, [activeComment, props.skeletonTracing.activeTreeId, isVisibleInDom]);
+
+  function scrollToActiveCommentOrTree(
+    activeComment: MutableCommentType | undefined,
+    activeTreeId: number | undefined | null,
+  ) {
+    // scroll to the current comment of the active node
+    // or in case there is no comment to it's parent tree
+
+    // Technically the comment is now present in the tree and it can also be found while debugging
+    // this class. But due to some React or virtual rendering magic in the scrollTo function,
+    // the new comment isn't found right away in the tree data, thus the timeout is used as a work-around.
+
+    setTimeout(() => {
+      if (treeRef.current)
+        if (activeComment) {
+          const commentNodeKey = `comment-${activeComment.nodeId}`;
+          treeRef.current.scrollTo({ key: commentNodeKey, align: "top" });
+          setHighlightedNodeIds([commentNodeKey]);
+        } else if (activeTreeId) {
+          const treeNodeKey = activeTreeId.toString();
+          treeRef.current.scrollTo({
+            key: treeNodeKey,
+            align: "top",
+          });
+          setHighlightedNodeIds([treeNodeKey]);
+        }
+    });
   }
 
-  shouldComponentUpdate(nextProps: PropsWithSkeleton, nextState: CommentTabState) {
-    if (nextState !== this.state) {
-      return true;
-    }
-
-    if (this.props.skeletonTracing.activeNodeId !== nextProps.skeletonTracing.activeNodeId) {
-      return true;
-    }
-
-    if (this.props.skeletonTracing.activeTreeId !== nextProps.skeletonTracing.activeTreeId) {
-      return true;
-    }
-
-    const updateActions = Array.from(
-      cachedDiffTrees(this.props.skeletonTracing.trees, nextProps.skeletonTracing.trees),
-    );
-    const relevantUpdateActions = updateActions.filter(
-      (ua) =>
-        RELEVANT_ACTIONS_FOR_COMMENTS.includes(ua.name) ||
-        (ua.name === "createTree" && ua.value.comments.length > 0),
-    );
-    return relevantUpdateActions.length > 0;
-  }
-
-  componentDidUpdate(prevProps: PropsWithSkeleton) {
-    if (
-      this.listRef != null &&
-      prevProps.skeletonTracing.trees !== this.props.skeletonTracing.trees
-    ) {
-      // Force the virtualized list to update if a comment was changed
-      // as it only rerenders if the rowCount changed otherwise
-      this.listRef.forceUpdateGrid();
-    }
-  }
-
-  componentWillUnmount() {
-    this.keyboard.destroy();
-    this.unsubscribeStoreListeners();
-  }
-
-  nextComment = (forward: boolean = true) => {
-    getActiveNode(this.props.skeletonTracing).map((activeNode) => {
-      const { isSortedAscending, sortBy } = this.state;
+  function nextComment(forward: boolean = true) {
+    const activeNode = getActiveNode(props.skeletonTracing);
+    if (activeNode != null) {
       const sortAscending = forward ? isSortedAscending : !isSortedAscending;
-      const { trees } = this.props.skeletonTracing;
+      const { trees } = props.skeletonTracing;
 
       // Create a sorted, flat array of all comments across all trees
-      const sortedTrees = _.values(trees)
-        .slice()
-        .sort(
-          getTreeSorter({
-            sortBy,
-            isSortedAscending: sortAscending,
-          }),
-        );
+      const sortedTrees = _.values(trees).slice().sort(getTreeSorter(sortBy, sortAscending));
 
-      const sortedComments = _.flatMap(
-        sortedTrees,
-        (tree: Tree): Array<CommentType> =>
-          tree.comments.slice().sort(
-            getCommentSorter({
-              sortBy,
-              isSortedAscending: sortAscending,
-            }),
-          ),
+      const sortedComments = _.flatMap(sortedTrees, (tree: Tree): CommentType[] =>
+        tree.comments.slice().sort(getCommentSorter(sortBy, sortAscending)),
       );
 
       const currentCommentIndex = _.findIndex(sortedComments, {
@@ -233,125 +213,125 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
       const nextCommentIndex = (currentCommentIndex + 1) % sortedComments.length;
 
       if (nextCommentIndex >= 0 && nextCommentIndex < sortedComments.length) {
-        this.props.setActiveNode(sortedComments[nextCommentIndex].nodeId);
+        setActiveNode(sortedComments[nextCommentIndex].nodeId);
       }
-    });
-  };
-
-  previousComment = () => {
-    this.nextComment(false);
-  };
-
-  handleChangeInput = (
-    evt: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-    insertLineBreaks: boolean = false,
-  ) => {
-    // @ts-ignore
-    const commentText = evt.target.value;
-
-    if (commentText) {
-      this.props.createComment(insertLineBreaks ? commentText.replace(/\\n/g, "\n") : commentText);
-    } else {
-      this.props.deleteComment();
     }
-  };
+  }
+  nextCommentRef.current = nextComment;
 
-  handleChangeSorting = ({ key }: { key: any }) => {
-    this.setState({
-      sortBy: key as SortByEnum,
-    });
-  };
+  function previousComment() {
+    nextComment(false);
+  }
+  previousCommentRef.current = previousComment;
 
-  toggleSortingDirection = () => {
-    this.setState((prevState) => ({
-      isSortedAscending: !prevState.isSortedAscending,
-    }));
-  };
-
-  toggleExpandForAllTrees = () => {
-    this.setState((prevState) => {
-      const shouldBeCollapsed = !_.values(prevState.collapsedTreeIds).some((bool) => bool);
-      const collapsedTreeIds = shouldBeCollapsed
-        ? _.mapValues(this.props.skeletonTracing.trees, () => true)
-        : {};
-      return {
-        collapsedTreeIds,
-      };
-    });
-  };
-
-  toggleExpand = (treeId: number) => {
-    this.setState((prevState) => ({
-      collapsedTreeIds: update(prevState.collapsedTreeIds, {
-        $toggle: [treeId],
-      }),
-    }));
-  };
-
-  unsubscribeStoreListeners() {
-    this.storePropertyUnsubscribers.forEach((unsubscribe) => unsubscribe());
-    this.storePropertyUnsubscribers = [];
+  function setActiveNode(nodeId: number) {
+    dispatch(setActiveNodeAction(nodeId));
   }
 
-  getActiveComment(createIfNotExisting: boolean = false) {
-    return zipMaybe(
-      getActiveTree(this.props.skeletonTracing),
-      getActiveNode(this.props.skeletonTracing),
-    ).chain(([tree, activeNode]) =>
-      Maybe.fromNullable(tree.comments.find((comment) => comment.nodeId === activeNode.id)).orElse(
-        () =>
-          // If there is no active comment and createIfNotExisting is set, create an empty comment
-          Maybe.fromNullable(
-            createIfNotExisting
-              ? {
-                  nodeId: activeNode.id,
-                  content: "",
-                }
-              : null,
-          ),
-      ),
-    );
+  function deleteComment() {
+    dispatch(deleteCommentAction());
   }
 
-  setMarkdownModalVisibility = (visible: boolean) => {
-    this.setState({
-      isMarkdownModalOpen: visible,
-    });
-  };
+  function createComment(text: string) {
+    dispatch(createCommentAction(text));
+  }
 
-  renderMarkdownModal() {
-    if (!this.props.allowUpdate) {
+  function handleChangeInput(commentText: string, insertLineBreaks: boolean = false) {
+    if (commentText) {
+      createComment(insertLineBreaks ? commentText.replace(/\\n/g, "\n") : commentText);
+
+      // make sure that the skeleton tree node is expanded
+      if (props.skeletonTracing.activeTreeId)
+        setExpandedTreeIds([...expandedTreeIds, props.skeletonTracing.activeTreeId.toString()]);
+    } else {
+      deleteComment();
+    }
+  }
+
+  function handleChangeSorting({ key }: { key: any }) {
+    setSortBy(key as SortByEnum);
+  }
+
+  function toggleSortingDirection() {
+    setIsSortedAscending((prevState) => !prevState);
+  }
+
+  function toggleExpandAllTrees() {
+    setExpandedTreeIds((prevState) => {
+      const shouldBeCollapsed = !_.isEmpty(prevState);
+      return shouldBeCollapsed ? [] : getData().map((tree) => tree.treeId.toString());
+    });
+  }
+
+  function onExpand(expandedKeys: React.Key[]) {
+    setExpandedTreeIds(expandedKeys);
+  }
+
+  function onSelect(
+    _selectedKeys: React.Key[],
+    { node }: { node: EventDataNode<MutableCommentType> },
+  ) {
+    // Careful, this method is invoked both when clicking on a skeleton tree ("root-node") or a comment ("child node")
+    if ("nodeId" in node) {
+      setActiveNode(node.nodeId);
+    }
+  }
+
+  function getActiveComment(): MutableCommentType | undefined {
+    const { activeTreeId, activeNodeId } = props.skeletonTracing;
+
+    if (activeTreeId && activeNodeId) {
+      const activeComment = props.skeletonTracing.trees[activeTreeId].comments.find(
+        (comment) => comment.nodeId === activeNodeId,
+      );
+
+      return activeComment;
+    }
+    return undefined;
+  }
+
+  function setMarkdownModalVisibility(visible: boolean) {
+    setIsMarkdownModalOpen(visible);
+  }
+
+  function renderMarkdownModal() {
+    if (!allowUpdate || !props.skeletonTracing.activeNodeId) {
       return null;
     }
-    const activeCommentMaybe = this.getActiveComment(true);
 
-    const onOk = () => this.setMarkdownModalVisibility(false);
+    const onOk = () => setMarkdownModalVisibility(false);
 
-    return toNullable(
-      activeCommentMaybe.map((comment) => (
-        <MarkdownModal
-          key={comment.nodeId}
-          source={comment.content}
-          isOpen={this.state.isMarkdownModalOpen}
-          onChange={this.handleChangeInput}
-          onOk={onOk}
-          label="Comment"
-        />
-      )),
+    let comment = activeComment;
+    if (!comment) {
+      comment = {
+        nodeId: props.skeletonTracing.activeNodeId,
+        content: "",
+      };
+    }
+
+    return (
+      <MarkdownModal
+        key={comment.nodeId}
+        source={comment.content}
+        isOpen={isMarkdownModalOpen}
+        onChange={handleChangeInput}
+        onOk={onOk}
+        label="Comment"
+      />
     );
   }
 
-  renderSortIcon() {
-    const sortAsc = this.state.isSortedAscending;
-    const sortNumeric = this.state.sortBy === SortByEnum.ID;
+  function renderSortIcon() {
+    const sortAsc = isSortedAscending;
+    const sortNumeric = sortBy === SortByEnum.ID;
     const iconClass = `fas fa-sort-${sortNumeric ? "numeric" : "alpha"}-${sortAsc ? "down" : "up"}`;
     return <i className={iconClass} />;
   }
 
-  getSortDropdown(): MenuProps {
+  function getSortDropdown(): MenuProps {
     return {
-      selectedKeys: [this.state.sortBy],
-      onClick: this.handleChangeSorting,
+      selectedKeys: [sortBy],
+      onClick: handleChangeSorting,
       items: [
         { key: SortByEnum.NAME, label: "by name" },
         { key: SortByEnum.ID, label: "by creation time" },
@@ -371,200 +351,216 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     };
   }
 
-  getData(): Array<Tree | CommentType> {
-    return memoizedDeriveData(this.props.skeletonTracing.trees, this.state);
+  function getData(): Tree[] {
+    return memoizedDeriveData(props.skeletonTracing.trees, sortBy, isSortedAscending);
   }
 
-  renderRow = ({
-    index,
-    key,
-    style,
-  }: {
-    index: number;
-    key: string;
-    style: React.CSSProperties;
-  }) => {
-    const element = this.getData()[index];
-    if ("treeId" in element) {
-      const tree = element;
-      return (
-        <TreeWithComments
-          key={key}
-          style={style}
-          tree={tree}
-          collapsed={this.state.collapsedTreeIds[tree.treeId]}
-          onExpand={this.toggleExpand}
-          isActive={tree.treeId === this.props.skeletonTracing.activeTreeId}
-        />
-      );
-    } else {
-      const comment = element;
-      const isActive = comment.nodeId === this.props.skeletonTracing.activeNodeId;
-      return <Comment key={key} style={style} comment={comment} isActive={isActive} />;
-    }
-  };
+  function renderCommentTree() {
+    const skeletonTracingTrees = getData();
 
-  render() {
-    const activeCommentMaybe = this.getActiveComment();
-    // Replace line breaks as they will otherwise be stripped when shown in an input field
-    const activeCommentContent = activeCommentMaybe
-      .map((comment) => comment.content)
-      .getOrElse("")
-      .replace(/\r?\n/g, "\\n");
-    const isMultilineComment = activeCommentContent.indexOf("\\n") !== -1;
-    const activeNodeMaybe = getActiveNode(this.props.skeletonTracing);
-    const isEditingDisabled = activeNodeMaybe.isNothing || !this.props.allowUpdate;
+    const treeData: TreeProps["treeData"] = skeletonTracingTrees.map((tree) => {
+      const commentSorter = getCommentSorter(sortBy, isSortedAscending);
 
-    const findCommentIndexFn = (commentOrTree: Tree | CommentType) =>
-      "nodeId" in commentOrTree && commentOrTree.nodeId === this.props.skeletonTracing.activeNodeId;
-
-    const findTreeIndexFn = (commentOrTree: Tree | CommentType) =>
-      "treeId" in commentOrTree && commentOrTree.treeId === this.props.skeletonTracing.activeTreeId;
+      return {
+        key: tree.treeId.toString(),
+        title: (
+          <div style={{ wordBreak: "break-all" }}>
+            <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} /> {tree.name}
+          </div>
+        ),
+        expanded: true,
+        children: tree.comments
+          .slice()
+          .sort(commentSorter)
+          .map((comment) => {
+            const key = `comment-${comment.nodeId}`;
+            const isActive = comment.nodeId === props.skeletonTracing.activeNodeId;
+            return {
+              ...comment,
+              key: key,
+              title: <Comment key={key} comment={comment} isActive={isActive} />,
+            };
+          }),
+      };
+    });
 
     return (
-      <div
-        id={commentTabId}
-        className="flex-column padded-tab-content"
-        style={{
-          height: "inherit",
-        }}
-      >
-        <DomVisibilityObserver targetId={commentTabId}>
-          {(isVisibleInDom) => {
-            if (!isVisibleInDom && !this.state.isMarkdownModalOpen) {
-              return null;
-            }
-
-            // If the activeNode has a comment, scroll to it,
-            // otherwise scroll to the activeTree
-            const scrollIndex = _.findIndex(
-              this.getData(),
-              activeCommentMaybe.isJust ? findCommentIndexFn : findTreeIndexFn,
-            );
-
-            return (
-              <React.Fragment>
-                {this.renderMarkdownModal()}
-                <InputGroup compact className="compact-items compact-icons">
-                  <AdvancedSearchPopover
-                    onSelect={(comment) => this.props.setActiveNode(comment.nodeId)}
-                    data={_.flatMap(this.props.skeletonTracing.trees, (tree) => tree.comments)}
-                    searchKey="content"
-                    targetId={commentListId}
-                  >
-                    <ButtonComponent icon={<SearchOutlined />} title="Search through comments" />
-                  </AdvancedSearchPopover>
-                  <ButtonComponent
-                    title="Jump to previous comment"
-                    onClick={this.previousComment}
-                    icon={<ArrowLeftOutlined />}
-                  />
-                  <InputComponent
-                    value={activeCommentContent}
-                    disabled={isEditingDisabled}
-                    title={
-                      this.props.allowUpdate
-                        ? undefined
-                        : messages["tracing.read_only_mode_notification"]
-                    }
-                    onChange={(evt: React.ChangeEvent<HTMLInputElement>) =>
-                      this.handleChangeInput(evt, true)
-                    }
-                    onPressEnter={(evt: React.KeyboardEvent<HTMLInputElement>) =>
-                      (evt.target as HTMLElement).blur()
-                    }
-                    placeholder="Add comment"
-                    style={{
-                      width: "50%",
-                    }}
-                  />
-                  <ButtonComponent
-                    onClick={() => this.setMarkdownModalVisibility(true)}
-                    disabled={isEditingDisabled}
-                    title={
-                      this.props.allowUpdate
-                        ? "Open dialog to edit comment in multi-line mode"
-                        : messages["tracing.read_only_mode_notification"]
-                    }
-                    type={isMultilineComment ? "primary" : "default"}
-                    icon={<EditOutlined />}
-                  />
-                  <ButtonComponent
-                    title="Jump to next comment"
-                    onClick={() => this.nextComment()}
-                    icon={<ArrowRightOutlined />}
-                  />
-                  <Dropdown menu={this.getSortDropdown()} trigger={["click"]}>
-                    <ButtonComponent title="Sort" onClick={this.toggleSortingDirection}>
-                      {this.renderSortIcon()}
-                    </ButtonComponent>
-                  </Dropdown>
-                  <ButtonComponent
-                    onClick={this.toggleExpandForAllTrees}
-                    icon={<ShrinkOutlined />}
-                    title="Collapse or expand groups"
-                  />
-                </InputGroup>
-                <div
-                  style={{
-                    flex: "1 1 auto",
-                    marginTop: 20,
-                    listStyle: "none",
-                  }}
-                >
-                  <AutoSizer>
-                    {({ height, width }) => (
-                      <div
-                        style={{
-                          height,
-                          width,
-                        }}
-                        className="flex-overflow"
-                      >
-                        <List
-                          id={commentListId}
-                          height={height}
-                          width={width}
-                          rowCount={this.getData().length}
-                          rowHeight={24}
-                          rowRenderer={this.renderRow}
-                          scrollToIndex={scrollIndex > -1 ? scrollIndex : undefined}
-                          tabIndex={null}
-                          ref={(listEl: List) => {
-                            this.listRef = listEl;
-                          }}
-                        />
-                      </div>
-                    )}
-                  </AutoSizer>
-                </div>
-              </React.Fragment>
-            );
-          }}
-        </DomVisibilityObserver>
-      </div>
+      <AutoSizer defaultHeight={500}>
+        {({ height, width }) => (
+          <div
+            style={{
+              height,
+              width,
+            }}
+          >
+            <AntdTree
+              key={commentListId}
+              treeData={treeData}
+              expandedKeys={expandedTreeIds}
+              selectedKeys={highlightedNodeIds}
+              onExpand={onExpand}
+              // @ts-ignore
+              onSelect={onSelect}
+              switcherIcon={<DownOutlined />}
+              height={height}
+              ref={treeRef}
+              blockNode
+              showLine
+              defaultExpandAll
+            />
+          </div>
+        )}
+      </AutoSizer>
     );
   }
+
+  // Replace line breaks as they will otherwise be stripped when shown in an input field
+  const activeCommentContent = activeComment?.content.replace(/\r?\n/g, "\\n");
+  const isMultilineComment = activeCommentContent?.indexOf("\\n") !== -1;
+  const activeNode = getActiveNode(props.skeletonTracing);
+  const isEditingDisabled = activeNode == null || !allowUpdate;
+
+  const isEditingDisabledMessage = messages["tracing.read_only_mode_notification"](
+    isAnnotationLockedByUser,
+    isOwner,
+  );
+
+  return (
+    <div
+      id={commentTabId}
+      className="flex-column padded-tab-content"
+      style={{
+        height: "inherit",
+      }}
+    >
+      <DomVisibilityObserver
+        targetId={commentTabId}
+        onChange={(isVisible) => {
+          setIsVisibleInDom(isVisible);
+        }}
+      >
+        {(isVisibleInDom) => {
+          if (!isVisibleInDom && !isMarkdownModalOpen) {
+            return null;
+          }
+
+          return (
+            <React.Fragment>
+              {renderMarkdownModal()}
+              <Space.Compact className="compact-items compact-icons">
+                <AdvancedSearchPopover
+                  onSelect={(comment) => {
+                    setActiveNode(comment.nodeId);
+
+                    const tree = getData().find((tree) => tree.nodes.has(comment.nodeId));
+                    if (tree) {
+                      setExpandedTreeIds(_.uniq([...expandedTreeIds, tree.treeId.toString()]));
+                    }
+                  }}
+                  data={_.flatMap(getData(), (tree) =>
+                    tree.comments.slice().sort(getCommentSorter(sortBy, isSortedAscending)),
+                  )}
+                  searchKey="content"
+                  targetId={commentListId}
+                >
+                  <ButtonComponent icon={<SearchOutlined />} title="Search through comments" />
+                </AdvancedSearchPopover>
+                <ButtonComponent
+                  title="Jump to previous comment"
+                  onClick={previousComment}
+                  icon={<ArrowLeftOutlined />}
+                />
+                <InputComponent
+                  value={activeCommentContent}
+                  disabled={isEditingDisabled}
+                  title={allowUpdate ? undefined : isEditingDisabledMessage}
+                  onChange={(evt: React.ChangeEvent<HTMLInputElement>) =>
+                    handleChangeInput(evt.target.value, true)
+                  }
+                  onPressEnter={(evt: React.KeyboardEvent<HTMLInputElement>) =>
+                    (evt.target as HTMLElement).blur()
+                  }
+                  placeholder="Add comment"
+                />
+                <ButtonComponent
+                  onClick={() => setMarkdownModalVisibility(true)}
+                  disabled={isEditingDisabled}
+                  title={
+                    allowUpdate
+                      ? "Open dialog to edit comment in multi-line mode"
+                      : isEditingDisabledMessage
+                  }
+                  type={isMultilineComment ? "primary" : "default"}
+                  icon={<EditOutlined />}
+                />
+                <ButtonComponent
+                  title="Jump to next comment"
+                  onClick={() => nextComment()}
+                  icon={<ArrowRightOutlined />}
+                />
+                <Dropdown menu={getSortDropdown()} trigger={["click"]}>
+                  <ButtonComponent title="Sort" onClick={toggleSortingDirection}>
+                    {renderSortIcon()}
+                  </ButtonComponent>
+                </Dropdown>
+                <ButtonComponent
+                  onClick={toggleExpandAllTrees}
+                  icon={<ShrinkOutlined />}
+                  title="Collapse or expand groups"
+                />
+              </Space.Compact>
+              <div
+                style={{
+                  flex: "1 1 auto",
+                  marginTop: 20,
+                  listStyle: "none",
+                }}
+              >
+                {renderCommentTree()}
+              </div>
+            </React.Fragment>
+          );
+        }}
+      </DomVisibilityObserver>
+    </div>
+  );
 }
 
-const mapStateToProps = (state: OxalisState) => ({
-  skeletonTracing: state.tracing.skeleton,
-  allowUpdate: state.tracing.restrictions.allowUpdate,
-});
+const CommentTabViewMemo = React.memo(
+  CommentTabView,
+  function arePropsEqual(prevPops: Props, nextProps: Props) {
+    if (prevPops.skeletonTracing.activeNodeId !== nextProps.skeletonTracing.activeNodeId) {
+      return false;
+    }
 
-const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
-  setActiveNode(nodeId: number) {
-    dispatch(setActiveNodeAction(nodeId));
+    if (prevPops.skeletonTracing.activeTreeId !== nextProps.skeletonTracing.activeTreeId) {
+      return false;
+    }
+
+    const updateActions = Array.from(
+      cachedDiffTrees(prevPops.skeletonTracing.trees, nextProps.skeletonTracing.trees),
+    );
+    const relevantUpdateActions = updateActions.filter(
+      (ua) =>
+        RELEVANT_ACTIONS_FOR_COMMENTS.includes(ua.name) ||
+        (ua.name === "createTree" && ua.value.comments.length > 0),
+    );
+    return relevantUpdateActions.length === 0;
   },
+);
 
-  deleteComment() {
-    dispatch(deleteCommentAction());
-  },
+function CommentTabViewWrapper() {
+  // This wrapper component serves 2 purposes:
+  // 1. Prevent excessive re-renders
+  // 2. Safe-guard that a skeleton tracing is available
 
-  createComment(text: string) {
-    dispatch(createCommentAction(text));
-  },
-});
+  const skeletonTracing = useSelector((state: OxalisState) =>
+    getSkeletonTracing(state.tracing).getOrElse(null),
+  );
 
-const connector = connect(mapStateToProps, mapDispatchToProps);
-export default connector(makeSkeletonTracingGuard(CommentTabView));
+  if (skeletonTracing) return <CommentTabViewMemo skeletonTracing={skeletonTracing} />;
+
+  return null;
+}
+
+export default CommentTabViewWrapper;

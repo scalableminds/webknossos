@@ -1,9 +1,12 @@
-import * as React from "react";
-import { Form, Input, Select, Card } from "antd";
+import type * as React from "react";
+import { Form, Input, Select, Card, type FormInstance } from "antd";
 import messages from "messages";
-import { isDatasetNameValid } from "admin/admin_rest_api";
-import type { APIDataStore, APIUser } from "types/api_flow_types";
+import type { APIDataStore, APITeam, APIUser } from "types/api_flow_types";
 import { syncValidator } from "types/validation";
+import { FormItemWithInfo } from "dashboard/dataset/helper_components";
+import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import features from "features";
+
 const FormItem = Form.Item;
 export function CardContainer({
   children,
@@ -32,27 +35,27 @@ export function CardContainer({
     );
   }
 }
-export const layerNameRules = [
+const sharedRules = [
   {
     min: 1,
   },
-  // Note that these rules are also checked by the backend
-  {
-    pattern: /^[0-9a-zA-Z_.-]+$/,
-    message: "Only letters, digits and the following characters are allowed: . _ -",
-  },
   {
     validator: syncValidator(
-      (value: string) => !value.startsWith("."),
+      (value: string | null) => !value || !value.startsWith("."),
       "The name must not start with a dot.",
     ),
   },
 ];
 
-export const getDatasetNameRules = (
-  activeUser: APIUser | null | undefined,
-  allowRenaming: boolean = true,
-) => [
+export const layerNameRules = [
+  ...sharedRules,
+  {
+    pattern: /^[0-9a-zA-Z_.\-$.]+$/,
+    message: "Only letters, digits and the following characters are allowed: . _ - $",
+  },
+];
+
+export const getDatasetNameRules = (activeUser: APIUser | null | undefined) => [
   {
     required: true,
     message: messages["dataset.import.required.name"],
@@ -60,22 +63,13 @@ export const getDatasetNameRules = (
   { min: 3, message: messages["dataset.name_length"] },
   ...layerNameRules,
   {
-    validator: async (_rule: any, value: string) => {
-      if (!allowRenaming) {
-        // Renaming is not allowed. No need to validate the (existing) name then.
-        return Promise.resolve();
-      }
+    pattern: /^[0-9a-zA-Z_.-]+$/,
+    message: "Only letters, digits and the following characters are allowed: . _ -",
+  },
+  {
+    validator: async () => {
       if (!activeUser) throw new Error("Can't do operation if no user is logged in.");
-      const reasons = await isDatasetNameValid({
-        name: value,
-        owningOrganization: activeUser.organization,
-      });
-
-      if (reasons != null) {
-        return Promise.reject(reasons);
-      } else {
-        return Promise.resolve();
-      }
+      return Promise.resolve();
     },
   },
 ];
@@ -84,10 +78,13 @@ export function DatasetNameFormItem({
   activeUser,
   initialName,
   label,
+  disabled,
 }: {
   activeUser: APIUser | null | undefined;
   initialName?: string;
   label?: string;
+  allowDuplicate?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <FormItem
@@ -98,16 +95,18 @@ export function DatasetNameFormItem({
       rules={getDatasetNameRules(activeUser)}
       validateFirst
     >
-      <Input />
+      <Input disabled={disabled} />
     </FormItem>
   );
 }
 export function DatastoreFormItem({
   datastores,
   hidden,
+  disabled,
 }: {
   datastores: Array<APIDataStore>;
   hidden?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <FormItem
@@ -127,6 +126,7 @@ export function DatastoreFormItem({
         showSearch
         placeholder="Select a Datastore"
         optionFilterProp="label"
+        disabled={disabled}
         style={{
           width: "100%",
         }}
@@ -136,5 +136,70 @@ export function DatastoreFormItem({
         }))}
       />
     </FormItem>
+  );
+}
+
+export function AllowedTeamsFormItem({
+  isDatasetManagerOrAdmin,
+  selectedTeams,
+  setSelectedTeams,
+  afterFetchedTeams,
+  formRef,
+  disabled,
+}: {
+  isDatasetManagerOrAdmin: boolean;
+  selectedTeams: APITeam | Array<APITeam>;
+  setSelectedTeams: (teams: APITeam | Array<APITeam>) => void;
+  afterFetchedTeams?: (arg0: Array<APITeam>) => void;
+  formRef: React.RefObject<FormInstance<any>>;
+  disabled?: boolean;
+}) {
+  return (
+    <FormItemWithInfo
+      name="initialTeams"
+      label="Teams allowed to access this dataset"
+      info="The dataset can be seen by administrators, dataset managers and by teams that have access to the folder to which the dataset is uploaded. If you want to grant additional teams access, define these teams here."
+      hasFeedback
+    >
+      <TeamSelectionComponent
+        mode="multiple"
+        value={selectedTeams}
+        allowNonEditableTeams={isDatasetManagerOrAdmin}
+        disabled={disabled}
+        onChange={(selectedTeams) => {
+          if (formRef.current == null) return;
+
+          if (!Array.isArray(selectedTeams)) {
+            // Making sure that we always have an array even when only one team is selected.
+            selectedTeams = [selectedTeams];
+          }
+
+          formRef.current.setFieldsValue({
+            initialTeams: selectedTeams,
+          });
+          setSelectedTeams(selectedTeams);
+        }}
+        afterFetchedTeams={(fetchedTeams) => {
+          if (afterFetchedTeams) {
+            afterFetchedTeams(fetchedTeams);
+          }
+          if (!features().isWkorgInstance) {
+            return;
+          }
+
+          const teamOfOrganization = fetchedTeams.find((team) => team.name === team.organization);
+
+          if (teamOfOrganization == null) {
+            return;
+          }
+
+          if (formRef.current == null) return;
+          formRef.current.setFieldsValue({
+            initialTeams: [teamOfOrganization],
+          });
+          setSelectedTeams([teamOfOrganization]);
+        }}
+      />
+    </FormItemWithInfo>
   );
 }

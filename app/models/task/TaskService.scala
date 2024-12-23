@@ -1,7 +1,9 @@
 package models.task
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+
 import javax.inject.Inject
 import models.annotation.{Annotation, AnnotationDAO, AnnotationType}
 import models.dataset.DatasetDAO
@@ -10,7 +12,7 @@ import models.team.TeamDAO
 import models.user.{User, UserService}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
@@ -29,7 +31,7 @@ class TaskService @Inject()(conf: WkConf,
   def publicWrites(task: Task)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       annotationBase <- annotationBaseFor(task._id)
-      dataSet <- datasetDAO.findOne(annotationBase._dataSet)
+      dataset <- datasetDAO.findOne(annotationBase._dataset)
       status <- statusOf(task).getOrElse(TaskStatus(-1, -1, -1))
       taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
       taskTypeJs <- taskTypeService.publicWrites(taskType)
@@ -44,7 +46,8 @@ class TaskService @Inject()(conf: WkConf,
         "projectName" -> project.name,
         "team" -> team.name,
         "type" -> taskTypeJs,
-        "dataSet" -> dataSet.name,
+        "datasetName" -> dataset.name,
+        "datasetId" -> dataset._id, // Only used for csv serialization in frontend.
         "neededExperience" -> task.neededExperience,
         "created" -> task.created,
         "status" -> status,

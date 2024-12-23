@@ -1,5 +1,5 @@
 import { PNG } from "pngjs";
-import fs from "fs";
+import fs from "node:fs";
 import pixelmatch from "pixelmatch";
 
 export function isPixelEquivalent(changedPixels: number, width: number, height: number) {

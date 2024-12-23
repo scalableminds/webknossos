@@ -1,5 +1,4 @@
 import _ from "lodash";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { Link } from "react-router-dom";
@@ -9,60 +8,58 @@ import {
   ClockCircleTwoTone,
   CloseCircleTwoTone,
   CloseCircleOutlined,
-  DownOutlined,
+  DownloadOutlined,
   EyeOutlined,
   LoadingOutlined,
   QuestionCircleTwoTone,
-  ToolTwoTone,
   InfoCircleOutlined,
 } from "@ant-design/icons";
-import * as React from "react";
-import { APIJob, APIJobType } from "types/api_flow_types";
+import type * as React from "react";
+import { type APIJob, APIJobType, type APIUserBase } from "types/api_flow_types";
 import { getJobs, cancelJob } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import FormattedDate from "components/formatted_date";
 import { AsyncLink } from "components/async_clickables";
+import { useEffect, useState } from "react";
+import { useInterval } from "libs/react_helpers";
+import { formatWkLibsNdBBox } from "libs/format_utils";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
+
 // Unfortunately, the twoToneColor (nor the style) prop don't support
 // CSS variables.
 export const TOOLTIP_MESSAGES_AND_ICONS = {
   UNKNOWN: {
     tooltip:
-      "The status information for this job could not be retreived. Please try again in a few minutes, or contact us if you need assistance.",
-    icon: <QuestionCircleTwoTone twoToneColor="#a3a3a3" />,
+      "The status information for this job could not be retrieved. Please try again in a few minutes, or contact us if you need assistance.",
+    icon: <QuestionCircleTwoTone twoToneColor="#a3a3a3" className="icon-margin-right" />,
   },
   SUCCESS: {
     tooltip: "This job has successfully been executed.",
-    icon: <CheckCircleTwoTone twoToneColor="#49b21b" />,
+    icon: <CheckCircleTwoTone twoToneColor="#49b21b" className="icon-margin-right" />,
   },
   PENDING: {
     tooltip: "This job will run as soon as a worker becomes available.",
-    icon: <ClockCircleTwoTone twoToneColor="#d89614" />,
+    icon: <ClockCircleTwoTone twoToneColor="#d89614" className="icon-margin-right" />,
   },
   STARTED: {
     tooltip: "This job is currently running.",
-    icon: <LoadingOutlined />,
+    icon: <LoadingOutlined className="icon-margin-right" />,
   },
   FAILURE: {
     tooltip:
       "Something went wrong when executing this job. Feel free to contact us if you need assistance.",
-    icon: <CloseCircleTwoTone twoToneColor="#a61d24" />,
+    icon: <CloseCircleTwoTone twoToneColor="#a61d24" className="icon-margin-right" />,
   },
   CANCELLED: {
     tooltip: "This job was cancelled.",
-    icon: <CloseCircleTwoTone twoToneColor="#aaaaaa" />,
-  },
-  MANUAL: {
-    tooltip:
-      "The job will be handled by an admin shortly, since it could not be finished automatically. Please check back here soon.",
-    icon: <ToolTwoTone twoToneColor="#d89614" />,
+    icon: <CloseCircleTwoTone twoToneColor="#aaaaaa" className="icon-margin-right" />,
   },
 };
 const refreshInterval = 5000;
 const { Column } = Table;
 const { Search } = Input;
-const typeHint: APIJob[] = [];
-type Props = {};
+
 type State = {
   isLoading: boolean;
   jobs: Array<APIJob>;
@@ -75,166 +72,162 @@ const persistence = new Persistence<Pick<State, "searchQuery">>(
   "jobList",
 );
 
-class JobListView extends React.PureComponent<Props, State> {
-  intervalID: ReturnType<typeof setTimeout> | null | undefined;
-  state: State = {
-    isLoading: true,
-    jobs: [],
-    searchQuery: "",
-  };
+export function JobState({ job }: { job: APIJob }) {
+  const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
 
-  componentDidMount() {
-    // @ts-ignore
-    this.setState(persistence.load());
-    this.fetchData();
+  const jobStateNormalized = _.capitalize(job.state.toLowerCase());
+
+  return (
+    <Tooltip title={tooltip}>
+      <span className="icon-margin-right">{icon}</span>
+      {jobStateNormalized}
+    </Tooltip>
+  );
+}
+
+function JobListView() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [jobs, setJobs] = useState<APIJob[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    fetchData();
+    const { searchQuery } = persistence.load();
+    setSearchQuery(searchQuery || "");
+    setIsLoading(false);
+  }, []);
+
+  async function fetchData() {
+    setJobs(await getJobs());
   }
 
-  componentDidUpdate() {
-    persistence.persist(this.state);
+  useInterval(async () => {
+    setJobs(await getJobs());
+  }, refreshInterval);
+
+  useEffect(() => {
+    persistence.persist({ searchQuery });
+  }, [searchQuery]);
+
+  function handleSearch(event: React.ChangeEvent<HTMLInputElement>): void {
+    setSearchQuery(event.target.value);
   }
 
-  componentWillUnmount() {
-    if (this.intervalID != null) {
-      clearTimeout(this.intervalID);
-    }
-  }
-
-  async fetchData(): Promise<void> {
-    const jobs = await getJobs();
-    this.setState(
-      {
-        isLoading: false,
-        jobs,
-      }, // refresh jobs according to the refresh interval
-      () => {
-        if (this.intervalID != null) {
-          clearTimeout(this.intervalID);
-        }
-
-        this.intervalID = setTimeout(this.fetchData.bind(this), refreshInterval);
-      },
-    );
-  }
-
-  handleSearch = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    this.setState({
-      searchQuery: event.target.value,
-    });
-  };
-
-  renderDescription = (__: any, job: APIJob) => {
+  function renderDescription(__: any, job: APIJob) {
+    const linkToDataset =
+      job.datasetId != null
+        ? `/datasets/${getReadableURLPart({ name: job.datasetName || "unknown_name", id: job.datasetId })}/view` // prefer updated link over legacy link.
+        : `/datasets/${job.organizationId || ""}/${job.datasetDirectoryName || job.datasetName}/view`;
     if (job.type === APIJobType.CONVERT_TO_WKW && job.datasetName) {
       return <span>{`Conversion to WKW of ${job.datasetName}`}</span>;
-    } else if (job.type === APIJobType.EXPORT_TIFF && job.organizationName && job.datasetName) {
+    } else if (job.type === APIJobType.EXPORT_TIFF && job.organizationId && job.datasetName) {
       const labelToAnnotationOrDataset =
         job.annotationId != null ? (
           <Link to={`/annotations/${job.annotationId}`}>
             annotation of dataset {job.datasetName}
           </Link>
         ) : (
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
-            dataset {job.datasetName}
-          </Link>
+          <Link to={linkToDataset}>dataset {job.datasetName}</Link>
         );
       const layerLabel = job.annotationLayerName || job.layerName;
       return (
         <span>
           Tiff export of layer {layerLabel} from {labelToAnnotationOrDataset} (Bounding Box{" "}
-          {job.boundingBox})
+          {job.ndBoundingBox ? formatWkLibsNdBBox(job.ndBoundingBox) : job.boundingBox})
         </span>
       );
-    } else if (
-      job.type === APIJobType.RENDER_ANIMATION &&
-      job.organizationName &&
-      job.datasetName
-    ) {
+    } else if (job.type === APIJobType.RENDER_ANIMATION && job.organizationId && job.datasetName) {
       return (
         <span>
           Animation rendering for layer {job.layerName} of dataset{" "}
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>
+          <Link to={linkToDataset}>{job.datasetName}</Link>
         </span>
       );
-    } else if (
-      job.type === APIJobType.COMPUTE_MESH_FILE &&
-      job.organizationName &&
-      job.datasetName
-    ) {
+    } else if (job.type === APIJobType.COMPUTE_MESH_FILE && job.organizationId && job.datasetName) {
       return (
         <span>
-          Mesh file computation for{" "}
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          Mesh file computation for <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
       job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE &&
-      job.organizationName &&
+      job.organizationId &&
       job.datasetName
     ) {
       return (
         <span>
-          Segment index file computation for{" "}
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          Segment index file computation for <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
       job.type === APIJobType.FIND_LARGEST_SEGMENT_ID &&
-      job.organizationName &&
+      job.organizationId &&
       job.datasetName &&
       job.layerName
     ) {
       return (
         <span>
           Largest segment id detection for layer {job.layerName} of{" "}
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
       job.type === APIJobType.INFER_NUCLEI &&
-      job.organizationName &&
+      job.organizationId &&
       job.datasetName &&
       job.layerName
     ) {
       return (
         <span>
           Nuclei inferral for layer {job.layerName} of{" "}
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
       job.type === APIJobType.INFER_NEURONS &&
-      job.organizationName &&
+      job.organizationId &&
       job.datasetName &&
       job.layerName
     ) {
       return (
         <span>
           Neuron inferral for layer {job.layerName} of{" "}
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+        </span>
+      );
+    } else if (
+      job.type === APIJobType.INFER_MITOCHONDRIA &&
+      job.organizationId &&
+      job.datasetName &&
+      job.layerName
+    ) {
+      return (
+        <span>
+          Mitochondria inferral for layer {job.layerName} of{" "}
+          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+        </span>
+      );
+    } else if (
+      job.type === APIJobType.ALIGN_SECTIONS &&
+      job.organizationId &&
+      job.datasetName &&
+      job.layerName
+    ) {
+      return (
+        <span>
+          Aligned sections for layer {job.layerName} of{" "}
+          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
       job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION &&
-      job.organizationName &&
+      job.organizationId &&
       job.datasetName
     ) {
       return (
         <span>
           Materialize annotation for {job.layerName ? ` layer ${job.layerName} of ` : " "}
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>
+          <Link to={linkToDataset}>{job.datasetName}</Link>
           {job.mergeSegments
             ? ". This includes merging the segments that were merged via merger mode."
             : null}
@@ -243,9 +236,9 @@ class JobListView extends React.PureComponent<Props, State> {
     } else {
       return <span>{job.type}</span>;
     }
-  };
+  }
 
-  renderActions = (__: any, job: APIJob) => {
+  function renderActions(__: any, job: APIJob) {
     if (job.state === "PENDING" || job.state === "STARTED") {
       return (
         <AsyncLink
@@ -258,23 +251,24 @@ class JobListView extends React.PureComponent<Props, State> {
             });
 
             if (isDeleteConfirmed) {
-              cancelJob(job.id).then(() => this.fetchData());
+              cancelJob(job.id).then(() => fetchData());
             }
           }}
-          icon={<CloseCircleOutlined key="cancel" />}
+          icon={<CloseCircleOutlined key="cancel" className="icon-margin-right" />}
         >
           Cancel
         </AsyncLink>
       );
     } else if (
       job.type === APIJobType.CONVERT_TO_WKW ||
-      job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE
+      job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE ||
+      job.type === APIJobType.ALIGN_SECTIONS
     ) {
       return (
         <span>
           {job.resultLink && (
             <Link to={job.resultLink} title="View Dataset">
-              <EyeOutlined />
+              <EyeOutlined className="icon-margin-right" />
               View
             </Link>
           )}
@@ -285,7 +279,7 @@ class JobListView extends React.PureComponent<Props, State> {
         <span>
           {job.resultLink && (
             <a href={job.resultLink} title="Download">
-              <DownOutlined />
+              <DownloadOutlined className="icon-margin-right" />
               Download
             </a>
           )}
@@ -296,7 +290,7 @@ class JobListView extends React.PureComponent<Props, State> {
         <span>
           {job.resultLink && (
             <a href={job.resultLink} title="Download">
-              <DownOutlined />
+              <DownloadOutlined className="icon-margin-right" />
               Download
             </a>
           )}
@@ -308,117 +302,120 @@ class JobListView extends React.PureComponent<Props, State> {
       job.type === APIJobType.INFER_NUCLEI ||
       job.type === APIJobType.INFER_NEURONS ||
       job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION ||
-      job.type === APIJobType.COMPUTE_MESH_FILE
+      job.type === APIJobType.COMPUTE_MESH_FILE ||
+      job.type === APIJobType.INFER_WITH_MODEL ||
+      job.type === APIJobType.INFER_MITOCHONDRIA
     ) {
       return (
         <span>
           {job.resultLink && (
             <Link to={job.resultLink} title="View Segmentation">
-              <EyeOutlined />
+              <EyeOutlined className="icon-margin-right" />
               View
             </Link>
           )}
         </span>
       );
-    } else return null;
-  };
-
-  renderState = (__: any, job: APIJob) => {
-    const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
-
-    const jobStateNormalized = _.capitalize(job.state.toLowerCase());
-
-    return (
-      <Tooltip title={tooltip}>
-        {icon}
-        {jobStateNormalized}
-      </Tooltip>
-    );
-  };
-
-  render() {
-    return (
-      <div className="container">
-        <div className="pull-right">
-          <Search
-            style={{
-              width: 200,
-            }}
-            onChange={this.handleSearch}
-            value={this.state.searchQuery}
-          />
-        </div>
-        <h3>Jobs</h3>
-        <Typography.Paragraph type="secondary">
-          Some actions such as dataset conversions or export as Tiff files require some time for
-          processing in the background.
-          <a
-            href="https://docs.webknossos.org/webknossos/jobs.html"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Tooltip title="Read more in the documentation">
-              <InfoCircleOutlined style={{ marginLeft: 10 }} />
-            </Tooltip>
-          </a>
-          <br />
-          WEBKNOSSOS will notfiy you via email when a job has finished or reload this page to track
-          progress.
-        </Typography.Paragraph>
-        <div
-          className="clearfix"
-          style={{
-            margin: "20px 0px",
-          }}
-        />
-        <Spin spinning={this.state.isLoading} size="large">
-          <Table
-            dataSource={Utils.filterWithSearchQueryAND(
-              this.state.jobs,
-              ["datasetName"],
-              this.state.searchQuery,
-            )}
-            rowKey="id"
-            pagination={{
-              defaultPageSize: 50,
-            }}
-            style={{
-              marginTop: 30,
-              marginBottom: 30,
-            }}
-          >
-            <Column
-              title="Job Id"
-              dataIndex="id"
-              key="id"
-              sorter={Utils.localeCompareBy(typeHint, (job) => job.id)}
-            />
-            <Column title="Description" key="datasetName" render={this.renderDescription} />
-            <Column
-              title="Created at"
-              key="createdAt"
-              render={(job) => <FormattedDate timestamp={job.createdAt} />}
-              sorter={Utils.compareBy(typeHint, (job) => job.createdAt)}
-              defaultSortOrder="descend"
-            />
-            <Column
-              title="State"
-              key="state"
-              render={this.renderState}
-              sorter={Utils.localeCompareBy(typeHint, (job) => job.state)}
-            />
-            <Column
-              title="Action"
-              key="actions"
-              fixed="right"
-              width={150}
-              render={this.renderActions}
-            />
-          </Table>
-        </Spin>
-      </div>
-    );
+    } else if (job.type === APIJobType.TRAIN_MODEL) {
+      return (
+        <span>
+          {job.state === "SUCCESS" &&
+            "The model may now be selected from the “AI Analysis“ button when viewing a dataset."}
+        </span>
+      );
+    } else {
+      // The above if-branches should be exhaustive over all job types
+      Utils.assertNever(job.type);
+    }
   }
+
+  function renderState(__: any, job: APIJob) {
+    return <JobState job={job} />;
+  }
+
+  return (
+    <div className="container">
+      <div className="pull-right">
+        <Search
+          style={{
+            width: 200,
+          }}
+          onChange={handleSearch}
+          value={searchQuery}
+        />
+      </div>
+      <h3>Jobs</h3>
+      <Typography.Paragraph type="secondary">
+        Some actions such as dataset conversions or export as Tiff files require some time for
+        processing in the background.
+        <a
+          href="https://docs.webknossos.org/webknossos/automation/jobs.html"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Tooltip title="Read more in the documentation">
+            <InfoCircleOutlined style={{ marginLeft: 10 }} />
+          </Tooltip>
+        </a>
+        <br />
+        WEBKNOSSOS will notify you via email when a job has finished or reload this page to track
+        progress.
+      </Typography.Paragraph>
+      <div
+        className="clearfix"
+        style={{
+          margin: "20px 0px",
+        }}
+      />
+      <Spin spinning={isLoading} size="large">
+        <Table
+          dataSource={Utils.filterWithSearchQueryAND(jobs, ["datasetName"], searchQuery)}
+          rowKey="id"
+          pagination={{
+            defaultPageSize: 50,
+          }}
+          style={{
+            marginTop: 30,
+            marginBottom: 30,
+          }}
+        >
+          <Column
+            title="Job Id"
+            dataIndex="id"
+            key="id"
+            sorter={Utils.localeCompareBy<APIJob>((job) => job.id)}
+          />
+          <Column title="Description" key="datasetName" render={renderDescription} />
+          <Column
+            title="Created at"
+            key="createdAt"
+            render={(job) => <FormattedDate timestamp={job.createdAt} />}
+            sorter={Utils.compareBy<APIJob>((job) => job.createdAt)}
+            defaultSortOrder="descend"
+          />
+          <Column
+            title="Owner"
+            dataIndex="owner"
+            key="owner"
+            sorter={Utils.localeCompareBy<APIJob>((job) => job.owner.lastName)}
+            render={(owner: APIUserBase) => (
+              <>
+                <div>{owner.email ? `${owner.lastName}, ${owner.firstName}` : "-"}</div>
+                <div>{owner.email ? `(${owner.email})` : "-"}</div>
+              </>
+            )}
+          />
+          <Column
+            title="State"
+            key="state"
+            render={renderState}
+            sorter={Utils.localeCompareBy<APIJob>((job) => job.state)}
+          />
+          <Column title="Action" key="actions" fixed="right" width={150} render={renderActions} />
+        </Table>
+      </Spin>
+    </div>
+  );
 }
 
 export default JobListView;

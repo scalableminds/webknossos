@@ -1,11 +1,12 @@
+import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import { SaveQueueEntry } from "oxalis/store";
+import type { SaveQueueEntry } from "oxalis/store";
 import dummyUser from "test/fixtures/dummy_user";
 
 export function createSaveQueueFromUpdateActions(
   updateActions: UpdateAction[][],
   timestamp: number,
-  stats = null,
+  stats: TracingStats | null = null,
 ): SaveQueueEntry[] {
   return updateActions.map((ua) => ({
     version: -1,

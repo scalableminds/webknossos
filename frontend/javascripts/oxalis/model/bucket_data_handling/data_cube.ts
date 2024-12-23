@@ -1,11 +1,17 @@
 import _ from "lodash";
+import { createNanoEvents, type Emitter } from "nanoevents";
 import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
 import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_flow_types";
 import type { ProgressCallback } from "libs/progress_callback";
 import { V3 } from "libs/mjs";
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
-import { areBoundingBoxesOverlappingOrTouching, castForArrayType } from "libs/utils";
+import {
+  areBoundingBoxesOverlappingOrTouching,
+  castForArrayType,
+  isNumberMap,
+  union,
+} from "libs/utils";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
@@ -14,8 +20,8 @@ import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { DimensionMap } from "oxalis/model/dimensions";
 import Dimensions from "oxalis/model/dimensions";
 import ErrorHandling from "libs/error_handling";
-import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
+import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import type PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import type { Mapping } from "oxalis/store";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
@@ -27,8 +33,8 @@ import type {
   BucketAddress,
 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
-import { ResolutionInfo } from "../helpers/resolution_info";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { MagInfo } from "../helpers/mag_info";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 const warnAboutTooManyAllocations = _.once(() => {
   const msg =
@@ -76,8 +82,10 @@ class DataCube {
   temporalBucketManager: TemporalBucketManager;
   isSegmentation: boolean;
   elementClass: ElementClass;
-  resolutionInfo: ResolutionInfo;
+  magInfo: MagInfo;
   layerName: string;
+  emitter: Emitter;
+  lastRequestForValueSet: number | null = null;
 
   // The cube stores the buckets in a separate array for each zoomStep. For each
   // zoomStep the cube-array contains the boundaries and an array holding the buckets.
@@ -98,16 +106,17 @@ class DataCube {
   constructor(
     layerBBox: BoundingBox,
     additionalAxes: AdditionalAxis[],
-    resolutionInfo: ResolutionInfo,
+    magInfo: MagInfo,
     elementClass: ElementClass,
     isSegmentation: boolean,
     layerName: string,
   ) {
     this.elementClass = elementClass;
     this.isSegmentation = isSegmentation;
-    this.resolutionInfo = resolutionInfo;
+    this.magInfo = magInfo;
     this.layerName = layerName;
     this.additionalAxes = _.keyBy(additionalAxes, "name");
+    this.emitter = createNanoEvents();
 
     this.cubes = {};
     this.buckets = [];
@@ -170,19 +179,25 @@ class DataCube {
       : false;
   }
 
-  mapId(idToMap: number): number {
-    let mappedId = null;
+  mapId(unmappedId: number): number {
+    // Note that the return value can be an unmapped id even when
+    // a mapping is active, if it is a HDF5 mapping that is partially loaded
+    // and no entry exists yet for the input id.
+    let mappedId: number | null | undefined = null;
     const mapping = this.getMapping();
 
     if (mapping != null && this.isMappingEnabled()) {
-      mappedId = mapping[idToMap];
+      mappedId = isNumberMap(mapping)
+        ? mapping.get(Number(unmappedId))
+        : // TODO: Proper 64 bit support (#6921)
+          Number(mapping.get(BigInt(unmappedId)));
+    }
+    if (mappedId == null || isNaN(mappedId)) {
+      // The id couldn't be mapped.
+      return this.shouldHideUnmappedIds() ? 0 : unmappedId;
     }
 
-    if (this.shouldHideUnmappedIds() && mappedId == null) {
-      mappedId = 0;
-    }
-
-    return mappedId != null ? mappedId : idToMap;
+    return mappedId;
   }
 
   private getCubeKey(zoomStep: number, allCoords: AdditionalCoordinate[] | undefined | null) {
@@ -198,7 +213,7 @@ class DataCube {
       return false;
     }
 
-    return this.boundingBox.containsBucket([x, y, z, zoomStep], this.resolutionInfo);
+    return this.boundingBox.containsBucket([x, y, z, zoomStep], this.magInfo);
   }
 
   getBucketIndexAndCube([x, y, z, zoomStep, coords]: BucketAddress): [
@@ -224,8 +239,8 @@ class DataCube {
   ): CubeEntry | null {
     const cubeKey = this.getCubeKey(zoomStep, coords);
     if (this.cubes[cubeKey] == null) {
-      const resolution = this.resolutionInfo.getResolutionByIndex(zoomStep);
-      if (resolution == null) {
+      const mag = this.magInfo.getMagByIndex(zoomStep);
+      if (mag == null) {
         return null;
       }
 
@@ -239,9 +254,9 @@ class DataCube {
       }
 
       const zoomedCubeBoundary: Vector3 = [
-        Math.ceil(this.boundingBox.max[0] / (constants.BUCKET_WIDTH * resolution[0])) + 1,
-        Math.ceil(this.boundingBox.max[1] / (constants.BUCKET_WIDTH * resolution[1])) + 1,
-        Math.ceil(this.boundingBox.max[2] / (constants.BUCKET_WIDTH * resolution[2])) + 1,
+        Math.ceil(this.boundingBox.max[0] / (constants.BUCKET_WIDTH * mag[0])) + 1,
+        Math.ceil(this.boundingBox.max[1] / (constants.BUCKET_WIDTH * mag[1])) + 1,
+        Math.ceil(this.boundingBox.max[2] / (constants.BUCKET_WIDTH * mag[2])) + 1,
       ];
       this.cubes[cubeKey] = new CubeEntry(zoomedCubeBoundary);
     }
@@ -327,7 +342,7 @@ class DataCube {
             {
               elementClass: this.elementClass,
               isSegmentation: this.isSegmentation,
-              resolutionInfo: this.resolutionInfo,
+              magInfo: this.magInfo,
             },
             "warning",
           );
@@ -359,7 +374,7 @@ class DataCube {
 
     const notCollectedBuckets = [];
     for (const bucket of this.buckets) {
-      bucket._breakMaybe();
+      bucket._debuggerMaybe();
       // Even if the predicateFn doesn't say that a bucket should be
       // collected, we collect REQUESTED buckets because the pullQueue
       // was already cleared above. This means that the bucket is in a
@@ -378,6 +393,30 @@ class DataCube {
 
     this.buckets = notCollectedBuckets;
     this.bucketIterator = notCollectedBuckets.length;
+  }
+
+  triggerBucketDataChanged(): void {
+    this.emitter.emit("bucketDataChanged");
+  }
+
+  shouldEagerlyMaintainUsedValueSet() {
+    // The value set for all buckets in this cube should be maintained eagerly
+    // if the valueSet was used within the last 2 minutes.
+    return Date.now() - (this.lastRequestForValueSet || 0) < 2 * 60 * 1000;
+  }
+
+  getValueSetForAllBuckets(): Set<number> | Set<bigint> {
+    this.lastRequestForValueSet = Date.now();
+
+    // Theoretically, we could ignore coarser buckets for which we know that
+    // finer buckets are already loaded. However, the current performance
+    // is acceptable which is why this optimization isn't implemented.
+    const valueSets = this.buckets
+      .filter((bucket) => bucket.state === "LOADED")
+      .map((bucket) => bucket.getValueSet());
+    // @ts-ignore The buckets of a single layer all have the same element class, so they are all number or all bigint
+    const valueSet = union(valueSets);
+    return valueSet;
   }
 
   collectBucket(bucket: DataBucket): void {
@@ -405,13 +444,13 @@ class DataCube {
     // Please make use of a LabeledVoxelsMap instead.
     const promises = [];
 
-    for (const [resolutionIndex] of this.resolutionInfo.getResolutionsWithIndices()) {
+    for (const [magIndex] of this.magInfo.getMagsWithIndices()) {
       promises.push(
         this._labelVoxelInResolution_DEPRECATED(
           voxel,
           additionalCoordinates,
           label,
-          resolutionIndex,
+          magIndex,
           activeSegmentId,
         ),
       );
@@ -428,7 +467,7 @@ class DataCube {
     zoomStep: number,
     activeSegmentId: number | null | undefined,
   ): Promise<void> {
-    let voxelInCube = this.boundingBox.containsPoint(voxel);
+    const voxelInCube = this.boundingBox.containsPoint(voxel);
 
     if (voxelInCube) {
       const address = this.positionToZoomedAddress(voxel, additionalCoordinates, zoomStep);
@@ -507,9 +546,9 @@ class DataCube {
       };
     }
 
-    if (!this.resolutionInfo.hasIndex(zoomStep)) {
+    if (!this.magInfo.hasIndex(zoomStep)) {
       throw new Error(
-        `DataCube.floodFill was called with a zoomStep of ${zoomStep} which does not exist for the current resolution.`,
+        `DataCube.floodFill was called with a zoomStep of ${zoomStep} which does not exist for the current magnification.`,
       );
     }
 
@@ -585,7 +624,7 @@ class DataCube {
       // for the current magnification. This simplifies the algorithm, too, since the floodfill also
       // uses the bucket's data array to mark visited voxels (which would not be possible with
       // LabeledVoxelMaps).
-      // eslint-disable-next-line no-await-in-loop
+
       const bucketData = await currentBucket.getDataForMutation();
       const initialVoxelIndex = this.getVoxelIndexByVoxelOffset(initialXyzVoxelInBucket);
 
@@ -602,16 +641,14 @@ class DataCube {
       const currentLabeledVoxelMap =
         bucketsWithLabeledVoxelsMap.get(currentBucket.zoomedAddress) || new Map();
 
-      const currentResolution = this.resolutionInfo.getResolutionByIndexOrThrow(
-        currentBucket.zoomedAddress[3],
-      );
+      const currentMag = this.magInfo.getMagByIndexOrThrow(currentBucket.zoomedAddress[3]);
 
       const markUvwInSliceAsLabeled = ([firstCoord, secondCoord, thirdCoord]: Vector3) => {
         // Convert bucket local W coordinate to global W (both mag-dependent)
         const w = dimensionIndices[2];
         thirdCoord += currentBucket.getTopLeftInMag()[w];
         // Convert mag-dependent W to mag-independent W
-        thirdCoord *= currentResolution[w];
+        thirdCoord *= currentMag[w];
 
         if (!currentLabeledVoxelMap.has(thirdCoord)) {
           currentLabeledVoxelMap.set(
@@ -671,7 +708,7 @@ class DataCube {
               labeledVoxelCount++;
               const currentGlobalPosition = V3.add(
                 currentGlobalBucketPosition,
-                V3.scale3(adjustedNeighbourVoxelXyz, currentResolution),
+                V3.scale3(adjustedNeighbourVoxelXyz, currentMag),
               );
               coveredBBoxMin = [
                 Math.min(coveredBBoxMin[0], currentGlobalPosition[0]),
@@ -687,7 +724,7 @@ class DataCube {
 
               if (labeledVoxelCount % 1000000 === 0) {
                 console.log(`Labeled ${labeledVoxelCount} Vx. Continuing...`);
-                // eslint-disable-next-line no-await-in-loop
+
                 await progressCallback(
                   false,
                   `Labeled ${labeledVoxelCount / 1000000} MVx. Continuing...`,
@@ -743,7 +780,7 @@ class DataCube {
     additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number = 0,
   ): boolean {
-    // When this method returns false, this means that the next resolution (if it exists)
+    // When this method returns false, this means that the next mag (if it exists)
     // needs to be examined for rendering.
     const bucket = this.getBucket(
       this.positionToZoomedAddress(voxel, additionalCoordinates, zoomStep),
@@ -781,12 +818,12 @@ class DataCube {
     additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number,
   ): number {
-    const resolutions = this.resolutionInfo.getDenseResolutions();
+    const mags = this.magInfo.getDenseMags();
     let usableZoomStep = zoomStep;
 
     while (
       position &&
-      usableZoomStep < resolutions.length - 1 &&
+      usableZoomStep < mags.length - 1 &&
       !this.isZoomStepCurrentlyRenderableForVoxel(position, additionalCoordinates, usableZoomStep)
     ) {
       usableZoomStep++;
@@ -800,12 +837,12 @@ class DataCube {
     additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number,
   ): Promise<number> {
-    const resolutions = this.resolutionInfo.getDenseResolutions();
+    const mags = this.magInfo.getDenseMags();
     let usableZoomStep = zoomStep;
 
     while (
       position &&
-      usableZoomStep < resolutions.length - 1 && // eslint-disable-next-line no-await-in-loop
+      usableZoomStep < mags.length - 1 &&
       !(await this.isZoomStepUltimatelyRenderableForVoxel(
         position,
         additionalCoordinates,
@@ -824,7 +861,7 @@ class DataCube {
     mapping: Mapping | null | undefined,
     zoomStep: number = 0,
   ): number {
-    if (!this.resolutionInfo.hasIndex(zoomStep)) {
+    if (!this.magInfo.hasIndex(zoomStep)) {
       return 0;
     }
 
@@ -835,17 +872,21 @@ class DataCube {
 
     if (bucket.hasData()) {
       const data = bucket.getData();
-      const dataValue = Number(data[voxelIndex]);
+      const dataValue = data[voxelIndex];
 
       if (mapping) {
-        const mappedValue = mapping[dataValue];
+        const mappedValue = isNumberMap(mapping)
+          ? mapping.get(Number(dataValue))
+          : mapping.get(BigInt(dataValue));
 
         if (mappedValue != null) {
-          return mappedValue;
+          // TODO: Proper 64 bit support (#6921)
+          return Number(mappedValue);
         }
       }
 
-      return dataValue;
+      // TODO: Proper 64 bit support (#6921)
+      return Number(dataValue);
     }
 
     return 0;
@@ -876,10 +917,10 @@ class DataCube {
   getVoxelOffset(voxel: Vector3, zoomStep: number = 0): Vector3 {
     // No `map` for performance reasons
     const voxelOffset: Vector3 = [0, 0, 0];
-    const resolution = this.resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
+    const mag = this.magInfo.getMagByIndexOrThrow(zoomStep);
 
     for (let i = 0; i < 3; i++) {
-      voxelOffset[i] = Math.floor(voxel[i] / resolution[i]) % constants.BUCKET_WIDTH;
+      voxelOffset[i] = Math.floor(voxel[i] / mag[i]) % constants.BUCKET_WIDTH;
     }
 
     return voxelOffset;
@@ -898,7 +939,7 @@ class DataCube {
     // return the bucket a given voxel lies in
     return globalPositionToBucketPosition(
       position,
-      this.resolutionInfo.getDenseResolutions(),
+      this.magInfo.getDenseMags(),
       zoomStep,
       additionalCoordinates,
     );

@@ -11,8 +11,9 @@ import {
   Tag,
   Tooltip,
   Select,
-  MenuProps,
-  Modal,
+  type MenuProps,
+  App,
+  type CollapseProps,
 } from "antd";
 import {
   ClockCircleOutlined,
@@ -23,6 +24,7 @@ import {
   ExclamationCircleOutlined,
   LeftOutlined,
   FieldTimeOutlined,
+  ExportOutlined,
 } from "@ant-design/icons";
 import MiniSearch from "minisearch";
 
@@ -31,16 +33,16 @@ import dayjs from "dayjs";
 import { useSearchParams, useUpdateEvery } from "libs/react_hooks";
 import {
   VoxelyticsRunState,
-  VoxelyticsTaskConfig,
-  VoxelyticsTaskConfigWithHierarchy,
-  VoxelyticsTaskConfigWithName,
-  VoxelyticsTaskInfo,
-  VoxelyticsWorkflowReport,
+  type VoxelyticsTaskConfig,
+  type VoxelyticsTaskConfigWithHierarchy,
+  type VoxelyticsTaskConfigWithName,
+  type VoxelyticsTaskInfo,
+  type VoxelyticsWorkflowReport,
 } from "types/api_flow_types";
 import {
   formatDateMedium,
-  formatDistance,
-  formatDistanceStrict,
+  formatTimeInterval,
+  formatTimeIntervalStrict,
   formatDurationStrict,
 } from "libs/format_utils";
 import DAGView, { colorHasher } from "./dag_view";
@@ -48,10 +50,13 @@ import TaskView from "./task_view";
 import { formatLog } from "./log_tab";
 import { addAfterPadding, addBeforePadding } from "./utils";
 import { LOG_LEVELS } from "oxalis/constants";
-import { getVoxelyticsLogs } from "admin/admin_rest_api";
+import { getVoxelyticsLogs, deleteWorkflow } from "admin/admin_rest_api";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
+import { notEmpty } from "libs/utils";
+import type { ArrayElement } from "types/globals";
+import { useSelector } from "react-redux";
+import type { OxalisState } from "oxalis/store";
 
-const { Panel } = Collapse;
 const { Search } = Input;
 
 function getFilteredTasks(
@@ -179,7 +184,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             timed out
           </Tag>{" "}
           {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
+          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.CANCELLED:
@@ -189,7 +194,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             <>
               End Time: {formatDateMedium(taskInfo.endTime)}
               <br />
-              Duration: {formatDistanceStrict(taskInfo.endTime, taskInfo.beginTime)}
+              Duration: {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
             </>
           }
         >
@@ -197,7 +202,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             cancelled
           </Tag>{" "}
           {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
+          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.FAILED:
@@ -207,7 +212,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             <>
               End Time: {formatDateMedium(taskInfo.endTime)}
               <br />
-              Duration: {formatDistanceStrict(taskInfo.endTime, taskInfo.beginTime)}
+              Duration: {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
             </>
           }
         >
@@ -215,7 +220,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             failed
           </Tag>{" "}
           {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
+          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.COMPLETE:
@@ -225,7 +230,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             <>
               End Time: {formatDateMedium(taskInfo.endTime)}
               <br />
-              Duration: {formatDistanceStrict(taskInfo.endTime, taskInfo.beginTime)}
+              Duration: {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
             </>
           }
         >
@@ -233,7 +238,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             completed
           </Tag>{" "}
           {dayjs(taskInfo.endTime).fromNow()},{" "}
-          {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
+          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     default:
@@ -258,6 +263,7 @@ export default function TaskListView({
   onToggleExpandedMetaTaskKey: (v: string) => void;
   onReload: () => void;
 }) {
+  const { modal } = App.useApp();
   const [searchQuery, setSearchQuery] = useState("");
   const { runId } = useSearchParams();
   const history = useHistory();
@@ -267,6 +273,8 @@ export default function TaskListView({
   const params = useParams<{ highlightedTask?: string }>();
   const highlightedTask = params.highlightedTask || "";
   const location = useLocation();
+
+  const isCurrentUserSuperUser = useSelector((state: OxalisState) => state.activeUser?.isSuperUser);
 
   const singleRunId = report.runs.length === 1 ? report.runs[0].id : runId;
 
@@ -285,7 +293,6 @@ export default function TaskListView({
   }
 
   const miniSearch = useMemo(() => {
-    // eslint-disable-next-line @typescript-eslint/no-shadow
     const miniSearch: MiniSearch<VoxelyticsTaskConfig> = new MiniSearch({
       fields: ["taskName", "task", "config.name"],
       idField: "taskName",
@@ -357,7 +364,7 @@ export default function TaskListView({
   }
 
   function showArtifactsDiskUsageList() {
-    Modal.info({
+    modal.info({
       title: "Disk Usage of Artifacts",
       content: (
         <ArtifactsDiskUsageList
@@ -418,6 +425,26 @@ export default function TaskListView({
     }
   }
 
+  async function deleteWorkflowReport() {
+    await modal.confirm({
+      title: "Delete Workflow Report",
+      content:
+        "Are you sure you want to delete this workflow report? This can not be undone. Note that if the workflow is still running, this may cause it to fail.",
+      okText: "Delete",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await deleteWorkflow(report.workflow.hash);
+          history.push("/workflows");
+          message.success("Workflow report deleted.");
+        } catch (error) {
+          console.error(error);
+          message.error("Could not delete workflow report.");
+        }
+      },
+    });
+  }
+
   const overflowMenu: MenuProps = {
     items: [
       { key: "1", onClick: copyAllArtifactPaths, label: "Copy All Artifact Paths" },
@@ -439,110 +466,136 @@ export default function TaskListView({
       { key: "5", onClick: showArtifactsDiskUsageList, label: "Show Disk Usage of Artifacts" },
     ],
   };
+  if (isCurrentUserSuperUser)
+    overflowMenu.items?.push({
+      key: "6",
+      onClick: deleteWorkflowReport,
+      label: "Delete Workflow Report",
+    });
 
-  const renderTaskGroupOrTask = (taskGroup: VoxelyticsTaskConfigWithHierarchy) => {
+  type ItemType = ArrayElement<CollapseProps["items"]>;
+
+  const getTaskGroupOrTaskItem = (
+    taskGroup: VoxelyticsTaskConfigWithHierarchy,
+  ): ItemType | undefined => {
     const taskInfo = aggregateTaskInfos(taskGroup, report.tasks, runId);
 
     if (taskGroup.isMetaTask) {
       // If tasks are filtered away by the search query, it can happen that a meta task
       // has "no children", anymore. In that case, don't render the entire meta task.
       const subtasks = taskGroup.subtasks;
-      const children = subtasks.map(renderTaskGroupOrTask).filter((c) => c != null);
-      if (children.length === 0) {
-        return null;
+      const collapseItems = subtasks.map(getTaskGroupOrTaskItem).filter(notEmpty);
+      if (collapseItems.length === 0) {
+        return undefined;
       }
 
-      return (
-        <Panel
-          header={
-            <div className="task-panel-header">
-              <div
-                style={{
-                  width: 10,
-                  height: 10,
-                  display: "inline-block",
-                  marginRight: 20,
-                  borderRadius: "50%",
-                  backgroundColor: "gray",
-                  boxShadow: "5px 0px 0 0px #478d98, 10px 0px 0 0px #73e471",
-                }}
-              />
-              {taskGroup.key}
-              <wbr />
-              <span className="task-panel-state">
-                <TaskStateTag taskInfo={taskInfo} />
-              </span>
-            </div>
-          }
-          key={taskGroup.key}
-          id={`task-panel-${taskGroup.key}`}
-        >
-          {openMetatask !== taskGroup.key && (
-            <div style={{ marginBottom: 8 }}>
-              <a
-                href=""
-                style={{ marginRight: 16 }}
-                onClick={(ev) => {
-                  ev.preventDefault();
-                  onToggleExpandedMetaTaskKey(taskGroup.key);
-                }}
-              >
-                {expandedMetaTaskKeys[taskGroup.key] ? "Collapse in DAG" : "Expand in DAG"}
-              </a>
-              <Link to={addUrlParam(location, "metatask", taskGroup.key)}>Open in extra View</Link>
-            </div>
-          )}
-          <Collapse>{children}</Collapse>
-        </Panel>
-      );
-    }
-    const task = taskGroup;
-
-    const isInFilteredTasks = filteredTasks.find((t) => t.taskName === task.taskName);
-    if (!isInFilteredTasks) {
-      return null;
-    }
-
-    return (
-      <Panel
-        header={
+      return {
+        key: taskGroup.key,
+        id: `task-panel-${taskGroup.key}`,
+        label: (
           <div className="task-panel-header">
             <div
               style={{
-                borderRadius: "50%",
-                height: 10,
                 width: 10,
+                height: 10,
                 display: "inline-block",
-                marginRight: 10,
-                backgroundColor: colorHasher.hex(task.task),
+                marginRight: 20,
+                borderRadius: "50%",
+                backgroundColor: "gray",
+                boxShadow: "5px 0px 0 0px #478d98, 10px 0px 0 0px #73e471",
               }}
             />
-            {task.taskName}
-            <wbr />
-            {task.config.name != null && (
-              <span className="task-panel-name">{task.config.name}</span>
-            )}
+            {taskGroup.key}
             <wbr />
             <span className="task-panel-state">
               <TaskStateTag taskInfo={taskInfo} />
             </span>
           </div>
-        }
-        key={task.taskName}
-        id={`task-panel-${task.taskName}`}
-      >
+        ),
+        children: (
+          <React.Fragment>
+            {openMetatask !== taskGroup.key && (
+              <div style={{ marginBottom: 8 }}>
+                <a
+                  href=""
+                  style={{ marginRight: 16 }}
+                  onClick={(ev) => {
+                    ev.preventDefault();
+                    onToggleExpandedMetaTaskKey(taskGroup.key);
+                  }}
+                >
+                  {expandedMetaTaskKeys[taskGroup.key] ? "Collapse in DAG" : "Expand in DAG"}
+                </a>
+                <Link to={addUrlParam(location, "metatask", taskGroup.key)}>
+                  Open in extra View
+                </Link>
+              </div>
+            )}
+            <Collapse items={collapseItems} />
+          </React.Fragment>
+        ),
+      };
+    }
+    const task = taskGroup;
+
+    const isInFilteredTasks = filteredTasks.find((t) => t.taskName === task.taskName);
+    if (!isInFilteredTasks) {
+      return undefined;
+    }
+
+    const taskArtifacts = report.artifacts[task.taskName] || {};
+    let foreignWorkflow: null | [string, string] = null;
+    if (taskInfo.state === VoxelyticsRunState.SKIPPED) {
+      foreignWorkflow = Object.values(taskArtifacts)[0]?.foreignWorkflow ?? null;
+    }
+
+    return {
+      key: task.taskName,
+      id: `task-panel-${task.taskName}`,
+      label: (
+        <div className="task-panel-header">
+          <div
+            style={{
+              borderRadius: "50%",
+              height: 10,
+              width: 10,
+              display: "inline-block",
+              marginRight: 10,
+              backgroundColor: colorHasher.hex(task.task),
+            }}
+          />
+          {foreignWorkflow != null ? (
+            <>
+              <Link to={`/workflows/${foreignWorkflow[0]}?runId=${foreignWorkflow[1]}`}>
+                {task.taskName}
+                &nbsp;
+                <ExportOutlined />
+              </Link>
+            </>
+          ) : (
+            task.taskName
+          )}
+          <wbr />
+          {task.config.name != null && <span className="task-panel-name">{task.config.name}</span>}
+          <wbr />
+          <span className="task-panel-state">
+            <TaskStateTag taskInfo={taskInfo} />
+          </span>
+        </div>
+      ),
+      children: (
         <TaskView
           taskName={task.taskName}
           workflowHash={report.workflow.hash}
           runId={singleRunId}
           task={task}
-          artifacts={report.artifacts[task.taskName] || []}
+          artifacts={taskArtifacts}
           dag={report.dag}
           taskInfo={taskInfo}
           onSelectTask={handleSelectTask}
         />
-      </Panel>
-    );
+      ),
+    };
   };
 
   const totalRuntime = report.tasks.reduce((sum, t) => {
@@ -559,8 +612,8 @@ export default function TaskListView({
     workflow: { name: readableWorkflowName },
   } = report;
   const runBeginTimeString = report.runs.reduce(
-    (r, a) => Math.min(r, a.beginTime.getTime()),
-    Infinity,
+    (r, a) => Math.min(r, a.beginTime != null ? a.beginTime.getTime() : Number.POSITIVE_INFINITY),
+    Number.POSITIVE_INFINITY,
   );
 
   return (
@@ -584,7 +637,7 @@ export default function TaskListView({
         <h4 style={{ color: "#51686e" }}>
           {formatDateMedium(new Date(runBeginTimeString))}{" "}
           <Tooltip title={formatDurationStrict(totalRuntime)}>
-            <FieldTimeOutlined style={{ marginLeft: 20 }} />
+            <FieldTimeOutlined style={{ marginLeft: 20 }} className="icon-margin-right" />
             {totalRuntime.humanize()}
           </Tooltip>
         </h4>
@@ -648,9 +701,11 @@ export default function TaskListView({
         </div>
 
         <div style={{ overflowY: "auto", flex: 1 }}>
-          <Collapse onChange={handleOnCollapseChange} activeKey={expandedTasks}>
-            {tasksWithHierarchy.map(renderTaskGroupOrTask)}
-          </Collapse>
+          <Collapse
+            onChange={handleOnCollapseChange}
+            activeKey={expandedTasks}
+            items={tasksWithHierarchy.map(getTaskGroupOrTaskItem).filter(notEmpty)}
+          />
         </div>
       </Col>
     </Row>
@@ -659,8 +714,18 @@ export default function TaskListView({
 
 function aggregateTimes(taskInfos: Array<VoxelyticsTaskInfo>): [Date, Date] {
   return [
-    new Date(taskInfos.reduce((r, a) => Math.min(r, a.beginTime?.getTime() ?? Infinity), Infinity)),
-    new Date(taskInfos.reduce((r, a) => Math.max(r, a.endTime?.getTime() ?? -Infinity), -Infinity)),
+    new Date(
+      taskInfos.reduce(
+        (r, a) => Math.min(r, a.beginTime?.getTime() ?? Number.POSITIVE_INFINITY),
+        Number.POSITIVE_INFINITY,
+      ),
+    ),
+    new Date(
+      taskInfos.reduce(
+        (r, a) => Math.max(r, a.endTime?.getTime() ?? Number.NEGATIVE_INFINITY),
+        Number.NEGATIVE_INFINITY,
+      ),
+    ),
   ];
 }
 

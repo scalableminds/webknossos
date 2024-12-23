@@ -22,7 +22,7 @@ export const tracing: ServerSkeletonTracing = {
           },
           radius: 112.39999389648438,
           viewport: 0,
-          resolution: 1,
+          mag: 1,
           bitDepth: 4,
           interpolation: true,
           createdTimestamp: 1502302785450,
@@ -49,6 +49,7 @@ export const tracing: ServerSkeletonTracing = {
       ],
       name: "explorative_2017-08-09_SCM_Boy_002",
       isVisible: true,
+      metadata: [],
     },
     {
       treeId: 1,
@@ -69,7 +70,7 @@ export const tracing: ServerSkeletonTracing = {
           },
           radius: 112.39999389648438,
           viewport: 0,
-          resolution: 1,
+          mag: 1,
           bitDepth: 4,
           interpolation: true,
           createdTimestamp: 1502302785447,
@@ -89,7 +90,7 @@ export const tracing: ServerSkeletonTracing = {
           },
           radius: 112.39999389648438,
           viewport: 0,
-          resolution: 1,
+          mag: 1,
           bitDepth: 4,
           interpolation: true,
           createdTimestamp: 1502302785448,
@@ -116,6 +117,7 @@ export const tracing: ServerSkeletonTracing = {
       comments: [],
       isVisible: true,
       name: "explorative_2017-08-09_SCM_Boy_001",
+      metadata: [],
     },
   ],
   treeGroups: [
@@ -156,6 +158,7 @@ export const tracing: ServerSkeletonTracing = {
 };
 export const annotation: APIAnnotation = {
   description: "",
+  datasetId: "66f3c82966010034942e9740",
   state: "Active",
   id: "598b52293c00009906f043e7",
   visibility: "Internal",
@@ -164,7 +167,6 @@ export const annotation: APIAnnotation = {
   teams: [],
   typ: "Explorational",
   task: null,
-  stats: {},
   restrictions: {
     allowAccess: true,
     allowUpdate: true,
@@ -177,6 +179,7 @@ export const annotation: APIAnnotation = {
       name: "Skeleton",
       tracingId: "47e37793-d0be-4240-a371-87ce68561a13",
       typ: "Skeleton",
+      stats: {},
     },
   ],
   dataSetName: "ROI2017_wkw",
@@ -186,6 +189,8 @@ export const annotation: APIAnnotation = {
     url: "http://localhost:9000",
     isScratch: false,
     allowsUpload: true,
+    jobsEnabled: false,
+    jobsSupportedByAvailableWorkers: [],
   },
   tracingStore: {
     name: "localhost",
@@ -197,10 +202,11 @@ export const annotation: APIAnnotation = {
     somaClickingAllowed: true,
     volumeInterpolationAllowed: false,
     mergerMode: false,
-    resolutionRestrictions: {},
+    magRestrictions: {},
   },
   tags: ["ROI2017_wkw", "skeleton"],
   tracingTime: 0,
   contributors: [],
   othersMayEdit: false,
+  isLockedByOwner: false,
 };

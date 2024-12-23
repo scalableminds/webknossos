@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { CopyOutlined, SwapOutlined } from "@ant-design/icons";
-import { Input, Button, Col, Row, Spin, Form } from "antd";
+import { Input, Button, Col, Row, Spin, Form, Space } from "antd";
 import { getAuthToken, revokeAuthToken } from "admin/admin_rest_api";
 import type { OxalisState } from "oxalis/store";
 import Toast from "libs/toast";
@@ -38,7 +38,7 @@ function AuthTokenView() {
     Toast.success("Token copied to clipboard");
   };
 
-  const copyOrganizationNameToClipboard = async () => {
+  const copyOrganizationIdToClipboard = async () => {
     if (activeUser != null) {
       await navigator.clipboard.writeText(activeUser.organization);
       Toast.success("Organization ID copied to clipboard");
@@ -59,7 +59,7 @@ function AuthTokenView() {
             <h3>Auth Token</h3>
             <Form form={form}>
               <FormItem>
-                <Input.Group compact>
+                <Space.Compact>
                   <Input
                     value={currentToken}
                     style={{
@@ -67,11 +67,8 @@ function AuthTokenView() {
                     }}
                     readOnly
                   />
-                  <Button
-                    onClick={copyTokenToClipboard}
-                    icon={<CopyOutlined className="without-icon-margin" />}
-                  />
-                </Input.Group>
+                  <Button onClick={copyTokenToClipboard} icon={<CopyOutlined />} />
+                </Space.Compact>
               </FormItem>
               <FormItem>
                 <Button icon={<SwapOutlined />} onClick={handleRevokeToken}>
@@ -84,7 +81,7 @@ function AuthTokenView() {
                 <h4>Organization ID</h4>
                 <Form>
                   <FormItem>
-                    <Input.Group compact>
+                    <Space.Compact>
                       <Input
                         value={activeUser.organization}
                         style={{
@@ -92,11 +89,8 @@ function AuthTokenView() {
                         }}
                         readOnly
                       />
-                      <Button
-                        onClick={copyOrganizationNameToClipboard}
-                        icon={<CopyOutlined className="without-icon-margin" />}
-                      />
-                    </Input.Group>
+                      <Button onClick={copyOrganizationIdToClipboard} icon={<CopyOutlined />} />
+                    </Space.Compact>
                   </FormItem>
                 </Form>
               </>
@@ -108,14 +102,12 @@ function AuthTokenView() {
         <Col span={8}>
           <p>
             An Auth Token is a series of symbols that serves to authenticate you. It is used in
-            communication with the backend API and sent with every request to verify your identity.
+            communication with the Python API and sent with every request to verify your identity.
           </p>
           <p>
             You should revoke it if somebody else has acquired your token or you have the suspicion
             this has happened.{" "}
-            <a href="https://docs.webknossos.org/webknossos/rest_api.html#authentication">
-              Read more
-            </a>
+            <a href="https://docs.webknossos.org/webknossos-py/index.html">Read more</a>
           </p>
         </Col>
       </Row>

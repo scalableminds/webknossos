@@ -9,9 +9,9 @@ export const setActiveUserAction = (user: APIUser) =>
   ({
     type: "SET_ACTIVE_USER",
     user,
-  } as const);
+  }) as const;
 
 export const logoutUserAction = () =>
   ({
     type: "LOGOUT_USER",
-  } as const);
+  }) as const;

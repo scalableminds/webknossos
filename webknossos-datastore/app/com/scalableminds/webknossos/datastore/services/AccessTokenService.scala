@@ -33,8 +33,8 @@ object UserAccessRequest {
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.delete)
   def administrateDataSources: UserAccessRequest =
     UserAccessRequest(DataSourceId("", ""), AccessResourceType.datasource, AccessMode.administrate)
-  def administrateDataSources(organizationName: String): UserAccessRequest =
-    UserAccessRequest(DataSourceId("", organizationName), AccessResourceType.datasource, AccessMode.administrate)
+  def administrateDataSources(organizationId: String): UserAccessRequest =
+    UserAccessRequest(DataSourceId("", organizationId), AccessResourceType.datasource, AccessMode.administrate)
   def readDataSources(dataSourceId: DataSourceId): UserAccessRequest =
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.read)
   def writeDataSource(dataSourceId: DataSourceId): UserAccessRequest =
@@ -53,7 +53,7 @@ object UserAccessRequest {
 }
 
 trait AccessTokenService {
-  val remoteWebKnossosClient: RemoteWebKnossosClient
+  val remoteWebknossosClient: RemoteWebknossosClient
 
   private val AccessExpiration: FiniteDuration = 2 minutes
   private lazy val accessAnswersCache: AlfuCache[(UserAccessRequest, Option[String]), UserAccessAnswer] =
@@ -75,7 +75,14 @@ trait AccessTokenService {
   private def hasUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
       implicit ec: ExecutionContext): Fox[UserAccessAnswer] =
     accessAnswersCache.getOrLoad((accessRequest, token),
-                                 _ => remoteWebKnossosClient.requestUserAccess(token, accessRequest))
+                                 _ => remoteWebknossosClient.requestUserAccess(token, accessRequest))
+
+  def assertUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
+      implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      userAccessAnswer <- hasUserAccess(accessRequest, token) ?~> "Failed to check data access, token may be expired, consider reloading."
+      _ <- Fox.bool2Fox(userAccessAnswer.granted) ?~> userAccessAnswer.msg.getOrElse("Access forbidden.")
+    } yield ()
 
   private def executeBlockOnPositiveAnswer(userAccessAnswer: UserAccessAnswer,
                                            block: => Future[Result]): Future[Result] =
@@ -89,5 +96,5 @@ trait AccessTokenService {
     }
 }
 
-class DataStoreAccessTokenService @Inject()(val remoteWebKnossosClient: DSRemoteWebKnossosClient)
+class DataStoreAccessTokenService @Inject()(val remoteWebknossosClient: DSRemoteWebknossosClient)
     extends AccessTokenService

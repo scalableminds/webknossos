@@ -1,5 +1,5 @@
 import { Modal } from "antd";
-import React, { useState } from "react";
+import { useState } from "react";
 import { AsyncButton } from "components/async_clickables";
 import type { Vector3 } from "oxalis/constants";
 import type { VolumeTracing } from "oxalis/store";
@@ -29,32 +29,31 @@ export default function DownsampleVolumeModal({
       footer={null}
       width={800}
       maskClosable={false}
-      visible
+      open
     >
       <p>
-        This annotation does not have volume annotation data in all resolutions. Consequently,
+        This annotation does not have volume annotation data in all magnifications. Consequently,
         annotation data cannot be rendered at all zoom values. By clicking &quot;Downsample&quot;,
-        WEBKNOSSOS will use the best resolution of the volume data to create all dependent
-        resolutions.
+        WEBKNOSSOS will use the best magnification of the volume data to create all dependent mags.
       </p>
-
       <p>
-        The following resolutions will be added when clicking &quot;Downsample&quot;:{" "}
+        The following magnifications will be added when clicking &quot;Downsample&quot;:{" "}
         {magsToDownsample.map((mag) => mag.join("-")).join(", ")}.
       </p>
-
       <div>
-        The cause for the missing resolutions can be one of the following:
+        The cause for the missing magnifications can be one of the following:
         <ul>
           <li>
-            The annotation was created before WEBKNOSSOS supported multi-resolution volume tracings.
+            The annotation was created before WEBKNOSSOS supported multi-magnification volume
+            tracings.
           </li>
-          <li>An old annotation was uploaded which did not include all resolutions.</li>
-          <li>The annotation was created in a task that was restricted to certain resolutions.</li>
-          <li>The dataset was mutated to have more resolutions.</li>
+          <li>An old annotation was uploaded which did not include all magnifications.</li>
+          <li>
+            The annotation was created in a task that was restricted to certain magnifications.
+          </li>
+          <li>The dataset was mutated to have more magnifications.</li>
         </ul>
       </div>
-
       <p
         style={{
           fontWeight: "bold",

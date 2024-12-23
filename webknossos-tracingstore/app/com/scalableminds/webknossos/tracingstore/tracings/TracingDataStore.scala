@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
@@ -18,7 +18,7 @@ class TracingDataStore @Inject()(config: TracingStoreConfig,
 
   val healthClient = new FossilDBClient("healthCheckOnly", config, slackNotificationService)
 
-  system.scheduler.scheduleOnce(5 seconds)(healthClient.checkHealth)
+  system.scheduler.scheduleOnce(5 seconds)(healthClient.checkHealth(verbose = true))
 
   lazy val skeletons = new FossilDBClient("skeletons", config, slackNotificationService)
 

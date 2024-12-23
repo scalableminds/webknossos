@@ -1,5 +1,5 @@
-import { Checkbox, Col, Collapse, Form, Input, Row, Table, Button } from "antd";
-import { FormInstance } from "antd/lib/form";
+import { Checkbox, Col, Collapse, Form, Input, Row, Table, Button, type CollapseProps } from "antd";
+import type { FormInstance } from "antd/lib/form";
 import * as React from "react";
 import _ from "lodash";
 import { jsonEditStyle } from "dashboard/dataset/helper_components";
@@ -9,7 +9,6 @@ import { validateUserSettingsJSON } from "types/validation";
 import { TDViewDisplayModeEnum } from "oxalis/constants";
 import features from "features";
 const FormItem = Form.Item;
-const { Panel } = Collapse;
 
 function getRecommendedConfigByCategory() {
   return {
@@ -138,79 +137,84 @@ export default function RecommendedConfigurationView({
     };
   });
 
+  const recommendedSettingsView = (
+    <Row gutter={32}>
+      <Col span={12}>
+        <div>
+          The recommended configuration will be displayed to users when starting to work on a task
+          with this task type. The user is able to accept or decline this recommendation.
+          <br />
+          <br />
+          <FormItem
+            name="recommendedConfiguration"
+            hasFeedback
+            rules={[
+              {
+                validator: (rule, value) =>
+                  enabled ? validateUserSettingsJSON(rule, value) : Promise.resolve(),
+              },
+            ]}
+          >
+            <Input.TextArea
+              spellCheck={false}
+              autoSize={{
+                minRows: 20,
+              }}
+              style={jsonEditStyle}
+            />
+          </FormItem>
+        </div>
+        <Button className="button-margin" onClick={() => removeSettings(form, "orthogonal")}>
+          Remove Orthogonal-only Settings
+        </Button>
+        <Button className="button-margin" onClick={() => removeSettings(form, "flight")}>
+          Remove Flight/Oblique-only Settings
+        </Button>
+        <Button className="button-margin" onClick={() => removeSettings(form, "volume")}>
+          Remove Volume-only Settings
+        </Button>
+      </Col>
+      <Col span={12}>
+        Valid settings and their default values: <br />
+        <br />
+        <Table
+          columns={columns}
+          dataSource={configurationEntries}
+          size="small"
+          pagination={false}
+          className="large-table"
+          scroll={{
+            x: "max-content",
+          }}
+        />
+      </Col>
+    </Row>
+  );
+
+  const collapseItems: CollapseProps["items"] = [
+    {
+      key: "config",
+      label: (
+        <React.Fragment>
+          <Checkbox
+            checked={enabled}
+            style={{
+              marginRight: 10,
+            }}
+          />{" "}
+          Add Recommended User Settings
+        </React.Fragment>
+      ),
+      showArrow: false,
+      children: recommendedSettingsView,
+    },
+  ];
+
   return (
     <Collapse
       onChange={(openedPanels) => onChangeEnabled(openedPanels.length === 1)}
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
-      activeKey={enabled ? "config" : null}
-    >
-      <Panel
-        key="config"
-        header={
-          <React.Fragment>
-            <Checkbox
-              checked={enabled}
-              style={{
-                marginRight: 10,
-              }}
-            />{" "}
-            Add Recommended User Settings
-          </React.Fragment>
-        }
-        showArrow={false}
-      >
-        <Row gutter={32}>
-          <Col span={12}>
-            <div>
-              The recommended configuration will be displayed to users when starting to work on a
-              task with this task type. The user is able to accept or decline this recommendation.
-              <br />
-              <br />
-              <FormItem
-                name="recommendedConfiguration"
-                hasFeedback
-                rules={[
-                  {
-                    validator: (rule, value) =>
-                      enabled ? validateUserSettingsJSON(rule, value) : Promise.resolve(),
-                  },
-                ]}
-              >
-                <Input.TextArea
-                  spellCheck={false}
-                  autoSize={{
-                    minRows: 20,
-                  }}
-                  style={jsonEditStyle}
-                />
-              </FormItem>
-            </div>
-            <Button className="button-margin" onClick={() => removeSettings(form, "orthogonal")}>
-              Remove Orthogonal-only Settings
-            </Button>
-            <Button className="button-margin" onClick={() => removeSettings(form, "flight")}>
-              Remove Flight/Oblique-only Settings
-            </Button>
-            <Button className="button-margin" onClick={() => removeSettings(form, "volume")}>
-              Remove Volume-only Settings
-            </Button>
-          </Col>
-          <Col span={12}>
-            Valid settings and their default values: <br />
-            <br />
-            <Table
-              columns={columns}
-              dataSource={configurationEntries}
-              size="small"
-              pagination={false}
-              className="large-table"
-              scroll={{
-                x: "max-content",
-              }}
-            />
-          </Col>
-        </Row>
-      </Panel>
-    </Collapse>
+      activeKey={enabled ? "config" : undefined}
+      items={collapseItems}
+    />
   );
 }

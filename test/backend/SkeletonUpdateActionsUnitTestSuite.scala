@@ -1,7 +1,8 @@
 package backend
 
-import com.scalableminds.util.geometry.{Vec3Int, Vec3Double}
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
 import org.scalatestplus.play._
@@ -66,7 +67,10 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         name = "updated tree",
         branchPoints = List(UpdateActionBranchPoint(0, Dummies.timestamp)),
         comments = List[UpdateActionComment](),
-        groupId = None
+        groupId = None,
+        metadata = Some(
+          List(MetadataEntry("myKey", numberValue = Some(5.0)),
+               MetadataEntry("anotherKey", stringListValue = Some(Seq("hello", "there")))))
       )
       val result = applyUpdateAction(updateTreeAction)
 
@@ -76,6 +80,9 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       assert(tree.createdTimestamp == Dummies.timestamp)
       assert(tree.comments == updateTreeAction.comments)
       assert(tree.name == updateTreeAction.name)
+      assert(
+        tree.metadata == List(MetadataEntryProto("myKey", numberValue = Some(5.0)),
+                              MetadataEntryProto("anotherKey", stringListValue = Seq("hello", "there"))))
     }
   }
 
@@ -100,7 +107,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
   }
 
   "MoveTreeComponentSkeletonAction" should {
-    "move the specified (seperate) nodes" in {
+    "move the specified (separate) nodes" in {
       val moveTreeComponentSkeletonAction =
         new MoveTreeComponentSkeletonAction(Dummies.comp1Nodes.map(_.id).toList, sourceId = 3, targetId = 4)
       val result = moveTreeComponentSkeletonAction.applyOn(Dummies.componentSkeletonTracing)
@@ -149,7 +156,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         Option(Vec3Double(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
         Option(newNode.radius),
         Option(newNode.viewport),
-        Option(newNode.resolution),
+        Option(newNode.mag),
         Option(newNode.bitDepth),
         Option(newNode.interpolation),
         treeId = 1,
@@ -174,11 +181,12 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         Option(Vec3Double(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
         Option(newNode.radius),
         Option(newNode.viewport),
-        Option(newNode.resolution),
+        Option(newNode.mag),
         Option(newNode.bitDepth),
         Option(newNode.interpolation),
         treeId = 1,
-        Dummies.timestamp
+        Dummies.timestamp,
+        None
       )
       val result = applyUpdateAction(updateNodeSkeletonAction)
       assert(result.trees.length == Dummies.skeletonTracing.trees.length)
@@ -198,7 +206,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         Option(Vec3Double(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
         Option(newNode.radius),
         Option(newNode.viewport),
-        Option(newNode.resolution),
+        Option(newNode.mag),
         Option(newNode.bitDepth),
         Option(newNode.interpolation),
         treeId = 1,
@@ -215,7 +223,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
     "update a top level tree group" in {
       val updatedName = "Axon 2 updated"
       val updateTreeGroupsSkeletonAction = new UpdateTreeGroupsSkeletonAction(
-        List(UpdateActionTreeGroup(updatedName, 2, List()))
+        List(UpdateActionTreeGroup(updatedName, 2, Some(true), List()))
       )
       val result = applyUpdateAction(updateTreeGroupsSkeletonAction)
       assert(result.trees == Dummies.skeletonTracing.trees)
@@ -226,7 +234,11 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       val updatedNameTop = "Axon 1 updated"
       val updatedNameNested = "Axon 3 updated"
       val updateTreeGroupsSkeletonAction = new UpdateTreeGroupsSkeletonAction(
-        List(UpdateActionTreeGroup(updatedNameTop, 1, List(UpdateActionTreeGroup(updatedNameNested, 3, List()))))
+        List(
+          UpdateActionTreeGroup(updatedNameTop,
+                                1,
+                                Some(true),
+                                List(UpdateActionTreeGroup(updatedNameNested, 3, Some(false), List()))))
       )
       val result = applyUpdateAction(updateTreeGroupsSkeletonAction)
       assert(result.trees == Dummies.skeletonTracing.trees)

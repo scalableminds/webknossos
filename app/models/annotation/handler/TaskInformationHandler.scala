@@ -8,7 +8,7 @@ import models.task.TaskDAO
 import models.user.{User, UserService}
 import models.annotation.AnnotationState._
 import models.project.ProjectDAO
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 
@@ -30,11 +30,11 @@ class TaskInformationHandler @Inject()(taskDAO: TaskDAO,
       _ <- assertNonEmpty(finishedAnnotations) ?~> "task.noAnnotations"
       user <- userOpt ?~> "user.notAuthorised"
       project <- projectDAO.findOne(task._project)
-      _dataSet <- finishedAnnotations.headOption.map(_._dataSet).toFox
+      datasetId <- finishedAnnotations.headOption.map(_._dataset).toFox
       mergedAnnotation <- annotationMerger.mergeN(task._id,
                                                   persistTracing = false,
                                                   user._id,
-                                                  _dataSet,
+                                                  datasetId,
                                                   project._team,
                                                   AnnotationType.CompoundTask,
                                                   finishedAnnotations) ?~> "annotation.merge.failed.compound"

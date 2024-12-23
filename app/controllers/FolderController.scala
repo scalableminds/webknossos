@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.objectid.ObjectId
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.dataset.DatasetDAO
@@ -7,10 +8,10 @@ import models.folder.{Folder, FolderDAO, FolderParameters, FolderService}
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.UserService
-import play.api.libs.json.Json
+import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
-import utils.ObjectId
+import utils.MetadataAssertions
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -25,7 +26,8 @@ class FolderController @Inject()(
     organizationDAO: OrganizationDAO,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
-    with FoxImplicits {
+    with FoxImplicits
+    with MetadataAssertions {
 
   def getRoot: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
@@ -53,6 +55,8 @@ class FolderController @Inject()(
         _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
         - <- Fox.assertTrue(folderDAO.isEditable(idValidated)) ?~> "folder.update.notAllowed" ~> FORBIDDEN
         _ <- folderService.assertValidFolderName(params.name)
+        _ <- assertNoDuplicateMetadataKeys(params.metadata)
+        _ <- folderDAO.updateMetadata(idValidated, params.metadata)
         _ <- folderDAO.updateName(idValidated, params.name) ?~> "folder.update.name.failed"
         _ <- folderService
           .updateAllowedTeams(idValidated, params.allowedTeams, request.identity) ?~> "folder.update.teams.failed"
@@ -103,7 +107,7 @@ class FolderController @Inject()(
     for {
       parentIdValidated <- ObjectId.fromString(parentId)
       _ <- folderService.assertValidFolderName(name)
-      newFolder = Folder(ObjectId.generate, name)
+      newFolder = Folder(ObjectId.generate, name, JsArray.empty)
       _ <- folderDAO.findOne(parentIdValidated) ?~> "folder.notFound"
       _ <- folderDAO.insertAsChild(parentIdValidated, newFolder) ?~> "folder.create.failed"
       organization <- organizationDAO.findOne(request.identity._organization) ?~> "folder.notFound"

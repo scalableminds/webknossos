@@ -5,8 +5,10 @@ import type {
   APIAllowedMode,
   APIDataLayer,
   APIDataset,
+  APIDatasetCompact,
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
+  APISkeletonLayer,
   ElementClass,
 } from "types/api_flow_types";
 import type {
@@ -18,48 +20,56 @@ import type {
   ActiveMappingInfo,
 } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
-import { IdentityTransform, Vector3, Vector4, ViewMode } from "oxalis/constants";
+import {
+  IdentityTransform,
+  LongUnitToShortUnitMap,
+  type Vector3,
+  type Vector4,
+  type ViewMode,
+} from "oxalis/constants";
 import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
 import { aggregateBoundingBox, maxValue } from "libs/utils";
-import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
+import { formatExtentInUnitWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
-import { DataLayer } from "types/schemas/datasource.types";
+import type { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
-import { M4x4, Matrix4x4, V3 } from "libs/mjs";
-import { convertToDenseResolution, ResolutionInfo } from "../helpers/resolution_info";
+import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
+import { convertToDenseMag, MagInfo } from "../helpers/mag_info";
 import MultiKeyMap from "libs/multi_key_map";
 import {
   chainTransforms,
+  createAffineTransformFromMatrix,
   createThinPlateSplineTransform,
   invertTransform,
-  Transform,
+  type Transform,
+  transformPointUnscaled,
 } from "../helpers/transformation_helpers";
 
-function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {
-  return new ResolutionInfo(resolutions);
+function _getMagInfo(magnifications: Array<Vector3>): MagInfo {
+  return new MagInfo(magnifications);
 }
 
-// Don't use memoizeOne here, since we want to cache the resolutions for all layers
+// Don't use memoizeOne here, since we want to cache the mags for all layers
 // (which are not that many).
-export const getResolutionInfo = _.memoize(_getResolutionInfo);
+export const getMagInfo = _.memoize(_getMagInfo);
 
-function _getResolutionInfoByLayer(dataset: APIDataset): Record<string, ResolutionInfo> {
-  const infos: Record<string, ResolutionInfo> = {};
+function _getMagInfoByLayer(dataset: APIDataset): Record<string, MagInfo> {
+  const infos: Record<string, MagInfo> = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
-    infos[layer.name] = getResolutionInfo(layer.resolutions);
+    infos[layer.name] = getMagInfo(layer.resolutions);
   }
 
   return infos;
 }
 
-export const getResolutionInfoByLayer = _.memoize(_getResolutionInfoByLayer);
+export const getMagInfoByLayer = _.memoize(_getMagInfoByLayer);
 
-export function getDenseResolutionsForLayerName(dataset: APIDataset, layerName: string) {
-  return getResolutionInfoByLayer(dataset)[layerName].getDenseResolutions();
+export function getDenseMagsForLayerName(dataset: APIDataset, layerName: string) {
+  return getMagInfoByLayer(dataset)[layerName].getDenseMags();
 }
 
-export const getResolutionUnion = memoizeOne((dataset: APIDataset): Array<Vector3[]> => {
+export const getMagnificationUnion = memoizeOne((dataset: APIDataset): Array<Vector3[]> => {
   /*
    * Returns a list of existent mags per mag level. For example:
    * [
@@ -69,48 +79,48 @@ export const getResolutionUnion = memoizeOne((dataset: APIDataset): Array<Vector
    *    [[8, 8, 8], [8, 8, 2]],
    * ]
    */
-  const resolutionUnionDict: { [key: number]: Vector3[] } = {};
+  const magUnionDict: { [key: number]: Vector3[] } = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
-    for (const resolution of layer.resolutions) {
-      const key = maxValue(resolution);
+    for (const mag of layer.resolutions) {
+      const key = maxValue(mag);
 
-      if (resolutionUnionDict[key] == null) {
-        resolutionUnionDict[key] = [resolution];
+      if (magUnionDict[key] == null) {
+        magUnionDict[key] = [mag];
       } else {
-        resolutionUnionDict[key].push(resolution);
+        magUnionDict[key].push(mag);
       }
     }
   }
 
-  for (const keyStr of Object.keys(resolutionUnionDict)) {
+  for (const keyStr of Object.keys(magUnionDict)) {
     const key = Number(keyStr);
-    resolutionUnionDict[key] = _.uniqWith(resolutionUnionDict[key], V3.isEqual);
+    magUnionDict[key] = _.uniqWith(magUnionDict[key], V3.isEqual);
   }
 
-  const keys = Object.keys(resolutionUnionDict)
+  const keys = Object.keys(magUnionDict)
     .sort((a, b) => Number(a) - Number(b))
     .map((el) => Number(el));
 
-  return keys.map((key) => resolutionUnionDict[key]);
+  return keys.map((key) => magUnionDict[key]);
 });
 
-export function getWidestResolutions(dataset: APIDataset): Vector3[] {
-  const allLayerResolutions = dataset.dataSource.dataLayers.map((layer) =>
-    convertToDenseResolution(layer.resolutions),
+export function getWidestMags(dataset: APIDataset): Vector3[] {
+  const allLayerMags = dataset.dataSource.dataLayers.map((layer) =>
+    convertToDenseMag(layer.resolutions),
   );
 
-  return _.maxBy(allLayerResolutions, (resolutions) => resolutions.length) || [];
+  return _.maxBy(allLayerMags, (mags) => mags.length) || [];
 }
 
-export const getSomeResolutionInfoForDataset = memoizeOne((dataset: APIDataset): ResolutionInfo => {
-  const resolutionUnion = getResolutionUnion(dataset);
-  const areMagsDistinct = resolutionUnion.every((mags) => mags.length <= 1);
+export const getSomeMagInfoForDataset = memoizeOne((dataset: APIDataset): MagInfo => {
+  const magUnion = getMagnificationUnion(dataset);
+  const areMagsDistinct = magUnion.every((mags) => mags.length <= 1);
 
   if (areMagsDistinct) {
-    return new ResolutionInfo(resolutionUnion.map((mags) => mags[0]));
+    return new MagInfo(magUnion.map((mags) => mags[0]));
   } else {
-    return new ResolutionInfo(getWidestResolutions(dataset));
+    return new MagInfo(getWidestMags(dataset));
   }
 });
 
@@ -123,7 +133,7 @@ function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
 
   const maxZoomstep = Math.max(
     minimumZoomStepCount,
-    _.max(_.flattenDeep(getResolutionUnion(dataset))) || minimumZoomStepCount,
+    _.max(_.flattenDeep(getMagnificationUnion(dataset))) || minimumZoomStepCount,
   );
 
   return maxZoomstep;
@@ -134,18 +144,18 @@ export function getDataLayers(dataset: APIDataset): DataLayerType[] {
   return dataset.dataSource.dataLayers;
 }
 
-function _getResolutionInfoOfVisibleSegmentationLayer(state: OxalisState): ResolutionInfo {
+function _getMagInfoOfVisibleSegmentationLayer(state: OxalisState): MagInfo {
   const segmentationLayer = getVisibleSegmentationLayer(state);
 
   if (!segmentationLayer) {
-    return new ResolutionInfo([]);
+    return new MagInfo([]);
   }
 
-  return getResolutionInfo(segmentationLayer.resolutions);
+  return getMagInfo(segmentationLayer.resolutions);
 }
 
-export const getResolutionInfoOfVisibleSegmentationLayer = memoizeOne(
-  _getResolutionInfoOfVisibleSegmentationLayer,
+export const getMagInfoOfVisibleSegmentationLayer = memoizeOne(
+  _getMagInfoOfVisibleSegmentationLayer,
 );
 export function getLayerByName(
   dataset: APIDataset,
@@ -204,7 +214,7 @@ export function getDefaultValueRangeOfLayer(
   layerName: string,
 ): [number, number] {
   const maxFloatValue = 3.40282347e38;
-  // eslint-disable-next-line @typescript-eslint/no-loss-of-precision
+  // biome-ignore lint/correctness/noPrecisionLoss: This number literal will lose precision at runtime. The value at runtime will be inf.
   const maxDoubleValue = 1.79769313486232e308;
   const elementClass = getElementClass(dataset, layerName);
 
@@ -234,10 +244,10 @@ export function getDefaultValueRangeOfLayer(
       return [0, 2 ** 63 - 1];
 
     case "float":
-      return [0, maxFloatValue];
+      return [-maxFloatValue, maxFloatValue];
 
     case "double":
-      return [0, maxDoubleValue];
+      return [-maxDoubleValue, maxDoubleValue];
 
     default:
       return [0, 255];
@@ -260,8 +270,16 @@ export function getLayerBoundingBox(dataset: APIDataset, layerName: string): Bou
 }
 
 export function getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
-  const min: Vector3 = [Infinity, Infinity, Infinity];
-  const max: Vector3 = [-Infinity, -Infinity, -Infinity];
+  const min: Vector3 = [
+    Number.POSITIVE_INFINITY,
+    Number.POSITIVE_INFINITY,
+    Number.POSITIVE_INFINITY,
+  ];
+  const max: Vector3 = [
+    Number.NEGATIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+  ];
   const layers = getDataLayers(dataset);
 
   for (const dataLayer of layers) {
@@ -296,15 +314,17 @@ export function getDatasetExtentInVoxel(dataset: APIDataset) {
   };
   return extent;
 }
-export function getDatasetExtentInLength(dataset: APIDataset): BoundingBoxObject {
+export function getDatasetExtentInUnit(dataset: APIDataset): BoundingBoxObject {
   const extentInVoxel = getDatasetExtentInVoxel(dataset);
-  const { scale } = dataset.dataSource;
-  const topLeft = extentInVoxel.topLeft.map((val, index) => val * scale[index]) as any as Vector3;
+  const scaleFactor = dataset.dataSource.scale.factor;
+  const topLeft = extentInVoxel.topLeft.map(
+    (val, index) => val * scaleFactor[index],
+  ) as any as Vector3;
   const extent = {
     topLeft,
-    width: extentInVoxel.width * scale[0],
-    height: extentInVoxel.height * scale[1],
-    depth: extentInVoxel.depth * scale[2],
+    width: extentInVoxel.width * scaleFactor[0],
+    height: extentInVoxel.height * scaleFactor[1],
+    depth: extentInVoxel.depth * scaleFactor[2],
   };
   return extent;
 }
@@ -318,11 +338,26 @@ export function getDatasetExtentAsString(
 
   if (inVoxel) {
     const extentInVoxel = getDatasetExtentInVoxel(dataset);
-    return `${formatExtentWithLength(extentInVoxel, (x) => `${x}`)} voxel`;
+    return `${formatExtentInUnitWithLength(extentInVoxel, (x) => `${x}`)} voxel`;
   }
 
-  const extent = getDatasetExtentInLength(dataset);
-  return formatExtentWithLength(extent, formatNumberToLength);
+  const extent = getDatasetExtentInUnit(dataset);
+  return formatExtentInUnitWithLength(extent, (length) =>
+    formatNumberToLength(length, LongUnitToShortUnitMap[dataset.dataSource.scale.unit]),
+  );
+}
+function getDatasetExtentAsProduct(extent: {
+  width: number;
+  height: number;
+  depth: number;
+}) {
+  return extent.width * extent.height * extent.depth;
+}
+export function getDatasetExtentInVoxelAsProduct(dataset: APIDataset) {
+  return getDatasetExtentAsProduct(getDatasetExtentInVoxel(dataset));
+}
+export function getDatasetExtentInUnitAsProduct(dataset: APIDataset) {
+  return getDatasetExtentAsProduct(getDatasetExtentInUnit(dataset));
 }
 export function determineAllowedModes(settings?: Settings): {
   preferredMode: APIAllowedMode | null | undefined;
@@ -553,8 +588,6 @@ export function getEnabledColorLayers(
 }
 
 export function getThumbnailURL(dataset: APIDataset): string {
-  const datasetName = dataset.name;
-  const organizationName = dataset.owningOrganization;
   const layers = dataset.dataSource.dataLayers;
 
   const colorLayer = _.find(layers, {
@@ -562,18 +595,16 @@ export function getThumbnailURL(dataset: APIDataset): string {
   });
 
   if (colorLayer) {
-    return `/api/datasets/${organizationName}/${datasetName}/layers/${colorLayer.name}/thumbnail`;
+    return `/api/datasets/${dataset.id}/layers/${colorLayer.name}/thumbnail`;
   }
 
   return "";
 }
 export function getSegmentationThumbnailURL(dataset: APIDataset): string {
-  const datasetName = dataset.name;
-  const organizationName = dataset.owningOrganization;
   const segmentationLayer = getFirstSegmentationLayer(dataset);
 
   if (segmentationLayer) {
-    return `/api/datasets/${organizationName}/${datasetName}/layers/${segmentationLayer.name}/thumbnail`;
+    return `/api/datasets/${dataset.id}/layers/${segmentationLayer.name}/thumbnail`;
   }
 
   return "";
@@ -594,6 +625,10 @@ export function isLayerVisible(
   const isArbitraryMode = constants.MODES_ARBITRARY.includes(viewMode);
   const isHiddenBecauseOfArbitraryMode = isArbitraryMode && isSegmentationLayer(dataset, layerName);
   return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenBecauseOfArbitraryMode;
+}
+
+export function hasFallbackLayer(layer: APIDataLayer) {
+  return "fallbackLayer" in layer && layer.fallbackLayer != null;
 }
 
 function _getLayerNameToIsDisabled(datasetConfiguration: DatasetConfiguration) {
@@ -648,25 +683,29 @@ export function is2dDataset(dataset: APIDataset): boolean {
 const dummyMapping = {
   mappingName: null,
   mapping: null,
-  mappingKeys: null,
   mappingColors: null,
   hideUnmappedIds: false,
   mappingStatus: MappingStatusEnum.DISABLED,
-  mappingSize: 0,
   mappingType: "JSON",
 } as const;
+
+export function getMappingInfoOrNull(
+  activeMappingInfos: Record<string, ActiveMappingInfo>,
+  layerName: string | null | undefined,
+): ActiveMappingInfo | null {
+  if (layerName != null && activeMappingInfos[layerName]) {
+    return activeMappingInfos[layerName];
+  }
+  return null;
+}
 
 export function getMappingInfo(
   activeMappingInfos: Record<string, ActiveMappingInfo>,
   layerName: string | null | undefined,
 ): ActiveMappingInfo {
-  if (layerName != null && activeMappingInfos[layerName]) {
-    return activeMappingInfos[layerName];
-  }
-
   // Return a dummy object (this mirrors webKnossos' behavior before the support of
   // multiple segmentation layers)
-  return dummyMapping;
+  return getMappingInfoOrNull(activeMappingInfos, layerName) || dummyMapping;
 }
 export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappingInfo {
   const layer = getSegmentationLayerWithMappingSupport(state);
@@ -682,7 +721,7 @@ function _getOriginalTransformsForLayerOrNull(
   dataset: APIDataset,
   layer: APIDataLayer,
 ): Transform | null {
-  let coordinateTransformations = layer.coordinateTransformations;
+  const coordinateTransformations = layer.coordinateTransformations;
   if (!coordinateTransformations || coordinateTransformations.length === 0) {
     return null;
   }
@@ -697,11 +736,11 @@ function _getOriginalTransformsForLayerOrNull(
 
   if (type === "affine") {
     const nestedMatrix = transformation.matrix;
-    return { type, affineMatrix: nestedToFlatMatrix(nestedMatrix) };
+    return createAffineTransformFromMatrix(nestedMatrix);
   } else if (type === "thin_plate_spline") {
-    let { source, target } = transformation.correspondences;
+    const { source, target } = transformation.correspondences;
 
-    return createThinPlateSplineTransform(target, source, dataset.dataSource.scale);
+    return createThinPlateSplineTransform(source, target, dataset.dataSource.scale.factor);
   }
 
   console.error(
@@ -712,9 +751,12 @@ function _getOriginalTransformsForLayerOrNull(
 
 function _getTransformsForLayerOrNull(
   dataset: APIDataset,
-  layer: APIDataLayer,
+  layer: APIDataLayer | APISkeletonLayer,
   nativelyRenderedLayerName: string | null,
 ): Transform | null {
+  if (layer.category === "skeleton") {
+    return getTransformsForSkeletonLayerOrNull(dataset, nativelyRenderedLayerName);
+  }
   const layerTransforms = _getOriginalTransformsForLayerOrNull(dataset, layer);
 
   if (nativelyRenderedLayerName == null) {
@@ -759,11 +801,46 @@ function memoizeWithThreeKeys<A, B, C, T>(fn: (a: A, b: B, c: C) => T) {
 export const getTransformsForLayerOrNull = memoizeWithThreeKeys(_getTransformsForLayerOrNull);
 export function getTransformsForLayer(
   dataset: APIDataset,
-  layer: APIDataLayer,
+  layer: APIDataLayer | APISkeletonLayer,
   nativelyRenderedLayerName: string | null,
 ): Transform {
   return (
     getTransformsForLayerOrNull(dataset, layer, nativelyRenderedLayerName || null) ||
+    IdentityTransform
+  );
+}
+
+function _getTransformsForSkeletonLayerOrNull(
+  dataset: APIDataset,
+  nativelyRenderedLayerName: string | null,
+): Transform | null {
+  if (nativelyRenderedLayerName == null) {
+    // No layer is requested to be rendered natively. We can use
+    // each layer's transforms as is. The skeleton layer doesn't have
+    // a transforms property currently, which is why we return null.
+    return null;
+  }
+
+  // Compute the inverse of the layer that should be rendered natively
+  const nativeLayer = getLayerByName(dataset, nativelyRenderedLayerName, true);
+  const transformsOfNativeLayer = _getOriginalTransformsForLayerOrNull(dataset, nativeLayer);
+
+  if (transformsOfNativeLayer == null) {
+    // The inverse of no transforms, are no transforms
+    return null;
+  }
+
+  return invertTransform(transformsOfNativeLayer);
+}
+
+export const getTransformsForSkeletonLayerOrNull = memoizeOne(_getTransformsForSkeletonLayerOrNull);
+
+export function getTransformsForSkeletonLayer(
+  dataset: APIDataset,
+  nativelyRenderedLayerName: string | null,
+): Transform {
+  return (
+    getTransformsForSkeletonLayerOrNull(dataset, nativelyRenderedLayerName || null) ||
     IdentityTransform
   );
 }
@@ -784,14 +861,21 @@ function _getTransformsPerLayer(
 
 export const getTransformsPerLayer = memoizeOne(_getTransformsPerLayer);
 
+export function getInverseSegmentationTransformer(
+  state: OxalisState,
+  segmentationLayerName: string,
+) {
+  const { dataset } = state;
+  const { nativelyRenderedLayerName } = state.datasetConfiguration;
+  const layer = getLayerByName(dataset, segmentationLayerName);
+  const segmentationTransforms = getTransformsForLayer(dataset, layer, nativelyRenderedLayerName);
+  return transformPointUnscaled(invertTransform(segmentationTransforms));
+}
+
 export const hasDatasetTransforms = memoizeOne((dataset: APIDataset) => {
   const layers = dataset.dataSource.dataLayers;
   return layers.some((layer) => _getOriginalTransformsForLayerOrNull(dataset, layer) != null);
 });
-
-export function nestedToFlatMatrix(matrix: [Vector4, Vector4, Vector4, Vector4]): Matrix4x4 {
-  return [...matrix[0], ...matrix[1], ...matrix[2], ...matrix[3]];
-}
 
 export function flatToNestedMatrix(matrix: Matrix4x4): [Vector4, Vector4, Vector4, Vector4] {
   return [
@@ -822,4 +906,35 @@ export function getEffectiveIntensityRange(
   const layerConfiguration = datasetConfiguration.layers[layerName];
 
   return layerConfiguration.intensityRange || defaultIntensityRange;
+}
+
+// Note that `hasSegmentIndex` needs to be loaded first (otherwise, the returned
+// value will be undefined). Dispatch an ensureSegmentIndexIsLoadedAction to make
+// sure this info is fetched.
+export function getMaybeSegmentIndexAvailability(
+  dataset: APIDataset,
+  layerName: string | null | undefined,
+) {
+  if (layerName == null) {
+    return false;
+  }
+  return dataset.dataSource.dataLayers.find((layer) => layer.name === layerName)?.hasSegmentIndex;
+}
+
+function getURLSanitizedName(dataset: APIDataset | APIDatasetCompact | { name: string }) {
+  return dataset.name.replace(/[^A-Z|a-z|0-9|-|_]/g, "");
+}
+
+export function getReadableURLPart(
+  dataset: APIDataset | APIDatasetCompact | { name: string; id: string },
+) {
+  return `${getURLSanitizedName(dataset)}-${dataset.id}`;
+}
+
+export function getDatasetIdOrNameFromReadableURLPart(datasetNameAndId: string) {
+  const datasetIdOrName = datasetNameAndId.split("-").pop();
+  const isId = /^[a-f0-9]{24}$/.test(datasetIdOrName || "");
+  return isId
+    ? { datasetId: datasetIdOrName, datasetName: null }
+    : { datasetId: null, datasetName: datasetIdOrName };
 }

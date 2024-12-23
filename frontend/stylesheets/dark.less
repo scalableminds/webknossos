@@ -1,135 +1,127 @@
-@import "../../node_modules/antd/dist/antd.dark.less";
-@import "./main.less";
+.dark-theme {
+  .metadata-table {
+    --compact-table-bg1: #262626;
+    --compact-table-bg2: #1A1A1A;
+    --compact-table-border: #4A4A4A;
+  }
 
-body {
-  background-color: #000;
-}
+  .brain-loading-content img {
+    filter: invert(1) contrast(0.7);
+  }
 
-.brain-loading-content img {
-  filter: invert(1) contrast(0.7);
-}
+  .inputcatcher.TDView,
+  .inputcatcher.arbitraryViewport {
+    border-color: transparent;
+  }
 
-.inputcatcher.TDView,
-.inputcatcher.arbitraryViewport {
-  border-color: transparent;
-}
-
-a:hover {
-  color: @blue-8;
-}
-
-.ant-slider-track,
-.ant-slider-handle {
-  background-color: @blue-4;
-}
-
-.ant-slider:hover {
   .ant-slider-track,
   .ant-slider-handle {
-    background-color: @blue-5;
-  }
-}
-
-.ant-input-affix-wrapper {
-  // <FormInput>s have a transparent baclground color and rely on a dark background shining through which is not always the case
-  // TODO: This is likely fixed by Antd v5 and can be removed
-  background-color: @black;
-}
-
-.ant-tree-show-line .ant-tree-switcher {
-  // Fixes incorrect background color in segments tree view.
-  background: @black;
-}
-
-// Change the bright versions to dark, too
-.icon-sidebar-hide-left-bright {
-  background-image: url(/assets/images/icon-sidebar-hide-left-dark.svg);
-}
-
-.icon-sidebar-show-left-bright {
-  background-image: url(/assets/images/icon-sidebar-show-left-dark.svg);
-}
-
-.icon-sidebar-hide-right-bright {
-  background-image: url(/assets/images/icon-sidebar-hide-right-dark.svg);
-}
-
-.icon-sidebar-show-right-bright {
-  background-image: url(/assets/images/icon-sidebar-show-right-dark.svg);
-}
-
-.cell-context-icon {
-  background-image: url("/assets/images/cell-bright.svg");
-  opacity: 0.5;
-}
-
-.hide-tree-edges-icon {
-  background-image: url("/assets/images/hide-skeleton-edges-icon-light.svg");
-}
-
-.voxelytics-view {
-  .react-flow__minimap-mask {
-    fill: rgba(50, 50, 50, 0.7);
-  }
-}
-
-.login-view {
-  // TODO: consider removing with Antd-v5
-  .ant-input-affix-wrapper-status-error {
-    background-color: @black !important;
-  }
-}
-
-.floating-buttons-bar {
-  .ant-btn-default {
-    color: rgba(0, 0, 0, 0.85);
-    background: white;
-    border-color: #d9d9d9;
+    background-color: var(--ant-blue-4);
   }
 
-  .ant-btn-primary[disabled] {
-    background: #f5f5f5;
-    border-color: #d9d9d9;
-    color: rgba(0, 0, 0, 0.25);
+  .ant-slider:hover {
+    .ant-slider-track,
+    .ant-slider-handle {
+      background-color: var(--ant-blue-5);
+    }
   }
-}
 
-.drawing-upgrade-users {
-  background: right -40px / 35% no-repeat url("/assets/images/pricing/add_users_dark_mode.svg");
-}
+  // virtualized Ant <Tree> components draw a scrollbar drag handle using some div
+  // The default color values are not visible in dark mode, so we override them
+  // Remove after https://github.com/ant-design/ant-design/issues/47565 is fixed
+  .ant-tree-list-scrollbar .ant-tree-list-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.5) !important
+  }
 
-.drawing-upgrade-storage {
-  background: url("/assets/images/pricing/upgrade_storage_dark_mode.svg") right -10px / 25% no-repeat;
-}
+  // Change the bright versions to dark, too
+  .icon-sidebar-hide-left-bright {
+    background-image: url(/assets/images/icon-sidebar-hide-left-dark.svg);
+  }
 
-.drawing-empty-list-tasks {
-  background-image: url("/assets/images/drawings/empty-list-tasks-dark.svg");
-}
+  .icon-sidebar-show-left-bright {
+    background-image: url(/assets/images/icon-sidebar-show-left-dark.svg);
+  }
 
-.drawing-empty-list-annotations {
-  background-image: url("/assets/images/drawings/empty-list-annotations-dark.svg");
-}
+  .icon-sidebar-hide-right-bright {
+    background-image: url(/assets/images/icon-sidebar-hide-right-dark.svg);
+  }
 
-.drawing-empty-list-public-gallery {
-  background-image: url("/assets/images/drawings/empty-list-public-gallery-dark.svg");
-}
+  .icon-sidebar-show-right-bright {
+    background-image: url(/assets/images/icon-sidebar-show-right-dark.svg);
+  }
 
-.drawing-empty-list-dataset-upload {
-  background-image: url("/assets/images/drawings/empty-list-dataset-upload-dark.svg");
-}
+  .cell-context-icon {
+    background-image: url("/assets/images/cell-bright.svg");
+    opacity: 0.5;
+  }
 
-.icon-mouse-left {
-  background-image: url("/assets/images/icon-mouse-left-dark.svg");
-}
+  .voxelytics-view {
+    // VX reports / DAG visualization
+    .react-flow__minimap-mask {
+      fill: rgba(50, 50, 50, 0.7);
+    }
+  }
 
-.icon-mouse-right {
-  background-image: url("/assets/images/icon-mouse-right-dark.svg");
-}
+  .floating-buttons-bar {
+    // Navigation buttons for mobile
+    .ant-btn-default {
+      color: rgba(0, 0, 0, 0.85);
+      background: white;
+      border-color: #d9d9d9;
+    }
 
-.keyboard-key-icon {
-  background-image: url(/assets/images/icon-keyboard-key-dark.svg);
-}
+    .ant-btn-primary[disabled] {
+      background: #f5f5f5;
+      border-color: #d9d9d9;
+      color: rgba(0, 0, 0, 0.25);
+    }
+  }
 
-.dataset-table-thumbnail.icon-thumbnail {
-  filter: invert() contrast(0.8);
+  .drawing-upgrade-users {
+    background: right -40px / 35% no-repeat url("/assets/images/pricing/add_users_dark_mode.svg");
+  }
+
+  .drawing-upgrade-storage {
+    background: url("/assets/images/pricing/upgrade_storage_dark_mode.svg") right -10px / 25% no-repeat;
+  }
+
+  .drawing-empty-list-tasks {
+    background-image: url("/assets/images/drawings/empty-list-tasks-dark.svg");
+  }
+
+  .drawing-empty-list-annotations {
+    background-image: url("/assets/images/drawings/empty-list-annotations-dark.svg");
+  }
+
+  .drawing-empty-list-public-gallery {
+    background-image: url("/assets/images/drawings/empty-list-public-gallery-dark.svg");
+  }
+
+  .drawing-empty-list-dataset-upload {
+    background-image: url("/assets/images/drawings/empty-list-dataset-upload-dark.svg");
+  }
+
+  .drawing-forbidden-view {
+    background-image: url("/assets/images/drawings/forbidden-view-dark.svg");
+  }
+
+  .icon-mouse-left {
+    background-image: url("/assets/images/icon-mouse-left-dark.svg");
+  }
+
+  .icon-mouse-right {
+    background-image: url("/assets/images/icon-mouse-right-dark.svg");
+  }
+
+  .keyboard-key-icon {
+    background-image: url(/assets/images/icon-keyboard-key-dark.svg);
+  }
+
+  .dataset-table-thumbnail.icon-thumbnail {
+    filter: invert() contrast(0.8);
+  }
+
+  .deemphasized {
+    color: #afb8ba;
+  }
 }

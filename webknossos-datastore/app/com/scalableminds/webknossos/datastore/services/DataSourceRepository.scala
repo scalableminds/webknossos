@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
@@ -13,17 +13,18 @@ import play.api.i18n.{Messages, MessagesProvider}
 import scala.concurrent.ExecutionContext
 
 class DataSourceRepository @Inject()(
-    remoteWebKnossosClient: DSRemoteWebKnossosClient,
+    remoteWebknossosClient: DSRemoteWebknossosClient,
     @Named("webknossos-datastore") val system: ActorSystem
 )(implicit ec: ExecutionContext)
     extends TemporaryStore[DataSourceId, InboxDataSource](system)
     with LazyLogging
     with FoxImplicits {
 
-  def getDataSourceAndDataLayer(organizationName: String, dataSetName: String, dataLayerName: String)(
+  def getDataSourceAndDataLayer(organizationId: String, datasetDirectoryName: String, dataLayerName: String)(
       implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] =
     for {
-      dataSource <- findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages("dataSource.notFound")
+      dataSource <- findUsable(DataSourceId(datasetDirectoryName, organizationId)).toFox ?~> Messages(
+        "dataSource.notFound")
       dataLayer <- dataSource.getDataLayer(dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName)
     } yield (dataSource, dataLayer)
 
@@ -34,7 +35,7 @@ class DataSourceRepository @Inject()(
     for {
       _ <- Fox.successful(())
       _ = insert(dataSource.id, dataSource)
-      _ <- remoteWebKnossosClient.reportDataSource(dataSource)
+      _ <- remoteWebknossosClient.reportDataSource(dataSource)
     } yield ()
 
   def updateDataSources(dataSources: List[InboxDataSource]): Fox[Unit] =
@@ -42,12 +43,12 @@ class DataSourceRepository @Inject()(
       _ <- Fox.successful(())
       _ = removeAll()
       _ = dataSources.foreach(dataSource => insert(dataSource.id, dataSource))
-      _ <- remoteWebKnossosClient.reportDataSources(dataSources)
+      _ <- remoteWebknossosClient.reportDataSources(dataSources)
     } yield ()
 
   def cleanUpDataSource(dataSourceId: DataSourceId): Fox[Unit] =
     for {
       _ <- Fox.successful(remove(dataSourceId))
-      _ <- remoteWebKnossosClient.deleteDataSource(dataSourceId)
+      _ <- remoteWebknossosClient.deleteDataSource(dataSourceId)
     } yield ()
 }

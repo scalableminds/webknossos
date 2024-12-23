@@ -6,7 +6,7 @@ import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation._
 import models.user.User
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.annotation.{nowarn, tailrec}
 import scala.concurrent.ExecutionContext
@@ -38,15 +38,15 @@ trait AnnotationInformationHandler extends FoxImplicits {
 
   def assertAllOnSameDataset(annotations: List[Annotation]): Fox[Boolean] = {
     @tailrec
-    def allOnSameDatasetIter(annotations: List[Annotation], _dataSet: ObjectId): Boolean =
+    def allOnSameDatasetIter(annotations: List[Annotation], datasetId: ObjectId): Boolean =
       annotations match {
         case List()       => true
-        case head :: tail => head._dataSet == _dataSet && allOnSameDatasetIter(tail, _dataSet)
+        case head :: tail => head._dataset == datasetId && allOnSameDatasetIter(tail, datasetId)
       }
     annotations match {
       case List() => Fox.successful(true)
       case head :: _ =>
-        if (allOnSameDatasetIter(annotations, head._dataSet))
+        if (allOnSameDatasetIter(annotations, head._dataset))
           Fox.successful(true)
         else
           Fox.failure("Cannot create compound annotation spanning multiple datasets")

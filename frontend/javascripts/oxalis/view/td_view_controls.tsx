@@ -6,8 +6,9 @@ import {
   Col,
   Row,
   Switch,
-  RadioChangeEvent,
-  MenuProps,
+  type RadioChangeEvent,
+  type MenuProps,
+  Space,
 } from "antd";
 import {
   StopOutlined,
@@ -15,7 +16,6 @@ import {
   BorderOuterOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
-import * as React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import type { OxalisState } from "oxalis/store";
@@ -23,7 +23,7 @@ import type { TDViewDisplayMode } from "oxalis/constants";
 import { TDViewDisplayModeEnum } from "oxalis/constants";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { api } from "oxalis/singletons";
-import { SwitchChangeEventHandler } from "antd/lib/switch";
+import type { SwitchChangeEventHandler } from "antd/lib/switch";
 type Props = {
   tdViewDisplayPlanes: TDViewDisplayMode;
   tdViewDisplayDatasetBorders: boolean;
@@ -58,7 +58,6 @@ function TDViewControls({
                 value={tdViewDisplayPlanes}
                 onChange={onChangeTdViewDisplayPlanes}
                 size="small"
-                className="without-icon-margin"
               >
                 <Tooltip title="Hide Planes">
                   <Radio.Button value={TDViewDisplayModeEnum.NONE}>
@@ -116,7 +115,7 @@ function TDViewControls({
   };
 
   return (
-    <div id="TDViewControls" className="antd-legacy-group">
+    <Space.Compact id="TDViewControls">
       <Button size="small" onClick={() => api.tracing.rotate3DViewToDiagonal()}>
         3D
       </Button>
@@ -137,7 +136,7 @@ function TDViewControls({
           <SettingOutlined />
         </Button>
       </Dropdown>
-    </div>
+    </Space.Compact>
   );
 }
 

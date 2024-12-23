@@ -1,112 +1,125 @@
 package controllers
 
-import java.text.SimpleDateFormat
-import java.util.Calendar
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.annotation.{AnnotationState, AnnotationType}
 
+import scala.collection.immutable.ListMap
 import javax.inject.Inject
 import models.user._
-import models.user.time.TimeSpanDAO
-import play.api.libs.json.{JsObject, JsValue, Json}
+import models.user.time.{Month, TimeSpan, TimeSpanDAO, TimeSpanService}
+import net.liftweb.common.Box
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
 
 class TimeController @Inject()(userService: UserService,
                                userDAO: UserDAO,
                                timeSpanDAO: TimeSpanDAO,
+                               timeSpanService: TimeSpanService,
                                sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
 
-  //all users with working hours > 0
-  def getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]): Action[AnyContent] =
+  // Called by webknossos-libs client. Sums monthly. Includes exploratives
+  def userLoggedTime(userId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        users <- userDAO.findAll
-        filteredUsers <- Fox.filter(users)(user => userService.isTeamManagerOrAdminOf(request.identity, user))
-        js <- loggedTimeForUserListByMonth(filteredUsers, year, month, startDay, endDay)
-      } yield Ok(js)
+        userIdValidated <- ObjectId.fromString(userId) ?~> "user.id.invalid"
+        user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
+        _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
+        timeSpansBox: Box[List[TimeSpan]] <- timeSpanDAO.findAllByUser(user._id).futureBox
+        timesGrouped: Map[Month, Duration] = timeSpanService.sumTimespansPerInterval(TimeSpan.groupByMonth,
+                                                                                     timeSpansBox)
+        timesGroupedSorted = ListMap(timesGrouped.toSeq.sortBy(_._1): _*)
+      } yield {
+        JsonOk(
+          Json.obj("loggedTime" ->
+            timesGroupedSorted.map {
+              case (paymentInterval, duration) =>
+                Json.obj("paymentInterval" -> paymentInterval, "durationInSeconds" -> duration.toSeconds)
+            }))
+      }
     }
 
-  //list user with working hours > 0 (only one user is also possible)
-  def getWorkingHoursOfUsers(userString: String,
-                             year: Int,
-                             month: Int,
-                             startDay: Option[Int],
-                             endDay: Option[Int]): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      for {
-        users <- Fox.combined(
-          userString
-            .split(",")
-            .toList
-            .map(email => userService.findOneByEmailAndOrganization(email, request.identity._organization))) ?~> "user.email.invalid"
-        _ <- Fox.combined(users.map(user => Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, user)))) ?~> "user.notAuthorised" ~> FORBIDDEN
-        js <- loggedTimeForUserListByMonth(users, year, month, startDay, endDay)
-      } yield Ok(js)
-    }
-
-  def getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+  def timeSummedByAnnotationForUser(userId: String,
+                                    start: Long,
+                                    end: Long,
+                                    annotationTypes: String,
+                                    annotationStates: String,
+                                    projectIds: Option[String]): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
       for {
         userIdValidated <- ObjectId.fromString(userId)
+        projectIdsValidated <- ObjectId.fromCommaSeparated(projectIds)
+        annotationTypesValidated <- AnnotationType.fromCommaSeparated(annotationTypes) ?~> "invalidAnnotationType"
+        annotationStatesValidated <- AnnotationState.fromCommaSeparated(annotationStates) ?~> "invalidAnnotationState"
         user <- userService.findOneCached(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
         _ <- bool2Fox(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> "user.notAuthorised" ~> FORBIDDEN
-        js <- loggedTimeForUserListByTimestamp(user, startDate, endDate)
-      } yield Ok(js)
+        timesByAnnotation <- timeSpanDAO.summedByAnnotationForUser(user._id,
+                                                                   Instant(start),
+                                                                   Instant(end),
+                                                                   annotationTypesValidated,
+                                                                   annotationStatesValidated,
+                                                                   projectIdsValidated)
+      } yield Ok(timesByAnnotation)
+  }
+
+  def timeSpansOfUser(userId: String,
+                      start: Long,
+                      end: Long,
+                      annotationTypes: String,
+                      annotationStates: String,
+                      projectIds: Option[String]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        userIdValidated <- ObjectId.fromString(userId)
+        projectIdsValidated <- ObjectId.fromCommaSeparated(projectIds)
+        annotationTypesValidated <- AnnotationType.fromCommaSeparated(annotationTypes) ?~> "invalidAnnotationType"
+        annotationStatesValidated <- AnnotationState.fromCommaSeparated(annotationStates) ?~> "invalidAnnotationState"
+        user <- userService.findOneCached(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
+        isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
+        _ <- bool2Fox(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> "user.notAuthorised" ~> FORBIDDEN
+        timeSpansJs <- timeSpanDAO.findAllByUserWithTask(user._id,
+                                                         Instant(start),
+                                                         Instant(end),
+                                                         annotationTypesValidated,
+                                                         annotationStatesValidated,
+                                                         projectIdsValidated)
+      } yield Ok(timeSpansJs)
     }
 
-  private def loggedTimeForUserListByMonth(users: List[User],
-                                           year: Int,
-                                           month: Int,
-                                           startDay: Option[Int],
-                                           endDay: Option[Int]): Fox[JsValue] = {
-    lazy val startDate = Calendar.getInstance()
-    lazy val endDate = Calendar.getInstance()
-
-    val input = new SimpleDateFormat("yy")
-    val output = new SimpleDateFormat("yyyy")
-    val date = input.parse(year.toString)
-    val fullYear = output.format(date).toInt
-
-    //set them here to first day of selected month so getActualMaximum below will use the correct month entry
-    startDate.set(fullYear, month - 1, 1, 0, 0, 0)
-    endDate.set(fullYear, month - 1, 1, 0, 0, 0)
-
-    val sDay = startDay.getOrElse(startDate.getActualMinimum(Calendar.DAY_OF_MONTH))
-    val eDay = endDay.getOrElse(endDate.getActualMaximum(Calendar.DAY_OF_MONTH))
-
-    startDate.set(fullYear, month - 1, sDay, 0, 0, 0)
-    startDate.set(Calendar.MILLISECOND, 0)
-    endDate.set(fullYear, month - 1, eDay, 23, 59, 59)
-    endDate.set(Calendar.MILLISECOND, 999)
-
-    val futureJsObjects = users.map(user => getUserHours(user, startDate, endDate))
-    Fox.combined(futureJsObjects).map(jsObjectList => Json.toJson(jsObjectList))
-  }
-
-  private def loggedTimeForUserListByTimestamp(user: User, startDate: Long, endDate: Long): Fox[JsValue] = {
-    lazy val sDate = Calendar.getInstance()
-    lazy val eDate = Calendar.getInstance()
-
-    sDate.setTimeInMillis(startDate)
-    eDate.setTimeInMillis(endDate)
-
-    getUserHours(user, sDate, eDate)
-  }
-
-  private def getUserHours(user: User, startDate: Calendar, endDate: Calendar): Fox[JsObject] =
-    for {
-      userJs <- userService.compactWrites(user)
-      timeJs <- timeSpanDAO.findAllByUserWithTask(user._id,
-                                                  Some(Instant.fromCalendar(startDate)),
-                                                  Some(Instant.fromCalendar(endDate)))
-    } yield Json.obj("user" -> userJs, "timelogs" -> timeJs)
+  def timeOverview(start: Long,
+                   end: Long,
+                   annotationTypes: String,
+                   annotationStates: String,
+                   teamIds: Option[String],
+                   projectIds: Option[String]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        teamIdsValidated <- ObjectId.fromCommaSeparated(teamIds) ?~> "invalidTeamId"
+        annotationTypesValidated <- AnnotationType.fromCommaSeparated(annotationTypes) ?~> "invalidAnnotationType"
+        annotationStatesValidated <- AnnotationState.fromCommaSeparated(annotationStates) ?~> "invalidAnnotationState"
+        _ <- bool2Fox(annotationTypesValidated.nonEmpty) ?~> "annotationTypesEmpty"
+        _ <- bool2Fox(annotationTypesValidated.forall(typ =>
+          typ == AnnotationType.Explorational || typ == AnnotationType.Task)) ?~> "unsupportedAnnotationType"
+        projectIdsValidated <- ObjectId.fromCommaSeparated(projectIds)
+        usersByTeams <- if (teamIdsValidated.isEmpty) userDAO.findAll else userDAO.findAllByTeams(teamIdsValidated)
+        admins <- userDAO.findAdminsByOrg(request.identity._organization)
+        usersFiltered = (usersByTeams ++ admins).distinct
+        usersWithTimesJs <- timeSpanDAO.timeOverview(Instant(start),
+                                                     Instant(end),
+                                                     usersFiltered.map(_._id),
+                                                     annotationTypesValidated,
+                                                     annotationStatesValidated,
+                                                     projectIdsValidated)
+      } yield Ok(Json.toJson(usersWithTimesJs))
+    }
 
 }

@@ -2,14 +2,18 @@ package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
+import com.scalableminds.webknossos.datastore.models.annotation.{
+  AnnotationLayer,
+  AnnotationLayerStatistics,
+  AnnotationLayerType
+}
 import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
 import models.dataset.DatasetDAO
 import models.user.User
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 
@@ -28,7 +32,7 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
       ObjectId.generate,
       persistTracing,
       issuingUser._id,
-      annotationB._dataSet,
+      annotationB._dataset,
       annotationB._team,
       AnnotationType.Explorational,
       List(annotationA, annotationB)
@@ -37,9 +41,9 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
   def mergeN(
       newId: ObjectId,
       persistTracing: Boolean,
-      _user: ObjectId,
-      _dataSet: ObjectId,
-      _team: ObjectId,
+      userId: ObjectId,
+      datasetId: ObjectId,
+      teamId: ObjectId,
       typ: AnnotationType,
       annotations: List[Annotation]
   )(implicit ctx: DBAccessContext): Fox[Annotation] =
@@ -47,25 +51,25 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
       Fox.empty
     else {
       for {
-        mergedAnnotationLayers <- mergeTracingsOfAnnotations(annotations, _dataSet, persistTracing)
+        mergedAnnotationLayers <- mergeTracingsOfAnnotations(annotations, datasetId, persistTracing)
       } yield {
         Annotation(
           newId,
-          _dataSet,
+          datasetId,
           None,
-          _team,
-          _user,
+          teamId,
+          userId,
           mergedAnnotationLayers,
           typ = typ
         )
       }
     }
 
-  private def mergeTracingsOfAnnotations(annotations: List[Annotation], dataSetId: ObjectId, persistTracing: Boolean)(
+  private def mergeTracingsOfAnnotations(annotations: List[Annotation], datasetId: ObjectId, persistTracing: Boolean)(
       implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] =
     for {
-      dataSet <- datasetDAO.findOne(dataSetId)
-      tracingStoreClient: WKRemoteTracingStoreClient <- tracingStoreService.clientFor(dataSet)
+      dataset <- datasetDAO.findOne(datasetId)
+      tracingStoreClient: WKRemoteTracingStoreClient <- tracingStoreService.clientFor(dataset)
       skeletonLayers = annotations.flatMap(_.annotationLayers.find(_.typ == AnnotationLayerType.Skeleton))
       volumeLayers = annotations.flatMap(_.annotationLayers.find(_.typ == AnnotationLayerType.Volume))
       mergedSkeletonTracingId <- mergeSkeletonTracings(tracingStoreClient,
@@ -78,12 +82,14 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
         id =>
           AnnotationLayer(id,
                           AnnotationLayerType.Skeleton,
-                          mergedSkeletonName.getOrElse(AnnotationLayer.defaultSkeletonLayerName)))
+                          mergedSkeletonName.getOrElse(AnnotationLayer.defaultSkeletonLayerName),
+                          AnnotationLayerStatistics.unknown))
       mergedVolumeLayer = mergedVolumeTracingId.map(
         id =>
           AnnotationLayer(id,
                           AnnotationLayerType.Volume,
-                          mergedVolumeName.getOrElse(AnnotationLayer.defaultVolumeLayerName)))
+                          mergedVolumeName.getOrElse(AnnotationLayer.defaultVolumeLayerName),
+                          AnnotationLayerStatistics.unknown))
     } yield List(mergedSkeletonLayer, mergedVolumeLayer).flatten
 
   private def allEqual(str: List[String]): Option[String] =

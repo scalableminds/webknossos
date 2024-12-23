@@ -1,14 +1,16 @@
 import type { Dispatch } from "redux";
-import { Alert, Slider, Row, Col, InputNumber, Spin, Tooltip } from "antd";
+import { Alert, Row, Col, InputNumber, Spin } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 import * as _ from "lodash";
-import { PRIMARY_COLOR, Vector2, Vector3 } from "oxalis/constants";
+import { PRIMARY_COLOR, type Vector2, type Vector3 } from "oxalis/constants";
 import type { APIHistogramData, HistogramDatum, ElementClass } from "types/api_flow_types";
 import { roundTo } from "libs/utils";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import type { DatasetLayerConfiguration } from "oxalis/store";
 import { CloseOutlined } from "@ant-design/icons";
+import FastTooltip from "components/fast_tooltip";
+import { Slider } from "components/slider";
 
 type OwnProps = {
   data: APIHistogramData | null | undefined;
@@ -205,8 +207,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     ctx.fill(activeRegion);
   };
 
-  onThresholdChange = ([firstVal, secVal]: [number, number]) => {
+  onThresholdChange = (values: number[]) => {
     const { layerName } = this.props;
+    const [firstVal, secVal] = values;
 
     if (firstVal < secVal) {
       this.props.onChangeLayer(layerName, "intensityRange", [firstVal, secVal]);
@@ -245,7 +248,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           style={{ margin: 10 }}
           message={
             <>
-              Histogram couldn&apos;t be fetched.{" "}
+              Histogram couldn’t be fetched.{" "}
               <a href="#" onClick={this.props.reloadHistogram}>
                 Retry
               </a>
@@ -275,7 +278,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           max={maxRange}
           defaultValue={[minRange, maxRange]}
           onChange={this.onThresholdChange}
-          onAfterChange={this.onThresholdChange}
+          onChangeComplete={this.onThresholdChange}
           step={(maxRange - minRange) / 255}
           tooltip={{ formatter: this.tipFormatter }}
           style={{
@@ -295,16 +298,17 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
               <label className="setting-label">Min:</label>
             </Col>
             <Col span={8}>
-              <Tooltip title={tooltipTitleFor("minimum")}>
+              <FastTooltip title={tooltipTitleFor("minimum")}>
                 <InputNumber
                   size="small"
                   min={defaultMinMax[0]}
                   max={maxRange}
                   defaultValue={currentMin}
                   value={currentMin}
+                  variant="borderless"
                   onChange={(value) => {
                     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
-                    value = parseFloat(value);
+                    value = Number.parseFloat(value);
 
                     if (value <= maxRange) {
                       this.setState({
@@ -315,7 +319,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   }}
                   style={minMaxInputStyle}
                 />
-              </Tooltip>
+              </FastTooltip>
             </Col>
             <Col span={3}>
               <label
@@ -329,16 +333,17 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
               </label>
             </Col>
             <Col span={8}>
-              <Tooltip title={tooltipTitleFor("maximum")}>
+              <FastTooltip title={tooltipTitleFor("maximum")}>
                 <InputNumber
                   size="small"
                   min={minRange}
                   max={defaultMinMax[1]}
                   defaultValue={currentMax}
                   value={currentMax}
+                  variant="borderless"
                   onChange={(value) => {
                     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
-                    value = parseFloat(value);
+                    value = Number.parseFloat(value);
 
                     if (value >= minRange) {
                       this.setState({
@@ -349,9 +354,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   }}
                   style={minMaxInputStyle}
                 />
-              </Tooltip>
+              </FastTooltip>
             </Col>
-            <Tooltip title="Stop editing histogram range">
+            <FastTooltip title="Stop editing histogram range">
               <Col
                 span={2}
                 style={{ textAlign: "right", cursor: "pointer" }}
@@ -359,7 +364,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
               >
                 <CloseOutlined />
               </Col>
-            </Tooltip>
+            </FastTooltip>
           </Row>
         ) : null}
       </Spin>

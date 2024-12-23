@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button, message, Select, Switch } from "antd";
 import chalk from "chalk";
 import Ansi from "ansi-to-react";
@@ -6,8 +6,8 @@ import classnames from "classnames";
 import { usePolling } from "libs/react_hooks";
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsLogs } from "admin/admin_rest_api";
-import { addAfterPadding, addBeforePadding, Result, VX_POLLING_INTERVAL } from "./utils";
-import { VoxelyticsLogLine } from "types/api_flow_types";
+import { addAfterPadding, addBeforePadding, type Result, VX_POLLING_INTERVAL } from "./utils";
+import type { VoxelyticsLogLine } from "types/api_flow_types";
 import { LOG_LEVELS } from "oxalis/constants";
 
 type LogResult = Result<Array<VoxelyticsLogLine>>;
@@ -42,7 +42,6 @@ function LogContent({ logText }: { logText: Array<string> }) {
   return (
     <div className="log-content">
       {logText.map((_line, index) => (
-        // rome-ignore lint/suspicious/noArrayIndexKey: log lines are indexed uniquely
         <div className={`log-line log-line-${index % 2 ? "odd" : "even"}`} key={index}>
           <div className="log-line-number">{index + 1}</div>
           <Ansi linkify>{logText[index]}</Ansi>

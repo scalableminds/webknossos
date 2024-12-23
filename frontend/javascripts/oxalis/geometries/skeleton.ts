@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import _ from "lodash";
-import Maybe from "data.maybe";
+import type Maybe from "data.maybe";
 import type { Tree, Node, Edge, OxalisState, SkeletonTracing } from "oxalis/store";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
@@ -12,7 +12,8 @@ import NodeShader, {
 } from "oxalis/geometries/materials/node_shader";
 import Store from "oxalis/throttled_store";
 import * as Utils from "libs/utils";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { CreateActionNode, UpdateActionNode } from "oxalis/model/sagas/update_actions";
 
 const MAX_CAPACITY = 1000;
 
@@ -219,10 +220,16 @@ class Skeleton {
     const geometry = new THREE.BufferGeometry() as BufferGeometryWithBufferAttributes;
     helper.setAttributes(geometry, capacity);
     const mesh = helper.buildMesh(geometry, material);
+    // Frustum culling is disabled because nodes that are transformed
+    // wouldn't be culled correctly.
+    // In basic testing, culling didn't provide a noticeable performance
+    // improvement (tested with 500k skeleton nodes).
+    mesh.frustumCulled = false;
     this.rootGroup.add(mesh);
 
     if (helper.supportsPicking) {
       const pickingMesh = helper.buildMesh(geometry, material);
+      pickingMesh.frustumCulled = false;
       this.pickingNode.add(pickingMesh);
     }
 
@@ -339,8 +346,8 @@ class Skeleton {
 
         case "createEdge": {
           const tree = skeletonTracing.trees[update.value.treeId];
-          const source = tree.nodes.get(update.value.source);
-          const target = tree.nodes.get(update.value.target);
+          const source = tree.nodes.getOrThrow(update.value.source);
+          const target = tree.nodes.getOrThrow(update.value.target);
           this.createEdge(tree.treeId, source, target);
           break;
         }
@@ -500,8 +507,8 @@ class Skeleton {
     }
 
     for (const edge of tree.edges.all()) {
-      const source = tree.nodes.get(edge.source);
-      const target = tree.nodes.get(edge.target);
+      const source = tree.nodes.getOrThrow(edge.source);
+      const target = tree.nodes.getOrThrow(edge.target);
       this.createEdge(tree.treeId, source, target);
     }
 
@@ -511,14 +518,16 @@ class Skeleton {
   /**
    * Creates a new node in a WebGL buffer.
    */
-  createNode(treeId: number, node: Node) {
+  createNode(treeId: number, node: Node | UpdateActionNode | CreateActionNode) {
     const id = this.combineIds(node.id, treeId);
     this.create(
       id,
       this.nodes,
       ({ buffer, index }: BufferPosition): Array<THREE.BufferAttribute> => {
         const attributes = buffer.geometry.attributes;
-        attributes.position.set(node.position, index * 3);
+        const untransformedPosition =
+          "untransformedPosition" in node ? node.untransformedPosition : node.position;
+        attributes.position.set(untransformedPosition, index * 3);
 
         if (node.additionalCoordinates) {
           for (const idx of _.range(0, node.additionalCoordinates.length)) {
@@ -649,8 +658,8 @@ class Skeleton {
       const positionAttribute = attributes.position;
       const treeIdAttribute = attributes.treeId;
 
-      positionAttribute.set(source.position, index * 6);
-      positionAttribute.set(target.position, index * 6 + 3);
+      positionAttribute.set(source.untransformedPosition, index * 6);
+      positionAttribute.set(target.untransformedPosition, index * 6 + 3);
       treeIdAttribute.set([treeId, treeId], index * 2);
 
       const changedAttributes = [];

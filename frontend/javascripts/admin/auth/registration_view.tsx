@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useHistory } from "react-router-dom";
 import { Spin, Row, Col, Card } from "antd";
 import messages from "messages";
@@ -7,7 +7,7 @@ import { getDefaultOrganization } from "admin/admin_rest_api";
 import features from "features";
 import RegistrationFormWKOrg from "admin/auth/registration_form_wkorg";
 import RegistrationFormGeneric from "admin/auth/registration_form_generic";
-import { APIOrganization } from "types/api_flow_types";
+import type { APIOrganization } from "types/api_flow_types";
 
 function RegistrationViewGeneric() {
   const history = useHistory();
@@ -47,11 +47,11 @@ function RegistrationViewGeneric() {
             marginBottom: 24,
           }}
         >
-          You are about to join the organization &ldquo;{organization.displayName}&rdquo;!
+          You are about to join the organization &ldquo;{organization.name}&rdquo;!
         </Card>
-        <RegistrationFormGeneric // The key is used to enforce a remount in case the organizationName changes.
+        <RegistrationFormGeneric // The key is used to enforce a remount in case the organizationId changes.
           // That way, we ensure that the organization field is cleared.
-          key={organization.name}
+          key={organization.id}
           targetOrganization={organization}
           onRegistered={(isUserLoggedIn?: boolean) => {
             if (isUserLoggedIn) {
@@ -82,10 +82,12 @@ function RegistrationViewGeneric() {
   return (
     <Spin spinning={isLoading}>
       <Row justify="center" align="middle" className="login-view">
-        <Col className="login-content drawing-signup" style={{ width: 1000 }}>
-          <h3>Sign Up</h3>
-          {content}
-          <Link to="/auth/login">Already have an account? Login instead.</Link>
+        <Col>
+          <Card className="login-content drawing-signup" style={{ maxWidth: 1000 }}>
+            <h3>Sign Up</h3>
+            {content}
+            <Link to="/auth/login">Already have an account? Login instead.</Link>
+          </Card>
         </Col>
       </Row>
     </Spin>
@@ -96,8 +98,8 @@ function RegistrationViewWkOrg() {
   const history = useHistory();
   return (
     <Row justify="center" align="middle" className="login-view">
-      <Col className="login-content drawing-signup" style={{ width: 1000 }}>
-        <div>
+      <Col>
+        <Card className="login-content drawing-signup" style={{ maxWidth: 1000 }}>
           <h3>Sign Up</h3>
           <RegistrationFormWKOrg
             onRegistered={() => {
@@ -111,7 +113,7 @@ function RegistrationViewWkOrg() {
           >
             <Link to="/auth/login">Log in to existing account</Link>
           </p>
-        </div>
+        </Card>
       </Col>
     </Row>
   );

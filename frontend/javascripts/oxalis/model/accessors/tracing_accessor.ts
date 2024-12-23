@@ -9,7 +9,7 @@ import type {
 } from "oxalis/store";
 import type { ServerTracing, TracingType } from "types/api_flow_types";
 import { TracingTypeEnum } from "types/api_flow_types";
-import { SaveQueueType } from "oxalis/model/actions/save_actions";
+import type { SaveQueueType } from "oxalis/model/actions/save_actions";
 
 export function maybeGetSomeTracing(
   tracing: Tracing,

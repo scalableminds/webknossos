@@ -6,12 +6,13 @@
   color: unset;
 }
 .flexlayout__tab_border,
+.flexlayout__tabset_tabbar_outer_top,
 .flexlayout__tabset-selected {
-  background-color: @body-background !important;
+  background-color: var(--ant-color-bg-base) !important;
 }
 
 .flexlayout__tabset_tabbar_outer_top {
-  border-color: @border-color-base;
+  border-color: var(--ant-color-border);
 }
 
 .flexlayout__border_left {
@@ -27,14 +28,14 @@
 
 .flexlayout__splitter:hover,
 .flexlayout__splitter_drag {
-  background-color: rgba(@text-color, 0.4);
+  background-color: var(--ant-color-border-secondary)
 }
 .flexlayout__splitter {
   z-index: 21;
-  background-color: rgba(@text-color, 0.1);
+  background-color: var(--ant-color-border);
   &::before {
     content: "";
-    background-color: rgba(@text-color, 0);
+    background-color: transparent;
   }
 }
 
@@ -68,6 +69,16 @@
   font-size: 14px;
 }
 
+// Fix min/max window button in dark mode
+.flexlayout__tab_toolbar_button:hover {
+  background-color: var(--ant-color-bg-base);
+  cursor: pointer;
+
+  svg {
+    fill: var(--ant-color-link);
+  }
+}
+
 .flexlayout__tab_button {
   margin: 0;
   padding: 0px 5px;
@@ -76,29 +87,30 @@
   font-size: 14px;
   font-weight: 400;
   font-family: @font-family;
+  
   &:hover {
     cursor: move;
   }
-  background-color: @body-background;
+  background-color: var(--ant-color-bg-base);
 
   .flexlayout__tab_button_content {
-    background-color: @body-background;
-    color: rgba(@text-color, 0.65);
+    background-color: var(--ant-color-bg-base);
+    color: var(--ant-color-text-secondary);
     border-bottom: 1px solid transparent;
   }
   &.flexlayout__tab_button--selected {
-    background-color: @body-background;
+    background-color: var(--ant-color-bg-base);
     .flexlayout__tab_button_content {
-      background-color: @body-background;
-      color: @link-color;
+      background-color: var(--ant-color-bg-base);
+      color: var(--ant-color-link);
     }
   }
   &:hover {
-    background-color: @body-background;
+    background-color: var(--ant-color-bg-base);
     .flexlayout__tab_button_content {
-      background-color: @body-background;
-      color: @link-color;
-      border-bottom: 1px solid @link-color;
+      background-color: var(--ant-color-bg-base);
+      color: var(--ant-color-link);
+      border-bottom: 1px solid var(--ant-color-link);
     }
   }
 }
@@ -110,7 +122,7 @@
 
 .flexlayout__outline_rect,
 .flexlayout__outline_rect_edge {
-  border-color: rgba(24, 144, 255, 0.85) !important;
+  border-color: var(--color-wk-blue) !important;
 }
 
 // Reverse the direction of the buttons in the tabset bar to be able to position elements on the right.

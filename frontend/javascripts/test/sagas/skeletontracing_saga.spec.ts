@@ -18,14 +18,14 @@ import update from "immutability-helper";
 import { createSaveQueueFromUpdateActions, withoutUpdateTracing } from "../helpers/saveHelpers";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
-import * as OriginalSaveActions from "oxalis/model/actions/save_actions";
-import * as OriginalSaveSaga from "oxalis/model/sagas/save_saga";
-import * as OriginalSkeletonTracingSaga from "oxalis/model/sagas/skeletontracing_saga";
-import OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
+import type * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
+import type * as OriginalSaveActions from "oxalis/model/actions/save_actions";
+import type * as OriginalSaveSaga from "oxalis/model/sagas/save_saga";
+import type * as OriginalSkeletonTracingSaga from "oxalis/model/sagas/skeletontracing_saga";
+import type OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import { TreeTypeEnum } from "oxalis/constants";
-import { Action } from "oxalis/model/actions/actions";
-import { ServerSkeletonTracing } from "types/api_flow_types";
+import type { Action } from "oxalis/model/actions/actions";
+import type { ServerSkeletonTracing } from "types/api_flow_types";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 
 const TIMESTAMP = 1494347146379;
@@ -141,6 +141,7 @@ skeletonTracing.trees[1] = {
   groupId: MISSING_GROUP_ID,
   type: TreeTypeEnum.DEFAULT,
   edgesAreVisible: true,
+  metadata: [],
 };
 const initialState = update(defaultState, {
   tracing: {
@@ -166,7 +167,7 @@ const createNodeAction = SkeletonTracingActions.createNodeAction(
   1.2,
 );
 const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
-const createTreeAction = SkeletonTracingActions.createTreeAction(12345678);
+const createTreeAction = SkeletonTracingActions.createTreeAction(undefined, 12345678);
 const deleteTreeAction = SkeletonTracingActions.deleteTreeAction();
 const setNodeRadiusAction = SkeletonTracingActions.setNodeRadiusAction(12);
 const createCommentAction = SkeletonTracingActions.createCommentAction("Hallo");
@@ -297,7 +298,7 @@ test("SkeletonTracingSaga should emit createNode and createTree update actions",
   });
 });
 test("SkeletonTracingSaga should emit first deleteNode and then createNode update actions", (t) => {
-  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(2, 1);
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 2);
   const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createTreeAction)
@@ -329,8 +330,8 @@ test("SkeletonTracingSaga should emit first deleteNode and then createNode updat
     name: "createEdge",
     value: {
       treeId: 1,
-      source: 2,
-      target: 1,
+      source: 1,
+      target: 2,
     },
   });
 });
@@ -481,7 +482,7 @@ test("SkeletonTracingSaga should emit an updateTree update actions (branchpoints
   });
 });
 test("SkeletonTracingSaga should emit update actions on merge tree", (t) => {
-  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 3);
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(3, 1);
   // create a node in first tree, then create a second tree with three nodes and merge them
   const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -521,13 +522,13 @@ test("SkeletonTracingSaga should emit update actions on merge tree", (t) => {
     name: "createEdge",
     value: {
       treeId: 2,
-      source: 1,
-      target: 3,
+      source: 3,
+      target: 1,
     },
   });
 });
 test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
-  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 3);
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(3, 1);
   // create a node in first tree, then create a second tree with three nodes and merge them
   const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -612,13 +613,13 @@ test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
     name: "deleteEdge",
     value: {
       treeId: 2,
-      source: 1,
-      target: 3,
+      source: 3,
+      target: 1,
     },
   });
 });
 test("compactUpdateActions should detect a tree merge (1/3)", (t) => {
-  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 4);
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(4, 1);
   // Create three nodes in the first tree, then create a second tree with one node and merge them
   const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -661,15 +662,15 @@ test("compactUpdateActions should detect a tree merge (1/3)", (t) => {
     name: "createEdge",
     value: {
       treeId: 2,
-      source: 1,
-      target: 4,
+      source: 4,
+      target: 1,
     },
   });
   t.is(simplifiedFirstBatch.length, 3);
 });
 test("compactUpdateActions should detect a tree merge (2/3)", (t) => {
   // In this test multiple diffs are performed and concatenated before compactUpdateActions is invoked
-  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 5);
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(5, 1);
   // Create three nodes in the first tree, then create a second tree with one node
   const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -742,16 +743,16 @@ test("compactUpdateActions should detect a tree merge (2/3)", (t) => {
     name: "createEdge",
     value: {
       treeId: 2,
-      source: 1,
-      target: 5,
+      source: 5,
+      target: 1,
     },
   });
   t.is(simplifiedSecondBatch.length, 5);
 });
 test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
   // In this test multiple merges and diffs are performed and concatenated before compactUpdateActions is invoked
-  const firstMergeTreesAction = SkeletonTracingActions.mergeTreesAction(4, 1);
-  const secondMergeTreesAction = SkeletonTracingActions.mergeTreesAction(6, 1);
+  const firstMergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 4);
+  const secondMergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 6);
   // Create three nodes in the first tree, then create a second tree with one node
   const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -823,8 +824,8 @@ test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
     name: "createEdge",
     value: {
       treeId: 1,
-      source: 4,
-      target: 1,
+      source: 1,
+      target: 4,
     },
   });
   t.is(simplifiedFirstBatch.length, 3);
@@ -855,8 +856,8 @@ test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
     name: "createEdge",
     value: {
       treeId: 1,
-      source: 6,
-      target: 1,
+      source: 1,
+      target: 6,
     },
   });
   t.is(simplifiedThirdBatch.length, 3);
@@ -1077,7 +1078,7 @@ test("compactUpdateActions should do nothing if it cannot compact", (t) => {
   // the right spot (see code comments for why)
   // This case cannot happen currently as there is no action in webknossos that results in such a diff,
   // it could however exist in the future and this test makes sure things won't break then
-  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 2);
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(2, 1);
   // Create three nodes in the first tree, then create a second tree with one node and merge them
   const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)

@@ -1,9 +1,9 @@
 import { Spin } from "antd";
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useFetch } from "libs/react_helpers";
 import { requestVerificationMail, verifyEmail } from "admin/admin_rest_api";
 import Toast from "libs/toast";
-import { ServerErrorMessage } from "libs/request";
+import type { ServerErrorMessage } from "libs/request";
 import { useHistory } from "react-router-dom";
 import { Store } from "oxalis/singletons";
 
@@ -62,13 +62,14 @@ export default function VerifyEmailView({ token }: { token: string }) {
     Toast.close(VERIFICATION_ERROR_TOAST_KEY);
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: history.push is not needed as a dependency.
   useEffect(() => {
     if (result) {
       Toast.success("Successfully verified your email.");
     }
     if (exception) {
       let errorMessage;
-      if ("messages" in exception) {
+      if (typeof exception === "object" && "messages" in exception) {
         errorMessage = ((exception as any).messages as ServerErrorMessage[])
           .map((m: any) => m.error || "")
           .join(" ");

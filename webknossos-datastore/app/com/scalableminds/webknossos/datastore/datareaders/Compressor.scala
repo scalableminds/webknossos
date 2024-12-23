@@ -2,13 +2,13 @@ package com.scalableminds.webknossos.datastore.datareaders
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO.GZIPOutputStream
-import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedDataType
-import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedDataType.PrecomputedDataType
+import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.compressedsegmentation.{
   CompressedSegmentation32,
   CompressedSegmentation64
 }
 import com.sun.jna.ptr.NativeLongByReference
+import org.apache.commons.compress.compressors.lz4.{BlockLZ4CompressorInputStream, BlockLZ4CompressorOutputStream}
 import org.apache.commons.compress.compressors.zstandard.{ZstdCompressorInputStream, ZstdCompressorOutputStream}
 import org.blosc.{BufferSizes, IBloscDll, JBlosc}
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
@@ -50,7 +50,7 @@ abstract class Compressor {
 
   def getId: String
 
-  def toString: String
+  override def toString: String = getId
 
   @throws[IOException]
   def compress(input: Array[Byte]): Array[Byte]
@@ -59,7 +59,7 @@ abstract class Compressor {
   def decompress(input: Array[Byte]): Array[Byte]
 
   @throws[IOException]
-  def passThrough(is: InputStream, os: OutputStream): Unit = {
+  protected def passThrough(is: InputStream, os: OutputStream): Unit = {
     val bytes = new Array[Byte](4096)
     var read = is.read(bytes)
     while ({
@@ -74,15 +74,36 @@ abstract class Compressor {
 }
 
 class NullCompressor extends Compressor {
-  override def getId: String = null
-
-  override def toString: String = getId
+  override def getId: String = "NullCompressor"
 
   @throws[IOException]
   override def compress(input: Array[Byte]): Array[Byte] = input
 
   @throws[IOException]
   override def decompress(input: Array[Byte]): Array[Byte] = input
+}
+
+class Lz4Compressor extends Compressor {
+  override def getId: String = "LZ4Compressor"
+
+  override def compress(input: Array[Byte]): Array[Byte] = {
+    val is = new BufferedInputStream(new ByteArrayInputStream(input));
+    val os = new ByteArrayOutputStream()
+    val cos = new BlockLZ4CompressorOutputStream(os)
+    try passThrough(is, cos)
+    finally if (cos != null) cos.close()
+    os.toByteArray
+  }
+
+  override def decompress(input: Array[Byte]): Array[Byte] = {
+    val is = new BufferedInputStream(new ByteArrayInputStream(input));
+    val os = new ByteArrayOutputStream()
+    val cis = new BlockLZ4CompressorInputStream(is)
+    try passThrough(cis, os)
+    finally if (cis != null) cis.close()
+    os.toByteArray
+  }
+
 }
 
 class ZlibCompressor(val properties: Map[String, CompressionSetting]) extends Compressor {
@@ -314,7 +335,7 @@ class JpegCompressor() extends Compressor {
   }
 }
 
-class CompressedSegmentationCompressor(dataType: PrecomputedDataType, volumeSize: Array[Int], blockSize: Vec3Int)
+class CompressedSegmentationCompressor(dataType: ArrayDataType, volumeSize: Array[Int], blockSize: Vec3Int)
     extends Compressor {
   override def getId: String = "compressedsegmentation"
 
@@ -322,13 +343,12 @@ class CompressedSegmentationCompressor(dataType: PrecomputedDataType, volumeSize
 
   override def decompress(input: Array[Byte]): Array[Byte] =
     dataType match {
-      case PrecomputedDataType.uint32 =>
+      case ArrayDataType.u4 =>
         CompressedSegmentation32.decompress(input, volumeSize, blockSize)
-      case PrecomputedDataType.uint64 =>
+      case ArrayDataType.u8 =>
         CompressedSegmentation64.decompress(input, volumeSize, blockSize)
       case _ =>
-        throw new UnsupportedOperationException(
-          "Can not use compressed segmentation for datatypes other than u32, u64.")
+        throw new UnsupportedOperationException("Can not use compressed segmentation for datatypes other than u4, u8.")
     }
 
   override def compress(input: Array[Byte]): Array[Byte] = ???

@@ -3,7 +3,7 @@ import * as React from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { updateNovelUserExperienceInfos } from "admin/admin_rest_api";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 
 export default function PresentModernControls() {
   const dispatch = useDispatch();
@@ -72,7 +72,7 @@ export default function PresentModernControls() {
       </div>
       <p
         style={{
-          color: "var(--ant-text-secondary)",
+          color: "var(--ant-color-text-secondary)",
           fontSize: 12,
           textAlign: "center",
           margin: "8px auto",
@@ -82,7 +82,7 @@ export default function PresentModernControls() {
         Note that you can always change your mind by enabling/disabling &quot;Classic Controls&quot;
         in the settings sidebar. Read more about the setting{" "}
         <a
-          href="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html#classic-controls"
+          href="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html#classic-controls"
           target="_blank"
           rel="noopener noreferrer"
         >

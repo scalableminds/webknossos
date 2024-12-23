@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.geometry
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.VolumeUpdateAction
-import com.scalableminds.webknossos.tracingstore.tracings.{NamedBoundingBox, UpdateAction}
+import com.scalableminds.webknossos.tracingstore.tracings.{NamedBoundingBox, UpdateAction, MetadataEntry}
 import play.api.libs.json._
 
 trait VolumeUpdateActionHelper {
@@ -19,7 +19,10 @@ trait VolumeUpdateActionHelper {
       if (segment.segmentId == segmentId) transformSegment(segment) else segment)
 
   protected def convertSegmentGroup(aSegmentGroup: UpdateActionSegmentGroup): SegmentGroup =
-    SegmentGroup(aSegmentGroup.name, aSegmentGroup.groupId, aSegmentGroup.children.map(convertSegmentGroup))
+    SegmentGroup(aSegmentGroup.name,
+                 aSegmentGroup.groupId,
+                 aSegmentGroup.children.map(convertSegmentGroup),
+                 aSegmentGroup.isExpanded)
 
 }
 
@@ -239,7 +242,8 @@ case class CreateSegmentVolumeAction(id: Long,
                                      creationTime: Option[Long],
                                      actionTimestamp: Option[Long] = None,
                                      actionAuthorId: Option[String] = None,
-                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
+                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+                                     metadata: Option[Seq[MetadataEntry]] = None)
     extends ApplyableVolumeAction
     with ProtoGeometryImplicits {
 
@@ -253,13 +257,16 @@ case class CreateSegmentVolumeAction(id: Long,
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     val newSegment =
-      Segment(id,
-              anchorPosition.map(vec3IntToProto),
-              name,
-              creationTime,
-              colorOptToProto(color),
-              groupId,
-              AdditionalCoordinate.toProto(additionalCoordinates))
+      Segment(
+        id,
+        anchorPosition.map(vec3IntToProto),
+        name,
+        creationTime,
+        colorOptToProto(color),
+        groupId,
+        AdditionalCoordinate.toProto(additionalCoordinates),
+        metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
+      )
     tracing.addSegments(newSegment)
   }
 }
@@ -276,7 +283,8 @@ case class UpdateSegmentVolumeAction(id: Long,
                                      groupId: Option[Int],
                                      actionTimestamp: Option[Long] = None,
                                      actionAuthorId: Option[String] = None,
-                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
+                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+                                     metadata: Option[Seq[MetadataEntry]] = None)
     extends ApplyableVolumeAction
     with ProtoGeometryImplicits
     with VolumeUpdateActionHelper {
@@ -297,7 +305,8 @@ case class UpdateSegmentVolumeAction(id: Long,
         creationTime = creationTime,
         color = colorOptToProto(color),
         groupId = groupId,
-        anchorPositionAdditionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates)
+        anchorPositionAdditionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates),
+        metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
       )
     tracing.withSegments(mapSegments(tracing, id, segmentTransform))
   }
@@ -330,7 +339,6 @@ object DeleteSegmentVolumeAction {
 }
 
 case class DeleteSegmentDataVolumeAction(id: Long,
-                                         additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
                                          actionTimestamp: Option[Long] = None,
                                          actionAuthorId: Option[String] = None)
     extends VolumeUpdateAction {
@@ -349,6 +357,7 @@ object DeleteSegmentDataVolumeAction {
 
 case class UpdateMappingNameAction(mappingName: Option[String],
                                    isEditable: Option[Boolean],
+                                   isLocked: Option[Boolean],
                                    actionTimestamp: Option[Long],
                                    actionAuthorId: Option[String] = None)
     extends ApplyableVolumeAction {
@@ -362,7 +371,11 @@ case class UpdateMappingNameAction(mappingName: Option[String],
                               Json.obj("mappingName" -> mappingName))
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.copy(mappingName = mappingName, mappingIsEditable = Some(isEditable.getOrElse(false)))
+    if (tracing.mappingIsLocked.getOrElse(false)) tracing // cannot change mapping name if it is locked
+    else
+      tracing.copy(mappingName = mappingName,
+                   hasEditableMapping = Some(isEditable.getOrElse(false)),
+                   mappingIsLocked = Some(isLocked.getOrElse(false)))
 }
 
 object UpdateMappingNameAction {

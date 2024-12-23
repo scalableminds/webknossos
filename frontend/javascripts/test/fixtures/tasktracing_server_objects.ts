@@ -20,7 +20,7 @@ export const tracing: ServerSkeletonTracing = {
           },
           radius: 120,
           viewport: 1,
-          resolution: 1,
+          mag: 1,
           bitDepth: 0,
           interpolation: false,
           createdTimestamp: 1528811979356,
@@ -39,6 +39,7 @@ export const tracing: ServerSkeletonTracing = {
       name: "",
       isVisible: true,
       createdTimestamp: 1528811979356,
+      metadata: [],
     },
   ],
   treeGroups: [],
@@ -62,6 +63,7 @@ export const tracing: ServerSkeletonTracing = {
   id: "e90133de-b2db-4912-8261-8b6f84f7edab",
 };
 export const annotation: APIAnnotation = {
+  datasetId: "66f3c82966010034942e9740",
   modified: 1529066010230,
   state: "Active",
   id: "5b1fd1cf97000027049c67ee",
@@ -85,12 +87,13 @@ export const annotation: APIAnnotation = {
         somaClickingAllowed: true,
         volumeInterpolationAllowed: false,
         mergerMode: false,
-        resolutionRestrictions: {},
+        magRestrictions: {},
       },
       recommendedConfiguration: null,
       tracingType: "skeleton",
     },
-    dataSet: "ROI2017_wkw",
+    datasetId: "66f3c82966010034942e9740",
+    datasetName: "ROI2017_wkw",
     neededExperience: {
       domain: "oxalis",
       value: 1,
@@ -108,7 +111,6 @@ export const annotation: APIAnnotation = {
     editPosition: [0, 0, 0],
     editRotation: [0, 0, 0],
   },
-  stats: {},
   restrictions: {
     allowAccess: true,
     allowUpdate: true,
@@ -120,6 +122,7 @@ export const annotation: APIAnnotation = {
       name: "Skeleton",
       tracingId: "e90133de-b2db-4912-8261-8b6f84f7edab",
       typ: "Skeleton",
+      stats: {},
     },
   ],
   dataSetName: "ROI2017_wkw",
@@ -129,6 +132,8 @@ export const annotation: APIAnnotation = {
     url: "http://localhost:9000",
     isScratch: false,
     allowsUpload: true,
+    jobsEnabled: false,
+    jobsSupportedByAvailableWorkers: [],
   },
   tracingStore: {
     name: "localhost",
@@ -141,7 +146,7 @@ export const annotation: APIAnnotation = {
     somaClickingAllowed: true,
     volumeInterpolationAllowed: false,
     mergerMode: false,
-    resolutionRestrictions: {},
+    magRestrictions: {},
   },
   tracingTime: null,
   tags: ["ROI2017_wkw", "skeleton"],
@@ -163,6 +168,7 @@ export const annotation: APIAnnotation = {
   },
   contributors: [],
   othersMayEdit: false,
+  isLockedByOwner: false,
   teams: [
     {
       id: "5b1e45f9a00000a000abc2c3",

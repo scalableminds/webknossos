@@ -1,7 +1,7 @@
-import { Button, Dropdown, MenuProps, Space } from "antd";
+import { Button, Dropdown, type MenuProps, Space } from "antd";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import React, { PureComponent } from "react";
+import { PureComponent } from "react";
 import {
   setViewModeAction,
   setFlightmodeRecordingAction,
@@ -9,8 +9,9 @@ import {
 import type { OxalisState, AllowedMode } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
-import { ViewMode, ViewModeValues } from "oxalis/constants";
+import { type ViewMode, ViewModeValues } from "oxalis/constants";
 import constants from "oxalis/constants";
+import type { EmptyObject } from "types/globals";
 
 type StateProps = {
   viewMode: ViewMode;
@@ -22,17 +23,14 @@ type DispatchProps = {
 type Props = StateProps & DispatchProps;
 
 const VIEW_MODE_TO_ICON = {
-  [constants.MODE_PLANE_TRACING]: <i className="fas fa-th-large without-icon-margin" />,
-  [constants.MODE_ARBITRARY]: <i className="fas fa-globe without-icon-margin" />,
+  [constants.MODE_PLANE_TRACING]: <i className="fas fa-th-large" />,
+  [constants.MODE_ARBITRARY]: <i className="fas fa-globe" />,
   [constants.MODE_ARBITRARY_PLANE]: (
-    <i
-      className="fas fa-square-full without-icon-margin"
-      style={{ transform: "scale(0.8, 1) rotate(-45deg)" }}
-    />
+    <i className="fas fa-square-full" style={{ transform: "scale(0.8, 1) rotate(-45deg)" }} />
   ),
 };
 
-class ViewModesView extends PureComponent<Props, {}> {
+class ViewModesView extends PureComponent<Props, EmptyObject> {
   handleChange = (mode: ViewMode) => {
     // If we switch back from any arbitrary mode we stop recording.
     // This prevents that when the user switches back to any arbitrary mode,

@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore

@@ -7,10 +7,7 @@ import * as Utils from "libs/utils";
 import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "oxalis/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import { V3 } from "libs/mjs";
-import {
-  getDatasetExtentInLength,
-  getDatasetCenter,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getDatasetExtentInUnit, getDatasetCenter } from "oxalis/model/accessors/dataset_accessor";
 import {
   getInputCatcherAspectRatio,
   getPlaneExtentInVoxelFromStore,
@@ -18,7 +15,7 @@ import {
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setTDCameraWithoutTimeTrackingAction } from "oxalis/model/actions/view_mode_actions";
-import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
+import { getBaseVoxelInUnit, voxelToUnit } from "oxalis/model/scaleinfo";
 import type { CameraData } from "oxalis/store";
 import Store from "oxalis/store";
 import { api } from "oxalis/singletons";
@@ -35,7 +32,7 @@ function getQuaternionFromCamera(_up: Vector3, position: Vector3, center: Vector
   const forward = V3.normalize(V3.sub(center, position));
   const right = V3.normalize(V3.cross(up, forward));
   const rotationMatrix = new THREE.Matrix4();
-  // prettier-ignore
+  // biome-ignore format: don't format
   rotationMatrix.set(right[0], up[0], forward[0], 0, right[1], up[1], forward[1], 0, right[2], up[2], forward[2], 0, 0, 0, 0, 1);
   const quat = new THREE.Quaternion();
   quat.setFromRotationMatrix(rotationMatrix);
@@ -72,20 +69,19 @@ class CameraController extends React.PureComponent<Props> {
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
 
   componentDidMount() {
-    const far = 8000000;
+    // Take the whole diagonal extent of the dataset to get the possible maximum extent of the dataset.
+    // This is used as an indication to set the far plane. This needs to be multiplied by 2
+    // as the dataset planes in the 3d viewport are offset by the maximum of width, height and extent to ensure the dataset is visible.
+    const datasetExtent = getDatasetExtentInUnit(Store.getState().dataset);
+    const diagonalDatasetExtent = Math.sqrt(
+      datasetExtent.width ** 2 + datasetExtent.height ** 2 + datasetExtent.depth ** 2,
+    );
+    const far = Math.max(8000000, diagonalDatasetExtent * 2);
 
     for (const cam of _.values(this.props.cameras)) {
       cam.near = 0;
       cam.far = far;
     }
-    // Take the whole diagonal extent of the dataset to get the possible maximum extent of the dataset.
-    // This is used as an indication to set the far plane. This needs to be multiplied by 2
-    // as the dataset planes in the 3d viewport are offset by the maximum of width, height and extent to ensure the dataset is visible.
-    const datasetExtent = getDatasetExtentInLength(Store.getState().dataset);
-    const diagonalDatasetExtent = Math.sqrt(
-      datasetExtent.width ** 2 + datasetExtent.height ** 2 + datasetExtent.depth ** 2,
-    );
-    this.props.cameras[OrthoViews.TDView].far = diagonalDatasetExtent * 2;
 
     const tdId = `inputcatcher_${OrthoViews.TDView}`;
     this.bindToEvents();
@@ -102,7 +98,8 @@ class CameraController extends React.PureComponent<Props> {
           }),
         );
         api.tracing.rotate3DViewToDiagonal(false);
-        this.updateTDCamera(Store.getState().viewModeData.plane.tdCamera);
+        const tdData = Store.getState().viewModeData.plane.tdCamera;
+        this.updateTDCamera(tdData);
       }, 0);
     });
   }
@@ -115,7 +112,7 @@ class CameraController extends React.PureComponent<Props> {
   updateCamViewport(inputCatcherRects?: OrthoViewRects): void {
     const state = Store.getState();
     const { clippingDistance } = state.userConfiguration;
-    const scaleFactor = getBaseVoxel(state.dataset.dataSource.scale);
+    const scaleFactor = getBaseVoxelInUnit(state.dataset.dataSource.scale.factor);
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const [width, height] = getPlaneExtentInVoxelFromStore(
@@ -159,7 +156,7 @@ class CameraController extends React.PureComponent<Props> {
     const state = Store.getState();
     const gPos = getPosition(state.flycam);
     // camera position's unit is nm, so convert it.
-    const cPos = voxelToNm(state.dataset.dataSource.scale, gPos);
+    const cPos = voxelToUnit(state.dataset.dataSource.scale, gPos);
     this.props.cameras[OrthoViews.PLANE_XY].position.set(cPos[0], cPos[1], cPos[2]);
     this.props.cameras[OrthoViews.PLANE_YZ].position.set(cPos[0], cPos[1], cPos[2]);
     this.props.cameras[OrthoViews.PLANE_XZ].position.set(cPos[0], cPos[1], cPos[2]);
@@ -202,7 +199,6 @@ class CameraController extends React.PureComponent<Props> {
     tdCamera.top = cameraData.top;
     tdCamera.bottom = cameraData.bottom;
     tdCamera.up = new THREE.Vector3(...cameraData.up);
-    tdCamera.lookAt(new THREE.Vector3(...cameraData.lookAt));
     tdCamera.updateProjectionMatrix();
     this.props.onCameraPositionChanged();
   }
@@ -222,8 +218,8 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   const state = Store.getState();
   const { dataset } = state;
   const { tdCamera } = state.viewModeData.plane;
-  const flycamPos = voxelToNm(dataset.dataSource.scale, getPosition(state.flycam));
-  const datasetExtent = getDatasetExtentInLength(dataset);
+  const flycamPos = voxelToUnit(dataset.dataSource.scale, getPosition(state.flycam));
+  const datasetExtent = getDatasetExtentInUnit(dataset);
   // This distance ensures that the 3D camera is so far "in the back" that all elements in the scene
   // are in front of it and thus visible.
   const clippingOffsetFactor = Math.max(
@@ -244,7 +240,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   if (id === OrthoViews.TDView && (height <= 0 || width <= 0)) {
     // This should only be the case when initializing the 3D-viewport.
     const aspectRatio = getInputCatcherAspectRatio(state, OrthoViews.TDView);
-    const datasetCenter = voxelToNm(dataset.dataSource.scale, getDatasetCenter(dataset));
+    const datasetCenter = voxelToUnit(dataset.dataSource.scale, getDatasetCenter(dataset));
     // The camera has no width and height which might be due to a bug or the camera has not been initialized.
     // Thus we zoom out to show the whole dataset.
     const paddingFactor = 1.1;
@@ -288,7 +284,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     ];
   }
 
-  const currentFlycamPos = voxelToNm(
+  const currentFlycamPos = voxelToUnit(
     Store.getState().dataset.dataSource.scale,
     getPosition(Store.getState().flycam),
   ) || [0, 0, 0];
@@ -324,7 +320,6 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
         right,
         top,
         bottom,
-        lookAt: currentFlycamPos,
       }),
     );
   };

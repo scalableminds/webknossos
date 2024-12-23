@@ -1,9 +1,10 @@
 import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
-import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
+import type { BoundingBoxType, OrthoView, Vector2, Vector3, Vector4 } from "oxalis/constants";
 import constants, { Vector3Indicies } from "oxalis/constants";
-import type { ResolutionInfo } from "../helpers/resolution_info";
+import type { MagInfo } from "../helpers/mag_info";
+import Dimensions from "../dimensions";
 
 class BoundingBox {
   min: Vector3;
@@ -11,9 +12,9 @@ class BoundingBox {
 
   constructor(boundingBox: BoundingBoxType | null | undefined) {
     // Min is including
-    this.min = [-Infinity, -Infinity, -Infinity];
+    this.min = [Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY];
     // Max is excluding
-    this.max = [Infinity, Infinity, Infinity];
+    this.max = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
 
     if (boundingBox != null) {
       for (const i of Vector3Indicies) {
@@ -23,13 +24,23 @@ class BoundingBox {
     }
   }
 
-  getBoxForZoomStep = _.memoize((resolution: Vector3): BoundingBoxType => {
+  getMinUV(activeViewport: OrthoView): Vector2 {
+    const [u, v, _w] = Dimensions.transDim(this.min, activeViewport);
+    return [u, v];
+  }
+
+  getMaxUV(activeViewport: OrthoView): Vector2 {
+    const [u, v, _w] = Dimensions.transDim(this.max, activeViewport);
+    return [u, v];
+  }
+
+  getBoxForZoomStep = _.memoize((mag: Vector3): BoundingBoxType => {
     // No `map` for performance reasons
     const min = [0, 0, 0] as Vector3;
     const max = [0, 0, 0] as Vector3;
 
     for (let i = 0; i < 3; i++) {
-      const divisor = constants.BUCKET_WIDTH * resolution[i];
+      const divisor = constants.BUCKET_WIDTH * mag[i];
       min[i] = Math.floor(this.min[i] / divisor);
       max[i] = Math.ceil(this.max[i] / divisor);
     }
@@ -40,16 +51,16 @@ class BoundingBox {
     };
   });
 
-  containsBucket([x, y, z, zoomStep]: Vector4, resolutionInfo: ResolutionInfo): boolean {
+  containsBucket([x, y, z, zoomStep]: Vector4, magInfo: MagInfo): boolean {
     /* Checks whether a bucket is contained in the active bounding box.
-     * If the passed resolutionInfo does not contain the passed zoomStep, this method
+     * If the passed magInfo does not contain the passed zoomStep, this method
      * returns false.
      */
-    const resolutionIndex = resolutionInfo.getResolutionByIndex(zoomStep);
-    if (resolutionIndex == null) {
+    const magIndex = magInfo.getMagByIndex(zoomStep);
+    if (magIndex == null) {
       return false;
     }
-    const { min, max } = this.getBoxForZoomStep(resolutionIndex);
+    const { min, max } = this.getBoxForZoomStep(magIndex);
     return min[0] <= x && x < max[0] && min[1] <= y && y < max[1] && min[2] <= z && z < max[2];
   }
 
@@ -81,6 +92,15 @@ class BoundingBox {
     });
   }
 
+  extend(other: BoundingBox): BoundingBox {
+    const newMin = V3.min(this.min, other.min);
+    const newMax = V3.max(this.max, other.max);
+    return new BoundingBox({
+      min: newMin,
+      max: newMax,
+    });
+  }
+
   getCenter(): Vector3 {
     return V3.floor(V3.add(this.min, V3.scale(this.getSize(), 0.5)));
   }
@@ -95,7 +115,7 @@ class BoundingBox {
     return size[0] * size[1] * size[2];
   }
 
-  chunkIntoBuckets() {
+  *chunkIntoBuckets(): Generator<BoundingBox, void, void> {
     const size = this.getSize();
     const start = [...this.min];
     const chunkSize: Vector3 = [32, 32, 32];
@@ -108,25 +128,20 @@ class BoundingBox {
       mod(start[1], chunkBorderAlignments[1]),
       mod(start[2], chunkBorderAlignments[2]),
     ];
-    const boxes = [];
 
     for (const x of _.range(start[0] - startAdjust[0], start[0] + size[0], chunkSize[0])) {
       for (const y of _.range(start[1] - startAdjust[1], start[1] + size[1], chunkSize[1])) {
         for (const z of _.range(start[2] - startAdjust[2], start[2] + size[2], chunkSize[2])) {
           const newMin: Vector3 = [x, y, z];
-          boxes.push(
-            this.intersectedWith(
-              new BoundingBox({
-                min: newMin,
-                max: V3.add(newMin, chunkSize),
-              }),
-            ),
+          yield this.intersectedWith(
+            new BoundingBox({
+              min: newMin,
+              max: V3.add(newMin, chunkSize),
+            }),
           );
         }
       }
     }
-
-    return boxes;
   }
 
   fromMag1ToMag(mag: Vector3): BoundingBox {
@@ -139,6 +154,23 @@ class BoundingBox {
       Math.ceil(this.max[0] / mag[0]),
       Math.ceil(this.max[1] / mag[1]),
       Math.ceil(this.max[2] / mag[2]),
+    ];
+    return new BoundingBox({
+      min,
+      max,
+    });
+  }
+
+  fromMagToMag1(mag: Vector3): BoundingBox {
+    const min: Vector3 = [
+      Math.floor(this.min[0] * mag[0]),
+      Math.floor(this.min[1] * mag[1]),
+      Math.floor(this.min[2] * mag[2]),
+    ];
+    const max: Vector3 = [
+      Math.ceil(this.max[0] * mag[0]),
+      Math.ceil(this.max[1] * mag[1]),
+      Math.ceil(this.max[2] * mag[2]),
     ];
     return new BoundingBox({
       min,
@@ -201,6 +233,20 @@ class BoundingBox {
   asServerBoundingBox() {
     const size = this.getSize();
     return { topLeft: this.min, width: size[0], height: size[1], depth: size[2] };
+  }
+
+  toBoundingBoxType(): BoundingBoxType {
+    return {
+      min: this.min,
+      max: this.max,
+    };
+  }
+
+  offset(offset: Vector3): BoundingBox {
+    return new BoundingBox({
+      min: V3.add(this.min, offset),
+      max: V3.add(this.max, offset),
+    });
   }
 }
 

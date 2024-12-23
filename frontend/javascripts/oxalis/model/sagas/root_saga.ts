@@ -9,7 +9,7 @@ import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
 import SkeletontracingSagas from "oxalis/model/sagas/skeletontracing_saga";
 import ErrorHandling from "libs/error_handling";
 import meshSaga, { handleAdditionalCoordinateUpdate } from "oxalis/model/sagas/mesh_saga";
-import { watchMaximumRenderableLayers, watchZ1Downsampling } from "oxalis/model/sagas/dataset_saga";
+import DatasetSagas from "oxalis/model/sagas/dataset_saga";
 import { watchToolDeselection, watchToolReset } from "oxalis/model/sagas/annotation_tool_saga";
 import SettingsSaga from "oxalis/model/sagas/settings_saga";
 import watchTasksAsync, { warnAboutMagRestriction } from "oxalis/model/sagas/task_saga";
@@ -19,7 +19,7 @@ import MappingSaga from "oxalis/model/sagas/mapping_saga";
 import ProofreadSaga from "oxalis/model/sagas/proofread_saga";
 import { listenForWkReady } from "oxalis/model/sagas/wk_ready_saga";
 import { warnIfEmailIsUnverified } from "./user_saga";
-import { EscalateErrorAction } from "../actions/actions";
+import type { EscalateErrorAction } from "../actions/actions";
 
 let rootSagaCrashed = false;
 export default function* rootSaga(): Saga<void> {
@@ -55,7 +55,6 @@ function* restartableSaga(): Saga<void> {
       call(watchDataRelevantChanges),
       call(meshSaga),
       call(watchTasksAsync),
-      call(watchMaximumRenderableLayers),
       call(MappingSaga),
       call(watchToolDeselection),
       call(watchToolReset),
@@ -64,10 +63,10 @@ function* restartableSaga(): Saga<void> {
       ...SaveSagas.map((saga) => call(saga)),
       call(UndoSaga),
       ...VolumetracingSagas.map((saga) => call(saga)),
-      call(watchZ1Downsampling),
       call(warnIfEmailIsUnverified),
       call(listenToErrorEscalation),
       call(handleAdditionalCoordinateUpdate),
+      ...DatasetSagas.map((saga) => call(saga)),
     ]);
   } catch (err) {
     rootSagaCrashed = true;

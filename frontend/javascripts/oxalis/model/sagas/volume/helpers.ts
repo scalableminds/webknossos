@@ -1,32 +1,32 @@
 import { V3 } from "libs/mjs";
 import Constants, {
-  ContourMode,
+  type ContourMode,
   ContourModeEnum,
-  LabeledVoxelsMap,
-  OrthoView,
-  OverwriteMode,
+  type LabeledVoxelsMap,
+  type OrthoView,
+  type OverwriteMode,
   OverwriteModeEnum,
-  Vector2,
-  Vector3,
+  type Vector2,
+  type Vector3,
 } from "oxalis/constants";
-import { getDatasetBoundingBox, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getDatasetBoundingBox, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { getHalfViewportExtents } from "oxalis/model/sagas/saga_selectors";
+import { getHalfViewportExtentsInVx } from "oxalis/model/sagas/saga_selectors";
 import { call } from "typed-redux-saga";
-import sampleVoxelMapToResolution, {
+import sampleVoxelMapToMagnification, {
   applyVoxelMap,
 } from "oxalis/model/volumetracing/volume_annotation_sampling";
-import Dimensions, { DimensionMap } from "oxalis/model/dimensions";
-import DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import { Model } from "oxalis/singletons";
-import VolumeLayer, { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
+import VolumeLayer, { type VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
 import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { BoundingBoxObject, VolumeTracing } from "oxalis/store";
+import type { BoundingBoxObject, VolumeTracing } from "oxalis/store";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import type { MagInfo } from "oxalis/model/helpers/mag_info";
 
 function* pairwise<T>(arr: Array<T>): Generator<[T, T], any, any> {
   for (let i = 0; i < arr.length - 1; i++) {
@@ -34,12 +34,16 @@ function* pairwise<T>(arr: Array<T>): Generator<[T, T], any, any> {
   }
 }
 
+export type BooleanBox = {
+  value: boolean;
+};
+
 export function* getBoundingBoxForViewport(
   position: Vector3,
   currentViewport: OrthoView,
 ): Saga<BoundingBox> {
   const [halfViewportExtentX, halfViewportExtentY] = yield* call(
-    getHalfViewportExtents,
+    getHalfViewportExtentsInVx,
     currentViewport,
   );
 
@@ -71,11 +75,11 @@ export function getBoundingBoxInMag1(boudingBox: BoundingBoxObject, magOfBB: Vec
   };
 }
 
-export function applyLabeledVoxelMapToAllMissingResolutions(
+export function applyLabeledVoxelMapToAllMissingMags(
   inputLabeledVoxelMap: LabeledVoxelsMap,
   labeledZoomStep: number,
   dimensionIndices: DimensionMap,
-  resolutionInfo: ResolutionInfo,
+  magInfo: MagInfo,
   segmentationCube: DataCube,
   segmentId: number,
   thirdDimensionOfSlice: number, // this value is specified in global (mag1) coords
@@ -90,9 +94,9 @@ export function applyLabeledVoxelMapToAllMissingResolutions(
   // a 2D vector address to the corresponding 3D vector address.
   // The input address is local to a slice in the LabeledVoxelsMap (that's
   // why it's 2D). The output address is local to the corresponding bucket.
-  const get3DAddressCreator = (targetResolution: Vector3) => {
+  const get3DAddressCreator = (targetMags: Vector3) => {
     const sampledThirdDimensionValue =
-      Math.floor(thirdDimensionOfSlice / targetResolution[thirdDim]) % Constants.BUCKET_WIDTH;
+      Math.floor(thirdDimensionOfSlice / targetMags[thirdDim]) % Constants.BUCKET_WIDTH;
     return (x: number, y: number, out: Vector3 | Float32Array) => {
       out[dimensionIndices[0]] = x;
       out[dimensionIndices[1]] = y;
@@ -100,21 +104,21 @@ export function applyLabeledVoxelMapToAllMissingResolutions(
     };
   };
 
-  // Get all available resolutions and divide the list into two parts.
-  // The pivotIndex is the index within allResolutionsWithIndices which refers to
-  // the labeled resolution.
+  // Get all available magnifications and divide the list into two parts.
+  // The pivotIndex is the index within allMagsWithIndices which refers to
+  // the labeled mag.
   // `downsampleSequence` contains the current mag and all higher mags (to which
   // should be downsampled)
   // `upsampleSequence` contains the current mag and all lower mags (to which
   // should be upsampled)
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
-  const allResolutionsWithIndices = resolutionInfo.getResolutionsWithIndices();
-  const pivotIndex = allResolutionsWithIndices.findIndex(([index]) => index === labeledZoomStep);
-  const downsampleSequence = allResolutionsWithIndices.slice(pivotIndex);
-  const upsampleSequence = allResolutionsWithIndices.slice(0, pivotIndex + 1).reverse();
+  const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
+  const allMagsWithIndices = magInfo.getMagsWithIndices();
+  const pivotIndex = allMagsWithIndices.findIndex(([index]) => index === labeledZoomStep);
+  const downsampleSequence = allMagsWithIndices.slice(pivotIndex);
+  const upsampleSequence = allMagsWithIndices.slice(0, pivotIndex + 1).reverse();
 
-  // Given a sequence of resolutions, the inputLabeledVoxelMap is applied
-  // over all these resolutions.
+  // Given a sequence of mags, the inputLabeledVoxelMap is applied
+  // over all these mags.
   function processSamplingSequence(
     samplingSequence: Array<[number, Vector3]>,
     getNumberOfSlices: (arg0: Vector3) => number,
@@ -124,24 +128,24 @@ export function applyLabeledVoxelMapToAllMissingResolutions(
     let currentLabeledVoxelMap: LabeledVoxelsMap = inputLabeledVoxelMap;
 
     for (const [source, target] of pairwise(samplingSequence)) {
-      const [sourceZoomStep, sourceResolution] = source;
-      const [targetZoomStep, targetResolution] = target;
-      currentLabeledVoxelMap = sampleVoxelMapToResolution(
+      const [sourceZoomStep, sourceMag] = source;
+      const [targetZoomStep, targetMag] = target;
+      currentLabeledVoxelMap = sampleVoxelMapToMagnification(
         currentLabeledVoxelMap,
         segmentationCube,
-        sourceResolution,
+        sourceMag,
         sourceZoomStep,
-        targetResolution,
+        targetMag,
         targetZoomStep,
         dimensionIndices,
         thirdDimensionOfSlice,
       );
-      const numberOfSlices = getNumberOfSlices(targetResolution);
+      const numberOfSlices = getNumberOfSlices(targetMag);
       applyVoxelMap(
         currentLabeledVoxelMap,
         segmentationCube,
         segmentId,
-        get3DAddressCreator(targetResolution),
+        get3DAddressCreator(targetMag),
         numberOfSlices,
         thirdDim,
         shouldOverwrite,
@@ -150,14 +154,14 @@ export function applyLabeledVoxelMapToAllMissingResolutions(
     }
   }
 
-  // First upsample the voxel map and apply it to all better resolutions.
+  // First upsample the voxel map and apply it to all better mags.
   // sourceZoomStep will be higher than targetZoomStep
-  processSamplingSequence(upsampleSequence, (targetResolution) =>
-    Math.ceil(labeledResolution[thirdDim] / targetResolution[thirdDim]),
+  processSamplingSequence(upsampleSequence, (targetMag) =>
+    Math.ceil(labeledMag[thirdDim] / targetMag[thirdDim]),
   );
   // Next we downsample the annotation and apply it.
   // sourceZoomStep will be lower than targetZoomStep
-  processSamplingSequence(downsampleSequence, (_targetResolution) => 1);
+  processSamplingSequence(downsampleSequence, (_targetMag) => 1);
 }
 
 export function* labelWithVoxelBuffer2D(
@@ -166,6 +170,7 @@ export function* labelWithVoxelBuffer2D(
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
   viewport: OrthoView,
+  wroteVoxelsBox?: BooleanBox,
 ): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
@@ -180,8 +185,8 @@ export function* labelWithVoxelBuffer2D(
   const { cube } = segmentationLayer;
   const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
   const dimensionIndices = Dimensions.getIndices(viewport);
-  const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+  const magInfo = yield* call(getMagInfo, segmentationLayer.mags);
+  const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
 
   const get3DCoordinateFromLocal2D = ([x, y]: Vector2) =>
     voxelBuffer.get3DCoordinate([x + voxelBuffer.minCoord2d[0], y + voxelBuffer.minCoord2d[1]]);
@@ -196,9 +201,7 @@ export function* labelWithVoxelBuffer2D(
     min: topLeft3DCoord,
     max: bottomRight3DCoord,
   });
-  const bucketBoundingBoxes = outerBoundingBox.chunkIntoBuckets();
-
-  for (const boundingBoxChunk of bucketBoundingBoxes) {
+  for (const boundingBoxChunk of outerBoundingBox.chunkIntoBuckets()) {
     const { min, max } = boundingBoxChunk;
     const bucketZoomedAddress = zoomedPositionToZoomedAddress(
       min,
@@ -238,14 +241,14 @@ export function* labelWithVoxelBuffer2D(
   const shouldOverwrite = overwriteMode === OverwriteModeEnum.OVERWRITE_ALL;
   // Since the LabeledVoxelMap is created in the current magnification,
   // we only need to annotate one slice in this mag.
-  // `applyLabeledVoxelMapToAllMissingResolutions` will take care of
+  // `applyLabeledVoxelMapToAllMissingMags` will take care of
   // annotating multiple slices
   const numberOfSlices = 1;
   const thirdDim = dimensionIndices[2];
   const isDeleting = contourTracingMode === ContourModeEnum.DELETE;
   const newCellIdValue = isDeleting ? 0 : activeCellId;
   const overwritableValue = isDeleting ? activeCellId : 0;
-  applyVoxelMap(
+  const wroteVoxels = applyVoxelMap(
     currentLabeledVoxelMap,
     cube,
     newCellIdValue,
@@ -255,29 +258,36 @@ export function* labelWithVoxelBuffer2D(
     shouldOverwrite,
     overwritableValue,
   );
-  // thirdDimensionOfSlice needs to be provided in global coordinates
-  const thirdDimensionOfSlice =
-    topLeft3DCoord[dimensionIndices[2]] * labeledResolution[dimensionIndices[2]];
-  applyLabeledVoxelMapToAllMissingResolutions(
-    currentLabeledVoxelMap,
-    labeledZoomStep,
-    dimensionIndices,
-    resolutionInfo,
-    cube,
-    newCellIdValue,
-    thirdDimensionOfSlice,
-    shouldOverwrite,
-    overwritableValue,
-  );
+
+  if (wroteVoxels) {
+    // thirdDimensionOfSlice needs to be provided in global coordinates
+    const thirdDimensionOfSlice =
+      topLeft3DCoord[dimensionIndices[2]] * labeledMag[dimensionIndices[2]];
+    applyLabeledVoxelMapToAllMissingMags(
+      currentLabeledVoxelMap,
+      labeledZoomStep,
+      dimensionIndices,
+      magInfo,
+      cube,
+      newCellIdValue,
+      thirdDimensionOfSlice,
+      shouldOverwrite,
+      overwritableValue,
+    );
+  }
+
+  if (wroteVoxelsBox != null) {
+    wroteVoxelsBox.value = wroteVoxels || wroteVoxelsBox.value;
+  }
 }
 
 export function* createVolumeLayer(
   volumeTracing: VolumeTracing,
   planeId: OrthoView,
-  labeledResolution: Vector3,
+  labeledMags: Vector3,
   thirdDimValue?: number,
 ): Saga<VolumeLayer> {
   const position = yield* select((state) => getFlooredPosition(state.flycam));
   thirdDimValue = thirdDimValue ?? position[Dimensions.thirdDimensionForPlane(planeId)];
-  return new VolumeLayer(volumeTracing.tracingId, planeId, thirdDimValue, labeledResolution);
+  return new VolumeLayer(volumeTracing.tracingId, planeId, thirdDimValue, labeledMags);
 }

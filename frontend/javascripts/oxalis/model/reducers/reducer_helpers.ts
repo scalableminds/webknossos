@@ -95,7 +95,9 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     tracingStore,
     owner,
     contributors,
+    organization,
     othersMayEdit,
+    isLockedByOwner,
     annotationLayers,
   } = annotation;
   const restrictions = { ...annotation.restrictions, ...annotation.settings };
@@ -107,6 +109,8 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     description,
     name,
     annotationType,
+    organization,
+    isLockedByOwner,
     tracingStore,
     owner,
     contributors,

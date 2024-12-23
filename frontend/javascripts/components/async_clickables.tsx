@@ -1,6 +1,7 @@
-import { Button, ButtonProps } from "antd";
+import { Button, type ButtonProps } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 import * as React from "react";
+import FastTooltip from "./fast_tooltip";
 const { useState, useEffect, useRef } = React;
 
 export type AsyncButtonProps = Omit<ButtonProps, "onClick"> & {
@@ -42,12 +43,14 @@ function useLoadingClickHandler(
 
 export function AsyncButton(props: AsyncButtonProps) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
-  const { children, hideContentWhenLoading, ...rest } = props;
+  const { children, hideContentWhenLoading, title, ...rest } = props;
   const effectiveChildren = hideContentWhenLoading && isLoading ? null : children;
   return (
-    <Button {...rest} loading={isLoading} onClick={onClick}>
-      {effectiveChildren}
-    </Button>
+    <FastTooltip title={title}>
+      <Button {...rest} loading={isLoading} onClick={onClick}>
+        {effectiveChildren}
+      </Button>
+    </FastTooltip>
   );
 }
 export function AsyncIconButton(
@@ -60,9 +63,17 @@ export function AsyncIconButton(
 }
 export function AsyncLink(props: AsyncButtonProps) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
-  const icon = isLoading ? <LoadingOutlined key="loading-icon" /> : props.icon;
+  const icon = isLoading ? (
+    <LoadingOutlined key="loading-icon" className="icon-margin-right" />
+  ) : (
+    props.icon
+  );
   return (
-    <a {...props} onClick={onClick} className={isLoading ? "link-in-progress" : undefined}>
+    <a
+      {...props}
+      onClick={props.disabled ? undefined : onClick}
+      className={isLoading ? "link-in-progress" : undefined}
+    >
       {icon}
       {props.children}
     </a>

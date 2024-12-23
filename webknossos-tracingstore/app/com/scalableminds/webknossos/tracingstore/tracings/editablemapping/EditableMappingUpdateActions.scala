@@ -8,9 +8,13 @@ trait EditableMappingUpdateAction {
   def addTimestamp(timestamp: Long): EditableMappingUpdateAction
 }
 
+// we switched from positions to segment ids in https://github.com/scalableminds/webknossos/pull/7742.
+// Both are now optional to support applying old update actions stored in the db.
 case class SplitAgglomerateUpdateAction(agglomerateId: Long,
-                                        segmentPosition1: Vec3Int,
-                                        segmentPosition2: Vec3Int,
+                                        segmentPosition1: Option[Vec3Int],
+                                        segmentPosition2: Option[Vec3Int],
+                                        segmentId1: Option[Long],
+                                        segmentId2: Option[Long],
                                         mag: Vec3Int,
                                         actionTimestamp: Option[Long] = None)
     extends EditableMappingUpdateAction {
@@ -21,10 +25,14 @@ object SplitAgglomerateUpdateAction {
   implicit val jsonFormat: OFormat[SplitAgglomerateUpdateAction] = Json.format[SplitAgglomerateUpdateAction]
 }
 
+// we switched from positions to segment ids in https://github.com/scalableminds/webknossos/pull/7742.
+// Both are now optional to support applying old update actions stored in the db.
 case class MergeAgglomerateUpdateAction(agglomerateId1: Long,
                                         agglomerateId2: Long,
-                                        segmentPosition1: Vec3Int,
-                                        segmentPosition2: Vec3Int,
+                                        segmentPosition1: Option[Vec3Int],
+                                        segmentPosition2: Option[Vec3Int],
+                                        segmentId1: Option[Long],
+                                        segmentId2: Option[Long],
                                         mag: Vec3Int,
                                         actionTimestamp: Option[Long] = None)
     extends EditableMappingUpdateAction {

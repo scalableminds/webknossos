@@ -9,6 +9,9 @@ import Store from "oxalis/throttled_store";
 import messages from "messages";
 import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
+import { useFetch } from "libs/react_helpers";
+import { getTermsOfService } from "admin/api/terms_of_service";
+import { TOSCheckFormItem } from "./tos_check_form_item";
 
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -16,7 +19,7 @@ const { Password } = Input;
 type Props = {
   onRegistered: (arg0: boolean) => void;
   confirmLabel?: string;
-  organizationNameToCreate?: string;
+  organizationIdToCreate?: string;
   targetOrganization?: APIOrganization;
   inviteToken?: string | null | undefined;
   hidePrivacyStatement?: boolean;
@@ -26,13 +29,19 @@ type Props = {
 function RegistrationFormGeneric(props: Props) {
   const [form] = Form.useForm();
 
+  const terms = useFetch(getTermsOfService, null, []);
+
   const onFinish = async (formValues: Record<string, any>) => {
     await Request.sendJSONReceiveJSON(
-      props.organizationNameToCreate != null
+      props.organizationIdToCreate != null
         ? "/api/auth/createOrganizationWithAdmin"
         : "/api/auth/register",
       {
-        data: formValues,
+        data: {
+          ...formValues,
+          firstName: formValues.firstName.trim(),
+          lastName: formValues.lastName.trim(),
+        },
       },
     );
     Store.dispatch(setHasOrganizationsAction(true));
@@ -95,7 +104,7 @@ function RegistrationFormGeneric(props: Props) {
           style={{
             display: "none",
           }}
-          name="organizationDisplayName"
+          name="organizationName"
         >
           <Input type="text" />
         </FormItem>
@@ -109,15 +118,15 @@ function RegistrationFormGeneric(props: Props) {
     );
   };
 
-  // targetOrganizationName is not empty if the user is
+  // targetOrganizationId is not empty if the user is
   // either creating a complete new organization OR
   // the user is about to join an existing organization
-  const { inviteToken, targetOrganization, organizationNameToCreate, hidePrivacyStatement } = props;
-  const targetOrganizationName =
-    organizationNameToCreate || (targetOrganization != null ? targetOrganization.name : null) || "";
+  const { inviteToken, targetOrganization, organizationIdToCreate, hidePrivacyStatement } = props;
+  const targetOrganizationId =
+    organizationIdToCreate || (targetOrganization != null ? targetOrganization.id : null) || "";
   const defaultValues: Record<string, any> = {
-    organization: targetOrganizationName,
-    organizationDisplayName: targetOrganizationName,
+    organization: targetOrganizationId,
+    organizationName: targetOrganizationId,
   };
 
   if (inviteToken) {
@@ -270,28 +279,32 @@ function RegistrationFormGeneric(props: Props) {
           </FormItem>
         </Col>
       </Row>
-      {props.hidePrivacyStatement ? null : (
-        <FormItem
-          name="privacy_check"
-          valuePropName="checked"
-          rules={[
-            {
-              validator: (_, value) =>
-                value
-                  ? Promise.resolve()
-                  : Promise.reject(new Error(messages["auth.privacy_check_required"])),
-            },
-          ]}
-        >
-          <Checkbox>
-            I agree to storage and processing of my personal data as described in the{" "}
-            <a target="_blank" href="/privacy" rel="noopener noreferrer">
-              privacy statement
-            </a>
-            .
-          </Checkbox>
-        </FormItem>
-      )}
+      <div className="registration-form-checkboxes">
+        {props.hidePrivacyStatement ? null : (
+          <FormItem
+            name="privacy_check"
+            valuePropName="checked"
+            rules={[
+              {
+                validator: (_, value) =>
+                  value
+                    ? Promise.resolve()
+                    : Promise.reject(new Error(messages["auth.privacy_check_required"])),
+              },
+            ]}
+          >
+            <Checkbox>
+              I agree to storage and processing of my personal data as described in the{" "}
+              <a target="_blank" href="/privacy" rel="noopener noreferrer">
+                privacy statement
+              </a>
+              .
+            </Checkbox>
+          </FormItem>
+        )}
+        <TOSCheckFormItem terms={terms} />
+      </div>
+
       <FormItem>
         <Button
           size="large"

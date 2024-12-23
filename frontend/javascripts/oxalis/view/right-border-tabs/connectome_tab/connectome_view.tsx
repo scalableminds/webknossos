@@ -1,4 +1,4 @@
-import { Alert, Empty, Input, Tooltip, TreeProps } from "antd";
+import { Alert, Empty, Space, Tooltip, type TreeProps } from "antd";
 import { connect } from "react-redux";
 import Maybe from "data.maybe";
 import React from "react";
@@ -7,7 +7,7 @@ import type {
   APISegmentationLayer,
   APIDataset,
   APIConnectomeFile,
-  APIDatasetId,
+  APIDataSourceId,
 } from "types/api_flow_types";
 import { diffArrays, unique, map3 } from "libs/utils";
 import { getTreeNameForAgglomerateSkeleton } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -36,7 +36,7 @@ import {
 import { stringToAntdColorPresetRgb } from "libs/format_utils";
 import { setMappingAction } from "oxalis/model/actions/settings_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
-import { TreeTypeEnum, Vector3 } from "oxalis/constants";
+import { TreeTypeEnum, type Vector3 } from "oxalis/constants";
 import Constants, { MappingStatusEnum } from "oxalis/constants";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
@@ -155,14 +155,15 @@ const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree
   groupId: null,
   type: TreeTypeEnum.DEFAULT,
   edgesAreVisible: true,
+  metadata: [],
 });
 
 const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): MutableNode => ({
-  position: synapsePosition,
+  untransformedPosition: synapsePosition,
   radius: Constants.DEFAULT_NODE_RADIUS,
   rotation: [0, 0, 0],
   viewport: 0,
-  resolution: 0,
+  mag: 0,
   id: synapseId,
   timestamp: Date.now(),
   bitDepth: 8,
@@ -353,7 +354,7 @@ class ConnectomeView extends React.Component<Props, State> {
       activeAgglomerateIds.length === 0
     )
       return;
-    const fetchProperties: [string, APIDatasetId, string, string] = [
+    const fetchProperties: [string, APIDataSourceId, string, string] = [
       dataset.dataStore.url,
       dataset,
       getBaseSegmentationName(segmentationLayer),
@@ -420,7 +421,7 @@ class ConnectomeView extends React.Component<Props, State> {
         (node) => node.data.type !== "synapse",
       ),
     );
-    // Auto-load the skeletons of the active agglomerates and check all occurences of the same agglomerate
+    // Auto-load the skeletons of the active agglomerates and check all occurrences of the same agglomerate
     const topLevelCheckedKeys = treeData.map((topLevelTreeNode) => topLevelTreeNode.key);
     const checkedKeys = Array.from(
       mapAndFilterTreeData(
@@ -645,7 +646,7 @@ class ConnectomeView extends React.Component<Props, State> {
     // @ts-ignore
     const agglomerateIds = evt.target.value
       .split(",")
-      .map((part: string) => parseInt(part, 10))
+      .map((part: string) => Number.parseInt(part, 10))
       .filter((id: number) => !Number.isNaN(id));
     this.setActiveConnectomeAgglomerateIds(agglomerateIds);
     // @ts-ignore
@@ -745,8 +746,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const disabled = currentConnectomeFile == null;
     return (
       <>
-        <Input.Group
-          compact
+        <Space.Compact
           className="compact-icons"
           style={{
             marginBottom: 10,
@@ -773,7 +773,7 @@ class ConnectomeView extends React.Component<Props, State> {
             disabled={disabled}
           />
           <ConnectomeSettings segmentationLayer={segmentationLayer} />
-        </Input.Group>
+        </Space.Compact>
         {this.getConnectomeMappingActivationAlert()}
       </>
     );

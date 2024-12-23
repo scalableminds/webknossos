@@ -76,7 +76,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
     "update a top level segment group" in {
       val updatedName = "Segment Group 2 updated"
       val updateSegmentGroupsVolumeAction = new UpdateSegmentGroupsVolumeAction(
-        List(UpdateActionSegmentGroup(updatedName, 2, List()))
+        List(UpdateActionSegmentGroup(updatedName, 2, isExpanded = Some(true), List()))
       )
       val result = applyUpdateAction(updateSegmentGroupsVolumeAction)
       assert(result.segments == Dummies.volumeTracing.segments)
@@ -87,7 +87,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
       val updatedNameTop = "Segment Group 1 updated"
       val updatedNameNested = "Segment Group 3 updated"
       val updateSegmentGroupsVolumeAction = new UpdateSegmentGroupsVolumeAction(
-        List(UpdateActionSegmentGroup(updatedNameTop, 1, List(UpdateActionSegmentGroup(updatedNameNested, 3, List()))))
+        List(UpdateActionSegmentGroup(updatedNameTop, 1, isExpanded = Some(true), List(UpdateActionSegmentGroup(updatedNameNested, 3, isExpanded = Some(false), List()))))
       )
       val result = applyUpdateAction(updateSegmentGroupsVolumeAction)
       assert(result.segments == Dummies.volumeTracing.segments)

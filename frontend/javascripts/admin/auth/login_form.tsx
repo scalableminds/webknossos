@@ -1,7 +1,6 @@
 import { Alert, Button, Form, Input } from "antd";
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import React from "react";
 import { getIsInIframe } from "libs/utils";
 import { loginUser, requestSingleSignOnLogin } from "admin/admin_rest_api";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";

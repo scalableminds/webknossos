@@ -3,8 +3,8 @@ import type { FieldError } from "rc-field-form/es/interface";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
-import { NamePath } from "antd/lib/form/interface";
-import { FormItemProps, Rule } from "antd/lib/form";
+import type { NamePath } from "antd/lib/form/interface";
+import type { FormItemProps, Rule } from "antd/lib/form";
 
 const FormItem = Form.Item;
 
@@ -104,8 +104,8 @@ export class RetryingErrorBoundary extends React.Component<
     return this.props.children;
   }
 }
-export const confirmAsync = (opts: Record<string, any>): Promise<boolean> =>
-  new Promise((resolve) => {
+export const confirmAsync = (opts: Record<string, any>): Promise<boolean> => {
+  return new Promise((resolve) => {
     Modal.confirm({
       ...opts,
 
@@ -118,6 +118,7 @@ export const confirmAsync = (opts: Record<string, any>): Promise<boolean> =>
       },
     });
   });
+};
 
 export const hasFormError = (formErrors: FieldError[], key: string): boolean => {
   // Find the number of errors for form fields whose path starts with key

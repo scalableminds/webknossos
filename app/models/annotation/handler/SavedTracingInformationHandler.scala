@@ -8,7 +8,7 @@ import javax.inject.Inject
 import models.annotation._
 import models.dataset.DatasetDAO
 import models.user.{User, UserService}
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 
@@ -26,7 +26,7 @@ class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
     for {
       userBox <- userService.findOneCached(annotation._user)(GlobalAccessContext).futureBox
       userName <- userBox.map(_.abbreviatedName).getOrElse("")
-      datasetName <- datasetDAO.findOne(annotation._dataSet)(GlobalAccessContext).map(_.name)
+      datasetName <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext).map(_.name)
       task = annotation._task.map(_.toString).getOrElse("explorational")
     } yield {
       val id = formatHash(annotation.id)

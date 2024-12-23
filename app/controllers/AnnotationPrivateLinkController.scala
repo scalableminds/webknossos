@@ -13,7 +13,7 @@ import models.annotation._
 import net.liftweb.common.Full
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WkEnv, WkSilhouetteEnvironment}
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 class AnnotationPrivateLinkController @Inject()(

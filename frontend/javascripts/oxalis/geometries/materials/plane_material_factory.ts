@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import _ from "lodash";
-import { BLEND_MODES, Identity4x4, OrthoView, Vector3 } from "oxalis/constants";
+import { BLEND_MODES, Identity4x4, type OrthoView, type Vector3 } from "oxalis/constants";
 import {
   ViewModeValues,
   OrthoViewValues,
@@ -14,6 +14,8 @@ import {
   getActiveCellId,
   getActiveSegmentationTracing,
   getActiveSegmentPosition,
+  getBucketRetrievalSourceFn,
+  needsLocalHdf5Mapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import {
@@ -29,8 +31,8 @@ import {
   getLayerByName,
   invertAndTranspose,
   getTransformsForLayer,
-  getResolutionInfoByLayer,
-  getResolutionInfo,
+  getMagInfoByLayer,
+  getMagInfo,
   getTransformsPerLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -47,10 +49,10 @@ import app from "app";
 import getMainFragmentShader, { getMainVertexShader } from "oxalis/shaders/main_data_shaders.glsl";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import type { ElementClass } from "types/api_flow_types";
-import { CuckooTable } from "oxalis/model/bucket_data_handling/cuckoo_table";
+import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
 import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { V3 } from "libs/mjs";
-import TPS3D from "libs/thin_plate_spline";
+import type TPS3D from "libs/thin_plate_spline";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;
@@ -112,7 +114,8 @@ class PlaneMaterialFactory {
   leastRecentlyVisibleLayers: Array<{ name: string; isSegmentationLayer: boolean }>;
   oldFragmentShaderCode: string | null | undefined;
   oldVertexShaderCode: string | null | undefined;
-  unsubscribeSeedsFn: (() => void) | null = null;
+  unsubscribeColorSeedsFn: (() => void) | null = null;
+  unsubscribeMappingSeedsFn: (() => void) | null = null;
 
   scaledTpsInvPerLayer: Record<string, TPS3D> = {};
 
@@ -140,6 +143,9 @@ class PlaneMaterialFactory {
       sphericalCapRadius: {
         value: 140,
       },
+      selectiveVisibilityInProofreading: {
+        value: true,
+      },
       is3DViewBeingRendered: {
         value: true,
       },
@@ -155,11 +161,11 @@ class PlaneMaterialFactory {
       viewportExtent: {
         value: [0, 0],
       },
-      isMappingEnabled: {
+      shouldApplyMappingOnGPU: {
         value: false,
       },
-      mappingSize: {
-        value: 0,
+      mappingIsPartial: {
+        value: false,
       },
       hideUnmappedIds: {
         value: false,
@@ -213,12 +219,21 @@ class PlaneMaterialFactory {
       hoveredSegmentIdLow: {
         value: new THREE.Vector4(0, 0, 0, 0),
       },
+      hoveredUnmappedSegmentIdHigh: {
+        value: new THREE.Vector4(0, 0, 0, 0),
+      },
+      hoveredUnmappedSegmentIdLow: {
+        value: new THREE.Vector4(0, 0, 0, 0),
+      },
       // The same is done for the active cell id.
       activeCellIdHigh: {
         value: new THREE.Vector4(0, 0, 0, 0),
       },
       activeCellIdLow: {
         value: new THREE.Vector4(0, 0, 0, 0),
+      },
+      isUnmappedSegmentHighlighted: {
+        value: false,
       },
       blendMode: { value: 1.0 },
     };
@@ -306,7 +321,7 @@ class PlaneMaterialFactory {
       value: sharedLookUpTexture,
     };
 
-    this.unsubscribeSeedsFn = sharedLookUpCuckooTable.subscribeToSeeds((seeds: number[]) => {
+    this.unsubscribeColorSeedsFn = sharedLookUpCuckooTable.subscribeToSeeds((seeds: number[]) => {
       this.uniforms.lookup_seeds = {
         value: seeds,
       };
@@ -328,18 +343,41 @@ class PlaneMaterialFactory {
 
   attachSegmentationMappingTextures(): void {
     const segmentationLayer = Model.getSegmentationLayerWithMappingSupport();
-    const [mappingTexture, mappingLookupTexture] =
-      segmentationLayer?.mappings != null
-        ? segmentationLayer.mappings.getMappingTextures() // It's important to set up the uniforms (even when they are null), since later
-        : // additions to `this.uniforms` won't be properly attached otherwise.
-          [null, null, null];
+    const cuckoo =
+      segmentationLayer?.mappings != null ? segmentationLayer.mappings.getCuckooTable() : null;
 
+    // It's important to set up the uniforms, since later additions to
+    // `this.uniforms` won't be properly attached otherwise.
     this.uniforms.segmentation_mapping_texture = {
-      value: mappingTexture,
+      value: cuckoo?.getTexture() || CuckooTableVec3.getNullTexture(),
     };
-    this.uniforms.segmentation_mapping_lookup_texture = {
-      value: mappingLookupTexture,
+    this.uniforms.mapping_seeds = { value: [0, 0, 0] };
+    this.uniforms.is_mapping_64bit = {
+      value: segmentationLayer?.mappings?.is64Bit() || false,
     };
+
+    this.unsubscribeMappingSeedsFn?.();
+
+    if (cuckoo) {
+      this.unsubscribeMappingSeedsFn = cuckoo.subscribeToSeeds((seeds: number[]) => {
+        this.uniforms.mapping_seeds = { value: seeds };
+      });
+      const {
+        CUCKOO_ENTRY_CAPACITY,
+        CUCKOO_ELEMENTS_PER_ENTRY,
+        CUCKOO_ELEMENTS_PER_TEXEL,
+        CUCKOO_TWIDTH,
+      } = cuckoo.getUniformValues();
+      this.uniforms.MAPPING_CUCKOO_ENTRY_CAPACITY = { value: CUCKOO_ENTRY_CAPACITY };
+      this.uniforms.MAPPING_CUCKOO_ELEMENTS_PER_ENTRY = { value: CUCKOO_ELEMENTS_PER_ENTRY };
+      this.uniforms.MAPPING_CUCKOO_ELEMENTS_PER_TEXEL = { value: CUCKOO_ELEMENTS_PER_TEXEL };
+      this.uniforms.MAPPING_CUCKOO_TWIDTH = { value: CUCKOO_TWIDTH };
+    } else {
+      this.uniforms.MAPPING_CUCKOO_ENTRY_CAPACITY = { value: 0 };
+      this.uniforms.MAPPING_CUCKOO_ELEMENTS_PER_ENTRY = { value: 0 };
+      this.uniforms.MAPPING_CUCKOO_ELEMENTS_PER_TEXEL = { value: 0 };
+      this.uniforms.MAPPING_CUCKOO_TWIDTH = { value: 0 };
+    }
   }
 
   attachSegmentationColorTexture(): void {
@@ -347,20 +385,20 @@ class PlaneMaterialFactory {
     if (segmentationLayer == null) {
       this.uniforms.custom_color_seeds = { value: [0, 0, 0] };
 
-      this.uniforms.CUCKOO_ENTRY_CAPACITY = { value: 0 };
-      this.uniforms.CUCKOO_ELEMENTS_PER_ENTRY = { value: 0 };
-      this.uniforms.CUCKOO_ELEMENTS_PER_TEXEL = { value: 0 };
-      this.uniforms.CUCKOO_TWIDTH = { value: 0 };
-      this.uniforms.custom_color_texture = { value: CuckooTable.getNullTexture() };
+      this.uniforms.COLOR_CUCKOO_ENTRY_CAPACITY = { value: 0 };
+      this.uniforms.COLOR_CUCKOO_ELEMENTS_PER_ENTRY = { value: 0 };
+      this.uniforms.COLOR_CUCKOO_ELEMENTS_PER_TEXEL = { value: 0 };
+      this.uniforms.COLOR_CUCKOO_TWIDTH = { value: 0 };
+      this.uniforms.custom_color_texture = { value: CuckooTableVec3.getNullTexture() };
       return;
     }
     const cuckoo = segmentationLayer.layerRenderingManager.getCustomColorCuckooTable();
     const customColorTexture = cuckoo.getTexture();
 
-    if (this.unsubscribeSeedsFn != null) {
-      this.unsubscribeSeedsFn();
+    if (this.unsubscribeColorSeedsFn != null) {
+      this.unsubscribeColorSeedsFn();
     }
-    this.unsubscribeSeedsFn = cuckoo.subscribeToSeeds((seeds: number[]) => {
+    this.unsubscribeColorSeedsFn = cuckoo.subscribeToSeeds((seeds: number[]) => {
       this.uniforms.custom_color_seeds = { value: seeds };
     });
     const {
@@ -369,10 +407,10 @@ class PlaneMaterialFactory {
       CUCKOO_ELEMENTS_PER_TEXEL,
       CUCKOO_TWIDTH,
     } = cuckoo.getUniformValues();
-    this.uniforms.CUCKOO_ENTRY_CAPACITY = { value: CUCKOO_ENTRY_CAPACITY };
-    this.uniforms.CUCKOO_ELEMENTS_PER_ENTRY = { value: CUCKOO_ELEMENTS_PER_ENTRY };
-    this.uniforms.CUCKOO_ELEMENTS_PER_TEXEL = { value: CUCKOO_ELEMENTS_PER_TEXEL };
-    this.uniforms.CUCKOO_TWIDTH = { value: CUCKOO_TWIDTH };
+    this.uniforms.COLOR_CUCKOO_ENTRY_CAPACITY = { value: CUCKOO_ENTRY_CAPACITY };
+    this.uniforms.COLOR_CUCKOO_ELEMENTS_PER_ENTRY = { value: CUCKOO_ELEMENTS_PER_ENTRY };
+    this.uniforms.COLOR_CUCKOO_ELEMENTS_PER_TEXEL = { value: CUCKOO_ELEMENTS_PER_TEXEL };
+    this.uniforms.COLOR_CUCKOO_TWIDTH = { value: CUCKOO_TWIDTH };
     this.uniforms.custom_color_texture = {
       value: customColorTexture,
     };
@@ -438,18 +476,20 @@ class PlaneMaterialFactory {
           // If all layers have a transform, the representativeMagForVertexAlignment
           // isn't relevant which is why it can default to [1, 1, 1].
 
-          let representativeMagForVertexAlignment: Vector3 = [Infinity, Infinity, Infinity];
+          let representativeMagForVertexAlignment: Vector3 = [
+            Number.POSITIVE_INFINITY,
+            Number.POSITIVE_INFINITY,
+            Number.POSITIVE_INFINITY,
+          ];
           const state = Store.getState();
           for (const [layerName, activeMagIndex] of Object.entries(activeMagIndices)) {
             const layer = getLayerByName(state.dataset, layerName);
-            const resolutionInfo = getResolutionInfo(layer.resolutions);
+            const magInfo = getMagInfo(layer.resolutions);
             // If the active mag doesn't exist, a fallback mag is likely rendered. Use that
             // to determine a representative mag.
-            const suitableMagIndex = resolutionInfo.getIndexOrClosestHigherIndex(activeMagIndex);
+            const suitableMagIndex = magInfo.getIndexOrClosestHigherIndex(activeMagIndex);
             const suitableMag =
-              suitableMagIndex != null
-                ? resolutionInfo.getResolutionByIndex(suitableMagIndex)
-                : null;
+              suitableMagIndex != null ? magInfo.getMagByIndex(suitableMagIndex) : null;
 
             const hasTransform = !_.isEqual(
               getTransformsForLayer(
@@ -467,7 +507,7 @@ class PlaneMaterialFactory {
             }
           }
 
-          if (Math.max(...representativeMagForVertexAlignment) === Infinity) {
+          if (Math.max(...representativeMagForVertexAlignment) === Number.POSITIVE_INFINITY) {
             representativeMagForVertexAlignment = [1, 1, 1];
           }
           this.uniforms.representativeMagForVertexAlignment = {
@@ -513,28 +553,36 @@ class PlaneMaterialFactory {
         true,
       ),
     );
-
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        (storeState) => getResolutionInfoByLayer(storeState.dataset),
-        (resolutionInfosByLayer) => {
-          const allDenseResolutions = Object.values(resolutionInfosByLayer).map((resInfo) =>
-            resInfo.getDenseResolutions(),
+        (storeState) => storeState.userConfiguration.selectiveVisibilityInProofreading,
+        (selectiveVisibilityInProofreading) => {
+          this.uniforms.selectiveVisibilityInProofreading.value = selectiveVisibilityInProofreading;
+        },
+        true,
+      ),
+    );
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => getMagInfoByLayer(storeState.dataset),
+        (magInfosByLayer) => {
+          const allDenseMags = Object.values(magInfosByLayer).map((magInfo) =>
+            magInfo.getDenseMags(),
           );
-          const flatResolutions = _.flattenDeep(allDenseResolutions);
-          this.uniforms.allResolutions = {
-            value: flatResolutions,
+          const flatMags = _.flattenDeep(allDenseMags);
+          this.uniforms.allMagnifications = {
+            value: flatMags,
           };
 
           let cumSum = 0;
-          const resolutionCountCumSum = [cumSum];
-          for (const denseResolutions of allDenseResolutions) {
-            cumSum += denseResolutions.length;
-            resolutionCountCumSum.push(cumSum);
+          const magCountCumSum = [cumSum];
+          for (const denseMags of allDenseMags) {
+            cumSum += denseMags.length;
+            magCountCumSum.push(cumSum);
           }
 
-          this.uniforms.resolutionCountCumSum = {
-            value: resolutionCountCumSum,
+          this.uniforms.magnificationCountCumSum = {
+            value: magCountCumSum,
           };
         },
         true,
@@ -546,15 +594,6 @@ class PlaneMaterialFactory {
         (storeState) => getZoomValue(storeState.flycam),
         (zoomValue) => {
           this.uniforms.zoomValue.value = zoomValue;
-        },
-        true,
-      ),
-    );
-    this.storePropertyUnsubscribers.push(
-      listenToStoreProperty(
-        (storeState) => getMappingInfoForSupportedLayer(storeState).mappingSize,
-        (mappingSize) => {
-          this.uniforms.mappingSize.value = mappingSize;
         },
         true,
       ),
@@ -651,7 +690,7 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         (state) => state.datasetConfiguration.colorLayerOrder,
         (colorLayerOrder) => {
-          let changedLayerOrder =
+          const changedLayerOrder =
             colorLayerOrder.length !== oldLayerOrder.length ||
             colorLayerOrder.some((layerName, index) => layerName !== oldLayerOrder[index]);
           if (changedLayerOrder) {
@@ -736,9 +775,30 @@ class PlaneMaterialFactory {
       );
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          (storeState) =>
-            Utils.maybe(getActiveCellId)(getActiveSegmentationTracing(storeState)).getOrElse(0),
+          (storeState) => storeState.temporaryConfiguration.hoveredUnmappedSegmentId,
+          (hoveredUnmappedSegmentId) => {
+            const [high, low] = Utils.convertNumberTo64Bit(hoveredUnmappedSegmentId);
+
+            this.uniforms.hoveredUnmappedSegmentIdLow.value.set(...low);
+            this.uniforms.hoveredUnmappedSegmentIdHigh.value.set(...high);
+          },
+        ),
+      );
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          (storeState) => {
+            const activeSegmentationTracing = getActiveSegmentationTracing(storeState);
+            return activeSegmentationTracing ? getActiveCellId(activeSegmentationTracing) : 0;
+          },
           () => this.updateActiveCellId(),
+          true,
+        ),
+      );
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          (storeState) => getActiveSegmentationTracing(storeState)?.activeUnmappedSegmentId,
+          (activeUnmappedSegmentId) =>
+            (this.uniforms.isUnmappedSegmentHighlighted.value = activeUnmappedSegmentId != null),
           true,
         ),
       );
@@ -757,15 +817,42 @@ class PlaneMaterialFactory {
       );
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          (storeState) =>
-            getMappingInfoForSupportedLayer(storeState).mappingStatus ===
-              MappingStatusEnum.ENABLED && // The shader should only know about the mapping when a JSON mapping exists
-            getMappingInfoForSupportedLayer(storeState).mappingType === "JSON",
-          (isEnabled) => {
-            this.uniforms.isMappingEnabled.value = isEnabled;
+          (storeState) => {
+            const layer = getSegmentationLayerWithMappingSupport(storeState);
+            if (!layer) {
+              return false;
+            }
+
+            return (
+              getMappingInfoForSupportedLayer(storeState).mappingStatus ===
+                MappingStatusEnum.ENABLED &&
+              _.isEqual(getBucketRetrievalSourceFn(layer.name)(storeState).slice(0, 2), [
+                "REQUESTED-WITHOUT-MAPPING",
+                "LOCAL-MAPPING-APPLIED",
+              ])
+            );
+          },
+          (shouldApplyMappingOnGPU) => {
+            this.uniforms.shouldApplyMappingOnGPU.value = shouldApplyMappingOnGPU;
           },
         ),
       );
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          (storeState) => {
+            const layer = getSegmentationLayerWithMappingSupport(storeState);
+            if (!layer) {
+              return false;
+            }
+
+            return needsLocalHdf5Mapping(storeState, layer.name);
+          },
+          (mappingIsPartial) => {
+            this.uniforms.mappingIsPartial.value = mappingIsPartial;
+          },
+        ),
+      );
+
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => storeState.uiInformation.activeTool,
@@ -818,7 +905,6 @@ class PlaneMaterialFactory {
 
             this.uniforms[`${name}_transform`].value = invertAndTranspose(affineMatrix);
             const hasTransform = !_.isEqual(affineMatrix, Identity4x4);
-            console.log(`${name}_has_transform`, hasTransform);
             this.uniforms[`${name}_has_transform`] = {
               value: hasTransform,
             };
@@ -831,18 +917,14 @@ class PlaneMaterialFactory {
   }
 
   updateActiveCellId() {
-    const activeCellId = Utils.maybe(getActiveCellId)(
-      getActiveSegmentationTracing(Store.getState()),
-    ).getOrElse(0);
-    const segmentationLayer = Model.getVisibleSegmentationLayer();
+    const activeSegmentationTracing = getActiveSegmentationTracing(Store.getState());
+    const activeCellId = activeSegmentationTracing ? getActiveCellId(activeSegmentationTracing) : 0;
 
-    if (segmentationLayer == null) {
+    if (activeSegmentationTracing == null) {
       return;
     }
 
-    const mappedActiveCellId = segmentationLayer.cube.mapId(activeCellId);
-
-    const [high, low] = Utils.convertNumberTo64Bit(mappedActiveCellId);
+    const [high, low] = Utils.convertNumberTo64Bit(activeCellId);
 
     this.uniforms.activeCellIdLow.value.set(...low);
     this.uniforms.activeCellIdHigh.value.set(...high);
@@ -922,7 +1004,7 @@ class PlaneMaterialFactory {
     // The third parameter returns the number of globally available layers (this is not always equal
     // to the sum of the lengths of the first two arrays, as not all layers might be rendered.)
     const state = Store.getState();
-    const allSanitizedOrderedColorLayerNames =
+    const allSanitizedOrderedColorLayerNames: string[] =
       state.datasetConfiguration.colorLayerOrder.map(sanitizeName);
     const colorLayerNames = getSanitizedColorLayerNames();
     const segmentationLayerNames = Model.getSegmentationLayers().map((layer) =>
@@ -1010,15 +1092,15 @@ class PlaneMaterialFactory {
 
     const textureLayerInfos = getTextureLayerInfos();
     const { dataset } = Store.getState();
-    const datasetScale = dataset.dataSource.scale;
+    const voxelSizeFactor = dataset.dataSource.scale.factor;
     const code = getMainFragmentShader({
       globalLayerCount,
       orderedColorLayerNames,
       colorLayerNames,
       segmentationLayerNames,
       textureLayerInfos,
-      resolutionsCount: this.getTotalResolutionCount(),
-      datasetScale,
+      magnificationsCount: this.getTotalMagCount(),
+      voxelSizeFactor,
       isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });
@@ -1028,13 +1110,13 @@ class PlaneMaterialFactory {
     ];
   }
 
-  getTotalResolutionCount(): number {
+  getTotalMagCount(): number {
     const storeState = Store.getState();
-    const allDenseResolutions = Object.values(getResolutionInfoByLayer(storeState.dataset)).map(
-      (resInfo) => resInfo.getDenseResolutions(),
+    const allDenseMags = Object.values(getMagInfoByLayer(storeState.dataset)).map((magInfo) =>
+      magInfo.getDenseMags(),
     );
-    const flatResolutions = _.flatten(allDenseResolutions);
-    return flatResolutions.length;
+    const flatMags = _.flatten(allDenseMags);
+    return flatMags.length;
   }
 
   getVertexShader(): string {
@@ -1044,7 +1126,7 @@ class PlaneMaterialFactory {
 
     const textureLayerInfos = getTextureLayerInfos();
     const { dataset } = Store.getState();
-    const datasetScale = dataset.dataSource.scale;
+    const voxelSizeFactor = dataset.dataSource.scale.factor;
 
     return getMainVertexShader({
       globalLayerCount,
@@ -1052,8 +1134,8 @@ class PlaneMaterialFactory {
       colorLayerNames,
       segmentationLayerNames,
       textureLayerInfos,
-      resolutionsCount: this.getTotalResolutionCount(),
-      datasetScale,
+      magnificationsCount: this.getTotalMagCount(),
+      voxelSizeFactor,
       isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });

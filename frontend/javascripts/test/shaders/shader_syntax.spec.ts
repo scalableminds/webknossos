@@ -1,7 +1,7 @@
 import "test/mocks/lz4";
 import getMainFragmentShader from "oxalis/shaders/main_data_shaders.glsl";
-import resolutions from "test/fixtures/resolutions";
-import test, { ExecutionContext } from "ava";
+import mags from "test/fixtures/mags";
+import test, { type ExecutionContext } from "ava";
 import { parser } from "@shaderfrog/glsl-parser";
 
 test.beforeEach((t: ExecutionContext<any>) => {
@@ -27,8 +27,8 @@ test("Shader syntax: Ortho Mode", (t: ExecutionContext<any>) => {
     },
     orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
     segmentationLayerNames: [],
-    resolutionsCount: resolutions.length,
-    datasetScale: [1, 1, 1],
+    magnificationsCount: mags.length,
+    voxelSizeFactor: [1, 1, 1],
     isOrthogonal: true,
     tpsTransformPerLayer: {},
   });
@@ -54,8 +54,8 @@ test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t: ExecutionContext<
     },
     orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
     segmentationLayerNames: ["segmentationLayer"],
-    resolutionsCount: resolutions.length,
-    datasetScale: [1, 1, 1],
+    magnificationsCount: mags.length,
+    voxelSizeFactor: [1, 1, 1],
     isOrthogonal: true,
     tpsTransformPerLayer: {},
   });
@@ -74,8 +74,8 @@ test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t: ExecutionContext<
     },
     orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
     segmentationLayerNames: ["segmentationLayer"],
-    resolutionsCount: resolutions.length,
-    datasetScale: [1, 1, 1],
+    magnificationsCount: mags.length,
+    voxelSizeFactor: [1, 1, 1],
     isOrthogonal: true,
     tpsTransformPerLayer: {},
   });
@@ -94,8 +94,8 @@ test("Shader syntax: Arbitrary Mode (no segmentation available)", (t: ExecutionC
     },
     orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
     segmentationLayerNames: [],
-    resolutionsCount: resolutions.length,
-    datasetScale: [1, 1, 1],
+    magnificationsCount: mags.length,
+    voxelSizeFactor: [1, 1, 1],
     isOrthogonal: false,
     tpsTransformPerLayer: {},
   });
@@ -114,8 +114,8 @@ test("Shader syntax: Arbitrary Mode (segmentation available)", (t: ExecutionCont
     },
     orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
     segmentationLayerNames: ["segmentationLayer"],
-    resolutionsCount: resolutions.length,
-    datasetScale: [1, 1, 1],
+    magnificationsCount: mags.length,
+    voxelSizeFactor: [1, 1, 1],
     isOrthogonal: false,
     tpsTransformPerLayer: {},
   });
@@ -133,8 +133,8 @@ test("Shader syntax: Ortho Mode (rgb and float layer)", (t: ExecutionContext<any
     },
     orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
     segmentationLayerNames: [],
-    resolutionsCount: resolutions.length,
-    datasetScale: [1, 1, 1],
+    magnificationsCount: mags.length,
+    voxelSizeFactor: [1, 1, 1],
     isOrthogonal: true,
     tpsTransformPerLayer: {},
   });

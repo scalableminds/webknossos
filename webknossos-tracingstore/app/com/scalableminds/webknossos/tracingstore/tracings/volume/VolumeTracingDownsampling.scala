@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedIntegerArray}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, DataSourceLike, ElementClass}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
-import com.scalableminds.webknossos.tracingstore.TSRemoteWebKnossosClient
+import com.scalableminds.webknossos.tracingstore.TSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
@@ -55,7 +55,7 @@ trait VolumeTracingDownsampling
     with FoxImplicits {
 
   val tracingDataStore: TracingDataStore
-  val tracingStoreWkRpcClient: TSRemoteWebKnossosClient
+  val tracingStoreWkRpcClient: TSRemoteWebknossosClient
   protected def saveBucket(dataLayer: VolumeTracingLayer,
                            bucket: BucketPosition,
                            data: Array[Byte],
@@ -66,19 +66,26 @@ trait VolumeTracingDownsampling
                                    bucketPosition: BucketPosition,
                                    bucketBytes: Array[Byte],
                                    previousBucketBytesBox: Box[Array[Byte]],
-                                   elementClass: ElementClassProto): Fox[Unit]
+                                   elementClass: ElementClassProto,
+                                   mappingName: Option[String],
+                                   editableMappingTracingId: Option[String]): Fox[Unit]
+
+  protected def editableMappingTracingId(tracing: VolumeTracing, tracingId: String): Option[String]
+
+  protected def baseMappingName(tracing: VolumeTracing): Fox[Option[String]]
 
   protected def volumeSegmentIndexClient: FossilDBClient
 
-  protected def downsampleWithLayer(
-      tracingId: String,
-      oldTracingId: String,
-      tracing: VolumeTracing,
-      dataLayer: VolumeTracingLayer)(implicit ec: ExecutionContext): Fox[List[Vec3Int]] = {
+  protected def downsampleWithLayer(tracingId: String,
+                                    oldTracingId: String,
+                                    tracing: VolumeTracing,
+                                    dataLayer: VolumeTracingLayer,
+                                    tracingService: VolumeTracingService,
+                                    userToken: Option[String])(implicit ec: ExecutionContext): Fox[List[Vec3Int]] = {
     val bucketVolume = 32 * 32 * 32
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
-      _ <- bool2Fox(tracing.resolutions.nonEmpty) ?~> "Cannot downsample tracing with no resolution list"
+      _ <- bool2Fox(tracing.mags.nonEmpty) ?~> "Cannot downsample tracing with no mag list"
       sourceMag = getSourceMag(tracing)
       magsToCreate <- getMagsToCreate(tracing, oldTracingId)
       elementClass = elementClassFromProto(tracing.elementClass)
@@ -97,16 +104,29 @@ trait VolumeTracingDownsampling
                              dataLayer)
         requiredMag
       }
-      segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId, volumeSegmentIndexClient, tracing.version)
+      fallbackLayer <- tracingService.getFallbackLayer(oldTracingId) // remote wk does not know the new id yet
+      tracing <- tracingService.find(tracingId) ?~> "tracing.notFound"
+      segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
+                                                        volumeSegmentIndexClient,
+                                                        tracing.version,
+                                                        tracingService.remoteDatastoreClient,
+                                                        fallbackLayer,
+                                                        dataLayer.additionalAxes,
+                                                        userToken)
       _ <- Fox.serialCombined(updatedBucketsMutable.toList) { bucketPosition: BucketPosition =>
         for {
           _ <- saveBucket(dataLayer, bucketPosition, bucketDataMapMutable(bucketPosition), tracing.version)
+          mappingName <- baseMappingName(tracing)
           _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
-            updateSegmentIndex(segmentIndexBuffer,
-                               bucketPosition,
-                               bucketDataMapMutable(bucketPosition),
-                               Empty,
-                               tracing.elementClass))
+            updateSegmentIndex(
+              segmentIndexBuffer,
+              bucketPosition,
+              bucketDataMapMutable(bucketPosition),
+              Empty,
+              tracing.elementClass,
+              mappingName,
+              editableMappingTracingId(tracing, tracingId)
+            ))
         } yield ()
       }
       _ <- segmentIndexBuffer.flush()
@@ -234,7 +254,7 @@ trait VolumeTracingDownsampling
     items.groupBy(i => i).view.mapValues(_.size).maxBy(_._2)._1
 
   private def getSourceMag(tracing: VolumeTracing): Vec3Int =
-    tracing.resolutions.minBy(_.maxDim)
+    tracing.mags.minBy(_.maxDim)
 
   private def getMagsToCreate(tracing: VolumeTracing, oldTracingId: String): Fox[List[Vec3Int]] =
     for {
@@ -249,34 +269,33 @@ trait VolumeTracingDownsampling
       magsForTracing = VolumeTracingDownsampling.magsForVolumeTracingByLayerName(dataSource, tracing.fallbackLayer)
     } yield magsForTracing.sortBy(_.maxDim)
 
-  protected def restrictMagList(tracing: VolumeTracing,
-                                resolutionRestrictions: ResolutionRestrictions): VolumeTracing = {
-    val tracingResolutions =
-      resolveLegacyResolutionList(tracing.resolutions)
-    val allowedResolutions = resolutionRestrictions.filterAllowed(tracingResolutions.map(vec3IntFromProto))
-    tracing.withResolutions(allowedResolutions.map(vec3IntToProto))
+  protected def restrictMagList(tracing: VolumeTracing, magRestrictions: MagRestrictions): VolumeTracing = {
+    val tracingMags =
+      resolveLegacyMagList(tracing.mags)
+    val allowedMags = magRestrictions.filterAllowed(tracingMags.map(vec3IntFromProto))
+    tracing.withMags(allowedMags.map(vec3IntToProto))
   }
 
-  protected def resolveLegacyResolutionList(resolutions: Seq[ProtoPoint3D]): Seq[ProtoPoint3D] =
-    if (resolutions.isEmpty) Seq(ProtoPoint3D(1, 1, 1)) else resolutions
+  protected def resolveLegacyMagList(mags: Seq[ProtoPoint3D]): Seq[ProtoPoint3D] =
+    if (mags.isEmpty) Seq(ProtoPoint3D(1, 1, 1)) else mags
 }
 
-object ResolutionRestrictions {
-  def empty: ResolutionRestrictions = ResolutionRestrictions(None, None)
-  implicit val jsonFormat: Format[ResolutionRestrictions] = Json.format[ResolutionRestrictions]
+object MagRestrictions {
+  def empty: MagRestrictions = MagRestrictions(None, None)
+  implicit val jsonFormat: Format[MagRestrictions] = Json.format[MagRestrictions]
 }
 
-case class ResolutionRestrictions(
+case class MagRestrictions(
     min: Option[Int],
     max: Option[Int]
 ) {
-  def filterAllowed(resolutions: Seq[Vec3Int]): Seq[Vec3Int] =
-    resolutions.filter(isAllowed)
+  def filterAllowed(mags: Seq[Vec3Int]): Seq[Vec3Int] =
+    mags.filter(isAllowed)
 
-  def isAllowed(resolution: Vec3Int): Boolean =
-    min.getOrElse(0) <= resolution.maxDim && max.getOrElse(Int.MaxValue) >= resolution.maxDim
+  def isAllowed(mag: Vec3Int): Boolean =
+    min.getOrElse(0) <= mag.maxDim && max.getOrElse(Int.MaxValue) >= mag.maxDim
 
-  def isForbidden(resolution: Vec3Int): Boolean = !isAllowed(resolution)
+  def isForbidden(mag: Vec3Int): Boolean = !isAllowed(mag)
 
   def minStr: Option[String] = min.map(_.toString)
   def maxStr: Option[String] = max.map(_.toString)

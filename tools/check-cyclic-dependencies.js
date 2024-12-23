@@ -1,37 +1,63 @@
-const madge = require("madge");
+const dpdm = require("dpdm");
+const { parseDependencyTree, parseCircular } = dpdm;
 
 const KNOWN_CYCLES = [
   [
-    "admin/admin_rest_api.ts",
-    "admin/api/mesh_v0.ts",
-    "admin/api/token.ts",
-    "libs/request.ts",
-    "admin/datastore_health_check.ts",
+    "frontend/javascripts/oxalis/model/accessors/view_mode_accessor.ts",
+    "frontend/javascripts/oxalis/model/accessors/flycam_accessor.ts",
   ],
-  ["libs/request.ts", "admin/datastore_health_check.ts"],
-  ["types/api_flow_types.ts", "admin/organization/pricing_plan_utils.ts"],
-  ["libs/mjs.ts"],
-  ["oxalis/model/accessors/flycam_accessor.ts", "oxalis/model/reducers/flycam_reducer.ts"],
-  ["admin/organization/upgrade_plan_modal.tsx", "admin/organization/organization_cards.tsx"],
-  ["admin/team/edit_team_modal_view.tsx", "admin/team/team_list_view.tsx"],
   [
-    "oxalis/geometries/materials/plane_material_factory.ts",
-    "oxalis/shaders/main_data_shaders.glsl.ts",
-    "oxalis/geometries/plane.ts",
+    "frontend/javascripts/oxalis/model/accessors/flycam_accessor.ts",
+    "frontend/javascripts/oxalis/model/reducers/flycam_reducer.ts",
+  ],
+  [
+    "frontend/javascripts/oxalis/view/right-border-tabs/tree_hierarchy_view_helpers.ts",
+    "frontend/javascripts/oxalis/model/accessors/skeletontracing_accessor.ts",
+  ],
+  ["frontend/javascripts/libs/request.ts", "frontend/javascripts/admin/datastore_health_check.ts"],
+  [
+    "frontend/javascripts/admin/admin_rest_api.ts",
+    "frontend/javascripts/libs/request.ts",
+    "frontend/javascripts/admin/datastore_health_check.ts",
+  ],
+  [
+    "frontend/javascripts/oxalis/view/action-bar/download_modal_view.tsx",
+    "frontend/javascripts/oxalis/view/action-bar/starting_job_modals.tsx",
+  ],
+  [
+    "frontend/javascripts/admin/organization/upgrade_plan_modal.tsx",
+    "frontend/javascripts/admin/organization/organization_cards.tsx",
+  ],
+  [
+    "frontend/javascripts/admin/task/task_create_form_view.tsx",
+    "frontend/javascripts/admin/task/task_create_bulk_view.tsx",
+  ],
+  [
+    "frontend/javascripts/admin/team/team_list_view.tsx",
+    "frontend/javascripts/admin/team/edit_team_modal_view.tsx",
+  ],
+  [
+    "frontend/javascripts/dashboard/advanced_dataset/dataset_table.tsx",
+    "frontend/javascripts/dashboard/folders/folder_tree.tsx",
+  ],
+  [
+    "frontend/javascripts/oxalis/model_initialization.ts",
+    "frontend/javascripts/oxalis/controller/url_manager.ts",
+  ],
+  [
+    "frontend/javascripts/oxalis/geometries/plane.ts",
+    "frontend/javascripts/oxalis/geometries/materials/plane_material_factory.ts",
+    "frontend/javascripts/oxalis/shaders/main_data_shaders.glsl.ts",
   ],
 ];
+parseDependencyTree("frontend/javascripts/main.tsx", {
+  /* options, see below */
+  extensions: [".ts", ".tsx"],
+  transform: true,
+  skipDynamicImports: true,
+}).then((tree) => {
+  const cyclicDependencies = parseCircular(tree);
 
-madge("frontend/javascripts/main.tsx", {
-  detectiveOptions: {
-    ts: {
-      skipTypeImports: true,
-    },
-    tsx: {
-      skipTypeImports: true,
-    },
-  },
-}).then((res) => {
-  const cyclicDependencies = res.circular({ tsx: { skipTypeImports: true } });
   const knownCycleStringsSet = new Set(KNOWN_CYCLES.map((el) => el.toString()));
   const knownCycleStrings = Array.from(knownCycleStringsSet);
 
@@ -46,7 +72,7 @@ madge("frontend/javascripts/main.tsx", {
     );
   } else if (cyclicDependencies.length < knownCycleStrings.length) {
     throw new Error(`Congratulations! Your admirable work removed at least one cyclic dependency from the TypeScript modules. To ensure
-      that this improvement is not undone accidentally in the future, please adapt the KNOWN_CYCLES variable in the check-cyclic-dependies.js
+      that this improvement is not undone accidentally in the future, please adapt the KNOWN_CYCLES variable in the check-cyclic-dependencies.js
       script. Please set the variable to the following and commit it:
       ${JSON.stringify(cyclicDependencies, null, " ")}
     `);

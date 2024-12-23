@@ -9,17 +9,16 @@ import {
   getLayoutConfig,
   addNewLayout,
 } from "oxalis/view/layouting/layout_persistence";
-import { trackAction } from "oxalis/model/helpers/analytics";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import { withAuthentication } from "admin/auth/authentication_modal";
-import { ViewMode, ControlMode, MappingStatusEnum } from "oxalis/constants";
+import { type ViewMode, type ControlMode, MappingStatusEnum } from "oxalis/constants";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import TracingActionsView, {
   getLayoutMenu,
-  LayoutProps,
+  type LayoutProps,
 } from "oxalis/view/action-bar/tracing_actions_view";
 import ViewDatasetActionsView from "oxalis/view/action-bar/view_dataset_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
@@ -32,15 +31,15 @@ import {
   getUnifiedAdditionalCoordinates,
   getColorLayers,
 } from "oxalis/model/accessors/dataset_accessor";
-import { AsyncButton } from "components/async_clickables";
+import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
 import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_actions";
 import { NumberSliderSetting } from "./components/setting_input_views";
 import { ArbitraryVectorInput } from "libs/vector_input";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import ButtonComponent from "./components/button_component";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
-import features from "features";
-import { StartAIJobModalState, StartAIJobModal } from "./action-bar/starting_job_modals";
+import { type StartAIJobModalState, StartAIJobModal } from "./action-bar/starting_job_modals";
+import { isUserAdminOrTeamManager } from "libs/utils";
 
 const VersionRestoreWarning = (
   <Alert
@@ -110,7 +109,7 @@ function AdditionalCoordinatesInputView() {
                 label={coord.name}
                 key={coord.name}
                 min={bounds[0]}
-                max={bounds[1]}
+                max={bounds[1] - 1}
                 value={coord.value}
                 spans={[2, 18, 4]}
                 onChange={(newCoord) => {
@@ -121,6 +120,7 @@ function AdditionalCoordinatesInputView() {
                   };
                   changeAdditionalCoordinates(newCoords);
                 }}
+                wheelFactor={0.05}
               />
             );
           })}
@@ -189,20 +189,17 @@ class ActionBarView extends React.PureComponent<Props, State> {
     }
 
     const annotation = await createExplorational(
-      dataset,
+      dataset.id,
       "hybrid",
       false,
       fallbackLayerName,
       maybeMappingName,
     );
-    trackAction("Create hybrid tracing (from view mode)");
     location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${location.hash}`;
   };
 
-  renderStartAIJobButton(disabled: boolean): React.ReactNode {
-    const tooltipText = disabled
-      ? "The dataset needs to have a color layer to start AI processing jobs."
-      : "Start a processing job using AI";
+  renderStartAIJobButton(disabled: boolean, tooltipTextIfDisabled: string): React.ReactNode {
+    const tooltipText = disabled ? tooltipTextIfDisabled : "Start a processing job using AI";
     return (
       <ButtonComponent
         key="ai-job-button"
@@ -210,20 +207,21 @@ class ActionBarView extends React.PureComponent<Props, State> {
         style={{ marginLeft: 12, pointerEvents: "auto" }}
         disabled={disabled}
         title={tooltipText}
+        icon={<i className="fas fa-magic" />}
       >
-        <i className="fas fa-magic" /> AI Analysis
+        AI Analysis
       </ButtonComponent>
     );
   }
 
   renderStartTracingButton(): React.ReactNode {
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(props: AsyncButtonProps) => Ele... Remove this comment to see the full error message
-    const ButtonWithAuthentication = withAuthentication(AsyncButton);
+    const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
+      AsyncButton,
+    );
     return (
       <ButtonWithAuthentication
         activeUser={this.props.activeUser}
         authenticationMessage="You have to register or login to create an annotation."
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; activeUser: APIUser | nu... Remove this comment to see the full error message
         style={{
           marginLeft: 12,
         }}
@@ -245,15 +243,17 @@ class ActionBarView extends React.PureComponent<Props, State> {
       hasSkeleton,
       layoutProps,
       viewMode,
+      activeUser,
     } = this.props;
+    const isAdminOrDatasetManager = activeUser && isUserAdminOrTeamManager(activeUser);
     const isViewMode = controlMode === ControlModeEnum.VIEW;
     const isArbitrarySupported = hasSkeleton || isViewMode;
-    const isAIAnalysisEnabled = () => {
-      const activeUser = this.props.activeUser;
-      const jobsEnabled = features().jobsEnabled;
-      if (isViewMode) {
-        return jobsEnabled && activeUser != null && activeUser.isSuperUser;
-      }
+    const getIsAIAnalysisEnabled = () => {
+      const jobsEnabled =
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NEURONS) ||
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_MITOCHONDRIA) ||
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NUCLEI) ||
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.ALIGN_SECTIONS);
       return jobsEnabled;
     };
 
@@ -269,7 +269,19 @@ class ActionBarView extends React.PureComponent<Props, State> {
       onDeleteLayout: this.handleLayoutDeleted,
     });
 
-    const datasetHasColorLayer = getColorLayers(dataset).length > 0;
+    const colorLayers = getColorLayers(dataset);
+    const datasetHasNoColorLayer = colorLayers.length === 0;
+    const isNd = (colorLayers[0]?.additionalAxes ?? []).length > 0;
+    const is2DOrNDDataset = isNd || is2d;
+    const isAIAnalysisDisabled = !getIsAIAnalysisEnabled();
+    const shouldDisableAIJobButton =
+      isAIAnalysisDisabled || datasetHasNoColorLayer || is2DOrNDDataset;
+    let tooltip = "AI analysis is not enabled for this dataset.";
+    if (datasetHasNoColorLayer) {
+      tooltip = "The dataset needs to have a color layer to start AI processing jobs.";
+    } else if (is2DOrNDDataset) {
+      tooltip = `AI Analysis is not supported for ${is2d ? "2D" : "ND"} datasets.`;
+    }
 
     return (
       <React.Fragment>
@@ -283,7 +295,9 @@ class ActionBarView extends React.PureComponent<Props, State> {
           <DatasetPositionView />
           <AdditionalCoordinatesInputView />
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
-          {isAIAnalysisEnabled() ? this.renderStartAIJobButton(!datasetHasColorLayer) : null}
+          {getIsAIAnalysisEnabled() && isAdminOrDatasetManager
+            ? this.renderStartAIJobButton(shouldDisableAIJobButton, tooltip)
+            : null}
           {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
         </div>

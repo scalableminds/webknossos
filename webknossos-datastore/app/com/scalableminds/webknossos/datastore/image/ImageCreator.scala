@@ -137,8 +137,7 @@ object ImageCreator extends LazyLogging {
               (0xFF << 24) | (colorRed(grayNormalized) << 16) | (colorGreen(grayNormalized) << 8) | (colorBlue(
                 grayNormalized) << 0)
             case _ =>
-              throw new Exception(
-                "Can't handle " + bytesPerElement + " bytes per element in Image creator for a color layer.")
+              throw new Exception(s"Unsupported ElementClass for color layer thumbnail: $elementClass")
           }
         }
       }

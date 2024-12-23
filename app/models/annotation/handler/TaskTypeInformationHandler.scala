@@ -7,7 +7,7 @@ import models.annotation._
 import models.task.{TaskDAO, TaskTypeDAO}
 import models.user.{User, UserService}
 import models.annotation.AnnotationState._
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 
@@ -32,11 +32,11 @@ class TaskTypeInformationHandler @Inject()(taskTypeDAO: TaskTypeDAO,
       _ <- assertAllOnSameDataset(finishedAnnotations)
       _ <- assertNonEmpty(finishedAnnotations) ?~> "taskType.noAnnotations"
       user <- userOpt ?~> "user.notAuthorised"
-      _dataSet <- finishedAnnotations.headOption.map(_._dataSet).toFox
+      datasetId <- finishedAnnotations.headOption.map(_._dataset).toFox
       mergedAnnotation <- annotationMerger.mergeN(taskTypeId,
                                                   persistTracing = false,
                                                   user._id,
-                                                  _dataSet,
+                                                  datasetId,
                                                   taskType._team,
                                                   AnnotationType.CompoundTaskType,
                                                   finishedAnnotations) ?~> "annotation.merge.failed.compound"

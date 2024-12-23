@@ -1,10 +1,14 @@
 import _ from "lodash";
-import { Matrix4x4 } from "mjs";
+import type { Matrix4x4 } from "mjs";
 import { Matrix, solve } from "ml-matrix";
-import { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 
-// Estimates an affine matrix that transforms from source points to target points.
-export default function estimateAffine(sourcePoints: Vector3[], targetPoints: Vector3[]) {
+export default function estimateAffine(
+  sourcePoints: Vector3[],
+  targetPoints: Vector3[],
+  optInfoOut?: { meanError: number },
+) {
+  /* Estimates an affine matrix that transforms from source points to target points. */
   // Number of correspondences
   const N = sourcePoints.length;
 
@@ -30,12 +34,12 @@ export default function estimateAffine(sourcePoints: Vector3[], targetPoints: Ve
   const xMatrix = solve(A, b);
   const x = xMatrix.to1DArray();
   const error = Matrix.sub(b, new Matrix(A).mmul(xMatrix)).to1DArray();
+  const meanError = _.mean(error.map((el) => Math.abs(el)));
+  if (optInfoOut) {
+    optInfoOut.meanError = meanError;
+  }
   if (!process.env.IS_TESTING) {
-    console.log(
-      "Affine estimation error: ",
-      error,
-      `(mean=${_.mean(error.map((el) => Math.abs(el)))})`,
-    );
+    console.log("Affine estimation error: ", error, `(mean=${meanError})`);
   }
 
   const affineMatrix = new Matrix([
@@ -48,6 +52,11 @@ export default function estimateAffine(sourcePoints: Vector3[], targetPoints: Ve
   return new Matrix(affineMatrix);
 }
 
-export function estimateAffineMatrix4x4(sourcePoints: Vector3[], targetPoints: Vector3[]) {
-  return estimateAffine(sourcePoints, targetPoints).to1DArray() as any as Matrix4x4;
+export function estimateAffineMatrix4x4(
+  sourcePoints: Vector3[],
+  targetPoints: Vector3[],
+  optInfoOut?: { meanError: number },
+): Matrix4x4 {
+  /* Estimates an affine matrix that transforms from source points to target points. */
+  return estimateAffine(sourcePoints, targetPoints, optInfoOut).to1DArray() as any as Matrix4x4;
 }

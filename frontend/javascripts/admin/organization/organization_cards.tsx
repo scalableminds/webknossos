@@ -8,10 +8,10 @@ import { Alert, Button, Card, Col, Progress, Row } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
 import Constants from "oxalis/constants";
-import { OxalisState } from "oxalis/store";
-import React from "react";
+import type { OxalisState } from "oxalis/store";
+import type React from "react";
 import { useSelector } from "react-redux";
-import { APIOrganization } from "types/api_flow_types";
+import type { APIOrganization } from "types/api_flow_types";
 import {
   hasPricingPlanExceededStorage,
   hasPricingPlanExceededUsers,
@@ -36,10 +36,10 @@ export function TeamAndPowerPlanUpgradeCards({
       <Col span={12}>
         <Card
           title={`${PricingPlanEnum.Team} Plan`}
-          bodyStyle={{ minHeight: 220, opacity: 0.8 }}
+          styles={{ body: { minHeight: 220, opacity: 0.8 } }}
           actions={[
-            <Button type="primary" onClick={teamUpgradeCallback}>
-              <PlusCircleOutlined /> Request Upgrade
+            <Button type="primary" onClick={teamUpgradeCallback} key="buy-teamupgrade-button">
+              <PlusCircleOutlined /> Buy Upgrade
             </Button>,
           ]}
         >
@@ -53,10 +53,10 @@ export function TeamAndPowerPlanUpgradeCards({
       <Col span={12}>
         <Card
           title={`${PricingPlanEnum.Power} Plan`}
-          bodyStyle={{ minHeight: 220, opacity: 0.8 }}
+          styles={{ body: { minHeight: 220, opacity: 0.8 } }}
           actions={[
-            <Button type="primary" onClick={powerUpgradeCallback}>
-              <PlusCircleOutlined /> Request Upgrade
+            <Button type="primary" onClick={powerUpgradeCallback} key="buy-power-upgrade-button">
+              <PlusCircleOutlined /> Buy Upgrade
             </Button>,
           ]}
         >
@@ -131,9 +131,11 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
       style={{
         marginBottom: 20,
       }}
-      bodyStyle={{
-        background: "#5660ff",
-        color: "white",
+      styles={{
+        body: {
+          background: "var(--color-wk-blue)",
+          color: "white",
+        },
       }}
     >
       <p>

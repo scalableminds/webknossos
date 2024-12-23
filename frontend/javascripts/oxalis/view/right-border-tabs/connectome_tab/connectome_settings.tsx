@@ -16,6 +16,7 @@ import { userSettings } from "types/schemas/user_settings.schema";
 import { settings } from "messages";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { NumberSliderSetting } from "oxalis/view/components/setting_input_views";
+import defaultState from "oxalis/default_state";
 const { Option } = Select;
 type OwnProps = {
   segmentationLayer: APISegmentationLayer | null | undefined;
@@ -157,6 +158,7 @@ class ConnectomeFilters extends React.Component<Props> {
               step={0.1}
               value={particleSize}
               onChange={this.updateParticleSize}
+              defaultValue={defaultState.userConfiguration.particleSize}
             />
           </Col>
         </Row>

@@ -1,7 +1,7 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import _ from "lodash";
 import ErrorHandling from "libs/error_handling";
+import type { EmptyObject } from "types/globals";
 
 class Persistence<T extends Record<string, any>> {
   stateProperties: Record<keyof T, any>;
@@ -51,7 +51,10 @@ class Persistence<T extends Record<string, any>> {
     return {};
   }
 
-  persist(state: Partial<T>, stateProperties: Record<keyof T, any> | {} = this.stateProperties) {
+  persist(
+    state: Partial<T>,
+    stateProperties: Record<keyof T, any> | EmptyObject = this.stateProperties,
+  ) {
     const locationState = (window.history.state || {}) as Record<string, T>;
 
     const stateToBePersisted = _.pick(state, Object.keys(stateProperties));

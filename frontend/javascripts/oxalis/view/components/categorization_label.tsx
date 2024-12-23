@@ -1,7 +1,8 @@
 import { Tag, Tooltip } from "antd";
 import UserLocalStorage from "libs/user_local_storage";
-import React, { MouseEventHandler, useEffect } from "react";
+import { type MouseEventHandler, useEffect } from "react";
 import { stringToColor } from "libs/format_utils";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 type LabelProps = {
   tag: string;
   kind: string;
@@ -15,11 +16,13 @@ type FilterProps = {
   setTags: (arg0: Array<string>) => void;
   localStorageSavingKey: string;
 };
+const LOCKED_TAG_COLOR = "var(--ant-color-warning)";
 export default function CategorizationLabel({ tag, kind, onClick, onClose, closable }: LabelProps) {
+  const color = tag === "locked" ? LOCKED_TAG_COLOR : stringToColor(tag);
   return (
     <Tooltip title={`Click to only show ${kind} with this tag.`}>
       <Tag
-        color={stringToColor(tag)}
+        color={color}
         onClick={onClick}
         onClose={onClose}
         closable={closable}
@@ -38,7 +41,7 @@ export function CategorizationSearch({
   setTags,
   localStorageSavingKey,
 }: FilterProps) {
-  useEffect(() => {
+  useEffectOnlyOnce(() => {
     // restore the search query tags from the last session
     const searchTagString = UserLocalStorage.getItem(localStorageSavingKey);
 
@@ -50,11 +53,11 @@ export function CategorizationSearch({
         // pass
       }
     }
-  }, []);
+  });
   useEffect(() => {
     // store newest the search query tags
     UserLocalStorage.setItem(localStorageSavingKey, JSON.stringify(searchTags));
-  }, [searchTags]);
+  }, [searchTags, localStorageSavingKey]);
 
   function removeTag(tag: string) {
     if (searchTags.includes(tag)) {

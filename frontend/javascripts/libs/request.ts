@@ -7,6 +7,7 @@ import FetchBufferWithHeadersWorker from "oxalis/workers/fetch_buffer_with_heade
 import FetchBufferWorker from "oxalis/workers/fetch_buffer.worker";
 import Toast from "libs/toast";
 import handleStatus from "libs/handle_http_status";
+import type { ArbitraryObject } from "types/globals";
 
 const fetchBufferViaWorker = createWorker(FetchBufferWorker);
 const fetchBufferWithHeaders = createWorker(FetchBufferWithHeadersWorker);
@@ -15,6 +16,7 @@ const compress = createWorker(CompressWorker);
 type method = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 
 export type RequestOptionsBase<T> = {
+  body?: ReadableStream | Blob | BufferSource | FormData | URLSearchParams | string;
   compress?: boolean;
   doNotInvestigate?: boolean;
   extractHeaders?: boolean;
@@ -309,7 +311,11 @@ class Request {
                 ...message,
                 key: json.status.toString(),
               }));
-              if (showErrorToast) Toast.messages(messages);
+              if (showErrorToast) {
+                Toast.messages(messages); // Note: Toast.error internally logs to console
+              } else {
+                console.error(messages);
+              }
               // Check whether the error chain mentions an url which belongs
               // to a datastore. Then, ping the datastore
               pingMentionedDataStores(text);
@@ -317,7 +323,11 @@ class Request {
               /* eslint-disable-next-line prefer-promise-reject-errors */
               return Promise.reject({ ...json, url: requestedUrl });
             } catch (_jsonError) {
-              if (showErrorToast) Toast.error(text);
+              if (showErrorToast) {
+                Toast.error(text); // Note: Toast.error internally logs to console
+              } else {
+                console.error(`Request failed for ${requestedUrl}:`, text);
+              }
 
               /* eslint-disable-next-line prefer-promise-reject-errors */
               return Promise.reject({
@@ -344,7 +354,7 @@ class Request {
     return Promise.reject(error);
   };
 
-  handleEmptyJsonResponse = (response: Response): Promise<{}> =>
+  handleEmptyJsonResponse = (response: Response): Promise<ArbitraryObject> =>
     response.text().then((responseText) => {
       if (responseText.length === 0) {
         return {};

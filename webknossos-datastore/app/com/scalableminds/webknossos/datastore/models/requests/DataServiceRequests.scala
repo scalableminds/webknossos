@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.models.requests
 
-import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, CubePosition}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, SegmentationLayer}
 
 import java.nio.file.Path
@@ -18,10 +17,8 @@ object DataServiceRequestSettings {
 case class DataServiceDataRequest(
     dataSource: DataSource, // null in VolumeTracings
     dataLayer: DataLayer,
-    dataLayerMapping: Option[String],
     cuboid: Cuboid,
-    settings: DataServiceRequestSettings,
-    subsamplingStrides: Vec3Int = Vec3Int.ones // if > 1, skip voxels when loading (used for adhoc mesh generation)
+    settings: DataServiceRequestSettings
 )
 
 case class DataReadInstruction(
@@ -31,7 +28,7 @@ case class DataReadInstruction(
     bucket: BucketPosition,
     version: Option[Long] = None
 ) {
-  val cube: CubePosition = bucket.toCube(dataLayer.lengthOfUnderlyingCubes(bucket.mag))
+  def layerSummary: String = f"${dataSource.id.organizationId}/${dataSource.id.directoryName}/${dataLayer.name}"
 }
 
 case class DataServiceMappingRequest(

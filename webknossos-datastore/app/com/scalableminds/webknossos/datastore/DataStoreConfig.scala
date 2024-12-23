@@ -28,9 +28,6 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val initialDelay: FiniteDuration = get[FiniteDuration]("datastore.watchFileSystem.initialDelay")
     }
     object Cache {
-      object DataCube {
-        val maxEntries: Int = get[Int]("datastore.cache.dataCube.maxEntries")
-      }
       object Mapping {
         val maxEntries: Int = get[Int]("datastore.cache.mapping.maxEntries")
       }
@@ -43,7 +40,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
         val blockSize: Int = get[Int]("datastore.cache.agglomerateFile.blockSize")
         val cumsumMaxReaderRange: Long = get[Long]("datastore.cache.agglomerateFile.cumsumMaxReaderRange")
       }
-      val children = List(DataCube, Mapping, AgglomerateFile)
+      val children = List(Mapping, AgglomerateFile)
     }
     object AdHocMesh {
       val timeout: FiniteDuration = get[FiniteDuration]("datastore.adHocMesh.timeout")

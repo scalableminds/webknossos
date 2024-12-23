@@ -26,9 +26,9 @@ trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHel
     val result = b match {
       case Full(result) =>
         result
-      case ParamFailure(msg, _, chain, statusCode: Int) =>
+      case ParamFailure(msg, h_, chain, statusCode: Int) =>
         new JsonResult(statusCode)(Messages(msg), formatChainOpt(chain))
-      case ParamFailure(_, _, _, msgs: JsArray) =>
+      case ParamFailure(_s, _b, _c, msgs: JsArray) =>
         new JsonResult(defaultErrorCode)(jsonMessages(msgs))
       case Failure(msg, _, chain) =>
         new JsonResult(defaultErrorCode)(Messages(msg), formatChainOpt(chain))
@@ -60,7 +60,7 @@ trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHel
   private def jsonMessages(msgs: JsArray): JsObject =
     Json.obj("messages" -> msgs)
 
-  // Override this in your controller to add the CORS headers to thes results of its actions
+  // Override this in your controller to add the CORS headers to the results of its actions
   def allowRemoteOrigin: Boolean = false
 
   private def allowRemoteOriginIfSelected(result: Result): Result =

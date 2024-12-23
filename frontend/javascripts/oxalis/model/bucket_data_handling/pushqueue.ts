@@ -1,4 +1,3 @@
-import _ from "lodash";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { createCompressedUpdateBucketActions } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -6,7 +5,7 @@ import { createDebouncedAbortableParameterlessCallable } from "libs/async/deboun
 import { call } from "redux-saga/effects";
 import Store from "oxalis/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
-import { UpdateAction } from "../sagas/update_actions";
+import type { UpdateAction } from "../sagas/update_actions";
 import { AsyncFifoResolver } from "libs/async/async_fifo_resolver";
 import { escalateErrorAction } from "../actions/actions";
 
@@ -28,7 +27,7 @@ class PushQueue {
   // user edited the buckets in a certain time window).
   private pendingBuckets: Set<DataBucket>;
 
-  // Everytime the pendingBuckets is flushed, its content is put into a transaction.
+  // Every time the pendingBuckets is flushed, its content is put into a transaction.
   // That transaction is compressed asynchronously before it is sent to the store.
   // Buckets that are currently being compressed, are counted in this property.
   private compressingBucketCount: number = 0;

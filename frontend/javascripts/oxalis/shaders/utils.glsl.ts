@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { Vector3, Vector4 } from "oxalis/constants";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import type { ShaderModule } from "./shader_module_system";
 export const hsvToRgb: ShaderModule = {
   requirements: [],
@@ -41,7 +41,7 @@ export function jsRgb2hsv(rgb: Vector3): Vector3 {
   const [r, g, b] = rgb;
   const v = Math.max(r, g, b);
   const n = v - Math.min(r, g, b);
-  // eslint-disable-next-line no-nested-ternary
+
   const h = n !== 0 && (v === r ? (g - b) / n : v === g ? 2 + (b - r) / n : 4 + (r - g) / n);
   // @ts-expect-error ts-migrate(2365) FIXME: Operator '+' cannot be applied to types 'number | ... Remove this comment to see the full error message
   return [60 * (h < 0 ? h + 6 : h), v && n / v, v];
@@ -113,10 +113,12 @@ export function jsColormapJet(x: number): Vector3 {
 
   return [r, g, b];
 }
-export const hslaToCSS = (hsla: Vector4) => {
-  const [h, s, l, a] = hsla;
-  return `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
+
+export const rgbaToCSS = (rgba: Vector4) => {
+  const [r, g, b, a] = rgba;
+  return `rgba(${255 * r}, ${255 * g}, ${255 * b}, ${a})`;
 };
+
 export const aaStep: ShaderModule = {
   requirements: [],
   code: `
@@ -290,20 +292,6 @@ export const vec4ToFloat: ShaderModule = {
     float vec4ToFloat(vec4 v) {
       v *= 255.0;
       return v.r + v.g * pow(2.0, 8.0) + v.b * pow(2.0, 16.0) + v.a * pow(2.0, 24.0);
-    }
-  `,
-};
-export const greaterThanVec4: ShaderModule = {
-  code: `
-    bool greaterThanVec4(vec4 x, vec4 y) {
-      if (x.a > y.a) return true;
-      if (x.a < y.a) return false;
-      if (x.b > y.b) return true;
-      if (x.b < y.b) return false;
-      if (x.g > y.g) return true;
-      if (x.g < y.g) return false;
-      if (x.r > y.r) return true;
-      else return false;
     }
   `,
 };

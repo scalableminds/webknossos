@@ -4,10 +4,11 @@ import {
   ReloadOutlined,
   VerticalAlignBottomOutlined,
   EllipsisOutlined,
+  TagsOutlined,
 } from "@ant-design/icons";
-import { List, Tooltip, Dropdown, MenuProps, Modal } from "antd";
+import { List, type MenuProps, App } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import Checkbox, { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
+import Checkbox, { type CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import React from "react";
 
 import classnames from "classnames";
@@ -29,27 +30,40 @@ import type {
   VolumeTracing,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getSegmentColorAsRGBA,
+  getSegmentName,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
-import { hslaToCSS } from "oxalis/shaders/utils.glsl";
+import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
 import { V4 } from "libs/mjs";
 import { ChangeColorMenuItemContent } from "components/color_picker";
-import { MenuItemType } from "antd/lib/menu/hooks/useItems";
+import type { MenuItemType } from "antd/es/menu/interface";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
-import { type AdditionalCoordinate } from "types/api_flow_types";
-import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
+import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
+import type { AdditionalCoordinate } from "types/api_flow_types";
+import {
+  getAdditionalCoordinatesAsString,
+  getPosition,
+} from "oxalis/model/accessors/flycam_accessor";
+import FastTooltip from "components/fast_tooltip";
+import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
+import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 
-function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
-  const hslaCss = hslaToCSS(segmentColorHSLA);
+export function ColoredDotIcon({ colorRGBA }: { colorRGBA: Vector4 }) {
+  const rgbaCss = rgbaToCSS(colorRGBA);
 
   return (
     <span
       className="circle"
       style={{
         paddingLeft: "10px",
-        backgroundColor: hslaCss,
+        backgroundColor: rgbaCss,
+        alignSelf: "flex-start",
+        marginTop: 5,
+        marginLeft: 1,
       }}
     />
   );
@@ -64,11 +78,13 @@ const getLoadPrecomputedMeshMenuItem = (
     seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
     meshFileName: string,
   ) => void,
-  andCloseContextMenu: (_ignore?: any) => void,
+  hideContextMenu: (_ignore?: any) => void,
   layerName: string | null | undefined,
   mappingInfo: ActiveMappingInfo,
+  activeVolumeTracing: VolumeTracing | null | undefined,
 ) => {
   const mappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
+
   return {
     key: "loadPrecomputedMesh",
     disabled: !currentMeshFile,
@@ -83,10 +99,10 @@ const getLoadPrecomputedMeshMenuItem = (
               Cannot load a mesh for this segment, because its position is unknown.
             </React.Fragment>,
           );
-          andCloseContextMenu();
+          hideContextMenu();
           return;
         }
-        andCloseContextMenu(
+        hideContextMenu(
           loadPrecomputedMesh(
             segment.id,
             segment.somePosition,
@@ -101,16 +117,10 @@ const getLoadPrecomputedMeshMenuItem = (
       mappingInfo,
     ),
     label: (
-      <Tooltip
-        key="tooltip"
-        title={
-          currentMeshFile != null
-            ? `Load mesh for centered segment from file ${currentMeshFile.meshFileName}`
-            : "There is no mesh file."
-        }
-      >
-        Load Mesh (precomputed)
-      </Tooltip>
+      <LoadMeshMenuItemLabel
+        currentMeshFile={currentMeshFile}
+        volumeTracing={activeVolumeTracing}
+      />
     ),
   };
 };
@@ -123,7 +133,7 @@ const getComputeMeshAdHocMenuItem = (
     seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   ) => void,
   isSegmentationLayerVisible: boolean,
-  andCloseContextMenu: (_ignore?: any) => void,
+  hideContextMenu: (_ignore?: any) => void,
 ): MenuItemType => {
   const { disabled, title } = getComputeMeshAdHocTooltipInfo(false, isSegmentationLayerVisible);
   return {
@@ -135,10 +145,10 @@ const getComputeMeshAdHocMenuItem = (
             Cannot load a mesh for this segment, because its position is unknown.
           </React.Fragment>,
         );
-        andCloseContextMenu();
+        hideContextMenu();
         return;
       }
-      andCloseContextMenu(
+      hideContextMenu(
         loadAdHocMesh(
           segment.id,
           segment.somePosition,
@@ -147,7 +157,7 @@ const getComputeMeshAdHocMenuItem = (
       );
     },
     disabled,
-    label: <Tooltip title={title}>Compute Mesh (ad hoc)</Tooltip>,
+    label: <FastTooltip title={title}>Compute Mesh (ad hoc)</FastTooltip>,
   };
 };
 
@@ -160,7 +170,7 @@ const getMakeSegmentActiveMenuItem = (
   ) => void,
   activeCellId: number | null | undefined,
   isEditingDisabled: boolean,
-  andCloseContextMenu: (_ignore?: any) => void,
+  hideContextMenu: (_ignore?: any) => void,
 ): MenuItemType => {
   const isActiveSegment = segment.id === activeCellId;
   const title = isActiveSegment
@@ -169,29 +179,24 @@ const getMakeSegmentActiveMenuItem = (
   return {
     key: "setActiveCell",
     onClick: () =>
-      andCloseContextMenu(
+      hideContextMenu(
         setActiveCell(segment.id, segment.somePosition, segment.someAdditionalCoordinates),
       ),
     disabled: isActiveSegment || isEditingDisabled,
     label: (
-      <Tooltip title={title} trigger={isEditingDisabled ? "" : "hover"}>
+      <FastTooltip title={title} disabled={isEditingDisabled}>
         Activate Segment ID
-      </Tooltip>
+      </FastTooltip>
     ),
   };
 };
 
 type Props = {
   segment: Segment;
-  mapId: (arg0: number) => number;
-  isJSONMappingEnabled: boolean;
   mappingInfo: ActiveMappingInfo;
-  centeredSegmentId: number | null | undefined;
   selectedSegmentIds: number[] | null | undefined;
   activeCellId: number | null | undefined;
   setHoveredSegmentId: (arg0: number | null | undefined) => void;
-  handleSegmentDropdownMenuVisibility: (arg0: boolean, arg1: number) => void;
-  activeDropdownSegmentId: number | null | undefined;
   allowUpdate: boolean;
   updateSegment: (
     arg0: number,
@@ -229,6 +234,8 @@ type Props = {
   onRenameEnd: () => void;
   multiSelectMenu: MenuProps;
   activeVolumeTracing: VolumeTracing | null | undefined;
+  showContextMenuAt: (xPos: number, yPos: number, menu: MenuProps) => void;
+  hideContextMenu: () => void;
 };
 
 function _MeshInfoItem(props: {
@@ -236,7 +243,6 @@ function _MeshInfoItem(props: {
   isSelectedInList: boolean;
   isHovered: boolean;
   mesh: MeshInformation | null | undefined;
-  handleSegmentDropdownMenuVisibility: (arg0: boolean, arg1: number) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   setPosition: (arg0: Vector3) => void;
   setAdditionalCoordinates: (additionalCoordinates: AdditionalCoordinate[] | undefined) => void;
@@ -258,14 +264,7 @@ function _MeshInfoItem(props: {
   ) {
     if (isSelectedInList) {
       return (
-        <div
-          className="deemphasized italic"
-          style={{ marginLeft: 8 }}
-          onContextMenu={(evt) => {
-            evt.preventDefault();
-            props.handleSegmentDropdownMenuVisibility(true, segment.id);
-          }}
-        >
+        <div className="deemphasized italic" style={{ marginLeft: 8 }}>
           No mesh loaded. Use right-click to add one.
         </div>
       );
@@ -277,7 +276,7 @@ function _MeshInfoItem(props: {
   const { seedPosition, seedAdditionalCoordinates, isLoading, isPrecomputed, isVisible } = mesh;
   const className = isVisible ? "" : "deemphasized italic";
   const downloadButton = (
-    <Tooltip title="Download Mesh">
+    <FastTooltip title="Download Mesh">
       <VerticalAlignBottomOutlined
         key="download-button"
         onClick={() => {
@@ -293,10 +292,10 @@ function _MeshInfoItem(props: {
           );
         }}
       />
-    </Tooltip>
+    </FastTooltip>
   );
   const deleteButton = (
-    <Tooltip title="Remove Mesh">
+    <FastTooltip title="Remove Mesh">
       <DeleteOutlined
         key="delete-button"
         onClick={() => {
@@ -307,10 +306,10 @@ function _MeshInfoItem(props: {
           Store.dispatch(removeMeshAction(props.visibleSegmentationLayer.name, segment.id));
         }}
       />
-    </Tooltip>
+    </FastTooltip>
   );
   const toggleVisibilityCheckbox = (
-    <Tooltip title="Change visibility">
+    <FastTooltip title="Change visibility">
       <Checkbox
         checked={isVisible}
         onChange={(event: CheckboxChangeEvent) => {
@@ -325,7 +324,7 @@ function _MeshInfoItem(props: {
           );
         }}
       />
-    </Tooltip>
+    </FastTooltip>
   );
   const actionVisibility = isLoading || isHovered ? "visible" : "hidden";
   return (
@@ -343,7 +342,7 @@ function _MeshInfoItem(props: {
       >
         <div
           className={classnames("segment-list-item", {
-            "is-selected-cell": isSelectedInList,
+            "is-selected-segment": isSelectedInList,
           })}
         >
           {toggleVisibilityCheckbox}
@@ -379,15 +378,10 @@ const MeshInfoItem = React.memo(_MeshInfoItem);
 
 function _SegmentListItem({
   segment,
-  mapId,
-  isJSONMappingEnabled,
   mappingInfo,
-  centeredSegmentId,
   selectedSegmentIds,
   activeCellId,
   setHoveredSegmentId,
-  handleSegmentDropdownMenuVisibility,
-  activeDropdownSegmentId,
   allowUpdate,
   updateSegment,
   removeSegment,
@@ -405,26 +399,23 @@ function _SegmentListItem({
   onRenameEnd,
   multiSelectMenu,
   activeVolumeTracing,
+  showContextMenuAt,
+  hideContextMenu,
 }: Props) {
+  const { modal } = App.useApp();
   const isEditingDisabled = !allowUpdate;
 
-  const mappedId = mapId(segment.id);
-
-  const segmentColorHSLA = useSelector(
-    (state: OxalisState) => getSegmentColorAsHSLA(state, mappedId),
+  const segmentColorRGBA = useSelector(
+    (state: OxalisState) => getSegmentColorAsRGBA(state, segment.id),
     (a: Vector4, b: Vector4) => V4.isEqual(a, b),
   );
   const isHoveredSegmentId = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.hoveredSegmentId === segment.id,
   );
-
-  const segmentColorRGBA = Utils.hslaToRgba(segmentColorHSLA);
-
-  if (mappingInfo.hideUnmappedIds && mappedId === 0) {
-    return null;
-  }
-
-  const andCloseContextMenu = (_ignore?: any) => handleSegmentDropdownMenuVisibility(false, 0);
+  const isCentered = useSelector((state: OxalisState) => {
+    const centeredSegmentId = getSegmentIdForPosition(getPosition(state.flycam));
+    return centeredSegmentId === segment.id;
+  });
 
   const createSegmentContextMenu = (): MenuProps => ({
     items: [
@@ -432,32 +423,26 @@ function _SegmentListItem({
         segment,
         currentMeshFile,
         loadPrecomputedMesh,
-        andCloseContextMenu,
+        hideContextMenu,
         visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
         mappingInfo,
+        activeVolumeTracing,
       ),
       getComputeMeshAdHocMenuItem(
         segment,
         loadAdHocMesh,
         visibleSegmentationLayer != null,
-        andCloseContextMenu,
+        hideContextMenu,
       ),
       getMakeSegmentActiveMenuItem(
         segment,
         setActiveCell,
         activeCellId,
         isEditingDisabled,
-        andCloseContextMenu,
+        hideContextMenu,
       ),
       {
-        key: "changeSegmentColor",
-        /*
-         * Disable the change-color menu if the segment was mapped to another segment, because
-         * changing the color wouldn't do anything as long as the mapping is still active.
-         * This is because the id (A) is mapped to another one (B). So, the user would need
-         * to change the color of B to see the effect for A.
-         */
-        disabled: segment.id !== mappedId,
+        key: `changeSegmentColor-${segment.id}`,
         label: (
           <ChangeColorMenuItemContent
             isDisabled={false}
@@ -476,7 +461,6 @@ function _SegmentListItem({
               );
             }}
             rgb={Utils.take3(segmentColorRGBA)}
-            hidePickerIcon
           />
         ),
       },
@@ -505,7 +489,7 @@ function _SegmentListItem({
             return;
           }
           removeSegment(segment.id, visibleSegmentationLayer.name);
-          andCloseContextMenu();
+          hideContextMenu();
         },
         label: "Remove Segment From List",
       },
@@ -516,7 +500,7 @@ function _SegmentListItem({
             return;
           }
 
-          Modal.confirm({
+          modal.confirm({
             content: `Are you sure you want to delete the data of segment ${getSegmentName(
               segment,
               true,
@@ -546,7 +530,7 @@ function _SegmentListItem({
             },
           });
 
-          andCloseContextMenu();
+          hideContextMenu();
         },
         disabled:
           activeVolumeTracing == null ||
@@ -559,55 +543,44 @@ function _SegmentListItem({
   });
 
   function getSegmentIdDetails() {
-    if (isJSONMappingEnabled && segment.id !== mappedId)
-      return (
-        <Tooltip title="Segment ID (Unmapped ID → Mapped ID)">
-          <span className="deemphasized italic">
-            {segment.id} → {mappedId}
-          </span>
-        </Tooltip>
-      );
     // Only if segment.name is truthy, render additional info.
     return segment.name ? (
-      <Tooltip title="Segment ID">
+      <FastTooltip title="Segment ID">
         <span className="deemphasized italic">{segment.id}</span>
-      </Tooltip>
+      </FastTooltip>
     ) : null;
   }
 
+  const onOpenContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+
+    const [x, y] = getContextMenuPositionFromEvent(event, "segment-list-context-menu-overlay");
+
+    showContextMenuAt(
+      x,
+      y,
+      (selectedSegmentIds || []).length > 1 && selectedSegmentIds?.includes(segment.id)
+        ? multiSelectMenu
+        : createSegmentContextMenu(),
+    );
+  };
   return (
     <List.Item
       style={{
         padding: "2px 5px",
       }}
-      className="segment-list-item"
+      className={`segment-list-item ${isHoveredSegmentId ? "is-hovered-segment" : ""}`}
       onMouseEnter={() => {
         setHoveredSegmentId(segment.id);
       }}
       onMouseLeave={() => {
         setHoveredSegmentId(null);
       }}
+      onContextMenu={onOpenContextMenu}
     >
-      <Dropdown
-        menu={
-          (selectedSegmentIds || []).length > 1 && selectedSegmentIds?.includes(segment.id)
-            ? multiSelectMenu
-            : createSegmentContextMenu()
-        } // The overlay is generated lazily. By default, this would make the overlay
-        // re-render on each parent's render() after it was shown for the first time.
-        // The reason for this is that it's not destroyed after closing.
-        // Therefore, autoDestroy is passed.
-        // destroyPopupOnHide should also be an option according to the docs, but
-        // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
-        autoDestroy
-        placement="bottom"
-        open={activeDropdownSegmentId === segment.id}
-        onOpenChange={(isVisible) => handleSegmentDropdownMenuVisibility(isVisible, segment.id)}
-        trigger={["contextMenu"]}
-      >
+      <div>
         <div style={{ display: "inline-flex", alignItems: "center" }}>
-          <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
+          <ColoredDotIcon colorRGBA={segmentColorRGBA} />
           <EditableTextLabel
             value={getSegmentName(segment)}
             label="Segment Name"
@@ -627,55 +600,61 @@ function _SegmentListItem({
               }
             }}
             margin="0 5px"
+            iconClassName="deemphasized"
             disableEditing={!allowUpdate}
           />
-          <Tooltip title="Open context menu (also available via right-click)">
-            <EllipsisOutlined
-              onClick={() => handleSegmentDropdownMenuVisibility(true, segment.id)}
-            />
-          </Tooltip>
+          {(segment.metadata || []).length > 0 ? (
+            <FastTooltip
+              className="deemphasized icon-margin-right"
+              title="This segment has assigned metadata properties."
+            >
+              <TagsOutlined />
+            </FastTooltip>
+          ) : null}
+          <FastTooltip title="Open context menu (also available via right-click)">
+            <EllipsisOutlined onClick={onOpenContextMenu} />
+          </FastTooltip>
           {/* Show Default Segment Name if another one is already defined*/}
           {getSegmentIdDetails()}
-          {segment.id === centeredSegmentId ? (
-            <Tooltip title="This segment is currently centered in the data viewports.">
+          {isCentered ? (
+            <FastTooltip title="This segment is currently centered in the data viewports.">
               <i
                 className="fas fa-crosshairs deemphasized"
                 style={{
                   marginLeft: 4,
                 }}
               />
-            </Tooltip>
+            </FastTooltip>
           ) : null}
           {segment.id === activeCellId ? (
-            <Tooltip title="The currently active segment id belongs to this segment.">
+            <FastTooltip title="The currently active segment id belongs to this segment.">
               <i
                 className="fas fa-paint-brush deemphasized"
                 style={{
                   marginLeft: 4,
                 }}
               />
-            </Tooltip>
+            </FastTooltip>
           ) : null}
         </div>
-      </Dropdown>
 
-      <div
-        style={{
-          marginLeft: 16,
-        }}
-      >
-        <MeshInfoItem
-          segment={segment}
-          isSelectedInList={
-            selectedSegmentIds != null ? selectedSegmentIds?.includes(segment.id) : false
-          }
-          isHovered={isHoveredSegmentId}
-          mesh={mesh}
-          handleSegmentDropdownMenuVisibility={handleSegmentDropdownMenuVisibility}
-          visibleSegmentationLayer={visibleSegmentationLayer}
-          setPosition={setPosition}
-          setAdditionalCoordinates={setAdditionalCoordinates}
-        />
+        <div
+          style={{
+            marginLeft: 16,
+          }}
+        >
+          <MeshInfoItem
+            segment={segment}
+            isSelectedInList={
+              selectedSegmentIds != null ? selectedSegmentIds?.includes(segment.id) : false
+            }
+            isHovered={isHoveredSegmentId}
+            mesh={mesh}
+            visibleSegmentationLayer={visibleSegmentationLayer}
+            setPosition={setPosition}
+            setAdditionalCoordinates={setAdditionalCoordinates}
+          />
+        </div>
       </div>
     </List.Item>
   );
@@ -703,7 +682,7 @@ function getRefreshButton(
     );
   } else {
     return (
-      <Tooltip title="Refresh Mesh">
+      <FastTooltip title="Refresh Mesh">
         <ReloadOutlined
           key="refresh-button"
           onClick={() => {
@@ -714,7 +693,7 @@ function getRefreshButton(
             Store.dispatch(refreshMeshAction(visibleSegmentationLayer.name, segment.id));
           }}
         />
-      </Tooltip>
+      </FastTooltip>
     );
   }
 }
@@ -737,11 +716,6 @@ function getComputeMeshAdHocTooltipInfo(
     disabled,
     title,
   };
-}
-
-function getSegmentName(segment: Segment, fallbackToId: boolean = false): string {
-  const fallback = fallbackToId ? `${segment.id}` : `Segment ${segment.id}`;
-  return segment.name || fallback;
 }
 
 export default SegmentListItem;

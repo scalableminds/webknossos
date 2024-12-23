@@ -1,6 +1,6 @@
 import PriorityQueue from "js-priority-queue";
 import type { LoadingStrategy, PlaneRects } from "oxalis/store";
-import { Matrix4x4 } from "libs/mjs";
+import type { Matrix4x4 } from "libs/mjs";
 import type { Vector3, Vector4, ViewMode } from "oxalis/constants";
 import constants from "oxalis/constants";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
@@ -40,7 +40,7 @@ function dequeueToArrayBuffer(bucketQueue: PriorityQueue<PriorityItem>): ArrayBu
 
 function pick(
   viewMode: ViewMode,
-  resolutions: Array<Vector3>,
+  mags: Array<Vector3>,
   position: Vector3,
   sphericalCapRadius: number,
   matrix: Matrix4x4,
@@ -64,7 +64,7 @@ function pick(
     determineBucketsForOblique(
       viewMode,
       loadingStrategy,
-      resolutions,
+      mags,
       position,
       enqueueFunction,
       matrix,
@@ -73,7 +73,7 @@ function pick(
     );
   } else if (viewMode === constants.MODE_ARBITRARY) {
     determineBucketsForFlight(
-      resolutions,
+      mags,
       position,
       sphericalCapRadius,
       enqueueFunction,
@@ -84,7 +84,7 @@ function pick(
     determineBucketsForOblique(
       viewMode,
       loadingStrategy,
-      resolutions,
+      mags,
       position,
       enqueueFunction,
       matrix,

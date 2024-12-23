@@ -11,10 +11,9 @@ import models.user._
 import models.user.time._
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
-import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.api.mvc._
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import models.user.Theme.Theme
@@ -64,7 +63,7 @@ class UserController @Inject()(userService: UserService,
         annotations <- annotationDAO.findAllListableExplorationals(
           isFinished,
           Some(request.identity._id),
-          AnnotationType.Explorational,
+          filterOwnedOrShared = true,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
           pageNumber.getOrElse(0)
         )
@@ -105,60 +104,6 @@ class UserController @Inject()(userService: UserService,
       }
   }
 
-  def userLoggedTime(userId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      userIdValidated <- ObjectId.fromString(userId) ?~> "user.id.invalid"
-      user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
-      _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-      loggedTimeAsMap <- timeSpanService.loggedTimeOfUser(user, TimeSpan.groupByMonth)
-    } yield {
-      JsonOk(
-        Json.obj("loggedTime" ->
-          loggedTimeAsMap.map {
-            case (paymentInterval, duration) =>
-              Json.obj("paymentInterval" -> paymentInterval, "durationInSeconds" -> duration.toSeconds)
-          }))
-    }
-  }
-
-  private def groupByAnnotationAndDay(timeSpan: TimeSpan) =
-    (timeSpan._annotation.map(_.toString).getOrElse("<none>"), TimeSpan.groupByDay(timeSpan))
-
-  def usersLoggedTime: Action[TimeSpanRequest] = sil.SecuredAction.async(validateJson[TimeSpanRequest]) {
-    implicit request =>
-      Fox
-        .combined(request.body.users.map { userId =>
-          for {
-            userIdValidated <- ObjectId.fromString(userId) ?~> "user.id.invalid"
-            user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
-            userEmail <- userService.emailFor(user)
-            _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-            result <- timeSpanService.loggedTimeOfUser(user,
-                                                       groupByAnnotationAndDay,
-                                                       Some(request.body.start),
-                                                       Some(request.body.end))
-          } yield {
-            Json.obj(
-              "user" -> Json.obj(
-                "userId" -> user._id.toString,
-                "firstName" -> user.firstName,
-                "lastName" -> user.lastName,
-                "email" -> userEmail
-              ),
-              "loggedTime" -> result.map {
-                case ((annotation, day), duration) =>
-                  Json.obj(
-                    "annotation" -> annotation,
-                    "day" -> day,
-                    "durationInSeconds" -> duration.toSeconds
-                  )
-              }
-            )
-          }
-        })
-        .map(loggedTime => Ok(Json.toJson(loggedTime)))
-  }
-
   def userAnnotations(userId: String,
                       isFinished: Option[Boolean],
                       limit: Option[Int],
@@ -172,9 +117,10 @@ class UserController @Inject()(userService: UserService,
         annotations <- annotationDAO.findAllListableExplorationals(
           isFinished,
           Some(userIdValidated),
-          AnnotationType.Explorational,
+          filterOwnedOrShared = false,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
-          pageNumber.getOrElse(0))
+          pageNumber.getOrElse(0)
+        )
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllFor(userIdValidated, isFinished, AnnotationType.Explorational))
         jsonList = annotations.map(annotationService.writeCompactInfo)
@@ -214,19 +160,6 @@ class UserController @Inject()(userService: UserService,
       }
     }
 
-  def loggedTime: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      loggedTimeAsMap <- timeSpanService.loggedTimeOfUser(request.identity, TimeSpan.groupByMonth)
-    } yield {
-      JsonOk(
-        Json.obj("loggedTime" ->
-          loggedTimeAsMap.map {
-            case (paymentInterval, duration) =>
-              Json.obj("paymentInterval" -> paymentInterval, "durationInSeconds" -> duration.toSeconds)
-          }))
-    }
-  }
-
   // List all users the requesting user is allowed to see (themself and users of whom they are admin or team-manager)
   def list(
       // Optional filtering: If true, list only users the requesting user is allowed to administrate,
@@ -238,11 +171,9 @@ class UserController @Inject()(userService: UserService,
       isAdmin: Option[Boolean]
   ): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      users <- userDAO.findAllWithFilters(isEditable, isTeamManagerOrAdmin, isAdmin, request.identity)
-      js <- Fox.serialCombined(users.sortBy(_.lastName.toLowerCase))(u => userService.publicWrites(u, request.identity))
-    } yield {
-      Ok(Json.toJson(js))
-    }
+      userCompactInfos <- userDAO.findAllCompactWithFilters(isEditable, isTeamManagerOrAdmin, isAdmin, request.identity)
+      js <- Fox.serialCombined(userCompactInfos.sortBy(_.lastName.toLowerCase))(userService.publicWritesCompact)
+    } yield Ok(Json.toJson(js))
   }
 
   private val userUpdateReader =

@@ -10,21 +10,23 @@ import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { throttle, call, take } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
 import {
   getPosition,
   getActiveMagIndexForLayer,
   getAreasFromState,
 } from "oxalis/model/accessors/flycam_accessor";
-import { isLayerVisible, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
-import DataLayer from "oxalis/model/data_layer";
+import { isLayerVisible, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
+import type DataLayer from "oxalis/model/data_layer";
 import { Model } from "oxalis/singletons";
 import type { Vector3 } from "oxalis/constants";
 import constants from "oxalis/constants";
+import { WkDevFlags } from "oxalis/api/wk_dev";
+
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
 const prefetchStrategiesArbitrary = [new PrefetchStrategyArbitrary()];
 const prefetchStrategiesPlane = [new PrefetchStrategySkeleton(), new PrefetchStrategyVolume()];
+
 export function* watchDataRelevantChanges(): Saga<void> {
   yield* take("WK_READY");
   const previousProperties = {};
@@ -101,14 +103,14 @@ export function* prefetchForPlaneMode(
 ): Saga<void> {
   const position = yield* select((state) => getPosition(state.flycam));
   const zoomStep = yield* select((state) => getActiveMagIndexForLayer(state, layer.name));
-  const resolutionInfo = getResolutionInfo(layer.resolutions);
+  const magInfo = getMagInfo(layer.mags);
   const activePlane = yield* select((state) => state.viewModeData.plane.activeViewport);
   const tracingTypes = yield* select(getTracingTypes);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const lastConnectionStats = getGlobalDataConnectionInfo().lastStats;
   const { lastPosition, lastDirection, lastZoomStep, lastBucketPickerTick } = previousProperties;
   const direction = getTraceDirection(position, lastPosition, lastDirection);
-  const resolutions = resolutionInfo.getDenseResolutions();
+  const mags = magInfo.getDenseMags();
   const layerRenderingManager = yield* call(
     [Model, Model.getLayerRenderingManagerByName],
     layer.name,
@@ -134,12 +136,12 @@ export function* prefetchForPlaneMode(
           zoomStep,
           activePlane,
           areas,
-          resolutions,
-          resolutionInfo,
+          mags,
+          magInfo,
           additionalCoordinates,
         );
 
-        if (bucketDebuggingFlags.visualizePrefetchedBuckets) {
+        if (WkDevFlags.bucketDebugging.visualizePrefetchedBuckets) {
           for (const item of buckets) {
             const bucket = layer.cube.getOrCreateBucket(item.bucket);
 
@@ -169,8 +171,8 @@ export function* prefetchForArbitraryMode(
   const matrix = yield* select((state) => state.flycam.currentMatrix);
   const zoomStep = yield* select((state) => getActiveMagIndexForLayer(state, layer.name));
   const tracingTypes = yield* select(getTracingTypes);
-  const resolutionInfo = getResolutionInfo(layer.resolutions);
-  const resolutions = resolutionInfo.getDenseResolutions();
+  const magInfo = getMagInfo(layer.mags);
+  const mags = magInfo.getDenseMags();
   const layerRenderingManager = yield* call(
     [Model, Model.getLayerRenderingManagerByName],
     layer.name,
@@ -195,12 +197,12 @@ export function* prefetchForArbitraryMode(
           matrix,
           zoomStep,
           position,
-          resolutions,
-          resolutionInfo,
+          mags,
+          magInfo,
           additionalCoordinates,
         );
 
-        if (bucketDebuggingFlags.visualizePrefetchedBuckets) {
+        if (WkDevFlags.bucketDebugging.visualizePrefetchedBuckets) {
           for (const item of buckets) {
             const bucket = cube.getOrCreateBucket(item.bucket);
 

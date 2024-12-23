@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import net.liftweb.common.{Box, Empty, Full}
+import play.api.i18n.MessagesProvider
 import play.api.libs.json.{JsObject, JsValue, Json}
 
 import scala.concurrent.ExecutionContext
@@ -176,7 +177,7 @@ class SkeletonTracingService @Inject()(
       tracingA <- tracingA
       tracingB <- tracingB
       mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
-        Seq(tracingA, tracingB).map(t => Some(AdditionalAxis.fromProto(t.additionalAxes))))
+        Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtosAsOpt(t.additionalAxes)))
       nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
       groupMapping = GroupUtils.calculateTreeGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
       mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping, groupMapping)
@@ -207,7 +208,9 @@ class SkeletonTracingService @Inject()(
                       tracings: Seq[SkeletonTracing],
                       newId: String,
                       newVersion: Long,
-                      toCache: Boolean): Fox[MergedVolumeStats] = Fox.successful(MergedVolumeStats.empty())
+                      toCache: Boolean,
+                      userToken: Option[String])(implicit mp: MessagesProvider): Fox[MergedVolumeStats] =
+    Fox.successful(MergedVolumeStats.empty())
 
   def updateActionLog(tracingId: String, newestVersion: Option[Long], oldestVersion: Option[Long]): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[SkeletonUpdateAction])): JsObject =

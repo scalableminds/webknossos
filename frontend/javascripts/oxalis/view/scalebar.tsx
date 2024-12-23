@@ -1,15 +1,16 @@
 import { connect } from "react-redux";
-import * as React from "react";
-import { Tooltip } from "antd";
 import type { APIDataset } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import { convertPixelsToNm } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import { formatNumberToLength } from "libs/format_utils";
 import { getViewportExtents, getTDViewZoom } from "oxalis/model/accessors/view_mode_accessor";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import type { OrthoView } from "oxalis/constants";
-import constants, { Unicode, OUTER_CSS_BORDER, OrthoViews } from "oxalis/constants";
+import constants, { Unicode, OrthoViews, LongUnitToShortUnitMap } from "oxalis/constants";
+import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
+import FastTooltip from "components/fast_tooltip";
+
 const { ThinSpace, MultiplicationSymbol } = Unicode;
+
 type OwnProps = {
   viewportID: OrthoView;
 };
@@ -20,6 +21,14 @@ type StateProps = {
   viewportHeightInPixels: number;
 };
 type Props = OwnProps & StateProps;
+
+function convertPixelsToUnit(
+  lengthInPixel: number,
+  zoomValue: number,
+  dataset: APIDataset,
+): number {
+  return lengthInPixel * zoomValue * getBaseVoxelInUnit(dataset.dataSource.scale.factor);
+}
 
 const getBestScalebarAnchorInNm = (lengthInNm: number): number => {
   const closestExponent = Math.floor(Math.log10(lengthInNm));
@@ -44,53 +53,50 @@ const maxScaleBarWidthFactor = 0.45;
 const minWidthToFillScalebar = 130;
 
 function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInPixels }: Props) {
-  const viewportWidthInNm = convertPixelsToNm(viewportWidthInPixels, zoomValue, dataset);
-  const viewportHeightInNm = convertPixelsToNm(viewportHeightInPixels, zoomValue, dataset);
-  const idealWidthInNm = viewportWidthInNm * idealScalebarWidthFactor;
-  const scalebarWidthInNm = getBestScalebarAnchorInNm(idealWidthInNm);
+  const voxelSizeUnit = dataset.dataSource.scale.unit;
+  const viewportWidthInUnit = convertPixelsToUnit(viewportWidthInPixels, zoomValue, dataset);
+  const viewportHeightInUnit = convertPixelsToUnit(viewportHeightInPixels, zoomValue, dataset);
+  const idealWidthInUnit = viewportWidthInUnit * idealScalebarWidthFactor;
+  const scalebarWidthInUnit = getBestScalebarAnchorInNm(idealWidthInUnit);
   const scaleBarWidthFactor = Math.min(
-    scalebarWidthInNm / viewportWidthInNm,
+    scalebarWidthInUnit / viewportWidthInUnit,
     maxScaleBarWidthFactor,
   );
   const tooltip = [
-    formatNumberToLength(viewportWidthInNm),
+    formatNumberToLength(viewportWidthInUnit, LongUnitToShortUnitMap[voxelSizeUnit], 1, true),
     ThinSpace,
     MultiplicationSymbol,
     ThinSpace,
-    formatNumberToLength(viewportHeightInNm),
+    formatNumberToLength(viewportHeightInUnit, LongUnitToShortUnitMap[voxelSizeUnit], 1, true),
   ].join("");
   const collapseScalebar = viewportWidthInPixels < minWidthToFillScalebar;
   const limitScalebar = scaleBarWidthFactor === maxScaleBarWidthFactor;
   const padding = 4;
   return (
-    <Tooltip
-      title={
-        <div>
-          <div>Viewport Size:</div>
-          <div>{tooltip}</div>
-        </div>
-      }
+    <div
+      style={{
+        position: "absolute",
+        bottom: constants.SCALEBAR_OFFSET,
+        right: constants.SCALEBAR_OFFSET,
+        width: collapseScalebar ? 16 : `${scaleBarWidthFactor * 100}%`,
+        height: constants.SCALEBAR_HEIGHT - padding * 2,
+        background: "rgba(0, 0, 0, .3)",
+        color: "white",
+        textAlign: "center",
+        fontSize: 12,
+        lineHeight: "14px",
+        boxSizing: "content-box",
+        padding,
+      }}
+      className="scalebar"
     >
-      <div
-        style={{
-          position: "absolute",
-          bottom: constants.SCALEBAR_OFFSET,
-          right: constants.SCALEBAR_OFFSET,
-          width: collapseScalebar
-            ? 16
-            : `calc(${scaleBarWidthFactor * 100}% - ${Math.round(
-                ((2 * OUTER_CSS_BORDER) / constants.VIEWPORT_WIDTH) * 100,
-              )}% + ${2 * padding}px)`,
-          height: constants.SCALEBAR_HEIGHT - padding * 2,
-          background: "rgba(0, 0, 0, .3)",
-          color: "white",
-          textAlign: "center",
-          fontSize: 12,
-          lineHeight: "14px",
-          boxSizing: "content-box",
-          padding,
-        }}
-        className="scalebar"
+      <FastTooltip
+        html={`
+            <div>
+              <div>Viewport Size:</div>
+              <div>${tooltip}</div>
+            </div>
+          `}
       >
         <div
           style={{
@@ -99,10 +105,17 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
             borderRight: "1px solid",
           }}
         >
-          {collapseScalebar ? "i" : formatNumberToLength(scalebarWidthInNm)}
+          {collapseScalebar
+            ? "i"
+            : formatNumberToLength(
+                scalebarWidthInUnit,
+                LongUnitToShortUnitMap[voxelSizeUnit],
+                1,
+                true,
+              )}
         </div>
-      </div>
-    </Tooltip>
+      </FastTooltip>
+    </div>
   );
 }
 

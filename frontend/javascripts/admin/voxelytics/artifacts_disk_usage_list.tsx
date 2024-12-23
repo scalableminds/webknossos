@@ -1,10 +1,13 @@
-import React from "react";
+import type React from "react";
 import { Table } from "antd";
 import _ from "lodash";
 
-import { VoxelyticsArtifactConfig, VoxelyticsTaskConfigWithHierarchy } from "types/api_flow_types";
+import type {
+  VoxelyticsArtifactConfig,
+  VoxelyticsTaskConfigWithHierarchy,
+} from "types/api_flow_types";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
-import { ColumnsType } from "antd/lib/table";
+import type { ColumnsType } from "antd/lib/table";
 import { renderArtifactPath } from "./artifacts_view";
 import { localeCompareBy } from "libs/utils";
 
@@ -50,20 +53,19 @@ export default function DiskUsageList({
   }
 
   const dataSource = _.flatten(tasksWithHierarchy.map(taskToTableEntry));
-  const typeHint: Array<ArtifactTableEntry> = [];
 
   const columns: ColumnsType<ArtifactTableEntry> = [
     {
       title: "Task Name",
       dataIndex: "taskName",
       key: "taskName",
-      sorter: localeCompareBy(typeHint, (artifact: ArtifactTableEntry) => artifact.taskName),
+      sorter: localeCompareBy((artifact: ArtifactTableEntry) => artifact.taskName),
     },
     {
       title: "Artifact Name",
       dataIndex: "artifactName",
       key: "artifactName",
-      sorter: localeCompareBy(typeHint, (artifact: ArtifactTableEntry) => artifact.artifactName),
+      sorter: localeCompareBy((artifact: ArtifactTableEntry) => artifact.artifactName),
     },
     {
       title: "File Size",
@@ -83,7 +85,7 @@ export default function DiskUsageList({
       title: "Artifact Path",
       dataIndex: "filePathComponent",
       key: "filePath",
-      sorter: localeCompareBy(typeHint, (artifact: ArtifactTableEntry) => artifact.filePath),
+      sorter: localeCompareBy((artifact: ArtifactTableEntry) => artifact.filePath),
     },
   ];
   return <Table dataSource={dataSource} columns={columns} />;

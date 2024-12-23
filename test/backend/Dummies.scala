@@ -1,6 +1,7 @@
 package backend
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, VolumeTracing}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.geometry.{BoundingBoxProto, ColorProto, Vec3DoubleProto, Vec3IntProto}
@@ -10,15 +11,17 @@ object Dummies {
   val timestampLong = 123456789L
 
   def createDummyNode(id: Int): Node =
-    Node(id,
-         Vec3IntProto(id, id + 1, id + 2),
-         Vec3DoubleProto(id, id + 1, id + 2),
-         id.toFloat,
-         1,
-         10,
-         8,
-         id % 2 == 0,
-         timestamp)
+    Node(
+      id,
+      Vec3IntProto(id, id + 1, id + 2),
+      Vec3DoubleProto(id, id + 1, id + 2),
+      id.toFloat,
+      1,
+      10,
+      8,
+      id % 2 == 0,
+      timestamp
+    )
 
   val tree1: Tree = Tree(
     1,
@@ -30,7 +33,12 @@ object Dummies {
     "TestTree-1",
     timestamp,
     None,
-    Some(true)
+    Some(true),
+    metadata = Seq(
+      MetadataEntryProto("aKey", numberValue = Some(5.7)),
+      MetadataEntryProto("anotherKey", boolValue = Some(true)),
+      MetadataEntryProto("aThirdKey", stringListValue = Seq("multiple", "strings"))
+    )
   )
 
   val tree2: Tree = Tree(
@@ -46,8 +54,12 @@ object Dummies {
     Some(true)
   )
 
-  val treeGroup1: TreeGroup = TreeGroup("Axon 1", 1, Seq(TreeGroup("Blah", 3), TreeGroup("Blah 2", 4)))
-  val treeGroup2: TreeGroup = TreeGroup("Axon 2", 2)
+  val treeGroup1: TreeGroup = TreeGroup(
+    "Axon 1",
+    1,
+    Seq(TreeGroup("Blah", 3, Seq.empty, Some(false)), TreeGroup("Blah 2", 4, Seq.empty, Some(false))),
+    Some(true))
+  val treeGroup2: TreeGroup = TreeGroup("Axon 2", 2, Seq.empty, Some(true))
 
   val skeletonTracing: SkeletonTracing = SkeletonTracing(
     "dummy_dataset",

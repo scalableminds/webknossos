@@ -2,9 +2,11 @@ package controllers
 
 import play.silhouette.api.{LoginInfo, Silhouette}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import models.aimodels.{AiModel, AiModelCategory, AiModelDAO}
 import models.annotation.{TracingStore, TracingStoreDAO}
 import models.dataset._
 import models.folder.{Folder, FolderDAO, FolderService}
@@ -13,11 +15,11 @@ import models.task.{TaskType, TaskTypeDAO}
 import models.team._
 import models.user._
 import net.liftweb.common.{Box, Full}
-import play.api.libs.json.Json
-import utils.{ObjectId, StoreModules, WkConf}
+import play.api.libs.json.{JsArray, Json}
+import utils.{StoreModules, WkConf}
 
 import javax.inject.Inject
-import models.organization.{Organization, OrganizationDAO}
+import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import play.api.mvc.{Action, AnyContent}
 import security.{Token, TokenDAO, TokenType, WkEnv}
 
@@ -42,6 +44,7 @@ class InitialDataService @Inject()(userService: UserService,
                                    taskTypeDAO: TaskTypeDAO,
                                    dataStoreDAO: DataStoreDAO,
                                    folderDAO: FolderDAO,
+                                   aiModelDAO: AiModelDAO,
                                    folderService: FolderService,
                                    tracingStoreDAO: TracingStoreDAO,
                                    teamDAO: TeamDAO,
@@ -50,6 +53,7 @@ class InitialDataService @Inject()(userService: UserService,
                                    publicationDAO: PublicationDAO,
                                    organizationDAO: OrganizationDAO,
                                    storeModules: StoreModules,
+                                   organizationService: OrganizationService,
                                    conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
@@ -68,7 +72,6 @@ Samplecountry
   private val organizationTeamId = ObjectId.generate
   private val defaultOrganization =
     Organization(
-      ObjectId.generate,
       "sample_organization",
       additionalInformation,
       "/assets/images/logo.svg",
@@ -139,6 +142,19 @@ Samplecountry
     Some(
       "This is a wonderful dummy publication, it has authors, it has a link, it has a doi number, those could go here.\nLorem [ipsum](https://github.com/scalableminds/webknossos) dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.")
   )
+  private val defaultDataStore =
+    DataStore(conf.Datastore.name, conf.Http.uri, conf.Datastore.publicUri.getOrElse(conf.Http.uri), conf.Datastore.key)
+  private val defaultAiModel = AiModel(
+    ObjectId("66544a56d20000af0e42ba0f"),
+    defaultOrganization._id,
+    defaultDataStore.name,
+    defaultUser._id,
+    None,
+    List.empty,
+    "sample_ai_model",
+    Some("Works if model files are manually placed at binaryData/sample_organization/66544a56d20000af0e42ba0f/"),
+    Some(AiModelCategory.em_neurons)
+  )
 
   def insert: Fox[Unit] =
     for {
@@ -147,9 +163,10 @@ Samplecountry
       _ <- insertLocalDataStoreIfEnabled()
       _ <- insertLocalTracingStoreIfEnabled()
       _ <- assertInitialDataEnabled
-      _ <- assertNoOrganizationsPresent
+      _ <- organizationService.assertNoOrganizationsPresent
       _ <- insertRootFolder()
       _ <- insertOrganization()
+      _ <- createOrganizationDirectory()
       _ <- insertTeams()
       _ <- insertDefaultUser(defaultUserEmail, defaultMultiUser, defaultUser, isTeamManager = true)
       _ <- insertDefaultUser(defaultUserEmail2, defaultMultiUser2, defaultUser2, isTeamManager = false)
@@ -157,6 +174,7 @@ Samplecountry
       _ <- insertTaskType()
       _ <- insertProject()
       _ <- insertPublication()
+      _ <- insertAiModel()
     } yield ()
 
   private def assertInitialDataEnabled: Fox[Unit] =
@@ -164,16 +182,11 @@ Samplecountry
       _ <- bool2Fox(conf.WebKnossos.SampleOrganization.enabled) ?~> "initialData.notEnabled"
     } yield ()
 
-  def assertNoOrganizationsPresent: Fox[Unit] =
-    for {
-      organizations <- organizationDAO.findAll
-      _ <- bool2Fox(organizations.isEmpty) ?~> "initialData.organizationsNotEmpty"
-    } yield ()
-
   private def insertRootFolder(): Fox[Unit] =
     folderDAO.findOne(defaultOrganization._rootFolder).futureBox.flatMap {
       case Full(_) => Fox.successful(())
-      case _       => folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, folderService.defaultRootName))
+      case _ =>
+        folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, folderService.defaultRootName, JsArray.empty))
     }
 
   private def insertDefaultUser(userEmail: String,
@@ -217,7 +230,7 @@ Samplecountry
 
   private def insertOrganization(): Fox[Unit] =
     organizationDAO
-      .findOneByName(defaultOrganization.name)
+      .findOne(defaultOrganization._id)
       .futureBox
       .flatMap {
         case Full(_) => Fox.successful(())
@@ -270,16 +283,18 @@ Samplecountry
     } else Fox.successful(())
   }
 
+  private def insertAiModel(): Fox[Unit] = aiModelDAO.findAll.flatMap { aiModels =>
+    if (aiModels.isEmpty) {
+      aiModelDAO.insertOne(defaultAiModel)
+    } else Fox.successful(())
+  }
+
   def insertLocalDataStoreIfEnabled(): Fox[Unit] =
     if (storeModules.localDataStoreEnabled) {
       dataStoreDAO.findOneByUrl(conf.Http.uri).futureBox.flatMap { maybeStore =>
         if (maybeStore.isEmpty) {
           logger.info("Inserting local datastore")
-          dataStoreDAO.insertOne(
-            DataStore(conf.Datastore.name,
-                      conf.Http.uri,
-                      conf.Datastore.publicUri.getOrElse(conf.Http.uri),
-                      conf.Datastore.key))
+          dataStoreDAO.insertOne(defaultDataStore)
         } else Fox.successful(())
       }
     } else Fox.successful(())
@@ -325,4 +340,7 @@ Samplecountry
         }
       }
     } else Fox.successful(())
+
+  private def createOrganizationDirectory(): Fox[Unit] =
+    organizationService.createOrganizationDirectory(defaultOrganization._id, RpcTokenHolder.webknossosToken) ?~> "organization.directoryCreation.failed"
 }

@@ -20,7 +20,8 @@ case class CreateTreeSkeletonAction(id: Int,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None,
                                     `type`: Option[TreeType] = None,
-                                    edgesAreVisible: Option[Boolean])
+                                    edgesAreVisible: Option[Boolean] = None,
+                                    metadata: Option[Seq[MetadataEntry]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
@@ -36,7 +37,8 @@ case class CreateTreeSkeletonAction(id: Int,
       groupId,
       isVisible,
       `type`.map(TreeType.toProto),
-      edgesAreVisible
+      edgesAreVisible,
+      metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
     )
     tracing.withTrees(newTree +: tracing.trees)
   }
@@ -73,7 +75,8 @@ case class UpdateTreeSkeletonAction(id: Int,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None,
-                                    `type`: Option[TreeType] = None)
+                                    `type`: Option[TreeType] = None,
+                                    metadata: Option[Seq[MetadataEntry]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
@@ -85,7 +88,8 @@ case class UpdateTreeSkeletonAction(id: Int,
         comments = comments.map(convertComment),
         name = name,
         groupId = groupId,
-        `type` = `type`.map(TreeType.toProto)
+        `type` = `type`.map(TreeType.toProto),
+        metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
       )
 
     tracing.withTrees(mapTrees(tracing, id, treeTransform))
@@ -229,7 +233,7 @@ case class CreateNodeSkeletonAction(id: Int,
       rotationOrDefault,
       radius getOrElse NodeDefaults.radius,
       viewport getOrElse NodeDefaults.viewport,
-      resolution getOrElse NodeDefaults.resolution,
+      resolution getOrElse NodeDefaults.mag,
       bitDepth getOrElse NodeDefaults.bitDepth,
       interpolation getOrElse NodeDefaults.interpolation,
       createdTimestamp = timestamp,
@@ -274,7 +278,7 @@ case class UpdateNodeSkeletonAction(id: Int,
       rotationOrDefault,
       radius getOrElse NodeDefaults.radius,
       viewport getOrElse NodeDefaults.viewport,
-      resolution getOrElse NodeDefaults.resolution,
+      resolution getOrElse NodeDefaults.mag,
       bitDepth getOrElse NodeDefaults.bitDepth,
       interpolation getOrElse NodeDefaults.interpolation,
       createdTimestamp = timestamp,
@@ -596,7 +600,8 @@ object SkeletonUpdateAction {
       }
     }
 
-    def deserialize[T](json: JsValue, shouldTransformPositions: Boolean = false)(implicit tjs: Reads[T]): JsResult[T] =
+    private def deserialize[T](json: JsValue, shouldTransformPositions: Boolean = false)(
+        implicit tjs: Reads[T]): JsResult[T] =
       if (shouldTransformPositions)
         json.transform(positionTransform).get.validate[T]
       else

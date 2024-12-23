@@ -28,7 +28,7 @@ class WkorgProxyController @Inject()(ws: WSClient,
 
   def proxyPageOrMainView: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     if (matchesProxyPage(request)) {
-      ws.url(conf.Proxy.prefix + request.uri).get().map(resp => Ok(resp.bodyAsBytes.utf8String).as("text/html"))
+      ws.url(conf.Proxy.prefix + request.uri).get().map(resp => Ok(resp.bodyAsBytes.utf8String).as(resp.contentType))
     } else {
       for {
         multiUserOpt <- Fox.runOptional(request.identity)(user =>

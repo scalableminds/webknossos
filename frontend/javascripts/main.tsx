@@ -1,16 +1,14 @@
 import { Provider } from "react-redux";
-import React from "react";
-import ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 import window, { document } from "libs/window";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import UnthrottledStore, { startSagas } from "oxalis/store";
 import { message } from "antd";
 
 import { getActiveUser, checkAnyOrganizationExists, getOrganization } from "admin/admin_rest_api";
-import { googleAnalyticsLogClicks } from "oxalis/model/helpers/analytics";
 import { load as loadFeatureToggles } from "features";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
+import { setHasOrganizationsAction, setThemeAction } from "oxalis/model/actions/ui_actions";
 import ErrorHandling from "libs/error_handling";
 import Router from "router";
 import Store from "oxalis/throttled_store";
@@ -27,6 +25,10 @@ import Model from "oxalis/model";
 import { setupApi } from "oxalis/api/internal_api";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
 import checkBrowserFeatures from "libs/browser_feature_check";
+import { RootForFastTooltips } from "components/fast_tooltip";
+
+import "../stylesheets/main.less";
+import GlobalThemeProvider, { getThemeFromUser } from "theme";
 
 // Suppress warning emitted by Olvy because it tries to eagerly initialize
 window.OlvyConfig = null;
@@ -39,7 +41,7 @@ startSagas(rootSaga);
 const reactQueryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      cacheTime: Infinity,
+      cacheTime: Number.POSITIVE_INFINITY,
     },
   },
 });
@@ -52,12 +54,13 @@ const localStoragePersister = createSyncStoragePersister({
 });
 
 async function loadActiveUser() {
-  // Try to retreive the currently active user if logged in
+  // Try to retrieve the currently active user if logged in
   try {
     const user = await getActiveUser({
       showErrorToast: false,
     });
     Store.dispatch(setActiveUserAction(user));
+    Store.dispatch(setThemeAction(getThemeFromUser(user)));
     ErrorHandling.setCurrentUser(user);
     persistQueryClient({
       queryClient: reactQueryClient,
@@ -93,14 +96,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     throwAssertions: false,
   });
   message.config({ top: 30 });
-  document.addEventListener("click", googleAnalyticsLogClicks);
   checkBrowserFeatures();
   await Promise.all([loadFeatureToggles(), loadActiveUser(), loadHasOrganizations()]);
   await Promise.all([loadOrganization()]);
   const containerElement = document.getElementById("main-container");
 
   if (containerElement) {
-    ReactDOM.render(
+    const react_root = createRoot(containerElement);
+    react_root.render(
       <ErrorBoundary>
         {/* @ts-ignore */}
         <Provider store={Store}>
@@ -110,12 +113,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         The fix is inspired by:
         https://github.com/frontend-collective/react-sortable-tree/blob/9aeaf3d38b500d58e2bcc1d9b6febce12f8cc7b4/stories/barebones-no-context.js */}
             <DndProvider backend={HTML5Backend}>
-              <Router />
+              <GlobalThemeProvider>
+                <RootForFastTooltips />
+                <Router />
+              </GlobalThemeProvider>
             </DndProvider>
           </QueryClientProvider>
         </Provider>
       </ErrorBoundary>,
-      containerElement,
     );
   }
 });

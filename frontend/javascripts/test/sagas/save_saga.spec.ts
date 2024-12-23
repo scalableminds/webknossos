@@ -8,6 +8,7 @@ import mockRequire from "mock-require";
 import test from "ava";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import { expectValueDeepEqual } from "../helpers/sagaHelpers";
+import { UnitLong } from "oxalis/constants";
 
 const TIMESTAMP = 1494695001688;
 const DateMock = {
@@ -31,7 +32,7 @@ const tracingId = "1234567890";
 const initialState = {
   dataset: {
     dataSource: {
-      scale: [5, 5, 5],
+      scale: { factor: [5, 5, 5], unit: UnitLong.nm },
     },
   },
   task: {
@@ -94,7 +95,7 @@ test("SaveSaga should send update actions", (t) => {
     saga.next({
       forcePush: SaveActions.saveNowAction(),
     }),
-    put(setSaveBusyAction(true, TRACING_TYPE)),
+    put(setSaveBusyAction(true, TRACING_TYPE, tracingId)),
   );
 
   saga.next(); // advance to next select state
@@ -102,7 +103,7 @@ test("SaveSaga should send update actions", (t) => {
   expectValueDeepEqual(t, saga.next(saveQueue), call(sendRequestToServer, TRACING_TYPE, tracingId));
   saga.next(saveQueue.length); // select state
 
-  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, TRACING_TYPE)));
+  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, TRACING_TYPE, tracingId)));
 
   // Test that loop repeats
   saga.next(); // select state
@@ -129,6 +130,7 @@ test("SaveSaga should send request to server", (t) => {
       method: "POST",
       data: saveQueueWithVersions,
       compress: false,
+      showErrorToast: false,
     }),
   );
 });
@@ -146,6 +148,7 @@ test("SaveSaga should retry update actions", (t) => {
       method: "POST",
       data: saveQueueWithVersions,
       compress: false,
+      showErrorToast: false,
     },
   );
   const saga = sendRequestToServer(TRACING_TYPE, tracingId);
@@ -186,6 +189,7 @@ test("SaveSaga should escalate on permanent client error update actions", (t) =>
       method: "POST",
       data: saveQueueWithVersions,
       compress: false,
+      showErrorToast: false,
     }),
   );
   saga.throw({
@@ -224,7 +228,7 @@ test("SaveSaga should send update actions right away and try to reach a state wh
 
   saga.next(1); // advance to select state
 
-  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, TRACING_TYPE)));
+  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, TRACING_TYPE, tracingId)));
 });
 test("SaveSaga should not try to reach state with all actions being saved when saving is triggered by a timeout", (t) => {
   const updateActions = [[UpdateActions.createEdge(1, 0, 1)], [UpdateActions.createEdge(1, 1, 2)]];
@@ -243,7 +247,7 @@ test("SaveSaga should not try to reach state with all actions being saved when s
 
   saga.next(saveQueue); // call sendRequestToServer
 
-  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, TRACING_TYPE)));
+  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, TRACING_TYPE, tracingId)));
 });
 test("SaveSaga should remove the correct update actions", (t) => {
   const saveQueue = createSaveQueueFromUpdateActions(

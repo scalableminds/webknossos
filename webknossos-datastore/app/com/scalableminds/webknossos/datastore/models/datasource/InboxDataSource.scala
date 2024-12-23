@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
-import com.scalableminds.util.geometry.Vec3Double
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
 
@@ -9,12 +9,13 @@ package object inbox {
   trait GenericInboxDataSource[+T <: DataLayerLike] {
 
     def id: DataSourceId
+    def withUpdatedId(newId: DataSourceId): GenericInboxDataSource[T]
 
     def toUsable: Option[GenericDataSource[T]]
 
     def isUsable: Boolean = toUsable.isDefined
 
-    def scaleOpt: Option[Vec3Double]
+    def voxelSizeOpt: Option[VoxelSize]
 
     def statusOpt: Option[String]
 
@@ -37,16 +38,18 @@ package object inbox {
 
   case class UnusableDataSource[+T <: DataLayerLike](id: DataSourceId,
                                                      status: String,
-                                                     scale: Option[Vec3Double] = None,
+                                                     scale: Option[VoxelSize] = None,
                                                      existingDataSourceProperties: Option[JsValue] = None)
       extends GenericInboxDataSource[T] {
     val toUsable: Option[GenericDataSource[T]] = None
 
-    val scaleOpt: Option[Vec3Double] = scale
+    val voxelSizeOpt: Option[VoxelSize] = scale
 
     val statusOpt: Option[String] = Some(status)
 
     val defaultViewConfiguration: Option[DatasetViewConfiguration] = None
+
+    def withUpdatedId(newId: DataSourceId): UnusableDataSource[T] = copy(id = newId)
   }
 
   object UnusableDataSource {

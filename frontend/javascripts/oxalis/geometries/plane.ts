@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import _ from "lodash";
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Store from "oxalis/store";
@@ -47,10 +47,10 @@ class Plane {
     this.displayCrosshair = true;
     this.lastScaleFactors = [-1, -1];
     // VIEWPORT_WIDTH means that the plane should be that many voxels wide in the
-    // dimension with the highest resolution. In all other dimensions, the plane
+    // dimension with the highest mag. In all other dimensions, the plane
     // is smaller in voxels, so that it is squared in nm.
     // --> scaleInfo.baseVoxel
-    const baseVoxelFactors = getBaseVoxelFactors(Store.getState().dataset.dataSource.scale);
+    const baseVoxelFactors = getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale);
     const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
     this.baseScaleVector = new THREE.Vector3(...scaleArray);
     this.createMeshes();
@@ -74,7 +74,7 @@ class Plane {
     for (let i = 0; i <= 1; i++) {
       crosshairGeometries.push(new THREE.BufferGeometry());
 
-      // prettier-ignore
+      // biome-ignore format: don't format array
       const crosshairVertices = new Float32Array([
         (-pWidth / 2) * i, (-pWidth / 2) * (1 - i), 0,
         -25 * i, -25 * (1 - i), 0,
@@ -140,12 +140,11 @@ class Plane {
   };
 
   setScale(xFactor: number, yFactor: number): void {
-    if (this.lastScaleFactors[0] !== xFactor || this.lastScaleFactors[1] !== yFactor) {
-      this.lastScaleFactors[0] = xFactor;
-      this.lastScaleFactors[1] = yFactor;
-    } else {
+    if (this.lastScaleFactors[0] === xFactor && this.lastScaleFactors[1] === yFactor) {
       return;
     }
+    this.lastScaleFactors[0] = xFactor;
+    this.lastScaleFactors[1] = yFactor;
 
     const scaleVec = new THREE.Vector3().multiplyVectors(
       new THREE.Vector3(xFactor, yFactor, 1),

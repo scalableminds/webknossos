@@ -1,7 +1,8 @@
 import type { Dispatch } from "redux";
-import { Layout, Tooltip } from "antd";
+import { Layout } from "antd";
 import { connect } from "react-redux";
-import FlexLayout, { TabNode, TabSetNode } from "flexlayout-react";
+import * as FlexLayout from "flexlayout-react";
+import type { BorderNode, TabNode, TabSetNode } from "flexlayout-react";
 import * as React from "react";
 import _ from "lodash";
 import features from "features";
@@ -27,7 +28,7 @@ import InputCatcher from "oxalis/view/input_catcher";
 import LayerSettingsTab from "oxalis/view/left-border-tabs/layer_settings_tab";
 import RecordingSwitch from "oxalis/view/recording_switch";
 import SegmentsView from "oxalis/view/right-border-tabs/segments_tab/segments_view";
-import SkeletonTabView from "oxalis/view/right-border-tabs/skeleton_tab_view";
+import SkeletonTabView from "oxalis/view/right-border-tabs/trees_tab/skeleton_tab_view";
 import Statusbar from "oxalis/view/statusbar";
 import type { OxalisState, BusyBlockingInfo, BorderOpenStatus } from "oxalis/store";
 import Store from "oxalis/store";
@@ -42,6 +43,7 @@ import {
 } from "./flex_layout_helper";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
 import BorderToggleButton from "../components/border_toggle_button";
+import FastTooltip from "components/fast_tooltip";
 
 const { Footer } = Layout;
 
@@ -205,10 +207,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   rebuildLayout() {
     const model = this.loadCurrentModel();
     this.updateToModelStateAndAdjustIt(model);
-    this.setState({
-      model,
-    });
-    setTimeout(this.onLayoutChange, 1);
+    this.setState({ model }, () => this.onLayoutChange());
 
     if (this.props.layoutName !== DEFAULT_LAYOUT_NAME) {
       sendAnalyticsEvent("load_custom_layout", {
@@ -347,7 +346,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         return (
           <InputCatcher
             busyBlockingInfo={busyBlockingInfo}
-            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
             viewportID={ArbitraryViews.arbitraryViewport}
           >
             {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
@@ -375,9 +373,9 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         model={model}
         factory={(...args) => this.layoutFactory(...args)}
         titleFactory={(renderedNode) => (
-          <Tooltip title={BorderTabs[renderedNode.getId()].description}>
+          <FastTooltip title={BorderTabs[renderedNode.getId()].description}>
             {renderedNode.getName()}{" "}
-          </Tooltip>
+          </FastTooltip>
         )}
         onModelChange={() => {
           // Update / inform parent layout about the changes.
@@ -459,12 +457,16 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'Element'.
         document.activeElement.blur();
       }
+      if (data?.node) {
+        const node = this.state.model.getNodeById(data.node);
+        if (node) {
+          const toggledViewportId = node.getChildren()[0].getId();
 
-      const toggledViewportId = this.state.model.getNodeById(data.node).getChildren()[0].getId();
-
-      if (toggledViewportId in OrthoViews) {
-        // @ts-ignore Typescript doesn't agree that toggledViewportId exists in OrthoViews
-        this.props.setActiveViewport(OrthoViews[toggledViewportId]);
+          if (toggledViewportId in OrthoViews) {
+            // @ts-ignore Typescript doesn't agree that toggledViewportId exists in OrthoViews
+            this.props.setActiveViewport(OrthoViews[toggledViewportId]);
+          }
+        }
       }
     }
 
@@ -495,10 +497,10 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   onRenderTabSet = (
-    tabSetNode: TabSetNode,
+    tabSetNode: TabSetNode | BorderNode,
     renderValues: {
       buttons: Array<React.ReactNode>;
-      headerContent: React.ReactNode;
+      headerContent?: React.ReactNode;
     },
   ) => {
     const { isTopMost, isRightMost } = getPositionStatusOf(tabSetNode);
@@ -557,7 +559,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
             factory={(...args) => this.layoutFactory(...args)}
             onModelChange={() => this.onLayoutChange()}
             onAction={this.onAction}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '(tabSetNode: TabSetNode, renderValues: {    ... Remove this comment to see the full error message
             onRenderTabSet={this.onRenderTabSet}
             onRenderTab={this.onRenderTab}
             classNameMapper={this.classNameMapper}

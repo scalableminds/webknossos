@@ -1,5 +1,5 @@
-import { AutoSizer } from "react-virtualized";
-import { Dropdown, MenuProps, Tag, Tree, TreeProps } from "antd";
+import AutoSizer from "react-virtualized-auto-sizer";
+import { Dropdown, type MenuProps, Tag, Tree, type TreeProps } from "antd";
 import React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
@@ -26,7 +26,7 @@ type SrcAndDstSynapse = BaseSynapse & {
   src: number;
   dst: number;
 };
-type DirectionCaptionsKeys = keyof typeof directionCaptions;
+export type DirectionCaptionsKeys = keyof typeof directionCaptions;
 export type Synapse = SrcSynapse | DstSynapse | SrcAndDstSynapse;
 export type Agglomerate = Record<DirectionCaptionsKeys, Array<number>>;
 export type ConnectomeData = {

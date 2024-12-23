@@ -1,21 +1,21 @@
 import {
+  ArrowRightOutlined,
+  CloseOutlined,
   DeleteOutlined,
+  DownloadOutlined,
   DownOutlined,
+  ExclamationCircleOutlined,
+  ExpandAltOutlined,
+  EyeInvisibleOutlined,
+  EyeOutlined,
   LoadingOutlined,
   PlusOutlined,
   ReloadOutlined,
-  SettingOutlined,
-  ExclamationCircleOutlined,
-  ArrowRightOutlined,
-  DownloadOutlined,
   SearchOutlined,
-  EyeInvisibleOutlined,
-  EyeOutlined,
-  CloseOutlined,
+  SettingOutlined,
+  ShrinkOutlined,
 } from "@ant-design/icons";
-import type RcTree from "rc-tree";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
-import { api, Model } from "oxalis/singletons";
 import {
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
@@ -25,34 +25,32 @@ import {
   Button,
   ConfigProvider,
   Divider,
-  Dropdown,
   Empty,
-  MenuProps,
   Modal,
   Popover,
   Select,
-  Tooltip,
-  Tree,
+  type MenuProps,
 } from "antd";
-import features from "features";
+import type { DataNode } from "antd/lib/tree";
+import { ChangeColorMenuItemContent } from "components/color_picker";
+import FastTooltip from "components/fast_tooltip";
 import Toast from "libs/toast";
-import _, { isNumber } from "lodash";
-import memoizeOne from "memoize-one";
+import { pluralize } from "libs/utils";
+import _, { isNumber, memoize } from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import { EMPTY_OBJECT, MappingStatusEnum } from "oxalis/constants";
-import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import {
   getMappingInfo,
-  getResolutionInfoOfVisibleSegmentationLayer,
+  getMaybeSegmentIndexAvailability,
+  getMagInfoOfVisibleSegmentationLayer,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import {
-  getAdditionalCoordinatesAsString,
-  getPosition,
-} from "oxalis/model/accessors/flycam_accessor";
+import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import {
   getActiveSegmentationTracing,
   getMeshesForCurrentAdditionalCoordinates,
+  getSegmentName,
+  getSelectedIds,
   getVisibleSegments,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -64,6 +62,7 @@ import {
   updateCurrentMeshFileAction,
   updateMeshVisibilityAction,
 } from "oxalis/model/actions/annotation_actions";
+import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
 import {
   setAdditionalCoordinatesAction,
   setPositionAction,
@@ -75,50 +74,70 @@ import {
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import {
   batchUpdateGroupsAndSegmentsAction,
-  removeSegmentAction,
   deleteSegmentDataAction,
+  removeSegmentAction,
   setActiveCellAction,
+  setExpandedSegmentGroupsAction,
+  setSelectedSegmentsOrGroupAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import type { MagInfo } from "oxalis/model/helpers/mag_info";
+import { api } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
-  Flycam,
   MeshInformation,
   OxalisState,
   Segment,
   SegmentGroup,
   SegmentMap,
+  TreeGroup,
   VolumeTracing,
 } from "oxalis/store";
 import Store from "oxalis/store";
+import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import {
-  SegmentHierarchyNode,
-  getBaseSegmentationName,
-} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
-import React, { Key } from "react";
-import { connect, useSelector } from "react-redux";
-import { AutoSizer } from "react-virtualized";
-import type { Dispatch } from "redux";
-import type { APIDataset, APIMeshFile, APISegmentationLayer, APIUser } from "types/api_flow_types";
-import DeleteGroupModalView from "../delete_group_modal_view";
 import {
+  getBaseSegmentationName,
+  type SegmentHierarchyNode,
+} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import type RcTree from "rc-tree";
+import React, { type Key } from "react";
+import { connect, useSelector } from "react-redux";
+import AutoSizer from "react-virtualized-auto-sizer";
+import type { Dispatch } from "redux";
+import type {
+  APIDataset,
+  APIMeshFile,
+  APISegmentationLayer,
+  APIUser,
+  MetadataEntryProto,
+} from "types/api_flow_types";
+import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
+import type { ValueOf } from "types/globals";
+import AdvancedSearchPopover from "../advanced_search_popover";
+import DeleteGroupModalView from "../delete_group_modal_view";
+import { ResizableSplitPane } from "../resizable_split_pane";
+import { ContextMenuContainer } from "../sidebar_context_menu";
+import {
+  additionallyExpandGroup,
+  createGroupToParentMap,
   createGroupToSegmentsMap,
   findParentIdForGroupId,
+  getExpandedGroups,
   getGroupByIdWithSubgroups,
+  getGroupNodeKey,
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
-import { ChangeColorMenuItemContent } from "components/color_picker";
-import { ItemType } from "antd/lib/menu/hooks/useItems";
-import { pluralize } from "libs/utils";
-import AdvancedSearchPopover from "../advanced_search_popover";
-import ButtonComponent from "oxalis/view/components/button_component";
+import { MetadataEntryTableRows } from "../metadata_table";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
-import { type AdditionalCoordinate } from "types/api_flow_types";
-import { DataNode } from "antd/lib/tree";
+import type { ItemType } from "antd/lib/menu/interface";
+import { InputWithUpdateOnBlur } from "oxalis/view/components/input_with_update_on_blur";
+import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
+
+const SCROLL_DELAY_MS = 50;
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -135,12 +154,12 @@ const segmentsTabId = "segment-list";
 type StateProps = {
   meshes: Record<number, MeshInformation>;
   dataset: APIDataset;
-  isJSONMappingEnabled: boolean;
   mappingInfo: ActiveMappingInfo;
-  flycam: Flycam;
-  hasVolumeTracing: boolean;
+  hasVolumeTracing: boolean | undefined;
+  isSegmentIndexAvailable: boolean | undefined;
   segments: SegmentMap | null | undefined;
   segmentGroups: Array<SegmentGroup>;
+  selectedIds: { segments: number[]; group: number | null };
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   activeVolumeTracing: VolumeTracing | null | undefined;
   allowUpdate: boolean;
@@ -152,7 +171,7 @@ type StateProps = {
   activeCellId: number | null | undefined;
   preferredQualityForMeshPrecomputation: number;
   preferredQualityForMeshAdHocComputation: number;
-  resolutionInfoOfVisibleSegmentationLayer: ResolutionInfo;
+  magInfoOfVisibleSegmentationLayer: MagInfo;
 };
 
 const mapStateToProps = (state: OxalisState): StateProps => {
@@ -173,17 +192,21 @@ const mapStateToProps = (state: OxalisState): StateProps => {
       ? getMeshesForCurrentAdditionalCoordinates(state, visibleSegmentationLayer?.name)
       : undefined;
 
+  const isSegmentIndexAvailable = getMaybeSegmentIndexAvailability(
+    state.dataset,
+    visibleSegmentationLayer?.name,
+  );
+
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
     meshes: meshesForCurrentAdditionalCoordinates || EMPTY_OBJECT, // satisfy ts
     dataset: state.dataset,
-    isJSONMappingEnabled:
-      mappingInfo.mappingStatus === MappingStatusEnum.ENABLED && mappingInfo.mappingType === "JSON",
     mappingInfo,
-    flycam: state.flycam,
     hasVolumeTracing: state.tracing.volumes.length > 0,
+    isSegmentIndexAvailable,
     segments,
     segmentGroups,
+    selectedIds: getCleanedSelectedSegmentsOrGroup(state),
     visibleSegmentationLayer,
     activeVolumeTracing,
     allowUpdate:
@@ -203,8 +226,16 @@ const mapStateToProps = (state: OxalisState): StateProps => {
       state.temporaryConfiguration.preferredQualityForMeshPrecomputation,
     preferredQualityForMeshAdHocComputation:
       state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
-    resolutionInfoOfVisibleSegmentationLayer: getResolutionInfoOfVisibleSegmentationLayer(state),
+    magInfoOfVisibleSegmentationLayer: getMagInfoOfVisibleSegmentationLayer(state),
   };
+};
+
+const getCleanedSelectedSegmentsOrGroup = (state: OxalisState) => {
+  const [cleanedSelectedIds, maybeUpdateStoreAction] = getSelectedIds(state);
+  if (maybeUpdateStoreAction != null) {
+    maybeUpdateStoreAction();
+  }
+  return cleanedSelectedIds;
 };
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
@@ -292,16 +323,17 @@ type DispatchProps = ReturnType<typeof mapDispatchToProps>;
 type Props = DispatchProps & StateProps;
 type State = {
   renamingCounter: number;
-  selectedIds: { segments: number[]; group: number | null };
   activeMeshJobId: string | null | undefined;
-  activeDropdownSegmentId: number | null | undefined;
-  activeDropdownGroupId: number | null | undefined;
   groupTree: SegmentHierarchyNode[];
   searchableTreeItemList: SegmentHierarchyNode[];
   prevProps: Props | null | undefined;
   groupToDelete: number | null | undefined;
-  areSegmentsInGroupVisible: { [groupId: number]: boolean };
+  groupsSegmentsVisibilityStateMap: {
+    [groupId: number]: { areSomeSegmentsVisible: boolean; areSomeSegmentsInvisible: boolean };
+  };
   activeStatisticsModalGroupId: number | null;
+  contextMenuPosition: [number, number] | null | undefined;
+  menu: MenuProps | null | undefined;
 };
 
 const formatMagWithLabel = (mag: Vector3, index: number) => {
@@ -319,16 +351,6 @@ const formatMeshFile = (meshFile: APIMeshFile | null | undefined): string | null
   return `${meshFile.meshFileName} (${meshFile.mappingName})`;
 };
 
-function _getMapIdFn(visibleSegmentationLayer: APISegmentationLayer | null | undefined) {
-  const dataLayer =
-    visibleSegmentationLayer != null ? Model.getLayerByName(visibleSegmentationLayer.name) : null;
-
-  const mapId = dataLayer != null ? (id: number) => dataLayer.cube.mapId(id) : (id: number) => id;
-  return mapId;
-}
-
-const getMapIdFn = memoizeOne(_getMapIdFn);
-
 function renderEmptyMeshFileSelect() {
   return (
     <Empty
@@ -337,6 +359,16 @@ function renderEmptyMeshFileSelect() {
     />
   );
 }
+
+const getExpandedKeys = (segmentGroups: TreeGroup[]) => {
+  return getExpandedGroups(segmentGroups).map((group) => getGroupNodeKey(group.groupId));
+};
+
+const getExpandedKeysWithRoot = memoize((segmentGroups: TreeGroup[]) => {
+  const expandedGroups = getExpandedKeys(segmentGroups);
+  expandedGroups.unshift(getGroupNodeKey(MISSING_GROUP_ID));
+  return expandedGroups;
+});
 
 function constructTreeData(
   groups: { name: string; groupId: number; children: SegmentGroup[] }[],
@@ -349,7 +381,7 @@ function constructTreeData(
     const treeNode: SegmentHierarchyNode = {
       ...group,
       title: group.name,
-      key: `group-${groupId}`,
+      key: getGroupNodeKey(groupId),
       id: groupId,
       type: "group",
       children: constructTreeData(group.children, groupToSegmentsMap).concat(
@@ -368,20 +400,27 @@ function constructTreeData(
   });
 }
 
+const rootGroup = {
+  name: "Root",
+  groupId: MISSING_GROUP_ID,
+  key: getGroupNodeKey(MISSING_GROUP_ID),
+  children: [],
+  isExpanded: true,
+};
+
 class SegmentsView extends React.Component<Props, State> {
   intervalID: ReturnType<typeof setTimeout> | null | undefined;
   state: State = {
     renamingCounter: 0,
-    selectedIds: { segments: [], group: null },
     activeMeshJobId: null,
-    activeDropdownSegmentId: null,
-    activeDropdownGroupId: null,
     groupTree: [],
     searchableTreeItemList: [],
     prevProps: null,
     groupToDelete: null,
-    areSegmentsInGroupVisible: {},
+    groupsSegmentsVisibilityStateMap: {},
     activeStatisticsModalGroupId: null,
+    contextMenuPosition: null,
+    menu: null,
   };
   tree: React.RefObject<RcTree>;
 
@@ -395,9 +434,16 @@ class SegmentsView extends React.Component<Props, State> {
       maybeFetchMeshFilesAction(this.props.visibleSegmentationLayer, this.props.dataset, false),
     );
 
-    if (features().jobsEnabled) {
+    if (
+      this.props.dataset.dataStore.jobsEnabled &&
+      this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+        APIJobType.COMPUTE_MESH_FILE,
+      )
+    ) {
       this.pollJobData();
     }
+
+    Store.dispatch(ensureSegmentIndexIsLoadedAction(this.props.visibleSegmentationLayer?.name));
   }
 
   componentDidUpdate(prevProps: Props) {
@@ -406,6 +452,26 @@ class SegmentsView extends React.Component<Props, State> {
         maybeFetchMeshFilesAction(this.props.visibleSegmentationLayer, this.props.dataset, false),
       );
     }
+
+    // Scroll to selected segment.
+    // The selection of the newly added segment, that wasn't in the segment list before,
+    // triggers this function. Technically the segment is now present in the tree due
+    // to the design in the volumetracing_saga, and it can also be found while debugging
+    // this class. But in the scrollTo function, the new segment isn't found right away
+    // in the tree data, thus the timeout is used as a work-around.
+
+    setTimeout(() => {
+      if (this.tree?.current == null) {
+        return;
+      }
+      if (
+        this.props.selectedIds.segments.length === 1 &&
+        prevProps.selectedIds.segments[0] !== this.props.selectedIds.segments[0]
+      ) {
+        const selectedId = this.props.selectedIds.segments[0];
+        this.tree.current.scrollTo({ key: `segment-${selectedId}` });
+      }
+    }, 100);
   }
 
   componentWillUnmount() {
@@ -413,6 +479,44 @@ class SegmentsView extends React.Component<Props, State> {
       clearTimeout(this.intervalID);
     }
   }
+
+  getExpandedGroupKeys = () => getExpandedKeysWithRoot(this.props.segmentGroups);
+
+  getKeysOfSubGroups = (groupId: number) => {
+    if (groupId !== MISSING_GROUP_ID) {
+      return getGroupByIdWithSubgroups(this.props.segmentGroups, groupId)
+        .filter((group) => group !== groupId)
+        .map((group) => getGroupNodeKey(group));
+    }
+    const allSegmentGroups = this.props.segmentGroups.flatMap((group) =>
+      getGroupByIdWithSubgroups(this.props.segmentGroups, group.groupId),
+    );
+    return allSegmentGroups.map((group) => getGroupNodeKey(group));
+  };
+
+  setExpandedGroupsFromArray = (expandedGroupsArray: Key[]) => {
+    if (this.props.visibleSegmentationLayer == null) return;
+    const expandedGroupSet = new Set(expandedGroupsArray as string[]);
+    Store.dispatch(
+      setExpandedSegmentGroupsAction(expandedGroupSet, this.props.visibleSegmentationLayer?.name),
+    );
+  };
+
+  setExpandedGroupsFromSet = (expandedGroupsSet: Set<string>) => {
+    if (this.props.visibleSegmentationLayer == null) return;
+    Store.dispatch(
+      setExpandedSegmentGroupsAction(expandedGroupsSet, this.props.visibleSegmentationLayer?.name),
+    );
+  };
+
+  collapseGroups = (groupsToCollapse: string[]) => {
+    if (this.props.visibleSegmentationLayer == null) return;
+    const newExpandedGroups = _.difference(this.getExpandedGroupKeys(), groupsToCollapse);
+    const expandedGroupSet = new Set(newExpandedGroups);
+    Store.dispatch(
+      setExpandedSegmentGroupsAction(expandedGroupSet, this.props.visibleSegmentationLayer.name),
+    );
+  };
 
   onSelectTreeItem = (
     keys: Key[],
@@ -439,14 +543,16 @@ class SegmentsView extends React.Component<Props, State> {
     // Windows / Mac single pick
     const ctrlPick: boolean = nativeEvent?.ctrlKey || nativeEvent?.metaKey;
 
-    let newSelectedKeys: Key[];
+    let newSelectedKeys: string[];
     if (ctrlPick) {
-      newSelectedKeys = keys;
+      newSelectedKeys = keys as string[];
     } else {
-      newSelectedKeys = [key];
+      newSelectedKeys = [key as string];
     }
-    const selectedIdsForCaseDistinction = this.getSegmentOrGroupIdsForKeys(keys);
+    const selectedIdsForCaseDistinction = this.getSegmentOrGroupIdsForKeys(keys as string[]);
     const selectedIdsForState = this.getSegmentOrGroupIdsForKeys(newSelectedKeys);
+    const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
+    if (visibleSegmentationLayer == null) return;
     if (
       selectedIdsForCaseDistinction.group != null &&
       selectedIdsForCaseDistinction.segments.length > 0
@@ -457,21 +563,37 @@ class SegmentsView extends React.Component<Props, State> {
           content: `You have ${selectedIdsForCaseDistinction.segments.length} selected segments. Do you really want to select this group?
         This will deselect all selected segments.`,
           onOk: () => {
-            this.setState({ selectedIds: { segments: [], group: selectedIdsForState.group } });
+            Store.dispatch(
+              setSelectedSegmentsOrGroupAction(
+                [],
+                selectedIdsForState.group,
+                visibleSegmentationLayer.name,
+              ),
+            );
           },
           onCancel() {},
         });
       } else {
-        // if only one segment is selected, select group without warning (and vice-versa) even though ctrl is pressed.
-        // this behaviour is imitated from the skeleton tab.
-        this.setState({ selectedIds: this.getSegmentOrGroupIdsForKeys([key]) });
+        // If only one segment is selected, select group without warning (and vice-versa) even though ctrl is pressed.
+        // This behaviour is imitated from the skeleton tab.
+        const selectedIds = this.getSegmentOrGroupIdsForKeys([key]);
+        Store.dispatch(
+          setSelectedSegmentsOrGroupAction(
+            selectedIds.segments,
+            selectedIds.group,
+            visibleSegmentationLayer.name,
+          ),
+        );
       }
       return;
     }
-
-    this.setState({
-      selectedIds: selectedIdsForState,
-    });
+    Store.dispatch(
+      setSelectedSegmentsOrGroupAction(
+        selectedIdsForState.segments,
+        selectedIdsForState.group,
+        visibleSegmentationLayer?.name,
+      ),
+    );
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
@@ -479,12 +601,10 @@ class SegmentsView extends React.Component<Props, State> {
     if (segments == null) {
       return { prevProps: nextProps };
     }
-    let updateStateObject;
+    let updateStateObject: Partial<State> | null = null;
     const groupToSegmentsMap = createGroupToSegmentsMap(segments);
-    const rootGroup = {
-      name: "Root",
-      groupId: MISSING_GROUP_ID,
-      key: MISSING_GROUP_ID,
+    const rootGroupWithChildren = {
+      ...rootGroup,
       children: segmentGroups,
     };
     if (
@@ -493,7 +613,7 @@ class SegmentsView extends React.Component<Props, State> {
     ) {
       // Insert the segments into the corresponding groups and create a
       // groupTree object that can be rendered using the antd Tree component
-      const generatedGroupTree = constructTreeData([rootGroup], groupToSegmentsMap);
+      const generatedGroupTree = constructTreeData([rootGroupWithChildren], groupToSegmentsMap);
 
       // Traverse the tree hierarchy so that we get a list of segments and groups
       // that is in the same order as the rendered tree. That way, cycling through
@@ -513,48 +633,49 @@ class SegmentsView extends React.Component<Props, State> {
       visitAllItems(generatedGroupTree, (item: SegmentHierarchyNode) => {
         searchableTreeItemList.push(item);
       });
-
-      const newSegmentIds = new Set(segments.map((segment) => segment.id));
-      const newGroupIds = new Set(segmentGroups.map((group) => group.groupId));
-      const oldSelectedGroupId = prevState.selectedIds.group;
       updateStateObject = {
         groupTree: generatedGroupTree,
         searchableTreeItemList,
         prevProps: nextProps,
-        selectedIds: {
-          // Ensure that the ids of previously selected segments are removed
-          // if these segments don't exist anymore.
-          segments: prevState.selectedIds.segments.filter((id) => newSegmentIds.has(id)),
-          group:
-            oldSelectedGroupId != null && newGroupIds.has(oldSelectedGroupId)
-              ? oldSelectedGroupId
-              : null,
-        },
       };
     }
     if (prevState.prevProps?.meshes !== meshes) {
-      // Derive the areSegmentsInGroupVisible state so that we know per group
-      // if it contains only visible elements. This is used to know whether "Show meshes" or
-      // "Hide meshes" context item should be shown.
-      // If any segment is invisible, set the visibility of the group to false, so that the preferred
-      // action is to make all meshes visible.
-      const newVisibleMap: { [groupId: number]: boolean } = {};
-      const segmentGroupsWithRoot = [...segmentGroups, rootGroup];
-      segmentGroupsWithRoot.forEach((group) => {
-        const segmentsOfGroup = groupToSegmentsMap[group.groupId];
-        if (segmentsOfGroup == null) return;
-        const isSomeSegmentLoadedAndInvisible = segmentsOfGroup.some((segment) => {
-          const segmentMesh = meshes[segment.id];
-          // Only regard loaded, but invisible meshes
-          return segmentMesh != null && !meshes[segment.id].isVisible;
-        });
+      const newVisibleMap: State["groupsSegmentsVisibilityStateMap"] = {};
 
-        newVisibleMap[group.groupId] = !isSomeSegmentLoadedAndInvisible;
-      });
+      const fillNewGroupsSegmentsVisibilityStateMap = (group: SegmentGroup) => {
+        group.children.forEach(fillNewGroupsSegmentsVisibilityStateMap);
+
+        const visibilityEntry = {
+          areSomeSegmentsVisible: group.children.some(
+            (childGroup) => newVisibleMap[childGroup.groupId].areSomeSegmentsVisible,
+          ),
+          areSomeSegmentsInvisible: group.children.some(
+            (childGroup) => newVisibleMap[childGroup.groupId].areSomeSegmentsInvisible,
+          ),
+        };
+
+        const segmentsOfGroup = groupToSegmentsMap[group.groupId];
+        if (segmentsOfGroup != null) {
+          segmentsOfGroup.some((segment) => {
+            const segmentMesh = meshes[segment.id];
+            // Only regard loaded, but invisible meshes
+            if (segmentMesh != null) {
+              visibilityEntry.areSomeSegmentsVisible ||= segmentMesh.isVisible;
+              visibilityEntry.areSomeSegmentsInvisible ||= !segmentMesh.isVisible;
+              return (
+                visibilityEntry.areSomeSegmentsInvisible && visibilityEntry.areSomeSegmentsVisible
+              );
+            }
+            return false;
+          });
+        }
+        newVisibleMap[group.groupId] = visibilityEntry;
+      };
+      fillNewGroupsSegmentsVisibilityStateMap(rootGroupWithChildren);
       return {
         ...updateStateObject, //may be null
         prevProps: nextProps,
-        areSegmentsInGroupVisible: newVisibleMap,
+        groupsSegmentsVisibilityStateMap: newVisibleMap,
       };
     }
     return {
@@ -608,16 +729,6 @@ class SegmentsView extends React.Component<Props, State> {
           break;
         }
 
-        case "MANUAL": {
-          Toast.info(
-            "The computation of a mesh file for this dataset didn't finish properly. The job will be handled by an admin shortly. Please check back here soon.",
-          );
-          this.setState({
-            activeMeshJobId: null,
-          });
-          break;
-        }
-
         default: {
           break;
         }
@@ -655,13 +766,17 @@ class SegmentsView extends React.Component<Props, State> {
       };
     }
 
-    if (!features().jobsEnabled) {
-      title = "Computation jobs are not enabled for this WEBKNOSSOS instance.";
+    if (
+      !this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+        APIJobType.COMPUTE_MESH_FILE,
+      )
+    ) {
+      title = "Mesh computation jobs are not enabled for this WEBKNOSSOS instance.";
     } else if (this.props.activeUser == null) {
       title = "Please log in to precompute the meshes of this dataset.";
-    } else if (!this.props.dataset.jobsEnabled) {
+    } else if (!this.props.dataset.dataStore.jobsEnabled) {
       title =
-        "Meshes Computation is not supported for datasets that are not natively hosted on the server. Upload your dataset directly to weknossos.org to enable this feature.";
+        "Meshes Computation is not supported for datasets that are not natively hosted on the server. Upload your dataset directly to webknossos.org to use this feature.";
     } else if (this.props.hasVolumeTracing) {
       title = this.props.visibleSegmentationLayer?.fallbackLayer
         ? "Meshes cannot be precomputed for volume annotations. However, you can open this dataset in view mode to precompute meshes for the dataset's segmentation layer."
@@ -681,9 +796,18 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   onSelectSegment = (segment: Segment) => {
-    this.setState({
-      selectedIds: { segments: [segment.id], group: null },
-    });
+    const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
+    if (visibleSegmentationLayer == null) {
+      Toast.info(
+        <React.Fragment>
+          Cannot select segment, because there is no visible segmentation layer.
+        </React.Fragment>,
+      );
+      return;
+    }
+    Store.dispatch(
+      setSelectedSegmentsOrGroupAction([segment.id], null, visibleSegmentationLayer.name),
+    );
 
     if (!segment.somePosition) {
       Toast.info(
@@ -700,36 +824,23 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
-  closeSegmentOrGroupDropdown = () => {
-    this.handleGroupDropdownMenuVisibility(false);
-    this.handleSegmentDropdownMenuVisibility(false);
-  };
-
-  handleSegmentDropdownMenuVisibility = (isVisible: boolean, segmentId: number | null = null) => {
-    const newActiveSegmentDropdown = isVisible ? segmentId : null;
-    this.setState({ activeDropdownSegmentId: newActiveSegmentDropdown });
-  };
-
-  handleGroupDropdownMenuVisibility = (isVisible: boolean, groupId: number | null = null) => {
-    const newActiveGroupDropdown = isVisible ? groupId : null;
-    this.setState({ activeDropdownGroupId: newActiveGroupDropdown });
-  };
-
   startComputingMeshfile = async () => {
     const {
       mappingInfo,
       preferredQualityForMeshPrecomputation,
-      resolutionInfoOfVisibleSegmentationLayer: resolutionInfo,
+      magInfoOfVisibleSegmentationLayer,
     } = this.props;
-    const defaultOrHigherIndex = resolutionInfo.getIndexOrClosestHigherIndex(
+    const defaultOrHigherIndex = magInfoOfVisibleSegmentationLayer.getIndexOrClosestHigherIndex(
       preferredQualityForMeshPrecomputation,
     );
-    const meshfileResolutionIndex =
+    const meshfileMagIndex =
       defaultOrHigherIndex != null
         ? defaultOrHigherIndex
-        : resolutionInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation);
-    const meshfileResolution = resolutionInfo.getResolutionByIndexWithFallback(
-      meshfileResolutionIndex,
+        : magInfoOfVisibleSegmentationLayer.getClosestExistingIndex(
+            preferredQualityForMeshPrecomputation,
+          );
+    const meshfileMag = magInfoOfVisibleSegmentationLayer.getMagByIndexWithFallback(
+      meshfileMagIndex,
       null,
     );
 
@@ -748,10 +859,9 @@ class SegmentsView extends React.Component<Props, State> {
           : undefined;
 
       const job = await startComputeMeshFileJob(
-        this.props.organization,
-        this.props.datasetName,
+        this.props.dataset.id,
         getBaseSegmentationName(this.props.visibleSegmentationLayer),
-        meshfileResolution,
+        meshfileMag,
         maybeMappingName,
       );
       this.setState({
@@ -782,36 +892,32 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
-  handleQualityChangeForPrecomputation = (resolutionIndex: number) =>
-    Store.dispatch(
-      updateTemporarySettingAction("preferredQualityForMeshPrecomputation", resolutionIndex),
-    );
+  handleQualityChangeForPrecomputation = (magIndex: number) =>
+    Store.dispatch(updateTemporarySettingAction("preferredQualityForMeshPrecomputation", magIndex));
 
-  handleQualityChangeForAdHocGeneration = (resolutionIndex: number) =>
+  handleQualityChangeForAdHocGeneration = (magIndex: number) =>
     Store.dispatch(
-      updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", resolutionIndex),
+      updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", magIndex),
     );
 
   getAdHocMeshSettings = () => {
-    const {
-      preferredQualityForMeshAdHocComputation,
-      resolutionInfoOfVisibleSegmentationLayer: resolutionInfo,
-    } = this.props;
+    const { preferredQualityForMeshAdHocComputation, magInfoOfVisibleSegmentationLayer: magInfo } =
+      this.props;
     return (
       <div>
-        <Tooltip title="The higher the quality, the more computational resources are required">
+        <FastTooltip title="The higher the quality, the more computational resources are required">
           <div>Quality for Ad-Hoc Mesh Computation:</div>
-        </Tooltip>
+        </FastTooltip>
         <Select
           size="small"
           style={{
             width: 220,
           }}
-          value={resolutionInfo.getClosestExistingIndex(preferredQualityForMeshAdHocComputation)}
+          value={magInfo.getClosestExistingIndex(preferredQualityForMeshAdHocComputation)}
           onChange={this.handleQualityChangeForAdHocGeneration}
         >
-          {resolutionInfo
-            .getResolutionsWithIndices()
+          {magInfo
+            .getMagsWithIndices()
             .map(([log2Index, mag]: [number, Vector3], index: number) => (
               <Option value={log2Index} key={log2Index}>
                 {formatMagWithLabel(mag, index)}
@@ -824,10 +930,8 @@ class SegmentsView extends React.Component<Props, State> {
 
   getPreComputeMeshesPopover = () => {
     const { disabled, title } = this.getPrecomputeMeshesTooltipInfo();
-    const {
-      preferredQualityForMeshPrecomputation,
-      resolutionInfoOfVisibleSegmentationLayer: resolutionInfo,
-    } = this.props;
+    const { preferredQualityForMeshPrecomputation, magInfoOfVisibleSegmentationLayer: magInfo } =
+      this.props;
     return (
       <div
         style={{
@@ -844,9 +948,9 @@ class SegmentsView extends React.Component<Props, State> {
 
         <div>
           <div>
-            <Tooltip title="The higher the quality, the more computational resources are required">
+            <FastTooltip title="The higher the quality, the more computational resources are required">
               Quality for Mesh Precomputation:
-            </Tooltip>
+            </FastTooltip>
           </div>
 
           <Select
@@ -854,11 +958,11 @@ class SegmentsView extends React.Component<Props, State> {
             style={{
               width: 220,
             }}
-            value={resolutionInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation)}
+            value={magInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation)}
             onChange={this.handleQualityChangeForPrecomputation}
           >
-            {resolutionInfo
-              .getResolutionsWithIndices()
+            {magInfo
+              .getMagsWithIndices()
               .map(([log2Index, mag]: [number, Vector3], index: number) => (
                 <Option value={log2Index} key={log2Index}>
                   {formatMagWithLabel(mag, index)}
@@ -874,7 +978,7 @@ class SegmentsView extends React.Component<Props, State> {
             marginTop: 16,
           }}
         >
-          <Tooltip title={title}>
+          <FastTooltip title={title}>
             <Button
               size="large"
               loading={this.state.activeMeshJobId != null}
@@ -884,7 +988,7 @@ class SegmentsView extends React.Component<Props, State> {
             >
               Precompute Meshes
             </Button>
-          </Tooltip>
+          </FastTooltip>
         </div>
       </div>
     );
@@ -892,8 +996,11 @@ class SegmentsView extends React.Component<Props, State> {
 
   getMeshesHeader = () => (
     <>
-      <Tooltip title="Select a mesh file from which precomputed meshes will be loaded.">
-        <ConfigProvider renderEmpty={renderEmptyMeshFileSelect}>
+      <FastTooltip title="Select a mesh file from which precomputed meshes will be loaded.">
+        <ConfigProvider
+          renderEmpty={renderEmptyMeshFileSelect}
+          theme={{ cssVar: { key: "antd-app-theme" } }}
+        >
           <Select
             style={{
               width: 180,
@@ -906,7 +1013,7 @@ class SegmentsView extends React.Component<Props, State> {
             onChange={this.handleMeshFileSelected}
             size="small"
             loading={this.props.availableMeshFiles == null}
-            dropdownMatchSelectWidth={false}
+            popupMatchSelectWidth={false}
           >
             {this.props.availableMeshFiles ? (
               this.props.availableMeshFiles.map((meshFile: APIMeshFile) => (
@@ -921,8 +1028,8 @@ class SegmentsView extends React.Component<Props, State> {
             )}
           </Select>
         </ConfigProvider>
-      </Tooltip>
-      <Tooltip title="Refresh list of available Mesh files">
+      </FastTooltip>
+      <FastTooltip title="Refresh list of available Mesh files">
         <ReloadOutlined
           key="refresh"
           onClick={() =>
@@ -937,25 +1044,26 @@ class SegmentsView extends React.Component<Props, State> {
           style={{
             marginLeft: 8,
           }}
+          className="icon-margin-right"
         >
           Reload from Server
         </ReloadOutlined>
-      </Tooltip>
-      <Popover content={this.getPreComputeMeshesPopover} trigger="click" placement="bottom">
-        <Tooltip title="Add a precomputed mesh file">
-          <PlusOutlined />
-        </Tooltip>
-      </Popover>
+      </FastTooltip>
+      <FastTooltip title="Add a precomputed mesh file">
+        <Popover content={this.getPreComputeMeshesPopover} trigger="click" placement="bottom">
+          <PlusOutlined className="icon-margin-right" />
+        </Popover>
+      </FastTooltip>
       {this.state.activeMeshJobId != null ? (
-        <Tooltip title='A mesh file is currently being computed. See "Processing Jobs" for more information.'>
-          <LoadingOutlined />
-        </Tooltip>
+        <FastTooltip title='A mesh file is currently being computed. See "Processing Jobs" for more information.'>
+          <LoadingOutlined className="icon-margin-right" />
+        </FastTooltip>
       ) : null}
-      <Tooltip title="Configure ad-hoc mesh computation">
+      <FastTooltip title="Configure ad-hoc mesh computation">
         <Popover content={this.getAdHocMeshSettings} trigger="click" placement="bottom">
           <SettingOutlined />
         </Popover>
-      </Tooltip>
+      </FastTooltip>
     </>
   );
 
@@ -975,14 +1083,7 @@ class SegmentsView extends React.Component<Props, State> {
   getSetGroupColorMenuItem = (groupId: number | null): ItemType => {
     return {
       key: "changeGroupColor",
-      icon: (
-        <i
-          className="fas fa-eye-dropper fa-sm fa-icon fa-fw"
-          style={{
-            cursor: "pointer",
-          }}
-        />
-      ),
+      icon: <i className="fas fa-eye-dropper fa-sm fa-icon fa-fw" />,
       label: (
         <ChangeColorMenuItemContent
           title="Change Segment Color"
@@ -994,7 +1095,6 @@ class SegmentsView extends React.Component<Props, State> {
             this.setGroupColor(groupId, color);
           }}
           rgb={this.getColorOfFirstSegmentOrGrey(groupId)}
-          hidePickerIcon // because the spacing differs from other items in the list, so set it manually
         />
       ),
     };
@@ -1004,14 +1104,7 @@ class SegmentsView extends React.Component<Props, State> {
     const title = "Reset Segment Color";
     return {
       key: "resetGroupColor",
-      icon: (
-        <i
-          className="fas fa-undo"
-          style={{
-            cursor: "pointer",
-          }}
-        />
-      ),
+      icon: <i className="fas fa-undo" />,
       label: (
         <div
           title={title}
@@ -1020,7 +1113,7 @@ class SegmentsView extends React.Component<Props, State> {
               return;
             }
             this.setGroupColor(groupId, null);
-            this.closeSegmentOrGroupDropdown();
+            this.hideContextMenu();
           }}
         >
           Reset Segment Color
@@ -1040,7 +1133,7 @@ class SegmentsView extends React.Component<Props, State> {
               return;
             }
             this.handleRemoveSegmentsFromList(groupId);
-            this.closeSegmentOrGroupDropdown();
+            this.hideContextMenu();
           }}
         >
           Remove Segments From List
@@ -1070,7 +1163,7 @@ class SegmentsView extends React.Component<Props, State> {
             }
             this.handleLoadMeshesAdHoc(groupId);
             this.getToastForMissingPositions(groupId);
-            this.closeSegmentOrGroupDropdown();
+            this.hideContextMenu();
           }}
         >
           Compute Meshes (ad hoc)
@@ -1080,17 +1173,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getShowSegmentStatistics = (id: number): ItemType => {
-    const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
-    if (
-      visibleSegmentationLayer == null ||
-      !("fallbackLayer" in visibleSegmentationLayer) ||
-      visibleSegmentationLayer.fallbackLayer != null ||
-      !this.props.activeVolumeTracing?.hasSegmentIndex ||
-      this.props.flycam.additionalCoordinates != null // TODO change once statistics are available for nd-datasets
-    ) {
-      //in this case there is a fallback layer
-      return null;
-    }
+    if (!this.props.isSegmentIndexAvailable) return null;
     return {
       key: "segmentStatistics",
       label: (
@@ -1098,7 +1181,7 @@ class SegmentsView extends React.Component<Props, State> {
           <div
             onClick={() => {
               this.setState({ activeStatisticsModalGroupId: id });
-              this.handleGroupDropdownMenuVisibility(false);
+              this.hideContextMenu();
             }}
           >
             Show Segment Statistics
@@ -1122,7 +1205,7 @@ class SegmentsView extends React.Component<Props, State> {
             }
             this.handleLoadMeshesFromFile(groupId);
             this.getToastForMissingPositions(groupId);
-            this.closeSegmentOrGroupDropdown();
+            this.hideContextMenu();
           }}
         >
           Load Meshes (precomputed)
@@ -1140,7 +1223,7 @@ class SegmentsView extends React.Component<Props, State> {
             <div
               onClick={() => {
                 this.handleRefreshMeshes(groupId);
-                this.closeSegmentOrGroupDropdown();
+                this.hideContextMenu();
               }}
             >
               Refresh Meshes
@@ -1159,7 +1242,7 @@ class SegmentsView extends React.Component<Props, State> {
             <div
               onClick={() => {
                 this.handleRemoveMeshes(groupId);
-                this.closeSegmentOrGroupDropdown();
+                this.hideContextMenu();
               }}
             >
               Remove Meshes
@@ -1178,7 +1261,7 @@ class SegmentsView extends React.Component<Props, State> {
             <div
               onClick={() => {
                 this.downloadAllMeshesForGroup(groupId);
-                this.closeSegmentOrGroupDropdown();
+                this.hideContextMenu();
               }}
             >
               Download Meshes
@@ -1189,7 +1272,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getMoveSegmentsHereMenuItem = (groupId: number): ItemType => {
-    return this.state.selectedIds != null
+    return this.props.selectedIds != null
       ? {
           key: "moveHere",
           onClick: () => {
@@ -1198,64 +1281,70 @@ class SegmentsView extends React.Component<Props, State> {
               return;
             }
             this.props.updateSegments(
-              this.state.selectedIds.segments,
+              this.props.selectedIds.segments,
               { groupId },
               this.props.visibleSegmentationLayer.name,
               true,
             );
-            this.closeSegmentOrGroupDropdown();
+            this.hideContextMenu();
           },
           disabled: !this.props.allowUpdate,
           icon: <ArrowRightOutlined />,
-          label: `Move active ${pluralize("segment", this.state.selectedIds.segments.length)} here`,
+          label: `Move active ${pluralize("segment", this.props.selectedIds.segments.length)} here`,
         }
       : null;
   };
 
-  areSelectedSegmentsMeshesVisible = () => {
+  visibilityStateOfSelectedMeshes = (): ValueOf<State["groupsSegmentsVisibilityStateMap"]> => {
     const selectedSegments = this.getSelectedSegments();
     const meshes = this.props.meshes;
-    const isSomeMeshLoadedAndInvisible = selectedSegments.some((segment) => {
+    const areSomeSegmentsInvisible = selectedSegments.some((segment) => {
       const segmentMesh = meshes[segment.id];
       return segmentMesh != null && !meshes[segment.id].isVisible;
     });
-    // show "Hide meshes" if no mesh is loaded and invisible
-    return !isSomeMeshLoadedAndInvisible;
+    const areSomeSegmentsVisible = selectedSegments.some((segment) => {
+      const segmentMesh = meshes[segment.id];
+      return segmentMesh != null && !meshes[segment.id].isVisible;
+    });
+    return { areSomeSegmentsInvisible, areSomeSegmentsVisible };
   };
 
-  getShowMeshesMenuItem = (groupId: number | null): ItemType => {
-    let areGroupOrSelectedSegmentMeshesVisible: boolean =
+  maybeGetShowOrHideMeshesMenuItems = (groupId: number | null): ItemType[] => {
+    if (!this.doesGroupHaveAnyMeshes(groupId)) {
+      return [];
+    }
+    const { areSomeSegmentsInvisible, areSomeSegmentsVisible } =
       groupId == null
-        ? this.areSelectedSegmentsMeshesVisible()
-        : this.state.areSegmentsInGroupVisible[groupId]; //toggle between hide and show
-
-    const showHideMeshesLabel = areGroupOrSelectedSegmentMeshesVisible
-      ? { icon: <EyeInvisibleOutlined />, text: "Hide" }
-      : { icon: <EyeOutlined />, text: "Show" };
-    return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
-      ? {
-          key: "showMeshesOfGroup",
-          icon: showHideMeshesLabel.icon,
-          label: (
-            <div
-              onClick={() => {
-                if (this.props.visibleSegmentationLayer == null) {
-                  // Satisfy TS
-                  return;
-                }
-                this.handleChangeMeshVisibilityInGroup(
-                  this.props.visibleSegmentationLayer.name,
-                  groupId,
-                  !areGroupOrSelectedSegmentMeshesVisible,
-                );
-                this.closeSegmentOrGroupDropdown();
-              }}
-            >
-              {showHideMeshesLabel.text} Meshes
-            </div>
-          ),
-        }
-      : null;
+        ? this.visibilityStateOfSelectedMeshes()
+        : this.state.groupsSegmentsVisibilityStateMap[groupId];
+    const menuOptions: ItemType[] = [];
+    const changeVisibility = (isVisible: boolean) => {
+      if (this.props.visibleSegmentationLayer == null) {
+        // Satisfy TS
+        return;
+      }
+      this.handleChangeMeshVisibilityInGroup(
+        this.props.visibleSegmentationLayer.name,
+        groupId,
+        isVisible,
+      );
+      this.hideContextMenu();
+    };
+    if (areSomeSegmentsInvisible) {
+      menuOptions.push({
+        key: "showMeshes",
+        icon: <EyeOutlined />,
+        label: <div onClick={() => changeVisibility(true)}>Show Meshes</div>,
+      });
+    }
+    if (areSomeSegmentsVisible) {
+      menuOptions.push({
+        key: "hideMeshes",
+        icon: <EyeInvisibleOutlined />,
+        label: <div onClick={() => changeVisibility(false)}>Hide Meshes</div>,
+      });
+    }
+    return menuOptions;
   };
 
   setGroupColor(groupId: number | null, color: Vector3 | null) {
@@ -1290,9 +1379,7 @@ class SegmentsView extends React.Component<Props, State> {
       Store.dispatch(removeSegmentAction(segment.id, visibleSegmentationLayer.name)),
     );
     // manually reset selected segments
-    this.setState({
-      selectedIds: { segments: [], group: null },
-    });
+    Store.dispatch(setSelectedSegmentsOrGroupAction([], null, visibleSegmentationLayer.name));
   };
 
   handleRemoveMeshes = (groupId: number | null) => {
@@ -1310,7 +1397,8 @@ class SegmentsView extends React.Component<Props, State> {
     groupId: number | null,
     isVisible: boolean,
   ) => {
-    const { flycam, meshes } = this.props;
+    const { flycam } = Store.getState();
+    const { meshes } = this.props;
     const additionalCoordinates = flycam.additionalCoordinates;
     this.handlePerSegment(groupId, (segment) => {
       if (meshes[segment.id] != null) {
@@ -1322,13 +1410,11 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   handleLoadMeshesAdHoc = (groupId: number | null) => {
+    const { flycam } = Store.getState();
+
     this.handlePerSegment(groupId, (segment) => {
       if (segment.somePosition == null) return;
-      this.props.loadAdHocMesh(
-        segment.id,
-        segment.somePosition,
-        this.props.flycam.additionalCoordinates,
-      );
+      this.props.loadAdHocMesh(segment.id, segment.somePosition, flycam.additionalCoordinates);
     });
   };
 
@@ -1336,7 +1422,7 @@ class SegmentsView extends React.Component<Props, State> {
     const relevantSegments =
       groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
     if (relevantSegments == null) return [];
-    let segmentsWithoutPosition: number[] = relevantSegments
+    const segmentsWithoutPosition = relevantSegments
       .filter((segment) => segment.somePosition == null)
       .map((segment) => segment.id);
     return segmentsWithoutPosition.sort();
@@ -1345,34 +1431,34 @@ class SegmentsView extends React.Component<Props, State> {
   getSelectedSegments = (): Segment[] => {
     const allSegments = this.props.segments;
     if (allSegments == null) return [];
-    return this.state.selectedIds.segments.map((segmentId) => allSegments.get(segmentId));
+    return this.props.selectedIds.segments.map((segmentId) => allSegments.getOrThrow(segmentId));
   };
 
   getSelectedItemKeys = () => {
-    const mappedIdsToKeys = this.state.selectedIds.segments.map(
+    const mappedIdsToKeys = this.props.selectedIds.segments.map(
       (segmentId) => `segment-${segmentId}`,
     );
-    if (this.state.selectedIds.group != null) {
-      return mappedIdsToKeys.concat(`group-${this.state.selectedIds.group}`);
+    if (this.props.selectedIds.group != null) {
+      return mappedIdsToKeys.concat(getGroupNodeKey(this.props.selectedIds.group));
     }
     return mappedIdsToKeys;
   };
 
-  getSegmentOrGroupIdsForKeys = (segmentOrGroupKeys: Key[]) => {
-    let selectedIds: { segments: number[]; group: number | null } = { segments: [], group: null };
+  getSegmentOrGroupIdsForKeys = (segmentOrGroupKeys: string[]) => {
+    const selectedIds: { segments: number[]; group: number | null } = { segments: [], group: null };
+    const groupPrefix = "Group-";
     segmentOrGroupKeys.forEach((key) => {
-      const keyAsString = String(key);
-      if (keyAsString.startsWith("group-")) {
-        // Note that negative ids can be found here, which is why group- is used as a splitter
-        const idWithSign = keyAsString.split("group-")[1];
-        if (isNumber(parseInt(idWithSign))) {
-          selectedIds.group = parseInt(idWithSign);
+      if (key.startsWith(groupPrefix)) {
+        // Note that negative ids can be found here, which is why Group- is used as a splitter
+        const idWithSign = key.split(groupPrefix)[1];
+        if (isNumber(Number.parseInt(idWithSign))) {
+          selectedIds.group = Number.parseInt(idWithSign);
         }
-      } else if (keyAsString.startsWith("segment-")) {
+      } else if (key.startsWith("segment-")) {
         // there should be no negative segment IDs
-        const regexSplit = keyAsString.split("-");
-        if (isNumber(parseInt(regexSplit[1]))) {
-          selectedIds.segments.push(parseInt(regexSplit[1]));
+        const regexSplit = key.split("-");
+        if (isNumber(Number.parseInt(regexSplit[1]))) {
+          selectedIds.segments.push(Number.parseInt(regexSplit[1]));
         }
       }
     });
@@ -1501,48 +1587,106 @@ class SegmentsView extends React.Component<Props, State> {
     this.setState(({ renamingCounter }) => ({ renamingCounter: renamingCounter - 1 }));
   };
 
-  handleSearchSelect = (selectedElement: SegmentHierarchyNode) => {
+  maybeExpandParentGroup = (selectedElement: SegmentHierarchyNode) => {
     if (this.tree?.current == null) {
       return;
     }
-    this.tree.current.scrollTo({ key: selectedElement.key });
-    const isASegment = "color" in selectedElement;
-    if (isASegment) {
-      this.onSelectSegment(selectedElement);
+    const groupToExpand =
+      selectedElement.type === "segment"
+        ? selectedElement.groupId
+        : createGroupToParentMap(this.props.segmentGroups)[selectedElement.id];
+    const expandedGroups = additionallyExpandGroup(
+      this.props.segmentGroups,
+      groupToExpand,
+      getGroupNodeKey,
+    );
+    if (expandedGroups) {
+      this.setExpandedGroupsFromSet(expandedGroups);
     }
   };
 
-  getSegmentStatisticsModal = (groupId: number) => {
-    const segments = this.getSegmentsOfGroupRecursively(groupId);
-    const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
-    const hasNoFallbackLayer =
-      visibleSegmentationLayer != null &&
-      "fallbackLayer" in visibleSegmentationLayer &&
-      visibleSegmentationLayer.fallbackLayer == null;
-    if (
-      hasNoFallbackLayer &&
-      this.props.hasVolumeTracing &&
-      segments != null &&
-      segments.length > 0
-    ) {
-      const state = Store.getState();
-      const tracingId = this.props.activeVolumeTracing?.tracingId;
-      if (tracingId == null) return null;
-      const tracingStoreUrl = state.tracing.tracingStore.url;
-      return this.state.activeStatisticsModalGroupId === groupId ? (
-        <SegmentStatisticsModal
-          onCancel={() => {
-            this.setState({ activeStatisticsModalGroupId: null });
-          }}
-          visibleSegmentationLayer={visibleSegmentationLayer}
-          tracingId={tracingId}
-          tracingStoreUrl={tracingStoreUrl}
-          relevantSegments={segments}
-          parentGroup={groupId}
-          groupTree={this.state.searchableTreeItemList}
-        />
-      ) : null;
+  handleSearchSelect = (selectedElement: SegmentHierarchyNode) => {
+    this.maybeExpandParentGroup(selectedElement);
+    // As parent groups might still need to expand, we need to wait for this to finish.
+    setTimeout(() => {
+      if (this.tree.current) this.tree.current.scrollTo({ key: selectedElement.key });
+    }, SCROLL_DELAY_MS);
+    const isASegment = "color" in selectedElement;
+    if (isASegment) {
+      this.onSelectSegment(selectedElement);
+    } else {
+      if (this.props.visibleSegmentationLayer == null) return;
+      Store.dispatch(
+        setSelectedSegmentsOrGroupAction(
+          [],
+          selectedElement.id,
+          this.props.visibleSegmentationLayer?.name,
+        ),
+      );
     }
+  };
+
+  handleSelectAllMatchingSegments = (allMatches: SegmentHierarchyNode[]) => {
+    if (this.props.visibleSegmentationLayer == null) return;
+    const allMatchingSegmentIds = allMatches.map((match) => {
+      this.maybeExpandParentGroup(match);
+      return match.id;
+    });
+    Store.dispatch(
+      setSelectedSegmentsOrGroupAction(
+        allMatchingSegmentIds,
+        null,
+        this.props.visibleSegmentationLayer.name,
+      ),
+    );
+    setTimeout(() => {
+      this.tree.current?.scrollTo({ key: allMatches[0].key });
+    }, SCROLL_DELAY_MS);
+  };
+
+  getSegmentStatisticsModal = (groupId: number) => {
+    const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
+    if (visibleSegmentationLayer == null) {
+      return null;
+    }
+    if (this.state.activeStatisticsModalGroupId !== groupId) {
+      return null;
+    }
+    const segments = this.getSegmentsOfGroupRecursively(groupId);
+    if (segments == null || segments.length === 0) {
+      return null;
+    }
+    return (
+      <SegmentStatisticsModal
+        onCancel={() => {
+          this.setState({ activeStatisticsModalGroupId: null });
+        }}
+        visibleSegmentationLayer={visibleSegmentationLayer}
+        tracingId={this.props.activeVolumeTracing?.tracingId}
+        relevantSegments={segments}
+        parentGroup={groupId}
+        groupTree={this.state.searchableTreeItemList}
+      />
+    );
+  };
+
+  showContextMenuAt = (xPos: number, yPos: number, menu: MenuProps) => {
+    // On Windows the right click to open the context menu is also triggered for the overlay
+    // of the context menu. This causes the context menu to instantly close after opening.
+    // Therefore delay the state update to delay that the context menu is rendered. Thus
+    // the context overlay does not get the right click as an event and therefore does not close.
+    setTimeout(
+      () =>
+        this.setState({
+          contextMenuPosition: [xPos, yPos],
+          menu,
+        }),
+      0,
+    );
+  };
+
+  hideContextMenu = () => {
+    this.setState({ contextMenuPosition: null, menu: null });
   };
 
   render() {
@@ -1550,15 +1694,19 @@ class SegmentsView extends React.Component<Props, State> {
 
     return (
       <div id={segmentsTabId} className="padded-tab-content">
+        <ContextMenuContainer
+          hideContextMenu={this.hideContextMenu}
+          contextMenuPosition={this.state.contextMenuPosition}
+          menu={this.state.menu}
+          className="segment-list-context-menu-overlay"
+        />
         <DomVisibilityObserver targetId={segmentsTabId}>
           {(isVisibleInDom) => {
             if (!isVisibleInDom) return null;
-            const centeredSegmentId = getSegmentIdForPosition(getPosition(this.props.flycam));
             const allSegments = this.props.segments;
             const isSegmentHierarchyEmpty = !(
               allSegments?.size() || this.props.segmentGroups.length
             );
-            const mapId = getMapIdFn(this.props.visibleSegmentationLayer);
 
             if (!this.props.visibleSegmentationLayer) {
               return (
@@ -1572,17 +1720,19 @@ class SegmentsView extends React.Component<Props, State> {
             const doSelectedSegmentsHaveAnyMeshes = this.doesGroupHaveAnyMeshes(null);
             const multiSelectMenu = (): MenuProps => {
               return {
-                items: [
+                items: _.flatten([
                   this.getLoadMeshesFromFileMenuItem(null),
                   this.getComputeMeshesAdHocMenuItem(null),
-                  doSelectedSegmentsHaveAnyMeshes ? this.getShowMeshesMenuItem(null) : null,
+                  doSelectedSegmentsHaveAnyMeshes
+                    ? this.maybeGetShowOrHideMeshesMenuItems(null)
+                    : null,
                   doSelectedSegmentsHaveAnyMeshes ? this.getReloadMenuItem(null) : null,
                   doSelectedSegmentsHaveAnyMeshes ? this.getRemoveMeshesMenuItem(null) : null,
                   doSelectedSegmentsHaveAnyMeshes ? this.getDownLoadMeshesMenuItem(null) : null,
                   this.getSetGroupColorMenuItem(null),
                   this.getResetGroupColorMenuItem(null),
                   this.getRemoveFromSegmentListMenuItem(null),
-                ],
+                ]),
               };
             };
 
@@ -1591,16 +1741,13 @@ class SegmentsView extends React.Component<Props, State> {
                 const segment = treeItem;
                 return (
                   <SegmentListItem
+                    showContextMenuAt={this.showContextMenuAt}
+                    hideContextMenu={this.hideContextMenu}
                     key={segment.id}
-                    mapId={mapId}
                     segment={segment}
-                    centeredSegmentId={centeredSegmentId}
-                    selectedSegmentIds={this.state.selectedIds.segments}
-                    activeDropdownSegmentId={this.state.activeDropdownSegmentId}
+                    selectedSegmentIds={this.props.selectedIds.segments}
                     onSelectSegment={this.onSelectSegment}
-                    handleSegmentDropdownMenuVisibility={this.handleSegmentDropdownMenuVisibility}
                     mesh={this.props.meshes[segment.id]}
-                    isJSONMappingEnabled={this.props.isJSONMappingEnabled}
                     mappingInfo={this.props.mappingInfo}
                     activeCellId={this.props.activeCellId}
                     setHoveredSegmentId={this.props.setHoveredSegmentId}
@@ -1617,6 +1764,8 @@ class SegmentsView extends React.Component<Props, State> {
                     currentMeshFile={this.props.currentMeshFile}
                     onRenameStart={this.onRenameStart}
                     onRenameEnd={this.onRenameEnd}
+                    // TODO #7895: The line below causes SegmentItems to always rerender
+                    // if SegmentsView rerenders.
                     multiSelectMenu={multiSelectMenu()}
                     activeVolumeTracing={this.props.activeVolumeTracing}
                   />
@@ -1624,82 +1773,79 @@ class SegmentsView extends React.Component<Props, State> {
               } else {
                 const { id, name } = treeItem;
                 const isEditingDisabled = !this.props.allowUpdate;
-                const menu: MenuProps = {
-                  items: [
-                    {
-                      key: "create",
-                      onClick: () => {
-                        this.createGroup(id);
-                        this.closeSegmentOrGroupDropdown();
+                const onOpenContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
+                  event.preventDefault();
+                  const getMenu = (): MenuProps => ({
+                    items: _.flatten([
+                      {
+                        key: "create",
+                        onClick: () => {
+                          this.createGroup(id);
+                          this.hideContextMenu();
+                        },
+                        disabled: isEditingDisabled,
+                        icon: <PlusOutlined />,
+                        label: "Create new group",
                       },
-                      disabled: isEditingDisabled,
-                      icon: <PlusOutlined />,
-                      label: "Create new group",
-                    },
-                    {
-                      key: "delete",
-                      disabled: isEditingDisabled,
-                      onClick: () => {
-                        this.handleDeleteGroup(id);
-                        this.closeSegmentOrGroupDropdown();
+                      {
+                        key: "delete",
+                        disabled: isEditingDisabled,
+                        onClick: () => {
+                          this.handleDeleteGroup(id);
+                          this.hideContextMenu();
+                        },
+                        icon: <DeleteOutlined />,
+                        label: "Delete group",
                       },
-                      icon: <DeleteOutlined />,
-                      label: "Delete group",
-                    },
-                    this.getMoveSegmentsHereMenuItem(id),
-                    {
-                      key: "groupAndMeshActionDivider",
-                      label: <Divider style={{ marginBottom: 0, marginTop: 0 }} />,
-                      disabled: true,
-                    },
-                    this.getSetGroupColorMenuItem(id),
-                    this.getShowSegmentStatistics(id),
-                    this.getLoadMeshesFromFileMenuItem(id),
-                    this.getComputeMeshesAdHocMenuItem(id),
-                    this.getReloadMenuItem(id),
-                    this.getRemoveMeshesMenuItem(id),
-                    this.getShowMeshesMenuItem(id),
-                    this.getDownLoadMeshesMenuItem(id),
-                  ],
+                      this.getExpandSubgroupsItem(id),
+                      this.getCollapseSubgroupsItem(id),
+                      this.getMoveSegmentsHereMenuItem(id),
+                      {
+                        key: "groupAndMeshActionDivider",
+                        label: <Divider style={{ marginBottom: 0, marginTop: 0 }} />,
+                        disabled: true,
+                      },
+                      this.getSetGroupColorMenuItem(id),
+                      this.getShowSegmentStatistics(id),
+                      this.getLoadMeshesFromFileMenuItem(id),
+                      this.getComputeMeshesAdHocMenuItem(id),
+                      this.getReloadMenuItem(id),
+                      this.getRemoveMeshesMenuItem(id),
+                      this.maybeGetShowOrHideMeshesMenuItems(id),
+                      this.getDownLoadMeshesMenuItem(id),
+                    ]),
+                  });
+
+                  const [x, y] = getContextMenuPositionFromEvent(
+                    event,
+                    "segment-list-context-menu-overlay",
+                  );
+                  this.showContextMenuAt(x, y, getMenu());
                 };
 
                 // Make sure the displayed name is not empty
                 const displayableName = name?.trim() || "<Unnamed Group>";
+
                 return (
-                  <div>
-                    <Dropdown
-                      menu={menu}
-                      placement="bottom"
-                      // AutoDestroy is used to remove the menu from DOM and keep up the performance.
-                      // destroyPopupOnHide should also be an option according to the docs, but
-                      // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
-                      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
-                      autoDestroy
-                      open={this.state.activeDropdownGroupId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Group color" is rendered/positioned incorrectly
-                      onOpenChange={(isVisible) =>
-                        this.handleGroupDropdownMenuVisibility(isVisible, id)
-                      }
-                      trigger={["contextMenu"]}
-                    >
-                      <EditableTextLabel
-                        value={displayableName}
-                        label="Group Name"
-                        onChange={(name) => {
-                          if (this.props.visibleSegmentationLayer != null) {
-                            api.tracing.renameSegmentGroup(
-                              id,
-                              name,
-                              this.props.visibleSegmentationLayer.name,
-                            );
-                          }
-                        }}
-                        margin="0 5px"
-                        // The root group must not be removed or renamed
-                        disableEditing={!this.props.allowUpdate || id === MISSING_GROUP_ID}
-                        onRenameStart={this.onRenameStart}
-                        onRenameEnd={this.onRenameEnd}
-                      />
-                    </Dropdown>
+                  <div onContextMenu={onOpenContextMenu}>
+                    <EditableTextLabel
+                      value={displayableName}
+                      label="Group Name"
+                      onChange={(name) => {
+                        if (this.props.visibleSegmentationLayer != null) {
+                          api.tracing.renameSegmentGroup(
+                            id,
+                            name,
+                            this.props.visibleSegmentationLayer.name,
+                          );
+                        }
+                      }}
+                      margin="0 5px"
+                      // The root group must not be removed or renamed
+                      disableEditing={!this.props.allowUpdate || id === MISSING_GROUP_ID}
+                      onRenameStart={this.onRenameStart}
+                      onRenameEnd={this.onRenameEnd}
+                    />
                     {this.getSegmentStatisticsModal(id)}
                   </div>
                 );
@@ -1712,16 +1858,17 @@ class SegmentsView extends React.Component<Props, State> {
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.state.searchableTreeItemList}
-                    searchKey={(item) => item.name ?? `${item.id}` ?? ""}
+                    searchKey={(item) => getSegmentName(item)}
                     provideShortcut
                     targetId={segmentsTabId}
+                    onSelectAllMatches={this.handleSelectAllMatchingSegments}
                   >
                     <ButtonComponent
                       size="small"
                       title="Open the search via CTRL + Shift + F"
                       style={{ marginRight: 8 }}
                     >
-                      <SearchOutlined className="without-icon-margin" />
+                      <SearchOutlined />
                     </ButtonComponent>
                   </AdvancedSearchPopover>
                   {this.getMeshesHeader()}
@@ -1737,49 +1884,59 @@ class SegmentsView extends React.Component<Props, State> {
                       }`}
                     />
                   ) : (
-                    /* Without the default height, height will be 0 on the first render, leading to tree virtualization being disabled.
-                    This has a major performance impact. */
-                    <AutoSizer defaultHeight={500}>
-                      {({ height, width }) => (
-                        <div
-                          style={{
-                            height,
-                            width,
-                          }}
+                    <ResizableSplitPane
+                      firstChild={
+                        <AutoSizer
+                          // Without the default height, height will be 0 on the first render, leading
+                          // to tree virtualization being disabled. This has a major performance impact.
+                          defaultHeight={500}
                         >
-                          <Tree
-                            allowDrop={this.allowDrop}
-                            onDrop={this.onDrop}
-                            onSelect={this.onSelectTreeItem}
-                            defaultExpandAll
-                            className="segments-tree"
-                            blockNode
-                            // Passing an explicit height here, makes the tree virtualized
-                            height={height} // without virtualization, pass 0 here and/or virtual={false}
-                            draggable={{
-                              icon: false,
-                              nodeDraggable: () =>
-                                // Forbid renaming when segments or groups are being renamed,
-                                // since selecting text within the editable input box would not work
-                                // otherwise (instead, the item would be dragged).
-                                this.state.renamingCounter === 0 && this.props.allowUpdate,
-                            }}
-                            multiple
-                            showLine
-                            selectedKeys={this.getSelectedItemKeys()}
-                            switcherIcon={<DownOutlined />}
-                            treeData={this.state.groupTree}
-                            titleRender={titleRender}
-                            style={{
-                              marginTop: 12,
-                              flex: "1 1 auto",
-                              overflow: "auto", // use hidden when not using virtualization
-                            }}
-                            ref={this.tree}
-                          />
-                        </div>
-                      )}
-                    </AutoSizer>
+                          {({ height, width }) => (
+                            <div
+                              style={{
+                                height,
+                                width,
+                                overflow: "hidden",
+                              }}
+                            >
+                              <ScrollableVirtualizedTree
+                                allowDrop={this.allowDrop}
+                                onDrop={this.onDrop}
+                                onSelect={this.onSelectTreeItem}
+                                className="segments-tree"
+                                blockNode
+                                // Passing an explicit height here, makes the tree virtualized
+                                height={height} // without virtualization, pass 0 here and/or virtual={false}
+                                draggable={{
+                                  icon: false,
+                                  nodeDraggable: () =>
+                                    // Forbid renaming when segments or groups are being renamed,
+                                    // since selecting text within the editable input box would not work
+                                    // otherwise (instead, the item would be dragged).
+                                    this.state.renamingCounter === 0 && this.props.allowUpdate,
+                                }}
+                                multiple
+                                showLine
+                                selectedKeys={this.getSelectedItemKeys()}
+                                switcherIcon={<DownOutlined />}
+                                treeData={this.state.groupTree}
+                                titleRender={titleRender}
+                                style={{
+                                  marginTop: 12,
+                                  marginLeft: -26, // hide switcherIcon for root group
+                                  flex: "1 1 auto",
+                                  overflow: "auto", // use hidden when not using virtualization
+                                }}
+                                ref={this.tree}
+                                onExpand={this.setExpandedGroupsFromArray}
+                                expandedKeys={this.getExpandedGroupKeys()}
+                              />
+                            </div>
+                          )}
+                        </AutoSizer>
+                      }
+                      secondChild={this.renderDetailsForSelection()}
+                    />
                   )}
                 </div>
                 {groupToDelete !== null ? (
@@ -1799,6 +1956,119 @@ class SegmentsView extends React.Component<Props, State> {
         </DomVisibilityObserver>
       </div>
     );
+  }
+
+  renameActiveSegment = (newName: string) => {
+    if (this.props.visibleSegmentationLayer == null) {
+      return;
+    }
+    const { segments } = this.props.selectedIds;
+    if (segments.length !== 1) {
+      return;
+    }
+    const segment = this.props.segments?.getNullable(segments[0]);
+    if (segment == null) {
+      return;
+    }
+
+    this.props.updateSegment(
+      segment.id,
+      { name: newName },
+      this.props.visibleSegmentationLayer.name,
+      true,
+    );
+  };
+
+  renderDetailsForSelection() {
+    const { segments } = this.props.selectedIds;
+    if (segments.length === 1) {
+      const readOnly = !this.props.allowUpdate;
+      const segment = this.props.segments?.getNullable(segments[0]);
+      if (segment == null) {
+        return <>Cannot find details for selected segment.</>;
+      }
+      return (
+        <table className="metadata-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th colSpan={2}>{segment.id}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Name</td>
+              <td colSpan={2}>
+                <InputWithUpdateOnBlur
+                  value={segment.name || ""}
+                  onChange={this.renameActiveSegment}
+                />
+              </td>
+            </tr>
+            <MetadataEntryTableRows
+              item={segment}
+              setMetadata={this.setMetadata}
+              readOnly={readOnly}
+            />
+          </tbody>
+        </table>
+      );
+    }
+    return null;
+  }
+
+  setMetadata = (segment: Segment, newProperties: MetadataEntryProto[]) => {
+    if (this.props.visibleSegmentationLayer == null) {
+      return;
+    }
+    this.props.updateSegment(
+      segment.id,
+      {
+        metadata: newProperties,
+      },
+      this.props.visibleSegmentationLayer.name,
+      true,
+    );
+  };
+
+  getExpandSubgroupsItem(groupId: number) {
+    const children = this.getKeysOfSubGroups(groupId);
+    const expandedGroupsSet = new Set(this.getExpandedGroupKeys());
+    const areAllChildrenExpanded = children.every((childNode) => expandedGroupsSet.has(childNode));
+    const isGroupItselfExpanded = expandedGroupsSet.has(getGroupNodeKey(groupId));
+    if (areAllChildrenExpanded && isGroupItselfExpanded) {
+      return null;
+    }
+    return {
+      key: "expandAll",
+      onClick: () => {
+        const allExpandedGroups = children.concat(this.getExpandedGroupKeys());
+        if (!isGroupItselfExpanded) allExpandedGroups.push(getGroupNodeKey(groupId));
+        this.setExpandedGroupsFromArray(allExpandedGroups);
+        this.hideContextMenu();
+      },
+      icon: <ExpandAltOutlined />,
+      label: "Expand all subgroups",
+    };
+  }
+
+  getCollapseSubgroupsItem(groupId: number) {
+    const children = this.getKeysOfSubGroups(groupId);
+    const expandedKeySet = new Set(this.getExpandedGroupKeys());
+    const areAllChildrenCollapsed = children.every((childNode) => !expandedKeySet.has(childNode));
+    const isGroupItselfCollapsed = !expandedKeySet.has(getGroupNodeKey(groupId));
+    if (areAllChildrenCollapsed || isGroupItselfCollapsed) {
+      return null;
+    }
+    return {
+      key: "collapseAll",
+      onClick: () => {
+        this.collapseGroups(children);
+        this.hideContextMenu();
+      },
+      icon: <ShrinkOutlined />,
+      label: "Collapse all subgroups",
+    };
   }
 
   createGroup(parentGroupId: number): void {
@@ -1846,9 +2116,11 @@ class SegmentsView extends React.Component<Props, State> {
         : dropTargetGroupId;
     }
     if (dragNode.type === "segment") {
-      // A segment is being dropped onto/next to a segment or group.
+      // Segment(s) were dragged onto/next to a segment or group.
+      // It is possible to drag a segment that was not selected. In that case, the selected segments are moved as well.
+      const selectedSegmentIds = this.props.selectedIds.segments;
       this.props.updateSegments(
-        [dragNode.id],
+        [dragNode.id, ...selectedSegmentIds],
         { groupId: targetGroupId },
         this.props.visibleSegmentationLayer.name,
         true,

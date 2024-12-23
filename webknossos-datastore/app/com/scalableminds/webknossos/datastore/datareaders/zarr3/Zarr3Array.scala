@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReade
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import scala.collection.immutable.NumericRange
@@ -19,20 +20,22 @@ object Zarr3Array extends LazyLogging {
            layerName: String,
            axisOrderOpt: Option[AxisOrder],
            channelIndex: Option[Int],
+           additionalAxes: Option[Seq[AdditionalAxis]],
            sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[Zarr3Array] =
     for {
       headerBytes <- (path / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
         .readBytes() ?~> s"Could not read header at ${Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
       header <- JsonHelper.parseAndValidateJson[Zarr3ArrayHeader](headerBytes) ?~> "Could not parse array header"
-    } yield
-      new Zarr3Array(path,
-                     dataSourceId,
-                     layerName,
-                     header,
-                     axisOrderOpt.getOrElse(AxisOrder.asCxyzFromRank(header.rank)),
-                     channelIndex,
-                     None,
-                     sharedChunkContentsCache)
+      array <- tryo(
+        new Zarr3Array(path,
+                       dataSourceId,
+                       layerName,
+                       header,
+                       axisOrderOpt.getOrElse(AxisOrder.asCxyzFromRank(header.rank)),
+                       channelIndex,
+                       additionalAxes,
+                       sharedChunkContentsCache)) ?~> "Could not open zarr3 array"
+    } yield array
 }
 
 class Zarr3Array(vaultPath: VaultPath,
@@ -72,8 +75,8 @@ class Zarr3Array(vaultPath: VaultPath,
       case GzipCodecConfiguration(level)           => new GzipCodec(level)
       case ZstdCodecConfiguration(level, checksum) => new ZstdCodec(level, checksum)
       case Crc32CCodecConfiguration                => new Crc32CCodec
-      case ShardingCodecConfiguration(chunk_shape, codecs, index_codecs) =>
-        new ShardingCodec(chunk_shape, codecs, index_codecs)
+      case ShardingCodecConfiguration(chunk_shape, codecs, index_codecs, index_location) =>
+        new ShardingCodec(chunk_shape, codecs, index_codecs, index_location)
     }
     val shardingCodecOpt: Option[ShardingCodec] = outerCodecs.flatMap {
       case codec: ShardingCodec => Some(codec)
@@ -95,17 +98,14 @@ class Zarr3Array(vaultPath: VaultPath,
   private val parsedShardIndexCache: AlfuCache[VaultPath, Array[(Long, Long)]] = AlfuCache()
 
   private def shardShape =
-    header.outerChunkSize // Only valid for one hierarchy of sharding codecs, describes total voxel size of a shard
+    header.outerChunkShape // Only valid for one hierarchy of sharding codecs, describes total shape of a shard (in voxels)
   private def innerChunkShape =
-    header.chunkSize // Describes voxel size of a real chunk, that is a chunk that is stored in a shard
+    header.chunkShape // Describes shape (in voxels) of a real chunk, that is a chunk that is stored in a shard
   private def indexShape =
     shardShape.zip(innerChunkShape).map { case (s, ics) => s / ics } // Describes how many chunks are in a shard, i.e. in the index
 
   private lazy val chunksPerShard = indexShape.product
   private def shardIndexEntryLength = 16
-
-  private def checkSumLength = 4 // 32-bit checksum
-  private def getShardIndexSize = shardIndexEntryLength * chunksPerShard + checkSumLength
 
   private def getChunkIndexInShardIndex(chunkIndex: Array[Int], shardCoordinates: Array[Int]): Int = {
     val shardOffset = shardCoordinates.zip(indexShape).map { case (sc, is) => sc * is }
@@ -122,8 +122,22 @@ class Zarr3Array(vaultPath: VaultPath,
       parsed = parseShardIndex(shardIndexRaw)
     } yield parsed
 
+  private lazy val shardIndexChecksumLength =
+    shardingCodec match {
+      case Some(codec) =>
+        if (codec.index_codecs.exists(_.name == "crc32c")) Crc32CCodecConfiguration.checkSumByteLength
+        else 0
+      case None => 0
+    }
+  private def getShardIndexSize = shardIndexEntryLength * chunksPerShard + shardIndexChecksumLength
+
   private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext) =
-    shardPath.readLastBytes(getShardIndexSize)
+    shardingCodec match {
+      case Some(codec) if codec.index_location == IndexLocationSetting.start =>
+        shardPath.readBytes(Some(Range.Long(0, getShardIndexSize.toLong, 1)))
+      case Some(codec) if codec.index_location == IndexLocationSetting.end => shardPath.readLastBytes(getShardIndexSize)
+      case _                                                               => Fox.failure("No sharding codec found")
+    }
 
   private def parseShardIndex(index: Array[Byte]): Array[(Long, Long)] = {
     val decodedIndex = shardingCodec match {
@@ -146,10 +160,10 @@ class Zarr3Array(vaultPath: VaultPath,
 
   private def chunkIndexToShardIndex(chunkIndex: Array[Int]) =
     ChunkUtils.computeChunkIndices(
-      axisOrder.permuteIndicesReverse(header.datasetShape),
-      axisOrder.permuteIndicesReverse(header.outerChunkSize),
-      header.chunkSize,
-      chunkIndex.zip(header.chunkSize).map { case (i, s) => i * s }
+      header.datasetShape,
+      header.outerChunkShape,
+      header.chunkShape,
+      chunkIndex.zip(header.chunkShape).map { case (i, s) => i * s }
     )
 
   override protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(

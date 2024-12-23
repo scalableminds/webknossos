@@ -22,29 +22,10 @@ td.nowrap * {
 }
 
 .bordered {
-  border: 1px solid @border-color-base;
+  border: 1px solid var(--ant-color-border);
   border-radius: 4px;
   padding: 4px 11px;
   width: fit-content;
-}
-
-// Export antd color vars
-:root {
-  --ant-primary: @primary-color;
-  --ant-success: @success-color;
-  --ant-info: @info-color;
-  --ant-warning: @warning-color;
-  --ant-warning-dark-5: darken(@warning-color, 5%);
-  --ant-error: @error-color;
-  --ant-highlight: @highlight-color;
-  --ant-text: @text-color;
-  --ant-text-secondary: @text-color-secondary;
-  --ant-link: @link-color;
-  --ant-border-base: @border-color-base;
-  --ant-body-background: @body-background;
-  --ant-component-background: @component-background;
-  --ant-disabled: @disabled-color;
-  --ant-box-shadow-base: @box-shadow-base;
 }
 
 // Layout util classes
@@ -66,10 +47,10 @@ td.nowrap * {
 .centered-items {
   display: flex;
   flex-direction: row;
+  justify-content: center;
 
   & > * {
     margin: 6px;
-    font-size: 14;
   }
 
   &:first-child {
@@ -83,6 +64,18 @@ td.nowrap * {
 
 .pull-right {
   float: right !important;
+}
+
+.clearfix::before {
+  // sometimes required by .pull-right
+  display: table;
+  content: "";
+}
+.clearfix::after {
+  // sometimes required by .pull-right
+  display: table;
+  clear: both;
+  content: "";
 }
 
 .circle {
@@ -102,6 +95,13 @@ td.nowrap * {
 .flex-container {
   justify-content: space-between;
   display: flex;
+}
+
+.flex-center-child {
+  display: flex;
+  justify-content: center;
+  align-content: center;
+  flex-wrap: wrap;
 }
 
 .flex-item {
@@ -133,7 +133,7 @@ td.nowrap * {
 .background-organelles {
   height: 100%;
   min-height: calc(100vh - var(--navbar-height));
-  background: @background-blue-organelles;
+  background: var(--background-blue-organelles);
 }
 
 .full-viewport-height {
@@ -164,3 +164,30 @@ td.nowrap * {
   // vertical-align: -3px)
   vertical-align: 0;
 }
+
+
+.resizable-two-split-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .child-1 {
+    overflow-y: auto;
+    flex-grow: 1;
+  }
+
+  .resizable-divider {
+    padding: 2px 0 10px;
+    cursor: row-resize;
+
+    .ant-divider {
+      margin: 0;
+    }
+  }
+
+  .child-2 {
+    overflow-y: auto;
+    flex-shrink: 1;
+  }
+}
+

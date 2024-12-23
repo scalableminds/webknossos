@@ -224,6 +224,14 @@ const M4x4 = {
 
 const V2 = {
   ...BareV2,
+  // Component-wise minimum of two vectors.
+  min(vec1: Vector2, vec2: Vector2): Vector2 {
+    return [Math.min(vec1[0], vec2[0]), Math.min(vec1[1], vec2[1])];
+  },
+  // Component-wise maximum of two vectors.
+  max(vec1: Vector2, vec2: Vector2): Vector2 {
+    return [Math.max(vec1[0], vec2[0]), Math.max(vec1[1], vec2[1])];
+  },
   scale2(a: Vector2, k: Vector2, r?: Vector2Like): Vector2Like {
     if (r == null) r = new Float32Array(2);
     r[0] = a[0] * k[0];
@@ -239,11 +247,14 @@ const V2 = {
   isEqual(a: Vector2, b: Vector2) {
     return a[0] === b[0] && a[1] === b[1];
   },
+  clone(a: Vector2): Vector2 {
+    return [a[0], a[1]];
+  },
 };
 
 const _tmpVec: Vector3 = [0, 0, 0];
 
-// @ts-ignore TS claims that the implementation doesnt match the overloading
+// @ts-ignore TS claims that the implementation doesn't match the overloading
 function round(v: Vector3, r?: Vector3 | null | undefined): Vector3;
 function round(v: Vector3Like, r?: Float32Array | null | undefined) {
   if (r == null) {
@@ -256,7 +267,7 @@ function round(v: Vector3Like, r?: Float32Array | null | undefined) {
   return r;
 }
 
-// @ts-ignore TS claims that the implementation doesnt match the overloading
+// @ts-ignore TS claims that the implementation doesn't match the overloading
 function divide3(a: Vector3, k: Vector3, r?: Vector3): Vector3;
 function divide3(a: Float32Array, k: Float32Array, r?: Float32Array) {
   if (r == null) r = new Float32Array(3);
@@ -342,12 +353,12 @@ const V3 = {
     return [vec[0], vec[1], vec[2]];
   },
 
-  roundElementToResolution(vec: Vector3, resolution: Vector3, index: 0 | 1 | 2): Vector3 {
+  roundElementToMag(vec: Vector3, magnification: Vector3, index: 0 | 1 | 2): Vector3 {
     // Rounds the element at the position referenced by index so that it's divisible by the
-    // resolution element.
-    // For example: roundElementToResolution([11, 12, 13], [4, 4, 2], 2) == [11, 12, 12]
+    // mag element.
+    // For example: roundElementToMag([11, 12, 13], [4, 4, 2], 2) == [11, 12, 12]
     const res: Vector3 = [vec[0], vec[1], vec[2]];
-    res[index] = Math.floor(res[index] / resolution[index]) * resolution[index];
+    res[index] = Math.floor(res[index] / magnification[index]) * magnification[index];
     return res;
   },
   isEqual(a: Vector3, b: Vector3) {
@@ -361,6 +372,14 @@ const V3 = {
       roundFn(a[1] / mag[1]) * mag[1],
       roundFn(a[2] / mag[2]) * mag[2],
     ] as Vector3;
+  },
+
+  negate(a: Vector3) {
+    return [-a[0], -a[1], -a[2]] as Vector3;
+  },
+
+  prod(a: Vector3) {
+    return a[0] * a[1] * a[2];
   },
 };
 

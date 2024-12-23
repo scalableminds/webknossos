@@ -1,11 +1,11 @@
 import * as THREE from "three";
-import { OrthoView, OrthoViews, Vector3 } from "oxalis/constants";
+import { type OrthoView, OrthoViews, type Vector3 } from "oxalis/constants";
 import ResizableBuffer from "libs/resizable_buffer";
 import app from "app";
 import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
 import Dimensions from "oxalis/model/dimensions";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
+import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
 
 export const CONTOUR_COLOR_NORMAL = new THREE.Color(0x0000ff);
 export const CONTOUR_COLOR_DELETE = new THREE.Color(0xff0000);
@@ -111,15 +111,18 @@ export class ContourGeometry {
     this.connectingLine.geometry.computeBoundingSphere();
   }
 
-  getArea(scale: Vector3): number {
+  getArea(voxelSizeFactor: Vector3): number {
     // This algorithm is based on the Trapezoid formula for calculating the polygon area.
     // Source: https://www.mathopenref.com/coordpolygonarea2.html.
-    let accArea = 0;
+    let accAreaInUnit = 0;
     const pointCount = this.vertexBuffer.getLength();
     const points = this.vertexBuffer.getBuffer();
     let previousPointIndex = pointCount - 1;
     const dimIndices = Dimensions.getIndices(this.viewport);
-    const scaleVector = new THREE.Vector2(scale[dimIndices[0]], scale[dimIndices[1]]);
+    const scaleVector = new THREE.Vector2(
+      voxelSizeFactor[dimIndices[0]],
+      voxelSizeFactor[dimIndices[1]],
+    );
     for (let i = 0; i < pointCount; i++) {
       const start = new THREE.Vector2(
         points[previousPointIndex * 3 + dimIndices[0]],
@@ -129,10 +132,10 @@ export class ContourGeometry {
         points[i * 3 + dimIndices[0]],
         points[i * 3 + dimIndices[1]],
       ).multiply(scaleVector);
-      accArea += (start.x + end.x) * (start.y - end.y);
+      accAreaInUnit += (start.x + end.x) * (start.y - end.y);
       previousPointIndex = i;
     }
-    return Math.abs(accArea / 2);
+    return Math.abs(accAreaInUnit / 2);
   }
   hide() {
     this.line.visible = false;
@@ -176,7 +179,7 @@ export class QuickSelectGeometry {
     });
     this.rectangle = new THREE.Mesh(geometry, material);
 
-    const baseWidth = getBaseVoxel(Store.getState().dataset.dataSource.scale);
+    const baseWidth = getBaseVoxelInUnit(Store.getState().dataset.dataSource.scale.factor);
     const centerGeometry = new THREE.PlaneGeometry(baseWidth, baseWidth);
     const centerMaterial = new THREE.MeshBasicMaterial({
       color: this.centerMarkerColor,
@@ -219,7 +222,7 @@ export class QuickSelectGeometry {
 
   rotateToViewport() {
     const { activeViewport } = Store.getState().viewModeData.plane;
-    const { scale } = Store.getState().dataset.dataSource;
+    const { factor: scaleFactor } = Store.getState().dataset.dataSource.scale;
     const rotation = rotations[activeViewport];
     if (!rotation) {
       return;
@@ -229,7 +232,7 @@ export class QuickSelectGeometry {
     this.centerMarker.setRotationFromEuler(rotation);
     this.centerMarker.scale.copy(
       new THREE.Vector3(
-        ...Dimensions.transDim(scale.map((el) => 1 / el) as Vector3, activeViewport),
+        ...Dimensions.transDim(scaleFactor.map((el) => 1 / el) as Vector3, activeViewport),
       ),
     );
   }
@@ -410,22 +413,22 @@ export class LineMeasurementGeometry {
     app.vent.emit("rerender");
   }
 
-  getDistance(scale: Vector3): number {
-    const scaleVector = new THREE.Vector3(...scale);
+  getDistance(voxelSizeFactor: Vector3): number {
+    const scaleVector = new THREE.Vector3(...voxelSizeFactor);
     const points = this.vertexBuffer.getBuffer();
     const pointCount = this.vertexBuffer.getLength();
     if (pointCount < 2) {
       return 0;
     }
-    let accDistance = 0;
+    let accDistanceInUnit = 0;
     for (let i = 0; i < pointCount - 1; i++) {
       const start = new THREE.Vector3(...points.subarray(i * 3, (i + 1) * 3)).multiply(scaleVector);
       const end = new THREE.Vector3(...points.subarray((i + 1) * 3, (i + 2) * 3)).multiply(
         scaleVector,
       );
-      accDistance += start.distanceTo(end);
+      accDistanceInUnit += start.distanceTo(end);
     }
-    return accDistance;
+    return accDistanceInUnit;
   }
 
   updateForCam(orthoView: OrthoView) {

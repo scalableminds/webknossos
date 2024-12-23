@@ -5,29 +5,32 @@ import scala.language.postfixOps
 
 object BuildInfoSettings {
 
-  def getStdoutFromCommand(command: String, failureMsg: String): String = {
+  def getStdoutFromCommand(command: String, failureMsg: String): String =
     try {
       (command !!).trim
     } catch {
       case _: Throwable => failureMsg
     }
-  }
 
-  val ciBuild: String = if (System.getenv().containsKey("CIRCLE_BUILD_NUM")) System.getenv().get("CIRCLE_BUILD_NUM") else ""
+  val ciBuild: String =
+    if (System.getenv().containsKey("CIRCLE_BUILD_NUM")) System.getenv().get("CIRCLE_BUILD_NUM") else ""
   val ciTag: String = if (System.getenv().containsKey("CIRCLE_TAG")) System.getenv().get("CIRCLE_TAG") else ""
 
   def commitHash: String = getStdoutFromCommand("git rev-parse HEAD", "<getting commit hash failed>")
   def commitDate: String = getStdoutFromCommand("git log -1 --format=%cd ", "<getting git date failed>")
 
-  def webKnossosVersion: String = if (ciTag != "") ciTag else (if (ciBuild != "") ciBuild else "dev")
+  def webknossosVersion: String = if (ciTag != "") ciTag else (if (ciBuild != "") ciBuild else "dev")
 
   lazy val webknossosBuildInfoSettings = Seq(
-    buildInfoKeys := Seq[BuildInfoKey](name, scalaVersion, sbtVersion,
+    buildInfoKeys := Seq[BuildInfoKey](
+      name,
+      scalaVersion,
+      sbtVersion,
       "commitHash" -> commitHash,
       "commitDate" -> commitDate,
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
-      "version" -> webKnossosVersion,
+      "version" -> webknossosVersion,
       "datastoreApiVersion" -> "2.0"
     ),
     buildInfoPackage := "webknossos",
@@ -35,12 +38,15 @@ object BuildInfoSettings {
   )
 
   lazy val webknossosDatastoreBuildInfoSettings = Seq(
-    buildInfoKeys := Seq[BuildInfoKey](name, scalaVersion, sbtVersion,
+    buildInfoKeys := Seq[BuildInfoKey](
+      name,
+      scalaVersion,
+      sbtVersion,
       "commitHash" -> commitHash,
       "commitDate" -> commitDate,
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
-      "version" -> webKnossosVersion,
+      "version" -> webknossosVersion,
       "datastoreApiVersion" -> "2.0"
     ),
     buildInfoPackage := "webknossosDatastore",
@@ -48,13 +54,14 @@ object BuildInfoSettings {
   )
 
   lazy val webknossosTracingstoreBuildInfoSettings = Seq(
-    buildInfoKeys := Seq[BuildInfoKey](name, scalaVersion, sbtVersion,
-      "commitHash" -> commitHash,
-      "commitDate" -> commitDate,
-      "ciBuild" -> ciBuild,
-      "ciTag" -> ciTag,
-      "version" -> webKnossosVersion
-    ),
+    buildInfoKeys := Seq[BuildInfoKey](name,
+                                       scalaVersion,
+                                       sbtVersion,
+                                       "commitHash" -> commitHash,
+                                       "commitDate" -> commitDate,
+                                       "ciBuild" -> ciBuild,
+                                       "ciTag" -> ciTag,
+                                       "version" -> webknossosVersion),
     buildInfoPackage := "webknossosTracingstore",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)
   )

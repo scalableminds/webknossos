@@ -44,7 +44,7 @@ window._setupShaderEditor = (identifier, _shaderType) => {
         `,
   );
   input.addEventListener("keydown", (evt) => {
-    if ((evt.keyCode === 10 || evt.keyCode === 13) && evt.ctrlKey) {
+    if ((evt.keyCode === 10 || evt.keyCode === 13) && (evt.ctrlKey || event.metaKey)) {
       evt.preventDefault();
       overrideShader();
     }
@@ -76,8 +76,14 @@ window._setupShaderReporting = () => {
       }
       for (const line of args[0].split("\n")) {
         const maybeLineNum = line.split(":")[0];
-        if (!isNaN(parseInt(maybeLineNum))) {
-          linesByLineNum[maybeLineNum] = line;
+        if (!isNaN(Number.parseInt(maybeLineNum))) {
+          if (linesByLineNum[maybeLineNum] != null) {
+            // Sometimes errors appear in fragment as well as vertex shaders. Simply
+            // show both.
+            linesByLineNum[maybeLineNum] += "\nor:\n" + line;
+          } else {
+            linesByLineNum[maybeLineNum] = line;
+          }
         }
       }
 

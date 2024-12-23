@@ -3,7 +3,12 @@ version: "2.2"
 services:
   # Production
   webknossos:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - scalableminds/webknossos
+        - scalableminds/webknossos:${DEV_CACHE:-master}
     image: scalableminds/webknossos:${DOCKER_TAG:-master}
     ports:
       - "9000:9000"
@@ -196,7 +201,7 @@ services:
           -Ddatastore.redis.address=redis
           -Ddatastore.watchFileSystem.enabled=false"
     volumes:
-      - ./binaryData/Connectomics department:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
+      - ./binaryData/Organization_X:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
 
   screenshot-tests:
     image: scalableminds/puppeteer:master
@@ -217,7 +222,7 @@ services:
       POSTGRES_USER: webknossos_user
       POSTGRES_PASSWORD: secret_password
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1 -p 5432"]
+      test: ["CMD-SHELL", "pg_isready -d webknossos -U webknossos_user -h 127.0.0.1 -p 5432"]
       interval: 2s
       timeout: 5s
       retries: 30
@@ -264,7 +269,7 @@ services:
 
   # FossilDB
   fossildb:
-    image: scalableminds/fossildb:master__484
+    image: scalableminds/fossildb:master__504
     command:
       - fossildb
       - -c

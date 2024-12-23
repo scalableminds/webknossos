@@ -47,7 +47,7 @@ class DataVaultService @Inject()(ws: WSClient) extends LazyLogging {
       val fs: DataVault = if (scheme == DataVaultService.schemeGS) {
         GoogleCloudDataVault.create(remoteSource)
       } else if (scheme == DataVaultService.schemeS3) {
-        S3DataVault.create(remoteSource)
+        S3DataVault.create(remoteSource, ws)
       } else if (scheme == DataVaultService.schemeHttps || scheme == DataVaultService.schemeHttp) {
         HttpsDataVault.create(remoteSource, ws)
       } else if (scheme == DataVaultService.schemeFile) {

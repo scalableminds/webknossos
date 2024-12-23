@@ -2,9 +2,12 @@ import { location } from "libs/window";
 import Request from "libs/request";
 import * as Utils from "libs/utils";
 
+const MAX_TOKEN_RETRY_ATTEMPTS = 3;
+
 let tokenPromise: Promise<string>;
 
 let tokenRequestPromise: Promise<string> | null;
+let shouldUseURLToken: boolean = true;
 
 function requestUserToken(): Promise<string> {
   if (tokenRequestPromise) {
@@ -33,22 +36,36 @@ export function getSharingTokenFromUrlParameters(): string | null | undefined {
   return null;
 }
 
-export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number = 1): Promise<any> {
-  const sharingToken = getSharingTokenFromUrlParameters();
+export async function doWithToken<T>(
+  fn: (token: string) => Promise<T>,
+  tries: number = 1,
+  useURLTokenIfAvailable: boolean = true,
+): Promise<T> {
+  let token =
+    useURLTokenIfAvailable && shouldUseURLToken ? getSharingTokenFromUrlParameters() : null;
 
-  if (sharingToken != null) {
-    return fn(sharingToken);
+  if (token == null) {
+    tokenPromise = tokenPromise == null ? requestUserToken() : tokenPromise;
+  } else {
+    tokenPromise = Promise.resolve(token);
   }
 
-  if (!tokenPromise) tokenPromise = requestUserToken();
-  return tokenPromise.then(fn).catch((error) => {
+  return tokenPromise.then(fn).catch(async (error) => {
     if (error.status === 403) {
-      console.warn("Token expired. Requesting new token...");
+      console.warn(
+        `Token expired (attempt ${tries}/${MAX_TOKEN_RETRY_ATTEMPTS}). Requesting new token...`,
+      );
       tokenPromise = requestUserToken();
 
       // If three new tokens did not fix the 403, abort, otherwise we'll get into an endless loop here
-      if (tries < 3) {
-        return doWithToken(fn, tries + 1);
+      if (tries < MAX_TOKEN_RETRY_ATTEMPTS) {
+        // If using the url sharing token failed, we try the user specific token instead.
+        const result = await doWithToken(fn, tries + 1, false);
+        // Upon successful retry with own token, discard the url token.
+        if (useURLTokenIfAvailable) {
+          shouldUseURLToken = false;
+        }
+        return result;
       }
     }
 

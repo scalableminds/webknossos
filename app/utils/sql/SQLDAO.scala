@@ -1,15 +1,14 @@
 package utils.sql
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import slick.lifted.{AbstractTable, Rep, TableQuery}
-import utils.ObjectId
 
 import javax.inject.Inject
 import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
-
 import slick.jdbc.PostgresProfile.api._
 
 abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -47,7 +46,7 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
       case Some(r) =>
         parse(r) ?~> ("sql: could not parse database row for object" + id)
       case _ =>
-        Fox.failure("sql: could not find object " + id)
+        Fox.empty
     }.flatten
 
   @nowarn // suppress warning about unused implicit ctx, as it is used in subclasses
@@ -64,6 +63,16 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
       _ <- run(query.update(true))
     } yield ()
   }
+
+  def deleteOneWithNameSuffix(id: ObjectId, nameColumn: String = "name")(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertDeleteAccess(id)
+      deletedSuffix = s".deleted.at.${Instant.now.epochMillis}"
+      collectionToken = SqlToken.raw(collectionName)
+      nameColumnToken = SqlToken.raw(nameColumn)
+      _ <- run(
+        q"UPDATE $collectionToken SET isDeleted = TRUE, $nameColumnToken = CONCAT($nameColumnToken, $deletedSuffix) WHERE _id = $id".asUpdate)
+    } yield ()
 
   protected def updateStringCol(id: ObjectId, column: X => Rep[String], newValue: String)(
       implicit ctx: DBAccessContext): Fox[Unit] = {
@@ -84,15 +93,6 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(query.update(newValue))
-    } yield ()
-  }
-
-  protected def updateTimestampCol(id: ObjectId, column: X => Rep[java.sql.Timestamp], newValue: Instant)(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
-    val query = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
-    for {
-      _ <- assertUpdateAccess(id)
-      _ <- run(query.update(newValue.toSql))
     } yield ()
   }
 

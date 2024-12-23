@@ -178,11 +178,18 @@ class PullQueue {
   ): void {
     const bucket = this.cube.getBucket(bucketAddress);
 
-    if (bucket.type != "data") {
+    if (bucket.type !== "data") {
       return;
     }
-
-    bucket.receiveData(bucketData);
+    if (this.cube.shouldEagerlyMaintainUsedValueSet()) {
+      // If we assume that the value set of the bucket is needed often (for proofreading),
+      // we compute it here eagerly and then send the data to the bucket.
+      // That way, the computations of the value set are spread out over time instead of being
+      // clustered when DataCube.getValueSetForAllBuckets is called. This improves the FPS rate.
+      bucket.receiveData(bucketData, true);
+    } else {
+      bucket.receiveData(bucketData);
+    }
   }
 
   add(item: PullQueueItem): void {

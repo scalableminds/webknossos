@@ -10,7 +10,6 @@ object MarchingCubes {
                        dataDimensions: Vec3Int,
                        boundingBox: BoundingBox,
                        segmentId: T,
-                       subsamplingStrides: Vec3Double,
                        offset: Vec3Double,
                        scale: Vec3Double,
                        vertexBuffer: mutable.ArrayBuffer[Vec3Double]): Unit = {
@@ -52,7 +51,7 @@ object MarchingCubes {
 
       val position = Vec3Double(x, y, z)
       MarchingCubesTable.triangleTable(cubeIndex).foreach { edgeDelta =>
-        vertexBuffer += ((position + edgeDelta) * subsamplingStrides + offset) * scale
+        vertexBuffer += (position + edgeDelta + offset) * scale
       }
     }
   }

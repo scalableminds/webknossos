@@ -1,10 +1,11 @@
-import { Button, ButtonProps, Tooltip } from "antd";
+import { Button, type ButtonProps } from "antd";
 import * as React from "react";
 import _ from "lodash";
-import { TooltipPlacement } from "antd/lib/tooltip";
+import FastTooltip, { type FastTooltipPlacement } from "components/fast_tooltip";
+
 type ButtonComponentProp = ButtonProps & {
   faIcon?: string;
-  tooltipPlacement?: TooltipPlacement | undefined;
+  tooltipPlacement?: FastTooltipPlacement | undefined;
 };
 /*
  * A lightweight wrapper around <Button> to automatically blur the button
@@ -51,9 +52,9 @@ class ButtonComponent extends React.PureComponent<ButtonComponentProp> {
         </Button>
       );
     return title != null ? (
-      <Tooltip title={title} placement={tooltipPlacement}>
+      <FastTooltip title={title} placement={tooltipPlacement}>
         {button}
-      </Tooltip>
+      </FastTooltip>
     ) : (
       button
     );

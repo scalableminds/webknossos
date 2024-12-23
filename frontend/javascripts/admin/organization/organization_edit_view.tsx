@@ -1,6 +1,6 @@
-import React from "react";
+import { useState, useEffect } from "react";
 import { connect } from "react-redux";
-import { Form, Button, Card, Input, Row, FormInstance, Col, Skeleton, Typography } from "antd";
+import { Form, Button, Card, Input, Row, Col, Skeleton, Typography, Space } from "antd";
 import {
   MailOutlined,
   TagOutlined,
@@ -17,7 +17,7 @@ import {
   getPricingPlanStatus,
 } from "admin/admin_rest_api";
 import Toast from "libs/toast";
-import { APIOrganization, APIPricingPlanStatus } from "types/api_flow_types";
+import type { APIOrganization, APIPricingPlanStatus } from "types/api_flow_types";
 import {
   PlanAboutToExceedAlert,
   PlanDashboardCard,
@@ -35,51 +35,42 @@ type Props = {
   organization: APIOrganization;
 };
 
-type State = {
-  isFetchingData: boolean;
-  isDeleting: boolean;
-  activeUsersCount: number;
-  pricingPlanStatus: APIPricingPlanStatus | null;
+type FormValues = {
+  displayName: string;
+  newUserMailingList: string;
 };
 
-class OrganizationEditView extends React.PureComponent<Props, State> {
-  state: State = {
-    isFetchingData: false,
-    isDeleting: false,
-    activeUsersCount: 1,
-    pricingPlanStatus: null,
-  };
+const OrganizationEditView = ({ organization }: Props) => {
+  const [isFetchingData, setIsFetchingData] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [activeUsersCount, setActiveUsersCount] = useState(1);
+  const [pricingPlanStatus, setPricingPlanStatus] = useState<APIPricingPlanStatus | null>(null);
 
-  formRef = React.createRef<FormInstance>();
+  const [form] = Form.useForm<FormValues>();
 
-  componentDidMount() {
-    this.fetchData();
-  }
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  async fetchData() {
-    this.setState({
-      isFetchingData: true,
-    });
+  async function fetchData() {
+    setIsFetchingData(true);
     const [users, pricingPlanStatus] = await Promise.all([getUsers(), getPricingPlanStatus()]);
 
-    this.setState({
-      isFetchingData: false,
-      pricingPlanStatus,
-      activeUsersCount: getActiveUserCount(users),
-    });
+    setPricingPlanStatus(pricingPlanStatus);
+    setActiveUsersCount(getActiveUserCount(users));
+    setIsFetchingData(false);
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
-  onFinish = async (formValues) => {
+  async function onFinish(formValues: FormValues) {
     await updateOrganization(
-      this.props.organization.name,
+      organization.id,
       formValues.displayName,
       formValues.newUserMailingList,
     );
     Toast.success("Organization settings were saved successfully.");
-  };
+  }
 
-  handleDeleteButtonClicked = async (): Promise<void> => {
+  async function handleDeleteButtonClicked(): Promise<void> {
     const isDeleteConfirmed = await confirmAsync({
       title: "Danger Zone",
       content: (
@@ -95,7 +86,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
           <p>
             Deleting an organization{" "}
             <Typography.Text type="danger">cannot be undone</Typography.Text>. Are you certain you
-            want to delete the organization {this.props.organization.displayName}?
+            want to delete the organization {organization.name}?
           </p>
         </div>
       ),
@@ -105,177 +96,151 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     });
 
     if (isDeleteConfirmed) {
-      this.setState({
-        isDeleting: true,
-      });
-      await deleteOrganization(this.props.organization.name);
-      this.setState({
-        isDeleting: false,
-      });
+      setIsDeleting(true);
+      await deleteOrganization(organization.id);
+      setIsDeleting(false);
       window.location.replace(`${window.location.origin}/dashboard`);
     }
-  };
+  }
 
-  handleCopyNameButtonClicked = async (): Promise<void> => {
-    await navigator.clipboard.writeText(this.props.organization.name);
+  async function handleCopyNameButtonClicked(): Promise<void> {
+    await navigator.clipboard.writeText(organization.id);
     Toast.success("Copied organization name to the clipboard.");
-  };
+  }
 
-  render() {
-    if (this.state.isFetchingData || !this.props.organization || !this.state.pricingPlanStatus)
-      return (
-        <div
-          className="container"
-          style={{
-            paddingTop: 40,
-            margin: "auto",
-            maxWidth: 800,
-          }}
-        >
-          <Skeleton active />
-        </div>
-      );
+  const OrgaNameRegexPattern = /^[A-Za-z0-9\\-_\\. ß]+$/;
 
-    const OrgaNameRegexPattern = /^[A-Za-z0-9\\-_\\. ß]+$/;
-
+  if (isFetchingData || !organization || !pricingPlanStatus)
     return (
       <div
         className="container"
         style={{
-          paddingTop: 20,
+          paddingTop: 40,
           margin: "auto",
           maxWidth: 800,
         }}
       >
-        <Row style={{ color: "#aaa", fontSize: "12" }}>Your Organization</Row>
-        <Row style={{ marginBottom: 20 }}>
-          <h2>{this.props.organization.displayName}</h2>
-        </Row>
-        {this.state.pricingPlanStatus.isExceeded ? (
-          <PlanExceededAlert organization={this.props.organization} />
-        ) : null}
-        {this.state.pricingPlanStatus.isAlmostExceeded &&
-        !this.state.pricingPlanStatus.isExceeded ? (
-          <PlanAboutToExceedAlert organization={this.props.organization} />
-        ) : null}
-        <PlanDashboardCard
-          organization={this.props.organization}
-          activeUsersCount={this.state.activeUsersCount}
-        />
-        <PlanExpirationCard organization={this.props.organization} />
-        <PlanUpgradeCard organization={this.props.organization} />
-        <Card title="Settings" style={{ marginBottom: 20 }}>
-          <Form
-            onFinish={this.onFinish}
-            layout="vertical"
-            ref={this.formRef}
-            initialValues={{
-              displayName: this.props.organization.displayName,
-              newUserMailingList: this.props.organization.newUserMailingList,
-            }}
-          >
-            <FormItem label="Organization ID">
-              <Input.Group compact>
-                <Input
-                  prefix={<IdcardOutlined />}
-                  value={this.props.organization.name}
-                  style={{
-                    width: "calc(100% - 31px)",
-                  }}
-                  readOnly
-                  disabled
-                />
-                <Button
-                  onClick={this.handleCopyNameButtonClicked}
-                  icon={<CopyOutlined className="without-icon-margin" />}
-                />
-              </Input.Group>
-            </FormItem>
-            <FormItem label="Organization Owner">
+        <Skeleton active />
+      </div>
+    );
+
+  return (
+    <div
+      className="container"
+      style={{
+        paddingTop: 20,
+        margin: "auto",
+        maxWidth: 800,
+      }}
+    >
+      <Row style={{ color: "#aaa", fontSize: " 12" }}>Your Organization</Row>
+      <Row style={{ marginBottom: 20 }}>
+        <h2>{organization.name}</h2>
+      </Row>
+      {pricingPlanStatus.isExceeded ? <PlanExceededAlert organization={organization} /> : null}
+      {pricingPlanStatus.isAlmostExceeded && !pricingPlanStatus.isExceeded ? (
+        <PlanAboutToExceedAlert organization={organization} />
+      ) : null}
+      <PlanDashboardCard organization={organization} activeUsersCount={activeUsersCount} />
+      <PlanExpirationCard organization={organization} />
+      <PlanUpgradeCard organization={organization} />
+      <Card title="Settings" style={{ marginBottom: 20 }}>
+        <Form
+          form={form}
+          onFinish={onFinish}
+          layout="vertical"
+          initialValues={{
+            displayName: organization.name,
+            newUserMailingList: organization.newUserMailingList,
+          }}
+        >
+          <FormItem label="Organization ID">
+            <Space.Compact>
               <Input
-                prefix={<UserOutlined />}
-                value={this.props.organization.ownerName}
+                prefix={<IdcardOutlined />}
+                value={organization.id}
+                style={{
+                  width: "calc(100% - 31px)",
+                }}
                 readOnly
                 disabled
               />
-            </FormItem>
-            <FormItem
-              label="Organization Name"
-              name="displayName"
-              rules={[
-                {
-                  required: true,
-                  pattern: OrgaNameRegexPattern,
-                  message:
-                    "Organization names must not contain any special characters and can not be empty.",
-                },
-              ]}
-            >
-              <Input
-                prefix={<TagOutlined />}
-                disabled={this.state.isFetchingData}
-                placeholder="Display Name"
-              />
-            </FormItem>
-            <FormItem
-              label="Email Address for New-User Notifications"
-              name="newUserMailingList"
-              rules={[
-                {
-                  required: false,
-                  type: "email",
-                  message: "Please provide a valid email address.",
-                },
-              ]}
-            >
-              <Input
-                prefix={
-                  <MailOutlined
-                    style={{
-                      fontSize: 13,
-                    }}
-                  />
-                }
-                disabled={this.state.isFetchingData}
-                placeholder="mail@example.com"
-              />
-            </FormItem>
+              <Button onClick={handleCopyNameButtonClicked} icon={<CopyOutlined />} />
+            </Space.Compact>
+          </FormItem>
+          <FormItem label="Organization Owner">
+            <Input prefix={<UserOutlined />} value={organization.ownerName} readOnly disabled />
+          </FormItem>
+          <FormItem
+            label="Organization Name"
+            name="displayName"
+            rules={[
+              {
+                required: true,
+                pattern: OrgaNameRegexPattern,
+                message:
+                  "Organization names must not contain any special characters and can not be empty.",
+              },
+            ]}
+          >
+            <Input prefix={<TagOutlined />} disabled={isFetchingData} placeholder="Display Name" />
+          </FormItem>
+          <FormItem
+            label="Email Address for New-User Notifications"
+            name="newUserMailingList"
+            rules={[
+              {
+                required: false,
+                type: "email",
+                message: "Please provide a valid email address.",
+              },
+            ]}
+          >
+            <Input
+              prefix={
+                <MailOutlined
+                  style={{
+                    fontSize: 13,
+                  }}
+                />
+              }
+              disabled={isFetchingData}
+              placeholder="mail@example.com"
+            />
+          </FormItem>
+          <Button
+            type="primary"
+            htmlType="submit"
+            disabled={isFetchingData}
+            icon={<SaveOutlined />}
+          >
+            Save
+          </Button>
+        </Form>
+      </Card>
+      <Card title="Danger Zone" style={{ marginBottom: 20 }}>
+        <Row>
+          <Col span={18}>
+            Delete this organization including all annotations, uploaded datasets, and associated
+            user accounts. Careful, this action can NOT be undone.
+          </Col>
+          <Col span={6}>
             <Button
-              type="primary"
-              htmlType="submit"
-              disabled={this.state.isFetchingData}
-              icon={<SaveOutlined />}
+              danger
+              loading={isDeleting}
+              onClick={handleDeleteButtonClicked}
+              disabled={isFetchingData}
             >
-              Save
+              Delete Organization
             </Button>
-          </Form>
-        </Card>
-        <Card title="Danger Zone" style={{ marginBottom: 20 }}>
-          <Row>
-            <Col span={18}>
-              Delete this organization including all annotations, uploaded datasets, and associated
-              user accounts. Careful, this action can NOT be undone.
-            </Col>
-            <Col span={6}>
-              <Button
-                danger
-                loading={this.state.isDeleting}
-                onClick={this.handleDeleteButtonClicked}
-                disabled={this.state.isFetchingData}
-              >
-                Delete Organization
-              </Button>
-            </Col>
-          </Row>
-        </Card>
-      </div>
-    );
-  }
-}
+          </Col>
+        </Row>
+      </Card>
+    </div>
+  );
+};
 
 const mapStateToProps = (state: OxalisState): Props => ({
   organization: enforceActiveOrganization(state.activeOrganization),
 });
-
-const connector = connect(mapStateToProps);
-export default connector(OrganizationEditView);
+export default connect(mapStateToProps)(OrganizationEditView);

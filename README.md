@@ -27,7 +27,7 @@ WEBKNOSSOS is an open-source tool for annotating and exploring large 3D image da
 * Sharing and collaboration features
 * Proof-Reading tools for working with large (over)-segmentations
 * [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
-* Supported dataset formats: [WKW](https://github.com/scalableminds/webknossos-wrap), [Neuroglancer Precomputed, and BossDB](https://github.com/scalableminds/webknossos-connect), [Zarr](https://zarr.dev), [N5](https://github.com/saalfeldlab/n5)
+* Supported dataset formats: [WKW](https://github.com/scalableminds/webknossos-wrap), [Neuroglancer Precomputed](https://github.com/google/neuroglancer/tree/master/src/datasource/precomputed), [Zarr](https://zarr.dev), [N5](https://github.com/saalfeldlab/n5)
 * Supported image formats: Grayscale, Segmentation Maps, RGB, Multi-Channel
 * [Support for 3D mesh rendering and ad-hoc mesh generation](https://docs.webknossos.org/webknossos/mesh_visualization.html)
 * Export and streaming of any dataset and annotation as [Zarr](https://zarr.dev) to third-party tools
@@ -46,7 +46,7 @@ WEBKNOSSOS is an open-source tool for annotating and exploring large 3D image da
 ## Installation
 WEBKNOSSOS is open-source, so you can install it on your own server.
 
-[Check out the documentation](https://docs.webknossos.org/webknossos/installation.html) for a tutorial on how to install WEBKNOSSOS on your own server.
+[Check out the documentation](https://docs.webknossos.org/webknossos/open_source/installation.html) for a tutorial on how to install WEBKNOSSOS on your own server.
 
 For development installations, please see `DEV_INSTALL.md` file.
 

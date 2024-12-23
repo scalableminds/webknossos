@@ -33,8 +33,8 @@ object PrecomputedCompressorFactory {
       case "jpeg" => new JpegCompressor
       case "compressed_segmentation" =>
         new CompressedSegmentationCompressor(
-          PrecomputedDataType.fromString(header.dataType.toLowerCase).get,
-          header.chunkSize,
+          header.resolvedDataType,
+          header.chunkShape,
           header.precomputedScale.compressed_segmentation_block_size
             .getOrElse(CompressedSegmentation64.defaultBlockSize)
         )

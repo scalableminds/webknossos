@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Button, Tooltip } from "antd";
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsChunkStatistics } from "admin/admin_rest_api";
@@ -6,12 +6,12 @@ import { usePolling } from "libs/react_hooks";
 import {
   formatCountToDataAmountUnit,
   formatCPU,
-  formatDistanceStrict,
+  formatTimeIntervalStrict,
   formatDurationStrict,
   formatNumber,
 } from "libs/format_utils";
-import { VoxelyticsChunkStatistics } from "types/api_flow_types";
-import { Result } from "./utils";
+import type { VoxelyticsChunkStatistics } from "types/api_flow_types";
+import type { Result } from "./utils";
 import dayjs from "dayjs";
 import { pluralize } from "libs/utils";
 
@@ -188,7 +188,7 @@ export default function StatisticsTab({
                     row.duration?.max != null && (
                       <>
                         <span className="stats-label">Sum</span>{" "}
-                        {formatDistanceStrict(row.duration.max * 1000, 0)}
+                        {formatTimeIntervalStrict(row.duration.max * 1000, 0)}
                       </>
                     )
                   ) : (
@@ -196,21 +196,21 @@ export default function StatisticsTab({
                       {row.duration?.max != null && (
                         <>
                           <span className="stats-label">Max</span>{" "}
-                          {formatDistanceStrict(row.duration.max * 1000, 0)}
+                          {formatTimeIntervalStrict(row.duration.max * 1000, 0)}
                         </>
                       )}
                       <br />
                       {row.duration?.median != null && (
                         <>
                           <span className="stats-label">Median</span>{" "}
-                          {formatDistanceStrict(row.duration.median * 1000, 0)}
+                          {formatTimeIntervalStrict(row.duration.median * 1000, 0)}
                         </>
                       )}
                       <br />{" "}
                       {row.duration?.sum != null && (
                         <>
                           <span className="stats-label">Sum</span>{" "}
-                          {formatDistanceStrict(row.duration.sum * 1000, 0)}
+                          {formatTimeIntervalStrict(row.duration.sum * 1000, 0)}
                         </>
                       )}
                     </>

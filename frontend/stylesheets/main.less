@@ -1,15 +1,7 @@
 @import "../../node_modules/@fortawesome/fontawesome-free/css/all.min.css";
-@import "../../node_modules/react-sortable-tree/style.css";
 @import "../../node_modules/flexlayout-react/style/light.css";
-
-// To update the antd iconfont:
-// * Go to https://ant.design/
-// * Find the iconfont in the network tab (host: at.alicdn.com)
-// * Download .eot,.woff,.ttf,.svg to ./iconfont
-// * Rename to iconfont.*
-
-// Path is relative to the node_modules/antd/lib/style/themes/
-@icon-url: "../../../../../frontend/stylesheets/iconfont/iconfont";
+@import "../../node_modules/antd/dist/reset.css";
+@import "../../node_modules/react-tooltip/dist/react-tooltip.css";
 
 @import "_variables.less";
 @import "_utils.less";
@@ -23,11 +15,10 @@
 @import "_help.less";
 @import "antd_overwrites.less";
 @import "olvy_overwrites.less";
-@import "react_sortable_tree_overwrites.less";
 @import "_admin.less";
-@import "_google-charts-overwrites.less";
 @import "flex_layout_overwrites.less";
 @import "_drawings.less";
+@import "dark.less";
 
 @font-face {
   font-family: "Nunito";
@@ -41,11 +32,8 @@
 }
 
 // ----------------------- MAIN STYLES
-@font-family: "Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-  "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
-  sans-serif;
-
 body {
+  margin: 0;
   font-family: @font-family;
   font-weight: 400;
   font-size: 16px;
@@ -61,7 +49,7 @@ body {
 .save-error {
   .ant-layout-header,
   .ant-menu {
-    background-color: @error-color !important;
+    background-color: var(--ant-color-error) !important;
   }
 }
 
@@ -88,13 +76,13 @@ body {
     }
   }
   .ant-avatar {
-    border: 1px solid @blue-zircon;
+    border: 1px solid var(--color-blue-zircon);
     background: transparent;
     transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
     cursor: pointer;
     &:hover {
-      background-color: @blue-zircon;
-      color: @black;
+      background-color: var(--color-blue-zircon);
+      color: var(--color-black);
     }
   }
   .switch-organization-icon {
@@ -106,7 +94,7 @@ body {
     height: 12px;
     line-height: 12px;
     font-size: 12px;
-    color: @blue-zircon;
+    color: var(--color-blue-zircon);
   }
 }
 
@@ -127,7 +115,7 @@ body {
 }
 
 #credits {
-  background-color: @layout-footer-background;
+  background-color: var(--ant-layout-footer-bg);
   & > div {
     max-width: 600px;
     img {
@@ -166,29 +154,20 @@ body {
   line-height: normal;
 }
 
-// make sure text and icons have space between them
-.anticon,
-i {
-  margin-right: 5px;
-}
-
-.ant-btn-icon-only > .anticon {
-  margin-right: 0;
-}
-
 button.narrow {
+  // undo/redo + toolbar buttons
   padding: 0 10px;
   i {
     margin-right: 0 !important;
   }
 }
 
-.without-icon-margin i,
-i.without-icon-margin,
-.without-icon-margin .anticon,
-.anticon.without-icon-margin {
-  // Allow to undo the above margin-right of 5px
-  margin-right: 0 !important;
+.icon-margin-left {
+  margin-inline-start: var(--ant-margin-xs);
+}
+
+.icon-margin-right {
+  margin-inline-end: var(--ant-margin-xs);
 }
 
 .ant-spin-dot,
@@ -246,7 +225,7 @@ i.without-icon-margin,
   left: 0;
   width: 100%;
   height: 100%;
-  background: @body-background;
+  background: var(--ant-color-bg-base);
   z-index: 300;
 }
 
@@ -274,7 +253,7 @@ i.without-icon-margin,
   width: 100%;
   position: relative;
   overflow: hidden;
-  background-color: @border-color-base;
+  background-color: var(--ant-color-border);
 }
 .brain-loading-bar:before {
   display: block;
@@ -283,7 +262,7 @@ i.without-icon-margin,
   left: -200px;
   width: 200px;
   height: 2px;
-  background-color: @text-color-secondary;
+  background-color: var(--ant-color-text-secondary);
   animation: loading 1.5s ease infinite;
 }
 
@@ -328,7 +307,7 @@ i.without-icon-margin,
   bottom: 0;
   left: 0;
   padding: 2.5em 0;
-  background: @modal-mask-bg;
+  background: var(--ant-color-bg-mask);
   text-align: center;
   z-index: 1000;
 }
@@ -337,8 +316,8 @@ i.without-icon-margin,
   top: 100px;
   width: 400px;
   height: 250px;
-  background: @modal-header-bg;
-  border-radius: 4px;
+  background: var(--ant-color-bg-container);
+  border-radius: var(--ant-border-radius);
   margin: 0 auto;
 }
 .dataset-upload-dropzone {
@@ -349,23 +328,23 @@ i.without-icon-margin,
   padding: 20px;
   border-width: 2px;
   border-radius: 2px;
-  border-color: fade(@text-color-secondary, 30%);
+  border-color: var(--ant-color-border-secondary);
   border-style: dashed;
-  background-color: @component-background;
-  color: @text-color;
+  background-color: var(--ant-color-bg-container);
+  color: var(--ant-color-text);
   font-size: 16px;
   outline: none;
   transition: border 0.24s ease-in-out;
   cursor: pointer;
 
   &.dataset-upload-dropzone-active {
-    border-color: @primary-color;
+    border-color: var(--ant-color-border);
   }
   &.dataset-upload-dropzone-accept {
-    border-color: @success-color;
+    border-color: var(--ant-color-success-border);
   }
   &.dataset-upload-dropzone-reject {
-    border-color: @error-color;
+    border-color: var(--ant-color-error-border);
   }
 }
 
@@ -376,44 +355,41 @@ i.without-icon-margin,
 .crosslink-box {
   padding: 20px;
   margin: 20px;
-  background: @component-background;
-  box-shadow: @box-shadow-base;
+  background: var(--ant-color-bg-container);
+  box-shadow: var(--ant-box-shadow);
   border-radius: 3px;
 }
 
 .webknossos-welcome-toast {
-  background-color: @primary-color;
-  color: white;
+  // small notification in the bottom right corner when you are viewing a dataset and you are not logged in
+  background-color: var(--color-wk-blue);
 
   .logo {
     background: url(/assets/images/logo-icon-only.svg) 15px center no-repeat;
     filter: brightness(4);
     width: 74px;
-    height: 50px;
-    background-size: 50px 50px;
+    height: 45px;
+    background-size: 45px 45px;
     display: inline-block;
   }
 
-  .ant-notification-notice-content {
-    position: relative;
-  }
   .ant-notification-notice-message {
     padding-left: 40px;
     margin-top: 20px;
-    margin-bottom: 30px;
-    color: white;
+    margin-bottom: 30px !important;
+    color: white !important;
     font-size: 24px;
   }
 
   .ant-notification-notice-description {
     font-size: 16px;
     line-height: 21px;
-    color: white;
-    margin-left: 24px;
+    color: white !important;
+    margin-inline-start: 24px !important;
 
     p {
       margin-bottom: 30px;
-      margin-right: 60px;
+      margin-inline-end: 60px;
     }
 
     .drawing-welcome-guy {
@@ -424,7 +400,7 @@ i.without-icon-margin,
         height: 100px;
         display: block;
         position: absolute;
-        top: 0px;
+        top: -5px;
         right: 0px;
         content: " ";
         transform: translate(15%, -104%);
@@ -432,6 +408,11 @@ i.without-icon-margin,
         background-repeat: no-repeat;
         background-size: cover;
       }
+    }
+
+    .ant-btn-background-ghost:hover {
+      color: #bbb;
+      border-color: #bbb;
     }
   }
 
@@ -449,10 +430,6 @@ i.without-icon-margin,
 
 .voxelytics-view {
   min-width: 1300px;
-
-  .tasks-header {
-    border-bottom: 1px solid @border-color-base;
-  }
 
   .task-panel {
     height: calc(100vh - 100px);
@@ -515,7 +492,7 @@ i.without-icon-margin,
 
     .log-content {
       position: relative;
-      background-color: @component-background;
+      background-color: var(--ant-color-bg-container);
       width: 100%;
       height: 500px;
       overflow-y: auto;
@@ -548,10 +525,10 @@ i.without-icon-margin,
         font-size: @log-font-size;
         line-height: @log-line-height;
         overflow-wrap: break-word;
-        color: @text-color;
+        color: var(--ant-color-text);
       }
       &:hover {
-        background-color: @dropdown-selected-bg;
+        background-color: var(--ant-control-item-bg-hover);
       }
     }
 
@@ -562,7 +539,7 @@ i.without-icon-margin,
       width: 100%;
       height: 100%;
       z-index: 1001;
-      background: @body-background;
+      background: var(--ant-color-bg-base);
       padding-top: 8px;
 
       .log-tab-header {
@@ -577,7 +554,7 @@ i.without-icon-margin,
   }
   .react-flow {
     .react-flow__minimap {
-      background-color: @component-background;
+      background-color: var(--ant-color-bg-container);
     }
 
     .controls {
@@ -609,15 +586,15 @@ i.without-icon-margin,
 }
 
 .valid-drop-target {
-  background-color: @blue-4;
+  background-color: var(--ant-blue-4);
 }
 
 .highlight-folder-sidebar {
-  background-color: @table-selected-row-hover-bg;
+  background-color: var(--ant-table-row-selected-hover-bg);
 }
 
 .sidebar-label {
-  color: var(--ant-text-secondary);
+  color: var(--ant-color-text-secondary);
   font-size: 12px;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -627,18 +604,14 @@ i.without-icon-margin,
   & {
     height: 100%;
     min-height: calc(100vh - var(--navbar-height));
-    background: @background-blue-neurons;
+    background: var(--background-blue-neurons);
   }
-
+  
   .login-content {
-    background-color: white;
-    width: 600px;
+    max-width: 600px;
     padding: 80px;
-
-    h3 {
-      color: @black; // always enforce dark text color to prevent dark mode bugs
-    }
-
+    margin: 0 auto;
+    
     @media @smartphones {
       padding: 20px;
       margin: 20px;
@@ -657,14 +630,62 @@ i.without-icon-margin,
       background-repeat: no-repeat;
       background-size: cover;
     }
-
-    .ant-checkbox + span {
-      color: @black;
-    }
   }
 }
 
 .ai-job-title {
   text-align: center;
   display: inherit;
+}
+
+.project-and-annotation-type-dropdown {
+  width: 200px;
+}
+
+.task-annotation-view {
+  width: 31%;
+}
+
+.organization-switch-menu > ul {
+  max-height: calc(100vh - var(--navbar-height) - 200px) !important;
+}
+
+.time-tracking-details {
+  .ant-col {
+    display: grid;
+    align-content: center;
+  }
+
+  .ant-row {
+    margin-left: 20px;
+  }
+}
+
+.global-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: var(--color-wk-blue);
+  transition: width 0.3s ease-in-out;
+}
+
+.hidden-global-progress-bar {
+  width: 0 !important;
+  transition: none !important;
+}
+
+.max-z-index {
+  z-index: 10000000000;
+}
+
+.registration-form-checkboxes {
+  > div:first-of-type {
+    margin-bottom: 0px;
+  }
+  
+  > div:last-of-type {
+    margin-bottom: 15px;
+  }
 }

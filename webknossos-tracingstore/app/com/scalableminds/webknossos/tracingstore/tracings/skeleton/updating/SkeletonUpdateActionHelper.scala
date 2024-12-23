@@ -22,5 +22,5 @@ trait SkeletonUpdateActionHelper extends ProtoGeometryImplicits {
     Comment(aComment.nodeId, aComment.content)
 
   protected def convertTreeGroup(aTreeGroup: UpdateActionTreeGroup): TreeGroup =
-    TreeGroup(aTreeGroup.name, aTreeGroup.groupId, aTreeGroup.children.map(convertTreeGroup))
+    TreeGroup(aTreeGroup.name, aTreeGroup.groupId, aTreeGroup.children.map(convertTreeGroup), aTreeGroup.isExpanded)
 }

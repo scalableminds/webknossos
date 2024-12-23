@@ -27,7 +27,7 @@ class Cube {
   cube: THREE.Line;
   min: Vector3;
   max: Vector3;
-  showCrossSections: boolean;
+  readonly showCrossSections: boolean;
   initialized: boolean;
   visible: boolean;
   lineWidth: number;
@@ -57,10 +57,12 @@ class Cube {
       this.setCorners(this.min, this.max);
     }
 
-    listenToStoreProperty(
-      (state) => getPosition(state.flycam),
-      (position) => this.updatePositionForCrossSections(position),
-    );
+    if (this.showCrossSections) {
+      listenToStoreProperty(
+        (state) => getPosition(state.flycam),
+        (position) => this.updatePositionForCrossSections(position),
+      );
+    }
   }
 
   getLineMaterial() {

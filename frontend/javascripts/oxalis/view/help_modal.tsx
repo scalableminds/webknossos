@@ -1,8 +1,9 @@
 import { sendHelpEmail, updateNovelUserExperienceInfos } from "admin/admin_rest_api";
 import { Modal, Input, Alert, message } from "antd";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import { OxalisState } from "oxalis/store";
-import React, { CSSProperties, useState } from "react";
+import type { OxalisState } from "oxalis/store";
+import type React from "react";
+import { type CSSProperties, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 function HelpButton() {
@@ -45,9 +46,7 @@ function HelpButton() {
         closable
         onClose={discardButton}
         onClick={() => setModalOpen(true)}
-      >
-        Help
-      </Alert>
+      />
       <HelpModal
         isModalOpen={isModalOpen}
         onCancel={() => setModalOpen(false)}

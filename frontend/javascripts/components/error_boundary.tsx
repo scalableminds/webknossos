@@ -1,12 +1,15 @@
 import { Alert } from "antd";
 import ErrorHandling from "libs/error_handling";
-import React, { ErrorInfo } from "react";
+import React, { type ErrorInfo } from "react";
+import type { ArbitraryObject } from "types/globals";
+
+type ErrorBoundaryProps = ArbitraryObject;
 
 export default class ErrorBoundary extends React.Component<
-  {},
+  ErrorBoundaryProps,
   { error?: Error | null; info?: ErrorInfo | null }
 > {
-  constructor(props: {}) {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = {};
   }

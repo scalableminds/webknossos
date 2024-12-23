@@ -82,8 +82,6 @@ export function handleClickSegment(clickPosition: Point2) {
   const { additionalCoordinates } = state.flycam;
 
   if (segmentId > 0) {
-    Store.dispatch(
-      clickSegmentAction(segmentId, globalPosition, additionalCoordinates || undefined),
-    );
+    Store.dispatch(clickSegmentAction(segmentId, globalPosition, additionalCoordinates));
   }
 }

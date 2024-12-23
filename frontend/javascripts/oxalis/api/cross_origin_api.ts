@@ -144,8 +144,8 @@ function CrossOriginApi() {
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Rerun each time window.webknossos changes.
   useEffect(() => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'webknossos' does not exist on type 'Wind... Remove this comment to see the full error message
     if (window.webknossos && window.parent) {
       // @ts-expect-error ts-migrate(2339) FIXME: Property 'webknossos' does not exist on type 'Wind... Remove this comment to see the full error message
       window.webknossos.apiReady().then(() => {
@@ -157,7 +157,6 @@ function CrossOriginApi() {
         );
       });
     }
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'webknossos' does not exist on type 'Wind... Remove this comment to see the full error message
   }, [window.webknossos]);
   return null;
 }

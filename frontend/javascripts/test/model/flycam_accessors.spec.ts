@@ -2,7 +2,7 @@ import _ from "lodash";
 import type { OxalisState } from "oxalis/store";
 import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 import * as accessors from "oxalis/model/accessors/flycam_accessor";
-import constants, { Identity4x4, Vector3 } from "oxalis/constants";
+import constants, { Identity4x4, UnitLong, type Vector3 } from "oxalis/constants";
 import test from "ava";
 import defaultState from "oxalis/default_state";
 const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
@@ -19,7 +19,7 @@ const initialState: OxalisState = {
     ...defaultState.dataset,
     dataSource: {
       ...defaultState.dataset.dataSource,
-      scale: [1, 1, 2],
+      scale: { factor: [1, 1, 2], unit: UnitLong.nm },
       dataLayers: [
         {
           name: "layer1",
@@ -80,7 +80,7 @@ test("Flycam Accessors should calculate the request log zoom step (2/2)", (t) =>
 
 test("Flycam Accessors should calculate appropriate zoom factors for datasets with many magnifications.", (t) => {
   const scale: Vector3 = [4, 4, 35];
-  const resolutions: Vector3[] = [
+  const mags: Vector3[] = [
     [1, 1, 1],
     [2, 2, 1],
     [4, 4, 1],
@@ -108,11 +108,11 @@ test("Flycam Accessors should calculate appropriate zoom factors for datasets wi
     TDView: rect,
   };
 
-  const maximumZoomPerResolution = accessors._getMaximumZoomForAllResolutions(
+  const maximumZoomPerMags = accessors._getMaximumZoomForAllMags(
     constants.MODE_PLANE_TRACING,
     "BEST_QUALITY_FIRST",
     scale,
-    resolutions,
+    mags,
     rects,
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
     Identity4x4,
@@ -122,7 +122,7 @@ test("Flycam Accessors should calculate appropriate zoom factors for datasets wi
   // If this test case should fail at some point, the following values may be updated appropriately
   // to make it pass again. However, it should be validated that zooming out works as expected for
   // datasets with many magnifications (> 12). Small variations in these numbers shouldn't matter much.
-  // prettier-ignore
+  // biome-ignore format: don't format array
   const expectedZoomValues = [
     1.9487171,
     3.4522712143931016,
@@ -138,5 +138,5 @@ test("Flycam Accessors should calculate appropriate zoom factors for datasets wi
     2726.4206856132723,
     6428.757360336458,
   ];
-  t.deepEqual(maximumZoomPerResolution, expectedZoomValues);
+  t.deepEqual(maximumZoomPerMags, expectedZoomValues);
 });

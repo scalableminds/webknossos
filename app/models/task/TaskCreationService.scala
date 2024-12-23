@@ -1,5 +1,7 @@
 package models.task
 
+import collections.SequenceUtils
+
 import java.io.File
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
@@ -8,7 +10,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, 
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
-import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
+import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 
 import javax.inject.Inject
 import models.annotation.nml.NmlResults.TracingBoxContainer
@@ -21,7 +23,9 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import telemetry.SlackNotificationService
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
+import models.organization.OrganizationDAO
+import play.api.http.Status.FORBIDDEN
 
 import scala.concurrent.ExecutionContext
 
@@ -29,6 +33,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                     taskTypeDAO: TaskTypeDAO,
                                     annotationService: AnnotationService,
                                     taskDAO: TaskDAO,
+                                    organizationDAO: OrganizationDAO,
                                     taskService: TaskService,
                                     userService: UserService,
                                     teamDAO: TeamDAO,
@@ -57,7 +62,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   // Used in create (without files) in case of base annotation
   // Note that the requested task’s tracingType is always fulfilled here,
   // either by duplicating the base annotation’s tracings or creating new tracings
-  def createTracingsFromBaseAnnotations(taskParametersList: List[TaskParameters], organizationId: ObjectId)(
+  def createTracingsFromBaseAnnotations(taskParametersList: List[TaskParameters], organizationId: String)(
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[List[TaskParameters]] =
     Fox.serialCombined(taskParametersList)(
@@ -70,23 +75,21 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   private def createTracingsFromBaseAnnotation(
       baseAnnotation: BaseAnnotation,
       taskParameters: TaskParameters,
-      organizationId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[BaseAnnotation] =
+      organizationId: String)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[BaseAnnotation] =
     for {
       taskTypeIdValidated <- ObjectId.fromString(taskParameters.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-      dataSet <- datasetDAO.findOneByNameAndOrganization(taskParameters.dataSet, organizationId)
+      dataset <- datasetDAO.findOne(taskParameters.datasetId)
+      _ <- bool2Fox(dataset._organization == organizationId) ?~> "dataset"
       baseAnnotationIdValidated <- ObjectId.fromString(baseAnnotation.baseId)
       annotation <- resolveBaseAnnotationId(baseAnnotationIdValidated)
-      tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+      tracingStoreClient <- tracingStoreService.clientFor(dataset)
       newSkeletonId <- if (taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid)
         duplicateOrCreateSkeletonBase(annotation, taskParameters, tracingStoreClient).map(Some(_))
       else Fox.successful(None)
       newVolumeId <- if (taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid)
-        duplicateOrCreateVolumeBase(annotation,
-                                    taskParameters,
-                                    tracingStoreClient,
-                                    organizationId,
-                                    taskType.settings.resolutionRestrictions).map(Some(_))
+        duplicateOrCreateVolumeBase(annotation, taskParameters, tracingStoreClient, taskType.settings.magRestrictions)
+          .map(Some(_))
       else Fox.successful(None)
     } yield BaseAnnotation(baseAnnotationIdValidated.id, newSkeletonId, newVolumeId)
 
@@ -118,9 +121,10 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     }).flatten
 
   // Used in create (without files) in case of base annotation
-  private def duplicateOrCreateSkeletonBase(baseAnnotation: Annotation,
-                                            params: TaskParameters,
-                                            tracingStoreClient: WKRemoteTracingStoreClient): Fox[String] =
+  private def duplicateOrCreateSkeletonBase(
+      baseAnnotation: Annotation,
+      params: TaskParameters,
+      tracingStoreClient: WKRemoteTracingStoreClient)(implicit ctx: DBAccessContext): Fox[String] =
     for {
       baseSkeletonTracingIdOpt <- baseAnnotation.skeletonTracingId
       newTracingId <- baseSkeletonTracingIdOpt
@@ -131,13 +135,14 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                                         editRotation = Some(params.editRotation),
                                                         boundingBox = params.boundingBox))
         .getOrElse(
-          tracingStoreClient.saveSkeletonTracing(
-            annotationService.createSkeletonTracingBase(
-              params.dataSet,
+          annotationService
+            .createSkeletonTracingBase(
+              params.datasetId,
               params.boundingBox,
               params.editPosition,
               params.editRotation
-            )))
+            )
+            .flatMap(tracingStoreClient.saveSkeletonTracing))
     } yield newTracingId
 
   // Used in create (without files) in case of base annotation
@@ -145,47 +150,47 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       baseAnnotation: Annotation,
       params: TaskParameters,
       tracingStoreClient: WKRemoteTracingStoreClient,
-      organizationId: ObjectId,
-      resolutionRestrictions: ResolutionRestrictions)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[String] =
+      magRestrictions: MagRestrictions)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[String] =
     for {
       volumeTracingOpt <- baseAnnotation.volumeTracingId
       newVolumeTracingId <- volumeTracingOpt
-        .map(id => tracingStoreClient.duplicateVolumeTracing(id, resolutionRestrictions = resolutionRestrictions))
+        .map(id => tracingStoreClient.duplicateVolumeTracing(id, magRestrictions = magRestrictions))
         .getOrElse(
           annotationService
             .createVolumeTracingBase(
-              params.dataSet,
-              organizationId,
+              params.datasetId,
               params.boundingBox,
               params.editPosition,
               params.editRotation,
               volumeShowFallbackLayer = false,
-              resolutionRestrictions = resolutionRestrictions
+              magRestrictions = magRestrictions
             )
-            .flatMap(tracingStoreClient.saveVolumeTracing(_, resolutionRestrictions = resolutionRestrictions)))
+            .flatMap(tracingStoreClient.saveVolumeTracing(_, magRestrictions = magRestrictions)))
     } yield newVolumeTracingId
 
   // Used in create (without files). If base annotations were used, this does nothing.
-  def createTaskSkeletonTracingBases(paramsList: List[TaskParameters])(
+  def createTaskSkeletonTracingBases(paramsList: List[TaskParameters], organizationId: String)(
       implicit ctx: DBAccessContext): Fox[List[Option[SkeletonTracing]]] =
     Fox.serialCombined(paramsList) { params =>
       for {
         taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"
         taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-        skeletonTracingOpt = if ((taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) && params.baseAnnotation.isEmpty) {
-          Some(
-            annotationService.createSkeletonTracingBase(
-              params.dataSet,
+        skeletonTracingOpt <- if ((taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) && params.baseAnnotation.isEmpty) {
+
+          annotationService
+            .createSkeletonTracingBase(
+              params.datasetId,
               params.boundingBox,
               params.editPosition,
               params.editRotation
-            ))
-        } else None
+            )
+            .map(Some(_))
+        } else Fox.successful(None)
       } yield skeletonTracingOpt
     }
 
   // Used in create (without files). If base annotations were used, this does nothing.
-  def createTaskVolumeTracingBases(paramsList: List[TaskParameters], organizationId: ObjectId)(
+  def createTaskVolumeTracingBases(paramsList: List[TaskParameters], organizationId: String)(
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[List[Option[(VolumeTracing, Option[File])]]] =
     Fox.serialCombined(paramsList) { params =>
@@ -195,13 +200,12 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         volumeTracingOpt <- if ((taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid) && params.baseAnnotation.isEmpty) {
           annotationService
             .createVolumeTracingBase(
-              params.dataSet,
-              organizationId,
+              params.datasetId,
               params.boundingBox,
               params.editPosition,
               params.editRotation,
               volumeShowFallbackLayer = false,
-              resolutionRestrictions = taskType.settings.resolutionRestrictions
+              magRestrictions = taskType.settings.magRestrictions
             )
             .map(v => Some((v, None)))
         } else Fox.successful(None)
@@ -214,49 +218,55 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       buildFullParamsFromFilesForSingleTask(params,
                                             boxContainer.skeleton,
                                             boxContainer.volume.map(_._1),
+                                            boxContainer.datasetId,
                                             boxContainer.fileName,
                                             boxContainer.description)
     }
 
   // Used in createFromFiles. For all volume tracings that have an empty bounding box, reset it to the dataset bounding box
-  def addVolumeFallbackBoundingBoxes(tracingBoxes: List[TracingBoxContainer],
-                                     organizationId: ObjectId): Fox[List[TracingBoxContainer]] =
+  def addVolumeFallbackBoundingBoxes(tracingBoxes: List[TracingBoxContainer]): Fox[List[TracingBoxContainer]] =
     Fox.serialCombined(tracingBoxes) { tracingBox: TracingBoxContainer =>
-      tracingBox.volume match {
-        case Full(v) =>
-          for { volumeAdapted <- addVolumeFallbackBoundingBox(v._1, organizationId) } yield
+      tracingBox match {
+        case TracingBoxContainer(_, _, _, Full(v), Full(datasetId)) =>
+          for { volumeAdapted <- addVolumeFallbackBoundingBox(v._1, datasetId) } yield
             tracingBox.copy(volume = Full(volumeAdapted, v._2))
         case _ => Fox.successful(tracingBox)
       }
     }
 
   // Used in createFromFiles. Called once per requested task if volume tracing is passed
-  private def addVolumeFallbackBoundingBox(volume: VolumeTracing, organizationId: ObjectId): Fox[VolumeTracing] =
-    if (volume.boundingBox.isEmpty) {
+  private def addVolumeFallbackBoundingBox(volume: UploadedVolumeLayer, datasetId: ObjectId): Fox[UploadedVolumeLayer] =
+    if (volume.tracing.boundingBox.isEmpty) {
       for {
-        dataSet <- datasetDAO.findOneByNameAndOrganization(volume.dataSetName, organizationId)(GlobalAccessContext)
-        dataSource <- datasetService.dataSourceFor(dataSet).flatMap(_.toUsable)
-      } yield volume.copy(boundingBox = dataSource.boundingBox)
+        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext)
+        dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
+      } yield volume.copy(tracing = volume.tracing.copy(boundingBox = dataSource.boundingBox))
     } else Fox.successful(volume)
 
   // Used in createFromFiles. Called once per requested task
   private def buildFullParamsFromFilesForSingleTask(
       nmlFormParams: NmlTaskParameters,
       skeletonTracing: Box[SkeletonTracing],
-      volumeTracing: Box[VolumeTracing],
+      uploadedVolumeLayer: Box[UploadedVolumeLayer],
+      datasetIdBox: Box[ObjectId],
       fileName: Box[String],
       description: Box[Option[String]])(implicit m: MessagesProvider): Box[TaskParameters] = {
-    val paramBox: Box[(Option[BoundingBox], String, Vec3Int, Vec3Double)] = skeletonTracing match {
-      case Full(tracing) => Full((tracing.boundingBox, tracing.dataSetName, tracing.editPosition, tracing.editRotation))
-      case f: Failure    => f
-      case Empty =>
-        volumeTracing match {
-          case Full(tracing) =>
-            Full((Some(tracing.boundingBox), tracing.dataSetName, tracing.editPosition, tracing.editRotation))
-          case f: Failure => f
-          case Empty      => Failure(Messages("task.create.needsEitherSkeletonOrVolume"))
-        }
-    }
+    val paramBox: Box[(Option[BoundingBox], ObjectId, Vec3Int, Vec3Double)] =
+      (skeletonTracing, datasetIdBox) match {
+        case (Full(tracing), Full(datasetId)) =>
+          Full((tracing.boundingBox, datasetId, tracing.editPosition, tracing.editRotation))
+        case (f: Failure, _) => f
+        case (_, f: Failure) => f
+        case (_, Empty)      => Failure(Messages("Could not find dataset for task creation."))
+        case (Empty, _) =>
+          (uploadedVolumeLayer, datasetIdBox) match {
+            case (Full(layer), Full(datasetId)) =>
+              Full((Some(layer.tracing.boundingBox), datasetId, layer.tracing.editPosition, layer.tracing.editRotation))
+            case (f: Failure, _) => f
+            case (_, f: Failure) => f
+            case _               => Failure(Messages("task.create.needsEitherSkeletonOrVolume"))
+          }
+      }
 
     paramBox map { params =>
       val parsedNmlTracingBoundingBox = params._1.map(b => BoundingBox(b.topLeft, b.width, b.height, b.depth))
@@ -280,10 +290,10 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
 
   // used in createFromFiles route
   def fillInMissingTracings(skeletons: List[Box[SkeletonTracing]],
-                            volumes: List[Box[(VolumeTracing, Option[File])]],
+                            volumes: List[Box[(UploadedVolumeLayer, Option[File])]],
                             fullParams: List[Box[TaskParameters]],
                             taskType: TaskType,
-                            organizationId: ObjectId)(
+                            organizationId: String)(
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[(List[Box[SkeletonTracing]], List[Box[(VolumeTracing, Option[File])]])] =
     if (taskType.tracingType == TracingType.skeleton) {
@@ -306,7 +316,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
             case (skeletonTracingBox, volumeTracingBox) =>
               skeletonTracingBox match {
                 case Full(_) => (Empty, Failure(Messages("taskType.mismatch", "volume", "skeleton")))
-                case _       => (Empty, volumeTracingBox)
+                case _       => (Empty, volumeTracingBox.map(box => (box._1.tracing, box._2)))
               }
           }
           .unzip)
@@ -316,28 +326,30 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
           case (paramBox, skeleton, volume) =>
             paramBox match {
               case Full(params) =>
-                val skeletonBox = Full(
-                  skeleton.openOr(
-                    annotationService.createSkeletonTracingBase(params.dataSet,
-                                                                params.boundingBox,
-                                                                params.editPosition,
-                                                                params.editRotation)))
+                val skeletonFox =
+                  skeleton
+                    .map(s => Fox.successful(s))
+                    .openOr(
+                      annotationService.createSkeletonTracingBase(params.datasetId,
+                                                                  params.boundingBox,
+                                                                  params.editPosition,
+                                                                  params.editRotation))
                 val volumeFox = volume
-                  .map(Fox.successful(_))
-                  .openOr(
-                    annotationService
-                      .createVolumeTracingBase(
-                        params.dataSet,
-                        organizationId,
-                        params.boundingBox,
-                        params.editPosition,
-                        params.editRotation,
-                        volumeShowFallbackLayer = false,
-                        resolutionRestrictions = taskType.settings.resolutionRestrictions
-                      )
-                      .map(v => (v, None)))
-
-                volumeFox.map(v => (skeletonBox, Full(v)))
+                  .map(v => Fox.successful(v._1.tracing, v._2))
+                  .openOr(annotationService
+                    .createVolumeTracingBase(
+                      params.datasetId,
+                      params.boundingBox,
+                      params.editPosition,
+                      params.editRotation,
+                      volumeShowFallbackLayer = false,
+                      magRestrictions = taskType.settings.magRestrictions
+                    )
+                    .map(v => (v, None)))
+                for {
+                  skeleton <- skeletonFox
+                  volume <- volumeFox
+                } yield (Full(skeleton), Full(volume))
               case f: Failure => Fox.failure(f.msg, Empty, f.chain)
               case _          => Fox.failure("")
             }
@@ -385,15 +397,14 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     } else {
       for {
         _ <- assertEachHasEitherSkeletonOrVolume(fullTasks) ?~> "task.create.needsEitherSkeletonOrVolume"
-        firstDatasetName <- fullTasks.headOption.map(_._1.dataSet).toFox
-        _ <- assertAllOnSameDataset(fullTasks, firstDatasetName)
-        dataSet <- datasetDAO.findOneByNameAndOrganization(firstDatasetName, requestingUser._organization) ?~> Messages(
-          "dataset.notFound",
-          firstDatasetName)
+        firstDatasetId <- fullTasks.headOption.map(_._1.datasetId).toFox
+        _ <- assertAllOnSameDataset(fullTasks)
+        dataset <- datasetDAO.findOne(firstDatasetId) ?~> Messages("dataset.notFound", firstDatasetId)
+        _ <- bool2Fox(dataset._organization == requestingUser._organization) ~> FORBIDDEN
         _ = if (fullTasks.exists(task => task._1.baseAnnotation.isDefined))
           slackNotificationService.noticeBaseAnnotationTaskCreation(fullTasks.map(_._1.taskTypeId).distinct,
                                                                     fullTasks.count(_._1.baseAnnotation.isDefined))
-        tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+        tracingStoreClient <- tracingStoreService.clientFor(dataset)
         savedSkeletonTracingIds: List[Box[Option[String]]] <- tracingStoreClient.saveSkeletonTracings(
           SkeletonTracings(requestedTasks.map(taskTuple => SkeletonTracingOpt(taskTuple.map(_._2).openOr(None)))))
         skeletonTracingIds: List[Box[Option[String]]] = savedSkeletonTracingIds.zip(requestedTasks).map {
@@ -428,10 +439,10 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
               requestingUser._id,
               skeletonTracingIdBox = tuple._2._1,
               volumeTracingIdBox = tuple._2._2,
-              dataSet._id,
+              dataset._id,
               description = tuple._1.map(_._1.description).openOr(None)
           ))
-        warnings <- warnIfTeamHasNoAccess(fullTasks.map(_._1), dataSet, requestingUser)
+        warnings <- warnIfTeamHasNoAccess(fullTasks.map(_._1), dataset, requestingUser)
         zippedTasksAndAnnotations = taskObjects zip createAnnotationBaseResults
         taskJsons = zippedTasksAndAnnotations.map(tuple => taskToJsonWithOtherFox(tuple._1, tuple._2))
         result <- TaskCreationResult.fromTaskJsFoxes(taskJsons, warnings)
@@ -446,19 +457,12 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       requestedTasks.forall(tuple => tuple._1.baseAnnotation.isDefined || tuple._2.isDefined || tuple._3.isDefined))
 
   private def assertAllOnSameDataset(
-      requestedTasks: List[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])],
-      firstDatasetName: String)(implicit mp: MessagesProvider): Fox[String] = {
+      requestedTasks: List[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])])(
+      implicit mp: MessagesProvider): Fox[Unit] = {
     @scala.annotation.tailrec
-    def allOnSameDatasetIter(
-        requestedTasksRest: List[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])],
-        dataSetName: String): Boolean =
-      requestedTasksRest match {
-        case List()       => true
-        case head :: tail => head._1.dataSet == dataSetName && allOnSameDatasetIter(tail, dataSetName)
-      }
-
-    if (allOnSameDatasetIter(requestedTasks, firstDatasetName))
-      Fox.successful(firstDatasetName)
+    val areAllIdsEqual = SequenceUtils.findUniqueElement(requestedTasks.map(_._1.datasetId))
+    if (areAllIdsEqual.isDefined)
+      Fox.successful(())
     else
       Fox.failure(Messages("task.notOnSameDataset"))
   }
@@ -485,34 +489,34 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
           taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"
           taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
           saveResult <- tracingStoreClient
-            .saveVolumeTracing(tracing, initialFile, resolutionRestrictions = taskType.settings.resolutionRestrictions)
+            .saveVolumeTracing(tracing, initialFile, magRestrictions = taskType.settings.magRestrictions)
             .map(Some(_))
         } yield saveResult
       case f: Failure => box2Fox(f)
       case _          => Fox.successful(None)
     }
 
-  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataSet: Dataset, requestingUser: User)(
+  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataset: Dataset, requestingUser: User)(
       implicit ctx: DBAccessContext): Fox[List[String]] = {
     val projectNames = requestedTasks.map(_.projectName).distinct
     for {
       projects: List[Project] <- Fox.serialCombined(projectNames)(
         projectDAO.findOneByNameAndOrganization(_, requestingUser._organization)) ?~> "project.notFound"
-      dataSetTeamIds <- teamService.allowedTeamIdsForDataset(dataSet, cumulative = true)
-      noAccessTeamIds = projects.map(_._team).diff(dataSetTeamIds)
+      datasetTeamIds <- teamService.allowedTeamIdsForDataset(dataset, cumulative = true)
+      noAccessTeamIds = projects.map(_._team).diff(datasetTeamIds)
       noAccessTeamIdsTransitive <- Fox.serialCombined(noAccessTeamIds)(id =>
-        filterOutTransitiveSubteam(id, dataSetTeamIds))
+        filterOutTransitiveSubteam(id, datasetTeamIds))
       noAccessTeams: List[Team] <- Fox.serialCombined(noAccessTeamIdsTransitive.flatten)(id => teamDAO.findOne(id))
       warnings = noAccessTeams.map(team =>
-        s"Project team “${team.name}” has no read permission to dataset “${dataSet.name}”.")
+        s"Project team “${team.name}” has no read permission to dataset “${dataset.name}”.")
     } yield warnings
   }
 
-  private def filterOutTransitiveSubteam(subteamId: ObjectId, dataSetTeams: List[ObjectId]): Fox[Option[ObjectId]] =
-    if (dataSetTeams.isEmpty) Fox.successful(Some(subteamId))
+  private def filterOutTransitiveSubteam(subteamId: ObjectId, datasetTeams: List[ObjectId]): Fox[Option[ObjectId]] =
+    if (datasetTeams.isEmpty) Fox.successful(Some(subteamId))
     else {
       for {
-        memberDifference <- userDAO.findTeamMemberDifference(subteamId, dataSetTeams)
+        memberDifference <- userDAO.findTeamMemberDifference(subteamId, datasetTeams)
       } yield if (memberDifference.isEmpty) None else Some(subteamId)
     }
 

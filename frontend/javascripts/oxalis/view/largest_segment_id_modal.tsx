@@ -8,14 +8,14 @@ import {
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import Store from "oxalis/throttled_store";
-import { OxalisState, VolumeTracing } from "oxalis/store";
+import type { OxalisState, VolumeTracing } from "oxalis/store";
 import { mayUserEditDataset } from "libs/utils";
-import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
+import { getBitDepth, getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 import {
   getSegmentationLayerForTracing,
   getVolumeTracingByLayerName,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { APISegmentationLayer } from "types/api_flow_types";
+import type { APISegmentationLayer } from "types/api_flow_types";
 
 const TOAST_KEY = "enter-largest-segment-id";
 
@@ -76,11 +76,7 @@ export default function EnterLargestSegmentIdModal({
 
   const editString = "edit the same property in the dataset";
   const editLinkOrText = mayUserEditDataset(activeUser, dataset) ? (
-    <a
-      href={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
-      target="_blank"
-      rel="noreferrer"
-    >
+    <a href={`/datasets/${getReadableURLPart(dataset)}/edit`} target="_blank" rel="noreferrer">
       {editString}
     </a>
   ) : (

@@ -30,6 +30,8 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
     object User {
       val timeTrackingPause: FiniteDuration = get[FiniteDuration]("webKnossos.user.timeTrackingPause")
+      val timeTrackingOnlyWithSignificantChanges: Boolean =
+        get[Boolean]("webKnossos.user.timeTrackingOnlyWithSignificantChanges")
       val inviteExpiry: FiniteDuration = get[FiniteDuration]("webKnossos.user.inviteExpiry")
       val ssoKey: String = get[String]("webKnossos.user.ssoKey")
 
@@ -192,24 +194,10 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val workerLivenessTimeout: FiniteDuration = get[FiniteDuration]("jobs.workerLivenessTimeout")
   }
 
-  object Braintracing {
-    val enabled: Boolean = get[Boolean]("braintracing.enabled")
-    val organizationName: String = get[String]("braintracing.organizationName")
-    val uri: String = get[String]("braintracing.uri")
-    val createUserScript: String = get[String]("braintracing.createUserScript")
-    val user: String = get[String]("braintracing.user")
-    val password: String = get[String]("braintracing.password")
-    val license: String = get[String]("braintracing.license")
-  }
-
   object Airbrake {
     val projectID: String = get[String]("airbrake.projectID")
     val projectKey: String = get[String]("airbrake.projectKey")
     val environment: String = get[String]("airbrake.environment")
-  }
-
-  object GoogleAnalytics {
-    val trackingId: String = get[String]("googleAnalytics.trackingId")
   }
 
   object SlackNotifications {
@@ -221,7 +209,9 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val uri: String = get[String]("backendAnalytics.uri")
     val key: String = get[String]("backendAnalytics.key")
     val sessionPause: FiniteDuration = get[FiniteDuration]("backendAnalytics.sessionPause")
+    val saveToDatabaseEnabled: Boolean = get[Boolean]("backendAnalytics.saveToDatabaseEnabled")
     val verboseLoggingEnabled: Boolean = get[Boolean]("backendAnalytics.verboseLoggingEnabled")
+    val wellKnownUris: List[String] = getList[String]("backendAnalytics.wellKnownUris")
   }
 
   object Slick {
@@ -264,9 +254,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       Mail,
       Silhouette,
       Jobs,
-      Braintracing,
       Airbrake,
-      GoogleAnalytics,
       BackendAnalytics,
       Slick,
       Voxelytics,

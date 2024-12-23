@@ -1,6 +1,7 @@
-import React, { memo, useState, useEffect } from "react";
+import type React from "react";
+import { memo, useState, useEffect } from "react";
 import { List, Input, Spin } from "antd";
-import { APIPublication } from "types/api_flow_types";
+import type { APIPublication } from "types/api_flow_types";
 import PublicationCard from "dashboard/publication_card";
 import * as Utils from "libs/utils";
 import { getPublications } from "admin/admin_rest_api";
@@ -73,16 +74,10 @@ function PublicationView(props: Props) {
       (model) => model.description,
       (model) => model.title,
       (model) =>
-        model.datasets.flatMap((dataset) => [dataset.name, dataset.description, dataset.details]),
+        model.datasets.flatMap((dataset) => [dataset.name, dataset.description, dataset.metadata]),
     ],
     props.searchQuery,
-  ).sort(
-    Utils.compareBy(
-      [] as Array<APIPublication>,
-      (publication) => publication.publicationDate,
-      false,
-    ),
-  );
+  ).sort(Utils.compareBy<APIPublication>((publication) => publication.publicationDate, false));
 
   return (
     <List

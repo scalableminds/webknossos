@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   UpdateActionGroup
 }
 import com.scalableminds.webknossos.tracingstore.{
-  TSRemoteWebKnossosClient,
+  TSRemoteWebknossosClient,
   TracingStoreAccessTokenService,
   TracingUpdatesReport
 }
@@ -30,7 +30,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
 
   def tracingService: TracingService[T]
 
-  def remoteWebKnossosClient: TSRemoteWebKnossosClient
+  def remoteWebknossosClient: TSRemoteWebknossosClient
 
   def accessTokenService: TracingStoreAccessTokenService
 
@@ -223,7 +223,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       viewChangesCount = updateGroups.map(_.viewChangesCount).sum,
       userToken
     )
-    remoteWebKnossosClient.reportTracingUpdates(report).flatMap { _ =>
+    remoteWebknossosClient.reportTracingUpdates(report).flatMap { _ =>
       updateGroups.foldLeft(currentCommittedVersion) { (previousVersion, updateGroup) =>
         previousVersion.flatMap { prevVersion: Long =>
           if (prevVersion + 1 == updateGroup.version) {
@@ -275,7 +275,8 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
                                                                 tracingsWithIds.map(_._1),
                                                                 newId,
                                                                 newVersion = 0L,
-                                                                toCache = !persist)
+                                                                toCache = !persist,
+                                                                token)
             newEditableMappingIdBox <- tracingService
               .mergeEditableMappings(tracingsWithIds, urlOrHeaderToken(token, request))
               .futureBox

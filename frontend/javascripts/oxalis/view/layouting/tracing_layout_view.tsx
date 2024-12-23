@@ -7,7 +7,6 @@ import { document, location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
-import type { OrthoView, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import type { ControllerStatus } from "oxalis/controller";
 import OxalisController from "oxalis/controller";
@@ -15,9 +14,9 @@ import MergerModeController from "oxalis/controller/merger_mode_controller";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { Store } from "oxalis/singletons";
-import type { OxalisState, TraceOrViewCommand } from "oxalis/store";
+import type { OxalisState, Theme, TraceOrViewCommand } from "oxalis/store";
 import ActionBarView from "oxalis/view/action_bar_view";
-import ContextMenuContainer from "oxalis/view/context_menu";
+import WkContextMenu from "oxalis/view/context_menu";
 import {
   initializeInputCatcherSizes,
   recalculateInputCatcherSizes,
@@ -33,14 +32,14 @@ import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import PresentModernControls from "oxalis/view/novel_user_experiences/01-present-modern-controls";
 import WelcomeToast from "oxalis/view/novel_user_experiences/welcome_toast";
-import { importTracingFiles } from "oxalis/view/right-border-tabs/skeleton_tab_view";
+import { importTracingFiles } from "oxalis/view/right-border-tabs/trees_tab/skeleton_tab_view";
 import TracingView from "oxalis/view/tracing_view";
 import VersionView from "oxalis/view/version_view";
 import * as React from "react";
 import { connect } from "react-redux";
-import { RouteComponentProps, withRouter } from "react-router-dom";
+import { type RouteComponentProps, withRouter } from "react-router-dom";
 import type { Dispatch } from "redux";
-import { APICompoundType } from "types/api_flow_types";
+import type { APICompoundType } from "types/api_flow_types";
 import DistanceMeasurementTooltip from "oxalis/view/distance_measurement_tooltip";
 import TabTitle from "../components/tab_title_component";
 import { determineLayout } from "./default_layout_configs";
@@ -53,6 +52,7 @@ const { Sider } = Layout;
 type OwnProps = {
   initialMaybeCompoundType: APICompoundType | null;
   initialCommandType: TraceOrViewCommand;
+  UITheme: Theme;
 };
 type StateProps = ReturnType<typeof mapStateToProps>;
 type DispatchProps = {
@@ -67,13 +67,6 @@ type State = {
   activeLayoutName: string;
   hasError: boolean;
   status: ControllerStatus;
-  contextMenuPosition: [number, number] | null | undefined;
-  clickedNodeId: number | null | undefined;
-  contextMenuMeshId: number | null | undefined;
-  contextMenuMeshIntersectionPosition: Vector3 | null | undefined;
-  clickedBoundingBoxId: number | null | undefined;
-  contextMenuGlobalPosition: Vector3 | null | undefined;
-  contextMenuViewport: OrthoView | null | undefined;
   model: Record<string, any>;
   showFloatingMobileButtons: boolean;
 };
@@ -103,13 +96,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       activeLayoutName: lastActiveLayoutName,
       hasError: false,
       status: "loading",
-      contextMenuPosition: null,
-      clickedNodeId: null,
-      clickedBoundingBoxId: null,
-      contextMenuGlobalPosition: null,
-      contextMenuViewport: null,
-      contextMenuMeshId: null,
-      contextMenuMeshIntersectionPosition: null,
       model: layout,
       showFloatingMobileButtons: false,
     };
@@ -203,59 +189,16 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     this.lastTouchTimeStamp = null;
   };
 
-  showContextMenuAt = (
-    xPos: number,
-    yPos: number,
-    nodeId: number | null | undefined,
-    boundingBoxId: number | null | undefined,
-    globalPosition: Vector3 | null | undefined,
-    viewport: OrthoView,
-    meshId?: number | null | undefined,
-    meshIntersectionPosition?: Vector3 | null | undefined,
-  ) => {
-    // On Windows the right click to open the context menu is also triggered for the overlay
-    // of the context menu. This causes the context menu to instantly close after opening.
-    // Therefore delay the state update to delay that the context menu is rendered.
-    // Thus the context overlay does not get the right click as an event and therefore does not close.
-    setTimeout(
-      () =>
-        this.setState({
-          contextMenuPosition: [xPos, yPos],
-          clickedNodeId: nodeId,
-          clickedBoundingBoxId: boundingBoxId,
-          contextMenuGlobalPosition: globalPosition,
-          contextMenuViewport: viewport,
-          contextMenuMeshId: meshId,
-          contextMenuMeshIntersectionPosition: meshIntersectionPosition,
-        }),
-      0,
-    );
-  };
-
-  hideContextMenu = () => {
-    this.setState({
-      contextMenuPosition: null,
-      clickedNodeId: null,
-      clickedBoundingBoxId: null,
-      contextMenuGlobalPosition: null,
-      contextMenuViewport: null,
-      contextMenuMeshId: null,
-      contextMenuMeshIntersectionPosition: null,
-    });
-  };
-
   onLayoutChange = (model?: Record<string, any>, layoutName?: string) => {
     recalculateInputCatcherSizes();
     app.vent.emit("rerender");
 
     if (model != null) {
-      this.setState({
-        model,
+      this.setState({ model }, () => {
+        if (this.props.autoSaveLayouts) {
+          this.saveCurrentLayout(layoutName);
+        }
       });
-    }
-
-    if (this.props.autoSaveLayouts) {
-      this.saveCurrentLayout(layoutName);
     }
   };
 
@@ -306,7 +249,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       );
     }
 
-    const { contextMenuPosition, contextMenuViewport, status, activeLayoutName } = this.state;
+    const { status, activeLayoutName } = this.state;
     const layoutType = determineLayout(
       this.props.initialCommandType.type,
       this.props.viewMode,
@@ -324,7 +267,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         data: {
           nmlFile: files,
           createGroupForEachFile,
-          datasetName: this.props.datasetName,
+          datasetId: this.props.datasetId,
         },
       });
       this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
@@ -335,19 +278,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         <PresentModernControls />
         {this.state.showFloatingMobileButtons && <FloatingMobileControls />}
 
-        {status === "loaded" && (
-          <ContextMenuContainer
-            hideContextMenu={this.hideContextMenu}
-            maybeClickedNodeId={this.state.clickedNodeId}
-            clickedBoundingBoxId={this.state.clickedBoundingBoxId}
-            globalPosition={this.state.contextMenuGlobalPosition}
-            additionalCoordinates={this.props.additionalCoordinates || undefined}
-            contextMenuPosition={contextMenuPosition}
-            maybeViewport={contextMenuViewport}
-            maybeClickedMeshId={this.state.contextMenuMeshId}
-            maybeMeshIntersectionPosition={this.state.contextMenuMeshIntersectionPosition}
-          />
-        )}
+        {status === "loaded" && <WkContextMenu />}
 
         {status === "loaded" && distanceMeasurementTooltipPosition != null && (
           <DistanceMeasurementTooltip />
@@ -363,7 +294,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             initialCommandType={this.props.initialCommandType}
             controllerStatus={status}
             setControllerStatus={this.setControllerStatus}
-            showContextMenuAt={this.showContextMenuAt}
           />
           <CrossOriginApi />
           <Layout className="tracing-layout">
@@ -399,7 +329,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                         style={{
                           height: 30,
                           paddingTop: 4,
-                          backgroundColor: "var(--ant-warning)",
+                          backgroundColor: "var(--ant-color-warning)",
                           border: "none",
                           color: "white",
                         }}
@@ -446,7 +376,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                 ) : null}
               </div>
               {this.props.showVersionRestore ? (
-                <Sider id="version-restore-sider" width={400}>
+                <Sider id="version-restore-sider" width={400} theme={this.props.UITheme}>
                   <VersionView allowUpdate={isUpdateTracingAllowed} />
                 </Sider>
               ) : null}
@@ -472,13 +402,14 @@ function mapStateToProps(state: OxalisState) {
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
     isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
-    datasetName: state.dataset.name,
+    datasetId: state.dataset.id,
     is2d: is2dDataset(state.dataset),
     displayName: state.tracing.name ? state.tracing.name : state.dataset.name,
     organization: state.dataset.owningOrganization,
     distanceMeasurementTooltipPosition:
       state.uiInformation.measurementToolInfo.lastMeasuredPosition,
     additionalCoordinates: state.flycam.additionalCoordinates,
+    UITheme: state.uiInformation.theme,
   };
 }
 

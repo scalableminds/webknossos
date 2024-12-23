@@ -5,14 +5,20 @@ import {
 } from "oxalis/model/actions/volumetracing_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { useDispatch, useSelector } from "react-redux";
-import { OxalisState } from "oxalis/store";
-import React from "react";
+import type { OxalisState } from "oxalis/store";
 import defaultState from "oxalis/default_state";
 import Shortcut from "libs/shortcut_component";
-import { Radio, RadioChangeEvent } from "antd";
+import { Radio, type RadioChangeEvent } from "antd";
 import { NumberSliderSetting, SwitchSetting } from "../components/setting_input_views";
 import ButtonComponent from "../components/button_component";
 import { showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
+import features from "features";
+import FastTooltip from "components/fast_tooltip";
+import { QuestionCircleOutlined } from "@ant-design/icons";
+
+// The maximum depth of 16 also needs to be adapted in the back-end
+// (at the time of writing, in segmentAnythingMask in DatasetController.scala).
+const MAX_DEPTH_FOR_SAM = 16;
 
 const OPTIONS_WITH_DISABLED = [
   { label: "Dark Segment", value: "dark" },
@@ -20,19 +26,82 @@ const OPTIONS_WITH_DISABLED = [
 ];
 
 export function QuickSelectControls() {
-  const isQuickSelectActive = useSelector(
-    (state: OxalisState) => state.uiInformation.quickSelectState === "active",
-  );
   const quickSelectConfig = useSelector(
     (state: OxalisState) => state.userConfiguration.quickSelect,
   );
+  const isAISelectAvailable = features().segmentAnythingEnabled;
+  const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
+
+  return isQuickSelectHeuristic ? <HeuristicQuickSelectControls /> : <AiQuickSelectControls />;
+}
+
+export function AiQuickSelectControls() {
+  const quickSelectConfig = useSelector(
+    (state: OxalisState) => state.userConfiguration.quickSelect,
+  );
+
+  const dispatch = useDispatch();
+
+  const onChangePredictionDepth = (predictionDepth: number) => {
+    const conf = { ...quickSelectConfig, predictionDepth };
+    dispatch(updateUserSettingAction("quickSelect", conf));
+  };
+
+  const closeControls = () => {
+    dispatch(showQuickSelectSettingsAction(false));
+  };
+
+  return (
+    <div>
+      <div style={{ position: "absolute", right: 4, top: 4 }}>
+        <FastTooltip
+          placement="right-start"
+          dynamicRenderer={() => (
+            <div style={{ maxWidth: 400 }}>
+              <p>
+                The AI-based Quick Select feature can be used by clicking on a cell or by drawing a
+                rectangle around a cell. By configuring the prediction depth, multiple sections can
+                be segmented at once.
+              </p>
+              <p>
+                Hint: If the predicted selection is too big, zoom in a bit further and try again.
+              </p>
+            </div>
+          )}
+        >
+          <QuestionCircleOutlined />
+        </FastTooltip>
+      </div>
+      <NumberSliderSetting
+        label="Prediction Depth"
+        min={1}
+        value={quickSelectConfig.predictionDepth || 1}
+        max={MAX_DEPTH_FOR_SAM}
+        step={1}
+        onChange={onChangePredictionDepth}
+        defaultValue={defaultState.userConfiguration.quickSelect.predictionDepth}
+      />
+      <Shortcut supportInputElements keys="escape" onTrigger={closeControls} />
+      <Shortcut supportInputElements keys="enter" onTrigger={closeControls} />
+    </div>
+  );
+}
+export function HeuristicQuickSelectControls() {
+  const quickSelectConfig = useSelector(
+    (state: OxalisState) => state.userConfiguration.quickSelect,
+  );
+  const isQuickSelectActive = useSelector(
+    (state: OxalisState) => state.uiInformation.quickSelectState === "active",
+  );
+
   const dispatch = useDispatch();
 
   const onResetValues = () => {
-    const { segmentMode, threshold, closeValue, erodeValue, dilateValue } =
+    const { segmentMode, threshold, closeValue, erodeValue, dilateValue, ...rest } =
       defaultState.userConfiguration.quickSelect;
     dispatch(
       updateUserSettingAction("quickSelect", {
+        ...rest,
         useHeuristic: true,
         showPreview: quickSelectConfig.showPreview,
         segmentMode,
@@ -111,6 +180,7 @@ export function QuickSelectControls() {
         step={0.25} // a granular step is important so that all 256 values can be effectively targeted
         onChange={onChangeThreshold}
         disabled={!isQuickSelectActive}
+        defaultValue={defaultState.userConfiguration.quickSelect.threshold}
       />
       <NumberSliderSetting
         label="Close [vx]"
@@ -119,6 +189,7 @@ export function QuickSelectControls() {
         max={10}
         step={1}
         onChange={onChangeCloseValue}
+        defaultValue={defaultState.userConfiguration.quickSelect.closeValue}
       />
       <NumberSliderSetting
         label="Erode [vx]"
@@ -127,6 +198,7 @@ export function QuickSelectControls() {
         max={10}
         step={1}
         onChange={onChangeErodeValue}
+        defaultValue={defaultState.userConfiguration.quickSelect.erodeValue}
       />
       <NumberSliderSetting
         label="Dilate [vx]"
@@ -135,6 +207,7 @@ export function QuickSelectControls() {
         max={10}
         step={1}
         onChange={onChangeDilateValue}
+        defaultValue={defaultState.userConfiguration.quickSelect.dilateValue}
       />
       <Shortcut supportInputElements keys="escape" onTrigger={onDiscard} />
       <Shortcut supportInputElements keys="enter" onTrigger={onConfirm} />

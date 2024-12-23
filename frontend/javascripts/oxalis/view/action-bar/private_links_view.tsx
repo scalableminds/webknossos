@@ -1,4 +1,3 @@
-import React from "react";
 import {
   createPrivateLink,
   deletePrivateLink,
@@ -16,10 +15,10 @@ import Toast from "libs/toast";
 import {
   Button,
   DatePicker,
-  DatePickerProps,
+  type DatePickerProps,
   Dropdown,
   Input,
-  MenuProps,
+  type MenuProps,
   Modal,
   Popover,
   Space,
@@ -35,21 +34,27 @@ import {
   InfoCircleOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
-import { ZarrPrivateLink } from "types/api_flow_types";
+import type { ZarrPrivateLink } from "types/api_flow_types";
 import { AsyncButton, AsyncIconButton } from "components/async_clickables";
 import dayjs from "dayjs";
 import FormattedDate from "components/formatted_date";
-import { ColumnsType } from "antd/lib/table";
+import type { ColumnsType } from "antd/lib/table";
 import { makeComponentLazy } from "libs/react_helpers";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { useSelector } from "react-redux";
 import { getDataLayers } from "oxalis/model/accessors/dataset_accessor";
 import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
 
+// TODO Remove explicit (error) type declaration when updating to tanstack/query >= 5
+// https://github.com/TanStack/query/pull/4706
 function useLinksQuery(annotationId: string) {
-  return useQuery(["links", annotationId], () => getPrivateLinksByAnnotation(annotationId), {
-    refetchOnWindowFocus: false,
-  });
+  return useQuery<ZarrPrivateLink[], Error>(
+    ["links", annotationId],
+    () => getPrivateLinksByAnnotation(annotationId),
+    {
+      refetchOnWindowFocus: false,
+    },
+  );
 }
 
 function useCreateLinkMutation(annotationId: string) {
@@ -140,7 +145,7 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
 
   const baseUrl = maybeAccessToken
     ? `${dataStoreURL}/data/annotations/zarr/${maybeAccessToken}`
-    : `${dataStoreURL}/data/zarr/${dataset.owningOrganization}/${dataset.name}`;
+    : `${dataStoreURL}/data/zarr/${dataset.owningOrganization}/${dataset.directoryName}`;
 
   const copyTokenToClipboard = async ({ key: layerName }: { key: string }) => {
     await navigator.clipboard.writeText(`${baseUrl}/${layerName}`);
@@ -175,14 +180,14 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
   const { baseUrl, copyLayerUrlMenu } = useZarrLinkMenu(linkItem.accessToken);
 
   return (
-    <Input.Group compact className="no-borders">
+    <Space.Compact className="no-borders">
       <Input
         value={baseUrl}
         size="small"
         style={{
           width: "90%",
           background: "transparent",
-          color: "var(--ant-text-secondary)",
+          color: "var(--ant-color-text-secondary)",
         }}
         readOnly
         disabled
@@ -191,7 +196,7 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
       <Dropdown menu={copyLayerUrlMenu}>
         <Button size="small" icon={<CopyOutlined />} style={{ background: "transparent" }} />
       </Dropdown>
-    </Input.Group>
+    </Space.Compact>
   );
 }
 
@@ -251,7 +256,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
   if (linkItem.expirationDateTime == null) {
     return (
       <Dropdown menu={expirationMenu}>
-        <Space style={{ color: "var(--ant-text-secondary)" }}>
+        <Space style={{ color: "var(--ant-color-text-secondary)" }}>
           Add Expiration Date
           <DownOutlined />
         </Space>
@@ -262,7 +267,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
   const maybeWarning =
     Number(new Date()) > linkItem.expirationDateTime ? (
       <Tooltip title="This link has expired">
-        <InfoCircleOutlined style={{ color: "var(--ant-error)" }} />
+        <InfoCircleOutlined style={{ color: "var(--ant-color-error)" }} />
       </Tooltip>
     ) : null;
 
@@ -310,8 +315,12 @@ function HumanizedDuration({ expirationDate }: { expirationDate: dayjs.Dayjs }) 
         // expiration date at 08:00, moment.to() would round the duration and
         // render "2 days" which is confusing if the user selected (in 1 day).
         // Therefore, we pin the time at each date to 23:59 UTC.
-        now.endOf("day").to(expirationDate.endOf("day"));
-  return <span style={{ color: "var(--ant-text-secondary)", marginLeft: 4 }}>{duration}</span>;
+        now
+          .endOf("day")
+          .to(expirationDate.endOf("day"));
+  return (
+    <span style={{ color: "var(--ant-color-text-secondary)", marginLeft: 4 }}>{duration}</span>
+  );
 }
 
 function PrivateLinksView({ annotationId }: { annotationId: string }) {
@@ -320,7 +329,7 @@ function PrivateLinksView({ annotationId }: { annotationId: string }) {
   const deleteMutation = useDeleteLinkMutation(annotationId);
 
   if (error) {
-    return <span>Error while loading the private links: {error}</span>;
+    return <span>Error while loading the private links: {error.message}</span>;
   }
 
   const columns: ColumnsType<ZarrPrivateLink> = [

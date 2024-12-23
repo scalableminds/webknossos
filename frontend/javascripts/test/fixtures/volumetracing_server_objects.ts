@@ -33,7 +33,7 @@ export const tracing: ServerVolumeTracing = {
   largestSegmentId: 21890,
   version: 0,
   zoomLevel: 0,
-  resolutions: [
+  mags: [
     {
       x: 1,
       y: 1,
@@ -67,6 +67,7 @@ export const tracing: ServerVolumeTracing = {
   ],
 };
 export const annotation: APIAnnotation = {
+  datasetId: "66f3c82966010034942e9740",
   description: "",
   state: "Active",
   id: "598b52293c00009906f043e7",
@@ -76,7 +77,6 @@ export const annotation: APIAnnotation = {
   typ: "Explorational",
   teams: [],
   task: null,
-  stats: {},
   restrictions: {
     allowAccess: true,
     allowUpdate: true,
@@ -88,6 +88,7 @@ export const annotation: APIAnnotation = {
       name: "volume",
       tracingId: "tracingId-1234",
       typ: "Volume",
+      stats: {},
     },
   ],
   dataSetName: "ROI2017_wkw",
@@ -97,6 +98,8 @@ export const annotation: APIAnnotation = {
     url: "http://localhost:9000",
     isScratch: false,
     allowsUpload: true,
+    jobsEnabled: false,
+    jobsSupportedByAvailableWorkers: [],
   },
   tracingStore: {
     name: "localhost",
@@ -108,10 +111,11 @@ export const annotation: APIAnnotation = {
     somaClickingAllowed: true,
     volumeInterpolationAllowed: false,
     mergerMode: false,
-    resolutionRestrictions: {},
+    magRestrictions: {},
   },
   tags: ["ROI2017_wkw", "volume"],
   tracingTime: 0,
   contributors: [],
   othersMayEdit: false,
+  isLockedByOwner: false,
 };

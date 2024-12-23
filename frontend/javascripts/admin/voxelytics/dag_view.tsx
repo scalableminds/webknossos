@@ -1,10 +1,10 @@
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import ReactFlow, {
   MiniMap,
   Background,
-  Node as FlowNode,
-  Edge as FlowEdge,
-  ReactFlowInstance,
+  type Node as FlowNode,
+  type Edge as FlowEdge,
+  type ReactFlowInstance,
 } from "react-flow-renderer";
 import dagre from "dagre";
 
@@ -12,12 +12,12 @@ import ColorHash from "color-hash";
 import { memoize } from "lodash";
 import {
   VoxelyticsRunState,
-  VoxelyticsTaskConfigWithName,
-  VoxelyticsWorkflowDag,
-  VoxelyticsWorkflowDagEdge,
+  type VoxelyticsTaskConfigWithName,
+  type VoxelyticsWorkflowDag,
+  type VoxelyticsWorkflowDagEdge,
 } from "types/api_flow_types";
 import { useSelector } from "react-redux";
-import { OxalisState, Theme } from "oxalis/store";
+import type { OxalisState, Theme } from "oxalis/store";
 import { Button } from "antd";
 import { ExpandOutlined, MinusOutlined, PlusOutlined } from "@ant-design/icons";
 

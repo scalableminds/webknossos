@@ -1,15 +1,17 @@
 package controllers
 
-import play.silhouette.api.Silhouette
-import play.silhouette.api.actions.SecuredRequest
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.organization.OrganizationDAO
+import models.user.UserService
 import models.voxelytics._
 import play.api.libs.json._
 import play.api.mvc._
+import play.silhouette.api.Silhouette
+import play.silhouette.api.actions.SecuredRequest
 import security.WkEnv
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -19,6 +21,7 @@ class VoxelyticsController @Inject()(
     organizationDAO: OrganizationDAO,
     voxelyticsDAO: VoxelyticsDAO,
     voxelyticsService: VoxelyticsService,
+    userService: UserService,
     lokiClient: LokiClient,
     wkConf: WkConf,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -78,15 +81,15 @@ class VoxelyticsController @Inject()(
     for {
       _ <- bool2Fox(runs.nonEmpty) // just asserting once more
       workflowTaskCounts <- voxelyticsDAO.findWorkflowTaskCounts(request.identity,
-                                                                 runs.map(_.workflow_hash).toSet,
+                                                                 runs.map(_.workflowHash).toSet,
                                                                  conf.staleTimeout)
       _ <- bool2Fox(workflowTaskCounts.nonEmpty) ?~> "voxelytics.noTaskFound" ~> NOT_FOUND
       workflows <- voxelyticsDAO.findWorkflowsByHashAndOrganization(request.identity._organization,
-                                                                    runs.map(_.workflow_hash).toSet)
+                                                                    runs.map(_.workflowHash).toSet)
       _ <- bool2Fox(workflows.nonEmpty) ?~> "voxelytics.noWorkflowFound" ~> NOT_FOUND
 
       workflowsAsJson = JsArray(workflows.flatMap(workflow => {
-        val workflowRuns = runs.filter(run => run.workflow_hash == workflow.hash)
+        val workflowRuns = runs.filter(run => run.workflowHash == workflow.hash)
         if (workflowRuns.nonEmpty) {
           val state = workflowRuns.maxBy(_.beginTime).state
           val beginTime = workflowRuns.map(_.beginTime).min
@@ -138,24 +141,35 @@ class VoxelyticsController @Inject()(
         combinedTaskRuns <- voxelyticsDAO.findCombinedTaskRuns(sortedRuns.map(_.id), conf.staleTimeout)
 
         // Fetch artifact data for task runs
-        artifacts <- voxelyticsDAO.findArtifacts(sortedRuns.map(_.id), conf.staleTimeout)
+        artifacts <- voxelyticsDAO.findArtifacts(request.identity, sortedRuns.map(_.id), conf.staleTimeout)
 
         // Fetch task configs
         tasks <- voxelyticsDAO.findTasks(mostRecentRun.id)
 
         // Assemble workflow report JSON
         result = Json.obj(
-          "config" -> voxelyticsService.workflowConfigPublicWrites(mostRecentRun.workflow_config, tasks),
+          "config" -> voxelyticsService.workflowConfigPublicWrites(mostRecentRun.workflowConfig, tasks),
           "artifacts" -> voxelyticsService.artifactsPublicWrites(artifacts),
           "runs" -> sortedRuns,
           "tasks" -> voxelyticsService.taskRunsPublicWrites(combinedTaskRuns, allTaskRuns),
           "workflow" -> Json.obj(
             "name" -> workflow.name,
             "hash" -> workflowHash,
-            "yamlContent" -> mostRecentRun.workflow_yamlContent
+            "yamlContent" -> mostRecentRun.workflowYamlContent
           )
         )
       } yield JsonOk(result)
+    }
+
+  def deleteWorkflow(workflowHash: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
+        _ <- userService.assertIsSuperUser(request.identity)
+        _ <- voxelyticsDAO.findWorkflowByHash(workflowHash) ?~> "voxelytics.workflowNotFound" ~> NOT_FOUND
+        _ = logger.info(s"Deleting workflow with hash $workflowHash in organization ${request.identity._organization}")
+        _ <- voxelyticsDAO.deleteWorkflow(workflowHash, request.identity._organization)
+      } yield Ok
     }
 
   def storeWorkflowEvents(workflowHash: String, runName: String): Action[List[WorkflowEvent]] =

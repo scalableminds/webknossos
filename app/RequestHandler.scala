@@ -9,7 +9,7 @@ import play.api.mvc.{Handler, InjectedController, RequestHeader}
 import play.api.routing.Router
 import play.core.WebCommands
 import play.filters.csp.CSPConfig
-import utils.WkConf
+import utils.{ApiVersioning, WkConf}
 
 import scala.concurrent.ExecutionContext
 
@@ -35,13 +35,13 @@ class RequestHandler @Inject()(webCommands: WebCommands,
     with InjectedController
     with ExtendedController
     with CspHeaders
+    with ApiVersioning
     with LazyLogging {
 
   override def routeRequest(request: RequestHeader): Option[Handler] =
-    if (apiVersionIsTooNew(request)) {
+    if (isInvalidApiVersion(request)) {
       Some(Action {
-        JsonNotFound(
-          f"This WEBKNOSSOS instance does not yet support this API version. The requested API version is higher than the current API version $CURRENT_API_VERSION.")
+        JsonNotFound(invalidApiVersionMessage(request))
       })
     } else if (request.uri.matches("^(/api/|/data/|/tracings/|/\\.well-known/).*$")) {
       super.routeRequest(request)
@@ -65,15 +65,5 @@ class RequestHandler @Inject()(webCommands: WebCommands,
     val path = requestHeader.path.replaceFirst("^(/assets/)", "")
     assets.at(path = "/public", file = path)
   }
-
-  private def CURRENT_API_VERSION = 5
-
-  private def apiVersionIsTooNew(request: RequestHeader): Boolean =
-    "^/api/v(\\d+).*$".r.findFirstMatchIn(request.uri) match {
-      case Some(m) =>
-        val version = m.group(1)
-        version.toInt > CURRENT_API_VERSION
-      case None => false
-    }
 
 }

@@ -15,7 +15,6 @@ function getSkeletonTracingForConnectome(
   layerName: string,
 ): Maybe<SkeletonTracing> {
   if (state.localSegmentationData[layerName].connectomeData.skeleton != null) {
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'IMaybe<SkeletonTracing | null | undefined>' ... Remove this comment to see the full error message
     return Maybe.Just(state.localSegmentationData[layerName].connectomeData.skeleton);
   }
 

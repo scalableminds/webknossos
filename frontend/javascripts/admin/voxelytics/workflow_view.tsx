@@ -1,23 +1,22 @@
 import _ from "lodash";
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
-  APIOrganization,
-  VoxelyticsRunInfo,
+  type APIOrganization,
   VoxelyticsRunState,
-  VoxelyticsTaskConfig,
-  VoxelyticsTaskConfigWithHierarchy,
-  VoxelyticsTaskConfigWithName,
-  VoxelyticsTaskInfo,
-  VoxelyticsWorkflowDag,
-  VoxelyticsWorkflowDagEdge,
-  VoxelyticsWorkflowDagNode,
-  VoxelyticsWorkflowReport,
+  type VoxelyticsTaskConfig,
+  type VoxelyticsTaskConfigWithHierarchy,
+  type VoxelyticsTaskConfigWithName,
+  type VoxelyticsTaskInfo,
+  type VoxelyticsWorkflowDag,
+  type VoxelyticsWorkflowDagEdge,
+  type VoxelyticsWorkflowDagNode,
+  type VoxelyticsWorkflowReport,
 } from "types/api_flow_types";
 import { useSearchParams, usePolling } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import TabTitle from "oxalis/view/components/tab_title_component";
 import { getVoxelyticsWorkflow, isWorkflowAccessibleBySwitching } from "admin/admin_rest_api";
 import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
@@ -129,7 +128,7 @@ function parseReport(report: VoxelyticsWorkflowReport): VoxelyticsWorkflowReport
         beginTime: t.beginTime != null ? new Date(t.beginTime) : null,
         endTime: t.endTime != null ? new Date(t.endTime) : null,
         state: t.state,
-      } as VoxelyticsTaskInfo),
+      }) as VoxelyticsTaskInfo,
   );
   const dag = parseDag(report.config.tasks, tasks);
   return {
@@ -139,14 +138,11 @@ function parseReport(report: VoxelyticsWorkflowReport): VoxelyticsWorkflowReport
       tasks: Object.fromEntries(dag.nodes.map((t) => [t.id, report.config.tasks[t.id]])),
     },
     dag,
-    runs: report.runs.map(
-      (run) =>
-        ({
-          ...run,
-          beginTime: run.beginTime != null ? new Date(run.beginTime) : null,
-          endTime: run.endTime != null ? new Date(run.endTime) : null,
-        } as VoxelyticsRunInfo),
-    ),
+    runs: report.runs.map((run) => ({
+      ...run,
+      beginTime: run.beginTime == null ? null : new Date(run.beginTime),
+      endTime: run.endTime == null ? null : new Date(run.endTime),
+    })),
     tasks,
   };
 }
@@ -372,8 +368,8 @@ export default function WorkflowView() {
           error: err as Error,
         });
       } catch (accessibleBySwitchingError) {
-        console.log(accessibleBySwitchingError);
         Toast.error("Could not load workflow report.");
+        console.error(accessibleBySwitchingError);
         setLoadingState({ status: "FAILED", error: accessibleBySwitchingError as Error });
       }
     }

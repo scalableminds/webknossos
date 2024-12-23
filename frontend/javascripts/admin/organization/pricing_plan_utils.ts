@@ -1,5 +1,5 @@
 import messages from "messages";
-import { APIOrganization, APIUser } from "types/api_flow_types";
+import type { APIOrganization, APIUser } from "types/api_flow_types";
 
 export enum PricingPlanEnum {
   Basic = "Basic",

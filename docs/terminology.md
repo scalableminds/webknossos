@@ -20,8 +20,8 @@ The underlying file formats zarr and wkw use **chunks** as a compressible unit a
 
 An **annotation** can consist of one or multiple **annotation layers**, which can either be a
 
-* **volume annotation layer**, or **volume layer** in short ([main guide](./volume_annotation.md)), or
-* **skeleton annotation layer**, or **skeleton layer** and **skeleton** in short ([main guide](./skeleton_annotation.md)).
+* **volume annotation layer**, or **volume layer** in short ([main guide](./volume_annotation/index.md)), or
+* **skeleton annotation layer**, or **skeleton layer** and **skeleton** in short ([main guide](./skeleton_annotation/index.md)).
 
 **Volume-only** and **skeleton-only** annotations are restricted to the specific annotation layer type.
 
@@ -37,12 +37,12 @@ A **task** specifies a desired annotation result. A **task instance** refers to 
 
 A **project** is a collection of tasks.
 
-See also the [task and projects guide](./tasks.md).
+See also the [task and projects guide](./tasks_projects/index.md).
 
 ## Segments
 At its lowest-level a **segment** is the collection of several annotated voxels. At a larger level, segments can grow to be the size of whole cell bodies or partial cells, e.g. a single axon.
 
-Typically many segments make up a segmentation. Segments can be painted manually using the WEBKNOSSOS volume annotation tools or created through third-party programs typically resulting in larger segmentations of a dataset.
+Typically, many segments make up a segmentation. Segments can be painted manually using the WEBKNOSSOS volume annotation tools or created through third-party programs typically resulting in larger segmentations of a dataset.
 
 ## Agglomerates
 An agglomerate is the combination of several (smaller) segments to reconstruct a larger biological structure. Typically an agglomerate combines the fragments of an over-segmentation created by some automated method, e.g. a machine learning system. 

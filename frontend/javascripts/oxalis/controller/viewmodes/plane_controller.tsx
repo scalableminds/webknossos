@@ -11,7 +11,7 @@ import {
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
+import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type MouseBindingMap } from "libs/input";
 import { document } from "libs/window";
 import {
   getPosition,
@@ -51,12 +51,7 @@ import {
   LineMeasurementTool,
   AreaMeasurementTool,
 } from "oxalis/controller/combinations/tool_controls";
-import type {
-  ShowContextMenuFunction,
-  OrthoView,
-  OrthoViewMap,
-  AnnotationTool,
-} from "oxalis/constants";
+import type { OrthoView, OrthoViewMap, AnnotationTool } from "oxalis/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews, AnnotationToolEnum } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -71,6 +66,7 @@ import {
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
 import { getDefaultBrushSizes } from "oxalis/view/action-bar/toolbar_view";
 import { userSettings } from "types/schemas/user_settings.schema";
+import { highlightAndSetCursorOnHoveredBoundingBox } from "../combinations/bounding_box_handlers";
 
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,
@@ -90,10 +86,6 @@ function ensureNonConflictingHandlers(
   }
 }
 
-type OwnProps = {
-  showContextMenuAt: ShowContextMenuFunction;
-};
-
 const cycleTools = () => {
   Store.dispatch(cycleToolAction());
 };
@@ -110,7 +102,7 @@ type StateProps = {
   tracing: Tracing;
   activeTool: AnnotationTool;
 };
-type Props = StateProps & OwnProps;
+type Props = StateProps;
 
 class SkeletonKeybindings {
   static getKeyboardControls() {
@@ -192,11 +184,28 @@ class BoundingBoxKeybindings {
   static getKeyboardControls() {
     return {
       c: () => Store.dispatch(addUserBoundingBoxAction()),
+      meta: BoundingBoxKeybindings.createKeyDownAndUpHandler(),
+      ctrl: BoundingBoxKeybindings.createKeyDownAndUpHandler(),
     };
   }
 
+  static handleUpdateCursor = (event: KeyboardEvent) => {
+    const { viewModeData, temporaryConfiguration } = Store.getState();
+    const { mousePosition } = temporaryConfiguration;
+    if (mousePosition == null) return;
+    highlightAndSetCursorOnHoveredBoundingBox(
+      { x: mousePosition[0], y: mousePosition[1] },
+      viewModeData.plane.activeViewport,
+      event,
+    );
+  };
+
   static getExtendedKeyboardControls() {
     return { x: () => setTool(AnnotationToolEnum.BOUNDING_BOX) };
+  }
+
+  static createKeyDownAndUpHandler() {
+    return (event: KeyboardEvent) => BoundingBoxKeybindings.handleUpdateCursor(event);
   }
 }
 
@@ -229,7 +238,7 @@ function createDelayAwareMoveHandler(multiplier: number) {
 
     const thirdDim = dimensions.thirdDimensionForPlane(activeViewport);
     const voxelPerSecond =
-      state.userConfiguration.moveValue / state.dataset.dataSource.scale[thirdDim];
+      state.userConfiguration.moveValue / state.dataset.dataSource.scale.factor[thirdDim];
 
     if (state.userConfiguration.dynamicSpaceDirection) {
       // Change direction of the value connected to space, based on the last direction
@@ -303,38 +312,15 @@ class PlaneController extends React.PureComponent<Props> {
     });
   }
 
-  getPlaneMouseControls(planeId: OrthoView): Record<string, any> {
-    const moveControls = MoveTool.getMouseControls(
-      planeId,
-      this.planeView,
-      this.props.showContextMenuAt,
-    );
-    const skeletonControls = SkeletonTool.getMouseControls(
-      this.planeView,
-      this.props.showContextMenuAt,
-    );
-    const drawControls = DrawTool.getPlaneMouseControls(
-      planeId,
-      this.planeView,
-      this.props.showContextMenuAt,
-    );
-    const eraseControls = EraseTool.getPlaneMouseControls(
-      planeId,
-      this.planeView,
-      this.props.showContextMenuAt,
-    );
+  getPlaneMouseControls(planeId: OrthoView): MouseBindingMap {
+    const moveControls = MoveTool.getMouseControls(planeId, this.planeView);
+    const skeletonControls = SkeletonTool.getMouseControls(this.planeView);
+    const drawControls = DrawTool.getPlaneMouseControls(planeId, this.planeView);
+    const eraseControls = EraseTool.getPlaneMouseControls(planeId, this.planeView);
     const fillCellControls = FillCellTool.getPlaneMouseControls(planeId);
     const pickCellControls = PickCellTool.getPlaneMouseControls(planeId);
-    const boundingBoxControls = BoundingBoxTool.getPlaneMouseControls(
-      planeId,
-      this.planeView,
-      this.props.showContextMenuAt,
-    );
-    const quickSelectControls = QuickSelectTool.getPlaneMouseControls(
-      planeId,
-      this.planeView,
-      this.props.showContextMenuAt,
-    );
+    const boundingBoxControls = BoundingBoxTool.getPlaneMouseControls(planeId, this.planeView);
+    const quickSelectControls = QuickSelectTool.getPlaneMouseControls(planeId, this.planeView);
     const proofreadControls = ProofreadTool.getPlaneMouseControls(planeId, this.planeView);
     const lineMeasurementControls = LineMeasurementTool.getPlaneMouseControls();
     const areaMeasurementControls = AreaMeasurementTool.getPlaneMouseControls();
@@ -353,7 +339,7 @@ class PlaneController extends React.PureComponent<Props> {
       Object.keys(areaMeasurementControls),
     );
 
-    const controls: Record<string, any> = {};
+    const controls: MouseBindingMap = {};
 
     for (const controlKey of allControlKeys) {
       controls[controlKey] = this.createToolDependentMouseHandler({
@@ -396,6 +382,7 @@ class PlaneController extends React.PureComponent<Props> {
     });
     const {
       baseControls: notLoopedKeyboardControls,
+      keyUpControls,
       extendedControls: extendedNotLoopedKeyboardControls,
     } = this.getNotLoopedKeyboardControls();
     const loopedKeyboardControls = this.getLoopedKeyboardControls();
@@ -429,6 +416,7 @@ class PlaneController extends React.PureComponent<Props> {
       notLoopedKeyboardControls,
       {},
       extendedNotLoopedKeyboardControls,
+      keyUpControls,
     );
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
@@ -533,7 +521,11 @@ class PlaneController extends React.PureComponent<Props> {
       this.props.tracing.volumes.length > 0
         ? VolumeKeybindings.getKeyboardControls()
         : emptyDefaultHandler;
-    const { c: boundingBoxCHandler } = BoundingBoxKeybindings.getKeyboardControls();
+    const {
+      c: boundingBoxCHandler,
+      meta: boundingBoxMetaHandler,
+      ctrl: boundingBoxCtrlHandler,
+    } = BoundingBoxKeybindings.getKeyboardControls();
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
     const extendedSkeletonControls =
       this.props.tracing.skeleton != null ? SkeletonKeybindings.getExtendedKeyboardControls() : {};
@@ -556,6 +548,12 @@ class PlaneController extends React.PureComponent<Props> {
           volumeCHandler,
           boundingBoxCHandler,
         ),
+        ctrl: this.createToolDependentKeyboardHandler(null, null, boundingBoxCtrlHandler),
+        meta: this.createToolDependentKeyboardHandler(null, null, boundingBoxMetaHandler),
+      },
+      keyUpControls: {
+        ctrl: this.createToolDependentKeyboardHandler(null, null, boundingBoxCtrlHandler),
+        meta: this.createToolDependentKeyboardHandler(null, null, boundingBoxMetaHandler),
       },
       extendedControls,
     };
@@ -695,7 +693,6 @@ class PlaneController extends React.PureComponent<Props> {
         cameras={this.planeView.getCameras()}
         tracing={this.props.tracing}
         planeView={this.planeView}
-        showContextMenuAt={this.props.showContextMenuAt}
       />
     );
   }

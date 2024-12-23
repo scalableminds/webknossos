@@ -1,14 +1,13 @@
 import { Button, Modal, Avatar, List, Spin, Checkbox, Alert } from "antd";
 import { FileOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
-import Dropzone, { DropzoneInputProps } from "react-dropzone";
+import Dropzone, { type DropzoneInputProps } from "react-dropzone";
 import * as React from "react";
 import prettyBytes from "pretty-bytes";
 import type { Dispatch } from "redux";
 import type { OxalisState } from "oxalis/store";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import FormattedDate from "components/formatted_date";
-import { trackAction } from "oxalis/model/helpers/analytics";
 
 type State = {
   files: Array<File>;
@@ -59,7 +58,7 @@ function NmlDropArea({
         <InboxOutlined
           style={{
             fontSize: 180,
-            color: "var(--ant-primary)",
+            color: "var(--ant-color-primary)",
           }}
         />
       </div>
@@ -67,7 +66,7 @@ function NmlDropArea({
         <h5>Drop NML or zip files here{isClickAllowed ? " or click to select files" : null}...</h5>
       ) : (
         <h5>
-          Drop NML or zip files here to <b>create a new tracing</b>.
+          Drop NML or zip files here to <b>create a new annotation</b>.
         </h5>
       )}
     </div>
@@ -115,7 +114,6 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
       files,
       dropzoneActive: false,
     });
-    trackAction("NML drag and drop");
     this.props.hideDropzoneModal();
   };
 
@@ -132,7 +130,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
                   size="large"
                   icon={<FileOutlined />}
                   style={{
-                    backgroundColor: "var(--ant-primary)",
+                    backgroundColor: "var(--ant-color-primary)",
                   }}
                 />
               }
@@ -291,7 +289,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
             ) : null}
             {
               // If the user explicitly selected the menu option to import NMLs,
-              // we show a proper modal which renderes almost the same hint ("You may drag... or click").
+              // we show a proper modal which renders almost the same hint ("You may drag... or click").
             }
             {this.props.showDropzoneModal ? this.renderDropzoneModal() : null}
 

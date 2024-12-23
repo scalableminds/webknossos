@@ -17,7 +17,7 @@ import window from "libs/window";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import BucketSnapshot, { type PendingOperation } from "./bucket_snapshot";
-import { uint8ToTypedBuffer } from "../helpers/bucket_compression";
+import { getConstructorForElementClass, uint8ToTypedBuffer } from "../helpers/typed_buffer";
 
 export enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
@@ -61,43 +61,6 @@ export class NullBucket {
   }
 }
 
-export type TypedArrayConstructor =
-  | Uint8ArrayConstructor
-  | Uint16ArrayConstructor
-  | Uint32ArrayConstructor
-  | Float32ArrayConstructor
-  | BigUint64ArrayConstructor;
-export const getConstructorForElementClass = (
-  type: ElementClass,
-): [TypedArrayConstructor, number] => {
-  switch (type) {
-    case "int8":
-    case "uint8":
-      return [Uint8Array, 1];
-
-    case "int16":
-    case "uint16":
-      return [Uint16Array, 1];
-
-    case "uint24":
-      // There is no Uint24Array and uint24 is treated in a special way (rgb) anyways
-      return [Uint8Array, 3];
-
-    case "int32":
-    case "uint32":
-      return [Uint32Array, 1];
-
-    case "float":
-      return [Float32Array, 1];
-
-    case "int64":
-    case "uint64":
-      return [BigUint64Array, 1];
-
-    default:
-      throw new Error(`This type is not supported by the DataBucket class: ${type}`);
-  }
-};
 export const NULL_BUCKET = new NullBucket();
 export type Bucket = DataBucket | NullBucket;
 

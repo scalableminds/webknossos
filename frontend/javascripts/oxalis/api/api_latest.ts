@@ -3,7 +3,6 @@ import PriorityQueue from "js-priority-queue";
 import TWEEN from "tween.js";
 import _ from "lodash";
 import type { Bucket, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_flow_types";
 import { InputKeyboardNoLoop } from "libs/input";
 import { M4x4, type Matrix4x4, V3, type Vector16 } from "libs/mjs";
@@ -182,6 +181,7 @@ import {
   getOptionsForCreateSkeletonNode,
 } from "oxalis/controller/combinations/skeleton_handlers";
 import { requestTask } from "admin/api/tasks";
+import { getConstructorForElementClass } from "oxalis/model/helpers/typed_buffer";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }

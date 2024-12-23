@@ -1,22 +1,7 @@
-import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import compressLz4Block from "oxalis/workers/byte_array_lz4_compression.worker";
 import type { BucketDataArray, ElementClass } from "types/api_flow_types";
-import Constants from "oxalis/constants";
-
-export function uint8ToTypedBuffer(
-  arrayBuffer: Uint8Array | null | undefined,
-  elementClass: ElementClass,
-) {
-  const [TypedArrayClass, channelCount] = getConstructorForElementClass(elementClass);
-  return arrayBuffer != null
-    ? new TypedArrayClass(
-        arrayBuffer.buffer,
-        arrayBuffer.byteOffset,
-        arrayBuffer.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
-      )
-    : new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
-}
+import { uint8ToTypedBuffer } from "./typed_buffer";
 
 const _byteArrayToLz4Array = createWorker(compressLz4Block);
 

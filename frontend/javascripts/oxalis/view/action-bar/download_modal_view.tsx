@@ -576,6 +576,8 @@ function _DownloadModalView({
     </>
   );
 
+  const onlyOneMagAvailable = selectedLayerMagInfo.getMagList().length === 1;
+
   const tiffExportTab = (
     <>
       <Row>
@@ -642,7 +644,7 @@ function _DownloadModalView({
             style={{ width: "100%" }}
           />
           {boundingBoxCompatibilityAlerts}
-          {selectedLayerInfos.additionalAxes != null && (
+          {(selectedLayerInfos.additionalAxes?.length || 0) > 0 && (
             <Row>
               <Divider
                 style={{
@@ -670,23 +672,27 @@ function _DownloadModalView({
           >
             Mag
           </Divider>
-          <Row>
-            <Col span={19}>
-              <MagSlider magnificationInfo={selectedLayerMagInfo} value={mag} onChange={setMag} />
-            </Col>
-            <Col
-              span={5}
-              style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}
-            >
-              {mag.join("-")}
-            </Col>
-          </Row>
+          {!onlyOneMagAvailable ? (
+            <Row>
+              <Col span={19}>
+                <MagSlider magnificationInfo={selectedLayerMagInfo} value={mag} onChange={setMag} />
+              </Col>
+              <Col
+                span={5}
+                style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}
+              >
+                {mag.join("-")}
+              </Col>
+            </Row>
+          ) : null}
           <Text
             style={{
               margin: "0 6px 12px",
               display: "block",
             }}
           >
+            {onlyOneMagAvailable && mag.join("-")}
+            <br />
             Estimated file size:{" "}
             {estimateFileSize(selectedLayer, mag, selectedBoundingBox.boundingBox, exportFormat)}
             <br />

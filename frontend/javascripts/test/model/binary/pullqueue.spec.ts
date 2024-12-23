@@ -1,12 +1,13 @@
-// @ts-nocheck
 import _ from "lodash";
 import mockRequire from "mock-require";
 import "test/mocks/lz4";
 import runAsync from "test/helpers/run-async";
 import sinon from "sinon";
-import test from "ava";
+import anyTest, { type TestFn } from "ava";
+import type PullQueueType from "oxalis/model/bucket_data_handling/pullqueue";
+
 const RequestMock = {
-  always: (promise, func) => promise.then(func, func),
+  always: (promise: Promise<unknown>, func: () => void) => promise.then(func, func),
 };
 mockRequire("oxalis/model/sagas/root_saga", function* () {
   yield;
@@ -21,6 +22,7 @@ const WkstoreAdapterMock = {
   requestWithFallback: sinon.stub(),
 };
 mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", WkstoreAdapterMock);
+
 const mockedCube = {
   isSegmentation: true,
   shouldEagerlyMaintainUsedValueSet: () => false,
@@ -32,12 +34,16 @@ const layer = {
   category: "color",
   resolutions: [[1, 1, 1]],
 };
+const tracingId = "volumeTracingId";
 const StoreMock = {
   getState: () => ({
     dataset: {
       dataSource: {
         dataLayers: [layer],
       },
+    },
+    tracing: {
+      volumes: [{ tracingId }],
     },
     datasetConfiguration: {
       renderMissingDataBlack: true,
@@ -48,10 +54,20 @@ const StoreMock = {
 };
 mockRequire("oxalis/store", StoreMock);
 // Avoid node caching and make sure all mockRequires are applied
-const PullQueue = mockRequire.reRequire("oxalis/model/bucket_data_handling/pullqueue").default;
+const PullQueue: typeof PullQueueType = mockRequire.reRequire(
+  "oxalis/model/bucket_data_handling/pullqueue",
+).default;
 const { DataBucket, BucketStateEnum } = mockRequire.reRequire(
   "oxalis/model/bucket_data_handling/bucket",
 );
+
+// Ava's recommendation for Typescript types
+// https://github.com/avajs/ava/blob/main/docs/recipes/typescript.md#typing-tcontext
+const test = anyTest as TestFn<{
+  buckets: Array<typeof DataBucket>;
+  pullQueue: Record<string, any>;
+}>;
+
 test.beforeEach((t) => {
   const cube = {
     getBucket: sinon.stub(),
@@ -62,13 +78,10 @@ test.beforeEach((t) => {
     },
     shouldEagerlyMaintainUsedValueSet: () => false,
   };
-  const connectionInfo = {
-    log: sinon.stub(),
-  };
   const datastoreInfo = {
     typ: "webknossos-store",
   };
-  const pullQueue = new PullQueue(cube, layer.name, connectionInfo, datastoreInfo);
+  const pullQueue = new PullQueue(cube as any, layer.name, datastoreInfo as any, tracingId);
   const buckets = [
     new DataBucket("uint8", [0, 0, 0, 0], null, mockedCube),
     new DataBucket("uint8", [1, 1, 1, 1], null, mockedCube),

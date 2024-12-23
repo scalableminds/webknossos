@@ -76,7 +76,7 @@ export class DataBucket {
   readonly type = "data" as const;
   readonly elementClass: ElementClass;
   readonly zoomedAddress: BucketAddress;
-  // todop: or should it be versionAtInstantiationTime ?
+  // todop: or should it be versionAtInstantiationTime ? remove again?
   versionAtRequestTime: number | null = null;
   visualizedMesh: Record<string, any> | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'visualizationColor' has no initializer a... Remove this comment to see the full error message

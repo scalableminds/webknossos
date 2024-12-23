@@ -98,7 +98,7 @@ test.beforeEach((t) => {
         const bucket = cube.getBucket(item.bucket, true);
 
         if (bucket.type === "data") {
-          bucket.markAsPulled(null);
+          bucket.markAsRequested(null);
           bucket.receiveData(new Uint8Array(4 * 32 ** 3));
         }
       }
@@ -170,7 +170,7 @@ test("Voxel Labeling should push buckets immediately if they are pulled already"
   const { cube, pushQueue } = t.context;
   const bucket = cube.getOrCreateBucket([0, 0, 0, 0, []]);
   assertNonNullBucket(bucket);
-  bucket.markAsPulled(null);
+  bucket.markAsRequested(null);
   bucket.receiveData(new Uint8Array(4 * 32 ** 3));
   await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, 42, 0, null);
   t.plan(1);
@@ -219,7 +219,7 @@ test("Garbage Collection should not collect buckets with mayBeGarbageCollected()
   cube.BUCKET_COUNT_SOFT_LIMIT = 3;
   const b1 = cube.getOrCreateBucket([0, 0, 0, 0, []]);
   assertNonNullBucket(b1);
-  b1.markAsPulled(null);
+  b1.markAsRequested(null);
   cube.getOrCreateBucket([1, 1, 1, 0]);
   cube.getOrCreateBucket([2, 2, 2, 0]);
   cube.getOrCreateBucket([3, 3, 3, 0]);
@@ -240,7 +240,7 @@ test("Garbage Collection should grow beyond soft limit if necessary", (t) => {
   // No bucket may be collected.
   [b1, b2, b3].map((b) => {
     assertNonNullBucket(b);
-    b.markAsPulled(null);
+    b.markAsRequested(null);
   });
   // Allocate a 4th one which should still be possible (will exceed BUCKET_COUNT_SOFT_LIMIT)
   cube.getOrCreateBucket([3, 3, 3, 0]);

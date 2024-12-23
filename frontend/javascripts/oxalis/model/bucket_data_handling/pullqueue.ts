@@ -74,7 +74,7 @@ class PullQueue {
 
         if (bucket.type === "data" && bucket.needsRequest()) {
           batch.push(address);
-          bucket.markAsPulled(version);
+          bucket.markAsRequested(version);
         }
       }
 

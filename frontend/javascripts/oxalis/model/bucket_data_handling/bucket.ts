@@ -298,12 +298,7 @@ export class DataBucket {
 
     bucketsAlreadyInUndoState.add(this);
 
-    Store.dispatch(
-      // Always use the current state of this.maybeUnmergedBucketLoadedPromise, since
-      // this bucket could be added to multiple undo batches while it's fetched. All entries
-      // need to have the corresponding promise for the undo to work correctly.
-      addBucketToUndoAction(this.getSnapshot("MUTATION")),
-    );
+    Store.dispatch(addBucketToUndoAction(this.getSnapshot("MUTATION")));
   }
 
   getSnapshot(purpose: "MUTATION" | "PREPARE_RESTORE_TO_SNAPSHOT"): BucketSnapshot {
@@ -560,8 +555,7 @@ export class DataBucket {
     return wroteVoxels;
   }
 
-  markAsPulled(versionAtRequestTime: number | null): void {
-    // todop (only renaming): rename to markAsRequested
+  markAsRequested(versionAtRequestTime: number | null): void {
     switch (this.state) {
       case BucketStateEnum.UNREQUESTED: {
         this.versionAtRequestTime = versionAtRequestTime;
@@ -776,11 +770,6 @@ export class DataBucket {
       console.log(addressStr, ...args);
     }
   };
-
-  // debug position:
-  // 619, 989, 533
-  //
-  //
 
   _debuggerMaybe = () => {
     const addressStr = this.zoomedAddress.slice(0, 4).join(",");

@@ -30,7 +30,7 @@ export type ClickSegmentAction = ReturnType<typeof clickSegmentAction>;
 export type InterpolateSegmentationLayerAction = ReturnType<
   typeof interpolateSegmentationLayerAction
 >;
-export type MaybeUnmergedBucketLoadedPromise = null | Promise<BucketDataArray>;
+export type MaybeUnmergedBucketLoadedPromise = Promise<BucketDataArray> | null;
 export type AddBucketToUndoAction = ReturnType<typeof addBucketToUndoAction>;
 type RegisterLabelPointAction = ReturnType<typeof registerLabelPointAction>;
 type ResetContourAction = ReturnType<typeof resetContourAction>;

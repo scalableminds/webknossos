@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Alert,
   Form,
@@ -180,7 +180,10 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 }) {
   const [form] = Form.useForm();
 
-  const magInfoPerLayer: Array<MagInfo> = Form.useWatch(() => {
+  const watcherFunctionRef = useRef(() => {
+    return [new MagInfo([])];
+  });
+  watcherFunctionRef.current = () => {
     const getIntersectingMags = (idx: number, annotationId: string, dataset: APIDataset) => {
       const segmentationLayerName = form.getFieldValue(["trainingAnnotations", idx, "layerName"]);
       const imageDataLayerName = form.getFieldValue(["trainingAnnotations", idx, "imageDataLayer"]);
@@ -192,15 +195,15 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
       return new MagInfo([]);
     };
 
-    const annotationInfos = form.getFieldValue("trainingAnnotations");
-    if (annotationInfos == null) {
-      return [];
-    }
-    return annotationInfos.map((_: TrainingAnnotation, idx: number) => {
-      const annotation = annotationInfos[idx].annotation;
+    return annotationInfos.map((annotationInfo, idx: number) => {
+      const annotation = annotationInfo.annotation;
       const annotationId = "id" in annotation ? annotation.id : annotation.annotationId;
-      return getIntersectingMags(idx, annotationId, annotationInfos[idx].dataset);
+      return getIntersectingMags(idx, annotationId, annotationInfo.dataset);
     });
+  };
+
+  const magInfoForLayer: Array<MagInfo> = Form.useWatch(() => {
+    return watcherFunctionRef.current();
   }, form);
 
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
@@ -228,18 +231,16 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
     return colorLayer != null ? getMagInfo(colorLayer.resolutions).getMagList() : null;
   };
 
-  const getTrainingAnnotations = async (values: any) => {
-    return Promise.all(
-      values.trainingAnnotations.map(async (trainingAnnotation: TrainingAnnotation) => {
-        const { annotationId, imageDataLayer, layerName, mag } = trainingAnnotation;
-        return {
-          annotationId,
-          colorLayerName: imageDataLayer,
-          segmentationLayerName: layerName,
-          mag,
-        };
-      }),
-    );
+  const getTrainingAnnotations = (values: any) => {
+    return values.trainingAnnotations.map((trainingAnnotation: TrainingAnnotation) => {
+      const { annotationId, imageDataLayer, layerName, mag } = trainingAnnotation;
+      return {
+        annotationId,
+        colorLayerName: imageDataLayer,
+        segmentationLayerName: layerName,
+        mag,
+      };
+    });
   };
 
   const onFinish = async (form: FormInstance<any>, useCustomWorkflow: boolean, values: any) => {
@@ -250,8 +251,8 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
       await ensureSavedState();
     }
 
-    await runTraining({
-      trainingAnnotations: await getTrainingAnnotations(values),
+    runTraining({
+      trainingAnnotations: getTrainingAnnotations(values),
       name: values.modelName,
       aiModelCategory: values.modelCategory,
       workflowYaml: useCustomWorkflow ? values.workflowYaml : undefined,
@@ -393,11 +394,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
             <Col span={6}>
               <MagSelectionFormItem
                 name={["trainingAnnotations", idx, "mag"]}
-                magInfo={
-                  magInfoPerLayer != null && magInfoPerLayer[idx] != null
-                    ? magInfoPerLayer[idx]
-                    : new MagInfo([])
-                }
+                magInfo={magInfoForLayer != null ? magInfoForLayer[idx] : new MagInfo([])}
               />
             </Col>
           </Row>

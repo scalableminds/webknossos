@@ -369,23 +369,26 @@ class DataCube {
   }
 
   collectBucketsIf(predicateFn: (bucket: DataBucket) => boolean): void {
-    this.pullQueue.clear();
+    // todop: why clear this? can't the buckets be still in the queue? their
+    // download didn't even start yet.
+    // and if we clear the queue, do we need to collect buckets independently
+    // of the predicateFn? to avoid that a bucket stays in REQUESTED forever?
+    // this.pullQueue.clear();
     this.pullQueue.abortRequests();
 
     const notCollectedBuckets = [];
     for (const bucket of this.buckets) {
       bucket._debuggerMaybe();
-      // Even if the predicateFn doesn't say that a bucket should be
-      // collected, we collect REQUESTED buckets because the pullQueue
-      // was already cleared above. This means that the bucket is in a
-      // requested state, but will never be filled with data.
-      // todop: who takes care of re-adding these buckets to the pullqueue
-      // if their loading priority was -1?
-      // todop: doublecheck this logic against all possible states.
-      if (bucket.state === "REQUESTED" || predicateFn(bucket)) {
-        // todop: can it happen that buckets are collected that don't want
-        // to be collected? we should prevent this.
-        this.collectBucket(bucket);
+      if (predicateFn(bucket)) {
+        if (bucket.mayBeGarbageCollected()) {
+          this.collectBucket(bucket);
+        } else {
+          console.warn(
+            "Did not GC bucket at",
+            bucket.zoomedAddress,
+            "even though predicate function requested this.",
+          );
+        }
       } else {
         notCollectedBuckets.push(bucket);
       }

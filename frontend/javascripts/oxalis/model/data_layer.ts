@@ -45,12 +45,7 @@ class DataLayer {
       this.isSegmentation,
       this.name,
     );
-    this.pullQueue = new PullQueue(
-      this.cube,
-      layerInfo.name,
-      dataset.dataStore,
-      "tracingId" in layerInfo ? layerInfo.tracingId || null : null,
-    );
+    this.pullQueue = new PullQueue(this.cube, layerInfo.name, dataset.dataStore);
     this.pushQueue = new PushQueue(this.cube);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
 

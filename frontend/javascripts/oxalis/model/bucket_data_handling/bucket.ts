@@ -76,8 +76,6 @@ export class DataBucket {
   readonly type = "data" as const;
   readonly elementClass: ElementClass;
   readonly zoomedAddress: BucketAddress;
-  // todop: or should it be versionAtInstantiationTime ? remove again?
-  versionAtRequestTime: number | null = null;
   visualizedMesh: Record<string, any> | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'visualizationColor' has no initializer a... Remove this comment to see the full error message
   visualizationColor: THREE.Color;
@@ -315,6 +313,7 @@ export class DataBucket {
 
     if (purpose === "PREPARE_RESTORE_TO_SNAPSHOT" && this.data == null) {
       throw new Error("Unexpected getSnapshot call.");
+      // todop: remove this?
       // this scenario can happen when
       // - the user hits undo and an older version of this bucket should be restored.
       // - however, this bucket was gc'ed and has no local changes
@@ -342,7 +341,6 @@ export class DataBucket {
       //   null,
       //   this.getTracingId(),
       //   this.elementClass,
-      //   this.versionAtRequestTime,
       // );
     }
 
@@ -365,7 +363,6 @@ export class DataBucket {
       this.pendingOperations.slice(),
       this.getTracingId(),
       this.elementClass,
-      this.versionAtRequestTime,
     );
   }
 
@@ -555,10 +552,9 @@ export class DataBucket {
     return wroteVoxels;
   }
 
-  markAsRequested(versionAtRequestTime: number | null): void {
+  markAsRequested(): void {
     switch (this.state) {
       case BucketStateEnum.UNREQUESTED: {
-        this.versionAtRequestTime = versionAtRequestTime;
         this._debuggerMaybe();
         this.state = BucketStateEnum.REQUESTED;
         break;

@@ -81,7 +81,7 @@ test.beforeEach((t) => {
   const datastoreInfo = {
     typ: "webknossos-store",
   };
-  const pullQueue = new PullQueue(cube as any, layer.name, datastoreInfo as any, tracingId);
+  const pullQueue = new PullQueue(cube as any, layer.name, datastoreInfo as any);
   const buckets = [
     new DataBucket("uint8", [0, 0, 0, 0], null, mockedCube),
     new DataBucket("uint8", [1, 1, 1, 1], null, mockedCube),

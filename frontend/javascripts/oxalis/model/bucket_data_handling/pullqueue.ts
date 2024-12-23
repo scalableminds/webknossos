@@ -6,7 +6,6 @@ import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { DataStoreInfo } from "oxalis/store";
 import Store from "oxalis/store";
 import { asAbortable, sleep } from "libs/utils";
-import { getVolumeTracingById } from "../accessors/volumetracing_accessor";
 
 export type PullQueueItem = {
   priority: number;
@@ -26,19 +25,13 @@ class PullQueue {
   cube: DataCube;
   layerName: string;
   datastoreInfo: DataStoreInfo;
-  tracingId: string | null;
   private priorityQueue: PriorityQueue<PullQueueItem>;
   private fetchingBatchCount: number;
   private abortController: AbortController;
   private consecutiveErrorCount: number;
   private isRetryScheduled: boolean;
 
-  constructor(
-    cube: DataCube,
-    layerName: string,
-    datastoreInfo: DataStoreInfo,
-    tracingId: string | null,
-  ) {
+  constructor(cube: DataCube, layerName: string, datastoreInfo: DataStoreInfo) {
     this.cube = cube;
     this.layerName = layerName;
     this.datastoreInfo = datastoreInfo;
@@ -50,18 +43,10 @@ class PullQueue {
     this.consecutiveErrorCount = 0;
     this.isRetryScheduled = false;
     this.abortController = new AbortController();
-    this.tracingId = tracingId;
   }
 
   pull(): void {
     // Start to download some buckets
-
-    let version = null;
-    if (this.tracingId != null) {
-      const volumeTracing = getVolumeTracingById(Store.getState().tracing, this.tracingId);
-      version = volumeTracing.version;
-    }
-
     while (
       this.fetchingBatchCount < PullQueueConstants.BATCH_LIMIT &&
       this.priorityQueue.length > 0
@@ -74,7 +59,7 @@ class PullQueue {
 
         if (bucket.type === "data" && bucket.needsRequest()) {
           batch.push(address);
-          bucket.markAsRequested(version);
+          bucket.markAsRequested();
         }
       }
 

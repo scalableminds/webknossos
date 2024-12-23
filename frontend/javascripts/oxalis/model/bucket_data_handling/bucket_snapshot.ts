@@ -3,7 +3,10 @@ import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volu
 import type { BucketDataArray, ElementClass } from "types/api_flow_types";
 import { compressTypedArray, decompressToTypedArray } from "../helpers/bucket_compression";
 
-export type PendingOperation = (arg0: BucketDataArray) => void;
+export type PendingOperation = (data: BucketDataArray) => void;
+
+// todop: write unit tests for this module to check against
+// race conditions?
 
 export default class BucketSnapshot {
   readonly zoomedAddress: BucketAddress;
@@ -11,10 +14,6 @@ export default class BucketSnapshot {
   readonly tracingId: string;
   readonly needsMergeWithBackendData: boolean;
   readonly elementClass: ElementClass;
-  // The version at which the annotation was when the
-  // snapshot was created.
-  // todop: should it default to null?
-  readonly version: number | null;
 
   // A copy of the bucket's data. Either stored
   // uncompressed:
@@ -22,12 +21,12 @@ export default class BucketSnapshot {
   // ... or compressed:
   compressedData: Uint8Array | null = null;
 
+  // A pending promise of the unmerged backend data. Once the promise
+  // is fulfilled, it will be set to null.
   // todop (perf): multiple bucketsnapshots might refer to the same
   // maybeUnmergedBucketLoadedPromise. however, they will all
   // compress/decompress the data independently (== redundantly).
   // this could be optimized
-  // A pending promise of the unmerged backend data. Once the promise
-  // is fulfilled, it will be set to null.
   maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
   // Afterwards, the backend data is either stored
   // uncompressed:
@@ -42,7 +41,6 @@ export default class BucketSnapshot {
     pendingOperations: PendingOperation[],
     tracingId: string,
     elementClass: ElementClass,
-    version: number | null,
   ) {
     this.zoomedAddress = zoomedAddress;
     this.dataClone = dataClone;
@@ -50,7 +48,6 @@ export default class BucketSnapshot {
     this.pendingOperations = pendingOperations;
     this.tracingId = tracingId;
     this.elementClass = elementClass;
-    this.version = version;
 
     this.needsMergeWithBackendData = maybeUnmergedBucketLoadedPromise != null;
 
@@ -117,13 +114,11 @@ export default class BucketSnapshot {
     // this function here returns.
     const newData = await this.getLocalData();
 
-    // todop: clarify case with
-    //        this.needsMergeWithBackendData && !isBackendDataAvailable...
     const { needsMergeWithBackendData } = this;
     if (needsMergeWithBackendData && this.isBackendDataAvailable()) {
       const decompressedBackendData = await this.getBackendData();
-      // The following code mutates newData without using it
-      // actually which is a bit fishy.
+      // todop: The following code mutates newData (which could be this.dataClone).
+      // Is this a problem?
       mergeDataWithBackendDataInPlace(newData, decompressedBackendData, this.pendingOperations);
       return {
         newData,

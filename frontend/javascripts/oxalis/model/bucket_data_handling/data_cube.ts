@@ -424,10 +424,6 @@ class DataCube {
     const [bucketIndex, cube] = this.getBucketIndexAndCube(address);
 
     if (bucketIndex != null && cube != null) {
-      // todop: can it happen that destroy is called even though the
-      // bucket is not collected? GC should avoid this and a force-reload
-      // will ensure a saved state. however, there might be a race condition
-      // here?
       bucket.destroy();
       cube.data.delete(bucketIndex);
     }

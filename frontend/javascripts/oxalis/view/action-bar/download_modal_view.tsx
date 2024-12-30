@@ -672,7 +672,7 @@ function _DownloadModalView({
           >
             Mag
           </Divider>
-          {!onlyOneMagAvailable ? (
+          {!onlyOneMagAvailable && (
             <Row>
               <Col span={19}>
                 <MagSlider magnificationInfo={selectedLayerMagInfo} value={mag} onChange={setMag} />
@@ -684,7 +684,7 @@ function _DownloadModalView({
                 {mag.join("-")}
               </Col>
             </Row>
-          ) : null}
+          )}
           <Text
             style={{
               margin: "0 6px 12px",

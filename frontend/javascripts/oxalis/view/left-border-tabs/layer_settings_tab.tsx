@@ -666,6 +666,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       allReadableLayerNames,
       readableName,
     );
+    const layerNameForDataStore =
+      isVolumeTracing && maybeFallbackLayer != null ? maybeFallbackLayer : layerName;
     const possibleItems: MenuProps["items"] = [
       isVolumeTracing && !isDisabled && maybeFallbackLayer != null && isAdminOrManager
         ? {
@@ -675,7 +677,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         : null,
       this.props.dataset.isEditable
         ? {
-            label: this.getReloadDataButton(layerName, isHistogramAvailable),
+            label: this.getReloadDataButton(layerNameForDataStore, isHistogramAvailable),
             key: "reloadDataButton",
           }
         : null,

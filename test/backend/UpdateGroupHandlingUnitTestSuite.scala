@@ -34,6 +34,28 @@ class UpdateGroupHandlingUnitTestSuite extends PlaySpec with UpdateGroupHandling
       assert(res(1)._2.length == 1)
       assert(res(1)._1 == 6L)
     }
+
+    "work if last element is isolationSensitive" in {
+      val updateGroupsBefore = List(
+        (5L,
+         List(
+           MergeTreeSkeletonAction(sourceId = 1, targetId = 2, actionTracingId = Dummies.tracingId),
+           MergeTreeSkeletonAction(sourceId = 2, targetId = 3, actionTracingId = Dummies.tracingId)
+         )),
+        (6L,
+         List(
+           RevertToVersionAnnotationAction(sourceVersion = 1)
+         )),
+        (7L,
+         List(
+           RevertToVersionAnnotationAction(sourceVersion = 1)
+         ))
+      )
+      val res = regroupByIsolationSensitiveActions(updateGroupsBefore)
+      assert(res.length == 3)
+      assert(res(1)._2.length == 1)
+      assert(res(1)._1 == 6L)
+    }
   }
 
   "ironOutReverts" should {

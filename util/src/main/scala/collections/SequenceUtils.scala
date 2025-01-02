@@ -32,6 +32,7 @@ object SequenceUtils {
           }
         }
       }
+      .filter(_.nonEmpty) // Remove empty lists. We create one in case the last element satisfies the predicate.
       .reverse // we prepended on the outer list (for perf reasons)
       .map(_.reverse) // we prepended on the inner lists (for perf reasons)
 

@@ -324,8 +324,22 @@ function JobListView() {
         </span>
       );
     } else {
-      // The above if-branches should be exhaustive over all job types
-      Utils.assertNever(job.type);
+      // unknown job type
+      return (
+        <span style={{ wordBreak: "break-word" }}>
+          {job.resultLink && (
+            <Link to={job.resultLink} title="View Or Download Result">
+              {job.resultLink}
+            </Link>
+          )}
+          {job.result && (
+            <span>
+              <br />
+              {job.result}
+            </span>
+          )}
+        </span>
+      );
     }
   }
 

@@ -280,7 +280,7 @@ class EditableMappingService @Inject()(
       agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId).futureBox
       skeletonBytes <- agglomerateGraphBox match {
         case Full(agglomerateGraph) =>
-          Fox.successful(agglomerateGraphToSkeleton(tracingId, agglomerateGraph, remoteFallbackLayer, agglomerateId))
+          Fox.successful(agglomerateGraphToSkeleton(tracingId, agglomerateGraph, agglomerateId))
         case Empty =>
           remoteDatastoreClient.getAgglomerateSkeleton(remoteFallbackLayer,
                                                        editableMappingInfo.baseMappingName,
@@ -291,7 +291,6 @@ class EditableMappingService @Inject()(
 
   private def agglomerateGraphToSkeleton(tracingId: String,
                                          graph: AgglomerateGraph,
-                                         remoteFallbackLayer: RemoteFallbackLayer,
                                          agglomerateId: Long): Array[Byte] = {
     val nodeIdStartAtOneOffset = 1
     val nodes = graph.positions.zipWithIndex.map {

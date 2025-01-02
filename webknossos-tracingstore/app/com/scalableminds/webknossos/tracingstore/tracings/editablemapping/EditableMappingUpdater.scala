@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.{
   SegmentToAgglomerateChunkProto
 }
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
-import com.scalableminds.webknossos.tracingstore.annotation.{TSAnnotationService, UpdateAction}
+import com.scalableminds.webknossos.tracingstore.annotation.UpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
@@ -40,7 +40,6 @@ class EditableMappingUpdater(
     tokenContext: TokenContext,
     remoteDatastoreClient: TSRemoteDatastoreClient,
     editableMappingService: EditableMappingService,
-    annotationService: TSAnnotationService,
     tracingDataStore: TracingDataStore
 ) extends KeyValueStoreImplicits
     with ReversionHelper
@@ -417,7 +416,6 @@ class EditableMappingUpdater(
       tokenContext,
       remoteDatastoreClient,
       editableMappingService,
-      annotationService,
       tracingDataStore
     )
 }

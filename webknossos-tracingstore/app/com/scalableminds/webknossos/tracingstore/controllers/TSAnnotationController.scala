@@ -21,6 +21,7 @@ import com.scalableminds.webknossos.tracingstore.annotation.{
 }
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingMergeService
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import net.liftweb.common.{Empty, Failure, Full}
@@ -34,6 +35,7 @@ class TSAnnotationController @Inject()(
     accessTokenService: TracingStoreAccessTokenService,
     slackNotificationService: TSSlackNotificationService,
     annotationService: TSAnnotationService,
+    editableMappingMergeService: EditableMappingMergeService,
     annotationTransactionService: AnnotationTransactionService,
     skeletonTracingService: SkeletonTracingService,
     volumeTracingService: VolumeTracingService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -172,7 +174,7 @@ class TSAnnotationController @Inject()(
                 Some(TracingSelector(l.tracingId))
               })
               .map(_.flatten)
-            mergeEditableMappingsResultBox <- annotationService
+            mergeEditableMappingsResultBox <- editableMappingMergeService
               .mergeEditableMappings(request.body,
                                      newAnnotationId,
                                      newVolumeId,

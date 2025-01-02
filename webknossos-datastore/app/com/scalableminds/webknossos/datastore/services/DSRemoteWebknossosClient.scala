@@ -111,7 +111,9 @@ class DSRemoteWebknossosClient @Inject()(
     } yield reserveUploadInfo
 
   def deleteDataSource(id: DataSourceId): Fox[_] =
-    rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset").addQueryString("key" -> dataStoreKey).postJson(id)
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset")
+      .addQueryString("key" -> dataStoreKey)
+      .postJson(id)
 
   def getJobExportProperties(jobId: String): Fox[JobExportProperties] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/jobExportProperties")
@@ -148,7 +150,7 @@ class DSRemoteWebknossosClient @Inject()(
       _ =>
         rpc(s"$webknossosUri/api/annotations/source/$accessToken")
           .addQueryString("key" -> dataStoreKey)
-          .withTokenFromContext
+          .addQueryStringOptional("userToken", tc.userTokenOpt)
           .getWithJsonResponse[AnnotationSource]
     )
 

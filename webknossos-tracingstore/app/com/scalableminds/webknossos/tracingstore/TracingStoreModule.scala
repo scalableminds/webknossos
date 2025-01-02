@@ -17,7 +17,6 @@ class TracingStoreModule extends AbstractModule {
   override def configure(): Unit = {
     bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-tracingstore")).toInstance(system)
     bind(classOf[TracingDataStore]).asEagerSingleton()
-    bind(classOf[TemporaryTracingService]).asEagerSingleton()
     bind(classOf[VolumeTracingService]).asEagerSingleton()
     bind(classOf[TracingStoreAccessTokenService]).asEagerSingleton()
     bind(classOf[TSRemoteWebknossosClient]).asEagerSingleton()
@@ -25,7 +24,6 @@ class TracingStoreModule extends AbstractModule {
     bind(classOf[EditableMappingService]).asEagerSingleton()
     bind(classOf[TSSlackNotificationService]).asEagerSingleton()
     bind(classOf[AdHocMeshServiceHolder]).asEagerSingleton()
-    bind(classOf[AnnotationTransactionService]).asEagerSingleton()
     bind(classOf[TSAnnotationService]).asEagerSingleton()
   }
 

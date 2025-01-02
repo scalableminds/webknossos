@@ -219,7 +219,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[AnnotationWithTracings] = {
     // Note: works only if reset actions are in separate update groups
-    val sourceVersion = 0L // Tasks are always created with as v0 currently
+    val sourceVersion = 0L // Tasks are currently always created with v0
     val before = Instant.now
     for {
       sourceAnnotation: AnnotationWithTracings <- getWithTracings(annotationId, Some(sourceVersion))
@@ -320,7 +320,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
 
   /*
    * The migration of https://github.com/scalableminds/webknossos/pull/7917 does not guarantee that the skeleton layer
-   * is materialized at the same version as the annottation. So even if we have an existing annotation version,
+   * is materialized at the same version as the annotation. So even if we have an existing annotation version,
    * we may fetch skeleton updates *older* than it, in order to fully construct the state of that version.
    * Only annotations from before that migration have this skeletonMayHavePendingUpdates=Some(true).
    */
@@ -361,7 +361,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       annotationId: String,
       annotation: AnnotationWithTracings,
       targetVersion: Long)(implicit ec: ExecutionContext): Fox[List[(Long, List[UpdateAction])]] =
-    if (annotation.annotation.skeletonMayHavePendingUpdates.getOrElse(false)) {
+    if (annotation.annotation.editableMappingsMayHavePendingUpdates.getOrElse(false)) {
       for {
         updatesByEditableMapping <- Fox.serialCombined(annotation.getEditableMappingTracingIds) { tracingId =>
           for {
@@ -524,7 +524,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           Some(annotationWithTracings.withNewUpdaters(annotationWithTracings.version, targetVersion)),
           updates)
         updatedWithNewVersion = updated.withVersion(targetVersion)
-        _ <- updatedWithNewVersion.flushBufferedUpdates()
+        _ <- updatedWithNewVersion.flushEditableMappingUpdaterBuffers()
         _ <- flushUpdatedTracings(updatedWithNewVersion, updates)
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVersion)
         _ <- Fox.runIf(reportChangesToWk && annotationWithTracings.annotation != updated.annotation)(
@@ -556,7 +556,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         case _ => Fox.successful(())
       }
       _ <- Fox.serialCombined(annotationWithTracings.getSkeletons) {
-        case (skeletonTracingId, skeletonTracing: SkeletonTracing)
+        case (skeletonTracingId, skeletonTracing)
             if allMayHaveUpdates || tracingIdsWithUpdates.contains(skeletonTracingId) =>
           tracingDataStore.skeletons.put(skeletonTracingId, skeletonTracing.version, skeletonTracing)
         case _ => Fox.successful(())

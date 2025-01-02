@@ -132,7 +132,7 @@ class EditableMappingController @Inject()(
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- annotationService.findVolume(annotationId, tracingId)
-          _ <- bool2Fox(tracing.getHasEditableMapping) ?~> "Cannot query agglomerate skeleton for volume annotation"
+          _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
           editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId)
           remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
           agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(tracingId,

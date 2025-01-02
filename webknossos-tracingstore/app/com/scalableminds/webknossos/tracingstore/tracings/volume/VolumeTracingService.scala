@@ -72,6 +72,7 @@ class VolumeTracingService @Inject()(
   adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService
 
+  // (tracingId, fallbackLayerNameOpt, userTokenOpt) → remoteFallbackLayerOpt
   private val fallbackLayerCache: AlfuCache[(String, Option[String], Option[String]), Option[RemoteFallbackLayer]] =
     AlfuCache(maxCapacity = 100)
 
@@ -152,7 +153,7 @@ class VolumeTracingService @Inject()(
       dataLayer = volumeTracingLayer(tracingId, volumeTracing)
       actionBucketData <- action.base64Data.map(Base64.getDecoder.decode).toFox
       _ <- saveBucket(dataLayer, bucketPosition, actionBucketData, updateGroupVersion) ?~> "failed to save bucket"
-      mappingName <- selectMappingName(volumeTracing)
+      mappingName <- getMappingNameUnlessEditable(volumeTracing)
       _ <- Fox.runIfOptionTrue(volumeTracing.hasSegmentIndex) {
         for {
           previousBucketBytes <- loadBucket(dataLayer, bucketPosition, Some(updateGroupVersion - 1L)).futureBox
@@ -172,9 +173,9 @@ class VolumeTracingService @Inject()(
   def editableMappingTracingId(tracing: VolumeTracing, tracingId: String): Option[String] =
     if (tracing.getHasEditableMapping) Some(tracingId) else None
 
-  private def selectMappingName(tracing: VolumeTracing): Fox[Option[String]] =
+  private def getMappingNameUnlessEditable(tracing: VolumeTracing): Fox[Option[String]] =
     if (tracing.getHasEditableMapping)
-      Fox.failure("mappingName called on volumeTracing with editableMapping!")
+      Fox.failure("getMappingNameUnlessEditable called on volumeTracing with editableMapping!")
     else Fox.successful(tracing.mappingName)
 
   private def deleteSegmentData(tracingId: String,
@@ -192,7 +193,7 @@ class VolumeTracingService @Inject()(
       } else {
         possibleAdditionalCoordinates.toList
       }
-      mappingName <- selectMappingName(volumeTracing)
+      mappingName <- getMappingNameUnlessEditable(volumeTracing)
       _ <- Fox.serialCombined(volumeTracing.mags.toList)(magProto =>
         Fox.serialCombined(additionalCoordinateList)(additionalCoordinates => {
           val mag = vec3IntFromProto(magProto)
@@ -265,7 +266,7 @@ class VolumeTracingService @Inject()(
                                                         fallbackLayer,
                                                         dataLayer.additionalAxes,
                                                         tc)
-      mappingName <- selectMappingName(sourceTracing)
+      mappingName <- getMappingNameUnlessEditable(sourceTracing)
       _ <- Fox.serialCombined(bucketStreamBeforeRevert) {
         case (bucketPosition, dataBeforeRevert, version) =>
           if (version > sourceVersion) {
@@ -325,7 +326,7 @@ class VolumeTracingService @Inject()(
             _ = if (magSet.nonEmpty) magSets.add(magSet)
           } yield ()
         }
-        mappingName <- selectMappingName(tracing)
+        mappingName <- getMappingNameUnlessEditable(tracing)
         mags <-
         // if none of the tracings contained any volume data do not save buckets, use full mag list, as already initialized on wk-side
         if (magSets.isEmpty)
@@ -390,7 +391,7 @@ class VolumeTracingService @Inject()(
       val savedMags = new mutable.HashSet[Vec3Int]()
       for {
         fallbackLayer <- getFallbackLayer(tracingId, tracing)
-        mappingName <- selectMappingName(tracing)
+        mappingName <- getMappingNameUnlessEditable(tracing)
         segmentIndexBuffer = new VolumeSegmentIndexBuffer(
           tracingId,
           volumeSegmentIndexClient,
@@ -549,7 +550,7 @@ class VolumeTracingService @Inject()(
         AdditionalAxis.fromProtosAsOpt(sourceTracing.additionalAxes),
         tc
       )
-      mappingName <- selectMappingName(sourceTracing)
+      mappingName <- getMappingNameUnlessEditable(sourceTracing)
       _ <- Fox.serialCombined(buckets) {
         case (bucketPosition, bucketData) =>
           if (newTracing.mags.contains(vec3IntToProto(bucketPosition.mag))) {
@@ -840,7 +841,7 @@ class VolumeTracingService @Inject()(
             tracing.elementClass)
           dataLayer = volumeTracingLayer(tracingId, tracing)
           fallbackLayer <- getFallbackLayer(tracingId, tracing)
-          mappingName <- selectMappingName(tracing)
+          mappingName <- getMappingNameUnlessEditable(tracing)
           segmentIndexBuffer <- Fox.successful(
             new VolumeSegmentIndexBuffer(tracingId,
                                          volumeSegmentIndexClient,

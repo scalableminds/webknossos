@@ -72,7 +72,7 @@ case class AnnotationWithTracings(
       case _                                    => None
     }.toList
 
-  def getEditableMappingInfo(tracingId: String): Box[EditableMappingInfo] =
+  def getEditableMappingInfo(tracingId: String): Option[EditableMappingInfo] =
     for {
       (info, _) <- editableMappingsByTracingId.get(tracingId)
     } yield info
@@ -100,7 +100,8 @@ case class AnnotationWithTracings(
   def deleteLayer(a: DeleteLayerAnnotationAction): AnnotationWithTracings =
     this.copy(
       annotation = annotation.copy(annotationLayers = annotation.annotationLayers.filter(_.tracingId != a.tracingId)),
-      tracingsById = tracingsById.removed(a.tracingId)
+      tracingsById = tracingsById.removed(a.tracingId),
+      editableMappingsByTracingId = editableMappingsByTracingId.removed(a.tracingId)
     )
 
   def updateLayerMetadata(a: UpdateLayerMetadataAnnotationAction): AnnotationWithTracings =

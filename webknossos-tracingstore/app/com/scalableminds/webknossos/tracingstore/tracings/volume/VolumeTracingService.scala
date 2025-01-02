@@ -493,16 +493,16 @@ class VolumeTracingService @Inject()(
     val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, isFromTask, datasetBoundingBox)
     val tracingWithMagRestrictions = VolumeTracingMags.restrictMagList(tracingWithBB, magRestrictions)
     for {
-      fallbackLayer <- getFallbackLayer(sourceTracingId, sourceTracing)
+      fallbackLayer <- getFallbackLayer(sourceTracingId, tracingWithMagRestrictions)
       hasSegmentIndex <- VolumeSegmentIndexService.canHaveSegmentIndex(remoteDatastoreClient, fallbackLayer)
       newTracing = tracingWithMagRestrictions.copy(
         createdTimestamp = System.currentTimeMillis(),
-        editPosition = editPosition.map(vec3IntToProto).getOrElse(sourceTracing.editPosition),
-        editRotation = editRotation.map(vec3DoubleToProto).getOrElse(sourceTracing.editRotation),
-        boundingBox = boundingBoxOptToProto(boundingBox).getOrElse(sourceTracing.boundingBox),
+        editPosition = editPosition.map(vec3IntToProto).getOrElse(tracingWithMagRestrictions.editPosition),
+        editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracingWithMagRestrictions.editRotation),
+        boundingBox = boundingBoxOptToProto(boundingBox).getOrElse(tracingWithMagRestrictions.boundingBox),
         mappingName =
-          if (sourceTracing.getHasEditableMapping) Some(newTracingId)
-          else sourceTracing.mappingName,
+          if (tracingWithMagRestrictions.getHasEditableMapping) Some(newTracingId)
+          else tracingWithMagRestrictions.mappingName,
         version = newVersion,
         // Adding segment index on duplication if the volume tracing allows it. This will be used in duplicateData
         hasSegmentIndex = Some(hasSegmentIndex)

@@ -251,6 +251,8 @@ annotation.deleteLayer.onlyLayer=Could not delete layer because it is the only l
 annotation.layer.notFound=Layer could not be found.
 annotation.getNewestVersion.failed=Could not get the newest version information for this annotation layer
 annotation.idForTracing.failed=Could not find the annotation id for this tracing id.
+annotation.editableMapping.getAgglomerateGraph.failed=Could not look up an agglomerate graph for requested agglomerate.
+annotation.editableMapping.getAgglomerateIdsForSegments.failed=Could not look up agglomerate ids for requested segments.
 
 mesh.notFound=Mesh could not be found
 mesh.write.failed=Failed to convert mesh info to json

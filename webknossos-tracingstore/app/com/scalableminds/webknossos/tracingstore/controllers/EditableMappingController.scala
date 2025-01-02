@@ -56,7 +56,7 @@ class EditableMappingController @Inject()(
             segmentIds <- agglomerateGraphBox match {
               case Full(agglomerateGraph) => Fox.successful(agglomerateGraph.segments)
               case Empty                  => Fox.successful(List.empty)
-              case f: Failure             => f.toFox
+              case f: Failure             => f.toFox ?~> "annotation.editableMapping.getAgglomerateGraph.failed"
             }
             agglomerateIdIsPresent = agglomerateGraphBox.isDefined
           } yield Ok(Json.toJson(EditableMappingSegmentListResult(segmentIds.toList, agglomerateIdIsPresent)))
@@ -79,7 +79,7 @@ class EditableMappingController @Inject()(
               editableMappingInfo,
               annotation.version,
               tracingId,
-              remoteFallbackLayer)
+              remoteFallbackLayer) ?~> "annotation.editableMapping.getAgglomerateIdsForSegments.failed"
             agglomerateIdsSorted = relevantMapping.toSeq.sortBy(_._1).map(_._2)
           } yield Ok(ListOfLong(agglomerateIdsSorted).toByteArray)
         }

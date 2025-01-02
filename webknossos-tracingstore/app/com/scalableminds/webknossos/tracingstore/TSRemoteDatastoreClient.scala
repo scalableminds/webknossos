@@ -50,7 +50,7 @@ class TSRemoteDatastoreClient @Inject()(
       implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-      response <- rpc(s"$remoteLayerUri/data").withTokenFromContext.silent.post(dataRequests)
+      response <- rpc(s"$remoteLayerUri/data").withTokenFromContext.silent.postJson(dataRequests)
       _ <- bool2Fox(Status.isSuccessful(response.status))
       bytes = response.bodyAsBytes.toArray
       indices <- parseMissingBucketHeader(response.header(missingBucketsHeader)) ?~> "failed to parse missing bucket header"

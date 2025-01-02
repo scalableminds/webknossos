@@ -107,7 +107,7 @@ class WKRemoteTracingStoreClient(
       .addQueryStringOptional("version", version.map(_.toString))
       .addQueryStringOptional("datasetBoundingBox", datasetBoundingBox.map(_.toLiteral))
       .addQueryString("isFromTask" -> isFromTask.toString)
-      .postWithProtoResponse[AnnotationProto]()(AnnotationProto)
+      .postEmptyWithProtoResponse[AnnotationProto]()(AnnotationProto)
   }
 
   // Used in task creation. History is dropped, new version will be zero.
@@ -120,7 +120,7 @@ class WKRemoteTracingStoreClient(
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
-      .postWithJsonResponse[String]()
+      .postEmptyWithJsonResponse[String]()
 
   // Used in task creation. History is dropped, new version will be zero.
   def duplicateVolumeTracing(volumeTracingId: String,
@@ -135,7 +135,7 @@ class WKRemoteTracingStoreClient(
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
       .addQueryStringOptional("minMag", magRestrictions.minStr)
       .addQueryStringOptional("maxMag", magRestrictions.maxStr)
-      .postWithJsonResponse[String]()
+      .postEmptyWithJsonResponse[String]()
 
   def mergeAnnotationsByIds(annotationIds: List[String],
                             newAnnotationId: ObjectId,
@@ -167,7 +167,7 @@ class WKRemoteTracingStoreClient(
       _ = tracingDataSourceTemporaryStore.store(tracingId, dataSource)
       _ <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/initialDataMultiple").withLongTimeout
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-        .post(packedVolumeDataZips)
+        .postFile(packedVolumeDataZips)
     } yield tracingId
   }
 
@@ -192,7 +192,7 @@ class WKRemoteTracingStoreClient(
             .addQueryString("token" -> RpcTokenHolder.webknossosToken)
             .addQueryStringOptional("minMag", magRestrictions.minStr)
             .addQueryStringOptional("maxMag", magRestrictions.maxStr)
-            .post(file)
+            .postFile(file)
         case _ =>
           Fox.successful(())
       }
@@ -246,7 +246,7 @@ class WKRemoteTracingStoreClient(
     for {
       _ <- rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/resetToBase").withLongTimeout
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-        .post()
+        .postEmpty()
     } yield ()
 
 }

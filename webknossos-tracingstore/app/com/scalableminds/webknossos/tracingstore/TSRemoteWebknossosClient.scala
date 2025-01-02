@@ -56,7 +56,7 @@ class TSRemoteWebknossosClient @Inject()(
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/handleTracingUpdateReport")
       .addQueryString("key" -> tracingStoreKey)
       .silent
-      .post(Json.toJson(tracingUpdatesReport))
+      .postJson(Json.toJson(tracingUpdatesReport))
 
   def getDataSourceForTracing(tracingId: String)(implicit tc: TokenContext): Fox[DataSourceLike] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/dataSource")

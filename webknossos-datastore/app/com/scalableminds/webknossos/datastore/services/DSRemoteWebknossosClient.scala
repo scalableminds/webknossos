@@ -65,12 +65,12 @@ class DSRemoteWebknossosClient @Inject()(
   private def reportStatus(): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/status")
       .addQueryString("key" -> dataStoreKey)
-      .patch(DataStoreStatus(ok = true, dataStoreUri, Some(reportUsedStorageEnabled)))
+      .patchJson(DataStoreStatus(ok = true, dataStoreUri, Some(reportUsedStorageEnabled)))
 
   def reportDataSource(dataSource: InboxDataSourceLike): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasource")
       .addQueryString("key" -> dataStoreKey)
-      .put(dataSource)
+      .putJson(dataSource)
 
   def getUnfinishedUploadsForUser(organizationName: String)(implicit tc: TokenContext): Fox[List[UnfinishedUpload]] =
     for {
@@ -91,7 +91,7 @@ class DSRemoteWebknossosClient @Inject()(
         .addQueryString("viaAddRoute" -> viaAddRoute.toString)
         .addQueryString("datasetSizeBytes" -> datasetSizeBytes.toString)
         .withTokenFromContext
-        .postWithJsonResponse[JsValue]()
+        .postEmptyWithJsonResponse[JsValue]()
       uploadedDatasetId <- (uploadedDatasetIdJson \ "id").validate[String].asOpt.toFox ?~> "uploadedDatasetId.invalid"
     } yield uploadedDatasetId
 
@@ -99,7 +99,7 @@ class DSRemoteWebknossosClient @Inject()(
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources")
       .addQueryString("key" -> dataStoreKey)
       .silent
-      .put(dataSources)
+      .putJson(dataSources)
 
   def reserveDataSourceUpload(info: ReserveUploadInformation)(
       implicit tc: TokenContext): Fox[ReserveAdditionalInformation] =
@@ -107,11 +107,11 @@ class DSRemoteWebknossosClient @Inject()(
       reserveUploadInfo <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveUpload")
         .addQueryString("key" -> dataStoreKey)
         .withTokenFromContext
-        .postWithJsonResponse[ReserveUploadInformation, ReserveAdditionalInformation](info)
+        .postJsonWithJsonResponse[ReserveUploadInformation, ReserveAdditionalInformation](info)
     } yield reserveUploadInfo
 
   def deleteDataSource(id: DataSourceId): Fox[_] =
-    rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset").addQueryString("key" -> dataStoreKey).post(id)
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset").addQueryString("key" -> dataStoreKey).postJson(id)
 
   def getJobExportProperties(jobId: String): Fox[JobExportProperties] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/jobExportProperties")

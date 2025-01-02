@@ -24,6 +24,10 @@ case class AnnotationWithTracings(
     editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)])
     extends LazyLogging {
 
+  // Assumes that there is at most one skeleton layer per annotation. This is true as of this writing
+  def getSkeletonId: Option[String] =
+    getSkeletons.headOption.map(_._1)
+
   def getSkeleton(tracingId: String): Box[SkeletonTracing] =
     for {
       tracingEither <- tracingsById.get(tracingId)
@@ -33,28 +37,16 @@ case class AnnotationWithTracings(
       }
     } yield skeletonTracing
 
-  def getVolumes: List[(String, VolumeTracing)] =
-    tracingsById.view.flatMap {
-      case (id, Right(vt: VolumeTracing)) => Some(id, vt)
-      case _                              => None
-    }.toList
-
   def getSkeletons: List[(String, SkeletonTracing)] =
     tracingsById.view.flatMap {
       case (id, Left(st: SkeletonTracing)) => Some(id, st)
       case _                               => None
     }.toList
 
-  // Assumes that there is at most one skeleton layer per annotation. This is true as of this writing
-  def getSkeletonId: Option[String] =
-    getSkeletons.headOption.map(_._1)
-
-  def getEditableMappingTracingIds: List[String] = editableMappingsByTracingId.keys.toList
-
-  def getEditableMappingsInfo: List[(String, EditableMappingInfo)] =
-    editableMappingsByTracingId.view.flatMap {
-      case (id, (info: EditableMappingInfo, _)) => Some(id, info)
-      case _                                    => None
+  def getVolumes: List[(String, VolumeTracing)] =
+    tracingsById.view.flatMap {
+      case (id, Right(vt: VolumeTracing)) => Some(id, vt)
+      case _                              => None
     }.toList
 
   def getVolume(tracingId: String): Box[VolumeTracing] =
@@ -70,6 +62,14 @@ case class AnnotationWithTracings(
     tracingsById.view.flatMap {
       case (id, Right(vt: VolumeTracing)) if vt.getHasEditableMapping => Some((vt, id))
       case _                                                          => None
+    }.toList
+
+  def getEditableMappingTracingIds: List[String] = editableMappingsByTracingId.keys.toList
+
+  def getEditableMappingsInfo: List[(String, EditableMappingInfo)] =
+    editableMappingsByTracingId.view.flatMap {
+      case (id, (info: EditableMappingInfo, _)) => Some(id, info)
+      case _                                    => None
     }.toList
 
   def getEditableMappingInfo(tracingId: String): Box[EditableMappingInfo] =

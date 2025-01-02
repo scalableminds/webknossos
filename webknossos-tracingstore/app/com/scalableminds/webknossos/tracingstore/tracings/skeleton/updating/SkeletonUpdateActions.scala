@@ -472,6 +472,8 @@ case class UpdateTreeGroupVisibilitySkeletonAction(treeGroupId: Option[Int],
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
+
+  override def isViewOnlyChange: Boolean = true
 }
 
 case class UpdateTreeEdgesVisibilitySkeletonAction(treeId: Int,
@@ -496,6 +498,8 @@ case class UpdateTreeEdgesVisibilitySkeletonAction(treeId: Int,
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
+
+  override def isViewOnlyChange: Boolean = true
 }
 
 case class UpdateUserBoundingBoxesSkeletonAction(boundingBoxes: List[NamedBoundingBox],

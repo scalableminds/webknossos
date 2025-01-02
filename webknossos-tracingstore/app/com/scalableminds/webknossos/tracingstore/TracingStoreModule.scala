@@ -3,11 +3,11 @@ package com.scalableminds.webknossos.tracingstore
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
 import com.scalableminds.webknossos.datastore.services.AdHocMeshServiceHolder
-import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, TSAnnotationService}
+import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
-import com.scalableminds.webknossos.tracingstore.tracings.{TemporaryTracingService, TracingDataStore}
+import com.scalableminds.webknossos.tracingstore.tracings.TracingDataStore
 import org.apache.pekko.actor.ActorSystem
 
 class TracingStoreModule extends AbstractModule {

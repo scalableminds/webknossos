@@ -67,7 +67,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
         Some(expiry))
     } yield ()
 
-  private def handleUpdateGroupForTransaction(
+  private def handleUpdateGroupOfTransaction(
       annotationId: String,
       previousVersionFox: Fox[Long],
       updateGroup: UpdateActionGroup)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
@@ -177,7 +177,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
     } else {
       updateGroups.foldLeft(annotationService.currentMaterializableVersion(annotationId)) {
         (currentCommittedVersionFox, updateGroup) =>
-          handleUpdateGroupForTransaction(annotationId, currentCommittedVersionFox, updateGroup)
+          handleUpdateGroupOfTransaction(annotationId, currentCommittedVersionFox, updateGroup)
       }
     }
 
@@ -259,12 +259,12 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
    * ignore it silently. This is in case the frontend sends a retry if it believes a save to be unsuccessful
    * despite the backend receiving it just fine.
    */
-  private def failUnlessAlreadyHandled(updateGroup: UpdateActionGroup, tracingId: String, previousVersion: Long)(
+  private def failUnlessAlreadyHandled(updateGroup: UpdateActionGroup, annotationId: String, previousVersion: Long)(
       implicit ec: ExecutionContext): Fox[Long] = {
     val errorMessage = s"Incorrect version. Expected: ${previousVersion + 1}; Got: ${updateGroup.version}"
     for {
       _ <- Fox.assertTrue(
-        handledGroupIdStoreContains(tracingId,
+        handledGroupIdStoreContains(annotationId,
                                     updateGroup.transactionId,
                                     updateGroup.version,
                                     updateGroup.transactionGroupIndex)) ?~> errorMessage ~> CONFLICT

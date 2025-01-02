@@ -918,6 +918,15 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       }
     } yield updatesByAnnotation.flatten
 
+  /*
+   * Merging editable mappings is complex because it is not defined on the materialized values (as with skeleton + volume),
+   * but rather on the update actions.
+   * We apply all updates from the first annotation, and then all updates from the second annotation.
+   * Everything is looked up by click position so that everything is defined.
+   * This means that we also need to store all the editable mapping updates in the merged annotation
+   * So that it itself can be merged again.
+   * The earliestAccessibleVersion property ensures that the fully merged annotation is still the earliest accessible one.
+   */
   def mergeEditableMappings(annotationIds: List[String],
                             newAnnotationId: String,
                             newVolumeTracingId: String,

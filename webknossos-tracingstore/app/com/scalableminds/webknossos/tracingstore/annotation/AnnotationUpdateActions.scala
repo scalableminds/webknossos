@@ -67,7 +67,7 @@ case class UpdateLayerMetadataAnnotationAction(tracingId: String,
 }
 
 case class UpdateMetadataAnnotationAction(
-    description: Option[String], // None means do not change description. Emptystring means set to empty
+    description: Option[String], // None means do not change description. Empty string means set to empty
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[String] = None,
     info: Option[String] = None)

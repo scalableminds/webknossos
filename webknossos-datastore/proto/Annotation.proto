@@ -8,7 +8,7 @@ enum AnnotationLayerTypeProto {
 }
 
 message AnnotationProto {
-  required string description = 1; // emptystring encodes no description
+  required string description = 1; // empty string encodes no description
   required int64 version = 2;
   repeated AnnotationLayerProto annotationLayers = 3;
   required int64 earliestAccessibleVersion = 4;

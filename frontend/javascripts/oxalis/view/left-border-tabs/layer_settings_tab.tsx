@@ -414,11 +414,19 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
-  getReloadDataButton = (layerName: string, isHistogramAvailable: boolean) => {
+  getReloadDataButton = (
+    layerName: string,
+    isHistogramAvailable: boolean,
+    maybeFallbackLayerName: string | null,
+  ) => {
     const tooltipText = "Use this when the data on the server changed.";
     return (
       <FastTooltip title={tooltipText}>
-        <div onClick={() => this.reloadLayerData(layerName, isHistogramAvailable)}>
+        <div
+          onClick={() =>
+            this.reloadLayerData(layerName, isHistogramAvailable, maybeFallbackLayerName)
+          }
+        >
           <ReloadOutlined className="icon-margin-right" />
           Reload data from server
         </div>
@@ -666,8 +674,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       allReadableLayerNames,
       readableName,
     );
-    const layerNameForDataStore =
-      isVolumeTracing && maybeFallbackLayer != null ? maybeFallbackLayer : layerName;
     const possibleItems: MenuProps["items"] = [
       isVolumeTracing && !isDisabled && maybeFallbackLayer != null && isAdminOrManager
         ? {
@@ -677,7 +683,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         : null,
       this.props.dataset.isEditable
         ? {
-            label: this.getReloadDataButton(layerNameForDataStore, isHistogramAvailable),
+            label: this.getReloadDataButton(layerName, isHistogramAvailable, maybeFallbackLayer),
             key: "reloadDataButton",
           }
         : null,
@@ -1003,7 +1009,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               marginLeft: 10,
             }}
           >
-            {isHistogramAvailable ? this.getHistogram(layerName, layerConfiguration) : null}
+            {isHistogramAvailable && this.getHistogram(layerName, layerConfiguration)}
             <NumberSliderSetting
               label={opacityLabel}
               min={0}
@@ -1084,8 +1090,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
-  reloadLayerData = async (layerName: string, isHistogramAvailable: boolean): Promise<void> => {
-    await clearCache(this.props.dataset, layerName);
+  reloadLayerData = async (
+    layerName: string,
+    isHistogramAvailable: boolean,
+    maybeFallbackLayerName: string | null,
+  ): Promise<void> => {
+    await clearCache(this.props.dataset, maybeFallbackLayerName ?? layerName);
     if (isHistogramAvailable) this.props.reloadHistogram(layerName);
     await api.data.reloadBuckets(layerName);
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);

@@ -233,6 +233,19 @@ function JobListView() {
             : null}
         </span>
       );
+    } else if (job.type === APIJobType.TRAIN_MODEL && job.organizationId) {
+      const numberOfTrainingAnnotations = job.trainingAnnotations.length;
+      return (
+        <span>
+          {`Trained model on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}`}
+        </span>
+      );
+    } else if (job.type === APIJobType.INFER_WITH_MODEL && job.organizationId) {
+      return (
+        <span>
+          Ran inference with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
+        </span>
+      );
     } else {
       return <span>{job.type}</span>;
     }

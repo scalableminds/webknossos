@@ -251,7 +251,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
       await ensureSavedState();
     }
 
-    runTraining({
+    await runTraining({
       trainingAnnotations: getTrainingAnnotations(values),
       name: values.modelName,
       aiModelCategory: values.modelCategory,

@@ -309,27 +309,31 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
       <AiModelCategoryFormItem />
 
       {annotationInfos.map(({ annotation, dataset, volumeTracings }, idx) => {
-        const segmentationLayerNames = _.uniq([
-          // Only consider the layers that are not volume layers (these aren't a fallback layer in one of the volume tracings).
-          // Add actual volume layers below.
-          ...getSegmentationLayers(dataset)
-            .filter(
-              (layer) => !volumeTracings.find((tracing) => tracing.fallbackLayer === layer.name),
-            )
-            .map((layer) => layer.name),
-          // Add volume layers here.
-          ...annotation.annotationLayers
-            .filter((layer) => layer.typ === "Volume")
-            .map((layer) => layer.name),
-        ]);
-        const segmentationLayers: Array<{ name: string }> = segmentationLayerNames.map(
-          (layerName) => ({
-            name: layerName,
-          }),
+        // Only consider the layers that are not volume layers (these aren't a fallback layer in one of the volume tracings).
+        // Add actual volume layers below.
+        const segmentationLayers = _.uniq(
+          getSegmentationLayers(dataset).filter(
+            (layer) => !volumeTracings.find((tracing) => tracing.fallbackLayer === layer.name),
+          ),
         );
 
+        const segmentationLayerNames = segmentationLayers.map((layer) => {
+          return { name: layer.name, additionalInfo: "Active layer: " };
+        });
+        // Add volume layers here.
+        const annotationLayers = _.uniq(
+          annotation.annotationLayers.filter((layer) => layer.typ === "Volume"),
+        );
+        const annotationLayerNames = annotationLayers.map((layer) => {
+          return { name: layer.name };
+        });
+
+        const segmentationAndColorLayers: Array<{ name: string; additionalInfo?: string }> = [
+          ...segmentationLayerNames,
+          ...annotationLayerNames,
+        ];
         const fixedSelectedSegmentationLayer =
-          segmentationLayers.length === 1 ? segmentationLayers[0] : null;
+          segmentationAndColorLayers.length === 1 ? segmentationAndColorLayers[0] : null;
 
         // Remove uint24 color layers because they cannot be trained on currently
         const colorLayers = getColorLayers(dataset).filter(
@@ -380,11 +384,10 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
               <LayerSelectionFormItem
                 name={["trainingAnnotations", idx, "layerName"]}
                 chooseSegmentationLayer
-                layers={segmentationLayers}
+                layers={segmentationAndColorLayers}
                 getReadableNameForLayer={(layer) => {
-                  return layer.name;
-                  //TODO_c fix that fallback layers are shown at least with the correct name?
-                  // eg. name (active layer)
+                  if (layer) return (layer.additionalInfo || "").concat(layer.name);
+                  return "";
                 }}
                 fixedLayerName={fixedSelectedSegmentationLayer?.name || undefined}
                 label="Ground Truth Layer"

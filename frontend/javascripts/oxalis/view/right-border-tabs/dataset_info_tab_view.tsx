@@ -227,7 +227,7 @@ export function AnnotationStats({
       {asInfoBlock && <p className="sidebar-label">Statistics</p>}
       <table className={asInfoBlock ? "annotation-stats-table" : "annotation-stats-table-slim"}>
         <tbody>
-          {skeletonStats && "treeCount" in skeletonStats ? (
+          {skeletonStats ? (
             <FastTooltip
               placement="left"
               html={`

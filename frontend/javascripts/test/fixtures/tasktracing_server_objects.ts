@@ -124,7 +124,6 @@ export const annotation: APIAnnotation = {
     allowDownload: true,
   },
   annotationLayers: [
-    // does this still exist?
     {
       name: "Skeleton",
       tracingId: TRACING_ID,

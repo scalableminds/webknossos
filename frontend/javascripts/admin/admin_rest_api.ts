@@ -1934,11 +1934,9 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   mappingId: string,
   segmentIds: Array<T>,
 ): Promise<Mapping> {
-  const params = new URLSearchParams();
-
   const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
-    params.append("token", token);
+    const params = new URLSearchParams({ token });
     return Request.receiveArraybuffer(
       `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
       {

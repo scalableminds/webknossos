@@ -988,8 +988,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       );
 
     const defaultLayerViewConfig = getDefaultLayerViewConfiguration();
-    const isHistogramAvailable =
-      isHistogramSupported(elementClass) && layerName != null && isColorLayer;
+    const isHistogramAvailable = isHistogramSupported(elementClass) && isColorLayer;
 
     return (
       <div key={layerName} style={style} ref={setNodeRef}>

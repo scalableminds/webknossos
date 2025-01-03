@@ -36,7 +36,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed some layout issues in the upload view. [#8231](https://github.com/scalableminds/webknossos/pull/8231)
 - Fixed `FATAL: role "postgres" does not exist` error message in Docker compose. [#8240](https://github.com/scalableminds/webknossos/pull/8240)
 - Fixed the Zarr 3 implementation not accepting BytesCodec without "configuration" key. [#8282](https://github.com/scalableminds/webknossos/pull/8282)
-- Fixed that reloading a layer's data from the server was sending the tracing ID instead of the fallback layer name to the datastore. [#8298](https://github.com/scalableminds/webknossos/pull/8298)
+- Fixed that reloading the data of a volume annotation layer did not work properly. [#8298](https://github.com/scalableminds/webknossos/pull/8298)
 
 ### Removed
 - Removed support for HTTP API versions 3 and 4. [#8075](https://github.com/scalableminds/webknossos/pull/8075)

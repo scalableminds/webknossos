@@ -246,7 +246,7 @@ export function* floodFill(): Saga<void> {
 
     console.timeEnd("applyLabeledVoxelMapToAllMissingMags");
 
-    let hideSuccessMsgFnBox: { hideFn: () => void } | undefined;
+    let showSuccessMsg = false;
     if (wasBoundingBoxExceeded) {
       const isRestrictedToBoundingBox = yield* select(
         (state) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
@@ -300,17 +300,20 @@ export function* floodFill(): Saga<void> {
           );
         }
       } else {
-        hideSuccessMsgFnBox = yield* call(progressCallback, true, "Floodfill done.");
+        showSuccessMsg = true;
       }
     } else {
-      hideSuccessMsgFnBox = yield* call(progressCallback, true, "Floodfill done.");
+      showSuccessMsg = true;
     }
 
     const floodfillDuration = performance.now() - startTimeOfFloodfill;
     const wasFloodfillQuick = floodfillDuration < NO_SUCCESS_MSG_WHEN_WITHIN_MS;
 
-    if (hideSuccessMsgFnBox != null && wasFloodfillQuick) {
-      hideSuccessMsgFnBox.hideFn();
+    if (showSuccessMsg) {
+      const { hideFn } = yield* call(progressCallback, true, "Floodfill done.");
+      if (wasFloodfillQuick) {
+        hideFn();
+      }
     }
 
     cube.triggerPushQueue();

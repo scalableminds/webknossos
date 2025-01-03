@@ -324,33 +324,6 @@ export class DataBucket {
 
     if (purpose === "PREPARE_RESTORE_TO_SNAPSHOT" && this.data == null) {
       throw new Error("Unexpected getSnapshot call.");
-      // todop: remove this?
-      // this scenario can happen when
-      // - the user hits undo and an older version of this bucket should be restored.
-      // - however, this bucket was gc'ed and has no local changes
-      // in this scenario:
-      // - there are no unsaved changes.
-      // - when restoring the snapshot, the version of the bucket should be loaded
-      //   that was stored at the backend at the current time.
-      // This "if" avoids that getCopyOfData() is called.
-      // The consequences of that would be (and were in older versions):
-      // - getOrCreateData()
-      // - this.temporalBucketManager.addBucket(this);
-      // - pullBucket()
-      // Thus, the newest version of this bucket would be requested.
-      // When the user hits undo, getSnapshot("PREPARE_RESTORE_TO_SNAPSHOT") is called before restoreToSnapshot.
-      // This means, that the newest bucket data would be fetched asynchronously
-      // and then it would overwrite the mutation in restoreToSnapshot.
-      // const volumeTracing = getVolumeTracingById(Store.getState().tracing, this.getTracingId());
-      // const version = volumeTracing.version;
-      // return new BucketSnapshot(
-      //   this.zoomedAddress,
-      //   null,
-      //   null,
-      //   null,
-      //   this.getTracingId(),
-      //   this.elementClass,
-      // );
     }
 
     const dataClone = this.getCopyOfData();

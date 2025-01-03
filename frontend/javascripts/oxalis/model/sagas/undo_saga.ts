@@ -637,22 +637,23 @@ function* applyAndGetRevertingVolumeUndoState(
   const { cube } = segmentationLayer;
   const allBucketSnapshotsForCurrentState: BucketSnapshot[] = [];
 
-  for (const bucketSnapshot of volumeUndoState.data.buckets) {
-    const bucket = cube.getOrCreateBucket(bucketSnapshot.zoomedAddress);
+  yield* call(
+    [Promise, Promise.all],
+    volumeUndoState.data.buckets.map(async (bucketSnapshot) => {
+      const bucket = cube.getOrCreateBucket(bucketSnapshot.zoomedAddress);
 
-    if (bucket.type === "null") {
-      continue;
-    }
-    // todop (only perf): don't block sequentially in this loop, but instead
-    // block at the end of the loop?
+      if (bucket.type === "null") {
+        return;
+      }
 
-    // Prepare a snapshot of the bucket's current data so that it can be
-    // saved in an VolumeUndoState.
-    const currentBucketSnapshot = yield* call([bucket, bucket.getSnapshotBeforeRestore]);
-    allBucketSnapshotsForCurrentState.push(currentBucketSnapshot);
+      // Prepare a snapshot of the bucket's current data so that it can be
+      // saved in an VolumeUndoState.
+      const currentBucketSnapshot = await bucket.getSnapshotBeforeRestore();
+      allBucketSnapshotsForCurrentState.push(currentBucketSnapshot);
 
-    yield* call([bucket, bucket.restoreToSnapshot], bucketSnapshot);
-  }
+      await bucket.restoreToSnapshot(bucketSnapshot);
+    }),
+  );
 
   const activeVolumeTracing = yield* select((state) =>
     getVolumeTracingById(state.tracing, volumeUndoState.data.tracingId),

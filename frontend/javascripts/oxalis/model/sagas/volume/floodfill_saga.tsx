@@ -1,5 +1,5 @@
 import { V2, V3 } from "libs/mjs";
-import createProgressCallback from "libs/progress_callback";
+import createProgressCallback, { type ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import type {
@@ -8,6 +8,7 @@ import type {
   OrthoView,
   Vector2,
   Vector3,
+  FillMode,
 } from "oxalis/constants";
 import Constants, { FillModeEnum, Unicode } from "oxalis/constants";
 
@@ -18,6 +19,7 @@ import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_action
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import {
   finishAnnotationStrokeAction,
+  type FloodFillAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -26,7 +28,7 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select, take } from "oxalis/model/sagas/effect-generators";
 import { requestBucketModificationInVolumeTracing } from "oxalis/model/sagas/saga_helpers";
 import { Model } from "oxalis/singletons";
-import { call, put } from "typed-redux-saga";
+import { call, put, takeEvery } from "typed-redux-saga";
 import { getUserBoundingBoxesThatContainPosition } from "../../accessors/tracing_accessor";
 import { applyLabeledVoxelMapToAllMissingMags } from "./helpers";
 import _ from "lodash";
@@ -34,51 +36,47 @@ import _ from "lodash";
 const NO_FLOODFILL_BBOX_TOAST_KEY = "NO_FLOODFILL_BBOX";
 const NO_SUCCESS_MSG_WHEN_WITHIN_MS = 500;
 
-function* getBoundingBoxForFloodFill(
+export function* floodFill(): Saga<void> {
+  yield* take("INITIALIZE_VOLUMETRACING");
+  yield* takeEvery("FLOOD_FILL", handleFloodFill);
+}
+
+function* getBoundingBoxForFloodFillWhenRestricted(position: Vector3, currentViewport: OrthoView) {
+  const fillMode = yield* select((state) => state.userConfiguration.fillMode);
+  const bboxes = yield* select((state) => getUserBoundingBoxesThatContainPosition(state, position));
+  if (bboxes.length === 0) {
+    return {
+      failureReason:
+        "No bounding box encloses the clicked position. Either disable the bounding box restriction or ensure a bounding box exists around the clicked position.",
+    };
+  }
+  const smallestBbox = _.sortBy(bboxes, (bbox) => new BoundingBox(bbox.boundingBox).getVolume())[0];
+
+  const maximumVoxelSize =
+    Constants.FLOOD_FILL_MULTIPLIER_FOR_BBOX_RESTRICTION *
+    V3.prod(Constants.FLOOD_FILL_EXTENTS[fillMode]);
+  const bboxObj = new BoundingBox(smallestBbox.boundingBox);
+
+  const bboxVolume =
+    fillMode === FillModeEnum._3D
+      ? bboxObj.getVolume()
+      : // Only consider the 2D projection of the bounding box onto the current viewport
+        V2.prod(
+          Dimensions.getIndices(currentViewport).map((idx) => bboxObj.getSize()[idx]) as Vector2,
+        );
+  if (bboxVolume > maximumVoxelSize) {
+    return {
+      failureReason: `The bounding box that encloses the clicked position is too large. Shrink its size so that it does not contain more than ${maximumVoxelSize} voxels.`,
+    };
+  }
+  return smallestBbox.boundingBox;
+}
+
+function* getBoundingBoxForFloodFillWhenUnrestricted(
   position: Vector3,
   currentViewport: OrthoView,
-): Saga<BoundingBoxType | { failureReason: string }> {
-  const isRestrictedToBoundingBox = yield* select(
-    (state) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
-  );
+) {
   const fillMode = yield* select((state) => state.userConfiguration.fillMode);
-  if (isRestrictedToBoundingBox) {
-    const bboxes = yield* select((state) =>
-      getUserBoundingBoxesThatContainPosition(state, position),
-    );
-    if (bboxes.length > 0) {
-      const smallestBbox = _.sortBy(bboxes, (bbox) =>
-        new BoundingBox(bbox.boundingBox).getVolume(),
-      )[0];
-
-      const maximumVoxelSize =
-        Constants.FLOOD_FILL_MULTIPLIER_FOR_BBOX_RESTRICTION *
-        V3.prod(Constants.FLOOD_FILL_EXTENTS[fillMode]);
-      const bboxObj = new BoundingBox(smallestBbox.boundingBox);
-
-      const bboxVolume =
-        fillMode === FillModeEnum._3D
-          ? bboxObj.getVolume()
-          : // Only consider the 2D projection of the bounding box onto the current viewport
-            V2.prod(
-              Dimensions.getIndices(currentViewport).map(
-                (idx) => bboxObj.getSize()[idx],
-              ) as Vector2,
-            );
-      if (bboxVolume > maximumVoxelSize) {
-        return {
-          failureReason: `The bounding box that encloses the clicked position is too large. Shrink its size so that it does not contain more than ${maximumVoxelSize} voxels.`,
-        };
-      }
-      return smallestBbox.boundingBox;
-    } else {
-      return {
-        failureReason:
-          "No bounding box encloses the clicked position. Either disable the bounding box restriction or ensure a bounding box exists around the clicked position.",
-      };
-    }
-  }
-
   const halfBoundingBoxSizeUVW = V3.scale(Constants.FLOOD_FILL_EXTENTS[fillMode], 0.5);
   const currentViewportBounding = {
     min: V3.sub(position, halfBoundingBoxSizeUVW),
@@ -103,224 +101,256 @@ function* getBoundingBoxForFloodFill(
   };
 }
 
-export function* floodFill(): Saga<void> {
-  yield* take("INITIALIZE_VOLUMETRACING");
+function* getBoundingBoxForFloodFill(
+  position: Vector3,
+  currentViewport: OrthoView,
+): Saga<BoundingBoxType | { failureReason: string }> {
+  const isRestrictedToBoundingBox = yield* select(
+    (state) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
+  );
+  if (isRestrictedToBoundingBox) {
+    return yield* call(getBoundingBoxForFloodFillWhenRestricted, position, currentViewport);
+  } else {
+    return yield* call(getBoundingBoxForFloodFillWhenUnrestricted, position, currentViewport);
+  }
+}
+
+function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
 
-  while (allowUpdate) {
-    const floodFillAction = yield* take("FLOOD_FILL");
+  if (!allowUpdate) {
+    return;
+  }
 
-    if (floodFillAction.type !== "FLOOD_FILL") {
-      throw new Error("Unexpected action. Satisfy typescript.");
-    }
+  const { position: positionFloat, planeId } = floodFillAction;
+  const volumeTracing = yield* select(enforceActiveVolumeTracing);
+  if (volumeTracing.hasEditableMapping) {
+    const message = "Volume modification is not allowed when an editable mapping is active.";
+    Toast.error(message);
+    console.error(message);
+    return;
+  }
+  const segmentationLayer = yield* call(
+    [Model, Model.getSegmentationTracingLayer],
+    volumeTracing.tracingId,
+  );
+  const { cube } = segmentationLayer;
+  const seedPosition = Dimensions.roundCoordinate(positionFloat);
+  const activeCellId = volumeTracing.activeCellId;
+  const dimensionIndices = Dimensions.getIndices(planeId);
+  const requestedZoomStep = yield* select((state) =>
+    getActiveMagIndexForLayer(state, segmentationLayer.name),
+  );
+  const magInfo = yield* call(getMagInfo, segmentationLayer.mags);
+  const labeledZoomStep = magInfo.getClosestExistingIndex(requestedZoomStep);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const oldSegmentIdAtSeed = cube.getDataValue(
+    seedPosition,
+    additionalCoordinates,
+    null,
+    labeledZoomStep,
+  );
 
-    const { position: positionFloat, planeId } = floodFillAction;
-    const volumeTracing = yield* select(enforceActiveVolumeTracing);
-    if (volumeTracing.hasEditableMapping) {
-      const message = "Volume modification is not allowed when an editable mapping is active.";
-      Toast.error(message);
-      console.error(message);
-      continue;
-    }
-    const segmentationLayer = yield* call(
-      [Model, Model.getSegmentationTracingLayer],
-      volumeTracing.tracingId,
-    );
-    const { cube } = segmentationLayer;
-    const seedPosition = Dimensions.roundCoordinate(positionFloat);
-    const activeCellId = volumeTracing.activeCellId;
-    const dimensionIndices = Dimensions.getIndices(planeId);
-    const requestedZoomStep = yield* select((state) =>
-      getActiveMagIndexForLayer(state, segmentationLayer.name),
-    );
-    const magInfo = yield* call(getMagInfo, segmentationLayer.mags);
-    const labeledZoomStep = magInfo.getClosestExistingIndex(requestedZoomStep);
-    const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-    const oldSegmentIdAtSeed = cube.getDataValue(
-      seedPosition,
-      additionalCoordinates,
-      null,
-      labeledZoomStep,
-    );
+  if (activeCellId === oldSegmentIdAtSeed) {
+    Toast.warning("The clicked voxel's id is already equal to the active segment id.");
+    return;
+  }
 
-    if (activeCellId === oldSegmentIdAtSeed) {
-      Toast.warning("The clicked voxel's id is already equal to the active segment id.");
-      continue;
-    }
+  const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
 
-    const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
-
-    if (busyBlockingInfo.isBusy) {
-      console.warn(`Ignoring floodfill request (reason: ${busyBlockingInfo.reason || "unknown"})`);
-      continue;
-    }
-    // As the flood fill will be applied to the volume layer,
-    // the potentially existing mapping should be locked to ensure a consistent state.
-    const isModificationAllowed = yield* call(
-      requestBucketModificationInVolumeTracing,
-      volumeTracing,
-    );
-    if (!isModificationAllowed) {
-      continue;
-    }
-    const boundingBoxForFloodFill = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
-    if ("failureReason" in boundingBoxForFloodFill) {
-      Toast.warning(boundingBoxForFloodFill.failureReason, {
-        key: NO_FLOODFILL_BBOX_TOAST_KEY,
-      });
-      continue;
-    } else {
-      Toast.close(NO_FLOODFILL_BBOX_TOAST_KEY);
-    }
-    yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
-    const progressCallback = createProgressCallback({
-      pauseDelay: 200,
-      successMessageDelay: 2000,
+  if (busyBlockingInfo.isBusy) {
+    console.warn(`Ignoring floodfill request (reason: ${busyBlockingInfo.reason || "unknown"})`);
+    return;
+  }
+  // As the flood fill will be applied to the volume layer,
+  // the potentially existing mapping should be locked to ensure a consistent state.
+  const isModificationAllowed = yield* call(
+    requestBucketModificationInVolumeTracing,
+    volumeTracing,
+  );
+  if (!isModificationAllowed) {
+    return;
+  }
+  const boundingBoxForFloodFill = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
+  if ("failureReason" in boundingBoxForFloodFill) {
+    Toast.warning(boundingBoxForFloodFill.failureReason, {
+      key: NO_FLOODFILL_BBOX_TOAST_KEY,
     });
-    yield* call(progressCallback, false, "Performing floodfill...");
-    console.time("cube.floodFill");
-    const startTimeOfFloodfill = performance.now();
-    const fillMode = yield* select((state) => state.userConfiguration.fillMode);
+    return;
+  } else {
+    Toast.close(NO_FLOODFILL_BBOX_TOAST_KEY);
+  }
+  yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
+  const progressCallback = createProgressCallback({
+    pauseDelay: 200,
+    successMessageDelay: 2000,
+  });
+  yield* call(progressCallback, false, "Performing floodfill...");
+  console.time("cube.floodFill");
+  const startTimeOfFloodfill = performance.now();
+  const fillMode = yield* select((state) => state.userConfiguration.fillMode);
 
-    const {
-      bucketsWithLabeledVoxelsMap: labelMasksByBucketAndW,
-      wasBoundingBoxExceeded,
-      coveredBoundingBox,
-    } = yield* call(
-      { context: cube, fn: cube.floodFill },
-      seedPosition,
-      additionalCoordinates,
-      activeCellId,
-      dimensionIndices,
-      boundingBoxForFloodFill,
+  const {
+    bucketsWithLabeledVoxelsMap: labelMasksByBucketAndW,
+    wasBoundingBoxExceeded,
+    coveredBoundingBox,
+  } = yield* call(
+    { context: cube, fn: cube.floodFill },
+    seedPosition,
+    additionalCoordinates,
+    activeCellId,
+    dimensionIndices,
+    boundingBoxForFloodFill,
+    labeledZoomStep,
+    progressCallback,
+    fillMode === FillModeEnum._3D,
+  );
+  console.timeEnd("cube.floodFill");
+  yield* call(progressCallback, false, "Finalizing floodfill...");
+  const indexSet: Set<number> = new Set();
+
+  for (const labelMaskByIndex of labelMasksByBucketAndW.values()) {
+    for (const zIndex of labelMaskByIndex.keys()) {
+      indexSet.add(zIndex);
+    }
+  }
+
+  console.time("applyLabeledVoxelMapToAllMissingMags");
+
+  for (const indexZ of indexSet) {
+    const labeledVoxelMapFromFloodFill: LabeledVoxelsMap = new Map();
+
+    for (const [bucketAddress, labelMaskByIndex] of labelMasksByBucketAndW.entries()) {
+      const map = labelMaskByIndex.get(indexZ);
+
+      if (map != null) {
+        labeledVoxelMapFromFloodFill.set(bucketAddress, map);
+      }
+    }
+
+    applyLabeledVoxelMapToAllMissingMags(
+      labeledVoxelMapFromFloodFill,
       labeledZoomStep,
-      progressCallback,
-      fillMode === FillModeEnum._3D,
+      dimensionIndices,
+      magInfo,
+      cube,
+      activeCellId,
+      indexZ,
+      true,
     );
-    console.timeEnd("cube.floodFill");
-    yield* call(progressCallback, false, "Finalizing floodfill...");
-    const indexSet: Set<number> = new Set();
+  }
 
-    for (const labelMaskByIndex of labelMasksByBucketAndW.values()) {
-      for (const zIndex of labelMaskByIndex.keys()) {
-        indexSet.add(zIndex);
-      }
-    }
+  yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+  yield* put(
+    updateSegmentAction(
+      volumeTracing.activeCellId,
+      {
+        somePosition: seedPosition,
+        someAdditionalCoordinates: additionalCoordinates || undefined,
+      },
+      volumeTracing.tracingId,
+    ),
+  );
 
-    console.time("applyLabeledVoxelMapToAllMissingMags");
+  console.timeEnd("applyLabeledVoxelMapToAllMissingMags");
 
-    for (const indexZ of indexSet) {
-      const labeledVoxelMapFromFloodFill: LabeledVoxelsMap = new Map();
+  yield* call(
+    notifyUserAboutResult,
+    wasBoundingBoxExceeded,
+    startTimeOfFloodfill,
+    progressCallback,
+    fillMode,
+    coveredBoundingBox,
+    oldSegmentIdAtSeed,
+    activeCellId,
+    seedPosition,
+  );
 
-      for (const [bucketAddress, labelMaskByIndex] of labelMasksByBucketAndW.entries()) {
-        const map = labelMaskByIndex.get(indexZ);
+  cube.triggerPushQueue();
+  yield* put(setBusyBlockingInfoAction(false));
 
-        if (map != null) {
-          labeledVoxelMapFromFloodFill.set(bucketAddress, map);
-        }
-      }
+  if (floodFillAction.callback != null) {
+    floodFillAction.callback();
+  }
+}
 
-      applyLabeledVoxelMapToAllMissingMags(
-        labeledVoxelMapFromFloodFill,
-        labeledZoomStep,
-        dimensionIndices,
-        magInfo,
-        cube,
-        activeCellId,
-        indexZ,
+function* notifyUserAboutResult(
+  wasBoundingBoxExceeded: boolean,
+  startTimeOfFloodfill: number,
+  progressCallback: ProgressCallback,
+  fillMode: FillMode,
+  coveredBoundingBox: BoundingBoxType,
+  oldSegmentIdAtSeed: number,
+  activeCellId: number,
+  seedPosition: Vector3,
+) {
+  let showSuccessMsg = false;
+  if (wasBoundingBoxExceeded) {
+    const isRestrictedToBoundingBox = yield* select(
+      (state) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
+    );
+    // Don't notify the user about early-terminated floodfills if the floodfill
+    // was configured to be restricted, anyway. Also, don't create a new bounding
+    // box in that case.
+    if (!isRestrictedToBoundingBox) {
+      // The bounding box is overkill for the 2D mode because in that case,
+      // it's trivial to check the borders manually.
+      const createNewBoundingBox = fillMode === FillModeEnum._3D;
+      const warningDetails = createNewBoundingBox
+        ? "A bounding box that represents the labeled volume was added so that you can check the borders manually."
+        : "Please check the borders of the filled area manually and use the fill tool again if necessary.";
+
+      // Pre-declare a variable for the hide function so that we can refer
+      // to that var within the toast content. We don't want to use message.destroy
+      // because this ignores the setTimeout within the progress callback utility.
+      // Without this, hide functions for older toasts could still be triggered (due to
+      // timeout) that act on new ones then.
+      let hideBox: { hideFn: () => void } | undefined;
+      hideBox = yield* call(
+        progressCallback,
         true,
-      );
-    }
-
-    yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
-    yield* put(
-      updateSegmentAction(
-        volumeTracing.activeCellId,
+        <>
+          Floodfill is done, but terminated because{" "}
+          {isRestrictedToBoundingBox
+            ? "the labeled volume touched the bounding box to which the floodfill was restricted"
+            : "the labeled volume got too large"}
+          .
+          <br />
+          {warningDetails} {Unicode.NonBreakingSpace}
+          <a href="#" style={{ pointerEvents: "auto" }} onClick={() => hideBox?.hideFn()}>
+            Close
+          </a>
+        </>,
         {
-          somePosition: seedPosition,
-          someAdditionalCoordinates: additionalCoordinates || undefined,
+          successMessageDelay: 10000,
         },
-        volumeTracing.tracingId,
-      ),
-    );
-
-    console.timeEnd("applyLabeledVoxelMapToAllMissingMags");
-
-    let showSuccessMsg = false;
-    if (wasBoundingBoxExceeded) {
-      const isRestrictedToBoundingBox = yield* select(
-        (state) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
       );
-      // Don't notify the user about early-terminated floodfills if the floodfill
-      // was configured to be restricted, anyway. Also, don't create a new bounding
-      // box in that case.
-      if (!isRestrictedToBoundingBox) {
-        // The bounding box is overkill for the 2D mode because in that case,
-        // it's trivial to check the borders manually.
-        const createNewBoundingBox = fillMode === FillModeEnum._3D;
-        const warningDetails = createNewBoundingBox
-          ? "A bounding box that represents the labeled volume was added so that you can check the borders manually."
-          : "Please check the borders of the filled area manually and use the fill tool again if necessary.";
-
-        // Pre-declare a variable for the hide function so that we can refer
-        // to that var within the toast content. We don't want to use message.destroy
-        // because this ignores the setTimeout within the progress callback utility.
-        // Without this, hide functions for older toasts could still be triggered (due to
-        // timeout) that act on new ones then.
-        let hideBox: { hideFn: () => void } | undefined;
-        hideBox = yield* call(
-          progressCallback,
-          true,
-          <>
-            Floodfill is done, but terminated because{" "}
-            {isRestrictedToBoundingBox
-              ? "the labeled volume touched the bounding box to which the floodfill was restricted"
-              : "the labeled volume got too large"}
-            .
-            <br />
-            {warningDetails} {Unicode.NonBreakingSpace}
-            <a href="#" style={{ pointerEvents: "auto" }} onClick={() => hideBox?.hideFn()}>
-              Close
-            </a>
-          </>,
-          {
-            successMessageDelay: 10000,
-          },
+      if (createNewBoundingBox) {
+        yield* put(
+          addUserBoundingBoxAction({
+            boundingBox: coveredBoundingBox,
+            name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
+              ",",
+            )}, timestamp=${new Date().getTime()})`,
+            color: Utils.getRandomColor(),
+            isVisible: true,
+          }),
         );
-        if (createNewBoundingBox) {
-          yield* put(
-            addUserBoundingBoxAction({
-              boundingBox: coveredBoundingBox,
-              name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
-                ",",
-              )}, timestamp=${new Date().getTime()})`,
-              color: Utils.getRandomColor(),
-              isVisible: true,
-            }),
-          );
-        }
-      } else {
-        showSuccessMsg = true;
       }
     } else {
       showSuccessMsg = true;
     }
+  } else {
+    showSuccessMsg = true;
+  }
 
-    const floodfillDuration = performance.now() - startTimeOfFloodfill;
-    const wasFloodfillQuick = floodfillDuration < NO_SUCCESS_MSG_WHEN_WITHIN_MS;
+  const floodfillDuration = performance.now() - startTimeOfFloodfill;
+  const wasFloodfillQuick = floodfillDuration < NO_SUCCESS_MSG_WHEN_WITHIN_MS;
 
-    if (showSuccessMsg) {
-      const { hideFn } = yield* call(progressCallback, true, "Floodfill done.");
-      if (wasFloodfillQuick) {
-        hideFn();
-      }
-    }
-
-    cube.triggerPushQueue();
-    yield* put(setBusyBlockingInfoAction(false));
-
-    if (floodFillAction.callback != null) {
-      floodFillAction.callback();
+  if (showSuccessMsg) {
+    const { hideFn } = yield* call(progressCallback, true, "Floodfill done.");
+    if (wasFloodfillQuick) {
+      hideFn();
     }
   }
 }

@@ -325,21 +325,7 @@ function JobListView() {
       );
     } else {
       // unknown job type
-      return (
-        <span style={{ wordBreak: "break-word" }}>
-          {job.resultLink && (
-            <Link to={job.resultLink} title="View Or Download Result">
-              {job.resultLink}
-            </Link>
-          )}
-          {job.result && (
-            <span>
-              <br />
-              {job.result}
-            </span>
-          )}
-        </span>
-      );
+      return null;
     }
   }
 

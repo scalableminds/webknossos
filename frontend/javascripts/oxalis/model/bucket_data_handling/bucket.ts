@@ -90,7 +90,7 @@ export class DataBucket {
   dirtyCount: number = 0;
   pendingOperations: Array<PendingOperation> = [];
   state: BucketStateEnumType;
-  accessed: boolean;
+  private accessed: boolean;
   data: BucketDataArray | null | undefined;
   temporalBucketManager: TemporalBucketManager;
   cube: DataCube;
@@ -296,10 +296,21 @@ export class DataBucket {
 
     bucketsAlreadyInUndoState.add(this);
 
-    Store.dispatch(addBucketToUndoAction(this.getSnapshot("MUTATION")));
+    Store.dispatch(addBucketToUndoAction(this.getSnapshotBeforeMutation()));
   }
 
-  getSnapshot(purpose: "MUTATION" | "PREPARE_RESTORE_TO_SNAPSHOT"): BucketSnapshot {
+  getSnapshotBeforeMutation(): BucketSnapshot {
+    return this.getSnapshot("MUTATION");
+  }
+
+  async getSnapshotBeforeRestore(): Promise<BucketSnapshot> {
+    if (this.data == null) {
+      await this.ensureLoaded();
+    }
+    return this.getSnapshot("PREPARE_RESTORE_TO_SNAPSHOT");
+  }
+
+  private getSnapshot(purpose: "MUTATION" | "PREPARE_RESTORE_TO_SNAPSHOT"): BucketSnapshot {
     // getSnapshot is called in two use cases:
     // 1) The user mutates data.
     //    If this.data is null, it will be allocated and the bucket will be added
@@ -330,10 +341,8 @@ export class DataBucket {
       // When the user hits undo, getSnapshot("PREPARE_RESTORE_TO_SNAPSHOT") is called before restoreToSnapshot.
       // This means, that the newest bucket data would be fetched asynchronously
       // and then it would overwrite the mutation in restoreToSnapshot.
-
       // const volumeTracing = getVolumeTracingById(Store.getState().tracing, this.getTracingId());
       // const version = volumeTracing.version;
-
       // return new BucketSnapshot(
       //   this.zoomedAddress,
       //   null,

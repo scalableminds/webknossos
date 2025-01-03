@@ -370,7 +370,7 @@ class DataCube {
 
   collectBucketsIf(predicateFn: (bucket: DataBucket) => boolean): void {
     // todop: why clear this? can't the buckets be still in the queue? their
-    // download didn't even start yet.
+    // download didn't even start yet (or did it?).
     // and if we clear the queue, do we need to collect buckets independently
     // of the predicateFn? to avoid that a bucket stays in REQUESTED forever?
     // this.pullQueue.clear();

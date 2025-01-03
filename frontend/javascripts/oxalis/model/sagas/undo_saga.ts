@@ -643,13 +643,14 @@ function* applyAndGetRevertingVolumeUndoState(
     if (bucket.type === "null") {
       continue;
     }
+    // todop (only perf): don't block sequentially in this loop, but instead
+    // block at the end of the loop?
 
     // Prepare a snapshot of the bucket's current data so that it can be
     // saved in an VolumeUndoState.
-    allBucketSnapshotsForCurrentState.push(bucket.getSnapshot("PREPARE_RESTORE_TO_SNAPSHOT"));
+    const currentBucketSnapshot = yield* call([bucket, bucket.getSnapshotBeforeRestore]);
+    allBucketSnapshotsForCurrentState.push(currentBucketSnapshot);
 
-    // todop (only perf): don't block sequentially in this loop, but instead
-    // block at the end of the loop?
     yield* call([bucket, bucket.restoreToSnapshot], bucketSnapshot);
   }
 

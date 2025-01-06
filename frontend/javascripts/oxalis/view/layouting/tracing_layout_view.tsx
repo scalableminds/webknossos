@@ -1,5 +1,4 @@
-import { WarningFilled } from "@ant-design/icons";
-import { Alert, Layout, Tooltip } from "antd";
+import { Layout } from "antd";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import Toast from "libs/toast";
@@ -256,8 +255,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       this.props.is2d,
     );
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { isDatasetOnScratchVolume, isUpdateTracingAllowed, distanceMeasurementTooltipPosition } =
-      this.props;
+    const { isUpdateTracingAllowed, distanceMeasurementTooltipPosition } = this.props;
 
     const createNewTracing = async (
       files: Array<File>,
@@ -322,31 +320,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                       autoSaveLayouts: this.props.autoSaveLayouts,
                     }}
                   />
-                  {isDatasetOnScratchVolume ? (
-                    <Tooltip title={messages["dataset.is_scratch"]}>
-                      <Alert
-                        className="hide-on-small-screen"
-                        style={{
-                          height: 30,
-                          paddingTop: 4,
-                          backgroundColor: "var(--ant-color-warning)",
-                          border: "none",
-                          color: "white",
-                        }}
-                        message={
-                          <span>
-                            Dataset is on tmpscratch!{" "}
-                            <WarningFilled
-                              style={{
-                                margin: "0 0 0 6px",
-                              }}
-                            />
-                          </span>
-                        }
-                        type="error"
-                      />
-                    </Tooltip>
-                  ) : null}
                 </div>
               ) : null}
             </RenderToPortal>
@@ -401,7 +374,6 @@ function mapStateToProps(state: OxalisState) {
     isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
-    isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
     datasetId: state.dataset.id,
     is2d: is2dDataset(state.dataset),
     displayName: state.tracing.name ? state.tracing.name : state.dataset.name,

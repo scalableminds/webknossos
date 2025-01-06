@@ -75,7 +75,9 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
     }
 
-  def volumeTracingDirectoryContentJson(token: Option[String], tracingId: String, zarrVersion: Int): Action[AnyContent] =
+  def volumeTracingDirectoryContentJson(token: Option[String],
+                                        tracingId: String,
+                                        zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {

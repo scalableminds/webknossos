@@ -308,30 +308,27 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
       <AiModelNameFormItem />
       <AiModelCategoryFormItem />
 
-      {annotationInfos.map(({ annotation, dataset, volumeTracings }, idx) => {
-        // Only consider the layers that are not volume layers (these aren't a fallback layer in one of the volume tracings).
-        // Add actual volume layers below.
-        const segmentationLayers = _.uniq(
-          getSegmentationLayers(dataset).filter(
-            (layer) => !volumeTracings.find((tracing) => tracing.fallbackLayer === layer.name),
-          ),
-        );
+      {annotationInfos.map(({ annotation, dataset }, idx) => {
+        // Gather layer names from dataset. Omit the layers that are also present
+        // in annotationLayers.
+        const segmentationLayerNames = getSegmentationLayers(dataset)
+          .map((layer) => layer.name)
+          .filter(
+            (tracingId) =>
+              !annotation.annotationLayers.find(
+                (annotationLayer) => annotationLayer.tracingId === tracingId,
+              ),
+          );
 
-        const segmentationLayerNames = segmentationLayers.map((layer) => {
-          return { name: layer.name, additionalInfo: "Active layer: " };
-        });
-        // Add volume layers here.
-        const annotationLayers = _.uniq(
-          annotation.annotationLayers.filter((layer) => layer.typ === "Volume"),
-        );
-        const annotationLayerNames = annotationLayers.map((layer) => {
-          return { name: layer.name };
-        });
+        // Gather layer names from the annotation
+        const annotationLayerNames = annotation.annotationLayers
+          .filter((layer) => layer.typ === "Volume")
+          .map((layer) => layer.name);
 
-        const segmentationAndColorLayers: Array<{ name: string; additionalInfo?: string }> = [
+        const segmentationAndColorLayers: Array<string> = _.uniq([
           ...segmentationLayerNames,
           ...annotationLayerNames,
-        ];
+        ]);
         const fixedSelectedSegmentationLayer =
           segmentationAndColorLayers.length === 1 ? segmentationAndColorLayers[0] : null;
 
@@ -384,12 +381,9 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
               <LayerSelectionFormItem
                 name={["trainingAnnotations", idx, "layerName"]}
                 chooseSegmentationLayer
-                layers={segmentationAndColorLayers}
-                getReadableNameForLayer={(layer) => {
-                  if (layer) return (layer.additionalInfo || "").concat(layer.name);
-                  return "";
-                }}
-                fixedLayerName={fixedSelectedSegmentationLayer?.name || undefined}
+                layers={segmentationAndColorLayers.map((name) => ({ name }))}
+                getReadableNameForLayer={(layer) => layer.name}
+                fixedLayerName={fixedSelectedSegmentationLayer || undefined}
                 label="Ground Truth Layer"
                 onChange={onChangeLayer}
               />

@@ -39,6 +39,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed some layout issues in the upload view. [#8231](https://github.com/scalableminds/webknossos/pull/8231)
 - Fixed `FATAL: role "postgres" does not exist` error message in Docker compose. [#8240](https://github.com/scalableminds/webknossos/pull/8240)
 - Fixed the Zarr 3 implementation not accepting BytesCodec without "configuration" key. [#8282](https://github.com/scalableminds/webknossos/pull/8282)
+- Fixed that reloading the data of a volume annotation layer did not work properly. [#8298](https://github.com/scalableminds/webknossos/pull/8298)
 - Removed the magnification slider for the TIFF export within the download modal if only one magnification is available for the selected layer. [#8297](https://github.com/scalableminds/webknossos/pull/8297)
 
 ### Removed

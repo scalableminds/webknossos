@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services._
@@ -55,6 +56,7 @@ class DSMeshController @Inject()(
         urlOrHeaderToken(token, request)) {
         for {
           _ <- Fox.successful(())
+          before = Instant.now
           mappingNameForMeshFile = meshFileService.mappingNameForMeshFile(organizationId,
                                                                           datasetDirectoryName,
                                                                           dataLayerName,
@@ -70,6 +72,7 @@ class DSMeshController @Inject()(
             omitMissing = false,
             urlOrHeaderToken(token, request)
           )
+          _ = Instant.logSince(before, "listChunks setup")
           chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(organizationId,
                                                                         datasetDirectoryName,
                                                                         dataLayerName,

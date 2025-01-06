@@ -25,12 +25,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingUpdater
 }
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{
-  CreateNodeSkeletonAction,
-  DeleteNodeSkeletonAction,
-  SkeletonUpdateAction,
-  UpdateTracingSkeletonAction
-}
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.volume._
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
@@ -594,28 +589,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                    math.min(requestedVersion, newestUpdateVersion))
       }
     } yield targetVersion
-
-  def updateActionStatistics(tracingId: String): Fox[JsObject] =
-    for {
-      updateActionGroups <- tracingDataStore.annotationUpdates.getMultipleVersions(tracingId)(
-        fromJsonBytes[List[UpdateAction]])
-      updateActions = updateActionGroups.flatten
-    } yield {
-      Json.obj(
-        "updateTracingActionCount" -> updateActions.count {
-          case _: UpdateTracingSkeletonAction => true
-          case _                              => false
-        },
-        "createNodeActionCount" -> updateActions.count {
-          case _: CreateNodeSkeletonAction => true
-          case _                           => false
-        },
-        "deleteNodeActionCount" -> updateActions.count {
-          case _: DeleteNodeSkeletonAction => true
-          case _                           => false
-        }
-      )
-    }
 
   def editableMappingLayer(annotationId: String, tracingId: String, tracing: VolumeTracing)(
       implicit tc: TokenContext): EditableMappingLayer =

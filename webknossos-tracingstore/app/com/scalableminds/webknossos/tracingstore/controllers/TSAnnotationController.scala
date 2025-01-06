@@ -91,16 +91,6 @@ class TSAnnotationController @Inject()(
     }
   }
 
-  def updateActionStatistics(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
-    log() {
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
-        for {
-          statistics <- annotationService.updateActionStatistics(tracingId)
-        } yield Ok(statistics)
-      }
-    }
-  }
-
   def get(annotationId: String, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {

@@ -215,7 +215,7 @@ function JobListView() {
     ) {
       return (
         <span>
-          Aligned sections for layer {job.layerName} of{" "}
+          Align sections for layer {job.layerName} of{" "}
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
@@ -237,13 +237,13 @@ function JobListView() {
       const numberOfTrainingAnnotations = job.trainingAnnotations.length;
       return (
         <span>
-          {`Trained model on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}`}
+          {`Train model on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}`}
         </span>
       );
     } else if (job.type === APIJobType.INFER_WITH_MODEL && job.organizationId) {
       return (
         <span>
-          Ran inference with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
+          Run inference with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
         </span>
       );
     } else {

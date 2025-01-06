@@ -242,7 +242,9 @@ export function createBoundingBoxAndGetEdges(
     addUserBoundingBoxAction({
       boundingBox: {
         min: globalPosition,
-        max: V3.add(globalPosition, [1, 1, 1]),
+        // The last argument ensures that a Vector3 is used and not a
+        // Float32Array.
+        max: V3.add(globalPosition, [1, 1, 1], [0, 0, 0]),
       },
     }),
   );

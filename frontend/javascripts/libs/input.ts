@@ -340,7 +340,7 @@ export class InputKeyboard {
 }
 
 // The mouse module.
-// Events: over, out, leftClick, rightClick, leftDownMove
+// Events: over, out, {left,right}Click, {left,right}DownMove, leftDoubleClick
 class InputMouseButton {
   mouse: InputMouse;
   name: MouseButtonString;
@@ -390,6 +390,19 @@ class InputMouseButton {
       }
 
       this.down = false;
+    }
+  }
+
+  handleDoubleClick(event: MouseEvent, triggeredByTouch: boolean): void {
+    // DoubleClick is only supported for the left mouse button
+    if (this.name === "left" && this.moveDelta <= MOUSE_MOVE_DELTA_THRESHOLD) {
+      this.mouse.emitter.emit(
+        "leftDoubleClick",
+        this.mouse.lastPosition,
+        this.id,
+        event,
+        triggeredByTouch,
+      );
     }
   }
 
@@ -446,6 +459,7 @@ export class InputMouse {
     document.addEventListener("mousemove", this.mouseMove);
     document.addEventListener("mouseup", this.mouseUp);
     document.addEventListener("touchend", this.touchEnd);
+    document.addEventListener("dblclick", this.doubleClick);
 
     this.delegatedEvents = {
       ...Utils.addEventListenerWithDelegation(
@@ -498,6 +512,7 @@ export class InputMouse {
     document.removeEventListener("mousemove", this.mouseMove);
     document.removeEventListener("mouseup", this.mouseUp);
     document.removeEventListener("touchend", this.touchEnd);
+    document.removeEventListener("dblclick", this.doubleClick);
 
     for (const [eventName, eventHandler] of Object.entries(this.delegatedEvents)) {
       document.removeEventListener(eventName, eventHandler);
@@ -548,6 +563,12 @@ export class InputMouse {
 
     if (this.isHit(event)) {
       this.mouseOver();
+    }
+  };
+
+  doubleClick = (event: MouseEvent): void => {
+    if (this.isHit(event)) {
+      this.leftMouseButton.handleDoubleClick(event, false);
     }
   };
 

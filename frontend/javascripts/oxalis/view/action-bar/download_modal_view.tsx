@@ -691,8 +691,7 @@ function _DownloadModalView({
               display: "block",
             }}
           >
-            {onlyOneMagAvailable && mag.join("-")}
-            <br />
+            {onlyOneMagAvailable && <div>{mag.join("-")}</div>}
             Estimated file size:{" "}
             {estimateFileSize(selectedLayer, mag, selectedBoundingBox.boundingBox, exportFormat)}
             <br />

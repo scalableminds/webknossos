@@ -6,6 +6,7 @@ import {
   convertCellIdToRGB,
   getBrushOverlay,
   getCrossHairOverlay,
+  getSegmentationAlphaIncrement,
   getSegmentId,
 } from "./segmentation.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
@@ -110,6 +111,7 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
 uniform float sphericalCapRadius;
 uniform bool selectiveVisibilityInProofreading;
+uniform bool selectiveSegmentVisibility;
 uniform float viewMode;
 uniform float alpha;
 uniform bool renderBucketIndices;
@@ -178,6 +180,7 @@ ${compileShader(
   hasSegmentation ? getBrushOverlay : null,
   hasSegmentation ? getSegmentId : null,
   hasSegmentation ? getCrossHairOverlay : null,
+  hasSegmentation ? getSegmentationAlphaIncrement : null,
   almostEq,
 )}
 
@@ -291,25 +294,13 @@ void main() {
         && hoveredUnmappedSegmentIdHigh == <%= segmentationName %>_unmapped_id_high;
       bool isActiveCell = activeCellIdLow == <%= segmentationName %>_id_low
          && activeCellIdHigh == <%= segmentationName %>_id_high;
-      // Highlight cell only if it's hovered or active during proofreading
-      // and if segmentation opacity is not zero
-      float alphaIncrement = isProofreading
-        ? (isActiveCell
-            ? (isHoveredUnmappedSegment
-              ? 0.4     // Highlight the hovered super-voxel of the active segment
-              : (isHoveredSegment
-                ? 0.15  // Highlight the not-hovered super-voxels of the hovered segment
-                : 0.0
-              )
-          )
-            : (isHoveredSegment
-              ? 0.2
-              // We are in proofreading mode, but the current voxel neither belongs
-              // to the active segment nor is it hovered. When selective visibility
-              // is enabled, lower the opacity.
-              : (selectiveVisibilityInProofreading ? -<%= segmentationName %>_alpha : 0.0)
-          )
-        ) : (isHoveredSegment ? 0.2 : 0.0);
+      float alphaIncrement = getSegmentationAlphaIncrement(
+        <%= segmentationName %>_alpha,
+        isHoveredSegment,
+        isHoveredUnmappedSegment,
+        isActiveCell
+      );
+
       gl_FragColor = vec4(mix(
         data_color.rgb,
         convertCellIdToRGB(<%= segmentationName %>_id_high, <%= segmentationName %>_id_low),

@@ -277,7 +277,8 @@ class AuthenticationController @Inject()(
             case None => Future.successful(NotFound(Messages("error.noUser")))
             case Some(user) =>
               for {
-                token <- bearerTokenAuthenticatorService.createAndInit(user.loginInfo, TokenType.ResetPassword)
+                token <- bearerTokenAuthenticatorService
+                  .createAndInit(user.loginInfo, TokenType.ResetPassword, deleteOld = true)
               } yield {
                 Mailer ! Send(defaultMails.resetPasswordMail(user.name, email.toLowerCase, token))
                 Ok

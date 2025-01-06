@@ -22,8 +22,8 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
     for {
       zattrsPath <- Fox.successful(remotePath / NgffMetadata.FILENAME_DOT_ZATTRS)
       ngffHeader <- zattrsPath.parseAsJson[NgffMetadata] ?~> s"Failed to read OME NGFF header at $zattrsPath"
-      labelLayers <- exploreLabelLayers(remotePath, credentialId).orElse(
-        Fox.successful(List[(DataLayerWithMagLocators, VoxelSize)]()))
+      //labelLayers <- exploreLabelLayers(remotePath, credentialId).orElse(
+      // Fox.successful(List[(DataLayerWithMagLocators, VoxelSize)]()))
 
       layerLists: List[List[(DataLayerWithMagLocators, VoxelSize)]] <- Fox.serialCombined(ngffHeader.multiscales)(
         multiscale => {
@@ -34,7 +34,7 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
           } yield layers
         })
       layers: List[(DataLayerWithMagLocators, VoxelSize)] = layerLists.flatten
-    } yield layers ++ labelLayers
+    } yield layers //++ labelLayers
 
   protected def createLayer(remotePath: VaultPath,
                             credentialId: Option[String],

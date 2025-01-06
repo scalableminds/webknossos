@@ -220,6 +220,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
       annotationId,
       groundTruthLayerName,
     ).getMagList();
+    console.log("getintersectingmaglist", dataLayerMags, groundTruthLayerMags);
 
     return groundTruthLayerMags?.filter((groundTruthMag) =>
       dataLayerMags?.find((mag) => V3.equals(mag, groundTruthMag)),
@@ -414,31 +415,31 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 
       {hasErrors
         ? errors.map((error) => (
-            <Alert
-              key={error}
-              description={error}
-              style={{
-                marginBottom: 12,
-                whiteSpace: "pre-line",
-              }}
-              type="error"
-              showIcon
-            />
-          ))
+          <Alert
+            key={error}
+            description={error}
+            style={{
+              marginBottom: 12,
+              whiteSpace: "pre-line",
+            }}
+            type="error"
+            showIcon
+          />
+        ))
         : null}
       {hasWarnings
         ? warnings.map((warning) => (
-            <Alert
-              key={warning}
-              description={warning}
-              style={{
-                marginBottom: 12,
-                whiteSpace: "pre-line",
-              }}
-              type="warning"
-              showIcon
-            />
-          ))
+          <Alert
+            key={warning}
+            description={warning}
+            style={{
+              marginBottom: 12,
+              whiteSpace: "pre-line",
+            }}
+            type="warning"
+            showIcon
+          />
+        ))
         : null}
 
       <FormItem>
@@ -682,10 +683,10 @@ function AnnotationsCsvInput({
               return valid
                 ? Promise.resolve()
                 : Promise.reject(
-                    new Error(
-                      "Each line should only contain an annotation ID or URL (without # or ,)",
-                    ),
-                  );
+                  new Error(
+                    "Each line should only contain an annotation ID or URL (without # or ,)",
+                  ),
+                );
             },
           }),
         ]}

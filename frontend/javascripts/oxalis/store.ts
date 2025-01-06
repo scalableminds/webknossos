@@ -395,6 +395,7 @@ export type UserConfiguration = {
   // how volume annotations overwrite existing voxels.
   readonly overwriteMode: OverwriteMode;
   readonly fillMode: FillMode;
+  readonly isFloodfillRestrictedToBoundingBox: boolean;
   readonly interpolationMode: InterpolationMode;
   readonly useLegacyBindings: boolean;
   readonly quickSelect: QuickSelectConfig;

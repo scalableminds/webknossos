@@ -463,6 +463,7 @@ test.serial("Brushing/Tracing with already existing backend data", async (t) => 
     }),
   );
 });
+
 // The binary parameters control whether the test will assert additional
 // constraints in between. Since getDataValue() has the side effect of awaiting
 // the loaded bucket, the test hits different execution paths. For example,
@@ -656,6 +657,60 @@ test.serial("Brushing/Tracing with undo (II)", async (t) => {
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 0]), newCellId + 1);
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]), oldCellId);
 });
+
+test.serial("Brushing with undo and garbage collection", async (t: ExecutionContext<Context>) => {
+  const oldCellId = 11;
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    Uint16Array,
+    oldCellId,
+    500,
+  );
+  // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
+  // function.
+  await t.context.api.data.reloadAllBuckets();
+  const paintCenter = [0, 0, 0] as Vector3;
+  const brushSize = 10;
+  const newCellId = 2;
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
+  Store.dispatch(updateUserSettingAction("brushSize", brushSize));
+  Store.dispatch(setPositionAction([0, 0, 0]));
+  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+  // Brush with ${newCellId}
+  Store.dispatch(setActiveCellAction(newCellId));
+  Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
+  Store.dispatch(addToLayerAction(paintCenter));
+  Store.dispatch(finishEditingAction());
+  // Brush with ${newCellId + 1}
+  Store.dispatch(setActiveCellAction(newCellId + 1));
+  Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
+  Store.dispatch(addToLayerAction(paintCenter));
+  Store.dispatch(finishEditingAction());
+
+  t.is(
+    await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter),
+    newCellId + 1,
+    "Before undo, there should be newCellId + 1",
+  );
+
+  await t.context.api.tracing.save();
+
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    Uint16Array,
+    newCellId + 1,
+    500,
+  );
+
+  const cube = t.context.api.data.model.getCubeByLayerName(volumeTracingLayerName);
+  cube.collectAllBuckets();
+
+  await dispatchUndoAsync(Store.dispatch);
+
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter), newCellId);
+
+  await dispatchRedoAsync(Store.dispatch);
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter), newCellId + 1);
+});
+
 test.serial("Brushing/Tracing with upsampling to unloaded data", async (t) => {
   const oldCellId = 11;
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(

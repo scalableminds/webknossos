@@ -16,20 +16,20 @@ export const PullQueueConstants = {
   // should never be removed from the queue
   PRIORITY_HIGHEST: -1,
   BATCH_LIMIT: 6,
-};
+} as const;
 const BATCH_SIZE = 6;
 const PULL_ABORTION_ERROR = new DOMException("Pull aborted.", "AbortError");
 const MAX_RETRY_DELAY = 5000;
 
 class PullQueue {
   cube: DataCube;
-  priorityQueue: PriorityQueue<PullQueueItem>;
-  batchCount: number;
   layerName: string;
   datastoreInfo: DataStoreInfo;
-  abortController: AbortController;
-  consecutiveErrorCount: number;
-  isRetryScheduled: boolean;
+  private priorityQueue: PriorityQueue<PullQueueItem>;
+  private fetchingBatchCount: number;
+  private abortController: AbortController;
+  private consecutiveErrorCount: number;
+  private isRetryScheduled: boolean;
 
   constructor(cube: DataCube, layerName: string, datastoreInfo: DataStoreInfo) {
     this.cube = cube;
@@ -39,7 +39,7 @@ class PullQueue {
       // small priorities take precedence
       comparator: (b, a) => b.priority - a.priority,
     });
-    this.batchCount = 0;
+    this.fetchingBatchCount = 0;
     this.consecutiveErrorCount = 0;
     this.isRetryScheduled = false;
     this.abortController = new AbortController();
@@ -47,7 +47,10 @@ class PullQueue {
 
   pull(): void {
     // Start to download some buckets
-    while (this.batchCount < PullQueueConstants.BATCH_LIMIT && this.priorityQueue.length > 0) {
+    while (
+      this.fetchingBatchCount < PullQueueConstants.BATCH_LIMIT &&
+      this.priorityQueue.length > 0
+    ) {
       const batch = [];
 
       while (batch.length < BATCH_SIZE && this.priorityQueue.length > 0) {
@@ -56,7 +59,7 @@ class PullQueue {
 
         if (bucket.type === "data" && bucket.needsRequest()) {
           batch.push(address);
-          bucket.markAsPulled();
+          bucket.markAsRequested();
         }
       }
 
@@ -71,11 +74,10 @@ class PullQueue {
     this.abortController = new AbortController();
   }
 
-  async pullBatch(batch: Array<BucketAddress>): Promise<void> {
+  private async pullBatch(batch: Array<BucketAddress>): Promise<void> {
     // Loading a bunch of buckets
-    this.batchCount++;
+    this.fetchingBatchCount++;
     const { dataset } = Store.getState();
-    // Measuring the time until response arrives to select appropriate preloading strategy
     const layerInfo = getLayerByName(dataset, this.layerName);
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 
@@ -128,14 +130,14 @@ class PullQueue {
       } else {
         this.consecutiveErrorCount = 0;
       }
-      this.batchCount--;
+      this.fetchingBatchCount--;
 
       if (!hasErrored) {
         // Continue to process the pull queue without delay.
         this.pull();
       } else {
-        // The current batch failed and we schedule a retry. However,
-        // parallel batches might fail, too, and also schedule a retry.
+        // The current batch failed and we want to schedule a retry. However,
+        // parallel batches might fail, too, and also want to schedule a retry.
         // To avoid that pull() is called X times in Y seconds, we only
         // initiate a retry after a sleep if no concurrent invocation
         // "claimed" the `isRetryScheduled` boolean.
@@ -161,20 +163,24 @@ class PullQueue {
   ): void {
     const bucket = this.cube.getBucket(bucketAddress);
 
-    if (bucket.type === "data") {
-      if (this.cube.shouldEagerlyMaintainUsedValueSet()) {
-        // If we assume that the value set of the bucket is needed often (for proofreading),
-        // we compute it here eagerly and then send the data to the bucket.
-        // That way, the computations of the value set are spread out over time instead of being
-        // clustered when DataCube.getValueSetForAllBuckets is called. This improves the FPS rate.
-        bucket.receiveData(bucketData, true);
-      } else {
-        bucket.receiveData(bucketData);
-      }
+    if (bucket.type !== "data") {
+      return;
+    }
+    if (this.cube.shouldEagerlyMaintainUsedValueSet()) {
+      // If we assume that the value set of the bucket is needed often (for proofreading),
+      // we compute it here eagerly and then send the data to the bucket.
+      // That way, the computations of the value set are spread out over time instead of being
+      // clustered when DataCube.getValueSetForAllBuckets is called. This improves the FPS rate.
+      bucket.receiveData(bucketData, true);
+    } else {
+      bucket.receiveData(bucketData);
     }
   }
 
   add(item: PullQueueItem): void {
+    // Theoretically, this queue could contain duplicates.
+    // However pull() will check that a bucket really needs
+    // a request to avoid redundant fetches.
     this.priorityQueue.queue(item);
   }
 

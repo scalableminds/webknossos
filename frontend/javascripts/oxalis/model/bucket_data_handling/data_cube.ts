@@ -1,8 +1,8 @@
 import _ from "lodash";
 import { createNanoEvents, type Emitter } from "nanoevents";
-import type { Bucket, BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
+import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
 import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { AdditionalAxis, ElementClass } from "types/api_flow_types";
+import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_flow_types";
 import type { ProgressCallback } from "libs/progress_callback";
 import { V3 } from "libs/mjs";
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
@@ -324,7 +324,7 @@ class DataCube {
       for (let i = 0; i < this.buckets.length; i++) {
         this.bucketIterator = (this.bucketIterator + 1) % this.buckets.length;
 
-        if (this.buckets[this.bucketIterator].shouldCollect()) {
+        if (this.buckets[this.bucketIterator].mayBeGarbageCollected()) {
           foundCollectibleBucket = true;
           break;
         }
@@ -369,16 +369,26 @@ class DataCube {
   }
 
   collectBucketsIf(predicateFn: (bucket: DataBucket) => boolean): void {
-    this.pullQueue.clear();
+    // todop: why clear this? can't the buckets be still in the queue? their
+    // download didn't even start yet (or did it?).
+    // and if we clear the queue, do we need to collect buckets independently
+    // of the predicateFn? to avoid that a bucket stays in REQUESTED forever?
+    // this.pullQueue.clear();
     this.pullQueue.abortRequests();
 
     const notCollectedBuckets = [];
     for (const bucket of this.buckets) {
-      // If a bucket is requested, collect it independently of the predicateFn,
-      // because the pullQueue was already cleared (meaning the bucket is in a
-      // requested state, but will never be filled with data).
-      if (bucket.state === "REQUESTED" || predicateFn(bucket)) {
-        this.collectBucket(bucket);
+      bucket._debuggerMaybe();
+      if (predicateFn(bucket)) {
+        if (bucket.mayBeGarbageCollected()) {
+          this.collectBucket(bucket);
+        } else {
+          console.warn(
+            "Did not GC bucket at",
+            bucket.zoomedAddress,
+            "even though predicate function requested this.",
+          );
+        }
       } else {
         notCollectedBuckets.push(bucket);
       }
@@ -745,20 +755,6 @@ class DataCube {
         max: coveredBBoxMax,
       },
     };
-  }
-
-  setBucketData(
-    zoomedAddress: BucketAddress,
-    data: BucketDataArray,
-    newPendingOperations: Array<(arg0: BucketDataArray) => void>,
-  ) {
-    const bucket = this.getOrCreateBucket(zoomedAddress);
-
-    if (bucket.type === "null") {
-      return;
-    }
-
-    bucket.setData(data, newPendingOperations);
   }
 
   triggerPushQueue() {

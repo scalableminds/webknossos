@@ -1,7 +1,7 @@
 import { createNanoEvents, type Emitter } from "nanoevents";
 import * as THREE from "three";
 import _ from "lodash";
-import type { ElementClass } from "types/api_flow_types";
+import type { BucketDataArray, ElementClass } from "types/api_flow_types";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
 import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
@@ -16,6 +16,8 @@ import type TemporalBucketManager from "oxalis/model/bucket_data_handling/tempor
 import window from "libs/window";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import type { AdditionalCoordinate } from "types/api_flow_types";
+import BucketSnapshot, { type PendingOperation } from "./bucket_snapshot";
+import { getConstructorForElementClass, uint8ToTypedBuffer } from "../helpers/typed_buffer";
 
 export enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
@@ -24,12 +26,6 @@ export enum BucketStateEnum {
   LOADED = "LOADED",
 }
 export type BucketStateEnumType = keyof typeof BucketStateEnum;
-export type BucketDataArray =
-  | Uint8Array
-  | Uint16Array
-  | Uint32Array
-  | Float32Array
-  | BigUint64Array;
 
 const WARNING_THROTTLE_THRESHOLD = 10000;
 
@@ -46,7 +42,7 @@ export function assertNonNullBucket(bucket: Bucket): asserts bucket is DataBucke
 }
 
 export class NullBucket {
-  type = "null" as const;
+  readonly type = "null" as const;
 
   hasData(): boolean {
     return false;
@@ -65,47 +61,9 @@ export class NullBucket {
   }
 }
 
-export type TypedArrayConstructor =
-  | Uint8ArrayConstructor
-  | Uint16ArrayConstructor
-  | Uint32ArrayConstructor
-  | Float32ArrayConstructor
-  | BigUint64ArrayConstructor;
-export const getConstructorForElementClass = (
-  type: ElementClass,
-): [TypedArrayConstructor, number] => {
-  switch (type) {
-    case "int8":
-    case "uint8":
-      return [Uint8Array, 1];
-
-    case "int16":
-    case "uint16":
-      return [Uint16Array, 1];
-
-    case "uint24":
-      // There is no Uint24Array and uint24 is treated in a special way (rgb) anyways
-      return [Uint8Array, 3];
-
-    case "int32":
-    case "uint32":
-      return [Uint32Array, 1];
-
-    case "float":
-      return [Float32Array, 1];
-
-    case "int64":
-    case "uint64":
-      return [BigUint64Array, 1];
-
-    default:
-      throw new Error(`This type is not supported by the DataBucket class: ${type}`);
-  }
-};
 export const NULL_BUCKET = new NullBucket();
-// The type is used within the DataBucket class which is why
-// we have to define it here.
 export type Bucket = DataBucket | NullBucket;
+
 // This set saves whether a bucket is already added to the current undo volume batch
 // and gets cleared when a volume transaction is ended (marked by the action
 // FINISH_ANNOTATION_STROKE).
@@ -115,8 +73,9 @@ export function markVolumeTransactionEnd() {
 }
 
 export class DataBucket {
-  type = "data" as const;
-  elementClass: ElementClass;
+  readonly type = "data" as const;
+  readonly elementClass: ElementClass;
+  readonly zoomedAddress: BucketAddress;
   visualizedMesh: Record<string, any> | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'visualizationColor' has no initializer a... Remove this comment to see the full error message
   visualizationColor: THREE.Color;
@@ -129,12 +88,11 @@ export class DataBucket {
   // - not yet created by the PushQueue, since the PushQueue creates the snapshots
   //   in a debounced manner
   dirtyCount: number = 0;
-  pendingOperations: Array<(arg0: BucketDataArray) => void> = [];
+  pendingOperations: Array<PendingOperation> = [];
   state: BucketStateEnumType;
-  accessed: boolean;
+  private accessed: boolean;
   data: BucketDataArray | null | undefined;
   temporalBucketManager: TemporalBucketManager;
-  zoomedAddress: BucketAddress;
   cube: DataCube;
   _fallbackBucket: Bucket | null | undefined;
   throttledTriggerLabeled: () => void;
@@ -168,6 +126,7 @@ export class DataBucket {
     } else {
       this.throttledTriggerLabeled = _.noop;
     }
+    this._debuggerMaybe();
   }
 
   once(event: string, callback: (...args: any[]) => any): () => void {
@@ -212,7 +171,7 @@ export class DataBucket {
     ];
   }
 
-  shouldCollect(): boolean {
+  mayBeGarbageCollected(): boolean {
     const collect =
       !this.accessed &&
       !this.dirty &&
@@ -222,6 +181,7 @@ export class DataBucket {
   }
 
   destroy(): void {
+    this._debuggerMaybe();
     // Since we rely on the GC to collect buckets, we
     // can easily have references to buckets which prohibit GC.
     // As a countermeasure, we set the data attribute to null
@@ -309,7 +269,7 @@ export class DataBucket {
     return dataClone;
   }
 
-  async label_DEPRECATED(labelFunc: (arg0: BucketDataArray) => void): Promise<void> {
+  async label_DEPRECATED(labelFunc: PendingOperation): Promise<void> {
     /*
      * It's not recommended to use this method (repeatedly), as it can be
      * very slow. See the docstring for Bucket.getOrCreateData() for alternatives.
@@ -335,6 +295,37 @@ export class DataBucket {
     }
 
     bucketsAlreadyInUndoState.add(this);
+
+    Store.dispatch(addBucketToUndoAction(this.getSnapshotBeforeMutation()));
+  }
+
+  getSnapshotBeforeMutation(): BucketSnapshot {
+    return this.getSnapshot("MUTATION");
+  }
+
+  async getSnapshotBeforeRestore(): Promise<BucketSnapshot> {
+    if (this.data == null) {
+      await this.ensureLoaded();
+    }
+    return this.getSnapshot("PREPARE_RESTORE_TO_SNAPSHOT");
+  }
+
+  private getSnapshot(purpose: "MUTATION" | "PREPARE_RESTORE_TO_SNAPSHOT"): BucketSnapshot {
+    // getSnapshot is called in two use cases:
+    // 1) The user mutates data.
+    //    If this.data is null, it will be allocated and the bucket will be added
+    //    to the pullQueue and temporalBucketManager.
+    // 2) The user uses undo/redo which will restore the bucket to another snapshot.
+    //    Before this restoration is done, the current version is snapshotted.
+    //    In that case, data must not be null, as it's important that we don't
+    //    initiate a new request from the back-end. If we did this, we would depend
+    //    on the correct version being fetched. Correct would be the most recent
+    //    version, but older snapshots might depend on another version.
+
+    if (purpose === "PREPARE_RESTORE_TO_SNAPSHOT" && this.data == null) {
+      throw new Error("Unexpected getSnapshot call.");
+    }
+
     const dataClone = this.getCopyOfData();
 
     if (this.needsBackendData() && this.maybeUnmergedBucketLoadedPromise == null) {
@@ -347,18 +338,34 @@ export class DataBucket {
       });
     }
 
-    Store.dispatch(
-      // Always use the current state of this.maybeUnmergedBucketLoadedPromise, since
-      // this bucket could be added to multiple undo batches while it's fetched. All entries
-      // need to have the corresponding promise for the undo to work correctly.
-      addBucketToUndoAction(
-        this.zoomedAddress,
-        dataClone,
-        this.maybeUnmergedBucketLoadedPromise,
-        this.pendingOperations,
-        this.getTracingId(),
-      ),
+    return new BucketSnapshot(
+      this.zoomedAddress,
+      dataClone,
+      this.maybeUnmergedBucketLoadedPromise,
+      this.pendingOperations.slice(),
+      this.getTracingId(),
+      this.elementClass,
     );
+  }
+
+  async restoreToSnapshot(snapshot: BucketSnapshot): Promise<void> {
+    // This function is async, but can still finish offline, because
+    // getDataForRestore only needs to wait for decompression in the webworker.
+    const { newData, newPendingOperations } = await snapshot.getDataForRestore();
+    // Set the new bucket data. This will add the bucket directly to the pushqueue, too.
+    this.setData(newData, newPendingOperations);
+
+    // needsMergeWithBackendData should be irrelevant. if the snapshot is complete,
+    // the bucket should also be loaded.
+    // if it's not complete, the bucket should already be requested.
+
+    if (this.state === BucketStateEnum.UNREQUESTED) {
+      this._logMaybe(
+        "setData was called but state is still unrequested. will probably be overwritten?",
+      );
+    } else {
+      this._logMaybe("setData was called. state==", this.state);
+    }
   }
 
   hasData(): boolean {
@@ -375,24 +382,13 @@ export class DataBucket {
     return data;
   }
 
-  setData(newData: BucketDataArray, newPendingOperations: Array<(arg0: BucketDataArray) => void>) {
+  setData(newData: BucketDataArray, newPendingOperations: Array<PendingOperation>) {
     this.data = newData;
     this.invalidateValueSet();
     this.pendingOperations = newPendingOperations;
     this.dirty = true;
     this.endDataMutation();
     this.cube.triggerBucketDataChanged();
-  }
-
-  uint8ToTypedBuffer(arrayBuffer: Uint8Array | null | undefined) {
-    const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
-    return arrayBuffer != null
-      ? new TypedArrayClass(
-          arrayBuffer.buffer,
-          arrayBuffer.byteOffset,
-          arrayBuffer.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
-        )
-      : new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
   }
 
   markAsNeeded(): void {
@@ -452,7 +448,7 @@ export class DataBucket {
      * See Bucket.getDataForMutation() for a safe way of using this method.
      */
     this.cube.pushQueue.insert(this);
-    this.trigger("bucketLabeled");
+    this.throttledTriggerLabeled();
   }
 
   applyVoxelMap(
@@ -538,9 +534,10 @@ export class DataBucket {
     return wroteVoxels;
   }
 
-  markAsPulled(): void {
+  markAsRequested(): void {
     switch (this.state) {
       case BucketStateEnum.UNREQUESTED: {
+        this._debuggerMaybe();
         this.state = BucketStateEnum.REQUESTED;
         break;
       }
@@ -568,7 +565,10 @@ export class DataBucket {
   }
 
   receiveData(arrayBuffer: Uint8Array | null | undefined, computeValueSet: boolean = false): void {
-    const data = this.uint8ToTypedBuffer(arrayBuffer);
+    if (this.data != null) {
+      this._logMaybe("bucket.receiveData was called, but this.data already exists.");
+    }
+    const data = uint8ToTypedBuffer(arrayBuffer, this.elementClass);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 
     if (data.length !== channelCount * Constants.BUCKET_SIZE) {
@@ -600,6 +600,8 @@ export class DataBucket {
           this.data = data;
         }
         this.invalidateValueSet();
+        this._debuggerMaybe();
+
         if (computeValueSet) {
           this.ensureValueSet();
         }
@@ -740,8 +742,18 @@ export class DataBucket {
   // Example usage:
   // bucket._logMaybe("Data of problematic bucket", bucket.data)
   _logMaybe = (...args: any[]) => {
-    if (this.zoomedAddress.join(",") === [93, 0, 0, 0].join(",")) {
-      console.log(...args);
+    const addressStr = this.zoomedAddress.slice(0, 4).join(",");
+    // console.log(addressStr, ...args);
+    if (addressStr === [19, 30, 16, 0].join(",")) {
+      console.log(addressStr, ...args);
+    }
+  };
+
+  _debuggerMaybe = () => {
+    const addressStr = this.zoomedAddress.slice(0, 4).join(",");
+    if (addressStr === [19, 30, 16, 0].join(",")) {
+      // biome-ignore lint/suspicious/noDebugger: meant for debugging
+      debugger;
     }
   };
 

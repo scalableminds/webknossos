@@ -143,7 +143,6 @@ const defaultState: OxalisState = {
     dataStore: {
       name: "localhost",
       url: "http://localhost:9000",
-      isScratch: false,
       allowsUpload: true,
       jobsEnabled: false,
       jobsSupportedByAvailableWorkers: [],

@@ -46,7 +46,6 @@ const OverridesForNavbarAndStatusBarTheme: ThemeConfig = {
     },
   },
   token: {
-    colorPrimary: ColorWKBlue,
     colorBgContainer: ColorDarkBg,
     colorBorder: "#4e4e4e",
     colorPrimaryBorder: "#4e4e4e",

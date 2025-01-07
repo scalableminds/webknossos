@@ -333,6 +333,9 @@ const Constants = {
     _2D: (process.env.IS_TESTING ? [512, 512, 1] : [768, 768, 1]) as Vector3,
     _3D: (process.env.IS_TESTING ? [64, 64, 32] : [96, 96, 96]) as Vector3,
   },
+  // When the user uses the "isFloodfillRestrictedToBoundingBox" setting,
+  // we are more lax with the flood fill extent.
+  FLOOD_FILL_MULTIPLIER_FOR_BBOX_RESTRICTION: 10,
   MAXIMUM_DATE_TIMESTAMP: 8640000000000000,
   SCALEBAR_HEIGHT: 22,
   SCALEBAR_OFFSET: 10,

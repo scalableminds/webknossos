@@ -1266,7 +1266,7 @@ function ToolSpecificSettings({
         <VolumeInterpolationButton />
       ) : null}
 
-      {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? <FillModeSwitch /> : null}
+      {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? <FloodFillSettings /> : null}
 
       {adaptedActiveTool === AnnotationToolEnum.PROOFREAD ? <ProofReadingComponents /> : null}
 
@@ -1349,6 +1349,41 @@ function QuickSelectSettingsPopover() {
 const handleSetFillMode = (event: RadioChangeEvent) => {
   Store.dispatch(updateUserSettingAction("fillMode", event.target.value));
 };
+
+function FloodFillSettings() {
+  const dispatch = useDispatch();
+  const isRestrictedToBoundingBox = useSelector(
+    (state: OxalisState) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
+  );
+  const toggleRestrictFloodfillToBoundingBox = () => {
+    dispatch(
+      updateUserSettingAction("isFloodfillRestrictedToBoundingBox", !isRestrictedToBoundingBox),
+    );
+  };
+  return (
+    <div>
+      <FillModeSwitch />
+
+      <ButtonComponent
+        style={{
+          opacity: isRestrictedToBoundingBox ? 1 : 0.5,
+          marginLeft: 12,
+        }}
+        type={isRestrictedToBoundingBox ? "primary" : "default"}
+        onClick={toggleRestrictFloodfillToBoundingBox}
+        title={
+          "When enabled, the floodfill will be restricted to the bounding box enclosed by the clicked position. If multiple bounding boxes enclose that position, the smallest is used."
+        }
+      >
+        <img
+          src="/assets/images/icon-restrict-floodfill-to-bbox.svg"
+          alt="Restrict floodfill"
+          style={imgStyleForSpaceyIcons}
+        />
+      </ButtonComponent>
+    </div>
+  );
+}
 
 function FillModeSwitch() {
   const fillMode = useSelector((state: OxalisState) => state.userConfiguration.fillMode);

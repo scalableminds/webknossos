@@ -487,7 +487,7 @@ class DataCube {
     additionalCoordinates: AdditionalCoordinate[] | null,
     segmentIdNumber: number,
     dimensionIndices: DimensionMap,
-    floodfillBoundingBox: BoundingBoxType,
+    _floodfillBoundingBox: BoundingBoxType,
     zoomStep: number,
     progressCallback: ProgressCallback,
     use3D: boolean,
@@ -498,14 +498,17 @@ class DataCube {
   }> {
     // This flood-fill algorithm works in two nested levels and uses a list of buckets to flood fill.
     // On the inner level a bucket is flood-filled  and if the iteration of the buckets data
-    // reaches an neighbour bucket, this bucket is added to this list of buckets to flood fill.
+    // reaches a neighbour bucket, this bucket is added to this list of buckets to flood fill.
     // The outer level simply iterates over all  buckets in the list and triggers the bucket-wise flood fill.
     // Additionally a map is created that saves all labeled voxels for each bucket. This map is returned at the end.
     //
-    // Note: It is possible that a bucket is multiple times added to the list of buckets. This is intended
+    // Note: It is possible that a bucket is added multiple times to the list of buckets. This is intended
     // because a border of the "neighbour volume shape" might leave the neighbour bucket and enter it somewhere else.
     // If it would not be possible to have the same neighbour bucket in the list multiple times,
     // not all of the target area in the neighbour bucket might be filled.
+
+    const floodfillBoundingBox = new BoundingBox(_floodfillBoundingBox);
+
     // Helper function to convert between xyz and uvw (both directions)
     const transpose = (voxel: Vector3): Vector3 =>
       Dimensions.transDimWithIndices(voxel, dimensionIndices);
@@ -517,12 +520,12 @@ class DataCube {
       zoomStep,
     );
     const seedBucket = this.getOrCreateBucket(seedBucketAddress);
-    let coveredBBoxMin: Vector3 = [
+    const coveredBBoxMin: Vector3 = [
       Number.POSITIVE_INFINITY,
       Number.POSITIVE_INFINITY,
       Number.POSITIVE_INFINITY,
     ];
-    let coveredBBoxMax: Vector3 = [0, 0, 0];
+    const coveredBBoxMax: Vector3 = [0, 0, 0];
 
     if (seedBucket.type === "null") {
       return {
@@ -689,35 +692,37 @@ class DataCube {
           } else {
             // Label the current neighbour and add it to the neighbourVoxelStackUvw to iterate over its neighbours.
             const neighbourVoxelIndex = this.getVoxelIndexByVoxelOffset(neighbourVoxelXyz);
+            const currentGlobalPosition = V3.add(
+              currentGlobalBucketPosition,
+              V3.scale3(adjustedNeighbourVoxelXyz, currentMag),
+            );
 
             if (bucketData[neighbourVoxelIndex] === sourceSegmentId) {
-              bucketData[neighbourVoxelIndex] = segmentId;
-              markUvwInSliceAsLabeled(neighbourVoxelUvw);
-              neighbourVoxelStackUvw.pushVoxel(neighbourVoxelUvw);
-              labeledVoxelCount++;
-              const currentGlobalPosition = V3.add(
-                currentGlobalBucketPosition,
-                V3.scale3(adjustedNeighbourVoxelXyz, currentMag),
-              );
-              coveredBBoxMin = [
-                Math.min(coveredBBoxMin[0], currentGlobalPosition[0]),
-                Math.min(coveredBBoxMin[1], currentGlobalPosition[1]),
-                Math.min(coveredBBoxMin[2], currentGlobalPosition[2]),
-              ];
-              // The maximum is exclusive which is why we add 1 to the position
-              coveredBBoxMax = [
-                Math.max(coveredBBoxMax[0], currentGlobalPosition[0] + 1),
-                Math.max(coveredBBoxMax[1], currentGlobalPosition[1] + 1),
-                Math.max(coveredBBoxMax[2], currentGlobalPosition[2] + 1),
-              ];
+              if (floodfillBoundingBox.containsPoint(currentGlobalPosition)) {
+                bucketData[neighbourVoxelIndex] = segmentId;
+                markUvwInSliceAsLabeled(neighbourVoxelUvw);
+                neighbourVoxelStackUvw.pushVoxel(neighbourVoxelUvw);
+                labeledVoxelCount++;
 
-              if (labeledVoxelCount % 1000000 === 0) {
-                console.log(`Labeled ${labeledVoxelCount} Vx. Continuing...`);
+                coveredBBoxMin[0] = Math.min(coveredBBoxMin[0], currentGlobalPosition[0]);
+                coveredBBoxMin[1] = Math.min(coveredBBoxMin[1], currentGlobalPosition[1]);
+                coveredBBoxMin[2] = Math.min(coveredBBoxMin[2], currentGlobalPosition[2]);
 
-                await progressCallback(
-                  false,
-                  `Labeled ${labeledVoxelCount / 1000000} MVx. Continuing...`,
-                );
+                // The maximum is exclusive which is why we add 1 to the position
+                coveredBBoxMax[0] = Math.max(coveredBBoxMax[0], currentGlobalPosition[0] + 1);
+                coveredBBoxMax[1] = Math.max(coveredBBoxMax[1], currentGlobalPosition[1] + 1);
+                coveredBBoxMax[2] = Math.max(coveredBBoxMax[2], currentGlobalPosition[2] + 1);
+
+                if (labeledVoxelCount % 1000000 === 0) {
+                  console.log(`Labeled ${labeledVoxelCount} Vx. Continuing...`);
+
+                  await progressCallback(
+                    false,
+                    `Labeled ${labeledVoxelCount / 1000000} MVx. Continuing...`,
+                  );
+                }
+              } else {
+                wasBoundingBoxExceeded = true;
               }
             }
           }

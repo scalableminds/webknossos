@@ -187,7 +187,6 @@ export const annotation: APIAnnotation = {
   dataStore: {
     name: "localhost",
     url: "http://localhost:9000",
-    isScratch: false,
     allowsUpload: true,
     jobsEnabled: false,
     jobsSupportedByAvailableWorkers: [],

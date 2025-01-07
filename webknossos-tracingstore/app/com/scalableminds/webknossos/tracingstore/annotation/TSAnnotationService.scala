@@ -141,40 +141,38 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       updateAction: UpdateAction,
       targetVersion: Long // Note: this is not the target version of this one update, but of all pending
   )(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
-    for {
-      updated <- updateAction match {
-        case a: AddLayerAnnotationAction =>
-          addLayer(annotationId, annotationWithTracings, a, targetVersion)
-        case a: DeleteLayerAnnotationAction =>
-          Fox.successful(annotationWithTracings.deleteLayer(a))
-        case a: UpdateLayerMetadataAnnotationAction =>
-          Fox.successful(annotationWithTracings.updateLayerMetadata(a))
-        case a: UpdateMetadataAnnotationAction =>
-          Fox.successful(annotationWithTracings.updateMetadata(a))
-        case a: SkeletonUpdateAction =>
-          annotationWithTracings.applySkeletonAction(a) ?~> "applySkeletonAction.failed"
-        case a: UpdateMappingNameVolumeAction if a.isEditable.contains(true) =>
-          for {
-            withNewEditableMapping <- addEditableMapping(annotationId, annotationWithTracings, a, targetVersion)
-            withApplyedVolumeAction <- withNewEditableMapping.applyVolumeAction(a)
-          } yield withApplyedVolumeAction
-        case a: ApplyableVolumeUpdateAction =>
-          annotationWithTracings.applyVolumeAction(a)
-        case a: EditableMappingUpdateAction =>
-          annotationWithTracings.applyEditableMappingAction(a)
-        case a: RevertToVersionAnnotationAction =>
-          revertToVersion(annotationId, annotationWithTracings, a, targetVersion)
-        case _: ResetToBaseAnnotationAction =>
-          resetToBase(annotationId, annotationWithTracings, targetVersion)
-        case _: BucketMutatingVolumeUpdateAction =>
-          Fox.successful(annotationWithTracings) // No-op, as bucket-mutating actions are performed eagerly, so not here.
-        case _: CompactVolumeUpdateAction =>
-          Fox.successful(annotationWithTracings) // No-op, as legacy compacted update actions cannot be applied
-        case _: UpdateTdCameraAnnotationAction =>
-          Fox.successful(annotationWithTracings) // No-op, exists just to mark these updates in the history / count times
-        case _ => Fox.failure(s"Received unsupported AnnotationUpdateAction action ${Json.toJson(updateAction)}")
-      }
-    } yield updated
+    updateAction match {
+      case a: AddLayerAnnotationAction =>
+        addLayer(annotationId, annotationWithTracings, a, targetVersion)
+      case a: DeleteLayerAnnotationAction =>
+        Fox.successful(annotationWithTracings.deleteLayer(a))
+      case a: UpdateLayerMetadataAnnotationAction =>
+        Fox.successful(annotationWithTracings.updateLayerMetadata(a))
+      case a: UpdateMetadataAnnotationAction =>
+        Fox.successful(annotationWithTracings.updateMetadata(a))
+      case a: SkeletonUpdateAction =>
+        annotationWithTracings.applySkeletonAction(a) ?~> "applySkeletonAction.failed"
+      case a: UpdateMappingNameVolumeAction if a.isEditable.contains(true) =>
+        for {
+          withNewEditableMapping <- addEditableMapping(annotationId, annotationWithTracings, a, targetVersion)
+          withApplyedVolumeAction <- withNewEditableMapping.applyVolumeAction(a)
+        } yield withApplyedVolumeAction
+      case a: ApplyableVolumeUpdateAction =>
+        annotationWithTracings.applyVolumeAction(a)
+      case a: EditableMappingUpdateAction =>
+        annotationWithTracings.applyEditableMappingAction(a)
+      case a: RevertToVersionAnnotationAction =>
+        revertToVersion(annotationId, annotationWithTracings, a, targetVersion)
+      case _: ResetToBaseAnnotationAction =>
+        resetToBase(annotationId, annotationWithTracings, targetVersion)
+      case _: BucketMutatingVolumeUpdateAction =>
+        Fox.successful(annotationWithTracings) // No-op, as bucket-mutating actions are performed eagerly, so not here.
+      case _: CompactVolumeUpdateAction =>
+        Fox.successful(annotationWithTracings) // No-op, as legacy compacted update actions cannot be applied
+      case _: UpdateTdCameraAnnotationAction =>
+        Fox.successful(annotationWithTracings) // No-op, exists just to mark these updates in the history / count times
+      case _ => Fox.failure(s"Received unsupported AnnotationUpdateAction action ${Json.toJson(updateAction)}")
+    }
 
   private def addLayer(annotationId: String,
                        annotationWithTracings: AnnotationWithTracings,

@@ -3,3 +3,4 @@ counts.py
 *.csv
 logs/
 *.dat
+result.json

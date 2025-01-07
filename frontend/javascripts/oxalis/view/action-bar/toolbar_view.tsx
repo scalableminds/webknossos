@@ -380,7 +380,7 @@ function VolumeInterpolationButton() {
   );
 }
 
-function AdditionalSkeletonModesButtons() {
+function SkeletonSpecificButtons() {
   const dispatch = useDispatch();
   const isMergerModeEnabled = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
@@ -418,7 +418,12 @@ function AdditionalSkeletonModesButtons() {
     );
 
   return (
-    <React.Fragment>
+    <Space.Compact
+      style={{
+        marginLeft: 10,
+      }}
+    >
+      <CreateTreeButton />
       <ToggleButton
         style={NARROW_BUTTON_STYLE}
         onClick={toggleNewNodeNewTreeMode}
@@ -461,7 +466,7 @@ function AdditionalSkeletonModesButtons() {
           handleClose={() => setShowMaterializeVolumeAnnotationModal(false)}
         />
       )}
-    </React.Fragment>
+    </Space.Compact>
   );
 }
 
@@ -1136,6 +1141,7 @@ export default function ToolbarView() {
               className="fas fa-clipboard-check"
               style={{
                 opacity: disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled ? 0.5 : 1,
+                padding: "0 4px",
               }}
             />
           </ToolRadioButton>
@@ -1175,7 +1181,7 @@ function ToolSpecificSettings({
   isControlOrMetaPressed: boolean;
   isShiftPressed: boolean;
 }) {
-  const showCreateTreeButton = hasSkeleton && adaptedActiveTool === AnnotationToolEnum.SKELETON;
+  const showSkeletonButtons = hasSkeleton && adaptedActiveTool === AnnotationToolEnum.SKELETON;
   const showNewBoundingBoxButton = adaptedActiveTool === AnnotationToolEnum.BOUNDING_BOX;
   const showCreateCellButton = hasVolume && VolumeTools.includes(adaptedActiveTool);
   const showChangeBrushSizeButton =
@@ -1204,16 +1210,7 @@ function ToolSpecificSettings({
 
   return (
     <>
-      {showCreateTreeButton ? (
-        <Space.Compact
-          style={{
-            marginLeft: 10,
-          }}
-        >
-          <CreateTreeButton />
-          <AdditionalSkeletonModesButtons />
-        </Space.Compact>
-      ) : null}
+      {showSkeletonButtons ? <SkeletonSpecificButtons /> : null}
 
       {showNewBoundingBoxButton ? (
         <Space.Compact

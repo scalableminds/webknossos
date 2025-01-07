@@ -84,6 +84,7 @@ const defaultState: OxalisState = {
     gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
     fillMode: FillModeEnum._2D,
+    isFloodfillRestrictedToBoundingBox: false,
     interpolationMode: InterpolationModeEnum.INTERPOLATE,
     useLegacyBindings: false,
     quickSelect: {
@@ -142,7 +143,6 @@ const defaultState: OxalisState = {
     dataStore: {
       name: "localhost",
       url: "http://localhost:9000",
-      isScratch: false,
       allowsUpload: true,
       jobsEnabled: false,
       jobsSupportedByAvailableWorkers: [],

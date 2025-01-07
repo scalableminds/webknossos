@@ -127,20 +127,6 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       } yield adaptedResult
     }
 
-  def updateTaskV8(taskId: String): Action[LegacyTaskParameters] =
-    sil.SecuredAction.async(validateJson[LegacyTaskParameters]) { implicit request =>
-      val params = request.body
-      for {
-        dataset <- datasetDAO.findOneByIdOrNameAndOrganization(params.datasetId,
-                                                               params.dataSet,
-                                                               request.identity._organization)
-        paramsWithDatasetId = TaskParameters.fromLegacyTaskParameters(params, dataset._id)
-        requestWithUpdatedBody = request.withBody(paramsWithDatasetId)
-        result <- taskController.update(taskId)(requestWithUpdatedBody)
-        adaptedResult <- replaceInResult(addLegacyDataSetFieldToTask)(result)
-      } yield adaptedResult
-    }
-
   def tasksForProjectV8(id: String,
                         limit: Option[Int] = None,
                         pageNumber: Option[Int] = None,
@@ -151,24 +137,6 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
         result <- projectController.tasksForProject(id, limit, pageNumber, includeTotalCount)(request)
         replacedResults <- replaceInResult(addLegacyDataSetFieldToTask)(result)
       } yield replacedResults
-    }
-
-  def annotationInfoV8(id: String, timestamp: Option[Long]): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
-      for {
-        _ <- Fox.successful(logVersioned(request))
-        result <- annotationController.infoWithoutType(id, timestamp)(request)
-        adaptedResult <- replaceInResult(addDataSetToTaskInAnnotation)(result)
-      } yield adaptedResult
-  }
-
-  def annotationsForTaskV8(taskId: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      for {
-        _ <- Fox.successful(logVersioned(request))
-        result <- annotationController.annotationsForTask(taskId)(request)
-        adaptedResult <- replaceInResult(addDataSetToTaskInAnnotation)(result)
-      } yield adaptedResult
     }
 
   /* provide v7 */
@@ -255,17 +223,6 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
         } yield dsWithOldDisplayNameField
       case _ => Fox.successful(jsResult)
     }
-  }
-
-  private def addDataSetToTaskInAnnotation(jsResult: JsObject): Fox[JsObject] = {
-    val taskObjectOpt = (jsResult \ "task").asOpt[JsObject]
-    taskObjectOpt
-      .map(task =>
-        for {
-          adaptedTask <- addLegacyDataSetFieldToTask(task)
-          adaptedJsResult <- tryo(jsResult - "task" + ("task" -> adaptedTask)).toFox
-        } yield adaptedJsResult)
-      .getOrElse(Fox.successful(jsResult))
   }
 
   private def addLegacyDataSetFieldToTaskCreationResult(jsResult: JsObject) =

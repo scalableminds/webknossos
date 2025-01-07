@@ -332,6 +332,7 @@ export type DatasetConfiguration = {
   readonly renderMissingDataBlack: boolean;
   readonly loadingStrategy: LoadingStrategy;
   readonly segmentationPatternOpacity: number;
+  readonly selectiveSegmentVisibility: boolean;
   readonly blendMode: BLEND_MODES;
   // If nativelyRenderedLayerName is not-null, the layer with
   // that name (or id) should be rendered without any transforms.
@@ -396,6 +397,7 @@ export type UserConfiguration = {
   // how volume annotations overwrite existing voxels.
   readonly overwriteMode: OverwriteMode;
   readonly fillMode: FillMode;
+  readonly isFloodfillRestrictedToBoundingBox: boolean;
   readonly interpolationMode: InterpolationMode;
   readonly useLegacyBindings: boolean;
   readonly quickSelect: QuickSelectConfig;

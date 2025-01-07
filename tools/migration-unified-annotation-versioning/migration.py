@@ -10,7 +10,7 @@ from typing import Dict, Tuple, List, Optional, Callable, Set
 from rich.progress import track
 import msgspec
 import concurrent.futures
-import multiprocessing
+import threading
 from functools import partial
 import heapq
 import sys
@@ -39,10 +39,10 @@ class Migration:
         self.dst_stub = None
         if not args.dry:
             self.dst_stub = connect_to_fossildb(args.dst, "destination")
-        self.done_count = multiprocessing.Value('i', 0)
-        self.done_count_lock = multiprocessing.Lock()
-        self.failure_count = multiprocessing.Value('i', 0)
-        self.failure_count_lock = multiprocessing.Lock()
+        self.done_count = None
+        self.done_count_lock = threading.Lock()
+        self.failure_count = 0
+        self.failure_count_lock = threading.Lock()
         self.total_count = None
         self.before = 0
 
@@ -50,15 +50,15 @@ class Migration:
         self.before = time.time()
         annotations = self.read_annotation_list()
         self.setup_checkpoint_logging()
-        self.done_count.value = 0
-        self.failure_count.value = 0
+        self.done_count = 0
+        self.failure_count = 0
         self.total_count = len(annotations)
 
-        with concurrent.futures.ProcessPoolExecutor(max_workers=self.args.num_threads) as executor:
-            list(executor.map(self.migrate_annotation, annotations))
-        log_since(self.before, f"Migrating all the {self.done_count.value} of {self.total_count} things")
-        if self.failure_count.value > 0:
-            logger.info(f"There were failures for {self.failure_count.value} annotations. See logs for details.")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.args.num_threads) as executor:
+            executor.map(self.migrate_annotation, annotations)
+        log_since(self.before, f"Migrating all the {self.total_count} things")
+        if self.failure_count > 0:
+            logger.info(f"There were failures for {self.failure_count} annotations. See logs for details.")
             sys.exit(1)
 
     def migrate_annotation(self, annotation):
@@ -86,13 +86,13 @@ class Migration:
                 if time.time() - before > 1 or self.args.verbose:
                     log_since(before, f"Migrating annotation {annotation['_id']} ({len(materialized_versions)} materialized versions)", self.get_progress())
                 checkpoint_logger.info(annotation['_id'])
-        except Exception as e:
+        except Exception:
             logger.exception(f"Exception while migrating annotation {annotation['_id']}:")
             with self.failure_count_lock:
-                self.failure_count.value += 1
+                self.failure_count += 1
         finally:
             with self.done_count_lock:
-                self.done_count.value += 1
+                self.done_count += 1
 
     def build_mapping_id_map(self, annotation) -> MappingIdMap:
         mapping_id_map = {}
@@ -555,8 +555,8 @@ class Migration:
 
     def get_progress(self) -> str:
         with self.done_count_lock:
-            done_count = self.done_count.value
-        percentage = 100.0 * done_count / self.total_count.value
+            done_count = self.done_count
+        percentage = 100.0 * done_count / self.total_count
         duration = time.time() - self.before
         if done_count > 0:
             etr = duration / done_count * (self.total_count - done_count)

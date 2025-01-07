@@ -32,7 +32,7 @@ import { Tooltip as ReactTooltip } from "react-tooltip";
 const ROOT_TOOLTIP_IDS = {
   DEFAULT: "main-tooltip",
   DYNAMIC: "main-tooltip-dynamic",
-};
+} as const;
 
 export type FastTooltipPlacement =
   | "top"

@@ -3,7 +3,7 @@ import * as React from "react";
 import _ from "lodash";
 import FastTooltip, { type FastTooltipPlacement } from "components/fast_tooltip";
 
-type ButtonComponentProp = ButtonProps & {
+type ButtonComponentProps = ButtonProps & {
   faIcon?: string;
   tooltipPlacement?: FastTooltipPlacement | undefined;
 };
@@ -12,8 +12,8 @@ type ButtonComponentProp = ButtonProps & {
  * after it was clicked.
  */
 
-class ButtonComponent extends React.PureComponent<ButtonComponentProp> {
-  static defaultProps: ButtonComponentProp = {
+class ButtonComponent extends React.PureComponent<ButtonComponentProps> {
+  static defaultProps: ButtonComponentProps = {
     onClick: _.noop,
   };
 
@@ -59,6 +59,11 @@ class ButtonComponent extends React.PureComponent<ButtonComponentProp> {
       button
     );
   }
+}
+
+export function ToggleButton(props: { active: boolean } & ButtonComponentProps) {
+  const { active, ...restProps } = props;
+  return <ButtonComponent type={active ? "primary" : "default"} {...restProps} />;
 }
 
 export default ButtonComponent;

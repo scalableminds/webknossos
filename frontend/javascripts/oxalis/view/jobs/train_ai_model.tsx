@@ -34,23 +34,13 @@ import _ from "lodash";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { formatVoxels } from "libs/format_utils";
 import * as Utils from "libs/utils";
-<<<<<<< HEAD
 import {
   AnnotationLayerEnum,
+  type APIDataLayer,
   type APIAnnotation,
   type APIDataset,
   type ServerVolumeTracing,
 } from "types/api_flow_types";
-||||||| 2b1242f5cc
-import type { APIAnnotation, APIDataset, ServerVolumeTracing } from "types/api_flow_types";
-=======
-import type {
-  APIAnnotation,
-  APIDataLayer,
-  APIDataset,
-  ServerVolumeTracing,
-} from "types/api_flow_types";
->>>>>>> master
 import type { Vector3, Vector6 } from "oxalis/constants";
 import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
 import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reducers/reducer_helpers";

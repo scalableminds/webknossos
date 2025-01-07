@@ -132,68 +132,8 @@ import {
 } from "oxalis/model/actions/save_actions";
 import { addLayerToAnnotation, deleteAnnotationLayer } from "oxalis/model/sagas/update_actions";
 
-<<<<<<< HEAD
-type DatasetSettingsProps = {
-  userConfiguration: UserConfiguration;
-  datasetConfiguration: DatasetConfiguration;
-  dataset: APIDataset;
-  onChange: (propertyName: keyof DatasetConfiguration, value: any) => void;
-  onChangeLayer: (
-    layerName: string,
-    propertyName: keyof DatasetLayerConfiguration,
-    value: any,
-  ) => void;
-  onClipHistogram: (layerName: string, shouldAdjustClipRange: boolean) => Promise<void>;
-  histogramData: HistogramDataForAllLayers;
-  onChangeRadius: (value: number) => void;
-  onChangeShowSkeletons: (arg0: boolean) => void;
-  onSetPosition: (arg0: Vector3) => void;
-  onZoomToMag: (layerName: string, arg0: Vector3) => number;
-  onChangeUser: (key: keyof UserConfiguration, value: any) => void;
-  reloadHistogram: (layerName: string) => void;
-  addSkeletonLayerToAnnotation: () => void;
-  deleteAnnotationLayer: (tracingId: string, type: AnnotationLayerType, layerName: string) => void;
-  tracing: Tracing;
-  task: Task | null | undefined;
-  onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void;
-  controlMode: ControlMode;
-  isArbitraryMode: boolean;
-  isAdminOrDatasetManager: boolean;
-  isAdminOrManager: boolean;
-  isSuperUser: boolean;
-};
-||||||| 2b1242f5cc
-type DatasetSettingsProps = {
-  userConfiguration: UserConfiguration;
-  datasetConfiguration: DatasetConfiguration;
-  dataset: APIDataset;
-  onChange: (propertyName: keyof DatasetConfiguration, value: any) => void;
-  onChangeLayer: (
-    layerName: string,
-    propertyName: keyof DatasetLayerConfiguration,
-    value: any,
-  ) => void;
-  onClipHistogram: (layerName: string, shouldAdjustClipRange: boolean) => Promise<void>;
-  histogramData: HistogramDataForAllLayers;
-  onChangeRadius: (value: number) => void;
-  onChangeShowSkeletons: (arg0: boolean) => void;
-  onSetPosition: (arg0: Vector3) => void;
-  onZoomToMag: (layerName: string, arg0: Vector3) => number;
-  onChangeUser: (key: keyof UserConfiguration, value: any) => void;
-  reloadHistogram: (layerName: string) => void;
-  tracing: Tracing;
-  task: Task | null | undefined;
-  onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void;
-  controlMode: ControlMode;
-  isArbitraryMode: boolean;
-  isAdminOrDatasetManager: boolean;
-  isAdminOrManager: boolean;
-  isSuperUser: boolean;
-};
-=======
 type DatasetSettingsProps = ReturnType<typeof mapStateToProps> &
   ReturnType<typeof mapDispatchToProps>;
->>>>>>> master
 
 type State = {
   isAddVolumeLayerModalVisible: boolean;

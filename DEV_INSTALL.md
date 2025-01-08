@@ -67,6 +67,9 @@ psql -c "CREATE USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
 psql -c "ALTER USER postgres WITH SUPERUSER;"
 psql -c "GRANT ALL PRIVILEGES ON DATABASE webknossos TO postgres;"
 
+# Enable corepack for nodeJs and yarn
+corepack enable
+
 # Checkout the WEBKNOSSOS git repository
 git clone git@github.com:scalableminds/webknossos.git
 ```

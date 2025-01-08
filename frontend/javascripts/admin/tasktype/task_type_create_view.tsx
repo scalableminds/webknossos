@@ -396,7 +396,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
                     valuePropName="checked"
                   >
                     <Checkbox>
-                      Allow Volume Interpolation
+                      Allow Volume Interpolation{" "}
                       <Tooltip
                         title="When enabled, it suffices to only label every 2nd slice. The skipped slices will be filled automatically by interpolating between the labeled slices."
                         placement="right"

@@ -5,26 +5,12 @@ import com.scalableminds.util.image.Color
 import com.scalableminds.util.tools.TextUtils.normalizeStrong
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
-import com.scalableminds.webknossos.datastore.datareaders.zarr.{
-  NgffAxis,
-  NgffChannelWindow,
-  NgffCoordinateTransformation,
-  NgffDataset,
-  NgffLabelsGroup,
-  NgffMultiscalesItem,
-  NgffMultiscalesItemV0_5,
-  NgffOmeroMetadata
-}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffAxis, NgffChannelWindow, NgffCoordinateTransformation, NgffDataset, NgffLabelsGroup, NgffMultiscalesItem, NgffMultiscalesItemV0_5, NgffOmeroMetadata}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.LengthUnit.LengthUnit
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  AdditionalAxis,
-  DataLayerWithMagLocators,
-  ElementClass,
-  LayerViewConfiguration
-}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, CoordinateTransformation, CoordinateTransformationType, DataLayerWithMagLocators, ElementClass, LayerViewConfiguration}
 import net.liftweb.common.Box
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, Json}
 
@@ -258,6 +244,42 @@ trait NgffExplorationUtils extends FoxImplicits {
       })
       layerAndVoxelSizeTuples = layers.map((_, VoxelSize(voxelSizeFactor, unifiedAxisUnit)))
     } yield layerAndVoxelSizeTuples
+
+  protected def getTranslation(multiscale: NgffMultiscalesItem): Option[List[CoordinateTransformation]] = {
+    val is2d = !multiscale.axes.exists(_.name == "z")
+    val baseTranslation = if (is2d) List(1.0, 1.0) else List(1.0, 1.0, 1.0)
+    if (!multiscale.datasets.head.coordinateTransformations.exists(_.`type` == "translation")) {
+      None
+    } else {
+      var translation = multiscale.datasets.head.coordinateTransformations.foldLeft(baseTranslation)((acc, ct) => {
+        ct.`type` match {
+          case "translation" =>
+            ct.translation match {
+              case Some(translationList) =>
+                acc.zipWithIndex.map { case (v, i) => v * translationList(translationList.length - 1 - i) }
+              case _ => acc
+            }
+          case _ =>
+            ct.scale match {
+              case Some(scaleList) => acc.zipWithIndex.map { case (v, i) => v / scaleList(scaleList.length - 1 - i) }
+              case _ => acc
+            }
+        }
+      })
+      if (is2d) {
+        translation = translation :+ 0.0
+      }
+      val xTranslation = translation(0)
+      val yTranslation = translation(1)
+      val zTranslation = translation(2)
+      val coordinateTransformation = CoordinateTransformation(
+        `type` = CoordinateTransformationType.affine,
+        matrix = Some(
+          List(List(1, 0, 0, xTranslation), List(0, 1, 0, yTranslation), List(0, 0, 1, zTranslation), List(0, 0, 0, 1)))
+      )
+      Some(List(coordinateTransformation))
+    }
+  }
 
   protected def layersForLabel(remotePath: VaultPath,
                                labelPath: String,

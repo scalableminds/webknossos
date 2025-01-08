@@ -50,8 +50,8 @@ trait ExploreLayerUtils extends FoxImplicits {
                                                    preferredVoxelSize: Option[VoxelSize],
                                                    voxelSize: VoxelSize): List[DataLayerWithMagLocators] =
     layers.map(l => {
-      val coordinateTransformations = coordinateTransformationForVoxelSize(voxelSize, preferredVoxelSize)
-      l.mapped(coordinateTransformations = coordinateTransformations)
+      val generatedCoordinateTransformation = coordinateTransformationForVoxelSize(voxelSize, preferredVoxelSize)
+      l.mapped(coordinateTransformations = generatedCoordinateTransformation.orElse(l.coordinateTransformations))
     })
 
   private def isPowerOfTwo(x: Int): Boolean =

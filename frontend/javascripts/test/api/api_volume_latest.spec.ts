@@ -1,12 +1,12 @@
 // @ts-nocheck
 import "test/mocks/lz4";
-import test from "ava";
-import window from "libs/window";
 import { AnnotationToolEnum } from "oxalis/constants";
 import { __setupOxalis } from "test/helpers/apiHelpers";
+import test from "ava";
+import window from "libs/window";
 import {
-  annotation as ANNOTATION,
   tracing as TRACING,
+  annotation as ANNOTATION,
 } from "../fixtures/volumetracing_server_objects";
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 test.beforeEach((t) => __setupOxalis(t, "volume"));

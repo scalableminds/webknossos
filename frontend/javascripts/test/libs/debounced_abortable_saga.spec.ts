@@ -1,8 +1,8 @@
-import test from "ava";
-import { createDebouncedAbortableCallable } from "libs/async/debounced_abortable_saga";
-import { sleep } from "libs/utils";
-import _ from "lodash";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { sleep } from "libs/utils";
+import test from "ava";
+import _ from "lodash";
+import { createDebouncedAbortableCallable } from "libs/async/debounced_abortable_saga";
 
 const createAbortableFnWithProtocol = () => {
   const protocol: string[] = [];

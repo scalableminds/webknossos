@@ -1,4 +1,4 @@
-import type { APIAnnotation, ServerVolumeTracing } from "types/api_flow_types";
+import type { ServerVolumeTracing, APIAnnotation } from "types/api_flow_types";
 export const tracing: ServerVolumeTracing = {
   typ: "Volume",
   activeSegmentId: 10000,

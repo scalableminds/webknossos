@@ -1,6 +1,6 @@
+import mock from "mock-require";
 import test, { type ExecutionContext } from "ava";
 import _ from "lodash";
-import mock from "mock-require";
 
 import "test/mocks/globals.mock";
 import "test/mocks/updatable_texture.mock";

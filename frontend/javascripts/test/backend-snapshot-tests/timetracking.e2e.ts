@@ -1,16 +1,16 @@
+import _ from "lodash";
+import dayjs from "dayjs";
+import {
+  tokenUserA,
+  setCurrToken,
+  resetDatabase,
+  writeTypeCheckingFile,
+  replaceVolatileValues,
+} from "test/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
-import dayjs from "dayjs";
-import _ from "lodash";
-import { AnnotationStateFilterEnum } from "oxalis/constants";
-import {
-  replaceVolatileValues,
-  resetDatabase,
-  setCurrToken,
-  tokenUserA,
-  writeTypeCheckingFile,
-} from "test/e2e-setup";
 import type { APITeam, APIUser } from "types/api_flow_types";
+import { AnnotationStateFilterEnum } from "oxalis/constants";
 
 let activeUser: APIUser;
 let firstTeam: APITeam;

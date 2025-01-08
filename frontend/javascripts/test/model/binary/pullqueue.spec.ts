@@ -1,9 +1,9 @@
-import test from "ava";
 // @ts-nocheck
 import _ from "lodash";
 import mockRequire from "mock-require";
-import sinon from "sinon";
 import runAsync from "test/helpers/run-async";
+import sinon from "sinon";
+import test from "ava";
 const RequestMock = {
   always: (promise, func) => promise.then(func, func),
 };

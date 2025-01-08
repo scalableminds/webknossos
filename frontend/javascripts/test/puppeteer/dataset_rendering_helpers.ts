@@ -1,17 +1,17 @@
-import anyTest, { type TestFn } from "ava";
-import type { RequestOptions } from "libs/request";
-import { sleep } from "libs/utils";
-import mergeImg from "merge-img";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
-import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
-import type { PartialDatasetConfiguration } from "oxalis/store";
-import pixelmatch from "pixelmatch";
-import type { Browser, Page } from "puppeteer-core";
-import puppeteer from "puppeteer-core";
 /* eslint no-await-in-loop: 0 */
 import urljoin from "url-join";
-import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
+import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
+import type { Browser, Page } from "puppeteer-core";
+import puppeteer from "puppeteer-core";
+import anyTest, { type TestFn } from "ava";
+import type { PartialDatasetConfiguration } from "oxalis/store";
+import mergeImg from "merge-img";
+import pixelmatch from "pixelmatch";
+import type { RequestOptions } from "libs/request";
 import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
+import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
+import { sleep } from "libs/utils";
 
 export const { WK_AUTH_TOKEN } = process.env;
 

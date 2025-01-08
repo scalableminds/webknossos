@@ -1,5 +1,5 @@
-import test from "ava";
 import * as Utils from "libs/utils";
+import test from "ava";
 
 test("filterWithSearchQueryAND: simple case", (t) => {
   const collection = [

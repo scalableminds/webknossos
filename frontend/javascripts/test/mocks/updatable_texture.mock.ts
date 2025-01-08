@@ -1,5 +1,5 @@
-import mock from "mock-require";
 import * as THREE from "three";
+import mock from "mock-require";
 
 /*
  * Note that RGB textures are currently not tested in this spec.

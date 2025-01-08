@@ -1,14 +1,14 @@
 import test from "ava";
-import { waitForCondition } from "libs/utils";
 import mockRequire from "mock-require";
+import { waitForCondition } from "libs/utils";
 import "test/mocks/lz4";
 import "test/sagas/saga_integration.mock";
-import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
-import Store from "oxalis/store";
-import dummyUser from "test/fixtures/dummy_user";
 import { __setupOxalis, createBucketResponseFunction } from "test/helpers/apiHelpers";
+import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
+import Store from "oxalis/store";
+import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
+import dummyUser from "test/fixtures/dummy_user";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { testLabelingManyBuckets } from "./bucket_eviction_helper";
 
 const { discardSaveQueuesAction } = mockRequire.reRequire("oxalis/model/actions/save_actions");

@@ -1,15 +1,15 @@
 import "test/mocks/lz4";
 import path from "node:path";
-import { encodeUrlHash } from "oxalis/controller/url_manager";
+import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
 import {
-  checkBrowserstackCredentials,
+  test,
   getNewPage,
   screenshotDatasetView,
   setupBeforeEachAndAfterEach,
-  test,
   withRetry,
+  checkBrowserstackCredentials,
 } from "./dataset_rendering_helpers";
-import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
+import { encodeUrlHash } from "oxalis/controller/url_manager";
 
 checkBrowserstackCredentials();
 

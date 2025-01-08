@@ -1,12 +1,12 @@
-import * as api from "admin/admin_rest_api";
-import test from "ava";
 import {
-  replaceVolatileValues,
-  resetDatabase,
-  setCurrToken,
   tokenUserA,
+  setCurrToken,
+  resetDatabase,
+  replaceVolatileValues,
   writeTypeCheckingFile,
 } from "test/e2e-setup";
+import * as api from "admin/admin_rest_api";
+import test from "ava";
 test.before("Reset database and change token", async () => {
   resetDatabase();
   setCurrToken(tokenUserA);

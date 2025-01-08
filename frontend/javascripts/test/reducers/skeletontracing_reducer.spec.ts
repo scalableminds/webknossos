@@ -1,21 +1,21 @@
 /* eslint-disable no-useless-computed-key */
 import "test/mocks/lz4";
-import test from "ava";
+import _ from "lodash";
 import update from "immutability-helper";
 import { rgbs as colors } from "libs/color_generator";
+import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
-import _ from "lodash";
+import EdgeCollection from "oxalis/model/edge_collection";
 import mock from "mock-require";
-import { TreeTypeEnum, type Vector3 } from "oxalis/constants";
+import test from "ava";
+import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import type { OxalisState, SkeletonTracing, Node } from "oxalis/store";
 import defaultState from "oxalis/default_state";
-import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { TreeTypeEnum, type Vector3 } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
 import type * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
-import EdgeCollection from "oxalis/model/edge_collection";
 import type OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
-import type { Node, OxalisState, SkeletonTracing } from "oxalis/store";
-import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import ChainReducer from "test/helpers/chainReducer";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 
 mock("app", {
   currentUser: {

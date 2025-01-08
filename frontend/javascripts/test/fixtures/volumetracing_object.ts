@@ -1,6 +1,6 @@
 import update from "immutability-helper";
-import mockRequire from "mock-require";
 import Constants, { AnnotationToolEnum } from "oxalis/constants";
+import mockRequire from "mock-require";
 import defaultState from "oxalis/default_state";
 mockRequire("app", {
   currentUser: {

@@ -1,15 +1,15 @@
-import * as api from "admin/admin_rest_api";
-import test from "ava";
 import _ from "lodash";
 import {
-  replaceVolatileValues,
-  resetDatabase,
-  setCurrToken,
   tokenUserA,
   tokenUserD,
+  setCurrToken,
+  replaceVolatileValues,
+  resetDatabase,
   writeTypeCheckingFile,
 } from "test/e2e-setup";
 import type { APIProject, APIProjectUpdater } from "types/api_flow_types";
+import * as api from "admin/admin_rest_api";
+import test from "ava";
 test.before("Reset database", async () => {
   resetDatabase();
 });

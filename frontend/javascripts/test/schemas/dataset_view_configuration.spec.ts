@@ -1,9 +1,9 @@
-import test from "ava";
 // @ts-nocheck
 import _ from "lodash";
-import DATASET from "test/fixtures/dataset_server_object";
-import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
+import test from "ava";
 import { validateObjectWithType } from "types/validation";
+import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
+import DATASET from "test/fixtures/dataset_server_object";
 const datasetViewConfigurationType = "types::DatasetViewConfiguration";
 const CORRECT_DATASET_CONFIGURATION = {
   fourBit: false,

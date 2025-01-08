@@ -1,10 +1,10 @@
-import test, { type ExecutionContext } from "ava";
 import _ from "lodash";
-import constants from "oxalis/constants";
 import {
   calculateTextureSizeAndCountForLayer,
   computeDataTexturesSetup,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import test, { type ExecutionContext } from "ava";
+import constants from "oxalis/constants";
 import type { ElementClass } from "types/api_flow_types";
 
 const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;

@@ -1,7 +1,7 @@
-import anyTest, { type TestFn } from "ava";
 import mockRequire from "mock-require";
-import sinon from "sinon";
 import runAsync from "test/helpers/run-async";
+import sinon from "sinon";
+import anyTest, { type TestFn } from "ava";
 import "test/mocks/lz4";
 
 mockRequire("oxalis/model/sagas/root_saga", function* () {

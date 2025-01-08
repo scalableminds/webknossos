@@ -1,20 +1,4 @@
 import "test/sagas/skeletontracing_saga.mock.js";
-import test from "ava";
-import update from "immutability-helper";
-import DiffableMap from "libs/diffable_map";
-import mockRequire from "mock-require";
-import { TreeTypeEnum } from "oxalis/constants";
-import defaultState from "oxalis/default_state";
-import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Action } from "oxalis/model/actions/actions";
-import type * as OriginalSaveActions from "oxalis/model/actions/save_actions";
-import type * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
-import EdgeCollection from "oxalis/model/edge_collection";
-import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue";
-import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update_actions";
-import type OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
-import type * as OriginalSaveSaga from "oxalis/model/sagas/save_saga";
-import type * as OriginalSkeletonTracingSaga from "oxalis/model/sagas/skeletontracing_saga";
 import type {
   Flycam,
   HybridTracing,
@@ -22,11 +6,27 @@ import type {
   SaveQueueEntry,
   SkeletonTracing,
 } from "oxalis/store";
-import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import ChainReducer from "test/helpers/chainReducer";
-import type { ServerSkeletonTracing } from "types/api_flow_types";
-import { execCall, expectValueDeepEqual } from "../helpers/sagaHelpers";
+import DiffableMap from "libs/diffable_map";
+import EdgeCollection from "oxalis/model/edge_collection";
+import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue";
+import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update_actions";
+import mockRequire from "mock-require";
+import test from "ava";
+import defaultState from "oxalis/default_state";
+import update from "immutability-helper";
 import { createSaveQueueFromUpdateActions, withoutUpdateTracing } from "../helpers/saveHelpers";
+import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
+import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import type * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
+import type * as OriginalSaveActions from "oxalis/model/actions/save_actions";
+import type * as OriginalSaveSaga from "oxalis/model/sagas/save_saga";
+import type * as OriginalSkeletonTracingSaga from "oxalis/model/sagas/skeletontracing_saga";
+import type OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
+import { TreeTypeEnum } from "oxalis/constants";
+import type { Action } from "oxalis/model/actions/actions";
+import type { ServerSkeletonTracing } from "types/api_flow_types";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 
 const TIMESTAMP = 1494347146379;
 const DateMock = {

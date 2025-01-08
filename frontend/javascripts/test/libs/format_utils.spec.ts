@@ -1,6 +1,6 @@
 import test from "ava";
+import { UnitShort, Unicode } from "oxalis/constants";
 import { formatNumberToArea, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
-import { Unicode, UnitShort } from "oxalis/constants";
 
 const { ThinSpace } = Unicode;
 

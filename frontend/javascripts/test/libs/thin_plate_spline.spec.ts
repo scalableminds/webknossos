@@ -1,9 +1,9 @@
 import "test/mocks/lz4";
 import test from "ava";
-import { V3 } from "libs/mjs";
 import TPS3D from "libs/thin_plate_spline";
-import type { Vector3 } from "oxalis/constants";
 import { almostEqual, getPointsC555 } from "./transform_spec_helpers";
+import { V3 } from "libs/mjs";
+import type { Vector3 } from "oxalis/constants";
 
 test("Basic TPS calculation", async (t) => {
   const [sourcePoints, targetPoints] = getPointsC555();

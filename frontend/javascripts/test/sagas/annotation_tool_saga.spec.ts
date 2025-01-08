@@ -1,10 +1,10 @@
 import "test/mocks/lz4";
 import test from "ava";
 import _ from "lodash";
+import { AnnotationToolEnum, type AnnotationTool } from "oxalis/constants";
 import mockRequire from "mock-require";
-import { type AnnotationTool, AnnotationToolEnum } from "oxalis/constants";
-import sinon from "sinon";
 import { initialState } from "test/fixtures/volumetracing_object";
+import sinon from "sinon";
 const disabledInfoMock: { [key in any]?: any } = {};
 Object.values(AnnotationToolEnum).forEach((annotationTool) => {
   disabledInfoMock[annotationTool] = {

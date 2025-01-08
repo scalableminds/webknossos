@@ -1,8 +1,8 @@
 import "test/mocks/lz4";
-import { parser } from "@shaderfrog/glsl-parser";
-import test, { type ExecutionContext } from "ava";
 import getMainFragmentShader from "oxalis/shaders/main_data_shaders.glsl";
 import mags from "test/fixtures/mags";
+import test, { type ExecutionContext } from "ava";
+import { parser } from "@shaderfrog/glsl-parser";
 
 test.beforeEach((t: ExecutionContext<any>) => {
   t.context.originalWarn = console.warn;

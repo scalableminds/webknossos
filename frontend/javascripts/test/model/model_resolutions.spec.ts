@@ -1,9 +1,9 @@
 import "test/mocks/lz4";
 import test from "ava";
-import type { Vector3 } from "oxalis/constants";
 import { getMagnificationUnion } from "oxalis/model/accessors/dataset_accessor";
-import { convertToDenseMag } from "oxalis/model/helpers/mag_info";
+import type { Vector3 } from "oxalis/constants";
 import type { APIDataset } from "types/api_flow_types";
+import { convertToDenseMag } from "oxalis/model/helpers/mag_info";
 
 test("Simple convertToDenseMag", (t) => {
   const denseMags = convertToDenseMag([

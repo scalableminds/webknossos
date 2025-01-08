@@ -1,6 +1,7 @@
 import "test/mocks/lz4";
 import test from "ava";
 import type { Vector3 } from "oxalis/constants";
+import { almostEqual } from "test/libs/transform_spec_helpers";
 import {
   chainTransforms,
   createAffineTransform,
@@ -8,7 +9,6 @@ import {
   invertTransform,
   transformPointUnscaled,
 } from "oxalis/model/helpers/transformation_helpers";
-import { almostEqual } from "test/libs/transform_spec_helpers";
 
 const EPSILON = 0.001;
 

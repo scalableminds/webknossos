@@ -1,16 +1,16 @@
-import * as api from "admin/admin_rest_api";
-import { getTask } from "admin/api/tasks";
-import test from "ava";
 import _ from "lodash";
 import {
-  resetDatabase,
-  setCurrToken,
   tokenUserA,
   tokenUserB,
   tokenUserC,
   tokenUserD,
   tokenUserE,
+  setCurrToken,
+  resetDatabase,
 } from "test/e2e-setup";
+import { getTask } from "admin/api/tasks";
+import * as api from "admin/admin_rest_api";
+import test from "ava";
 test.before("Reset database", async () => {
   resetDatabase();
 });

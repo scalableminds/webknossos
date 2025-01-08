@@ -1,19 +1,19 @@
-import test from "ava";
 import update from "immutability-helper";
 import mockRequire from "mock-require";
+import test from "ava";
 import "test/sagas/saga_integration.mock.js";
-import { omit } from "lodash";
-import { getStats } from "oxalis/model/accessors/annotation_accessor";
-import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
-import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
-import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
-import Store from "oxalis/store";
-import dummyUser from "test/fixtures/dummy_user";
-import { TIMESTAMP, __setupOxalis } from "test/helpers/apiHelpers";
+import { __setupOxalis, TIMESTAMP } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getStats } from "oxalis/model/accessors/annotation_accessor";
+import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
+import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
+import Store from "oxalis/store";
+import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import dummyUser from "test/fixtures/dummy_user";
+import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
+import { omit } from "lodash";
 
 const {
   createTreeMapFromTreeArray,

@@ -1,21 +1,21 @@
 import "test/mocks/lz4";
-import test, { type ExecutionContext } from "ava";
-import update from "immutability-helper";
-import DiffableMap from "libs/diffable_map";
 import _ from "lodash";
-import mock from "mock-require";
-import { TreeTypeEnum } from "oxalis/constants";
+import update from "immutability-helper";
+import sinon from "sinon";
+import type { Node, SkeletonTracing, OxalisState } from "oxalis/store";
 import defaultState from "oxalis/default_state";
-import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import type * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
+import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
+import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import mock from "mock-require";
+import test, { type ExecutionContext } from "ava";
+import { TreeTypeEnum } from "oxalis/constants";
+import type * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
 import type * as OriginalNmlHelpers from "oxalis/model/helpers/nml_helpers";
 import type OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
-import type { Node, OxalisState, SkeletonTracing } from "oxalis/store";
-import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import sinon from "sinon";
-import { buildInfo as BUILD_INFO } from "../fixtures/build_info";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { annotation as TASK_ANNOTATION } from "../fixtures/tasktracing_server_objects";
+import { buildInfo as BUILD_INFO } from "../fixtures/build_info";
 
 const TIMESTAMP = 123456789;
 const { serializeToNml, getNmlName, parseNml }: typeof OriginalNmlHelpers = mock.reRequire(

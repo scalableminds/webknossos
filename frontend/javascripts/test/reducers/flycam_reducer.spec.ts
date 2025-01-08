@@ -1,17 +1,17 @@
-import test from "ava";
-import update from "immutability-helper";
 // @ts-nocheck
 import { M4x4, V3 } from "libs/mjs";
-import { OrthoViews, UnitLong } from "oxalis/constants";
+import { UnitLong, OrthoViews } from "oxalis/constants";
+import update from "immutability-helper";
 import {
-  getLeft,
   getPosition,
   getRotation,
   getUp,
+  getLeft,
   getZoomedMatrix,
 } from "oxalis/model/accessors/flycam_accessor";
 import * as FlycamActions from "oxalis/model/actions/flycam_actions";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
+import test from "ava";
 
 function equalWithEpsilon(t, a, b, epsilon = 1e-10) {
   t.is(a.length, b.length);

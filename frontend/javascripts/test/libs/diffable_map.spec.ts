@@ -1,6 +1,6 @@
-import test from "ava";
-import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import _ from "lodash";
+import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
+import test from "ava";
 
 function sort(arr: Array<number>) {
   return arr.sort((a, b) => a - b);

@@ -1,16 +1,16 @@
 import "test/mocks/lz4";
-import anyTest, { type TestFn } from "ava";
-import mockRequire from "mock-require";
-import type { Vector3, Vector4 } from "oxalis/constants";
-import Constants from "oxalis/constants";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import { assertNonNullBucket } from "oxalis/model/bucket_data_handling/bucket";
-import type DataCubeType from "oxalis/model/bucket_data_handling/data_cube";
-import { MagInfo } from "oxalis/model/helpers/mag_info";
-import sinon from "sinon";
-import datasetServerObject from "test/fixtures/dataset_server_object";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import { tracing as volumetracingServerObject } from "test/fixtures/volumetracing_server_objects";
+import type { Vector3, Vector4 } from "oxalis/constants";
+import Constants from "oxalis/constants";
+import anyTest, { type TestFn } from "ava";
+import datasetServerObject from "test/fixtures/dataset_server_object";
+import mockRequire from "mock-require";
+import sinon from "sinon";
+import { MagInfo } from "oxalis/model/helpers/mag_info";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import type DataCubeType from "oxalis/model/bucket_data_handling/data_cube";
+import { assertNonNullBucket } from "oxalis/model/bucket_data_handling/bucket";
 
 const StoreMock = {
   getState: () => ({

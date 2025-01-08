@@ -1,10 +1,10 @@
 import "test/mocks/lz4";
-import fs from "node:fs";
+import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'deep... Remove this comment to see the full error message
 import deepForEach from "deep-for-each";
-import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
 import fetch, { Headers, FormData, Request, Response, FetchError, File } from "node-fetch";
+import fs from "node:fs";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'shel... Remove this comment to see the full error message
 import shell from "shelljs";
 import type { ArbitraryObject } from "types/globals";

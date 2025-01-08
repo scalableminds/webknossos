@@ -370,25 +370,35 @@ class DataCube {
 
   collectBucketsIf(predicateFn: (bucket: DataBucket) => boolean): void {
     // todop: why clear this? can't the buckets be still in the queue? their
-    // download didn't even start yet (or did it?).
-    // and if we clear the queue, do we need to collect buckets independently
-    // of the predicateFn? to avoid that a bucket stays in REQUESTED forever?
-    // this.pullQueue.clear();
+    // download didn't even start yet (the request + version look up happens *after* dequeuing).
+    // also, clear() does not clear high-pri buckets anyway, so we cannot rely on that.
+    // however: if the bucket is collected below and the bucket address is still in the pullqueue,
+    // the bucket state will be unexpected once the request goes through.
+    this.pullQueue.clear();
     this.pullQueue.abortRequests();
 
     const notCollectedBuckets = [];
     for (const bucket of this.buckets) {
       bucket._debuggerMaybe();
-      if (predicateFn(bucket)) {
-        if (bucket.mayBeGarbageCollected()) {
-          this.collectBucket(bucket);
-        } else {
-          console.warn(
-            "Did not GC bucket at",
-            bucket.zoomedAddress,
-            "even though predicate function requested this.",
-          );
-        }
+      // If a bucket is in the `requested` state, collect it independently of the predicateFn,
+      // because the corresponding request was aborted above (meaning the bucket would never
+      // be filled with data).
+
+      if (bucket.state === "UNREQUESTED") {
+        // No need to GC bucket because its data hasn't been loaded, anyway
+      } else if (bucket.state === "REQUESTED") {
+        // No need to GC bucket because no data has arrived yet. However, its request was aborted above.
+        // So, mark it as failed.
+        // todop: this should have happened in the abort handler above. test this again?
+        // bucket.markAsFailed(false);
+      }
+      if (bucket.state === "REQUESTED" || predicateFn(bucket)) {
+        // We ignore bucket.mayBeGarbageCollected() here, because that method would not
+        // allow to collect requested buckets. <-- not a strong point. we could adapt that.
+        // other reason: mayBeGarbageCollected is meant for asking whether the bucket is necessary
+        // right now. however, we know that we want to reload everything. so, we shouldn't care
+        // for that method.
+        this.collectBucket(bucket);
       } else {
         notCollectedBuckets.push(bucket);
       }

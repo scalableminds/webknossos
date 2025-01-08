@@ -118,7 +118,7 @@ export default class BucketSnapshot {
     if (needsMergeWithBackendData && this.isBackendDataAvailable()) {
       const decompressedBackendData = await this.getBackendData();
       // todop: The following code mutates newData (which could be this.dataClone).
-      // Is this a problem?
+      // Is this a problem? maybe not, because the snapshot instance is used nowhere else? still, can we be sure?
       mergeDataWithBackendDataInPlace(newData, decompressedBackendData, this.pendingOperations);
       return {
         newData,

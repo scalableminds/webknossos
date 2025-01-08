@@ -127,6 +127,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
             step={90}
             precision={0}
             onChange={(value: number | null) =>
+              // InputNumber might be called with null, so we need to check for that.
               value != null && setMatrixRotationsForAllLayer(value)
             }
           />

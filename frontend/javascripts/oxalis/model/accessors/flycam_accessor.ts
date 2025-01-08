@@ -3,7 +3,7 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { DataLayerType, Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
 import type { Matrix4x4 } from "libs/mjs";
-import { M4x4 } from "libs/mjs";
+import { M4x4, V3 } from "libs/mjs";
 import { getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getColorLayers,
@@ -36,6 +36,12 @@ import type { SmallerOrHigherInfo } from "../helpers/mag_info";
 import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
 import type { AdditionalCoordinate, VoxelSize } from "types/api_flow_types";
 import { invertAndTranspose, getTransformsForLayer } from "./dataset_layer_transformation_accessor";
+import {
+  invertTransform,
+  chainTransforms,
+  transformPointUnscaled,
+  type Transform,
+} from "../helpers/transformation_helpers";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
@@ -250,6 +256,36 @@ function getMaximumZoomForAllMagsFromStore(state: OxalisState, layerName: string
     // this already proved to be fine, though.
     dummyFlycamMatrix,
   );
+}
+
+// This function depends on functionality from this and the dataset_layer_transformation_accessor module.
+// To avoid cyclic dependencies and as the result of the function is a position and scale change,
+// this function is arguably semantically closer to this flycam module.
+export function getNewPositionAndZoomChangeFromTransformationChange(
+  activeTransformation: Transform,
+  nextTransform: Transform,
+  state: OxalisState,
+) {
+  // Calculate the difference between the current and the next transformation.
+  const currentTransformInverted = invertTransform(activeTransformation);
+  const changeInAppliedTransformation = chainTransforms(currentTransformInverted, nextTransform);
+
+  const currentPosition = getPosition(state.flycam);
+  const newPosition = transformPointUnscaled(changeInAppliedTransformation)(currentPosition);
+
+  // Also transform a reference coordinate to determine how the scaling
+  // changed. Then, adapt the zoom accordingly.
+
+  const referenceOffset: Vector3 = [10, 10, 10];
+  const secondPosition = V3.add(currentPosition, referenceOffset, [0, 0, 0]);
+  const newSecondPosition = transformPointUnscaled(changeInAppliedTransformation)(secondPosition);
+
+  const scaleChange = _.mean(
+    // Only consider XY for now to determine the zoom change (by slicing from 0 to 2)
+    V3.abs(V3.divide3(V3.sub(newPosition, newSecondPosition), referenceOffset)).slice(0, 2),
+  );
+
+  return { newPosition, scaleChange };
 }
 
 function _getUp(flycam: Flycam): Vector3 {

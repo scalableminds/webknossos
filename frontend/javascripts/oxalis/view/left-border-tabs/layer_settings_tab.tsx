@@ -63,7 +63,11 @@ import {
   getWidestMags,
   getLayerBoundingBox,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getMaxZoomValueForMag, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getMaxZoomValueForMag,
+  getNewPositionAndZoomChangeFromTransformationChange,
+  getPosition,
+} from "oxalis/model/accessors/flycam_accessor";
 import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
@@ -126,7 +130,6 @@ import {
   hasDatasetTransforms,
   isIdentityTransform,
   getTransformsForLayer,
-  getNewPositionAndZoomChangeFromTransformationChange,
 } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 
 type DatasetSettingsProps = ReturnType<typeof mapStateToProps> &

@@ -1,6 +1,15 @@
 import { CopyOutlined, PushpinOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
-import { Dropdown, Empty, notification, Popover, Input, type MenuProps, Modal } from "antd";
+import {
+  Dropdown,
+  Empty,
+  notification,
+  Popover,
+  Input,
+  type MenuProps,
+  Modal,
+  ConfigProvider,
+} from "antd";
 import { useSelector } from "react-redux";
 import React, { createContext, type MouseEvent, useContext, useEffect, useState } from "react";
 import type {
@@ -147,7 +156,6 @@ type OwnProps = {
   globalPosition: Vector3 | null | undefined;
   additionalCoordinates: AdditionalCoordinate[] | undefined;
   maybeViewport: OrthoView | null | undefined;
-  hideContextMenu: () => void;
 };
 
 type StateProps = {
@@ -179,6 +187,8 @@ type NoNodeContextMenuProps = Props & {
   activeTool: AnnotationTool;
   infoRows: ItemType[];
 };
+
+const hideContextMenu = () => Store.dispatch(hideContextMenuAction());
 
 export const getNoActionsAvailableMenu = (hideContextMenu: () => void): MenuProps => ({
   onClick: hideContextMenu,
@@ -760,7 +770,6 @@ function getBoundingBoxMenuOptions({
   activeTool,
   clickedBoundingBoxId,
   userBoundingBoxes,
-  hideContextMenu,
   allowUpdate,
 }: NoNodeContextMenuProps): ItemType[] {
   if (globalPosition == null) return [];
@@ -1331,14 +1340,46 @@ export function GenericContextMenuContainer(props: {
           // @ts-ignore
           ref={inputRef}
         />
-        <ContextMenuContext.Provider value={inputRef}>{props.children}</ContextMenuContext.Provider>
+        {/* Disable animations for the context menu (for performance reasons). */}
+        <ConfigProvider theme={{ token: { motion: false } }}>
+          <ContextMenuContext.Provider value={inputRef}>
+            {props.children}
+          </ContextMenuContext.Provider>
+        </ConfigProvider>
       </div>
     </React.Fragment>
   );
 }
 
-const hideContextMenu = () => Store.dispatch(hideContextMenuAction());
 function WkContextMenu() {
+  const contextMenuPosition = useSelector((state: OxalisState) => {
+    return state.uiInformation.contextInfo.contextMenuPosition;
+  });
+
+  return (
+    <GenericContextMenuContainer
+      hideContextMenu={hideContextMenu}
+      contextMenuPosition={contextMenuPosition}
+    >
+      {contextMenuPosition != null ? <ContextMenuInner /> : <div />}
+    </GenericContextMenuContainer>
+  );
+}
+
+function getInfoMenuItem(
+  key: MenuItemType["key"],
+  label: MenuItemType["label"],
+): MenuItemGroupType {
+  /*
+   * This component is a work-around. We want antd menu entries that can not be selected
+   * or otherwise interacted with. An "empty" menu group will only display the group header
+   * which gives us the desired behavior.
+   */
+
+  return { key, label, type: "group" };
+}
+
+function ContextMenuInner() {
   const props = useSelector((state: OxalisState) => {
     const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
     const mappingInfo = getMappingInfo(
@@ -1380,46 +1421,19 @@ function WkContextMenu() {
       maybeClickedMeshId: contextInfo.meshId,
       maybeMeshIntersectionPosition: contextInfo.meshIntersectionPosition,
       maybeUnmappedSegmentId: contextInfo.unmappedSegmentId,
-      hideContextMenu,
     };
   });
 
-  return (
-    <GenericContextMenuContainer
-      hideContextMenu={hideContextMenu}
-      contextMenuPosition={props.contextMenuPosition}
-    >
-      {props.contextMenuPosition != null ? <ContextMenuInner {...props} /> : <div />}
-    </GenericContextMenuContainer>
-  );
-}
-
-function getInfoMenuItem(
-  key: MenuItemType["key"],
-  label: MenuItemType["label"],
-): MenuItemGroupType {
-  /*
-   * This component is a work-around. We want antd menu entries that can not be selected
-   * or otherwise interacted with. An "empty" menu group will only display the group header
-   * which gives us the desired behavior.
-   */
-
-  return { key, label, type: "group" };
-}
-
-function ContextMenuInner(propsWithInputRef: Props) {
   const [lastTimeSegmentInfoShouldBeFetched, setLastTimeSegmentInfoShouldBeFetched] = useState(
     new Date(),
   );
   const inputRef = useContext(ContextMenuContext);
-  const { ...props } = propsWithInputRef;
   const {
     skeletonTracing,
     maybeClickedNodeId,
     maybeClickedMeshId,
     contextMenuPosition,
     segments,
-    hideContextMenu,
     voxelSize,
     globalPosition,
     maybeViewport,

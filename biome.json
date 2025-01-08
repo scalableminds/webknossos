@@ -2,7 +2,10 @@
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "organizeImports": { 
     "enabled": true,  
-    "ignore": ["frontend/javascripts/test/*"]
+    "ignore": [
+      "frontend/javascripts/test/*",
+      "frontend/javascripts/oxalis/model/helpers/shader_editor.ts"
+    ]
   },
   "linter": {
     "enabled": true,

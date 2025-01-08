@@ -1,28 +1,28 @@
+import type { ExecutionContext } from "ava";
+import { sleep } from "libs/utils";
+import window from "libs/window";
+import _ from "lodash";
+import mockRequire from "mock-require";
 // @ts-nocheck
 import { createNanoEvents } from "nanoevents";
-import type { ExecutionContext } from "ava";
-import _ from "lodash";
 import { ControlModeEnum } from "oxalis/constants";
-import { sleep } from "libs/utils";
-import mockRequire from "mock-require";
-import sinon from "sinon";
-import window from "libs/window";
-import dummyUser from "test/fixtures/dummy_user";
-import dummyOrga from "test/fixtures/dummy_organization";
 import { setSceneController } from "oxalis/controller/scene_controller_provider";
+import sinon from "sinon";
+import dummyOrga from "test/fixtures/dummy_organization";
+import dummyUser from "test/fixtures/dummy_user";
+import DATASET from "../fixtures/dataset_server_object";
 import {
-  tracing as SKELETON_TRACING,
   annotation as SKELETON_ANNOTATION,
+  tracing as SKELETON_TRACING,
 } from "../fixtures/skeletontracing_server_objects";
 import {
-  tracing as TASK_TRACING,
   annotation as TASK_ANNOTATION,
+  tracing as TASK_TRACING,
 } from "../fixtures/tasktracing_server_objects";
 import {
-  tracing as VOLUME_TRACING,
   annotation as VOLUME_ANNOTATION,
+  tracing as VOLUME_TRACING,
 } from "../fixtures/volumetracing_server_objects";
-import DATASET from "../fixtures/dataset_server_object";
 
 const Request = {
   receiveJSON: sinon.stub(),

@@ -1,6 +1,11 @@
 /* eslint-disable no-await-in-loop */
 import "test/sagas/saga_integration.mock";
+import anyTest, { type ExecutionContext, type TestFn } from "ava";
+import { V3 } from "libs/mjs";
+import type { RequestType } from "libs/request";
 import _ from "lodash";
+import mockRequire from "mock-require";
+import type { ApiInterface } from "oxalis/api/api_latest";
 import Constants, {
   AnnotationToolEnum,
   ContourModeEnum,
@@ -9,15 +14,9 @@ import Constants, {
   OverwriteModeEnum,
   type Vector3,
 } from "oxalis/constants";
-import { __setupOxalis, createBucketResponseFunction } from "test/helpers/apiHelpers";
-import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
+import type { ModelType } from "oxalis/model";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import Store from "oxalis/store";
-import mockRequire from "mock-require";
-import anyTest, { type ExecutionContext, type TestFn } from "ava";
-import { V3 } from "libs/mjs";
-import dummyUser from "test/fixtures/dummy_user";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import {
   batchUpdateGroupsAndSegmentsAction,
@@ -26,11 +25,12 @@ import {
   setSegmentGroupsAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import type { ModelType } from "oxalis/model";
-import type { RequestType } from "libs/request";
-import type { ApiInterface } from "oxalis/api/api_latest";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
+import Store from "oxalis/store";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import dummyUser from "test/fixtures/dummy_user";
+import { __setupOxalis, createBucketResponseFunction } from "test/helpers/apiHelpers";
 
 const { dispatchUndoAsync, dispatchRedoAsync, discardSaveQueuesAction } = mockRequire.reRequire(
   "oxalis/model/actions/save_actions",

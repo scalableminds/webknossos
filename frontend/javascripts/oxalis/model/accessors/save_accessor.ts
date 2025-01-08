@@ -1,6 +1,6 @@
-import type { IsBusyInfo, OxalisState, SaveQueueEntry } from "oxalis/store";
-import type { SaveQueueType } from "oxalis/model/actions/save_actions";
 import * as Utils from "libs/utils";
+import type { SaveQueueType } from "oxalis/model/actions/save_actions";
+import type { IsBusyInfo, OxalisState, SaveQueueEntry } from "oxalis/store";
 
 export function isBusy(isBusyInfo: IsBusyInfo): boolean {
   return (

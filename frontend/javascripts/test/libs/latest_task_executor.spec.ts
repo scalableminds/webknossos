@@ -1,5 +1,5 @@
-import Deferred from "libs/async/deferred";
 import test from "ava";
+import Deferred from "libs/async/deferred";
 import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/async/latest_task_executor";
 
 test("LatestTaskExecutor: One task", async (t) => {

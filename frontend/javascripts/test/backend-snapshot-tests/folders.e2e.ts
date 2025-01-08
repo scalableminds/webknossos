@@ -1,15 +1,15 @@
-import _ from "lodash";
-import {
-  tokenUserA,
-  tokenUserC,
-  setCurrToken,
-  resetDatabase,
-  replaceVolatileValues,
-  writeTypeCheckingFile,
-} from "test/e2e-setup";
-import Request from "libs/request";
 import * as foldersApi from "admin/api/folders";
 import test from "ava";
+import Request from "libs/request";
+import _ from "lodash";
+import {
+  replaceVolatileValues,
+  resetDatabase,
+  setCurrToken,
+  tokenUserA,
+  tokenUserC,
+  writeTypeCheckingFile,
+} from "test/e2e-setup";
 import { APIMetadataEnum } from "types/api_flow_types";
 test.before("Reset database and change token", async () => {
   resetDatabase();

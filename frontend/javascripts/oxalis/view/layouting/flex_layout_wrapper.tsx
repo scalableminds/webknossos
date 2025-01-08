@@ -1,49 +1,49 @@
-import type { Dispatch } from "redux";
+import { sendAnalyticsEvent } from "admin/admin_rest_api";
 import { Layout } from "antd";
-import { connect } from "react-redux";
+import FastTooltip from "components/fast_tooltip";
+import features from "features";
 import * as FlexLayout from "flexlayout-react";
 import type { BorderNode, TabNode, TabSetNode } from "flexlayout-react";
-import * as React from "react";
+import { InputKeyboardNoLoop } from "libs/input";
+import Toast from "libs/toast";
 import _ from "lodash";
-import features from "features";
+import messages from "messages";
+import type { OrthoView } from "oxalis/constants";
+import { ArbitraryViews, BorderTabs, OrthoViews } from "oxalis/constants";
+import { setBorderOpenStatusAction } from "oxalis/model/actions/ui_actions";
+import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
+import type { BorderOpenStatus, BusyBlockingInfo, OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
+import InputCatcher from "oxalis/view/input_catcher";
 import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 import {
   DEFAULT_LAYOUT_NAME,
   getTabDescriptorForBorderTab,
   resetDefaultLayouts,
 } from "oxalis/view/layouting/default_layout_configs";
-import { InputKeyboardNoLoop } from "libs/input";
-import type { OrthoView } from "oxalis/constants";
-import { OrthoViews, ArbitraryViews, BorderTabs } from "oxalis/constants";
-import { sendAnalyticsEvent } from "admin/admin_rest_api";
-import { setBorderOpenStatusAction } from "oxalis/model/actions/ui_actions";
-import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
+import ControlsAndRenderingSettingsTab from "oxalis/view/left-border-tabs/controls_and_rendering_settings_tab";
+import LayerSettingsTab from "oxalis/view/left-border-tabs/layer_settings_tab";
+import RecordingSwitch from "oxalis/view/recording_switch";
 import AbstractTreeTab from "oxalis/view/right-border-tabs/abstract_tree_tab";
 import BoundingBoxTab from "oxalis/view/right-border-tabs/bounding_box_tab";
 import CommentTabView from "oxalis/view/right-border-tabs/comment_tab/comment_tab_view";
 import ConnectomeView from "oxalis/view/right-border-tabs/connectome_tab/connectome_view";
-import ControlsAndRenderingSettingsTab from "oxalis/view/left-border-tabs/controls_and_rendering_settings_tab";
 import DatasetInfoTabView from "oxalis/view/right-border-tabs/dataset_info_tab_view";
-import InputCatcher from "oxalis/view/input_catcher";
-import LayerSettingsTab from "oxalis/view/left-border-tabs/layer_settings_tab";
-import RecordingSwitch from "oxalis/view/recording_switch";
 import SegmentsView from "oxalis/view/right-border-tabs/segments_tab/segments_view";
 import SkeletonTabView from "oxalis/view/right-border-tabs/trees_tab/skeleton_tab_view";
 import Statusbar from "oxalis/view/statusbar";
-import type { OxalisState, BusyBlockingInfo, BorderOpenStatus } from "oxalis/store";
-import Store from "oxalis/store";
 import TDViewControls from "oxalis/view/td_view_controls";
-import Toast from "libs/toast";
-import messages from "messages";
+import * as React from "react";
+import { connect } from "react-redux";
+import type { Dispatch } from "redux";
+import BorderToggleButton from "../components/border_toggle_button";
 import {
-  getMaximizedItemId,
-  getBorderOpenStatus,
   adjustModelToBorderOpenStatus,
+  getBorderOpenStatus,
+  getMaximizedItemId,
   getPositionStatusOf,
 } from "./flex_layout_helper";
-import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
-import BorderToggleButton from "../components/border_toggle_button";
-import FastTooltip from "components/fast_tooltip";
+import { getLayoutConfig, layoutEmitter } from "./layout_persistence";
 
 const { Footer } = Layout;
 

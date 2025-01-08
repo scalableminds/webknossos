@@ -1,10 +1,10 @@
-// @ts-nocheck
-import configureMockStore from "redux-mock-store";
+import test from "ava";
 import overwriteActionMiddleware, {
   overwriteAction,
   removeOverwrite,
 } from "oxalis/model/helpers/overwrite_action_middleware";
-import test from "ava";
+// @ts-nocheck
+import configureMockStore from "redux-mock-store";
 const middlewares = [overwriteActionMiddleware];
 const mockStore = configureMockStore(middlewares);
 test("Tracing Api: registerOverwrite should overwrite an existing function", (t) => {

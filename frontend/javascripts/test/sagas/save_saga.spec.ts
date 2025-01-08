@@ -1,14 +1,14 @@
 import "test/mocks/lz4";
-import { alert } from "libs/window";
-import { setSaveBusyAction } from "oxalis/model/actions/save_actions";
+import test from "ava";
 import DiffableMap from "libs/diffable_map";
+import { alert } from "libs/window";
+import mockRequire from "mock-require";
+import { UnitLong } from "oxalis/constants";
+import { setSaveBusyAction } from "oxalis/model/actions/save_actions";
 import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue";
 import { ensureWkReady } from "oxalis/model/sagas/wk_ready_saga";
-import mockRequire from "mock-require";
-import test from "ava";
-import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import { expectValueDeepEqual } from "../helpers/sagaHelpers";
-import { UnitLong } from "oxalis/constants";
+import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 
 const TIMESTAMP = 1494695001688;
 const DateMock = {

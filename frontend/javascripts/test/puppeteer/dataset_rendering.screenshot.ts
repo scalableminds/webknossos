@@ -1,10 +1,11 @@
 import urljoin from "url-join";
 import "test/mocks/lz4";
-import type { PartialDatasetConfiguration } from "oxalis/store";
 import path from "node:path";
-import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
+import type { PartialDatasetConfiguration } from "oxalis/store";
 import {
-  test,
+  WK_AUTH_TOKEN,
+  checkBrowserstackCredentials,
+  getDefaultRequestOptions,
   getNewPage,
   screenshotAnnotation,
   screenshotDataset,
@@ -12,11 +13,10 @@ import {
   screenshotDatasetWithMappingLink,
   screenshotSandboxWithMappingLink,
   setupBeforeEachAndAfterEach,
+  test,
   withRetry,
-  WK_AUTH_TOKEN,
-  checkBrowserstackCredentials,
-  getDefaultRequestOptions,
 } from "./dataset_rendering_helpers";
+import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
 
 if (!WK_AUTH_TOKEN) {
   throw new Error("No WK_AUTH_TOKEN specified.");

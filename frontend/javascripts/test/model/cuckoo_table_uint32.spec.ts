@@ -1,5 +1,5 @@
-import mock from "mock-require";
 import test, { type ExecutionContext } from "ava";
+import mock from "mock-require";
 
 import "test/mocks/globals.mock";
 import "test/mocks/updatable_texture.mock";

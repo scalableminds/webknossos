@@ -1,24 +1,24 @@
+import * as api from "admin/admin_rest_api";
+import test from "ava";
 import {
-  resetDatabase,
+  getNullableSkeletonTracing,
+  getSkeletonDescriptor,
+} from "oxalis/model/accessors/skeletontracing_accessor";
+import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
+import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
+import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { addVersionNumbers, sendRequestWithToken } from "oxalis/model/sagas/save_saga";
+import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
+import * as UpdateActions from "oxalis/model/sagas/update_actions";
+import {
   replaceVolatileValues,
+  resetDatabase,
   setCurrToken,
   tokenUserA,
   writeTypeCheckingFile,
 } from "test/e2e-setup";
 import type { APIAnnotation } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
-import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import {
-  getNullableSkeletonTracing,
-  getSkeletonDescriptor,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
-import { sendRequestWithToken, addVersionNumbers } from "oxalis/model/sagas/save_saga";
-import * as UpdateActions from "oxalis/model/sagas/update_actions";
-import * as api from "admin/admin_rest_api";
-import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
-import test from "ava";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 const datasetId = "59e9cfbdba632ac2ab8b23b3";
 process.on("unhandledRejection", (err, promise) => {

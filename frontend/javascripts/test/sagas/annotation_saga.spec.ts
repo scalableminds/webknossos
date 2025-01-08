@@ -1,17 +1,17 @@
+import { createMockTask } from "@redux-saga/testing-utils";
 import test, { type ExecutionContext } from "ava";
 import _ from "lodash";
 import mockRequire from "mock-require";
-import type { OxalisState } from "oxalis/store";
-import { createMockTask } from "@redux-saga/testing-utils";
-import { take, put } from "redux-saga/effects";
-import dummyUser from "test/fixtures/dummy_user";
 import defaultState from "oxalis/default_state";
-import { expectValueDeepEqual } from "test/helpers/sagaHelpers";
 import {
   setAnnotationAllowUpdateAction,
   setBlockedByUserAction,
   setOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
+import type { OxalisState } from "oxalis/store";
+import { put, take } from "redux-saga/effects";
+import dummyUser from "test/fixtures/dummy_user";
+import { expectValueDeepEqual } from "test/helpers/sagaHelpers";
 
 const createInitialState = (othersMayEdit: boolean, allowUpdate: boolean = true): OxalisState => ({
   ...defaultState,

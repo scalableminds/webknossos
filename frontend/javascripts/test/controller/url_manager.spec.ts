@@ -1,14 +1,14 @@
 import "test/mocks/lz4";
 import test from "ava";
+import update from "immutability-helper";
+import { location } from "libs/window";
+import Constants, { type Vector3, ViewModeValues } from "oxalis/constants";
 import UrlManager, {
   updateTypeAndId,
   encodeUrlHash,
   type UrlManagerState,
 } from "oxalis/controller/url_manager";
-import { location } from "libs/window";
-import Constants, { type Vector3, ViewModeValues } from "oxalis/constants";
 import defaultState from "oxalis/default_state";
-import update from "immutability-helper";
 
 test("UrlManager should replace tracing in url", (t) => {
   // Without annotationType (Explorational and Task don't appear in the URL)

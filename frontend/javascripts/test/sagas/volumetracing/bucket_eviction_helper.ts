@@ -1,10 +1,10 @@
 import _ from "lodash";
 import mockRequire from "mock-require";
 import "test/sagas/saga_integration.mock";
-import { createBucketResponseFunction } from "test/helpers/apiHelpers";
-import Store from "oxalis/store";
-import { OrthoViews, AnnotationToolEnum } from "oxalis/constants";
+import { AnnotationToolEnum, OrthoViews } from "oxalis/constants";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import Store from "oxalis/store";
+import { createBucketResponseFunction } from "test/helpers/apiHelpers";
 const { setToolAction } = mockRequire.reRequire("oxalis/model/actions/ui_actions");
 const { setPositionAction } = mockRequire.reRequire("oxalis/model/actions/flycam_actions");
 const { setActiveCellAction, addToLayerAction, startEditingAction, finishEditingAction } =

@@ -1,6 +1,6 @@
-import { sleep } from "libs/utils";
 import test from "ava";
 import { AsyncFifoResolver } from "libs/async/async_fifo_resolver";
+import { sleep } from "libs/utils";
 
 const createSubmitterFnWithProtocol = () => {
   const resolver = new AsyncFifoResolver();

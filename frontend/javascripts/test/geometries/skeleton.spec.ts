@@ -2,14 +2,14 @@
 import "test/mocks/lz4";
 // Ensure singletons are set up
 import "test/helpers/apiHelpers";
-import _ from "lodash";
-import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import * as Utils from "libs/utils";
-import mockRequire from "mock-require";
 import test from "ava";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import mockRequire from "mock-require";
 import type { Vector3 } from "oxalis/constants";
+import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { OxalisState } from "oxalis/store";
-import { tracing, annotation } from "../fixtures/skeletontracing_server_objects";
+import { annotation, tracing } from "../fixtures/skeletontracing_server_objects";
 
 mockRequire("app", {
   currentUser: {

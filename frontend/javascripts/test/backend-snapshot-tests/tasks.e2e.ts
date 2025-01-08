@@ -1,18 +1,18 @@
-import _ from "lodash";
-import { resetDatabase, replaceVolatileValues, writeTypeCheckingFile } from "test/e2e-setup";
 import {
+  createTasks,
+  deleteTask,
+  getAnnotationsForTask,
   getTask,
   getTasks,
   peekNextTasks,
-  getAnnotationsForTask,
-  transferTask,
-  deleteTask,
   requestTask,
-  createTasks,
+  transferTask,
   updateTask,
 } from "admin/api/tasks";
 import test from "ava";
+import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
+import { replaceVolatileValues, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
 test.before("Reset database", async () => {
   resetDatabase();
 });

@@ -1,16 +1,16 @@
 import "test/mocks/lz4";
-import update from "immutability-helper";
-import Maybe from "data.maybe";
-import { AnnotationToolEnum, type Vector3 } from "oxalis/constants";
-import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
-import * as UiActions from "oxalis/model/actions/ui_actions";
-import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
-import UiReducer from "oxalis/model/reducers/ui_reducer";
-import mockRequire from "mock-require";
 import test from "ava";
-import { initialState } from "test/fixtures/volumetracing_object";
-import type { OxalisState, Tracing, VolumeTracing } from "oxalis/store";
+import Maybe from "data.maybe";
+import update from "immutability-helper";
+import mockRequire from "mock-require";
+import { AnnotationToolEnum, type Vector3 } from "oxalis/constants";
 import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
+import * as UiActions from "oxalis/model/actions/ui_actions";
+import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
+import UiReducer from "oxalis/model/reducers/ui_reducer";
+import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
+import type { OxalisState, Tracing, VolumeTracing } from "oxalis/store";
+import { initialState } from "test/fixtures/volumetracing_object";
 
 // biome-ignore lint/suspicious/noExportsInTest:
 export function getFirstVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTracing> {

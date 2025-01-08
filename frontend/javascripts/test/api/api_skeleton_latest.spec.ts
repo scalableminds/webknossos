@@ -1,13 +1,13 @@
 // @ts-nocheck
 import "test/mocks/lz4";
-import { __setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
-import { makeBasicGroupObject } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import test from "ava";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { setTreeGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
-import { userSettings } from "types/schemas/user_settings.schema";
 import Store from "oxalis/store";
+import { makeBasicGroupObject } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import sinon from "sinon";
-import test from "ava";
+import { KeyboardJS, __setupOxalis } from "test/helpers/apiHelpers";
+import { userSettings } from "types/schemas/user_settings.schema";
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 test.beforeEach((t) => __setupOxalis(t, "skeleton"));
 test("getActiveNodeId should get the active node id", (t) => {

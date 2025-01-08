@@ -1,6 +1,6 @@
-import mock from "mock-require";
 import test, { type ExecutionContext } from "ava";
 import _ from "lodash";
+import mock from "mock-require";
 import type { Vector3 } from "oxalis/constants";
 
 import "test/mocks/globals.mock";

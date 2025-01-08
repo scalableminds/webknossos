@@ -1,8 +1,8 @@
-import { call, type Saga } from "oxalis/model/sagas/effect-generators";
-import { runSaga } from "redux-saga";
+import test from "ava";
 import processTaskWithPool from "libs/async/task_pool";
 import * as Utils from "libs/utils";
-import test from "ava";
+import { type Saga, call } from "oxalis/model/sagas/effect-generators";
+import { runSaga } from "redux-saga";
 
 /*eslint func-names: ["warn", "always", { "generators": "never" }]*/
 type Tasks = Array<() => Saga<void>>;

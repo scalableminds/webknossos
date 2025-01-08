@@ -1,11 +1,11 @@
-import mockRequire from "mock-require";
 import test from "ava";
+import mockRequire from "mock-require";
 import "test/reducers/save_reducer.mock";
-import dummyUser from "test/fixtures/dummy_user";
 import type { SaveState } from "oxalis/store";
+import dummyUser from "test/fixtures/dummy_user";
 import type { APIUser } from "types/api_flow_types";
-import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import type { EmptyObject } from "types/globals";
+import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 const TIMESTAMP = 1494695001688;
 const DateMock = {
   now: () => TIMESTAMP,

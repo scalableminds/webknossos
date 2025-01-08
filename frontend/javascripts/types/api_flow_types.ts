@@ -1,29 +1,29 @@
+import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import _ from "lodash";
 import type {
-  BoundingBoxObject,
-  Edge,
-  CommentType,
-  TreeGroup,
-  RecommendedConfiguration,
-  SegmentGroup,
-  MeshInformation,
-} from "oxalis/store";
-import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
+  ColorObject,
+  LOG_LEVELS,
+  Point3,
+  TreeType,
+  UnitLong,
+  Vector3,
+  Vector4,
+  Vector6,
+} from "oxalis/constants";
 import type {
   SkeletonTracingStats,
   TracingStats,
 } from "oxalis/model/accessors/annotation_accessor";
+import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type {
-  Vector3,
-  Vector6,
-  Point3,
-  ColorObject,
-  LOG_LEVELS,
-  Vector4,
-  TreeType,
-  UnitLong,
-} from "oxalis/constants";
-import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+  BoundingBoxObject,
+  CommentType,
+  Edge,
+  MeshInformation,
+  RecommendedConfiguration,
+  SegmentGroup,
+  TreeGroup,
+} from "oxalis/store";
 import type { EmptyObject } from "./globals";
 
 export type AdditionalCoordinate = { name: string; value: number };

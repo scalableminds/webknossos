@@ -1,15 +1,15 @@
 import _ from "lodash";
 import "test/mocks/lz4";
-import type { Flycam, OxalisState, Tree, TreeGroup, TreeMap } from "oxalis/store";
-import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
-import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import { updateTreeGroupVisibility, updateTreeVisibility } from "oxalis/model/sagas/update_actions";
-import { withoutUpdateTracing, withoutUpdateTree } from "test/helpers/saveHelpers";
+import test from "ava";
 import DiffableMap from "libs/diffable_map";
+import defaultState from "oxalis/default_state";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import EdgeCollection from "oxalis/model/edge_collection";
 import compactToggleActions from "oxalis/model/helpers/compaction/compact_toggle_actions";
-import defaultState from "oxalis/default_state";
-import test from "ava";
+import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
+import { updateTreeGroupVisibility, updateTreeVisibility } from "oxalis/model/sagas/update_actions";
+import type { Flycam, OxalisState, Tree, TreeGroup, TreeMap } from "oxalis/store";
+import { withoutUpdateTracing, withoutUpdateTree } from "test/helpers/saveHelpers";
 
 const createTree = (id: number, groupId: number | null, isVisible: boolean): Tree => ({
   treeId: id,

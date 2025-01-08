@@ -1,5 +1,5 @@
-import type { APIOrganization } from "types/api_flow_types";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import type { APIOrganization } from "types/api_flow_types";
 
 const dummyOrga: APIOrganization = {
   id: "dummy_orga",

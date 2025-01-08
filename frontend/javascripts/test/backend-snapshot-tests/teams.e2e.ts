@@ -1,7 +1,7 @@
-import _ from "lodash";
-import { tokenUserA, setCurrToken, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
+import _ from "lodash";
+import { resetDatabase, setCurrToken, tokenUserA, writeTypeCheckingFile } from "test/e2e-setup";
 test.before("Reset database and change token", async () => {
   resetDatabase();
   setCurrToken(tokenUserA);

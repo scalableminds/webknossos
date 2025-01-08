@@ -1,17 +1,17 @@
 import "test/mocks/lz4";
-import _ from "lodash";
-import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
-import { sleep } from "libs/utils";
 import anyTest, { type TestFn } from "ava";
-import datasetServerObject from "test/fixtures/dataset_server_object";
+import { sleep } from "libs/utils";
+import _ from "lodash";
 import mockRequire from "mock-require";
-import runAsync from "test/helpers/run-async";
-import sinon from "sinon";
-import { MagInfo } from "oxalis/model/helpers/mag_info";
 import type { Vector3, Vector4 } from "oxalis/constants";
-import { assertNonNullBucket, type DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import { type DataBucket, assertNonNullBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type DataCubeType from "oxalis/model/bucket_data_handling/data_cube";
+import { MagInfo } from "oxalis/model/helpers/mag_info";
+import sinon from "sinon";
+import datasetServerObject from "test/fixtures/dataset_server_object";
+import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
+import runAsync from "test/helpers/run-async";
 
 const StoreMock = {
   getState: () => ({

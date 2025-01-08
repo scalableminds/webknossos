@@ -1,10 +1,10 @@
 import "test/mocks/lz4";
 import test from "ava";
-import type { Vector3 } from "oxalis/constants";
-import Matrix from "ml-matrix";
 import estimateAffine, { estimateAffineMatrix4x4 } from "libs/estimate_affine";
-import { almostEqual, getPointsC555 } from "./transform_spec_helpers";
 import { M4x4 } from "libs/mjs";
+import Matrix from "ml-matrix";
+import type { Vector3 } from "oxalis/constants";
+import { almostEqual, getPointsC555 } from "./transform_spec_helpers";
 
 test("Estimate affine projection", (t) => {
   const [sourcePoints, targetPoints] = getPointsC555();

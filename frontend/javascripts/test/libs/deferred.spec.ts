@@ -1,7 +1,7 @@
+import test from "ava";
 // @ts-nocheck
 import Deferred from "libs/async/deferred";
 import runAsync from "test/helpers/run-async";
-import test from "ava";
 
 function makeGetState(promise) {
   let resolved = false;

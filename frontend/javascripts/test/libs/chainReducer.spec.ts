@@ -1,5 +1,5 @@
-import ChainReducer from "test/helpers/chainReducer";
 import test from "ava";
+import ChainReducer from "test/helpers/chainReducer";
 
 function IncrementReducer(state: number): number {
   return state + 1;

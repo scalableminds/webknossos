@@ -1,28 +1,28 @@
 import "test/sagas/volumetracing/volumetracing_saga.mock";
-import { take, put, call } from "redux-saga/effects";
+import test from "ava";
 import update from "immutability-helper";
+import { enforce } from "libs/utils";
 import _ from "lodash";
-import type { APISegmentationLayer, ServerVolumeTracing } from "types/api_flow_types";
+import mockRequire from "mock-require";
 import {
-  OrthoViews,
   AnnotationToolEnum,
   ContourModeEnum,
-  OverwriteModeEnum,
   MappingStatusEnum,
+  OrthoViews,
+  OverwriteModeEnum,
 } from "oxalis/constants";
-import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
-import { enforce } from "libs/utils";
+import defaultState from "oxalis/default_state";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
+import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
-import defaultState from "oxalis/default_state";
-import mockRequire from "mock-require";
-import sinon from "sinon";
-import test from "ava";
-import { expectValueDeepEqual, execCall } from "test/helpers/sagaHelpers";
-import { withoutUpdateTracing } from "test/helpers/saveHelpers";
-import type { ActiveMappingInfo } from "oxalis/store";
 import { askUserForLockingActiveMapping } from "oxalis/model/sagas/saga_helpers";
+import type { ActiveMappingInfo } from "oxalis/store";
+import { call, put, take } from "redux-saga/effects";
+import sinon from "sinon";
+import { execCall, expectValueDeepEqual } from "test/helpers/sagaHelpers";
+import { withoutUpdateTracing } from "test/helpers/saveHelpers";
+import type { APISegmentationLayer, ServerVolumeTracing } from "types/api_flow_types";
 
 mockRequire("app", {
   currentUser: {

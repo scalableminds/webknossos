@@ -1,15 +1,15 @@
 import _ from "lodash";
 import "test/mocks/lz4";
-import mockRequire from "mock-require";
-import sinon from "sinon";
 import anyTest, { type TestFn } from "ava";
+import mockRequire from "mock-require";
 import { ControlModeEnum } from "oxalis/constants";
-import {
-  tracing as TRACING,
-  annotation as ANNOTATION,
-} from "../fixtures/skeletontracing_server_objects";
-import DATASET from "../fixtures/dataset_server_object";
 import type { OxalisModel } from "oxalis/model";
+import sinon from "sinon";
+import DATASET from "../fixtures/dataset_server_object";
+import {
+  annotation as ANNOTATION,
+  tracing as TRACING,
+} from "../fixtures/skeletontracing_server_objects";
 
 const test = anyTest as TestFn<{ model: OxalisModel }>;
 

@@ -1,12 +1,12 @@
 import _ from "lodash";
 import "test/model/binary/layers/wkstore_adapter.mock.js";
-import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
-import { byteArraysToLz4Base64 } from "oxalis/workers/byte_arrays_to_lz4_base64.worker";
-import datasetServerObject from "test/fixtures/dataset_server_object";
-import mockRequire from "mock-require";
-import sinon from "sinon";
 import test from "ava";
+import mockRequire from "mock-require";
+import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
 import { MagInfo } from "oxalis/model/helpers/mag_info";
+import { byteArraysToLz4Base64 } from "oxalis/workers/byte_arrays_to_lz4_base64.worker";
+import sinon from "sinon";
+import datasetServerObject from "test/fixtures/dataset_server_object";
 import type { APIDataLayer } from "types/api_flow_types";
 
 const RequestMock = {

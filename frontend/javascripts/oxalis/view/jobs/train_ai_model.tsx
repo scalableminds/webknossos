@@ -223,7 +223,6 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
       annotationId,
       groundTruthLayerName,
     ).getMagList();
-    console.log("getintersectingmaglist", dataLayerMags, groundTruthLayerMags);
 
     return groundTruthLayerMags?.filter((groundTruthMag) =>
       dataLayerMags?.find((mag) => V3.equals(mag, groundTruthMag)),

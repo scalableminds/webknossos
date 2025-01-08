@@ -5,12 +5,28 @@ import com.scalableminds.util.image.Color
 import com.scalableminds.util.tools.TextUtils.normalizeStrong
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
-import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffAxis, NgffChannelWindow, NgffCoordinateTransformation, NgffDataset, NgffLabelsGroup, NgffMultiscalesItem, NgffMultiscalesItemV0_5, NgffOmeroMetadata}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.{
+  NgffAxis,
+  NgffChannelWindow,
+  NgffCoordinateTransformation,
+  NgffDataset,
+  NgffLabelsGroup,
+  NgffMultiscalesItem,
+  NgffMultiscalesItemV0_5,
+  NgffOmeroMetadata
+}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.LengthUnit.LengthUnit
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, CoordinateTransformation, CoordinateTransformationType, DataLayerWithMagLocators, ElementClass, LayerViewConfiguration}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  AdditionalAxis,
+  CoordinateTransformation,
+  CoordinateTransformationType,
+  DataLayerWithMagLocators,
+  ElementClass,
+  LayerViewConfiguration
+}
 import net.liftweb.common.Box
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, Json}
 
@@ -262,7 +278,7 @@ trait NgffExplorationUtils extends FoxImplicits {
           case _ =>
             ct.scale match {
               case Some(scaleList) => acc.zipWithIndex.map { case (v, i) => v / scaleList(scaleList.length - 1 - i) }
-              case _ => acc
+              case _               => acc
             }
         }
       })

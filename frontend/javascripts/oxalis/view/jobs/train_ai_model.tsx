@@ -47,6 +47,7 @@ import { computeArrayFromBoundingBox } from "libs/utils";
 import { MagSelectionFormItem } from "components/mag_selection";
 import { MagInfo } from "oxalis/model/helpers/mag_info";
 import { V3 } from "libs/mjs";
+import { getAnnotationsForTask } from "admin/api/tasks";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;
@@ -55,10 +56,12 @@ const FormItem = Form.Item;
 // only the APIAnnotations of the given annotations to train on are loaded from the backend.
 // Thus, the code needs to handle both HybridTracing | APIAnnotation where APIAnnotation is missing some information.
 // Therefore, volumeTracings with the matching volumeTracingMags are needed to get more details on each volume annotation layer and its magnifications.
-// The userBoundingBoxes are needed for checking for equal bounding box sizes. As training on fallback data is supported and an annotation is not required to have VolumeTracings,
+// As the userBoundingBoxes should have multiple sizes of the smallest one, a check with a warning should be included.
+// As training on fallback data is supported and an annotation is not required to have VolumeTracings,
 // it is necessary to save userBoundingBoxes separately and not load them from volumeTracings entries to support skeleton only annotations.
+// Moreover, in case an annotations is a task, its task bounding box should also be used for training.
 // Note that a copy of the userBoundingBoxes is included in each volume and skeleton tracing of an annotation. Thus, it doesn't matter from which the userBoundingBoxes are taken.
-export type AnnotationInfoForAIJob<GenericAnnotation> = {
+export type AnnotationInfoForAITrainingJob<GenericAnnotation> = {
   annotation: GenericAnnotation;
   dataset: APIDataset;
   volumeTracings: VolumeTracing[];
@@ -175,8 +178,8 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
   getMagsForSegmentationLayer: (annotationId: string, layerName: string) => MagInfo;
   onClose: () => void;
   ensureSavedState?: (() => Promise<void>) | null;
-  annotationInfos: Array<AnnotationInfoForAIJob<GenericAnnotation>>;
-  onAddAnnotationsInfos?: (newItems: Array<AnnotationInfoForAIJob<APIAnnotation>>) => void;
+  annotationInfos: Array<AnnotationInfoForAITrainingJob<GenericAnnotation>>;
+  onAddAnnotationsInfos?: (newItems: Array<AnnotationInfoForAITrainingJob<APIAnnotation>>) => void;
 }) {
   const [form] = Form.useForm();
 
@@ -495,7 +498,7 @@ export function CollapsibleWorkflowYamlEditor({
 }
 
 function checkAnnotationsForErrorsAndWarnings<T extends HybridTracing | APIAnnotation>(
-  annotationsWithDatasets: Array<AnnotationInfoForAIJob<T>>,
+  annotationsWithDatasets: Array<AnnotationInfoForAITrainingJob<T>>,
 ): {
   hasAnnotationErrors: boolean;
   errors: string[];
@@ -596,31 +599,42 @@ function checkBoundingBoxesForErrorsAndWarnings(
 function AnnotationsCsvInput({
   onAdd,
 }: {
-  onAdd: (newItems: Array<AnnotationInfoForAIJob<APIAnnotation>>) => void;
+  onAdd: (newItems: Array<AnnotationInfoForAITrainingJob<APIAnnotation>>) => void;
 }) {
   const [value, setValue] = useState("");
   const onClickAdd = async () => {
-    const newItems = [];
+    const annotationIdsForTraining = [];
+    const unfinishedTasks = [];
 
     const lines = value
       .split("\n")
       .map((line) => line.trim())
       .filter((line) => line !== "");
-    for (const annotationUrlOrId of lines) {
-      if (annotationUrlOrId.includes("/")) {
-        newItems.push({
-          annotationId: annotationUrlOrId.split("/").at(-1) as string,
-        });
+    for (const taskOrAnnotationIdOrUrl of lines) {
+      if (taskOrAnnotationIdOrUrl.includes("/")) {
+        annotationIdsForTraining.push(taskOrAnnotationIdOrUrl.split("/").at(-1) as string);
       } else {
-        newItems.push({
-          annotationId: annotationUrlOrId,
-        });
+        let isTask = true;
+        try {
+          const annotations = await getAnnotationsForTask(taskOrAnnotationIdOrUrl);
+          const finishedAnnotations = annotations.filter(({ state }) => state === "Finished");
+          if (annotations.length > 0) {
+            annotationIdsForTraining.push(...finishedAnnotations.map(({ id }) => id));
+          } else {
+            unfinishedTasks.push(taskOrAnnotationIdOrUrl);
+          }
+        } catch (_e) {
+          isTask = false;
+        }
+        if (!isTask) {
+          annotationIdsForTraining.push(taskOrAnnotationIdOrUrl);
+        }
       }
     }
 
     const newAnnotationsWithDatasets = await Promise.all(
-      newItems.map(async (item) => {
-        const annotation = await getAnnotationInformation(item.annotationId);
+      annotationIdsForTraining.map(async (annotationId) => {
+        const annotation = await getAnnotationInformation(annotationId);
         const dataset = await getDataset(annotation.datasetId);
 
         const volumeServerTracings: ServerVolumeTracing[] = await Promise.all(
@@ -651,6 +665,16 @@ function AnnotationsCsvInput({
             );
           }
         }
+        if (annotation.task?.boundingBox) {
+          const largestId = Math.max(...userBoundingBoxes.map(({ id }) => id));
+          userBoundingBoxes.push({
+            name: "Task Bounding Box",
+            boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(annotation.task.boundingBox),
+            color: [0, 0, 0],
+            isVisible: true,
+            id: largestId + 1,
+          });
+        }
 
         return {
           annotation,
@@ -663,14 +687,18 @@ function AnnotationsCsvInput({
         };
       }),
     );
-
+    if (unfinishedTasks.length > 0) {
+      Toast.warning(
+        `The following tasks have no finished annotations: ${unfinishedTasks.join(", ")}`,
+      );
+    }
     onAdd(newAnnotationsWithDatasets);
   };
   return (
     <div>
       <FormItem
         name="annotationCsv"
-        label="Annotations CSV"
+        label="Annotations or Tasks CSV"
         hasFeedback
         initialValue={value}
         rules={[
@@ -693,7 +721,7 @@ function AnnotationsCsvInput({
       >
         <TextArea
           className="input-monospace"
-          placeholder="annotationUrlOrId"
+          placeholder="taskOrAnnotationIdOrUrl"
           autoSize={{
             minRows: 6,
           }}

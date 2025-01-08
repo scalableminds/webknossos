@@ -12,7 +12,10 @@ import { JobState } from "admin/job/job_list_view";
 import { Link } from "react-router-dom";
 import { useGuardedFetch } from "libs/react_helpers";
 import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
-import { type AnnotationInfoForAIJob, TrainAiModelTab } from "oxalis/view/jobs/train_ai_model";
+import {
+  type AnnotationInfoForAITrainingJob,
+  TrainAiModelTab,
+} from "oxalis/view/jobs/train_ai_model";
 import { getMagInfo, getSegmentationLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type { Key } from "react";
@@ -106,7 +109,7 @@ export default function AiModelListView() {
 
 function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
   const [annotationInfosForAiJob, setAnnotationInfosForAiJob] = useState<
-    AnnotationInfoForAIJob<APIAnnotation>[]
+    AnnotationInfoForAITrainingJob<APIAnnotation>[]
   >([]);
 
   const getMagsForSegmentationLayer = (annotationId: string, layerName: string) => {

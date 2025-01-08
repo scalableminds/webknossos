@@ -28,10 +28,7 @@ class TemporalBucketManager {
   }
 
   pullBucket(bucket: DataBucket): void {
-    this.pullQueue.add({
-      bucket: bucket.zoomedAddress,
-      priority: PullQueueConstants.PRIORITY_HIGHEST,
-    });
+    bucket.addToPullQueueWithHighestPriority();
     this.pullQueue.pull();
   }
 

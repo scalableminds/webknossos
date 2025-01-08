@@ -111,10 +111,7 @@ class PullQueue {
           bucket.markAsFailed(false);
 
           if (bucket.dirty) {
-            this.add({
-              bucket: bucketAddress,
-              priority: PullQueueConstants.PRIORITY_HIGHEST,
-            });
+            bucket.addToPullQueueWithHighestPriority();
           }
         }
       }

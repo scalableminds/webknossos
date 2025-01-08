@@ -767,10 +767,7 @@ export class DataBucket {
     if (this.isRequested()) {
       needsToAwaitBucket = true;
     } else if (this.needsRequest()) {
-      this.cube.pullQueue.add({
-        bucket: this.zoomedAddress,
-        priority: PullQueueConstants.PRIORITY_HIGHEST,
-      });
+      this.addToPullQueueWithHighestPriority();
       this.cube.pullQueue.pull();
       needsToAwaitBucket = true;
     } else if (this.isMissing()) {
@@ -791,5 +788,12 @@ export class DataBucket {
       // bugs which could arise in combination with MISSING buckets.
       warnAwaitedMissingBucket();
     }
+  }
+
+  addToPullQueueWithHighestPriority() {
+    this.cube.pullQueue.add({
+      bucket: this.zoomedAddress,
+      priority: PullQueueConstants.PRIORITY_HIGHEST,
+    });
   }
 }

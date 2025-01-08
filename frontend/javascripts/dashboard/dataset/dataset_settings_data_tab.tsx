@@ -350,7 +350,7 @@ function SimpleLayerForm({
     },
     initialJobKeyExtractor: (job) =>
       job.type === "find_largest_segment_id" && job.datasetName === dataset?.name
-        ? job.datasetName ?? "largest_segment_id"
+        ? (job.datasetName ?? "largest_segment_id")
         : null,
   });
   const activeJob = runningJobs[0];

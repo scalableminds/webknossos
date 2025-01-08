@@ -12,7 +12,8 @@
       "libs/fps_meter.ts",
       "libs/parse_stl_buffer.ts",
       "libs/trackball_controls.ts",
-      "*.d.ts"
+      "*.d.ts",
+      "frontend/javascripts/test/snapshots/*"
     ],
     "rules": {
       "recommended": true,
@@ -49,7 +50,8 @@
         "useValidAnchor": "off",
         "useKeyWithClickEvents": "off",
         "useIframeTitle": "off",
-        "noAriaHiddenOnFocusable": "off"
+        "noAriaHiddenOnFocusable": "off",
+        "noLabelWithoutControl": "off"
       },
       "performance": {
         "noDelete": "off"
@@ -57,8 +59,7 @@
       "correctness": {
         "noUnusedVariables": "error",
         "noRenderReturnValue": "off",
-        "useHookAtTopLevel": "error",
-        "noUnusedImports": "error"
+        "useHookAtTopLevel": "error"
       },
       "suspicious": {
         "noExplicitAny": "off",

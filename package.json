@@ -9,7 +9,7 @@
     "url": "git://github.com/scalableminds/webknossos.git"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.8.3",
+    "@biomejs/biome": "^1.9.4",
     "@redux-saga/testing-utils": "^1.1.5",
     "@shaderfrog/glsl-parser": "^0.3.0",
     "@types/color-hash": "^1.0.2",

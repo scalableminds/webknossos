@@ -214,7 +214,7 @@ function TreeHierarchyView(props: Props) {
     const parentGroupId =
       dragTargetNode.type === GroupTypeEnum.GROUP
         ? dragTargetNode.id
-        : props.trees[dragTargetNode.id].groupId ?? MISSING_GROUP_ID;
+        : (props.trees[dragTargetNode.id].groupId ?? MISSING_GROUP_ID);
 
     let updatedTreeGroups: TreeGroup[] = props.treeGroups;
     if (draggedNode.type === GroupTypeEnum.TREE) {

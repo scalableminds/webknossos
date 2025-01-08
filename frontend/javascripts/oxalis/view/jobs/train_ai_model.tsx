@@ -615,7 +615,9 @@ function AnnotationsCsvInput({
       } else {
         let isTask = true;
         try {
-          const annotations = await getAnnotationsForTask(taskOrAnnotationIdOrUrl);
+          const annotations = await getAnnotationsForTask(taskOrAnnotationIdOrUrl, {
+            showErrorToast: false,
+          });
           const finishedAnnotations = annotations.filter(({ state }) => state === "Finished");
           if (annotations.length > 0) {
             annotationIdsForTraining.push(...finishedAnnotations.map(({ id }) => id));

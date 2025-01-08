@@ -19,19 +19,17 @@ object NgffDataset {
   implicit val jsonFormat: OFormat[NgffDataset] = Json.format[NgffDataset]
 }
 
-case class NgffAxis(name: String, `type`: String, unit: Option[String] = None, units: Option[String] = None) {
+case class NgffAxis(name: String, `type`: String, unit: Option[String] = None) {
 
-  def lengthUnit: Box[models.LengthUnit.Value] = {
-    val u = units.orElse(unit)
+  def lengthUnit: Box[models.LengthUnit.Value] =
     if (`type` != "space")
       Failure(f"Could not convert NGFF unit $name of type ${`type`} to LengthUnit")
     else {
-      u match {
+      unit match {
         case None | Some("") => Full(VoxelSize.DEFAULT_UNIT)
         case Some(someUnit)  => LengthUnit.fromString(someUnit)
       }
     }
-  }
 }
 
 object NgffAxis {

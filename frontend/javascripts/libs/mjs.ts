@@ -254,6 +254,9 @@ const V2 = {
   clone(a: Vector2): Vector2 {
     return [a[0], a[1]];
   },
+  prod(a: Vector2) {
+    return a[0] * a[1];
+  },
 };
 
 const _tmpVec: Vector3 = [0, 0, 0];

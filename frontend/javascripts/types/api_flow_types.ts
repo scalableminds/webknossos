@@ -136,7 +136,6 @@ export type APIDataSource = Readonly<MutableAPIDataSource>;
 export type APIDataStore = {
   readonly name: string;
   readonly url: string;
-  readonly isScratch: boolean;
   readonly allowsUpload: boolean;
   readonly jobsEnabled: boolean;
   readonly jobsSupportedByAvailableWorkers: APIJobType[];

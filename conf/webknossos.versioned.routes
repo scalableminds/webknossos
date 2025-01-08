@@ -24,10 +24,7 @@ GET      /v8/datasets/:organizationId/:datasetName/isValidNewName             co
 GET      /v8/datasets/:organizationId/:datasetName                            controllers.LegacyApiController.readDatasetV8(organizationId: String, datasetName: String, sharingToken: Option[String])
 GET      /v8/tasks/:id                                                        controllers.LegacyApiController.readTaskV8(id: ObjectId)
 POST     /v8/tasks                                                            controllers.LegacyApiController.createTaskV8()
-PUT      /v8/tasks/:id                                                        controllers.LegacyApiController.updateTaskV8(id: ObjectId)
 GET      /v8/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: ObjectId, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET      /v8/annotations/:id/info                                             controllers.LegacyApiController.annotationInfoV8(id: ObjectId, timestamp: Long)
-GET      /v8/tasks/:id/annotations                                            controllers.LegacyApiController.annotationsForTaskV8(id: ObjectId)
 
 ->       /v8/                                                                 webknossos.latest.Routes
 #v7: support changes to v9
@@ -38,10 +35,7 @@ GET      /v7/datasets/:organizationId/:datasetName/isValidNewName             co
 GET      /v7/datasets/:organizationId/:datasetName                            controllers.LegacyApiController.readDatasetV8(organizationId: String, datasetName: String, sharingToken: Option[String])
 GET      /v7/tasks/:id                                                        controllers.LegacyApiController.readTaskV8(id: ObjectId)
 POST     /v7/tasks                                                            controllers.LegacyApiController.createTaskV8()
-PUT      /v7/tasks/:id                                                        controllers.LegacyApiController.updateTaskV8(id: ObjectId)
 GET      /v7/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: ObjectId, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET      /v7/annotations/:id/info                                             controllers.LegacyApiController.annotationInfoV8(id: ObjectId, timestamp: Long)
-GET      /v7/tasks/:id/annotations                                            controllers.LegacyApiController.annotationsForTaskV8(id: ObjectId)
 
 # v7: support changes to v8
 GET      /v7/datasets                                                         controllers.LegacyApiController.listDatasetsV7(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
@@ -55,10 +49,7 @@ PATCH    /v6/datasets/:organizationId/:datasetName/teams                      co
 GET      /v6/datasets/:organizationId/:datasetName/isValidNewName             controllers.LegacyApiController.isValidNewNameV8(datasetName: String, organizationId: String)
 GET      /v6/tasks/:id                                                        controllers.LegacyApiController.readTaskV8(id: ObjectId)
 POST     /v6/tasks                                                            controllers.LegacyApiController.createTaskV8()
-PUT      /v6/tasks/:id                                                        controllers.LegacyApiController.updateTaskV8(id: ObjectId)
 GET      /v6/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: ObjectId, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET      /v6/annotations/:id/info                                             controllers.LegacyApiController.annotationInfoV8(id: ObjectId, timestamp: Long)
-GET      /v6/tasks/:id/annotations                                            controllers.LegacyApiController.annotationsForTaskV8(id: ObjectId)
 
 
 # v6: support changes to v7
@@ -75,10 +66,7 @@ PATCH    /v5/datasets/:organizationId/:datasetName/teams                      co
 GET      /v5/datasets/:organizationId/:datasetName/isValidNewName             controllers.LegacyApiController.isValidNewNameV8(datasetName: String, organizationId: String)
 GET      /v5/tasks/:id                                                        controllers.LegacyApiController.readTaskV8(id: ObjectId)
 POST     /v5/tasks                                                            controllers.LegacyApiController.createTaskV8()
-PUT      /v5/tasks/:id                                                        controllers.LegacyApiController.updateTaskV8(id: ObjectId)
 GET      /v5/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: ObjectId, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET      /v5/annotations/:id/info                                             controllers.LegacyApiController.annotationInfoV8(id: ObjectId, timestamp: Long)
-GET      /v5/tasks/:id/annotations                                            controllers.LegacyApiController.annotationsForTaskV8(id: ObjectId)
 
 # v5: support changes to v7
 GET      /v5/datasets                                                         controllers.LegacyApiController.listDatasetsV6(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])

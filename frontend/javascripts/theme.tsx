@@ -28,6 +28,11 @@ const globalDesignToken: Partial<AliasToken> = {
     '"Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;',
 };
 
+const lightGlobalToken = theme.getDesignToken({
+  token: globalDesignToken,
+  algorithm: theme.defaultAlgorithm,
+});
+
 const darkGlobalToken = theme.getDesignToken({
   token: globalDesignToken,
   algorithm: theme.darkAlgorithm,
@@ -87,7 +92,7 @@ export function getAntdTheme(userTheme: Theme) {
     },
     Tree: {
       colorBgContainer: "transparent",
-      directoryNodeSelectedBg: ColorWKBlue,
+      nodeSelectedBg: lightGlobalToken.blue3,
       titleHeight: 20, // default is 24px,
       marginXXS: 2, // default is 4px; adjust to match checkboxes because of smaller titleHeight
     },

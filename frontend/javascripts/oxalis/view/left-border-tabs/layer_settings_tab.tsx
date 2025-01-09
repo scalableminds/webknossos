@@ -253,9 +253,8 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
       <FastTooltip
         title={
           transform != null
-            ? `This layer is rendered with ${
-                typeToLabel[transform.type]
-              } transformation. Click to render this layer without any transforms.`
+            ? `This layer is rendered with ${typeToLabel[transform.type]
+            } transformation. Click to render this layer without any transforms.`
             : "This layer is shown natively (i.e., without any transformations)."
         }
       >
@@ -649,15 +648,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const possibleItems: MenuProps["items"] = [
       isVolumeTracing && !isDisabled && maybeFallbackLayer != null && isAdminOrManager
         ? {
-            label: this.getMergeWithFallbackLayerButton(layer),
-            key: "mergeWithFallbackLayerButton",
-          }
+          label: this.getMergeWithFallbackLayerButton(layer),
+          key: "mergeWithFallbackLayerButton",
+        }
         : null,
       this.props.dataset.isEditable
         ? {
-            label: this.getReloadDataButton(layerName, isHistogramAvailable, maybeFallbackLayer),
-            key: "reloadDataButton",
-          }
+          label: this.getReloadDataButton(layerName, isHistogramAvailable, maybeFallbackLayer),
+          key: "reloadDataButton",
+        }
         : null,
       {
         label: this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing),
@@ -665,13 +664,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       },
       isAnnotationLayer && !isOnlyAnnotationLayer
         ? {
-            label: (
-              <div className="flex-item">
-                {this.getDeleteAnnotationLayerDropdownOption(readableName, layer)}
-              </div>
-            ),
-            key: "deleteAnnotationLayer",
-          }
+          label: (
+            <div className="flex-item">
+              {this.getDeleteAnnotationLayerDropdownOption(readableName, layer)}
+            </div>
+          ),
+          key: "deleteAnnotationLayer",
+        }
         : null,
       hasHistogram && !isDisabled
         ? { label: this.getEditMinMaxButton(layerName, isInEditMode), key: "editMinMax" }
@@ -680,13 +679,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         ? { label: this.getClipButton(layerName, isInEditMode), key: "clipButton" }
         : null,
       this.props.dataset.dataStore.jobsEnabled &&
-      this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-        APIJobType.COMPUTE_SEGMENT_INDEX_FILE,
-      )
+        this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+          APIJobType.COMPUTE_SEGMENT_INDEX_FILE,
+        )
         ? {
-            label: this.getComputeSegmentIndexFileButton(layerName, isSegmentation),
-            key: "computeSegmentIndexFileButton",
-          }
+          label: this.getComputeSegmentIndexFileButton(layerName, isSegmentation),
+          key: "computeSegmentIndexFileButton",
+        }
         : null,
     ];
     const items = possibleItems.filter((el) => el);
@@ -780,11 +779,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <div className="flex-item">
             {isVolumeTracing ? (
               <FastTooltip
-                title={`This layer is a volume annotation.${
-                  maybeFallbackLayer
-                    ? ` It is based on the dataset's original layer ${maybeFallbackLayer}`
-                    : ""
-                }`}
+                title={`This layer is a volume annotation.${maybeFallbackLayer
+                  ? ` It is based on the dataset's original layer ${maybeFallbackLayer}`
+                  : ""
+                  }`}
                 placement="left"
               >
                 <i
@@ -1120,8 +1118,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       fallbackLayerInfo != null
         ? fallbackLayerInfo.resolutions
         : // This is only a heuristic. At some point, user configuration
-          // might make sense here.
-          getWidestMags(this.props.dataset);
+        // might make sense here.
+        getWidestMags(this.props.dataset);
 
     const getMaxDim = (mag: Vector3) => Math.max(...mag);
 
@@ -1523,7 +1521,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         {this.getSkeletonLayer()}
 
         {this.props.tracing.restrictions.allowUpdate &&
-        this.props.controlMode === ControlModeEnum.TRACE ? (
+          this.props.controlMode === ControlModeEnum.TRACE ? (
           <>
             <Divider />
             <Row justify="center" align="middle">

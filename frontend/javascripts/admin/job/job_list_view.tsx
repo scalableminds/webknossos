@@ -11,6 +11,7 @@ import {
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { cancelJob, getJobs } from "admin/admin_rest_api";
+import { getShowTrainingDataLink } from "admin/voxelytics/ai_model_list_view";
 import { Input, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
@@ -25,7 +26,6 @@ import type * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { type APIJob, APIJobType, type APIUserBase } from "types/api_flow_types";
-import { getShowTrainingDataLink } from "admin/voxelytics/ai_model_list_view";
 
 // Unfortunately, the twoToneColor (nor the style) prop don't support
 // CSS variables.

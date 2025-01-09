@@ -1,7 +1,7 @@
+import ErrorHandling from "libs/error_handling";
 import type { Vector3 } from "oxalis/constants";
 import { getLayerBoundingBox, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import ErrorHandling from "libs/error_handling";
 import LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import Mappings from "oxalis/model/bucket_data_handling/mappings";
 import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";

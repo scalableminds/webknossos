@@ -1,8 +1,8 @@
-import type { Dispatch } from "redux";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import { getUid } from "libs/uid_generator";
-import Date from "libs/date";
 import Deferred from "libs/async/deferred";
+import Date from "libs/date";
+import { getUid } from "libs/uid_generator";
+import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import type { Dispatch } from "redux";
 export type SaveQueueType = "skeleton" | "volume" | "mapping";
 
 export type PushSaveQueueTransaction = ReturnType<typeof pushSaveQueueTransaction>;

@@ -1,66 +1,66 @@
-import { Alert, Empty, Space, Tooltip, type TreeProps } from "antd";
-import { connect } from "react-redux";
-import Maybe from "data.maybe";
-import React from "react";
-import _ from "lodash";
-import type {
-  APISegmentationLayer,
-  APIDataset,
-  APIConnectomeFile,
-  APIDataSourceId,
-} from "types/api_flow_types";
-import { diffArrays, unique, map3 } from "libs/utils";
-import { getTreeNameForAgglomerateSkeleton } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import {
-  getSynapsesOfAgglomerates,
-  getSynapseSources,
   getSynapseDestinations,
   getSynapsePositions,
+  getSynapseSources,
   getSynapseTypes,
+  getSynapsesOfAgglomerates,
 } from "admin/admin_rest_api";
-import {
-  getVisibleOrLastSegmentationLayer,
-  getMappingInfo,
-} from "oxalis/model/accessors/dataset_accessor";
-import {
-  initializeConnectomeTracingAction,
-  removeConnectomeTracingAction,
-  deleteConnectomeTreesAction,
-  addConnectomeTreesAction,
-  setConnectomeTreesVisibilityAction,
-  setActiveConnectomeAgglomerateIdsAction,
-  loadConnectomeAgglomerateSkeletonAction,
-  removeConnectomeAgglomerateSkeletonAction,
-} from "oxalis/model/actions/connectome_actions";
+import { Alert, Empty, Space, Tooltip, type TreeProps } from "antd";
+import Maybe from "data.maybe";
+import DiffableMap from "libs/diffable_map";
 import { stringToAntdColorPresetRgb } from "libs/format_utils";
-import { setMappingAction } from "oxalis/model/actions/settings_actions";
-import ButtonComponent from "oxalis/view/components/button_component";
+import Toast from "libs/toast";
+import { diffArrays, map3, unique } from "libs/utils";
+import _ from "lodash";
 import { TreeTypeEnum, type Vector3 } from "oxalis/constants";
 import Constants, { MappingStatusEnum } from "oxalis/constants";
-import DiffableMap from "libs/diffable_map";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import {
+  getMappingInfo,
+  getVisibleOrLastSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
+import { getTreeNameForAgglomerateSkeleton } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  addConnectomeTreesAction,
+  deleteConnectomeTreesAction,
+  initializeConnectomeTracingAction,
+  loadConnectomeAgglomerateSkeletonAction,
+  removeConnectomeAgglomerateSkeletonAction,
+  removeConnectomeTracingAction,
+  setActiveConnectomeAgglomerateIdsAction,
+  setConnectomeTreesVisibilityAction,
+} from "oxalis/model/actions/connectome_actions";
+import { setMappingAction } from "oxalis/model/actions/settings_actions";
 import EdgeCollection from "oxalis/model/edge_collection";
-import InputComponent from "oxalis/view/components/input_component";
 import type {
-  OxalisState,
-  MutableTree,
-  MutableNode,
-  MutableTreeMap,
   ActiveMappingInfo,
+  MutableNode,
+  MutableTree,
+  MutableTreeMap,
+  OxalisState,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import Toast from "libs/toast";
-import getSceneController from "oxalis/controller/scene_controller_provider";
+import ButtonComponent from "oxalis/view/components/button_component";
+import InputComponent from "oxalis/view/components/input_component";
+import ConnectomeFilters from "oxalis/view/right-border-tabs/connectome_tab/connectome_filters";
+import ConnectomeSettings from "oxalis/view/right-border-tabs/connectome_tab/connectome_settings";
 import type {
-  ConnectomeData,
   Agglomerate,
+  ConnectomeData,
   TreeNode,
 } from "oxalis/view/right-border-tabs/connectome_tab/synapse_tree";
 import SynapseTree, {
   convertConnectomeToTreeData,
 } from "oxalis/view/right-border-tabs/connectome_tab/synapse_tree";
-import ConnectomeFilters from "oxalis/view/right-border-tabs/connectome_tab/connectome_filters";
-import ConnectomeSettings from "oxalis/view/right-border-tabs/connectome_tab/connectome_settings";
+import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import React from "react";
+import { connect } from "react-redux";
+import type {
+  APIConnectomeFile,
+  APIDataSourceId,
+  APIDataset,
+  APISegmentationLayer,
+} from "types/api_flow_types";
 const connectomeTabId = "connectome-view";
 type StateProps = {
   dataset: APIDataset;

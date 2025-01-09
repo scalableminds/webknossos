@@ -1,18 +1,18 @@
-import { Button, Result, Layout, Spin } from "antd";
 import { GiftTwoTone } from "@ant-design/icons";
-import { useHistory } from "react-router-dom";
-import { AsyncButton } from "components/async_clickables";
-import { useState } from "react";
-import AuthenticationModal from "admin/auth/authentication_modal";
-import { useFetch } from "libs/react_helpers";
 import {
   getOrganizationByInvite,
   joinOrganization,
   switchToOrganization,
 } from "admin/admin_rest_api";
-import type { APIUser } from "types/api_flow_types";
+import AuthenticationModal from "admin/auth/authentication_modal";
+import { Button, Layout, Result, Spin } from "antd";
+import { AsyncButton } from "components/async_clickables";
+import { useFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
 import { location } from "libs/window";
+import { useState } from "react";
+import { useHistory } from "react-router-dom";
+import type { APIUser } from "types/api_flow_types";
 
 const { Content } = Layout;
 

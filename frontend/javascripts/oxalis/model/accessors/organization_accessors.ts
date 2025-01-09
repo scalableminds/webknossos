@@ -1,5 +1,5 @@
-import type { APIOrganization } from "types/api_flow_types";
 import messages from "messages";
+import type { APIOrganization } from "types/api_flow_types";
 
 export function enforceActiveOrganization(
   activeOrganization: APIOrganization | null,

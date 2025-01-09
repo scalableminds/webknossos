@@ -1,6 +1,6 @@
+import { getDatastores } from "admin/admin_rest_api";
 import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
 import { useFetch } from "libs/react_helpers";
-import { getDatastores } from "admin/admin_rest_api";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { useHistory } from "react-router-dom";

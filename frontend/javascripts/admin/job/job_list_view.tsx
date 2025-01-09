@@ -1,30 +1,30 @@
-import _ from "lodash";
-import { PropTypes } from "@scalableminds/prop-types";
-import { confirmAsync } from "dashboard/dataset/helper_components";
-import { Link } from "react-router-dom";
-import { Table, Spin, Input, Tooltip, Typography } from "antd";
 import {
   CheckCircleTwoTone,
   ClockCircleTwoTone,
-  CloseCircleTwoTone,
   CloseCircleOutlined,
+  CloseCircleTwoTone,
   DownloadOutlined,
   EyeOutlined,
+  InfoCircleOutlined,
   LoadingOutlined,
   QuestionCircleTwoTone,
-  InfoCircleOutlined,
 } from "@ant-design/icons";
-import type * as React from "react";
-import { type APIJob, APIJobType, type APIUserBase } from "types/api_flow_types";
-import { getJobs, cancelJob } from "admin/admin_rest_api";
-import Persistence from "libs/persistence";
-import * as Utils from "libs/utils";
-import FormattedDate from "components/formatted_date";
+import { PropTypes } from "@scalableminds/prop-types";
+import { cancelJob, getJobs } from "admin/admin_rest_api";
+import { Input, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
-import { useEffect, useState } from "react";
-import { useInterval } from "libs/react_helpers";
+import FormattedDate from "components/formatted_date";
+import { confirmAsync } from "dashboard/dataset/helper_components";
 import { formatWkLibsNdBBox } from "libs/format_utils";
+import Persistence from "libs/persistence";
+import { useInterval } from "libs/react_helpers";
+import * as Utils from "libs/utils";
+import _ from "lodash";
 import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
+import type * as React from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { type APIJob, APIJobType, type APIUserBase } from "types/api_flow_types";
 
 // Unfortunately, the twoToneColor (nor the style) prop don't support
 // CSS variables.

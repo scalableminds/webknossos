@@ -1,5 +1,6 @@
 import {
   getAnnotationCompoundInformation,
+  getAnnotationInformation,
   getTracingForAnnotationType,
   getUnversionedAnnotationInformation,
 } from "admin/admin_rest_api";

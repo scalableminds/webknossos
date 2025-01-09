@@ -13,6 +13,49 @@ const ColorWKLinkHover = "#a8b4ff"; // slightly brighter WK Blue
 const ColorWKDarkGrey = "#1f1f1f";
 const ColorWhite = "white";
 const ColorBlack = "black";
+const ColorDarkBg = "#383d48";
+
+// Ant Design Customizations
+const globalDesignToken: Partial<AliasToken> = {
+  colorPrimary: ColorWKBlue,
+  colorLink: ColorWKBlue,
+  colorLinkHover: ColorWKLinkHover,
+  colorInfo: ColorWKBlue,
+  blue: ColorWKBlue,
+  borderRadius: 4,
+  fontFamily:
+    '"Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;',
+};
+
+const darkGlobalToken = theme.getDesignToken({
+  token: globalDesignToken,
+  algorithm: theme.darkAlgorithm,
+});
+
+const OverridesForNavbarAndStatusBarTheme: ThemeConfig = {
+  components: {
+    Radio: {
+      buttonCheckedBg: darkGlobalToken.colorPrimary,
+      buttonSolidCheckedBg: darkGlobalToken.colorPrimary,
+      buttonBg: ColorDarkBg,
+    },
+    Button: {
+      primaryShadow: "none",
+    },
+  },
+  token: {
+    colorBgContainer: ColorDarkBg,
+    colorBorder: "#4e4e4e",
+    colorPrimaryBorder: "#4e4e4e",
+    // Use a non-transparent color for disabled backgrounds. Otherwise the
+    // erase-buttons which hide under their neighbors would not hide properly.
+    colorBgContainerDisabled: "#313131",
+  },
+};
+export const NavAndStatusBarTheme = _.merge(
+  getAntdTheme("dark"),
+  OverridesForNavbarAndStatusBarTheme,
+);
 
 export function getSystemColorTheme(): Theme {
   // @ts-ignore
@@ -49,18 +92,6 @@ export function getAntdTheme(userTheme: Theme) {
     },
   };
 
-  // Ant Design Customizations
-  const globalDesignToken: Partial<AliasToken> = {
-    colorPrimary: ColorWKBlue,
-    colorLink: ColorWKBlue,
-    colorLinkHover: ColorWKLinkHover,
-    colorInfo: ColorWKBlue,
-    blue: ColorWKBlue,
-    borderRadius: 4,
-    fontFamily:
-      '"Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;',
-  };
-
   if (userTheme === "dark") {
     algorithm = theme.darkAlgorithm;
     components.Tree = {
@@ -69,7 +100,13 @@ export function getAntdTheme(userTheme: Theme) {
       nodeHoverBg: ColorWKDarkGrey,
     };
   }
-  return { algorithm, token: globalDesignToken, components };
+  return {
+    algorithm,
+    // Without the clone(), the default theme shows dark backgrounds in various components.
+    // Apparently, antd mutates this variable?
+    token: _.clone(globalDesignToken),
+    components,
+  };
 }
 
 export default function GlobalThemeProvider({

@@ -1,5 +1,6 @@
 import {
   doWithToken,
+  downsampleSegmentation,
   finishAnnotation,
   getMappingsForDatasetLayer,
   sendAnalyticsEvent,

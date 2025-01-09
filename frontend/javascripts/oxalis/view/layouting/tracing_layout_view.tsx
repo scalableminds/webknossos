@@ -40,6 +40,7 @@ import * as React from "react";
 import { connect } from "react-redux";
 import { type RouteComponentProps, withRouter } from "react-router-dom";
 import type { Dispatch } from "redux";
+import { NavAndStatusBarTheme } from "theme";
 import type { APICompoundType } from "types/api_flow_types";
 import TabTitle from "../components/tab_title_component";
 import { determineLayout } from "./default_layout_configs";
@@ -296,32 +297,34 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
           <CrossOriginApi />
           <Layout className="tracing-layout">
             <RenderToPortal portalId="navbarTracingSlot">
-              {status === "loaded" ? (
-                <div
-                  style={{
-                    flex: "0 1 auto",
-                    zIndex: 210,
-                    display: "flex",
-                  }}
-                >
-                  <ActionBarView
-                    layoutProps={{
-                      storedLayoutNamesForView: currentLayoutNames,
-                      activeLayout: activeLayoutName,
-                      layoutKey: layoutType,
-                      setCurrentLayout: (layoutName) => {
-                        this.setState({
-                          activeLayoutName: layoutName,
-                        });
-                        setActiveLayout(layoutType, layoutName);
-                      },
-                      saveCurrentLayout: this.saveCurrentLayout,
-                      setAutoSaveLayouts: this.props.setAutoSaveLayouts,
-                      autoSaveLayouts: this.props.autoSaveLayouts,
+              <ConfigProvider theme={NavAndStatusBarTheme}>
+                {status === "loaded" ? (
+                  <div
+                    style={{
+                      flex: "0 1 auto",
+                      zIndex: 210,
+                      display: "flex",
                     }}
-                  />
-                </div>
-              ) : null}
+                  >
+                    <ActionBarView
+                      layoutProps={{
+                        storedLayoutNamesForView: currentLayoutNames,
+                        activeLayout: activeLayoutName,
+                        layoutKey: layoutType,
+                        setCurrentLayout: (layoutName) => {
+                          this.setState({
+                            activeLayoutName: layoutName,
+                          });
+                          setActiveLayout(layoutType, layoutName);
+                        },
+                        saveCurrentLayout: this.saveCurrentLayout,
+                        setAutoSaveLayouts: this.props.setAutoSaveLayouts,
+                        autoSaveLayouts: this.props.autoSaveLayouts,
+                      }}
+                    />
+                  </div>
+                ) : null}
+              </ConfigProvider>
             </RenderToPortal>
             <Layout
               style={{

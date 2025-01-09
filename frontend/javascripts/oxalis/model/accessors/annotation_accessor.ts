@@ -1,6 +1,7 @@
 import _ from "lodash";
 import type { OxalisState, Tracing } from "oxalis/store";
 import type { EmptyObject } from "types/globals";
+import { getVolumeTracingById } from "./volumetracing_accessor";
 
 export function mayEditAnnotationProperties(state: OxalisState) {
   const { owner, restrictions } = state.tracing;

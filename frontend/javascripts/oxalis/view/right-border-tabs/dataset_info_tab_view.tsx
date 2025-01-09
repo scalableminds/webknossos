@@ -461,7 +461,9 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             <Typography.Text>
               {description}
               <FastTooltip title="Edit">
+                {/* biome-ignore lint/a11y/useFocusableInteractive: <explanation> */}
                 <div
+                  // biome-ignore lint/a11y/useSemanticElements: <explanation>
                   role="button"
                   className="ant-typography-edit"
                   style={{

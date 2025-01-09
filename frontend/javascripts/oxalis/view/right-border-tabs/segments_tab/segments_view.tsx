@@ -125,6 +125,7 @@ import {
   additionallyExpandGroup,
   createGroupToParentMap,
   createGroupToSegmentsMap,
+  findGroup,
   findParentIdForGroupId,
   getExpandedGroups,
   getGroupByIdWithSubgroups,
@@ -1980,10 +1981,10 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   renderDetailsForSelection() {
-    const { segments } = this.props.selectedIds;
-    if (segments.length === 1) {
+    const { segments: selectedSegmentIds, group: selectedGroupId } = this.props.selectedIds;
+    if (selectedSegmentIds.length === 1) {
       const readOnly = !this.props.allowUpdate;
-      const segment = this.props.segments?.getNullable(segments[0]);
+      const segment = this.props.segments?.getNullable(selectedSegmentIds[0]);
       if (segment == null) {
         return <>Cannot find details for selected segment.</>;
       }
@@ -2010,6 +2011,67 @@ class SegmentsView extends React.Component<Props, State> {
               setMetadata={this.setMetadata}
               readOnly={readOnly}
             />
+          </tbody>
+        </table>
+      );
+    } else if (selectedGroupId != null) {
+      const { segmentGroups } = this.props;
+      const activeGroup = findGroup(this.props.segmentGroups, selectedGroupId);
+      if (!activeGroup || this.props.segments == null) {
+        return null;
+      }
+
+      const groupToSegmentsMap = createGroupToSegmentsMap(this.props.segments);
+      const groupWithSubgroups = getGroupByIdWithSubgroups(segmentGroups, selectedGroupId);
+
+      return (
+        <table className="metadata-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th colSpan={2}>{activeGroup.groupId}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Name</td>
+              <td colSpan={2}>
+                <InputWithUpdateOnBlur
+                  value={activeGroup.name || ""}
+                  onChange={(newName) => {
+                    if (this.props.visibleSegmentationLayer == null) {
+                      return;
+                    }
+                    api.tracing.renameSegmentGroup(
+                      activeGroup.groupId,
+                      newName,
+                      this.props.visibleSegmentationLayer.name,
+                    );
+                  }}
+                />
+              </td>
+            </tr>
+            {groupWithSubgroups.length === 1 ? (
+              <tr>
+                <td>Segment Count</td>
+                <td colSpan={2}>{groupToSegmentsMap[selectedGroupId]?.length ?? 0}</td>
+              </tr>
+            ) : (
+              <>
+                <tr>
+                  <td>Segment Count (direct children)</td>
+                  <td colSpan={2}>{groupToSegmentsMap[selectedGroupId]?.length ?? 0}</td>
+                </tr>
+                <tr>
+                  <td>Segment Count (all children)</td>
+                  <td colSpan={2}>
+                    {_.sum(
+                      groupWithSubgroups.map((groupId) => groupToSegmentsMap[groupId]?.length ?? 0),
+                    )}
+                  </td>
+                </tr>
+              </>
+            )}
           </tbody>
         </table>
       );

@@ -60,6 +60,7 @@ import {
 import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_flow_types";
 import { mapGroups } from "../accessors/skeletontracing_accessor";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
+
 type SegmentUpdateInfo =
   | {
       readonly type: "UPDATE_VOLUME_TRACING";

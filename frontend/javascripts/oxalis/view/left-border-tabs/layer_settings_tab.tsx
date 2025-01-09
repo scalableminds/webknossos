@@ -86,7 +86,7 @@ import {
   reloadHistogramAction,
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
-import type { Vector3, ControlMode } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import Constants, { ControlModeEnum, MappingStatusEnum } from "oxalis/constants";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import LinkButton from "components/link_button";
@@ -97,9 +97,6 @@ import type {
   DatasetLayerConfiguration,
   OxalisState,
   UserConfiguration,
-  HistogramDataForAllLayers,
-  Tracing,
-  Task,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
@@ -132,33 +129,8 @@ import {
 } from "types/schemas/dataset_view_configuration.schema";
 import defaultState from "oxalis/default_state";
 
-type DatasetSettingsProps = {
-  userConfiguration: UserConfiguration;
-  datasetConfiguration: DatasetConfiguration;
-  dataset: APIDataset;
-  onChange: (propertyName: keyof DatasetConfiguration, value: any) => void;
-  onChangeLayer: (
-    layerName: string,
-    propertyName: keyof DatasetLayerConfiguration,
-    value: any,
-  ) => void;
-  onClipHistogram: (layerName: string, shouldAdjustClipRange: boolean) => Promise<void>;
-  histogramData: HistogramDataForAllLayers;
-  onChangeRadius: (value: number) => void;
-  onChangeShowSkeletons: (arg0: boolean) => void;
-  onSetPosition: (arg0: Vector3) => void;
-  onZoomToMag: (layerName: string, arg0: Vector3) => number;
-  onChangeUser: (key: keyof UserConfiguration, value: any) => void;
-  reloadHistogram: (layerName: string) => void;
-  tracing: Tracing;
-  task: Task | null | undefined;
-  onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void;
-  controlMode: ControlMode;
-  isArbitraryMode: boolean;
-  isAdminOrDatasetManager: boolean;
-  isAdminOrManager: boolean;
-  isSuperUser: boolean;
-};
+type DatasetSettingsProps = ReturnType<typeof mapStateToProps> &
+  ReturnType<typeof mapDispatchToProps>;
 
 type State = {
   // If this is set to not-null, the downsampling modal
@@ -414,11 +386,19 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
-  getReloadDataButton = (layerName: string) => {
+  getReloadDataButton = (
+    layerName: string,
+    isHistogramAvailable: boolean,
+    maybeFallbackLayerName: string | null,
+  ) => {
     const tooltipText = "Use this when the data on the server changed.";
     return (
       <FastTooltip title={tooltipText}>
-        <div onClick={() => this.reloadLayerData(layerName)}>
+        <div
+          onClick={() =>
+            this.reloadLayerData(layerName, isHistogramAvailable, maybeFallbackLayerName)
+          }
+        >
           <ReloadOutlined className="icon-margin-right" />
           Reload data from server
         </div>
@@ -613,6 +593,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     isInEditMode: boolean,
     layerName: string,
     layerSettings: DatasetLayerConfiguration,
+    isHistogramAvailable: boolean,
     hasLessThanTwoColorLayers: boolean = true,
   ) => {
     const { tracing, dataset, isAdminOrManager } = this.props;
@@ -673,7 +654,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           }
         : null,
       this.props.dataset.isEditable
-        ? { label: this.getReloadDataButton(layerName), key: "reloadDataButton" }
+        ? {
+            label: this.getReloadDataButton(layerName, isHistogramAvailable, maybeFallbackLayer),
+            key: "reloadDataButton",
+          }
         : null,
       {
         label: this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing),
@@ -927,9 +911,37 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         defaultValue={defaultDatasetViewConfigurationWithoutNull.segmentationPatternOpacity}
       />
     );
+
+    const isProofreadingMode = this.props.activeTool === "PROOFREAD";
+    const isSelectiveVisibilityDisabled = isProofreadingMode;
+
+    const selectiveVisibilitySwitch = (
+      <FastTooltip
+        title={
+          isSelectiveVisibilityDisabled
+            ? "This behavior is overriden by the 'selective segment visibility' button in the toolbar, because the proofreading tool is active."
+            : "When enabled, only hovered or active segments will be shown."
+        }
+      >
+        <div
+          style={{
+            marginBottom: 6,
+          }}
+        >
+          <SwitchSetting
+            onChange={_.partial(this.props.onChange, "selectiveSegmentVisibility")}
+            value={this.props.datasetConfiguration.selectiveSegmentVisibility}
+            label="Selective Visibility"
+            disabled={isSelectiveVisibilityDisabled}
+          />
+        </div>
+      </FastTooltip>
+    );
+
     return (
       <div>
         {segmentationOpacitySetting}
+        {selectiveVisibilitySwitch}
         <MappingSettingsView layerName={layerName} />
       </div>
     );
@@ -976,6 +988,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       );
 
     const defaultLayerViewConfig = getDefaultLayerViewConfiguration();
+    const isHistogramAvailable = isHistogramSupported(elementClass) && isColorLayer;
 
     return (
       <div key={layerName} style={style} ref={setNodeRef}>
@@ -985,6 +998,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           isInEditMode,
           layerName,
           layerConfiguration,
+          isHistogramAvailable,
           hasLessThanTwoColorLayers,
         )}
         {isDisabled ? null : (
@@ -994,9 +1008,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               marginLeft: 10,
             }}
           >
-            {isHistogramSupported(elementClass) && layerName != null && isColorLayer
-              ? this.getHistogram(layerName, layerConfiguration)
-              : null}
+            {isHistogramAvailable && this.getHistogram(layerName, layerConfiguration)}
             <NumberSliderSetting
               label={opacityLabel}
               min={0}
@@ -1077,9 +1089,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
-  reloadLayerData = async (layerName: string): Promise<void> => {
-    await clearCache(this.props.dataset, layerName);
-    this.props.reloadHistogram(layerName);
+  reloadLayerData = async (
+    layerName: string,
+    isHistogramAvailable: boolean,
+    maybeFallbackLayerName: string | null,
+  ): Promise<void> => {
+    await clearCache(this.props.dataset, maybeFallbackLayerName ?? layerName);
+    if (isHistogramAvailable) this.props.reloadHistogram(layerName);
     await api.data.reloadBuckets(layerName);
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);
   };
@@ -1338,6 +1354,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         "loadingStrategy",
         "segmentationPatternOpacity",
         "blendMode",
+        "selectiveSegmentVisibility",
       ] as Array<keyof RecommendedConfiguration>
     ).map((key) => ({
       name: settings[key] as string,
@@ -1585,6 +1602,7 @@ const mapStateToProps = (state: OxalisState) => ({
     state.activeUser != null ? Utils.isUserAdminOrDatasetManager(state.activeUser) : false,
   isAdminOrManager: state.activeUser != null ? Utils.isUserAdminOrManager(state.activeUser) : false,
   isSuperUser: state.activeUser?.isSuperUser || false,
+  activeTool: state.uiInformation.activeTool,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

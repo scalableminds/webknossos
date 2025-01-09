@@ -1,10 +1,10 @@
-import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
+import _ from "lodash";
 import type { BoundingBoxType, OrthoView, Vector2, Vector3, Vector4 } from "oxalis/constants";
 import constants, { Vector3Indicies } from "oxalis/constants";
-import type { MagInfo } from "../helpers/mag_info";
 import Dimensions from "../dimensions";
+import type { MagInfo } from "../helpers/mag_info";
 
 class BoundingBox {
   min: Vector3;

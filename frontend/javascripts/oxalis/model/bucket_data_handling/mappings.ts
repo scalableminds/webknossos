@@ -1,20 +1,20 @@
+import { message } from "antd";
+import type UpdatableTexture from "libs/UpdatableTexture";
+import { CuckooTableUint32 } from "libs/cuckoo/cuckoo_table_uint32";
+import { CuckooTableUint64 } from "libs/cuckoo/cuckoo_table_uint64";
+import Toast from "libs/toast";
+import { diffMaps } from "libs/utils";
 import _ from "lodash";
+import memoizeOne from "memoize-one";
 import {
-  getMappings,
-  getMappingInfo,
   getElementClass,
+  getMappingInfo,
+  getMappings,
 } from "oxalis/model/accessors/dataset_accessor";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { finishMappingInitializationAction } from "oxalis/model/actions/settings_actions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import type { Mapping, NumberLike } from "oxalis/store";
 import Store from "oxalis/store";
-import type UpdatableTexture from "libs/UpdatableTexture";
-import { CuckooTableUint64 } from "libs/cuckoo/cuckoo_table_uint64";
-import { CuckooTableUint32 } from "libs/cuckoo/cuckoo_table_uint32";
-import { message } from "antd";
-import { diffMaps } from "libs/utils";
-import memoizeOne from "memoize-one";
-import Toast from "libs/toast";
 
 // With the default load factor of 0.9, this suffices for mapping
 // ~15M uint32 ids.

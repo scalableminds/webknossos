@@ -1,70 +1,70 @@
-import { connect } from "react-redux";
-import * as React from "react";
+import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type MouseBindingMap } from "libs/input";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import { document } from "libs/window";
 import _ from "lodash";
-import dimensions from "oxalis/model/dimensions";
+import type { AnnotationTool, OrthoView, OrthoViewMap } from "oxalis/constants";
+import { AnnotationToolEnum, OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
+import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
+import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
 import {
-  deleteNodeAsUserAction,
-  createTreeAction,
+  AreaMeasurementTool,
+  BoundingBoxTool,
+  DrawTool,
+  EraseTool,
+  FillCellTool,
+  LineMeasurementTool,
+  MoveTool,
+  PickCellTool,
+  ProofreadTool,
+  QuickSelectTool,
+  SkeletonTool,
+} from "oxalis/controller/combinations/tool_controls";
+import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import TDController from "oxalis/controller/td_controller";
+import {
+  getActiveMagIndexForLayer,
+  getMoveOffset,
+  getPosition,
+} from "oxalis/model/accessors/flycam_accessor";
+import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import {
+  getActiveSegmentationTracing,
+  getMaximumBrushSize,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import {
   createBranchPointAction,
+  createTreeAction,
+  deleteNodeAsUserAction,
   requestDeleteBranchPointAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type MouseBindingMap } from "libs/input";
-import { document } from "libs/window";
-import {
-  getPosition,
-  getActiveMagIndexForLayer,
-  getMoveOffset,
-} from "oxalis/model/accessors/flycam_accessor";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { Model, api } from "oxalis/singletons";
-import PlaneView from "oxalis/view/plane_view";
-import type { BrushPresets, OxalisState, Tracing } from "oxalis/store";
-import Store from "oxalis/store";
-import TDController from "oxalis/controller/td_controller";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import {
-  createCellAction,
-  interpolateSegmentationLayerAction,
-} from "oxalis/model/actions/volumetracing_actions";
 import {
   cycleToolAction,
   enterAction,
   escapeAction,
   setToolAction,
 } from "oxalis/model/actions/ui_actions";
+import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
 import {
-  MoveTool,
-  SkeletonTool,
-  DrawTool,
-  EraseTool,
-  PickCellTool,
-  FillCellTool,
-  BoundingBoxTool,
-  QuickSelectTool,
-  ProofreadTool,
-  LineMeasurementTool,
-  AreaMeasurementTool,
-} from "oxalis/controller/combinations/tool_controls";
-import type { OrthoView, OrthoViewMap, AnnotationTool } from "oxalis/constants";
-import { OrthoViewValuesWithoutTDView, OrthoViews, AnnotationToolEnum } from "oxalis/constants";
-import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
-import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
-import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
-import { downloadScreenshot } from "oxalis/view/rendering_utils";
-import {
-  getActiveSegmentationTracing,
-  getMaximumBrushSize,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
+  createCellAction,
+  interpolateSegmentationLayerAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import dimensions from "oxalis/model/dimensions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { Model, api } from "oxalis/singletons";
+import type { BrushPresets, OxalisState, Tracing } from "oxalis/store";
+import Store from "oxalis/store";
 import { getDefaultBrushSizes } from "oxalis/view/action-bar/toolbar_view";
+import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
+import PlaneView from "oxalis/view/plane_view";
+import { downloadScreenshot } from "oxalis/view/rendering_utils";
+import * as React from "react";
+import { connect } from "react-redux";
 import { userSettings } from "types/schemas/user_settings.schema";
 import { highlightAndSetCursorOnHoveredBoundingBox } from "../combinations/bounding_box_handlers";
 

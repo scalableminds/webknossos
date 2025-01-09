@@ -1,21 +1,53 @@
+import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/admin_rest_api";
 import { Modal } from "antd";
+import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
+import ErrorHandling from "libs/error_handling";
+import { V3 } from "libs/mjs";
+import createProgressCallback from "libs/progress_callback";
+import type { Message } from "libs/toast";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
 import _ from "lodash";
-import type { Action } from "oxalis/model/actions/actions";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
+import memoizeOne from "memoize-one";
+import messages from "messages";
+import { TreeTypeEnum } from "oxalis/constants";
+import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import {
-  actionChannel,
-  take,
-  takeEvery,
-  throttle,
-  all,
-  call,
-  fork,
-  put,
-  race,
-} from "typed-redux-saga";
+  enforceSkeletonTracing,
+  findTreeByName,
+  getActiveNode,
+  getBranchPoints,
+  getNodePosition,
+  getTreeNameForAgglomerateSkeleton,
+  getTreesWithType,
+} from "oxalis/model/accessors/skeletontracing_accessor";
+import type { Action } from "oxalis/model/actions/actions";
+import {
+  addConnectomeTreesAction,
+  deleteConnectomeTreesAction,
+} from "oxalis/model/actions/connectome_actions";
+import {
+  setAdditionalCoordinatesAction,
+  setPositionAction,
+  setRotationAction,
+} from "oxalis/model/actions/flycam_actions";
+import type { LoadAgglomerateSkeletonAction } from "oxalis/model/actions/skeletontracing_actions";
+import {
+  addTreesAndGroupsAction,
+  deleteBranchPointAction,
+  setTreeNameAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
+import EdgeCollection, { diffEdgeCollections } from "oxalis/model/edge_collection";
+import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
+import {
+  createMutableTreeMapFromTreeArray,
+  generateTreeName,
+} from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import { TreeTypeEnum } from "oxalis/constants";
 import {
   createEdge,
   createNode,
@@ -23,44 +55,15 @@ import {
   deleteEdge,
   deleteNode,
   deleteTree,
-  updateTreeVisibility,
-  updateTreeEdgesVisibility,
   updateNode,
   updateSkeletonTracing,
-  updateUserBoundingBoxes,
   updateTree,
+  updateTreeEdgesVisibility,
   updateTreeGroups,
+  updateTreeVisibility,
+  updateUserBoundingBoxes,
 } from "oxalis/model/sagas/update_actions";
-import { V3 } from "libs/mjs";
-import type { LoadAgglomerateSkeletonAction } from "oxalis/model/actions/skeletontracing_actions";
-import {
-  deleteBranchPointAction,
-  setTreeNameAction,
-  addTreesAndGroupsAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import {
-  generateTreeName,
-  createMutableTreeMapFromTreeArray,
-} from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import {
-  getActiveNode,
-  getBranchPoints,
-  enforceSkeletonTracing,
-  findTreeByName,
-  getTreeNameForAgglomerateSkeleton,
-  getTreesWithType,
-  getNodePosition,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import {
-  setAdditionalCoordinatesAction,
-  setPositionAction,
-  setRotationAction,
-} from "oxalis/model/actions/flycam_actions";
-import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
-import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
-import EdgeCollection, { diffEdgeCollections } from "oxalis/model/edge_collection";
-import ErrorHandling from "libs/error_handling";
+import { api } from "oxalis/singletons";
 import type {
   Flycam,
   Node,
@@ -71,21 +74,18 @@ import type {
   TreeMap,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import type { Message } from "libs/toast";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import { api } from "oxalis/singletons";
-import messages from "messages";
-import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
-import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/admin_rest_api";
-import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
-import createProgressCallback from "libs/progress_callback";
 import {
-  addConnectomeTreesAction,
-  deleteConnectomeTreesAction,
-} from "oxalis/model/actions/connectome_actions";
+  actionChannel,
+  all,
+  call,
+  fork,
+  put,
+  race,
+  take,
+  takeEvery,
+  throttle,
+} from "typed-redux-saga";
 import type { ServerSkeletonTracing } from "types/api_flow_types";
-import memoizeOne from "memoize-one";
 
 function* centerActiveNode(action: Action): Saga<void> {
   if ("suppressCentering" in action && action.suppressCentering) {

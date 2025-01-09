@@ -1,3 +1,4 @@
+import dagre from "dagre";
 import { useRef, useState } from "react";
 import ReactFlow, {
   MiniMap,
@@ -6,20 +7,19 @@ import ReactFlow, {
   type Edge as FlowEdge,
   type ReactFlowInstance,
 } from "react-flow-renderer";
-import dagre from "dagre";
 
+import { ExpandOutlined, MinusOutlined, PlusOutlined } from "@ant-design/icons";
+import { Button } from "antd";
 import ColorHash from "color-hash";
 import { memoize } from "lodash";
+import type { OxalisState, Theme } from "oxalis/store";
+import { useSelector } from "react-redux";
 import {
   VoxelyticsRunState,
   type VoxelyticsTaskConfigWithName,
   type VoxelyticsWorkflowDag,
   type VoxelyticsWorkflowDagEdge,
 } from "types/api_flow_types";
-import { useSelector } from "react-redux";
-import type { OxalisState, Theme } from "oxalis/store";
-import { Button } from "antd";
-import { ExpandOutlined, MinusOutlined, PlusOutlined } from "@ant-design/icons";
 
 export const colorHasher = new ColorHash({ lightness: [0.35, 0.5, 0.65] });
 

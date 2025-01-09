@@ -1,20 +1,20 @@
-import * as THREE from "three";
+import { M4x4 } from "libs/mjs";
+import type TPS3D from "libs/thin_plate_spline";
+import _ from "lodash";
 import { ViewModeValues, ViewModeValuesIndices } from "oxalis/constants";
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
-import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
+import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_accessor";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { Store } from "oxalis/singletons";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
-import _ from "lodash";
-import { formatNumberAsGLSLFloat } from "oxalis/shaders/utils.glsl";
-import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_accessor";
-import { M4x4 } from "libs/mjs";
+import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
 import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
 } from "oxalis/shaders/thin_plate_spline.glsl";
-import type TPS3D from "libs/thin_plate_spline";
+import { formatNumberAsGLSLFloat } from "oxalis/shaders/utils.glsl";
+import { Store } from "oxalis/singletons";
+import * as THREE from "three";
 
 export const NodeTypes = {
   INVALID: 0.0,

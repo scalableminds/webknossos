@@ -3,25 +3,25 @@ import { Alert, Modal, Spin, Table } from "antd";
 import saveAs from "file-saver";
 import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
+import { pluralize, transformToCSVRow } from "libs/utils";
 import { LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
-import { getMappingInfo, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
-import type { OxalisState, Segment } from "oxalis/store";
-import {
-  type SegmentHierarchyNode,
-  type SegmentHierarchyGroup,
-  getVolumeRequestUrl,
-} from "./segments_view_helper";
-import { api } from "oxalis/singletons";
-import type { APISegmentationLayer, VoxelSize } from "types/api_flow_types";
-import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
-import { useSelector } from "react-redux";
+import { getMagInfo, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
   getAdditionalCoordinatesAsString,
   hasAdditionalCoordinates,
 } from "oxalis/model/accessors/flycam_accessor";
-import { pluralize, transformToCSVRow } from "libs/utils";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
+import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import { voxelToVolumeInUnit } from "oxalis/model/scaleinfo";
+import { api } from "oxalis/singletons";
+import type { OxalisState, Segment } from "oxalis/store";
+import { useSelector } from "react-redux";
+import type { APISegmentationLayer, VoxelSize } from "types/api_flow_types";
+import {
+  type SegmentHierarchyGroup,
+  type SegmentHierarchyNode,
+  getVolumeRequestUrl,
+} from "./segments_view_helper";
 
 const MODAL_ERROR_MESSAGE =
   "Segment statistics could not be fetched. Check the console for more details.";

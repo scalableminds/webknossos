@@ -67,7 +67,7 @@ import {
 import { Model } from "oxalis/singletons";
 import Store, { type BrushPresets, type OxalisState } from "oxalis/store";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
-import ButtonComponent from "oxalis/view/components/button_component";
+import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
 import { userSettings } from "types/schemas/user_settings.schema";

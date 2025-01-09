@@ -1,4 +1,4 @@
-import { Layout } from "antd";
+import { ConfigProvider, Layout } from "antd";
 import app from "app";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";

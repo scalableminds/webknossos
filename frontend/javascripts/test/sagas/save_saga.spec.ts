@@ -18,24 +18,24 @@ mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/sagas/root_saga", function* () {
   yield;
 });
-const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions") as typeof import(
+const UpdateActions = mockRequire.reRequire(
   "oxalis/model/sagas/update_actions",
-);
-const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions") as typeof import(
+) as typeof import("oxalis/model/sagas/update_actions");
+const SaveActions = mockRequire.reRequire(
   "oxalis/model/actions/save_actions",
-);
-const { take, call, put } = mockRequire.reRequire("redux-saga/effects") as typeof import(
+) as typeof import("oxalis/model/actions/save_actions");
+const { take, call, put } = mockRequire.reRequire(
   "redux-saga/effects",
-);
+) as typeof import("redux-saga/effects");
 const {
   pushSaveQueueAsync,
   sendSaveRequestToServer,
   toggleErrorHighlighting,
   addVersionNumbers,
   sendRequestWithToken,
-} = mockRequire.reRequire("oxalis/model/sagas/save_saga") as typeof import(
+} = mockRequire.reRequire(
   "oxalis/model/sagas/save_saga",
-);
+) as typeof import("oxalis/model/sagas/save_saga");
 
 const annotationId = "annotation-abcdefgh";
 const tracingId = "tracing-1234567890";

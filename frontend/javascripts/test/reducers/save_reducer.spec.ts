@@ -16,14 +16,14 @@ const AccessorMock = {
 mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/accessors/annotation_accessor", AccessorMock);
 
-const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions") as typeof import(
+const SaveActions = mockRequire.reRequire(
   "oxalis/model/actions/save_actions",
-);
+) as typeof import("oxalis/model/actions/save_actions");
 const SaveReducer = mockRequire.reRequire("oxalis/model/reducers/save_reducer")
   .default as typeof import("oxalis/model/reducers/save_reducer")["default"];
-const { createEdge } = mockRequire.reRequire("oxalis/model/sagas/update_actions") as typeof import(
+const { createEdge } = mockRequire.reRequire(
   "oxalis/model/sagas/update_actions",
-);
+) as typeof import("oxalis/model/sagas/update_actions");
 
 const tracingId = "1234567890";
 const initialState = {

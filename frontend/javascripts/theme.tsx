@@ -1,4 +1,4 @@
-import { App, ConfigProvider, theme } from "antd";
+import { App, ConfigProvider, theme, ThemeConfig } from "antd";
 import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
 import { ToastContextMountRoot } from "libs/toast";
 import window from "libs/window";
@@ -7,6 +7,7 @@ import type React from "react";
 import { useEffect } from "react";
 import { useSelector } from "react-redux";
 import type { APIUser } from "types/api_flow_types";
+import _ from "lodash";
 
 const ColorWKBlue = "#5660ff"; // WK ~blue/purple
 const ColorWKLinkHover = "#a8b4ff"; // slightly brighter WK Blue

@@ -34,6 +34,11 @@ class FossilDBStub(object):
                 request_serializer=fossildbapi__pb2.GetMultipleKeysRequest.SerializeToString,
                 response_deserializer=fossildbapi__pb2.GetMultipleKeysReply.FromString,
                 )
+        self.GetMultipleKeysByListWithMultipleVersions = channel.unary_unary(
+                '/com.scalableminds.fossildb.proto.FossilDB/GetMultipleKeysByListWithMultipleVersions',
+                request_serializer=fossildbapi__pb2.GetMultipleKeysByListWithMultipleVersionsRequest.SerializeToString,
+                response_deserializer=fossildbapi__pb2.GetMultipleKeysByListWithMultipleVersionsReply.FromString,
+                )
         self.Put = channel.unary_unary(
                 '/com.scalableminds.fossildb.proto.FossilDB/Put',
                 request_serializer=fossildbapi__pb2.PutRequest.SerializeToString,
@@ -43,6 +48,11 @@ class FossilDBStub(object):
                 '/com.scalableminds.fossildb.proto.FossilDB/PutMultipleVersions',
                 request_serializer=fossildbapi__pb2.PutMultipleVersionsRequest.SerializeToString,
                 response_deserializer=fossildbapi__pb2.PutMultipleVersionsReply.FromString,
+                )
+        self.PutMultipleKeysWithMultipleVersions = channel.unary_unary(
+                '/com.scalableminds.fossildb.proto.FossilDB/PutMultipleKeysWithMultipleVersions',
+                request_serializer=fossildbapi__pb2.PutMultipleKeysWithMultipleVersionsRequest.SerializeToString,
+                response_deserializer=fossildbapi__pb2.PutMultipleKeysWithMultipleVersionsReply.FromString,
                 )
         self.Delete = channel.unary_unary(
                 '/com.scalableminds.fossildb.proto.FossilDB/Delete',
@@ -118,6 +128,12 @@ class FossilDBServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetMultipleKeysByListWithMultipleVersions(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def Put(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -125,6 +141,12 @@ class FossilDBServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def PutMultipleVersions(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def PutMultipleKeysWithMultipleVersions(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -207,6 +229,11 @@ def add_FossilDBServicer_to_server(servicer, server):
                     request_deserializer=fossildbapi__pb2.GetMultipleKeysRequest.FromString,
                     response_serializer=fossildbapi__pb2.GetMultipleKeysReply.SerializeToString,
             ),
+            'GetMultipleKeysByListWithMultipleVersions': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetMultipleKeysByListWithMultipleVersions,
+                    request_deserializer=fossildbapi__pb2.GetMultipleKeysByListWithMultipleVersionsRequest.FromString,
+                    response_serializer=fossildbapi__pb2.GetMultipleKeysByListWithMultipleVersionsReply.SerializeToString,
+            ),
             'Put': grpc.unary_unary_rpc_method_handler(
                     servicer.Put,
                     request_deserializer=fossildbapi__pb2.PutRequest.FromString,
@@ -216,6 +243,11 @@ def add_FossilDBServicer_to_server(servicer, server):
                     servicer.PutMultipleVersions,
                     request_deserializer=fossildbapi__pb2.PutMultipleVersionsRequest.FromString,
                     response_serializer=fossildbapi__pb2.PutMultipleVersionsReply.SerializeToString,
+            ),
+            'PutMultipleKeysWithMultipleVersions': grpc.unary_unary_rpc_method_handler(
+                    servicer.PutMultipleKeysWithMultipleVersions,
+                    request_deserializer=fossildbapi__pb2.PutMultipleKeysWithMultipleVersionsRequest.FromString,
+                    response_serializer=fossildbapi__pb2.PutMultipleKeysWithMultipleVersionsReply.SerializeToString,
             ),
             'Delete': grpc.unary_unary_rpc_method_handler(
                     servicer.Delete,
@@ -341,6 +373,23 @@ class FossilDB(object):
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
+    def GetMultipleKeysByListWithMultipleVersions(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/com.scalableminds.fossildb.proto.FossilDB/GetMultipleKeysByListWithMultipleVersions',
+            fossildbapi__pb2.GetMultipleKeysByListWithMultipleVersionsRequest.SerializeToString,
+            fossildbapi__pb2.GetMultipleKeysByListWithMultipleVersionsReply.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
     def Put(request,
             target,
             options=(),
@@ -371,6 +420,23 @@ class FossilDB(object):
         return grpc.experimental.unary_unary(request, target, '/com.scalableminds.fossildb.proto.FossilDB/PutMultipleVersions',
             fossildbapi__pb2.PutMultipleVersionsRequest.SerializeToString,
             fossildbapi__pb2.PutMultipleVersionsReply.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def PutMultipleKeysWithMultipleVersions(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/com.scalableminds.fossildb.proto.FossilDB/PutMultipleKeysWithMultipleVersions',
+            fossildbapi__pb2.PutMultipleKeysWithMultipleVersionsRequest.SerializeToString,
+            fossildbapi__pb2.PutMultipleKeysWithMultipleVersionsReply.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

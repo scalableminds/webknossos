@@ -14,12 +14,13 @@ import threading
 from functools import partial
 import heapq
 import sys
+from viztracer import VizTracer
 
 import fossildbapi_pb2 as proto
 import VolumeTracing_pb2 as Volume
 import SkeletonTracing_pb2 as Skeleton
 import Annotation_pb2 as AnnotationProto
-from utils import log_since, batch_range, format_duration, time_str
+from utils import log_since, batch_range, batch_list, format_duration, time_str
 from connections import connect_to_fossildb, connect_to_postgres, assert_grpc_success
 
 logger = logging.getLogger("migration-logs")
@@ -73,16 +74,20 @@ class Migration:
                 if versions > 1:
                     logger.info(f"{versions} versions for {annotation['_id']}{self.get_progress()}")
             else:
+                #tracer = VizTracer(tracer_entries=10000000)
+                #tracer.start()
                 if self.args.verbose:
                     logger.info(f"Migrating annotation {annotation['_id']} (dry={self.args.dry}) ...")
                 mapping_id_map = self.build_mapping_id_map(annotation)
-                if self.includes_revert(annotation) and self.args.previous_start is not None:
+                if self.args.previous_start is not None and self.includes_revert(annotation):
                     self.clean_up_previously_migrated(annotation, mapping_id_map)
                 layer_version_mapping = self.migrate_updates(annotation, mapping_id_map)
                 materialized_versions = self.migrate_materialized_layers(annotation, layer_version_mapping, mapping_id_map)
                 if len(materialized_versions) == 0:
                     raise ValueError(f"Zero materialized versions present in source FossilDB for annotation {annotation['_id']}.")
                 self.create_and_save_annotation_proto(annotation, materialized_versions, mapping_id_map)
+                #tracer.stop()
+                #tracer.save()
                 if time.time() - before > 1 or self.args.verbose:
                     log_since(before, f"Migrating annotation {annotation['_id']} ({len(materialized_versions)} materialized versions)", self.get_progress())
                 checkpoint_logger.info(annotation['_id'])
@@ -109,10 +114,10 @@ class Migration:
         updates_for_layer = []
         included_revert = False
         next_version = newest_version
-        for batch_start, batch_end in reversed(list(batch_range(newest_version, batch_size))):
+        for batch_start, batch_end in reversed(list(batch_range(newest_version + 1, batch_size))): # TODO check overlaps?
             if batch_start > next_version:
                 continue
-            update_groups = self.get_update_batch(tracing_or_mapping_id, collection, batch_start, batch_end)
+            update_groups = self.get_update_batch(tracing_or_mapping_id, collection, batch_start, batch_end - 1)
             for version, update_group in reversed(update_groups):
                 if version > next_version:
                     continue
@@ -128,6 +133,7 @@ class Migration:
         return updates_for_layer, included_revert
 
     def includes_revert(self, annotation) -> bool:
+        logger.info("checking if includes revert")
         json_encoder = msgspec.json.Encoder()
         json_decoder = msgspec.json.Decoder()
         layers = list(annotation["layers"].items())
@@ -139,6 +145,9 @@ class Migration:
         return False
 
     def migrate_updates(self, annotation, mapping_id_map: MappingIdMap) -> LayerVersionMapping:
+        put_updates_buffer_size = 500
+        logger.info("migrating updates...")
+        before = time.time()
         all_update_groups = []
         json_encoder = msgspec.json.Encoder()
         json_decoder = msgspec.json.Decoder()
@@ -154,12 +163,15 @@ class Migration:
                 layer_updates, _ = self.fetch_updates(mapping_id, "editableMapping", "editableMappingUpdates", json_encoder=json_encoder, json_decoder=json_decoder)
                 all_update_groups.append(layer_updates)
                 tracing_ids_and_mapping_ids.append(mapping_id)
+        log_since(before, "fetch updates")
 
         unified_version = 0
         version_mapping = {}
         for tracing_or_mapping_id in tracing_ids_and_mapping_ids:
             version_mapping[tracing_or_mapping_id] = {0: 0} # We always want to keep the initial version 0 of all layers, even if there are no updates at all.
 
+        buffered_versions_to_put = []
+        buffered_updates_to_put = []
         # We use a priority queue to efficiently select which tracing each next update should come from.
         # This effectively implements a merge sort
         queue = []
@@ -174,12 +186,23 @@ class Migration:
 
             unified_version += 1
             version_mapping[tracing_or_mapping_id][version] = unified_version
-            self.save_update_group(annotation['_id'], unified_version, update_group)
+            buffered_versions_to_put.append(unified_version)
+            buffered_updates_to_put.append(update_group)
+            if len(buffered_versions_to_put) >= put_updates_buffer_size:
+                # flush
+                self.save_update_groups(annotation['_id'], buffered_versions_to_put, buffered_updates_to_put)
+                buffered_versions_to_put = []
+                buffered_updates_to_put = []
 
             if element_index + 1 < len(all_update_groups[layer_index]):
                 next_element = all_update_groups[layer_index][element_index + 1]
                 heapq.heappush(queue, (next_element, layer_index, element_index + 1))
 
+        if len(buffered_versions_to_put) > 0:
+            # flush
+            self.save_update_groups(annotation['_id'], buffered_versions_to_put, buffered_updates_to_put)
+
+        log_since(before, "updates total")
         return version_mapping
 
     def get_editable_mapping_id(self, tracing_id: str, layer_type: str) -> Optional[str]:
@@ -246,8 +269,8 @@ class Migration:
 
         return json_encoder.encode(update_group_parsed), action_timestamp, revert_source_version
 
-    def save_update_group(self, annotation_id: str, version: int, update_group_raw: bytes) -> None:
-        self.save_bytes(collection="annotationUpdates", key=annotation_id, version=version, value=update_group_raw)
+    def save_update_groups(self, annotation_id: str, versions: List[int], update_groups_raw: List[bytes]) -> None:
+        self.save_multiple_versions(collection="annotationUpdates", key=annotation_id, versions=versions, values=update_groups_raw)
 
     def get_newest_version(self, tracing_id: str, collection: str) -> int:
         getReply = self.src_stub.Get(
@@ -280,6 +303,7 @@ class Migration:
         return materialized_versions
 
     def migrate_materialized_layer(self, tracing_id: str, layer_type: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap) -> List[int]:
+        logger.info(f"migrating materialized {layer_type} layer {tracing_id}...")
         if layer_type == "Skeleton":
             return self.migrate_skeleton_proto(tracing_id, layer_version_mapping)
         if layer_type == "Volume":
@@ -308,9 +332,44 @@ class Migration:
         return materialized_versions_unified
 
     def migrate_volume_proto(self, tracing_id: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap):
+        volume_proto_page_size = 500
+        logger.info("migrating volume protos...")
         collection = "volumes"
         materialized_versions_unified = []
+        before = time.time()
+        newest_tracing_version = max(layer_version_mapping[tracing_id].keys())
+        for version_range_start, version_range_end in batch_range(newest_tracing_version + 1, volume_proto_page_size):
+            reply = self.src_stub.GetMultipleVersions(
+                proto.GetMultipleVersionsRequest(collection=collection, key=tracing_id, oldestVersion=version_range_start, newestVersion=version_range_end - 1)
+            )
+            versions_to_put = []
+            values_to_put = []
+            for (materialized_version, value_bytes) in zip(reply.versions, reply.values):
+                if materialized_version not in layer_version_mapping[tracing_id]:
+                    continue
+                new_version = layer_version_mapping[tracing_id][materialized_version]
+                if materialized_version != new_version or tracing_id in mapping_id_map:
+                    volume = Volume.VolumeTracing()
+                    volume.ParseFromString(value_bytes)
+                    volume.version = new_version
+                    if tracing_id in mapping_id_map:
+                        volume.mappingName = tracing_id
+                    value_bytes = volume.SerializeToString()
+                materialized_versions_unified.append(new_version)
+                versions_to_put.append(new_version)
+                values_to_put.append(value_bytes)
+            self.put_multiple_versions(collection, tracing_id, versions_to_put, values_to_put)
+        log_since(before, "volume proto total")
+        return materialized_versions_unified
+
+    def migrate_volume_proto_LEGACY(self, tracing_id: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap):
+        logger.info("migrating volume protos...")
+        collection = "volumes"
+        materialized_versions_unified = []
+        before = time.time()
         materialized_versions = self.list_versions(collection, tracing_id)
+        print(materialized_versions)
+        log_since(before, "list versions volume proto")
         for materialized_version in materialized_versions:
             if materialized_version not in layer_version_mapping[tracing_id]:
                 continue
@@ -325,6 +384,7 @@ class Migration:
                 value_bytes = volume.SerializeToString()
             materialized_versions_unified.append(new_version)
             self.save_bytes(collection, tracing_id, new_version, value_bytes)
+        log_since(before, "volume proto total")
         return materialized_versions_unified
 
     def list_versions(self, collection, key) -> List[int]:
@@ -342,15 +402,30 @@ class Migration:
             reply = self.dst_stub.Put(proto.PutRequest(collection=collection, key=key, version=version, value=value))
             assert_grpc_success(reply)
 
+    def put_multiple_versions(self, collection: str, key: str, versions: List[int], values: List[bytes]) -> None:
+        if self.dst_stub is not None:
+            reply = self.dst_stub.PutMultipleVersions(proto.PutMultipleVersionsRequest(collection=collection, key=key, versions=versions, values=values))
+            assert_grpc_success(reply)
+
+    def put_multiple_keys_versions(self, collection: str, to_put) -> None:
+        if self.dst_stub is not None:
+            reply = self.dst_stub.PutMultipleKeysWithMultipleVersions(proto.PutMultipleKeysWithMultipleVersionsRequest(collection=collection, versionedKeyValuePairs = to_put))
+            assert_grpc_success(reply)
+
+    # TODO remove if multi-put is faster
     def save_multiple_versions(self, collection: str, key: str, versions: List[int], values: List[bytes]) -> None:
         if self.dst_stub is not None:
             reply = self.dst_stub.PutMultipleVersions(proto.PutMultipleVersionsRequest(collection=collection, key=key, versions=versions, values=values))
             assert_grpc_success(reply)
 
     def migrate_volume_buckets(self, tracing_id: str, layer_version_mapping: LayerVersionMapping):
+        logger.info("migrating volume buckets...")
+        before = time.time()
         self.migrate_all_versions_and_keys_with_prefix("volumeData", tracing_id, layer_version_mapping, transform_key=self.remove_morton_index)
+        log_since(before, "migrating volume buckets")
 
-    def migrate_all_versions_and_keys_with_prefix(self, collection: str, tracing_or_mapping_id: str, layer_version_mapping: LayerVersionMapping, transform_key: Optional[Callable[[str], str]]):
+
+    def migrate_all_versions_and_keys_with_prefix_LEGACY(self, collection: str, tracing_or_mapping_id: str, layer_version_mapping: LayerVersionMapping, transform_key: Optional[Callable[[str], str]]):
         list_keys_page_size = 5000
         versions_page_size = 500
         current_start_after_key = tracing_or_mapping_id + "."  # . is lexicographically before /
@@ -383,12 +458,49 @@ class Migration:
                     # We iterated past the elements of the current tracing
                     return
 
+
+    def migrate_all_versions_and_keys_with_prefix(self, collection: str, tracing_or_mapping_id: str, layer_version_mapping: LayerVersionMapping, transform_key: Optional[Callable[[str], str]]):
+        list_keys_page_size = 10000
+        get_keys_page_size = 500
+        current_start_after_key = tracing_or_mapping_id + "."  # . is lexicographically before /
+        while True:
+            list_keys_reply = self.src_stub.ListKeys(proto.ListKeysRequest(collection=collection, limit=list_keys_page_size, startAfterKey=current_start_after_key, prefix=tracing_or_mapping_id))
+            assert_grpc_success(list_keys_reply)
+            if len(list_keys_reply.keys) == 0:
+                # We iterated towards the very end of the collection
+                return
+            for key_batch in batch_list(list_keys_reply.keys, get_keys_page_size):
+                get_keys_with_versions_reply = self.src_stub.GetMultipleKeysByListWithMultipleVersions(proto.GetMultipleKeysByListWithMultipleVersionsRequest(collection=collection, keys=key_batch))
+                assert_grpc_success(get_keys_with_versions_reply)
+                to_put = []
+                for keyVersionsValuesPair in get_keys_with_versions_reply.keyVersionsValuesPairs:
+                    key = keyVersionsValuesPair.key
+                    if not key.startswith(tracing_or_mapping_id):
+                        raise Exception(f"key does not stat with tracing/mapping id: {key}")
+                    new_key = key
+                    if transform_key is not None:
+                        new_key = transform_key(key)
+                    for version_value_pair in keyVersionsValuesPair.versionValuePairs:
+                        if version_value_pair.actualVersion not in layer_version_mapping[tracing_or_mapping_id]:
+                            continue
+                        new_version = layer_version_mapping[tracing_or_mapping_id][version_value_pair.actualVersion]
+                        versioned_key_value_pair = proto.VersionedKeyValuePairProto()
+                        versioned_key_value_pair.key = key
+                        versioned_key_value_pair.version = new_version
+                        versioned_key_value_pair.value = version_value_pair.value
+                        to_put.append(versioned_key_value_pair)
+
+                self.put_multiple_keys_versions(collection, to_put)
+            current_start_after_key = list_keys_reply.keys[-1]
+
     def migrate_segment_index(self, tracing_id, layer_version_mapping):
+        logger.info("migrating volume segment index...")
         self.migrate_all_versions_and_keys_with_prefix("volumeSegmentIndex", tracing_id, layer_version_mapping, transform_key=None)
 
     def migrate_editable_mapping(self, tracing_id: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap) -> List[int]:
         if tracing_id not in mapping_id_map:
             return []
+        logger.info(f"migrating editable mapping of tracing {tracing_id}...")
         mapping_id = mapping_id_map[tracing_id]
         materialized_versions = self.migrate_editable_mapping_info(tracing_id, mapping_id, layer_version_mapping)
         self.migrate_editable_mapping_agglomerate_to_graph(tracing_id, mapping_id, layer_version_mapping)
@@ -425,6 +537,7 @@ class Migration:
         )
 
     def create_and_save_annotation_proto(self, annotation, materialized_versions: Set[int], mapping_id_map: MappingIdMap):
+        logger.info("writing annotationProtos...")
         skeleton_may_have_pending_updates = self.skeleton_may_have_pending_updates(annotation)
         editable_mapping_may_have_pending_updates = bool(mapping_id_map) # same problem as with skeletons, see comment there
         earliest_accessible_version = 0

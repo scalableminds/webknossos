@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Iterator, Tuple
+from typing import Iterator, Tuple, List
 import sys
 from math import floor, ceil
 from datetime import datetime
@@ -46,6 +46,11 @@ def batch_range(
 
         if i + batch_size >= full_range.stop:
             return
+
+
+def batch_list(lst: List, batch_size: int) -> Iterator[List]:
+    for start, end in batch_range(len(lst), batch_size):
+        yield lst[start:end]
 
 
 def format_duration(seconds: float) -> str:

@@ -10,7 +10,7 @@ import type {
   Vector3,
   FillMode,
 } from "oxalis/constants";
-import Constants, { FillModeEnum, Unicode } from "oxalis/constants";
+import Constants, { AnnotationToolEnum, FillModeEnum, Unicode } from "oxalis/constants";
 
 import { getDatasetBoundingBox, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
@@ -32,6 +32,7 @@ import { call, put, takeEvery } from "typed-redux-saga";
 import { getUserBoundingBoxesThatContainPosition } from "../../accessors/tracing_accessor";
 import { applyLabeledVoxelMapToAllMissingMags } from "./helpers";
 import _ from "lodash";
+import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 
 const NO_FLOODFILL_BBOX_TOAST_KEY = "NO_FLOODFILL_BBOX";
 const NO_SUCCESS_MSG_WHEN_WITHIN_MS = 500;
@@ -117,8 +118,9 @@ function* getBoundingBoxForFloodFill(
 
 function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const disabledInfosForTools = yield* select(getDisabledInfoForTools);
 
-  if (!allowUpdate) {
+  if (!allowUpdate || disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled) {
     return;
   }
 

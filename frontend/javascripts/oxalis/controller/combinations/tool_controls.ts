@@ -497,11 +497,25 @@ export class EraseTool {
       leftDownMove: (_delta: Point2, pos: Point2) => {
         VolumeHandlers.handleMoveForDrawOrErase(pos);
       },
-      leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent) => {
+      leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+        if (event.shiftKey || event.ctrlKey || event.metaKey) {
+          return;
+        }
+
         VolumeHandlers.handleEraseStart(pos, plane);
       },
       leftMouseUp: () => {
         VolumeHandlers.handleEndForDrawOrErase();
+      },
+      leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+        const isControlOrMetaPressed = event.ctrlKey || event.metaKey;
+        if (event.shiftKey) {
+          if (isControlOrMetaPressed) {
+            VolumeHandlers.handleFloodFill(pos, plane);
+          } else {
+            VolumeHandlers.handlePickCell(pos);
+          }
+        }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         SkeletonHandlers.handleOpenContextMenu(planeView, pos, plane, isTouch, event);

@@ -1,51 +1,51 @@
-import * as React from "react";
 import type { ModifierKeys } from "libs/input";
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
 import type { Matrix4x4 } from "libs/mjs";
 import { V3 } from "libs/mjs";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import messages from "messages";
+import type { Point2, Vector3, ViewMode, Viewport } from "oxalis/constants";
+import constants, { ArbitraryViewport } from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import TDController from "oxalis/controller/td_controller";
+import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
+import Crosshair from "oxalis/geometries/crosshair";
+import { getMoveOffset3d, getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import {
   getActiveNode,
   getMaxNodeId,
   getNodePosition,
   untransformNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getRotation, getPosition, getMoveOffset3d } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
-  setActiveNodeAction,
-  deleteNodeAsUserAction,
-  createNodeAction,
-  createBranchPointAction,
-  requestDeleteBranchPointAction,
-  toggleAllTreesAction,
-  toggleInactiveTreesAction,
-  createTreeAction,
-} from "oxalis/model/actions/skeletontracing_actions";
+  moveFlycamAction,
+  pitchFlycamAction,
+  yawFlycamAction,
+  zoomInAction,
+  zoomOutAction,
+} from "oxalis/model/actions/flycam_actions";
 import {
   setFlightmodeRecordingAction,
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import {
-  yawFlycamAction,
-  pitchFlycamAction,
-  zoomInAction,
-  zoomOutAction,
-  moveFlycamAction,
-} from "oxalis/model/actions/flycam_actions";
-import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
-import ArbitraryView from "oxalis/view/arbitrary_view";
-import Crosshair from "oxalis/geometries/crosshair";
-import Store from "oxalis/store";
-import TDController from "oxalis/controller/td_controller";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+  createBranchPointAction,
+  createNodeAction,
+  createTreeAction,
+  deleteNodeAsUserAction,
+  requestDeleteBranchPointAction,
+  setActiveNodeAction,
+  toggleAllTreesAction,
+  toggleInactiveTreesAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { api } from "oxalis/singletons";
-import type { ViewMode, Point2, Vector3, Viewport } from "oxalis/constants";
-import constants, { ArbitraryViewport } from "oxalis/constants";
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import messages from "messages";
+import Store from "oxalis/store";
+import ArbitraryView from "oxalis/view/arbitrary_view";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
+import * as React from "react";
 import { SkeletonTool } from "../combinations/tool_controls";
 
 const arbitraryViewportId = "inputcatcher_arbitraryViewport";

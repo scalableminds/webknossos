@@ -1,10 +1,10 @@
-import * as React from "react";
+import type { InputProps } from "antd";
+import * as Utils from "libs/utils";
 import _ from "lodash";
-import type { ServerBoundingBoxTypeTuple } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import InputComponent from "oxalis/view/components/input_component";
-import * as Utils from "libs/utils";
-import type { InputProps } from "antd";
+import * as React from "react";
+import type { ServerBoundingBoxTypeTuple } from "types/api_flow_types";
 
 const CHARACTER_WIDTH_PX = 8;
 

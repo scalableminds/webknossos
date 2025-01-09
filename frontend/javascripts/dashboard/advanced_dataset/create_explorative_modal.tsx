@@ -1,19 +1,19 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { Link } from "react-router-dom";
-import { Modal, Radio, Button, Tooltip, Spin } from "antd";
-import React, { useEffect, useState } from "react";
-import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
+import { getDataset } from "admin/admin_rest_api";
+import { Button, Modal, Radio, Spin, Tooltip } from "antd";
+import { Slider } from "components/slider";
+import { useFetch } from "libs/react_helpers";
 import {
   doesSupportVolumeWithFallback,
-  getSomeMagInfoForDataset,
-  getSegmentationLayers,
   getMagInfo,
   getSegmentationLayerByName,
+  getSegmentationLayers,
+  getSomeMagInfoForDataset,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getDataset } from "admin/admin_rest_api";
-import { useFetch } from "libs/react_helpers";
 import type { MagInfo } from "oxalis/model/helpers/mag_info";
-import { Slider } from "components/slider";
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 
 type Props = {
   datasetId: string;

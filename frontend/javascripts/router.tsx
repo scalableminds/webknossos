@@ -9,8 +9,8 @@ import StartResetPasswordView from "admin/auth/start_reset_password_view";
 import DatasetAddView from "admin/dataset/dataset_add_view";
 import JobListView from "admin/job/job_list_view";
 import Onboarding from "admin/onboarding";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import OrganizationEditView from "admin/organization/organization_edit_view";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import ProjectCreateView from "admin/project/project_create_view";
 import ProjectListView from "admin/project/project_list_view";
 import ScriptCreateView from "admin/scripts/script_create_view";
@@ -55,20 +55,20 @@ import {
   TracingTypeEnum,
 } from "types/api_flow_types";
 
-import ErrorBoundary from "components/error_boundary";
-import { Store } from "oxalis/singletons";
-import VerifyEmailView from "admin/auth/verify_email_view";
-import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
-import loadable from "libs/lazy_loader";
-import type { EmptyObject } from "types/globals";
-import { DatasetURLImport } from "admin/dataset/dataset_url_import";
-import AiModelListView from "admin/voxelytics/ai_model_list_view";
-import { CheckTermsOfServices } from "components/terms_of_services_check";
 import {
   getDatasetIdFromNameAndOrganization,
   getOrganizationForDataset,
 } from "admin/api/disambiguate_legacy_routes";
+import VerifyEmailView from "admin/auth/verify_email_view";
+import { DatasetURLImport } from "admin/dataset/dataset_url_import";
+import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
+import AiModelListView from "admin/voxelytics/ai_model_list_view";
+import ErrorBoundary from "components/error_boundary";
+import { CheckTermsOfServices } from "components/terms_of_services_check";
+import loadable from "libs/lazy_loader";
 import { getDatasetIdOrNameFromReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
+import { Store } from "oxalis/singletons";
+import type { EmptyObject } from "types/globals";
 
 const { Content } = Layout;
 

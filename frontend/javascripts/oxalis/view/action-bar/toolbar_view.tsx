@@ -1444,8 +1444,9 @@ function ProofReadingComponents() {
       </ToggleButton>
       <ToggleButton
         active={selectiveVisibilityInProofreading}
-        title={`${selectiveVisibilityInProofreading ? "Disable" : "Enable"
-          } selective segment visibility. When enabled, only hovered or active segments will be shown.`}
+        title={`${
+          selectiveVisibilityInProofreading ? "Disable" : "Enable"
+        } selective segment visibility. When enabled, only hovered or active segments will be shown.`}
         style={NARROW_BUTTON_STYLE}
         onClick={() =>
           handleToggleSelectiveVisibilityInProofreading(!selectiveVisibilityInProofreading)

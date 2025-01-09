@@ -10,11 +10,12 @@ import type {
   Vector2,
   Vector3,
 } from "oxalis/constants";
-import Constants, { FillModeEnum, Unicode } from "oxalis/constants";
+import Constants, { AnnotationToolEnum, FillModeEnum, Unicode } from "oxalis/constants";
 
 import _ from "lodash";
 import { getDatasetBoundingBox, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
+import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
@@ -117,8 +118,9 @@ function* getBoundingBoxForFloodFill(
 
 function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const disabledInfosForTools = yield* select(getDisabledInfoForTools);
 
-  if (!allowUpdate) {
+  if (!allowUpdate || disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled) {
     return;
   }
 

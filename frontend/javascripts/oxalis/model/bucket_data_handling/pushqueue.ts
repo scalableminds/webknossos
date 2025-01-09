@@ -1,13 +1,13 @@
-import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { createCompressedUpdateBucketActions } from "oxalis/model/bucket_data_handling/wkstore_adapter";
-import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import { AsyncFifoResolver } from "libs/async/async_fifo_resolver";
 import { createDebouncedAbortableParameterlessCallable } from "libs/async/debounced_abortable_saga";
-import { call } from "redux-saga/effects";
+import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import { createCompressedUpdateBucketActions } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import Store from "oxalis/store";
+import { call } from "redux-saga/effects";
+import { escalateErrorAction } from "../actions/actions";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import type { UpdateActionWithoutIsolationRequirement } from "../sagas/update_actions";
-import { AsyncFifoResolver } from "libs/async/async_fifo_resolver";
-import { escalateErrorAction } from "../actions/actions";
 
 // Only process the PushQueue after there was no user interaction (or bucket modification due to
 // downsampling) for PUSH_DEBOUNCE_TIME milliseconds.

@@ -1,84 +1,84 @@
-import { Button, Dropdown, Modal, Space, Tooltip } from "antd";
 import {
-  HistoryOutlined,
   CheckCircleOutlined,
   CheckOutlined,
   CodeSandboxOutlined,
   CopyOutlined,
   DeleteOutlined,
   DisconnectOutlined,
-  DownloadOutlined,
   DownOutlined,
+  DownloadOutlined,
   FileAddOutlined,
   FolderOpenOutlined,
+  HistoryOutlined,
   InfoCircleOutlined,
   LayoutOutlined,
   LinkOutlined,
+  LockOutlined,
   PlusOutlined,
   RollbackOutlined,
   SaveOutlined,
   SettingOutlined,
   ShareAltOutlined,
   StopOutlined,
+  UnlockOutlined,
   VerticalLeftOutlined,
   VerticalRightOutlined,
-  UnlockOutlined,
-  LockOutlined,
 } from "@ant-design/icons";
-import { connect } from "react-redux";
-import * as React from "react";
-import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_flow_types";
-import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_flow_types";
-import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
-import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
-import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
 import {
+  createExplorational,
   duplicateAnnotation,
+  editLockedState,
   finishAnnotation,
   reOpenAnnotation,
-  createExplorational,
-  editLockedState,
 } from "admin/admin_rest_api";
+import { withAuthentication } from "admin/auth/authentication_modal";
+import { Button, Dropdown, Modal, Space, Tooltip } from "antd";
+import type { ItemType, SubMenuType } from "antd/es/menu/interface";
+import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
+import features from "features";
+import Toast from "libs/toast";
+import UserLocalStorage from "libs/user_local_storage";
+import * as Utils from "libs/utils";
 import { location } from "libs/window";
-import {
-  setVersionRestoreVisibilityAction,
-  setDownloadModalVisibilityAction,
-  setShareModalVisibilityAction,
-  setRenderAnimationModalVisibilityAction,
-} from "oxalis/model/actions/ui_actions";
-import { setTracingAction } from "oxalis/model/actions/skeletontracing_actions";
+import messages from "messages";
+import Constants, { ControlModeEnum } from "oxalis/constants";
+import UrlManager from "oxalis/controller/url_manager";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getTracingType } from "oxalis/model/accessors/tracing_accessor";
+import {
+  disableSavingAction,
+  dispatchRedoAsync,
+  dispatchUndoAsync,
+} from "oxalis/model/actions/save_actions";
+import { setTracingAction } from "oxalis/model/actions/skeletontracing_actions";
+import {
+  setDownloadModalVisibilityAction,
+  setRenderAnimationModalVisibilityAction,
+  setShareModalVisibilityAction,
+  setVersionRestoreVisibilityAction,
+} from "oxalis/model/actions/ui_actions";
+import { Model } from "oxalis/singletons";
+import { api } from "oxalis/singletons";
 import type { BusyBlockingInfo, OxalisState, RestrictionsAndSettings, Task } from "oxalis/store";
 import Store from "oxalis/store";
-import {
-  dispatchUndoAsync,
-  dispatchRedoAsync,
-  disableSavingAction,
-} from "oxalis/model/actions/save_actions";
-import ButtonComponent from "oxalis/view/components/button_component";
-import Constants, { ControlModeEnum } from "oxalis/constants";
+import DownloadModalView from "oxalis/view/action-bar/download_modal_view";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
-import { Model } from "oxalis/singletons";
 import SaveButton from "oxalis/view/action-bar/save_button";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
-import DownloadModalView from "oxalis/view/action-bar/download_modal_view";
 import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
-import { api } from "oxalis/singletons";
-import messages from "messages";
 import {
-  screenshotMenuItem,
   renderAnimationMenuItem,
+  screenshotMenuItem,
 } from "oxalis/view/action-bar/view_dataset_actions_view";
-import * as Utils from "libs/utils";
-import UserLocalStorage from "libs/user_local_storage";
-import features from "features";
-import { getTracingType } from "oxalis/model/accessors/tracing_accessor";
-import Toast from "libs/toast";
-import UrlManager from "oxalis/controller/url_manager";
-import { withAuthentication } from "admin/auth/authentication_modal";
-import { PrivateLinksModal } from "./private_links_view";
-import type { ItemType, SubMenuType } from "antd/es/menu/interface";
+import ButtonComponent from "oxalis/view/components/button_component";
+import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
+import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
+import * as React from "react";
+import { connect } from "react-redux";
+import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_flow_types";
+import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_flow_types";
 import CreateAnimationModal from "./create_animation_modal";
+import { PrivateLinksModal } from "./private_links_view";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,

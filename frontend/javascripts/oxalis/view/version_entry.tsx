@@ -1,9 +1,8 @@
-import { Avatar, Button, List } from "antd";
 import {
   ArrowsAltOutlined,
   BackwardOutlined,
-  CodepenOutlined,
   CodeSandboxOutlined,
+  CodepenOutlined,
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
@@ -12,46 +11,47 @@ import {
   RocketOutlined,
   ShrinkOutlined,
 } from "@ant-design/icons";
-import * as React from "react";
+import { Avatar, Button, List } from "antd";
 import _ from "lodash";
+import * as React from "react";
 
 import classNames from "classnames";
-import type {
-  ServerUpdateAction,
-  CreateNodeUpdateAction,
-  DeleteNodeUpdateAction,
-  UpdateTreeUpdateAction,
-  DeleteTreeUpdateAction,
-  RevertToVersionUpdateAction,
-  UpdateNodeUpdateAction,
-  UpdateTreeVisibilityUpdateAction,
-  UpdateTreeEdgesVisibilityUpdateAction,
-  UpdateTreeGroupVisibilityUpdateAction,
-  CreateEdgeUpdateAction,
-  DeleteEdgeUpdateAction,
-  SplitAgglomerateUpdateAction,
-  MergeAgglomerateUpdateAction,
-  CreateSegmentUpdateAction,
-  UpdateSegmentUpdateAction,
-  DeleteSegmentUpdateAction,
-  MoveTreeComponentUpdateAction,
-  MergeTreeUpdateAction,
-  UpdateAnnotationLayerNameUpdateAction,
-  UpdateMappingNameUpdateAction,
-  DeleteSegmentDataUpdateAction,
-  AddLayerToAnnotationUpdateAction,
-  DeleteAnnotationLayerUpdateAction,
-  UpdateMetadataOfAnnotationUpdateAction,
-  UpdateBucketUpdateAction,
-  UpdateSegmentGroupsUpdateAction,
-  AddSegmentIndexUpdateAction,
-} from "oxalis/model/sagas/update_actions";
 import FormattedDate from "components/formatted_date";
-import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import { useSelector } from "react-redux";
-import type { HybridTracing, OxalisState } from "oxalis/store";
 import { formatUserName, getContributorById } from "oxalis/model/accessors/user_accessor";
 import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
+import type {
+  AddLayerToAnnotationUpdateAction,
+  AddSegmentIndexUpdateAction,
+  CreateEdgeUpdateAction,
+  CreateNodeUpdateAction,
+  CreateSegmentUpdateAction,
+  DeleteAnnotationLayerUpdateAction,
+  DeleteEdgeUpdateAction,
+  DeleteNodeUpdateAction,
+  DeleteSegmentDataUpdateAction,
+  DeleteSegmentUpdateAction,
+  DeleteTreeUpdateAction,
+  MergeAgglomerateUpdateAction,
+  MergeTreeUpdateAction,
+  MoveTreeComponentUpdateAction,
+  RevertToVersionUpdateAction,
+  ServerUpdateAction,
+  SplitAgglomerateUpdateAction,
+  UpdateAnnotationLayerNameUpdateAction,
+  UpdateBucketUpdateAction,
+  UpdateMappingNameUpdateAction,
+  UpdateMetadataOfAnnotationUpdateAction,
+  UpdateNodeUpdateAction,
+  UpdateSegmentGroupsUpdateAction,
+  UpdateSegmentUpdateAction,
+  UpdateTreeEdgesVisibilityUpdateAction,
+  UpdateTreeGroupVisibilityUpdateAction,
+  UpdateTreeUpdateAction,
+  UpdateTreeVisibilityUpdateAction,
+} from "oxalis/model/sagas/update_actions";
+import type { HybridTracing, OxalisState } from "oxalis/store";
+import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { useSelector } from "react-redux";
 type Description = {
   description: string;
   icon: React.ReactNode;
@@ -99,7 +99,7 @@ const descriptionFns: Record<
     const segment1Description =
       action.value.segmentPosition1 != null
         ? `at position ${action.value.segmentPosition1}`
-        : action.value.segmentId1 ?? "unknown";
+        : (action.value.segmentId1 ?? "unknown");
     const segment2Description =
       action.value.segmentPosition2 ?? action.value.segmentId1 ?? "unknown";
     const description = `Split agglomerate ${action.value.agglomerateId} by separating the segments ${segment1Description} and ${segment2Description}.`;
@@ -112,7 +112,7 @@ const descriptionFns: Record<
     const segment1Description =
       action.value.segmentPosition1 != null
         ? `at position ${action.value.segmentPosition1}`
-        : action.value.segmentId1 ?? "unknown";
+        : (action.value.segmentId1 ?? "unknown");
     const segment2Description =
       action.value.segmentPosition2 ?? action.value.segmentId1 ?? "unknown";
     const description = `Merged agglomerates ${action.value.agglomerateId1} and ${action.value.agglomerateId2} by combining the segments  ${segment1Description} and ${segment2Description}.`;

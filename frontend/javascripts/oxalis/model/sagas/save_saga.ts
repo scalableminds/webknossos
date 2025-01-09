@@ -31,6 +31,7 @@ import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
+import { ensureWkReady } from "oxalis/model/sagas/ready_sagas";
 import {
   MAXIMUM_ACTION_COUNT_PER_SAVE,
   MAX_SAVE_RETRY_WAITING_TIME,
@@ -39,11 +40,10 @@ import {
 } from "oxalis/model/sagas/save_saga_constants";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import {
-  updateTdCamera,
   type UpdateActionWithoutIsolationRequirement,
+  updateTdCamera,
 } from "oxalis/model/sagas/update_actions";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
-import { ensureWkReady } from "oxalis/model/sagas/ready_sagas";
 import { Model } from "oxalis/singletons";
 import type {
   CameraData,

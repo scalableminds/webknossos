@@ -1,37 +1,37 @@
-import { Button, List, Spin } from "antd";
-import { useState, useEffect } from "react";
-import _ from "lodash";
-import dayjs from "dayjs";
-import type { APIUpdateActionBatch } from "types/api_flow_types";
-import { chunkIntoTimeWindows } from "libs/utils";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  getUpdateActionLog,
   downloadAnnotation,
-  getNewestVersionForAnnotation,
   getAnnotationProto,
+  getNewestVersionForAnnotation,
+  getUpdateActionLog,
 } from "admin/admin_rest_api";
+import { Button, List, Spin } from "antd";
+import dayjs from "dayjs";
 import { handleGenericError } from "libs/error_handling";
+import { useFetch } from "libs/react_helpers";
+import { useEffectOnlyOnce } from "libs/react_hooks";
+import { chunkIntoTimeWindows } from "libs/utils";
+import _ from "lodash";
+import { getCreationTimestamp } from "oxalis/model/accessors/annotation_accessor";
+import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import {
   pushSaveQueueTransactionIsolated,
   setVersionNumberAction,
 } from "oxalis/model/actions/save_actions";
+import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import {
+  type ServerUpdateAction,
   revertToVersion,
   serverCreateTracing,
-  type ServerUpdateAction,
 } from "oxalis/model/sagas/update_actions";
-import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
-import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { Model } from "oxalis/singletons";
+import { api } from "oxalis/singletons";
 import type { HybridTracing, OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
-import { api } from "oxalis/singletons";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffectOnlyOnce } from "libs/react_hooks";
-import { useFetch } from "libs/react_helpers";
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import { getCreationTimestamp } from "oxalis/model/accessors/annotation_accessor";
+import type { APIUpdateActionBatch } from "types/api_flow_types";
 
 const ENTRIES_PER_PAGE = 5000;
 

@@ -1,10 +1,10 @@
-import type * as React from "react";
+import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
-import ErrorHandling from "libs/error_handling";
-import Store from "oxalis/store";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import { api } from "oxalis/singletons";
+import Store from "oxalis/store";
+import type * as React from "react";
 
 const WEBGL_CONTEXT_LOST_KEY = "WEBGL_CONTEXT_LOST_KEY";
 

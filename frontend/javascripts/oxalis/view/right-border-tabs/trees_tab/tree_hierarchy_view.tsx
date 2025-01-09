@@ -1,46 +1,46 @@
 import { DownOutlined } from "@ant-design/icons";
 import { type Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
-import React, { memo, useCallback, useEffect, useRef, useState } from "react";
-import AutoSizer from "react-virtualized-auto-sizer";
+import * as Utils from "libs/utils";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeGroupAction,
-  setTreeNameAction,
   setTreeMetadataAction,
+  setTreeNameAction,
   toggleAllTreesAction,
   toggleTreeAction,
   toggleTreeGroupAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import * as Utils from "libs/utils";
 import { Store } from "oxalis/singletons";
 import type { Tree, TreeGroup, TreeMap } from "oxalis/store";
 import {
+  GroupTypeEnum,
+  MISSING_GROUP_ID,
+  type TreeNode,
   createGroupToTreesMap,
   deepFlatFilter,
   findParentGroupNode,
   getNodeKey,
-  GroupTypeEnum,
   insertTreesAndTransform,
-  MISSING_GROUP_ID,
   moveGroupsHelper,
-  type TreeNode,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import React, { memo, useCallback, useEffect, useRef, useState } from "react";
+import AutoSizer from "react-virtualized-auto-sizer";
+import type { MetadataEntryProto } from "types/api_flow_types";
+import { InputWithUpdateOnBlur } from "../../components/input_with_update_on_blur";
 import { getContextMenuPositionFromEvent } from "../../context_menu";
+import { MetadataEntryTableRows } from "../metadata_table";
+import { ResizableSplitPane } from "../resizable_split_pane";
+import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
 import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
-  onBatchActions,
   type Props,
+  onBatchActions,
   renderGroupNode,
   renderTreeNode,
   selectGroupById,
   setExpandedGroups,
   setUpdateTreeGroups,
 } from "./tree_hierarchy_renderers";
-import { ResizableSplitPane } from "../resizable_split_pane";
-import { MetadataEntryTableRows } from "../metadata_table";
-import type { MetadataEntryProto } from "types/api_flow_types";
-import { InputWithUpdateOnBlur } from "../../components/input_with_update_on_blur";
-import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
 
 const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
   const { id, type } = info.node;
@@ -214,7 +214,7 @@ function TreeHierarchyView(props: Props) {
     const parentGroupId =
       dragTargetNode.type === GroupTypeEnum.GROUP
         ? dragTargetNode.id
-        : props.trees[dragTargetNode.id].groupId ?? MISSING_GROUP_ID;
+        : (props.trees[dragTargetNode.id].groupId ?? MISSING_GROUP_ID);
 
     let updatedTreeGroups: TreeGroup[] = props.treeGroups;
     if (draggedNode.type === GroupTypeEnum.TREE) {

@@ -1,89 +1,91 @@
-import _ from "lodash";
-import type {
-  APIAnnotation,
-  APIDataset,
-  MutableAPIDataset,
-  APIDataLayer,
-  ServerVolumeTracing,
-  ServerTracing,
-  ServerEditableMapping,
-  APICompoundType,
-  APISegmentationLayer,
-  APITracingStoreAnnotation,
-} from "types/api_flow_types";
 import {
-  computeDataTexturesSetup,
-  getSupportedTextureSpecs,
-  validateMinimumRequirements,
-} from "oxalis/model/bucket_data_handling/data_rendering_logic";
+  getAnnotationCompoundInformation,
+  getAnnotationProto,
+  getDataset,
+  getDatasetViewConfiguration,
+  getEditableMappingInfo,
+  getEmptySandboxAnnotationInformation,
+  getSharingTokenFromUrlParameters,
+  getTracingsForAnnotation,
+  getUnversionedAnnotationInformation,
+  getUserConfiguration,
+} from "admin/admin_rest_api";
+import {
+  PricingPlanEnum,
+  isFeatureAllowedByPricingPlan,
+} from "admin/organization/pricing_plan_utils";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import messages from "messages";
+import constants, { ControlModeEnum, AnnotationToolEnum, type Vector3 } from "oxalis/constants";
+import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/url_manager";
+import UrlManager from "oxalis/controller/url_manager";
 import {
   determineAllowedModes,
   getBitDepth,
-  getDatasetBoundingBox,
   getDataLayers,
+  getDatasetBoundingBox,
   getDatasetCenter,
+  getLayerByName,
+  getSegmentationLayerByName,
+  getSegmentationLayers,
+  getUnifiedAdditionalCoordinates,
   hasSegmentation,
   isElementClassSupported,
   isSegmentationLayer,
-  getSegmentationLayers,
-  getLayerByName,
-  getSegmentationLayerByName,
-  getUnifiedAdditionalCoordinates,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
-import {
-  getTracingsForAnnotation,
-  getUnversionedAnnotationInformation,
-  getEmptySandboxAnnotationInformation,
-  getDataset,
-  getSharingTokenFromUrlParameters,
-  getUserConfiguration,
-  getDatasetViewConfiguration,
-  getEditableMappingInfo,
-  getAnnotationCompoundInformation,
-  getAnnotationProto,
-} from "admin/admin_rest_api";
+import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   dispatchMaybeFetchMeshFilesAsync,
   initializeAnnotationAction,
   updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
 import {
-  initializeSettingsAction,
+  setActiveConnectomeAgglomerateIdsAction,
+  updateCurrentConnectomeFileAction,
+} from "oxalis/model/actions/connectome_actions";
+import { setDatasetAction } from "oxalis/model/actions/dataset_actions";
+import {
+  setAdditionalCoordinatesAction,
+  setPositionAction,
+  setRotationAction,
+  setZoomStepAction,
+} from "oxalis/model/actions/flycam_actions";
+import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
+import {
   initializeGpuSetupAction,
+  initializeSettingsAction,
   setControlModeAction,
-  setViewModeAction,
   setMappingAction,
-  updateLayerSettingAction,
   setMappingEnabledAction,
+  setViewModeAction,
+  updateLayerSettingAction,
 } from "oxalis/model/actions/settings_actions";
+import {
+  initializeSkeletonTracingAction,
+  loadAgglomerateSkeletonAction,
+  setActiveNodeAction,
+  setShowSkeletonsAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { setTaskAction } from "oxalis/model/actions/task_actions";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
 import {
   initializeEditableMappingAction,
   initializeVolumeTracingAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
-  setActiveNodeAction,
-  initializeSkeletonTracingAction,
-  loadAgglomerateSkeletonAction,
-  setShowSkeletonsAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { setDatasetAction } from "oxalis/model/actions/dataset_actions";
-import {
-  setPositionAction,
-  setZoomStepAction,
-  setRotationAction,
-  setAdditionalCoordinatesAction,
-} from "oxalis/model/actions/flycam_actions";
-import { setTaskAction } from "oxalis/model/actions/task_actions";
-import { setToolAction } from "oxalis/model/actions/ui_actions";
-import {
-  loadAdHocMeshAction,
-  loadPrecomputedMeshAction,
-} from "oxalis/model/actions/segmentation_actions";
+  computeDataTexturesSetup,
+  getSupportedTextureSpecs,
+  validateMinimumRequirements,
+} from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import DataLayer from "oxalis/model/data_layer";
-import ErrorHandling from "libs/error_handling";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
@@ -91,25 +93,23 @@ import type {
   UserConfiguration,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import Toast from "libs/toast";
-import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/url_manager";
-import UrlManager from "oxalis/controller/url_manager";
-import * as Utils from "libs/utils";
-import constants, { ControlModeEnum, AnnotationToolEnum, type Vector3 } from "oxalis/constants";
-import messages from "messages";
-import {
-  setActiveConnectomeAgglomerateIdsAction,
-  updateCurrentConnectomeFileAction,
-} from "oxalis/model/actions/connectome_actions";
-import {
-  PricingPlanEnum,
-  isFeatureAllowedByPricingPlan,
-} from "admin/organization/pricing_plan_utils";
+import type {
+  APIAnnotation,
+  APICompoundType,
+  APIDataLayer,
+  APIDataset,
+  APISegmentationLayer,
+  APITracingStoreAnnotation,
+  MutableAPIDataset,
+  ServerEditableMapping,
+  ServerTracing,
+  ServerVolumeTracing,
+} from "types/api_flow_types";
+import { setVersionNumberAction } from "./model/actions/save_actions";
 import {
   convertServerAdditionalAxesToFrontEnd,
   convertServerAnnotationToFrontendAnnotation,
 } from "./model/reducers/reducer_helpers";
-import { setVersionNumberAction } from "./model/actions/save_actions";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
@@ -152,10 +152,10 @@ export async function initialize(
             // Only when the newest version is requested (version==null),
             // the stats are available in unversionedAnnotation.
             version == null
-              ? _.find(
+              ? (_.find(
                   unversionedAnnotation.annotationLayers,
                   (layer) => layer.tracingId === protoLayer.tracingId,
-                )?.stats ?? {}
+                )?.stats ?? {})
               : {},
         };
       });

@@ -1,12 +1,12 @@
+import { App, ConfigProvider, theme } from "antd";
+import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
+import { ToastContextMountRoot } from "libs/toast";
+import window from "libs/window";
+import type { OxalisState, Theme } from "oxalis/store";
 import type React from "react";
 import { useEffect } from "react";
 import { useSelector } from "react-redux";
-import { App, ConfigProvider, theme } from "antd";
 import type { APIUser } from "types/api_flow_types";
-import window from "libs/window";
-import type { OxalisState, Theme } from "oxalis/store";
-import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
-import { ToastContextMountRoot } from "libs/toast";
 
 const ColorWKBlue = "#5660ff"; // WK ~blue/purple
 const ColorWKLinkHover = "#a8b4ff"; // slightly brighter WK Blue

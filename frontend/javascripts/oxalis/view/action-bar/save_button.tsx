@@ -1,21 +1,21 @@
-import { connect } from "react-redux";
-import React from "react";
-import _ from "lodash";
-import Store, { type SaveState } from "oxalis/store";
-import type { OxalisState } from "oxalis/store";
-import ButtonComponent from "oxalis/view/components/button_component";
-import { Model } from "oxalis/singletons";
-import window from "libs/window";
 import {
   CheckOutlined,
   ExclamationCircleOutlined,
   HourglassOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
-import ErrorHandling from "libs/error_handling";
-import FastTooltip from "components/fast_tooltip";
 import { Tooltip } from "antd";
+import FastTooltip from "components/fast_tooltip";
+import ErrorHandling from "libs/error_handling";
+import window from "libs/window";
+import _ from "lodash";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
+import { Model } from "oxalis/singletons";
+import Store, { type SaveState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
+import ButtonComponent from "oxalis/view/components/button_component";
+import React from "react";
+import { connect } from "react-redux";
 
 type OwnProps = {
   onClick: (arg0: React.MouseEvent<HTMLButtonElement, MouseEvent>) => Promise<any>;

@@ -1,13 +1,14 @@
-import type { Dispatch } from "redux";
-import { Typography, Tag } from "antd";
-import { SettingOutlined, InfoCircleOutlined, EditOutlined } from "@ant-design/icons";
-import { connect } from "react-redux";
-import Markdown from "libs/markdown_adapter";
-import React, { type CSSProperties } from "react";
-import { Link } from "react-router-dom";
-import type { APIDataset, APIUser } from "types/api_flow_types";
-import { ControlModeEnum, LongUnitToShortUnitMap } from "oxalis/constants";
+import { EditOutlined, InfoCircleOutlined, SettingOutlined } from "@ant-design/icons";
+import { Tag, Typography } from "antd";
 import { formatNumberToVolume, formatScale, formatVoxels } from "libs/format_utils";
+import Markdown from "libs/markdown_adapter";
+import { ControlModeEnum, LongUnitToShortUnitMap } from "oxalis/constants";
+import {
+  type TracingStats,
+  getSkeletonStats,
+  getStats,
+  getVolumeStats,
+} from "oxalis/model/accessors/annotation_accessor";
 import {
   getDatasetExtentAsString,
   getDatasetExtentInUnitAsProduct,
@@ -17,27 +18,26 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
 import {
-  getSkeletonStats,
-  getStats,
-  getVolumeStats,
-  type TracingStats,
-} from "oxalis/model/accessors/annotation_accessor";
-import {
-  setAnnotationNameAction,
   setAnnotationDescriptionAction,
+  setAnnotationNameAction,
 } from "oxalis/model/actions/annotation_actions";
+import React, { type CSSProperties } from "react";
+import { connect } from "react-redux";
+import { Link } from "react-router-dom";
+import type { Dispatch } from "redux";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 
 import type { OxalisState, Task, Tracing } from "oxalis/store";
 
-import { formatUserName } from "oxalis/model/accessors/user_accessor";
-import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
-import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
-import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 import { getOrganization } from "admin/admin_rest_api";
-import { MarkdownModal } from "../components/markdown_modal";
 import FastTooltip from "components/fast_tooltip";
+import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
 import messages from "messages";
+import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
+import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 import type { EmptyObject } from "types/globals";
+import { MarkdownModal } from "../components/markdown_modal";
 
 type StateProps = {
   annotation: Tracing;

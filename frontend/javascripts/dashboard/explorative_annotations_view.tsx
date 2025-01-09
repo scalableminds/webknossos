@@ -1,71 +1,71 @@
-import { Link } from "react-router-dom";
-import { PropTypes } from "@scalableminds/prop-types";
 import {
-  Spin,
-  Input,
-  Table,
-  Button,
-  Modal,
-  Tooltip,
-  Tag,
-  Row,
-  Col,
-  Card,
-  type TableProps,
-} from "antd";
-import {
+  CopyOutlined,
   DownloadOutlined,
   FolderOpenOutlined,
   InboxOutlined,
+  LockOutlined,
   PlayCircleOutlined,
   PlusOutlined,
-  UploadOutlined,
-  CopyOutlined,
   TeamOutlined,
-  UserOutlined,
-  LockOutlined,
   UnlockOutlined,
+  UploadOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
-import * as React from "react";
-import _ from "lodash";
-import update from "immutability-helper";
-import { AsyncLink } from "components/async_clickables";
+import { PropTypes } from "@scalableminds/prop-types";
 import {
-  annotationToCompact,
-  type APIAnnotationInfo,
-  type APIUser,
-  type APIUserCompact,
-} from "types/api_flow_types";
-import { AnnotationContentTypes } from "oxalis/constants";
-import {
-  finishAllAnnotations,
-  editAnnotation,
-  finishAnnotation,
-  reOpenAnnotation,
   downloadAnnotation,
+  editAnnotation,
+  editLockedState,
+  finishAllAnnotations,
+  finishAnnotation,
   getCompactAnnotationsForUser,
   getReadableAnnotations,
-  editLockedState,
+  reOpenAnnotation,
 } from "admin/admin_rest_api";
-import { formatHash, stringToColor } from "libs/format_utils";
-import { handleGenericError } from "libs/error_handling";
-import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import EditableTextIcon from "oxalis/view/components/editable_text_icon";
+import {
+  Button,
+  Card,
+  Col,
+  Input,
+  Modal,
+  Row,
+  Spin,
+  Table,
+  type TableProps,
+  Tag,
+  Tooltip,
+} from "antd";
+import type { SearchProps } from "antd/lib/input";
+import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
+import TextWithDescription from "components/text_with_description";
+import update from "immutability-helper";
+import { handleGenericError } from "libs/error_handling";
+import { formatHash, stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import messages from "messages";
+import { AnnotationContentTypes } from "oxalis/constants";
+import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
+import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
+import Store from "oxalis/store";
 import CategorizationLabel, {
   CategorizationSearch,
 } from "oxalis/view/components/categorization_label";
-import Store from "oxalis/store";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import messages from "messages";
-import TextWithDescription from "components/text_with_description";
-import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
+import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
-import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
-import type { SearchProps } from "antd/lib/input";
 import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
+import * as React from "react";
+import { Link } from "react-router-dom";
+import {
+  type APIAnnotationInfo,
+  type APIUser,
+  type APIUserCompact,
+  annotationToCompact,
+} from "types/api_flow_types";
+import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
 const { Search } = Input;
 const pageLength: number = 1000;

@@ -1,16 +1,16 @@
 import update from "immutability-helper";
-import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, UserBoundingBox, MeshInformation } from "oxalis/store";
 import { V3 } from "libs/mjs";
-import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
-import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import * as Utils from "libs/utils";
-import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
 import _ from "lodash";
-import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
-import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
+import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
+import type { Action } from "oxalis/model/actions/actions";
+import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
+import type { MeshInformation, OxalisState, UserBoundingBox } from "oxalis/store";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getDatasetBoundingBox } from "../accessors/dataset_accessor";
+import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
+import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 
 const updateTracing = (state: OxalisState, shape: Partial<OxalisState["tracing"]>): OxalisState =>

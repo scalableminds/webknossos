@@ -1,39 +1,48 @@
 import {
-  Radio,
-  Badge,
-  Space,
-  Popover,
-  type RadioChangeEvent,
-  Dropdown,
-  type MenuProps,
-  Col,
-  Row,
-  Divider,
-  Popconfirm,
-} from "antd";
-import {
   ClearOutlined,
   DownOutlined,
   ExportOutlined,
   InfoCircleOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
-import { useSelector, useDispatch } from "react-redux";
+import {
+  Badge,
+  Col,
+  Divider,
+  Dropdown,
+  type MenuProps,
+  Popconfirm,
+  Popover,
+  Radio,
+  type RadioChangeEvent,
+  Row,
+  Space,
+} from "antd";
 import React, { useEffect, useCallback, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
-import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
-import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
-import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import {
-  interpolateSegmentationLayerAction,
-  createCellAction,
-  setMousePositionAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import {
-  createTreeAction,
-  setMergerModeEnabledAction,
-} from "oxalis/model/actions/skeletontracing_actions";
+import { useKeyPress, usePrevious } from "libs/react_hooks";
 import { document } from "libs/window";
+import {
+  type AnnotationTool,
+  AnnotationToolEnum,
+  FillModeEnum,
+  type InterpolationMode,
+  InterpolationModeEnum,
+  MappingStatusEnum,
+  MeasurementTools,
+  type OverwriteMode,
+  OverwriteModeEnum,
+  ToolsWithInterpolationCapabilities,
+  ToolsWithOverwriteCapabilities,
+  Unicode,
+  VolumeTools,
+} from "oxalis/constants";
+import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  adaptActiveToolToShortcuts,
+  getDisabledInfoForTools,
+} from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,
   getMappingInfoForVolumeTracing,
@@ -43,49 +52,40 @@ import {
   hasAgglomerateMapping,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  getDisabledInfoForTools,
-  adaptActiveToolToShortcuts,
-} from "oxalis/model/accessors/tool_accessor";
-import { setToolAction, showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
+import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { usePrevious, useKeyPress } from "libs/react_hooks";
-import { userSettings } from "types/schemas/user_settings.schema";
-import ButtonComponent from "oxalis/view/components/button_component";
-import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
 import {
-  ToolsWithOverwriteCapabilities,
-  AnnotationToolEnum,
-  OverwriteModeEnum,
-  FillModeEnum,
-  VolumeTools,
-  MappingStatusEnum,
-  type AnnotationTool,
-  type OverwriteMode,
-  ToolsWithInterpolationCapabilities,
-  InterpolationModeEnum,
-  type InterpolationMode,
-  Unicode,
-  MeasurementTools,
-} from "oxalis/constants";
+  createTreeAction,
+  setMergerModeEnabledAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { setToolAction, showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
+import {
+  createCellAction,
+  interpolateSegmentationLayerAction,
+  setMousePositionAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import { Model } from "oxalis/singletons";
 import Store, { type BrushPresets, type OxalisState } from "oxalis/store";
+import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
+import ButtonComponent from "oxalis/view/components/button_component";
+import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
+import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
+import { userSettings } from "types/schemas/user_settings.schema";
 
+import { updateNovelUserExperienceInfos } from "admin/admin_rest_api";
+import FastTooltip from "components/fast_tooltip";
 import features from "features";
-import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
-import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
-import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
-import { QuickSelectControls } from "./quick_select_settings";
-import type { MenuInfo } from "rc-menu/lib/interface";
+import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
+import defaultState from "oxalis/default_state";
 import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
-import { APIJobType } from "types/api_flow_types";
-import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
-import { updateNovelUserExperienceInfos } from "admin/admin_rest_api";
+import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import FastTooltip from "components/fast_tooltip";
-import defaultState from "oxalis/default_state";
+import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
+import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
+import type { MenuInfo } from "rc-menu/lib/interface";
+import { APIJobType } from "types/api_flow_types";
+import { QuickSelectControls } from "./quick_select_settings";
 
 const NARROW_BUTTON_STYLE = {
   paddingLeft: 10,

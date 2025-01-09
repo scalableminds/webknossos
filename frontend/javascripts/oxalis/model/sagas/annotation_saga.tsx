@@ -1,54 +1,54 @@
-import React from "react";
+import type { EditableAnnotation } from "admin/admin_rest_api";
+import { acquireAnnotationMutex, editAnnotation } from "admin/admin_rest_api";
+import { Button } from "antd";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
 import _ from "lodash";
+import messages from "messages";
+import constants, { MappingStatusEnum } from "oxalis/constants";
+import { getMappingInfo, is2dDataset } from "oxalis/model/accessors/dataset_accessor";
+import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import {
   type EditAnnotationLayerAction,
-  setAnnotationAllowUpdateAction,
   type SetAnnotationDescriptionAction,
-  setBlockedByUserAction,
   type SetOthersMayEditForAnnotationAction,
+  setAnnotationAllowUpdateAction,
+  setBlockedByUserAction,
 } from "oxalis/model/actions/annotation_actions";
-import * as Utils from "libs/utils";
-import type { EditableAnnotation } from "admin/admin_rest_api";
-import type { ActionPattern } from "redux-saga/effects";
-import { editAnnotation, acquireAnnotationMutex } from "admin/admin_rest_api";
+import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
 import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,
 } from "oxalis/model/sagas/save_saga_constants";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import {
-  takeLatest,
-  take,
-  retry,
-  delay,
-  call,
-  put,
-  fork,
-  takeEvery,
-  cancel,
-  cancelled,
-} from "typed-redux-saga";
-import { select } from "oxalis/model/sagas/effect-generators";
-import { getMappingInfo, is2dDataset } from "oxalis/model/accessors/dataset_accessor";
-import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
 import { Model } from "oxalis/singletons";
 import Store from "oxalis/store";
-import Toast from "libs/toast";
-import constants, { MappingStatusEnum } from "oxalis/constants";
-import messages from "messages";
-import type { APIUserCompact } from "types/api_flow_types";
-import { Button } from "antd";
-import ErrorHandling from "libs/error_handling";
-import { mayEditAnnotationProperties } from "../accessors/annotation_accessor";
 import { determineLayout } from "oxalis/view/layouting/default_layout_configs";
-import { getLastActiveLayout, getLayoutConfig } from "oxalis/view/layouting/layout_persistence";
 import { is3dViewportMaximized } from "oxalis/view/layouting/flex_layout_helper";
+import { getLastActiveLayout, getLayoutConfig } from "oxalis/view/layouting/layout_persistence";
+import React from "react";
+import type { ActionPattern } from "redux-saga/effects";
+import {
+  call,
+  cancel,
+  cancelled,
+  delay,
+  fork,
+  put,
+  retry,
+  take,
+  takeEvery,
+  takeLatest,
+} from "typed-redux-saga";
+import type { APIUserCompact } from "types/api_flow_types";
+import { mayEditAnnotationProperties } from "../accessors/annotation_accessor";
 import { needsLocalHdf5Mapping } from "../accessors/volumetracing_accessor";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
-import { updateAnnotationLayerName, updateMetadataOfAnnotation } from "./update_actions";
-import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { ensureWkReady } from "./ready_sagas";
+import { updateAnnotationLayerName, updateMetadataOfAnnotation } from "./update_actions";
 
 /* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping
   compare https://github.com/scalableminds/webknossos/issues/5223.

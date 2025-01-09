@@ -1,7 +1,7 @@
 import { DownOutlined } from "@ant-design/icons";
 import { type Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
-import _ from "lodash";
 import * as Utils from "libs/utils";
+import _ from "lodash";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeGroupAction,
@@ -218,7 +218,7 @@ function TreeHierarchyView(props: Props) {
     const parentGroupId =
       dragTargetNode.type === GroupTypeEnum.GROUP
         ? dragTargetNode.id
-        : props.trees[dragTargetNode.id].groupId ?? MISSING_GROUP_ID;
+        : (props.trees[dragTargetNode.id].groupId ?? MISSING_GROUP_ID);
 
     let updatedTreeGroups: TreeGroup[] = props.treeGroups;
     if (draggedNode.type === GroupTypeEnum.TREE) {

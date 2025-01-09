@@ -1,13 +1,13 @@
-import { connect } from "react-redux";
-import type { APIDataset } from "types/api_flow_types";
-import type { OxalisState } from "oxalis/store";
+import FastTooltip from "components/fast_tooltip";
 import { formatNumberToLength } from "libs/format_utils";
-import { getViewportExtents, getTDViewZoom } from "oxalis/model/accessors/view_mode_accessor";
-import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import type { OrthoView } from "oxalis/constants";
 import constants, { Unicode, OrthoViews, LongUnitToShortUnitMap } from "oxalis/constants";
+import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
+import { getTDViewZoom, getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
-import FastTooltip from "components/fast_tooltip";
+import type { OxalisState } from "oxalis/store";
+import { connect } from "react-redux";
+import type { APIDataset } from "types/api_flow_types";
 
 const { ThinSpace, MultiplicationSymbol } = Unicode;
 

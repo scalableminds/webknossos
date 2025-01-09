@@ -1,19 +1,19 @@
-import { Card, Button, Tooltip } from "antd";
 import { LinkOutlined } from "@ant-design/icons";
-import Markdown from "libs/markdown_adapter";
-import type React from "react";
-import { useState } from "react";
+import { Button, Card, Tooltip } from "antd";
 import classNames from "classnames";
-import { Link } from "react-router-dom";
-import type { APIDataset, APIPublication, APIPublicationAnnotation } from "types/api_flow_types";
 import { formatScale } from "libs/format_utils";
+import Markdown from "libs/markdown_adapter";
+import { compareBy } from "libs/utils";
 import {
+  getDatasetExtentAsString,
+  getSegmentationThumbnailURL,
   getThumbnailURL,
   hasSegmentation,
-  getSegmentationThumbnailURL,
-  getDatasetExtentAsString,
 } from "oxalis/model/accessors/dataset_accessor";
-import { compareBy } from "libs/utils";
+import type React from "react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import type { APIDataset, APIPublication, APIPublicationAnnotation } from "types/api_flow_types";
 
 type DatasetDetails = {
   species?: string;

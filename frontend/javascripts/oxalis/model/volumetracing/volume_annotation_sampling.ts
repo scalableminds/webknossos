@@ -1,10 +1,10 @@
-import _ from "lodash";
-import type { Vector3, LabeledVoxelsMap, BucketAddress } from "oxalis/constants";
-import constants from "oxalis/constants";
 import { map3 } from "libs/utils";
-import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
+import _ from "lodash";
 import messages from "messages";
+import type { BucketAddress, LabeledVoxelsMap, Vector3 } from "oxalis/constants";
+import constants from "oxalis/constants";
+import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { DimensionMap } from "oxalis/model/dimensions";
 
 function upsampleVoxelMap(

@@ -1,20 +1,20 @@
 import { CloseOutlined, TagsOutlined } from "@ant-design/icons";
 import { Button } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import {
   type APIMetadataWithError,
-  getTypeSelectDropdownMenu,
-  getUsedTagsWithinMetadata,
   InnerMetadataTable,
   MetadataValueInput,
+  getTypeSelectDropdownMenu,
+  getUsedTagsWithinMetadata,
 } from "dashboard/folders/metadata_table";
+import { memo } from "react";
 import {
   type APIMetadataEntry,
   APIMetadataEnum,
   type MetadataEntryProto,
 } from "types/api_flow_types";
 import { InputWithUpdateOnBlur } from "../components/input_with_update_on_blur";
-import { memo } from "react";
-import FastTooltip from "components/fast_tooltip";
 
 const getKeyInputIdForIndex = (index: number) => `metadata-key-input-id-${index}`;
 

@@ -1,9 +1,9 @@
-import type React from "react";
-import { useState, useEffect, useRef } from "react";
-import { useSelector, useStore } from "react-redux";
-import type { OxalisState } from "oxalis/store";
-import type { ArbitraryFunction } from "types/globals";
 import { isUserAdminOrManager } from "libs/utils";
+import type { OxalisState } from "oxalis/store";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSelector, useStore } from "react-redux";
+import type { ArbitraryFunction } from "types/globals";
 import Toast from "./toast";
 
 // From https://overreacted.io/making-setinterval-declarative-with-react-hooks/

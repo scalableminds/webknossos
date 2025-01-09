@@ -2,8 +2,8 @@ import {
   ArrowRightOutlined,
   CloseOutlined,
   DeleteOutlined,
-  DownloadOutlined,
   DownOutlined,
+  DownloadOutlined,
   ExclamationCircleOutlined,
   ExpandAltOutlined,
   EyeInvisibleOutlined,
@@ -17,20 +17,21 @@ import {
 } from "@ant-design/icons";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
 import {
+  PricingPlanEnum,
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
-  PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import {
   Button,
   ConfigProvider,
   Divider,
   Empty,
+  type MenuProps,
   Modal,
   Popover,
   Select,
-  type MenuProps,
 } from "antd";
+import type { ItemType } from "antd/lib/menu/interface";
 import type { DataNode } from "antd/lib/tree";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
@@ -40,9 +41,9 @@ import _, { isNumber, memoize } from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import { EMPTY_OBJECT, MappingStatusEnum } from "oxalis/constants";
 import {
+  getMagInfoOfVisibleSegmentationLayer,
   getMappingInfo,
   getMaybeSegmentIndexAvailability,
-  getMagInfoOfVisibleSegmentationLayer,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
@@ -97,11 +98,12 @@ import Store from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import { InputWithUpdateOnBlur } from "oxalis/view/components/input_with_update_on_blur";
 import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
 import {
-  getBaseSegmentationName,
   type SegmentHierarchyNode,
+  getBaseSegmentationName,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import type RcTree from "rc-tree";
 import React, { type Key } from "react";
@@ -119,9 +121,12 @@ import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import type { ValueOf } from "types/globals";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
+import { MetadataEntryTableRows } from "../metadata_table";
 import { ResizableSplitPane } from "../resizable_split_pane";
+import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
 import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
+  MISSING_GROUP_ID,
   additionallyExpandGroup,
   createGroupToParentMap,
   createGroupToSegmentsMap,
@@ -130,13 +135,8 @@ import {
   getExpandedGroups,
   getGroupByIdWithSubgroups,
   getGroupNodeKey,
-  MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
-import { MetadataEntryTableRows } from "../metadata_table";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
-import type { ItemType } from "antd/lib/menu/interface";
-import { InputWithUpdateOnBlur } from "oxalis/view/components/input_with_update_on_blur";
-import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
 
 const SCROLL_DELAY_MS = 50;
 

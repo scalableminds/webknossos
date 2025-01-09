@@ -1,6 +1,6 @@
 import _ from "lodash";
-import type { Dispatch } from "redux";
 import type { Action } from "oxalis/model/actions/actions";
+import type { Dispatch } from "redux";
 
 const MAX_ACTION_LOG_LENGTH = 250;
 let actionLog: string[] = [];

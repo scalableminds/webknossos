@@ -1,14 +1,14 @@
-import AutoSizer from "react-virtualized-auto-sizer";
 import { Dropdown, type MenuProps, Tag, Tree, type TreeProps } from "antd";
-import React from "react";
+import { stringToAntdColorPreset } from "libs/format_utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import { stringToAntdColorPreset } from "libs/format_utils";
-import { api } from "oxalis/singletons";
 import type { Vector3 } from "oxalis/constants";
-import type { APIConnectomeFile } from "types/api_flow_types";
-import Store from "oxalis/store";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
+import { api } from "oxalis/singletons";
+import Store from "oxalis/store";
+import React from "react";
+import AutoSizer from "react-virtualized-auto-sizer";
+import type { APIConnectomeFile } from "types/api_flow_types";
 type BaseSynapse = {
   id: number;
   position: Vector3;

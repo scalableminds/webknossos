@@ -1,13 +1,13 @@
-import { Button, Modal, Avatar, List, Spin, Checkbox, Alert } from "antd";
 import { FileOutlined, InboxOutlined } from "@ant-design/icons";
-import { connect } from "react-redux";
-import Dropzone, { type DropzoneInputProps } from "react-dropzone";
-import * as React from "react";
-import prettyBytes from "pretty-bytes";
-import type { Dispatch } from "redux";
-import type { OxalisState } from "oxalis/store";
-import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
+import { Alert, Avatar, Button, Checkbox, List, Modal, Spin } from "antd";
 import FormattedDate from "components/formatted_date";
+import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
+import type { OxalisState } from "oxalis/store";
+import prettyBytes from "pretty-bytes";
+import * as React from "react";
+import Dropzone, { type DropzoneInputProps } from "react-dropzone";
+import { connect } from "react-redux";
+import type { Dispatch } from "redux";
 
 type State = {
   files: Array<File>;

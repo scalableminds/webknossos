@@ -1,8 +1,8 @@
-import { Select } from "antd";
-import * as React from "react";
-import _ from "lodash";
-import type { APITeam } from "types/api_flow_types";
 import { getEditableTeams, getTeams } from "admin/admin_rest_api";
+import { Select } from "antd";
+import _ from "lodash";
+import * as React from "react";
+import type { APITeam } from "types/api_flow_types";
 
 const { Option } = Select;
 

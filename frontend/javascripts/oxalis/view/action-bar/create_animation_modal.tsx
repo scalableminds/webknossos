@@ -1,11 +1,23 @@
 import { Alert, Checkbox, Col, Divider, Modal, Radio, Row, Space, Tooltip } from "antd";
-import { useSelector } from "react-redux";
 import React, { useState } from "react";
+import { useSelector } from "react-redux";
 
 import { startRenderAnimationJob } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import Store, { type MeshInformation, type OxalisState, type UserBoundingBox } from "oxalis/store";
 
+import { InfoCircleOutlined } from "@ant-design/icons";
+import {
+  PricingPlanEnum,
+  isFeatureAllowedByPricingPlan,
+} from "admin/organization/pricing_plan_utils";
+import { LayerSelection } from "components/layer_selection";
+import { PricingEnforcedSpan } from "components/pricing_enforcers";
+import {
+  computeBoundingBoxFromBoundingBoxObject,
+  computeBoundingBoxObjectFromBoundingBox,
+} from "libs/utils";
+import type { Vector3 } from "oxalis/constants";
 import {
   getColorLayers,
   getEffectiveIntensityRange,
@@ -13,30 +25,18 @@ import {
   getMagInfo,
   is2dDataset,
 } from "oxalis/model/accessors/dataset_accessor";
-import {
-  computeBoundingBoxFromBoundingBoxObject,
-  computeBoundingBoxObjectFromBoundingBox,
-} from "libs/utils";
+import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import {
-  CAMERA_POSITIONS,
-  type RenderAnimationOptions,
-  MOVIE_RESOLUTIONS,
   type APIDataLayer,
   APIJobType,
   type APISegmentationLayer,
+  CAMERA_POSITIONS,
+  MOVIE_RESOLUTIONS,
+  type RenderAnimationOptions,
 } from "types/api_flow_types";
-import { InfoCircleOutlined } from "@ant-design/icons";
-import { PricingEnforcedSpan } from "components/pricing_enforcers";
-import {
-  PricingPlanEnum,
-  isFeatureAllowedByPricingPlan,
-} from "admin/organization/pricing_plan_utils";
-import type { Vector3 } from "oxalis/constants";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { BoundingBoxSelection } from "./starting_job_modals";
-import { LayerSelection } from "components/layer_selection";
-import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 
 type Props = {
   isOpen: boolean;

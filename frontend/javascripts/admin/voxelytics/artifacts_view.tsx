@@ -1,11 +1,11 @@
-import { JSONTree } from "react-json-tree";
-import { Button, Card, message } from "antd";
 import { CopyOutlined, ExportOutlined } from "@ant-design/icons";
-import type { VoxelyticsArtifactConfig } from "types/api_flow_types";
 import { getVoxelyticsArtifactChecksums } from "admin/admin_rest_api";
+import { Button, Card, message } from "antd";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
-import { copyToClipboad, isObjectEmpty, useTheme } from "./utils";
+import { JSONTree } from "react-json-tree";
 import { Link } from "react-router-dom";
+import type { VoxelyticsArtifactConfig } from "types/api_flow_types";
+import { copyToClipboad, isObjectEmpty, useTheme } from "./utils";
 
 export function renderArtifactPath(artifact: VoxelyticsArtifactConfig) {
   return (

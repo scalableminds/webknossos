@@ -1,5 +1,5 @@
-import * as THREE from "three";
 import window, { document } from "libs/window";
+import * as THREE from "three";
 
 /**
  * The MIT License

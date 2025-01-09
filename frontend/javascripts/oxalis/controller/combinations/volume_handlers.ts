@@ -1,20 +1,20 @@
+import { V3 } from "libs/mjs";
+import memoizeOne from "memoize-one";
 import type { OrthoView, Point2, Vector3 } from "oxalis/constants";
 import { ContourModeEnum } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import {
-  startEditingAction,
-  floodFillAction,
   addToLayerAction,
   finishEditingAction,
-  setContourTracingModeAction,
-  setActiveCellAction,
+  floodFillAction,
   resetContourAction,
+  setActiveCellAction,
+  setContourTracingModeAction,
+  startEditingAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { Model, Store, api } from "oxalis/singletons";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import type { AdditionalCoordinate } from "types/api_flow_types";
-import memoizeOne from "memoize-one";
-import { V3 } from "libs/mjs";
 
 export function handleDrawStart(pos: Point2, plane: OrthoView) {
   const state = Store.getState();

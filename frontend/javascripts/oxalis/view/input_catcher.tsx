@@ -1,5 +1,6 @@
+import { useEffectOnlyOnce, useKeyPress } from "libs/react_hooks";
+import { waitForCondition } from "libs/utils";
 import _ from "lodash";
-import type * as React from "react";
 import type { Rect, Viewport } from "oxalis/constants";
 import {
   AnnotationToolEnum,
@@ -7,17 +8,16 @@ import {
   ArbitraryViews,
   OrthoViews,
 } from "oxalis/constants";
+import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import { setInputCatcherRects } from "oxalis/model/actions/view_mode_actions";
-import Scalebar from "oxalis/view/scalebar";
-import ViewportStatusIndicator from "oxalis/view/viewport_status_indicator";
 import type { BusyBlockingInfo, OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
-import { waitForCondition } from "libs/utils";
-import { useEffectOnlyOnce, useKeyPress } from "libs/react_hooks";
+import Scalebar from "oxalis/view/scalebar";
+import ViewportStatusIndicator from "oxalis/view/viewport_status_indicator";
+import type * as React from "react";
 import { useRef } from "react";
 import { useSelector } from "react-redux";
-import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 
 const emptyViewportRect = {
   top: 0,

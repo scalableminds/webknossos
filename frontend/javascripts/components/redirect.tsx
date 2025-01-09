@@ -1,7 +1,7 @@
+import { useEffectOnlyOnce } from "libs/react_hooks";
+import type React from "react";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import type React from "react";
-import { useEffectOnlyOnce } from "libs/react_hooks";
 
 type Props = {
   redirectTo: () => Promise<string>;

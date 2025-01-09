@@ -1,22 +1,22 @@
-import * as THREE from "three";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
-import TWEEN from "tween.js";
+import app from "app";
+import window from "libs/window";
 import _ from "lodash";
+import type { OrthoViewMap, Viewport } from "oxalis/constants";
+import Constants, { ARBITRARY_CAM_DISTANCE, ArbitraryViewport, OrthoViews } from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import type ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
+import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
+import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import Store from "oxalis/store";
 import {
   getGroundTruthLayoutRect,
   show3DViewportInArbitrary,
 } from "oxalis/view/layouting/default_layout_configs";
-import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
-import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
-import type ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
-import type { OrthoViewMap, Viewport } from "oxalis/constants";
-import Constants, { ARBITRARY_CAM_DISTANCE, ArbitraryViewport, OrthoViews } from "oxalis/constants";
-import Store from "oxalis/store";
-import app from "app";
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import window from "libs/window";
-import { clearCanvas, setupRenderArea, renderToTexture } from "oxalis/view/rendering_utils";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { clearCanvas, renderToTexture, setupRenderArea } from "oxalis/view/rendering_utils";
+import * as THREE from "three";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
+import TWEEN from "tween.js";
 
 type GeometryLike = {
   addToScene: (obj: THREE.Object3D) => void;

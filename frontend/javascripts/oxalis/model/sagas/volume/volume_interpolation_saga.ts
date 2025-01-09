@@ -37,8 +37,8 @@ import type { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
 import { Model, api } from "oxalis/singletons";
 import type { OxalisState } from "oxalis/store";
 import { call, put } from "typed-redux-saga";
-import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
 import { requestBucketModificationInVolumeTracing } from "../saga_helpers";
+import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
 
 /*
  * This saga is capable of doing segment interpolation between two slices.

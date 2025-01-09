@@ -1,4 +1,4 @@
-import { type Model, Actions, type TabSetNode, type BorderNode } from "flexlayout-react";
+import { Actions, type BorderNode, type Model, type TabSetNode } from "flexlayout-react";
 import type { BorderOpenStatus } from "oxalis/store";
 import type { ModelConfig } from "./flex_layout_types";
 

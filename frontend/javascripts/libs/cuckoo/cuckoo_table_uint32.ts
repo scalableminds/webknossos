@@ -1,6 +1,6 @@
+import type { NumberLike } from "oxalis/store";
 import * as THREE from "three";
 import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
-import type { NumberLike } from "oxalis/store";
 
 const EMPTY_KEY = EMPTY_KEY_VALUE;
 const EMPTY_VALUE = EMPTY_KEY_VALUE;

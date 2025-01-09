@@ -163,6 +163,50 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+export const getShowTrainingDataLink = (
+  trainingAnnotations: {
+    annotationId: string;
+  }[],
+) => {
+  return trainingAnnotations == null ? null : trainingAnnotations.length > 1 ? (
+    <a
+      href="#"
+      onClick={() => {
+        Modal.info({
+          content: (
+            <div>
+              The following annotations were used during training:
+              <ul>
+                {trainingAnnotations.map((annotation: { annotationId: string }, index: number) => (
+                  <li key={`annotation_${index}`}>
+                    <a
+                      href={`/annotations/${annotation.annotationId}`}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      Annotation {index + 1}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ),
+        });
+      }}
+    >
+      Show Training Data
+    </a>
+  ) : (
+    <a
+      href={`/annotations/${trainingAnnotations[0].annotationId}`}
+      target="_blank"
+      rel="noreferrer noopener"
+    >
+      Show Training Data
+    </a>
+  );
+};
+
 const renderActionsForModel = (model: AiModel) => {
   if (model.trainingJob == null) {
     return;
@@ -177,45 +221,7 @@ const renderActionsForModel = (model: AiModel) => {
           <br />
         </>
       ) : null}
-      {trainingAnnotations == null ? null : trainingAnnotations.length > 1 ? (
-        <a
-          href="#"
-          onClick={() => {
-            Modal.info({
-              content: (
-                <div>
-                  The following annotations were used during training:
-                  <ul>
-                    {trainingAnnotations.map(
-                      (annotation: { annotationId: string }, index: number) => (
-                        <li key={`annotation_${index}`}>
-                          <a
-                            href={`/annotations/${annotation.annotationId}`}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                          >
-                            Annotation {index + 1}
-                          </a>
-                        </li>
-                      ),
-                    )}
-                  </ul>
-                </div>
-              ),
-            });
-          }}
-        >
-          Show Training Data
-        </a>
-      ) : (
-        <a
-          href={`/annotations/${trainingAnnotations[0].annotationId}`}
-          target="_blank"
-          rel="noreferrer noopener"
-        >
-          Show Training Data
-        </a>
-      )}
+      {getShowTrainingDataLink(trainingAnnotations)}
     </div>
   );
 };

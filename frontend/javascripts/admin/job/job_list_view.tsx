@@ -25,6 +25,7 @@ import type * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { type APIJob, APIJobType, type APIUserBase } from "types/api_flow_types";
+import { getShowTrainingDataLink } from "admin/voxelytics/ai_model_list_view";
 
 // Unfortunately, the twoToneColor (nor the style) prop don't support
 // CSS variables.
@@ -237,13 +238,14 @@ function JobListView() {
       const numberOfTrainingAnnotations = job.trainingAnnotations.length;
       return (
         <span>
-          {`Train model on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}`}
+          {`Train model on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
+          {getShowTrainingDataLink(job.trainingAnnotations)}
         </span>
       );
     } else if (job.type === APIJobType.INFER_WITH_MODEL && job.organizationId) {
       return (
         <span>
-          Run inference with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
+          Run AI segmentation with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
         </span>
       );
     } else {
@@ -338,7 +340,16 @@ function JobListView() {
       );
     } else {
       // unknown job type
-      return null;
+      return (
+        <span>
+          {job.resultLink && (
+            <a href={job.resultLink} title="Result">
+              Result
+            </a>
+          )}
+          {job.result && <p>{job.result}</p>}
+        </span>
+      );
     }
   }
 

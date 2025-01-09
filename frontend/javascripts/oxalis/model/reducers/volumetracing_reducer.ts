@@ -23,6 +23,7 @@ import {
 import {
   getRequestedOrVisibleSegmentationLayer,
   getSegmentationLayerForTracing,
+  getSelectedIds,
   getVisibleSegments,
   getVolumeTracingById,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -192,7 +193,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       creationTime: action.timestamp,
       name: null,
       color: null,
-      groupId: null,
+      groupId: getSelectedIds(state)[0].group,
       someAdditionalCoordinates: someAdditionalCoordinates,
       ...oldSegment,
       ...segment,

@@ -11,8 +11,7 @@ import {
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { cancelJob, getJobs } from "admin/admin_rest_api";
-import { getShowTrainingDataLink } from "admin/voxelytics/ai_model_list_view";
-import { Input, Spin, Table, Tooltip, Typography } from "antd";
+import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import { confirmAsync } from "dashboard/dataset/helper_components";
@@ -60,6 +59,50 @@ export const TOOLTIP_MESSAGES_AND_ICONS = {
 const refreshInterval = 5000;
 const { Column } = Table;
 const { Search } = Input;
+
+export const getShowTrainingDataLink = (
+  trainingAnnotations: {
+    annotationId: string;
+  }[],
+) => {
+  return trainingAnnotations == null ? null : trainingAnnotations.length > 1 ? (
+    <a
+      href="#"
+      onClick={() => {
+        Modal.info({
+          content: (
+            <div>
+              The following annotations were used during training:
+              <ul>
+                {trainingAnnotations.map((annotation: { annotationId: string }, index: number) => (
+                  <li key={`annotation_${index}`}>
+                    <a
+                      href={`/annotations/${annotation.annotationId}`}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      Annotation {index + 1}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ),
+        });
+      }}
+    >
+      Show Training Data
+    </a>
+  ) : (
+    <a
+      href={`/annotations/${trainingAnnotations[0].annotationId}`}
+      target="_blank"
+      rel="noreferrer noopener"
+    >
+      Show Training Data
+    </a>
+  );
+};
 
 type State = {
   isLoading: boolean;

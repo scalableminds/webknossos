@@ -1,5 +1,6 @@
 import type { DataNode } from "antd/es/tree";
 import _ from "lodash";
+import memoizeOne from "memoize-one";
 import { mapGroupsWithRoot } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Tree, TreeGroup, SegmentMap, Segment, TreeMap, SegmentGroup } from "oxalis/store";
 
@@ -201,9 +202,11 @@ export function findTreeNode(groups: TreeNode[], id: number, callback: (arg0: Tr
   }
 }
 
-export function createGroupToTreesMap(trees: TreeMap): Record<number, Tree[]> {
+function _createGroupToTreesMap(trees: TreeMap): Record<number, Tree[]> {
   return _.groupBy(trees, (tree) => (tree.groupId != null ? tree.groupId : MISSING_GROUP_ID));
 }
+
+export const createGroupToTreesMap = memoizeOne(_createGroupToTreesMap);
 
 export function createGroupToParentMap(
   groups: TreeGroup[],

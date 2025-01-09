@@ -3,6 +3,7 @@ import { type Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreePro
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
+import { api } from "oxalis/singletons";
 import {
   setTreeGroupAction,
   setTreeNameAction,
@@ -17,7 +18,9 @@ import type { Tree, TreeGroup, TreeMap } from "oxalis/store";
 import {
   createGroupToTreesMap,
   deepFlatFilter,
+  findGroup,
   findParentGroupNode,
+  getGroupByIdWithSubgroups,
   getNodeKey,
   GroupTypeEnum,
   insertTreesAndTransform,
@@ -41,6 +44,7 @@ import { MetadataEntryTableRows } from "../metadata_table";
 import type { MetadataEntryProto } from "types/api_flow_types";
 import { InputWithUpdateOnBlur } from "../../components/input_with_update_on_blur";
 import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
+import _ from "lodash";
 
 const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
   const { id, type } = info.node;
@@ -327,7 +331,9 @@ function TreeHierarchyView(props: Props) {
         secondChild={
           <DetailsForSelection
             trees={props.trees}
+            treeGroups={props.treeGroups}
             selectedTreeIds={props.selectedTreeIds}
+            activeGroupId={props.activeGroupId}
             readOnly={!props.allowUpdate}
           />
         }
@@ -343,9 +349,17 @@ const setMetadata = (tree: Tree, newProperties: MetadataEntryProto[]) => {
 const DetailsForSelection = memo(
   ({
     trees,
+    treeGroups,
     selectedTreeIds,
     readOnly,
-  }: { trees: TreeMap; selectedTreeIds: number[]; readOnly: boolean }) => {
+    activeGroupId,
+  }: {
+    trees: TreeMap;
+    treeGroups: TreeGroup[];
+    selectedTreeIds: number[];
+    readOnly: boolean;
+    activeGroupId: number | null | undefined;
+  }) => {
     if (selectedTreeIds.length === 1) {
       const tree = trees[selectedTreeIds[0]];
       if (tree == null) {
@@ -353,30 +367,26 @@ const DetailsForSelection = memo(
       }
 
       return (
-        <div>
-          <table className="metadata-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th colSpan={2}>{tree.treeId}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Name</td>
-                <td colSpan={2}>
-                  <InputWithUpdateOnBlur
-                    value={tree.name || ""}
-                    onChange={(newValue) =>
-                      Store.dispatch(setTreeNameAction(newValue, tree.treeId))
-                    }
-                  />
-                </td>
-              </tr>
-              <MetadataEntryTableRows item={tree} setMetadata={setMetadata} readOnly={readOnly} />
-            </tbody>
-          </table>
-        </div>
+        <table className="metadata-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th colSpan={2}>{tree.treeId}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Name</td>
+              <td colSpan={2}>
+                <InputWithUpdateOnBlur
+                  value={tree.name || ""}
+                  onChange={(newValue) => Store.dispatch(setTreeNameAction(newValue, tree.treeId))}
+                />
+              </td>
+            </tr>
+            <MetadataEntryTableRows item={tree} setMetadata={setMetadata} readOnly={readOnly} />
+          </tbody>
+        </table>
       );
     } else if (selectedTreeIds.length > 1) {
       return (
@@ -384,7 +394,59 @@ const DetailsForSelection = memo(
           {selectedTreeIds.length} {Utils.pluralize("Tree", selectedTreeIds.length)} selected.{" "}
         </div>
       );
+    } else if (activeGroupId != null) {
+      const activeGroup = findGroup(treeGroups, activeGroupId);
+      if (!activeGroup) {
+        return null;
+      }
+
+      const groupToTreesMap = createGroupToTreesMap(trees);
+      const groupWithSubgroups = getGroupByIdWithSubgroups(treeGroups, activeGroupId);
+
+      return (
+        <table className="metadata-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th colSpan={2}>{activeGroup.groupId}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Name</td>
+              <td colSpan={2}>
+                <InputWithUpdateOnBlur
+                  value={activeGroup.name || ""}
+                  onChange={(newValue) => api.tracing.renameSkeletonGroup(activeGroupId, newValue)}
+                />
+              </td>
+            </tr>
+            {groupWithSubgroups.length === 1 ? (
+              <tr>
+                <td>Tree Count</td>
+                <td colSpan={2}>{groupToTreesMap[activeGroupId]?.length ?? 0}</td>
+              </tr>
+            ) : (
+              <>
+                <tr>
+                  <td>Tree Count (direct children)</td>
+                  <td colSpan={2}>{groupToTreesMap[activeGroupId]?.length ?? 0}</td>
+                </tr>
+                <tr>
+                  <td>Tree Count (all children)</td>
+                  <td colSpan={2}>
+                    {_.sum(
+                      groupWithSubgroups.map((groupId) => groupToTreesMap[groupId]?.length ?? 0),
+                    )}
+                  </td>
+                </tr>
+              </>
+            )}
+          </tbody>
+        </table>
+      );
     }
+
     return null;
   },
 );

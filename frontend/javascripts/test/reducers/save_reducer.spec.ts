@@ -16,11 +16,14 @@ const AccessorMock = {
 mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/accessors/annotation_accessor", AccessorMock);
 
+// biome-ignore format: biome produces invalid syntax when formatting this
 const SaveActions = mockRequire.reRequire(
   "oxalis/model/actions/save_actions",
 ) as typeof import("oxalis/model/actions/save_actions");
+// biome-ignore format: biome produces invalid syntax when formatting this
 const SaveReducer = mockRequire.reRequire("oxalis/model/reducers/save_reducer")
   .default as typeof import("oxalis/model/reducers/save_reducer")["default"];
+// biome-ignore format: biome produces invalid syntax when formatting this
 const { createEdge } = mockRequire.reRequire(
   "oxalis/model/sagas/update_actions",
 ) as typeof import("oxalis/model/sagas/update_actions");

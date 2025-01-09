@@ -16,16 +16,22 @@ import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
 import { omit } from "lodash";
 
 const { createTreeMapFromTreeArray, generateTreeName } =
-  require("oxalis/model/reducers/skeletontracing_reducer_helpers") as typeof import("oxalis/model/reducers/skeletontracing_reducer_helpers");
+  // biome-ignore format: biome produces invalid syntax when formatting this
+  require("oxalis/model/reducers/skeletontracing_reducer_helpers") as typeof import(
+    "oxalis/model/reducers/skeletontracing_reducer_helpers"
+  );
 
 const { addTreesAndGroupsAction, deleteNodeAction } = mockRequire.reRequire(
   "oxalis/model/actions/skeletontracing_actions",
+  // biome-ignore format: biome produces invalid syntax when formatting this
 ) as typeof import("oxalis/model/actions/skeletontracing_actions");
 const { discardSaveQueuesAction } = mockRequire.reRequire(
   "oxalis/model/actions/save_actions",
+  // biome-ignore format: biome produces invalid syntax when formatting this
 ) as typeof import("oxalis/model/actions/save_actions");
 const UpdateActions = mockRequire.reRequire(
   "oxalis/model/sagas/update_actions",
+  // biome-ignore format: biome produces invalid syntax when formatting this
 ) as typeof import("oxalis/model/sagas/update_actions");
 
 test.beforeEach(async (t) => {

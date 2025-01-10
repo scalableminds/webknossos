@@ -1,37 +1,4 @@
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
-import {
-  Row,
-  Col,
-  Divider,
-  Form,
-  Select,
-  Button,
-  Card,
-  Radio,
-  Upload,
-  InputNumber,
-  Input,
-  Spin,
-  type RadioChangeEvent,
-  Tooltip,
-  App,
-  type UploadFile,
-} from "antd";
-import React, { useEffect, useState } from "react";
 import { InboxOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
-import _ from "lodash";
-import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "types/api_flow_types";
-import type { BoundingBoxObject } from "oxalis/store";
-import type {
-  NewTask,
-  NewNmlTask,
-  TaskCreationResponse,
-  TaskCreationResponseContainer,
-} from "admin/task/task_create_bulk_view";
-import { normalizeFileEvent, NUM_TASKS_PER_BATCH } from "admin/task/task_create_bulk_view";
-import { Vector3Input, Vector6Input } from "libs/vector_input";
-import type { Vector3, Vector6 } from "oxalis/constants";
 import {
   getActiveDatasetsOfMyOrganization,
   getAnnotationInformation,
@@ -40,13 +7,46 @@ import {
   getTaskTypes,
 } from "admin/admin_rest_api";
 import { createTaskFromNML, createTasks, getTask, updateTask } from "admin/api/tasks";
-import { coalesce, tryToAwaitPromise } from "libs/utils";
-import SelectExperienceDomain from "components/select_experience_domain";
-import messages from "messages";
-import { saveAs } from "file-saver";
-import { formatDateInLocalTimeZone } from "components/formatted_date";
-import { AsyncButton } from "components/async_clickables";
+import type {
+  NewNmlTask,
+  NewTask,
+  TaskCreationResponse,
+  TaskCreationResponseContainer,
+} from "admin/task/task_create_bulk_view";
+import { NUM_TASKS_PER_BATCH, normalizeFileEvent } from "admin/task/task_create_bulk_view";
+import {
+  App,
+  Button,
+  Card,
+  Col,
+  Divider,
+  Form,
+  Input,
+  InputNumber,
+  Radio,
+  type RadioChangeEvent,
+  Row,
+  Select,
+  Spin,
+  Tooltip,
+  Upload,
+  type UploadFile,
+} from "antd";
 import type { useAppProps } from "antd/es/app/context";
+import { AsyncButton } from "components/async_clickables";
+import { formatDateInLocalTimeZone } from "components/formatted_date";
+import SelectExperienceDomain from "components/select_experience_domain";
+import { saveAs } from "file-saver";
+import { coalesce, tryToAwaitPromise } from "libs/utils";
+import { Vector3Input, Vector6Input } from "libs/vector_input";
+import _ from "lodash";
+import messages from "messages";
+import type { Vector3, Vector6 } from "oxalis/constants";
+import type { BoundingBoxObject } from "oxalis/store";
+import React, { useEffect, useState } from "react";
+import type { RouteComponentProps } from "react-router-dom";
+import { withRouter } from "react-router-dom";
+import type { APIDataset, APIProject, APIScript, APITask, APITaskType } from "types/api_flow_types";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;

@@ -1,15 +1,15 @@
-import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type { Vector3 } from "oxalis/constants";
+import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import { convertUserBoundingBoxesFromFrontendToServer } from "oxalis/model/reducers/reducer_helpers";
 import type {
-  VolumeTracing,
-  Tree,
   Node,
+  NumberLike,
+  SegmentGroup,
+  Tree,
   TreeGroup,
   UserBoundingBox,
-  SegmentGroup,
-  NumberLike,
+  VolumeTracing,
 } from "oxalis/store";
-import { convertUserBoundingBoxesFromFrontendToServer } from "oxalis/model/reducers/reducer_helpers";
 import type { AdditionalCoordinate, MetadataEntryProto } from "types/api_flow_types";
 
 export type NodeWithTreeId = {

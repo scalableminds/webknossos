@@ -1,13 +1,13 @@
-import type { ViewMode, ControlMode } from "oxalis/constants";
+import Deferred from "libs/async/deferred";
+import type { ControlMode, ViewMode } from "oxalis/constants";
 import type {
-  UserConfiguration,
   DatasetConfiguration,
   DatasetLayerConfiguration,
-  TemporaryConfiguration,
   Mapping,
   MappingType,
+  TemporaryConfiguration,
+  UserConfiguration,
 } from "oxalis/store";
-import Deferred from "libs/async/deferred";
 import type { APIHistogramData } from "types/api_flow_types";
 
 export type UpdateUserSettingAction = ReturnType<typeof updateUserSettingAction>;

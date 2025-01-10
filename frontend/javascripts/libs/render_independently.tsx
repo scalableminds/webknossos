@@ -1,8 +1,8 @@
-import type React from "react";
 import { document } from "libs/window";
+import type React from "react";
+import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
 import GlobalThemeProvider from "theme";
-import { createRoot } from "react-dom/client";
 
 type DestroyFunction = () => void; // The returned promise gets resolved once the element is destroyed.
 

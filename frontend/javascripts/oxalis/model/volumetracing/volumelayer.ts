@@ -1,21 +1,21 @@
-import _ from "lodash";
+import Drawing from "libs/drawing";
 import { V2, V3 } from "libs/mjs";
-import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
-import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
+import Toast from "libs/toast";
+import _ from "lodash";
+import messages from "messages";
+import type { AnnotationTool, OrthoView, Vector2, Vector3 } from "oxalis/constants";
+import Constants, { OrthoViews, Vector3Indicies, Vector2Indicies } from "oxalis/constants";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
+import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import Dimensions from "oxalis/model/dimensions";
 import {
   scaleGlobalPositionWithMagnification,
   scaleGlobalPositionWithMagnificationFloat,
   zoomedPositionToGlobalPosition,
 } from "oxalis/model/helpers/position_converter";
-import type { OrthoView, Vector2, Vector3, AnnotationTool } from "oxalis/constants";
-import Constants, { OrthoViews, Vector3Indicies, Vector2Indicies } from "oxalis/constants";
-import Dimensions from "oxalis/model/dimensions";
-import Drawing from "libs/drawing";
+import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
 import Store from "oxalis/store";
-import Toast from "libs/toast";
-import messages from "messages";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 
 /*
   A VoxelBuffer2D instance holds a two dimensional slice

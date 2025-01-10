@@ -24,7 +24,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.UploadedVolumeLayer
+import models.annotation.{SharedParsingParameters, UploadedVolumeLayer}
 import models.dataset.DatasetDAO
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -48,13 +48,12 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
 
   def parse(name: String,
             nmlInputStream: InputStream,
-            overwritingDatasetId: Option[String],
-            isTaskUpload: Boolean,
+            sharedParsingParameters: SharedParsingParameters,
             basePath: Option[String] = None)(implicit m: MessagesProvider,
                                              ec: ExecutionContext,
                                              ctx: DBAccessContext): Fox[NmlParseSuccessWithoutFile] =
     for {
-      nmlParsedParameters <- getParametersFromNML(nmlInputStream, name, overwritingDatasetId, isTaskUpload).toFox
+      nmlParsedParameters <- getParametersFromNML(nmlInputStream, name, sharedParsingParameters).toFox
       parsedResult <- nmlParametersToResult(nmlParsedParameters, basePath)
     } yield parsedResult
 
@@ -83,7 +82,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
             zoomLevel = nmlParams.zoomLevel,
             userBoundingBox = None,
             userBoundingBoxes = nmlParams.userBoundingBoxes,
-            organizationId = Some(nmlParams.organizationId),
+            organizationId = Some(dataset._organization),
             segments = v.segments,
             mappingName = v.mappingName,
             mappingIsLocked = v.mappingIsLocked,
@@ -113,7 +112,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
             None,
             nmlParams.treeGroupsAfterSplit,
             nmlParams.userBoundingBoxes,
-            Some(nmlParams.organizationId),
+            Some(dataset._organization),
             nmlParams.editPositionAdditionalCoordinates,
             additionalAxes = nmlParams.additionalAxisProtos
           )
@@ -121,10 +120,10 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
     } yield
       NmlParseSuccessWithoutFile(skeletonTracingOpt, volumeLayers, dataset._id, nmlParams.description, nmlParams.wkUrl)
 
-  private def getParametersFromNML(nmlInputStream: InputStream,
-                                   name: String,
-                                   overwritingDatasetId: Option[String],
-                                   isTaskUpload: Boolean)(implicit m: MessagesProvider): Box[NmlParsedParameters] =
+  private def getParametersFromNML(
+      nmlInputStream: InputStream,
+      name: String,
+      sharedParsingParameters: SharedParsingParameters)(implicit m: MessagesProvider): Box[NmlParsedParameters] =
     try {
       val nmlData = XML.load(nmlInputStream)
       for {
@@ -143,9 +142,10 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
         _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
         additionalAxisProtos <- parseAdditionalAxes(parameters \ "additionalAxes")
         datasetName = parseDatasetName(parameters \ "experiment")
-        datasetIdOpt = if (overwritingDatasetId.isDefined) overwritingDatasetId
+        datasetIdOpt = if (sharedParsingParameters.overwritingDatasetId.isDefined)
+          sharedParsingParameters.overwritingDatasetId
         else parseDatasetId(parameters \ "experiment")
-        organizationId = parseOrganizationId(parameters \ "experiment")
+        organizationId = parseOrganizationId(parameters \ "experiment", sharedParsingParameters.userOrganizationId)
         description = parseDescription(parameters \ "experiment")
         wkUrl = parseWkUrl(parameters \ "experiment")
         activeNodeId = parseActiveNode(parameters \ "activeNode")
@@ -153,13 +153,14 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
           .getOrElse((SkeletonTracingDefaults.editPosition, Seq()))
         editRotation = parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracingDefaults.editRotation)
         zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracingDefaults.zoomLevel)
-        taskBoundingBox: Option[BoundingBox] = if (isTaskUpload) parseTaskBoundingBox(parameters \ "taskBoundingBox")
+        taskBoundingBox: Option[BoundingBox] = if (sharedParsingParameters.isTaskUpload)
+          parseTaskBoundingBox(parameters \ "taskBoundingBox")
         else None
-        userBoundingBoxes = parseBoundingBoxes(parameters \ "userBoundingBox")
       } yield {
-        if (!isTaskUpload) {
+        var userBoundingBoxes = parseBoundingBoxes(parameters \ "userBoundingBox")
+        if (!sharedParsingParameters.isTaskUpload) {
           parseTaskBoundingBoxAsUserBoundingBox(parameters \ "taskBoundingBox", userBoundingBoxes)
-            .map(asUserBoundingBox => userBoundingBoxes :+ asUserBoundingBox)
+            .foreach(asUserBoundingBox => userBoundingBoxes = userBoundingBoxes :+ asUserBoundingBox)
         }
         NmlParsedParameters(
           datasetIdOpt,
@@ -379,8 +380,8 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
   private def parseWkUrl(nodes: NodeSeq): Option[String] =
     nodes.headOption.map(node => getSingleAttribute(node, "wkUrl"))
 
-  private def parseOrganizationId(nodes: NodeSeq): String =
-    nodes.headOption.map(node => getSingleAttribute(node, "organization")).getOrElse("")
+  private def parseOrganizationId(nodes: NodeSeq, fallbackOrganization: String): String =
+    nodes.headOption.flatMap(node => getSingleAttributeOpt(node, "organization")).getOrElse(fallbackOrganization)
 
   private def parseActiveNode(nodes: NodeSeq): Option[Int] =
     nodes.headOption.flatMap(node => getSingleAttribute(node, "id").toIntOpt)

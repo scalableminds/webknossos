@@ -1,53 +1,53 @@
 import Maybe from "data.maybe";
-import _ from "lodash";
 import update from "immutability-helper";
+import ColorGenerator from "libs/color_generator";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import Constants, { AnnotationToolEnum, TreeTypeEnum } from "oxalis/constants";
+import {
+  findTreeByNodeId,
+  getNodeAndTree,
+  getSkeletonTracing,
+  getTree,
+  getTreesWithType,
+  isSkeletonLayerTransformed,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, SkeletonTracing, Tree, TreeGroup } from "oxalis/store";
 import {
   convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
 } from "oxalis/model/reducers/reducer_helpers";
 import {
+  addTreesAndGroups,
   createBranchPoint,
-  deleteBranchPoint,
+  createComment,
   createNode,
   createTree,
-  deleteTrees,
-  deleteNode,
-  deleteEdge,
-  shuffleTreeColor,
-  setTreeColorIndex,
-  createComment,
+  createTreeMapFromTreeArray,
+  deleteBranchPoint,
   deleteComment,
+  deleteEdge,
+  deleteNode,
+  deleteTrees,
+  ensureTreeNames,
+  getOrCreateTree,
   mergeTrees,
+  removeMissingGroupsFromTrees,
+  setExpandedTreeGroups,
+  setTreeColorIndex,
+  shuffleTreeColor,
   toggleAllTreesReducer,
   toggleTreeGroupReducer,
-  addTreesAndGroups,
-  createTreeMapFromTreeArray,
-  removeMissingGroupsFromTrees,
-  getOrCreateTree,
-  ensureTreeNames,
-  setExpandedTreeGroups,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import {
-  getSkeletonTracing,
-  findTreeByNodeId,
-  getTree,
-  getTreesWithType,
-  getNodeAndTree,
-  isSkeletonLayerTransformed,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import ColorGenerator from "libs/color_generator";
-import Constants, { AnnotationToolEnum, TreeTypeEnum } from "oxalis/constants";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import { userSettings } from "types/schemas/user_settings.schema";
+import type { OxalisState, SkeletonTracing, Tree, TreeGroup } from "oxalis/store";
 import {
   GroupTypeEnum,
   getNodeKey,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import type { MetadataEntryProto } from "types/api_flow_types";
+import { userSettings } from "types/schemas/user_settings.schema";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {

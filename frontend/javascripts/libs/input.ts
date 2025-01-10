@@ -1,13 +1,13 @@
-import _ from "lodash";
 import Date from "libs/date";
 import Hammer from "libs/hammerjs_wrapper";
 // @ts-expect-error ts-migrate(2306) FIXME: ... Remove this comment to see the full error message
 import KeyboardJS from "libs/keyboard";
 import * as Utils from "libs/utils";
+import window, { document } from "libs/window";
+import _ from "lodash";
+import { type Emitter, createNanoEvents } from "nanoevents";
 import type { Point2 } from "oxalis/constants";
 import constants from "oxalis/constants";
-import window, { document } from "libs/window";
-import { createNanoEvents, type Emitter } from "nanoevents";
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
 // the controller, this is were the magic happens.
@@ -84,6 +84,7 @@ export class InputKeyboardNoLoop {
       supportInputElements?: boolean;
     },
     extendedCommands?: KeyBindingMap,
+    keyUpBindings?: KeyBindingMap,
   ) {
     if (options) {
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
@@ -100,16 +101,17 @@ export class InputKeyboardNoLoop {
       document.addEventListener("keydown", this.preventBrowserSearchbarShortcut);
       this.attach(EXTENDED_COMMAND_KEYS, this.toggleExtendedMode);
       // Add empty callback in extended mode to deactivate the extended mode via the same EXTENDED_COMMAND_KEYS.
-      this.attach(EXTENDED_COMMAND_KEYS, _.noop, true);
+      this.attach(EXTENDED_COMMAND_KEYS, _.noop, _.noop, true);
       for (const key of Object.keys(extendedCommands)) {
         const callback = extendedCommands[key];
-        this.attach(key, callback, true);
+        this.attach(key, callback, _.noop, true);
       }
     }
 
     for (const key of Object.keys(initialBindings)) {
       const callback = initialBindings[key];
-      this.attach(key, callback);
+      const keyUpCallback = keyUpBindings != null ? keyUpBindings[key] : _.noop;
+      this.attach(key, callback, keyUpCallback);
     }
   }
 
@@ -141,7 +143,12 @@ export class InputKeyboardNoLoop {
     }
   }
 
-  attach(key: KeyboardKey, callback: KeyboardHandler, isExtendedCommand: boolean = false) {
+  attach(
+    key: KeyboardKey,
+    keyDownCallback: KeyboardHandler,
+    keyUpCallback: KeyboardHandler = _.noop,
+    isExtendedCommand: boolean = false,
+  ) {
     const binding = [
       key,
       (event: KeyboardEvent) => {
@@ -163,13 +170,15 @@ export class InputKeyboardNoLoop {
         }
 
         if (!event.repeat) {
-          callback(event);
+          keyDownCallback(event);
         } else {
           event.preventDefault();
           event.stopPropagation();
         }
       },
-      _.noop,
+      (event: KeyboardEvent) => {
+        keyUpCallback(event);
+      },
     ];
     if (isExtendedCommand) {
       KeyboardJS.withContext("extended", () => {
@@ -331,7 +340,7 @@ export class InputKeyboard {
 }
 
 // The mouse module.
-// Events: over, out, leftClick, rightClick, leftDownMove
+// Events: over, out, {left,right}Click, {left,right}DownMove, leftDoubleClick
 class InputMouseButton {
   mouse: InputMouse;
   name: MouseButtonString;
@@ -381,6 +390,19 @@ class InputMouseButton {
       }
 
       this.down = false;
+    }
+  }
+
+  handleDoubleClick(event: MouseEvent, triggeredByTouch: boolean): void {
+    // DoubleClick is only supported for the left mouse button
+    if (this.name === "left" && this.moveDelta <= MOUSE_MOVE_DELTA_THRESHOLD) {
+      this.mouse.emitter.emit(
+        "leftDoubleClick",
+        this.mouse.lastPosition,
+        this.id,
+        event,
+        triggeredByTouch,
+      );
     }
   }
 
@@ -437,6 +459,7 @@ export class InputMouse {
     document.addEventListener("mousemove", this.mouseMove);
     document.addEventListener("mouseup", this.mouseUp);
     document.addEventListener("touchend", this.touchEnd);
+    document.addEventListener("dblclick", this.doubleClick);
 
     this.delegatedEvents = {
       ...Utils.addEventListenerWithDelegation(
@@ -489,6 +512,7 @@ export class InputMouse {
     document.removeEventListener("mousemove", this.mouseMove);
     document.removeEventListener("mouseup", this.mouseUp);
     document.removeEventListener("touchend", this.touchEnd);
+    document.removeEventListener("dblclick", this.doubleClick);
 
     for (const [eventName, eventHandler] of Object.entries(this.delegatedEvents)) {
       document.removeEventListener(eventName, eventHandler);
@@ -539,6 +563,12 @@ export class InputMouse {
 
     if (this.isHit(event)) {
       this.mouseOver();
+    }
+  };
+
+  doubleClick = (event: MouseEvent): void => {
+    if (this.isHit(event)) {
+      this.leftMouseButton.handleDoubleClick(event, false);
     }
   };
 

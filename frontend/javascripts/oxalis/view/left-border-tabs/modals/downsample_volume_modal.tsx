@@ -1,9 +1,9 @@
 import { Modal } from "antd";
-import { useState } from "react";
 import { AsyncButton } from "components/async_clickables";
 import type { Vector3 } from "oxalis/constants";
-import type { VolumeTracing } from "oxalis/store";
 import { api } from "oxalis/singletons";
+import type { VolumeTracing } from "oxalis/store";
+import { useState } from "react";
 export default function DownsampleVolumeModal({
   hideDownsampleVolumeModal,
   magsToDownsample,

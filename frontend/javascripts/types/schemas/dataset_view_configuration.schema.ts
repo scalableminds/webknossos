@@ -1,5 +1,5 @@
 import { BLEND_MODES } from "oxalis/constants";
-import type { DatasetLayerConfiguration, DatasetConfiguration } from "oxalis/store";
+import type { DatasetConfiguration, DatasetLayerConfiguration } from "oxalis/store";
 
 export function getDefaultLayerViewConfiguration(
   dynamicDefault: Partial<DatasetLayerConfiguration> = {},
@@ -89,6 +89,7 @@ export const defaultDatasetViewConfigurationWithoutNull: DatasetConfiguration = 
   blendMode: BLEND_MODES.Additive,
   colorLayerOrder: [],
   nativelyRenderedLayerName: null,
+  selectiveSegmentVisibility: false,
 };
 export const defaultDatasetViewConfiguration = {
   ...defaultDatasetViewConfigurationWithoutNull,

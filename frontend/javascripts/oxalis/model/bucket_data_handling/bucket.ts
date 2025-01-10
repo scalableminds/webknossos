@@ -1,21 +1,21 @@
-import { createNanoEvents, type Emitter } from "nanoevents";
-import * as THREE from "three";
-import _ from "lodash";
-import type { ElementClass } from "types/api_flow_types";
-import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
-import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
-import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
-import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import ErrorHandling from "libs/error_handling";
 import { castForArrayType, mod } from "libs/utils";
+import window from "libs/window";
+import _ from "lodash";
+import { type Emitter, createNanoEvents } from "nanoevents";
 import type { BoundingBoxType, BucketAddress, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
+import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
+import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import ErrorHandling from "libs/error_handling";
-import Store from "oxalis/store";
+import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 import type TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import window from "libs/window";
-import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import Store from "oxalis/store";
+import * as THREE from "three";
+import type { ElementClass } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
+import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 
 export enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
@@ -37,6 +37,10 @@ const warnMergeWithoutPendingOperations = _.throttle(() => {
   ErrorHandling.notify(
     new Error("Bucket.merge() was called with an empty list of pending operations."),
   );
+}, WARNING_THROTTLE_THRESHOLD);
+
+const warnAwaitedMissingBucket = _.throttle(() => {
+  ErrorHandling.notify(new Error("Awaited missing bucket"));
 }, WARNING_THROTTLE_THRESHOLD);
 
 export function assertNonNullBucket(bucket: Bucket): asserts bucket is DataBucket {
@@ -773,7 +777,7 @@ export class DataBucket {
       // In the past, ensureLoaded() never returned if the bucket
       // was MISSING. This log might help to discover potential
       // bugs which could arise in combination with MISSING buckets.
-      console.warn("Awaited missing bucket.");
+      warnAwaitedMissingBucket();
     }
   }
 }

@@ -38,7 +38,8 @@ class Application @Inject()(actorSystem: ActorSystem,
       addRemoteOriginHeaders(
         Ok(
           Json.obj(
-            "webknossos" -> Json.toJson(webknossos.BuildInfo.toMap.view.mapValues(_.toString).toMap),
+            "webknossos" -> Json.toJson(
+              webknossos.BuildInfo.toMap.view.mapValues(_.toString).filterKeys(_ != "certificatePublicKey").toMap),
             "schemaVersion" -> schemaVersion.toOption,
             "httpApiVersioning" -> Json.obj(
               "currentApiVersion" -> CURRENT_API_VERSION,

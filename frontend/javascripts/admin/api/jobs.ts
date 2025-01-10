@@ -194,7 +194,7 @@ export function startNeuronInferralJob(
   });
   if (doSplitMergerEvaluation) {
     if (!annotationId) {
-      throw new Error("annotationId is required when doEvaluation is true");
+      throw new Error("annotationId is required when doSplitMergerEvaluation is true");
     }
     urlParams.append("annotationId", `${annotationId}`);
     if (useSparseTracing != null) {

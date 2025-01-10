@@ -18,7 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - A segment can be activated with doubleclick now. [#8281](https://github.com/scalableminds/webknossos/pull/8281)
 - It is now possible to select the magnification of the layers on which an AI model will be trained. [#8266](https://github.com/scalableminds/webknossos/pull/8266)
 - Enabled auto sorting of Typescript imports in Biome linter. [#8313](https://github.com/scalableminds/webknossos/pull/8313)
-
+- Segment and tree names can be edited by doubleclicking them. [#8316](https://github.com/scalableminds/webknossos/pull/8316)
 
 ### Changed
 - Renamed "resolution" to "magnification" in more places within the codebase, including local variables. [#8168](https://github.com/scalableminds/webknossos/pull/8168)

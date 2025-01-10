@@ -1,5 +1,5 @@
-import app from "app";
 // @ts-nocheck
+import app from "app";
 import window, { document } from "libs/window";
 
 export default {

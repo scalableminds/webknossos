@@ -56,10 +56,10 @@ const FormItem = Form.Item;
 // only the APIAnnotations of the given annotations to train on are loaded from the backend.
 // Thus, the code needs to handle both HybridTracing | APIAnnotation where APIAnnotation is missing some information.
 // Therefore, volumeTracings with the matching volumeTracingMags are needed to get more details on each volume annotation layer and its magnifications.
-// As the userBoundingBoxes should have multiple sizes of the smallest one, a check with a warning should be included.
+// As the userBoundingBoxes should have extents that are multiples of the smallest extent, a check with a warning should be included.
 // As training on fallback data is supported and an annotation is not required to have VolumeTracings,
 // it is necessary to save userBoundingBoxes separately and not load them from volumeTracings entries to support skeleton only annotations.
-// Moreover, in case an annotations is a task, its task bounding box should also be used for training.
+// Moreover, in case an annotation is a task, its task bounding box should also be used for training.
 // Note that a copy of the userBoundingBoxes is included in each volume and skeleton tracing of an annotation. Thus, it doesn't matter from which the userBoundingBoxes are taken.
 export type AnnotationInfoForAITrainingJob<GenericAnnotation> = {
   annotation: GenericAnnotation;
@@ -560,7 +560,7 @@ function checkBoundingBoxesForErrorsAndWarnings(
     (min, { boundingBox: box, trainingMag }) => {
       let bbox = new BoundingBox(box);
       if (trainingMag) {
-        bbox = bbox.alignWithMag(trainingMag, "shrink");
+        bbox = bbox.alignFromMag1ToMag(trainingMag, "shrink");
       }
       const size = bbox.getSize();
       return {
@@ -586,18 +586,20 @@ function checkBoundingBoxesForErrorsAndWarnings(
   const nonMultipleBoxes: BoundingBoxWithAnnotationId[] = [];
   const notMagAlignedBoundingBoxes: (BoundingBoxWithAnnotationId & {
     alignedBoundingBox: Vector6;
+    trainingMag: Vector3;
   })[] = [];
   userBoundingBoxes.forEach(({ boundingBox: box, name, annotationId, trainingMag }) => {
     const boundingBox = new BoundingBox(box);
     let arrayBox = computeArrayFromBoundingBox(box);
     if (trainingMag) {
-      const alignedBoundingBox = boundingBox.alignWithMag(trainingMag, "shrink");
+      const alignedBoundingBox = boundingBox.alignFromMag1ToMag(trainingMag, "shrink");
       if (!alignedBoundingBox.equals(boundingBox)) {
         const alignedArrayBox = computeArrayFromBoundingBox(alignedBoundingBox);
         notMagAlignedBoundingBoxes.push({
           boundingBox: arrayBox,
           name,
           annotationId,
+          trainingMag,
           alignedBoundingBox: alignedArrayBox,
         });
         // Update the arrayBox as the aligned version of the bounding box will be used for training.
@@ -625,8 +627,8 @@ function checkBoundingBoxesForErrorsAndWarnings(
   if (notMagAlignedBoundingBoxes.length > 0) {
     hasBBoxWarnings = true;
     const notMagAlignedBoundingBoxesStrings = notMagAlignedBoundingBoxes.map(
-      ({ boundingBox, name, annotationId, alignedBoundingBox }) =>
-        `'${name}' of annotation ${annotationId}: ${boundingBox.join(", ")} -> ${alignedBoundingBox.join(", ")}`,
+      ({ boundingBox, name, annotationId, alignedBoundingBox, trainingMag }) =>
+        `'${name}' of annotation ${annotationId}: ${boundingBox.join(", ")} will be ${alignedBoundingBox.join(", ")} in mag ${trainingMag.join(", ")}`,
     );
     warnings.push(
       `The following bounding boxes are not aligned with the selected magnification. They will be automatically shrunk to be aligned with the magnification:\n${notMagAlignedBoundingBoxesStrings.join("\n")}`,

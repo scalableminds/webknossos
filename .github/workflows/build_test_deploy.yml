@@ -185,17 +185,17 @@ jobs:
           docker compose up -d webknossos-tracingstore
 
       - name: Run webknossos smoke test
-        uses: ./.github/actions/health_check_action
+        uses: ./.github/actions/url-health-check
         with:
           url: http://localhost:9000/api/health
 
       - name: Run webknossos-datastore smoke test
-        uses: ./.github/actions/health_check_action
+        uses: ./.github/actions/url-health-check
         with:
           url: http://localhost:9090/data/health
 
       - name: Run webknossos-tracingstore smoke test
-        uses: ./.github/actions/health_check_action
+        uses: ./.github/actions/url-health-check
         with:
           url: http://localhost:9050/tracings/health
 

@@ -891,7 +891,7 @@ export function MaterializeVolumeAnnotationModal({
 }: MaterializeVolumeAnnotationModalProps) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
-  let includesProofreading = false;
+  let includesEditableMapping = false;
   const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
   const fixedSelectedLayer = selectedVolumeLayer || activeSegmentationTracingLayer;
   const readableVolumeLayerName =
@@ -927,7 +927,7 @@ export function MaterializeVolumeAnnotationModal({
       </p>
     );
   } else if (fixedSelectedLayer && "tracingId" in fixedSelectedLayer) {
-    includesProofreading =
+    includesEditableMapping =
       tracing.volumes.find((volume) => volume.tracingId === fixedSelectedLayer.tracingId)
         ?.hasEditableMapping === true;
   }
@@ -959,7 +959,7 @@ export function MaterializeVolumeAnnotationModal({
         jobName={"materialize_volume_annotation"}
         suggestedDatasetSuffix="with_merged_segmentation"
         chooseSegmentationLayer
-        isBoundingBoxConfigurable={includesProofreading}
+        isBoundingBoxConfigurable={includesEditableMapping}
         fixedSelectedLayer={fixedSelectedLayer}
         jobApiCall={async ({
           newDatasetName,
@@ -989,7 +989,7 @@ export function MaterializeVolumeAnnotationModal({
             tracing.annotationId,
             tracing.annotationType,
             isMergerModeEnabled,
-            includesProofreading,
+            includesEditableMapping,
             bbox,
           );
         }}

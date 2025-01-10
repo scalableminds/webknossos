@@ -70,6 +70,10 @@ import {
   getActiveNode,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
+  enforceSkeletonTracing,
+  getActiveNode,
+} from "oxalis/model/accessors/skeletontracing_accessor";
+import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
   getVolumeDescriptorById,

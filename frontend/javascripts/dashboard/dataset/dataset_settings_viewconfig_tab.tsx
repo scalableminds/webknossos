@@ -1,35 +1,35 @@
-import _ from "lodash";
 import { InfoCircleOutlined } from "@ant-design/icons";
+import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admin/admin_rest_api";
 import {
+  Alert,
+  Checkbox,
+  Col,
+  Divider,
   Form,
   Input,
-  Checkbox,
-  Alert,
   InputNumber,
-  Col,
   Row,
-  Tooltip,
-  Table,
   Select,
-  Divider,
+  Table,
+  Tooltip,
 } from "antd";
-import { useMemo, useState } from "react";
+import { Slider } from "components/slider";
 import { Vector3Input } from "libs/vector_input";
-import { validateLayerViewConfigurationObjectJSON, syncValidator } from "types/validation";
-import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
+import _ from "lodash";
 import messages, {
   type RecommendedConfiguration,
   layerViewConfigurations,
   settings,
   settingsTooltips,
 } from "messages";
-import type { DatasetConfiguration, DatasetLayerConfiguration } from "oxalis/store";
-import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
 import { BLEND_MODES } from "oxalis/constants";
-import ColorLayerOrderingTable from "./color_layer_ordering_component";
+import type { DatasetConfiguration, DatasetLayerConfiguration } from "oxalis/store";
+import { useMemo, useState } from "react";
 import type { APIDataSourceId } from "types/api_flow_types";
-import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admin/admin_rest_api";
-import { Slider } from "components/slider";
+import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
+import { syncValidator, validateLayerViewConfigurationObjectJSON } from "types/validation";
+import ColorLayerOrderingTable from "./color_layer_ordering_component";
+import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
 
 const FormItem = Form.Item;
 

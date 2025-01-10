@@ -1,14 +1,14 @@
-import type { EnqueueFunction } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
+import { map3, map4, mod } from "libs/utils";
+import type { BucketAddress, Vector3, Vector4 } from "oxalis/constants";
+import constants from "oxalis/constants";
+import type { EnqueueFunction } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import {
   globalPositionToBucketPosition,
   globalPositionToBucketPositionFloat,
   zoomedAddressToAnotherZoomStep,
 } from "oxalis/model/helpers/position_converter";
-import type { BucketAddress, Vector3, Vector4 } from "oxalis/constants";
-import constants from "oxalis/constants";
-import { map3, map4, mod } from "libs/utils";
 
 const aggregatePerDimension = (
   aggregateFn: (...args: number[]) => number,

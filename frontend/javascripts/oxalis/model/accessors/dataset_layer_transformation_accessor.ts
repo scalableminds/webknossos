@@ -1,29 +1,29 @@
 import { M4x4, type Matrix4x4 } from "libs/mjs";
+import MultiKeyMap from "libs/multi_key_map";
+import { mod } from "libs/utils";
+import _ from "lodash";
+import memoizeOne from "memoize-one";
 import { Identity4x4, IdentityTransform, type NestedMatrix4, type Vector4 } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 import * as THREE from "three";
 import type {
-  AffineTransformation,
   APIDataLayer,
   APIDataset,
   APISkeletonLayer,
+  AffineTransformation,
   CoordinateTransformation,
 } from "types/api_flow_types";
-import { mod } from "libs/utils";
-import MultiKeyMap from "libs/multi_key_map";
-import _ from "lodash";
-import memoizeOne from "memoize-one";
+import type BoundingBox from "../bucket_data_handling/bounding_box";
 import {
+  type Transform,
+  chainTransforms,
   createAffineTransformFromMatrix,
   createThinPlateSplineTransform,
-  chainTransforms,
   invertTransform,
-  transformPointUnscaled,
   nestedToFlatMatrix,
-  type Transform,
+  transformPointUnscaled,
 } from "../helpers/transformation_helpers";
 import { getLayerByName } from "./dataset_accessor";
-import type BoundingBox from "../bucket_data_handling/bounding_box";
 
 const IDENTITY_MATRIX = [
   [1, 0, 0, 0],

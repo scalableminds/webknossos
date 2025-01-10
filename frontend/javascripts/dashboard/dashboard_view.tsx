@@ -1,33 +1,33 @@
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
-import { Spin, Tabs } from "antd";
-import { connect } from "react-redux";
-import type { Dispatch } from "redux";
-import type React from "react";
-import { PureComponent } from "react";
-import _ from "lodash";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import { WhatsNextHeader } from "admin/welcome_ui";
-import type { APIOrganization, APIPricingPlanStatus, APIUser } from "types/api_flow_types";
-import type { OxalisState } from "oxalis/store";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
   cachedGetPricingPlanStatus,
   getUser,
   updateNovelUserExperienceInfos,
 } from "admin/admin_rest_api";
+import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
+import { WhatsNextHeader } from "admin/welcome_ui";
+import { Spin, Tabs } from "antd";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
-import { PublicationViewWithHeader } from "dashboard/publication_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
-import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
+import { PublicationViewWithHeader } from "dashboard/publication_view";
+import features from "features";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
-import features from "features";
-import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
-import { PortalTarget } from "oxalis/view/layouting/portal_utils";
-import { DatasetFolderView } from "./dataset_folder_view";
-import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
+import _ from "lodash";
 import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import type { OxalisState } from "oxalis/store";
+import { PortalTarget } from "oxalis/view/layouting/portal_utils";
+import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
+import type React from "react";
+import { PureComponent } from "react";
+import { connect } from "react-redux";
+import type { RouteComponentProps } from "react-router-dom";
+import { withRouter } from "react-router-dom";
+import type { Dispatch } from "redux";
+import type { APIOrganization, APIPricingPlanStatus, APIUser } from "types/api_flow_types";
+import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
+import { DatasetFolderView } from "./dataset_folder_view";
 
 type OwnProps = {
   userId: string | null | undefined;

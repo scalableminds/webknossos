@@ -1,4 +1,3 @@
-import * as THREE from "three";
 import app from "app";
 import type Maybe from "data.maybe";
 import { V3 } from "libs/mjs";
@@ -34,6 +33,7 @@ import {
   getLayerBoundingBox,
   getLayerNameToIsDisabled,
 } from "oxalis/model/accessors/dataset_accessor";
+import { getTransformsForLayerOrNull } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import { getActiveMagIndicesForLayers, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
@@ -45,8 +45,8 @@ import { getVoxelPerUnit } from "oxalis/model/scaleinfo";
 import { Model } from "oxalis/singletons";
 import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import Store from "oxalis/store";
+import * as THREE from "three";
 import SegmentMeshController from "./segment_mesh_controller";
-import { getTransformsForLayerOrNull } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;

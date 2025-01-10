@@ -2,7 +2,7 @@ import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
 import { M4x4 } from "libs/mjs";
 import TPS3D from "libs/thin_plate_spline";
 import type { Matrix4x4 } from "mjs";
-import type { Vector3, NestedMatrix4 } from "oxalis/constants";
+import type { NestedMatrix4, Vector3 } from "oxalis/constants";
 
 export function nestedToFlatMatrix(matrix: NestedMatrix4): Matrix4x4 {
   return [...matrix[0], ...matrix[1], ...matrix[2], ...matrix[3]];

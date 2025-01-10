@@ -1,17 +1,17 @@
+import type { Vector3, Vector4 } from "oxalis/constants";
 import {
-  hsvToRgb,
-  jsRgb2hsv,
-  getElementOfPermutation,
-  jsGetElementOfPermutation,
   aaStep,
   colormapJet,
+  getElementOfPermutation,
+  hsvToRgb,
   jsColormapJet,
+  jsGetElementOfPermutation,
+  jsRgb2hsv,
 } from "oxalis/shaders/utils.glsl";
-import type { Vector3, Vector4 } from "oxalis/constants";
-import type { ShaderModule } from "./shader_module_system";
-import { getRgbaAtIndex } from "./texture_access.glsl";
 import { hashCombine } from "./hashing.glsl";
 import { attemptMappingLookUp } from "./mappings.glsl";
+import type { ShaderModule } from "./shader_module_system";
+import { getRgbaAtIndex } from "./texture_access.glsl";
 
 export const convertCellIdToRGB: ShaderModule = {
   requirements: [

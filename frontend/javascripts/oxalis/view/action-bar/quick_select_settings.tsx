@@ -1,20 +1,20 @@
+import { QuestionCircleOutlined } from "@ant-design/icons";
+import { Radio, type RadioChangeEvent } from "antd";
+import FastTooltip from "components/fast_tooltip";
+import features from "features";
+import Shortcut from "libs/shortcut_component";
+import defaultState from "oxalis/default_state";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
 import {
   cancelQuickSelectAction,
   confirmQuickSelectAction,
   fineTuneQuickSelectAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { useDispatch, useSelector } from "react-redux";
 import type { OxalisState } from "oxalis/store";
-import defaultState from "oxalis/default_state";
-import Shortcut from "libs/shortcut_component";
-import { Radio, type RadioChangeEvent } from "antd";
-import { NumberSliderSetting, SwitchSetting } from "../components/setting_input_views";
+import { useDispatch, useSelector } from "react-redux";
 import ButtonComponent from "../components/button_component";
-import { showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
-import features from "features";
-import FastTooltip from "components/fast_tooltip";
-import { QuestionCircleOutlined } from "@ant-design/icons";
+import { NumberSliderSetting, SwitchSetting } from "../components/setting_input_views";
 
 // The maximum depth of 16 also needs to be adapted in the back-end
 // (at the time of writing, in segmentAnythingMask in DatasetController.scala).

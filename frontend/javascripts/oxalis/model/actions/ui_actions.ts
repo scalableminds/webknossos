@@ -1,5 +1,5 @@
 import type { AnnotationTool, OrthoView, Vector3 } from "oxalis/constants";
-import type { OxalisState, BorderOpenStatus, Theme } from "oxalis/store";
+import type { BorderOpenStatus, OxalisState, Theme } from "oxalis/store";
 import type { StartAIJobModalState } from "oxalis/view/action-bar/starting_job_modals";
 
 type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;

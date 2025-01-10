@@ -1,3 +1,5 @@
+import { DownOutlined } from "@ant-design/icons";
+import { getUsersOrganizations } from "admin/admin_rest_api";
 import {
   type AcceptanceInfo,
   acceptTermsOfService,
@@ -6,19 +8,17 @@ import {
 } from "admin/api/terms_of_service";
 import { Dropdown, type MenuProps, Modal, Space, Spin } from "antd";
 import { AsyncButton } from "components/async_clickables";
+import dayjs from "dayjs";
 import { useFetch } from "libs/react_helpers";
 import UserLocalStorage from "libs/user_local_storage";
-import dayjs from "dayjs";
+import _ from "lodash";
+import { switchTo } from "navbar";
 import type { OxalisState } from "oxalis/store";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import { formatDateInLocalTimeZone } from "./formatted_date";
-import { switchTo } from "navbar";
-import { getUsersOrganizations } from "admin/admin_rest_api";
-import { DownOutlined } from "@ant-design/icons";
-import _ from "lodash";
 import type { APIUser } from "types/api_flow_types";
+import { formatDateInLocalTimeZone } from "./formatted_date";
 
 const SNOOZE_DURATION_IN_DAYS = 3;
 const LAST_TERMS_OF_SERVICE_WARNING_KEY = "lastTermsOfServiceWarning";

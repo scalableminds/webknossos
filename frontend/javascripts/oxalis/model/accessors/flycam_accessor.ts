@@ -1,20 +1,8 @@
-import * as THREE from "three";
-import _ from "lodash";
-import memoizeOne from "memoize-one";
-import type { DataLayerType, Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
-import { getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
-import {
-  getColorLayers,
-  getDataLayers,
-  getEnabledLayers,
-  getLayerByName,
-  getMaxZoomStep,
-  getMagInfo,
-} from "oxalis/model/accessors/dataset_accessor";
 import { map3, mod } from "libs/utils";
-import Dimensions from "oxalis/model/dimensions";
+import _ from "lodash";
+import memoizeOne from "memoize-one";
 import type {
   OrthoView,
   OrthoViewMap,
@@ -25,23 +13,35 @@ import type {
   ViewMode,
 } from "oxalis/constants";
 import constants, { OrthoViews } from "oxalis/constants";
+import {
+  getColorLayers,
+  getDataLayers,
+  getEnabledLayers,
+  getLayerByName,
+  getMagInfo,
+  getMaxZoomStep,
+} from "oxalis/model/accessors/dataset_accessor";
+import { getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
-import * as scaleInfo from "oxalis/model/scaleinfo";
-import { reuseInstanceOnEquality } from "./accessor_helpers";
-import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
-import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
-import type { SmallerOrHigherInfo } from "../helpers/mag_info";
+import Dimensions from "oxalis/model/dimensions";
+import * as scaleInfo from "oxalis/model/scaleinfo";
 import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
+import type { DataLayerType, Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
+import * as THREE from "three";
 import type { AdditionalCoordinate, VoxelSize } from "types/api_flow_types";
-import { invertAndTranspose, getTransformsForLayer } from "./dataset_layer_transformation_accessor";
+import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
+import type { SmallerOrHigherInfo } from "../helpers/mag_info";
 import {
-  invertTransform,
-  chainTransforms,
-  transformPointUnscaled,
   type Transform,
+  chainTransforms,
+  invertTransform,
+  transformPointUnscaled,
 } from "../helpers/transformation_helpers";
+import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
+import { reuseInstanceOnEquality } from "./accessor_helpers";
+import { getTransformsForLayer, invertAndTranspose } from "./dataset_layer_transformation_accessor";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 

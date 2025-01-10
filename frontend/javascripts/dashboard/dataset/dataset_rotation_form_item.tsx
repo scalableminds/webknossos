@@ -1,18 +1,18 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { type FormInstance, Row, Col, Slider, InputNumber, Tooltip, Typography, Form } from "antd";
+import { Col, Form, type FormInstance, InputNumber, Row, Slider, Tooltip, Typography } from "antd";
 import FormItem from "antd/es/form/FormItem";
+import {
+  AXIS_TO_TRANSFORM_INDEX,
+  IDENTITY_TRANSFORM,
+  doAllLayersHaveTheSameRotation,
+  fromCenterToOrigin,
+  fromOriginToCenter,
+  getRotationMatrixAroundAxis,
+} from "oxalis/model/accessors/dataset_layer_transformation_accessor";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { useCallback, useEffect, useMemo } from "react";
 import type { APIDataLayer } from "types/api_flow_types";
 import { FormItemWithInfo } from "./helper_components";
-import {
-  getRotationMatrixAroundAxis,
-  fromCenterToOrigin,
-  IDENTITY_TRANSFORM,
-  fromOriginToCenter,
-  AXIS_TO_TRANSFORM_INDEX,
-  doAllLayersHaveTheSameRotation,
-} from "oxalis/model/accessors/dataset_layer_transformation_accessor";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 
 const { Text } = Typography;
 

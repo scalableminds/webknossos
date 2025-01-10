@@ -1,33 +1,33 @@
+import ErrorHandling from "libs/error_handling";
+import { formatExtentInUnitWithLength, formatNumberToLength } from "libs/format_utils";
+import { V3 } from "libs/mjs";
+import { aggregateBoundingBox, maxValue } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
+import messages from "messages";
+import { LongUnitToShortUnitMap, type Vector3, type ViewMode } from "oxalis/constants";
+import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
 import type {
-  AdditionalAxis,
+  ActiveMappingInfo,
+  BoundingBoxObject,
+  DataLayerType,
+  DatasetConfiguration,
+  OxalisState,
+  Settings,
+} from "oxalis/store";
+import type {
   APIAllowedMode,
   APIDataLayer,
   APIDataset,
   APIDatasetCompact,
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
+  AdditionalAxis,
   ElementClass,
 } from "types/api_flow_types";
-import type {
-  Settings,
-  DataLayerType,
-  DatasetConfiguration,
-  BoundingBoxObject,
-  OxalisState,
-  ActiveMappingInfo,
-} from "oxalis/store";
-import ErrorHandling from "libs/error_handling";
-import { LongUnitToShortUnitMap, type Vector3, type ViewMode } from "oxalis/constants";
-import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
-import { aggregateBoundingBox, maxValue } from "libs/utils";
-import { formatExtentInUnitWithLength, formatNumberToLength } from "libs/format_utils";
-import messages from "messages";
 import type { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
-import { V3 } from "libs/mjs";
-import { convertToDenseMag, MagInfo } from "../helpers/mag_info";
+import { MagInfo, convertToDenseMag } from "../helpers/mag_info";
 
 function _getMagInfo(magnifications: Array<Vector3>): MagInfo {
   return new MagInfo(magnifications);

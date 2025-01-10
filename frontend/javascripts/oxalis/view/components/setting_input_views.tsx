@@ -172,7 +172,6 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     const b =
       (100 * (Math.log(this.props.min) + Math.log(this.props.max))) /
       (Math.log(this.props.min) - Math.log(this.props.max));
-    console.log("calculate value", Math.exp((value - b) / a), value, a, b);
     return Math.exp((value - b) / a);
   }
 
@@ -192,13 +191,11 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
       (100 * (Math.log(this.props.min) + Math.log(this.props.max))) /
       (Math.log(this.props.min) - Math.log(this.props.max));
     const scaleValue = a * Math.log(this.props.value) + b;
-    console.log("getSliderValue", Math.round(scaleValue));
     return Math.round(scaleValue);
   };
 
   render() {
     const { label, roundTo, value, min, max, disabled, defaultValue } = this.props;
-    console.log("step", value / 10, value, this.getSliderValue());
     return (
       <Row align="middle" gutter={ROW_GUTTER}>
         <Col span={this.props.spans[0]}>

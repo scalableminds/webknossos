@@ -65,7 +65,6 @@ export function Slider(props: SliderProps) {
   if (onWheelDisabled) return;
   if (range === false || range == null) {
     handleWheelEvent = (event) => {
-      console.log("event", event);
       if (!isFocused) return;
       const newValue = value - getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
       const clampedNewValue = clamp(min, newValue, max);

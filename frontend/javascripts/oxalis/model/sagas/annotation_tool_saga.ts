@@ -1,16 +1,16 @@
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { select } from "oxalis/model/sagas/effect-generators";
-import { take, call, put } from "typed-redux-saga";
+import { AnnotationToolEnum, MeasurementTools } from "oxalis/constants";
+import { getToolClassForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import {
-  type SetToolAction,
   type CycleToolAction,
+  type SetToolAction,
   hideMeasurementTooltipAction,
   setIsMeasuringAction,
 } from "oxalis/model/actions/ui_actions";
 import { getNextTool } from "oxalis/model/reducers/reducer_helpers";
-import { getToolClassForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import { AnnotationToolEnum, MeasurementTools } from "oxalis/constants";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
+import { call, put, take } from "typed-redux-saga";
 export function* watchToolDeselection(): Saga<void> {
   yield* take("WK_READY");
   let previousTool = yield* select((state) => state.uiInformation.activeTool);

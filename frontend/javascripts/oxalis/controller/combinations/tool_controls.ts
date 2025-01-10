@@ -1,60 +1,60 @@
+import features from "features";
 import type { ModifierKeys } from "libs/input";
-import * as THREE from "three";
-import type { OrthoView, Point2, AnnotationTool, Vector3, Viewport } from "oxalis/constants";
-import { OrthoViews, ContourModeEnum, AnnotationToolEnum } from "oxalis/constants";
+import { V3 } from "libs/mjs";
+import * as Utils from "libs/utils";
+import { document } from "libs/window";
+import type { AnnotationTool, OrthoView, Point2, Vector3, Viewport } from "oxalis/constants";
+import { AnnotationToolEnum, ContourModeEnum, OrthoViews } from "oxalis/constants";
 import {
-  enforceActiveVolumeTracing,
-  getActiveSegmentationTracing,
-  getContourTracingMode,
-  getSegmentColorAsHSLA,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  handleAgglomerateSkeletonAtClick,
-  handleClickSegment,
-} from "oxalis/controller/combinations/segmentation_handlers";
-import {
-  computeQuickSelectForPointAction,
-  computeQuickSelectForRectAction,
-  confirmQuickSelectAction,
-  hideBrushAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import { finishedResizingUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
-import type PlaneView from "oxalis/view/plane_view";
-import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
-import {
+  type SelectedEdge,
   createBoundingBoxAndGetEdges,
   handleMovingBoundingBox,
-  type SelectedEdge,
 } from "oxalis/controller/combinations/bounding_box_handlers";
 import {
   getClosestHoveredBoundingBox,
   handleResizingBoundingBox,
   highlightAndSetCursorOnHoveredBoundingBox,
 } from "oxalis/controller/combinations/bounding_box_handlers";
-import Store from "oxalis/store";
-import * as Utils from "libs/utils";
+import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
+import {
+  handleAgglomerateSkeletonAtClick,
+  handleClickSegment,
+} from "oxalis/controller/combinations/segmentation_handlers";
+import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
-import { document } from "libs/window";
-import { api } from "oxalis/singletons";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
+import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import {
+  enforceActiveVolumeTracing,
+  getActiveSegmentationTracing,
+  getContourTracingMode,
+  getSegmentColorAsHSLA,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { finishedResizingUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
   minCutAgglomerateWithPositionAction,
   proofreadAtPosition,
   proofreadMerge,
 } from "oxalis/model/actions/proofread_actions";
-import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
-import { V3 } from "libs/mjs";
 import {
   hideMeasurementTooltipAction,
-  setQuickSelectStateAction,
-  setLastMeasuredPositionAction,
-  setIsMeasuringAction,
   setActiveUserBoundingBoxId,
+  setIsMeasuringAction,
+  setLastMeasuredPositionAction,
+  setQuickSelectStateAction,
 } from "oxalis/model/actions/ui_actions";
+import {
+  computeQuickSelectForPointAction,
+  computeQuickSelectForRectAction,
+  confirmQuickSelectAction,
+  hideBrushAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import { api } from "oxalis/singletons";
+import Store from "oxalis/store";
 import type ArbitraryView from "oxalis/view/arbitrary_view";
-import features from "features";
+import type PlaneView from "oxalis/view/plane_view";
+import * as THREE from "three";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -136,6 +136,20 @@ export class MoveTool {
           }
         }
         handleClickSegment(pos);
+      },
+      leftDoubleClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent, _isTouch: boolean) => {
+        const { uiInformation } = Store.getState();
+        const isMoveToolActive = uiInformation.activeTool === AnnotationToolEnum.MOVE;
+
+        if (isMoveToolActive) {
+          // We want to select the clicked segment ID only in the MOVE tool. This method is
+          // implemented within the Move tool, but other tool controls will fall back to this one
+          // if they didn't define the double click hook. However, for most other tools, this behavior
+          // would be suboptimal, because when doing a double click, the first click will also be registered
+          // as a simple left click. For example, doing a double click with the brush tool would brush something
+          // and then immediately select the id again which is weird.
+          VolumeHandlers.handlePickCell(pos);
+        }
       },
       middleClick: (pos: Point2, _plane: OrthoView, event: MouseEvent) => {
         if (event.shiftKey) {
@@ -483,11 +497,25 @@ export class EraseTool {
       leftDownMove: (_delta: Point2, pos: Point2) => {
         VolumeHandlers.handleMoveForDrawOrErase(pos);
       },
-      leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent) => {
+      leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+        if (event.shiftKey || event.ctrlKey || event.metaKey) {
+          return;
+        }
+
         VolumeHandlers.handleEraseStart(pos, plane);
       },
       leftMouseUp: () => {
         VolumeHandlers.handleEndForDrawOrErase();
+      },
+      leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+        const isControlOrMetaPressed = event.ctrlKey || event.metaKey;
+        if (event.shiftKey) {
+          if (isControlOrMetaPressed) {
+            VolumeHandlers.handleFloodFill(pos, plane);
+          } else {
+            VolumeHandlers.handlePickCell(pos);
+          }
+        }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         SkeletonHandlers.handleOpenContextMenu(planeView, pos, plane, isTouch, event);

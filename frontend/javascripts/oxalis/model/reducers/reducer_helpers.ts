@@ -1,27 +1,27 @@
 import Maybe from "data.maybe";
+import * as Utils from "libs/utils";
+import { AnnotationToolEnum } from "oxalis/constants";
+import type { AnnotationTool, BoundingBoxType } from "oxalis/constants";
+import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
+import {
+  isVolumeAnnotationDisallowedForZoom,
+  isVolumeTool,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { updateKey } from "oxalis/model/helpers/deep_update";
 import type {
-  AdditionalAxis,
+  Annotation,
+  BoundingBoxObject,
+  OxalisState,
+  UserBoundingBox,
+  UserBoundingBoxToServer,
+} from "oxalis/store";
+import type {
   APIAnnotation,
+  AdditionalAxis,
   ServerAdditionalAxis,
   ServerBoundingBox,
   UserBoundingBoxFromServer,
 } from "types/api_flow_types";
-import type {
-  Annotation,
-  BoundingBoxObject,
-  UserBoundingBox,
-  UserBoundingBoxToServer,
-  OxalisState,
-} from "oxalis/store";
-import { AnnotationToolEnum } from "oxalis/constants";
-import type { BoundingBoxType, AnnotationTool } from "oxalis/constants";
-import * as Utils from "libs/utils";
-import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
-import {
-  isVolumeTool,
-  isVolumeAnnotationDisallowedForZoom,
-} from "oxalis/model/accessors/volumetracing_accessor";
 
 export function convertServerBoundingBoxToBoundingBox(
   boundingBox: ServerBoundingBox,
@@ -95,6 +95,7 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     tracingStore,
     owner,
     contributors,
+    organization,
     othersMayEdit,
     isLockedByOwner,
     annotationLayers,
@@ -108,6 +109,7 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     description,
     name,
     annotationType,
+    organization,
     isLockedByOwner,
     tracingStore,
     owner,

@@ -72,7 +72,8 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       for {
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
         result <- datasetController.read(dataset._id.toString, sharingToken)(request)
-      } yield result
+        adaptedResult <- replaceInResult(migrateDatasetJsonToOldFormat)(result)
+      } yield adaptedResult
     }
 
   def updateDatasetV8(organizationId: String, datasetName: String): Action[JsValue] =
@@ -81,7 +82,8 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
         _ <- Fox.successful(logVersioned(request))
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
         result <- datasetController.update(dataset._id.toString)(request)
-      } yield result
+        adaptedResult <- replaceInResult(migrateDatasetJsonToOldFormat)(result)
+      } yield adaptedResult
     }
 
   def updateDatasetTeamsV8(organizationId: String, datasetName: String): Action[List[ObjectId]] =
@@ -125,20 +127,6 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       } yield adaptedResult
     }
 
-  def updateTaskV8(taskId: String): Action[LegacyTaskParameters] =
-    sil.SecuredAction.async(validateJson[LegacyTaskParameters]) { implicit request =>
-      val params = request.body
-      for {
-        dataset <- datasetDAO.findOneByIdOrNameAndOrganization(params.datasetId,
-                                                               params.dataSet,
-                                                               request.identity._organization)
-        paramsWithDatasetId = TaskParameters.fromLegacyTaskParameters(params, dataset._id)
-        requestWithUpdatedBody = request.withBody(paramsWithDatasetId)
-        result <- taskController.update(taskId)(requestWithUpdatedBody)
-        adaptedResult <- replaceInResult(addLegacyDataSetFieldToTask)(result)
-      } yield adaptedResult
-    }
-
   def tasksForProjectV8(id: String,
                         limit: Option[Int] = None,
                         pageNumber: Option[Int] = None,
@@ -149,23 +137,6 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
         result <- projectController.tasksForProject(id, limit, pageNumber, includeTotalCount)(request)
         replacedResults <- replaceInResult(addLegacyDataSetFieldToTask)(result)
       } yield replacedResults
-    }
-
-  def annotationInfoV8(id: String, timestamp: Long): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      _ <- Fox.successful(logVersioned(request))
-      result <- annotationController.infoWithoutType(id, timestamp)(request)
-      adaptedResult <- replaceInResult(addDataSetToTaskInAnnotation)(result)
-    } yield adaptedResult
-  }
-
-  def annotationsForTaskV8(taskId: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      for {
-        _ <- Fox.successful(logVersioned(request))
-        result <- annotationController.annotationsForTask(taskId)(request)
-        adaptedResult <- replaceInResult(addDataSetToTaskInAnnotation)(result)
-      } yield adaptedResult
     }
 
   /* provide v7 */
@@ -241,15 +212,17 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   /* private helper methods for legacy adaptation */
 
-  private def addDataSetToTaskInAnnotation(jsResult: JsObject): Fox[JsObject] = {
-    val taskObjectOpt = (jsResult \ "task").asOpt[JsObject]
-    taskObjectOpt
-      .map(task =>
+  private def migrateDatasetJsonToOldFormat(jsResult: JsObject): Fox[JsObject] = {
+    val datasetName = (jsResult \ "name").asOpt[String]
+    val directoryName = (jsResult \ "directoryName").asOpt[String]
+    datasetName.zip(directoryName) match {
+      case Some((name, dirName)) =>
         for {
-          adaptedTask <- addLegacyDataSetFieldToTask(task)
-          adaptedJsResult <- tryo(jsResult - "task" + ("task" -> adaptedTask)).toFox
-        } yield adaptedJsResult)
-      .getOrElse(Fox.successful(jsResult))
+          dsWithOldNameField <- tryo(jsResult - "directoryName" + ("name" -> Json.toJson(dirName))).toFox
+          dsWithOldDisplayNameField <- tryo(dsWithOldNameField + ("displayName" -> Json.toJson(name))).toFox
+        } yield dsWithOldDisplayNameField
+      case _ => Fox.successful(jsResult)
+    }
   }
 
   private def addLegacyDataSetFieldToTaskCreationResult(jsResult: JsObject) =

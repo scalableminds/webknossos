@@ -1,39 +1,39 @@
+import { DeleteOutlined } from "@ant-design/icons";
+import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
+import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
+import { useStartAndPollJob } from "admin/job/job_hooks";
 import {
-  List,
-  Input,
-  Form,
-  InputNumber,
+  Button,
   Col,
-  Row,
-  Switch,
-  Tooltip,
+  Form,
   type FormInstance,
+  Input,
+  InputNumber,
+  List,
+  Row,
   Select,
   Space,
-  Button,
+  Switch,
+  Tooltip,
 } from "antd";
-import * as React from "react";
-import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
-import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
-import { validateDatasourceJSON, isValidJSON, syncValidator } from "types/validation";
-import type { BoundingBoxObject, OxalisState } from "oxalis/store";
 import {
-  Hideable,
   FormItemWithInfo,
+  Hideable,
   RetryingErrorBoundary,
   jsonEditStyle,
 } from "dashboard/dataset/helper_components";
-import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
-import { jsonStringify, parseMaybe } from "libs/utils";
-import type { DataLayer } from "types/schemas/datasource.types";
-import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
-import { useSelector } from "react-redux";
-import { DeleteOutlined } from "@ant-design/icons";
-import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_flow_types";
-import { useStartAndPollJob } from "admin/job/job_hooks";
-import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
+import { jsonStringify, parseMaybe } from "libs/utils";
+import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
+import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
+import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
+import type { BoundingBoxObject, OxalisState } from "oxalis/store";
+import * as React from "react";
+import { useSelector } from "react-redux";
+import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_flow_types";
 import type { ArbitraryObject } from "types/globals";
+import type { DataLayer } from "types/schemas/datasource.types";
+import { isValidJSON, syncValidator, validateDatasourceJSON } from "types/validation";
 
 const FormItem = Form.Item;
 
@@ -350,7 +350,7 @@ function SimpleLayerForm({
     },
     initialJobKeyExtractor: (job) =>
       job.type === "find_largest_segment_id" && job.datasetName === dataset?.name
-        ? job.datasetName ?? "largest_segment_id"
+        ? (job.datasetName ?? "largest_segment_id")
         : null,
   });
   const activeJob = runningJobs[0];
@@ -398,8 +398,9 @@ function SimpleLayerForm({
               {
                 validator: syncValidator(
                   (value: string) =>
-                    dataLayers.filter((someLayer: APIDataLayer) => someLayer.name === value)
-                      .length <= 1,
+                    form
+                      .getFieldValue(["dataSource", "dataLayers"])
+                      .filter((someLayer: APIDataLayer) => someLayer.name === value).length <= 1,
                   "Layer names must be unique.",
                 ),
               },

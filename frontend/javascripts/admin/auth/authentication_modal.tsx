@@ -1,13 +1,13 @@
-import { Modal, Alert } from "antd";
-import type { ComponentType } from "react";
-import React, { useState } from "react";
+import RegistrationFormWKOrg from "admin/auth/registration_form_wkorg";
+import { Alert, Modal } from "antd";
+import LinkButton from "components/link_button";
+import features from "features";
 import Toast from "libs/toast";
 import messages from "messages";
-import features from "features";
-import RegistrationFormWKOrg from "admin/auth/registration_form_wkorg";
-import LinkButton from "components/link_button";
-import RegistrationFormGeneric from "./registration_form_generic";
+import type { ComponentType } from "react";
+import React, { useState } from "react";
 import LoginForm from "./login_form";
+import RegistrationFormGeneric from "./registration_form_generic";
 type Props = {
   onLoggedIn: (userJustRegistered: boolean) => unknown;
   onCancel: () => void;

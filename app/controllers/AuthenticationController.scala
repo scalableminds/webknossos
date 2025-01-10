@@ -1,41 +1,29 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
+import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
+import models.organization.{Organization, OrganizationDAO, OrganizationService}
+import models.user._
+import net.liftweb.common.{Box, Empty, Failure, Full}
+import org.apache.commons.codec.binary.Base64
+import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import org.apache.pekko.actor.ActorSystem
+import play.api.data.Form
+import play.api.data.Forms._
+import play.api.data.validation.Constraints._
+import play.api.i18n.{Messages, MessagesProvider}
+import play.api.libs.json._
+import play.api.mvc._
 import play.silhouette.api.actions.SecuredRequest
 import play.silhouette.api.exceptions.ProviderException
 import play.silhouette.api.services.AuthenticatorResult
 import play.silhouette.api.util.{Credentials, PasswordInfo}
 import play.silhouette.api.{LoginInfo, Silhouette}
 import play.silhouette.impl.providers.CredentialsProvider
-import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
-import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
-import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
-import models.annotation.AnnotationState.Cancelled
-import models.annotation.{AnnotationDAO, AnnotationIdentifier, AnnotationInformationProvider}
-import models.dataset.DatasetDAO
-import models.organization.{Organization, OrganizationDAO, OrganizationService}
-import models.user._
-import models.voxelytics.VoxelyticsDAO
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import org.apache.commons.codec.binary.Base64
-import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
-import play.api.data.Form
-import play.api.data.Forms._
-import play.api.data.validation.Constraints._
-import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, Cookie, PlayBodyParsers, Request, Result}
-import security.{
-  CombinedAuthenticator,
-  OpenIdConnectClient,
-  OpenIdConnectUserInfo,
-  PasswordHasher,
-  TokenType,
-  WkEnv,
-  WkSilhouetteEnvironment
-}
+import security._
 import utils.WkConf
 
 import java.net.URLEncoder
@@ -49,7 +37,7 @@ class AuthenticationController @Inject()(
     credentialsProvider: CredentialsProvider,
     passwordHasher: PasswordHasher,
     userService: UserService,
-    annotationProvider: AnnotationInformationProvider,
+    authenticationService: AccessibleBySwitchingService,
     organizationService: OrganizationService,
     inviteService: InviteService,
     inviteDAO: InviteDAO,
@@ -57,12 +45,9 @@ class AuthenticationController @Inject()(
     organizationDAO: OrganizationDAO,
     analyticsService: AnalyticsService,
     userDAO: UserDAO,
-    datasetDAO: DatasetDAO,
     multiUserDAO: MultiUserDAO,
     defaultMails: DefaultMails,
     conf: WkConf,
-    annotationDAO: AnnotationDAO,
-    voxelyticsDAO: VoxelyticsDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     openIdConnectClient: OpenIdConnectClient,
     initialDataService: InitialDataService,
@@ -228,101 +213,18 @@ class AuthenticationController @Inject()(
       result <- combinedAuthenticatorService.embed(cookie, Redirect("/dashboard")) //to login the new user
     } yield result
 
-  /*
-    superadmin - can definitely switch, find organization via global access context
-    not superadmin - fetch all identities, construct access context, try until one works
-   */
-
   def accessibleBySwitching(datasetId: Option[String],
                             annotationId: Option[String],
                             workflowHash: Option[String]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
         datasetIdValidated <- Fox.runOptional(datasetId)(ObjectId.fromString(_))
-        isSuperUser <- multiUserDAO.findOne(request.identity._multiUser).map(_.isSuperUser)
-        selectedOrganization <- if (isSuperUser)
-          accessibleBySwitchingForSuperUser(datasetIdValidated, annotationId, workflowHash)
-        else
-          accessibleBySwitchingForMultiUser(request.identity._multiUser, datasetIdValidated, annotationId, workflowHash)
-        _ <- bool2Fox(selectedOrganization._id != request.identity._organization) // User is already in correct orga, but still could not see dataset. Assume this had a reason.
+        selectedOrganization <- authenticationService.getOrganizationToSwitchTo(request.identity,
+                                                                                datasetIdValidated,
+                                                                                annotationId,
+                                                                                workflowHash)
         selectedOrganizationJs <- organizationService.publicWrites(selectedOrganization)
       } yield Ok(selectedOrganizationJs)
-  }
-
-  private def accessibleBySwitchingForSuperUser(datasetIdOpt: Option[ObjectId],
-                                                annotationIdOpt: Option[String],
-                                                workflowHashOpt: Option[String]): Fox[Organization] = {
-    implicit val ctx: DBAccessContext = GlobalAccessContext
-    (datasetIdOpt, annotationIdOpt, workflowHashOpt) match {
-      case (Some(datasetId), None, None) =>
-        for {
-          dataset <- datasetDAO.findOne(datasetId)
-          organization <- organizationDAO.findOne(dataset._organization)
-        } yield organization
-      case (None, Some(annotationId), None) =>
-        for {
-          annotationObjectId <- ObjectId.fromString(annotationId)
-          annotation <- annotationDAO.findOne(annotationObjectId) // Note: this does not work for compound annotations.
-          user <- userDAO.findOne(annotation._user)
-          organization <- organizationDAO.findOne(user._organization)
-        } yield organization
-      case (None, None, Some(workflowHash)) =>
-        for {
-          workflow <- voxelyticsDAO.findWorkflowByHash(workflowHash)
-          organization <- organizationDAO.findOne(workflow._organization)
-        } yield organization
-      case _ => Fox.failure("Can either test access for dataset or annotation or workflow, not a combination")
-    }
-  }
-
-  private def accessibleBySwitchingForMultiUser(multiUserId: ObjectId,
-                                                datasetIdOpt: Option[ObjectId],
-                                                annotationIdOpt: Option[String],
-                                                workflowHashOpt: Option[String]): Fox[Organization] =
-    for {
-      identities <- userDAO.findAllByMultiUser(multiUserId)
-      selectedIdentity <- Fox.find(identities)(identity =>
-        canAccessDatasetOrAnnotationOrWorkflow(identity, datasetIdOpt, annotationIdOpt, workflowHashOpt))
-      selectedOrganization <- organizationDAO.findOne(selectedIdentity._organization)(GlobalAccessContext)
-    } yield selectedOrganization
-
-  private def canAccessDatasetOrAnnotationOrWorkflow(user: User,
-                                                     datasetIdOpt: Option[ObjectId],
-                                                     annotationIdOpt: Option[String],
-                                                     workflowHashOpt: Option[String]): Fox[Boolean] = {
-    val ctx = AuthorizedAccessContext(user)
-    (datasetIdOpt, annotationIdOpt, workflowHashOpt) match {
-      case (Some(datasetId), None, None) =>
-        canAccessDataset(ctx, datasetId)
-      case (None, Some(annotationId), None) =>
-        canAccessAnnotation(user, ctx, annotationId)
-      case (None, None, Some(workflowHash)) =>
-        canAccessWorkflow(user, workflowHash)
-      case _ => Fox.failure("Can either test access for dataset or annotation or workflow, not a combination")
-    }
-  }
-
-  private def canAccessDataset(ctx: DBAccessContext, datasetId: ObjectId): Fox[Boolean] = {
-    val foundFox = datasetDAO.findOne(datasetId)(ctx)
-    foundFox.futureBox.map(_.isDefined)
-  }
-
-  private def canAccessAnnotation(user: User, ctx: DBAccessContext, annotationId: String): Fox[Boolean] = {
-    val foundFox = for {
-      annotationIdParsed <- ObjectId.fromString(annotationId)
-      annotation <- annotationDAO.findOne(annotationIdParsed)(GlobalAccessContext)
-      _ <- bool2Fox(annotation.state != Cancelled)
-      restrictions <- annotationProvider.restrictionsFor(AnnotationIdentifier(annotation.typ, annotationIdParsed))(ctx)
-      _ <- restrictions.allowAccess(user)
-    } yield ()
-    foundFox.futureBox.map(_.isDefined)
-  }
-
-  private def canAccessWorkflow(user: User, workflowHash: String): Fox[Boolean] = {
-    val foundFox = for {
-      _ <- voxelyticsDAO.findWorkflowByHashAndOrganization(user._organization, workflowHash)
-    } yield ()
-    foundFox.futureBox.map(_.isDefined)
   }
 
   def joinOrganization(inviteToken: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
@@ -375,7 +277,8 @@ class AuthenticationController @Inject()(
             case None => Future.successful(NotFound(Messages("error.noUser")))
             case Some(user) =>
               for {
-                token <- bearerTokenAuthenticatorService.createAndInit(user.loginInfo, TokenType.ResetPassword)
+                token <- bearerTokenAuthenticatorService
+                  .createAndInit(user.loginInfo, TokenType.ResetPassword, deleteOld = true)
               } yield {
                 Mailer ! Send(defaultMails.resetPasswordMail(user.name, email.toLowerCase, token))
                 Ok

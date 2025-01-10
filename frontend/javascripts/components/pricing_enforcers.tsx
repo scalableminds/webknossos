@@ -1,22 +1,22 @@
-import React from "react";
-import { useSelector } from "react-redux";
-import { Alert, type ButtonProps, Button, Result, Popover, Col, Row } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import {
+  type PricingPlanEnum,
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
-  type PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import { isUserAllowedToRequestUpgrades } from "admin/organization/pricing_plan_utils";
-import { Link } from "react-router-dom";
-import type { OxalisState } from "oxalis/store";
+import UpgradePricingPlanModal from "admin/organization/upgrade_plan_modal";
+import { Alert, Button, type ButtonProps, Col, Popover, Result, Row } from "antd";
+import type { PopoverProps } from "antd/lib";
+import type { TooltipPlacement } from "antd/lib/tooltip";
 import { rgbToHex } from "libs/utils";
 import { PRIMARY_COLOR } from "oxalis/constants";
-import UpgradePricingPlanModal from "admin/organization/upgrade_plan_modal";
-import type { APIOrganization, APIUser } from "types/api_flow_types";
-import type { TooltipPlacement } from "antd/lib/tooltip";
+import type { OxalisState } from "oxalis/store";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
-import type { PopoverProps } from "antd/lib";
+import React from "react";
+import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
+import type { APIOrganization, APIUser } from "types/api_flow_types";
 
 const PRIMARY_COLOR_HEX = rgbToHex(PRIMARY_COLOR);
 

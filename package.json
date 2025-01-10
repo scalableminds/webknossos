@@ -9,7 +9,7 @@
     "url": "git://github.com/scalableminds/webknossos.git"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.8.3",
+    "@biomejs/biome": "^1.9.4",
     "@redux-saga/testing-utils": "^1.1.5",
     "@shaderfrog/glsl-parser": "^0.3.0",
     "@types/color-hash": "^1.0.2",
@@ -103,8 +103,8 @@
     "stash-pop-cmake-cache": "[ -f webknossos-jni/target/native/x86_64-linux/build/CMakeCache.txt.bak ] && mv webknossos-jni/target/native/x86_64-linux/build/CMakeCache.txt.bak webknossos-jni/target/native/x86_64-linux/build/CMakeCache.txt || true",
     "refresh-e2e-snapshots": "yarn remove-e2e-snapshots && mkdir -p frontend/javascripts/test/snapshots/type-check && yarn stash-cmake-cache && docker compose down && docker compose up e2e-tests && yarn stash-pop-cmake-cache",
     "refresh-all-snapshots": "yarn remove-all-snapshots && yarn test && yarn refresh-e2e-snapshots",
-    "check-frontend": "yarn run biome check frontend package.json --organize-imports-enabled=false && tools/assert-no-test-only.sh",
-    "fix-frontend": "yarn run biome check frontend package.json --write --organize-imports-enabled=false && echo Please proofread the applied suggestions, as they may not be safe.",
+    "check-frontend": "yarn run biome check frontend package.json  && tools/assert-no-test-only.sh",
+    "fix-frontend": "yarn run biome check frontend package.json --write && echo Please proofread the applied suggestions, as they may not be safe.",
     "format-backend": "sbt \";scalafmt; util/scalafmt; webknossosTracingstore/scalafmt; webknossosDatastore/scalafmt\"",
     "lint-backend": "sbt \";scapegoat\"",
     "licenses-backend": "sbt dumpLicenseReport",

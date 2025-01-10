@@ -1,164 +1,136 @@
-import { Button, Col, Divider, Dropdown, type MenuProps, Modal, Row, Switch } from "antd";
-import type { Dispatch } from "redux";
 import {
   EditOutlined,
-  InfoCircleOutlined,
-  ReloadOutlined,
-  ScanOutlined,
-  WarningOutlined,
-  PlusOutlined,
-  VerticalAlignMiddleOutlined,
-  LockOutlined,
-  UnlockOutlined,
   EllipsisOutlined,
-  SaveOutlined,
+  InfoCircleOutlined,
+  LockOutlined,
   MenuOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SaveOutlined,
+  ScanOutlined,
+  UnlockOutlined,
+  VerticalAlignMiddleOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
-import ErrorHandling from "libs/error_handling";
-import { connect, useDispatch, useSelector } from "react-redux";
-import React, { useCallback } from "react";
-import _ from "lodash";
-import classnames from "classnames";
-import update from "immutability-helper";
+import { DndContext, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
-  APIAnnotationTypeEnum,
-  type APIDataLayer,
-  type APIDataset,
-  type APISkeletonLayer,
-  APIJobType,
-  type EditableLayerProperties,
-} from "types/api_flow_types";
-import type { ValueOf } from "types/globals";
-import { HoverIconButton } from "components/hover_icon_button";
-import {
-  SwitchSetting,
-  NumberSliderSetting,
-  LogSliderSetting,
-  ColorSetting,
-  SETTING_LEFT_SPAN,
-  SETTING_MIDDLE_SPAN,
-  SETTING_VALUE_SPAN,
-} from "oxalis/view/components/setting_input_views";
-import { M4x4, V3 } from "libs/mjs";
-import { editAnnotationLayerAction } from "oxalis/model/actions/annotation_actions";
-import {
-  enforceSkeletonTracing,
-  getActiveNode,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  findDataPositionForLayer,
   clearCache,
-  findDataPositionForVolumeTracing,
   convertToHybridTracing,
   deleteAnnotationLayer,
-  updateDatasetDefaultConfiguration,
+  findDataPositionForLayer,
+  findDataPositionForVolumeTracing,
   startComputeSegmentIndexFileJob,
+  updateDatasetDefaultConfiguration,
 } from "admin/admin_rest_api";
+import { Button, Col, Divider, Dropdown, type MenuProps, Modal, Row, Switch } from "antd";
+import classnames from "classnames";
+import FastTooltip from "components/fast_tooltip";
+import { HoverIconButton } from "components/hover_icon_button";
+import LinkButton from "components/link_button";
+import update from "immutability-helper";
+import ErrorHandling from "libs/error_handling";
+import { M4x4, V3 } from "libs/mjs";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import {
+  type RecommendedConfiguration,
+  layerViewConfigurationTooltips,
+  layerViewConfigurations,
+  settings,
+  settingsTooltips,
+} from "messages";
+import type { Vector3 } from "oxalis/constants";
+import Constants, { ControlModeEnum, MappingStatusEnum } from "oxalis/constants";
+import defaultState from "oxalis/default_state";
 import {
   getDefaultValueRangeOfLayer,
   getElementClass,
   isColorLayer as getIsColorLayer,
+  getLayerBoundingBox,
   getLayerByName,
   getMagInfo,
+  getTransformsForLayer,
   getTransformsForLayerOrNull,
   getWidestMags,
-  getLayerBoundingBox,
-  getTransformsForLayer,
   hasDatasetTransforms,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForMag, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import {
+  enforceSkeletonTracing,
+  getActiveNode,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
   getVolumeDescriptorById,
   getVolumeTracingById,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import { editAnnotationLayerAction } from "oxalis/model/actions/annotation_actions";
+import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
+import {
+  dispatchClipHistogramAsync,
+  reloadHistogramAction,
+  updateDatasetSettingAction,
+  updateLayerSettingAction,
+  updateUserSettingAction,
+} from "oxalis/model/actions/settings_actions";
 import {
   setNodeRadiusAction,
   setShowSkeletonsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-import {
-  updateUserSettingAction,
-  updateDatasetSettingAction,
-  updateLayerSettingAction,
-  dispatchClipHistogramAsync,
-  reloadHistogramAction,
-} from "oxalis/model/actions/settings_actions";
-import { userSettings } from "types/schemas/user_settings.schema";
-import type { Vector3, ControlMode } from "oxalis/constants";
-import Constants, { ControlModeEnum, MappingStatusEnum } from "oxalis/constants";
-import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import LinkButton from "components/link_button";
-import { Model } from "oxalis/singletons";
-import type {
-  VolumeTracing,
-  DatasetConfiguration,
-  DatasetLayerConfiguration,
-  OxalisState,
-  UserConfiguration,
-  HistogramDataForAllLayers,
-  Tracing,
-  Task,
-} from "oxalis/store";
-import Store from "oxalis/store";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import { api } from "oxalis/singletons";
-import {
-  layerViewConfigurations,
-  layerViewConfigurationTooltips,
-  type RecommendedConfiguration,
-  settings,
-  settingsTooltips,
-} from "messages";
-import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
-import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_volume_layer_modal";
-import DownsampleVolumeModal from "./modals/downsample_volume_modal";
-import Histogram, { isHistogramSupported } from "./histogram_view";
-import MappingSettingsView from "./mapping_settings_view";
-import { confirmAsync } from "../../../dashboard/dataset/helper_components";
 import {
   invertTransform,
   transformPointUnscaled,
 } from "oxalis/model/helpers/transformation_helpers";
-import FastTooltip from "components/fast_tooltip";
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { DndContext, type DragEndEvent } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
+import { Model } from "oxalis/singletons";
+import { api } from "oxalis/singletons";
+import type {
+  DatasetConfiguration,
+  DatasetLayerConfiguration,
+  OxalisState,
+  UserConfiguration,
+  VolumeTracing,
+} from "oxalis/store";
+import Store from "oxalis/store";
+import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import {
+  ColorSetting,
+  LogSliderSetting,
+  NumberSliderSetting,
+  SETTING_LEFT_SPAN,
+  SETTING_MIDDLE_SPAN,
+  SETTING_VALUE_SPAN,
+  SwitchSetting,
+} from "oxalis/view/components/setting_input_views";
+import React, { useCallback } from "react";
+import { connect, useDispatch, useSelector } from "react-redux";
+import type { Dispatch } from "redux";
+import {
+  APIAnnotationTypeEnum,
+  type APIDataLayer,
+  type APIDataset,
+  APIJobType,
+  type APISkeletonLayer,
+  type EditableLayerProperties,
+} from "types/api_flow_types";
+import type { ValueOf } from "types/globals";
 import {
   defaultDatasetViewConfigurationWithoutNull,
   getDefaultLayerViewConfiguration,
 } from "types/schemas/dataset_view_configuration.schema";
-import defaultState from "oxalis/default_state";
+import { userSettings } from "types/schemas/user_settings.schema";
+import { confirmAsync } from "../../../dashboard/dataset/helper_components";
+import Histogram, { isHistogramSupported } from "./histogram_view";
+import MappingSettingsView from "./mapping_settings_view";
+import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_volume_layer_modal";
+import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 
-type DatasetSettingsProps = {
-  userConfiguration: UserConfiguration;
-  datasetConfiguration: DatasetConfiguration;
-  dataset: APIDataset;
-  onChange: (propertyName: keyof DatasetConfiguration, value: any) => void;
-  onChangeLayer: (
-    layerName: string,
-    propertyName: keyof DatasetLayerConfiguration,
-    value: any,
-  ) => void;
-  onClipHistogram: (layerName: string, shouldAdjustClipRange: boolean) => Promise<void>;
-  histogramData: HistogramDataForAllLayers;
-  onChangeRadius: (value: number) => void;
-  onChangeShowSkeletons: (arg0: boolean) => void;
-  onSetPosition: (arg0: Vector3) => void;
-  onZoomToMag: (layerName: string, arg0: Vector3) => number;
-  onChangeUser: (key: keyof UserConfiguration, value: any) => void;
-  reloadHistogram: (layerName: string) => void;
-  tracing: Tracing;
-  task: Task | null | undefined;
-  onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void;
-  controlMode: ControlMode;
-  isArbitraryMode: boolean;
-  isAdminOrDatasetManager: boolean;
-  isAdminOrManager: boolean;
-  isSuperUser: boolean;
-};
+type DatasetSettingsProps = ReturnType<typeof mapStateToProps> &
+  ReturnType<typeof mapDispatchToProps>;
 
 type State = {
   // If this is set to not-null, the downsampling modal
@@ -414,11 +386,19 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
-  getReloadDataButton = (layerName: string) => {
+  getReloadDataButton = (
+    layerName: string,
+    isHistogramAvailable: boolean,
+    maybeFallbackLayerName: string | null,
+  ) => {
     const tooltipText = "Use this when the data on the server changed.";
     return (
       <FastTooltip title={tooltipText}>
-        <div onClick={() => this.reloadLayerData(layerName)}>
+        <div
+          onClick={() =>
+            this.reloadLayerData(layerName, isHistogramAvailable, maybeFallbackLayerName)
+          }
+        >
           <ReloadOutlined className="icon-margin-right" />
           Reload data from server
         </div>
@@ -613,6 +593,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     isInEditMode: boolean,
     layerName: string,
     layerSettings: DatasetLayerConfiguration,
+    isHistogramAvailable: boolean,
     hasLessThanTwoColorLayers: boolean = true,
   ) => {
     const { tracing, dataset, isAdminOrManager } = this.props;
@@ -673,7 +654,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           }
         : null,
       this.props.dataset.isEditable
-        ? { label: this.getReloadDataButton(layerName), key: "reloadDataButton" }
+        ? {
+            label: this.getReloadDataButton(layerName, isHistogramAvailable, maybeFallbackLayer),
+            key: "reloadDataButton",
+          }
         : null,
       {
         label: this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing),
@@ -927,9 +911,37 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         defaultValue={defaultDatasetViewConfigurationWithoutNull.segmentationPatternOpacity}
       />
     );
+
+    const isProofreadingMode = this.props.activeTool === "PROOFREAD";
+    const isSelectiveVisibilityDisabled = isProofreadingMode;
+
+    const selectiveVisibilitySwitch = (
+      <FastTooltip
+        title={
+          isSelectiveVisibilityDisabled
+            ? "This behavior is overriden by the 'selective segment visibility' button in the toolbar, because the proofreading tool is active."
+            : "When enabled, only hovered or active segments will be shown."
+        }
+      >
+        <div
+          style={{
+            marginBottom: 6,
+          }}
+        >
+          <SwitchSetting
+            onChange={_.partial(this.props.onChange, "selectiveSegmentVisibility")}
+            value={this.props.datasetConfiguration.selectiveSegmentVisibility}
+            label="Selective Visibility"
+            disabled={isSelectiveVisibilityDisabled}
+          />
+        </div>
+      </FastTooltip>
+    );
+
     return (
       <div>
         {segmentationOpacitySetting}
+        {selectiveVisibilitySwitch}
         <MappingSettingsView layerName={layerName} />
       </div>
     );
@@ -976,6 +988,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       );
 
     const defaultLayerViewConfig = getDefaultLayerViewConfiguration();
+    const isHistogramAvailable = isHistogramSupported(elementClass) && isColorLayer;
 
     return (
       <div key={layerName} style={style} ref={setNodeRef}>
@@ -985,6 +998,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           isInEditMode,
           layerName,
           layerConfiguration,
+          isHistogramAvailable,
           hasLessThanTwoColorLayers,
         )}
         {isDisabled ? null : (
@@ -994,9 +1008,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               marginLeft: 10,
             }}
           >
-            {isHistogramSupported(elementClass) && layerName != null && isColorLayer
-              ? this.getHistogram(layerName, layerConfiguration)
-              : null}
+            {isHistogramAvailable && this.getHistogram(layerName, layerConfiguration)}
             <NumberSliderSetting
               label={opacityLabel}
               min={0}
@@ -1077,9 +1089,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
-  reloadLayerData = async (layerName: string): Promise<void> => {
-    await clearCache(this.props.dataset, layerName);
-    this.props.reloadHistogram(layerName);
+  reloadLayerData = async (
+    layerName: string,
+    isHistogramAvailable: boolean,
+    maybeFallbackLayerName: string | null,
+  ): Promise<void> => {
+    await clearCache(this.props.dataset, maybeFallbackLayerName ?? layerName);
+    if (isHistogramAvailable) this.props.reloadHistogram(layerName);
     await api.data.reloadBuckets(layerName);
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);
   };
@@ -1338,6 +1354,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         "loadingStrategy",
         "segmentationPatternOpacity",
         "blendMode",
+        "selectiveSegmentVisibility",
       ] as Array<keyof RecommendedConfiguration>
     ).map((key) => ({
       name: settings[key] as string,
@@ -1585,6 +1602,7 @@ const mapStateToProps = (state: OxalisState) => ({
     state.activeUser != null ? Utils.isUserAdminOrDatasetManager(state.activeUser) : false,
   isAdminOrManager: state.activeUser != null ? Utils.isUserAdminOrManager(state.activeUser) : false,
   isSuperUser: state.activeUser?.isSuperUser || false,
+  activeTool: state.uiInformation.activeTool,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

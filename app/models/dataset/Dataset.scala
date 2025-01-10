@@ -115,14 +115,12 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   protected def parse(r: DatasetsRow): Fox[Dataset] =
     for {
-      voxelSize <- parseVoxelSizeOpt(r.voxelsizefactor, r.voxelsizeunit) ?~> "could not parse dataset voxel size"
+      voxelSize <- parseVoxelSizeOpt(r.voxelsizefactor, r.voxelsizeunit)
       defaultViewConfigurationOpt <- Fox.runOptional(r.defaultviewconfiguration)(
-        JsonHelper
-          .parseAndValidateJson[DatasetViewConfiguration](_)) ?~> "could not parse dataset default view configuration"
+        JsonHelper.parseAndValidateJson[DatasetViewConfiguration](_))
       adminViewConfigurationOpt <- Fox.runOptional(r.adminviewconfiguration)(
-        JsonHelper
-          .parseAndValidateJson[DatasetViewConfiguration](_)) ?~> "could not parse dataset admin view configuration"
-      metadata <- JsonHelper.parseAndValidateJson[JsArray](r.metadata) ?~> "could not parse dataset metadata"
+        JsonHelper.parseAndValidateJson[DatasetViewConfiguration](_))
+      metadata <- JsonHelper.parseAndValidateJson[JsArray](r.metadata)
     } yield {
       Dataset(
         ObjectId(r._Id),
@@ -220,11 +218,9 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                                                       includeSubfolders,
                                                       None,
                                                       None)
-      _ = logger.info(s"Requesting datasets with selection predicates '$selectionPredicates'")
       limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
-      _ = logger.info("Requesting datasets with query")
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery".as[DatasetsRow])
-      parsed <- parseAll(r) ?~> "Parsing datasets failed"
+      parsed <- parseAll(r)
     } yield parsed
 
   def findAllCompactWithSearch(isActiveOpt: Option[Boolean] = None,
@@ -434,16 +430,15 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       exists <- r.headOption
     } yield exists
 
-  // Datasets are looked up by name and directoryName, as datasets from before dataset renaming was possible
-  // should have their directory name equal to their name during the time the link was created. This heuristic should
-  // have the best expected outcome as it expect to find the dataset by directoryName and it to be the oldest. In case
-  // someone renamed a dataset and created the link with a tool that uses the outdated dataset identification, the dataset should still be found.
+  // Legacy links to Datasets used their name and organizationId as identifier. In #8075 name was changed to directoryName.
+  // Thus, interpreting the name as the directory name should work, as changing the directory name is not possible.
+  // This way of looking up datasets should only be used for backwards compatibility.
   def findOneByNameAndOrganization(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
                    FROM $existingCollectionName
-                   WHERE (directoryName = $name OR name = $name)
+                   WHERE (directoryName = $name)
                    AND _organization = $organizationId
                    AND $accessQuery
                    ORDER BY created ASC

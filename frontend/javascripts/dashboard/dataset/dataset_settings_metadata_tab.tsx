@@ -1,4 +1,4 @@
-import { Input, Col, Row, DatePicker } from "antd";
+import { Col, DatePicker, Input, Row } from "antd";
 import { FormItemWithInfo } from "./helper_components";
 
 export default function DatasetSettingsMetadataTab() {

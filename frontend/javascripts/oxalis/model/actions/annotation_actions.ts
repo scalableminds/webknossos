@@ -1,3 +1,13 @@
+import Deferred from "libs/async/deferred";
+import _ from "lodash";
+import type { Vector3 } from "oxalis/constants";
+import type {
+  MappingType,
+  UserBoundingBox,
+  UserBoundingBoxWithoutId,
+  UserBoundingBoxWithoutIdMaybe,
+} from "oxalis/store";
+import type { Dispatch } from "redux";
 import type {
   APIAnnotation,
   APIAnnotationVisibility,
@@ -7,16 +17,6 @@ import type {
   APIUserCompact,
   EditableLayerProperties,
 } from "types/api_flow_types";
-import type {
-  MappingType,
-  UserBoundingBox,
-  UserBoundingBoxWithoutId,
-  UserBoundingBoxWithoutIdMaybe,
-} from "oxalis/store";
-import type { Vector3 } from "oxalis/constants";
-import _ from "lodash";
-import type { Dispatch } from "redux";
-import Deferred from "libs/async/deferred";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 
 type InitializeAnnotationAction = ReturnType<typeof initializeAnnotationAction>;

@@ -1,4 +1,4 @@
-import { isFlightMode, getW } from "oxalis/shaders/utils.glsl";
+import { getW, isFlightMode } from "oxalis/shaders/utils.glsl";
 import type { ShaderModule } from "./shader_module_system";
 export const getMagnification: ShaderModule = {
   code: `

@@ -1,12 +1,12 @@
-import type { ServerEditableMapping, ServerVolumeTracing } from "types/api_flow_types";
-import type { Vector2, Vector3, OrthoView, ContourMode, BucketAddress } from "oxalis/constants";
+import Deferred from "libs/async/deferred";
+import type { BucketAddress, ContourMode, OrthoView, Vector2, Vector3 } from "oxalis/constants";
+import type { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
+import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import type { NumberLike, Segment, SegmentGroup, SegmentMap } from "oxalis/store";
-import Deferred from "libs/async/deferred";
 import type { Dispatch } from "redux";
-import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
-import type { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import { batchActions } from "redux-batched-actions";
+import type { ServerEditableMapping, ServerVolumeTracing } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
@@ -14,7 +14,7 @@ export type InitializeEditableMappingAction = ReturnType<typeof initializeEditab
 export type CreateCellAction = ReturnType<typeof createCellAction>;
 type StartEditingAction = ReturnType<typeof startEditingAction>;
 type AddToLayerAction = ReturnType<typeof addToLayerAction>;
-type FloodFillAction = ReturnType<typeof floodFillAction>;
+export type FloodFillAction = ReturnType<typeof floodFillAction>;
 export type PerformMinCutAction = ReturnType<typeof performMinCutAction>;
 type FinishEditingAction = ReturnType<typeof finishEditingAction>;
 export type SetActiveCellAction = ReturnType<typeof setActiveCellAction>;
@@ -45,6 +45,9 @@ export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
 export type SetExpandedSegmentGroupsAction = ReturnType<typeof setExpandedSegmentGroupsAction>;
 export type SetHasEditableMappingAction = ReturnType<typeof setHasEditableMappingAction>;
 export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedAction>;
+export type SetVolumeBucketDataHasChangedAction = ReturnType<
+  typeof setVolumeBucketDataHasChangedAction
+>;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
 export type ComputeQuickSelectForPointAction = ReturnType<typeof computeQuickSelectForPointAction>;
@@ -99,6 +102,7 @@ export type VolumeTracingAction =
   | FineTuneQuickSelectAction
   | CancelQuickSelectAction
   | ConfirmQuickSelectAction
+  | SetVolumeBucketDataHasChangedAction
   | BatchUpdateGroupsAndSegmentsAction;
 
 export const VolumeTracingSaveRelevantActions = [
@@ -437,3 +441,9 @@ export const batchUpdateGroupsAndSegmentsAction = (actions: BatchableUpdateSegme
 export const cancelQuickSelectAction = () => ({ type: "CANCEL_QUICK_SELECT" }) as const;
 
 export const confirmQuickSelectAction = () => ({ type: "CONFIRM_QUICK_SELECT" }) as const;
+
+export const setVolumeBucketDataHasChangedAction = (tracingId: string) =>
+  ({
+    type: "SET_VOLUME_BUCKET_DATA_HAS_CHANGED",
+    tracingId,
+  }) as const;

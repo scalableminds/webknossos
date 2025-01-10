@@ -1,30 +1,30 @@
-import { useDispatch, useSelector } from "react-redux";
-import { useEffect, useRef } from "react";
-import type { OxalisState } from "oxalis/store";
-import {
-  AnnotationToolEnum,
-  MeasurementTools,
-  LongUnitToShortUnitMap,
-  type Vector3,
-} from "oxalis/constants";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { hideMeasurementTooltipAction } from "oxalis/model/actions/ui_actions";
-import getSceneController from "oxalis/controller/scene_controller_provider";
 import { CopyOutlined } from "@ant-design/icons";
 import { copyToClipboad } from "admin/voxelytics/utils";
-import {
-  formatNumberToLength,
-  formatLengthAsVx,
-  formatAreaAsVx,
-  formatNumberToArea,
-} from "libs/format_utils";
 import { Tooltip } from "antd";
+import {
+  formatAreaAsVx,
+  formatLengthAsVx,
+  formatNumberToArea,
+  formatNumberToLength,
+} from "libs/format_utils";
+import { clamp } from "libs/utils";
+import {
+  AnnotationToolEnum,
+  LongUnitToShortUnitMap,
+  MeasurementTools,
+  type Vector3,
+} from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   calculateMaybePlaneScreenPos,
   getInputCatcherRect,
 } from "oxalis/model/accessors/view_mode_accessor";
-import { clamp } from "libs/utils";
+import { hideMeasurementTooltipAction } from "oxalis/model/actions/ui_actions";
 import dimensions from "oxalis/model/dimensions";
+import type { OxalisState } from "oxalis/store";
+import { useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
 const TOOLTIP_HEIGHT = 48;
 const ADDITIONAL_OFFSET = 12;

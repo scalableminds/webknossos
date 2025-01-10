@@ -1,30 +1,30 @@
 import {
+  EditOutlined,
   FileOutlined,
   FolderOpenOutlined,
-  SearchOutlined,
-  EditOutlined,
   LoadingOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
+import { getOrganization } from "admin/admin_rest_api";
 import { Result, Spin, Tag, Tooltip } from "antd";
-import { stringToColor, formatCountToDataAmountUnit } from "libs/format_utils";
+import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
+import Markdown from "libs/markdown_adapter";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
+import type { OxalisState } from "oxalis/store";
 import {
   DatasetExtentRow,
   OwningOrganizationRow,
   VoxelSizeRow,
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import { useEffect } from "react";
+import { useSelector } from "react-redux";
 import type { APIDatasetCompact, Folder } from "types/api_flow_types";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
-import { useSelector } from "react-redux";
-import type { OxalisState } from "oxalis/store";
-import { getOrganization } from "admin/admin_rest_api";
-import { useQuery } from "@tanstack/react-query";
 import MetadataTable from "./metadata_table";
-import Markdown from "libs/markdown_adapter";
 
 export function DetailsSidebar({
   selectedDatasets,

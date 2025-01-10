@@ -1,5 +1,5 @@
-import { Component } from "react";
 import window from "libs/window";
+import { Component } from "react";
 import type { EmptyObject } from "types/globals";
 type LoopProps = {
   interval: number;

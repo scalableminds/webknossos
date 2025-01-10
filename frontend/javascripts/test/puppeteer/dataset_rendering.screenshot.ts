@@ -1,3 +1,4 @@
+import urljoin from "url-join";
 import "test/mocks/lz4";
 import type { PartialDatasetConfiguration } from "oxalis/store";
 import path from "node:path";
@@ -27,7 +28,7 @@ process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
 });
 const BASE_PATH = path.join(__dirname, "../../../../frontend/javascripts/test/screenshots");
-let URL = "https://master.webknossos.xyz";
+let URL = "https://master.webknossos.xyz/";
 
 if (!process.env.URL) {
   console.warn(
@@ -114,7 +115,8 @@ test.before("Retrieve dataset ids", async () => {
       3,
       async () => {
         const options = getDefaultRequestOptions(URL);
-        const url = `${URL}/api/datasets/disambiguate/sample_organization/${datasetName}/toId`;
+        const path = `/api/datasets/disambiguate/sample_organization/${datasetName}/toId`;
+        const url = urljoin(URL, path);
         const response = await fetch(url, options);
         const { id } = await response.json();
         datasetNameToId[datasetName] = id;
@@ -124,7 +126,7 @@ test.before("Retrieve dataset ids", async () => {
     );
   }
 });
-test("Dataset IDs were retrieved successfully", (t) => {
+test.serial("Dataset IDs were retrieved successfully", (t) => {
   for (const datasetName of datasetNames) {
     t.truthy(datasetNameToId[datasetName], `Dataset ID not found for "${datasetName}"`);
   }

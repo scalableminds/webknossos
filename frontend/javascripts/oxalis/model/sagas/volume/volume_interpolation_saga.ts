@@ -37,8 +37,8 @@ import type { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
 import { Model, api } from "oxalis/singletons";
 import type { OxalisState } from "oxalis/store";
 import { call, put } from "typed-redux-saga";
+import { requestBucketModificationInVolumeTracing } from "../saga_helpers";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
-import { ensureMaybeActiveMappingIsLocked } from "../saga_helpers";
 
 /*
  * This saga is capable of doing segment interpolation between two slices.
@@ -436,8 +436,11 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     return;
   }
   // As the interpolation will be applied, the potentially existing mapping should be locked to ensure a consistent state.
-  const { isMappingLockedIfNeeded } = yield* call(ensureMaybeActiveMappingIsLocked, volumeTracing);
-  if (!isMappingLockedIfNeeded) {
+  const isModificationAllowed = yield* call(
+    requestBucketModificationInVolumeTracing,
+    volumeTracing,
+  );
+  if (!isModificationAllowed) {
     return;
   }
 

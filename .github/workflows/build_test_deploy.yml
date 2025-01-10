@@ -205,6 +205,10 @@ jobs:
           timeout_minutes: 10
           max_attempts: 3
           command: .github/not-on-master.sh yarn run test-e2e
+        env:
+          POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
+          POSTGRES_USER: webknossos_user
+          POSTGRES_PASSWORD: secret_password
 
       - name: Stop webknossos, datastore, and tracingstore
         run: docker compose down --volumes --remove-orphans

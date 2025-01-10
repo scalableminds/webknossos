@@ -14,8 +14,11 @@ import {
   Button,
   Card,
   Checkbox,
+  Col,
+  Collapse,
   Form,
   type FormInstance,
+  InputNumber,
   Modal,
   Radio,
   Row,
@@ -24,9 +27,6 @@ import {
   Switch,
   Tabs,
   Tooltip,
-  Collapse,
-  Col,
-  InputNumber,
 } from "antd";
 import { LayerSelectionFormItem } from "components/layer_selection";
 import { Slider } from "components/slider";

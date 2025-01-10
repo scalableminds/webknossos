@@ -381,7 +381,7 @@ class JobController @Inject()(
                                         mergeSegments: Boolean,
                                         volumeLayerName: Option[String],
                                         includesProofreading: Boolean,
-                                        selectedBoundingBox: Option[String]): Action[AnyContent] =
+                                        boundingBox: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -396,7 +396,7 @@ class JobController @Inject()(
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-          _ <- Fox.runIf(!multiUser.isSuperUser && includesProofreading)(Fox.runOptional(selectedBoundingBox)(bbox =>
+          _ <- Fox.runIf(!multiUser.isSuperUser && includesProofreading)(Fox.runOptional(boundingBox)(bbox =>
             jobService.assertBoundingBoxLimits(bbox, None)))
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
@@ -410,7 +410,7 @@ class JobController @Inject()(
             "merge_segments" -> mergeSegments,
             "volume_layer_name" -> volumeLayerName,
             "includes_proofreading" -> includesProofreading,
-            "selected_bounding_box" -> selectedBoundingBox
+            "bounding_box" -> boundingBox
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunApplyMergerMode"
           js <- jobService.publicWrites(job)

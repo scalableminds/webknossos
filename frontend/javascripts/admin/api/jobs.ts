@@ -209,7 +209,7 @@ function startSegmentationAnnotationDependentJob(
   annotationType: APIAnnotationType,
   mergeSegments?: boolean,
   includesProofreading?: boolean,
-  selectedBoundingBox?: Vector6,
+  boundingBox?: Vector6,
 ): Promise<APIJob> {
   const requestURL = new URL(`/api/jobs/run/${jobURLPath}/${datasetId}`, location.origin);
   if (volumeLayerName != null) {
@@ -227,8 +227,8 @@ function startSegmentationAnnotationDependentJob(
   if (includesProofreading != null) {
     requestURL.searchParams.append("includesProofreading", includesProofreading.toString());
   }
-  if (selectedBoundingBox) {
-    requestURL.searchParams.append("selectedBoundingBox", selectedBoundingBox.toString());
+  if (boundingBox) {
+    requestURL.searchParams.append("boundingBox", boundingBox.join(","));
   }
   return Request.receiveJSON(requestURL.href, {
     method: "POST",
@@ -244,7 +244,7 @@ export function startMaterializingVolumeAnnotationJob(
   annotationType: APIAnnotationType,
   mergeSegments: boolean,
   includesProofreading: boolean,
-  selectedBoundingBox?: Vector6,
+  boundingBox?: Vector6,
 ): Promise<APIJob> {
   return startSegmentationAnnotationDependentJob(
     "materializeVolumeAnnotation",
@@ -256,7 +256,7 @@ export function startMaterializingVolumeAnnotationJob(
     annotationType,
     mergeSegments,
     includesProofreading,
-    selectedBoundingBox,
+    boundingBox,
   );
 }
 

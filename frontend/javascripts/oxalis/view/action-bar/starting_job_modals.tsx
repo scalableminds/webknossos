@@ -926,8 +926,10 @@ export function MaterializeVolumeAnnotationModal({
         output dataset and the output segmentation layer.
       </p>
     );
-  } else {
-    includesProofreading = tracing.volumes.some((v) => v.hasEditableMapping === true);
+  } else if (fixedSelectedLayer && "tracingId" in fixedSelectedLayer) {
+    includesProofreading =
+      tracing.volumes.find((volume) => volume.tracingId === fixedSelectedLayer.tracingId)
+        ?.hasEditableMapping === true;
   }
   const jobImage =
     jobNameToImagePath[jobName] != null ? (

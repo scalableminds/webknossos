@@ -22,6 +22,8 @@ import type { Versions } from "oxalis/view/version_view";
 import type { APICompoundType } from "types/api_flow_types";
 
 import { initialize } from "./model_initialization";
+import { getTransformsForLayerOrNull } from "./model/accessors/dataset_layer_transformation_accessor";
+import { transformPointUnscaled } from "./model/helpers/transformation_helpers";
 
 // TODO: Non-reactive
 export class OxalisModel {
@@ -224,7 +226,21 @@ export class OxalisModel {
     );
 
     const getIdForPos = (pos: Vector3, usableZoomStep: number) => {
-      const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
+      const state = Store.getState();
+      const additionalCoordinates = state.flycam.additionalCoordinates;
+      const segmentationDataLayer = state.dataset.dataSource.dataLayers.find(
+        (dataLayer) => dataLayer.name === segmentationLayer.name,
+      );
+      if (segmentationDataLayer) {
+        const segmentationLayerTransforms = getTransformsForLayerOrNull(
+          state.dataset,
+          segmentationDataLayer,
+          state.datasetConfiguration.nativelyRenderedLayerName,
+        );
+        if (segmentationLayerTransforms) {
+          pos = transformPointUnscaled(segmentationLayerTransforms)(pos);
+        }
+      }
       const id = cube.getDataValue(pos, additionalCoordinates, null, usableZoomStep);
       return {
         // Note that this id can be an unmapped id even when

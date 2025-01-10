@@ -21,9 +21,9 @@ import Store from "oxalis/store";
 import type { Versions } from "oxalis/view/version_view";
 import type { APICompoundType } from "types/api_flow_types";
 
-import { initialize } from "./model_initialization";
 import { getTransformsForLayerOrNull } from "./model/accessors/dataset_layer_transformation_accessor";
 import { transformPointUnscaled } from "./model/helpers/transformation_helpers";
+import { initialize } from "./model_initialization";
 
 // TODO: Non-reactive
 export class OxalisModel {

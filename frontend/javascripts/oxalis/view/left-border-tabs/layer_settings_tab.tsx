@@ -828,6 +828,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerName: string,
   ) => {
     const defaultSettings = getDefaultLayerViewConfiguration();
+    console.log("gamma", layerConfiguration.gammaCorrectionValue);
     return (
       <div>
         <LogSliderSetting

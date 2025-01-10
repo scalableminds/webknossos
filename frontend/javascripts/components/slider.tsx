@@ -22,6 +22,8 @@ const getDiffPerSliderStep = (
 };
 
 const getWheelStepFromEvent = (step: number, deltaY: number, wheelStep: number) => {
+  const absDeltaY = Math.abs(deltaY);
+  if (absDeltaY === 0 || step === 0) throw new Error("Step and deltaY must not be 0");
   // Make sure that result is a multiple of step
   return step * Math.round((wheelStep * deltaY) / Math.abs(deltaY) / step);
 };
@@ -43,8 +45,8 @@ export function Slider(props: SliderProps) {
     return <AntdSlider {...props} />;
   const sliderRange = max - min;
   const ensuredStep = step || DEFAULT_STEP;
-  let handleWheelEvent: WheelEventHandler<HTMLDivElement> = () => {};
-  let handleDoubleClick: React.MouseEventHandler<HTMLDivElement> = () => {};
+  let handleWheelEvent: WheelEventHandler<HTMLDivElement> = () => { };
+  let handleDoubleClick: React.MouseEventHandler<HTMLDivElement> = () => { };
   const wheelStep = getDiffPerSliderStep(sliderRange, wheelFactor, ensuredStep);
 
   handleDoubleClick = (event) => {
@@ -59,25 +61,23 @@ export function Slider(props: SliderProps) {
   };
 
   // differentiate between single value and range slider
+  if (onWheelDisabled) return;
   if (range === false || range == null) {
-    if (!onWheelDisabled) {
-      handleWheelEvent = (event) => {
-        const newValue = value - getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
-        const clampedNewValue = clamp(min, newValue, max);
-        onChange(clampedNewValue);
-      };
-    }
+    handleWheelEvent = (event) => {
+      if (Math.abs(event.deltaY) === 0) return;
+      const newValue = value - getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
+      const clampedNewValue = clamp(min, newValue, max);
+      onChange(clampedNewValue);
+    };
   } else if (range === true || typeof range === "object") {
-    if (!onWheelDisabled) {
-      handleWheelEvent = (event) => {
-        const diff = getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
-        const newLowerValue = Math.round(value[0] + diff);
-        const newUpperValue = Math.round(value[1] - diff);
-        const clampedNewLowerValue = clamp(min, newLowerValue, Math.min(newUpperValue, max));
-        const clampedNewUpperValue = clamp(newLowerValue, newUpperValue, max);
-        onChange([clampedNewLowerValue, clampedNewUpperValue]);
-      };
-    }
+    handleWheelEvent = (event) => {
+      const diff = getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
+      const newLowerValue = Math.round(value[0] + diff);
+      const newUpperValue = Math.round(value[1] - diff);
+      const clampedNewLowerValue = clamp(min, newLowerValue, Math.min(newUpperValue, max));
+      const clampedNewUpperValue = clamp(newLowerValue, newUpperValue, max);
+      onChange([clampedNewLowerValue, clampedNewUpperValue]);
+    };
   }
 
   return (

@@ -1,8 +1,8 @@
 import jsonschema from "jsonschema";
-import DatasourceSchema from "types/schemas/datasource.schema";
-import UserSettingsSchema from "types/schemas/user_settings.schema";
 import ViewConfigurationSchema from "types/schemas/dataset_view_configuration.schema";
+import DatasourceSchema from "types/schemas/datasource.schema";
 import UrlStateSchema from "types/schemas/url_state.schema";
+import UserSettingsSchema from "types/schemas/user_settings.schema";
 const validator = new jsonschema.Validator();
 // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ definitions: { "types::Vector3... Remove this comment to see the full error message
 validator.addSchema(DatasourceSchema, "/");

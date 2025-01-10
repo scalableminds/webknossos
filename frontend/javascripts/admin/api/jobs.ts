@@ -3,13 +3,13 @@ import { location } from "libs/window";
 import type { UnitLong, Vector3, Vector6 } from "oxalis/constants";
 import type {
   APIAnnotationType,
-  APIJob,
-  APIJobState,
-  APIJobManualState,
   APIEffectiveJobState,
+  APIJob,
+  APIJobManualState,
+  APIJobState,
+  AdditionalCoordinate,
   AiModel,
   RenderAnimationOptions,
-  AdditionalCoordinate,
 } from "types/api_flow_types";
 import { assertResponseLimit } from "./api_utils";
 

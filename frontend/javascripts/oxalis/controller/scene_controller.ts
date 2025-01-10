@@ -1,4 +1,3 @@
-import * as THREE from "three";
 import app from "app";
 import type Maybe from "data.maybe";
 import { V3 } from "libs/mjs";
@@ -46,6 +45,7 @@ import { getVoxelPerUnit } from "oxalis/model/scaleinfo";
 import { Model } from "oxalis/singletons";
 import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import Store from "oxalis/store";
+import * as THREE from "three";
 import SegmentMeshController from "./segment_mesh_controller";
 
 const CUBE_COLOR = 0x999999;

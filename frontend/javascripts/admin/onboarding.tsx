@@ -1,33 +1,33 @@
-import React, { useState } from "react";
-import { Form, Modal, Input, Button, Row, Col, Steps, Card, AutoComplete, Alert } from "antd";
 import {
-  CloudUploadOutlined,
-  TeamOutlined,
-  UserOutlined,
-  FileAddOutlined,
-  RocketOutlined,
   ClockCircleOutlined,
-  PlayCircleOutlined,
-  PaperClipOutlined,
+  CloudUploadOutlined,
   CodeOutlined,
   CustomerServiceOutlined,
+  FileAddOutlined,
+  PaperClipOutlined,
+  PlayCircleOutlined,
   PlusOutlined,
+  RocketOutlined,
+  TeamOutlined,
   UserAddOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
-import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
-import { connect } from "react-redux";
-import type { APIUser, APIDataStore } from "types/api_flow_types";
+import { getDatastores, sendInvitesForOrganization } from "admin/admin_rest_api";
+import RegistrationFormGeneric from "admin/auth/registration_form_generic";
+import DatasetUploadView from "admin/dataset/dataset_upload_view";
+import { maxInludedUsersInBasicPlan } from "admin/organization/pricing_plan_utils";
+import { Alert, AutoComplete, Button, Card, Col, Form, Input, Modal, Row, Steps } from "antd";
+import CreditsFooter from "components/credits_footer";
+import LinkButton from "components/link_button";
+import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
+import features from "features";
+import Toast from "libs/toast";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
-import LinkButton from "components/link_button";
-import { getDatastores, sendInvitesForOrganization } from "admin/admin_rest_api";
-import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
-import DatasetUploadView from "admin/dataset/dataset_upload_view";
-import RegistrationFormGeneric from "admin/auth/registration_form_generic";
-import CreditsFooter from "components/credits_footer";
-import Toast from "libs/toast";
-import features from "features";
-import { maxInludedUsersInBasicPlan } from "admin/organization/pricing_plan_utils";
+import React, { useState } from "react";
+import { connect } from "react-redux";
+import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
+import type { APIDataStore, APIUser } from "types/api_flow_types";
 
 const { Step } = Steps;
 const FormItem = Form.Item;

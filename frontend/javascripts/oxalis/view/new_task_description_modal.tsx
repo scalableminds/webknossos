@@ -1,4 +1,4 @@
-import { Modal, Button } from "antd";
+import { Button, Modal } from "antd";
 import Markdown from "libs/markdown_adapter";
 import * as React from "react";
 type Props = {

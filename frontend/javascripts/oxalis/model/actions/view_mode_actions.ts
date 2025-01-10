@@ -1,8 +1,8 @@
+import type { OrthoView, Point2, Rect, Viewport, ViewportRects } from "oxalis/constants";
+import constants from "oxalis/constants";
 import { getTDViewportSize } from "oxalis/model/accessors/view_mode_accessor";
 import type { PartialCameraData } from "oxalis/store";
 import Store from "oxalis/store";
-import type { OrthoView, Point2, Rect, Viewport, ViewportRects } from "oxalis/constants";
-import constants from "oxalis/constants";
 type SetViewportAction = ReturnType<typeof setViewportAction>;
 type SetTDCameraAction = ReturnType<typeof setTDCameraAction>;
 type CenterTDViewAction = ReturnType<typeof centerTDViewAction>;

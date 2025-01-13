@@ -104,7 +104,7 @@ class Migration:
         return mapping_id_map
 
     def fetch_updates(self, tracing_or_mapping_id: str, layer_type: str, collection: str, json_encoder, json_decoder) -> Tuple[List[Tuple[int, int, bytes]], bool]:
-        batch_size = 1000
+        batch_size = 100
         newest_version = self.get_newest_version(tracing_or_mapping_id, collection)
         updates_for_layer = []
         included_revert = False
@@ -160,7 +160,7 @@ class Migration:
         for tracing_or_mapping_id in tracing_ids_and_mapping_ids:
             version_mapping[tracing_or_mapping_id] = {0: 0} # We always want to keep the initial version 0 of all layers, even if there are no updates at all.
 
-        put_updates_buffer_size = 5000
+        put_updates_buffer_size = 100
         buffered_versions_to_put = []
         buffered_updates_to_put = []
         # We use a priority queue to efficiently select which tracing each next update should come from.
@@ -385,8 +385,8 @@ class Migration:
         tracing_or_mapping_id: str,
         layer_version_mapping: LayerVersionMapping,
         transform_key: Optional[Callable[[str], str]],
-        get_keys_page_size = 500,
-        put_buffer_size = 5000
+        get_keys_page_size = 200,
+        put_buffer_size = 1000
     ):
         list_keys_page_size = 10000
         put_buffer = []
@@ -456,8 +456,8 @@ class Migration:
             mapping_id,
             layer_version_mapping,
             transform_key=partial(self.replace_before_first_slash, tracing_id),
-            get_keys_page_size = 100,
-            put_buffer_size = 100
+            get_keys_page_size = 20,
+            put_buffer_size = 20
         )
 
     def migrate_editable_mapping_segment_to_agglomerate(self, tracing_id: str, mapping_id: str, layer_version_mapping: LayerVersionMapping):
@@ -466,8 +466,8 @@ class Migration:
             mapping_id,
             layer_version_mapping,
             transform_key=partial(self.replace_before_first_slash, tracing_id),
-            get_keys_page_size = 300,
-            put_buffer_size = 300
+            get_keys_page_size = 30,
+            put_buffer_size = 30
         )
 
     def create_and_save_annotation_proto(self, annotation, materialized_versions: Set[int], mapping_id_map: MappingIdMap):
@@ -481,7 +481,7 @@ class Migration:
             # So we forbid it.
             earliest_accessible_version = max(materialized_versions)
         # We write an annotationProto object for every materialized version of every layer.
-        put_buffer_size = 5000
+        put_buffer_size = 1000
         versions_to_put_buffer = []
         values_to_put_buffer = []
         for version in materialized_versions:

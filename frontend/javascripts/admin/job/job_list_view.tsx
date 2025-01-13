@@ -159,7 +159,8 @@ function JobListView() {
 
   function getLinkToDataset(job: APIJob) {
     if (job.datasetId != null)
-      return `/datasets/${getReadableURLPart({ name: job.datasetName || "unknown_name", id: job.datasetId })}/view`; // prefer updated link over legacy link.
+      // prefer updated link over legacy link.
+      return `/datasets/${getReadableURLPart({ name: job.datasetName || "unknown_name", id: job.datasetId })}/view`;
     if (job.organizationId != null && job.datasetName)
       return `/datasets/${job.organizationId}/${job.datasetDirectoryName || job.datasetName}/view`;
     return null;

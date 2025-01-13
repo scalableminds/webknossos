@@ -21,7 +21,7 @@ function transformBackendJobToAPIJob(job: any): APIJob {
     type: job.command,
     datasetName: job.commandArgs.dataset_name,
     datasetDirectoryName: job.commandArgs.dataset_directory_name,
-    organizationId: job.commandArgs.organization_id,
+    organizationId: job.commandArgs.organization_id || job.commandArgs.organization_name,
     layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
     annotationLayerName: job.commandArgs.annotation_layer_name,
     boundingBox: job.commandArgs.bbox,
@@ -42,14 +42,51 @@ function transformBackendJobToAPIJob(job: any): APIJob {
 }
 
 export async function getJobs(): Promise<APIJob[]> {
+  //TODO_c remove after testing
   const jobs = await Request.receiveJSON("/api/jobs");
+  const testJob = {
+    id: "675b307cca3e113942cec271",
+    owner: {
+      id: "674892deb40000b40022714c",
+      email: "sample@scm.io",
+      firstName: "Sample",
+      lastName: "User",
+      isAdmin: true,
+      isDatasetManager: true,
+      isAnonymous: false,
+      teams: [
+        {
+          id: "674892deb40000b40022714a",
+          name: "Default",
+          isTeamManager: true,
+        },
+      ],
+    },
+    type: "infer_with_model",
+    trainingAnnotations: [
+      {
+        mag: [16, 16, 4],
+        annotationId: "6756bfe9b2a1008da7dfa218",
+        colorLayerName: "color",
+        segmentationLayerName: "segmentation",
+      },
+    ],
+    datasetName: "l4_sample",
+    state: "SUCCESS",
+    manualState: null,
+    result: "This was such a huge success",
+    resultLink:
+      "annotations/6772a666680d009c0eb49161#3584,3584,1024,0,1osdnfäsldkfnsädlfknsdäflkansdfälaskdnfväalsdvnädalckvnsdäflcvnmdfälvkn2983ruhoqencwldkcnw8evbwevlvsjdvsnei39",
+    createdAt: 1734029436266,
+    voxelyticsWorkflowHash: null,
+  };
   assertResponseLimit(jobs);
-  return (
-    jobs
-      .map(transformBackendJobToAPIJob)
-      // Newest jobs should be first
-      .sort((a: APIJob, b: APIJob) => a.createdAt > b.createdAt)
-  );
+  const newJobs = jobs
+    .map(transformBackendJobToAPIJob)
+    // Newest jobs should be first
+    .sort((a: APIJob, b: APIJob) => a.createdAt > b.createdAt);
+  newJobs.push(testJob);
+  return newJobs;
 }
 
 export async function getJob(jobId: string): Promise<APIJob> {

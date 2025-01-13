@@ -13,12 +13,7 @@ import security.{UserAwareRequestLogging, WkEnv}
 
 import scala.concurrent.ExecutionContext
 
-trait Controller
-    extends InjectedController
-    with ExtendedController
-    with UserAwareRequestLogging
-    with I18nSupport
-    with LazyLogging {
+trait Controller extends InjectedController with ExtendedController with UserAwareRequestLogging with LazyLogging {
 
   final val badRequestLabel = "Operation could not be performed. See JSON body for more information."
 

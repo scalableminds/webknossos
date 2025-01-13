@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.{Color, JPEGWriter}
 import com.scalableminds.util.time.Instant
@@ -94,7 +95,7 @@ class BinaryDataController @Inject()(
       // If true, use lossy compression by sending only half-bytes of the data
       halfByte: Boolean,
       mappingName: Option[String]
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.async { implicit r =>
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
@@ -140,7 +141,7 @@ class BinaryDataController @Inject()(
                         x: Int,
                         y: Int,
                         z: Int,
-                        cubeSize: Int): Action[AnyContent] = Action.async { implicit request =>
+                        cubeSize: Int): Action[AnyContent] = Action.async { implicit r =>
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
@@ -171,7 +172,7 @@ class BinaryDataController @Inject()(
                     intensityMin: Option[Double],
                     intensityMax: Option[Double],
                     color: Option[String],
-                    invertColor: Option[Boolean]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
+                    invertColor: Option[Boolean]): Action[RawBuffer] = Action.async(parse.raw) { implicit r =>
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
@@ -308,7 +309,7 @@ class BinaryDataController @Inject()(
       dataSource: DataSource,
       dataLayer: DataLayer,
       dataRequests: DataRequestCollection
-  ): Fox[(Array[Byte], List[Int])] = {
+  )(implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
     val requests =
       dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, r.cuboid(dataLayer), r.settings))
     binaryDataService.handleDataRequests(requests)

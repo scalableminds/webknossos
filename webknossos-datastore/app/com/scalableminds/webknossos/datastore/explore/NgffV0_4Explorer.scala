@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.explore
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -17,8 +18,8 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
 
   override def name: String = "OME NGFF Zarr v0.4"
 
-  override def explore(remotePath: VaultPath,
-                       credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String])(
+      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       zattrsPath <- Fox.successful(remotePath / NgffMetadata.FILENAME_DOT_ZATTRS)
       ngffHeader <- zattrsPath.parseAsJson[NgffMetadata] ?~> s"Failed to read OME NGFF header at $zattrsPath"
@@ -44,7 +45,7 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
                             datasetName: String,
                             voxelSizeInAxisUnits: Vec3Double,
                             axisOrder: AxisOrder,
-                            isSegmentation: Boolean): Fox[(ZarrLayer)] =
+                            isSegmentation: Boolean)(implicit tc: TokenContext): Fox[(ZarrLayer)] =
     for {
       magsWithAttributes <- Fox.serialCombined(multiscale.datasets)(d =>
         zarrMagFromNgffDataset(d, remotePath, voxelSizeInAxisUnits, axisOrder, credentialId, Some(channelIndex)))
@@ -85,7 +86,7 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
         )
     } yield layer
 
-  private def getZarrHeader(ngffDataset: NgffDataset, layerPath: VaultPath) = {
+  private def getZarrHeader(ngffDataset: NgffDataset, layerPath: VaultPath)(implicit tc: TokenContext) = {
     val magPath = layerPath / ngffDataset.path
     val zarrayPath = magPath / ZarrHeader.FILENAME_DOT_ZARRAY
     for {
@@ -98,12 +99,13 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
     } yield header
   }
 
-  private def zarrMagFromNgffDataset(ngffDataset: NgffDataset,
-                                     layerPath: VaultPath,
-                                     voxelSizeInAxisUnits: Vec3Double,
-                                     axisOrder: AxisOrder,
-                                     credentialId: Option[String],
-                                     channelIndex: Option[Int])(implicit ec: ExecutionContext): Fox[MagWithAttributes] =
+  private def zarrMagFromNgffDataset(
+      ngffDataset: NgffDataset,
+      layerPath: VaultPath,
+      voxelSizeInAxisUnits: Vec3Double,
+      axisOrder: AxisOrder,
+      credentialId: Option[String],
+      channelIndex: Option[Int])(implicit ec: ExecutionContext, tc: TokenContext): Fox[MagWithAttributes] =
     for {
       mag <- magFromTransforms(ngffDataset.coordinateTransformations, voxelSizeInAxisUnits, axisOrder) ?~> "Could not extract mag from scale transforms"
       magPath = layerPath / ngffDataset.path
@@ -118,15 +120,14 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
         elementClass,
         boundingBox)
 
-  protected def getShape(dataset: NgffDataset, path: VaultPath): Fox[Array[Int]] =
+  protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Int]] =
     for {
       zarrHeader <- getZarrHeader(dataset, path)
       shape = zarrHeader.shape
     } yield shape
 
-  protected def layersForLabel(remotePath: VaultPath,
-                               labelPath: String,
-                               credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+  protected def layersForLabel(remotePath: VaultPath, labelPath: String, credentialId: Option[String])(
+      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       fullLabelPath <- Fox.successful(remotePath / "labels" / labelPath)
       zattrsPath = fullLabelPath / NgffMetadata.FILENAME_DOT_ZATTRS

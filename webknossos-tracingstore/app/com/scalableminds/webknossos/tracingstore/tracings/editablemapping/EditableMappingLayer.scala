@@ -28,7 +28,8 @@ import scala.concurrent.ExecutionContext
 
 class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketProvider with ProtoGeometryImplicits {
 
-  override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
+                                                          tc: TokenContext): Fox[Array[Byte]] = {
     val bucket: BucketPosition = readInstruction.bucket
     for {
       tracingId <- Fox.successful(layer.name)

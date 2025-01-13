@@ -192,8 +192,8 @@ class EditableMappingService @Inject()(
       voxelAsLong <- voxelAsLongArray.headOption
     } yield voxelAsLong
 
-  def volumeData(editableMappingLayer: EditableMappingLayer,
-                 dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] = {
+  def volumeData(editableMappingLayer: EditableMappingLayer, dataRequests: DataRequestCollection)(
+      implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
     val requests = dataRequests.map(
       r =>
         DataServiceDataRequest(null,

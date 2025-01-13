@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.explore
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -52,7 +53,8 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
     with LazyLogging {
 
   def exploreRemoteDatasource(parameters: List[ExploreRemoteLayerParameters], reportMutable: ListBuffer[String])(
-      implicit ec: ExecutionContext): Fox[GenericDataSource[DataLayer]] =
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[GenericDataSource[DataLayer]] =
     for {
       exploredLayersNested <- Fox.serialCombined(parameters)(
         parameters =>
@@ -75,7 +77,8 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
   private def exploreRemoteLayersForOneUri(layerUri: String,
                                            credentialId: Option[String],
                                            reportMutable: ListBuffer[String])(
-      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       uri <- tryo(new URI(removeNeuroglancerPrefixesFromUri(removeHeaderFileNamesFromUriSuffix(layerUri)))) ?~> s"Received invalid URI: $layerUri"
       _ <- bool2Fox(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
@@ -116,7 +119,8 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
                                                    credentialId: Option[String],
                                                    explorers: List[RemoteLayerExplorer],
                                                    reportMutable: ListBuffer[String])(
-      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     remotePathsWithDepth match {
       case Nil =>
         Fox.empty
@@ -139,7 +143,8 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
                                                            explorers: List[RemoteLayerExplorer],
                                                            credentialId: Option[String],
                                                            reportMutable: ListBuffer[String])(
-      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     Fox
       .sequence(explorers.map { explorer =>
         {
@@ -179,7 +184,8 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
                                         credentialId: Option[String],
                                         explorers: List[RemoteLayerExplorer],
                                         reportMutable: ListBuffer[String])(
-      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     explorationResultOfPath match {
       case Full(layersWithVoxelSizes) =>
         Fox.successful(layersWithVoxelSizes)

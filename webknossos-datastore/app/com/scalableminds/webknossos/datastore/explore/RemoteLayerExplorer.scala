@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.BoundingBox
 import collections.SequenceUtils
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
@@ -19,7 +20,8 @@ trait RemoteLayerExplorer extends FoxImplicits {
 
   implicit def ec: ExecutionContext
 
-  def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]]
+  def explore(remotePath: VaultPath, credentialId: Option[String])(
+      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]]
 
   def name: String
 

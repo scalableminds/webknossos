@@ -264,36 +264,40 @@ trait NgffExplorationUtils extends FoxImplicits {
   protected def getTranslation(multiscale: NgffMultiscalesItem): Option[List[CoordinateTransformation]] = {
     val is2d = !multiscale.axes.exists(_.name == "z")
     val baseTranslation = if (is2d) List(1.0, 1.0) else List(1.0, 1.0, 1.0)
-    if (!multiscale.datasets.head.coordinateTransformations.exists(_.`type` == "translation")) {
-      None
-    } else {
-      var translation = multiscale.datasets.head.coordinateTransformations.foldLeft(baseTranslation)((acc, ct) => {
-        ct.`type` match {
-          case "translation" =>
-            ct.translation match {
-              case Some(translationList) =>
-                acc.zipWithIndex.map { case (v, i) => v * translationList(translationList.length - 1 - i) }
-              case _ => acc
-            }
-          case _ =>
-            ct.scale match {
-              case Some(scaleList) => acc.zipWithIndex.map { case (v, i) => v / scaleList(scaleList.length - 1 - i) }
-              case _               => acc
-            }
+    multiscale.datasets.headOption match {
+      case Some(firstDataset) if firstDataset.coordinateTransformations.exists(_.`type` == "translation") => {
+        var translation = firstDataset.coordinateTransformations.foldLeft(baseTranslation)((acc, ct) => {
+          ct.`type` match {
+            case "translation" =>
+              ct.translation match {
+                case Some(translationList) =>
+                  acc.zipWithIndex.map { case (v, i) => v * translationList(translationList.length - 1 - i) }
+                case _ => acc
+              }
+            case _ =>
+              ct.scale match {
+                case Some(scaleList) => acc.zipWithIndex.map { case (v, i) => v / scaleList(scaleList.length - 1 - i) }
+                case _               => acc
+              }
+          }
+        })
+        if (is2d) {
+          translation = translation :+ 0.0
         }
-      })
-      if (is2d) {
-        translation = translation :+ 0.0
+        val xTranslation = translation(0)
+        val yTranslation = translation(1)
+        val zTranslation = translation(2)
+        val coordinateTransformation = CoordinateTransformation(
+          `type` = CoordinateTransformationType.affine,
+          matrix = Some(
+            List(List(1, 0, 0, xTranslation),
+                 List(0, 1, 0, yTranslation),
+                 List(0, 0, 1, zTranslation),
+                 List(0, 0, 0, 1)))
+        )
+        Some(List(coordinateTransformation))
       }
-      val xTranslation = translation(0)
-      val yTranslation = translation(1)
-      val zTranslation = translation(2)
-      val coordinateTransformation = CoordinateTransformation(
-        `type` = CoordinateTransformationType.affine,
-        matrix = Some(
-          List(List(1, 0, 0, xTranslation), List(0, 1, 0, yTranslation), List(0, 0, 1, zTranslation), List(0, 0, 0, 1)))
-      )
-      Some(List(coordinateTransformation))
+      case _ => None
     }
   }
 

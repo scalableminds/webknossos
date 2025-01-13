@@ -1,15 +1,4 @@
 import {
-  Row,
-  Col,
-  InputNumber,
-  Switch,
-  Input,
-  Select,
-  Popover,
-  type PopoverProps,
-  type MenuProps,
-} from "antd";
-import {
   BorderInnerOutlined,
   DeleteOutlined,
   DownloadOutlined,
@@ -18,19 +7,30 @@ import {
   InfoCircleOutlined,
   ScanOutlined,
 } from "@ant-design/icons";
-import * as React from "react";
-import _ from "lodash";
-import type { Vector3, Vector6 } from "oxalis/constants";
-import * as Utils from "libs/utils";
-import messages from "messages";
-import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
-import { connect } from "react-redux";
-import type { OxalisState } from "oxalis/store";
-import type { APISegmentationLayer } from "types/api_flow_types";
-import { api } from "oxalis/singletons";
+import {
+  Col,
+  Input,
+  InputNumber,
+  type MenuProps,
+  Popover,
+  type PopoverProps,
+  Row,
+  Select,
+  Switch,
+} from "antd";
 import FastTooltip from "components/fast_tooltip";
-import Toast from "libs/toast";
 import { Slider } from "components/slider";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import messages from "messages";
+import type { Vector3, Vector6 } from "oxalis/constants";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { api } from "oxalis/singletons";
+import type { OxalisState } from "oxalis/store";
+import * as React from "react";
+import { connect } from "react-redux";
+import type { APISegmentationLayer } from "types/api_flow_types";
 
 const ROW_GUTTER = 1;
 

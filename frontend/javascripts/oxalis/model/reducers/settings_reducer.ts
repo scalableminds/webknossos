@@ -1,19 +1,19 @@
-import type { Action } from "oxalis/model/actions/actions";
-import { MappingStatusEnum } from "oxalis/constants";
-import type { OxalisState, ActiveMappingInfo } from "oxalis/store";
 import { clamp } from "libs/utils";
+import { MappingStatusEnum } from "oxalis/constants";
 import {
   getLayerByName,
+  getMappingInfo,
   getSegmentationLayers,
   getVisibleSegmentationLayers,
-  getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { updateKey, updateKey2, updateKey3 } from "oxalis/model/helpers/deep_update";
-import { userSettings } from "types/schemas/user_settings.schema";
 import {
   hasEditableMapping,
   isMappingActivationAllowed,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import type { Action } from "oxalis/model/actions/actions";
+import { updateKey, updateKey2, updateKey3 } from "oxalis/model/helpers/deep_update";
+import type { ActiveMappingInfo, OxalisState } from "oxalis/store";
+import { userSettings } from "types/schemas/user_settings.schema";
 import { setRotationReducer } from "./flycam_reducer";
 
 //

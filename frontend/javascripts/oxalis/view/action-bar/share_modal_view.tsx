@@ -1,55 +1,55 @@
-import {
-  Alert,
-  Divider,
-  Radio,
-  Modal,
-  Input,
-  Button,
-  Row,
-  Col,
-  type RadioChangeEvent,
-  Tooltip,
-  Space,
-} from "antd";
 import { CompressOutlined, CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
-import { useSelector } from "react-redux";
-import type React from "react";
-import { useState, useEffect } from "react";
-import type {
-  APIDataset,
-  APIAnnotationVisibility,
-  APIAnnotationType,
-  APITeam,
-} from "types/api_flow_types";
 import {
-  getDatasetSharingToken,
-  getTeamsForSharedAnnotation,
-  updateTeamsForSharedAnnotation,
+  createShortLink,
   editAnnotation,
+  getDatasetSharingToken,
+  getSharingTokenFromUrlParameters,
+  getTeamsForSharedAnnotation,
   sendAnalyticsEvent,
   setOthersMayEditForAnnotation,
-  getSharingTokenFromUrlParameters,
-  createShortLink,
+  updateTeamsForSharedAnnotation,
 } from "admin/admin_rest_api";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import {
+  Alert,
+  Button,
+  Col,
+  Divider,
+  Input,
+  Modal,
+  Radio,
+  type RadioChangeEvent,
+  Row,
+  Space,
+  Tooltip,
+} from "antd";
+import { AsyncButton } from "components/async_clickables";
+import { PricingEnforcedBlur } from "components/pricing_enforcers";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import { makeComponentLazy } from "libs/react_helpers";
 import Toast from "libs/toast";
 import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
-import Store, { type OxalisState } from "oxalis/store";
+import { ControlModeEnum } from "oxalis/constants";
 import UrlManager from "oxalis/controller/url_manager";
+import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import {
   setAnnotationVisibilityAction,
   setOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
 import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import { ControlModeEnum } from "oxalis/constants";
-import { makeComponentLazy } from "libs/react_helpers";
-import { AsyncButton } from "components/async_clickables";
-import { PricingEnforcedBlur } from "components/pricing_enforcers";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
-import { formatUserName } from "oxalis/model/accessors/user_accessor";
+import Store, { type OxalisState } from "oxalis/store";
+import type React from "react";
+import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import type {
+  APIAnnotationType,
+  APIAnnotationVisibility,
+  APIDataset,
+  APITeam,
+} from "types/api_flow_types";
 
 const RadioGroup = Radio.Group;
 const sharingActiveNode = true;

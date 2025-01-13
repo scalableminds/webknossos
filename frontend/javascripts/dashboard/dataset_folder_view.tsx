@@ -1,19 +1,19 @@
+import { Button, Card, Col, Row } from "antd";
+import features, { getDemoDatasetUrl } from "features";
 import { filterNullValues } from "libs/utils";
+import * as Utils from "libs/utils";
+import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import type { APIDatasetCompact, APIUser, FolderItem } from "types/api_flow_types";
 import DatasetCollectionContextProvider, {
   useDatasetCollectionContext,
 } from "./dataset/dataset_collection_context";
-import { Button, Card, Col, Row } from "antd";
-import { Link } from "react-router-dom";
-import * as Utils from "libs/utils";
+import { useDatasetsInFolderQuery, useFolderHierarchyQuery } from "./dataset/queries";
 import DatasetView, { DatasetAddButton, DatasetRefreshButton } from "./dataset_view";
 import { DetailsSidebar } from "./folders/details_sidebar";
 import { EditFolderModal } from "./folders/edit_folder_modal";
 import { FolderTreeSidebar } from "./folders/folder_tree";
-import features, { getDemoDatasetUrl } from "features";
-import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
-import { useFolderHierarchyQuery, useDatasetsInFolderQuery } from "./dataset/queries";
 
 type Props = {
   user: APIUser;

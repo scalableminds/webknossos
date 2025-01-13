@@ -1,32 +1,32 @@
-import { Modal, Row } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import type React from "react";
-import { useMemo, useState } from "react";
-import _ from "lodash";
-import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
+import { addAnnotationLayer } from "admin/admin_rest_api";
+import { Modal, Row } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import {
   NewVolumeLayerSelection,
   RestrictMagnificationSlider,
 } from "dashboard/advanced_dataset/create_explorative_modal";
-import Store, { type Tracing } from "oxalis/store";
-import { addAnnotationLayer } from "admin/admin_rest_api";
+import Toast from "libs/toast";
+import _ from "lodash";
+import messages from "messages";
+import { MappingStatusEnum } from "oxalis/constants";
 import {
-  getSomeMagInfoForDataset,
   getLayerByName,
+  getMagInfo,
   getMappingInfo,
   getSegmentationLayers,
-  getMagInfo,
+  getSomeMagInfoForDataset,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getAllReadableLayerNames,
   getVolumeTracingLayers,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import messages from "messages";
-import InputComponent from "oxalis/view/components/input_component";
 import { api } from "oxalis/singletons";
-import Toast from "libs/toast";
-import { MappingStatusEnum } from "oxalis/constants";
+import Store, { type Tracing } from "oxalis/store";
+import InputComponent from "oxalis/view/components/input_component";
+import type React from "react";
+import { useMemo, useState } from "react";
+import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 
 export type ValidationResult = { isValid: boolean; message: string };
 export function checkForLayerNameDuplication(

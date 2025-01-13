@@ -7,22 +7,22 @@ import {
 import { Alert, Button, Card, Col, Progress, Row } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
+import { formatCountToDataAmountUnit } from "libs/format_utils";
 import Constants from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 import type React from "react";
 import { useSelector } from "react-redux";
 import type { APIOrganization } from "types/api_flow_types";
 import {
+  PricingPlanEnum,
   hasPricingPlanExceededStorage,
   hasPricingPlanExceededUsers,
   hasPricingPlanExpired,
   isUserAllowedToRequestUpgrades,
   powerPlanFeatures,
-  PricingPlanEnum,
   teamPlanFeatures,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
-import { formatCountToDataAmountUnit } from "libs/format_utils";
 
 export function TeamAndPowerPlanUpgradeCards({
   teamUpgradeCallback,

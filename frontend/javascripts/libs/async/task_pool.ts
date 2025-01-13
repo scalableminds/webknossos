@@ -1,5 +1,5 @@
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { join, call, fork, type FixedTask } from "typed-redux-saga";
+import { type FixedTask, call, fork, join } from "typed-redux-saga";
 
 /*
   Given an array of async tasks, processTaskWithPool

@@ -25,7 +25,7 @@ The Tiff stack will be downloaded to your computer.
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-automation/02_export_as_tiff.mp4){: autoplay loop muted}
 
 To [automate this process with Python](./data/export_python.md), follow the same initial steps.
-Select “Python client” in the download modal, then copy the provided code snippet to get started.
+Select “Python client” in the download dialog, then copy the provided code snippet to get started.
 You can also use the [Python library documentation](https://docs.webknossos.org/webknossos-py/) for more code examples on interacting with your data.
 
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-automation/03_copy_python_code.mp4){: autoplay loop muted}

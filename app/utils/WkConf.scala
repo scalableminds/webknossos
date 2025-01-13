@@ -200,10 +200,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val environment: String = get[String]("airbrake.environment")
   }
 
-  object GoogleAnalytics {
-    val trackingId: String = get[String]("googleAnalytics.trackingId")
-  }
-
   object SlackNotifications {
     val uri: String = get[String]("slackNotifications.uri")
     val verboseLoggingEnabled: Boolean = get[Boolean]("slackNotifications.verboseLoggingEnabled")
@@ -259,7 +255,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       Silhouette,
       Jobs,
       Airbrake,
-      GoogleAnalytics,
       BackendAnalytics,
       Slick,
       Voxelytics,

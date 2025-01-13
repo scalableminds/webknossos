@@ -6,10 +6,9 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/24.10.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/24.12.0...HEAD)
+- Removed support for HTTP API versions 3 and 4. [#8075](https://github.com/scalableminds/webknossos/pull/8075)
+- New FossilDB version `0.1.33` (docker image `scalableminds/fossildb:master__504`) is required.
 
 ### Postgres Evolutions:
-
-- [121-worker-name.sql](conf/evolutions/121-worker-name.sql)
-- [122-resolution-to-mag.sql](conf/evolutions/122-resolution-to-mag.sql)
-- [123-more-model-categories.sql](conf/evolutions/123-more-model-categories.sql)
+- [124-decouple-dataset-directory-from-name](conf/evolutions/124-decouple-dataset-directory-from-name)

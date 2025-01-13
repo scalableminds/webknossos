@@ -1,3 +1,5 @@
+import { getIsInIframe } from "libs/utils";
+import * as Utils from "libs/utils";
 /*
  * This file defines:
  *  - the main tabs which can be arranged in WK Core
@@ -5,7 +7,6 @@
  *  - a `determineLayout` function which decides which layout type has to be chosen
  */
 import _ from "lodash";
-import { getIsInIframe } from "libs/utils";
 import type { BorderTabType, ControlMode, ViewMode } from "oxalis/constants";
 import Constants, {
   ArbitraryViews,
@@ -15,17 +16,16 @@ import Constants, {
   OrthoViews,
   OrthoViewsToName,
 } from "oxalis/constants";
-import * as Utils from "libs/utils";
-import type {
-  RowOrTabsetNode,
-  RowNode,
-  TabsetNode,
-  TabNode,
-  GlobalConfig,
-  Border,
-  ModelConfig,
-} from "./flex_layout_types";
 import { Store } from "oxalis/singletons";
+import type {
+  Border,
+  GlobalConfig,
+  ModelConfig,
+  RowNode,
+  RowOrTabsetNode,
+  TabNode,
+  TabsetNode,
+} from "./flex_layout_types";
 // Increment this number to invalidate old layoutConfigs in localStorage
 export const currentLayoutVersion = 15;
 const layoutHeaderHeight = 20;

@@ -1,15 +1,15 @@
-import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type { Vector3 } from "oxalis/constants";
+import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import { convertUserBoundingBoxesFromFrontendToServer } from "oxalis/model/reducers/reducer_helpers";
 import type {
-  VolumeTracing,
-  Tree,
   Node,
+  NumberLike,
+  SegmentGroup,
+  Tree,
   TreeGroup,
   UserBoundingBox,
-  SegmentGroup,
-  NumberLike,
+  VolumeTracing,
 } from "oxalis/store";
-import { convertUserBoundingBoxesFromFrontendToServer } from "oxalis/model/reducers/reducer_helpers";
 import type { AdditionalCoordinate, MetadataEntryProto } from "types/api_flow_types";
 
 export type NodeWithTreeId = {
@@ -220,16 +220,27 @@ export function deleteEdge(treeId: number, sourceNodeId: number, targetNodeId: n
   } as const;
 }
 
+export type CreateActionNode = Omit<Node, "untransformedPosition" | "mag"> & {
+  position: Node["untransformedPosition"];
+  treeId: number;
+  resolution: number;
+};
+
 export type UpdateActionNode = Omit<Node, "untransformedPosition"> & {
   position: Node["untransformedPosition"];
   treeId: number;
 };
 
 export function createNode(treeId: number, node: Node) {
-  const { untransformedPosition, ...restNode } = node;
+  const { untransformedPosition, mag, ...restNode } = node;
   return {
     name: "createNode",
-    value: { ...restNode, position: untransformedPosition, treeId } as UpdateActionNode,
+    value: {
+      ...restNode,
+      position: untransformedPosition,
+      treeId,
+      resolution: mag,
+    } as CreateActionNode,
   } as const;
 }
 export function updateNode(treeId: number, node: Node) {

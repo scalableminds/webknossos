@@ -1,6 +1,6 @@
 import Request from "libs/request";
 import type { Vector3, Vector4 } from "oxalis/constants";
-import type { APIDatasetId } from "types/api_flow_types";
+import type { APIDataSourceId } from "types/api_flow_types";
 import { doWithToken } from "./token";
 
 export type MeshChunk = {
@@ -31,7 +31,7 @@ type SegmentInfo = {
 
 export function getMeshfileChunksForSegment(
   dataStoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   meshFile: string,
   segmentId: number,
@@ -55,7 +55,7 @@ export function getMeshfileChunksForSegment(
       params.append("editableMappingTracingId", editableMappingTracingId);
     }
     return Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes/chunks?${params}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/meshes/chunks?${params}`,
       {
         data: {
           meshFile,
@@ -79,13 +79,13 @@ type MeshChunkDataRequestList = {
 
 export function getMeshfileChunkData(
   dataStoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   batchDescription: MeshChunkDataRequestList,
 ): Promise<ArrayBuffer[]> {
   return doWithToken(async (token) => {
     const dracoDataChunks = await Request.sendJSONReceiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes/chunks/data?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/meshes/chunks/data?token=${token}`,
       {
         data: batchDescription,
         useWebworkerForArrayBuffer: true,

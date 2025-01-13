@@ -33,6 +33,7 @@ const StoreMock = {
   getState: () => ({
     dataset: {
       name: "dataset",
+      directoryName: "datasetPath",
       dataStore: {
         typ: "webknossos-store",
         url: "url",
@@ -149,9 +150,9 @@ test.serial(
         t.deepEqual(buffer2, bucketData2);
         t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 2);
         const url = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(0).args[0];
-        t.is(url, "url/data/datasets/organization/dataset/layers/color/data?token=token");
+        t.is(url, "url/data/datasets/organization/datasetPath/layers/color/data?token=token");
         const url2 = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(1).args[0];
-        t.is(url2, "url/data/datasets/organization/dataset/layers/color/data?token=token2");
+        t.is(url2, "url/data/datasets/organization/datasetPath/layers/color/data?token=token2");
       },
     );
   },
@@ -185,7 +186,7 @@ test.serial(
   (t) => {
     const { layer } = t.context as { layer: APIDataLayer };
     const { batch } = prepare();
-    const expectedUrl = "url/data/datasets/organization/dataset/layers/color/data?token=token2";
+    const expectedUrl = "url/data/datasets/organization/datasetPath/layers/color/data?token=token2";
     const expectedOptions = createExpectedOptions();
     return requestWithFallback(layer, batch).then(() => {
       t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 1);
@@ -202,7 +203,7 @@ test.serial(
     // test four bit color and 8 bit seg
     const { layer } = t.context as { layer: APIDataLayer };
     const { batch } = prepare();
-    const expectedUrl = "url/data/datasets/organization/dataset/layers/color/data?token=token2";
+    const expectedUrl = "url/data/datasets/organization/datasetPath/layers/color/data?token=token2";
     const expectedOptions = createExpectedOptions(true);
     await requestWithFallback(layer, batch).then(() => {
       t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 1);
@@ -220,7 +221,7 @@ test.serial(
     const { segmentationLayer } = t.context as { segmentationLayer: APIDataLayer };
     const { batch } = prepare();
     const expectedUrl =
-      "url/data/datasets/organization/dataset/layers/segmentation/data?token=token2";
+      "url/data/datasets/organization/datasetPath/layers/segmentation/data?token=token2";
     const expectedOptions = createExpectedOptions(false);
     await requestWithFallback(segmentationLayer, batch).then(() => {
       t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 1);

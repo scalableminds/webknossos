@@ -1,5 +1,3 @@
-import type { OxalisState } from "oxalis/store";
-import { defaultDatasetViewConfigurationWithoutNull } from "types/schemas/dataset_view_configuration.schema";
 import Constants, {
   ControlModeEnum,
   OrthoViews,
@@ -9,13 +7,15 @@ import Constants, {
   InterpolationModeEnum,
   UnitLong,
 } from "oxalis/constants";
+import constants from "oxalis/constants";
+import type { OxalisState } from "oxalis/store";
+import { getSystemColorTheme } from "theme";
 import type {
   APIAllowedMode,
   APIAnnotationType,
   APIAnnotationVisibility,
 } from "types/api_flow_types";
-import constants from "oxalis/constants";
-import { getSystemColorTheme } from "theme";
+import { defaultDatasetViewConfigurationWithoutNull } from "types/schemas/dataset_view_configuration.schema";
 
 const defaultViewportRect = {
   top: 0,
@@ -84,6 +84,7 @@ const defaultState: OxalisState = {
     gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
     fillMode: FillModeEnum._2D,
+    isFloodfillRestrictedToBoundingBox: false,
     interpolationMode: InterpolationModeEnum.INTERPOLATE,
     useLegacyBindings: false,
     quickSelect: {
@@ -121,6 +122,7 @@ const defaultState: OxalisState = {
   },
   task: null,
   dataset: {
+    id: "dummy-dataset-id",
     name: "Loading",
     folderId: "dummy-folder-id",
     isUnreported: false,
@@ -141,14 +143,13 @@ const defaultState: OxalisState = {
     dataStore: {
       name: "localhost",
       url: "http://localhost:9000",
-      isScratch: false,
       allowsUpload: true,
       jobsEnabled: false,
       jobsSupportedByAvailableWorkers: [],
     },
     owningOrganization: "",
     description: null,
-    displayName: "Loading",
+    directoryName: "Loading",
     allowedTeams: [],
     allowedTeamsCumulative: [],
     logoUrl: null,
@@ -177,6 +178,7 @@ const defaultState: OxalisState = {
     othersMayEdit: false,
     blockedByUser: null,
     annotationLayers: [],
+    organization: "",
   },
   save: {
     queue: {

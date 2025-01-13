@@ -1,27 +1,40 @@
 import {
   DeleteOutlined,
+  EllipsisOutlined,
   LoadingOutlined,
   ReloadOutlined,
-  VerticalAlignBottomOutlined,
-  EllipsisOutlined,
   TagsOutlined,
+  VerticalAlignBottomOutlined,
 } from "@ant-design/icons";
-import { List, type MenuProps, App } from "antd";
-import { useDispatch, useSelector } from "react-redux";
+import { App, List, type MenuProps } from "antd";
 import Checkbox, { type CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import React from "react";
+import { useDispatch, useSelector } from "react-redux";
 
+import type { MenuItemType } from "antd/es/menu/interface";
 import classnames from "classnames";
+import { ChangeColorMenuItemContent } from "components/color_picker";
+import FastTooltip from "components/fast_tooltip";
+import { V4 } from "libs/mjs";
+import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import type { APISegmentationLayer, APIMeshFile } from "types/api_flow_types";
 import type { Vector3, Vector4 } from "oxalis/constants";
+import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import {
+  getAdditionalCoordinatesAsString,
+  getPosition,
+} from "oxalis/model/accessors/flycam_accessor";
+import {
+  getSegmentColorAsRGBA,
+  getSegmentName,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  refreshMeshAction,
+  removeMeshAction,
   triggerMeshDownloadAction,
   updateMeshVisibilityAction,
-  removeMeshAction,
-  refreshMeshAction,
 } from "oxalis/model/actions/annotation_actions";
-import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
 import type {
   ActiveMappingInfo,
   MeshInformation,
@@ -30,24 +43,12 @@ import type {
   VolumeTracing,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import {
-  getSegmentColorAsRGBA,
-  getSegmentName,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import Toast from "libs/toast";
-import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
-import { V4 } from "libs/mjs";
-import { ChangeColorMenuItemContent } from "components/color_picker";
-import type { MenuItemType } from "antd/es/menu/interface";
-import { withMappingActivationConfirmation } from "./segments_view_helper";
-import type { AdditionalCoordinate } from "types/api_flow_types";
-import {
-  getAdditionalCoordinatesAsString,
-  getPosition,
-} from "oxalis/model/accessors/flycam_accessor";
-import FastTooltip from "components/fast_tooltip";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
-import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
+import type { APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
+import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
+import { withMappingActivationConfirmation } from "./segments_view_helper";
 
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 
@@ -60,6 +61,9 @@ export function ColoredDotIcon({ colorRGBA }: { colorRGBA: Vector4 }) {
       style={{
         paddingLeft: "10px",
         backgroundColor: rgbaCss,
+        alignSelf: "flex-start",
+        marginTop: 5,
+        marginLeft: 1,
       }}
     />
   );
@@ -77,8 +81,10 @@ const getLoadPrecomputedMeshMenuItem = (
   hideContextMenu: (_ignore?: any) => void,
   layerName: string | null | undefined,
   mappingInfo: ActiveMappingInfo,
+  activeVolumeTracing: VolumeTracing | null | undefined,
 ) => {
   const mappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
+
   return {
     key: "loadPrecomputedMesh",
     disabled: !currentMeshFile,
@@ -111,16 +117,10 @@ const getLoadPrecomputedMeshMenuItem = (
       mappingInfo,
     ),
     label: (
-      <FastTooltip
-        key="tooltip"
-        title={
-          currentMeshFile != null
-            ? `Load mesh for centered segment from file ${currentMeshFile.meshFileName}`
-            : "There is no mesh file."
-        }
-      >
-        Load Mesh (precomputed)
-      </FastTooltip>
+      <LoadMeshMenuItemLabel
+        currentMeshFile={currentMeshFile}
+        volumeTracing={activeVolumeTracing}
+      />
     ),
   };
 };
@@ -426,6 +426,7 @@ function _SegmentListItem({
         hideContextMenu,
         visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
         mappingInfo,
+        activeVolumeTracing,
       ),
       getComputeMeshAdHocMenuItem(
         segment,
@@ -441,7 +442,7 @@ function _SegmentListItem({
         hideContextMenu,
       ),
       {
-        key: "changeSegmentColor",
+        key: `changeSegmentColor-${segment.id}`,
         label: (
           <ChangeColorMenuItemContent
             isDisabled={false}

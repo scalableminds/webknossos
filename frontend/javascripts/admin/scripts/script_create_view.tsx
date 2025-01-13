@@ -1,17 +1,17 @@
-import { Form, Input, Select, Button, Card } from "antd";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
-import { connect } from "react-redux";
-import { useState, useEffect } from "react";
-import type { APIUser } from "types/api_flow_types";
-import type { OxalisState } from "oxalis/store";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
-  getTeamManagerOrAdminUsers,
-  updateScript,
   createScript,
   getScript,
+  getTeamManagerOrAdminUsers,
+  updateScript,
 } from "admin/admin_rest_api";
+import { Button, Card, Form, Input, Select } from "antd";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import type { OxalisState } from "oxalis/store";
+import { useEffect, useState } from "react";
+import { connect } from "react-redux";
+import type { RouteComponentProps } from "react-router-dom";
+import { withRouter } from "react-router-dom";
+import type { APIUser } from "types/api_flow_types";
 
 const FormItem = Form.Item;
 type OwnProps = {

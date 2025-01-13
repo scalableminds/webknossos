@@ -1,11 +1,11 @@
 package models.user
 
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables
 import com.scalableminds.webknossos.schema.Tables.{Emailverificationkeys, EmailverificationkeysRow}
 import slick.lifted.{Rep, TableQuery}
-import utils.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
 import javax.inject.Inject

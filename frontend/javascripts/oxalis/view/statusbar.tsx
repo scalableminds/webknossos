@@ -1,44 +1,44 @@
-import { useDispatch, useSelector } from "react-redux";
-import React, { useCallback, useState } from "react";
-import { WarningOutlined, MoreOutlined, DownloadOutlined } from "@ant-design/icons";
+import { DownloadOutlined, MoreOutlined, WarningOutlined } from "@ant-design/icons";
+import FastTooltip from "components/fast_tooltip";
+import { formatCountToDataAmountUnit } from "libs/format_utils";
+import { V3 } from "libs/mjs";
+import { useInterval } from "libs/react_helpers";
+import { useKeyPress } from "libs/react_hooks";
+import message from "messages";
+import messages from "messages";
 import type { Vector3 } from "oxalis/constants";
 import { AltOrOptionKey, MappingStatusEnum, OrthoViews } from "oxalis/constants";
-import {
-  getMappingInfoOrNull,
-  getVisibleSegmentationLayer,
-  hasVisibleUint64Segmentation,
-} from "oxalis/model/accessors/dataset_accessor";
-import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
-import { useKeyPress } from "libs/react_hooks";
-import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
-import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
-import {
-  setActiveNodeAction,
-  setActiveTreeAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { formatCountToDataAmountUnit } from "libs/format_utils";
-import message from "messages";
 import {
   type ActionDescriptor,
   getToolClassForAnnotationTool,
 } from "oxalis/controller/combinations/tool_controls";
 import {
+  getMappingInfoOrNull,
+  getVisibleSegmentationLayer,
+  hasVisibleUint64Segmentation,
+} from "oxalis/model/accessors/dataset_accessor";
+import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
+import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
+import {
   calculateGlobalPos,
   isPlaneMode as getIsPlaneMode,
 } from "oxalis/model/accessors/view_mode_accessor";
-import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
-import { V3 } from "libs/mjs";
-import type { OxalisState } from "oxalis/store";
 import {
   getActiveSegmentationTracing,
   getReadableNameForLayerName,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  setActiveNodeAction,
+  setActiveTreeAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
-import { useInterval } from "libs/react_helpers";
-import type { AdditionalCoordinate } from "types/api_flow_types";
-import FastTooltip from "components/fast_tooltip";
 import { Store } from "oxalis/singletons";
-import messages from "messages";
+import type { OxalisState } from "oxalis/store";
+import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
+import React, { useCallback, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
@@ -500,7 +500,7 @@ function DownloadSpeedometer() {
 }
 
 function MagnificationInfo() {
-  const { representativeResolution, isActiveResolutionGlobal } = useSelector(getActiveMagInfo);
+  const { representativeMag, isActiveMagGlobal } = useSelector(getActiveMagInfo);
 
   const renderMagTooltipContent = useCallback(() => {
     const state = Store.getState();
@@ -527,7 +527,7 @@ function MagnificationInfo() {
     );
   }, []);
 
-  if (representativeResolution == null) {
+  if (representativeMag == null) {
     return null;
   }
 
@@ -535,12 +535,12 @@ function MagnificationInfo() {
     <span className="info-element">
       <img
         src="/assets/images/icon-statusbar-downsampling.svg"
-        className="resolution-status-bar-icon"
+        className="mag-status-bar-icon"
         alt="Magnification"
       />{" "}
       <FastTooltip dynamicRenderer={renderMagTooltipContent} placement="top">
-        {representativeResolution.join("-")}
-        {isActiveResolutionGlobal ? "" : "*"}{" "}
+        {representativeMag.join("-")}
+        {isActiveMagGlobal ? "" : "*"}{" "}
       </FastTooltip>
     </span>
   );

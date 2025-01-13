@@ -1,14 +1,17 @@
-import { Form, Input, Button, Row, Col, Checkbox } from "antd";
-import { LockOutlined, UserOutlined, MailOutlined } from "@ant-design/icons";
+import { LockOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
+import { loginUser } from "admin/admin_rest_api";
+import { getTermsOfService } from "admin/api/terms_of_service";
+import { Button, Checkbox, Col, Form, Input, Row } from "antd";
+import { useFetch } from "libs/react_helpers";
+import Request from "libs/request";
+import messages from "messages";
+import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
+import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import Store from "oxalis/throttled_store";
 import React from "react";
 import type { APIOrganization } from "types/api_flow_types";
-import { loginUser } from "admin/admin_rest_api";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import Request from "libs/request";
-import Store from "oxalis/throttled_store";
-import messages from "messages";
-import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
-import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
+import { TOSCheckFormItem } from "./tos_check_form_item";
 
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -25,6 +28,8 @@ type Props = {
 
 function RegistrationFormGeneric(props: Props) {
   const [form] = Form.useForm();
+
+  const terms = useFetch(getTermsOfService, null, []);
 
   const onFinish = async (formValues: Record<string, any>) => {
     await Request.sendJSONReceiveJSON(
@@ -274,28 +279,32 @@ function RegistrationFormGeneric(props: Props) {
           </FormItem>
         </Col>
       </Row>
-      {props.hidePrivacyStatement ? null : (
-        <FormItem
-          name="privacy_check"
-          valuePropName="checked"
-          rules={[
-            {
-              validator: (_, value) =>
-                value
-                  ? Promise.resolve()
-                  : Promise.reject(new Error(messages["auth.privacy_check_required"])),
-            },
-          ]}
-        >
-          <Checkbox>
-            I agree to storage and processing of my personal data as described in the{" "}
-            <a target="_blank" href="/privacy" rel="noopener noreferrer">
-              privacy statement
-            </a>
-            .
-          </Checkbox>
-        </FormItem>
-      )}
+      <div className="registration-form-checkboxes">
+        {props.hidePrivacyStatement ? null : (
+          <FormItem
+            name="privacy_check"
+            valuePropName="checked"
+            rules={[
+              {
+                validator: (_, value) =>
+                  value
+                    ? Promise.resolve()
+                    : Promise.reject(new Error(messages["auth.privacy_check_required"])),
+              },
+            ]}
+          >
+            <Checkbox>
+              I agree to storage and processing of my personal data as described in the{" "}
+              <a target="_blank" href="/privacy" rel="noopener noreferrer">
+                privacy statement
+              </a>
+              .
+            </Checkbox>
+          </FormItem>
+        )}
+        <TOSCheckFormItem terms={terms} />
+      </div>
+
       <FormItem>
         <Button
           size="large"

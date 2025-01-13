@@ -1,15 +1,35 @@
+import { V3 } from "libs/mjs";
+import _ from "lodash";
 import memoizeOne from "memoize-one";
-import type {
-  APIAnnotation,
-  APIAnnotationInfo,
-  APIDataLayer,
-  APIDataset,
-  APISegmentationLayer,
-  AdditionalCoordinate,
-  AnnotationLayerDescriptor,
-  ServerTracing,
-  ServerVolumeTracing,
-} from "types/api_flow_types";
+import messages from "messages";
+import {
+  type AnnotationTool,
+  type ContourMode,
+  MappingStatusEnum,
+  type Vector3,
+  type Vector4,
+} from "oxalis/constants";
+import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
+import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
+import {
+  getDataLayers,
+  getLayerByName,
+  getMagInfo,
+  getMappingInfo,
+  getSegmentationLayerByName,
+  getSegmentationLayers,
+  getVisibleOrLastSegmentationLayer,
+  getVisibleSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
+import {
+  getActiveMagIndexForLayer,
+  getAdditionalCoordinatesAsString,
+  getFlooredPosition,
+} from "oxalis/model/accessors/flycam_accessor";
+import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
+import { jsConvertCellIdToRGBA } from "oxalis/shaders/segmentation.glsl";
+import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
+import { Store } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
   HybridTracing,
@@ -21,44 +41,24 @@ import type {
   Tracing,
   VolumeTracing,
 } from "oxalis/store";
-import {
-  type AnnotationTool,
-  type ContourMode,
-  MappingStatusEnum,
-  type Vector3,
-  type Vector4,
-} from "oxalis/constants";
-import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
-import {
-  getMappingInfo,
-  getMagInfo,
-  getSegmentationLayerByName,
-  getSegmentationLayers,
-  getVisibleSegmentationLayer,
-  getDataLayers,
-  getLayerByName,
-  getVisibleOrLastSegmentationLayer,
-} from "oxalis/model/accessors/dataset_accessor";
-import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
-import {
-  getFlooredPosition,
-  getActiveMagIndexForLayer,
-  getAdditionalCoordinatesAsString,
-} from "oxalis/model/accessors/flycam_accessor";
-import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
-import { V3 } from "libs/mjs";
-import { jsConvertCellIdToRGBA } from "oxalis/shaders/segmentation.glsl";
-import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
-import { MagInfo } from "../helpers/mag_info";
-import messages from "messages";
+import type { SegmentHierarchyNode } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import {
   MISSING_GROUP_ID,
   getGroupByIdWithSubgroups,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import { Store } from "oxalis/singletons";
+import type {
+  APIAnnotation,
+  APIAnnotationInfo,
+  APIDataLayer,
+  APIDataset,
+  APISegmentationLayer,
+  AdditionalCoordinate,
+  AnnotationLayerDescriptor,
+  ServerTracing,
+  ServerVolumeTracing,
+} from "types/api_flow_types";
 import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
-import _ from "lodash";
-import type { SegmentHierarchyNode } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { MagInfo } from "../helpers/mag_info";
 
 export function getVolumeTracings(tracing: Tracing): Array<VolumeTracing> {
   return tracing.volumes;
@@ -243,28 +243,28 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
     return true;
   }
 
-  const volumeResolutions = getMagInfoOfActiveSegmentationTracingLayer(state);
-  const lowestExistingResolutionIndex = volumeResolutions.getFinestMagIndex();
+  const volumeMags = getMagInfoOfActiveSegmentationTracingLayer(state);
+  const lowestExistingMagIndex = volumeMags.getFinestMagIndex();
   // The current mag is too high for the tool
   // because too many voxels could be annotated at the same time.
   const isZoomStepTooHigh =
     getActiveMagIndexForLayer(state, activeSegmentation.tracingId) >
-    threshold + lowestExistingResolutionIndex;
+    threshold + lowestExistingMagIndex;
   return isZoomStepTooHigh;
 }
 
 const MAX_BRUSH_SIZE_FOR_MAG1 = 300;
 export function getMaximumBrushSize(state: OxalisState) {
-  const volumeResolutions = getMagInfoOfActiveSegmentationTracingLayer(state);
+  const volumeMags = getMagInfoOfActiveSegmentationTracingLayer(state);
 
-  if (volumeResolutions.mags.length === 0) {
+  if (volumeMags.mags.length === 0) {
     return MAX_BRUSH_SIZE_FOR_MAG1;
   }
 
-  const lowestExistingResolutionIndex = volumeResolutions.getFinestMagIndex();
+  const lowestExistingMagIndex = volumeMags.getFinestMagIndex();
   // For each leading magnification which does not exist,
   // we double the maximum brush size.
-  return MAX_BRUSH_SIZE_FOR_MAG1 * 2 ** lowestExistingResolutionIndex;
+  return MAX_BRUSH_SIZE_FOR_MAG1 * 2 ** lowestExistingMagIndex;
 }
 
 export function getRequestedOrVisibleSegmentationLayer(
@@ -484,7 +484,7 @@ function _getRenderableMagForSegmentationTracing(
   segmentationTracing: VolumeTracing | null | undefined,
 ):
   | {
-      resolution: Vector3;
+      mag: Vector3;
       zoomStep: number;
     }
   | null
@@ -497,7 +497,7 @@ function _getRenderableMagForSegmentationTracing(
 
   const requestedZoomStep = getActiveMagIndexForLayer(state, segmentationLayer.name);
   const { renderMissingDataBlack } = state.datasetConfiguration;
-  const resolutionInfo = getMagInfo(segmentationLayer.resolutions);
+  const magInfo = getMagInfo(segmentationLayer.resolutions);
   // Check whether the segmentation layer is enabled
   const segmentationSettings = state.datasetConfiguration.layers[segmentationLayer.name];
 
@@ -506,10 +506,10 @@ function _getRenderableMagForSegmentationTracing(
   }
 
   // Check whether the requested zoom step exists
-  if (resolutionInfo.hasIndex(requestedZoomStep)) {
+  if (magInfo.hasIndex(requestedZoomStep)) {
     return {
       zoomStep: requestedZoomStep,
-      resolution: resolutionInfo.getMagByIndexOrThrow(requestedZoomStep),
+      mag: magInfo.getMagByIndexOrThrow(requestedZoomStep),
     };
   }
 
@@ -527,10 +527,10 @@ function _getRenderableMagForSegmentationTracing(
     fallbackZoomStep <= requestedZoomStep + MAX_ZOOM_STEP_DIFF;
     fallbackZoomStep++
   ) {
-    if (resolutionInfo.hasIndex(fallbackZoomStep)) {
+    if (magInfo.hasIndex(fallbackZoomStep)) {
       return {
         zoomStep: fallbackZoomStep,
-        resolution: resolutionInfo.getMagByIndexOrThrow(fallbackZoomStep),
+        mag: magInfo.getMagByIndexOrThrow(fallbackZoomStep),
       };
     }
   }
@@ -544,7 +544,7 @@ export const getRenderableMagForSegmentationTracing = reuseInstanceOnEquality(
 
 function _getRenderableMagForActiveSegmentationTracing(state: OxalisState):
   | {
-      resolution: Vector3;
+      mag: Vector3;
       zoomStep: number;
     }
   | null
@@ -642,13 +642,13 @@ export function getLastLabelAction(volumeTracing: VolumeTracing): LabelAction | 
 export function getLabelActionFromPreviousSlice(
   state: OxalisState,
   volumeTracing: VolumeTracing,
-  resolution: Vector3,
+  mag: Vector3,
   dim: 0 | 1 | 2,
 ): LabelAction | undefined {
   // Gets the last label action which was performed on a different slice.
   // Note that in coarser mags (e.g., 8-8-2), the comparison of the coordinates
   // is done while respecting how the coordinates are clipped due to that mag.
-  const adapt = (vec: Vector3) => V3.roundElementToMag(vec, resolution, dim);
+  const adapt = (vec: Vector3) => V3.roundElementToMag(vec, mag, dim);
   const position = adapt(getFlooredPosition(state.flycam));
 
   return volumeTracing.lastLabelActions.find(

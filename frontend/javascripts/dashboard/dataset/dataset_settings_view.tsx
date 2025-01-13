@@ -1,54 +1,53 @@
-import { Button, Spin, Alert, Form, Card, Tabs, Tooltip, type FormInstance } from "antd";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-import * as React from "react";
-import _ from "lodash";
-import dayjs from "dayjs";
-import { connect } from "react-redux";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter, Link } from "react-router-dom";
-import type {
-  UnregisterCallback,
-  Location as HistoryLocation,
-  Action as HistoryAction,
-} from "history";
-import type {
-  APIDataSource,
-  APIDataset,
-  MutableAPIDataset,
-  APIDatasetId,
-  APIMessage,
-} from "types/api_flow_types";
-import { Unicode } from "oxalis/constants";
-import type { DatasetConfiguration, OxalisState } from "oxalis/store";
-import { diffObjects, jsonStringify } from "libs/utils";
+import { defaultContext } from "@tanstack/react-query";
 import {
   getDataset,
   getDatasetDefaultConfiguration,
-  updateDatasetDefaultConfiguration,
   readDatasetDatasource,
-  updateDatasetDatasource,
-  updateDatasetTeams,
   sendAnalyticsEvent,
+  updateDatasetDatasource,
+  updateDatasetDefaultConfiguration,
   updateDatasetPartial,
+  updateDatasetTeams,
 } from "admin/admin_rest_api";
-import { handleGenericError } from "libs/error_handling";
-import { trackAction } from "oxalis/model/helpers/analytics";
-import Toast from "libs/toast";
-import messages from "messages";
+import { Alert, Button, Card, Form, type FormInstance, Spin, Tabs, Tooltip } from "antd";
+import dayjs from "dayjs";
 import features from "features";
+import type {
+  Action as HistoryAction,
+  Location as HistoryLocation,
+  UnregisterCallback,
+} from "history";
+import { handleGenericError } from "libs/error_handling";
+import Toast from "libs/toast";
+import { diffObjects, jsonStringify } from "libs/utils";
+import _ from "lodash";
+import messages from "messages";
+import { Unicode } from "oxalis/constants";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
+import type { DatasetConfiguration, OxalisState } from "oxalis/store";
+import * as React from "react";
+import { connect } from "react-redux";
+import type { RouteComponentProps } from "react-router-dom";
+import { Link, withRouter } from "react-router-dom";
+import type {
+  APIDataSource,
+  APIDataset,
+  APIMessage,
+  MutableAPIDataset,
+} from "types/api_flow_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-import { Hideable, hasFormError } from "./helper_components";
-import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
+import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
+import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
 import DatasetSettingsMetadataTab from "./dataset_settings_metadata_tab";
 import DatasetSettingsSharingTab from "./dataset_settings_sharing_tab";
-import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
-import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
-import { defaultContext } from "@tanstack/react-query";
+import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
+import { Hideable, hasFormError } from "./helper_components";
 
 const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";
 type OwnProps = {
-  datasetId: APIDatasetId;
+  datasetId: string;
   isEditingMode: boolean;
   onComplete: () => void;
   onCancel: () => void;
@@ -183,7 +182,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       form.setFieldsValue({
         dataSourceJson: jsonStringify(dataSource),
         dataset: {
-          displayName: dataset.displayName || undefined,
+          name: dataset.name,
           isPublic: dataset.isPublic || false,
           description: dataset.description || undefined,
           allowedTeams: dataset.allowedTeams || [],
@@ -283,6 +282,16 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     return _.size(diffObjects(dataSource, this.state.savedDataSourceOnServer || {})) > 0;
   }
 
+  didDatasourceIdChange(dataSource: Record<string, any>) {
+    const savedDatasourceId = this.state.savedDataSourceOnServer?.id;
+    if (!savedDatasourceId) {
+      return false;
+    }
+    return (
+      savedDatasourceId.name !== dataSource.id.name || savedDatasourceId.team !== dataSource.id.team
+    );
+  }
+
   isOnlyDatasourceIncorrectAndNotEdited() {
     const validationSummary = this.getFormValidationSummary();
     const form = this.formRef.current;
@@ -330,12 +339,18 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       this.state.activeDataSourceEditMode === "simple" ? "advanced" : "simple",
     );
 
-    const afterForceUpdateCallback = () =>
+    const afterForceUpdateCallback = () => {
       // Trigger validation manually, because fields may have been updated
-      form
-        .validateFields()
-        .then((formValues) => this.submit(formValues))
-        .catch((errorInfo) => this.handleValidationFailed(errorInfo));
+      // and defer the validation as it is done asynchronously by antd or so.
+      setTimeout(
+        () =>
+          form
+            .validateFields()
+            .then((formValues) => this.submit(formValues))
+            .catch((errorInfo) => this.handleValidationFailed(errorInfo)),
+        0,
+      );
+    };
 
     // Need to force update of the SimpleAdvancedDataForm as removing a layer in the advanced tab does not update
     // the form items in the simple tab (only the values are updated). The form items automatically update once
@@ -367,14 +382,17 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     const dataSource = JSON.parse(formValues.dataSourceJson);
 
     if (dataset != null && this.didDatasourceChange(dataSource)) {
-      await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
+      if (this.didDatasourceIdChange(dataSource)) {
+        Toast.warning(messages["dataset.settings.updated_datasource_id_warning"]);
+      }
+      await updateDatasetDatasource(dataset.directoryName, dataset.dataStore.url, dataSource);
       this.setState({
         savedDataSourceOnServer: dataSource,
       });
     }
 
     const verb = this.props.isEditingMode ? "updated" : "imported";
-    Toast.success(`Successfully ${verb} ${this.props.datasetId.name}.`);
+    Toast.success(`Successfully ${verb} ${dataset?.name || this.props.datasetId}.`);
     this.setState({
       hasUnsavedChanges: false,
     });
@@ -390,7 +408,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       }
     }
 
-    trackAction(`Dataset ${verb}`);
     this.props.onComplete();
   };
 
@@ -477,17 +494,26 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
 
   render() {
     const form = this.formRef.current;
+    const { dataset } = this.state;
+
+    const maybeStoredDatasetName = dataset?.name || this.props.datasetId;
+    const maybeDataSourceId = dataset
+      ? {
+          owningOrganization: dataset.owningOrganization,
+          directoryName: dataset.directoryName,
+        }
+      : null;
 
     const { isUserAdmin } = this.props;
     const titleString = this.props.isEditingMode ? "Settings for" : "Import";
     const datasetLinkOrName = this.props.isEditingMode ? (
       <Link
-        to={`/datasets/${this.props.datasetId.owningOrganization}/${this.props.datasetId.name}`}
+        to={`/datasets/${this.state.dataset ? getReadableURLPart(this.state.dataset) : this.props.datasetId}/view`}
       >
-        {this.props.datasetId.name}
+        {maybeStoredDatasetName}
       </Link>
     ) : (
-      this.props.datasetId.name
+      maybeStoredDatasetName
     );
     const confirmString =
       this.props.isEditingMode ||
@@ -521,7 +547,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
               <DatasetSettingsDataTab
                 key="SimpleAdvancedDataForm"
                 dataset={this.state.dataset}
-                allowRenamingDataset={false}
                 form={form}
                 activeDataSourceEditMode={this.state.activeDataSourceEditMode}
                 onChange={(activeEditMode) => {
@@ -575,10 +600,14 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         forceRender: true,
         children: (
           <Hideable hidden={this.state.activeTabKey !== "defaultConfig"}>
-            <DatasetSettingsViewConfigTab
-              datasetId={this.props.datasetId}
-              dataStoreURL={this.state.dataset?.dataStore.url}
-            />
+            {
+              maybeDataSourceId ? (
+                <DatasetSettingsViewConfigTab
+                  dataSourceId={maybeDataSourceId}
+                  dataStoreURL={this.state.dataset?.dataStore.url}
+                />
+              ) : null /* null case should never be rendered as tabs are only rendered when the dataset is loaded. */
+            }
           </Hideable>
         ),
       },

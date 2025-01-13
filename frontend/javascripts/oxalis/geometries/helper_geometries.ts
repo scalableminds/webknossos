@@ -1,11 +1,11 @@
-import * as THREE from "three";
-import { type OrthoView, OrthoViews, type Vector3 } from "oxalis/constants";
-import ResizableBuffer from "libs/resizable_buffer";
 import app from "app";
 import { V3 } from "libs/mjs";
-import Store from "oxalis/store";
+import ResizableBuffer from "libs/resizable_buffer";
+import { type OrthoView, OrthoViews, type Vector3 } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
 import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
+import Store from "oxalis/store";
+import * as THREE from "three";
 
 export const CONTOUR_COLOR_NORMAL = new THREE.Color(0x0000ff);
 export const CONTOUR_COLOR_DELETE = new THREE.Color(0xff0000);

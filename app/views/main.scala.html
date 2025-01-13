@@ -6,9 +6,6 @@ Option[String], openGraphImage: Option[String] )
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <meta name="commit-hash" content="@(webknossos.BuildInfo.commitHash)" />
     <meta name="selected-theme" content="@(selectedTheme)" />
-    @if(conf.GoogleAnalytics.trackingId.nonEmpty) {
-    <meta name="google-analytics-tracking-id" content="@(conf.GoogleAnalytics.trackingId)" />
-    }
     <title>@(conf.WebKnossos.tabTitle)</title>
     @openGraphTitle.map { ogt =>
     <meta property="og:title" content="@ogt" />
@@ -52,25 +49,5 @@ Option[String], openGraphImage: Option[String] )
   </head>
   <body>
     <main id="main-container"></main>
-
-    @if(conf.GoogleAnalytics.trackingId.nonEmpty) {
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=@(conf.GoogleAnalytics.trackingId)"
-    ></script>
-    <script>
-      const metaElement = document.querySelector("meta[name='google-analytics-tracking-id']");
-      const googleAnalyticsTrackingId = metaElement ? metaElement.getAttribute("content") : null;
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag("js", new Date());
-      gtag("config", googleAnalyticsTrackingId, {
-        anonymize_ip: true,
-        cookie_expires: 0,
-      });
-    </script>
-    }
   </body>
 </html>

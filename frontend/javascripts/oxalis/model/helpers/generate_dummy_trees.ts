@@ -34,7 +34,7 @@ export default function generateDummyTrees(
         },
         radius: 112.39999389648438,
         viewport: 1,
-        resolution: 1,
+        mag: 2,
         bitDepth: 4,
         interpolation: true,
         createdTimestamp: 1507550793899,

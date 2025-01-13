@@ -1,6 +1,7 @@
+import PriorityQueue from "js-priority-queue";
 import _ from "lodash";
-import ops from "ndarray-ops";
 import moments from "ndarray-moments";
+import ops from "ndarray-ops";
 import {
   ContourModeEnum,
   type OrthoView,
@@ -10,12 +11,14 @@ import {
   type Vector2,
   type Vector3,
 } from "oxalis/constants";
-import PriorityQueue from "js-priority-queue";
 
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { call, put, race, take } from "typed-redux-saga";
-import { select } from "oxalis/model/sagas/effect-generators";
+import { sendAnalyticsEvent } from "admin/admin_rest_api";
+import morphology from "ball-morphology";
 import { V2, V3 } from "libs/mjs";
+import Toast from "libs/toast";
+import { clamp, map3, take2 } from "libs/utils";
+import ndarray from "ndarray";
+import type { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import {
   getActiveSegmentationTracing,
   getSegmentationLayerForTracing,
@@ -31,27 +34,17 @@ import {
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
 import { api } from "oxalis/singletons";
-import ndarray from "ndarray";
-import morphology from "ball-morphology";
-import Toast from "libs/toast";
 import type {
   DatasetLayerConfiguration,
   OxalisState,
   QuickSelectConfig,
   VolumeTracing,
 } from "oxalis/store";
-import type { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
-import { clamp, map3, take2 } from "libs/utils";
+import { call, put, race, take } from "typed-redux-saga";
 import type { APIDataLayer, APIDataset } from "types/api_flow_types";
-import { sendAnalyticsEvent } from "admin/admin_rest_api";
-import { copyNdArray } from "./volume/volume_interpolation_saga";
-import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
-import {
-  type EnterAction,
-  type EscapeAction,
-  showQuickSelectSettingsAction,
-} from "../actions/ui_actions";
 import {
   getDefaultValueRangeOfLayer,
   getEnabledColorLayers,
@@ -59,9 +52,16 @@ import {
   getMagInfo,
   getTransformsForLayer,
 } from "../accessors/dataset_accessor";
-import Dimensions, { type DimensionIndices } from "../dimensions";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
+import {
+  type EnterAction,
+  type EscapeAction,
+  showQuickSelectSettingsAction,
+} from "../actions/ui_actions";
+import Dimensions, { type DimensionIndices } from "../dimensions";
+import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
+import { copyNdArray } from "./volume/volume_interpolation_saga";
 
 const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
 
@@ -145,16 +145,16 @@ export function* prepareQuickSelect(
   const requestedZoomStep = yield* select((store) =>
     getActiveMagIndexForLayer(store, colorLayer.name),
   );
-  const resolutionInfo = getMagInfo(
+  const magInfo = getMagInfo(
     // Ensure that a magnification is used which exists in the color layer as well as the
     // target segmentation layer.
     _.intersectionBy(colorLayer.resolutions, volumeLayer.resolutions, (mag) => mag.join("-")),
   );
-  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(
+  const labeledZoomStep = magInfo.getClosestExistingIndex(
     requestedZoomStep,
     "The visible color layer and the active segmentation layer don't have any magnifications in common. Cannot select segment.",
   );
-  const labeledResolution = resolutionInfo.getMagByIndexOrThrow(labeledZoomStep);
+  const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
 
   return {
     labeledZoomStep,
@@ -164,7 +164,7 @@ export function* prepareQuickSelect(
     colorLayer,
     quickSelectConfig,
     activeViewport,
-    labeledMag: labeledResolution,
+    labeledMag,
     volumeTracing,
   };
 }
@@ -184,7 +184,7 @@ export default function* performQuickSelect(
     colorLayer,
     quickSelectConfig,
     activeViewport,
-    labeledMag: labeledResolution,
+    labeledMag,
     volumeTracing,
   } = preparation;
   const { startPosition, endPosition, quickSelectGeometry } = action;
@@ -204,7 +204,7 @@ export default function* performQuickSelect(
   const inclusiveMaxW = map3((el, idx) => (idx === thirdDim ? el - 1 : el), boundingBoxMag1.max);
   quickSelectGeometry.setCoordinates(boundingBoxMag1.min, inclusiveMaxW);
 
-  const boundingBoxInMag = boundingBoxMag1.fromMag1ToMag(labeledResolution);
+  const boundingBoxInMag = boundingBoxMag1.fromMag1ToMag(labeledMag);
 
   if (boundingBoxInMag.getVolume() === 0) {
     Toast.warning("The drawn rectangular had a width or height of zero.");
@@ -288,7 +288,7 @@ export default function* performQuickSelect(
       quickSelectGeometry,
       volumeTracing,
       activeViewport,
-      labeledResolution,
+      labeledMag,
       boundingBoxMag1,
       boundingBoxMag1.min[thirdDim],
       thresholdField,
@@ -358,7 +358,7 @@ export default function* performQuickSelect(
         quickSelectGeometry,
         volumeTracing,
         activeViewport,
-        labeledResolution,
+        labeledMag,
         boundingBoxMag1,
         boundingBoxMag1.min[thirdDim],
         thresholdField,

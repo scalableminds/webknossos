@@ -1,29 +1,30 @@
-import _ from "lodash";
-import { PropTypes } from "@scalableminds/prop-types";
-import { confirmAsync } from "dashboard/dataset/helper_components";
-import { Link } from "react-router-dom";
-import { Table, Spin, Input, Tooltip, Typography } from "antd";
 import {
   CheckCircleTwoTone,
   ClockCircleTwoTone,
-  CloseCircleTwoTone,
   CloseCircleOutlined,
+  CloseCircleTwoTone,
   DownloadOutlined,
   EyeOutlined,
+  InfoCircleOutlined,
   LoadingOutlined,
   QuestionCircleTwoTone,
-  InfoCircleOutlined,
 } from "@ant-design/icons";
-import type * as React from "react";
-import { type APIJob, APIJobType, type APIUserBase } from "types/api_flow_types";
-import { getJobs, cancelJob } from "admin/admin_rest_api";
-import Persistence from "libs/persistence";
-import * as Utils from "libs/utils";
-import FormattedDate from "components/formatted_date";
+import { PropTypes } from "@scalableminds/prop-types";
+import { cancelJob, getJobs } from "admin/admin_rest_api";
+import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
-import { useEffect, useState } from "react";
-import { useInterval } from "libs/react_helpers";
+import FormattedDate from "components/formatted_date";
+import { confirmAsync } from "dashboard/dataset/helper_components";
 import { formatWkLibsNdBBox } from "libs/format_utils";
+import Persistence from "libs/persistence";
+import { useInterval } from "libs/react_helpers";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
+import type * as React from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { type APIJob, APIJobType, type APIUserBase } from "types/api_flow_types";
 
 // Unfortunately, the twoToneColor (nor the style) prop don't support
 // CSS variables.
@@ -58,6 +59,50 @@ export const TOOLTIP_MESSAGES_AND_ICONS = {
 const refreshInterval = 5000;
 const { Column } = Table;
 const { Search } = Input;
+
+export const getShowTrainingDataLink = (
+  trainingAnnotations: {
+    annotationId: string;
+  }[],
+) => {
+  return trainingAnnotations == null ? null : trainingAnnotations.length > 1 ? (
+    <a
+      href="#"
+      onClick={() => {
+        Modal.info({
+          content: (
+            <div>
+              The following annotations were used during training:
+              <ul>
+                {trainingAnnotations.map((annotation: { annotationId: string }, index: number) => (
+                  <li key={`annotation_${index}`}>
+                    <a
+                      href={`/annotations/${annotation.annotationId}`}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      Annotation {index + 1}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ),
+        });
+      }}
+    >
+      Show Training Data
+    </a>
+  ) : (
+    <a
+      href={`/annotations/${trainingAnnotations[0].annotationId}`}
+      target="_blank"
+      rel="noreferrer noopener"
+    >
+      Show Training Data
+    </a>
+  );
+};
 
 type State = {
   isLoading: boolean;
@@ -113,6 +158,10 @@ function JobListView() {
   }
 
   function renderDescription(__: any, job: APIJob) {
+    const linkToDataset =
+      job.datasetId != null
+        ? `/datasets/${getReadableURLPart({ name: job.datasetName || "unknown_name", id: job.datasetId })}/view` // prefer updated link over legacy link.
+        : `/datasets/${job.organizationId || ""}/${job.datasetDirectoryName || job.datasetName}/view`;
     if (job.type === APIJobType.CONVERT_TO_WKW && job.datasetName) {
       return <span>{`Conversion to WKW of ${job.datasetName}`}</span>;
     } else if (job.type === APIJobType.EXPORT_TIFF && job.organizationId && job.datasetName) {
@@ -122,9 +171,7 @@ function JobListView() {
             annotation of dataset {job.datasetName}
           </Link>
         ) : (
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            dataset {job.datasetName}
-          </Link>
+          <Link to={linkToDataset}>dataset {job.datasetName}</Link>
         );
       const layerLabel = job.annotationLayerName || job.layerName;
       return (
@@ -137,18 +184,13 @@ function JobListView() {
       return (
         <span>
           Animation rendering for layer {job.layerName} of dataset{" "}
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>
+          <Link to={linkToDataset}>{job.datasetName}</Link>
         </span>
       );
     } else if (job.type === APIJobType.COMPUTE_MESH_FILE && job.organizationId && job.datasetName) {
       return (
         <span>
-          Mesh file computation for{" "}
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          Mesh file computation for <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
@@ -158,10 +200,7 @@ function JobListView() {
     ) {
       return (
         <span>
-          Segment index file computation for{" "}
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          Segment index file computation for <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
@@ -173,9 +212,7 @@ function JobListView() {
       return (
         <span>
           Largest segment id detection for layer {job.layerName} of{" "}
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
@@ -187,9 +224,7 @@ function JobListView() {
       return (
         <span>
           Nuclei inferral for layer {job.layerName} of{" "}
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
@@ -201,9 +236,7 @@ function JobListView() {
       return (
         <span>
           Neuron inferral for layer {job.layerName} of{" "}
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
@@ -215,9 +248,7 @@ function JobListView() {
       return (
         <span>
           Mitochondria inferral for layer {job.layerName} of{" "}
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
@@ -228,10 +259,8 @@ function JobListView() {
     ) {
       return (
         <span>
-          Aligned sections for layer {job.layerName} of{" "}
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
+          Align sections for layer {job.layerName} of{" "}
+          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (
@@ -242,12 +271,24 @@ function JobListView() {
       return (
         <span>
           Materialize annotation for {job.layerName ? ` layer ${job.layerName} of ` : " "}
-          <Link to={`/datasets/${job.organizationId}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>
+          <Link to={linkToDataset}>{job.datasetName}</Link>
           {job.mergeSegments
             ? ". This includes merging the segments that were merged via merger mode."
             : null}
+        </span>
+      );
+    } else if (job.type === APIJobType.TRAIN_MODEL && job.organizationId) {
+      const numberOfTrainingAnnotations = job.trainingAnnotations.length;
+      return (
+        <span>
+          {`Train model on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
+          {getShowTrainingDataLink(job.trainingAnnotations)}
+        </span>
+      );
+    } else if (job.type === APIJobType.INFER_WITH_MODEL && job.organizationId) {
+      return (
+        <span>
+          Run AI segmentation with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
         </span>
       );
     } else {
@@ -341,8 +382,17 @@ function JobListView() {
         </span>
       );
     } else {
-      // The above if-branches should be exhaustive over all job types
-      Utils.assertNever(job.type);
+      // unknown job type
+      return (
+        <span>
+          {job.resultLink && (
+            <a href={job.resultLink} title="Result">
+              Result
+            </a>
+          )}
+          {job.result && <p>{job.result}</p>}
+        </span>
+      );
     }
   }
 

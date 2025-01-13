@@ -88,7 +88,7 @@ class VolumeTracingService @Inject()(
 
   /* We want to reuse the bucket loading methods from binaryDataService for the volume tracings, however, it does not
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
-  private val binaryDataService = new BinaryDataService(Paths.get(""), None, None, None, None, None)
+  private val binaryDataService = new BinaryDataService(Paths.get(""), None, None, None, None)
 
   adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService
@@ -210,7 +210,7 @@ class VolumeTracingService @Inject()(
           ) ?~> "failed to update segment index"
         } yield ()
       }
-    } yield volumeTracing
+    } yield volumeTracing.copy(volumeBucketDataHasChanged = Some(true))
 
   override def editableMappingTracingId(tracing: VolumeTracing, tracingId: String): Option[String] =
     if (tracing.getHasEditableMapping) Some(tracingId) else None
@@ -281,7 +281,7 @@ class VolumeTracingService @Inject()(
           } yield ()
         }))
       _ <- segmentIndexBuffer.flush()
-    } yield volumeTracing
+    } yield volumeTracing.copy(volumeBucketDataHasChanged = Some(true))
 
   private def assertMagIsValid(tracing: VolumeTracing, mag: Vec3Int): Fox[Unit] =
     if (tracing.mags.nonEmpty) {

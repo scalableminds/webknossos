@@ -13,7 +13,7 @@ import slick.dbio.{DBIO, Effect, NoStream}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import slick.sql.SqlAction
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject

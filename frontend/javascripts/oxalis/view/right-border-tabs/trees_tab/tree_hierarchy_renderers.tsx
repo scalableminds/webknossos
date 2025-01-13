@@ -11,8 +11,8 @@ import { type MenuProps, notification } from "antd";
 import _ from "lodash";
 import {
   LongUnitToShortUnitMap,
-  TreeTypeEnum,
   type TreeType,
+  TreeTypeEnum,
   type Vector3,
 } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
@@ -38,21 +38,21 @@ import {
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { api, Store } from "oxalis/singletons";
+import { Store, api } from "oxalis/singletons";
 import type { Tree, TreeGroup, TreeMap } from "oxalis/store";
 import {
+  GroupTypeEnum,
+  MISSING_GROUP_ID,
+  type TreeNode,
   anySatisfyDeep,
   callDeep,
   createGroupToTreesMap,
   getGroupByIdWithSubgroups,
   getNodeKey,
-  GroupTypeEnum,
   makeBasicGroupObject,
-  MISSING_GROUP_ID,
-  type TreeNode,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
-import { ColoredDotIcon } from "./segments_tab/segment_list_item";
+import { ColoredDotIcon } from "../segments_tab/segment_list_item";
+import { HideTreeEdgesIcon } from "./hide_tree_edges_icon";
 
 export type Props = {
   activeTreeId: number | null | undefined;
@@ -87,10 +87,10 @@ export function renderTreeNode(
 
   return (
     <div
-      className="nowrap"
       onContextMenu={(evt) =>
         onOpenContextMenu(createMenuForTree(tree, props, hideContextMenu), evt)
       }
+      style={{ wordBreak: "break-word" }}
     >
       <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
       {`(${tree.nodes.size()}) `} {maybeProofreadingIcon} {tree.name}
@@ -140,6 +140,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
         onClick: () => {
           props.deselectAllTrees();
           Store.dispatch(deleteTreeAction(tree.treeId));
+          hideContextMenu();
         },
         title: "Delete Tree",
         disabled: isEditingDisabled,
@@ -208,18 +209,16 @@ export function renderGroupNode(
   const displayableName = name.trim() || "<Unnamed Group>";
   return (
     <div
-      className="nowrap"
       onContextMenu={(evt) =>
         onOpenContextMenu(
           createMenuForTreeGroup(props, hideContextMenu, node, expandedNodeKeys),
           evt,
         )
       }
+      style={{ wordBreak: "break-word" }}
     >
-      <span>
-        <FolderOutlined className="icon-margin-right" />
-        {displayableName}
-      </span>
+      <FolderOutlined className="icon-margin-right" />
+      {displayableName}
     </div>
   );
 }

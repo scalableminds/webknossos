@@ -1,67 +1,74 @@
-import PriorityQueue from "js-priority-queue";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
-import TWEEN from "tween.js";
-import _ from "lodash";
-import type { Bucket, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
-import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_flow_types";
-import { InputKeyboardNoLoop } from "libs/input";
-import { M4x4, type Matrix4x4, V3, type Vector16 } from "libs/mjs";
-import type { Versions } from "oxalis/view/version_view";
-import {
-  addTreesAndGroupsAction,
-  setActiveNodeAction,
-  createCommentAction,
-  deleteNodeAction,
-  centerActiveNodeAction,
-  deleteTreeAction,
-  resetSkeletonTracingAction,
-  setNodeRadiusAction,
-  setTreeNameAction,
-  setActiveTreeAction,
-  setActiveTreeGroupAction,
-  setActiveTreeByNameAction,
-  setTreeColorIndexAction,
-  setTreeVisibilityAction,
-  setTreeGroupAction,
-  setTreeGroupsAction,
-  setTreeEdgeVisibilityAction,
-  createTreeAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import {
-  bucketPositionToGlobalAddress,
-  globalPositionToBucketPosition,
-  scaleGlobalPositionWithMagnification,
-  zoomedAddressToZoomedPosition,
-} from "oxalis/model/helpers/position_converter";
-import {
-  callDeep,
-  createGroupToSegmentsMap,
-  MISSING_GROUP_ID,
-  moveGroupsHelper,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
-import { disableSavingAction, discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
   doWithToken,
+  downsampleSegmentation,
   finishAnnotation,
   getMappingsForDatasetLayer,
-  requestTask,
-  downsampleSegmentation,
   sendAnalyticsEvent,
 } from "admin/admin_rest_api";
+import { requestTask } from "admin/api/tasks";
+import PriorityQueue from "js-priority-queue";
+import { InputKeyboardNoLoop } from "libs/input";
+import { M4x4, type Matrix4x4, V3, type Vector16 } from "libs/mjs";
+import Request from "libs/request";
+import type { ToastStyle } from "libs/toast";
+import Toast from "libs/toast";
+import UserLocalStorage from "libs/user_local_storage";
+import * as Utils from "libs/utils";
+import { coalesce } from "libs/utils";
+import window, { location } from "libs/window";
+import _ from "lodash";
+import messages from "messages";
+import type {
+  AnnotationTool,
+  BoundingBoxType,
+  BucketAddress,
+  ControlMode,
+  OrthoView,
+  TypedArray,
+  Vector3,
+  Vector4,
+} from "oxalis/constants";
+import Constants, {
+  ControlModeEnum,
+  OrthoViews,
+  AnnotationToolEnum,
+  TDViewDisplayModeEnum,
+  MappingStatusEnum,
+  EMPTY_OBJECT,
+} from "oxalis/constants";
+import { rotate3DViewTo } from "oxalis/controller/camera_controller";
+import { loadAgglomerateSkeletonForSegmentId } from "oxalis/controller/combinations/segmentation_handlers";
+import {
+  createSkeletonNode,
+  getOptionsForCreateSkeletonNode,
+} from "oxalis/controller/combinations/skeleton_handlers";
+import UrlManager from "oxalis/controller/url_manager";
+import type { OxalisModel } from "oxalis/model";
+import {
+  flatToNestedMatrix,
+  getLayerBoundingBox,
+  getLayerByName,
+  getMagInfo,
+  getMappingInfo,
+  getVisibleSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
+import {
+  getActiveMagIndexForLayer,
+  getPosition,
+  getRotation,
+} from "oxalis/model/accessors/flycam_accessor";
 import {
   findTreeByNodeId,
-  getNodeAndTree,
-  getNodeAndTreeOrNull,
   getActiveNode,
   getActiveTree,
   getActiveTreeGroup,
-  getTree,
   getFlatTreeGroups,
+  getNodeAndTree,
+  getNodeAndTreeOrNull,
+  getNodePosition,
+  getTree,
   getTreeGroupsMap,
   mapGroups,
-  getNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getActiveCellId,
@@ -78,28 +85,50 @@ import {
   getVolumeTracings,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getHalfViewportExtentsInUnitFromState } from "oxalis/model/sagas/saga_selectors";
+import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import {
-  getLayerBoundingBox,
-  getLayerByName,
-  getMagInfo,
-  getVisibleSegmentationLayer,
-  getMappingInfo,
-  flatToNestedMatrix,
-} from "oxalis/model/accessors/dataset_accessor";
-import {
-  getPosition,
-  getActiveMagIndexForLayer,
-  getRotation,
-} from "oxalis/model/accessors/flycam_accessor";
+  dispatchMaybeFetchMeshFilesAsync,
+  refreshMeshesAction,
+  removeMeshAction,
+  updateCurrentMeshFileAction,
+  updateMeshVisibilityAction,
+} from "oxalis/model/actions/annotation_actions";
+import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
+import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { disableSavingAction, discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
-import { loadAgglomerateSkeletonForSegmentId } from "oxalis/controller/combinations/segmentation_handlers";
-import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
-import { parseNml } from "oxalis/model/helpers/nml_helpers";
-import { rotate3DViewTo } from "oxalis/controller/camera_controller";
+import {
+  setMappingAction,
+  setMappingEnabledAction,
+  updateDatasetSettingAction,
+  updateLayerSettingAction,
+  updateUserSettingAction,
+} from "oxalis/model/actions/settings_actions";
+import {
+  addTreesAndGroupsAction,
+  centerActiveNodeAction,
+  createCommentAction,
+  createTreeAction,
+  deleteNodeAction,
+  deleteTreeAction,
+  resetSkeletonTracingAction,
+  setActiveNodeAction,
+  setActiveTreeAction,
+  setActiveTreeByNameAction,
+  setActiveTreeGroupAction,
+  setNodeRadiusAction,
+  setTreeColorIndexAction,
+  setTreeEdgeVisibilityAction,
+  setTreeGroupAction,
+  setTreeGroupsAction,
+  setTreeNameAction,
+  setTreeVisibilityAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
+import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import {
   type BatchableUpdateSegmentAction,
   batchUpdateGroupsAndSegmentsAction,
@@ -109,79 +138,50 @@ import {
   setSegmentGroupsAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
-import { setToolAction } from "oxalis/model/actions/ui_actions";
-import {
-  updateCurrentMeshFileAction,
-  refreshMeshesAction,
-  updateMeshVisibilityAction,
-  removeMeshAction,
-  dispatchMaybeFetchMeshFilesAsync,
-} from "oxalis/model/actions/annotation_actions";
-import {
-  updateUserSettingAction,
-  updateDatasetSettingAction,
-  updateLayerSettingAction,
-  setMappingAction,
-  setMappingEnabledAction,
-} from "oxalis/model/actions/settings_actions";
-import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
-import type {
-  BoundingBoxType,
-  ControlMode,
-  OrthoView,
-  Vector3,
-  Vector4,
-  AnnotationTool,
-  TypedArray,
-  BucketAddress,
-} from "oxalis/constants";
-import Constants, {
-  ControlModeEnum,
-  OrthoViews,
-  AnnotationToolEnum,
-  TDViewDisplayModeEnum,
-  MappingStatusEnum,
-  EMPTY_OBJECT,
-} from "oxalis/constants";
+import type { Bucket, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import type DataLayer from "oxalis/model/data_layer";
-import type { OxalisModel } from "oxalis/model";
+import dimensions from "oxalis/model/dimensions";
+import { MagInfo } from "oxalis/model/helpers/mag_info";
+import { parseNml } from "oxalis/model/helpers/nml_helpers";
+import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
+import {
+  bucketPositionToGlobalAddress,
+  globalPositionToBucketPosition,
+  scaleGlobalPositionWithMagnification,
+  zoomedAddressToZoomedPosition,
+} from "oxalis/model/helpers/position_converter";
+import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { getHalfViewportExtentsInUnitFromState } from "oxalis/model/sagas/saga_selectors";
 import { Model, api } from "oxalis/singletons";
-import Request from "libs/request";
 import type {
-  MappingType,
   DatasetConfiguration,
   Mapping,
+  MappingType,
+  MutableNode,
   Node,
+  OxalisState,
+  Segment,
+  SegmentGroup,
   SkeletonTracing,
   Tracing,
   TreeGroupTypeFlat,
   TreeMap,
   UserConfiguration,
   VolumeTracing,
-  OxalisState,
-  SegmentGroup,
-  Segment,
-  MutableNode,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import type { ToastStyle } from "libs/toast";
-import Toast from "libs/toast";
-import UrlManager from "oxalis/controller/url_manager";
-import UserLocalStorage from "libs/user_local_storage";
-import * as Utils from "libs/utils";
-import dimensions from "oxalis/model/dimensions";
-import messages from "messages";
-import window, { location } from "libs/window";
-import { coalesce } from "libs/utils";
-import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
-import { MagInfo } from "oxalis/model/helpers/mag_info";
-import type { AdditionalCoordinate } from "types/api_flow_types";
-import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
-  createSkeletonNode,
-  getOptionsForCreateSkeletonNode,
-} from "oxalis/controller/combinations/skeleton_handlers";
+  MISSING_GROUP_ID,
+  callDeep,
+  createGroupToSegmentsMap,
+  moveGroupsHelper,
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import type { Versions } from "oxalis/view/version_view";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
+import TWEEN from "tween.js";
+import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -625,8 +625,9 @@ class TracingApi {
    * @example
    * api.tracing.registerSegment(
    *   3,
-   *   "volume-layer-id"
    *   [1, 2, 3],
+   *   null,             // optional
+   *   "volume-layer-id" // optional
    * );
    */
   registerSegment(
@@ -669,15 +670,13 @@ class TracingApi {
       );
     }
 
-    const resolutionInfo = getMagInfo(
-      getLayerByName(state.dataset, segmentationLayerName).resolutions,
-    );
+    const magInfo = getMagInfo(getLayerByName(state.dataset, segmentationLayerName).resolutions);
     const theoreticalMagIndex = getActiveMagIndexForLayer(state, segmentationLayerName);
-    const existingMagIndex = resolutionInfo.getIndexOrClosestHigherIndex(theoreticalMagIndex);
+    const existingMagIndex = magInfo.getIndexOrClosestHigherIndex(theoreticalMagIndex);
     if (existingMagIndex == null) {
       throw new Error("The index of the current mag could not be found.");
     }
-    const currentMag = resolutionInfo.getMagByIndex(existingMagIndex);
+    const currentMag = magInfo.getMagByIndex(existingMagIndex);
     if (currentMag == null) {
       throw new Error("No mag could be found.");
     }
@@ -1842,8 +1841,8 @@ class DataApi {
       zoomStep = _zoomStep;
     } else {
       const layer = getLayerByName(Store.getState().dataset, layerName);
-      const resolutionInfo = getMagInfo(layer.resolutions);
-      zoomStep = resolutionInfo.getFinestMagIndex();
+      const magInfo = getMagInfo(layer.resolutions);
+      zoomStep = magInfo.getFinestMagIndex();
     }
 
     const cube = this.model.getCubeByLayerName(layerName);
@@ -1899,19 +1898,19 @@ class DataApi {
     additionalCoordinates: AdditionalCoordinate[] | null = null,
   ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
-    const resolutionInfo = getMagInfo(layer.resolutions);
+    const magInfo = getMagInfo(layer.resolutions);
     let zoomStep;
 
     if (_zoomStep != null) {
       zoomStep = _zoomStep;
     } else {
-      zoomStep = resolutionInfo.getFinestMagIndex();
+      zoomStep = magInfo.getFinestMagIndex();
     }
 
-    const resolutions = resolutionInfo.getDenseMags();
+    const mags = magInfo.getDenseMags();
     const bucketAddresses = this.getBucketAddressesInCuboid(
       mag1Bbox,
-      resolutions,
+      mags,
       zoomStep,
       additionalCoordinates,
     );
@@ -1926,13 +1925,13 @@ class DataApi {
       bucketAddresses.map((addr) => this.getLoadedBucket(layerName, addr)),
     );
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
-    return this.cutOutCuboid(buckets, mag1Bbox, elementClass, resolutions, zoomStep);
+    return this.cutOutCuboid(buckets, mag1Bbox, elementClass, mags, zoomStep);
   }
 
   async getViewportData(
     viewport: OrthoView,
     layerName: string,
-    maybeResolutionIndex: number | null | undefined,
+    maybeMagIndex: number | null | undefined,
     additionalCoordinates: AdditionalCoordinate[] | null,
   ) {
     const state = Store.getState();
@@ -1945,11 +1944,11 @@ class DataApi {
       viewport,
     );
     const layer = getLayerByName(state.dataset, layerName);
-    const resolutionInfo = getMagInfo(layer.resolutions);
-    if (maybeResolutionIndex == null) {
-      maybeResolutionIndex = getActiveMagIndexForLayer(state, layerName);
+    const magInfo = getMagInfo(layer.resolutions);
+    if (maybeMagIndex == null) {
+      maybeMagIndex = getActiveMagIndexForLayer(state, layerName);
     }
-    const zoomStep = resolutionInfo.getClosestExistingIndex(maybeResolutionIndex);
+    const zoomStep = magInfo.getClosestExistingIndex(maybeMagIndex);
 
     const min = dimensions.transDim(
       V3.sub([curU, curV, curW], [halfViewportExtentU, halfViewportExtentV, 0]),
@@ -1960,10 +1959,10 @@ class DataApi {
       viewport,
     );
 
-    const resolution = resolutionInfo.getMagByIndexOrThrow(zoomStep);
-    const resolutionUVX = dimensions.transDim(resolution, viewport);
-    const widthInVoxel = Math.ceil(halfViewportExtentU / resolutionUVX[0]);
-    const heightInVoxel = Math.ceil(halfViewportExtentV / resolutionUVX[1]);
+    const mag = magInfo.getMagByIndexOrThrow(zoomStep);
+    const magUVX = dimensions.transDim(mag, viewport);
+    const widthInVoxel = Math.ceil(halfViewportExtentU / magUVX[0]);
+    const heightInVoxel = Math.ceil(halfViewportExtentV / magUVX[1]);
     if (widthInVoxel * heightInVoxel > 1024 ** 2) {
       throw new Error(
         "Requested data for viewport cannot be loaded, since the amount of data is too large for the available magnification. Please zoom in further or ensure that coarser magnifications are available.",
@@ -2035,12 +2034,12 @@ class DataApi {
     magnifications: Array<Vector3>,
     zoomStep: number,
   ): TypedArray {
-    const resolution = magnifications[zoomStep];
+    const mag = magnifications[zoomStep];
     // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
     // by the mag
-    const topLeft = scaleGlobalPositionWithMagnification(bbox.min, resolution);
+    const topLeft = scaleGlobalPositionWithMagnification(bbox.min, mag);
     // Ceil the bounding box bottom right instead of flooring, because it is exclusive
-    const bottomRight = scaleGlobalPositionWithMagnification(bbox.max, resolution, true);
+    const bottomRight = scaleGlobalPositionWithMagnification(bbox.max, mag, true);
     const extent: Vector3 = V3.sub(bottomRight, topLeft);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(elementClass);
     const result = new TypedArrayClass(channelCount * extent[0] * extent[1] * extent[2]);
@@ -2106,12 +2105,12 @@ class DataApi {
     magnification?: Vector3,
   ): string {
     const { dataset } = Store.getState();
-    const resolutionInfo = getMagInfo(getLayerByName(dataset, layerName, true).resolutions);
-    magnification = magnification || resolutionInfo.getFinestMag();
+    const magInfo = getMagInfo(getLayerByName(dataset, layerName, true).resolutions);
+    magnification = magnification || magInfo.getFinestMag();
 
     const magString = magnification.join("-");
     return (
-      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/data?mag=${magString}&` +
+      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.directoryName}/layers/${layerName}/data?mag=${magString}&` +
       `token=${token}&` +
       `x=${Math.floor(topLeft[0])}&` +
       `y=${Math.floor(topLeft[1])}&` +

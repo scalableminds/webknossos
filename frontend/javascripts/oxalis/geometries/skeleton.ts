@@ -1,19 +1,19 @@
-import * as THREE from "three";
-import _ from "lodash";
 import type Maybe from "data.maybe";
-import type { Tree, Node, Edge, OxalisState, SkeletonTracing } from "oxalis/store";
+import * as Utils from "libs/utils";
+import _ from "lodash";
 import type { Vector3, Vector4 } from "oxalis/constants";
-import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import EdgeShader from "oxalis/geometries/materials/edge_shader";
 import NodeShader, {
   NodeTypes,
   COLOR_TEXTURE_WIDTH,
 } from "oxalis/geometries/materials/node_shader";
+import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
+import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
+import type { CreateActionNode, UpdateActionNode } from "oxalis/model/sagas/update_actions";
+import type { Edge, Node, OxalisState, SkeletonTracing, Tree } from "oxalis/store";
 import Store from "oxalis/throttled_store";
-import * as Utils from "libs/utils";
+import * as THREE from "three";
 import type { AdditionalCoordinate } from "types/api_flow_types";
-import type { UpdateActionNode } from "oxalis/model/sagas/update_actions";
 
 const MAX_CAPACITY = 1000;
 
@@ -518,7 +518,7 @@ class Skeleton {
   /**
    * Creates a new node in a WebGL buffer.
    */
-  createNode(treeId: number, node: Node | UpdateActionNode) {
+  createNode(treeId: number, node: Node | UpdateActionNode | CreateActionNode) {
     const id = this.combineIds(node.id, treeId);
     this.create(
       id,

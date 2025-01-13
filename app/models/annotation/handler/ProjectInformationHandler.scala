@@ -7,7 +7,7 @@ import models.annotation._
 import models.project.ProjectDAO
 import models.user.{User, UserService}
 
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 

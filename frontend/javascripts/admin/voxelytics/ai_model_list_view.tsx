@@ -1,21 +1,21 @@
-import _ from "lodash";
-import { useState } from "react";
 import { PlusOutlined, SyncOutlined } from "@ant-design/icons";
-import { Table, Button, Modal, Space } from "antd";
 import { getAiModels } from "admin/admin_rest_api";
-import type { AiModel, APIAnnotation } from "types/api_flow_types";
+import { JobState, getShowTrainingDataLink } from "admin/job/job_list_view";
+import { Button, Modal, Space, Table } from "antd";
 import FormattedDate from "components/formatted_date";
-import { formatUserName } from "oxalis/model/accessors/user_accessor";
-import { useSelector } from "react-redux";
-import type { OxalisState } from "oxalis/store";
-import { JobState } from "admin/job/job_list_view";
-import { Link } from "react-router-dom";
-import { useGuardedFetch } from "libs/react_helpers";
 import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
-import { type AnnotationInfoForAIJob, TrainAiModelTab } from "oxalis/view/jobs/train_ai_model";
-import { getMagInfo, getSegmentationLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import { useGuardedFetch } from "libs/react_helpers";
+import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
+import { getMagInfo, getSegmentationLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
+import type { OxalisState } from "oxalis/store";
+import { type AnnotationInfoForAIJob, TrainAiModelTab } from "oxalis/view/jobs/train_ai_model";
+import { useState } from "react";
 import type { Key } from "react";
+import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
+import type { APIAnnotation, AiModel } from "types/api_flow_types";
 
 export default function AiModelListView() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
@@ -109,7 +109,7 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
     AnnotationInfoForAIJob<APIAnnotation>[]
   >([]);
 
-  const getMagForSegmentationLayer = async (annotationId: string, layerName: string) => {
+  const getMagsForSegmentationLayer = (annotationId: string, layerName: string) => {
     // The layer name is a human-readable one. It can either belong to an annotationLayer
     // (therefore, also to a volume tracing) or to the actual dataset.
     // Both are checked below. This won't be ambiguous because annotationLayers must not
@@ -129,11 +129,11 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
       const volumeTracingIndex = volumeTracings.findIndex(
         (tracing) => tracing.tracingId === annotationLayer.tracingId,
       );
-      const resolutions = volumeTracingMags[volumeTracingIndex] || ([[1, 1, 1]] as Vector3[]);
-      return getMagInfo(resolutions).getFinestMag();
+      const mags = volumeTracingMags[volumeTracingIndex] || ([[1, 1, 1]] as Vector3[]);
+      return getMagInfo(mags);
     } else {
       const segmentationLayer = getSegmentationLayerByName(dataset, layerName);
-      return getMagInfo(segmentationLayer.resolutions).getFinestMag();
+      return getMagInfo(segmentationLayer.resolutions);
     }
   };
 
@@ -152,7 +152,7 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
       maskClosable={false}
     >
       <TrainAiModelTab
-        getMagForSegmentationLayer={getMagForSegmentationLayer}
+        getMagsForSegmentationLayer={getMagsForSegmentationLayer}
         onClose={onClose}
         annotationInfos={annotationInfosForAiJob}
         onAddAnnotationsInfos={(newItems) => {
@@ -177,45 +177,7 @@ const renderActionsForModel = (model: AiModel) => {
           <br />
         </>
       ) : null}
-      {trainingAnnotations == null ? null : trainingAnnotations.length > 1 ? (
-        <a
-          href="#"
-          onClick={() => {
-            Modal.info({
-              content: (
-                <div>
-                  The following annotations were used during training:
-                  <ul>
-                    {trainingAnnotations.map(
-                      (annotation: { annotationId: string }, index: number) => (
-                        <li key={`annotation_${index}`}>
-                          <a
-                            href={`/annotations/${annotation.annotationId}`}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                          >
-                            Annotation {index + 1}
-                          </a>
-                        </li>
-                      ),
-                    )}
-                  </ul>
-                </div>
-              ),
-            });
-          }}
-        >
-          Show Training Data
-        </a>
-      ) : (
-        <a
-          href={`/annotations/${trainingAnnotations[0].annotationId}`}
-          target="_blank"
-          rel="noreferrer noopener"
-        >
-          Show Training Data
-        </a>
-      )}
+      {getShowTrainingDataLink(trainingAnnotations)}
     </div>
   );
 };

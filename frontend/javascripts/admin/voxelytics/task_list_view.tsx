@@ -1,36 +1,47 @@
-import React, { useEffect, useState, useMemo } from "react";
 import {
-  Collapse,
-  Input,
-  Row,
-  Col,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined,
+  ExportOutlined,
+  FieldTimeOutlined,
+  LeftOutlined,
+  MinusCircleOutlined,
+  SyncOutlined,
+} from "@ant-design/icons";
+import {
+  App,
   Button,
+  Col,
+  Collapse,
+  type CollapseProps,
   Dropdown,
-  notification,
-  message,
+  Input,
+  type MenuProps,
+  Row,
+  Select,
   Tag,
   Tooltip,
-  Select,
-  type MenuProps,
-  App,
-  type CollapseProps,
+  message,
+  notification,
 } from "antd";
-import {
-  ClockCircleOutlined,
-  MinusCircleOutlined,
-  CloseCircleOutlined,
-  SyncOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-  LeftOutlined,
-  FieldTimeOutlined,
-  ExportOutlined,
-} from "@ant-design/icons";
 import MiniSearch from "minisearch";
+import React, { useEffect, useState, useMemo } from "react";
 
-import { Link, useHistory, useLocation, useParams } from "react-router-dom";
+import { deleteWorkflow, getVoxelyticsLogs } from "admin/admin_rest_api";
 import dayjs from "dayjs";
+import {
+  formatDateMedium,
+  formatDurationStrict,
+  formatTimeInterval,
+  formatTimeIntervalStrict,
+} from "libs/format_utils";
 import { useSearchParams, useUpdateEvery } from "libs/react_hooks";
+import { notEmpty } from "libs/utils";
+import { LOG_LEVELS } from "oxalis/constants";
+import type { OxalisState } from "oxalis/store";
+import { useSelector } from "react-redux";
+import { Link, useHistory, useLocation, useParams } from "react-router-dom";
 import {
   VoxelyticsRunState,
   type VoxelyticsTaskConfig,
@@ -39,21 +50,12 @@ import {
   type VoxelyticsTaskInfo,
   type VoxelyticsWorkflowReport,
 } from "types/api_flow_types";
-import {
-  formatDateMedium,
-  formatTimeInterval,
-  formatTimeIntervalStrict,
-  formatDurationStrict,
-} from "libs/format_utils";
-import DAGView, { colorHasher } from "./dag_view";
-import TaskView from "./task_view";
-import { formatLog } from "./log_tab";
-import { addAfterPadding, addBeforePadding } from "./utils";
-import { LOG_LEVELS } from "oxalis/constants";
-import { getVoxelyticsLogs } from "admin/admin_rest_api";
-import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
-import { notEmpty } from "libs/utils";
 import type { ArrayElement } from "types/globals";
+import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
+import DAGView, { colorHasher } from "./dag_view";
+import { formatLog } from "./log_tab";
+import TaskView from "./task_view";
+import { addAfterPadding, addBeforePadding } from "./utils";
 
 const { Search } = Input;
 
@@ -272,6 +274,8 @@ export default function TaskListView({
   const highlightedTask = params.highlightedTask || "";
   const location = useLocation();
 
+  const isCurrentUserSuperUser = useSelector((state: OxalisState) => state.activeUser?.isSuperUser);
+
   const singleRunId = report.runs.length === 1 ? report.runs[0].id : runId;
 
   useEffect(() => {
@@ -421,6 +425,26 @@ export default function TaskListView({
     }
   }
 
+  async function deleteWorkflowReport() {
+    await modal.confirm({
+      title: "Delete Workflow Report",
+      content:
+        "Are you sure you want to delete this workflow report? This can not be undone. Note that if the workflow is still running, this may cause it to fail.",
+      okText: "Delete",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await deleteWorkflow(report.workflow.hash);
+          history.push("/workflows");
+          message.success("Workflow report deleted.");
+        } catch (error) {
+          console.error(error);
+          message.error("Could not delete workflow report.");
+        }
+      },
+    });
+  }
+
   const overflowMenu: MenuProps = {
     items: [
       { key: "1", onClick: copyAllArtifactPaths, label: "Copy All Artifact Paths" },
@@ -442,6 +466,12 @@ export default function TaskListView({
       { key: "5", onClick: showArtifactsDiskUsageList, label: "Show Disk Usage of Artifacts" },
     ],
   };
+  if (isCurrentUserSuperUser)
+    overflowMenu.items?.push({
+      key: "6",
+      onClick: deleteWorkflowReport,
+      label: "Delete Workflow Report",
+    });
 
   type ItemType = ArrayElement<CollapseProps["items"]>;
 

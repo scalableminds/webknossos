@@ -1,53 +1,53 @@
 import Maybe from "data.maybe";
-import _ from "lodash";
 import update from "immutability-helper";
+import ColorGenerator from "libs/color_generator";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import Constants, { AnnotationToolEnum, TreeTypeEnum } from "oxalis/constants";
+import {
+  findTreeByNodeId,
+  getNodeAndTree,
+  getSkeletonTracing,
+  getTree,
+  getTreesWithType,
+  isSkeletonLayerTransformed,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, SkeletonTracing, Tree, TreeGroup } from "oxalis/store";
 import {
   convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
 } from "oxalis/model/reducers/reducer_helpers";
 import {
+  addTreesAndGroups,
   createBranchPoint,
-  deleteBranchPoint,
+  createComment,
   createNode,
   createTree,
-  deleteTree,
-  deleteNode,
-  deleteEdge,
-  shuffleTreeColor,
-  setTreeColorIndex,
-  createComment,
+  createTreeMapFromTreeArray,
+  deleteBranchPoint,
   deleteComment,
+  deleteEdge,
+  deleteNode,
+  deleteTrees,
+  ensureTreeNames,
+  getOrCreateTree,
   mergeTrees,
+  removeMissingGroupsFromTrees,
+  setExpandedTreeGroups,
+  setTreeColorIndex,
+  shuffleTreeColor,
   toggleAllTreesReducer,
   toggleTreeGroupReducer,
-  addTreesAndGroups,
-  createTreeMapFromTreeArray,
-  removeMissingGroupsFromTrees,
-  getOrCreateTree,
-  ensureTreeNames,
-  setExpandedTreeGroups,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import {
-  getSkeletonTracing,
-  findTreeByNodeId,
-  getTree,
-  getTreesWithType,
-  getNodeAndTree,
-  isSkeletonLayerTransformed,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import ColorGenerator from "libs/color_generator";
-import Constants, { AnnotationToolEnum, TreeTypeEnum } from "oxalis/constants";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import { userSettings } from "types/schemas/user_settings.schema";
+import type { OxalisState, SkeletonTracing, Tree, TreeGroup } from "oxalis/store";
 import {
   GroupTypeEnum,
   getNodeKey,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import type { MetadataEntryProto } from "types/api_flow_types";
+import { userSettings } from "types/schemas/user_settings.schema";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
@@ -602,15 +602,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             // Don't create nodes if the skeleton layer is rendered with transforms.
             return state;
           }
-          const {
-            position,
-            rotation,
-            viewport,
-            resolution,
-            treeId,
-            timestamp,
-            additionalCoordinates,
-          } = action;
+          const { position, rotation, viewport, mag, treeId, timestamp, additionalCoordinates } =
+            action;
           return getOrCreateTree(state, skeletonTracing, treeId, timestamp, TreeTypeEnum.DEFAULT)
             .chain((tree) =>
               createNode(
@@ -621,7 +614,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                 additionalCoordinates,
                 rotation,
                 viewport,
-                resolution,
+                mag,
                 timestamp,
               ).map(([node, edges]) => {
                 const diffableNodeMap = tree.nodes;
@@ -897,10 +890,16 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             .getOrElse(state);
         }
 
-        case "DELETE_TREE": {
-          const { treeId, suppressActivatingNextNode } = action;
-          return getTree(skeletonTracing, treeId)
-            .chain((tree) => deleteTree(skeletonTracing, tree, suppressActivatingNextNode))
+        case "DELETE_TREE":
+        case "DELETE_TREES": {
+          const { suppressActivatingNextNode } = action;
+          const treeIds =
+            action.type === "DELETE_TREE"
+              ? getTree(skeletonTracing, action.treeId) // The treeId in a DELETE_TREE action can be undefined which will select the active tree
+                  .map((tree) => [tree.treeId])
+                  .getOrElse([])
+              : action.treeIds;
+          return deleteTrees(skeletonTracing, treeIds, suppressActivatingNextNode)
             .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
               update(state, {
                 tracing: {

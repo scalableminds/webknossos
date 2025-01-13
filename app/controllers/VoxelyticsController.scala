@@ -1,15 +1,17 @@
 package controllers
 
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.organization.OrganizationDAO
+import models.user.UserService
 import models.voxelytics._
 import play.api.libs.json._
 import play.api.mvc._
 import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.SecuredRequest
 import security.WkEnv
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -19,6 +21,7 @@ class VoxelyticsController @Inject()(
     organizationDAO: OrganizationDAO,
     voxelyticsDAO: VoxelyticsDAO,
     voxelyticsService: VoxelyticsService,
+    userService: UserService,
     lokiClient: LokiClient,
     wkConf: WkConf,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -156,6 +159,17 @@ class VoxelyticsController @Inject()(
           )
         )
       } yield JsonOk(result)
+    }
+
+  def deleteWorkflow(workflowHash: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
+        _ <- userService.assertIsSuperUser(request.identity)
+        _ <- voxelyticsDAO.findWorkflowByHash(workflowHash) ?~> "voxelytics.workflowNotFound" ~> NOT_FOUND
+        _ = logger.info(s"Deleting workflow with hash $workflowHash in organization ${request.identity._organization}")
+        _ <- voxelyticsDAO.deleteWorkflow(workflowHash, request.identity._organization)
+      } yield Ok
     }
 
   def storeWorkflowEvents(workflowHash: String, runName: String): Action[List[WorkflowEvent]] =

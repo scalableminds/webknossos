@@ -1,46 +1,45 @@
-import { Alert, Popover } from "antd";
-import { connect, useDispatch, useSelector } from "react-redux";
-import * as React from "react";
-import type { APIDataset, APIUser } from "types/api_flow_types";
 import { createExplorational } from "admin/admin_rest_api";
-import {
-  layoutEmitter,
-  deleteLayout,
-  getLayoutConfig,
-  addNewLayout,
-} from "oxalis/view/layouting/layout_persistence";
-import { trackAction } from "oxalis/model/helpers/analytics";
-import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import { withAuthentication } from "admin/auth/authentication_modal";
-import { type ViewMode, type ControlMode, MappingStatusEnum } from "oxalis/constants";
+import { Alert, Popover } from "antd";
+import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
+import { isUserAdminOrTeamManager } from "libs/utils";
+import { ArbitraryVectorInput } from "libs/vector_input";
+import { type ControlMode, MappingStatusEnum, type ViewMode } from "oxalis/constants";
 import constants, { ControlModeEnum } from "oxalis/constants";
-import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
+import {
+  doesSupportVolumeWithFallback,
+  getColorLayers,
+  getMappingInfoForSupportedLayer,
+  getUnifiedAdditionalCoordinates,
+  getVisibleSegmentationLayer,
+  is2dDataset,
+} from "oxalis/model/accessors/dataset_accessor";
+import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_actions";
+import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
+import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
+import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
+import ToolbarView from "oxalis/view/action-bar/toolbar_view";
 import TracingActionsView, {
   getLayoutMenu,
   type LayoutProps,
 } from "oxalis/view/action-bar/tracing_actions_view";
 import ViewDatasetActionsView from "oxalis/view/action-bar/view_dataset_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
-import ToolbarView from "oxalis/view/action-bar/toolbar_view";
 import {
-  is2dDataset,
-  doesSupportVolumeWithFallback,
-  getVisibleSegmentationLayer,
-  getMappingInfoForSupportedLayer,
-  getUnifiedAdditionalCoordinates,
-  getColorLayers,
-} from "oxalis/model/accessors/dataset_accessor";
-import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
-import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_actions";
-import { NumberSliderSetting } from "./components/setting_input_views";
-import { ArbitraryVectorInput } from "libs/vector_input";
+  addNewLayout,
+  deleteLayout,
+  getLayoutConfig,
+  layoutEmitter,
+} from "oxalis/view/layouting/layout_persistence";
+import * as React from "react";
+import { connect, useDispatch, useSelector } from "react-redux";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
+import { StartAIJobModal, type StartAIJobModalState } from "./action-bar/starting_job_modals";
 import ButtonComponent from "./components/button_component";
-import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
-import { type StartAIJobModalState, StartAIJobModal } from "./action-bar/starting_job_modals";
-import { isUserAdminOrTeamManager } from "libs/utils";
+import { NumberSliderSetting } from "./components/setting_input_views";
 
 const VersionRestoreWarning = (
   <Alert
@@ -190,13 +189,12 @@ class ActionBarView extends React.PureComponent<Props, State> {
     }
 
     const annotation = await createExplorational(
-      dataset,
+      dataset.id,
       "hybrid",
       false,
       fallbackLayerName,
       maybeMappingName,
     );
-    trackAction("Create hybrid tracing (from view mode)");
     location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${location.hash}`;
   };
 

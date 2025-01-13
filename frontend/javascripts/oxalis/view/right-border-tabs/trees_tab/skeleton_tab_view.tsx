@@ -1,99 +1,99 @@
-import { Dropdown, Empty, Spin, Modal, Tooltip, notification, type MenuProps, Space } from "antd";
-import type { Dispatch } from "redux";
 import {
-  DownloadOutlined,
   DownOutlined,
+  DownloadOutlined,
   ExclamationCircleOutlined,
   SearchOutlined,
   UploadOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import { batchActions } from "redux-batched-actions";
-import { connect } from "react-redux";
+import { BlobReader, BlobWriter, type Entry, ZipReader } from "@zip.js/zip.js";
+import { clearCache, getBuildInfo, importVolumeTracing } from "admin/admin_rest_api";
+import { Dropdown, Empty, type MenuProps, Modal, Space, Spin, Tooltip, notification } from "antd";
 import { saveAs } from "file-saver";
-import { BlobReader, BlobWriter, ZipReader, type Entry } from "@zip.js/zip.js";
-import * as React from "react";
+import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
+import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import type { Action } from "oxalis/model/actions/actions";
-import { addUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
+import messages from "messages";
+import { LongUnitToShortUnitMap } from "oxalis/constants";
+import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 import {
-  createGroupToTreesMap,
-  callDeep,
-  MISSING_GROUP_ID,
-  GroupTypeEnum,
-  createGroupToParentMap,
-  additionallyExpandGroup,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
-import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import {
+  enforceSkeletonTracing,
   getActiveTree,
   getActiveTreeGroup,
   getTree,
-  enforceSkeletonTracing,
   isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getBuildInfo, importVolumeTracing, clearCache } from "admin/admin_rest_api";
+import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import type { Action } from "oxalis/model/actions/actions";
+import { addUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
+import { setVersionNumberAction } from "oxalis/model/actions/save_actions";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import {
+  type BatchableUpdateTreeAction,
+  addTreesAndGroupsAction,
+  batchUpdateGroupsAndTreesAction,
+  createTreeAction,
+  deleteTreeAsUserAction,
+  deleteTreesAction,
+  deselectActiveTreeAction,
+  deselectActiveTreeGroupAction,
+  selectNextTreeAction,
+  setActiveTreeAction,
+  setActiveTreeGroupAction,
+  setExpandedTreeGroupsByIdsAction,
+  setTreeGroupAction,
+  setTreeGroupsAction,
+  setTreeNameAction,
+  shuffleAllTreeColorsAction,
+  toggleAllTreesAction,
+  toggleInactiveTreesAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import {
   importVolumeTracingAction,
   setLargestSegmentIdAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
-import { readFileAsText, readFileAsArrayBuffer } from "libs/read_file";
 import {
-  serializeToNml,
+  NmlParseError,
   getNmlName,
   parseNml,
+  serializeToNml,
   wrapInNewGroup,
-  NmlParseError,
 } from "oxalis/model/helpers/nml_helpers";
-import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import {
-  setTreeNameAction,
-  createTreeAction,
-  deleteTreeAction,
-  deleteTreeAsUserAction,
-  shuffleAllTreeColorsAction,
-  selectNextTreeAction,
-  toggleAllTreesAction,
-  toggleInactiveTreesAction,
-  setActiveTreeAction,
-  deselectActiveTreeAction,
-  deselectActiveTreeGroupAction,
-  setActiveTreeGroupAction,
-  setTreeGroupAction,
-  setTreeGroupsAction,
-  addTreesAndGroupsAction,
-  type BatchableUpdateTreeAction,
-  batchUpdateGroupsAndTreesAction,
-  setExpandedTreeGroupsByIdsAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { setVersionNumberAction } from "oxalis/model/actions/save_actions";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import ButtonComponent from "oxalis/view/components/button_component";
-import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
-import InputComponent from "oxalis/view/components/input_component";
+import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
+import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { Model } from "oxalis/singletons";
+import { api } from "oxalis/singletons";
 import type {
+  MutableTreeMap,
   OxalisState,
   Tree,
-  TreeMap,
   TreeGroup,
-  MutableTreeMap,
+  TreeMap,
   UserBoundingBox,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import Toast from "libs/toast";
-import TreeHierarchyView from "oxalis/view/right-border-tabs/tree_hierarchy_view";
-import * as Utils from "libs/utils";
-import { api } from "oxalis/singletons";
-import messages from "messages";
-import AdvancedSearchPopover from "./advanced_search_popover";
-import DeleteGroupModalView from "./delete_group_modal_view";
-import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
-import { LongUnitToShortUnitMap } from "oxalis/constants";
+import ButtonComponent from "oxalis/view/components/button_component";
+import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
+import InputComponent from "oxalis/view/components/input_component";
+import {
+  GroupTypeEnum,
+  MISSING_GROUP_ID,
+  additionallyExpandGroup,
+  callDeep,
+  createGroupToParentMap,
+  createGroupToTreesMap,
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import TreeHierarchyView from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view";
+import * as React from "react";
+import { connect } from "react-redux";
+import type { Dispatch } from "redux";
+import { batchActions } from "redux-batched-actions";
+import AdvancedSearchPopover from "../advanced_search_popover";
+import DeleteGroupModalView from "../delete_group_modal_view";
 
 const { confirm } = Modal;
 const treeTabId = "tree-list";
@@ -365,7 +365,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         _groups: Array<TreeGroup>,
         _groupToTreesMap: Record<number, Array<Tree>>,
         _sortBy: string,
-      ): Generator<TreeOrTreeGroup, void, void> {
+      ): Generator<TreeOrTreeGroup, void, undefined> {
         for (const group of _groups) {
           yield makeGroup(group);
 
@@ -380,7 +380,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
             // Trees are sorted by the sortBy property
             const sortedTrees = _.orderBy(_groupToTreesMap[group.groupId], [_sortBy], ["asc"]);
 
-            // @ts-expect-error ts-migrate(2766) FIXME: Cannot delegate iteration to value because the 'ne... Remove this comment to see the full error message
             yield* sortedTrees.map(makeTree);
           }
         }
@@ -459,11 +458,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
     checkAndConfirmDeletingInitialNode(treeIdsToDelete).then(() => {
       // Update the store at once
-      const deleteTreeActions: BatchableUpdateTreeAction[] = treeIdsToDelete.map((treeId) =>
-        deleteTreeAction(treeId),
-      );
       this.props.onBatchUpdateGroupsAndTreesAction(
-        updateTreeActions.concat(deleteTreeActions, [setTreeGroupsAction(newTreeGroups)]),
+        updateTreeActions.concat([
+          deleteTreesAction(treeIdsToDelete),
+          setTreeGroupsAction(newTreeGroups),
+        ]),
       );
     });
   };
@@ -511,8 +510,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     if (selectedTreeCount > 0) {
       const deleteAllSelectedTrees = () => {
         checkAndConfirmDeletingInitialNode(selectedTreeIds).then(() => {
-          const deleteTreeActions = selectedTreeIds.map((treeId) => deleteTreeAction(treeId));
-          this.props.onBatchActions(deleteTreeActions, "DELETE_TREE");
+          this.props.onDeleteTrees(selectedTreeIds);
           this.setState({
             selectedTreeIds: [],
           });
@@ -853,7 +851,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     );
 
     return (
-      <div id={treeTabId} className="padded-tab-content">
+      <div id={treeTabId} className="padded-tab-content" style={{ overflow: "hidden" }}>
         <DomVisibilityObserver targetId={treeTabId}>
           {(isVisibleInDom) =>
             !isVisibleInDom ? null : (
@@ -871,52 +869,57 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <Spin />
                 </Modal>
                 <Space.Compact className="compact-icons">
-                  <AdvancedSearchPopover
-                    onSelect={this.handleSearchSelect}
-                    data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
-                    searchKey="name"
-                    provideShortcut
-                    targetId={treeTabId}
-                    onSelectAllMatches={this.handleSelectAllMatchingTrees}
-                  >
-                    <ButtonComponent title="Open the search via CTRL + Shift + F">
-                      <SearchOutlined />
+                  <div className="compact-buttons">
+                    <AdvancedSearchPopover
+                      onSelect={this.handleSearchSelect}
+                      data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
+                      searchKey="name"
+                      provideShortcut
+                      targetId={treeTabId}
+                      onSelectAllMatches={this.handleSelectAllMatchingTrees}
+                    >
+                      <ButtonComponent
+                        title="Open the search via CTRL + Shift + F"
+                        className="firstButton"
+                      >
+                        <SearchOutlined />
+                      </ButtonComponent>
+                    </AdvancedSearchPopover>
+                    <ButtonComponent
+                      onClick={this.props.onCreateTree}
+                      title={isEditingDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
+                      disabled={isEditingDisabled}
+                    >
+                      <i className="fas fa-plus" />
                     </ButtonComponent>
-                  </AdvancedSearchPopover>
-                  <ButtonComponent
-                    onClick={this.props.onCreateTree}
-                    title={isEditingDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
-                    disabled={isEditingDisabled}
-                  >
-                    <i className="fas fa-plus" />
-                  </ButtonComponent>
-                  <ButtonComponent
-                    onClick={this.handleDelete}
-                    title={isEditingDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
-                    disabled={isEditingDisabled}
-                  >
-                    <i className="far fa-trash-alt" />
-                  </ButtonComponent>
-                  <ButtonComponent
-                    onClick={this.toggleAllTrees}
-                    title="Toggle Visibility of All Trees (1)"
-                    disabled={isEditingDisabled}
-                  >
-                    <i className="fas fa-toggle-on" />
-                  </ButtonComponent>
-                  <ButtonComponent
-                    onClick={this.toggleInactiveTrees}
-                    title="Toggle Visibility of Inactive Trees (2)"
-                    disabled={isEditingDisabled}
-                  >
-                    <i className="fas fa-toggle-off" />
-                  </ButtonComponent>
-                  <Dropdown menu={this.getActionsDropdown()} trigger={["click"]}>
-                    <ButtonComponent>
-                      More
-                      <DownOutlined />
+                    <ButtonComponent
+                      onClick={this.handleDelete}
+                      title={isEditingDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
+                      disabled={isEditingDisabled}
+                    >
+                      <i className="far fa-trash-alt" />
                     </ButtonComponent>
-                  </Dropdown>
+                    <ButtonComponent
+                      onClick={this.toggleAllTrees}
+                      title="Toggle Visibility of All Trees (1)"
+                      disabled={isEditingDisabled}
+                    >
+                      <i className="fas fa-toggle-on" />
+                    </ButtonComponent>
+                    <ButtonComponent
+                      onClick={this.toggleInactiveTrees}
+                      title="Toggle Visibility of Inactive Trees (2)"
+                      disabled={isEditingDisabled}
+                    >
+                      <i className="fas fa-toggle-off" />
+                    </ButtonComponent>
+                    <Dropdown menu={this.getActionsDropdown()} trigger={["click"]}>
+                      <ButtonComponent style={{ overflow: "clip" }} className="lastButton">
+                        More
+                        <DownOutlined />
+                      </ButtonComponent>
+                    </Dropdown>
+                  </div>
                 </Space.Compact>
                 <Space.Compact className="compact-icons compact-items">
                   <ButtonComponent
@@ -939,7 +942,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     <i className="fas fa-arrow-right" />
                   </ButtonComponent>
                   <Dropdown menu={this.getSettingsDropdown()} trigger={["click"]}>
-                    <ButtonComponent title="Sort">
+                    <ButtonComponent title="Sort" style={{ overflow: "clip" }}>
                       <i className="fas fa-sort-alpha-down" />
                     </ButtonComponent>
                   </Dropdown>
@@ -1027,6 +1030,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   onDeleteTree() {
     dispatch(deleteTreeAsUserAction());
+  },
+
+  onDeleteTrees(treeIds: number[]) {
+    dispatch(deleteTreesAction(treeIds));
   },
 
   onBatchActions(actions: Array<Action>, actionName: string) {

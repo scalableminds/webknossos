@@ -1,33 +1,33 @@
 import Maybe from "data.maybe";
 import _ from "lodash";
+import type { TreeType, Vector3 } from "oxalis/constants";
 import type {
-  ServerTracing,
-  ServerSkeletonTracing,
-  APIAnnotation,
-  AnnotationLayerDescriptor,
-} from "types/api_flow_types";
-import type {
-  Tracing,
-  SkeletonTracing,
-  Tree,
-  TreeMap,
   BranchPoint,
+  Node,
+  NumberLike,
+  OxalisState,
+  SkeletonTracing,
+  Tracing,
+  Tree,
   TreeGroup,
   TreeGroupTypeFlat,
-  Node,
-  OxalisState,
-  NumberLike,
+  TreeMap,
 } from "oxalis/store";
 import {
-  findGroup,
   MISSING_GROUP_ID,
+  findGroup,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import type { TreeType, Vector3 } from "oxalis/constants";
+import type {
+  APIAnnotation,
+  AnnotationLayerDescriptor,
+  ServerSkeletonTracing,
+  ServerTracing,
+} from "types/api_flow_types";
+import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
 import {
   getTransformsForSkeletonLayer,
   getTransformsForSkeletonLayerOrNull,
 } from "./dataset_accessor";
-import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
 
 export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
   if (tracing.skeleton != null) {
@@ -175,7 +175,7 @@ export function getNodeAndTree(
     let node = null;
 
     if (nodeId != null) {
-      node = tree.nodes.getOrThrow(nodeId);
+      node = tree.nodes.getNullable(nodeId);
     } else {
       const { activeNodeId } = skeletonTracing;
 

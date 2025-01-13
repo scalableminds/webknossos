@@ -1,30 +1,30 @@
-import { Button, Card, Checkbox, Form, Input, Radio, Select, InputNumber, Tooltip } from "antd";
-import { syncValidator } from "types/validation";
 import { InfoCircleOutlined } from "@ant-design/icons";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
-import { useEffect, useState } from "react";
-import _ from "lodash";
 import {
-  type APITaskType,
-  type TracingType,
-  TracingTypeEnum,
-  type APIAllowedMode,
-  type APIMagRestrictions,
-  type APITeam,
-} from "types/api_flow_types";
-import {
-  getEditableTeams,
   createTaskType,
-  updateTaskType,
+  getEditableTeams,
   getTaskType,
+  updateTaskType,
 } from "admin/admin_rest_api";
 import RecommendedConfigurationView, {
   getDefaultRecommendedConfiguration,
 } from "admin/tasktype/recommended_configuration_view";
-import { useFetch } from "libs/react_helpers";
+import { Button, Card, Checkbox, Form, Input, InputNumber, Radio, Select, Tooltip } from "antd";
 import type { RuleObject } from "antd/es/form";
+import { useFetch } from "libs/react_helpers";
 import { jsonStringify } from "libs/utils";
+import _ from "lodash";
+import { useEffect, useState } from "react";
+import type { RouteComponentProps } from "react-router-dom";
+import { withRouter } from "react-router-dom";
+import {
+  type APIAllowedMode,
+  type APIMagRestrictions,
+  type APITaskType,
+  type APITeam,
+  type TracingType,
+  TracingTypeEnum,
+} from "types/api_flow_types";
+import { syncValidator } from "types/validation";
 
 const RadioGroup = Radio.Group;
 const FormItem = Form.Item;
@@ -36,7 +36,7 @@ type Props = {
 };
 
 type FormValues = {
-  isResolutionRestricted: boolean;
+  isMagRestricted: boolean;
   summary: string;
   teamId: string;
   description: string;
@@ -103,7 +103,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
     const taskType = taskTypeId ? await getTaskType(taskTypeId) : null;
 
     const defaultValues = {
-      isResolutionRestricted: false,
+      isMagRestricted: false,
       settings: {
         somaClickingAllowed: true,
         branchPointsAllowed: true,
@@ -131,7 +131,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
     }
 
     if (taskType?.settings.magRestrictions.min || taskType?.settings.magRestrictions.max)
-      form.setFieldValue(["isResolutionRestricted"], true);
+      form.setFieldValue(["isMagRestricted"], true);
   }
 
   async function onFinish(formValues: FormValues) {
@@ -139,7 +139,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
       settings,
       teamId,
       recommendedConfiguration,
-      isResolutionRestricted: _isResolutionRestricted,
+      isMagRestricted: _isMagRestricted,
       ...rest
     } = formValues;
     const teamName = teams.find((team) => team.id === teamId)!["name"];
@@ -411,7 +411,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
           </FormItem>
 
           <FormItem
-            name={["isResolutionRestricted"]}
+            name={["isMagRestricted"]}
             valuePropName="checked"
             style={{
               marginBottom: 6,
@@ -431,12 +431,12 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
           <FormItem
             noStyle
             shouldUpdate={(prevValues, curValues) =>
-              !prevValues.isResolutionRestricted ||
-              prevValues.isResolutionRestricted !== curValues.isResolutionRestricted
+              !prevValues.isMagRestricted ||
+              prevValues.isMagRestricted !== curValues.isMagRestricted
             }
           >
             {({ getFieldValue }) =>
-              getFieldValue(["isResolutionRestricted"]) ? (
+              getFieldValue(["isMagRestricted"]) ? (
                 <div
                   style={{
                     marginLeft: 24,

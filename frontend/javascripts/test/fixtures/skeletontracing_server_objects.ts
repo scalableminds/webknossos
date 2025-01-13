@@ -22,7 +22,7 @@ export const tracing: ServerSkeletonTracing = {
           },
           radius: 112.39999389648438,
           viewport: 0,
-          resolution: 1,
+          mag: 1,
           bitDepth: 4,
           interpolation: true,
           createdTimestamp: 1502302785450,
@@ -70,7 +70,7 @@ export const tracing: ServerSkeletonTracing = {
           },
           radius: 112.39999389648438,
           viewport: 0,
-          resolution: 1,
+          mag: 1,
           bitDepth: 4,
           interpolation: true,
           createdTimestamp: 1502302785447,
@@ -90,7 +90,7 @@ export const tracing: ServerSkeletonTracing = {
           },
           radius: 112.39999389648438,
           viewport: 0,
-          resolution: 1,
+          mag: 1,
           bitDepth: 4,
           interpolation: true,
           createdTimestamp: 1502302785448,
@@ -158,6 +158,7 @@ export const tracing: ServerSkeletonTracing = {
 };
 export const annotation: APIAnnotation = {
   description: "",
+  datasetId: "66f3c82966010034942e9740",
   state: "Active",
   id: "598b52293c00009906f043e7",
   visibility: "Internal",
@@ -186,7 +187,6 @@ export const annotation: APIAnnotation = {
   dataStore: {
     name: "localhost",
     url: "http://localhost:9000",
-    isScratch: false,
     allowsUpload: true,
     jobsEnabled: false,
     jobsSupportedByAvailableWorkers: [],

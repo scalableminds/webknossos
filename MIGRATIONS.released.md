@@ -6,6 +6,21 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [24.12.0](https://github.com/scalableminds/webknossos/releases/tag/24.12.0) - 2024-12-05
+[Commits](https://github.com/scalableminds/webknossos/compare/24.11.1...24.12.0)
+
+- The config option `googleAnalytics.trackingId` is no longer used and can be removed. [#8201](https://github.com/scalableminds/webknossos/pull/8201)
+
+## [24.11.1](https://github.com/scalableminds/webknossos/releases/tag/24.11.1) - 2024-11-13
+[Commits](https://github.com/scalableminds/webknossos/compare/24.10.0...24.11.1)
+
+### Postgres Evolutions:
+
+- [121-worker-name.sql](conf/evolutions/121-worker-name.sql)
+- [122-resolution-to-mag.sql](conf/evolutions/122-resolution-to-mag.sql)
+- [123-more-model-categories.sql](conf/evolutions/123-more-model-categories.sql)
+
+
 ## [24.10.0](https://github.com/scalableminds/webknossos/releases/tag/24.10.0) - 2024-09-24
 [Commits](https://github.com/scalableminds/webknossos/compare/24.08.1...24.10.0)
 

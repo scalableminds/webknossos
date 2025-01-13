@@ -1,17 +1,17 @@
-import Store from "oxalis/store";
-import type { Point2, Vector3, OrthoView } from "oxalis/constants";
-import { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
-import Dimensions from "oxalis/model/dimensions";
-import { getInputCatcherRect, calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import type { OrthoView, Point2, Vector3 } from "oxalis/constants";
+import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
+import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
+import { calculateGlobalPos, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import {
-  movePlaneFlycamOrthoAction,
   moveFlycamOrthoAction,
+  movePlaneFlycamOrthoAction,
   zoomByDeltaAction,
 } from "oxalis/model/actions/flycam_actions";
 import { setViewportAction, zoomTDViewAction } from "oxalis/model/actions/view_mode_actions";
-import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
 import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
+import Dimensions from "oxalis/model/dimensions";
+import Store from "oxalis/store";
 
 export function setMousePosition(position: Point2 | null | undefined): void {
   if (position != null) {
@@ -49,9 +49,9 @@ export const moveW = (deltaW: number, oneSlide: boolean): void => {
     // The following logic might not always make sense when having layers
     // that are transformed each. Todo: Rethink / adapt the logic once
     // problems occur. Tracked in #6926.
-    const { representativeResolution } = getActiveMagInfo(Store.getState());
+    const { representativeMag } = getActiveMagInfo(Store.getState());
     const wDim = Dimensions.getIndices(activeViewport)[2];
-    const wStep = (representativeResolution || [1, 1, 1])[wDim];
+    const wStep = (representativeMag || [1, 1, 1])[wDim];
     Store.dispatch(
       moveFlycamOrthoAction(
         Dimensions.transDim([0, 0, Math.sign(deltaW) * Math.max(1, wStep)], activeViewport),

@@ -2,12 +2,13 @@ package models.user
 
 import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, Send}
 import security.RandomIDGenerator
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

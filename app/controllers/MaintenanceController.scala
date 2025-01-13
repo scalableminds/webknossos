@@ -7,7 +7,7 @@ import models.user.UserService
 import play.api.libs.json.{JsObject, Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import slick.lifted.Rep
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
 import javax.inject.Inject

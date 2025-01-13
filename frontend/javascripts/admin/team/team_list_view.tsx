@@ -1,23 +1,23 @@
-import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Spin, Button, Input, Alert, Tag, App } from "antd";
 import { DeleteOutlined, PlusOutlined, UserOutlined } from "@ant-design/icons";
-import * as React from "react";
-import _ from "lodash";
-import type { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
+import { PropTypes } from "@scalableminds/prop-types";
 import {
-  getEditableTeams,
   deleteTeam as deleteTeamAPI,
+  getEditableTeams,
   getEditableUsers,
 } from "admin/admin_rest_api";
-import { handleGenericError } from "libs/error_handling";
-import LinkButton from "components/link_button";
 import CreateTeamModal from "admin/team/create_team_modal_view";
+import { Alert, App, Button, Input, Spin, Table, Tag } from "antd";
+import LinkButton from "components/link_button";
+import { handleGenericError } from "libs/error_handling";
+import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
+import _ from "lodash";
 import messages from "messages";
-import { stringToColor } from "libs/format_utils";
-import EditTeamModalView from "./edit_team_modal_view";
+import * as React from "react";
 import { useEffect, useState } from "react";
+import type { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
+import EditTeamModalView from "./edit_team_modal_view";
 
 const { Column } = Table;
 const { Search } = Input;

@@ -14,8 +14,8 @@ import models.configuration.DatasetConfigurationService
 import net.liftweb.common.Full
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
+import com.scalableminds.util.objectid.ObjectId
 import play.api.libs.json.{JsArray, JsObject}
-import utils.ObjectId
 import utils.sql.{SimpleSQLDAO, SqlClient}
 
 import javax.inject.Inject
@@ -36,8 +36,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
   private val MaxThumbnailHeight = 4000
 
   def getThumbnailWithCache(
-      organizationId: String,
-      datasetName: String,
+      datasetIdValidated: ObjectId,
       layerName: String,
       w: Option[Int],
       h: Option[Int],
@@ -45,35 +44,28 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
     val width = com.scalableminds.util.tools.Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
     val height = com.scalableminds.util.tools.Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(GlobalAccessContext)
+      dataset <- datasetDAO.findOne(datasetIdValidated)(GlobalAccessContext)
       image <- thumbnailCachingService.getOrLoad(
         dataset._id,
         layerName,
         width,
         height,
         mappingName,
-        _ =>
-          getThumbnail(organizationId, datasetName, layerName, width, height, mappingName)(ec, GlobalAccessContext, mp)
+        _ => getThumbnail(dataset, layerName, width, height, mappingName)(ec, GlobalAccessContext, mp)
       )
     } yield image
   }
 
-  private def getThumbnail(organizationId: String,
-                           datasetName: String,
-                           layerName: String,
-                           width: Int,
-                           height: Int,
-                           mappingName: Option[String])(implicit ec: ExecutionContext,
-                                                        ctx: DBAccessContext,
-                                                        mp: MessagesProvider): Fox[Array[Byte]] =
+  private def getThumbnail(dataset: Dataset, layerName: String, width: Int, height: Int, mappingName: Option[String])(
+      implicit ec: ExecutionContext,
+      ctx: DBAccessContext,
+      mp: MessagesProvider): Fox[Array[Byte]] =
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
       dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
       usableDataSource <- dataSource.toUsable.toFox ?~> "dataset.notImported"
       layer <- usableDataSource.dataLayers.find(_.name == layerName) ?~> Messages("dataLayer.notFound", layerName) ~> NOT_FOUND
-      viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty,
-                                                                                             datasetName,
-                                                                                             organizationId)(ctx)
+      viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty, dataset._id)(
+        ctx)
       (mag1BoundingBox, mag, intensityRangeOpt, colorSettingsOpt, mapping) = selectParameters(viewConfiguration,
                                                                                               usableDataSource,
                                                                                               layerName,
@@ -82,8 +74,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
                                                                                               height,
                                                                                               mappingName)
       client <- datasetService.clientFor(dataset)
-      image <- client.getDataLayerThumbnail(organizationId,
-                                            dataset,
+      image <- client.getDataLayerThumbnail(dataset,
                                             layerName,
                                             mag1BoundingBox,
                                             mag,
@@ -169,7 +160,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
 
 case class ThumbnailColorSettings(color: Color, isInverted: Boolean)
 
-class ThumbnailCachingService @Inject()(datasetDAO: DatasetDAO, thumbnailDAO: ThumbnailDAO) {
+class ThumbnailCachingService @Inject()(thumbnailDAO: ThumbnailDAO) {
   private val ThumbnailCacheDuration = 10 days
 
   // First cache is in memory, then in postgres.
@@ -196,12 +187,6 @@ class ThumbnailCachingService @Inject()(datasetDAO: DatasetDAO, thumbnailDAO: Th
           }
         } yield fromDbOrNew
     )
-
-  def removeFromCache(organizationId: String, datasetName: String): Fox[Unit] =
-    for {
-      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(GlobalAccessContext)
-      _ <- removeFromCache(dataset._id)
-    } yield ()
 
   def removeFromCache(datasetId: ObjectId): Fox[Unit] = {
     inMemoryThumbnailCache.clear(keyTuple => keyTuple._1 == datasetId)

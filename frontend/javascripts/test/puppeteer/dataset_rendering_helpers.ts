@@ -10,7 +10,6 @@ import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
 import type { RequestOptions } from "libs/request";
 import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
-import type { APIDatasetId } from "../../types/api_flow_types";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
 import { sleep } from "libs/utils";
 
@@ -22,7 +21,7 @@ type Screenshot = {
   height: number;
 };
 
-function getDefaultRequestOptions(baseUrl: string): RequestOptions {
+export function getDefaultRequestOptions(baseUrl: string): RequestOptions {
   if (!WK_AUTH_TOKEN) {
     throw new Error("No WK_AUTH_TOKEN specified.");
   }
@@ -38,7 +37,7 @@ function getDefaultRequestOptions(baseUrl: string): RequestOptions {
 export async function screenshotDataset(
   page: Page,
   baseUrl: string,
-  datasetId: APIDatasetId,
+  datasetId: string,
   optionalViewOverride?: string | null | undefined,
   optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
 ): Promise<Screenshot> {
@@ -56,7 +55,7 @@ export async function screenshotDataset(
 export async function screenshotAnnotation(
   page: Page,
   baseUrl: string,
-  datasetId: APIDatasetId,
+  datasetId: string,
   fallbackLayerName: string | null,
   optionalViewOverride?: string | null | undefined,
   optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
@@ -75,7 +74,7 @@ export async function screenshotAnnotation(
 async function _screenshotAnnotationHelper(
   page: Page,
   baseUrl: string,
-  datasetId: APIDatasetId,
+  datasetId: string,
   typ: "skeleton" | "volume" | "hybrid",
   fallbackLayerName: string | null,
   optionalViewOverride?: string | null | undefined,
@@ -103,10 +102,10 @@ async function _screenshotAnnotationHelper(
 export async function screenshotDatasetView(
   page: Page,
   baseUrl: string,
-  datasetId: APIDatasetId,
+  datasetId: string,
   optionalViewOverride?: string | null | undefined,
 ): Promise<Screenshot> {
-  const url = `${baseUrl}/datasets/${datasetId.owningOrganization}/${datasetId.name}`;
+  const url = `${baseUrl}/datasets/${datasetId}`;
 
   await openDatasetView(page, url, optionalViewOverride);
   return screenshotTracingView(page);
@@ -115,7 +114,7 @@ export async function screenshotDatasetView(
 export async function screenshotDatasetWithMapping(
   page: Page,
   baseUrl: string,
-  datasetId: APIDatasetId,
+  datasetId: string,
   mappingName: string,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
@@ -138,7 +137,7 @@ export async function screenshotDatasetWithMapping(
 export async function screenshotDatasetWithMappingLink(
   page: Page,
   baseUrl: string,
-  datasetId: APIDatasetId,
+  datasetId: string,
   optionalViewOverride: string | null | undefined,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
@@ -158,7 +157,7 @@ export async function screenshotDatasetWithMappingLink(
 export async function screenshotSandboxWithMappingLink(
   page: Page,
   baseUrl: string,
-  datasetId: APIDatasetId,
+  datasetId: string,
   optionalViewOverride: string | null | undefined,
 ): Promise<Screenshot> {
   await openSandboxView(page, baseUrl, datasetId, optionalViewOverride);
@@ -264,14 +263,11 @@ async function openDatasetView(
 async function openSandboxView(
   page: Page,
   baseUrl: string,
-  datasetId: APIDatasetId,
+  datasetId: string,
   optionalViewOverride: string | null | undefined,
 ) {
   const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
-  const url = urljoin(
-    baseUrl,
-    `/datasets/${datasetId.owningOrganization}/${datasetId.name}/sandbox/skeleton${urlSlug}`,
-  );
+  const url = urljoin(baseUrl, `/datasets/${datasetId}/sandbox/skeleton${urlSlug}`);
   console.log(`Opening sandbox annotation view at ${url}`);
   await page.goto(url, {
     timeout: 0,
@@ -374,16 +370,19 @@ export function setupBeforeEachAndAfterEach() {
       browser_version: "latest",
       os: "os x",
       os_version: "mojave",
+      name: t.title, // add test name to BrowserStack session
       "browserstack.username": process.env.BROWSERSTACK_USERNAME,
       "browserstack.accessKey": process.env.BROWSERSTACK_ACCESS_KEY,
     };
-    t.context.browser = await puppeteer.connect({
+    const browser = await puppeteer.connect({
       browserWSEndpoint: `ws://cdp.browserstack.com/puppeteer?caps=${encodeURIComponent(
         JSON.stringify(caps),
       )}`,
     });
+    t.context.browser = browser;
 
     console.log(`\nRunning chrome version ${await t.context.browser.version()}\n`);
+    console.log(`\nBrowserStack Session Id ${await getBrowserstackSessionId(browser)}\n`);
     global.Headers = Headers;
     global.fetch = fetch;
     global.Request = Request;
@@ -395,6 +394,17 @@ export function setupBeforeEachAndAfterEach() {
   test.afterEach.always(async (t) => {
     await t.context.browser.close();
   });
+}
+
+async function getBrowserstackSessionId(browser: Browser) {
+  const page = await browser.newPage();
+  const response = (await page.evaluate(
+    (_) => {},
+    `browserstack_executor: ${JSON.stringify({ action: "getSessionDetails" })}`,
+  )) as unknown as string;
+
+  const sessionDetails = await JSON.parse(response);
+  return sessionDetails.hashed_id;
 }
 
 export function checkBrowserstackCredentials() {

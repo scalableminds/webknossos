@@ -1,71 +1,73 @@
-import type React from "react";
-import { useState, useEffect, useRef } from "react";
+import {
+  BarChartOutlined,
+  BellOutlined,
+  CheckOutlined,
+  HomeOutlined,
+  QuestionCircleOutlined,
+  SwapOutlined,
+  TeamOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 import {
   Avatar,
-  Button,
   Badge,
-  Tooltip,
+  Button,
+  ConfigProvider,
+  Input,
+  type InputRef,
   Layout,
   Menu,
   Popover,
   type SubMenuProps,
   Tag,
-  Input,
-  type InputRef,
-  ConfigProvider,
+  Tooltip,
 } from "antd";
-import {
-  SwapOutlined,
-  TeamOutlined,
-  CheckOutlined,
-  BarChartOutlined,
-  HomeOutlined,
-  QuestionCircleOutlined,
-  UserOutlined,
-  BellOutlined,
-} from "@ant-design/icons";
-import { useHistory, Link } from "react-router-dom";
 import classnames from "classnames";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import { connect, useSelector } from "react-redux";
+import { Link, useHistory } from "react-router-dom";
 
+import {
+  getBuildInfo,
+  getUsersOrganizations,
+  sendAnalyticsEvent,
+  switchToOrganization,
+  updateNovelUserExperienceInfos,
+  updateSelectedThemeOfUser,
+} from "admin/admin_rest_api";
+import LoginForm from "admin/auth/login_form";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
+import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
+import { PricingEnforcedSpan } from "components/pricing_enforcers";
+import features from "features";
+import { useFetch, useInterval } from "libs/react_helpers";
+import Request from "libs/request";
 import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import window, { location } from "libs/window";
+import messages from "messages";
+import constants from "oxalis/constants";
+import {
+  isAnnotationFromDifferentOrganization,
+  isAnnotationOwner as isAnnotationOwnerAccessor,
+} from "oxalis/model/accessors/annotation_accessor";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
+import { setThemeAction } from "oxalis/model/actions/ui_actions";
+import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
+import type { OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
+import { HelpModal } from "oxalis/view/help_modal";
+import { PortalTarget } from "oxalis/view/layouting/portal_utils";
+import type { MenuClickEventHandler } from "rc-menu/lib/interface";
+import { getAntdTheme, getSystemColorTheme } from "theme";
 import type {
   APIOrganizationCompact,
   APIUser,
   APIUserCompact,
   APIUserTheme,
 } from "types/api_flow_types";
-import { PortalTarget } from "oxalis/view/layouting/portal_utils";
-import {
-  getBuildInfo,
-  getUsersOrganizations,
-  switchToOrganization,
-  updateSelectedThemeOfUser,
-  updateNovelUserExperienceInfos,
-  sendAnalyticsEvent,
-} from "admin/admin_rest_api";
-import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
-import { trackVersion } from "oxalis/model/helpers/analytics";
-import { useFetch, useInterval } from "libs/react_helpers";
-import LoginForm from "admin/auth/login_form";
-import Request from "libs/request";
-import type { OxalisState } from "oxalis/store";
-import Store from "oxalis/store";
-import * as Utils from "libs/utils";
-import window, { location } from "libs/window";
-import features from "features";
-import { setThemeAction } from "oxalis/model/actions/ui_actions";
-import { HelpModal } from "oxalis/view/help_modal";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import messages from "messages";
-import { PricingEnforcedSpan } from "components/pricing_enforcers";
-import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
-import type { MenuClickEventHandler } from "rc-menu/lib/interface";
-import constants from "oxalis/constants";
-import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
-import { getAntdTheme, getSystemColorTheme } from "theme";
-import { formatUserName } from "oxalis/model/accessors/user_accessor";
-import { isAnnotationOwner as isAnnotationOwnerAccessor } from "oxalis/model/accessors/annotation_accessor";
 
 const { Header } = Layout;
 
@@ -86,6 +88,7 @@ type StateProps = {
   othersMayEdit: boolean;
   allowUpdate: boolean;
   isLockedByOwner: boolean;
+  isAnnotationFromDifferentOrganization: boolean;
   isAnnotationOwner: boolean;
   annotationOwnerName: string;
   blockedByUser: APIUserCompact | null | undefined;
@@ -739,13 +742,9 @@ function AnonymousAvatar() {
   );
 }
 
-async function getAndTrackVersion(dontTrack: boolean = false) {
+async function getVersion() {
   const buildInfo = await getBuildInfo();
-  const { version } = buildInfo.webknossos;
-  if (dontTrack) {
-    trackVersion(version);
-  }
-  return version;
+  return buildInfo.webknossos.version;
 }
 
 function AnnotationLockedByUserTag({
@@ -818,6 +817,7 @@ function Navbar({
   allowUpdate,
   annotationOwnerName,
   isLockedByOwner,
+  isAnnotationFromDifferentOrganization,
   navbarHeight,
   isAnnotationOwner,
 }: Props) {
@@ -831,7 +831,7 @@ function Navbar({
     location.href = "/";
   };
 
-  const version = useFetch(getAndTrackVersion, null, []);
+  const version = useFetch(getVersion, null, []);
   const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
   const [polledVersion, setPolledVersion] = useState<string | null>(null);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
@@ -839,7 +839,7 @@ function Navbar({
   useInterval(
     async () => {
       if (isHelpMenuOpen) {
-        setPolledVersion(await getAndTrackVersion(true));
+        setPolledVersion(await getVersion());
       }
     },
     2000,
@@ -882,7 +882,12 @@ function Navbar({
       menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
     }
 
-    if (othersMayEdit && !allowUpdate && !isLockedByOwner) {
+    if (
+      othersMayEdit &&
+      !allowUpdate &&
+      !isLockedByOwner &&
+      !isAnnotationFromDifferentOrganization
+    ) {
       trailingNavItems.push(
         <AnnotationLockedByUserTag
           key="locked-by-user-tag"
@@ -978,16 +983,17 @@ function Navbar({
           paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         }}
       />
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          marginRight: 12,
-        }}
-      >
-        {trailingNavItems}
-      </div>
+      <ConfigProvider theme={{ ...getAntdTheme("dark") }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            marginRight: 12,
+          }}
+        >
+          {trailingNavItems}
+        </div>
+      </ConfigProvider>
     </Header>
   );
 }
@@ -1013,6 +1019,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   isLockedByOwner: state.tracing.isLockedByOwner,
   annotationOwnerName: formatUserName(state.activeUser, state.tracing.owner),
   isAnnotationOwner: isAnnotationOwnerAccessor(state),
+  isAnnotationFromDifferentOrganization: isAnnotationFromDifferentOrganization(state),
   navbarHeight: state.uiInformation.navbarHeight,
 });
 

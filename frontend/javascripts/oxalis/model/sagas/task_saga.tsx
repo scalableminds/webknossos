@@ -1,31 +1,31 @@
-import React from "react";
-import _ from "lodash";
+import { updateLastTaskTypeIdOfUser } from "admin/admin_rest_api";
 import { Button } from "antd";
-import type { APITaskType } from "types/api_flow_types";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { select } from "oxalis/model/sagas/effect-generators";
-import { call, put, delay, take } from "typed-redux-saga";
+import renderIndependently from "libs/render_independently";
+import Toast from "libs/toast";
 import { clamp } from "libs/utils";
+import _ from "lodash";
+import messages from "messages";
+import { getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
 import {
   getValidTaskZoomRange,
   isMagRestrictionViolated,
 } from "oxalis/model/accessors/flycam_accessor";
-import { getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import { setMergerModeEnabledAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
   updateDatasetSettingAction,
-  updateUserSettingAction,
   updateLayerSettingAction,
+  updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
-import { updateLastTaskTypeIdOfUser } from "admin/admin_rest_api";
+import { setMergerModeEnabledAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
+import Store, { type RecommendedConfiguration } from "oxalis/store";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
 import RecommendedConfigurationModal from "oxalis/view/recommended_configuration_modal";
-import Store, { type RecommendedConfiguration } from "oxalis/store";
-import Toast from "libs/toast";
-import messages from "messages";
-import renderIndependently from "libs/render_independently";
+import React from "react";
+import { call, delay, put, take } from "typed-redux-saga";
+import type { APITaskType } from "types/api_flow_types";
 import { ensureWkReady } from "./ready_sagas";
 
 function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {

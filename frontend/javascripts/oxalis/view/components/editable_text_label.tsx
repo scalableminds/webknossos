@@ -1,11 +1,11 @@
-import { Input, type InputProps } from "antd";
 import { CheckOutlined, EditOutlined } from "@ant-design/icons";
-import * as React from "react";
-import Markdown from "libs/markdown_adapter";
-import { MarkdownModal } from "oxalis/view/components/markdown_modal";
-import Toast from "libs/toast";
-import type { ValidationResult } from "../left-border-tabs/modals/add_volume_layer_modal";
+import { Input, type InputProps } from "antd";
 import FastTooltip from "components/fast_tooltip";
+import Markdown from "libs/markdown_adapter";
+import Toast from "libs/toast";
+import { MarkdownModal } from "oxalis/view/components/markdown_modal";
+import * as React from "react";
+import type { ValidationResult } from "../left-border-tabs/modals/add_volume_layer_modal";
 
 type Rule = {
   message?: string;

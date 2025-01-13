@@ -1,14 +1,14 @@
-import { Button, Alert } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
-import { connect, useDispatch } from "react-redux";
-import * as React from "react";
+import { Alert, Button } from "antd";
+import { useWillUnmount } from "beautiful-react-hooks";
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import type { OxalisState, Tracing } from "oxalis/store";
 import Store from "oxalis/store";
 import VersionList, { previewVersion } from "oxalis/view/version_list";
+import * as React from "react";
 import { useState } from "react";
-import { useWillUnmount } from "beautiful-react-hooks";
+import { connect, useDispatch } from "react-redux";
 
 export type Versions = {
   skeleton?: number | null | undefined;

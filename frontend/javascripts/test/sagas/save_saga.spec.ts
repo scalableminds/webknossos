@@ -20,12 +20,15 @@ mockRequire("oxalis/model/sagas/root_saga", function* () {
 });
 const UpdateActions = mockRequire.reRequire(
   "oxalis/model/sagas/update_actions",
+  // biome-ignore format: biome produces invalid syntax when formatting this
 ) as typeof import("oxalis/model/sagas/update_actions");
 const SaveActions = mockRequire.reRequire(
   "oxalis/model/actions/save_actions",
+  // biome-ignore format: biome produces invalid syntax when formatting this
 ) as typeof import("oxalis/model/actions/save_actions");
 const { take, call, put } = mockRequire.reRequire(
   "redux-saga/effects",
+  // biome-ignore format: biome produces invalid syntax when formatting this
 ) as typeof import("redux-saga/effects");
 const {
   pushSaveQueueAsync,
@@ -35,6 +38,7 @@ const {
   sendRequestWithToken,
 } = mockRequire.reRequire(
   "oxalis/model/sagas/save_saga",
+  // biome-ignore format: biome produces invalid syntax when formatting this
 ) as typeof import("oxalis/model/sagas/save_saga");
 
 const annotationId = "annotation-abcdefgh";

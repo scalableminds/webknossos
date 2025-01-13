@@ -1,53 +1,53 @@
-import React, { useRef, useState } from "react";
+import {
+  getDataset,
+  getTracingForAnnotationType,
+  getUnversionedAnnotationInformation,
+  runTraining,
+} from "admin/admin_rest_api";
 import {
   Alert,
-  Form,
-  Row,
-  Col,
-  Input,
   Button,
-  Select,
-  Collapse,
-  Tooltip,
   Checkbox,
+  Col,
+  Collapse,
+  Form,
   type FormInstance,
+  Input,
+  Row,
+  Select,
+  Tooltip,
 } from "antd";
-import { useSelector } from "react-redux";
-import type { HybridTracing, OxalisState, UserBoundingBox, VolumeTracing } from "oxalis/store";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import { LayerSelection, LayerSelectionFormItem } from "components/layer_selection";
+import { MagSelectionFormItem } from "components/mag_selection";
+import { formatVoxels } from "libs/format_utils";
+import { V3 } from "libs/mjs";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import { computeArrayFromBoundingBox } from "libs/utils";
+import _ from "lodash";
+import type { Vector3, Vector6 } from "oxalis/constants";
 import {
   getColorLayers,
   getMagInfo,
   getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
-import {
-  getUnversionedAnnotationInformation,
-  getDataset,
-  getTracingForAnnotationType,
-  runTraining,
-} from "admin/admin_rest_api";
-import { LayerSelection, LayerSelectionFormItem } from "components/layer_selection";
-import Toast from "libs/toast";
-import { Model } from "oxalis/singletons";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getSegmentationLayerByHumanReadableName } from "oxalis/model/accessors/volumetracing_accessor";
-import _ from "lodash";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import { formatVoxels } from "libs/format_utils";
-import * as Utils from "libs/utils";
+import { MagInfo } from "oxalis/model/helpers/mag_info";
+import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reducers/reducer_helpers";
+import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
+import { Model } from "oxalis/singletons";
+import type { HybridTracing, OxalisState, UserBoundingBox, VolumeTracing } from "oxalis/store";
+import React, { useRef, useState } from "react";
+import { useSelector } from "react-redux";
 import {
-  AnnotationLayerEnum,
-  type APIDataLayer,
   type APIAnnotation,
+  type APIDataLayer,
   type APIDataset,
+  AnnotationLayerEnum,
   type ServerVolumeTracing,
 } from "types/api_flow_types";
-import type { Vector3, Vector6 } from "oxalis/constants";
-import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
-import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reducers/reducer_helpers";
-import { computeArrayFromBoundingBox } from "libs/utils";
-import { MagSelectionFormItem } from "components/mag_selection";
-import { MagInfo } from "oxalis/model/helpers/mag_info";
-import { V3 } from "libs/mjs";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;

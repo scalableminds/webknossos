@@ -1,22 +1,22 @@
+import { isDatasetAccessibleBySwitching } from "admin/admin_rest_api";
+import * as Utils from "libs/utils";
 import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
-import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
-import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
 import {
-  getSegmentationLayerWithMappingSupport,
   getLayerByName,
+  getSegmentationLayerWithMappingSupport,
   isLayerVisible,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getTotalSaveQueueLength } from "oxalis/model/reducers/save_reducer";
-import { isDatasetAccessibleBySwitching } from "admin/admin_rest_api";
+import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import type DataLayer from "oxalis/model/data_layer";
 import type LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import type DataLayer from "oxalis/model/data_layer";
+import { getTotalSaveQueueLength } from "oxalis/model/reducers/save_reducer";
 import type { TraceOrViewCommand } from "oxalis/store";
 import Store from "oxalis/store";
-import * as Utils from "libs/utils";
 import type { APICompoundType } from "types/api_flow_types";
 
 import { initialize } from "./model_initialization";

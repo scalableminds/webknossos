@@ -1,27 +1,27 @@
 import update from "immutability-helper";
 import {
   type ContourMode,
-  OrthoViews,
   type OrthoViewWithoutTD,
+  OrthoViews,
   type Vector3,
 } from "oxalis/constants";
-import type {
-  EditableMapping,
-  MappingType,
-  LabelAction,
-  OxalisState,
-  VolumeTracing,
-  SegmentGroup,
-  SegmentMap,
-} from "oxalis/store";
 import {
   getSegmentationLayerForTracing,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 import { updateKey } from "oxalis/model/helpers/deep_update";
-import { mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
+import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
+import type {
+  EditableMapping,
+  LabelAction,
+  MappingType,
+  OxalisState,
+  SegmentGroup,
+  SegmentMap,
+  VolumeTracing,
+} from "oxalis/store";
 import { getMaximumSegmentIdForLayer } from "../accessors/dataset_accessor";
+import { mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
 
 export function updateVolumeTracing(
   state: OxalisState,

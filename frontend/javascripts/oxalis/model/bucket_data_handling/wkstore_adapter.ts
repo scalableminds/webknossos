@@ -1,34 +1,34 @@
-import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
-import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { doWithToken } from "admin/admin_rest_api";
+import ErrorHandling from "libs/error_handling";
+import Request from "libs/request";
+import { parseMaybe } from "libs/utils";
+import WebworkerPool from "libs/webworker_pool";
+import window from "libs/window";
+import _ from "lodash";
+import type { BucketAddress, Vector3 } from "oxalis/constants";
+import constants, { MappingStatusEnum } from "oxalis/constants";
 import {
-  isSegmentationLayer,
   getByteCountFromLayer,
   getMagInfo,
   getMappingInfo,
+  isSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getVolumeTracingById,
   needsLocalHdf5Mapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { parseMaybe } from "libs/utils";
+import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
-import ByteArraysToLz4Base64Worker from "oxalis/workers/byte_arrays_to_lz4_base64.worker";
-import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
-import ErrorHandling from "libs/error_handling";
-import Request from "libs/request";
 import type { DataLayerType, VolumeTracing } from "oxalis/store";
 import Store from "oxalis/store";
-import WebworkerPool from "libs/webworker_pool";
-import type { BucketAddress, Vector3 } from "oxalis/constants";
-import constants, { MappingStatusEnum } from "oxalis/constants";
-import window from "libs/window";
+import ByteArraysToLz4Base64Worker from "oxalis/workers/byte_arrays_to_lz4_base64.worker";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
+import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
 import type { MagInfo } from "../helpers/mag_info";
-import type { AdditionalCoordinate } from "types/api_flow_types";
-import _ from "lodash";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
 

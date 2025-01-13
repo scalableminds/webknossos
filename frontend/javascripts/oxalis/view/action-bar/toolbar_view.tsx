@@ -1,39 +1,48 @@
 import {
-  Radio,
-  Badge,
-  Space,
-  Popover,
-  type RadioChangeEvent,
-  Dropdown,
-  type MenuProps,
-  Col,
-  Row,
-  Divider,
-  Popconfirm,
-} from "antd";
-import {
   ClearOutlined,
   DownOutlined,
   ExportOutlined,
   InfoCircleOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
-import { useSelector, useDispatch } from "react-redux";
+import {
+  Badge,
+  Col,
+  Divider,
+  Dropdown,
+  type MenuProps,
+  Popconfirm,
+  Popover,
+  Radio,
+  type RadioChangeEvent,
+  Row,
+  Space,
+} from "antd";
 import React, { useEffect, useCallback, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
-import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
-import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
-import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import {
-  interpolateSegmentationLayerAction,
-  createCellAction,
-  setMousePositionAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import {
-  createTreeAction,
-  setMergerModeEnabledAction,
-} from "oxalis/model/actions/skeletontracing_actions";
+import { useKeyPress, usePrevious } from "libs/react_hooks";
 import { document } from "libs/window";
+import {
+  type AnnotationTool,
+  AnnotationToolEnum,
+  FillModeEnum,
+  type InterpolationMode,
+  InterpolationModeEnum,
+  MappingStatusEnum,
+  MeasurementTools,
+  type OverwriteMode,
+  OverwriteModeEnum,
+  ToolsWithInterpolationCapabilities,
+  ToolsWithOverwriteCapabilities,
+  Unicode,
+  VolumeTools,
+} from "oxalis/constants";
+import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  adaptActiveToolToShortcuts,
+  getDisabledInfoForTools,
+} from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,
   getMappingInfoForVolumeTracing,
@@ -43,59 +52,44 @@ import {
   hasAgglomerateMapping,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  getDisabledInfoForTools,
-  adaptActiveToolToShortcuts,
-} from "oxalis/model/accessors/tool_accessor";
-import { setToolAction, showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
+import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { usePrevious, useKeyPress } from "libs/react_hooks";
-import { userSettings } from "types/schemas/user_settings.schema";
-import ButtonComponent from "oxalis/view/components/button_component";
-import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
 import {
-  ToolsWithOverwriteCapabilities,
-  AnnotationToolEnum,
-  OverwriteModeEnum,
-  FillModeEnum,
-  VolumeTools,
-  MappingStatusEnum,
-  type AnnotationTool,
-  type OverwriteMode,
-  ToolsWithInterpolationCapabilities,
-  InterpolationModeEnum,
-  type InterpolationMode,
-  Unicode,
-  MeasurementTools,
-} from "oxalis/constants";
+  createTreeAction,
+  setMergerModeEnabledAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { setToolAction, showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
+import {
+  createCellAction,
+  interpolateSegmentationLayerAction,
+  setMousePositionAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import { Model } from "oxalis/singletons";
 import Store, { type BrushPresets, type OxalisState } from "oxalis/store";
+import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
+import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
+import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
+import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
+import { userSettings } from "types/schemas/user_settings.schema";
 
+import { updateNovelUserExperienceInfos } from "admin/admin_rest_api";
+import FastTooltip from "components/fast_tooltip";
 import features from "features";
-import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
-import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
-import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
-import { QuickSelectControls } from "./quick_select_settings";
-import type { MenuInfo } from "rc-menu/lib/interface";
+import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
+import defaultState from "oxalis/default_state";
 import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
-import { APIJobType } from "types/api_flow_types";
-import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
-import { updateNovelUserExperienceInfos } from "admin/admin_rest_api";
+import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import FastTooltip from "components/fast_tooltip";
-import defaultState from "oxalis/default_state";
+import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
+import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
+import type { MenuInfo } from "rc-menu/lib/interface";
+import { APIJobType } from "types/api_flow_types";
+import { QuickSelectControls } from "./quick_select_settings";
 
 const NARROW_BUTTON_STYLE = {
   paddingLeft: 10,
   paddingRight: 8,
-};
-// The z-index is needed so that the blue border of an active button does override the border color of the neighboring non active button.
-const ACTIVE_BUTTON_STYLE = {
-  ...NARROW_BUTTON_STYLE,
-  borderColor: "var(--ant-color-primary)",
-  zIndex: 1,
 };
 const imgStyleForSpaceyIcons = {
   width: 19,
@@ -173,7 +167,7 @@ function RadioButtonWithTooltip({
   disabledTitle?: string;
   disabled?: boolean;
   children: React.ReactNode;
-  style: React.CSSProperties;
+  style?: React.CSSProperties;
   value: string;
   onClick?: (event: React.MouseEvent) => void;
   onMouseEnter?: () => void;
@@ -219,7 +213,7 @@ function ToolRadioButton({
   disabledExplanation?: string;
   disabled?: boolean;
   children: React.ReactNode;
-  style: React.CSSProperties;
+  style?: React.CSSProperties;
   value: string;
   onClick?: (event: React.MouseEvent) => void;
   onMouseEnter?: () => void;
@@ -297,7 +291,6 @@ function OverwriteModeSwitch({
     >
       <RadioButtonWithTooltip
         title="Overwrite everything. This setting can be toggled by holding CTRL."
-        style={NARROW_BUTTON_STYLE}
         value={OverwriteModeEnum.OVERWRITE_ALL}
       >
         <img
@@ -308,7 +301,6 @@ function OverwriteModeSwitch({
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
         title="Only overwrite empty areas. In case of erasing, only the current segment ID is overwritten. This setting can be toggled by holding CTRL."
-        style={NARROW_BUTTON_STYLE}
         value={OverwriteModeEnum.OVERWRITE_EMPTY}
       >
         <img
@@ -388,7 +380,7 @@ function VolumeInterpolationButton() {
   );
 }
 
-function AdditionalSkeletonModesButtons() {
+function SkeletonSpecificButtons() {
   const dispatch = useDispatch();
   const isMergerModeEnabled = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
@@ -420,21 +412,22 @@ function AdditionalSkeletonModesButtons() {
 
   const toggleMergerMode = () => dispatch(setMergerModeEnabledAction(!isMergerModeEnabled));
 
-  const newNodeNewTreeModeButtonStyle = isNewNodeNewTreeModeOn
-    ? ACTIVE_BUTTON_STYLE
-    : NARROW_BUTTON_STYLE;
-  const mergerModeButtonStyle = isMergerModeEnabled ? ACTIVE_BUTTON_STYLE : NARROW_BUTTON_STYLE;
-
   const isMaterializeVolumeAnnotationEnabled =
     dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
       APIJobType.MATERIALIZE_VOLUME_ANNOTATION,
     );
 
   return (
-    <React.Fragment>
-      <ButtonComponent
-        style={newNodeNewTreeModeButtonStyle}
+    <Space.Compact
+      style={{
+        marginLeft: 10,
+      }}
+    >
+      <CreateTreeButton />
+      <ToggleButton
+        style={NARROW_BUTTON_STYLE}
         onClick={toggleNewNodeNewTreeMode}
+        active={isNewNodeNewTreeModeOn}
         title="Toggle the Single node Tree (soma clicking) mode - If enabled, each node creation will create a new tree."
       >
         <img
@@ -442,10 +435,11 @@ function AdditionalSkeletonModesButtons() {
           src="/assets/images/soma-clicking-icon.svg"
           alt="Single Node Tree Mode"
         />
-      </ButtonComponent>
-      <ButtonComponent
+      </ToggleButton>
+      <ToggleButton
+        active={isMergerModeEnabled}
         style={{
-          ...mergerModeButtonStyle,
+          ...NARROW_BUTTON_STYLE,
           opacity: isMergerModeDisabled ? 0.5 : 1,
         }}
         onClick={toggleMergerMode}
@@ -457,7 +451,7 @@ function AdditionalSkeletonModesButtons() {
           src="/assets/images/merger-mode-icon.svg"
           alt="Merger Mode"
         />
-      </ButtonComponent>
+      </ToggleButton>
       {isMergerModeEnabled && isMaterializeVolumeAnnotationEnabled && isUserAdminOrManager && (
         <ButtonComponent
           style={NARROW_BUTTON_STYLE}
@@ -472,7 +466,7 @@ function AdditionalSkeletonModesButtons() {
           handleClose={() => setShowMaterializeVolumeAnnotationModal(false)}
         />
       )}
-    </React.Fragment>
+    </Space.Compact>
   );
 }
 
@@ -940,7 +934,6 @@ export default function ToolbarView() {
           description="Use left-click to move around and right-click to open a context menu."
           disabledExplanation=""
           disabled={false}
-          style={NARROW_BUTTON_STYLE}
           value={AnnotationToolEnum.MOVE}
         >
           <i className="fas fa-arrows-alt" />
@@ -952,7 +945,6 @@ export default function ToolbarView() {
             description={skeletonToolDescription}
             disabledExplanation={disabledInfosForTools[AnnotationToolEnum.SKELETON].explanation}
             disabled={disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled}
-            style={NARROW_BUTTON_STYLE}
             value={AnnotationToolEnum.SKELETON}
           >
             <i
@@ -973,7 +965,6 @@ export default function ToolbarView() {
               }
               disabledExplanation={disabledInfosForTools[AnnotationToolEnum.BRUSH].explanation}
               disabled={disabledInfosForTools[AnnotationToolEnum.BRUSH].isDisabled}
-              style={NARROW_BUTTON_STYLE}
               value={AnnotationToolEnum.BRUSH}
             >
               <i
@@ -993,7 +984,6 @@ export default function ToolbarView() {
               }
               disabled={disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].isDisabled}
               style={{
-                ...NARROW_BUTTON_STYLE,
                 marginLeft: showEraseBrushTool ? 0 : -38,
                 zIndex: showEraseBrushTool ? "initial" : -10,
                 transition: "margin 0.3s",
@@ -1018,7 +1008,6 @@ export default function ToolbarView() {
               description="Draw outlines around the voxels you would like to label."
               disabledExplanation={disabledInfosForTools[AnnotationToolEnum.TRACE].explanation}
               disabled={disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled}
-              style={NARROW_BUTTON_STYLE}
               value={AnnotationToolEnum.TRACE}
             >
               <img
@@ -1041,7 +1030,6 @@ export default function ToolbarView() {
               }
               disabled={disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled}
               style={{
-                ...NARROW_BUTTON_STYLE,
                 marginLeft: showEraseTraceTool ? 0 : -38,
                 zIndex: showEraseTraceTool ? "initial" : -10,
                 transition: "margin 0.3s",
@@ -1066,7 +1054,6 @@ export default function ToolbarView() {
               description="Flood-fill the clicked region."
               disabledExplanation={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].explanation}
               disabled={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled}
-              style={NARROW_BUTTON_STYLE}
               value={AnnotationToolEnum.FILL_CELL}
             >
               <i
@@ -1085,7 +1072,6 @@ export default function ToolbarView() {
               description="Click on a voxel to make its segment id the active segment id."
               disabledExplanation={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].explanation}
               disabled={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].isDisabled}
-              style={NARROW_BUTTON_STYLE}
               value={AnnotationToolEnum.PICK_CELL}
             >
               <i
@@ -1095,31 +1081,33 @@ export default function ToolbarView() {
                 }}
               />
             </ToolRadioButton>
+            <ToolRadioButton
+              name={TOOL_NAMES.QUICK_SELECT}
+              description="Click on a segment or draw a rectangle around it to automatically detect it"
+              disabledExplanation={
+                disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].explanation
+              }
+              disabled={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled}
+              value={AnnotationToolEnum.QUICK_SELECT}
+            >
+              <img
+                src="/assets/images/quick-select-tool.svg"
+                alt="Quick Select Icon"
+                style={{
+                  opacity: disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled
+                    ? 0.5
+                    : 1,
+                  ...imgStyleForSpaceyIcons,
+                }}
+              />
+            </ToolRadioButton>
           </React.Fragment>
         ) : null}
-        <ToolRadioButton
-          name={TOOL_NAMES.QUICK_SELECT}
-          description="Click on a segment or draw a rectangle around it to automatically detect it"
-          disabledExplanation={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].explanation}
-          disabled={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled}
-          style={NARROW_BUTTON_STYLE}
-          value={AnnotationToolEnum.QUICK_SELECT}
-        >
-          <img
-            src="/assets/images/quick-select-tool.svg"
-            alt="Quick Select Icon"
-            style={{
-              opacity: disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled ? 0.5 : 1,
-              ...imgStyleForSpaceyIcons,
-            }}
-          />
-        </ToolRadioButton>
         <ToolRadioButton
           name={TOOL_NAMES.BOUNDING_BOX}
           description="Create, resize and modify bounding boxes."
           disabledExplanation={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].explanation}
           disabled={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled}
-          style={NARROW_BUTTON_STYLE}
           value={AnnotationToolEnum.BOUNDING_BOX}
         >
           <img
@@ -1144,7 +1132,6 @@ export default function ToolbarView() {
               !isAgglomerateMappingEnabled.value ||
               disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled
             }
-            style={NARROW_BUTTON_STYLE}
             value={AnnotationToolEnum.PROOFREAD}
             onMouseEnter={() => {
               dispatch(ensureLayerMappingsAreLoadedAction());
@@ -1154,6 +1141,7 @@ export default function ToolbarView() {
               className="fas fa-clipboard-check"
               style={{
                 opacity: disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled ? 0.5 : 1,
+                padding: "0 4px",
               }}
             />
           </ToolRadioButton>
@@ -1163,7 +1151,6 @@ export default function ToolbarView() {
           description="Use to measure distances or areas."
           disabledExplanation=""
           disabled={false}
-          style={NARROW_BUTTON_STYLE}
           value={AnnotationToolEnum.LINE_MEASUREMENT}
         >
           <i className="fas fa-ruler" />
@@ -1194,7 +1181,7 @@ function ToolSpecificSettings({
   isControlOrMetaPressed: boolean;
   isShiftPressed: boolean;
 }) {
-  const showCreateTreeButton = hasSkeleton && adaptedActiveTool === AnnotationToolEnum.SKELETON;
+  const showSkeletonButtons = hasSkeleton && adaptedActiveTool === AnnotationToolEnum.SKELETON;
   const showNewBoundingBoxButton = adaptedActiveTool === AnnotationToolEnum.BOUNDING_BOX;
   const showCreateCellButton = hasVolume && VolumeTools.includes(adaptedActiveTool);
   const showChangeBrushSizeButton =
@@ -1207,7 +1194,6 @@ function ToolSpecificSettings({
   );
   const isAISelectAvailable = features().segmentAnythingEnabled;
   const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
-  const heuristicButtonStyle = isQuickSelectHeuristic ? NARROW_BUTTON_STYLE : ACTIVE_BUTTON_STYLE;
   const quickSelectTooltipText = isAISelectAvailable
     ? isQuickSelectHeuristic
       ? "The quick select tool is now working without AI. Activate AI for better results."
@@ -1224,16 +1210,7 @@ function ToolSpecificSettings({
 
   return (
     <>
-      {showCreateTreeButton ? (
-        <Space.Compact
-          style={{
-            marginLeft: 10,
-          }}
-        >
-          <CreateTreeButton />
-          <AdditionalSkeletonModesButtons />
-        </Space.Compact>
-      ) : null}
+      {showSkeletonButtons ? <SkeletonSpecificButtons /> : null}
 
       {showNewBoundingBoxButton ? (
         <Space.Compact
@@ -1264,9 +1241,10 @@ function ToolSpecificSettings({
 
       {adaptedActiveTool === "QUICK_SELECT" && (
         <>
-          <ButtonComponent
+          <ToggleButton
+            active={!isQuickSelectHeuristic}
             style={{
-              ...heuristicButtonStyle,
+              ...NARROW_BUTTON_STYLE,
               opacity: isQuickSelectHeuristic ? 0.5 : 1,
               marginLeft: 12,
             }}
@@ -1275,7 +1253,7 @@ function ToolSpecificSettings({
             title={quickSelectTooltipText}
           >
             <i className="fas fa-magic icon-margin-right" /> AI
-          </ButtonComponent>
+          </ToggleButton>
 
           <QuickSelectSettingsPopover />
         </>
@@ -1350,15 +1328,15 @@ function QuickSelectSettingsPopover() {
             dispatch(showQuickSelectSettingsAction(open));
           }}
         >
-          <ButtonComponent
+          <ToggleButton
             title="Configure Quick Select"
             tooltipPlacement="right"
             className="narrow"
-            type={isQuickSelectActive || showNux ? "primary" : "default"}
+            active={isQuickSelectActive || showNux}
             style={{ marginLeft: 12, marginRight: 12 }}
           >
             <SettingOutlined />
-          </ButtonComponent>
+          </ToggleButton>
         </Popover>
       </Wrapper>
     </>
@@ -1456,30 +1434,26 @@ function ProofReadingComponents() {
       >
         <ClearOutlined />
       </ButtonComponent>
-      <ButtonComponent
+      <ToggleButton
         title={`${autoRenderMeshes ? "Disable" : "Enable"} automatic loading of meshes`}
-        style={{
-          ...(autoRenderMeshes ? ACTIVE_BUTTON_STYLE : NARROW_BUTTON_STYLE),
-          opacity: autoRenderMeshes ? 1 : 0.5,
-        }}
+        active={autoRenderMeshes}
+        style={NARROW_BUTTON_STYLE}
         onClick={() => handleToggleAutomaticMeshRendering(!autoRenderMeshes)}
       >
         <i className="fas fa-dice-d20" />
-      </ButtonComponent>
-      <ButtonComponent
+      </ToggleButton>
+      <ToggleButton
+        active={selectiveVisibilityInProofreading}
         title={`${
           selectiveVisibilityInProofreading ? "Disable" : "Enable"
         } selective segment visibility. When enabled, only hovered or active segments will be shown.`}
-        style={{
-          ...(selectiveVisibilityInProofreading ? ACTIVE_BUTTON_STYLE : NARROW_BUTTON_STYLE),
-          opacity: selectiveVisibilityInProofreading ? 1 : 0.5,
-        }}
+        style={NARROW_BUTTON_STYLE}
         onClick={() =>
           handleToggleSelectiveVisibilityInProofreading(!selectiveVisibilityInProofreading)
         }
       >
         <i className="fas fa-highlighter" />
-      </ButtonComponent>
+      </ToggleButton>
     </Space.Compact>
   );
 }

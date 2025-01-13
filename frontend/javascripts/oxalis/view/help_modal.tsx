@@ -1,5 +1,5 @@
 import { sendHelpEmail, updateNovelUserExperienceInfos } from "admin/admin_rest_api";
-import { Modal, Input, Alert, message } from "antd";
+import { Alert, Input, Modal, message } from "antd";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import type { OxalisState } from "oxalis/store";
 import type React from "react";

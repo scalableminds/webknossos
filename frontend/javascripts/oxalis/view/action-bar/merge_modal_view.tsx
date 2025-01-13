@@ -1,28 +1,28 @@
-import { Alert, Modal, Button, Select, Form, Spin, Tooltip } from "antd";
-import { connect } from "react-redux";
-import type React from "react";
-import { PureComponent } from "react";
-import type { Dispatch } from "redux";
-import { type APIAnnotation, APIAnnotationTypeEnum } from "types/api_flow_types";
-import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
-import { getSkeletonDescriptor } from "oxalis/model/accessors/skeletontracing_accessor";
-import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
-  getUnversionedAnnotationInformation,
   getAnnotationCompoundInformation,
   getTracingForAnnotationType,
+  getUnversionedAnnotationInformation,
 } from "admin/admin_rest_api";
-import { location } from "libs/window";
-import InputComponent from "oxalis/view/components/input_component";
+import { Alert, Button, Form, Modal, Select, Spin, Tooltip } from "antd";
+import { makeComponentLazy } from "libs/react_helpers";
 import Request from "libs/request";
-import Constants from "oxalis/constants";
-import type { OxalisState, MutableTreeMap, TreeGroup } from "oxalis/store";
-import Store from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import { api } from "oxalis/singletons";
+import { location } from "libs/window";
 import messages from "messages";
-import { makeComponentLazy } from "libs/react_helpers";
+import Constants from "oxalis/constants";
+import { getSkeletonDescriptor } from "oxalis/model/accessors/skeletontracing_accessor";
+import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
+import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { api } from "oxalis/singletons";
+import type { MutableTreeMap, OxalisState, TreeGroup } from "oxalis/store";
+import Store from "oxalis/store";
+import InputComponent from "oxalis/view/components/input_component";
+import type React from "react";
+import { PureComponent } from "react";
+import { connect } from "react-redux";
+import type { Dispatch } from "redux";
+import { type APIAnnotation, APIAnnotationTypeEnum } from "types/api_flow_types";
 type ProjectInfo = {
   id: string;
   label: string;

@@ -1,12 +1,12 @@
-import _ from "lodash";
 import update from "immutability-helper";
-import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, SaveState } from "oxalis/store";
-import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
-import { type TracingStats, getStats } from "oxalis/model/accessors/annotation_accessor";
-import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
-import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import Date from "libs/date";
+import _ from "lodash";
+import { type TracingStats, getStats } from "oxalis/model/accessors/annotation_accessor";
+import type { Action } from "oxalis/model/actions/actions";
+import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
+import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
+import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
+import type { OxalisState, SaveState } from "oxalis/store";
 
 // These update actions are not idempotent. Having them
 // twice in the save queue causes a corruption of the current annotation.

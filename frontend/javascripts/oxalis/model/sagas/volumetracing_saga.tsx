@@ -69,11 +69,11 @@ import {
   takeEveryUnlessBusy,
 } from "oxalis/model/sagas/saga_helpers";
 import {
+  type UpdateActionWithoutIsolationRequirement,
   createSegmentVolumeAction,
   deleteSegmentDataVolumeAction,
   deleteSegmentVolumeAction,
   removeFallbackLayer,
-  type UpdateActionWithoutIsolationRequirement,
   updateMappingName,
   updateSegmentGroups,
   updateSegmentVolumeAction,
@@ -84,12 +84,12 @@ import type VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import { Model, api } from "oxalis/singletons";
 import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
 import type { ActionPattern } from "redux-saga/effects";
-import { ensureWkReady } from "./ready_sagas";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
-import { createVolumeLayer, labelWithVoxelBuffer2D, type BooleanBox } from "./volume/helpers";
-import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
+import { ensureWkReady } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";
+import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
+import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 

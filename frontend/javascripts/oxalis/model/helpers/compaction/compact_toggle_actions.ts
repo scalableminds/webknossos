@@ -4,16 +4,16 @@
 // appropriate.
 // See compactToggleActions for the high-level logic of the compaction.
 import _ from "lodash";
-import type { SkeletonTracing, Tree, TreeGroup, TreeMap, VolumeTracing } from "oxalis/store";
 import type {
   UpdateActionWithoutIsolationRequirement,
   UpdateTreeVisibilityUpdateAction,
 } from "oxalis/model/sagas/update_actions";
 import { updateTreeGroupVisibility, updateTreeVisibility } from "oxalis/model/sagas/update_actions";
+import type { SkeletonTracing, Tree, TreeGroup, TreeMap, VolumeTracing } from "oxalis/store";
 import {
+  MISSING_GROUP_ID,
   createGroupToTreesMap,
   getGroupByIdWithSubgroups,
-  MISSING_GROUP_ID,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 type GroupNode = {
   children: GroupNode[];

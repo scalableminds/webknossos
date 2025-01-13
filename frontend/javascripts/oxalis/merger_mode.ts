@@ -1,12 +1,7 @@
 import _ from "lodash";
-import type {
-  DeleteNodeUpdateAction,
-  NodeWithTreeId,
-  UpdateActionNode,
-} from "oxalis/model/sagas/update_actions";
-import type { TreeMap, SkeletonTracing, OxalisState, StoreType } from "oxalis/store";
+import messages from "messages";
+import type { UnregisterHandler } from "oxalis/api/api_latest";
 import type { Vector3 } from "oxalis/constants";
-import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import {
   getInverseSegmentationTransformer,
   getVisibleSegmentationLayer,
@@ -16,13 +11,18 @@ import {
   getSkeletonTracing,
   transformNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import Store from "oxalis/throttled_store";
-import { api } from "oxalis/singletons";
-import messages from "messages";
-import type { UnregisterHandler } from "oxalis/api/api_latest";
 import type { Action } from "oxalis/model/actions/actions";
-import type { CreateNodeAction } from "./model/actions/skeletontracing_actions";
+import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
+import type {
+  DeleteNodeUpdateAction,
+  NodeWithTreeId,
+  UpdateActionNode,
+} from "oxalis/model/sagas/update_actions";
+import { api } from "oxalis/singletons";
+import type { OxalisState, SkeletonTracing, StoreType, TreeMap } from "oxalis/store";
+import Store from "oxalis/throttled_store";
 import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { CreateNodeAction } from "./model/actions/skeletontracing_actions";
 
 type MergerModeState = {
   treeIdToRepresentativeSegmentId: Record<number, number | null | undefined>;

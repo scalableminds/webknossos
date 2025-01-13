@@ -1,34 +1,34 @@
-import { Modal, Row } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import type React from "react";
-import { useMemo, useState } from "react";
-import _ from "lodash";
-import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
+import { Modal, Row } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import {
   NewVolumeLayerSelection,
   RestrictMagnificationSlider,
 } from "dashboard/advanced_dataset/create_explorative_modal";
-import Store, { type Tracing } from "oxalis/store";
+import Toast from "libs/toast";
+import _ from "lodash";
+import messages from "messages";
+import { MappingStatusEnum } from "oxalis/constants";
 import {
-  getSomeMagInfoForDataset,
   getLayerByName,
+  getMagInfo,
   getMappingInfo,
   getSegmentationLayers,
-  getMagInfo,
+  getSomeMagInfoForDataset,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getAllReadableLayerNames,
   getVolumeTracingLayers,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import messages from "messages";
-import InputComponent from "oxalis/view/components/input_component";
-import { api, Model } from "oxalis/singletons";
-import Toast from "libs/toast";
-import { MappingStatusEnum } from "oxalis/constants";
 import { pushSaveQueueTransactionIsolated } from "oxalis/model/actions/save_actions";
-import { useDispatch } from "react-redux";
 import { addLayerToAnnotation } from "oxalis/model/sagas/update_actions";
+import { Model, api } from "oxalis/singletons";
+import Store, { type Tracing } from "oxalis/store";
+import InputComponent from "oxalis/view/components/input_component";
+import type React from "react";
+import { useMemo, useState } from "react";
+import { useDispatch } from "react-redux";
+import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 
 export type ValidationResult = { isValid: boolean; message: string };
 export function checkForLayerNameDuplication(

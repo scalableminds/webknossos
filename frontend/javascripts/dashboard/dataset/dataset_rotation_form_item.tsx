@@ -48,7 +48,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
   useEffect(() => {
     if (
       datasetBoundingBox == null ||
-      dataLayers[0].coordinateTransformations?.length !== 5 ||
+      dataLayers[0].coordinateTransformations?.length !== EXPECTED_TRANSFORMATION_LENGTH ||
       !form
     ) {
       return;

@@ -135,7 +135,7 @@ import {
   getExpandedGroups,
   getGroupByIdWithSubgroups,
   getGroupNodeKey,
-} from "../tree_hierarchy_view_helpers";
+} from "../trees_tab/tree_hierarchy_view_helpers";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
 
 const SCROLL_DELAY_MS = 50;

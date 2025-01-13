@@ -52,7 +52,7 @@ import {
   getGroupByIdWithSubgroups,
   getNodeKey,
   makeBasicGroupObject,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
 import { HideTreeEdgesIcon } from "./hide_tree_edges_icon";
 

@@ -14,7 +14,7 @@ import {
   MISSING_GROUP_ID,
   createGroupToTreesMap,
   getGroupByIdWithSubgroups,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 type GroupNode = {
   children: GroupNode[];
   groupId: number | null | undefined;

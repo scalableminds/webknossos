@@ -26,7 +26,7 @@ import {
   getNodeKey,
   insertTreesAndTransform,
   moveGroupsHelper,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { MetadataEntryProto } from "types/api_flow_types";

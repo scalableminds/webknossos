@@ -56,7 +56,7 @@ import type {
 import {
   findParentIdForGroupId,
   getGroupNodeKey,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_flow_types";
 import { mapGroups } from "../accessors/skeletontracing_accessor";
 import { sanitizeMetadata } from "./skeletontracing_reducer";

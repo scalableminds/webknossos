@@ -79,6 +79,7 @@ import Store from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import InputComponent from "oxalis/view/components/input_component";
+import TreeHierarchyView from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view";
 import {
   GroupTypeEnum,
   MISSING_GROUP_ID,
@@ -86,8 +87,7 @@ import {
   callDeep,
   createGroupToParentMap,
   createGroupToTreesMap,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import TreeHierarchyView from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view";
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import * as React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";

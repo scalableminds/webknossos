@@ -137,6 +137,7 @@ import {
   getGroupNodeKey,
 } from "../trees_tab/tree_hierarchy_view_helpers";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
+import { SimpleRow } from "dashboard/folders/metadata_table";
 
 const SCROLL_DELAY_MS = 50;
 
@@ -1991,21 +1992,18 @@ class SegmentsView extends React.Component<Props, State> {
       return (
         <table className="metadata-table">
           <thead>
-            <tr>
-              <th>ID</th>
-              <th colSpan={2}>{segment.id}</th>
-            </tr>
+            <SimpleRow isTableHead label="ID" value={segment.id} />
           </thead>
           <tbody>
-            <tr>
-              <td>Name</td>
-              <td colSpan={2}>
+            <SimpleRow
+              label="Name"
+              value={
                 <InputWithUpdateOnBlur
                   value={segment.name || ""}
                   onChange={this.renameActiveSegment}
                 />
-              </td>
-            </tr>
+              }
+            />
             <MetadataEntryTableRows
               item={segment}
               setMetadata={this.setMetadata}
@@ -2027,15 +2025,12 @@ class SegmentsView extends React.Component<Props, State> {
       return (
         <table className="metadata-table">
           <thead>
-            <tr>
-              <th>ID</th>
-              <th colSpan={2}>{activeGroup.groupId}</th>
-            </tr>
+            <SimpleRow isTableHead label="ID" value={activeGroup.groupId} />
           </thead>
           <tbody>
-            <tr>
-              <td>Name</td>
-              <td colSpan={2}>
+            <SimpleRow
+              label="Name"
+              value={
                 <InputWithUpdateOnBlur
                   value={activeGroup.name || ""}
                   onChange={(newName) => {
@@ -2049,27 +2044,26 @@ class SegmentsView extends React.Component<Props, State> {
                     );
                   }}
                 />
-              </td>
-            </tr>
+              }
+            />
+
             {groupWithSubgroups.length === 1 ? (
-              <tr>
-                <td>Segment Count</td>
-                <td colSpan={2}>{groupToSegmentsMap[selectedGroupId]?.length ?? 0}</td>
-              </tr>
+              <SimpleRow
+                label="Segment Count"
+                value={groupToSegmentsMap[selectedGroupId]?.length ?? 0}
+              />
             ) : (
               <>
-                <tr>
-                  <td>Segment Count (direct children)</td>
-                  <td colSpan={2}>{groupToSegmentsMap[selectedGroupId]?.length ?? 0}</td>
-                </tr>
-                <tr>
-                  <td>Segment Count (all children)</td>
-                  <td colSpan={2}>
-                    {_.sum(
-                      groupWithSubgroups.map((groupId) => groupToSegmentsMap[groupId]?.length ?? 0),
-                    )}
-                  </td>
-                </tr>
+                <SimpleRow
+                  label="Segment Count (direct children)"
+                  value={groupToSegmentsMap[selectedGroupId]?.length ?? 0}
+                />
+                <SimpleRow
+                  label="Segment Count (all children)"
+                  value={_.sum(
+                    groupWithSubgroups.map((groupId) => groupToSegmentsMap[groupId]?.length ?? 0),
+                  )}
+                />
               </>
             )}
           </tbody>

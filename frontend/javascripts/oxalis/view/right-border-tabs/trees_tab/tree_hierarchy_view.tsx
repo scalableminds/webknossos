@@ -45,6 +45,7 @@ import {
   setExpandedGroups,
   setUpdateTreeGroups,
 } from "./tree_hierarchy_renderers";
+import { SimpleRow } from "dashboard/folders/metadata_table";
 
 const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
   const { id, type } = info.node;
@@ -369,21 +370,18 @@ const DetailsForSelection = memo(
       return (
         <table className="metadata-table">
           <thead>
-            <tr>
-              <th>ID</th>
-              <th colSpan={2}>{tree.treeId}</th>
-            </tr>
+            <SimpleRow isTableHead label="ID" value={tree.treeId} />
           </thead>
           <tbody>
-            <tr>
-              <td>Name</td>
-              <td colSpan={2}>
+            <SimpleRow
+              label="Name"
+              value={
                 <InputWithUpdateOnBlur
                   value={tree.name || ""}
                   onChange={(newValue) => Store.dispatch(setTreeNameAction(newValue, tree.treeId))}
                 />
-              </td>
-            </tr>
+              }
+            />
             <MetadataEntryTableRows item={tree} setMetadata={setMetadata} readOnly={readOnly} />
           </tbody>
         </table>
@@ -406,40 +404,33 @@ const DetailsForSelection = memo(
       return (
         <table className="metadata-table">
           <thead>
-            <tr>
-              <th>ID</th>
-              <th colSpan={2}>{activeGroup.groupId}</th>
-            </tr>
+            <SimpleRow isTableHead label="ID" value={activeGroup.groupId} />
           </thead>
           <tbody>
-            <tr>
-              <td>Name</td>
-              <td colSpan={2}>
+            <SimpleRow
+              label="Name"
+              value={
                 <InputWithUpdateOnBlur
                   value={activeGroup.name || ""}
                   onChange={(newValue) => api.tracing.renameSkeletonGroup(activeGroupId, newValue)}
                 />
-              </td>
-            </tr>
+              }
+            />
+
             {groupWithSubgroups.length === 1 ? (
-              <tr>
-                <td>Tree Count</td>
-                <td colSpan={2}>{groupToTreesMap[activeGroupId]?.length ?? 0}</td>
-              </tr>
+              <SimpleRow label="Tree Count" value={groupToTreesMap[activeGroupId]?.length ?? 0} />
             ) : (
               <>
-                <tr>
-                  <td>Tree Count (direct children)</td>
-                  <td colSpan={2}>{groupToTreesMap[activeGroupId]?.length ?? 0}</td>
-                </tr>
-                <tr>
-                  <td>Tree Count (all children)</td>
-                  <td colSpan={2}>
-                    {_.sum(
-                      groupWithSubgroups.map((groupId) => groupToTreesMap[groupId]?.length ?? 0),
-                    )}
-                  </td>
-                </tr>
+                <SimpleRow
+                  label="Tree Count (direct children)"
+                  value={groupToTreesMap[activeGroupId]?.length ?? 0}
+                />
+                <SimpleRow
+                  label="Tree Count (all children)"
+                  value={_.sum(
+                    groupWithSubgroups.map((groupId) => groupToTreesMap[groupId]?.length ?? 0),
+                  )}
+                />
               </>
             )}
           </tbody>

@@ -376,8 +376,17 @@ function hasOnlyAffineTransformations(dataLayers: Array<APIDataLayer>): boolean 
   );
 }
 
+// The transformation array consists of 5 matrices:
+// 1. Translation to coordinate system origin
+// 2. Rotation around x-axis
+// 3. Rotation around y-axis
+// 4. Rotation around z-axis
+// 5. Translation back to original position
+export const EXPECTED_TRANSFORMATION_LENGTH = 5;
+
 function hasValidTransformationPattern(transformations: CoordinateTransformation[]): boolean {
   return (
+    transformations.length === EXPECTED_TRANSFORMATION_LENGTH &&
     isTranslationOnly(transformations[0] as AffineTransformation) &&
     isRotationOnly(transformations[1] as AffineTransformation) &&
     isRotationOnly(transformations[2] as AffineTransformation) &&

@@ -3,6 +3,7 @@ import { Col, Form, type FormInstance, InputNumber, Row, Slider, Tooltip, Typogr
 import FormItem from "antd/es/form/FormItem";
 import {
   AXIS_TO_TRANSFORM_INDEX,
+  EXPECTED_TRANSFORMATION_LENGTH,
   IDENTITY_TRANSFORM,
   doAllLayersHaveTheSameRotation,
   fromCenterToOrigin,
@@ -84,7 +85,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
       const rotationMatrix = getRotationMatrixAroundAxis(axis, rotationInRadians);
       const dataLayersWithUpdatedTransforms: APIDataLayer[] = dataLayers.map((layer) => {
         let transformations = layer.coordinateTransformations;
-        if (transformations == null || transformations.length !== 5) {
+        if (transformations == null || transformations.length !== EXPECTED_TRANSFORMATION_LENGTH) {
           transformations = [
             fromCenterToOrigin(datasetBoundingBox),
             IDENTITY_TRANSFORM,

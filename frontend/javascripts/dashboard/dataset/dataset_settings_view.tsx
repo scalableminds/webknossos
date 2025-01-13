@@ -26,6 +26,7 @@ import messages from "messages";
 import { Unicode } from "oxalis/constants";
 import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 import {
+  EXPECTED_TRANSFORMATION_LENGTH,
   doAllLayersHaveTheSameRotation,
   getRotationFromTransformationIn90DegreeSteps,
 } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
@@ -204,7 +205,10 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       if (doAllLayersHaveTheSameRotation(dataSource.dataLayers)) {
         const firstLayerTransformations = dataSource.dataLayers[0].coordinateTransformations;
         let initialDatasetRotationSettings: DatasetRotation;
-        if (!firstLayerTransformations || firstLayerTransformations.length !== 5) {
+        if (
+          !firstLayerTransformations ||
+          firstLayerTransformations.length !== EXPECTED_TRANSFORMATION_LENGTH
+        ) {
           initialDatasetRotationSettings = {
             x: 0,
             y: 0,

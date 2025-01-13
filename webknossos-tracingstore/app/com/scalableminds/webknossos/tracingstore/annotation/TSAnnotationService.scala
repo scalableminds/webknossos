@@ -760,6 +760,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                     for {
                       mappedTracingId <- tracingIdMapMutable.get(a.actionTracingId) ?~> "duplicating action for unknown layer"
                     } yield a.withActionTracingId(mappedTracingId)
+                  case a: UpdateAction =>
+                    Fox.successful(a)
                 }
                 _ <- tracingDataStore.annotationUpdates.put(newAnnotationId, version, Json.toJson(updateListAdapted))
               } yield ()

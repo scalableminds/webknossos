@@ -369,7 +369,12 @@ object CompactVolumeUpdateAction {
       } yield CompactVolumeUpdateAction(name, actionTracingId, actionTimestamp, actionAuthorId, value)
 
     override def writes(o: CompactVolumeUpdateAction): JsValue =
-      Json.obj("name" -> o.name, "value" -> (Json.obj("actionTimestamp" -> o.actionTimestamp) ++ o.value))
+      Json.obj(
+        "name" -> o.name,
+        "value" -> (Json.obj("actionTracingId" -> o.actionTracingId,
+                             "actionTimestamp" -> o.actionTimestamp,
+                             "actionAuthorId" -> o.actionAuthorId) ++ o.value)
+      )
   }
 }
 

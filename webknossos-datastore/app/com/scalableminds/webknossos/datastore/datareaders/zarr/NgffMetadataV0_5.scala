@@ -47,7 +47,7 @@ object NgffMetadataV0_5 {
           List(
             NgffCoordinateTransformation(
               scale = Some(List[Double](1.0) ++ (dataSourceVoxelSize.factor * Vec3Double(mag)).toList),
-              translation = Some(List[Double](0.0, 0.0, 0.0))))
+              translation = None))
       ))
     val lengthUnitStr = dataSourceVoxelSize.unit.toString
     val axes = List(NgffAxis(name = "c", `type` = "channel")) ++ additionalAxes

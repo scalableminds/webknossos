@@ -51,7 +51,16 @@ trait ExploreLayerUtils extends FoxImplicits {
                                                    voxelSize: VoxelSize): List[DataLayerWithMagLocators] =
     layers.map(l => {
       val generatedCoordinateTransformation = coordinateTransformationForVoxelSize(voxelSize, preferredVoxelSize)
-      l.mapped(coordinateTransformations = generatedCoordinateTransformation.orElse(l.coordinateTransformations))
+      val existingCoordinateTransformations = l.coordinateTransformations
+      val combinedCoordinateTransformations = existingCoordinateTransformations match {
+        // See https://github.com/scalableminds/webknossos/pull/8311/files/bbdde25dc4c1955281a45e5be063a8d5d1d8194c#r1913128610 for discussion.
+        // We are not merging the coordinate transformations, but rather appending the generated ones to the existing ones.
+        // It is unclear what the correct behavior should be, since we do not have test datasets where this would be relevant.
+        case Some(coordinateTransformations) =>
+          Some(coordinateTransformations ++ generatedCoordinateTransformation.getOrElse(List()))
+        case None => generatedCoordinateTransformation
+      }
+      l.mapped(coordinateTransformations = combinedCoordinateTransformations)
     })
 
   private def isPowerOfTwo(x: Int): Boolean =

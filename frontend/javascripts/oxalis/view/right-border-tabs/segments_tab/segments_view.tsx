@@ -35,6 +35,7 @@ import type { ItemType } from "antd/lib/menu/interface";
 import type { DataNode } from "antd/lib/tree";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
+import { SimpleRow } from "dashboard/folders/metadata_table";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import _, { isNumber, memoize } from "lodash";
@@ -137,7 +138,6 @@ import {
   getGroupNodeKey,
 } from "../trees_tab/tree_hierarchy_view_helpers";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
-import { SimpleRow } from "dashboard/folders/metadata_table";
 
 const SCROLL_DELAY_MS = 50;
 

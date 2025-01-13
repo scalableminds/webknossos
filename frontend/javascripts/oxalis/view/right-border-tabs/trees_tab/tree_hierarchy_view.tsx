@@ -1,5 +1,6 @@
 import { DownOutlined } from "@ant-design/icons";
 import { type Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
+import { SimpleRow } from "dashboard/folders/metadata_table";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -45,7 +46,6 @@ import {
   setExpandedGroups,
   setUpdateTreeGroups,
 } from "./tree_hierarchy_renderers";
-import { SimpleRow } from "dashboard/folders/metadata_table";
 
 const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
   const { id, type } = info.node;

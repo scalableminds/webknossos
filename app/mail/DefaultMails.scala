@@ -14,6 +14,7 @@ class DefaultMails @Inject()(conf: WkConf) {
   private val uri = conf.Http.uri
   private val defaultSender = conf.Mail.defaultSender
   private val newOrganizationMailingList = conf.WebKnossos.newOrganizationMailingList
+  private val additionalFooter = conf.Mail.additionalFooter
 
   def registerAdminNotifierMail(name: String,
                                 email: String,
@@ -24,7 +25,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       from = defaultSender,
       subject =
         s"WEBKNOSSOS | A new user ($name, $email) registered on $uri for ${organization.name} (${organization._id})",
-      bodyHtml = html.mail.notifyAdminNewUser(name, uri, autoActivate).body,
+      bodyHtml = html.mail.notifyAdminNewUser(name, uri, autoActivate, additionalFooter).body,
       recipients = List(recipient)
     )
 
@@ -32,7 +33,8 @@ class DefaultMails @Inject()(conf: WkConf) {
     Mail(
       from = defaultSender,
       subject = s"WEBKNOSSOS | Time limit reached. ${user.abbreviatedName} in $projectName",
-      bodyHtml = html.mail.notifyAdminTimeLimit(user.name, projectName, taskId, annotationId, uri).body,
+      bodyHtml =
+        html.mail.notifyAdminTimeLimit(user.name, projectName, taskId, annotationId, uri, additionalFooter).body,
       recipients = List(projectOwner)
     )
 
@@ -40,7 +42,7 @@ class DefaultMails @Inject()(conf: WkConf) {
     Mail(
       from = defaultSender,
       subject = "Welcome to WEBKNOSSOS",
-      bodyHtml = html.mail.newUser(name, enableAutoVerify).body,
+      bodyHtml = html.mail.newUser(name, enableAutoVerify, additionalFooter).body,
       recipients = List(recipient)
     )
 

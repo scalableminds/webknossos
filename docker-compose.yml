@@ -269,7 +269,7 @@ services:
 
   # FossilDB
   fossildb:
-    image: scalableminds/fossildb:master__504
+    image: scalableminds/fossildb:master__510
     command:
       - fossildb
       - -c

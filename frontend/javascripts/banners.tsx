@@ -8,6 +8,7 @@ import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import { useFetch, useInterval } from "libs/react_helpers";
 import { parseCTimeDefaultDate } from "libs/utils";
+import * as Utils from "libs/utils";
 import _ from "lodash";
 import constants from "oxalis/constants";
 import { setNavbarHeightAction } from "oxalis/model/actions/ui_actions";
@@ -18,7 +19,6 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import type { MaintenanceInfo } from "types/api_flow_types";
-import * as Utils from "libs/utils";
 
 const INITIAL_DELAY = 5000;
 const INTERVAL_TO_FETCH_MAINTENANCES_MS = 60000; // 1min

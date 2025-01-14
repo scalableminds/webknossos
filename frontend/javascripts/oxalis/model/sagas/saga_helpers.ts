@@ -1,19 +1,19 @@
+import type { ActionPattern } from "@redux-saga/types";
 import { Modal } from "antd";
+import Toast from "libs/toast";
 import messages from "messages";
+import { MappingStatusEnum } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
+import { Store } from "oxalis/singletons";
 import type { ActiveMappingInfo, VolumeTracing } from "oxalis/store";
 import { call, put, takeEvery } from "typed-redux-saga";
-import Toast from "libs/toast";
-import { Store } from "oxalis/singletons";
-import type { ActionPattern } from "@redux-saga/types";
 import {
   setMappingIsLockedAction,
   setVolumeBucketDataHasChangedAction,
 } from "../actions/volumetracing_actions";
-import { MappingStatusEnum } from "oxalis/constants";
 
 export function* takeEveryUnlessBusy<P extends ActionPattern>(
   actionDescriptor: P,

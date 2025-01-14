@@ -1,12 +1,12 @@
-import { Select } from "antd";
-import type React from "react";
-import { useEffect, useState } from "react";
 import { getProjects } from "admin/admin_rest_api";
+import { Select } from "antd";
 import { useFetch } from "libs/react_helpers";
 import { isUserAdminOrTeamManager } from "libs/utils";
-import { useSelector } from "react-redux";
-import type { OxalisState } from "oxalis/store";
 import { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "oxalis/constants";
+import type { OxalisState } from "oxalis/store";
+import type React from "react";
+import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 
 type ProjectAndTypeDropdownProps = {
   selectedProjectIds: string[];

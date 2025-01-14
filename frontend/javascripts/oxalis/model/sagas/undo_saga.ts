@@ -18,23 +18,23 @@ import {
 import type { RedoAction, UndoAction } from "oxalis/model/actions/save_actions";
 import type { SkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import {
+  SkeletonTracingSaveRelevantActions,
   centerActiveNodeAction,
   setTracingAction,
-  SkeletonTracingSaveRelevantActions,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import {
   type AddBucketToUndoAction,
   type BatchUpdateGroupsAndSegmentsAction,
-  cancelQuickSelectAction,
   type FinishAnnotationStrokeAction,
   type ImportVolumeTracingAction,
   type MaybeUnmergedBucketLoadedPromise,
   type RemoveSegmentAction,
-  setSegmentGroupsAction,
   type SetSegmentGroupsAction,
-  setSegmentsAction,
   type UpdateSegmentAction,
+  cancelQuickSelectAction,
+  setSegmentGroupsAction,
+  setSegmentsAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import {

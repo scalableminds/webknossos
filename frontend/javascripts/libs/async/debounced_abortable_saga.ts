@@ -1,5 +1,5 @@
-import { call, type Saga } from "oxalis/model/sagas/effect-generators";
-import { buffers, type Channel, channel, runSaga } from "redux-saga";
+import { type Saga, call } from "oxalis/model/sagas/effect-generators";
+import { type Channel, buffers, channel, runSaga } from "redux-saga";
 import { delay, race, take } from "redux-saga/effects";
 
 // biome-ignore lint/complexity/noBannedTypes: This is copied from redux-saga because it cannot be imported.

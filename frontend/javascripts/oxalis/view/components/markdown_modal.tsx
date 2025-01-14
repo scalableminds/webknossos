@@ -1,4 +1,4 @@
-import { Alert, Modal, Button, Row, Col, Input } from "antd";
+import { Alert, Button, Col, Input, Modal, Row } from "antd";
 import Markdown from "libs/markdown_adapter";
 import * as React from "react";
 

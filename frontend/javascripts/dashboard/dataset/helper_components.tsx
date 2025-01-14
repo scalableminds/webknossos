@@ -1,10 +1,10 @@
-import { Alert, Form, Tooltip, Modal } from "antd";
-import type { FieldError } from "rc-field-form/es/interface";
 import { InfoCircleOutlined } from "@ant-design/icons";
-import * as React from "react";
-import _ from "lodash";
-import type { NamePath } from "antd/lib/form/interface";
+import { Alert, Form, Modal, Tooltip } from "antd";
 import type { FormItemProps, Rule } from "antd/lib/form";
+import type { NamePath } from "antd/lib/form/interface";
+import _ from "lodash";
+import type { FieldError } from "rc-field-form/es/interface";
+import * as React from "react";
 
 const FormItem = Form.Item;
 

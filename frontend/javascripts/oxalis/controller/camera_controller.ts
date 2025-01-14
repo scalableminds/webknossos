@@ -1,24 +1,24 @@
-import * as React from "react";
-import * as THREE from "three";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
-import TWEEN from "tween.js";
-import _ from "lodash";
+import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
+import _ from "lodash";
 import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "oxalis/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
-import { V3 } from "libs/mjs";
-import { getDatasetExtentInUnit, getDatasetCenter } from "oxalis/model/accessors/dataset_accessor";
+import { getDatasetCenter, getDatasetExtentInUnit } from "oxalis/model/accessors/dataset_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   getInputCatcherAspectRatio,
   getPlaneExtentInVoxelFromStore,
 } from "oxalis/model/accessors/view_mode_accessor";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setTDCameraWithoutTimeTrackingAction } from "oxalis/model/actions/view_mode_actions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { getBaseVoxelInUnit, voxelToUnit } from "oxalis/model/scaleinfo";
+import { api } from "oxalis/singletons";
 import type { CameraData } from "oxalis/store";
 import Store from "oxalis/store";
-import { api } from "oxalis/singletons";
+import * as React from "react";
+import * as THREE from "three";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
+import TWEEN from "tween.js";
 
 type Props = {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;

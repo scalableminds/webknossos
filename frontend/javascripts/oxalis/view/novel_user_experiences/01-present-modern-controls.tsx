@@ -1,9 +1,9 @@
-import { Modal, Button } from "antd";
-import * as React from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { updateNovelUserExperienceInfos } from "admin/admin_rest_api";
+import { Button, Modal } from "antd";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import type { OxalisState } from "oxalis/store";
+import * as React from "react";
+import { useDispatch, useSelector } from "react-redux";
 
 export default function PresentModernControls() {
   const dispatch = useDispatch();

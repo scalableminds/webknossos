@@ -1,25 +1,25 @@
-import memoizeOne from "memoize-one";
+import { V3 } from "libs/mjs";
 import _ from "lodash";
-import type { Flycam, OxalisState } from "oxalis/store";
+import memoizeOne from "memoize-one";
 import type {
-  OrthoViewExtents,
-  Rect,
-  Viewport,
   OrthoView,
+  OrthoViewExtents,
   Point2,
+  Rect,
+  Vector2,
   Vector3,
   ViewMode,
-  Vector2,
+  Viewport,
 } from "oxalis/constants";
 import constants, {
   ArbitraryViewport,
   OrthoViews,
   OrthoViewValuesWithoutTDView,
 } from "oxalis/constants";
-import { V3 } from "libs/mjs";
-import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
+import type { Flycam, OxalisState } from "oxalis/store";
 
 export function getTDViewportSize(state: OxalisState): [number, number] {
   const camera = state.viewModeData.plane.tdCamera;

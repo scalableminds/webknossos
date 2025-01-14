@@ -117,6 +117,14 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(userEmail)
     )
 
+  def upgradePricingPlanToPowerMail(user: User, userEmail: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "WEBKNOSSOS Plan Upgrade Request",
+      bodyHtml = html.mail.upgradePricingPlanToPower(user.name, additionalFooter).body,
+      recipients = List(userEmail)
+    )
+
   def upgradePricingPlanUsersMail(user: User, userEmail: String, requestedUsers: Int): Mail =
     Mail(
       from = defaultSender,

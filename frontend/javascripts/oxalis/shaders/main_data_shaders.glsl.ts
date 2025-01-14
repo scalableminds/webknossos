@@ -245,6 +245,8 @@ void main() {
             !<%= name %>_has_transform
           );
         bool used_fallback = maybe_filtered_color.used_fallback_color;
+
+        // color_value is usually between 0 and 1.
         color_value = maybe_filtered_color.color.rgb;
         <% if (textureLayerInfos[name].packingDegree === 2.0) { %>
           // Workaround for 16-bit color layers

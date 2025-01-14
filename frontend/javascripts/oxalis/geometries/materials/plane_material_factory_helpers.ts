@@ -31,6 +31,7 @@ export function createUpdatableTexture(
   type: THREE.TextureDataType,
   renderer: THREE.WebGLRenderer,
   optFormat?: THREE.PixelFormat,
+  internalFormat?: THREE.PixelFormatGPU,
 ): UpdatableTexture {
   const format = optFormat ?? channelCountToFormat(channelCount, type);
 
@@ -50,6 +51,16 @@ export function createUpdatableTexture(
     THREE.NearestFilter,
   );
   newTexture.setRenderer(renderer);
+
+  if (internalFormat) {
+    // Sometimes, the internal format has to be set manually, since ThreeJS does not
+    // derive this value by itself.
+    // See https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html
+    // for a reference of the internal formats.
+    newTexture.internalFormat = internalFormat;
+  }
+
   return newTexture;
 }
+
 export default {};

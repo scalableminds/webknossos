@@ -76,7 +76,7 @@ class UpdatableTexture extends THREE.Texture {
   }
 
   update(
-    src: Float32Array | Uint8Array | Uint32Array,
+    src: Float32Array | Uint8Array | Int8Array | Uint32Array,
     x: number,
     y: number,
     width: number,

@@ -219,6 +219,8 @@ export function getDefaultValueRangeOfLayer(
   const elementClass = getElementClass(dataset, layerName);
 
   switch (elementClass) {
+    case "int8":
+      return [-(2 ** 7), 2 ** 7 - 1];
     case "uint8":
     case "uint24":
       // Since uint24 layers are multi-channel, their intensity ranges are equal to uint8

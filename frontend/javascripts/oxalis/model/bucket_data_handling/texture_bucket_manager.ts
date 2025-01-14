@@ -49,7 +49,7 @@ function getSomeValue<T>(set: Set<T>): T {
 }
 
 const tmpPaddingBuffer = new Uint8Array(4 * constants.BUCKET_SIZE);
-function maybePadRgbData(src: Uint8Array | Float32Array, elementClass: ElementClass) {
+function maybePadRgbData(src: Uint8Array | Int8Array | Float32Array, elementClass: ElementClass) {
   if (elementClass !== "uint24") {
     return src;
   }
@@ -217,7 +217,12 @@ export default class TextureBucketManager {
       const dataTextureIndex = Math.floor(_index / bucketsPerTexture);
       const indexInDataTexture = _index % bucketsPerTexture;
       const data = bucket.getData();
-      const TypedArrayClass = this.elementClass === "float" ? Float32Array : Uint8Array;
+      const TypedArrayClass =
+        this.elementClass === "float"
+          ? Float32Array
+          : this.elementClass.startsWith("int")
+            ? Int8Array
+            : Uint8Array;
 
       const rawSrc = new TypedArrayClass(
         data.buffer,
@@ -264,14 +269,23 @@ export default class TextureBucketManager {
   setupDataTextures(bytes: number, lookUpCuckooTable: CuckooTableVec5, layerIndex: number): void {
     for (let i = 0; i < this.dataTextureCount; i++) {
       const channelCount = getChannelCount(bytes, this.packingDegree, this.elementClass);
-      const textureType = this.elementClass === "float" ? THREE.FloatType : THREE.UnsignedByteType;
+      const textureType =
+        this.elementClass === "float"
+          ? THREE.FloatType
+          : this.elementClass.startsWith("int")
+            ? THREE.ByteType
+            : THREE.UnsignedByteType;
+
       const dataTexture = createUpdatableTexture(
         this.textureWidth,
         this.textureWidth,
         channelCount,
         textureType,
         getRenderer(),
+        undefined,
+        this.elementClass === "int8" ? "RGBA8_SNORM" : undefined,
       );
+
       this.dataTextures.push(dataTexture);
     }
 

@@ -66,6 +66,7 @@ export type Uniforms = Record<
     value: any;
   }
 >;
+
 const DEFAULT_COLOR = new THREE.Vector3(255, 255, 255);
 
 function sanitizeName(name: string | null | undefined): string {
@@ -954,10 +955,17 @@ class PlaneMaterialFactory {
 
     // In UnsignedByte textures the byte values are scaled to [0, 1], in Float textures they are not
     if (!isSegmentationLayer) {
-      const divisor = elementClass === "float" ? 1 : 255;
+      const divisor = elementClass === "float" ? 1 : 256;
       if (intensityRange) {
-        this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
-        this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;
+        if (elementClass === "int8") {
+          // Bytes are stored as signed normalized integers (-1 to 1) in WebGL.
+          // Therefore, we scale the range (-128 to 127) from -1 to 1, too.
+          this.uniforms[`${name}_min`].value = intensityRange[0] / 128;
+          this.uniforms[`${name}_max`].value = intensityRange[1] / 128;
+        } else {
+          this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
+          this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;
+        }
       }
       this.uniforms[`${name}_is_inverted`].value = isInverted ? 1.0 : 0;
 

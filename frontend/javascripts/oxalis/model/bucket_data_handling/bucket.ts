@@ -25,6 +25,7 @@ export enum BucketStateEnum {
 }
 export type BucketStateEnumType = keyof typeof BucketStateEnum;
 export type BucketDataArray =
+  | Int8Array
   | Uint8Array
   | Uint16Array
   | Uint32Array
@@ -70,6 +71,7 @@ export class NullBucket {
 }
 
 export type TypedArrayConstructor =
+  | Int8ArrayConstructor
   | Uint8ArrayConstructor
   | Uint16ArrayConstructor
   | Uint32ArrayConstructor
@@ -80,6 +82,7 @@ export const getConstructorForElementClass = (
 ): [TypedArrayConstructor, number] => {
   switch (type) {
     case "int8":
+      return [Int8Array, 1];
     case "uint8":
       return [Uint8Array, 1];
 

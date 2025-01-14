@@ -1,7 +1,7 @@
 package controllers
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.typesafe.config.ConfigRenderOptions
+import com.typesafe.config.{ConfigRenderOptions, ConfigValueFactory}
 import mail.{DefaultMails, Send}
 import models.organization.OrganizationDAO
 import models.user.UserService
@@ -9,7 +9,7 @@ import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, Result}
 import play.silhouette.api.Silhouette
-import security.WkEnv
+import security.{CertificateValidationService, WkEnv}
 import utils.sql.{SimpleSQLDAO, SqlClient}
 import utils.{ApiVersioning, StoreModules, WkConf}
 
@@ -23,7 +23,8 @@ class Application @Inject()(actorSystem: ActorSystem,
                             conf: WkConf,
                             defaultMails: DefaultMails,
                             storeModules: StoreModules,
-                            sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+                            sil: Silhouette[WkEnv],
+                            certificateValidationService: CertificateValidationService)(implicit ec: ExecutionContext)
     extends Controller
     with ApiVersioning {
 
@@ -53,8 +54,18 @@ class Application @Inject()(actorSystem: ActorSystem,
   }
 
   // This only changes on server restart, so we can cache the full result.
-  private lazy val cachedFeaturesResult: Result = addNoCacheHeaderFallback(
-    Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise())).as(jsonMimeType))
+  private lazy val cachedFeaturesResult: Result = {
+    var features = conf.raw.underlying.getConfig("features")
+    val overwrites = certificateValidationService.getFeatureOverwrites
+    if(!overwrites.getOrElse("sam", true)) {
+      features = features.withValue("segmentAnythingEnabled", ConfigValueFactory.fromAnyRef(false))
+    }
+    if(!overwrites.getOrElse("proofreading", true)) {
+      features = features.withValue("proofreadingEnabled", ConfigValueFactory.fromAnyRef(false))
+    }
+    addNoCacheHeaderFallback(
+      Ok(features.resolve.root.render(ConfigRenderOptions.concise())).as(jsonMimeType))
+  }
 
   def features: Action[AnyContent] = sil.UserAwareAction {
     cachedFeaturesResult
@@ -62,6 +73,13 @@ class Application @Inject()(actorSystem: ActorSystem,
 
   def health: Action[AnyContent] = Action {
     addNoCacheHeaderFallback(Ok("Ok"))
+  }
+
+  def checkCertificate: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    certificateValidationService.checkCertificate().map {
+      case true  => Ok(Json.obj("valid" -> true))
+      case false => BadRequest(Json.obj("valid" -> false))
+    }
   }
 
   def helpEmail(message: String, currentUrl: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

@@ -9,49 +9,16 @@ import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
-import com.scalableminds.webknossos.datastore.helpers.{
-  GetSegmentIndexParameters,
-  ProtoGeometryImplicits,
-  SegmentStatisticsParameters
-}
+import com.scalableminds.webknossos.datastore.helpers.{GetSegmentIndexParameters, ProtoGeometryImplicits, SegmentStatisticsParameters}
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
-import com.scalableminds.webknossos.datastore.models.{
-  LengthUnit,
-  VoxelSize,
-  WebknossosAdHocMeshRequest,
-  WebknossosDataRequest
-}
+import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize, WebknossosAdHocMeshRequest, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.{
-  EditableMappingSegmentListResult,
-  FullMeshRequest,
-  UserAccessRequest
-}
+import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, FullMeshRequest, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
-  EditableMappingService,
-  EditableMappingUpdateActionGroup,
-  MinCutParameters,
-  NeighborsParameters
-}
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  MergedVolumeStats,
-  MagRestrictions,
-  TSFullMeshService,
-  UpdateMappingNameAction,
-  VolumeDataZipFormat,
-  VolumeSegmentIndexService,
-  VolumeSegmentStatisticsService,
-  VolumeTracingService
-}
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{EditableMappingService, EditableMappingUpdateActionGroup, MinCutParameters, NeighborsParameters}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{MagRestrictions, MergedVolumeStats, TSFullMeshService, UpdateMappingNameAction, VolumeDataZipFormat, VolumeSegmentIndexService, VolumeSegmentStatisticsService, VolumeTracingService}
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, UpdateActionGroup}
-import com.scalableminds.webknossos.tracingstore.{
-  TSRemoteDatastoreClient,
-  TSRemoteWebknossosClient,
-  TracingStoreAccessTokenService,
-  TracingStoreConfig,
-  TracingUpdatesReport
-}
+import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient, TracingStoreAccessTokenService, TracingStoreConfig, TracingUpdatesReport}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile

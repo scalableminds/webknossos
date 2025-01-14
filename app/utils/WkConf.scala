@@ -121,6 +121,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val exportTiffMaxVolumeMVx: Long = get[Long]("features.exportTiffMaxVolumeMVx")
     val exportTiffMaxEdgeLengthVx: Long = get[Long]("features.exportTiffMaxEdgeLengthVx")
     val openIdConnectEnabled: Boolean = get[Boolean]("features.openIdConnectEnabled")
+    val proofreadingEnabled: Boolean = get[Boolean]("features.proofreadingEnabled")
     val segmentAnythingEnabled: Boolean = get[Boolean]("features.segmentAnythingEnabled")
   }
 

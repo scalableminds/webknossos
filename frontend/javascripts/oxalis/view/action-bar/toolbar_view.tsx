@@ -917,6 +917,7 @@ export default function ToolbarView() {
     isControlOrMetaPressed,
     isAltPressed,
   );
+  const isProofreadingEnabled = features().proofreadingEnabled;
 
   const skeletonToolDescription = useLegacyBindings
     ? "Use left-click to move around and right-click to create new skeleton nodes"
@@ -925,6 +926,9 @@ export default function ToolbarView() {
     adaptedActiveTool === AnnotationToolEnum.TRACE ||
     adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE;
   const showEraseBrushTool = !showEraseTraceTool;
+  const proofreadToolDescription = isProofreadingEnabled
+    ? "Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
+    : "Proofreading tool is only available on webknossos.org";
 
   return (
     <>
@@ -1123,12 +1127,13 @@ export default function ToolbarView() {
         {hasSkeleton && hasVolume ? (
           <ToolRadioButton
             name={TOOL_NAMES.PROOFREAD}
-            description="Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
+            description={proofreadToolDescription}
             disabledExplanation={
               isAgglomerateMappingEnabled.reason ||
               disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation
             }
             disabled={
+              !isProofreadingEnabled ||
               !isAgglomerateMappingEnabled.value ||
               disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled
             }
@@ -1199,6 +1204,7 @@ function ToolSpecificSettings({
       ? "The quick select tool is now working without AI. Activate AI for better results."
       : "The quick select tool is now working with AI."
     : "The quick select tool with AI is only available on webknossos.org";
+  const isProofreadingEnabled = features().proofreadingEnabled;
   const toggleQuickSelectStrategy = () => {
     dispatch(
       updateUserSettingAction("quickSelect", {
@@ -1265,7 +1271,9 @@ function ToolSpecificSettings({
 
       {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? <FloodFillSettings /> : null}
 
-      {adaptedActiveTool === AnnotationToolEnum.PROOFREAD ? <ProofReadingComponents /> : null}
+      {adaptedActiveTool === AnnotationToolEnum.PROOFREAD && isProofreadingEnabled ? (
+        <ProofReadingComponents />
+      ) : null}
 
       {MeasurementTools.includes(adaptedActiveTool) ? (
         <MeasurementToolSwitch activeTool={adaptedActiveTool} />

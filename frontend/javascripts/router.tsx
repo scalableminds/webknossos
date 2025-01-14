@@ -69,6 +69,7 @@ import loadable from "libs/lazy_loader";
 import { getDatasetIdOrNameFromReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 import { Store } from "oxalis/singletons";
 import type { EmptyObject } from "types/globals";
+import { CheckCertificateModal } from "components/certificate_check";
 
 const { Content } = Layout;
 
@@ -257,6 +258,7 @@ class ReactRouter extends React.Component<Props> {
       <Router history={browserHistory}>
         <Layout>
           <DisableGenericDnd />
+          <CheckCertificateModal />
           <CheckTermsOfServices />
           <Navbar isAuthenticated={isAuthenticated} />
           <HelpButton />

@@ -52,6 +52,7 @@ class AuthenticationController @Inject()(
     openIdConnectClient: OpenIdConnectClient,
     initialDataService: InitialDataService,
     emailVerificationService: EmailVerificationService,
+    certificateValidationService: CertificateValidationService,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with AuthForms
@@ -65,6 +66,8 @@ class AuthenticationController @Inject()(
 
   private lazy val ssoKey =
     conf.WebKnossos.User.ssoKey
+
+  private lazy val isSSOEnabled = certificateValidationService.getFeatureOverwrites.getOrElse("sso", true)
 
   def register: Action[AnyContent] = Action.async { implicit request =>
     signUpForm
@@ -370,45 +373,55 @@ class AuthenticationController @Inject()(
   }
 
   def singleSignOn(sso: String, sig: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    if (ssoKey == "")
-      logger.warn("No SSO key configured! To use single-sign-on a sso key needs to be defined in the configuration.")
+    if (!isSSOEnabled) {
+      Fox.successful(BadRequest("SSO is not enabled"))
+    } else {
+      if (ssoKey == "")
+        logger.warn("No SSO key configured! To use single-sign-on a sso key needs to be defined in the configuration.")
 
-    request.identity match {
-      case Some(user) =>
-        // logged in
-        // Check if the request we received was signed using our private sso-key
-        if (MessageDigest.isEqual(shaHex(ssoKey, sso).getBytes(StandardCharsets.UTF_8),
-                                  sig.getBytes(StandardCharsets.UTF_8))) {
-          val payload = new String(Base64.decodeBase64(sso))
-          val values = play.core.parsers.FormUrlEncodedParser.parse(payload)
-          for {
-            nonce <- values.get("nonce").flatMap(_.headOption) ?~> "Nonce is missing"
-            returnUrl <- values.get("return_sso_url").flatMap(_.headOption) ?~> "Return url is missing"
-            userEmail <- userService.emailFor(user)
-            _ = logger.info(f"User ${user._id} logged in via SSO.")
-          } yield {
-            val returnPayload =
-              s"nonce=$nonce&" +
-                s"email=${URLEncoder.encode(userEmail, "UTF-8")}&" +
-                s"external_id=${URLEncoder.encode(user._id.toString, "UTF-8")}&" +
-                s"username=${URLEncoder.encode(user.abbreviatedName, "UTF-8")}&" +
-                s"name=${URLEncoder.encode(user.name, "UTF-8")}"
-            val encodedReturnPayload = Base64.encodeBase64String(returnPayload.getBytes("UTF-8"))
-            val returnSignature = shaHex(ssoKey, encodedReturnPayload)
-            val query = "sso=" + URLEncoder.encode(encodedReturnPayload, "UTF-8") + "&sig=" + returnSignature
-            Redirect(returnUrl + "?" + query)
+      request.identity match {
+        case Some(user) =>
+          // logged in
+          // Check if the request we received was signed using our private sso-key
+          if (MessageDigest.isEqual(shaHex(ssoKey, sso).getBytes(StandardCharsets.UTF_8),
+                                    sig.getBytes(StandardCharsets.UTF_8))) {
+            val payload = new String(Base64.decodeBase64(sso))
+            val values = play.core.parsers.FormUrlEncodedParser.parse(payload)
+            for {
+              nonce <- values.get("nonce").flatMap(_.headOption) ?~> "Nonce is missing"
+              returnUrl <- values.get("return_sso_url").flatMap(_.headOption) ?~> "Return url is missing"
+              userEmail <- userService.emailFor(user)
+              _ = logger.info(f"User ${user._id} logged in via SSO.")
+            } yield {
+              val returnPayload =
+                s"nonce=$nonce&" +
+                  s"email=${URLEncoder.encode(userEmail, "UTF-8")}&" +
+                  s"external_id=${URLEncoder.encode(user._id.toString, "UTF-8")}&" +
+                  s"username=${URLEncoder.encode(user.abbreviatedName, "UTF-8")}&" +
+                  s"name=${URLEncoder.encode(user.name, "UTF-8")}"
+              val encodedReturnPayload = Base64.encodeBase64String(returnPayload.getBytes("UTF-8"))
+              val returnSignature = shaHex(ssoKey, encodedReturnPayload)
+              val query = "sso=" + URLEncoder.encode(encodedReturnPayload, "UTF-8") + "&sig=" + returnSignature
+              Redirect(returnUrl + "?" + query)
+            }
+          } else {
+            Fox.successful(BadRequest("Invalid signature"))
           }
-        } else {
-          Fox.successful(BadRequest("Invalid signature"))
-        }
-      case None => Fox.successful(Redirect("/auth/login?redirectPage=http://discuss.webknossos.org")) // not logged in
+        case None => Fox.successful(Redirect("/auth/login?redirectPage=http://discuss.webknossos.org")) // not logged in
+      }
     }
   }
 
   private lazy val absoluteOpenIdConnectCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
 
   def loginViaOpenIdConnect(): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    openIdConnectClient.getRedirectUrl(absoluteOpenIdConnectCallbackURL).map(url => Ok(Json.obj("redirect_url" -> url)))
+    if (!isSSOEnabled) {
+      Fox.successful(BadRequest("SSO is not enabled"))
+    } else {
+      openIdConnectClient
+        .getRedirectUrl(absoluteOpenIdConnectCallbackURL)
+        .map(url => Ok(Json.obj("redirect_url" -> url)))
+    }
   }
 
   private def loginUser(loginInfo: LoginInfo)(implicit request: Request[AnyContent]): Future[Result] =
@@ -458,6 +471,7 @@ class AuthenticationController @Inject()(
 
   def openIdCallback(): Action[AnyContent] = Action.async { implicit request =>
     for {
+      _ <- bool2Fox(isSSOEnabled) ?~> "SSO is not enabled"
       (accessToken: JsObject, idToken: Option[JsObject]) <- openIdConnectClient.getAndValidateTokens(
         absoluteOpenIdConnectCallbackURL,
         request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),

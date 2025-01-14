@@ -6,7 +6,7 @@ import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.user.User
-import play.api.i18n.{I18nSupport, Messages, MessagesProvider}
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import play.api.mvc.{InjectedController, Request, Result}
 import security.{UserAwareRequestLogging, WkEnv}
@@ -17,7 +17,7 @@ trait Controller extends InjectedController with ExtendedController with UserAwa
 
   final val badRequestLabel = "Operation could not be performed. See JSON body for more information."
 
-  def jsonErrorWrites(errors: JsError)(implicit m: MessagesProvider): JsObject =
+  private def jsonErrorWrites(errors: JsError)(implicit m: MessagesProvider): JsObject =
     Json.obj(
       "errors" -> errors.errors.map(error =>
         error._2.foldLeft(Json.obj("field" -> error._1.toJsonString)) {
@@ -37,8 +37,8 @@ trait Controller extends InjectedController with ExtendedController with UserAwa
       f: A => Fox[Result])(implicit rds: Reads[A], m: MessagesProvider, ec: ExecutionContext): Fox[Result] =
     withJsonUsing(json, rds)(f)
 
-  def withJsonUsing[A](json: JsReadable, reads: Reads[A])(f: A => Fox[Result])(implicit m: MessagesProvider,
-                                                                               ec: ExecutionContext): Fox[Result] =
+  private def withJsonUsing[A](json: JsReadable, reads: Reads[A])(f: A => Fox[Result])(implicit m: MessagesProvider,
+                                                                                       ec: ExecutionContext): Fox[Result] =
     json.validate(reads) match {
       case JsSuccess(result, _) =>
         f(result)

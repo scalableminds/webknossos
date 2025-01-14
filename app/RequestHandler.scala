@@ -9,7 +9,6 @@ import play.api.mvc.{Handler, InjectedController, RequestHeader}
 import play.api.routing.Router
 import play.core.WebCommands
 import play.filters.csp.CSPConfig
-import security.CertificateValidationService
 import utils.{ApiVersioning, WkConf}
 
 import scala.concurrent.ExecutionContext
@@ -17,7 +16,6 @@ import scala.concurrent.ExecutionContext
 class RequestHandler @Inject()(webCommands: WebCommands,
                                optionalDevContext: OptionalDevContext,
                                router: Router,
-                               certificateValidationService: CertificateValidationService,
                                errorHandler: HttpErrorHandler,
                                httpConfiguration: HttpConfiguration,
                                wkorgProxyController: WkorgProxyController,
@@ -45,8 +43,6 @@ class RequestHandler @Inject()(webCommands: WebCommands,
       Some(Action {
         JsonNotFound(invalidApiVersionMessage(request))
       })
-    } else if (!certificateValidationService.checkCertificate()) {
-      Some(Action { MovedPermanently(conf.Http.uri + "/expired") })
     } else if (request.uri.matches("^(/api/|/data/|/tracings/|/\\.well-known/).*$")) {
       super.routeRequest(request)
     } else if (request.uri.matches("^(/assets/).*(worker.js).*$")) {

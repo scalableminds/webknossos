@@ -1,7 +1,9 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
 import collections.SequenceUtils
+import com.scalableminds.util.tools.JsonHelper.bool2Box
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.{Box, Full}
 
 trait UpdateGroupHandling extends LazyLogging {
 
@@ -9,17 +11,23 @@ trait UpdateGroupHandling extends LazyLogging {
    * Regroup update action groups, isolating the update actions that need it.
    * (Currently RevertToVersionAnnotationAction and AddLayerAnnotationAction)
    * Assumes they are already the only update in their respective group.
+   * Expects groups sorted by version in descending order
+   * Outputs (potentially fewer!) groups in ascending order
+   * Target versions should be unchanged. Each group's target version is the max of its input.
    * Compare unit test for UpdateGroupHandlingUnitTestSuite
    */
   def regroupByIsolationSensitiveActions(
-      updateActionGroupsWithVersions: List[(Long, List[UpdateAction])]): List[(Long, List[UpdateAction])] = {
-    val splitGroupLists: List[List[(Long, List[UpdateAction])]] =
-      SequenceUtils.splitAndIsolate(updateActionGroupsWithVersions.reverse)(actionGroup =>
+      updateActionGroupsWithVersions: List[(Long, List[UpdateAction])]): Box[List[(Long, List[UpdateAction])]] =
+    for {
+      groupVersions <- Full(updateActionGroupsWithVersions.map(_._1))
+      _ <- bool2Box(groupVersions.sorted((Ordering[Long].reverse)) == groupVersions) ?~! "updateGroupVersions.notSortedDesc"
+      splitGroupLists: List[List[(Long, List[UpdateAction])]] = SequenceUtils.splitAndIsolate(
+        updateActionGroupsWithVersions.reverse)(actionGroup =>
         actionGroup._2.exists(updateAction => isIsolationSensitiveAction(updateAction)))
-    splitGroupLists.flatMap { groupsToConcatenate: List[(Long, List[UpdateAction])] =>
-      concatenateUpdateActionGroups(groupsToConcatenate)
-    }
-  }
+      result = splitGroupLists.flatMap { groupsToConcatenate: List[(Long, List[UpdateAction])] =>
+        concatenateUpdateActionGroups(groupsToConcatenate)
+      }
+    } yield result
 
   private def concatenateUpdateActionGroups(
       groups: List[(Long, List[UpdateAction])]): Option[(Long, List[UpdateAction])] = {

@@ -139,7 +139,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
   def createHistogram(dataSource: DataSource, dataLayer: DataLayer): Fox[List[Histogram]] = {
 
-    def calculateHistogramValues(data: Array[_ >: UByte with UShort with UInt with ULong with Float],
+    def calculateHistogramValues(data: Array[_ >: UByte with Byte with UShort with UInt with ULong with Float],
                                  bytesPerElement: Int,
                                  isUint24: Boolean) = {
       val counts = if (isUint24) Array.ofDim[Long](768) else Array.ofDim[Long](256)
@@ -157,10 +157,14 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
               extrema = (0, 255)
             } else
               byteData.foreach(el => counts(el.toInt) += 1)
+          case byteData: Array[Byte] => {
+            byteData.foreach(el => counts(el.toInt + 128) += 1)
+            extrema = (-128, 128)
+          }
           case shortData: Array[UShort] =>
             shortData.foreach(el => counts((el / UShort(256)).toInt) += 1)
-          case intData: Array[UInt] =>
-            intData.foreach(el => counts((el / UInt(16777216)).toInt) += 1)
+          case uintData: Array[UInt] =>
+            uintData.foreach(el => counts((el / UInt(16777216)).toInt) += 1)
           case longData: Array[ULong] =>
             longData.foreach(el => counts((el / ULong(math.pow(2, 56).toLong)).toInt) += 1)
           case floatData: Array[Float] =>
@@ -186,7 +190,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       for {
         dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, mag) ?~> "dataset.noData"
         isUint24 = dataLayer.elementClass == ElementClass.uint24
-        convertedData = toUnsigned(filterZeroes(convertData(dataConcatenated, dataLayer.elementClass), skip = isUint24))
+        convertedData = toMaybeUnsigned(filterZeroes(convertData(dataConcatenated, dataLayer.elementClass), skip = isUint24))
       } yield calculateHistogramValues(convertedData, dataLayer.bytesPerElement, isUint24)
 
     if (dataLayer.resolutions.nonEmpty)

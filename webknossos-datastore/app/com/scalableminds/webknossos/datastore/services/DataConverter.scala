@@ -47,10 +47,10 @@ trait DataConverter extends FoxImplicits {
     dstArray
   }
 
-  def toUnsigned(data: Array[_ >: Byte with Short with Int with Long with Float])
-    : Array[_ >: UByte with UShort with UInt with ULong with Float] =
+  def toMaybeUnsigned(data: Array[_ >: Byte with Short with Int with Long with Float])
+    : Array[_ >: UByte with Byte with UShort with UInt with ULong with Float] =
     data match {
-      case d: Array[Byte]  => d.map(UByte(_))
+      case d: Array[Byte]  => d
       case d: Array[Short] => d.map(UShort(_))
       case d: Array[Int]   => d.map(UInt(_))
       case d: Array[Long]  => d.map(ULong(_))

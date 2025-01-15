@@ -444,7 +444,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
               description={warning}
               style={{
                 marginBottom: 12,
-                whiteSpace: "pre-line",
+                whiteSpace: "pre-wrap",
               }}
               type="warning"
               showIcon
@@ -626,12 +626,17 @@ function checkBoundingBoxesForErrorsAndWarnings(
 
   if (notMagAlignedBoundingBoxes.length > 0) {
     hasBBoxWarnings = true;
-    const notMagAlignedBoundingBoxesStrings = notMagAlignedBoundingBoxes.map(
-      ({ boundingBox, name, annotationId, alignedBoundingBox, trainingMag }) =>
-        `'${name}' of annotation ${annotationId}: ${boundingBox.join(", ")} will be ${alignedBoundingBox.join(", ")} in mag ${trainingMag.join(", ")}`,
-    );
+    const warningsPerAnnotation = _.toPairs(_.groupBy(notMagAlignedBoundingBoxes, "annotationId"))
+      .map(([annotationId, boxes]) => {
+        let warning = `- Annotation ${annotationId}\n`;
+        boxes.forEach(({ name, boundingBox, alignedBoundingBox, trainingMag }) => {
+          warning += `  - ${name}: ${boundingBox.join(", ")} will be ${alignedBoundingBox.join(", ")} in mag ${trainingMag.join(", ")}\n`;
+        });
+        return warning;
+      })
+      .join("\n");
     warnings.push(
-      `The following bounding boxes are not aligned with the selected magnification. They will be automatically shrunk to be aligned with the magnification:\n${notMagAlignedBoundingBoxesStrings.join("\n")}`,
+      `The following bounding boxes are not aligned with the selected magnification. They will be automatically shrunk to be aligned with the magnification:\n${warningsPerAnnotation}`,
     );
   }
 

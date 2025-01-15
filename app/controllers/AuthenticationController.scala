@@ -67,7 +67,7 @@ class AuthenticationController @Inject()(
   private lazy val ssoKey =
     conf.WebKnossos.User.ssoKey
 
-  private lazy val isSSOEnabled = certificateValidationService.getFeatureOverwrites.getOrElse("sso", true)
+  private lazy val isSSOEnabled = certificateValidationService.getFeatureOverrides.getOrElse("sso", true)
 
   def register: Action[AnyContent] = Action.async { implicit request =>
     signUpForm

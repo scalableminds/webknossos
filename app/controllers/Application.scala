@@ -1,7 +1,7 @@
 package controllers
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.typesafe.config.{ConfigRenderOptions, ConfigValueFactory}
+import com.typesafe.config.ConfigRenderOptions
 import mail.{DefaultMails, Send}
 import models.organization.OrganizationDAO
 import models.user.UserService
@@ -54,19 +54,8 @@ class Application @Inject()(actorSystem: ActorSystem,
   }
 
   // This only changes on server restart, so we can cache the full result.
-  private lazy val cachedFeaturesResult: Result = {
-    var features = conf.raw.underlying.getConfig("features")
-    val overwrites = certificateValidationService.getFeatureOverwrites
-    overwrites
-      .get("sam")
-      .foreach(isSamEnabled =>
-        features = features.withValue("segmentAnythingEnabled", ConfigValueFactory.fromAnyRef(isSamEnabled)))
-    overwrites
-      .get("proofreading")
-      .foreach(isProofreadingEnabled =>
-        features = features.withValue("proofreadingEnabled", ConfigValueFactory.fromAnyRef(isProofreadingEnabled)))
-    addNoCacheHeaderFallback(Ok(features.resolve.root.render(ConfigRenderOptions.concise())).as(jsonMimeType))
-  }
+  private lazy val cachedFeaturesResult: Result = addNoCacheHeaderFallback(
+    Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise())).as(jsonMimeType))
 
   def features: Action[AnyContent] = sil.UserAwareAction {
     cachedFeaturesResult

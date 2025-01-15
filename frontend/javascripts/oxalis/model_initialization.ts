@@ -40,6 +40,7 @@ import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontraci
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import {
+  batchedAnnotationInitializationAction,
   dispatchMaybeFetchMeshFilesAsync,
   initializeAnnotationAction,
   updateCurrentMeshFileAction,
@@ -93,6 +94,7 @@ import type {
   UserConfiguration,
 } from "oxalis/store";
 import Store from "oxalis/store";
+import { batchActions } from "redux-batched-actions";
 import type {
   APIAnnotation,
   APICompoundType,
@@ -352,7 +354,8 @@ function initializeAnnotation(
       };
     }
 
-    Store.dispatch(
+    const initializationActions = [];
+    initializationActions.push(
       initializeAnnotationAction(
         convertServerAnnotationToFrontendAnnotation(annotation, version, earliestAccessibleVersion),
       ),
@@ -362,16 +365,20 @@ function initializeAnnotation(
         getSegmentationLayers(dataset).length > 0,
         messages["tracing.volume_missing_segmentation"],
       );
-      Store.dispatch(initializeVolumeTracingAction(volumeTracing));
+      initializationActions.push(initializeVolumeTracingAction(volumeTracing));
     });
 
-    editableMappings.map((mapping) => Store.dispatch(initializeEditableMappingAction(mapping)));
+    editableMappings.map((mapping) =>
+      initializationActions.push(initializeEditableMappingAction(mapping)),
+    );
 
     const skeletonTracing = getNullableSkeletonTracing(serverTracings);
 
     if (skeletonTracing != null) {
-      Store.dispatch(initializeSkeletonTracingAction(skeletonTracing));
+      initializationActions.push(initializeSkeletonTracingAction(skeletonTracing));
     }
+
+    Store.dispatch(batchedAnnotationInitializationAction(initializationActions));
     Store.dispatch(setVersionNumberAction(version));
   }
 

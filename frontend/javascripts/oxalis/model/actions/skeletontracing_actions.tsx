@@ -132,6 +132,7 @@ export type SkeletonTracingAction =
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
+  "INITIALIZE_ANNOTATION_WITH_TRACINGS",
   "CREATE_NODE",
   "DELETE_NODE",
   "DELETE_EDGE",

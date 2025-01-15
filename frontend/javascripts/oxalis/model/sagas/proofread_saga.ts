@@ -79,7 +79,7 @@ import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_flow
 import { getCurrentMag } from "../accessors/flycam_accessor";
 import type { Action } from "../actions/actions";
 import { ensureWkReady } from "./ready_sagas";
-import { takeEveryUnlessBusy } from "./saga_helpers";
+import { takeEveryUnlessBusy, takeWithBatchActionSupport } from "./saga_helpers";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -96,7 +96,7 @@ function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
 }
 
 export default function* proofreadRootSaga(): Saga<void> {
-  yield* take("INITIALIZE_SKELETONTRACING");
+  yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* call(ensureWkReady);
 
   yield* takeEveryUnlessBusy(

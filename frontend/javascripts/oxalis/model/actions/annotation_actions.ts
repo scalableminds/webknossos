@@ -9,6 +9,7 @@ import type {
   UserBoundingBoxWithoutIdMaybe,
 } from "oxalis/store";
 import type { Dispatch } from "redux";
+import { batchActions } from "redux-batched-actions";
 import type {
   APIAnnotationVisibility,
   APIDataLayer,
@@ -18,8 +19,32 @@ import type {
   EditableLayerProperties,
 } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { InitializeSkeletonTracingAction } from "./skeletontracing_actions";
+import type {
+  InitializeEditableMappingAction,
+  InitializeVolumeTracingAction,
+} from "./volumetracing_actions";
 
 type InitializeAnnotationAction = ReturnType<typeof initializeAnnotationAction>;
+type InitializationAction =
+  | InitializeAnnotationAction
+  | InitializeSkeletonTracingAction
+  | InitializeVolumeTracingAction
+  | InitializeEditableMappingAction;
+
+// This BatchedAnnotationInitializationAction should be used
+// when initializing the annotation. This is important especially when
+// switching between annotation versions with the version-restore view.
+// Otherwise, there can be listeners that act too eagerly after the first
+// initialization action was dispatched and try to access data that is not
+// there yet (because the other initialization actions were not dispatched yet).
+export type BatchedAnnotationInitializationAction = {
+  type: "INITIALIZE_ANNOTATION_WITH_TRACINGS";
+  payload: InitializationAction[];
+  meta: {
+    batch: true;
+  };
+};
 export type SetAnnotationNameAction = ReturnType<typeof setAnnotationNameAction>;
 type SetAnnotationVisibilityAction = ReturnType<typeof setAnnotationVisibilityAction>;
 export type EditAnnotationLayerAction = ReturnType<typeof editAnnotationLayerAction>;
@@ -53,6 +78,7 @@ export type SetOthersMayEditForAnnotationAction = ReturnType<
 
 export type AnnotationActionTypes =
   | InitializeAnnotationAction
+  | BatchedAnnotationInitializationAction
   | SetAnnotationNameAction
   | SetAnnotationVisibilityAction
   | EditAnnotationLayerAction
@@ -100,6 +126,12 @@ export const initializeAnnotationAction = (annotation: Annotation) =>
     type: "INITIALIZE_ANNOTATION",
     annotation,
   }) as const;
+
+export const batchedAnnotationInitializationAction = (actions: Array<InitializationAction>) =>
+  batchActions(
+    actions,
+    "INITIALIZE_ANNOTATION_WITH_TRACINGS",
+  ) as unknown as BatchedAnnotationInitializationAction;
 
 export const setAnnotationNameAction = (name: string) =>
   ({

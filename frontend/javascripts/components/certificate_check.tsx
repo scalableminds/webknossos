@@ -52,7 +52,7 @@ export function CheckCertificateModal() {
                 >
                   contact us
                 </a>{" "}
-                to review your certificate.
+                to renew your certificate.
               </span>
             }
             style={{ height: "100%" }}

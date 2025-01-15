@@ -136,7 +136,6 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val key: String = get[String]("datastore.key")
     val name: String = get[String]("datastore.name")
     val publicUri: Option[String] = getOptional[String]("datastore.publicUri")
-    val localFolderWhitelist: List[String] = getList[String]("datastore.localFolderWhitelist")
   }
 
   object Tracingstore {

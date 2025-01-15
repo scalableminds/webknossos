@@ -5,7 +5,9 @@ import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import net.liftweb.common.{Box, Failure, Full}
 import play.api.libs.json.{Json, OFormat}
 
-case class NgffCoordinateTransformation(`type`: String = "scale", scale: Option[List[Double]])
+case class NgffCoordinateTransformation(`type`: String = "scale",
+                                        scale: Option[List[Double]],
+                                        translation: Option[List[Double]])
 
 object NgffCoordinateTransformation {
   implicit val jsonFormat: OFormat[NgffCoordinateTransformation] = Json.format[NgffCoordinateTransformation]

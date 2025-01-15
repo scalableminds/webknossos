@@ -9,21 +9,18 @@ export function CheckCertificateModal() {
   useEffect(() => {
     isCertificateValid().then(({ valid }) => setIsValid(valid));
   }, []);
-  useInterval(
-    async () => {
-      const { valid } = await isCertificateValid();
-      setIsValid(valid);
-    },
-    5 * 60 * 1000,
-  );
+  useInterval(async () => {
+    const { valid } = await isCertificateValid();
+    setIsValid(valid);
+  }, 5 * 60 * 1000);
   if (isValid) {
     return null;
   }
   return (
     <Modal
       open={true}
-      title="Certificate Expired"
       closable={false}
+      footer={null}
       onCancel={_.noop}
       width={"70%"}
       keyboard={false}
@@ -41,18 +38,18 @@ export function CheckCertificateModal() {
             status="warning"
             title={
               <span style={{ color: "white" }}>
-                Sorry, your WEBKNOSSOS subscription has ended.
+                Sorry, your WEBKNOSSOS license has expired.
                 <br />
                 Please{" "}
                 <a
                   target="_blank"
                   rel="noreferrer"
-                  href="mailto:webknossos@scm.io"
+                  href="mailto:hello@webknossos.org"
                   style={{ color: "inherit", textDecoration: "underline" }}
                 >
                   contact us
                 </a>{" "}
-                to renew your certificate.
+                to renew your license.
               </span>
             }
             style={{ height: "100%" }}

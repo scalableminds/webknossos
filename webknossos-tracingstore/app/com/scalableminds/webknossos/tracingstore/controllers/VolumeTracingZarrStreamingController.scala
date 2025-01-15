@@ -56,7 +56,7 @@ class VolumeTracingZarrStreamingController @Inject()(
 
   override def defaultErrorCode: Int = NOT_FOUND
 
-  def volumeTracingFolderContent(token: Option[String], tracingId: String, zarrVersion: Int): Action[AnyContent] =
+  def volumeTracingDirectoryContent(token: Option[String], tracingId: String, zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
@@ -75,7 +75,9 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
     }
 
-  def volumeTracingFolderContentJson(token: Option[String], tracingId: String, zarrVersion: Int): Action[AnyContent] =
+  def volumeTracingDirectoryContentJson(token: Option[String],
+                                        tracingId: String,
+                                        zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
@@ -88,10 +90,10 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
     }
 
-  def volumeTracingMagFolderContent(token: Option[String],
-                                    tracingId: String,
-                                    mag: String,
-                                    zarrVersion: Int): Action[AnyContent] =
+  def volumeTracingMagDirectoryContent(token: Option[String],
+                                       tracingId: String,
+                                       mag: String,
+                                       zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
@@ -111,10 +113,10 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
     }
 
-  def volumeTracingMagFolderContentJson(token: Option[String],
-                                        tracingId: String,
-                                        mag: String,
-                                        zarrVersion: Int): Action[AnyContent] =
+  def volumeTracingMagDirectoryContentJson(token: Option[String],
+                                           tracingId: String,
+                                           mag: String,
+                                           zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {

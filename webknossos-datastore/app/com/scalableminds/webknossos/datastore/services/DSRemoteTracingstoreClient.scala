@@ -60,12 +60,12 @@ class DSRemoteTracingstoreClient @Inject()(
       implicit tc: TokenContext): Fox[Array[Byte]] =
     rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/$mag/$cxyz").silent.withTokenFromContext.getWithBytesResponse
 
-  def getDataLayerMagFolderContents(tracingId: String, mag: String, tracingStoreUri: String, zarrVersion: Int)(
+  def getDataLayerMagDirectoryContents(tracingId: String, mag: String, tracingStoreUri: String, zarrVersion: Int)(
       implicit tc: TokenContext): Fox[List[String]] =
     rpc(s"$tracingStoreUri/tracings/volume/${getZarrVersionDependantSubPath(zarrVersion)}/json/$tracingId/$mag").withTokenFromContext
       .getWithJsonResponse[List[String]]
 
-  def getDataLayerFolderContents(tracingId: String, tracingStoreUri: String, zarrVersion: Int)(
+  def getDataLayerDirectoryContents(tracingId: String, tracingStoreUri: String, zarrVersion: Int)(
       implicit tc: TokenContext): Fox[List[String]] =
     rpc(s"$tracingStoreUri/tracings/volume/${getZarrVersionDependantSubPath(zarrVersion)}/json/$tracingId").withTokenFromContext
       .getWithJsonResponse[List[String]]

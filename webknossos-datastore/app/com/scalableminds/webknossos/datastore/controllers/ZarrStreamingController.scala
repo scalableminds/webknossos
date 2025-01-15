@@ -383,23 +383,23 @@ class ZarrStreamingController @Inject()(
       }
     } yield result
 
-  def requestDataLayerMagFolderContents(organizationId: String,
-                                        datasetDirectoryName: String,
-                                        dataLayerName: String,
-                                        mag: String,
-                                        zarrVersion: Int): Action[AnyContent] =
+  def requestDataLayerMagDirectoryContents(organizationId: String,
+                                           datasetDirectoryName: String,
+                                           dataLayerName: String,
+                                           mag: String,
+                                           zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
-        dataLayerMagFolderContents(organizationId, datasetDirectoryName, dataLayerName, mag, zarrVersion)
+        dataLayerMagDirectoryContents(organizationId, datasetDirectoryName, dataLayerName, mag, zarrVersion)
       }
     }
 
-  private def dataLayerMagFolderContents(organizationId: String,
-                                         datasetDirectoryName: String,
-                                         dataLayerName: String,
-                                         mag: String,
-                                         zarrVersion: Int)(implicit m: MessagesProvider): Fox[Result] =
+  private def dataLayerMagDirectoryContents(organizationId: String,
+                                            datasetDirectoryName: String,
+                                            dataLayerName: String,
+                                            mag: String,
+                                            zarrVersion: Int)(implicit m: MessagesProvider): Fox[Result] =
     for {
       (_, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                        datasetDirectoryName,
@@ -416,20 +416,20 @@ class ZarrStreamingController @Inject()(
           additionalEntries
         )).withHeaders()
 
-  def dataLayerMagFolderContentsPrivateLink(accessToken: String,
-                                            dataLayerName: String,
-                                            mag: String,
-                                            zarrVersion: Int): Action[AnyContent] =
+  def dataLayerMagDirectoryContentsPrivateLink(accessToken: String,
+                                               dataLayerName: String,
+                                               mag: String,
+                                               zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       ifIsAnnotationLayerOrElse(
         accessToken,
         dataLayerName,
         ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
           remoteTracingstoreClient
-            .getDataLayerMagFolderContents(annotationLayer.tracingId,
-                                           mag,
-                                           annotationSource.tracingStoreUrl,
-                                           zarrVersion)(relevantTokenContext)
+            .getDataLayerMagDirectoryContents(annotationLayer.tracingId,
+                                              mag,
+                                              annotationSource.tracingStoreUrl,
+                                              zarrVersion)(relevantTokenContext)
             .map(
               layers =>
                 Ok(
@@ -439,28 +439,28 @@ class ZarrStreamingController @Inject()(
                     layers
                   )).withHeaders()),
         orElse = annotationSource =>
-          dataLayerMagFolderContents(annotationSource.organizationId,
-                                     annotationSource.datasetDirectoryName,
-                                     dataLayerName,
-                                     mag,
-                                     zarrVersion)
+          dataLayerMagDirectoryContents(annotationSource.organizationId,
+                                        annotationSource.datasetDirectoryName,
+                                        dataLayerName,
+                                        mag,
+                                        zarrVersion)
       )
     }
 
-  def requestDataLayerFolderContents(organizationId: String,
-                                     datasetDirectoryName: String,
-                                     dataLayerName: String,
-                                     zarrVersion: Int): Action[AnyContent] = Action.async { implicit request =>
+  def requestDataLayerDirectoryContents(organizationId: String,
+                                        datasetDirectoryName: String,
+                                        dataLayerName: String,
+                                        zarrVersion: Int): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
-      dataLayerFolderContents(organizationId, datasetDirectoryName, dataLayerName, zarrVersion)
+      dataLayerDirectoryContents(organizationId, datasetDirectoryName, dataLayerName, zarrVersion)
     }
   }
 
-  private def dataLayerFolderContents(organizationId: String,
-                                      datasetDirectoryName: String,
-                                      dataLayerName: String,
-                                      zarrVersion: Int)(implicit m: MessagesProvider): Fox[Result] =
+  private def dataLayerDirectoryContents(organizationId: String,
+                                         datasetDirectoryName: String,
+                                         dataLayerName: String,
+                                         zarrVersion: Int)(implicit m: MessagesProvider): Fox[Result] =
     for {
       (_, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                        datasetDirectoryName,
@@ -478,16 +478,16 @@ class ZarrStreamingController @Inject()(
           additionalFiles ++ mags.map(_.toMagLiteral(allowScalar = true))
         )).withHeaders()
 
-  def dataLayerFolderContentsPrivateLink(accessToken: String,
-                                         dataLayerName: String,
-                                         zarrVersion: Int): Action[AnyContent] =
+  def dataLayerDirectoryContentsPrivateLink(accessToken: String,
+                                            dataLayerName: String,
+                                            zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       ifIsAnnotationLayerOrElse(
         accessToken,
         dataLayerName,
         ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
           remoteTracingstoreClient
-            .getDataLayerFolderContents(annotationLayer.tracingId, annotationSource.tracingStoreUrl, zarrVersion)(
+            .getDataLayerDirectoryContents(annotationLayer.tracingId, annotationSource.tracingStoreUrl, zarrVersion)(
               relevantTokenContext)
             .map(
               layers =>
@@ -498,16 +498,16 @@ class ZarrStreamingController @Inject()(
                     layers
                   )).withHeaders()),
         orElse = annotationSource =>
-          dataLayerFolderContents(annotationSource.organizationId,
-                                  annotationSource.datasetDirectoryName,
-                                  dataLayerName,
-                                  zarrVersion)
+          dataLayerDirectoryContents(annotationSource.organizationId,
+                                     annotationSource.datasetDirectoryName,
+                                     dataLayerName,
+                                     zarrVersion)
       )
     }
 
-  def requestDataSourceFolderContents(organizationId: String,
-                                      datasetDirectoryName: String,
-                                      zarrVersion: Int): Action[AnyContent] =
+  def requestDataSourceDirectoryContents(organizationId: String,
+                                         datasetDirectoryName: String,
+                                         zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
@@ -528,7 +528,7 @@ class ZarrStreamingController @Inject()(
       }
     }
 
-  def dataSourceFolderContentsPrivateLink(accessToken: String, zarrVersion: Int): Action[AnyContent] =
+  def dataSourceDirectoryContentsPrivateLink(accessToken: String, zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       for {
         annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken)

@@ -8,6 +8,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ## Unreleased
 [Commits](https://github.com/scalableminds/webknossos/compare/24.12.0...HEAD)
 - Removed support for HTTP API versions 3 and 4. [#8075](https://github.com/scalableminds/webknossos/pull/8075)
+- Datastore config options `datastore.baseFolder` and `localFolderWhitelist` to `datastore.baseDirectory` and `localDirectoryWhitelist` respectively, to avoid confusion with the dashboard folders. [#8292](https://github.com/scalableminds/webknossos/pull/8292)
 - The migration route `addSegmentIndex` was removed. If you haven’t done this yet, but need segment indices for your volume annotations, upgrade to an earlier version first, call addSegmentIndex, and then upgrade again. [#7917](https://github.com/scalableminds/webknossos/pull/7917)
 - The versioning scheme of annotations has been changed. That requires a larger migration including the FossilDB content. [#7917](https://github.com/scalableminds/webknossos/pull/7917)
     - New FossilDB version `0.1.34` (docker image `scalableminds/fossildb:master__510`) is required.

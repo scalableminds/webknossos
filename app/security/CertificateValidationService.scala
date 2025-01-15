@@ -54,7 +54,8 @@ class CertificateValidationService @Inject()(implicit ec: ExecutionContext) exte
 
   def checkCertificate(): Fox[(Boolean, Long)] = cache.getOrLoad("c", _ => Fox.successful(_checkCertificate()))
 
-  private def defaultMap: Map[String, Boolean] = Map("sso" -> false, "sam" -> false, "proofreading" -> false)
+  private def defaultMap: Map[String, Boolean] =
+    Map("openIdConnectEnabled" -> false, "segmentAnythingEnabled" -> false, "proofreadingEnabled" -> false)
 
   lazy val getFeatureOverrides: Map[String, Boolean] = publicKeyBox match {
     case Full(publicKey) =>
@@ -62,7 +63,7 @@ class CertificateValidationService @Inject()(implicit ec: ExecutionContext) exte
         certificate <- Properties.envOrNone("CERTIFICATE")
         // JwtJson already throws and error which is transformed to an empty option when the certificate is expired.
         token <- JwtJson.decodeJson(certificate, publicKey).toOption
-        featureOverrides <- Some((token \ "features").asOpt[Map[String, Boolean]].getOrElse(defaultMap))
+        featureOverrides <- Some((token \ "webknossos").asOpt[Map[String, Boolean]].getOrElse(defaultMap))
         featureOverridesWithDefaults = featureOverrides ++ defaultMap.view.filterKeys(!featureOverrides.contains(_))
       } yield featureOverridesWithDefaults).getOrElse(defaultMap)
     case Empty => Map.empty

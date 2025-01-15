@@ -67,7 +67,7 @@ class AuthenticationController @Inject()(
   private lazy val ssoKey =
     conf.WebKnossos.User.ssoKey
 
-  private lazy val isSSOEnabled = certificateValidationService.getFeatureOverrides.getOrElse("sso", true)
+  private lazy val isOIDCEnabled = certificateValidationService.getFeatureOverrides.getOrElse("openIdConnectEnabled", true)
 
   def register: Action[AnyContent] = Action.async { implicit request =>
     signUpForm
@@ -373,7 +373,7 @@ class AuthenticationController @Inject()(
   }
 
   def singleSignOn(sso: String, sig: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    if (!isSSOEnabled) {
+    if (!isOIDCEnabled) {
       Fox.successful(BadRequest("SSO is not enabled"))
     } else {
       if (ssoKey == "")
@@ -415,7 +415,7 @@ class AuthenticationController @Inject()(
   private lazy val absoluteOpenIdConnectCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
 
   def loginViaOpenIdConnect(): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    if (!isSSOEnabled) {
+    if (!isOIDCEnabled) {
       Fox.successful(BadRequest("SSO is not enabled"))
     } else {
       openIdConnectClient
@@ -471,7 +471,7 @@ class AuthenticationController @Inject()(
 
   def openIdCallback(): Action[AnyContent] = Action.async { implicit request =>
     for {
-      _ <- bool2Fox(isSSOEnabled) ?~> "SSO is not enabled"
+      _ <- bool2Fox(isOIDCEnabled) ?~> "SSO is not enabled"
       (accessToken: JsObject, idToken: Option[JsObject]) <- openIdConnectClient.getAndValidateTokens(
         absoluteOpenIdConnectCallbackURL,
         request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),

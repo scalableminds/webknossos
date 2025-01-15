@@ -124,11 +124,11 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")
     val exportTiffMaxVolumeMVx: Long = get[Long]("features.exportTiffMaxVolumeMVx")
     val exportTiffMaxEdgeLengthVx: Long = get[Long]("features.exportTiffMaxEdgeLengthVx")
-    val openIdConnectEnabled: Boolean = featureOverrides.getOrElse("sso", get[Boolean]("features.openIdConnectEnabled"))
+    val openIdConnectEnabled: Boolean = featureOverrides.getOrElse("openIdConnectEnabled", get[Boolean]("features.openIdConnectEnabled"))
     val proofreadingEnabled: Boolean =
-      featureOverrides.getOrElse("proofreading", get[Boolean]("features.proofreadingEnabled"))
+      featureOverrides.getOrElse("proofreadingEnabled", get[Boolean]("features.proofreadingEnabled"))
     val segmentAnythingEnabled: Boolean =
-      featureOverrides.getOrElse("segmentAnything", get[Boolean]("features.segmentAnythingEnabled"))
+      featureOverrides.getOrElse("segmentAnythingEnabled", get[Boolean]("features.segmentAnythingEnabled"))
   }
 
   object Datastore {

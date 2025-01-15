@@ -47,8 +47,8 @@ export function CheckCertificateModal() {
             status="warning"
             title={
               <span style={{ color: "white" }}>
-                Sorry, your WEBKNOSSOS license has expired at{" "}
-                <FormattedDate timestamp={expiresAt * 1000} />.
+                Sorry, your WEBKNOSSOS license expired on{" "}
+                <FormattedDate timestamp={expiresAt * 1000} format="DD/MM/YYYY" />.
                 <br />
                 Please{" "}
                 <a

@@ -67,7 +67,8 @@ class AuthenticationController @Inject()(
   private lazy val ssoKey =
     conf.WebKnossos.User.ssoKey
 
-  private lazy val isOIDCEnabled = certificateValidationService.getFeatureOverrides.getOrElse("openIdConnectEnabled", true)
+  private lazy val isOIDCEnabled =
+    certificateValidationService.getFeatureOverrides.getOrElse("openIdConnectEnabled", true)
 
   def register: Action[AnyContent] = Action.async { implicit request =>
     signUpForm

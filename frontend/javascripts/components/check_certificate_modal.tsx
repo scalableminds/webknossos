@@ -3,6 +3,7 @@ import { Col, Modal, Result, Row } from "antd";
 import { useInterval } from "libs/react_helpers";
 import _ from "lodash";
 import { useEffect, useState } from "react";
+import FormattedDate from "./formatted_date";
 
 export function CheckCertificateModal() {
   const [isValid, setIsValid] = useState(true);
@@ -24,7 +25,6 @@ export function CheckCertificateModal() {
   if (isValid) {
     return null;
   }
-  const expiresAtDate = new Date(expiresAt * 1000).toLocaleString();
   return (
     <Modal
       open={true}
@@ -47,7 +47,8 @@ export function CheckCertificateModal() {
             status="warning"
             title={
               <span style={{ color: "white" }}>
-                Sorry, your WEBKNOSSOS license has expired at {expiresAtDate}.
+                Sorry, your WEBKNOSSOS license has expired at{" "}
+                <FormattedDate timestamp={expiresAt * 1000} />.
                 <br />
                 Please{" "}
                 <a

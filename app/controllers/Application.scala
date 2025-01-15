@@ -57,12 +57,10 @@ class Application @Inject()(actorSystem: ActorSystem,
   private lazy val cachedFeaturesResult: Result = {
     var features = conf.raw.underlying.getConfig("features")
     val overwrites = certificateValidationService.getFeatureOverwrites
-    if(!overwrites.getOrElse("sam", true)) {
-      features = features.withValue("segmentAnythingEnabled", ConfigValueFactory.fromAnyRef(false))
-    }
-    if(!overwrites.getOrElse("proofreading", true)) {
-      features = features.withValue("proofreadingEnabled", ConfigValueFactory.fromAnyRef(false))
-    }
+    overwrites.get("sam").foreach(
+      isSamEnabled => features = features.withValue("segmentAnythingEnabled", ConfigValueFactory.fromAnyRef(isSamEnabled)))
+    overwrites.get("proofreading").foreach(
+      isProofreadingEnabled => features = features.withValue("proofreadingEnabled", ConfigValueFactory.fromAnyRef(isProofreadingEnabled)))
     addNoCacheHeaderFallback(
       Ok(features.resolve.root.render(ConfigRenderOptions.concise())).as(jsonMimeType))
   }

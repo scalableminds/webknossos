@@ -917,7 +917,7 @@ export default function ToolbarView() {
     isControlOrMetaPressed,
     isAltPressed,
   );
-  const isProofreadingEnabled = features().proofreadingEnabled;
+  const isProofreadingFeatureEnabled = features().proofreadingEnabled;
 
   const skeletonToolDescription = useLegacyBindings
     ? "Use left-click to move around and right-click to create new skeleton nodes"
@@ -926,9 +926,6 @@ export default function ToolbarView() {
     adaptedActiveTool === AnnotationToolEnum.TRACE ||
     adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE;
   const showEraseBrushTool = !showEraseTraceTool;
-  const proofreadToolDescription = isProofreadingEnabled
-    ? "Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
-    : "Proofreading tool is only available on webknossos.org";
 
   return (
     <>
@@ -1127,13 +1124,17 @@ export default function ToolbarView() {
         {hasSkeleton && hasVolume ? (
           <ToolRadioButton
             name={TOOL_NAMES.PROOFREAD}
-            description={proofreadToolDescription}
+            description={
+              "Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
+            }
             disabledExplanation={
-              isAgglomerateMappingEnabled.reason ||
-              disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation
+              isProofreadingFeatureEnabled
+                ? isAgglomerateMappingEnabled.reason ||
+                  disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation
+                : "Proofreading tool is only available on webknossos.org"
             }
             disabled={
-              !isProofreadingEnabled ||
+              !isProofreadingFeatureEnabled ||
               !isAgglomerateMappingEnabled.value ||
               disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled
             }

@@ -17,6 +17,7 @@ import scala.util.Properties
 
 class CertificateValidationService @Inject()(implicit ec: ExecutionContext) extends LazyLogging {
 
+  // The publicKeyBox is empty if no public key is provided, Failure if decoding the public key failed or Full if there is a valid public key.
   private lazy val publicKeyBox: Box[PublicKey] = webknossos.BuildInfo.toMap.get("certificatePublicKey").flatMap {
     case Some(value: String) => deserializePublicKey(value)
     case None                => Empty

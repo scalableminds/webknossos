@@ -1,6 +1,6 @@
 import { PlusOutlined, SyncOutlined } from "@ant-design/icons";
 import { getAiModels } from "admin/admin_rest_api";
-import { JobState } from "admin/job/job_list_view";
+import { JobState, getShowTrainingDataLink } from "admin/job/job_list_view";
 import { Button, Modal, Space, Table } from "antd";
 import FormattedDate from "components/formatted_date";
 import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
@@ -180,45 +180,7 @@ const renderActionsForModel = (model: AiModel) => {
           <br />
         </>
       ) : null}
-      {trainingAnnotations == null ? null : trainingAnnotations.length > 1 ? (
-        <a
-          href="#"
-          onClick={() => {
-            Modal.info({
-              content: (
-                <div>
-                  The following annotations were used during training:
-                  <ul>
-                    {trainingAnnotations.map(
-                      (annotation: { annotationId: string }, index: number) => (
-                        <li key={`annotation_${index}`}>
-                          <a
-                            href={`/annotations/${annotation.annotationId}`}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                          >
-                            Annotation {index + 1}
-                          </a>
-                        </li>
-                      ),
-                    )}
-                  </ul>
-                </div>
-              ),
-            });
-          }}
-        >
-          Show Training Data
-        </a>
-      ) : (
-        <a
-          href={`/annotations/${trainingAnnotations[0].annotationId}`}
-          target="_blank"
-          rel="noreferrer noopener"
-        >
-          Show Training Data
-        </a>
-      )}
+      {getShowTrainingDataLink(trainingAnnotations)}
     </div>
   );
 };

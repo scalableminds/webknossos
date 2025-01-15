@@ -31,7 +31,7 @@ class ExportsController @Inject()(webknossosClient: DSRemoteWebknossosClient,
     extends Controller
     with FoxImplicits {
 
-  private val dataBaseDir: Path = Paths.get(config.Datastore.baseFolder)
+  private val dataBaseDir: Path = Paths.get(config.Datastore.baseDirectory)
 
   override def allowRemoteOrigin: Boolean = true
 

@@ -1,8 +1,8 @@
+import { isCertificateValid } from "admin/api/certificate_validation";
 import { Col, Modal, Result, Row } from "antd";
 import { useInterval } from "libs/react_helpers";
 import _ from "lodash";
-import { useState, useEffect } from "react";
-import { isCertificateValid } from "admin/api/certificate_validation";
+import { useEffect, useState } from "react";
 
 export function CheckCertificateModal() {
   const [isValid, setIsValid] = useState(true);

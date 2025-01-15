@@ -63,13 +63,13 @@ import VerifyEmailView from "admin/auth/verify_email_view";
 import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
 import AiModelListView from "admin/voxelytics/ai_model_list_view";
+import { CheckCertificateModal } from "components/certificate_check";
 import ErrorBoundary from "components/error_boundary";
 import { CheckTermsOfServices } from "components/terms_of_services_check";
 import loadable from "libs/lazy_loader";
 import { getDatasetIdOrNameFromReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 import { Store } from "oxalis/singletons";
 import type { EmptyObject } from "types/globals";
-import { CheckCertificateModal } from "components/certificate_check";
 
 const { Content } = Layout;
 

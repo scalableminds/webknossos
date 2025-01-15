@@ -1,16 +1,16 @@
-import type { Dispatch } from "redux";
-import { Alert, Row, Col, InputNumber, Spin } from "antd";
-import { connect } from "react-redux";
-import * as React from "react";
-import * as _ from "lodash";
-import { PRIMARY_COLOR, type Vector2, type Vector3 } from "oxalis/constants";
-import type { APIHistogramData, HistogramDatum, ElementClass } from "types/api_flow_types";
-import { roundTo } from "libs/utils";
-import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
-import type { DatasetLayerConfiguration } from "oxalis/store";
 import { CloseOutlined } from "@ant-design/icons";
+import { Alert, Col, InputNumber, Row, Spin } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { Slider } from "components/slider";
+import { roundTo } from "libs/utils";
+import * as _ from "lodash";
+import { PRIMARY_COLOR, type Vector2, type Vector3 } from "oxalis/constants";
+import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
+import type { DatasetLayerConfiguration } from "oxalis/store";
+import * as React from "react";
+import { connect } from "react-redux";
+import type { Dispatch } from "redux";
+import type { APIHistogramData, ElementClass, HistogramDatum } from "types/api_flow_types";
 
 type OwnProps = {
   data: APIHistogramData | null | undefined;

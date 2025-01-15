@@ -1,5 +1,5 @@
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
-import { getMagnificationFactors, getAbsoluteCoords } from "oxalis/shaders/coords.glsl";
+import { getAbsoluteCoords, getMagnificationFactors } from "oxalis/shaders/coords.glsl";
 import { hashCombine } from "./hashing.glsl";
 import type { ShaderModule } from "./shader_module_system";
 import { transDim } from "./utils.glsl";

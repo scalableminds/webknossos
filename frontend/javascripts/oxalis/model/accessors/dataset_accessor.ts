@@ -1,25 +1,11 @@
+import ErrorHandling from "libs/error_handling";
+import { formatExtentInUnitWithLength, formatNumberToLength } from "libs/format_utils";
+import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
+import MultiKeyMap from "libs/multi_key_map";
+import { aggregateBoundingBox, maxValue } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import type {
-  AdditionalAxis,
-  APIAllowedMode,
-  APIDataLayer,
-  APIDataset,
-  APIDatasetCompact,
-  APIMaybeUnimportedDataset,
-  APISegmentationLayer,
-  APISkeletonLayer,
-  ElementClass,
-} from "types/api_flow_types";
-import type {
-  Settings,
-  DataLayerType,
-  DatasetConfiguration,
-  BoundingBoxObject,
-  OxalisState,
-  ActiveMappingInfo,
-} from "oxalis/store";
-import ErrorHandling from "libs/error_handling";
+import messages from "messages";
 import {
   IdentityTransform,
   LongUnitToShortUnitMap,
@@ -28,20 +14,34 @@ import {
   type ViewMode,
 } from "oxalis/constants";
 import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
-import { aggregateBoundingBox, maxValue } from "libs/utils";
-import { formatExtentInUnitWithLength, formatNumberToLength } from "libs/format_utils";
-import messages from "messages";
+import type {
+  ActiveMappingInfo,
+  BoundingBoxObject,
+  DataLayerType,
+  DatasetConfiguration,
+  OxalisState,
+  Settings,
+} from "oxalis/store";
+import type {
+  APIAllowedMode,
+  APIDataLayer,
+  APIDataset,
+  APIDatasetCompact,
+  APIMaybeUnimportedDataset,
+  APISegmentationLayer,
+  APISkeletonLayer,
+  AdditionalAxis,
+  ElementClass,
+} from "types/api_flow_types";
 import type { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
-import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
-import { convertToDenseMag, MagInfo } from "../helpers/mag_info";
-import MultiKeyMap from "libs/multi_key_map";
+import { MagInfo, convertToDenseMag } from "../helpers/mag_info";
 import {
+  type Transform,
   chainTransforms,
   createAffineTransformFromMatrix,
   createThinPlateSplineTransform,
   invertTransform,
-  type Transform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
 

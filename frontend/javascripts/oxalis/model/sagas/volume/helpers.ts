@@ -10,23 +10,23 @@ import Constants, {
   type Vector3,
 } from "oxalis/constants";
 import { getDatasetBoundingBox, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
+import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
+import type { MagInfo } from "oxalis/model/helpers/mag_info";
+import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { getHalfViewportExtentsInVx } from "oxalis/model/sagas/saga_selectors";
-import { call } from "typed-redux-saga";
 import sampleVoxelMapToMagnification, {
   applyVoxelMap,
 } from "oxalis/model/volumetracing/volume_annotation_sampling";
-import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
-import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import { Model } from "oxalis/singletons";
 import VolumeLayer, { type VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
-import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { Model } from "oxalis/singletons";
 import type { BoundingBoxObject, VolumeTracing } from "oxalis/store";
-import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
-import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
-import type { MagInfo } from "oxalis/model/helpers/mag_info";
+import { call } from "typed-redux-saga";
 
 function* pairwise<T>(arr: Array<T>): Generator<[T, T], any, any> {
   for (let i = 0; i < arr.length - 1; i++) {

@@ -1,5 +1,6 @@
+import { withoutValues } from "libs/utils";
 import _ from "lodash";
-import type { SkeletonTracing, VolumeTracing } from "oxalis/store";
+import compactToggleActions from "oxalis/model/helpers/compaction/compact_toggle_actions";
 import type {
   CreateEdgeUpdateAction,
   CreateNodeUpdateAction,
@@ -9,8 +10,7 @@ import type {
   UpdateAction,
 } from "oxalis/model/sagas/update_actions";
 import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
-import compactToggleActions from "oxalis/model/helpers/compaction/compact_toggle_actions";
-import { withoutValues } from "libs/utils";
+import type { SkeletonTracing, VolumeTracing } from "oxalis/store";
 
 // The Cantor pairing function assigns one natural number to each pair of natural numbers
 function cantor(a: number, b: number): number {

@@ -1,6 +1,5 @@
-import * as THREE from "three";
 import { saveAs } from "file-saver";
-import Store from "oxalis/store";
+import { convertBufferToImage } from "libs/utils";
 import { ARBITRARY_CAM_DISTANCE, type OrthoView } from "oxalis/constants";
 import constants, {
   ArbitraryViewport,
@@ -8,10 +7,11 @@ import constants, {
   OrthoViewValues,
   OrthoViews,
 } from "oxalis/constants";
-import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
-import { convertBufferToImage } from "libs/utils";
+import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import Store from "oxalis/store";
+import * as THREE from "three";
 
 const getBackgroundColor = (): number =>
   Store.getState().uiInformation.theme === "dark" ? 0x000000 : 0xffffff;

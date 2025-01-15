@@ -1,6 +1,6 @@
-import { location } from "libs/window";
 import Request from "libs/request";
 import * as Utils from "libs/utils";
+import { location } from "libs/window";
 
 const MAX_TOKEN_RETRY_ATTEMPTS = 3;
 

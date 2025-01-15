@@ -1,13 +1,13 @@
+import { App, ConfigProvider, type ThemeConfig, theme } from "antd";
+import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
+import { ToastContextMountRoot } from "libs/toast";
+import window from "libs/window";
+import _ from "lodash";
+import type { OxalisState, Theme } from "oxalis/store";
 import type React from "react";
 import { useEffect } from "react";
 import { useSelector } from "react-redux";
-import { App, ConfigProvider, theme, type ThemeConfig } from "antd";
 import type { APIUser } from "types/api_flow_types";
-import window from "libs/window";
-import type { OxalisState, Theme } from "oxalis/store";
-import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
-import { ToastContextMountRoot } from "libs/toast";
-import _ from "lodash";
 
 const ColorWKBlue = "#5660ff"; // WK ~blue/purple
 const ColorWKLinkHover = "#a8b4ff"; // slightly brighter WK Blue
@@ -27,6 +27,11 @@ const globalDesignToken: Partial<AliasToken> = {
   fontFamily:
     '"Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;',
 };
+
+const lightGlobalToken = theme.getDesignToken({
+  token: globalDesignToken,
+  algorithm: theme.defaultAlgorithm,
+});
 
 const darkGlobalToken = theme.getDesignToken({
   token: globalDesignToken,
@@ -87,7 +92,7 @@ export function getAntdTheme(userTheme: Theme) {
     },
     Tree: {
       colorBgContainer: "transparent",
-      directoryNodeSelectedBg: ColorWKBlue,
+      nodeSelectedBg: lightGlobalToken.blue3,
       titleHeight: 20, // default is 24px,
       marginXXS: 2, // default is 4px; adjust to match checkboxes because of smaller titleHeight
     },

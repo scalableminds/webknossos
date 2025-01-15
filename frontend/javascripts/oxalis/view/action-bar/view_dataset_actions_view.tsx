@@ -1,24 +1,24 @@
-import { useSelector } from "react-redux";
-import { Dropdown, type MenuProps } from "antd";
 import {
-  ShareAltOutlined,
-  DownOutlined,
-  VideoCameraOutlined,
   CameraOutlined,
+  DownOutlined,
   DownloadOutlined,
+  ShareAltOutlined,
+  VideoCameraOutlined,
 } from "@ant-design/icons";
-import ButtonComponent from "oxalis/view/components/button_component";
-import ShareViewDatasetModalView from "oxalis/view/action-bar/share_view_dataset_modal_view";
-import { downloadScreenshot } from "oxalis/view/rendering_utils";
+import { Dropdown, type MenuProps } from "antd";
+import type { MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import {
   setPythonClientModalVisibilityAction,
-  setShareModalVisibilityAction,
   setRenderAnimationModalVisibilityAction,
+  setShareModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
 import Store, { type OxalisState } from "oxalis/store";
-import type { MenuItemType, SubMenuType } from "antd/es/menu/interface";
-import DownloadModalView from "./download_modal_view";
+import ShareViewDatasetModalView from "oxalis/view/action-bar/share_view_dataset_modal_view";
+import ButtonComponent from "oxalis/view/components/button_component";
+import { downloadScreenshot } from "oxalis/view/rendering_utils";
+import { useSelector } from "react-redux";
 import CreateAnimationModal from "./create_animation_modal";
+import DownloadModalView from "./download_modal_view";
 
 type Props = {
   layoutMenu: SubMenuType;

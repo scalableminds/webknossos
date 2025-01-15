@@ -53,6 +53,14 @@ const creditsFooter = () => (
           <Link to="/imprint">Imprint</Link> &bull; <Link to="/privacy">Privacy</Link> &bull;{" "}
           <a href="https://twitter.com/webknossos" target="_blank" rel="noopener noreferrer">
             Twitter
+          </a>{" "}
+          &bull;{" "}
+          <a
+            href="https://bsky.app/profile/webknossos.org"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Bluesky
           </a>
         </p>
       </div>

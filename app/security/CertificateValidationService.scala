@@ -6,7 +6,7 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 
 import java.security.{KeyFactory, PublicKey}
-import pdi.jwt.JwtJson
+import pdi.jwt.{JwtJson, JwtOptions}
 
 import java.security.spec.X509EncodedKeySpec
 import java.util.Base64
@@ -23,7 +23,7 @@ class CertificateValidationService @Inject()(implicit ec: ExecutionContext) exte
     case None                => Empty
   }
 
-  private lazy val cache: AlfuCache[String, Boolean] = AlfuCache(timeToLive = 1 minute)
+  private lazy val cache: AlfuCache[String, (Boolean, Long)] = AlfuCache(timeToLive = 1 minute)
 
   private def deserializePublicKey(pem: String): Box[PublicKey] =
     try {
@@ -38,18 +38,21 @@ class CertificateValidationService @Inject()(implicit ec: ExecutionContext) exte
         Failure(message)
     }
 
-  private def _checkCertificate(): Boolean = publicKeyBox match {
+  private def _checkCertificate(): (Boolean, Long) = publicKeyBox match {
     case Full(publicKey) =>
       (for {
         certificate <- Properties.envOrNone("CERTIFICATE")
         // JwtJson already throws and error which is transformed to an empty option when the certificate is expired.
-        _ <- JwtJson.decodeJson(certificate, publicKey).toOption
-      } yield true).getOrElse(false)
-    case Empty => true
-    case _     => false
+        token <- JwtJson.decodeJson(certificate, publicKey, JwtOptions(expiration = false)).toOption
+        expirationInSeconds <- (token \ "exp").asOpt[Long]
+        currentTimeInSeconds = System.currentTimeMillis() / 1000
+        isExpired = currentTimeInSeconds < expirationInSeconds
+      } yield (isExpired, expirationInSeconds)).getOrElse((false, 0L))
+    case Empty => (true, 0L) // No public key provided, so certificate is always valid.
+    case _     => (false, 0L) // Invalid public key provided, so certificate is always invalid.
   }
 
-  def checkCertificate(): Fox[Boolean] = cache.getOrLoad("c", _ => Fox.successful(_checkCertificate()))
+  def checkCertificate(): Fox[(Boolean, Long)] = cache.getOrLoad("c", _ => Fox.successful(_checkCertificate()))
 
   private def defaultMap: Map[String, Boolean] = Map("sso" -> false, "sam" -> false, "proofreading" -> false)
 

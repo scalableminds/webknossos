@@ -67,8 +67,8 @@ class Application @Inject()(actorSystem: ActorSystem,
 
   def checkCertificate: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     certificateValidationService.checkCertificate().map {
-      case true  => Ok(Json.obj("valid" -> true))
-      case false => BadRequest(Json.obj("valid" -> false))
+      case (true, expiresAt)  => Ok(Json.obj("isValid" -> true, "expiresAt" -> expiresAt))
+      case (false, expiresAt) => BadRequest(Json.obj("isValid" -> false, "expiresAt" -> expiresAt))
     }
   }
 

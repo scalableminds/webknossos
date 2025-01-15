@@ -6,16 +6,25 @@ import { useEffect, useState } from "react";
 
 export function CheckCertificateModal() {
   const [isValid, setIsValid] = useState(true);
+  const [expiresAt, setExpiresAt] = useState(Number.POSITIVE_INFINITY);
   useEffect(() => {
-    isCertificateValid().then(({ valid }) => setIsValid(valid));
+    isCertificateValid().then(({ isValid, expiresAt }) => {
+      setIsValid(isValid);
+      setExpiresAt(expiresAt);
+    });
   }, []);
-  useInterval(async () => {
-    const { valid } = await isCertificateValid();
-    setIsValid(valid);
-  }, 5 * 60 * 1000);
+  useInterval(
+    async () => {
+      const { isValid, expiresAt } = await isCertificateValid();
+      setIsValid(isValid);
+      setExpiresAt(expiresAt);
+    },
+    5 * 60 * 1000,
+  );
   if (isValid) {
     return null;
   }
+  const expiresAtDate = new Date(expiresAt * 1000).toLocaleString();
   return (
     <Modal
       open={true}
@@ -38,7 +47,7 @@ export function CheckCertificateModal() {
             status="warning"
             title={
               <span style={{ color: "white" }}>
-                Sorry, your WEBKNOSSOS license has expired.
+                Sorry, your WEBKNOSSOS license has expired at {expiresAtDate}.
                 <br />
                 Please{" "}
                 <a

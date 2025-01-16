@@ -153,6 +153,9 @@ function* warnTooLargeSegmentId(): Saga<void> {
 }
 
 export function* editVolumeLayerAsync(): Saga<any> {
+  // Waiting for the initialization is important. Otherwise, allowUpdate would be
+  // false and the saga would terminate.
+  yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
 
   while (allowUpdate) {

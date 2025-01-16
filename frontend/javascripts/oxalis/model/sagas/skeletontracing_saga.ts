@@ -86,6 +86,7 @@ import {
 } from "typed-redux-saga";
 import type { ServerSkeletonTracing } from "types/api_flow_types";
 import { ensureWkReady } from "./ready_sagas";
+import { takeWithBatchActionSupport } from "./saga_helpers";
 
 function* centerActiveNode(action: Action): Saga<void> {
   if ("suppressCentering" in action && action.suppressCentering) {
@@ -219,7 +220,7 @@ export function* watchTreeNames(): Saga<void> {
 export function* watchAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_READY
   const channel = yield* actionChannel("LOAD_AGGLOMERATE_SKELETON");
-  yield* take("INITIALIZE_SKELETONTRACING");
+  yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* call(ensureWkReady);
   yield* takeEvery(channel, loadAgglomerateSkeletonWithId);
 }
@@ -449,7 +450,7 @@ function* removeConnectomeAgglomerateSkeletonWithId(
 }
 
 export function* watchSkeletonTracingAsync(): Saga<void> {
-  yield* take("INITIALIZE_SKELETONTRACING");
+  yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* takeEvery("WK_READY", watchTreeNames);
   yield* takeEvery(
     [

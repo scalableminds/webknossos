@@ -288,7 +288,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       reportChangesToWk: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
       updateGroupsAsSaved <- findPendingUpdates(annotationId, annotationWithTracingsAndMappings, targetVersion) ?~> "findPendingUpdates.failed"
-      updatesGroupsRegrouped = regroupByIsolationSensitiveActions(updateGroupsAsSaved)
+      _ = logger.info(updateGroupsAsSaved.toString)
+      updatesGroupsRegrouped <- regroupByIsolationSensitiveActions(updateGroupsAsSaved).toFox
+      _ = logger.info(updatesGroupsRegrouped.toString)
       updated <- applyUpdatesGrouped(annotationWithTracingsAndMappings,
                                      annotationId,
                                      updatesGroupsRegrouped,

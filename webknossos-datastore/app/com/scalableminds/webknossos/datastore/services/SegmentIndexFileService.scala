@@ -34,7 +34,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
     extends FoxImplicits
     with Hdf5HashedArrayUtils
     with SegmentStatistics {
-  private val dataBaseDir = Paths.get(config.Datastore.baseFolder)
+  private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
   private val segmentIndexDir = "segmentIndex"
 
   private lazy val fileHandleCache = new Hdf5FileCache(10)

@@ -52,7 +52,8 @@ import type {
   SkeletonTracing,
   VolumeTracing,
 } from "oxalis/store";
-import { call, delay, fork, put, race, take, takeEvery } from "typed-redux-saga";
+import { call, delay, fork, put, race, take } from "typed-redux-saga";
+import { takeEveryWithBatchActionSupport } from "./saga_helpers";
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
 
@@ -370,8 +371,8 @@ export function performDiffTracing(
 
 export function* saveTracingAsync(): Saga<void> {
   yield* fork(pushSaveQueueAsync);
-  yield* takeEvery("INITIALIZE_SKELETONTRACING", setupSavingForTracingType);
-  yield* takeEvery("INITIALIZE_VOLUMETRACING", setupSavingForTracingType);
+  yield* takeEveryWithBatchActionSupport("INITIALIZE_SKELETONTRACING", setupSavingForTracingType);
+  yield* takeEveryWithBatchActionSupport("INITIALIZE_VOLUMETRACING", setupSavingForTracingType);
 }
 
 export function* setupSavingForTracingType(

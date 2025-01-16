@@ -11,6 +11,7 @@ import type { Vector3 } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 import { tracing, annotation } from "../fixtures/skeletontracing_server_objects";
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
+import { batchedAnnotationInitializationAction } from "oxalis/model/actions/annotation_actions";
 
 mockRequire("app", {
   currentUser: {
@@ -40,9 +41,11 @@ test.before((t) => {
   tracing.trees = [];
   delete tracing.activeNodeId;
   Store.dispatch(
-    initializeAnnotationAction(convertServerAnnotationToFrontendAnnotation(annotation, 0, 0)),
+    batchedAnnotationInitializationAction([
+      initializeAnnotationAction(convertServerAnnotationToFrontendAnnotation(annotation, 0, 0)),
+      initializeSkeletonTracingAction(tracing),
+    ]),
   );
-  Store.dispatch(initializeSkeletonTracingAction(tracing));
 
   // Create 20 trees with 100 nodes each
   for (let i = 0; i < 2000; i++) {

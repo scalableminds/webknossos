@@ -67,6 +67,7 @@ import listenToQuickSelect from "oxalis/model/sagas/quick_select_saga";
 import {
   requestBucketModificationInVolumeTracing,
   takeEveryUnlessBusy,
+  takeWithBatchActionSupport,
 } from "oxalis/model/sagas/saga_helpers";
 import {
   type UpdateActionWithoutIsolationRequirement,
@@ -128,7 +129,7 @@ function* warnOfTooLowOpacity(): Saga<void> {
 }
 
 function* warnTooLargeSegmentId(): Saga<void> {
-  yield* take("INITIALIZE_VOLUMETRACING");
+  yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
   while (true) {
     const action = (yield* take(["SET_ACTIVE_CELL", "CREATE_CELL"]) as any) as
       | SetActiveCellAction
@@ -152,7 +153,6 @@ function* warnTooLargeSegmentId(): Saga<void> {
 }
 
 export function* editVolumeLayerAsync(): Saga<any> {
-  yield* take("INITIALIZE_VOLUMETRACING");
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
 
   while (allowUpdate) {
@@ -375,8 +375,8 @@ export function* finishLayer(
   yield* put(registerLabelPointAction(layer.getUnzoomedCentroid()));
 }
 
-export function* ensureToolIsAllowedInMag(): Saga<any> {
-  yield* take("INITIALIZE_VOLUMETRACING");
+export function* ensureToolIsAllowedInMag(): Saga<void> {
+  yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
 
   while (true) {
     yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP"]);

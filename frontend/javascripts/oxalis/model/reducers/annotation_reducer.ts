@@ -74,7 +74,14 @@ const maybeAddAdditionalCoordinatesToMeshState = (
 function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "INITIALIZE_ANNOTATION": {
-      return updateTracing(state, action.annotation);
+      return updateTracing(state, {
+        // Clear all tracings. These will be initialized in corresponding
+        // initialization actions.
+        mappings: [],
+        skeleton: undefined,
+        volumes: [],
+        ...action.annotation,
+      });
     }
 
     case "SET_ANNOTATION_NAME": {

@@ -59,7 +59,7 @@ class VolumeTracingZarrStreamingController @Inject()(
 
   override def defaultErrorCode: Int = NOT_FOUND
 
-  def volumeTracingFolderContent(tracingId: String, zarrVersion: Int): Action[AnyContent] =
+  def volumeTracingDirectoryContent(tracingId: String, zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
@@ -79,7 +79,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
     }
 
-  def volumeTracingFolderContentJson(tracingId: String, zarrVersion: Int): Action[AnyContent] =
+  def volumeTracingDirectoryContentJson(tracingId: String, zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
@@ -93,7 +93,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
     }
 
-  def volumeTracingMagFolderContent(tracingId: String, mag: String, zarrVersion: Int): Action[AnyContent] =
+  def volumeTracingMagDirectoryContent(tracingId: String, mag: String, zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
@@ -113,7 +113,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
     }
 
-  def volumeTracingMagFolderContentJson(tracingId: String, mag: String, zarrVersion: Int): Action[AnyContent] =
+  def volumeTracingMagDirectoryContentJson(tracingId: String, mag: String, zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {

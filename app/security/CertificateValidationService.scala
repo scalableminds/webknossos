@@ -38,7 +38,7 @@ class CertificateValidationService @Inject()(implicit ec: ExecutionContext) exte
         Failure(message)
     }
 
-  private def _checkCertificate(): (Boolean, Long) = publicKeyBox match {
+  private def checkCertificate: (Boolean, Long) = publicKeyBox match {
     case Full(publicKey) =>
       (for {
         certificate <- Properties.envOrNone("CERTIFICATE")
@@ -53,9 +53,9 @@ class CertificateValidationService @Inject()(implicit ec: ExecutionContext) exte
     case _     => (false, 0L) // Invalid public key provided, so certificate is always invalid.
   }
 
-  def checkCertificate(): Fox[(Boolean, Long)] = cache.getOrLoad("c", _ => Fox.successful(_checkCertificate()))
+  def checkCertificateCached(): Fox[(Boolean, Long)] = cache.getOrLoad("c", _ => Fox.successful(checkCertificate))
 
-  private def defaultMap: Map[String, Boolean] =
+  private def defaultConfigOverridesMap: Map[String, Boolean] =
     Map("openIdConnectEnabled" -> false, "segmentAnythingEnabled" -> false, "proofreadingEnabled" -> false)
 
   lazy val getFeatureOverrides: Map[String, Boolean] = publicKeyBox match {
@@ -65,10 +65,10 @@ class CertificateValidationService @Inject()(implicit ec: ExecutionContext) exte
         // JwtJson already throws and error which is transformed to an empty option when the certificate is expired.
         // In case the token is expired, tge default map will be used.
         token <- JwtJson.decodeJson(certificate, publicKey, JwtOptions(expiration = false)).toOption
-        featureOverrides <- Some((token \ "webknossos").asOpt[Map[String, Boolean]].getOrElse(defaultMap))
-        featureOverridesWithDefaults = featureOverrides ++ defaultMap.view.filterKeys(!featureOverrides.contains(_))
-      } yield featureOverridesWithDefaults).getOrElse(defaultMap)
+        featureOverrides <- Some((token \ "webknossos").asOpt[Map[String, Boolean]].getOrElse(defaultConfigOverridesMap))
+        featureOverridesWithDefaults = featureOverrides ++ defaultConfigOverridesMap.view.filterKeys(!featureOverrides.contains(_))
+      } yield featureOverridesWithDefaults).getOrElse(defaultConfigOverridesMap)
     case Empty => Map.empty
-    case _     => defaultMap
+    case _     => defaultConfigOverridesMap
   }
 }

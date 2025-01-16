@@ -52,7 +52,6 @@ class AuthenticationController @Inject()(
     openIdConnectClient: OpenIdConnectClient,
     initialDataService: InitialDataService,
     emailVerificationService: EmailVerificationService,
-    certificateValidationService: CertificateValidationService,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with AuthForms
@@ -67,8 +66,7 @@ class AuthenticationController @Inject()(
   private lazy val ssoKey =
     conf.WebKnossos.User.ssoKey
 
-  private lazy val isOIDCEnabled =
-    certificateValidationService.getFeatureOverrides.getOrElse("openIdConnectEnabled", true)
+  private lazy val isOIDCEnabled = conf.Features.openIdConnectEnabled
 
   def register: Action[AnyContent] = Action.async { implicit request =>
     signUpForm

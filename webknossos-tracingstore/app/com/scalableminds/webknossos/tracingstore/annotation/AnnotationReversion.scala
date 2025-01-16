@@ -22,10 +22,15 @@ trait AnnotationReversion {
           for {
             tracingBeforeRevert <- currentAnnotationWithTracings.getVolume(tracingId).toFox
             _ <- Fox.runIf(!sourceTracing.getHasEditableMapping)(
-              volumeTracingService
-                .revertVolumeData(tracingId, sourceVersion, sourceTracing, newVersion: Long, tracingBeforeRevert))
-            _ <- Fox.runIf(sourceTracing.getHasEditableMapping)(
-              revertEditableMappingFields(currentAnnotationWithTracings, sourceVersion, tracingId))
+              volumeTracingService.revertVolumeData(tracingId,
+                                                    sourceVersion,
+                                                    sourceTracing,
+                                                    newVersion: Long,
+                                                    tracingBeforeRevert)) ?~> "revert.volumeData.failed"
+            _ <- Fox.runIf(sourceTracing.getHasEditableMapping)(revertEditableMappingFields(
+              currentAnnotationWithTracings,
+              sourceVersion,
+              tracingId)) ?~> "revert.editableMappingData.failed"
           } yield ()
       }
     } yield ()

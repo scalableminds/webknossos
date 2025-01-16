@@ -10,21 +10,27 @@ logger = logging.getLogger("migration-logs")
 
 
 def setup_logging():
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(threadName)-24s %(message)s")
 
     stdout_handler = logging.StreamHandler(sys.stdout)
-    stdout_handler.setLevel(logging.DEBUG)
+    stdout_handler.setLevel(logging.INFO)
     stdout_handler.setFormatter(formatter)
     logger.addHandler(stdout_handler)
 
     logs_path = Path("logs")
     logs_path.mkdir(exist_ok=True)
     file_handler = logging.FileHandler(f"{logs_path}/{time_str()}.log")
-    file_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
+
+
+def set_log_level_debug():
+    logger.setLevel(logging.DEBUG)
+    for handler in logger.handlers:
+        handler.setLevel(logging.DEBUG)
 
 
 def time_str() -> str:

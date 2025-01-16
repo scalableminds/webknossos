@@ -4,7 +4,7 @@ import logging
 import argparse
 
 from migration import Migration
-from utils import setup_logging
+from utils import setup_logging, set_log_level_debug
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,8 @@ def main():
     args = parser.parse_args()
     if args.dst is None and not args.dry:
         parser.error("At least one of --dry or --dst is required")
+    if args.verbose:
+        set_log_level_debug()
     migration = Migration(args)
     migration.run()
 

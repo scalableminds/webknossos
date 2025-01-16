@@ -78,10 +78,16 @@ class Migration:
                 mapping_id_map = self.build_mapping_id_map(annotation)
                 if self.args.previous_start is not None and self.includes_revert(annotation):
                     self.clean_up_previously_migrated(annotation, mapping_id_map)
+                if self.args.verbose:
+                    logger.info("migrating updates...")
                 layer_version_mapping = self.migrate_updates(annotation, mapping_id_map)
+                if self.args.verbose:
+                    logger.info("migrating materialized layers...")
                 materialized_versions = self.migrate_materialized_layers(annotation, layer_version_mapping, mapping_id_map)
                 if len(materialized_versions) == 0:
                     raise ValueError(f"Zero materialized versions present in source FossilDB for annotation {annotation['_id']}.")
+                if self.args.verbose:
+                    logger.info("writing annotationProtos...")
                 self.create_and_save_annotation_proto(annotation, materialized_versions, mapping_id_map)
                 if time.time() - before > 1 or self.args.verbose:
                     log_since(before, f"Migrating annotation {annotation['_id']} ({len(materialized_versions)} materialized versions)", self.get_progress())
@@ -294,11 +300,21 @@ class Migration:
 
     def migrate_materialized_layer(self, tracing_id: str, layer_type: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap) -> List[int]:
         if layer_type == "Skeleton":
+            if self.args.verbose:
+                logger.info("migrating skeleton protos...")
             return self.migrate_skeleton_proto(tracing_id, layer_version_mapping)
         if layer_type == "Volume":
+            if self.args.verbose:
+                logger.info("migrating volume protos...")
             materialized_volume_versions = self.migrate_volume_proto(tracing_id, layer_version_mapping, mapping_id_map)
+            if self.args.verbose:
+                logger.info("migrating volume buckets...")
             self.migrate_volume_buckets(tracing_id, layer_version_mapping)
+            if self.args.verbose:
+                logger.info("migrating segment index...")
             self.migrate_segment_index(tracing_id, layer_version_mapping)
+            if self.args.verbose:
+                logger.info("migrating editable mapping...")
             materialized_mapping_versions = self.migrate_editable_mapping(tracing_id, layer_version_mapping, mapping_id_map)
             return materialized_volume_versions + materialized_mapping_versions
 

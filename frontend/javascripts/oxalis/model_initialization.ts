@@ -240,6 +240,7 @@ export async function initialize(
       annotation.tracingStore.url,
       serverVolumeTracings,
       annotation.id,
+      version,
     );
     initializeAnnotation(
       annotation,
@@ -282,10 +283,11 @@ async function fetchEditableMappings(
   tracingStoreUrl: string,
   serverVolumeTracings: ServerVolumeTracing[],
   annotationId: string,
+  version: number | undefined | null,
 ): Promise<ServerEditableMapping[]> {
   const promises = serverVolumeTracings
     .filter((tracing) => tracing.hasEditableMapping)
-    .map((tracing) => getEditableMappingInfo(tracingStoreUrl, tracing.id, annotationId));
+    .map((tracing) => getEditableMappingInfo(tracingStoreUrl, tracing.id, annotationId, version));
   return Promise.all(promises);
 }
 

@@ -33,7 +33,7 @@ class EditableMappingController @Inject()(
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
           for {
-            tracing <- annotationService.findVolume(annotationId, tracingId)
+            tracing <- annotationService.findVolume(annotationId, tracingId, version)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId, version)
             infoJson = editableMappingService.infoJson(tracingId = tracingId, editableMappingInfo = editableMappingInfo)

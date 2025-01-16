@@ -1449,12 +1449,16 @@ export function getEditableMappingInfo(
   tracingStoreUrl: string,
   tracingId: string,
   annotationId: string,
+  version: number | undefined | null,
 ): Promise<ServerEditableMapping> {
   return doWithToken((token) => {
     const params = new URLSearchParams({
       token,
       annotationId: `${annotationId}`,
     });
+    if (version != null) {
+      params.append("version", version.toString());
+    }
     return Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}/info?${params}`);
   });
 }

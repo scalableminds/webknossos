@@ -42,7 +42,8 @@ class CertificateValidationService @Inject()(implicit ec: ExecutionContext) exte
     case Full(publicKey) =>
       (for {
         certificate <- Properties.envOrNone("CERTIFICATE")
-        // JwtJson already throws and error which is transformed to an empty option when the certificate is expired.
+        // JwtJson would throw an error in case the exp time of the token is expired. As we want to check the expiration
+        // date yourself, we don't want to throw an error.
         token <- JwtJson.decodeJson(certificate, publicKey, JwtOptions(expiration = false)).toOption
         expirationInSeconds <- (token \ "exp").asOpt[Long]
         currentTimeInSeconds = System.currentTimeMillis() / 1000
@@ -62,7 +63,8 @@ class CertificateValidationService @Inject()(implicit ec: ExecutionContext) exte
       (for {
         certificate <- Properties.envOrNone("CERTIFICATE")
         // JwtJson already throws and error which is transformed to an empty option when the certificate is expired.
-        token <- JwtJson.decodeJson(certificate, publicKey).toOption
+        // In case the token is expired, tge default map will be used.
+        token <- JwtJson.decodeJson(certificate, publicKey, JwtOptions(expiration = false)).toOption
         featureOverrides <- Some((token \ "webknossos").asOpt[Map[String, Boolean]].getOrElse(defaultMap))
         featureOverridesWithDefaults = featureOverrides ++ defaultMap.view.filterKeys(!featureOverrides.contains(_))
       } yield featureOverridesWithDefaults).getOrElse(defaultMap)

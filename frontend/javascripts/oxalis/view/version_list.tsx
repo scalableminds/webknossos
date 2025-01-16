@@ -211,6 +211,9 @@ function InnerVersionList(props: Props & { newestVersion: number }) {
   const { newestVersion } = props;
   const [initialVersion] = useState(tracing.version);
 
+  // true if another version is being restored or previewed
+  const [isChangingVersion, setIsChangingVersion] = useState(false);
+
   function fetchPaginatedVersions({ pageParam }: { pageParam?: number }) {
     if (pageParam == null) {
       pageParam = Math.floor((newestVersion - initialVersion) / ENTRIES_PER_PAGE);
@@ -302,7 +305,7 @@ function InnerVersionList(props: Props & { newestVersion: number }) {
       {flattenedVersions && (
         <List
           dataSource={batchesAndDateStrings}
-          loading={isFetching}
+          loading={isFetching || isChangingVersion}
           locale={VERSION_LIST_PLACEHOLDER}
           renderItem={(batchesOrDateString) =>
             _.isString(batchesOrDateString) ? (
@@ -321,10 +324,28 @@ function InnerVersionList(props: Props & { newestVersion: number }) {
                 allowUpdate={props.allowUpdate}
                 newestVersion={flattenedVersions[0].version}
                 activeVersion={tracing.version}
-                onRestoreVersion={(version) =>
-                  handleRestoreVersion(props, flattenedVersions, version)
-                }
-                onPreviewVersion={(version) => previewVersion(version)}
+                onRestoreVersion={async (version) => {
+                  if (isChangingVersion) {
+                    return;
+                  }
+                  setIsChangingVersion(true);
+                  try {
+                    await handleRestoreVersion(props, flattenedVersions, version);
+                  } finally {
+                    setIsChangingVersion(false);
+                  }
+                }}
+                onPreviewVersion={async (version) => {
+                  if (isChangingVersion) {
+                    return;
+                  }
+                  setIsChangingVersion(true);
+                  try {
+                    await previewVersion(version);
+                  } finally {
+                    setIsChangingVersion(false);
+                  }
+                }}
                 key={batchesOrDateString[0].version}
               />
             )

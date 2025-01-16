@@ -35,18 +35,13 @@ export function CheckCertificateModal() {
       keyboard={false}
       maskClosable={false}
     >
-      <Row
-        justify="center"
-        align="middle"
-        className="background-organelles-modal ant-app"
-        style={{ maxHeight: "50%", width: "auto" }}
-      >
+      <Row justify="center" align="middle" style={{ maxHeight: "50%", width: "auto" }}>
         <Col>
           <Result
-            icon={<i className="drawing drawing-404" />}
+            icon={<i className="drawing drawing-license-expired" />}
             status="warning"
             title={
-              <span style={{ color: "white" }}>
+              <span>
                 Sorry, your WEBKNOSSOS license expired on{" "}
                 <FormattedDate timestamp={expiresAt * 1000} format="YYYY-MM-DD" />.
                 <br />

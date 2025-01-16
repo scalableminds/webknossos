@@ -23,7 +23,7 @@ class CertificateValidationService @Inject()(implicit ec: ExecutionContext) exte
     case None                => Empty
   }
 
-  private lazy val cache: AlfuCache[String, (Boolean, Long)] = AlfuCache(timeToLive = 1 minute)
+  private lazy val cache: AlfuCache[String, (Boolean, Long)] = AlfuCache(timeToLive = 1 hour)
 
   private def deserializePublicKey(pem: String): Box[PublicKey] =
     try {

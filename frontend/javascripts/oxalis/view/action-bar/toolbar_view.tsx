@@ -26,6 +26,7 @@ import { document } from "libs/window";
 import {
   type AnnotationTool,
   AnnotationToolEnum,
+  ControlModeEnum,
   FillModeEnum,
   type InterpolationMode,
   InterpolationModeEnum,
@@ -126,6 +127,7 @@ const handleToggleSelectiveVisibilityInProofreading = (value: boolean) => {
 const handleSetTool = (event: RadioChangeEvent) => {
   const value = event.target.value as AnnotationTool;
   Store.dispatch(setToolAction(value));
+  console.log("Tool set to", value);
 };
 
 const handleCreateCell = () => {
@@ -847,8 +849,11 @@ const TOOL_NAMES = {
 
 export default function ToolbarView() {
   const dispatch = useDispatch();
-  const hasVolume = useSelector((state: OxalisState) => state.tracing.volumes.length > 0);
-  const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+  const hasVolume = useSelector((state: OxalisState) => state.tracing?.volumes.length > 0);
+  const hasSkeleton = useSelector((state: OxalisState) => state.tracing?.skeleton != null);
+  const isViewMode = useSelector(
+    (state: OxalisState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+  );
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
 
   const [lastForcefullyDisabledTool, setLastForcefullyDisabledTool] =
@@ -1103,22 +1108,26 @@ export default function ToolbarView() {
             </ToolRadioButton>
           </React.Fragment>
         ) : null}
-        <ToolRadioButton
-          name={TOOL_NAMES.BOUNDING_BOX}
-          description="Create, resize and modify bounding boxes."
-          disabledExplanation={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].explanation}
-          disabled={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled}
-          value={AnnotationToolEnum.BOUNDING_BOX}
-        >
-          <img
-            src="/assets/images/bounding-box.svg"
-            alt="Bounding Box Icon"
-            style={{
-              opacity: disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled ? 0.5 : 1,
-              ...imgStyleForSpaceyIcons,
-            }}
-          />
-        </ToolRadioButton>
+        {!isViewMode && (
+          <ToolRadioButton
+            name={TOOL_NAMES.BOUNDING_BOX}
+            description="Create, resize and modify bounding boxes."
+            disabledExplanation={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].explanation}
+            disabled={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled}
+            value={AnnotationToolEnum.BOUNDING_BOX}
+          >
+            <img
+              src="/assets/images/bounding-box.svg"
+              alt="Bounding Box Icon"
+              style={{
+                opacity: disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled
+                  ? 0.5
+                  : 1,
+                ...imgStyleForSpaceyIcons,
+              }}
+            />
+          </ToolRadioButton>
+        )}
 
         {hasSkeleton && hasVolume ? (
           <ToolRadioButton

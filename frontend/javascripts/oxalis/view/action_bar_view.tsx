@@ -237,7 +237,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const {
       dataset,
       is2d,
-      isReadOnly,
+      isReadOnly, // TODO_c are there any cases where this is true, that are not read-only annotations or view mode?
       showVersionRestore,
       controlMode,
       hasSkeleton,
@@ -298,7 +298,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           {getIsAIAnalysisEnabled() && isAdminOrDatasetManager
             ? this.renderStartAIJobButton(shouldDisableAIJobButton, tooltip)
             : null}
-          {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
+          {constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
         </div>
         <AddNewLayoutModal

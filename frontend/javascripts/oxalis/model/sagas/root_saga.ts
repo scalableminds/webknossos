@@ -10,16 +10,17 @@ import MappingSaga from "oxalis/model/sagas/mapping_saga";
 import meshSaga, { handleAdditionalCoordinateUpdate } from "oxalis/model/sagas/mesh_saga";
 import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
 import ProofreadSaga from "oxalis/model/sagas/proofread_saga";
-import ReadySagas, { setWkReadyToFalse } from "oxalis/model/sagas/ready_sagas";
+import ReadySagas from "oxalis/model/sagas/ready_sagas";
 import SaveSagas, { toggleErrorHighlighting } from "oxalis/model/sagas/save_saga";
 import SettingsSaga from "oxalis/model/sagas/settings_saga";
 import SkeletontracingSagas from "oxalis/model/sagas/skeletontracing_saga";
 import watchTasksAsync, { warnAboutMagRestriction } from "oxalis/model/sagas/task_saga";
 import UndoSaga from "oxalis/model/sagas/undo_saga";
 import VolumetracingSagas from "oxalis/model/sagas/volumetracing_saga";
-import { all, call, cancel, fork, take, takeEvery } from "typed-redux-saga";
+import { all, call, cancel, fork, put, take, takeEvery } from "typed-redux-saga";
 import type { EscalateErrorAction } from "../actions/actions";
 import { warnIfEmailIsUnverified } from "./user_saga";
+import { setIsWkReadyAction } from "../actions/ui_actions";
 
 let rootSagaCrashed = false;
 export default function* rootSaga(): Saga<void> {
@@ -28,7 +29,7 @@ export default function* rootSaga(): Saga<void> {
     const task = yield* fork(restartableSaga);
     yield* take("RESTART_SAGA");
     yield* cancel(task);
-    yield* call(setWkReadyToFalse);
+    yield* put(setIsWkReadyAction(false));
   }
 }
 export function hasRootSagaCrashed() {

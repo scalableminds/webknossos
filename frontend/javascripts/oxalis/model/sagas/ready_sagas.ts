@@ -1,24 +1,13 @@
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { take, takeEvery } from "typed-redux-saga";
+import type { OxalisState } from "oxalis/store";
+import { select, take, takeEvery } from "typed-redux-saga";
 
-let isWkReady = false;
 let isSceneControllerReady = false;
-
-function setWkReady() {
-  isWkReady = true;
-}
 
 function setSceneControllerReady() {
   isSceneControllerReady = true;
 }
 
-export function setWkReadyToFalse() {
-  isWkReady = false;
-}
-
-function* listenForWkReady(): Saga<void> {
-  yield* takeEvery("WK_READY", setWkReady);
-}
 function* listenForSceneControllerReady(): Saga<void> {
   yield* takeEvery("SCENE_CONTROLLER_READY", setSceneControllerReady);
 }
@@ -29,6 +18,7 @@ function* listenForSceneControllerReady(): Saga<void> {
 // until the action is dispatched.
 
 export function* ensureWkReady(): Saga<void> {
+  const isWkReady = yield* select((state: OxalisState) => state.uiInformation.isWkReady);
   if (isWkReady) return;
   yield* take("WK_READY");
 }
@@ -38,4 +28,4 @@ export function* ensureSceneControllerReady(): Saga<void> {
   yield* take("SCENE_CONTROLLER_READY");
 }
 
-export default [listenForWkReady, listenForSceneControllerReady];
+export default [listenForSceneControllerReady];

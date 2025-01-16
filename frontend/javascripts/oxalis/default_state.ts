@@ -247,6 +247,7 @@ const defaultState: OxalisState = {
     busyBlockingInfo: {
       isBusy: false,
     },
+    isWkReady: false,
     quickSelectState: "inactive",
     areQuickSelectSettingsOpen: false,
     measurementToolInfo: {

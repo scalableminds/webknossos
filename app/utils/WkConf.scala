@@ -126,8 +126,8 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val exportTiffMaxEdgeLengthVx: Long = get[Long]("features.exportTiffMaxEdgeLengthVx")
     val openIdConnectEnabled: Boolean =
       featureOverrides.getOrElse("openIdConnectEnabled", get[Boolean]("features.openIdConnectEnabled"))
-    val proofreadingEnabled: Boolean =
-      featureOverrides.getOrElse("proofreadingEnabled", get[Boolean]("features.proofreadingEnabled"))
+    val editableMappingsEnabled: Boolean =
+      featureOverrides.getOrElse("editableMappingsEnabled", get[Boolean]("features.editableMappingsEnabled"))
     val segmentAnythingEnabled: Boolean =
       featureOverrides.getOrElse("segmentAnythingEnabled", get[Boolean]("features.segmentAnythingEnabled"))
   }

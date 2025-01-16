@@ -917,7 +917,7 @@ export default function ToolbarView() {
     isControlOrMetaPressed,
     isAltPressed,
   );
-  const isProofreadingFeatureEnabled = features().proofreadingEnabled;
+  const areEditableMappingsEnabled = features().editableMappingsEnabled;
 
   const skeletonToolDescription = useLegacyBindings
     ? "Use left-click to move around and right-click to create new skeleton nodes"
@@ -1128,13 +1128,13 @@ export default function ToolbarView() {
               "Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
             }
             disabledExplanation={
-              isProofreadingFeatureEnabled
+              areEditableMappingsEnabled
                 ? isAgglomerateMappingEnabled.reason ||
                   disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation
                 : "Proofreading tool is only available on webknossos.org"
             }
             disabled={
-              !isProofreadingFeatureEnabled ||
+              !areEditableMappingsEnabled ||
               !isAgglomerateMappingEnabled.value ||
               disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled
             }
@@ -1205,7 +1205,7 @@ function ToolSpecificSettings({
       ? "The quick select tool is now working without AI. Activate AI for better results."
       : "The quick select tool is now working with AI."
     : "The quick select tool with AI is only available on webknossos.org";
-  const isProofreadingEnabled = features().proofreadingEnabled;
+  const areEditableMappingsEnabled = features().editableMappingsEnabled;
   const toggleQuickSelectStrategy = () => {
     dispatch(
       updateUserSettingAction("quickSelect", {
@@ -1272,7 +1272,7 @@ function ToolSpecificSettings({
 
       {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? <FloodFillSettings /> : null}
 
-      {adaptedActiveTool === AnnotationToolEnum.PROOFREAD && isProofreadingEnabled ? (
+      {adaptedActiveTool === AnnotationToolEnum.PROOFREAD && areEditableMappingsEnabled ? (
         <ProofReadingComponents />
       ) : null}
 

@@ -687,7 +687,7 @@ export type APIFeatureToggles = {
   readonly exportTiffMaxVolumeMVx: number;
   readonly exportTiffMaxEdgeLengthVx: number;
   readonly defaultToLegacyBindings: boolean;
-  readonly proofreadingEnabled?: boolean;
+  readonly editableMappingsEnabled?: boolean;
   readonly optInTabs?: Array<string>;
   readonly openIdConnectEnabled?: boolean;
   readonly segmentAnythingEnabled?: boolean;

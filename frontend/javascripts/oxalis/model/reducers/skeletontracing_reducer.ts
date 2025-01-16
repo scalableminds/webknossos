@@ -45,7 +45,7 @@ import type { OxalisState, SkeletonTracing, Tree, TreeGroup } from "oxalis/store
 import {
   GroupTypeEnum,
   getNodeKey,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import type { MetadataEntryProto } from "types/api_flow_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 

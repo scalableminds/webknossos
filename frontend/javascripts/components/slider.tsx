@@ -1,6 +1,7 @@
 import { Slider as AntdSlider, type SliderSingleProps } from "antd";
 import type { SliderRangeProps } from "antd/lib/slider";
 import { clamp } from "libs/utils";
+import _ from "lodash";
 import type { WheelEventHandler } from "react";
 
 const DEFAULT_WHEEL_FACTOR = 0.02;
@@ -43,8 +44,8 @@ export function Slider(props: SliderProps) {
     return <AntdSlider {...props} />;
   const sliderRange = max - min;
   const ensuredStep = step || DEFAULT_STEP;
-  let handleWheelEvent: WheelEventHandler<HTMLDivElement> = () => {};
-  let handleDoubleClick: React.MouseEventHandler<HTMLDivElement> = () => {};
+  let handleWheelEvent: WheelEventHandler<HTMLDivElement> = _.noop;
+  let handleDoubleClick: React.MouseEventHandler<HTMLDivElement> = _.noop;
   const wheelStep = getDiffPerSliderStep(sliderRange, wheelFactor, ensuredStep);
 
   handleDoubleClick = (event) => {

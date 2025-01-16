@@ -10,7 +10,10 @@ import type { Vector3 } from "oxalis/constants";
 import { getMagInfo, getSegmentationLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import type { OxalisState } from "oxalis/store";
-import { type AnnotationInfoForAIJob, TrainAiModelTab } from "oxalis/view/jobs/train_ai_model";
+import {
+  type AnnotationInfoForAITrainingJob,
+  TrainAiModelTab,
+} from "oxalis/view/jobs/train_ai_model";
 import { useState } from "react";
 import type { Key } from "react";
 import { useSelector } from "react-redux";
@@ -106,7 +109,7 @@ export default function AiModelListView() {
 
 function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
   const [annotationInfosForAiJob, setAnnotationInfosForAiJob] = useState<
-    AnnotationInfoForAIJob<APIAnnotation>[]
+    AnnotationInfoForAITrainingJob<APIAnnotation>[]
   >([]);
 
   const getMagsForSegmentationLayer = (annotationId: string, layerName: string) => {

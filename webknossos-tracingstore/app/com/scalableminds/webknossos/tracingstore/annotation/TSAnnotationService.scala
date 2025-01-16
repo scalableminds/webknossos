@@ -143,7 +143,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   )(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     updateAction match {
       case a: AddLayerAnnotationAction =>
-        addLayer(annotationId, annotationWithTracings, a, targetVersion)
+        addLayer(annotationId, annotationWithTracings, a, targetVersion) ?~> "applyUpdate.addLayer.failed"
       case a: DeleteLayerAnnotationAction =>
         Fox.successful(annotationWithTracings.deleteLayer(a))
       case a: UpdateLayerMetadataAnnotationAction =>
@@ -151,20 +151,20 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       case a: UpdateMetadataAnnotationAction =>
         Fox.successful(annotationWithTracings.updateMetadata(a))
       case a: SkeletonUpdateAction =>
-        annotationWithTracings.applySkeletonAction(a) ?~> "applySkeletonAction.failed"
+        annotationWithTracings.applySkeletonAction(a) ?~> "applyUpdate.skeletonAction.failed"
       case a: UpdateMappingNameVolumeAction if a.isEditable.contains(true) =>
         for {
-          withNewEditableMapping <- addEditableMapping(annotationId, annotationWithTracings, a, targetVersion)
+          withNewEditableMapping <- addEditableMapping(annotationId, annotationWithTracings, a, targetVersion) ?~> "applyUpdate.addEditableMapping.failed"
           withApplyedVolumeAction <- withNewEditableMapping.applyVolumeAction(a)
         } yield withApplyedVolumeAction
       case a: ApplyableVolumeUpdateAction =>
-        annotationWithTracings.applyVolumeAction(a)
+        annotationWithTracings.applyVolumeAction(a) ?~> "applyUpdate.volumeAction.failed"
       case a: EditableMappingUpdateAction =>
-        annotationWithTracings.applyEditableMappingAction(a)
+        annotationWithTracings.applyEditableMappingAction(a) ?~> "applyUpdate.editableMappingAction.failed"
       case a: RevertToVersionAnnotationAction =>
-        revertToVersion(annotationId, annotationWithTracings, a, targetVersion)
+        revertToVersion(annotationId, annotationWithTracings, a, targetVersion) ?~> "applyUpdate.revertToversion.failed"
       case _: ResetToBaseAnnotationAction =>
-        resetToBase(annotationId, annotationWithTracings, targetVersion)
+        resetToBase(annotationId, annotationWithTracings, targetVersion) ?~> "applyUpdate.resetToBase.failed"
       case _: BucketMutatingVolumeUpdateAction =>
         Fox.successful(annotationWithTracings) // No-op, as bucket-mutating actions are performed eagerly, so not here.
       case _: CompactVolumeUpdateAction =>
@@ -201,8 +201,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     for {
       _ <- bool2Fox(revertAction.sourceVersion >= annotationWithTracings.annotation.earliestAccessibleVersion) ?~> f"Trying to revert to ${revertAction.sourceVersion}, but earliest accessible is ${annotationWithTracings.annotation.earliestAccessibleVersion}"
       before = Instant.now
-      sourceAnnotation: AnnotationWithTracings <- getWithTracings(annotationId, Some(revertAction.sourceVersion))
-      _ <- revertDistributedElements(annotationWithTracings, sourceAnnotation, revertAction.sourceVersion, newVersion)
+      sourceAnnotation: AnnotationWithTracings <- getWithTracings(annotationId, Some(revertAction.sourceVersion)) ?~> "revert.getSource.failed"
+      _ <- revertDistributedElements(annotationWithTracings, sourceAnnotation, revertAction.sourceVersion, newVersion) ?~> "revert.revertDistributedElements.failed"
       _ = Instant.logSince(
         before,
         s"Reverting annotation $annotationId from v${annotationWithTracings.version} to v${revertAction.sourceVersion}")
@@ -518,11 +518,12 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           Some(annotationWithTracings.withNewUpdaters(annotationWithTracings.version, targetVersion)),
           updates)
         updatedWithNewVersion = updated.withVersion(targetVersion)
-        _ <- updatedWithNewVersion.flushEditableMappingUpdaterBuffers()
-        _ <- flushUpdatedTracings(updatedWithNewVersion, updates)
-        _ <- flushAnnotationInfo(annotationId, updatedWithNewVersion)
+        _ <- updatedWithNewVersion.flushEditableMappingUpdaterBuffers() ?~> "flushEditableMappingUpdaterBuffers.failed"
+        _ <- flushUpdatedTracings(updatedWithNewVersion, updates) ?~> "flushUpdatedTracings.failed"
+        _ <- flushAnnotationInfo(annotationId, updatedWithNewVersion) ?~> "flushAnnotationInfo.failed"
         _ <- Fox.runIf(reportChangesToWk && annotationWithTracings.annotation != updated.annotation)(
-          remoteWebknossosClient.updateAnnotation(annotationId, updatedWithNewVersion.annotation))
+          remoteWebknossosClient
+            .updateAnnotation(annotationId, updatedWithNewVersion.annotation)) ?~> "updateRemote.failed"
       } yield updatedWithNewVersion
     }
   }

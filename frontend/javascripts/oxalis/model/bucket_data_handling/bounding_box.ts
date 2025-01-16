@@ -206,6 +206,10 @@ class BoundingBox {
     return new BoundingBox({ min, max });
   }
 
+  alignFromMag1ToMag(mag: Vector3, strategy: "shrink" | "grow" | "ceil" | "floor"): BoundingBox {
+    return this.alignWithMag(mag, strategy).fromMag1ToMag(mag);
+  }
+
   /*
    * Each component of margins is used as
    *   - a left margin IF the value is negative (the absolute value will be

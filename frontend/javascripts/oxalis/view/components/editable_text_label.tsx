@@ -23,6 +23,7 @@ export type EditableTextLabelProp = {
   margin?: number | string;
   onClick?: () => void;
   disableEditing?: boolean;
+  hideEditIcon?: boolean;
   onContextMenu?: () => void;
   width?: string | number;
   iconClassName?: string;
@@ -133,6 +134,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
   render() {
     const iconStyle = {
       cursor: "pointer",
+      marginLeft: 5,
     };
     const margin = this.props.margin != null ? this.props.margin : "0 10px";
     const inputComponentProps: InputProps = {
@@ -147,6 +149,18 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       autoFocus: true,
     };
     const isInvalidStyleMaybe = this.props.isInvalid ? { color: "var(--ant-color-error)" } : {};
+    const onRename = (evt: React.MouseEvent) => {
+      if (this.props.disableEditing) {
+        return;
+      }
+      evt.stopPropagation();
+      this.setState({
+        isEditing: true,
+      });
+      if (this.props.onRenameStart) {
+        this.props.onRenameStart();
+      }
+    };
 
     if (this.state.isEditing) {
       return (
@@ -185,6 +199,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
           }}
           className={this.props.onClick != null ? "clickable-text" : undefined}
           onClick={this.props.onClick}
+          onDoubleClick={onRename}
           onContextMenu={this.props.onContextMenu}
         >
           {this.props.markdown ? (
@@ -194,7 +209,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
           ) : (
             <span style={isInvalidStyleMaybe}>{this.props.value}</span>
           )}
-          {this.props.disableEditing ? null : (
+          {this.props.disableEditing || this.props.hideEditIcon ? null : (
             <FastTooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
               <EditOutlined
                 className={
@@ -202,19 +217,10 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
                 }
                 style={{
                   ...iconStyle,
-                  marginLeft: 5,
                   display: "inline",
                   whiteSpace: "nowrap",
                 }}
-                onClick={(evt) => {
-                  evt.stopPropagation();
-                  this.setState({
-                    isEditing: true,
-                  });
-                  if (this.props.onRenameStart) {
-                    this.props.onRenameStart();
-                  }
-                }}
+                onClick={onRename}
               />
             </FastTooltip>
           )}

@@ -918,7 +918,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     onChange={_.noop}
                     value={activeTreeName || activeGroupName}
                     disabled
-                    title="Edit the name in the details table below the tree list. Note: This text field will be removed in a future update."
+                    title="Edit the name by double-clicking the tree or by using the details table below the tree list. Note: This text field will be removed in a future update."
                     style={{ width: "80%" }}
                   />
                   <ButtonComponent

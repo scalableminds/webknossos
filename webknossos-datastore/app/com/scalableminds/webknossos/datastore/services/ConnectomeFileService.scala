@@ -84,7 +84,7 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
     extends FoxImplicits
     with LazyLogging {
 
-  private val dataBaseDir = Paths.get(config.Datastore.baseFolder)
+  private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
   private val connectomesDir = "connectomes"
   private val connectomeFileExtension = "hdf5"
 

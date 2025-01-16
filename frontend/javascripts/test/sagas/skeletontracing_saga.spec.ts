@@ -11,7 +11,7 @@ import defaultState from "oxalis/default_state";
 import update from "immutability-helper";
 import { createSaveQueueFromUpdateActions, withoutUpdateTracing } from "../helpers/saveHelpers";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
-import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import type * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
 import type * as OriginalSaveActions from "oxalis/model/actions/save_actions";
 import type * as OriginalSaveSaga from "oxalis/model/sagas/save_saga";

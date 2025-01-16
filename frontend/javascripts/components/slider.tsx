@@ -1,7 +1,7 @@
 import { Slider as AntdSlider, type SliderSingleProps } from "antd";
 import type { SliderRangeProps } from "antd/lib/slider";
 import { clamp } from "libs/utils";
-import { type WheelEventHandler, useState } from "react";
+import { type WheelEventHandler, useRef, useState } from "react";
 
 const DEFAULT_WHEEL_FACTOR = 0.02;
 const DEFAULT_STEP = 1;
@@ -42,6 +42,7 @@ export function Slider(props: SliderProps) {
     disabled,
   } = props;
   const [isFocused, setIsFocused] = useState(false);
+  const sliderElement = useRef<HTMLDivElement>(null);
   if (min == null || max == null || onChange == null || value == null || disabled)
     return <AntdSlider {...props} />;
   const sliderRange = max - min;
@@ -66,6 +67,7 @@ export function Slider(props: SliderProps) {
   if (range === false || range == null) {
     handleWheelEvent = (event) => {
       if (!isFocused) return;
+      event.preventDefault();
       const newValue = value - getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
       const clampedNewValue = clamp(min, newValue, max);
       onChange(clampedNewValue);
@@ -73,6 +75,7 @@ export function Slider(props: SliderProps) {
   } else if (range === true || typeof range === "object") {
     handleWheelEvent = (event) => {
       if (!isFocused) return;
+      event.preventDefault();
       const diff = getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
       const newLowerValue = Math.round(value[0] + diff);
       const newUpperValue = Math.round(value[1] - diff);
@@ -82,11 +85,13 @@ export function Slider(props: SliderProps) {
     };
   }
 
+  sliderElement.current?.addEventListener("wheel", handleWheelEvent, { passive: false }); // TODO_c fix type :/
+
   return (
     <div
-      onWheel={handleWheelEvent}
+      ref={sliderElement}
       onDoubleClick={handleDoubleClick}
-      style={{ flexGrow: 1 }}
+      style={{ flexGrow: 1, touchAction: "none" }}
       onFocus={() => setIsFocused(true)}
       onBlur={() => setIsFocused(false)}
     >

@@ -11,7 +11,7 @@ import {
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { cancelJob, getJobs } from "admin/admin_rest_api";
-import { Input, Spin, Table, Tooltip, Typography } from "antd";
+import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import { confirmAsync } from "dashboard/dataset/helper_components";
@@ -59,6 +59,50 @@ export const TOOLTIP_MESSAGES_AND_ICONS = {
 const refreshInterval = 5000;
 const { Column } = Table;
 const { Search } = Input;
+
+export const getShowTrainingDataLink = (
+  trainingAnnotations: {
+    annotationId: string;
+  }[],
+) => {
+  return trainingAnnotations == null ? null : trainingAnnotations.length > 1 ? (
+    <a
+      href="#"
+      onClick={() => {
+        Modal.info({
+          content: (
+            <div>
+              The following annotations were used during training:
+              <ul>
+                {trainingAnnotations.map((annotation: { annotationId: string }, index: number) => (
+                  <li key={`annotation_${index}`}>
+                    <a
+                      href={`/annotations/${annotation.annotationId}`}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      Annotation {index + 1}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ),
+        });
+      }}
+    >
+      Show Training Data
+    </a>
+  ) : (
+    <a
+      href={`/annotations/${trainingAnnotations[0].annotationId}`}
+      target="_blank"
+      rel="noreferrer noopener"
+    >
+      Show Training Data
+    </a>
+  );
+};
 
 type State = {
   isLoading: boolean;
@@ -215,7 +259,7 @@ function JobListView() {
     ) {
       return (
         <span>
-          Aligned sections for layer {job.layerName} of{" "}
+          Align sections for layer {job.layerName} of{" "}
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
@@ -231,6 +275,20 @@ function JobListView() {
           {job.mergeSegments
             ? ". This includes merging the segments that were merged via merger mode."
             : null}
+        </span>
+      );
+    } else if (job.type === APIJobType.TRAIN_MODEL && job.organizationId) {
+      const numberOfTrainingAnnotations = job.trainingAnnotations.length;
+      return (
+        <span>
+          {`Train model on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
+          {getShowTrainingDataLink(job.trainingAnnotations)}
+        </span>
+      );
+    } else if (job.type === APIJobType.INFER_WITH_MODEL && job.organizationId) {
+      return (
+        <span>
+          Run AI segmentation with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
         </span>
       );
     } else {
@@ -324,8 +382,17 @@ function JobListView() {
         </span>
       );
     } else {
-      // The above if-branches should be exhaustive over all job types
-      Utils.assertNever(job.type);
+      // unknown job type
+      return (
+        <span>
+          {job.resultLink && (
+            <a href={job.resultLink} title="Result">
+              Result
+            </a>
+          )}
+          {job.result && <p>{job.result}</p>}
+        </span>
+      );
     }
   }
 

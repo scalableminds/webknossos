@@ -176,7 +176,7 @@ import {
   callDeep,
   createGroupToSegmentsMap,
   moveGroupsHelper,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import type { Versions } from "oxalis/view/version_view";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";

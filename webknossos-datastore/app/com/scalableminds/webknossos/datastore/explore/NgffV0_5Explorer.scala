@@ -61,6 +61,7 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
 
       boundingBox = boundingBoxFromMags(magsWithAttributes)
       additionalAxes <- getAdditionalAxes(multiscale, remotePath)
+      translationOpt = getTranslation(multiscale)
       layer: Zarr3Layer = if (looksLikeSegmentationLayer(datasetName, elementClass) || isSegmentation) {
         Zarr3SegmentationLayer(
           channelName,
@@ -70,6 +71,7 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
           largestSegmentId = None,
           additionalAxes = Some(additionalAxes),
           defaultViewConfiguration = Some(viewConfig),
+          coordinateTransformations = translationOpt,
         )
       } else
         Zarr3DataLayer(
@@ -80,6 +82,7 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
           magsWithAttributes.map(_.mag),
           additionalAxes = Some(additionalAxes),
           defaultViewConfiguration = Some(viewConfig),
+          coordinateTransformations = translationOpt,
         )
     } yield layer
 

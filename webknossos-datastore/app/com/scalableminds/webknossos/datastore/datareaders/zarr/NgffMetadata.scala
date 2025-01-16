@@ -36,8 +36,11 @@ object NgffMetadata {
       mag =>
         NgffDataset(
           path = mag.toMagLiteral(allowScalar = true),
-          List(NgffCoordinateTransformation(
-            scale = Some(List[Double](1.0) ++ (dataSourceVoxelSize.factor * Vec3Double(mag)).toList)))
+          List(
+            NgffCoordinateTransformation(
+              scale = Some(List[Double](1.0) ++ (dataSourceVoxelSize.factor * Vec3Double(mag)).toList),
+              translation = None,
+            ))
       ))
     val lengthUnitStr = dataSourceVoxelSize.unit.toString
     val axes = List(

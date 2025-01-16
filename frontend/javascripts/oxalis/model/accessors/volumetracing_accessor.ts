@@ -609,11 +609,26 @@ export function isMappingActivationAllowed(
   state: OxalisState,
   mappingName: string | null | undefined,
   layerName?: string | null | undefined,
+  isMergerModeMapping?: boolean,
 ): boolean {
   const isEditableMappingActive = hasEditableMapping(state, layerName);
   const isActiveMappingLocked = isMappingLocked(state, layerName);
 
-  if (!isEditableMappingActive && !isActiveMappingLocked) return true;
+  const activeMappingInfo = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    layerName,
+  );
+
+  const isAllowedBecauseOfMergerMode =
+    // a merger mode mapping should be enabled
+    isMergerModeMapping &&
+    // and currently no (or a merger mode) mapping exists
+    (activeMappingInfo.mappingName == null || activeMappingInfo.isMergerModeMapping);
+
+  // todo: if non-null-mapping is locked, isMergerModeMapping should not be relevant
+  if (!isEditableMappingActive && (!isActiveMappingLocked || isAllowedBecauseOfMergerMode)) {
+    return true;
+  }
 
   const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
 

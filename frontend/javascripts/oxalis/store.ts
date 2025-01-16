@@ -424,6 +424,7 @@ export type ActiveMappingInfo = {
   readonly hideUnmappedIds: boolean;
   readonly mappingStatus: MappingStatus;
   readonly mappingType: MappingType;
+  readonly isMergerModeMapping?: boolean;
 };
 export type TemporaryConfiguration = {
   readonly histogramData: HistogramDataForAllLayers;

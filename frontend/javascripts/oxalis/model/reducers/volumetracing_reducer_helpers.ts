@@ -20,7 +20,7 @@ import type {
   SegmentMap,
   VolumeTracing,
 } from "oxalis/store";
-import { getMaximumSegmentIdForLayer } from "../accessors/dataset_accessor";
+import { getMappingInfo, getMaximumSegmentIdForLayer } from "../accessors/dataset_accessor";
 import { mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
 
 export function updateVolumeTracing(
@@ -164,9 +164,20 @@ export function setMappingNameReducer(
   isMappingEnabled: boolean = true,
 ) {
   // Editable mappings or locked mappings cannot be disabled or switched for now
-  if (volumeTracing.hasEditableMapping || volumeTracing.mappingIsLocked) {
+  if (volumeTracing.hasEditableMapping) {
     return state;
   }
+  const mappingInfo = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    volumeTracing.tracingId,
+  );
+  if (
+    volumeTracing.mappingIsLocked &&
+    ((isMappingEnabled && mappingInfo == null) || mappingInfo.isMergerModeMapping)
+  ) {
+    return state;
+  }
+
   // Only HDF5 mappings are persisted in volume annotations for now
   if (mappingType !== "HDF5" || !isMappingEnabled) {
     mappingName = null;

@@ -20,7 +20,7 @@ export function CheckCertificateModal() {
       setIsValid(isValid);
       setExpiresAt(expiresAt);
     },
-    5 * 60 * 1000,
+    5 * 60 * 1000, // 5 minutes
   );
   if (isValid) {
     return null;
@@ -48,7 +48,7 @@ export function CheckCertificateModal() {
             title={
               <span style={{ color: "white" }}>
                 Sorry, your WEBKNOSSOS license expired on{" "}
-                <FormattedDate timestamp={expiresAt * 1000} format="DD/MM/YYYY" />.
+                <FormattedDate timestamp={expiresAt * 1000} format="YYYY-MM-DD" />.
                 <br />
                 Please{" "}
                 <a

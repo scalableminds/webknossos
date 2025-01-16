@@ -60,8 +60,10 @@ export async function previewVersion(version?: number) {
     )
   ) {
     const params = new URLSearchParams();
-    params.append("showVersionRestore", "true");
-    params.append("version", `${version}`);
+    if (version != null) {
+      params.append("showVersionRestore", "true");
+      params.append("version", `${version}`);
+    }
     location.href = `${location.origin}/annotations/${annotationId}?${params}${location.hash}`;
 
     return;

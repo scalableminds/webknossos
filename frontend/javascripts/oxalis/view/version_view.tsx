@@ -19,7 +19,6 @@ function VersionView() {
   const initialAllowUpdate = useSelector(
     (state: OxalisState) => state.tracing.restrictions.initialAllowUpdate,
   );
-  console.log("initialAllowUpdate", initialAllowUpdate);
   useEffect(() => {
     Store.dispatch(setAnnotationAllowUpdateAction(false));
   }, []);

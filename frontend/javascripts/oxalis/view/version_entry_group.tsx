@@ -62,6 +62,19 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
     }));
   };
 
+  componentDidMount() {
+    const newestBatch = this.props.batches.at(0);
+    const oldestBatch = this.props.batches.at(-1);
+    if (
+      newestBatch &&
+      oldestBatch &&
+      oldestBatch.version <= this.props.activeVersion &&
+      this.props.activeVersion <= newestBatch.version
+    ) {
+      this.setState({ expanded: true });
+    }
+  }
+
   render() {
     const {
       batches,

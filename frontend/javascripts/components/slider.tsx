@@ -1,7 +1,7 @@
 import { Slider as AntdSlider, type SliderSingleProps } from "antd";
 import type { SliderRangeProps } from "antd/lib/slider";
 import { clamp } from "libs/utils";
-import { type WheelEventHandler, useRef, useState } from "react";
+import { type WheelEventHandler, useCallback, useRef, useState } from "react";
 
 const DEFAULT_WHEEL_FACTOR = 0.02;
 const DEFAULT_STEP = 1;
@@ -43,15 +43,36 @@ export function Slider(props: SliderProps) {
   } = props;
   const [isFocused, setIsFocused] = useState(false);
   const sliderElement = useRef<HTMLDivElement>(null);
+
+  const handleWheelEvent = useCallback(
+    (event: { preventDefault: () => void; deltaY: number }) => {
+      // differentiate between single value and range slider
+      if (onWheelDisabled || value == null || min == null || max == null || !isFocused) return;
+      if (range === false || range == null) {
+        event.preventDefault();
+        const newValue = value - getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
+        const clampedNewValue = clamp(min, newValue, max);
+        if (onChange != null) onChange(clampedNewValue);
+      } else if (range === true || typeof range === "object") {
+        event.preventDefault();
+        const diff = getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
+        const newLowerValue = Math.round(value[0] + diff);
+        const newUpperValue = Math.round(value[1] - diff);
+        const clampedNewLowerValue = clamp(min, newLowerValue, Math.min(newUpperValue, max));
+        const clampedNewUpperValue = clamp(newLowerValue, newUpperValue, max);
+        if (onChange != null) onChange([clampedNewLowerValue, clampedNewUpperValue]);
+      }
+    },
+    [value, min, max, onChange, range, isFocused, onWheelDisabled],
+  );
   if (min == null || max == null || onChange == null || value == null || disabled)
     return <AntdSlider {...props} />;
   const sliderRange = max - min;
   const ensuredStep = step || DEFAULT_STEP;
-  let handleWheelEvent: WheelEventHandler<HTMLDivElement> = () => {};
-  let handleDoubleClick: React.MouseEventHandler<HTMLDivElement> = () => {};
+
   const wheelStep = getDiffPerSliderStep(sliderRange, wheelFactor, ensuredStep);
 
-  handleDoubleClick = (event) => {
+  const handleDoubleClick: React.MouseEventHandler<HTMLDivElement> = (event) => {
     if (
       event.target instanceof HTMLElement &&
       event.target.className.includes("ant-slider-handle") &&
@@ -62,30 +83,7 @@ export function Slider(props: SliderProps) {
       onChange(defaultValue);
   };
 
-  // differentiate between single value and range slider
-  if (onWheelDisabled) return;
-  if (range === false || range == null) {
-    handleWheelEvent = (event) => {
-      if (!isFocused) return;
-      event.preventDefault();
-      const newValue = value - getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
-      const clampedNewValue = clamp(min, newValue, max);
-      onChange(clampedNewValue);
-    };
-  } else if (range === true || typeof range === "object") {
-    handleWheelEvent = (event) => {
-      if (!isFocused) return;
-      event.preventDefault();
-      const diff = getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
-      const newLowerValue = Math.round(value[0] + diff);
-      const newUpperValue = Math.round(value[1] - diff);
-      const clampedNewLowerValue = clamp(min, newLowerValue, Math.min(newUpperValue, max));
-      const clampedNewUpperValue = clamp(newLowerValue, newUpperValue, max);
-      onChange([clampedNewLowerValue, clampedNewUpperValue]);
-    };
-  }
-
-  sliderElement.current?.addEventListener("wheel", handleWheelEvent, { passive: false }); // TODO_c fix type :/
+  sliderElement.current?.addEventListener("wheel", handleWheelEvent, { passive: false });
 
   return (
     <div

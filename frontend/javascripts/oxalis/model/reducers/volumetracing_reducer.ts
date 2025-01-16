@@ -9,6 +9,7 @@ import {
 import {
   getRequestedOrVisibleSegmentationLayer,
   getSegmentationLayerForTracing,
+  getSelectedIds,
   getVisibleSegments,
   getVolumeTracingById,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -55,10 +56,11 @@ import type {
 import {
   findParentIdForGroupId,
   getGroupNodeKey,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_flow_types";
 import { mapGroups } from "../accessors/skeletontracing_accessor";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
+
 type SegmentUpdateInfo =
   | {
       readonly type: "UPDATE_VOLUME_TRACING";
@@ -192,7 +194,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       creationTime: action.timestamp,
       name: null,
       color: null,
-      groupId: null,
+      groupId: getSelectedIds(state)[0].group,
       someAdditionalCoordinates: someAdditionalCoordinates,
       ...oldSegment,
       ...segment,

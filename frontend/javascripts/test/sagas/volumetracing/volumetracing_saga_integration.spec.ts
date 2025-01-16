@@ -30,7 +30,7 @@ import type { ModelType } from "oxalis/model";
 import type { RequestType } from "libs/request";
 import type { ApiInterface } from "oxalis/api/api_latest";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 
 const { dispatchUndoAsync, dispatchRedoAsync, discardSaveQueuesAction } = mockRequire.reRequire(
   "oxalis/model/actions/save_actions",

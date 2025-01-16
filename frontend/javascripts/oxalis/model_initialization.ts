@@ -344,7 +344,11 @@ function initializeAnnotation(
     if (controlMode === ControlModeEnum.SANDBOX) {
       annotation = {
         ...annotation,
-        restrictions: { ...annotation.restrictions, allowUpdate: true, allowSave: false },
+        restrictions: {
+          ...annotation.restrictions,
+          allowUpdate: true,
+          allowSave: false,
+        },
       };
     } else if (controlMode === ControlModeEnum.TRACE) {
       annotation = {

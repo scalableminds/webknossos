@@ -351,9 +351,9 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                   </React.Fragment>
                 ) : null}
               </div>
-              {this.props.showVersionRestore && this.props.isWkReady ? (
+              {this.props.showVersionRestore ? (
                 <Sider id="version-restore-sider" width={400} theme={this.props.UITheme}>
-                  <VersionView allowUpdate={isUpdateTracingAllowed} />
+                  <VersionView />
                 </Sider>
               ) : null}
             </Layout>

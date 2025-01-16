@@ -3,31 +3,30 @@ import { Alert, Button } from "antd";
 import { useWillUnmount } from "beautiful-react-hooks";
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
-import type { OxalisState, Tracing } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import VersionList, { previewVersion } from "oxalis/view/version_list";
 import * as React from "react";
-import { useState } from "react";
-import { connect, useDispatch } from "react-redux";
+import { useEffect } from "react";
+import { useSelector } from "react-redux";
 
 export type Versions = {
   skeleton?: number | null | undefined;
   volumes?: Record<string, number>;
 };
-type StateProps = {
-  tracing: Tracing;
-};
-type OwnProps = {
-  allowUpdate: boolean;
-};
-type Props = StateProps & OwnProps;
 
-const VersionView: React.FC<Props> = (props: Props) => {
-  const [initialAllowUpdate] = useState<boolean>(props.allowUpdate);
-  const dispatch = useDispatch();
+function VersionView() {
+  const initialAllowUpdate = useSelector(
+    (state: OxalisState) => state.tracing.restrictions.initialAllowUpdate,
+  );
+  console.log("initialAllowUpdate", initialAllowUpdate);
+  useEffect(() => {
+    Store.dispatch(setAnnotationAllowUpdateAction(false));
+  }, []);
 
   useWillUnmount(() => {
-    dispatch(setAnnotationAllowUpdateAction(initialAllowUpdate));
+    console.log("version view unmount: initialAllowUpdate", initialAllowUpdate);
+    Store.dispatch(setAnnotationAllowUpdateAction(initialAllowUpdate));
   });
 
   const handleClose = async () => {
@@ -98,13 +97,6 @@ const VersionView: React.FC<Props> = (props: Props) => {
       </div>
     </div>
   );
-};
-
-function mapStateToProps(state: OxalisState): StateProps {
-  return {
-    tracing: state.tracing,
-  };
 }
 
-const connector = connect(mapStateToProps);
-export default connector(VersionView);
+export default VersionView;

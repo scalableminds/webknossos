@@ -181,7 +181,7 @@ export type SegmentGroup = TreeGroup;
 export type MutableSegmentGroup = MutableTreeGroup;
 
 export type DataLayerType = APIDataLayer;
-export type Restrictions = APIRestrictions;
+export type Restrictions = APIRestrictions & { initialAllowUpdate: boolean };
 export type AllowedMode = APIAllowedMode;
 export type Settings = APISettings;
 export type DataStoreInfo = APIDataStore;

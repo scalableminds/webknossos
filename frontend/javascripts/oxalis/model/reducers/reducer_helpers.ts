@@ -105,7 +105,11 @@ export function convertServerAnnotationToFrontendAnnotation(
     isLockedByOwner,
     annotationLayers,
   } = annotation;
-  const restrictions = { ...annotation.restrictions, ...annotation.settings };
+  const restrictions = {
+    ...annotation.restrictions,
+    ...annotation.settings,
+    initialAllowUpdate: annotation.restrictions.allowUpdate,
+  };
   return {
     annotationId,
     restrictions,

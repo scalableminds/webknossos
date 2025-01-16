@@ -1,7 +1,7 @@
 // @ts-nocheck
 import "test/mocks/lz4";
 import { __setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
-import { makeBasicGroupObject } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { makeBasicGroupObject } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { setTreeGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { userSettings } from "types/schemas/user_settings.schema";

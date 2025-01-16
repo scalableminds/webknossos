@@ -20,6 +20,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added support for translations in OME NGFF zarr datasets (translation within coordinateTransformations on datasets). [#8311](https://github.com/scalableminds/webknossos/pull/8311)
 - When the eraser tool is active, one can switch temporarily to the fill-segment tool by pressing shift and ctrl. Only pressing shift, switches to the pick-segment tool. [#8314](https://github.com/scalableminds/webknossos/pull/8314)
 - Enabled auto sorting of Typescript imports in Biome linter. [#8313](https://github.com/scalableminds/webknossos/pull/8313)
+- Clicking on a segment or tree group will show some details in the details table. [#8316](https://github.com/scalableminds/webknossos/pull/8316)
+- Segment and tree names can be edited by doubleclicking them. [#8316](https://github.com/scalableminds/webknossos/pull/8316)
 
 ### Changed
 - Renamed "resolution" to "magnification" in more places within the codebase, including local variables. [#8168](https://github.com/scalableminds/webknossos/pull/8168)

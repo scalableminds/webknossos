@@ -35,6 +35,7 @@ import type { ItemType } from "antd/lib/menu/interface";
 import type { DataNode } from "antd/lib/tree";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
+import { SimpleRow } from "dashboard/folders/metadata_table";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import _, { isNumber, memoize } from "lodash";
@@ -130,11 +131,12 @@ import {
   additionallyExpandGroup,
   createGroupToParentMap,
   createGroupToSegmentsMap,
+  findGroup,
   findParentIdForGroupId,
   getExpandedGroups,
   getGroupByIdWithSubgroups,
   getGroupNodeKey,
-} from "../tree_hierarchy_view_helpers";
+} from "../trees_tab/tree_hierarchy_view_helpers";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
 
 const SCROLL_DELAY_MS = 50;
@@ -1980,36 +1982,90 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   renderDetailsForSelection() {
-    const { segments } = this.props.selectedIds;
-    if (segments.length === 1) {
+    const { segments: selectedSegmentIds, group: selectedGroupId } = this.props.selectedIds;
+    if (selectedSegmentIds.length === 1) {
       const readOnly = !this.props.allowUpdate;
-      const segment = this.props.segments?.getNullable(segments[0]);
+      const segment = this.props.segments?.getNullable(selectedSegmentIds[0]);
       if (segment == null) {
         return <>Cannot find details for selected segment.</>;
       }
       return (
         <table className="metadata-table">
           <thead>
-            <tr>
-              <th>ID</th>
-              <th colSpan={2}>{segment.id}</th>
-            </tr>
+            <SimpleRow isTableHead label="ID" value={segment.id} />
           </thead>
           <tbody>
-            <tr>
-              <td>Name</td>
-              <td colSpan={2}>
+            <SimpleRow
+              label="Name"
+              value={
                 <InputWithUpdateOnBlur
                   value={segment.name || ""}
                   onChange={this.renameActiveSegment}
                 />
-              </td>
-            </tr>
+              }
+            />
             <MetadataEntryTableRows
               item={segment}
               setMetadata={this.setMetadata}
               readOnly={readOnly}
             />
+          </tbody>
+        </table>
+      );
+    } else if (selectedGroupId != null) {
+      const { segmentGroups } = this.props;
+      const activeGroup = findGroup(this.props.segmentGroups, selectedGroupId);
+      if (!activeGroup || this.props.segments == null) {
+        return null;
+      }
+
+      const groupToSegmentsMap = createGroupToSegmentsMap(this.props.segments);
+      const groupWithSubgroups = getGroupByIdWithSubgroups(segmentGroups, selectedGroupId);
+
+      return (
+        <table className="metadata-table">
+          <thead>
+            <SimpleRow isTableHead label="ID" value={activeGroup.groupId} />
+          </thead>
+          <tbody>
+            <SimpleRow
+              label="Name"
+              value={
+                <InputWithUpdateOnBlur
+                  value={activeGroup.name || ""}
+                  onChange={(newName) => {
+                    if (this.props.visibleSegmentationLayer == null) {
+                      return;
+                    }
+                    api.tracing.renameSegmentGroup(
+                      activeGroup.groupId,
+                      newName,
+                      this.props.visibleSegmentationLayer.name,
+                    );
+                  }}
+                />
+              }
+            />
+
+            {groupWithSubgroups.length === 1 ? (
+              <SimpleRow
+                label="Segment Count"
+                value={groupToSegmentsMap[selectedGroupId]?.length ?? 0}
+              />
+            ) : (
+              <>
+                <SimpleRow
+                  label="Segment Count (direct children)"
+                  value={groupToSegmentsMap[selectedGroupId]?.length ?? 0}
+                />
+                <SimpleRow
+                  label="Segment Count (all children)"
+                  value={_.sum(
+                    groupWithSubgroups.map((groupId) => groupToSegmentsMap[groupId]?.length ?? 0),
+                  )}
+                />
+              </>
+            )}
           </tbody>
         </table>
       );

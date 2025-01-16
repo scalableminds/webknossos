@@ -147,7 +147,7 @@ export default function BoundingBoxTab() {
           isVisible={bb.isVisible}
           onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
           onDelete={_.partial(deleteBoundingBox, bb.id)}
-          onExport={isExportEnabled ? () => handleExportBoundingBox(bb) : () => {}}
+          onExport={isExportEnabled ? () => handleExportBoundingBox(bb) : _.noop}
           onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
           onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
           onNameChange={_.partial(setBoundingBoxName, bb.id)}

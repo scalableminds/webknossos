@@ -42,7 +42,7 @@ import type {
   UpdateTreeVisibilityUpdateAction,
 } from "oxalis/model/sagas/update_actions";
 import type { OxalisState } from "oxalis/store";
-import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { useSelector } from "react-redux";
 type Description = {
   description: string;

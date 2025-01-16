@@ -79,6 +79,7 @@ import Store from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import InputComponent from "oxalis/view/components/input_component";
+import TreeHierarchyView from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view";
 import {
   GroupTypeEnum,
   MISSING_GROUP_ID,
@@ -86,8 +87,7 @@ import {
   callDeep,
   createGroupToParentMap,
   createGroupToTreesMap,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import TreeHierarchyView from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view";
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import * as React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
@@ -388,20 +388,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       return Array.from(mapGroupsAndTreesSorted([rootGroup], groupToTreesMap, sortBy));
     },
   );
-
-  handleChangeName = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    if (!this.props.skeletonTracing) {
-      return;
-    }
-
-    const { activeGroupId } = this.props.skeletonTracing;
-
-    if (activeGroupId != null) {
-      api.tracing.renameSkeletonGroup(activeGroupId, evt.target.value);
-    } else {
-      this.props.onChangeTreeName(evt.target.value);
-    }
-  };
 
   deleteGroup = (groupId: number, deleteRecursively: boolean = false) => {
     if (!this.props.skeletonTracing) {
@@ -929,10 +915,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     <i className="fas fa-arrow-left" />
                   </ButtonComponent>
                   <InputComponent
-                    onChange={this.handleChangeName}
+                    onChange={_.noop}
                     value={activeTreeName || activeGroupName}
-                    disabled={noTreesAndGroups || isEditingDisabled}
-                    title={isEditingDisabled ? isEditingDisabledMessage : undefined}
+                    disabled
+                    title="Edit the name by double-clicking the tree or by using the details table below the tree list. Note: This text field will be removed in a future update."
                     style={{ width: "80%" }}
                   />
                   <ButtonComponent

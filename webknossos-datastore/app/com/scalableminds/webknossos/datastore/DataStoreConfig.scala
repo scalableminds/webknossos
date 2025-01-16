@@ -20,8 +20,8 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val uri: String = get[String]("datastore.webKnossos.uri")
       val pingInterval: FiniteDuration = get[FiniteDuration]("datastore.webKnossos.pingInterval")
     }
-    val baseFolder: String = get[String]("datastore.baseFolder")
-    val localFolderWhitelist: List[String] = getList[String]("datastore.localFolderWhitelist")
+    val baseDirectory: String = get[String]("datastore.baseDirectory")
+    val localDirectoryWhitelist: List[String] = getList[String]("datastore.localDirectoryWhitelist")
     object WatchFileSystem {
       val enabled: Boolean = get[Boolean]("datastore.watchFileSystem.enabled")
       val interval: FiniteDuration = get[FiniteDuration]("datastore.watchFileSystem.interval")

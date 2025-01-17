@@ -26,19 +26,23 @@
   border: none !important;
 }
 
+// The horizontal/vertical splitter is the UI element that is used to resize the borders between the tabs/viewports. 
 .flexlayout__splitter:hover,
 .flexlayout__splitter_drag {
   background-color: var(--ant-color-border-secondary)
 }
+
 .flexlayout__splitter {
   z-index: 21;
   background-color: var(--ant-color-border);
+
   &::before {
     content: "";
     background-color: transparent;
   }
 }
 
+// We configure the splitter to be almost invisible in code (just 1px) and use CSS transparent ::before pseudo to increase to mouse click/drag target instead. 
 .flexlayout__splitter_vert::before {
   width: 11px;
   display: inline-block;
@@ -56,8 +60,8 @@
   top: -15px;
 }
 
-.flexlayout__tab_button_content {
-  // On Safari, this ensures that the button is easily clickable
+.flexlayout__tabset_tabbar_outer {
+  // On Safari, this ensures that the "maximize/minimize viewport"-button is easily clickable and a tab header/name can be grabbed for repositioning. 
   // (otherwise, the resizer becomes the default target for some reason).
   z-index: 100;
 }

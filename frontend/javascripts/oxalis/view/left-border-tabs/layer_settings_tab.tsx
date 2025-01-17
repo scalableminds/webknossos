@@ -176,7 +176,10 @@ function DragHandle({ id }: { id: string }) {
 
 function DummyDragHandle({ tooltipTitle }: { tooltipTitle: string }) {
   return (
-    <FastTooltip title={tooltipTitle}>
+    <FastTooltip
+      title={tooltipTitle}
+      style={{ justifyContent: "center", alignItems: "center", display: "flex" }}
+    >
       <DragHandleIcon isDisabled />
     </FastTooltip>
   );

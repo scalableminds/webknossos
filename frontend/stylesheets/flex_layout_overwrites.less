@@ -5,6 +5,7 @@
   background-color: transparent;
   color: unset;
 }
+
 .flexlayout__tab_border,
 .flexlayout__tabset_tabbar_outer_top,
 .flexlayout__tabset-selected {
@@ -18,6 +19,7 @@
 .flexlayout__border_left {
   border-right: none;
 }
+
 .flexlayout__border_right {
   border-left: none;
 }
@@ -91,10 +93,11 @@
   font-size: 14px;
   font-weight: 400;
   font-family: @font-family;
-  
+
   &:hover {
     cursor: move;
   }
+
   background-color: var(--ant-color-bg-base);
 
   .flexlayout__tab_button_content {
@@ -102,15 +105,19 @@
     color: var(--ant-color-text-secondary);
     border-bottom: 1px solid transparent;
   }
+
   &.flexlayout__tab_button--selected {
     background-color: var(--ant-color-bg-base);
+
     .flexlayout__tab_button_content {
       background-color: var(--ant-color-bg-base);
       color: var(--ant-color-link);
     }
   }
+
   &:hover {
     background-color: var(--ant-color-bg-base);
+
     .flexlayout__tab_button_content {
       background-color: var(--ant-color-bg-base);
       color: var(--ant-color-link);
@@ -140,7 +147,8 @@
 .hide_first_splitter_border {
   pointer-events: none;
 }
+
 // This re-enables all pointer event for all other border splitters that are not the first (left most).
-.hide_first_splitter_border ~ .hide_first_splitter_border {
+.hide_first_splitter_border~.hide_first_splitter_border {
   pointer-events: all;
 }

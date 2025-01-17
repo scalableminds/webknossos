@@ -72,7 +72,8 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO, jobService: JobServ
         "name" -> dataStore.name,
         "url" -> dataStore.publicUrl,
         "allowsUpload" -> dataStore.allowsUpload,
-        "jobsSupportedByAvailableWorkers" -> Json.toJson(jobsSupportedByAvailableWorkers),
+        "jobsSupportedByAvailableWorkers" -> Json.toJson(
+          if (conf.Features.jobsEnabled) jobsSupportedByAvailableWorkers else List.empty),
         "jobsEnabled" -> jobsEnabled
       )
 

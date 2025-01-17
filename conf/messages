@@ -377,5 +377,6 @@ shortLink.notFound=No shortlink with this key could be found
 aiModel.delete.referencedByInferences=Cannot delete AI models that are referenced by existing inferences.
 aiModel.notFound=Could not find requested AI model.
 aiModel.training.zeroAnnotations=Need at least one training annotation for model training.
+aiModel.nameInUse=The AI model name is already in use. Please choose a different name.
 
 aiInference.notFound=Could not find requested AI inference.

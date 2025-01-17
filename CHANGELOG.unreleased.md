@@ -47,6 +47,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Removed the magnification slider for the TIFF export within the download modal if only one magnification is available for the selected layer. [#8297](https://github.com/scalableminds/webknossos/pull/8297)
 - Fixed regression in styling of segment and skeleton tree tab. [#8307](https://github.com/scalableminds/webknossos/pull/8307)
 - Fixed the template for neuron inferral using a custom workflow. [#8312](https://github.com/scalableminds/webknossos/pull/8312)
+- Fixed an issue where you could not maximize or reposition the 3D/XZ viewport in Safari. [#8337](https://github.com/scalableminds/webknossos/pull/8337)
 
 ### Removed
 - Removed support for HTTP API versions 3 and 4. [#8075](https://github.com/scalableminds/webknossos/pull/8075)

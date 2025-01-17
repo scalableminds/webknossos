@@ -625,7 +625,6 @@ export function isMappingActivationAllowed(
     // and currently no (or a merger mode) mapping exists
     (activeMappingInfo.mappingName == null || activeMappingInfo.isMergerModeMapping);
 
-  // todo: if non-null-mapping is locked, isMergerModeMapping should not be relevant
   if (!isEditableMappingActive && (!isActiveMappingLocked || isAllowedBecauseOfMergerMode)) {
     return true;
   }

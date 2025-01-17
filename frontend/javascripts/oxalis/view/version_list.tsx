@@ -292,6 +292,18 @@ function InnerVersionList(props: Props & { newestVersion: number }) {
     }
   }, [error]);
 
+  const executeUnlessSwitchingVersions = async (fn: () => Promise<void>) => {
+    if (isChangingVersion) {
+      return;
+    }
+    setIsChangingVersion(true);
+    try {
+      await fn();
+    } finally {
+      setIsChangingVersion(false);
+    }
+  };
+
   return (
     <div>
       {hasPreviousPage && (
@@ -327,26 +339,12 @@ function InnerVersionList(props: Props & { newestVersion: number }) {
                 newestVersion={flattenedVersions[0].version}
                 activeVersion={tracing.version}
                 onRestoreVersion={async (version) => {
-                  if (isChangingVersion) {
-                    return;
-                  }
-                  setIsChangingVersion(true);
-                  try {
-                    await handleRestoreVersion(props, flattenedVersions, version);
-                  } finally {
-                    setIsChangingVersion(false);
-                  }
+                  executeUnlessSwitchingVersions(() =>
+                    handleRestoreVersion(props, flattenedVersions, version),
+                  );
                 }}
                 onPreviewVersion={async (version) => {
-                  if (isChangingVersion) {
-                    return;
-                  }
-                  setIsChangingVersion(true);
-                  try {
-                    await previewVersion(version);
-                  } finally {
-                    setIsChangingVersion(false);
-                  }
+                  executeUnlessSwitchingVersions(() => previewVersion(version));
                 }}
                 key={batchesOrDateString[0].version}
               />

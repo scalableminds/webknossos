@@ -24,7 +24,6 @@ function VersionView() {
   }, []);
 
   useWillUnmount(() => {
-    console.log("version view unmount: initialAllowUpdate", initialAllowUpdate);
     Store.dispatch(setAnnotationAllowUpdateAction(initialAllowUpdate));
   });
 

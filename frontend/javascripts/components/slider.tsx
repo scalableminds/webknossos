@@ -9,6 +9,7 @@ const DEFAULT_STEP = 1;
 type SliderProps = (SliderSingleProps | SliderRangeProps) & {
   wheelFactor?: number;
   onWheelDisabled?: boolean;
+  onResetToDefault?: () => void;
 };
 
 const getDiffPerSliderStep = (
@@ -33,6 +34,7 @@ export function Slider(props: SliderProps) {
     min,
     max,
     onChange,
+    onResetToDefault,
     value,
     range,
     defaultValue,
@@ -78,9 +80,10 @@ export function Slider(props: SliderProps) {
       event.target.className.includes("ant-slider-handle") &&
       defaultValue != null
     )
+      if (onResetToDefault != null) onResetToDefault();
       // @ts-ignore Argument of type 'number | number[]' is not assignable to parameter of type 'number'.
       //TypeScript doesn't understand that onChange always takes the type of defaultValue.
-      onChange(defaultValue);
+      else onChange(defaultValue);
   };
 
   sliderElement.current?.addEventListener("wheel", handleWheelEvent, { passive: false });

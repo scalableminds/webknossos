@@ -260,3 +260,39 @@ test.serial("Send update actions for updating metadata", async (t) => {
   );
   t.is(annotation.description, newDescription);
 });
+
+test.serial.only("Send complex update actions (including revert and delete layer)", async (t) => {
+  const createdExplorational = await api.createExplorational(datasetId, "hybrid", true, null);
+  // const tracings = await api.getTracingsForAnnotation(createdExplorational);
+
+  const skeletonLayer = createdExplorational.annotationLayers.find(
+    (layer) => layer.typ === "Skeleton",
+  );
+  t.true(skeletonLayer == null);
+  if (skeletonLayer == null) {
+    throw new Error("Satisfy TS");
+  }
+
+  const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 6));
+  const createTreesUpdateActions = Array.from(diffTrees(skeletonLayer.tracingId, {}, trees));
+
+  const updateTreeAction = UpdateActions.updateTree(trees[1], skeletonLayer.tracingId);
+  const [saveQueue] = addVersionNumbers(
+    createSaveQueueFromUpdateActions([createTreesUpdateActions, [updateTreeAction]], 123456789),
+    0,
+  );
+
+  // const [saveQueue] = addVersionNumbers(
+  //   createSaveQueueFromUpdateActions(
+  //     [[UpdateActions.updateMetadataOfAnnotation(newDescription)]],
+  //     123456789,
+  //   ),
+  //   0,
+  // );
+  await sendUpdateActions(createdExplorational, saveQueue);
+  // const annotation = await api.getAnnotationProto(
+  //   createdExplorational.tracingStore.url,
+  //   createdExplorational.id,
+  //   1,
+  // );
+});

@@ -270,6 +270,9 @@ services:
   # FossilDB
   fossildb:
     image: scalableminds/fossildb:master__510
+    volumes:
+      - "./fossildb-e2e/data:/fossildb/data"
+      - "./fossildb-e2e/backup:/fossildb/backup"
     command:
       - fossildb
       - -c

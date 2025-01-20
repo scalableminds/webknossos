@@ -55,7 +55,7 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
           var updateVersion = 1L
           Fox.serialCombined(linearizedEditableMappingUpdates) { update: UpdateAction =>
             for {
-              _ <- tracingDataStore.annotationUpdates.put(newVolumeTracingId, updateVersion, Json.toJson(List(update)))
+              _ <- tracingDataStore.annotationUpdates.put(newAnnotationId, updateVersion, Json.toJson(List(update)))
               _ = updateVersion += 1
             } yield ()
           }

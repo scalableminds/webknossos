@@ -1,9 +1,9 @@
-@(name: String, datasetName: String, jobLink: String, jobTitle: String, jobDescription: String)
+@(name: String, datasetName: String, jobLink: String, jobTitle: String, jobDescription: String, additionalFooter: String)
 
-@emailBaseTemplate() {
+@emailBaseTemplate(additionalFooter) {
 <p>Hi @{name},</p>
 
-<p>We wanted to let you know that WEBKNOSSOS has finished your background job for the dataset <i>@{datasetName}</i>. 
+<p>We wanted to let you know that WEBKNOSSOS has finished your background job for the dataset <i>@{datasetName}</i>.
 <p>@{jobDescription}</p>
 
 <div style="text-align: center;">
@@ -28,9 +28,9 @@
 <p>With best regards,<br />the WEBKNOSSOS team</p>
 
 <div style="text-align: center;">
-  <img src="https://static.webknossos.org/mails/email-drawing-successful-job.png" 
-    srcset="https://static.webknossos.org/mails/email-drawing-successful-job.svg" 
-    alt="A person celebrating a successful WEBKNOSSOS job" 
+  <img src="https://static.webknossos.org/mails/email-drawing-successful-job.png"
+    srcset="https://static.webknossos.org/mails/email-drawing-successful-job.svg"
+    alt="A person celebrating a successful WEBKNOSSOS job"
     style="width: 460px; height: 307px; margin-top: 10px; margin-bottom: 20px;"/>
 </div>
 }

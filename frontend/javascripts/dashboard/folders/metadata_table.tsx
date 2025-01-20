@@ -542,3 +542,25 @@ export function InnerMetadataTable({
     </table>
   );
 }
+
+export function SimpleRow({
+  label, // must not be called "key" as this is reserved in react
+  value,
+  isTableHead,
+}: { label: React.ReactNode; value: React.ReactNode; isTableHead?: boolean }) {
+  if (isTableHead) {
+    return (
+      <tr>
+        <th>{label}</th>
+        <th colSpan={2}>{value}</th>
+      </tr>
+    );
+  }
+
+  return (
+    <tr>
+      <td>{label}</td>
+      <td colSpan={2}>{value}</td>
+    </tr>
+  );
+}

@@ -16,7 +16,7 @@ import type {
 import {
   MISSING_GROUP_ID,
   findGroup,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import type {
   APIAnnotation,
   AnnotationLayerDescriptor,

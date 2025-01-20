@@ -1,6 +1,6 @@
-@( username: String, uri: String, autoActivate: Boolean )
+@( username: String, uri: String, autoActivate: Boolean, additionalFooter: String )
 
-@emailBaseTemplate() {
+@emailBaseTemplate(additionalFooter) {
   <p>Hi,</p>
 
   <p>A new user - @username - just registered a WEBKNOSSOS account for your <a href="@uri">organization.</a></p>

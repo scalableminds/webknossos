@@ -162,6 +162,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     }
 
     val defaultSender: String = get[String]("mail.defaultSender")
+    def additionalFooter: String = get[String]("mail.additionalFooter")
 
     object Mailchimp {
       val host: String = get[String]("mail.mailchimp.host")

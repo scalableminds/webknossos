@@ -122,7 +122,12 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       explorer: RemoteLayerExplorer)(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(
       implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
     for {
-      fullPath <- Fox.successful(path.resolve(layerDirectory))
+      _ <- Fox.successful(())
+      layer = if (layerDirectory.isEmpty) {
+        val subdirs = Files.list(path).iterator().asScala.toList
+        if (subdirs.size == 1) subdirs.head.getFileName.toString else layerDirectory
+      } else layerDirectory
+      fullPath <- Fox.successful(path.resolve(layer))
       remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(fullPath.toUri, None))
       vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
       layersWithVoxelSizes <- explorer.explore(vaultPath, None)

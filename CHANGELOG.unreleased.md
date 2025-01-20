@@ -53,6 +53,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed the template for neuron inferral using a custom workflow. [#8312](https://github.com/scalableminds/webknossos/pull/8312)
 - Fixed that the list of processing jobs crashed for deleted job types. [#8300](https://github.com/scalableminds/webknossos/pull/8300)
 - Fixed an issue where you could not maximize or reposition the 3D/XZ viewport in Safari. [#8337](https://github.com/scalableminds/webknossos/pull/8337)
+- Fixed upload of NGFF datasets with only one directory named "color". [#8341](https://github.com/scalableminds/webknossos/pull/8341/) 
+- Fixed an issue that could occur if the NGFF multiscale name was set to "/" when exploring. [#8341](https://github.com/scalableminds/webknossos/pull/8341/)
 
 ### Removed
 - Removed support for HTTP API versions 3 and 4. [#8075](https://github.com/scalableminds/webknossos/pull/8075)

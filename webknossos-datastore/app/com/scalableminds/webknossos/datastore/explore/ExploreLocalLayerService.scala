@@ -15,7 +15,6 @@ import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteS
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.Json
 
-import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 import javax.inject.Inject

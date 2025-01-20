@@ -3,7 +3,13 @@ import MultiKeyMap from "libs/multi_key_map";
 import { mod } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import { Identity4x4, IdentityTransform, type NestedMatrix4, type Vector4 } from "oxalis/constants";
+import {
+  Identity4x4,
+  IdentityTransform,
+  type NestedMatrix4,
+  type Vector3,
+  type Vector4,
+} from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 import * as THREE from "three";
 import type {
@@ -429,3 +435,24 @@ function _doAllLayersHaveTheSameRotation(dataLayers: Array<APIDataLayer>): boole
 }
 
 export const doAllLayersHaveTheSameRotation = _.memoize(_doAllLayersHaveTheSameRotation);
+
+export function globalToLayerTransformedPosition(
+  globalPos: Vector3,
+  layerName: string,
+  layerCategory: APIDataLayer["category"] | "skeleton",
+  state: OxalisState,
+): Vector3 {
+  const layerDescriptor =
+    layerCategory !== "skeleton"
+      ? getLayerByName(state.dataset, layerName, true)
+      : ({ name: "skeleton", category: "skeleton" } as APISkeletonLayer);
+  const layerTransforms = getTransformsForLayerOrNull(
+    state.dataset,
+    layerDescriptor,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+  if (layerTransforms) {
+    return transformPointUnscaled(invertTransform(layerTransforms))(globalPos);
+  }
+  return globalPos;
+}

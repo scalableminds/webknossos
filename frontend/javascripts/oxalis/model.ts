@@ -21,7 +21,7 @@ import Store from "oxalis/store";
 import type { Versions } from "oxalis/view/version_view";
 import type { APICompoundType } from "types/api_flow_types";
 
-import { getTransformsForLayerOrNull } from "./model/accessors/dataset_layer_transformation_accessor";
+import { globalToLayerTransformedPosition } from "./model/accessors/dataset_layer_transformation_accessor";
 import { invertTransform, transformPointUnscaled } from "./model/helpers/transformation_helpers";
 import { initialize } from "./model_initialization";
 
@@ -228,20 +228,13 @@ export class OxalisModel {
     const getIdForPos = (pos: Vector3, usableZoomStep: number) => {
       const state = Store.getState();
       const additionalCoordinates = state.flycam.additionalCoordinates;
-      const segmentationDataLayer = state.dataset.dataSource.dataLayers.find(
-        (dataLayer) => dataLayer.name === segmentationLayer.name,
+      const posInLayerSpace = globalToLayerTransformedPosition(
+        pos,
+        segmentationLayer.name,
+        "segmentation",
+        state,
       );
-      if (segmentationDataLayer) {
-        const segmentationLayerTransforms = getTransformsForLayerOrNull(
-          state.dataset,
-          segmentationDataLayer,
-          state.datasetConfiguration.nativelyRenderedLayerName,
-        );
-        if (segmentationLayerTransforms) {
-          pos = transformPointUnscaled(invertTransform(segmentationLayerTransforms))(pos);
-        }
-      }
-      const id = cube.getDataValue(pos, additionalCoordinates, null, usableZoomStep);
+      const id = cube.getDataValue(posInLayerSpace, additionalCoordinates, null, usableZoomStep);
       return {
         // Note that this id can be an unmapped id even when
         // a mapping is active, if it is a HDF5 mapping that is partially loaded

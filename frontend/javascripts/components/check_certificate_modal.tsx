@@ -31,7 +31,7 @@ export function CheckCertificateModal() {
       closable={false}
       footer={null}
       onCancel={_.noop}
-      width={"70%"}
+      width={"max(70%, 600px)"}
       keyboard={false}
       maskClosable={false}
     >

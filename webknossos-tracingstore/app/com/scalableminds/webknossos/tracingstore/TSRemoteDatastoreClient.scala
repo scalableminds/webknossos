@@ -83,19 +83,26 @@ class TSRemoteDatastoreClient @Inject()(
                                      mappingName: String,
                                      segmentIdsOrdered: List[Long],
                                      userToken: Option[String]): Fox[List[Long]] =
-    for {
-      remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-      segmentIdsOrderedProto = ListOfLong(items = segmentIdsOrdered)
-      result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/agglomeratesForSegments")
-        .addQueryStringOptional("token", userToken)
-        .silent
-        .postProtoWithProtoResponse[ListOfLong, ListOfLong](segmentIdsOrderedProto)(ListOfLong)
-    } yield result.items.toList
+    if (mappingName == "") {
+      Fox.successful(segmentIdsOrdered)
+    } else {
+      for {
+        remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
+        segmentIdsOrderedProto = ListOfLong(items = segmentIdsOrdered)
+        result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/agglomeratesForSegments")
+          .addQueryStringOptional("token", userToken)
+          .silent
+          .postProtoWithProtoResponse[ListOfLong, ListOfLong](segmentIdsOrderedProto)(ListOfLong)
+      } yield result.items.toList
+    }
 
   def getAgglomerateGraph(remoteFallbackLayer: RemoteFallbackLayer,
                           baseMappingName: String,
                           agglomerateId: Long,
-                          userToken: Option[String]): Fox[AgglomerateGraph] =
+                          userToken: Option[String]): Fox[AgglomerateGraph] = {
+    if (baseMappingName == "") {
+      AgglomerateGraph(List(agglomerateId), List.empty, List.empty)
+    }
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       result <- rpc(s"$remoteLayerUri/agglomerates/$baseMappingName/agglomerateGraph/$agglomerateId").silent
@@ -103,6 +110,7 @@ class TSRemoteDatastoreClient @Inject()(
         .silent
         .getWithProtoResponse[AgglomerateGraph](AgglomerateGraph)
     } yield result
+  }
 
   def getLargestAgglomerateId(remoteFallbackLayer: RemoteFallbackLayer,
                               mappingName: String,

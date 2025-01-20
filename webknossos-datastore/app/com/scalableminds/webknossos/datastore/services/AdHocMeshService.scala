@@ -73,6 +73,9 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
       case ElementClass.uint8 =>
         generateAdHocMeshImpl[Byte, ByteBuffer](request,
                                                 DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
+      case ElementClass.int8 =>
+        generateAdHocMeshImpl[Byte, ByteBuffer](request,
+                                                DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
       case ElementClass.uint16 =>
         generateAdHocMeshImpl[Short, ShortBuffer](
           request,

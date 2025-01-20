@@ -36,12 +36,15 @@ import {
   transDim,
 } from "./utils.glsl";
 
-type Params = {
+export type Params = {
   globalLayerCount: number;
   colorLayerNames: string[];
   orderedColorLayerNames: string[];
   segmentationLayerNames: string[];
-  textureLayerInfos: Record<string, { packingDegree: number; dataTextureCount: number }>;
+  textureLayerInfos: Record<
+    string,
+    { packingDegree: number; dataTextureCount: number; isSigned: boolean }
+  >;
   magnificationsCount: number;
   voxelSizeFactor: Vector3;
   isOrthogonal: boolean;

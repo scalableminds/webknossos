@@ -47,7 +47,10 @@ import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_renderi
 import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
-import getMainFragmentShader, { getMainVertexShader } from "oxalis/shaders/main_data_shaders.glsl";
+import getMainFragmentShader, {
+  getMainVertexShader,
+  type Params,
+} from "oxalis/shaders/main_data_shaders.glsl";
 import { Model } from "oxalis/singletons";
 import type { DatasetLayerConfiguration } from "oxalis/store";
 import Store from "oxalis/store";
@@ -84,23 +87,21 @@ function getSanitizedColorLayerNames() {
   return getColorLayers(Store.getState().dataset).map((layer) => sanitizeName(layer.name));
 }
 
-function getTextureLayerInfos(): Record<
-  string,
-  { packingDegree: number; dataTextureCount: number }
-> {
+function getTextureLayerInfos(): Params["textureLayerInfos"] {
   const { dataset } = Store.getState();
   const layers = getDataLayers(dataset);
 
   // keyBy the sanitized layer name as the lookup will happen in the shader using the sanitized layer name
   const layersObject = _.keyBy(layers, (layer) => sanitizeName(layer.name));
 
-  return _.mapValues(layersObject, (layer) => ({
-    packingDegree: getPackingDegree(
-      getByteCount(dataset, layer.name),
-      getElementClass(dataset, layer.name),
-    ),
-    dataTextureCount: Model.getLayerRenderingManagerByName(layer.name).dataTextureCount,
-  }));
+  return _.mapValues(layersObject, (layer) => {
+    const elementClass = getElementClass(dataset, layer.name);
+    return {
+      packingDegree: getPackingDegree(getByteCount(dataset, layer.name), elementClass),
+      dataTextureCount: Model.getLayerRenderingManagerByName(layer.name).dataTextureCount,
+      isSigned: elementClass.startsWith("int"),
+    };
+  });
 }
 
 class PlaneMaterialFactory {
@@ -953,9 +954,10 @@ class PlaneMaterialFactory {
   ): void {
     const { alpha, intensityRange, isDisabled, isInverted, gammaCorrectionValue } = settings;
 
-    // In UnsignedByte textures the byte values are scaled to [0, 1], in Float textures they are not
+    // In UnsignedByte textures the byte values are scaled to [0, 1] (inclusive),
+    // in Float textures they are not.
     if (!isSegmentationLayer) {
-      const divisor = elementClass === "float" ? 1 : 256;
+      const divisor = elementClass === "float" ? 1 : 255;
       if (intensityRange) {
         if (elementClass === "int8") {
           // Bytes are stored as signed normalized integers (-1 to 1) in WebGL.

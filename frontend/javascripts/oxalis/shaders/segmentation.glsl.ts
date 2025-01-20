@@ -75,7 +75,7 @@ export const convertCellIdToRGB: ShaderModule = {
 
       // Since collisions of ids are bound to happen, using all 64 bits is not
       // necessary, which is why we simply combine the 32-bit tuple into one 32-bit value.
-      vec4 id = idHigh + idLow;
+      vec4 id = abs(idHigh) + abs(idLow);
       float significantSegmentIndex = 256.0 * id.g + id.r;
 
       float colorCount = 19.;
@@ -177,6 +177,8 @@ export const jsConvertCellIdToRGBA = (
   }
 
   let rgb;
+
+  id = Math.abs(id);
 
   if (customColors != null) {
     const last8Bits = id % 2 ** 8;
@@ -314,8 +316,11 @@ export const getSegmentId: ShaderModule = {
         segment_id[1] = vec4(segment_id[1].r, segment_id[1].g, 0.0, 0.0);
       <% } %>
 
-      mapped_id[0] = 255. * segment_id[0]; // High
-      mapped_id[1] = 255. * segment_id[1]; // Low
+      float dtype_normalizer = <%=
+        formatNumberAsGLSLFloat(textureLayerInfos[segmentationName].isSigned ? 127 : 255)
+      %>;
+      mapped_id[0] = dtype_normalizer * segment_id[0]; // High
+      mapped_id[1] = dtype_normalizer * segment_id[1]; // Low
 
       uint high_integer = vec4ToUint(mapped_id[0]);
       uint low_integer = vec4ToUint(mapped_id[1]);
@@ -345,8 +350,8 @@ export const getSegmentId: ShaderModule = {
         }
       }
 
-      segment_id[0] *= 255.0;
-      segment_id[1] *= 255.0;
+      segment_id[0] *= dtype_normalizer;
+      segment_id[1] *= dtype_normalizer;
     }
 <% }) %>
   `,

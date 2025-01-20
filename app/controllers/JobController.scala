@@ -393,7 +393,9 @@ class JobController @Inject()(
                                         newDatasetName: String,
                                         outputSegmentationLayerName: String,
                                         mergeSegments: Boolean,
-                                        volumeLayerName: Option[String]): Action[AnyContent] =
+                                        volumeLayerName: Option[String],
+                                        includesEditableMapping: Boolean,
+                                        boundingBox: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -407,6 +409,9 @@ class JobController @Inject()(
           command = JobCommand.materialize_volume_annotation
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
+          multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+          _ <- Fox.runIf(!multiUser.isSuperUser && includesEditableMapping)(Fox.runOptional(boundingBox)(bbox =>
+            jobService.assertBoundingBoxLimits(bbox, None)))
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
@@ -417,7 +422,9 @@ class JobController @Inject()(
             "annotation_type" -> annotationType,
             "new_dataset_name" -> newDatasetName,
             "merge_segments" -> mergeSegments,
-            "volume_layer_name" -> volumeLayerName
+            "volume_layer_name" -> volumeLayerName,
+            "use_zarr_streaming" -> includesEditableMapping,
+            "bounding_box" -> boundingBox
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunApplyMergerMode"
           js <- jobService.publicWrites(job)

@@ -32,6 +32,7 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Full}
 import play.api.libs.json.{JsObject, JsValue, Json}
 
+import java.util.Comparator
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
@@ -313,7 +314,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           Some(desiredVersion),
           Some(existingVersion + 1))(fromJsonBytes[List[UpdateAction]])
       }
-    } yield extraSkeletonUpdates ++ extraEditableMappingUpdates ++ pendingAnnotationUpdates
+    } yield
+      (extraSkeletonUpdates ++ extraEditableMappingUpdates).sortBy(_._1)(Ordering[Long].reverse) ++ pendingAnnotationUpdates
 
   /*
    * The migration of https://github.com/scalableminds/webknossos/pull/7917 does not guarantee that the skeleton layer
@@ -378,13 +380,15 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
 
   private def filterEditableMappingUpdates(updateGroups: List[(Long, List[UpdateAction])],
                                            tracingId: String): List[(Long, List[EditableMappingUpdateAction])] =
-    updateGroups.map {
+    updateGroups.flatMap {
       case (version, updateGroup) =>
         val updateGroupFiltered = updateGroup.flatMap {
           case a: EditableMappingUpdateAction if a.actionTracingId == tracingId => Some(a)
           case _                                                                => None
         }
-        (version, updateGroupFiltered)
+        if (updateGroupFiltered.nonEmpty) {
+          Some((version, updateGroupFiltered))
+        } else None
     }
 
   private def findTracingsForAnnotation(annotation: AnnotationProto)(

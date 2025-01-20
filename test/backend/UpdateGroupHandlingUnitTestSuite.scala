@@ -7,7 +7,7 @@ import org.scalatestplus.play.PlaySpec
 
 class UpdateGroupHandlingUnitTestSuite extends PlaySpec with UpdateGroupHandling {
 
-  "regroupByIsolationSensitiveActions" should {
+  "reorderAndRegroupByIsolationSensitiveActions" should {
     "isolate sensitive actions, group the rest, reverse group order" in {
       val updateGroupsBefore = List(
         (8L,
@@ -30,7 +30,7 @@ class UpdateGroupHandlingUnitTestSuite extends PlaySpec with UpdateGroupHandling
            MergeTreeSkeletonAction(sourceId = 2, targetId = 3, actionTracingId = Dummies.tracingId)
          ))
       )
-      val res = regroupByIsolationSensitiveActions(updateGroupsBefore).openOrThrowException("test context")
+      val res = reorderAndRegroupByIsolationSensitiveActions(updateGroupsBefore).openOrThrowException("test context")
       // Expect 5 to be untouched
       assert(res(0)._2.length == 2)
       assert(res(0)._1 == 5L)
@@ -69,7 +69,7 @@ class UpdateGroupHandlingUnitTestSuite extends PlaySpec with UpdateGroupHandling
            MergeTreeSkeletonAction(sourceId = 2, targetId = 3, actionTracingId = Dummies.tracingId)
          ))
       )
-      val res = regroupByIsolationSensitiveActions(updateGroupsBefore).openOrThrowException("test context")
+      val res = reorderAndRegroupByIsolationSensitiveActions(updateGroupsBefore).openOrThrowException("test context")
       assert(res.length == 4)
       assert(res(0)._2.length == 2)
       assert(res(0)._1 == 3L)
@@ -88,7 +88,7 @@ class UpdateGroupHandlingUnitTestSuite extends PlaySpec with UpdateGroupHandling
            RevertToVersionAnnotationAction(sourceVersion = 1)
          ))
       )
-      val res = regroupByIsolationSensitiveActions(updateGroupsBefore).openOrThrowException("test context")
+      val res = reorderAndRegroupByIsolationSensitiveActions(updateGroupsBefore).openOrThrowException("test context")
       assert(res.length == 1)
       assert(res(0)._2.length == 1)
       assert(res(0)._1 == 7L)
@@ -107,7 +107,7 @@ class UpdateGroupHandlingUnitTestSuite extends PlaySpec with UpdateGroupHandling
            MergeTreeSkeletonAction(sourceId = 2, targetId = 3, actionTracingId = Dummies.tracingId)
          ))
       )
-      val res = regroupByIsolationSensitiveActions(updateGroupsBefore)
+      val res = reorderAndRegroupByIsolationSensitiveActions(updateGroupsBefore)
       assert(res.isInstanceOf[Failure])
     }
   }

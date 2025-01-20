@@ -62,7 +62,7 @@ class CertificateValidationService @Inject()(implicit ec: ExecutionContext) exte
     case Full(publicKey) =>
       (for {
         certificate <- Properties.envOrNone("CERTIFICATE")
-        // JwtJson already throws and error which is transformed to an empty option when the certificate is expired.
+        // JwtJson already throws an error which is transformed to an empty option when the certificate is expired.
         // In case the token is expired, tge default map will be used.
         token <- JwtJson.decodeJson(certificate, publicKey, JwtOptions(expiration = false)).toOption
         featureOverrides <- Some(

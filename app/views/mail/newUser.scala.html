@@ -1,6 +1,6 @@
-@(name: String, enableAutoVerify: Boolean )
+@(name: String, enableAutoVerify: Boolean, additionalFooter: String )
 
-@emailBaseTemplate() {
+@emailBaseTemplate(additionalFooter) {
 
   <p>Hi @name,</p>
 

@@ -212,7 +212,7 @@ class OrganizationController @Inject()(
         mail = if (requestedPlan == PricingPlan.Team) {
           defaultMails.upgradePricingPlanToTeamMail _
         } else {
-          defaultMails.upgradePricingPlanToTeamMail _
+          defaultMails.upgradePricingPlanToPowerMail _
         }
         _ = Mailer ! Send(mail(request.identity, userEmail))
         _ = Mailer ! Send(

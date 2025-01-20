@@ -59,6 +59,7 @@ import {
   getTransformsForLayerOrNull,
   hasDatasetTransforms,
   isIdentityTransform,
+  isLayerWithoutTransformationConfigSupport,
 } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import {
   getMaxZoomValueForMag,
@@ -194,9 +195,11 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
       state.datasetConfiguration.nativelyRenderedLayerName,
     ),
   );
+  const canLayerHaveTransforms = !isLayerWithoutTransformationConfigSupport(layer);
   const hasLayerTransformsConfigured = useSelector(
     (state: OxalisState) => getTransformsForLayerOrNull(state.dataset, layer, null) != null,
   );
+
   const showIcon = useSelector((state: OxalisState) => hasDatasetTransforms(state.dataset));
   if (!showIcon) {
     return null;
@@ -214,14 +217,15 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
     affine: "icon-affine-transformation.svg",
   };
 
-  // Cannot toggle transforms on for a layer that has no transforms.
+  // Cannot toggle transforms for a layer that cannot have no transforms or turn them on in case the layer has no transforms.
   // Layers that cannot have transformations like skeleton layer and volume tracing layers without fallback
   // automatically copy to the dataset transformation if all other layers have the same transformation.
-  const isDisabled = isRenderedNatively && !hasLayerTransformsConfigured;
+  const isDisabled =
+    !canLayerHaveTransforms || (isRenderedNatively && !hasLayerTransformsConfigured);
 
   const toggleLayerTransforms = () => {
     const state = Store.getState();
-    // Get getOriginalTransformsForLayerOrNull is not used to handle layers that do not support configuring a transformation.
+    // Set nativelyRenderedLayerName to null in case the current layer is already natively rendered or does not have its own transformations configured (e.g. a skeleton layer) .
     const nextNativelyRenderedLayerName = isRenderedNatively ? null : layer.name;
     const activeTransformation = getTransformsForLayer(
       state.dataset,
@@ -260,7 +264,7 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
       <FastTooltip
         title={
           isRenderedNatively
-            ? "This layer is shown natively (i.e., without any transformations)."
+            ? `This layer is shown natively (i.e., without any transformations).${isDisabled ? "" : " Click to render this layer with its configured transforms."}`
             : `This layer is rendered with ${
                 typeToLabel[transform.type]
               } transformation.${isDisabled ? "" : " Click to render this layer without any transforms."}`

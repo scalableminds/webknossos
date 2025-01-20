@@ -32,7 +32,6 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Full}
 import play.api.libs.json.{JsObject, JsValue, Json}
 
-import java.util.Comparator
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
@@ -315,7 +314,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           Some(existingVersion + 1))(fromJsonBytes[List[UpdateAction]])
       }
     } yield
-      (extraSkeletonUpdates ++ extraEditableMappingUpdates).sortBy(_._1)(Ordering[Long].reverse) ++ pendingAnnotationUpdates
+      pendingAnnotationUpdates ++ (extraSkeletonUpdates ++ extraEditableMappingUpdates).sortBy(_._1)(
+        Ordering[Long].reverse)
 
   /*
    * The migration of https://github.com/scalableminds/webknossos/pull/7917 does not guarantee that the skeleton layer

@@ -26,7 +26,8 @@ class AboutPageRedirectController @Inject()(conf: WkConf,
 
   def redirectToAboutPageOrSendMainView: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     if (matchesRedirectRoute(request)) {
-      Fox.successful(Redirect(conf.AboutPageRedirect.prefix + request.uri, status = MOVED_PERMANENTLY))
+      val status = if (request.uri == "/") SEE_OTHER else MOVED_PERMANENTLY
+      Fox.successful(Redirect(conf.AboutPageRedirect.prefix + request.uri, status = status))
     } else {
       for {
         multiUserOpt <- Fox.runOptional(request.identity)(user =>

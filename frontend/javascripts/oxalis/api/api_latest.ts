@@ -1114,11 +1114,12 @@ class TracingApi {
     newControlMode: ControlMode,
     version?: number | undefined | null,
     keepUrlState: boolean = false,
+    keepUrlSearch: boolean = true,
   ) {
     if (newControlMode === ControlModeEnum.VIEW)
       throw new Error("Restarting with view option is not supported");
     Store.dispatch(restartSagaAction());
-    UrlManager.reset(keepUrlState);
+    UrlManager.reset(keepUrlState, keepUrlSearch);
 
     newMaybeCompoundType =
       newMaybeCompoundType != null ? coalesce(APICompoundTypeEnum, newMaybeCompoundType) : null;

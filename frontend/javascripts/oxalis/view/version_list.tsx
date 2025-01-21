@@ -14,6 +14,7 @@ import { chunkIntoTimeWindows } from "libs/utils";
 import _ from "lodash";
 import { getCreationTimestamp } from "oxalis/model/accessors/annotation_accessor";
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
+import UrlManager from "oxalis/controller/url_manager";
 import {
   pushSaveQueueTransactionIsolated,
   setVersionNumberAction,
@@ -65,11 +66,10 @@ export async function previewVersion(version?: number) {
       params.append("version", `${version}`);
     }
     location.href = `${location.origin}/annotations/${annotationId}?${params}${location.hash}`;
-
     return;
   }
 
-  await api.tracing.restart(null, annotationId, controlMode, version);
+  await api.tracing.restart(null, annotationId, controlMode, version, false, false);
   Store.dispatch(setAnnotationAllowUpdateAction(false));
   const segmentationLayersToReload = [];
 

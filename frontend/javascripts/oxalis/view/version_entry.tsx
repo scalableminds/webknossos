@@ -387,7 +387,7 @@ function getDescriptionForBatch(
 
 type Props = {
   actions: Array<ServerUpdateAction>;
-  allowUpdate: boolean;
+  initialAllowUpdate: boolean;
   version: number;
   isNewest: boolean;
   isActive: boolean;
@@ -397,7 +397,7 @@ type Props = {
 };
 export default function VersionEntry({
   actions,
-  allowUpdate,
+  initialAllowUpdate,
   version,
   isNewest,
   isActive,
@@ -422,7 +422,7 @@ export default function VersionEntry({
       type="primary"
       onClick={() => onRestoreVersion(version)}
     >
-      {allowUpdate ? "Restore" : "Download"}
+      {initialAllowUpdate ? "Restore" : "Download"}
     </Button>
   );
   const { description, icon } = getDescriptionForBatch(actions, tracing);

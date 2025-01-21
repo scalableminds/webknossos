@@ -14,7 +14,6 @@ import { chunkIntoTimeWindows } from "libs/utils";
 import _ from "lodash";
 import { getCreationTimestamp } from "oxalis/model/accessors/annotation_accessor";
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
-import UrlManager from "oxalis/controller/url_manager";
 import {
   pushSaveQueueTransactionIsolated,
   setVersionNumberAction,
@@ -37,7 +36,7 @@ import type { APIUpdateActionBatch } from "types/api_flow_types";
 const ENTRIES_PER_PAGE = 5000;
 
 type Props = {
-  allowUpdate: boolean;
+  initialAllowUpdate: boolean;
 };
 
 // The string key is a date string
@@ -86,7 +85,7 @@ async function handleRestoreVersion(
   versions: APIUpdateActionBatch[],
   version: number,
 ) {
-  if (props.allowUpdate) {
+  if (props.initialAllowUpdate) {
     const newestVersion = _.max(versions.map((batch) => batch.version)) || 0;
     Store.dispatch(setVersionNumberAction(newestVersion));
     Store.dispatch(pushSaveQueueTransactionIsolated(revertToVersion(version)));
@@ -99,6 +98,14 @@ async function handleRestoreVersion(
     downloadAnnotation(annotationId, annotationType, includesVolumeFallbackData, version);
   }
 }
+
+export const handleCloseRestoreView = async () => {
+  // This will load the newest version of both skeleton and volume tracings
+  await previewVersion();
+  Store.dispatch(setVersionRestoreVisibilityAction(false));
+  const { initialAllowUpdate } = Store.getState().tracing.restrictions;
+  Store.dispatch(setAnnotationAllowUpdateAction(initialAllowUpdate));
+};
 
 const getGroupedAndChunkedVersions = _.memoize(
   (versions: Array<APIUpdateActionBatch>): GroupedAndChunkedVersions => {
@@ -178,10 +185,12 @@ async function getUpdateActionLogPage(
   return { data: updateActionLog, nextPage, previousPage };
 }
 
-function VersionList(props: Props) {
+function VersionList() {
   const tracingStoreUrl = useSelector((state: OxalisState) => state.tracing.tracingStore.url);
   const annotationId = useSelector((state: OxalisState) => state.tracing.annotationId);
-
+  const initialAllowUpdate = useSelector(
+    (state: OxalisState) => state.tracing.restrictions.initialAllowUpdate,
+  );
   const newestVersion = useFetch(
     async () => {
       if (annotationId === "") {
@@ -201,10 +210,10 @@ function VersionList(props: Props) {
     );
   }
 
-  return <InnerVersionList {...props} newestVersion={newestVersion} />;
+  return <InnerVersionList newestVersion={newestVersion} initialAllowUpdate={initialAllowUpdate} />;
 }
 
-function InnerVersionList(props: Props & { newestVersion: number }) {
+function InnerVersionList(props: Props & { newestVersion: number; initialAllowUpdate: boolean }) {
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const queryClient = useQueryClient();
   // Remember the version with which the version view was opened (
@@ -241,6 +250,7 @@ function InnerVersionList(props: Props & { newestVersion: number }) {
     // are relative to the base version. If the version of the tracing changed,
     // old pages are not valid anymore.
     queryClient.removeQueries(queryKey);
+    // Will be set back by handleRestoreVersion or handleCloseRestoreView
     Store.dispatch(setAnnotationAllowUpdateAction(false));
   });
 
@@ -335,7 +345,7 @@ function InnerVersionList(props: Props & { newestVersion: number }) {
             ) : (
               <VersionEntryGroup
                 batches={batchesOrDateString}
-                allowUpdate={props.allowUpdate}
+                initialAllowUpdate={props.initialAllowUpdate}
                 newestVersion={flattenedVersions[0].version}
                 activeVersion={tracing.version}
                 onRestoreVersion={async (version) => {

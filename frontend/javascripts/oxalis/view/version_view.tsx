@@ -1,14 +1,7 @@
 import { CloseOutlined } from "@ant-design/icons";
 import { Alert, Button } from "antd";
-import { useWillUnmount } from "beautiful-react-hooks";
-import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
-import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
-import type { OxalisState } from "oxalis/store";
-import Store from "oxalis/store";
-import VersionList, { previewVersion } from "oxalis/view/version_list";
+import VersionList, { handleCloseRestoreView } from "oxalis/view/version_list";
 import * as React from "react";
-import { useEffect } from "react";
-import { useSelector } from "react-redux";
 
 export type Versions = {
   skeleton?: number | null | undefined;
@@ -16,24 +9,6 @@ export type Versions = {
 };
 
 function VersionView() {
-  const initialAllowUpdate = useSelector(
-    (state: OxalisState) => state.tracing.restrictions.initialAllowUpdate,
-  );
-  useEffect(() => {
-    Store.dispatch(setAnnotationAllowUpdateAction(false));
-  }, []);
-
-  useWillUnmount(() => {
-    Store.dispatch(setAnnotationAllowUpdateAction(initialAllowUpdate));
-  });
-
-  const handleClose = async () => {
-    // This will load the newest version of both skeleton and volume tracings
-    await previewVersion();
-    Store.dispatch(setVersionRestoreVisibilityAction(false));
-    Store.dispatch(setAnnotationAllowUpdateAction(initialAllowUpdate));
-  };
-
   return (
     <div
       style={{
@@ -62,7 +37,7 @@ function VersionView() {
             float: "right",
             border: 0,
           }}
-          onClick={handleClose}
+          onClick={handleCloseRestoreView}
           shape="circle"
           icon={<CloseOutlined />}
         />
@@ -91,7 +66,7 @@ function VersionView() {
           paddingLeft: 2,
         }}
       >
-        <VersionList allowUpdate={initialAllowUpdate} />
+        <VersionList />
       </div>
     </div>
   );

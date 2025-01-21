@@ -752,7 +752,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
               annotationId,
               oldestVersion = Some(batchRange._1),
               newestVersion = Some(batchRange._2))(fromJsonBytes[List[UpdateAction]])
-          _ <- Fox.serialCombined(updateLists) {
+          _ <- Fox.serialCombined(updateLists.reverse) { // we reverse (order asc by version) so that addLayer comes before the layer’s updates
             case (version, updateList) =>
               for {
                 updateListAdapted <- Fox.serialCombined(updateList) {
@@ -763,11 +763,11 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                         a.tracingId.foreach(actionTracingId =>
                           tracingIdMapMutable.put(actionTracingId, TracingId.generate))
                       }
-                      mappedTracingId <- tracingIdMapMutable.get(actionTracingId) ?~> "duplicating action for unknown layer"
+                      mappedTracingId <- tracingIdMapMutable.get(actionTracingId) ?~> "duplicating addLayer action for unknown layer"
                     } yield a.copy(tracingId = Some(mappedTracingId))
                   case a: LayerUpdateAction =>
                     for {
-                      mappedTracingId <- tracingIdMapMutable.get(a.actionTracingId) ?~> "duplicating action for unknown layer"
+                      mappedTracingId <- tracingIdMapMutable.get(a.actionTracingId) ?~> "duplicating layer action for unknown layer"
                     } yield a.withActionTracingId(mappedTracingId)
                   case a: UpdateAction =>
                     Fox.successful(a)

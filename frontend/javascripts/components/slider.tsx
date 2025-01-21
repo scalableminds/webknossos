@@ -2,7 +2,7 @@ import { Slider as AntdSlider, type SliderSingleProps } from "antd";
 import type { SliderRangeProps } from "antd/lib/slider";
 import { clamp } from "libs/utils";
 import _ from "lodash";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const DEFAULT_WHEEL_FACTOR = 0.02;
 const DEFAULT_STEP = 1;
@@ -44,13 +44,14 @@ export function Slider(props: SliderProps) {
     step,
     disabled,
   } = props;
-  const [isFocused, setIsFocused] = useState(false);
-  const sliderElement = useRef<HTMLDivElement>(null);
+  const isFocused = useRef(false);
+  const sliderRef = useRef<HTMLDivElement>(null);
 
   const handleWheelEvent = useCallback(
     (event: { preventDefault: () => void; deltaY: number }) => {
       // differentiate between single value and range slider
-      if (onWheelDisabled || value == null || min == null || max == null || !isFocused) return;
+      if (onWheelDisabled || value == null || min == null || max == null || !isFocused.current)
+        return _.noop;
       if (range === false || range == null) {
         event.preventDefault();
         const newValue = value - getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
@@ -66,8 +67,16 @@ export function Slider(props: SliderProps) {
         if (onChange != null) onChange([clampedNewLowerValue, clampedNewUpperValue]);
       }
     },
-    [value, min, max, onChange, range, isFocused, onWheelDisabled],
+    [value, min, max, onChange, range, onWheelDisabled],
   );
+
+  useEffect(() => {
+    const sliderElement = sliderRef.current;
+    if (sliderElement) {
+      sliderElement.addEventListener("wheel", handleWheelEvent, { passive: false });
+    }
+  }, [handleWheelEvent]);
+
   if (min == null || max == null || onChange == null || value == null || disabled)
     return <AntdSlider {...props} />;
   const sliderRange = max - min;
@@ -87,15 +96,13 @@ export function Slider(props: SliderProps) {
       else onChange(defaultValue);
   };
 
-  sliderElement.current?.addEventListener("wheel", handleWheelEvent, { passive: false });
-
   return (
     <div
-      ref={sliderElement}
+      ref={sliderRef}
       onDoubleClick={handleDoubleClick}
       style={{ flexGrow: 1, touchAction: "none" }}
-      onFocus={() => setIsFocused(true)}
-      onBlur={() => setIsFocused(false)}
+      onFocus={() => (isFocused.current = true)}
+      onBlur={() => (isFocused.current = false)}
     >
       <AntdSlider {...props} />
     </div>

@@ -1997,9 +1997,9 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
 ): Promise<Mapping> {
   const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
   let listArrayBuffer: ArrayBuffer;
-  if (mappingId == "") {
+  if (mappingId === "") {
     // Identity mapping, every segment is its own agglomerate
-    listArrayBuffer = segmentIdBuffer
+    listArrayBuffer = segmentIdBuffer;
   } else {
     listArrayBuffer = await doWithToken((token) =>
       Request.receiveArraybuffer(

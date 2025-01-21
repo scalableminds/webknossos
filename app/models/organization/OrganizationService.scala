@@ -22,6 +22,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
                                     multiUserDAO: MultiUserDAO,
                                     userDAO: UserDAO,
                                     teamDAO: TeamDAO,
+                                    creditTransactionDAO: CreditTransactionDAO,
                                     dataStoreDAO: DataStoreDAO,
                                     folderDAO: FolderDAO,
                                     folderService: FolderService,
@@ -49,6 +50,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
       ownerBox <- userDAO.findOwnerByOrg(organization._id).futureBox
+      creditBalance <- creditTransactionDAO.getCreditBalance(organization._id)(GlobalAccessContext)
       ownerNameOpt = ownerBox.toOption.map(o => s"${o.firstName} ${o.lastName}")
     } yield
       Json.obj(
@@ -62,7 +64,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "includedUsers" -> organization.includedUsers,
         "includedStorageBytes" -> organization.includedStorageBytes,
         "usedStorageBytes" -> usedStorageBytes,
-        "ownerName" -> ownerNameOpt
+        "ownerName" -> ownerNameOpt,
+        "creditBalance" -> creditBalance
       ) ++ adminOnlyInfo
   }
 

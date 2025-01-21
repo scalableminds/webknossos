@@ -437,13 +437,14 @@ function initializeDataset(
   // Make sure subsequent fetch calls are always for the same dataset
   if (!initialFetch) {
     ErrorHandling.assert(
-      _.isEqual(dataset.dataSource.id.name, Store.getState().dataset.name),
+      _.isEqual(dataset.id, Store.getState().dataset.id),
       messages["dataset.changed_without_reload"],
     );
   }
 
   ErrorHandling.assertExtendContext({
-    dataSet: dataset.dataSource.id.name,
+    datasetName: dataset.name,
+    datasetId: dataset.id,
   });
   const mutableDataset = dataset as any as MutableAPIDataset;
   const volumeTracings = getServerVolumeTracings(serverTracings);

@@ -100,6 +100,7 @@ function getTextureLayerInfos(): Params["textureLayerInfos"] {
       packingDegree: getPackingDegree(getByteCount(dataset, layer.name), elementClass),
       dataTextureCount: Model.getLayerRenderingManagerByName(layer.name).dataTextureCount,
       isSigned: elementClass.startsWith("int"),
+      unsanitizedName: layer.name,
     };
   });
 }
@@ -957,17 +958,19 @@ class PlaneMaterialFactory {
     // In UnsignedByte textures the byte values are scaled to [0, 1] (inclusive),
     // in Float textures they are not.
     if (!isSegmentationLayer) {
-      const divisor = elementClass === "float" ? 1 : 255;
+      let divisor;
       if (intensityRange) {
         if (elementClass === "int8") {
           // Bytes are stored as signed normalized integers (-1 to 1) in WebGL.
           // Therefore, we scale the range (-128 to 127) from -1 to 1, too.
-          this.uniforms[`${name}_min`].value = intensityRange[0] / 128;
-          this.uniforms[`${name}_max`].value = intensityRange[1] / 128;
+          divisor = 128;
+        } else if (elementClass === "uint32" || elementClass === "float") {
+          divisor = 1;
         } else {
-          this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
-          this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;
+          divisor = 255;
         }
+        this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
+        this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;
       }
       this.uniforms[`${name}_is_inverted`].value = isInverted ? 1.0 : 0;
 

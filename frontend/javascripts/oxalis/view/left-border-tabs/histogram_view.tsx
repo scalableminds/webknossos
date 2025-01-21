@@ -21,6 +21,7 @@ type OwnProps = {
   max?: number;
   isInEditMode: boolean;
   defaultMinMax: Vector2;
+  supportFractionals: boolean;
   reloadHistogram: () => void;
 };
 type HistogramProps = OwnProps & {
@@ -44,7 +45,7 @@ const canvasHeight = 100;
 const canvasWidth = 318;
 
 export function isHistogramSupported(elementClass: ElementClass): boolean {
-  return ["int8", "uint8", "int16", "uint16", "float", "uint24"].includes(elementClass);
+  return ["int8", "uint8", "int16", "uint16", "uint24", "uint32", "float"].includes(elementClass);
 }
 
 function getMinAndMax(props: HistogramProps) {
@@ -268,6 +269,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     const minMaxInputStyle = {
       width: "100%",
     };
+    const maybeCeilFn = this.props.supportFractionals ? Math.ceil : (val: number) => val;
     return (
       <Spin spinning={data === undefined}>
         <canvas ref={this.onCanvasRefChange} width={canvasWidth} height={canvasHeight} />
@@ -279,7 +281,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           defaultValue={[minRange, maxRange]}
           onChange={this.onThresholdChange}
           onChangeComplete={this.onThresholdChange}
-          step={(maxRange - minRange) / 255}
+          step={maybeCeilFn((maxRange - minRange) / 255)}
           tooltip={{ formatter: this.tipFormatter }}
           style={{
             width: canvasWidth,

@@ -78,8 +78,8 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
 <% _.each(colorLayerNames, function(name) { %>
   uniform vec3 <%= name %>_color;
-  uniform float <%= name %>_min;
-  uniform float <%= name %>_max;
+  uniform <%= textureLayerInfos[name].packingDegree == 1 ? "uint" : "float" %> <%= name %>_min;
+  uniform <%= textureLayerInfos[name].packingDegree == 1 ? "uint" : "float" %> <%= name %>_max;
   uniform float <%= name %>_is_inverted;
 <% }) %>
 
@@ -228,7 +228,7 @@ void main() {
     <% const color_layer_index = colorLayerNames.indexOf(name); %>
     float <%= name %>_effective_alpha = <%= name %>_alpha * (1. - <%= name %>_unrenderable);
     if (<%= name %>_effective_alpha > 0.) {
-      // Get grayscale value for <%= name %>
+      // Get grayscale value for <%= textureLayerInfos[name].unsanitizedName %>
 
       <% if (tpsTransformPerLayer[name] != null) { %>
         vec3 transformedCoordUVW = worldCoordUVW + transDim(tpsOffsetXYZ_<%= name %>);
@@ -248,20 +248,41 @@ void main() {
             !<%= name %>_has_transform
           );
         bool used_fallback = maybe_filtered_color.used_fallback_color;
+        float is_max_and_min_equal = float(<%= name %>_max == <%= name %>_min);
 
         // color_value is usually between 0 and 1.
         color_value = maybe_filtered_color.color.rgb;
         <% if (textureLayerInfos[name].packingDegree === 2.0) { %>
-          // Workaround for 16-bit color layers
+          // Handle 16-bit color layers
           color_value = vec3(color_value.g * 256.0 + color_value.r);
         <% } %>
-        // Keep the color in bounds of min and max
-        color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
-        // Scale the color value according to the histogram settings.
-        // Note: max == min would cause a division by 0. Thus we add 1 in this case and hide that value below
-        // via mixing.
-        float is_max_and_min_equal = float(<%= name %>_max == <%= name %>_min);
-        color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min + is_max_and_min_equal);
+        <% if (textureLayerInfos[name].packingDegree === 1.0) { %>
+          // Handle 32-bit color layers
+          // Scale from [0,1] to [0,255] so that we can convert to an uint
+          // below.
+          uvec4 four_bytes = uvec4(255. * maybe_filtered_color.color);
+
+          highp uint hpv =
+            uint(four_bytes.a) * uint(pow(256., 3.))
+            + uint(four_bytes.b) * uint(pow(256., 2.))
+            + uint(four_bytes.g) * 256u
+            + uint(four_bytes.r);
+
+          uint min_uint = <%= name %>_min;
+          uint max_uint = <%= name %>_max;
+          hpv = clamp(hpv, min_uint, max_uint);
+          color_value = vec3(
+            float(hpv - min_uint) / (float(max_uint - min_uint) + is_max_and_min_equal)
+          );
+        <% } else { %>
+          // Keep the color in bounds of min and max
+          color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
+          // Scale the color value according to the histogram settings.
+          // Note: max == min would cause a division by 0. Thus we add 1 in this case and hide that value below
+          // via mixing.
+          color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min + is_max_and_min_equal);
+        <% } %>
+
 
         color_value = pow(color_value, 1. / vec3(<%= name %>_gammaCorrectionValue));
 

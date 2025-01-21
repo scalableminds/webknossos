@@ -16,7 +16,7 @@ trait UpdateGroupHandling extends LazyLogging {
    * Target versions should be unchanged. Each group's target version is the max of its input.
    * Compare unit test for UpdateGroupHandlingUnitTestSuite
    */
-  def regroupByIsolationSensitiveActions(
+  def reorderAndRegroupByIsolationSensitiveActions(
       updateActionGroupsWithVersions: List[(Long, List[UpdateAction])]): Box[List[(Long, List[UpdateAction])]] =
     for {
       groupVersions <- Full(updateActionGroupsWithVersions.map(_._1))

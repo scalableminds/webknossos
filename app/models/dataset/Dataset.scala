@@ -723,7 +723,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   def updateMags(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
     val clearQuery = q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId".asUpdate
     val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
-      layer.resolutions.map { mag: Vec3Int =>
+      layer.resolutions.distinct.map { mag: Vec3Int =>
         {
           q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag)
                 VALUES($datasetId, ${layer.name}, $mag)""".asUpdate

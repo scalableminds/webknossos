@@ -292,7 +292,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       reportChangesToWk: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
       updateGroupsAsSaved <- findPendingUpdates(annotationId, annotationWithTracingsAndMappings, targetVersion) ?~> "findPendingUpdates.failed"
-      updatesGroupsRegrouped <- regroupByIsolationSensitiveActions(updateGroupsAsSaved).toFox
+      updatesGroupsRegrouped <- reorderAndRegroupByIsolationSensitiveActions(updateGroupsAsSaved).toFox
       updated <- applyUpdatesGrouped(annotationWithTracingsAndMappings,
                                      annotationId,
                                      updatesGroupsRegrouped,
@@ -313,7 +313,10 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           Some(desiredVersion),
           Some(existingVersion + 1))(fromJsonBytes[List[UpdateAction]])
       }
-    } yield extraSkeletonUpdates ++ extraEditableMappingUpdates ++ pendingAnnotationUpdates
+    } yield
+    // Ordering must be preserved (newest versions first). Thus we append, not prepend the (older) extra updates.
+    pendingAnnotationUpdates ++ (extraSkeletonUpdates ++ extraEditableMappingUpdates).sortBy(_._1)(
+      Ordering[Long].reverse)
 
   /*
    * The migration of https://github.com/scalableminds/webknossos/pull/7917 does not guarantee that the skeleton layer
@@ -378,13 +381,15 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
 
   private def filterEditableMappingUpdates(updateGroups: List[(Long, List[UpdateAction])],
                                            tracingId: String): List[(Long, List[EditableMappingUpdateAction])] =
-    updateGroups.map {
+    updateGroups.flatMap {
       case (version, updateGroup) =>
         val updateGroupFiltered = updateGroup.flatMap {
           case a: EditableMappingUpdateAction if a.actionTracingId == tracingId => Some(a)
           case _                                                                => None
         }
-        (version, updateGroupFiltered)
+        if (updateGroupFiltered.nonEmpty) {
+          Some((version, updateGroupFiltered))
+        } else None
     }
 
   private def findTracingsForAnnotation(annotation: AnnotationProto)(
@@ -747,7 +752,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
               annotationId,
               oldestVersion = Some(batchRange._1),
               newestVersion = Some(batchRange._2))(fromJsonBytes[List[UpdateAction]])
-          _ <- Fox.serialCombined(updateLists) {
+          _ <- Fox.serialCombined(updateLists.reverse) { // we reverse (order asc by version) so that addLayer comes before the layer’s updates
             case (version, updateList) =>
               for {
                 updateListAdapted <- Fox.serialCombined(updateList) {
@@ -758,11 +763,11 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                         a.tracingId.foreach(actionTracingId =>
                           tracingIdMapMutable.put(actionTracingId, TracingId.generate))
                       }
-                      mappedTracingId <- tracingIdMapMutable.get(actionTracingId) ?~> "duplicating action for unknown layer"
+                      mappedTracingId <- tracingIdMapMutable.get(actionTracingId) ?~> "duplicating addLayer action for unknown layer"
                     } yield a.copy(tracingId = Some(mappedTracingId))
                   case a: LayerUpdateAction =>
                     for {
-                      mappedTracingId <- tracingIdMapMutable.get(a.actionTracingId) ?~> "duplicating action for unknown layer"
+                      mappedTracingId <- tracingIdMapMutable.get(a.actionTracingId) ?~> "duplicating layer action for unknown layer"
                     } yield a.withActionTracingId(mappedTracingId)
                   case a: UpdateAction =>
                     Fox.successful(a)

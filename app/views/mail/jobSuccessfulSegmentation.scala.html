@@ -1,11 +1,11 @@
-@(name: String, datasetName: String, jobLink: String, jobTitle: String)
+@(name: String, datasetName: String, jobLink: String, jobTitle: String, additionalFooter: String)
 
-@emailBaseTemplate() {
+@emailBaseTemplate(additionalFooter) {
 <p>Hi @{name},</p>
 
 <p>
-  Your @{jobTitle} is ready for exploration. 
-  WEBKNOSSOS successfully applied our machine learning models on the specific subset of the <i>@{datasetName}</i> dataset. 
+  Your @{jobTitle} is ready for exploration.
+  WEBKNOSSOS successfully applied our machine learning models on the specific subset of the <i>@{datasetName}</i> dataset.
   Click the button below to open the dataset or find it amongst your other dataset in the WEBKNOSSOS dashboard.
 </p>
 
@@ -41,7 +41,7 @@
   Do you want to make corrections to the automated segmentation? Use the easy-to-use, built-in <a href="https://docs.webknossos.org/webknossos/proofreading/tools.html">proof-reading tools in WEBKNOSSOS</a> (requires Power plan).
 </p>
 <div style="text-align: center; margin-bottom: 20px;">
-  <img src="https://static.webknossos.org/mails/email-proofreading-preview.600.jpg" 
+  <img src="https://static.webknossos.org/mails/email-proofreading-preview.600.jpg"
     alt="A preview of the proofreading tools for a segmentation of a WEBKNOSSOS dataset"
     style="width: 600px; height: 300px;" />
 </div>

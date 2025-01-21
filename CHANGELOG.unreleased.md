@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 - Added the total volume of a dataset to a tooltip in the dataset info tab. [#8229](https://github.com/scalableminds/webknossos/pull/8229)
 - Optimized performance of data loading with “fill value“ chunks. [#8271](https://github.com/scalableminds/webknossos/pull/8271)
+- Added the option to export a segmentation that was corrected with the proofreading tool to a new segmentation. [#8286](https://github.com/scalableminds/webknossos/pull/8286)
 - The fill tool can now be adapted so that it only acts within a specified bounding box. Use the new "Restrict Floodfill" mode for that in the toolbar. [#8267](https://github.com/scalableminds/webknossos/pull/8267)
 - Added the option for "Selective Segment Visibility" for segmentation layers. Select this option in the left sidebar to only show segments that are currently active or hovered.  [#8281](https://github.com/scalableminds/webknossos/pull/8281)
 - A segment can be activated with doubleclick now. [#8281](https://github.com/scalableminds/webknossos/pull/8281)
@@ -52,6 +53,9 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed regression in styling of segment and skeleton tree tab. [#8307](https://github.com/scalableminds/webknossos/pull/8307)
 - Fixed the template for neuron inferral using a custom workflow. [#8312](https://github.com/scalableminds/webknossos/pull/8312)
 - Fixed that the list of processing jobs crashed for deleted job types. [#8300](https://github.com/scalableminds/webknossos/pull/8300)
+- Fixed an issue where you could not maximize or reposition the 3D/XZ viewport in Safari. [#8337](https://github.com/scalableminds/webknossos/pull/8337)
+- Fixed upload of NGFF datasets with only one directory named "color". [#8341](https://github.com/scalableminds/webknossos/pull/8341/) 
+- Fixed an issue that could occur if the NGFF multiscale name was set to "/" when exploring. [#8341](https://github.com/scalableminds/webknossos/pull/8341/)
 
 ### Removed
 - Removed support for HTTP API versions 3 and 4. [#8075](https://github.com/scalableminds/webknossos/pull/8075)

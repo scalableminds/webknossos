@@ -1,11 +1,11 @@
-@(name: String, datasetName: String, jobTitle: String)
+@(name: String, datasetName: String, jobTitle: String, additionalFooter: String)
 
-@emailBaseTemplate() {
+@emailBaseTemplate(additionalFooter) {
 <p>Hi @{name},</p>
 
 <p>
   oops, something unexpected went wrong when working on your WEBKNOSSOS @{jobTitle} job for the <i>@{datasetName}</i> dataset.
-  This should not have happened and we are sorry about the inconvenience. Our engineers will investigate and fix the problem as soon as possible. 
+  This should not have happened and we are sorry about the inconvenience. Our engineers will investigate and fix the problem as soon as possible.
 </p>
 <p>
 Feel free to contact us via email for assistance or please try again later.
@@ -16,7 +16,7 @@ Feel free to contact us via email for assistance or please try again later.
 <div style="text-align: center;">
   <img src="https://static.webknossos.org/mails/email-drawing-failed-job.png"
     srcset="https://static.webknossos.org/mails/email-drawing-failed-job.svg"
-    alt="A person dismayed about an unsuccessful WEBKNOSSOS job" 
+    alt="A person dismayed about an unsuccessful WEBKNOSSOS job"
     style="width: 460px; height: 258px; margin-top: 10px; margin-bottom: 20px" />
 </div>
 

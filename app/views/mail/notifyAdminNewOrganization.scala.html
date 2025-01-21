@@ -1,6 +1,6 @@
-@( organizationName: String, creatorMail: String, domain: String )
+@( organizationName: String, creatorMail: String, domain: String, additionalFooter: String )
 
-@emailBaseTemplate() {
+@emailBaseTemplate(additionalFooter) {
   <p>Hi,</p>
 
   <p>

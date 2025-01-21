@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   GetMultipleSegmentIndexParameters,
   GetSegmentIndexParameters,
   MissingBucketHeaders,
+  ProtoGeometryImplicits,
   SegmentIndexData
 }
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
@@ -31,6 +32,7 @@ class TSRemoteDatastoreClient @Inject()(
     val lifecycle: ApplicationLifecycle
 )(implicit ec: ExecutionContext)
     extends LazyLogging
+    with ProtoGeometryImplicits
     with MissingBucketHeaders {
 
   private lazy val dataStoreUriCache: AlfuCache[(String, String), String] = AlfuCache()
@@ -99,18 +101,25 @@ class TSRemoteDatastoreClient @Inject()(
   def getAgglomerateGraph(remoteFallbackLayer: RemoteFallbackLayer,
                           baseMappingName: String,
                           agglomerateId: Long,
-                          userToken: Option[String]): Fox[AgglomerateGraph] = {
+                          segmentPosition: Option[Vec3Int],
+                          userToken: Option[String]): Fox[AgglomerateGraph] =
     if (baseMappingName == "") {
-      AgglomerateGraph(List(agglomerateId), List.empty, List.empty)
+      // Identity mapping: graph with just the agglomerate id as mapping.
+      // passed segmentPosition is used if supplied. Should only be None where it is not later needed in the graph.
+      Fox.successful(
+        AgglomerateGraph(List(agglomerateId),
+                         List.empty,
+                         List(vec3IntToProto(segmentPosition.getOrElse(Vec3Int.zeros))),
+                         List.empty))
+    } else {
+      for {
+        remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
+        result <- rpc(s"$remoteLayerUri/agglomerates/$baseMappingName/agglomerateGraph/$agglomerateId").silent
+          .addQueryStringOptional("token", userToken)
+          .silent
+          .getWithProtoResponse[AgglomerateGraph](AgglomerateGraph)
+      } yield result
     }
-    for {
-      remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-      result <- rpc(s"$remoteLayerUri/agglomerates/$baseMappingName/agglomerateGraph/$agglomerateId").silent
-        .addQueryStringOptional("token", userToken)
-        .silent
-        .getWithProtoResponse[AgglomerateGraph](AgglomerateGraph)
-    } yield result
-  }
 
   def getLargestAgglomerateId(remoteFallbackLayer: RemoteFallbackLayer,
                               mappingName: String,
@@ -121,10 +130,9 @@ class TSRemoteDatastoreClient @Inject()(
       k =>
         for {
           remoteLayerUri <- getRemoteLayerUri(k._1)
-          result <- rpc(s"$remoteLayerUri/agglomerates/${k._2}/largestAgglomerateId")
-            .addQueryStringOptional("token", k._3)
-            .silent
-            .getWithJsonResponse[Long]
+          uri = if (mappingName == "") s"$remoteLayerUri/largestSegmentId"
+          else s"$remoteLayerUri/agglomerates/${k._2}/largestAgglomerateId"
+          result <- rpc(uri).addQueryStringOptional("token", k._3).silent.getWithJsonResponse[Long]
         } yield result
     )
   }

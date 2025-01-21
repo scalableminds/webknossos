@@ -622,6 +622,7 @@ class EditableMappingService @Inject()(
                                            editableMappingId: String,
                                            version: Option[Long],
                                            agglomerateId: Long,
+                                           segmentPosition: Option[Vec3Int],
                                            remoteFallbackLayer: RemoteFallbackLayer,
                                            userToken: Option[String]): Fox[AgglomerateGraph] =
     for {
@@ -636,6 +637,7 @@ class EditableMappingService @Inject()(
           remoteDatastoreClient.getAgglomerateGraph(remoteFallbackLayer,
                                                     mapping.baseMappingName,
                                                     agglomerateId,
+                                                    segmentPosition,
                                                     userToken)
         case f: Failure => f.toFox
       }
@@ -651,6 +653,7 @@ class EditableMappingService @Inject()(
                                                                parameters.editableMappingId,
                                                                None,
                                                                parameters.agglomerateId,
+                                                               None,
                                                                remoteFallbackLayer,
                                                                userToken)
       edgesToCut <- minCut(agglomerateGraph, parameters.segmentId1, parameters.segmentId2) ?~> "Could not calculate min-cut on agglomerate graph."
@@ -719,6 +722,7 @@ class EditableMappingService @Inject()(
                                                                parameters.editableMappingId,
                                                                None,
                                                                parameters.agglomerateId,
+                                                               None,
                                                                remoteFallbackLayer,
                                                                userToken)
       neighborNodes = neighbors(agglomerateGraph, parameters.segmentId)

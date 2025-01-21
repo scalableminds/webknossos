@@ -69,7 +69,8 @@ class BinaryDataService(val dataBaseDir: Path,
           data <- handleDataRequest(request)
           mappedDataFox <- agglomerateServiceOpt.map { agglomerateService =>
             convertIfNecessary(
-              request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
+              request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping && !request.settings.appliedAgglomerate
+                .contains(""),
               data,
               agglomerateService.applyAgglomerate(request),
               request

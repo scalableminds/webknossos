@@ -362,7 +362,7 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId)
-            tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
+            tracingMappingName = tracing.mappingName.getOrElse("") // TODO fix, tracing.mappingName should have been emptystring already.
             _ <- assertMappingIsNotLocked(tracing)
             _ <- bool2Fox(tracingService.volumeBucketsAreEmpty(tracingId)) ?~> "annotation.volumeBucketsNotEmpty"
             (editableMappingId, editableMappingInfo) <- editableMappingService.create(

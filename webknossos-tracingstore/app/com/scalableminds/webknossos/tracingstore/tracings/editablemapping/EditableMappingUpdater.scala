@@ -120,7 +120,7 @@ class EditableMappingUpdater(
                                                                            update.mag,
                                                                            userToken)
       agglomerateId <- agglomerateIdForSplitAction(update, segmentId1)
-      agglomerateGraph <- agglomerateGraphForIdWithFallback(editableMappingInfo, agglomerateId)
+      agglomerateGraph <- agglomerateGraphForIdWithFallback(editableMappingInfo, agglomerateId, None)
       _ = if (segmentId1 == 0)
         logger.warn(
           s"Split action for editable mapping $editableMappingId: Looking up segment id at position ${update.segmentPosition1} in mag ${update.mag} returned invalid value zero. Splitting outside of dataset?")
@@ -128,12 +128,14 @@ class EditableMappingUpdater(
         logger.warn(
           s"Split action for editable mapping $editableMappingId: Looking up segment id at position ${update.segmentPosition2} in mag ${update.mag} returned invalid value zero. Splitting outside of dataset?")
       (graph1, graph2) <- tryo(splitGraph(agglomerateId, agglomerateGraph, update, segmentId1, segmentId2)) ?~> s"splitGraph failed while removing edge between segments $segmentId1 and $segmentId2"
+      actualSplitHappened = graph2.segments.nonEmpty
       largestExistingAgglomerateId <- largestAgglomerateId(editableMappingInfo)
       agglomerateId2 = largestExistingAgglomerateId + 1L
-      _ <- updateSegmentToAgglomerate(graph2.segments, agglomerateId2)
-      _ = updateAgglomerateGraph(agglomerateId, graph1)
-      _ = updateAgglomerateGraph(agglomerateId2, graph2)
-    } yield editableMappingInfo.withLargestAgglomerateId(agglomerateId2)
+      _ <- Fox.runIf(actualSplitHappened)(updateSegmentToAgglomerate(graph2.segments, agglomerateId2))
+      _ = if (actualSplitHappened) updateAgglomerateGraph(agglomerateId, graph1)
+      _ = if (actualSplitHappened) updateAgglomerateGraph(agglomerateId2, graph2)
+    } yield
+      if (actualSplitHappened) editableMappingInfo.withLargestAgglomerateId(agglomerateId2) else editableMappingInfo
 
   private def agglomerateIdForSplitAction(updateAction: SplitAgglomerateUpdateAction, segmentId1: Long)(
       implicit ec: ExecutionContext): Fox[Long] =
@@ -205,8 +207,10 @@ class EditableMappingUpdater(
     }
   }
 
-  private def agglomerateGraphForIdWithFallback(mapping: EditableMappingInfo, agglomerateId: Long)(
-      implicit ec: ExecutionContext): Fox[AgglomerateGraph] = {
+  private def agglomerateGraphForIdWithFallback(
+      mapping: EditableMappingInfo,
+      agglomerateId: Long,
+      segmentPosition: Option[Vec3Int])(implicit ec: ExecutionContext): Fox[AgglomerateGraph] = {
     val key = editableMappingService.agglomerateGraphKey(editableMappingId, agglomerateId)
     val fromBufferOpt = agglomerateToGraphBuffer.get(key)
     fromBufferOpt.map(Fox.successful(_)).getOrElse {
@@ -214,6 +218,7 @@ class EditableMappingUpdater(
                                                                   editableMappingId,
                                                                   Some(oldVersion),
                                                                   agglomerateId,
+                                                                  segmentPosition,
                                                                   remoteFallbackLayer,
                                                                   userToken)
     }
@@ -332,8 +337,8 @@ class EditableMappingUpdater(
         logger.warn(
           s"Merge action for editable mapping $editableMappingId: Looking up segment id at position ${update.segmentPosition2} in mag ${update.mag} returned invalid value zero. Merging outside of dataset?")
       (agglomerateId1, agglomerateId2) <- agglomerateIdsForMergeAction(update, segmentId1, segmentId2) ?~> "Failed to look up agglomerate ids for merge action segments"
-      agglomerateGraph1 <- agglomerateGraphForIdWithFallback(mapping, agglomerateId1) ?~> s"Failed to get agglomerate graph for id $agglomerateId1"
-      agglomerateGraph2 <- agglomerateGraphForIdWithFallback(mapping, agglomerateId2) ?~> s"Failed to get agglomerate graph for id $agglomerateId2"
+      agglomerateGraph1 <- agglomerateGraphForIdWithFallback(mapping, agglomerateId1, update.segmentPosition1) ?~> s"Failed to get agglomerate graph for id $agglomerateId1"
+      agglomerateGraph2 <- agglomerateGraphForIdWithFallback(mapping, agglomerateId2, update.segmentPosition2) ?~> s"Failed to get agglomerate graph for id $agglomerateId2"
       _ <- bool2Fox(agglomerateGraph2.segments.contains(segmentId2)) ?~> s"Segment $segmentId2 as queried by position ${update.segmentPosition2} is not contained in fetched agglomerate graph for agglomerate $agglomerateId2"
       mergedGraphOpt = mergeGraph(agglomerateGraph1,
                                   agglomerateGraph2,

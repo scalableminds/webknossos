@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
-import com.scalableminds.util.time.{DurationFormatting, Instant}
+import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.time.Instant
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import com.scalableminds.webknossos.tracingstore.tracings.TracingDataStore
@@ -13,7 +14,7 @@ import scala.concurrent.ExecutionContext
 class Application @Inject()(tracingDataStore: TracingDataStore, redisClient: TracingStoreRedisStore)(
     implicit ec: ExecutionContext)
     extends Controller
-    with DurationFormatting {
+    with Formatter {
 
   override def allowRemoteOrigin: Boolean = true
 

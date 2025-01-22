@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.controllers
 
-import com.scalableminds.util.time.{DurationFormatting, Instant}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.ApplicationHealthService
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
@@ -12,8 +12,7 @@ import scala.concurrent.ExecutionContext
 
 class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthService: ApplicationHealthService)(
     implicit ec: ExecutionContext)
-    extends Controller
-    with DurationFormatting {
+    extends Controller {
 
   override def allowRemoteOrigin: Boolean = true
 

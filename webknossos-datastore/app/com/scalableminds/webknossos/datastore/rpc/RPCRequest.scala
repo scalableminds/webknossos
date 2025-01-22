@@ -1,13 +1,13 @@
 package com.scalableminds.webknossos.datastore.rpc
 
-import com.scalableminds.util.mvc.MimeTypes
+import com.scalableminds.util.mvc.{Formatter, MimeTypes}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
 import play.api.http.{HeaderNames, Status}
 import play.api.libs.json._
 import play.api.libs.ws._
-import com.scalableminds.util.time.{DurationFormatting, Instant}
+import com.scalableminds.util.time.Instant
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import java.io.File
@@ -17,7 +17,7 @@ import scala.concurrent.duration._
 class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
-    with DurationFormatting
+    with Formatter
     with MimeTypes {
 
   var request: WSRequest = wsClient.url(url)

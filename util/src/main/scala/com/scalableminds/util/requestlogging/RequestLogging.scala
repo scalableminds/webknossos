@@ -1,6 +1,7 @@
 package com.scalableminds.util.requestlogging
 
-import com.scalableminds.util.time.{DurationFormatting, Instant}
+import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.time.Instant
 import com.typesafe.scalalogging.LazyLogging
 import play.api.http.{HttpEntity, Status}
 import play.api.mvc.{Request, Result}
@@ -8,7 +9,7 @@ import play.api.mvc.{Request, Result}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-trait AbstractRequestLogging extends LazyLogging with DurationFormatting {
+trait AbstractRequestLogging extends LazyLogging with Formatter {
 
   def logRequestFormatted(request: Request[_],
                           result: Result,

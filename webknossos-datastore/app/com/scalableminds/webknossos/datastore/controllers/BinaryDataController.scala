@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.{Color, JPEGWriter}
-import com.scalableminds.util.time.{DurationFormatting, Instant}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
@@ -39,8 +39,7 @@ class BinaryDataController @Inject()(
     findDataService: FindDataService,
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with MissingBucketHeaders
-    with DurationFormatting {
+    with MissingBucketHeaders {
 
   override def allowRemoteOrigin: Boolean = true
 

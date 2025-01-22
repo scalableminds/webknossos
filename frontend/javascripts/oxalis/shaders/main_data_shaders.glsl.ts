@@ -1,39 +1,40 @@
+import type TPS3D from "libs/thin_plate_spline";
 import _ from "lodash";
-import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/bucket_data_handling/mappings";
 import type { Vector3 } from "oxalis/constants";
 import constants, { ViewModeValuesIndices, OrthoViewIndices } from "oxalis/constants";
+import Constants from "oxalis/constants";
+import { PLANE_SUBDIVISION } from "oxalis/geometries/plane";
+import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
+import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/bucket_data_handling/mappings";
+import { getBlendLayersAdditive, getBlendLayersCover } from "./blending.glsl";
+import {
+  getAbsoluteCoords,
+  getMagnification,
+  getWorldCoordUVW,
+  isOutsideOfBoundingBox,
+} from "./coords.glsl";
+import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 import {
   convertCellIdToRGB,
   getBrushOverlay,
   getCrossHairOverlay,
   getSegmentId,
+  getSegmentationAlphaIncrement,
 } from "./segmentation.glsl";
-import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
-import {
-  getAbsoluteCoords,
-  getResolution,
-  getWorldCoordUVW,
-  isOutsideOfBoundingBox,
-} from "./coords.glsl";
-import {
-  inverse,
-  div,
-  isNan,
-  transDim,
-  isFlightMode,
-  formatNumberAsGLSLFloat,
-  almostEq,
-} from "./utils.glsl";
 import compileShader from "./shader_module_system";
-import Constants from "oxalis/constants";
-import { PLANE_SUBDIVISION } from "oxalis/geometries/plane";
-import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
-import { getBlendLayersAdditive, getBlendLayersCover } from "./blending.glsl";
-import type TPS3D from "libs/thin_plate_spline";
 import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
 } from "./thin_plate_spline.glsl";
+import {
+  almostEq,
+  div,
+  formatNumberAsGLSLFloat,
+  inverse,
+  isFlightMode,
+  isNan,
+  transDim,
+} from "./utils.glsl";
 
 type Params = {
   globalLayerCount: number;
@@ -41,7 +42,7 @@ type Params = {
   orderedColorLayerNames: string[];
   segmentationLayerNames: string[];
   textureLayerInfos: Record<string, { packingDegree: number; dataTextureCount: number }>;
-  resolutionsCount: number;
+  magnificationsCount: number;
   voxelSizeFactor: Vector3;
   isOrthogonal: boolean;
   tpsTransformPerLayer: Record<string, TPS3D>;
@@ -52,8 +53,8 @@ uniform vec2 viewportExtent;
 
 uniform float activeMagIndices[<%= globalLayerCount %>];
 uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
-uniform vec3 allResolutions[<%= resolutionsCount %>];
-uniform uint resolutionCountCumSum[<%= globalLayerCount %>];
+uniform vec3 allMagnifications[<%= magnificationsCount %>];
+uniform uint magnificationCountCumSum[<%= globalLayerCount %>];
 
 uniform highp usampler2D lookup_texture;
 uniform highp uint lookup_seeds[3];
@@ -110,6 +111,7 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
 uniform float sphericalCapRadius;
 uniform bool selectiveVisibilityInProofreading;
+uniform bool selectiveSegmentVisibility;
 uniform float viewMode;
 uniform float alpha;
 uniform bool renderBucketIndices;
@@ -178,6 +180,7 @@ ${compileShader(
   hasSegmentation ? getBrushOverlay : null,
   hasSegmentation ? getSegmentId : null,
   hasSegmentation ? getCrossHairOverlay : null,
+  hasSegmentation ? getSegmentationAlphaIncrement : null,
   almostEq,
 )}
 
@@ -291,25 +294,13 @@ void main() {
         && hoveredUnmappedSegmentIdHigh == <%= segmentationName %>_unmapped_id_high;
       bool isActiveCell = activeCellIdLow == <%= segmentationName %>_id_low
          && activeCellIdHigh == <%= segmentationName %>_id_high;
-      // Highlight cell only if it's hovered or active during proofreading
-      // and if segmentation opacity is not zero
-      float alphaIncrement = isProofreading
-        ? (isActiveCell
-            ? (isHoveredUnmappedSegment
-              ? 0.4     // Highlight the hovered super-voxel of the active segment
-              : (isHoveredSegment
-                ? 0.15  // Highlight the not-hovered super-voxels of the hovered segment
-                : 0.0
-              )
-          )
-            : (isHoveredSegment
-              ? 0.2
-              // We are in proofreading mode, but the current voxel neither belongs
-              // to the active segment nor is it hovered. When selective visibility
-              // is enabled, lower the opacity.
-              : (selectiveVisibilityInProofreading ? -<%= segmentationName %>_alpha : 0.0)
-          )
-        ) : (isHoveredSegment ? 0.2 : 0.0);
+      float alphaIncrement = getSegmentationAlphaIncrement(
+        <%= segmentationName %>_alpha,
+        isHoveredSegment,
+        isHoveredUnmappedSegment,
+        isActiveCell
+      );
+
       gl_FragColor = vec4(mix(
         data_color.rgb,
         convertCellIdToRGB(<%= segmentationName %>_id_high, <%= segmentationName %>_id_low),
@@ -385,7 +376,7 @@ ${compileShader(
   isOutsideOfBoundingBox,
   getMaybeFilteredColorOrFallback,
   hasSegmentation ? getSegmentId : null,
-  getResolution,
+  getMagnification,
   almostEq,
 )}
 
@@ -442,7 +433,7 @@ void main() {
   // Invert vertical axis to make calculation more intuitive with top-left coordinates.
   index.y = PLANE_SUBDIVISION - index.y;
 
-  // d is the width/height of a bucket in the current resolution.
+  // d is the width/height of a bucket in the current magnification.
   vec2 d = transDim(vec3(bucketWidth) * representativeMagForVertexAlignment).xy;
 
   vec3 voxelSizeFactorUVW = transDim(voxelSizeFactor);

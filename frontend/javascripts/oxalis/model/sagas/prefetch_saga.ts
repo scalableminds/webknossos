@@ -1,26 +1,26 @@
-import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import type { OxalisState } from "oxalis/store";
-import { PrefetchStrategyArbitrary } from "oxalis/model/bucket_data_handling/prefetch_strategy_arbitrary";
-import {
-  PrefetchStrategySkeleton,
-  PrefetchStrategyVolume,
-  ContentTypes as PrefetchContentTypes,
-} from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
-import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { throttle, call, take } from "typed-redux-saga";
-import { select } from "oxalis/model/sagas/effect-generators";
-import {
-  getPosition,
-  getActiveMagIndexForLayer,
-  getAreasFromState,
-} from "oxalis/model/accessors/flycam_accessor";
-import { isLayerVisible, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
-import type DataLayer from "oxalis/model/data_layer";
-import { Model } from "oxalis/singletons";
+import { WkDevFlags } from "oxalis/api/wk_dev";
 import type { Vector3 } from "oxalis/constants";
 import constants from "oxalis/constants";
-import { WkDevFlags } from "oxalis/api/wk_dev";
+import { getMagInfo, isLayerVisible } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getActiveMagIndexForLayer,
+  getAreasFromState,
+  getPosition,
+} from "oxalis/model/accessors/flycam_accessor";
+import { FlycamActions } from "oxalis/model/actions/flycam_actions";
+import { PrefetchStrategyArbitrary } from "oxalis/model/bucket_data_handling/prefetch_strategy_arbitrary";
+import {
+  ContentTypes as PrefetchContentTypes,
+  PrefetchStrategySkeleton,
+  PrefetchStrategyVolume,
+} from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
+import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
+import type DataLayer from "oxalis/model/data_layer";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
+import { Model } from "oxalis/singletons";
+import type { OxalisState } from "oxalis/store";
+import { call, take, throttle } from "typed-redux-saga";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
@@ -103,14 +103,14 @@ export function* prefetchForPlaneMode(
 ): Saga<void> {
   const position = yield* select((state) => getPosition(state.flycam));
   const zoomStep = yield* select((state) => getActiveMagIndexForLayer(state, layer.name));
-  const resolutionInfo = getMagInfo(layer.resolutions);
+  const magInfo = getMagInfo(layer.mags);
   const activePlane = yield* select((state) => state.viewModeData.plane.activeViewport);
   const tracingTypes = yield* select(getTracingTypes);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const lastConnectionStats = getGlobalDataConnectionInfo().lastStats;
   const { lastPosition, lastDirection, lastZoomStep, lastBucketPickerTick } = previousProperties;
   const direction = getTraceDirection(position, lastPosition, lastDirection);
-  const resolutions = resolutionInfo.getDenseMags();
+  const mags = magInfo.getDenseMags();
   const layerRenderingManager = yield* call(
     [Model, Model.getLayerRenderingManagerByName],
     layer.name,
@@ -136,8 +136,8 @@ export function* prefetchForPlaneMode(
           zoomStep,
           activePlane,
           areas,
-          resolutions,
-          resolutionInfo,
+          mags,
+          magInfo,
           additionalCoordinates,
         );
 
@@ -171,8 +171,8 @@ export function* prefetchForArbitraryMode(
   const matrix = yield* select((state) => state.flycam.currentMatrix);
   const zoomStep = yield* select((state) => getActiveMagIndexForLayer(state, layer.name));
   const tracingTypes = yield* select(getTracingTypes);
-  const resolutionInfo = getMagInfo(layer.resolutions);
-  const resolutions = resolutionInfo.getDenseMags();
+  const magInfo = getMagInfo(layer.mags);
+  const mags = magInfo.getDenseMags();
   const layerRenderingManager = yield* call(
     [Model, Model.getLayerRenderingManagerByName],
     layer.name,
@@ -197,8 +197,8 @@ export function* prefetchForArbitraryMode(
           matrix,
           zoomStep,
           position,
-          resolutions,
-          resolutionInfo,
+          mags,
+          magInfo,
           additionalCoordinates,
         );
 

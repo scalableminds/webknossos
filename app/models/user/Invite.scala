@@ -2,6 +2,7 @@ package models.user
 
 import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
@@ -13,8 +14,8 @@ import models.organization.OrganizationDAO
 import security.RandomIDGenerator
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SqlClient, SQLDAO}
-import utils.{ObjectId, WkConf}
+import utils.sql.{SQLDAO, SqlClient}
+import utils.WkConf
 
 import scala.concurrent.{ExecutionContext, Future}
 

@@ -1,6 +1,114 @@
 # Publications
 The following publications used WEBKNOSSOS for exploring large 3D electron-microscopy (EM) and light-microscopy (LM) datasets as well as collaboratively generating annotations or other tasks. Please [get in touch with us](mailto:hello@webknossos.org) if your publication is missing.
 
+## 2025
+* Jakob Reichmann, Anne Schnurpfeil, Sylvia Mittelstädt, Patrick Moller Jensen, Vedrana Andersen Dahl, Anders Bjorholm Dahl, Carina Weide, Eva von Campenhausen, Hector Dejea, Paul Tafforeau, Christopher Werlein, Danny Jonigk, Maximilian Ackermann, Klaus Engel, Julia Gallwas, Alexander Dietz, Mir Fuad Hasanov & Tim Salditt.  
+  3D multiscale characterization of the human placenta: Bridging anatomy and histology by X-ray phase-contrast tomography.  
+  [PNAS Nexus, Volume 4, Issue 1 (2025). DOI: 10.1093/pnasnexus/pgae583](https://doi.org/10.1093/pnasnexus/pgae583)
+
+## 2024
+* Andrea Nathansen, Matthis Clausen, Manuel Berning, Ethan MacKenzie, Yuxin Zhang, Alexandra Pacureanu, Andreas T. Schaefer, Norman Rzepka, & Carles Bosch.  
+  Cell nuclei segmentation in mm-scale x-ray holographic nanotomography images of mouse brain tissue.  
+  [Developments in X-Ray Tomography XV. Vol. 13152. SPIE (2024). DOI: 10.1117/12.3028309](https://doi.org/10.1117/12.3028309)  
+  **View data [#1](https://wklink.org/9238) [#2](https://wklink.org/9123)** in WEBKNOSSOS 
+
+* Anja Günther, Silke Haverkamp, Stephan Irsen, Paul V. Watkins, Karin Dedek, Henrik Mouritsen & Kevin L. Briggman.  
+  Species–specific circuitry of double cone photoreceptors in two avian retinas.  
+  [Communications Biology 7.1 (2024). DOI: 10.1038/s42003-024-06697-2](https://doi.org/10.1038/s42003-024-06697-2)  
+  [**View data**](https://webknossos.mpinb.mpg.de/datasets/Briggman%20Lab/robin-retina-compressed-3/view#145000,59392,512,0,1.3) in WEBKNOSSOS
+
+* Yan Lu, Jing Liu, Bei Li, Haoyu Wang , Fangfang Wang , Shengxiong Wang , Hao Wu , Hua Han & Yunfeng Hua.  
+  Spatial patterns of noise-induced inner hair cell ribbon loss in the mouse mid-cochlea.  
+  [Iscience 27.2 (2024). DOI: 10.1016/j.isci.2024.108825](https://doi.org/10.1016/j.isci.2024.108825)  
+  **View data 
+  [#1](https://wklink.org/3892) 
+  [#2](https://wklink.org/7172)
+  [#3](https://wklink.org/1329)
+  [#4](https://wklink.org/9122)
+  [#5](https://wklink.org/7842)
+  [#6](https://wklink.org/1728)** in WEBKNOSSOS
+
+* Meike Sievers, Alessandro Motta, Martin Schmidt, Yagmur Yener, Sahil Loomba, Kun Song, Johannes Bruett, & Moritz Helmstaedter.  
+  Connectomic reconstruction of a cortical column.  
+  [bioRxiv (2024). DOI: 2024.03.22.586254](https://doi.org/10.1101/2024.03.22.586254)
+
+* Martin Schmidt, Alessandro Motta, Meike Sievers & Moritz Helmstaedter.  
+  RoboEM: automated 3D flight tracing for synaptic-resolution connectomics.  
+  [Nature Methods 21.5 (2024). DOI: 10.1038/s41592-024-02226-5](https://doi.org/10.1038/s41592-024-02226-5)
+
+* Rosanna P. Sammons, Mourat Vezir, Laura Moreno-Velasquez, Gaspar Cano, Marta Orlando, Meike Sievers, Eleonora Grasso, Verjinia D. Metodieva, Richard Kempter, Helene Schmidt, & Dietmar Schmitz.  
+  Structure and function of the hippocampal CA3 module.  
+  [Proceedings of the National Academy of Sciences 121.6 (2024). DOI: 10.1073/pnas.2312281120](https://doi.org/10.1073/pnas.2312281120)
+
+* Julia M. Michalska, Julia Lyudchik, Philipp Velicky, Hana Štefaničková, Jake F. Watson, Alban Cenameri, Christoph Sommer, Nicole Amberg, Alessandro Venturino, Karl Roessler, Thomas Czech, Romana Höftberger, Sandra Siegert, Gaia Novarino, Peter Jonas & Johann G. Danzl.  
+  Imaging brain tissue architecture across millimeter to nanometer scales.  
+  [Nature Biotechnology 42.7 (2024). DOI: 10.1038/s41587-023-01911-8](https://doi.org/10.1038/s41587-023-01911-8)
+
+* Hongcheng Mai, Jie Luo, Luciano Hoeher, Rami Al-Maskari, Izabela Horvath, Ying Chen, Florian Kofler, Marie Piraud, Johannes C. Paetzold, Jennifer Modamio, Mihail Todorov, Markus Elsner, Farida Hellal & Ali Ertürk.  
+  Whole-body cellular mapping in mouse using standard IgG antibodies.  
+  [Nature Biotechnology 42.4 (2024). DOI: 10.1038/s41587-023-01846-0](https://doi.org/10.1038/s41587-023-01846-0)  
+  [**View data**](https://webknossos.org/publications/64aeaa06fcf33704ca101ceb) in WEBKNOSSOS.
+
+* Kievits, Arent J., Duinkerken, B. H. Peter, Lane, Ryan, de Heus, Cecilia, van Beijeren Bergen en Henegouwen, Daan, Höppener, Tibbe, Wolters, Anouk H. G., Liv, Nalan, Giepmans, Ben N. G. and Hoogenboom, Jacob P..  
+  FAST-EM array tomography: a workflow for multibeam volume electron microscopy  
+  [Methods in Microscopy (2024). DOI: 10.1515/mim-2024-0005](https://doi.org/10.1515/mim-2024-0005)
+
+* Yan Lu, Yi Jiang, Fangfang Wang, Hao Wu & Yunfeng Hua.  
+  Electron Microscopic Mapping of Mitochondrial Morphology in the Cochlear Nerve Fibers.  
+  [Journal of the Association for Research in Otolaryngology 25.4 (2024). DOI: 10.1007/s10162-024-00957-y](https://doi.org/10.1007/s10162-024-00957-y)
+
+* Vandana Sampathkumar, Kevin P. Koster, Briana J. Carroll, S. Murray Sherman, & Narayanan Kasthuri.   
+  Synaptic integration of somatosensory and motor cortical inputs onto spiny projection neurons of mice caudoputamen.  
+  [European Journal of Neuroscience 60.8 (2024). DOI: 10.1111/ejn.16538](https://doi.org/10.1111/ejn.16538)
+
+* Angeles Salles, Emely Loscalzo, Jessica Montoya, Rosa Mendoza, Kevin M. Boergens & Cynthia F. Moss.  
+  Auditory processing of communication calls in interacting bats.  
+  [Iscience 27.6 (2024). DOI: 10.1016/j.isci.2024.109872](https://doi.org/10.1016/j.isci.2024.109872)
+
+* Wen-Qing Huang, Haibin Sheng, Haoyu Wang, Yumeng Qi, Fangfang Wang, & Yunfeng Hua.  
+  Volume electron microscopy reveals age-related ultrastructural differences of globular bush cell axons in mouse central auditory system.  
+  [Neurobiology of Aging 136 (2024). DOI: 10.1016/j.neurobiolaging.2024.01.016](https://doi.org/10.1016/j.neurobiolaging.2024.01.016)
+
+* Yi Jiang, Haoyu Wang, Kevin Boergens, Norman Rzepka, Fangfang Wang, & Yunfeng Hua.  
+  Efficient cell-wide mapping of mitochondria in electron microscopic volumes using webKnossos.  
+  [bioRxiv (2024). DOI: 10.1101/2024.10.20.619271](https://doi.org/10.1101/2024.10.20.619271)
+
+* Yuh-Tarng Chen, Dominica de Thomas Wagner, Alastair J. Loutit, Ali Nourizonoz, Mary-Claude Croisier-Coeytaux, Jérôme Blanc, Graham Knott, Kuo-Sheng Lee, & Daniel Huber.  
+  Lamellar Schwann cells in the Pacinian corpuscle potentiate vibration perception.  
+  [bioRxiv (2024). DOI: 10.1101/2024.08.23.609459](https://doi.org/10.1101/2024.08.23.609459)
+
+* Rafael Luján, Marta Turegano-Lopez, Carolina Aguado, & Angel Merchan-Perez.  
+  Two- and three-dimensional electron microscopy techniques: powerful tools for studying the brain under physiological and pathological conditions.  
+  [Advanced Technology in Neuroscience 1.2 (2024). DOI: 10.4103/ATN.ATN-D-24-00009](https://doi.org/10.4103/atn.atn-d-24-00009)
+
+* Nare Karagulyan, Maja Überegger, Yumeng Qi, Norbert Babai, Florian Hofer, Lejo Johnson Chacko, Fangfang Wang, Maria Luque, Rudolf Glueckert, Anneliese Schrott-Fischer, Yunfeng Hua, Tobias Moser, & Christine Bandtlow.  
+  Probing the role of synaptic adhesion molecule RTN4RL2 in setting up cochlear connectivity.  
+  [bioRxiv (2024). DOI: 10.1101/2024.09.16.613011](https://doi.org/10.1101/2024.09.16.613011)
+
+* Kristina D Micheva, Anish K Simhal, Jenna Schardt, Stephen J Smith, Richard J Weinberg, & Scott F Owen.  
+  Data-driven synapse classification reveals a logic of glutamate receptor composition.  
+  [bioRxiv (2024). DOI: 10.1101/2024.12.11.628056](https://doi.org/10.1101/2024.12.11.628056)
+
+* Guangmei Liu, Shruthi Bandyadka, & Kimberly McCall.  
+  Protocol to analyze 3D neurodegenerative vacuoles in Drosophila melanogaster.  
+  [STAR protocols 5.2 (2024). DOI: 10.1016/j.xpro.2024.103017](https://doi.org/10.1016/j.xpro.2024.103017)
+
+* Jakob Reichmann, Jonas Franz, Marina Eckermann, Katja Schulz, Brit Mollenhauer, Christine Stadelmann, & Tim Salditt.  
+  3D imaging of neuronal inclusions and protein aggregates in human neurodegeneration by multiscale X-ray phase-contrast tomography.  
+  [medRxiv (2024). DOI: 10.1101/2024.03.26.24304193](https://doi.org/10.1101/2024.03.26.24304193)
+
+* Tay Won Shin, Hao Wang, Chi Zhang, Bobae An, Yangning Lu, Elizabeth Zhang, Xiaotang Lu, Emmanouil D. Karagiannis, Jeong Seuk Kang, Amauche Emenari, Panagiotis Symvoulidis, Shoh Asano, Leanne Lin, Emma K. Costa; IMAXT Grand Challenge Consortium, Adam H. Marblestone, Narayanan Kasthuri, Li-Huei Tsai, Edward S. Boyden.  
+  Dense, Continuous Membrane Labeling and Expansion Microscopy Visualization of Ultrastructure in Tissues.  
+  [bioRxiv (2024). DOI: 10.1101/2024.03.07.583776](https://doi.org/10.1101/2024.03.07.583776)
+
+* Carina C. Theobald, Ahmadali Lotfinia, Jan A. Knobloch, Yasser Medlej, David R. Stevens & Marcel A. Lauterbach.  
+  Distribution of spine classes shows intra-neuronal dendritic heterogeneity in mouse cortex.  
+  [Neurophotonics, Vol. 12, Issue 1, 015001. SPIE (2024). DOI: 1.NPh.12.1.015001](https://doi.org/10.1117/1.NPh.12.1.015001)
+
+* Norman Rzepka.  
+  Next-generation file formats (NGFF), RFC 2:  Specification for using Zarr v3 in OME-Zarr.  
+  [NGFF RFC 2 (2024)](https://ngff.openmicroscopy.org/rfc/2/index.html).
+
 ## 2023
 * Tri M. Nguyen, Logan A. Thomas, Jeff L. Rhoades, Ilaria Ricchi, Xintong Cindy Yuan, Arlo Sheridan, David G. C. Hildebrand, Jan Funke, Wade G. Regehr & Wei-Chung Allen Lee.  
   Structured cerebellar connectivity supports resilient pattern separation.  
@@ -17,7 +125,6 @@ The following publications used WEBKNOSSOS for exploring large 3D electron-micro
 * Tri Nguyen, Mukul Narwani, Mark Larson, Yicong Li, Shuhan Xie, Hanspeter Pfister, Donglai Wei, Nir Shavit, Lu Mi, Alexandra Pacureanu, Wei-Chung Lee & Aaron T. Kuan.  
   The XPRESS Challenge: Xray Projectomic Reconstruction -- Extracting Segmentation with Skeletons.  
   [arXiv (2023). DOI: 10.48550/arXiv.2302.03819](https://doi.org/10.48550/arXiv.2302.03819)
-
 
 ## 2022
 * Sahil Loomba, Jakob Straehle, Vijayan Gangadharan, Natalie Heike, Abdelrahman Khalifa, Alessandro Motta, Niansheng Ju, Meike Sievers, Jens Gempt, Hanno S. Meyer & Moritz Helmstaedter.  

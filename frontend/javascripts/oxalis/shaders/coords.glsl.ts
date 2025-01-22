@@ -1,26 +1,26 @@
-import { isFlightMode, getW } from "oxalis/shaders/utils.glsl";
+import { getW, isFlightMode } from "oxalis/shaders/utils.glsl";
 import type { ShaderModule } from "./shader_module_system";
-export const getResolution: ShaderModule = {
+export const getMagnification: ShaderModule = {
   code: `
-    vec3 getResolution(uint zoomStep, uint globalLayerIndex) {
-      return allResolutions[zoomStep + resolutionCountCumSum[globalLayerIndex]];
+    vec3 getMagnification(uint zoomStep, uint globalLayerIndex) {
+      return allMagnifications[zoomStep + magnificationCountCumSum[globalLayerIndex]];
     }
   `,
 };
-export const getResolutionFactors: ShaderModule = {
-  requirements: [getResolution],
+export const getMagnificationFactors: ShaderModule = {
+  requirements: [getMagnification],
   code: `
-    vec3 getResolutionFactors(uint zoomStepA, uint zoomStepB, uint globalLayerIndex) {
-      return getResolution(zoomStepA, globalLayerIndex) / getResolution(zoomStepB, globalLayerIndex);
+    vec3 getMagnificationFactors(uint zoomStepA, uint zoomStepB, uint globalLayerIndex) {
+      return getMagnification(zoomStepA, globalLayerIndex) / getMagnification(zoomStepB, globalLayerIndex);
     }
   `,
 };
 export const getAbsoluteCoords: ShaderModule = {
-  requirements: [getResolution],
+  requirements: [getMagnification],
   code: `
     vec3 getAbsoluteCoords(vec3 worldCoordUVW, uint usedZoomStep, uint globalLayerIndex) {
-      vec3 resolution = getResolution(usedZoomStep, globalLayerIndex);
-      vec3 coords = transDim(worldCoordUVW) / resolution;
+      vec3 magnification = getMagnification(usedZoomStep, globalLayerIndex);
+      vec3 coords = transDim(worldCoordUVW) / magnification;
       return coords;
     }
   `,

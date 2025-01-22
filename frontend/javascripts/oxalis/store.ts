@@ -1,60 +1,34 @@
-import { createStore, applyMiddleware, type Middleware } from "redux";
-import { enableBatching } from "redux-batched-actions";
-import createSagaMiddleware, { type Saga } from "redux-saga";
+import type DiffableMap from "libs/diffable_map";
+import type { Matrix4x4 } from "libs/mjs";
 import type {
-  APIAllowedMode,
-  APIAnnotationType,
-  APIAnnotationVisibility,
-  APIConnectomeFile,
-  APIDataLayer,
-  APIDataStore,
-  APIDataset,
-  APIDatasetId,
-  APIHistogramData,
-  APIRestrictions,
-  APIScript,
-  APISettings,
-  APITask,
-  APITracingStore,
-  APIUser,
-  APIUserBase,
-  AnnotationLayerDescriptor,
-  TracingType,
-  APIMeshFile,
-  ServerEditableMapping,
-  APIOrganization,
-  APIUserCompact,
-  AdditionalCoordinate,
-  AdditionalAxis,
-  MetadataEntryProto,
-} from "types/api_flow_types";
-import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
-import type { Action } from "oxalis/model/actions/actions";
-import type {
+  AnnotationTool,
   BoundingBoxType,
   ContourMode,
-  OverwriteMode,
-  FillMode,
   ControlMode,
-  TDViewDisplayMode,
-  ViewMode,
+  FillMode,
+  InterpolationMode,
+  MappingStatus,
   OrthoView,
+  OrthoViewWithoutTD,
+  OverwriteMode,
   Rect,
+  TDViewDisplayMode,
+  TreeType,
   Vector2,
   Vector3,
-  AnnotationTool,
-  MappingStatus,
-  OrthoViewWithoutTD,
-  InterpolationMode,
-  TreeType,
+  ViewMode,
 } from "oxalis/constants";
 import type { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
-import type { Matrix4x4 } from "libs/mjs";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
-import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
-import type DiffableMap from "libs/diffable_map";
+import defaultState from "oxalis/default_state";
+import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
+import type { Action } from "oxalis/model/actions/actions";
 import type EdgeCollection from "oxalis/model/edge_collection";
+import actionLoggerMiddleware from "oxalis/model/helpers/action_logger_middleware";
+import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
+import reduceReducers from "oxalis/model/helpers/reduce_reducers";
+import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
+import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
+import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import SaveReducer from "oxalis/model/reducers/save_reducer";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
@@ -64,11 +38,37 @@ import UiReducer from "oxalis/model/reducers/ui_reducer";
 import UserReducer from "oxalis/model/reducers/user_reducer";
 import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
-import actionLoggerMiddleware from "oxalis/model/helpers/action_logger_middleware";
-import defaultState from "oxalis/default_state";
-import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
-import reduceReducers from "oxalis/model/helpers/reduce_reducers";
-import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
+import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import { type Middleware, applyMiddleware, createStore } from "redux";
+import { enableBatching } from "redux-batched-actions";
+import createSagaMiddleware, { type Saga } from "redux-saga";
+import type {
+  APIAllowedMode,
+  APIAnnotationType,
+  APIAnnotationVisibility,
+  APIConnectomeFile,
+  APIDataLayer,
+  APIDataSourceId,
+  APIDataStore,
+  APIDataset,
+  APIHistogramData,
+  APIMeshFile,
+  APIOrganization,
+  APIRestrictions,
+  APIScript,
+  APISettings,
+  APITask,
+  APITracingStore,
+  APIUser,
+  APIUserBase,
+  APIUserCompact,
+  AdditionalAxis,
+  AdditionalCoordinate,
+  AnnotationLayerDescriptor,
+  MetadataEntryProto,
+  ServerEditableMapping,
+  TracingType,
+} from "types/api_flow_types";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import type { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
 
@@ -89,7 +89,7 @@ export type MutableNode = {
   rotation: Vector3;
   bitDepth: number;
   viewport: number;
-  resolution: number;
+  mag: number;
   radius: number;
   timestamp: number;
   interpolation: boolean;
@@ -197,6 +197,7 @@ export type Annotation = {
   readonly tags: Array<string>;
   readonly description: string;
   readonly name: string;
+  readonly organization: string;
   readonly tracingStore: APITracingStore;
   readonly annotationType: APIAnnotationType;
   readonly owner: APIUserBase | null | undefined;
@@ -264,6 +265,7 @@ export type VolumeTracing = TracingBase & {
   readonly hasEditableMapping?: boolean;
   readonly mappingIsLocked?: boolean;
   readonly hasSegmentIndex: boolean;
+  readonly volumeBucketDataHasChanged?: boolean;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
@@ -278,18 +280,23 @@ export type HybridTracing = Annotation & {
   readonly mappings: Array<EditableMapping>;
 };
 export type Tracing = HybridTracing;
+export type LegacyViewCommand = APIDataSourceId & {
+  readonly type: typeof ControlModeEnum.VIEW;
+};
 export type TraceOrViewCommand =
-  | (APIDatasetId & {
+  | {
+      readonly datasetId: string;
       readonly type: typeof ControlModeEnum.VIEW;
-    })
+    }
   | {
       readonly type: typeof ControlModeEnum.TRACE;
       readonly annotationId: string;
     }
-  | (APIDatasetId & {
+  | {
+      readonly datasetId: string;
       readonly type: typeof ControlModeEnum.SANDBOX;
       readonly tracingType: TracingType;
-    });
+    };
 export type DatasetLayerConfiguration = {
   readonly color: Vector3;
   readonly brightness?: number;
@@ -323,6 +330,7 @@ export type DatasetConfiguration = {
   readonly renderMissingDataBlack: boolean;
   readonly loadingStrategy: LoadingStrategy;
   readonly segmentationPatternOpacity: number;
+  readonly selectiveSegmentVisibility: boolean;
   readonly blendMode: BLEND_MODES;
   // If nativelyRenderedLayerName is not-null, the layer with
   // that name (or id) should be rendered without any transforms.
@@ -387,6 +395,7 @@ export type UserConfiguration = {
   // how volume annotations overwrite existing voxels.
   readonly overwriteMode: OverwriteMode;
   readonly fillMode: FillMode;
+  readonly isFloodfillRestrictedToBoundingBox: boolean;
   readonly interpolationMode: InterpolationMode;
   readonly useLegacyBindings: boolean;
   readonly quickSelect: QuickSelectConfig;

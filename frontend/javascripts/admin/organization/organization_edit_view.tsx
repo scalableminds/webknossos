@@ -1,22 +1,24 @@
-import { useState, useEffect } from "react";
-import { connect } from "react-redux";
-import { Form, Button, Card, Input, Row, Col, Skeleton, Typography, Space } from "antd";
 import {
-  MailOutlined,
-  TagOutlined,
   CopyOutlined,
-  SaveOutlined,
   IdcardOutlined,
+  MailOutlined,
+  SaveOutlined,
+  TagOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { confirmAsync } from "dashboard/dataset/helper_components";
 import {
   deleteOrganization,
-  updateOrganization,
-  getUsers,
   getPricingPlanStatus,
+  getUsers,
+  updateOrganization,
 } from "admin/admin_rest_api";
+import { Button, Card, Col, Form, Input, Row, Skeleton, Space, Typography } from "antd";
+import { confirmAsync } from "dashboard/dataset/helper_components";
 import Toast from "libs/toast";
+import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
+import type { OxalisState } from "oxalis/store";
+import { useEffect, useState } from "react";
+import { connect } from "react-redux";
 import type { APIOrganization, APIPricingPlanStatus } from "types/api_flow_types";
 import {
   PlanAboutToExceedAlert,
@@ -25,9 +27,7 @@ import {
   PlanExpirationCard,
   PlanUpgradeCard,
 } from "./organization_cards";
-import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
 import { getActiveUserCount } from "./pricing_plan_utils";
-import type { OxalisState } from "oxalis/store";
 
 const FormItem = Form.Item;
 

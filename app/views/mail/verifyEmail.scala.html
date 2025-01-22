@@ -1,6 +1,6 @@
-@( name: String, url: String, linkExpiry: String )
+@( name: String, url: String, linkExpiry: String, additionalFooter: String )
 
-@emailBaseTemplate() {
+@emailBaseTemplate(additionalFooter) {
   <p>Hi @name,</p>
 
   <p>

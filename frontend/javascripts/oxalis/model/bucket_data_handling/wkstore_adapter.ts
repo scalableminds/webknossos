@@ -1,34 +1,34 @@
-import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
-import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { doWithToken } from "admin/admin_rest_api";
+import ErrorHandling from "libs/error_handling";
+import Request from "libs/request";
+import { parseMaybe } from "libs/utils";
+import WebworkerPool from "libs/webworker_pool";
+import window from "libs/window";
+import _ from "lodash";
+import type { BucketAddress, Vector3 } from "oxalis/constants";
+import constants, { MappingStatusEnum } from "oxalis/constants";
 import {
-  isSegmentationLayer,
   getByteCountFromLayer,
   getMagInfo,
   getMappingInfo,
+  isSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getVolumeTracingById,
   needsLocalHdf5Mapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { parseMaybe } from "libs/utils";
+import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
-import ByteArraysToLz4Base64Worker from "oxalis/workers/byte_arrays_to_lz4_base64.worker";
-import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
-import ErrorHandling from "libs/error_handling";
-import Request from "libs/request";
 import type { DataLayerType, VolumeTracing } from "oxalis/store";
 import Store from "oxalis/store";
-import WebworkerPool from "libs/webworker_pool";
-import type { BucketAddress, Vector3 } from "oxalis/constants";
-import constants, { MappingStatusEnum } from "oxalis/constants";
-import window from "libs/window";
+import ByteArraysToLz4Base64Worker from "oxalis/workers/byte_arrays_to_lz4_base64.worker";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
+import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
 import type { MagInfo } from "../helpers/mag_info";
-import type { AdditionalCoordinate } from "types/api_flow_types";
-import _ from "lodash";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
 
@@ -60,12 +60,12 @@ type RequestBucketInfo = SendBucketInfo & {
 // object as expected by the server on bucket request
 const createRequestBucketInfo = (
   zoomedAddress: BucketAddress,
-  resolutionInfo: MagInfo,
+  magInfo: MagInfo,
   fourBit: boolean,
   applyAgglomerate: string | null | undefined,
   version: number | null | undefined,
 ): RequestBucketInfo => ({
-  ...createSendBucketInfo(zoomedAddress, resolutionInfo),
+  ...createSendBucketInfo(zoomedAddress, magInfo),
   fourBit,
   ...(applyAgglomerate != null
     ? {
@@ -79,14 +79,11 @@ const createRequestBucketInfo = (
     : {}),
 });
 
-function createSendBucketInfo(
-  zoomedAddress: BucketAddress,
-  resolutionInfo: MagInfo,
-): SendBucketInfo {
+function createSendBucketInfo(zoomedAddress: BucketAddress, magInfo: MagInfo): SendBucketInfo {
   return {
-    position: bucketPositionToGlobalAddress(zoomedAddress, resolutionInfo),
+    position: bucketPositionToGlobalAddress(zoomedAddress, magInfo),
     additionalCoordinates: zoomedAddress[4],
-    mag: resolutionInfo.getMagByIndexOrThrow(zoomedAddress[3]),
+    mag: magInfo.getMagByIndexOrThrow(zoomedAddress[3]),
     cubeSize: constants.BUCKET_WIDTH,
   };
 }
@@ -100,13 +97,13 @@ export async function requestWithFallback(
   batch: Array<BucketAddress>,
 ): Promise<Array<Uint8Array | null | undefined>> {
   const state = Store.getState();
-  const datasetName = state.dataset.name;
+  const datasetDirectoryName = state.dataset.directoryName;
   const organization = state.dataset.owningOrganization;
   const dataStoreHost = state.dataset.dataStore.url;
   const tracingStoreHost = state.tracing.tracingStore.url;
 
   const getDataStoreUrl = (optLayerName?: string) =>
-    `${dataStoreHost}/data/datasets/${organization}/${datasetName}/layers/${
+    `${dataStoreHost}/data/datasets/${organization}/${datasetDirectoryName}/layers/${
       optLayerName || layerInfo.name
     }`;
 
@@ -198,7 +195,7 @@ export async function requestFromStore(
       : null;
   })();
 
-  const resolutionInfo = getMagInfo(layerInfo.resolutions);
+  const magInfo = getMagInfo(layerInfo.resolutions);
   const version =
     !isVolumeFallback && isSegmentation && maybeVolumeTracing != null
       ? maybeVolumeTracing.version
@@ -206,7 +203,7 @@ export async function requestFromStore(
   const bucketInfo = batch.map((zoomedAddress) =>
     createRequestBucketInfo(
       zoomedAddress,
-      resolutionInfo,
+      magInfo,
       fourBit,
       agglomerateMappingNameToApplyOnServer,
       version,

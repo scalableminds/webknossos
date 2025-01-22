@@ -1,108 +1,103 @@
-import ResumableJS from "resumablejs";
-import _ from "lodash";
 import dayjs from "dayjs";
+import { V3 } from "libs/mjs";
+import type { RequestOptions } from "libs/request";
+import Request from "libs/request";
+import type { Message } from "libs/toast";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import window, { location } from "libs/window";
+import _ from "lodash";
+import messages from "messages";
+import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector2, Vector3 } from "oxalis/constants";
+import Constants, { ControlModeEnum, AnnotationStateFilterEnum } from "oxalis/constants";
+import type { SaveQueueType } from "oxalis/model/actions/save_actions";
+import type BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import {
+  parseProtoListOfLong,
+  parseProtoTracing,
+  serializeProtoListOfLong,
+} from "oxalis/model/helpers/proto_helpers";
 import type {
-  APIActiveUser,
+  DatasetConfiguration,
+  Mapping,
+  MappingType,
+  NumberLike,
+  PartialDatasetConfiguration,
+  TraceOrViewCommand,
+  Tracing,
+  UserConfiguration,
+  VolumeTracing,
+} from "oxalis/store";
+import type { Versions } from "oxalis/view/version_view";
+import ResumableJS from "resumablejs";
+import type {
   APIAnnotation,
   APIAnnotationInfo,
   APIAnnotationType,
   APIAnnotationVisibility,
-  APIAnnotationWithTask,
+  APIAvailableTasksReport,
   APIBuildInfo,
+  APICompoundType,
   APIConnectomeFile,
   APIDataSource,
+  APIDataSourceId,
   APIDataStore,
   APIDataset,
-  APIDatasetId,
+  APIDatasetCompact,
   APIFeatureToggles,
   APIHistogramData,
+  APIMagRestrictions,
   APIMapping,
   APIMaybeUnimportedDataset,
   APIMeshFile,
-  APIAvailableTasksReport,
   APIOrganization,
   APIOrganizationCompact,
+  APIPricingPlanStatus,
   APIProject,
   APIProjectCreator,
   APIProjectProgressReport,
   APIProjectUpdater,
   APIProjectWithStatus,
   APIPublication,
-  APIMagRestrictions,
   APIScript,
   APIScriptCreator,
   APIScriptUpdater,
-  APITask,
   APITaskType,
   APITeam,
   APITimeInterval,
   APITimeTrackingPerAnnotation,
+  APITimeTrackingPerUser,
   APITimeTrackingSpan,
   APITracingStore,
   APIUpdateActionBatch,
   APIUser,
+  APIUserCompact,
   APIUserLoggedTime,
   APIUserTheme,
+  AdditionalCoordinate,
   AnnotationLayerDescriptor,
   AnnotationViewConfiguration,
   EditableLayerProperties,
   ExperienceDomainList,
-  ServerTracing,
-  TracingType,
-  ServerEditableMapping,
-  APICompoundType,
-  ZarrPrivateLink,
-  VoxelyticsWorkflowReport,
-  VoxelyticsChunkStatistics,
-  ShortLink,
-  VoxelyticsWorkflowListing,
-  APIPricingPlanStatus,
-  VoxelyticsLogLine,
-  APIUserCompact,
-  APIDatasetCompact,
-  MaintenanceInfo,
-  AdditionalCoordinate,
   LayerLink,
+  MaintenanceInfo,
+  ServerEditableMapping,
+  ServerTracing,
+  ShortLink,
+  TracingType,
   VoxelSize,
-  APITimeTrackingPerUser,
+  VoxelyticsChunkStatistics,
+  VoxelyticsLogLine,
+  VoxelyticsWorkflowListing,
+  VoxelyticsWorkflowReport,
+  ZarrPrivateLink,
 } from "types/api_flow_types";
-import { APIAnnotationTypeEnum } from "types/api_flow_types";
-import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector2, Vector3 } from "oxalis/constants";
-import Constants, { ControlModeEnum, AnnotationStateFilterEnum } from "oxalis/constants";
-import type {
-  DatasetConfiguration,
-  PartialDatasetConfiguration,
-  Tracing,
-  TraceOrViewCommand,
-  MappingType,
-  VolumeTracing,
-  UserConfiguration,
-  Mapping,
-  NumberLike,
-} from "oxalis/store";
-import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
-import type { QueryObject } from "admin/task/task_search_form";
-import { V3 } from "libs/mjs";
-import type { Versions } from "oxalis/view/version_view";
-import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-import {
-  parseProtoListOfLong,
-  parseProtoTracing,
-  serializeProtoListOfLong,
-} from "oxalis/model/helpers/proto_helpers";
-import type { RequestOptions } from "libs/request";
-import Request from "libs/request";
-import type { Message } from "libs/toast";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import messages from "messages";
-import window, { location } from "libs/window";
-import type { SaveQueueType } from "oxalis/model/actions/save_actions";
-import type { DatasourceConfiguration } from "types/schemas/datasource.types";
-import { doWithToken } from "./api/token";
-import type BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { ArbitraryObject } from "types/globals";
+import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
+import type { DatasourceConfiguration } from "types/schemas/datasource.types";
 import { assertResponseLimit } from "./api/api_utils";
+import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
+import { doWithToken } from "./api/token";
 
 export * from "./api/token";
 export * from "./api/jobs";
@@ -408,112 +403,6 @@ export async function resumeProject(projectId: string): Promise<APIProject> {
   });
   return transformProject(project);
 }
-// ### Tasks
-export function peekNextTasks(): Promise<APITask | null | undefined> {
-  return Request.receiveJSON("/api/user/tasks/peek");
-}
-export async function requestTask(): Promise<APIAnnotationWithTask> {
-  const taskWithMessages = await Request.receiveJSON("/api/user/tasks/request", {
-    method: "POST",
-  });
-  // Extract the potential messages property before returning the task to avoid
-  // failing e2e tests in annotations.e2e.ts
-  const { messages: _messages, ...task } = taskWithMessages;
-  return task;
-}
-export function getAnnotationsForTask(taskId: string): Promise<Array<APIAnnotation>> {
-  return Request.receiveJSON(`/api/tasks/${taskId}/annotations`);
-}
-export function deleteTask(taskId: string): Promise<void> {
-  return Request.receiveJSON(`/api/tasks/${taskId}`, {
-    method: "DELETE",
-  });
-}
-
-function transformTask(task: APITask): APITask {
-  const tracingTime = task.tracingTime == null ? 0 : task.tracingTime;
-  // convert bounding box
-  let boundingBoxVec6;
-
-  if (task.boundingBox != null) {
-    const { topLeft, width, height, depth } = task.boundingBox;
-    boundingBoxVec6 = Utils.numberArrayToVector6(topLeft.concat([width, height, depth]));
-  }
-
-  return { ...task, tracingTime, boundingBoxVec6 };
-}
-
-export async function getTasks(queryObject: QueryObject): Promise<APITask[]> {
-  const responses = await Request.sendJSONReceiveJSON("/api/tasks/list", {
-    data: queryObject,
-  });
-  const tasks = responses.map((response: APITask) => transformTask(response));
-  assertResponseLimit(tasks);
-  return tasks;
-}
-
-export function createTasks(tasks: NewTask[]): Promise<TaskCreationResponseContainer> {
-  return Request.sendJSONReceiveJSON("/api/tasks", {
-    data: tasks,
-  });
-}
-
-export function createTaskFromNML(task: NewTask): Promise<TaskCreationResponseContainer> {
-  return Request.sendMultipartFormReceiveJSON("/api/tasks/createFromFiles", {
-    data: {
-      nmlFiles: task.nmlFiles,
-      formJSON: JSON.stringify(task),
-    },
-  });
-}
-
-export async function getTask(taskId: string, options: RequestOptions = {}): Promise<APITask> {
-  const task = await Request.receiveJSON(`/api/tasks/${taskId}`, options);
-  return transformTask(task);
-}
-
-export async function updateTask(taskId: string, task: NewTask): Promise<APITask> {
-  const updatedTask = await Request.sendJSONReceiveJSON(`/api/tasks/${taskId}`, {
-    method: "PUT",
-    data: task,
-  });
-  return transformTask(updatedTask);
-}
-
-export function finishTask(annotationId: string): Promise<APIAnnotation> {
-  return finishAnnotation(annotationId, APIAnnotationTypeEnum.Task);
-}
-
-export function transferTask(annotationId: string, userId: string): Promise<APIAnnotation> {
-  return Request.sendJSONReceiveJSON(`/api/annotations/Task/${annotationId}/transfer`, {
-    method: "PATCH",
-    data: {
-      userId,
-    },
-  });
-}
-
-export async function transferActiveTasksOfProject(
-  projectId: string,
-  userId: string,
-): Promise<APIAnnotation> {
-  return Request.sendJSONReceiveJSON(`/api/projects/${projectId}/transferActiveTasks`, {
-    data: {
-      userId,
-    },
-    method: "POST",
-  });
-}
-
-export async function getUsersWithActiveTasks(projectId: string): Promise<Array<APIActiveUser>> {
-  return Request.receiveJSON(`/api/projects/${projectId}/usersWithActiveTasks`);
-}
-
-export async function assignTaskToUser(taskId: string, userId: string): Promise<APITask> {
-  return Request.receiveJSON(`/api/tasks/${taskId}/assign?userId=${userId}`, {
-    method: "POST",
-  });
-}
 
 // ### Private Links
 
@@ -778,18 +667,18 @@ export async function getAnnotationCompoundInformation(
 }
 
 export function getEmptySandboxAnnotationInformation(
-  datasetId: APIDatasetId,
+  datasetId: string,
   tracingType: TracingType,
   sharingToken?: string | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
-  const infoUrl = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/sandbox/${tracingType}${sharingTokenSuffix}`;
+  const infoUrl = `/api/datasets/${datasetId}/sandbox/${tracingType}${sharingTokenSuffix}`;
   return Request.receiveJSON(infoUrl, options);
 }
 
 export function createExplorational(
-  datasetId: APIDatasetId,
+  datasetId: string,
   typ: TracingType,
   autoFallbackLayer: boolean,
   fallbackLayerName?: string | null | undefined,
@@ -797,7 +686,7 @@ export function createExplorational(
   magRestrictions?: APIMagRestrictions | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
-  const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
+  const url = `/api/datasets/${datasetId}/createExplorational`;
   let layers: Array<AnnotationLayerCreateDescriptor> = [];
 
   if (typ === "skeleton") {
@@ -960,13 +849,13 @@ export function getNewestVersionForTracing(
 
 export function hasSegmentIndexInDataStore(
   dataStoreUrl: string,
-  dataSetName: string,
+  datasetDirectoryName: string,
   dataLayerName: string,
   organizationId: string,
 ) {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${dataStoreUrl}/data/datasets/${organizationId}/${dataSetName}/layers/${dataLayerName}/hasSegmentIndex?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${organizationId}/${datasetDirectoryName}/layers/${dataLayerName}/hasSegmentIndex?token=${token}`,
     ),
   );
 }
@@ -1124,21 +1013,22 @@ export async function getDatasets(
 export function readDatasetDatasource(dataset: APIDataset): Promise<APIDataSource> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/readInboxDataSource?token=${token}`,
+      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.directoryName}/readInboxDataSource?token=${token}`,
     ),
   );
 }
 
 export async function updateDatasetDatasource(
-  datasetName: string,
+  datasetDirectoryName: string,
   dataStoreUrl: string,
   datasource: APIDataSource,
 ): Promise<void> {
   await doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasource.id.team}/${datasetName}?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${datasource.id.team}/${datasetDirectoryName}?token=${token}`,
       {
         data: datasource,
+        method: "PUT",
       },
     ),
   );
@@ -1151,15 +1041,27 @@ export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIData
 }
 
 export function getDataset(
-  datasetId: APIDatasetId,
+  datasetId: string,
   sharingToken?: string | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIDataset> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
-  return Request.receiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}${sharingTokenSuffix}`,
+  return Request.receiveJSON(`/api/datasets/${datasetId}${sharingTokenSuffix}`, options);
+}
+
+export async function getDatasetLegacy(
+  datasetOrga: string,
+  datasetName: string,
+  sharingToken?: string | null | undefined,
+  options: RequestOptions = {},
+): Promise<APIDataset> {
+  const datasetId = await getDatasetIdFromNameAndOrganization(
+    datasetName,
+    datasetOrga,
+    sharingToken,
     options,
   );
+  return getDataset(datasetId, sharingToken, options);
 }
 
 export type DatasetUpdater = {
@@ -1173,16 +1075,13 @@ export type DatasetUpdater = {
 };
 
 export function updateDatasetPartial(
-  datasetId: APIDatasetId,
+  datasetId: string,
   updater: DatasetUpdater,
 ): Promise<APIDataset> {
-  return Request.sendJSONReceiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/updatePartial`,
-    {
-      method: "PATCH",
-      data: updater,
-    },
-  );
+  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/updatePartial`, {
+    method: "PATCH",
+    data: updater,
+  });
 }
 
 export async function getDatasetViewConfiguration(
@@ -1192,7 +1091,7 @@ export async function getDatasetViewConfiguration(
 ): Promise<DatasetConfiguration> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
   const settings = await Request.sendJSONReceiveJSON(
-    `/api/datasetConfigurations/${dataset.owningOrganization}/${dataset.name}${sharingTokenSuffix}`,
+    `/api/datasetConfigurations/${dataset.id}${sharingTokenSuffix}`,
     {
       data: displayedVolumeTracings,
       method: "POST",
@@ -1203,41 +1102,33 @@ export async function getDatasetViewConfiguration(
 }
 
 export function updateDatasetConfiguration(
-  datasetId: APIDatasetId,
+  datasetId: string,
   datasetConfig: PartialDatasetConfiguration,
   options: RequestOptions = {},
 ): Promise<Record<string, any>> {
-  return Request.sendJSONReceiveJSON(
-    `/api/datasetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
-    { ...options, method: "PUT", data: datasetConfig },
-  );
+  return Request.sendJSONReceiveJSON(`/api/datasetConfigurations/${datasetId}`, {
+    ...options,
+    method: "PUT",
+    data: datasetConfig,
+  });
 }
 
-export function getDatasetDefaultConfiguration(
-  datasetId: APIDatasetId,
-): Promise<DatasetConfiguration> {
-  return Request.receiveJSON(
-    `/api/datasetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
-  );
+export function getDatasetDefaultConfiguration(datasetId: string): Promise<DatasetConfiguration> {
+  return Request.receiveJSON(`/api/datasetConfigurations/default/${datasetId}`);
 }
 
 export function updateDatasetDefaultConfiguration(
-  datasetId: APIDatasetId,
+  datasetId: string,
   datasetConfiguration: DatasetConfiguration,
 ): Promise<ArbitraryObject> {
-  return Request.sendJSONReceiveJSON(
-    `/api/datasetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
-    {
-      method: "PUT",
-      data: datasetConfiguration,
-    },
-  );
+  return Request.sendJSONReceiveJSON(`/api/datasetConfigurations/default/${datasetId}`, {
+    method: "PUT",
+    data: datasetConfiguration,
+  });
 }
 
-export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<APIUser>> {
-  return Request.receiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/accessList`,
-  );
+export function getDatasetAccessList(dataset: APIDataset): Promise<Array<APIUser>> {
+  return Request.receiveJSON(`/api/datasets/${dataset.id}/accessList`);
 }
 
 type DatasetCompositionArgs = {
@@ -1248,10 +1139,23 @@ type DatasetCompositionArgs = {
   layers: LayerLink[];
 };
 
-export function createDatasetComposition(datastoreUrl: string, payload: DatasetCompositionArgs) {
+export function createDatasetComposition(
+  datastoreUrl: string,
+  payload: DatasetCompositionArgs,
+): Promise<NewDatasetReply> {
+  // Formatting the dataSourceId to the old format so that the backend can parse it.
+  // And removing the datasetId as the datastore cannot use it.
+  const updatedLayers = payload.layers.map(({ dataSourceId, datasetId, ...rest }) => ({
+    ...rest,
+    dataSourceId: { name: dataSourceId.directoryName, team: dataSourceId.owningOrganization },
+  }));
+  const payloadWithUpdatedLayers = {
+    ...payload,
+    layers: updatedLayers,
+  };
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${datastoreUrl}/data/datasets/compose?token=${token}`, {
-      data: payload,
+      data: payloadWithUpdatedLayers,
     }),
   );
 }
@@ -1288,8 +1192,10 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
 }
 type ReserveUploadInformation = {
   uploadId: string;
-  organization: string;
   name: string;
+  directoryName: string;
+  newDatasetId: string;
+  organization: string;
   totalFileCount: number;
   filePaths: Array<string>;
   initialTeams: Array<string>;
@@ -1310,14 +1216,12 @@ export function reserveDatasetUpload(
 
 export type UnfinishedUpload = {
   uploadId: string;
-  datasetId: { name: string; organizationName: string };
+  datasetName: string;
   folderId: string;
   created: number;
   filePaths: Array<string> | null | undefined;
   allowedTeams: Array<string>;
 };
-
-type OldDatasetIdFormat = { name: string; team: string };
 
 export function getUnfinishedUploads(
   datastoreHost: string,
@@ -1329,19 +1233,19 @@ export function getUnfinishedUploads(
       {
         host: datastoreHost,
       },
-    )) as Array<UnfinishedUpload & { dataSourceId: OldDatasetIdFormat }>;
-    // Rename "team" to "organization" as this is the actual used current naming.
-    return unfinishedUploads.map(({ dataSourceId: { name, team }, ...rest }) => ({
-      ...rest,
-      datasetId: { name, organizationName: team },
-    }));
+    )) as Array<UnfinishedUpload>;
+    return unfinishedUploads;
   });
 }
+
+type NewDatasetReply = {
+  newDatasetId: string;
+};
 
 export function finishDatasetUpload(
   datastoreHost: string,
   uploadInformation: ArbitraryObject,
-): Promise<void> {
+): Promise<NewDatasetReply> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`/data/datasets/finishUpload?token=${token}`, {
       data: uploadInformation,
@@ -1406,7 +1310,7 @@ export async function storeRemoteDataset(
   organizationId: string,
   datasource: string,
   folderId: string | null,
-): Promise<void> {
+): Promise<NewDatasetReply> {
   return doWithToken((token) => {
     const params = new URLSearchParams();
     params.append("token", token);
@@ -1417,7 +1321,7 @@ export async function storeRemoteDataset(
     return Request.sendJSONReceiveJSON(
       `${datastoreUrl}/data/datasets/${organizationId}/${datasetName}?${params}`,
       {
-        method: "PUT",
+        method: "POST",
         data: datasource,
       },
     );
@@ -1425,16 +1329,12 @@ export async function storeRemoteDataset(
 }
 
 // Returns void if the name is valid. Otherwise, a string is returned which denotes the reason.
-export async function isDatasetNameValid(
-  datasetId: APIDatasetId,
-): Promise<string | null | undefined> {
-  if (datasetId.name === "") {
+export async function isDatasetNameValid(datasetName: string): Promise<string | null | undefined> {
+  if (datasetName === "") {
     return "The dataset name must not be empty.";
   }
 
-  const response = await Request.receiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/isValidNewName`,
-  );
+  const response = await Request.receiveJSON(`/api/datasets/${datasetName}/isValidNewName`);
   if (response.isValid) {
     return null;
   } else {
@@ -1443,16 +1343,13 @@ export async function isDatasetNameValid(
 }
 
 export function updateDatasetTeams(
-  datasetId: APIDatasetId,
+  datasetId: string,
   newTeams: Array<string>,
 ): Promise<APIDataset> {
-  return Request.sendJSONReceiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/teams`,
-    {
-      method: "PATCH",
-      data: newTeams,
-    },
-  );
+  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/teams`, {
+    method: "PATCH",
+    data: newTeams,
+  });
 }
 
 export async function triggerDatasetCheck(datastoreHost: string): Promise<void> {
@@ -1466,12 +1363,12 @@ export async function triggerDatasetCheck(datastoreHost: string): Promise<void> 
 
 export async function triggerDatasetClearCache(
   datastoreHost: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName?: string,
 ): Promise<void> {
   await doWithToken((token) =>
     Request.triggerRequest(
-      `/data/triggers/reload/${datasetId.owningOrganization}/${datasetId.name}?token=${token}${
+      `/data/triggers/reload/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}?token=${token}${
         layerName ? `&layerName=${layerName}` : ""
       }`,
       {
@@ -1484,11 +1381,11 @@ export async function triggerDatasetClearCache(
 
 export async function deleteDatasetOnDisk(
   datastoreHost: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
 ): Promise<void> {
   await doWithToken((token) =>
     Request.triggerRequest(
-      `/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/deleteOnDisk?token=${token}`,
+      `/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/deleteOnDisk?token=${token}`,
       {
         host: datastoreHost,
         method: "DELETE",
@@ -1497,65 +1394,52 @@ export async function deleteDatasetOnDisk(
   );
 }
 
-export async function triggerDatasetClearThumbnailCache(datasetId: APIDatasetId): Promise<void> {
-  await Request.triggerRequest(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/clearThumbnailCache`,
-    {
-      method: "PUT",
-    },
-  );
+export async function triggerDatasetClearThumbnailCache(datasetId: string): Promise<void> {
+  await Request.triggerRequest(`/api/datasets/${datasetId}/clearThumbnailCache`, {
+    method: "PUT",
+  });
 }
 
 export async function clearCache(dataset: APIMaybeUnimportedDataset, layerName?: string) {
   return Promise.all([
     triggerDatasetClearCache(dataset.dataStore.url, dataset, layerName),
-    triggerDatasetClearThumbnailCache(dataset),
+    triggerDatasetClearThumbnailCache(dataset.id),
   ]);
 }
 
 export async function getDatasetSharingToken(
-  datasetId: APIDatasetId,
+  datasetId: string,
   options?: RequestOptions,
 ): Promise<string> {
   const { sharingToken } = await Request.receiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/sharingToken`,
+    `/api/datasets/${datasetId}/sharingToken`,
     options,
   );
   return sharingToken;
 }
 
-export async function revokeDatasetSharingToken(datasetId: APIDatasetId): Promise<void> {
-  await Request.triggerRequest(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/sharingToken`,
-    {
-      method: "DELETE",
-    },
-  );
-}
-
-export async function getOrganizationForDataset(datasetName: string): Promise<string> {
-  const { organizationId } = await Request.receiveJSON(
-    `/api/datasets/disambiguate/${datasetName}/toNew`,
-  );
-  return organizationId;
+export async function revokeDatasetSharingToken(datasetId: string): Promise<void> {
+  await Request.triggerRequest(`/api/datasets/${datasetId}/sharingToken`, {
+    method: "DELETE",
+  });
 }
 
 export async function findDataPositionForLayer(
   datastoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
 ): Promise<{
   position: Vector3 | null | undefined;
-  resolution: Vector3 | null | undefined;
+  mag: Vector3 | null | undefined;
 }> {
-  const { position, resolution } = await doWithToken((token) =>
+  const { position, mag } = await doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/findData?token=${token}`,
+      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/findData?token=${token}`,
     ),
   );
   return {
     position,
-    resolution,
+    mag,
   };
 }
 
@@ -1564,25 +1448,25 @@ export async function findDataPositionForVolumeTracing(
   tracingId: string,
 ): Promise<{
   position: Vector3 | null | undefined;
-  resolution: Vector3 | null | undefined;
+  mag: Vector3 | null | undefined;
 }> {
-  const { position, resolution } = await doWithToken((token) =>
+  const { position, mag } = await doWithToken((token) =>
     Request.receiveJSON(`${tracingstoreUrl}/tracings/volume/${tracingId}/findData?token=${token}`),
   );
   return {
     position,
-    resolution,
+    mag,
   };
 }
 
 export async function getHistogramForLayer(
   datastoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
 ): Promise<APIHistogramData> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/histogram?token=${token}`,
+      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/histogram?token=${token}`,
       { showErrorToast: false },
     ),
   );
@@ -1590,25 +1474,25 @@ export async function getHistogramForLayer(
 
 export async function getMappingsForDatasetLayer(
   datastoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
 ): Promise<Array<string>> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/mappings?token=${token}`,
+      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/mappings?token=${token}`,
     ),
   );
 }
 
 export function fetchMapping(
   datastoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   mappingName: string,
 ): Promise<APIMapping> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/mappings/${mappingName}?token=${token}`,
+      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/mappings/${mappingName}?token=${token}`,
     ),
   );
 }
@@ -1638,7 +1522,7 @@ export function getEditableMappingInfo(
 
 export function getPositionForSegmentInAgglomerate(
   datastoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   mappingName: string,
   segmentId: number,
@@ -1649,8 +1533,8 @@ export function getPositionForSegmentInAgglomerate(
       segmentId: `${segmentId}`,
     });
     const position = await Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
-        datasetId.name
+      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${
+        dataSourceId.directoryName
       }/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${urlParams.toString()}`,
     );
     return position;
@@ -1659,12 +1543,12 @@ export function getPositionForSegmentInAgglomerate(
 
 export async function getAgglomeratesForDatasetLayer(
   datastoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
 ): Promise<Array<string>> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates?token=${token}`,
+      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates?token=${token}`,
     ),
   );
 }
@@ -1905,7 +1789,7 @@ export async function isDatasetAccessibleBySwitching(
     );
   } else {
     return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?organizationId=${commandType.owningOrganization}&datasetName=${commandType.name}`,
+      `/api/auth/accessibleBySwitching?datasetId=${commandType.datasetId}`,
       {
         showErrorToast: false,
       },
@@ -2086,14 +1970,14 @@ export function getBucketPositionsForAdHocMesh(
 
 export function getAgglomerateSkeleton(
   dataStoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   mappingId: string,
   agglomerateId: number,
 ): Promise<ArrayBuffer> {
   return doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`, // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`, // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
@@ -2106,7 +1990,7 @@ export function getAgglomerateSkeleton(
 
 export async function getAgglomeratesForSegmentsFromDatastore<T extends number | bigint>(
   dataStoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   mappingId: string,
   segmentIds: Array<T>,
@@ -2114,7 +1998,7 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?token=${token}`,
       {
         method: "POST",
         body: segmentIdBuffer,
@@ -2185,12 +2069,12 @@ export function getEditableAgglomerateSkeleton(
 
 export async function getMeshfilesForDatasetLayer(
   dataStoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
 ): Promise<Array<APIMeshFile>> {
   const meshFiles: Array<APIMeshFile> = await doWithToken((token) =>
     Request.receiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/meshes?token=${token}`,
     ),
   );
 
@@ -2206,19 +2090,19 @@ export async function getMeshfilesForDatasetLayer(
 // ### Connectomes
 export function getConnectomeFilesForDatasetLayer(
   dataStoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
 ): Promise<Array<APIConnectomeFile>> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/connectomes?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/connectomes?token=${token}`,
     ),
   );
 }
 
 export function getSynapsesOfAgglomerates(
   dataStoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   connectomeFile: string,
   agglomerateIds: Array<number>,
@@ -2230,7 +2114,7 @@ export function getSynapsesOfAgglomerates(
 > {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/connectomes/synapses?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/connectomes/synapses?token=${token}`,
       {
         data: {
           connectomeFile,
@@ -2243,7 +2127,7 @@ export function getSynapsesOfAgglomerates(
 
 function getSynapseSourcesOrDestinations(
   dataStoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   connectomeFile: string,
   synapseIds: Array<number>,
@@ -2251,7 +2135,7 @@ function getSynapseSourcesOrDestinations(
 ): Promise<Array<number>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/connectomes/synapses/${srcOrDst}?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/connectomes/synapses/${srcOrDst}?token=${token}`,
       {
         data: {
           connectomeFile,
@@ -2274,14 +2158,14 @@ export function getSynapseDestinations(...args: any): Promise<Array<number>> {
 
 export function getSynapsePositions(
   dataStoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   connectomeFile: string,
   synapseIds: Array<number>,
 ): Promise<Array<Vector3>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/connectomes/synapses/positions?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/connectomes/synapses/positions?token=${token}`,
       {
         data: {
           connectomeFile,
@@ -2294,7 +2178,7 @@ export function getSynapsePositions(
 
 export function getSynapseTypes(
   dataStoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   connectomeFile: string,
   synapseIds: Array<number>,
@@ -2304,7 +2188,7 @@ export function getSynapseTypes(
 }> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/connectomes/synapses/types?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/connectomes/synapses/types?token=${token}`,
       {
         data: {
           connectomeFile,
@@ -2410,7 +2294,7 @@ export async function getSamMask(
   const { type: interactionType, ...promptWithoutType } = prompt;
 
   const buffer = await Request.sendJSONReceiveArraybuffer(
-    `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingMask?${params}`,
+    `/api/datasets/${dataset.id}/layers/${layerName}/segmentAnythingMask?${params}`,
     {
       data: {
         mag,

@@ -48,6 +48,7 @@ message VolumeTracing {
   repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
   repeated AdditionalAxisProto additionalAxes = 22; // Additional axes for which this tracing is defined
   optional bool mappingIsLocked = 23; // user may not select another mapping (e.g. because they have already mutated buckets)
+  optional bool volumeBucketDataHasChanged = 24; // The volume bucket data has been edited at least once
 }
 
 message SegmentGroup {

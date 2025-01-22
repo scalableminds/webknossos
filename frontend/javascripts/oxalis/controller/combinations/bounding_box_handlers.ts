@@ -1,22 +1,22 @@
+import { V3 } from "libs/mjs";
+import { document } from "libs/window";
+import _ from "lodash";
+import type { BoundingBoxType, OrthoView, Point2, Vector2, Vector3 } from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   calculateGlobalDelta,
   calculateGlobalPos,
   calculateMaybeGlobalPos,
 } from "oxalis/model/accessors/view_mode_accessor";
-import _ from "lodash";
-import type { OrthoView, Point2, Vector3, BoundingBoxType, Vector2 } from "oxalis/constants";
-import Store, { type OxalisState, type UserBoundingBox } from "oxalis/store";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import type { DimensionMap, DimensionIndices } from "oxalis/model/dimensions";
-import Dimension from "oxalis/model/dimensions";
 import {
   addUserBoundingBoxAction,
   changeUserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
+import type { DimensionIndices, DimensionMap } from "oxalis/model/dimensions";
+import Dimension from "oxalis/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import { document } from "libs/window";
-import { V3 } from "libs/mjs";
+import Store, { type OxalisState, type UserBoundingBox } from "oxalis/store";
 
 const BOUNDING_BOX_HOVERING_THROTTLE_TIME = 100;
 const getNeighbourEdgeIndexByEdgeIndex: { [key: number]: Vector2 } = {
@@ -242,7 +242,9 @@ export function createBoundingBoxAndGetEdges(
     addUserBoundingBoxAction({
       boundingBox: {
         min: globalPosition,
-        max: V3.add(globalPosition, [1, 1, 1]),
+        // The last argument ensures that a Vector3 is used and not a
+        // Float32Array.
+        max: V3.add(globalPosition, [1, 1, 1], [0, 0, 0]),
       },
     }),
   );
@@ -265,7 +267,7 @@ export function createBoundingBoxAndGetEdges(
 }
 
 export const highlightAndSetCursorOnHoveredBoundingBox = _.throttle(
-  (position: Point2, planeId: OrthoView, event: MouseEvent) => {
+  (position: Point2, planeId: OrthoView, event: MouseEvent | KeyboardEvent) => {
     const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, planeId);
     // Access the parent element as that is where the cursor style property is set
     const inputCatcher = document.getElementById(`inputcatcher_${planeId}`)?.parentElement;

@@ -13,7 +13,7 @@ import net.liftweb.common.Box
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration

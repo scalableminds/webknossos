@@ -1,9 +1,9 @@
-import { Modal, Button } from "antd";
+import { transferTask } from "admin/api/tasks";
+import UserSelectionComponent from "admin/user/user_selection_component";
+import { Button, Modal } from "antd";
+import { handleGenericError } from "libs/error_handling";
 import * as React from "react";
 import type { APIAnnotation } from "types/api_flow_types";
-import { handleGenericError } from "libs/error_handling";
-import { transferTask } from "admin/admin_rest_api";
-import UserSelectionComponent from "admin/user/user_selection_component";
 
 type Props = {
   onChange: (updatedAnnotation: APIAnnotation) => void;

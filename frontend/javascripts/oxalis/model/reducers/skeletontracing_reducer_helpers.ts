@@ -1,48 +1,48 @@
 import Maybe from "data.maybe";
-import _ from "lodash";
 import update from "immutability-helper";
-import type {
-  OxalisState,
-  SkeletonTracing,
-  Edge,
-  Node,
-  MutableNode,
-  Tree,
-  MutableTree,
-  BranchPoint,
-  MutableBranchPoint,
-  MutableCommentType,
-  TreeMap,
-  MutableTreeMap,
-  CommentType,
-  TreeGroup,
-  RestrictionsAndSettings,
-  MutableTreeGroup,
-  MutableNodeMap,
-} from "oxalis/store";
-import type {
-  ServerSkeletonTracingTree,
-  ServerNode,
-  ServerBranchPoint,
-  MetadataEntryProto,
-} from "types/api_flow_types";
-import {
-  getSkeletonTracing,
-  getActiveNodeFromTree,
-  getTree,
-  getActiveTree,
-  getActiveTreeGroup,
-  findTreeByNodeId,
-  mapGroupsToGenerator,
-  mapGroups,
-} from "oxalis/model/accessors/skeletontracing_accessor";
 import ColorGenerator from "libs/color_generator";
+import DiffableMap from "libs/diffable_map";
+import { V3 } from "libs/mjs";
+import * as Utils from "libs/utils";
+import _ from "lodash";
 import { type TreeType, TreeTypeEnum, type Vector3 } from "oxalis/constants";
 import Constants, { NODE_ID_REF_REGEX } from "oxalis/constants";
-import DiffableMap from "libs/diffable_map";
+import {
+  findTreeByNodeId,
+  getActiveNodeFromTree,
+  getActiveTree,
+  getActiveTreeGroup,
+  getSkeletonTracing,
+  getTree,
+  mapGroups,
+  mapGroupsToGenerator,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import EdgeCollection from "oxalis/model/edge_collection";
-import * as Utils from "libs/utils";
-import { V3 } from "libs/mjs";
+import type {
+  BranchPoint,
+  CommentType,
+  Edge,
+  MutableBranchPoint,
+  MutableCommentType,
+  MutableNode,
+  MutableNodeMap,
+  MutableTree,
+  MutableTreeGroup,
+  MutableTreeMap,
+  Node,
+  OxalisState,
+  RestrictionsAndSettings,
+  SkeletonTracing,
+  Tree,
+  TreeGroup,
+  TreeMap,
+} from "oxalis/store";
+import type {
+  MetadataEntryProto,
+  ServerBranchPoint,
+  ServerNode,
+  ServerSkeletonTracingTree,
+} from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
@@ -122,7 +122,7 @@ export function createNode(
   additionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   viewport: number,
-  resolution: number,
+  mag: number,
   timestamp: number,
 ): Maybe<[Node, EdgeCollection]> {
   const activeNodeMaybe = getActiveNodeFromTree(skeletonTracing, tree);
@@ -146,7 +146,7 @@ export function createNode(
     radius,
     rotation,
     viewport,
-    resolution,
+    mag,
     id: nextNewId,
     timestamp,
     bitDepth: state.datasetConfiguration.fourBit ? 4 : 8,
@@ -851,7 +851,7 @@ function serverNodeToMutableNode(n: ServerNode): MutableNode {
     rotation: Utils.point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,
     viewport: n.viewport,
-    resolution: n.mag,
+    mag: n.mag,
     radius: n.radius,
     timestamp: n.createdTimestamp,
     interpolation: n.interpolation,

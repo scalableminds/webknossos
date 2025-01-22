@@ -1,89 +1,90 @@
-import _ from "lodash";
-import type {
-  APIAnnotation,
-  APIDatasetId,
-  APIDataset,
-  MutableAPIDataset,
-  APIDataLayer,
-  ServerVolumeTracing,
-  ServerTracing,
-  ServerEditableMapping,
-  APICompoundType,
-  APISegmentationLayer,
-} from "types/api_flow_types";
-import type { Versions } from "oxalis/view/version_view";
 import {
-  computeDataTexturesSetup,
-  getSupportedTextureSpecs,
-  validateMinimumRequirements,
-} from "oxalis/model/bucket_data_handling/data_rendering_logic";
+  getAnnotationCompoundInformation,
+  getAnnotationInformation,
+  getDataset,
+  getDatasetViewConfiguration,
+  getEditableMappingInfo,
+  getEmptySandboxAnnotationInformation,
+  getSharingTokenFromUrlParameters,
+  getTracingsForAnnotation,
+  getUserConfiguration,
+} from "admin/admin_rest_api";
+import {
+  PricingPlanEnum,
+  isFeatureAllowedByPricingPlan,
+} from "admin/organization/pricing_plan_utils";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import messages from "messages";
+import constants, { ControlModeEnum, AnnotationToolEnum, type Vector3 } from "oxalis/constants";
+import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/url_manager";
+import UrlManager from "oxalis/controller/url_manager";
 import {
   determineAllowedModes,
   getBitDepth,
-  getDatasetBoundingBox,
   getDataLayers,
+  getDatasetBoundingBox,
   getDatasetCenter,
+  getLayerByName,
+  getSegmentationLayerByName,
+  getSegmentationLayers,
+  getUnifiedAdditionalCoordinates,
   hasSegmentation,
   isElementClassSupported,
   isSegmentationLayer,
-  getSegmentationLayers,
-  getLayerByName,
-  getSegmentationLayerByName,
-  getUnifiedAdditionalCoordinates,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
-import {
-  getTracingsForAnnotation,
-  getAnnotationInformation,
-  getEmptySandboxAnnotationInformation,
-  getDataset,
-  getSharingTokenFromUrlParameters,
-  getUserConfiguration,
-  getDatasetViewConfiguration,
-  getEditableMappingInfo,
-  getAnnotationCompoundInformation,
-} from "admin/admin_rest_api";
+import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   dispatchMaybeFetchMeshFilesAsync,
   initializeAnnotationAction,
   updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
 import {
-  initializeSettingsAction,
+  setActiveConnectomeAgglomerateIdsAction,
+  updateCurrentConnectomeFileAction,
+} from "oxalis/model/actions/connectome_actions";
+import { setDatasetAction } from "oxalis/model/actions/dataset_actions";
+import {
+  setAdditionalCoordinatesAction,
+  setPositionAction,
+  setRotationAction,
+  setZoomStepAction,
+} from "oxalis/model/actions/flycam_actions";
+import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
+import {
   initializeGpuSetupAction,
+  initializeSettingsAction,
   setControlModeAction,
-  setViewModeAction,
   setMappingAction,
-  updateLayerSettingAction,
   setMappingEnabledAction,
+  setViewModeAction,
+  updateLayerSettingAction,
 } from "oxalis/model/actions/settings_actions";
+import {
+  initializeSkeletonTracingAction,
+  loadAgglomerateSkeletonAction,
+  setActiveNodeAction,
+  setShowSkeletonsAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { setTaskAction } from "oxalis/model/actions/task_actions";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
 import {
   initializeEditableMappingAction,
   initializeVolumeTracingAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
-  setActiveNodeAction,
-  initializeSkeletonTracingAction,
-  loadAgglomerateSkeletonAction,
-  setShowSkeletonsAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { setDatasetAction } from "oxalis/model/actions/dataset_actions";
-import {
-  setPositionAction,
-  setZoomStepAction,
-  setRotationAction,
-  setAdditionalCoordinatesAction,
-} from "oxalis/model/actions/flycam_actions";
-import { setTaskAction } from "oxalis/model/actions/task_actions";
-import { setToolAction } from "oxalis/model/actions/ui_actions";
-import {
-  loadAdHocMeshAction,
-  loadPrecomputedMeshAction,
-} from "oxalis/model/actions/segmentation_actions";
+  computeDataTexturesSetup,
+  getSupportedTextureSpecs,
+  validateMinimumRequirements,
+} from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import DataLayer from "oxalis/model/data_layer";
-import ErrorHandling from "libs/error_handling";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
@@ -91,20 +92,18 @@ import type {
   UserConfiguration,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import Toast from "libs/toast";
-import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/url_manager";
-import UrlManager from "oxalis/controller/url_manager";
-import * as Utils from "libs/utils";
-import constants, { ControlModeEnum, AnnotationToolEnum, type Vector3 } from "oxalis/constants";
-import messages from "messages";
-import {
-  setActiveConnectomeAgglomerateIdsAction,
-  updateCurrentConnectomeFileAction,
-} from "oxalis/model/actions/connectome_actions";
-import {
-  PricingPlanEnum,
-  isFeatureAllowedByPricingPlan,
-} from "admin/organization/pricing_plan_utils";
+import type { Versions } from "oxalis/view/version_view";
+import type {
+  APIAnnotation,
+  APICompoundType,
+  APIDataLayer,
+  APIDataset,
+  APISegmentationLayer,
+  MutableAPIDataset,
+  ServerEditableMapping,
+  ServerTracing,
+  ServerVolumeTracing,
+} from "types/api_flow_types";
 import { convertServerAdditionalAxesToFrontEnd } from "./model/reducers/reducer_helpers";
 
 export const HANDLED_ERROR = "error_was_handled";
@@ -125,7 +124,7 @@ export async function initialize(
 > {
   Store.dispatch(setControlModeAction(initialCommandType.type));
   let annotation: APIAnnotation | null | undefined;
-  let datasetId: APIDatasetId;
+  let datasetId: string;
 
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
@@ -133,10 +132,7 @@ export async function initialize(
       initialMaybeCompoundType != null
         ? await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType)
         : await getAnnotationInformation(annotationId);
-    datasetId = {
-      name: annotation.dataSetName,
-      owningOrganization: annotation.organization,
-    };
+    datasetId = annotation.datasetId;
 
     if (!annotation.restrictions.allowAccess) {
       Toast.error(messages["tracing.no_access"]);
@@ -148,22 +144,14 @@ export async function initialize(
     });
     Store.dispatch(setTaskAction(annotation.task));
   } else if (initialCommandType.type === ControlModeEnum.SANDBOX) {
-    const { name, owningOrganization } = initialCommandType;
-    datasetId = {
-      name,
-      owningOrganization,
-    };
+    datasetId = initialCommandType.datasetId;
     annotation = await getEmptySandboxAnnotationInformation(
       datasetId,
       initialCommandType.tracingType,
       getSharingTokenFromUrlParameters(),
     );
   } else {
-    const { name, owningOrganization } = initialCommandType;
-    datasetId = {
-      name,
-      owningOrganization,
-    };
+    datasetId = initialCommandType.datasetId;
   }
 
   const [dataset, initialUserSettings, serverTracings] = await fetchParallel(
@@ -236,7 +224,7 @@ export async function initialize(
 
 async function fetchParallel(
   annotation: APIAnnotation | null | undefined,
-  datasetId: APIDatasetId,
+  datasetId: string,
   versions?: Versions,
 ): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>]> {
   return Promise.all([
@@ -503,14 +491,14 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
 
     const fallbackLayer = fallbackLayerIndex > -1 ? originalLayers[fallbackLayerIndex] : null;
     const boundingBox = getDatasetBoundingBox(dataset).asServerBoundingBox();
-    const resolutions = tracing.mags || [];
-    const tracingHasResolutionList = resolutions.length > 0;
+    const mags = tracing.mags || [];
+    const tracingHasMagList = mags.length > 0;
     // Legacy tracings don't have the `tracing.mags` property
     // since they were created before WK started to maintain multiple magnifications
     // in volume annotations. Therefore, this code falls back to mag (1, 1, 1) for
     // that case.
-    const tracingResolutions: Vector3[] = tracingHasResolutionList
-      ? resolutions.map(({ x, y, z }) => [x, y, z])
+    const tracingMags: Vector3[] = tracingHasMagList
+      ? mags.map(({ x, y, z }) => [x, y, z])
       : [[1, 1, 1]];
     const tracingLayer: APISegmentationLayer = {
       name: tracing.id,
@@ -519,7 +507,7 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
       category: "segmentation",
       largestSegmentId: tracing.largestSegmentId,
       boundingBox,
-      resolutions: tracingResolutions,
+      resolutions: tracingMags,
       mappings:
         fallbackLayer != null && "mappings" in fallbackLayer ? fallbackLayer.mappings : undefined,
       // Remember the name of the original layer (e.g., used to request mappings)

@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.helpers
 
-import com.scalableminds.util.geometry.{Vec3Int, Vec3Double}
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Node, SkeletonTracing}
 
 object SkeletonTracingDefaults extends ProtoGeometryImplicits {

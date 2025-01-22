@@ -1,18 +1,18 @@
+import { hasSegmentIndexInDataStore } from "admin/admin_rest_api";
 import { Modal } from "antd";
-import type { APIDataLayer, APIDataset, APISegmentationLayer } from "types/api_flow_types";
-import type { ActiveMappingInfo, HybridTracing, Segment } from "oxalis/store";
-import Store from "oxalis/store";
-import { MappingStatusEnum } from "oxalis/constants";
-import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
+import type { BasicDataNode } from "antd/es/tree";
 import { waitForCondition } from "libs/utils";
+import { MappingStatusEnum } from "oxalis/constants";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
   getEditableMappingForVolumeTracingId,
   getVolumeTracingById,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
+import type { ActiveMappingInfo, HybridTracing, Segment } from "oxalis/store";
+import Store from "oxalis/store";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
-import { hasSegmentIndexInDataStore } from "admin/admin_rest_api";
-import type { BasicDataNode } from "antd/es/tree";
+import type { APIDataLayer, APIDataset, APISegmentationLayer } from "types/api_flow_types";
 
 const { confirm } = Modal;
 
@@ -49,7 +49,7 @@ export function getVolumeRequestUrl(
   visibleSegmentationLayer: APISegmentationLayer | APIDataLayer,
 ) {
   if (tracing == null || tracingId == null) {
-    return `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${visibleSegmentationLayer.name}`;
+    return `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.directoryName}/layers/${visibleSegmentationLayer.name}`;
   } else {
     const tracingStoreHost = tracing?.tracingStore.url;
     return `${tracingStoreHost}/tracings/volume/${tracingId}`;
@@ -71,7 +71,7 @@ export async function hasSegmentIndex(
   if (maybeVolumeTracing == null) {
     segmentIndexInDataStore = await hasSegmentIndexInDataStore(
       dataset.dataStore.url,
-      dataset.name,
+      dataset.directoryName,
       visibleSegmentationLayer.name,
       dataset.owningOrganization,
     );

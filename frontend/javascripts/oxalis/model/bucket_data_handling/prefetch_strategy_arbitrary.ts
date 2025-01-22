@@ -1,12 +1,12 @@
-import { AbstractPrefetchStrategy } from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
-import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
+import type { BoundingBoxType, Vector3 } from "oxalis/constants";
+import PolyhedronRasterizer from "oxalis/model/bucket_data_handling/polyhedron_rasterizer";
+import { AbstractPrefetchStrategy } from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
 import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
-import PolyhedronRasterizer from "oxalis/model/bucket_data_handling/polyhedron_rasterizer";
-import type { MagInfo } from "../helpers/mag_info";
 import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { MagInfo } from "../helpers/mag_info";
 
 export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
   velocityRangeStart = 0;
@@ -57,12 +57,12 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
     matrix: Matrix4x4,
     activeZoomStep: number,
     position: Vector3,
-    resolutions: Array<Vector3>,
-    resolutionInfo: MagInfo,
+    mags: Array<Vector3>,
+    magInfo: MagInfo,
     additionalCoordinates: AdditionalCoordinate[] | null,
   ): Array<PullQueueItem> {
     const pullQueue: PullQueueItem[] = [];
-    const zoomStep = resolutionInfo.getIndexOrClosestHigherIndex(activeZoomStep);
+    const zoomStep = magInfo.getIndexOrClosestHigherIndex(activeZoomStep);
 
     if (zoomStep == null) {
       // The layer cannot be rendered at this zoom step, as necessary magnifications
@@ -82,7 +82,7 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
       const bucketZ = testAddresses[i++];
       const positionBucketWithZoomStep = globalPositionToBucketPosition(
         position,
-        resolutions,
+        mags,
         zoomStep,
         null,
       );

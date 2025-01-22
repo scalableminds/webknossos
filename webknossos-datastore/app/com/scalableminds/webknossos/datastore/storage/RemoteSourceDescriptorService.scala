@@ -50,7 +50,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
                                dataSourceId: DataSourceId,
                                layerName: String,
                                magLocator: MagLocator): Box[URI] = tryo {
-    val localDatasetDir = baseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
+    val localDatasetDir = baseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
     val localLayerDir = localDatasetDir.resolve(layerName)
     magLocator.path match {
       case Some(magLocatorPath) =>
@@ -60,12 +60,12 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
         } else if (uri.getScheme == null || uri.getScheme == DataVaultService.schemeFile) {
           val localPath = Paths.get(uri.getPath)
           if (localPath.isAbsolute) {
-            if (dataStoreConfig.Datastore.localFolderWhitelist.exists(whitelistEntry =>
+            if (dataStoreConfig.Datastore.localDirectoryWhitelist.exists(whitelistEntry =>
                   localPath.toString.startsWith(whitelistEntry)))
               uri
             else
               throw new Exception(
-                s"Absolute path $localPath in local file system is not in path whitelist. Consider adding it to datastore.localFolderWhitelist")
+                s"Absolute path $localPath in local file system is not in path whitelist. Consider adding it to datastore.localDirectoryWhitelist")
           } else { // relative local path, resolve in dataset dir
             val magPathRelativeToDataset = localDatasetDir.resolve(localPath)
             val magPathRelativeToLayer = localDatasetDir.resolve(layerName).resolve(localPath)

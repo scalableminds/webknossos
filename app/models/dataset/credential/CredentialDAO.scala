@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.schema.Tables.{Credentials, CredentialsRow}
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.Json
 import utils.sql.{SecuredSQLDAO, SqlClient, SqlToken}
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

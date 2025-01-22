@@ -69,11 +69,11 @@ test.beforeEach((t) => {
       [32, 32, 32],
     ] as Vector3[],
   };
-  const resolutionInfo = new MagInfo(mockedLayer.resolutions);
+  const magInfo = new MagInfo(mockedLayer.resolutions);
   const cube = new DataCube(
     new BoundingBox({ min: [0, 0, 0], max: [100, 100, 100] }),
     [],
-    resolutionInfo,
+    magInfo,
     "uint32",
     false,
     "layerName",

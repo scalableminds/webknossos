@@ -20,10 +20,11 @@ class DataSourceRepository @Inject()(
     with LazyLogging
     with FoxImplicits {
 
-  def getDataSourceAndDataLayer(organizationId: String, datasetName: String, dataLayerName: String)(
+  def getDataSourceAndDataLayer(organizationId: String, datasetDirectoryName: String, dataLayerName: String)(
       implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] =
     for {
-      dataSource <- findUsable(DataSourceId(datasetName, organizationId)).toFox ?~> Messages("dataSource.notFound")
+      dataSource <- findUsable(DataSourceId(datasetDirectoryName, organizationId)).toFox ?~> Messages(
+        "dataSource.notFound")
       dataLayer <- dataSource.getDataLayer(dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName)
     } yield (dataSource, dataLayer)
 

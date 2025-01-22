@@ -1,24 +1,24 @@
-import { call, put, take, takeEvery, takeLatest } from "typed-redux-saga";
+import { V3 } from "libs/mjs";
+import Toast from "libs/toast";
+import { sleep } from "libs/utils";
 import { sum } from "lodash";
+import messages from "messages";
+import { Identity4x4 } from "oxalis/constants";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { sleep } from "libs/utils";
-import Toast from "libs/toast";
-import messages from "messages";
+import { hasSegmentIndex } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { call, put, take, takeEvery, takeLatest } from "typed-redux-saga";
 import {
   getEnabledLayers,
   getLayerByName,
-  getMaybeSegmentIndexAvailability,
   getMagInfo,
+  getMaybeSegmentIndexAvailability,
   getTransformsForLayer,
   invertAndTranspose,
   isLayerVisible,
 } from "../accessors/dataset_accessor";
 import { getCurrentMag } from "../accessors/flycam_accessor";
 import { getViewportExtents } from "../accessors/view_mode_accessor";
-import { V3 } from "libs/mjs";
-import { Identity4x4 } from "oxalis/constants";
-import { hasSegmentIndex } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import {
   type EnsureSegmentIndexIsLoadedAction,
   setLayerHasSegmentIndexAction,
@@ -111,9 +111,9 @@ export function* watchZ1Downsampling(): Saga<void> {
         // is no appropriate mag for that layer.
         break;
       }
-      const resolutionInfo = getMagInfo(dataLayer.resolutions);
-      const bestExistingIndex = resolutionInfo.getFinestMagIndex();
-      const currentIndex = resolutionInfo.getIndexByMag(currentRes);
+      const magInfo = getMagInfo(dataLayer.resolutions);
+      const bestExistingIndex = magInfo.getFinestMagIndex();
+      const currentIndex = magInfo.getIndexByMag(currentRes);
       if (currentIndex <= bestExistingIndex) {
         // There's no better mag to render the current layer in.
         continue;

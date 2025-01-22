@@ -1,45 +1,45 @@
+import { UnlockOutlined } from "@ant-design/icons";
+import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "admin/admin_rest_api";
+import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_components";
 import {
-  Form,
-  Input,
   Button,
   Col,
+  Collapse,
+  Divider,
+  Form,
+  type FormInstance,
+  Input,
+  List,
+  Modal,
   Radio,
   Row,
-  Collapse,
-  type FormInstance,
-  Modal,
-  Divider,
-  List,
   Upload,
 } from "antd";
-import { connect } from "react-redux";
-import React, { useEffect, useState } from "react";
-import type { APIDataStore, APIUser } from "types/api_flow_types";
-import type { OxalisState } from "oxalis/store";
-import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "admin/admin_rest_api";
-import messages from "messages";
-import { jsonStringify } from "libs/utils";
-import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_components";
+import type { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { AsyncButton } from "components/async_clickables";
-import Toast from "libs/toast";
-import _ from "lodash";
-import { Hint } from "oxalis/view/action-bar/download_modal_view";
-import { formatScale } from "libs/format_utils";
-import type { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
+import BrainSpinner from "components/brain_spinner";
 import DatasetSettingsDataTab, {
   // Sync simple with advanced and get newest datasourceJson
   syncDataSourceFields,
 } from "dashboard/dataset/dataset_settings_data_tab";
 import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
-import type { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
-import { UnlockOutlined } from "@ant-design/icons";
-import { Unicode } from "oxalis/constants";
+import { formatScale } from "libs/format_utils";
 import { readFileAsText } from "libs/read_file";
+import Toast from "libs/toast";
+import { jsonStringify } from "libs/utils";
 import * as Utils from "libs/utils";
-import type { ArbitraryObject } from "types/globals";
-import BrainSpinner from "components/brain_spinner";
+import _ from "lodash";
+import messages from "messages";
+import { Unicode } from "oxalis/constants";
+import type { OxalisState } from "oxalis/store";
+import { Hint } from "oxalis/view/action-bar/download_modal_view";
+import React, { useEffect, useState } from "react";
+import { connect } from "react-redux";
 import { useHistory } from "react-router-dom";
+import type { APIDataStore, APIUser } from "types/api_flow_types";
+import type { ArbitraryObject } from "types/globals";
+import type { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
@@ -49,8 +49,8 @@ type FileList = UploadFile<any>[];
 
 type OwnProps = {
   onAdded: (
-    datasetOrganization: string,
-    uploadedDatasetName: string,
+    uploadedDatasetId: string,
+    updatedDatasetName: string,
     needsConversion?: boolean | null | undefined,
   ) => Promise<void>;
   datastores: APIDataStore[];
@@ -252,13 +252,13 @@ function DatasetAddRemoteView(props: Props) {
     form.setFieldsValue({ dataSourceJson });
     // Since this function sets the JSON string, we have to update the
     // data which is rendered by the "simple" page.
-    syncDataSourceFields(form, "simple");
+    syncDataSourceFields(form, "simple", true);
     form.validateFields();
   };
 
   async function handleStoreDataset() {
     // Sync simple with advanced and get newest datasourceJson
-    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
+    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple", true);
     try {
       await form.validateFields();
     } catch (_e) {
@@ -287,26 +287,23 @@ function DatasetAddRemoteView(props: Props) {
       let configJSON;
       try {
         configJSON = JSON.parse(dataSourceJsonStr);
-        const nameValidationResult = await isDatasetNameValid({
-          name: configJSON.id.name,
-          owningOrganization: activeUser.organization,
-        });
+        const nameValidationResult = await isDatasetNameValid(configJSON.id.name);
         if (nameValidationResult) {
           throw new Error(nameValidationResult);
         }
-        await storeRemoteDataset(
+        const { newDatasetId } = await storeRemoteDataset(
           datastoreToUse.url,
           configJSON.id.name,
           activeUser.organization,
           dataSourceJsonStr,
           targetFolderId,
         );
+        onAdded(newDatasetId, configJSON.id.name);
       } catch (e) {
         setShowLoadingOverlay(false);
         Toast.error(`The datasource config could not be stored. ${e}`);
         return;
       }
-      onAdded(activeUser.organization, configJSON.id.name);
     }
   }
 
@@ -376,11 +373,10 @@ function DatasetAddRemoteView(props: Props) {
             {/* Only the component's visibility is changed, so that the form is always rendered.
                 This is necessary so that the form's structure is always populated. */}
             <DatasetSettingsDataTab
-              allowRenamingDataset
               form={form}
               activeDataSourceEditMode={dataSourceEditMode}
               onChange={(activeEditMode) => {
-                syncDataSourceFields(form, activeEditMode);
+                syncDataSourceFields(form, activeEditMode, true);
                 form.validateFields();
                 setDataSourceEditMode(activeEditMode);
               }}
@@ -519,7 +515,7 @@ function AddRemoteLayer({
     }
 
     // Sync simple with advanced and get newest datasourceJson
-    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
+    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple", true);
     const datasourceConfigStr = form.getFieldValue("dataSourceJson");
     const datastoreToUse = uploadableDatastores.find(
       (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,

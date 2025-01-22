@@ -1,64 +1,64 @@
-import React, { useState } from "react";
-import type { APIJob, APIDataLayer } from "types/api_flow_types";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import {
-  Modal,
-  Select,
-  Button,
-  Form,
-  Row,
-  Space,
-  Radio,
-  Card,
-  Tooltip,
-  Alert,
-  Tabs,
-  Switch,
-  type FormInstance,
-  Checkbox,
-} from "antd";
-import {
-  startNucleiInferralJob,
-  startMaterializingVolumeAnnotationJob,
-  startNeuronInferralJob,
-  startMitochondriaInferralJob,
+  getAiModels,
   runInferenceJob,
   startAlignSectionsJob,
-  getAiModels,
+  startMaterializingVolumeAnnotationJob,
+  startMitochondriaInferralJob,
+  startNeuronInferralJob,
+  startNucleiInferralJob,
 } from "admin/admin_rest_api";
-import { useDispatch, useSelector } from "react-redux";
 import { DatasetNameFormItem } from "admin/dataset/dataset_components";
-import { getColorLayers, getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
 import {
-  getActiveSegmentationTracingLayer,
-  getReadableNameOfVolumeLayer,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
+  Alert,
+  Button,
+  Card,
+  Checkbox,
+  Form,
+  type FormInstance,
+  Modal,
+  Radio,
+  Row,
+  Select,
+  Space,
+  Switch,
+  Tabs,
+  Tooltip,
+} from "antd";
+import { LayerSelectionFormItem } from "components/layer_selection";
+import { Slider } from "components/slider";
+import features from "features";
+import { V3 } from "libs/mjs";
+import { useGuardedFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
-import type { OxalisState, UserBoundingBox } from "oxalis/store";
-import { ControlModeEnum, Unicode, type Vector3 } from "oxalis/constants";
-import { Model, Store } from "oxalis/singletons";
 import {
   clamp,
   computeArrayFromBoundingBox,
   computeBoundingBoxFromBoundingBoxObject,
   rgbToHex,
 } from "libs/utils";
-import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import { V3 } from "libs/mjs";
-import type { MagInfo } from "oxalis/model/helpers/mag_info";
-import { isBoundingBoxExportable } from "./download_modal_view";
-import features from "features";
+import _ from "lodash";
+import { ControlModeEnum, Unicode, type Vector3 } from "oxalis/constants";
+import { getColorLayers, getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
+import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
+import {
+  getActiveSegmentationTracingLayer,
+  getReadableNameOfVolumeLayer,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
-import { InfoCircleOutlined } from "@ant-design/icons";
+import type { MagInfo } from "oxalis/model/helpers/mag_info";
+import { Model, Store } from "oxalis/singletons";
+import type { OxalisState, UserBoundingBox } from "oxalis/store";
+import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { APIDataLayer, APIJob } from "types/api_flow_types";
 import {
   CollapsibleWorkflowYamlEditor,
   TrainAiModelFromAnnotationTab,
 } from "../jobs/train_ai_model";
-import { LayerSelectionFormItem } from "components/layer_selection";
-import { useGuardedFetch } from "libs/react_helpers";
-import _ from "lodash";
 import DEFAULT_PREDICT_WORKFLOW from "./default-predict-workflow-template";
-import { Slider } from "components/slider";
+import { isBoundingBoxExportable } from "./download_modal_view";
 
 const { ThinSpace } = Unicode;
 
@@ -111,6 +111,7 @@ type StartJobFormProps = Props & {
 type BoundingBoxSelectionProps = {
   isBoundingBoxConfigurable?: boolean;
   userBoundingBoxes: UserBoundingBox[];
+  isSuperUser: boolean;
   onChangeSelectedBoundingBox: (bBoxId: number | null) => void;
   value: number | null;
 };
@@ -183,6 +184,7 @@ export function BoundingBoxSelection({
 function BoundingBoxSelectionFormItem({
   isBoundingBoxConfigurable,
   userBoundingBoxes,
+  isSuperUser,
   onChangeSelectedBoundingBox,
   value: selectedBoundingBoxId,
 }: BoundingBoxSelectionProps): JSX.Element {
@@ -218,7 +220,7 @@ function BoundingBoxSelectionFormItem({
           },
           {
             validator: (_rule, value) => {
-              if (!isBoundingBoxConfigurable) return Promise.resolve();
+              if (!isBoundingBoxConfigurable || isSuperUser) return Promise.resolve();
 
               const selectedBoundingBox = userBoundingBoxes.find((bbox) => bbox.id === value);
               let rejectionReason = "";
@@ -260,7 +262,7 @@ export function MagSlider({
   value: Vector3;
   onChange: (v: Vector3) => void;
 }) {
-  // Use `getResolutionsWithIndices` because returns a sorted list
+  // Use `getMagsWithIndices` because returns a sorted list
   const allMags = magnificationInfo.getMagsWithIndices();
 
   return (
@@ -533,6 +535,7 @@ function StartJobForm(props: StartJobFormProps) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const isActiveUserSuperUser = activeUser?.isSuperUser || false;
   const colorLayers = getColorLayers(dataset);
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : colorLayers;
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
@@ -643,6 +646,7 @@ function StartJobForm(props: StartJobFormProps) {
       <BoundingBoxSelectionFormItem
         isBoundingBoxConfigurable={isBoundingBoxConfigurable}
         userBoundingBoxes={userBoundingBoxes}
+        isSuperUser={isActiveUserSuperUser}
         onChangeSelectedBoundingBox={(bBoxId) => form.setFieldsValue({ boundingBoxId: bBoxId })}
         value={form.getFieldValue("boundingBoxId")}
       />
@@ -673,12 +677,7 @@ export function NucleiDetectionForm() {
       title="AI Nuclei Segmentation"
       suggestedDatasetSuffix="with_nuclei"
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) =>
-        startNucleiInferralJob(
-          dataset.owningOrganization,
-          dataset.name,
-          colorLayer.name,
-          newDatasetName,
-        )
+        startNucleiInferralJob(dataset.id, colorLayer.name, newDatasetName)
       }
       description={
         <>
@@ -717,13 +716,7 @@ export function NeuronSegmentationForm() {
         }
 
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
-        return startNeuronInferralJob(
-          dataset.owningOrganization,
-          dataset.name,
-          colorLayer.name,
-          bbox,
-          newDatasetName,
-        );
+        return startNeuronInferralJob(dataset.id, colorLayer.name, bbox, newDatasetName);
       }}
       description={
         <>
@@ -759,13 +752,7 @@ export function MitochondriaSegmentationForm() {
         }
 
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
-        return startMitochondriaInferralJob(
-          dataset.owningOrganization,
-          dataset.name,
-          colorLayer.name,
-          bbox,
-          newDatasetName,
-        );
+        return startMitochondriaInferralJob(dataset.id, colorLayer.name, bbox, newDatasetName);
       }}
       description={
         <>
@@ -828,7 +815,7 @@ function CustomAiModelInferenceForm() {
           ...maybeAnnotationId,
           aiModelId: form.getFieldValue("aiModel"),
           workflowYaml: useCustomWorkflow ? form.getFieldValue("workflowYaml") : undefined,
-          datasetName: dataset.name,
+          datasetDirectoryName: dataset.directoryName,
           organizationId: dataset.owningOrganization,
           colorLayerName: colorLayer.name,
           boundingBox,
@@ -873,13 +860,7 @@ export function AlignSectionsForm() {
       isBoundingBoxConfigurable={false}
       isSkeletonSelectable={true}
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, annotationId }) =>
-        startAlignSectionsJob(
-          dataset.owningOrganization,
-          dataset.name,
-          colorLayer.name,
-          newDatasetName,
-          annotationId,
-        )
+        startAlignSectionsJob(dataset.id, colorLayer.name, newDatasetName, annotationId)
       }
       description={
         <Space direction="vertical" size="middle">
@@ -910,6 +891,7 @@ export function MaterializeVolumeAnnotationModal({
 }: MaterializeVolumeAnnotationModalProps) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
+  let includesEditableMapping = false;
   const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
   const fixedSelectedLayer = selectedVolumeLayer || activeSegmentationTracingLayer;
   const readableVolumeLayerName =
@@ -944,6 +926,10 @@ export function MaterializeVolumeAnnotationModal({
         output dataset and the output segmentation layer.
       </p>
     );
+  } else if (fixedSelectedLayer && "tracingId" in fixedSelectedLayer) {
+    includesEditableMapping =
+      tracing.volumes.find((volume) => volume.tracingId === fixedSelectedLayer.tracingId)
+        ?.hasEditableMapping === true;
   }
   const jobImage =
     jobNameToImagePath[jobName] != null ? (
@@ -973,8 +959,13 @@ export function MaterializeVolumeAnnotationModal({
         jobName={"materialize_volume_annotation"}
         suggestedDatasetSuffix="with_merged_segmentation"
         chooseSegmentationLayer
+        isBoundingBoxConfigurable={includesEditableMapping}
         fixedSelectedLayer={fixedSelectedLayer}
-        jobApiCall={async ({ newDatasetName, selectedLayer: segmentationLayer }) => {
+        jobApiCall={async ({
+          newDatasetName,
+          selectedLayer: segmentationLayer,
+          selectedBoundingBox,
+        }) => {
           // There are 3 cases for the value assignments to volumeLayerName and baseSegmentationName for the job:
           // 1. There is a volume annotation with a fallback layer. volumeLayerName will reference the volume layer
           // and baseSegmentationName will reference the fallback layer. The job will merge those layers.
@@ -987,15 +978,19 @@ export function MaterializeVolumeAnnotationModal({
               ? getReadableNameOfVolumeLayer(segmentationLayer, tracing)
               : null;
           const baseSegmentationName = getBaseSegmentationName(segmentationLayer);
+          const bbox = selectedBoundingBox?.boundingBox
+            ? computeArrayFromBoundingBox(selectedBoundingBox.boundingBox)
+            : undefined;
           return startMaterializingVolumeAnnotationJob(
-            dataset.owningOrganization,
-            dataset.name,
+            dataset.id,
             baseSegmentationName,
             volumeLayerName,
             newDatasetName,
             tracing.annotationId,
             tracing.annotationType,
             isMergerModeEnabled,
+            includesEditableMapping,
+            bbox,
           );
         }}
         description={

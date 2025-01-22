@@ -1,61 +1,3 @@
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { takeEvery, put, call, all, spawn } from "typed-redux-saga";
-import { select, take } from "oxalis/model/sagas/effect-generators";
-import {
-  AnnotationToolEnum,
-  MappingStatusEnum,
-  TreeTypeEnum,
-  type Vector3,
-} from "oxalis/constants";
-import Toast from "libs/toast";
-import {
-  type CreateNodeAction,
-  type DeleteNodeAction,
-  deleteEdgeAction,
-  setTreeNameAction,
-  type SetNodePositionAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import {
-  initializeEditableMappingAction,
-  removeSegmentAction,
-  setHasEditableMappingAction,
-  updateSegmentAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import type {
-  MinCutAgglomerateWithPositionAction,
-  ProofreadAtPositionAction,
-  ProofreadMergeAction,
-} from "oxalis/model/actions/proofread_actions";
-import {
-  enforceSkeletonTracing,
-  findTreeByNodeId,
-  getNodeAndTree,
-  getTreeNameForAgglomerateSkeleton,
-  isSkeletonLayerTransformed,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  pushSaveQueueTransaction,
-  setVersionNumberAction,
-} from "oxalis/model/actions/save_actions";
-import {
-  splitAgglomerate,
-  mergeAgglomerate,
-  type UpdateAction,
-} from "oxalis/model/sagas/update_actions";
-import { Model, api, Store } from "oxalis/singletons";
-import {
-  getActiveSegmentationTracingLayer,
-  getActiveSegmentationTracing,
-  getSegmentsForLayer,
-  getMeshInfoForSegment,
-  getEditableMappingForVolumeTracingId,
-  getSegmentName,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  getLayerByName,
-  getMappingInfo,
-  getMagInfo,
-} from "oxalis/model/accessors/dataset_accessor";
 import {
   type NeighborInfo,
   getAgglomeratesForSegmentsFromTracingstore,
@@ -64,25 +6,83 @@ import {
   getPositionForSegmentInAgglomerate,
   makeMappingEditable,
 } from "admin/admin_rest_api";
-import { setMappingAction, setMappingNameAction } from "oxalis/model/actions/settings_actions";
+import { V3 } from "libs/mjs";
+import Toast from "libs/toast";
+import { SoftError, isBigInt, isNumberMap } from "libs/utils";
+import _ from "lodash";
+import {
+  AnnotationToolEnum,
+  MappingStatusEnum,
+  TreeTypeEnum,
+  type Vector3,
+} from "oxalis/constants";
 import { getSegmentIdForPositionAsync } from "oxalis/controller/combinations/volume_handlers";
 import {
-  loadAdHocMeshAction,
-  loadPrecomputedMeshAction,
-} from "oxalis/model/actions/segmentation_actions";
-import { V3 } from "libs/mjs";
+  getLayerByName,
+  getMagInfo,
+  getMappingInfo,
+} from "oxalis/model/accessors/dataset_accessor";
+import {
+  enforceSkeletonTracing,
+  findTreeByNodeId,
+  getNodeAndTree,
+  getTreeNameForAgglomerateSkeleton,
+  isSkeletonLayerTransformed,
+} from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  getActiveSegmentationTracing,
+  getActiveSegmentationTracingLayer,
+  getEditableMappingForVolumeTracingId,
+  getMeshInfoForSegment,
+  getSegmentName,
+  getSegmentsForLayer,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import {
   dispatchMaybeFetchMeshFilesAsync,
   refreshMeshAction,
   removeMeshAction,
 } from "oxalis/model/actions/annotation_actions";
+import type {
+  MinCutAgglomerateWithPositionAction,
+  ProofreadAtPositionAction,
+  ProofreadMergeAction,
+} from "oxalis/model/actions/proofread_actions";
+import {
+  pushSaveQueueTransaction,
+  setVersionNumberAction,
+} from "oxalis/model/actions/save_actions";
+import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
+import { setMappingAction, setMappingNameAction } from "oxalis/model/actions/settings_actions";
+import {
+  type CreateNodeAction,
+  type DeleteNodeAction,
+  type SetNodePositionAction,
+  deleteEdgeAction,
+  setTreeNameAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import {
+  initializeEditableMappingAction,
+  removeSegmentAction,
+  setHasEditableMappingAction,
+  updateSegmentAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select, take } from "oxalis/model/sagas/effect-generators";
+import {
+  type UpdateAction,
+  mergeAgglomerate,
+  splitAgglomerate,
+} from "oxalis/model/sagas/update_actions";
+import { Model, Store, api } from "oxalis/singletons";
 import type { ActiveMappingInfo, Mapping, NumberLikeMap, Tree, VolumeTracing } from "oxalis/store";
-import _ from "lodash";
+import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate } from "types/api_flow_types";
-import { takeEveryUnlessBusy } from "./saga_helpers";
-import type { Action } from "../actions/actions";
-import { isBigInt, isNumberMap, SoftError } from "libs/utils";
 import { getCurrentMag } from "../accessors/flycam_accessor";
+import type { Action } from "../actions/actions";
+import { takeEveryUnlessBusy } from "./saga_helpers";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -1036,18 +1036,18 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
     }
   }
 
-  const resolutionInfo = getMagInfo(volumeTracingLayer.resolutions);
+  const magInfo = getMagInfo(volumeTracingLayer.resolutions);
   const currentMag = yield* select((state) => getCurrentMag(state, volumeTracingLayer.name));
 
   const agglomerateFileMag = isSkeletonProofreading
     ? // In case of skeleton proofreading, the finest mag should be used.
-      resolutionInfo.getFinestMag()
+      magInfo.getFinestMag()
     : // For non-skeleton proofreading, the active mag suffices
       currentMag;
   if (agglomerateFileMag == null) {
     return null;
   }
-  const agglomerateFileZoomstep = resolutionInfo.getIndexByMag(agglomerateFileMag);
+  const agglomerateFileZoomstep = magInfo.getIndexByMag(agglomerateFileMag);
 
   const getUnmappedDataValue = (position: Vector3): Promise<number> => {
     const { additionalCoordinates } = Store.getState().flycam;

@@ -1,32 +1,32 @@
-import { Modal, Row } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import type React from "react";
-import { useMemo, useState } from "react";
-import _ from "lodash";
-import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
+import { addAnnotationLayer } from "admin/admin_rest_api";
+import { Modal, Row } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import {
   NewVolumeLayerSelection,
   RestrictMagnificationSlider,
 } from "dashboard/advanced_dataset/create_explorative_modal";
-import Store, { type Tracing } from "oxalis/store";
-import { addAnnotationLayer } from "admin/admin_rest_api";
+import Toast from "libs/toast";
+import _ from "lodash";
+import messages from "messages";
+import { MappingStatusEnum } from "oxalis/constants";
 import {
-  getSomeMagInfoForDataset,
   getLayerByName,
+  getMagInfo,
   getMappingInfo,
   getSegmentationLayers,
-  getMagInfo,
+  getSomeMagInfoForDataset,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getAllReadableLayerNames,
   getVolumeTracingLayers,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import messages from "messages";
-import InputComponent from "oxalis/view/components/input_component";
 import { api } from "oxalis/singletons";
-import Toast from "libs/toast";
-import { MappingStatusEnum } from "oxalis/constants";
+import Store, { type Tracing } from "oxalis/store";
+import InputComponent from "oxalis/view/components/input_component";
+import type React from "react";
+import { useMemo, useState } from "react";
+import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 
 export type ValidationResult = { isValid: boolean; message: string };
 export function checkForLayerNameDuplication(
@@ -41,9 +41,16 @@ export function checkForLayerNameDuplication(
 }
 
 export function checkLayerNameForInvalidCharacters(readableLayerName: string): ValidationResult {
-  const uriSafeCharactersRegex = /[0-9a-zA-Z-._]+/g;
+  // A layer name is not allowed to start with a dot.
+  if (readableLayerName.startsWith(".")) {
+    return {
+      isValid: false,
+      message: messages["tracing.volume_layer_name_starts_with_dot"],
+    };
+  }
+  const validLayerNameCharactersRegex = /[0-9a-zA-Z-._$]+/g;
   // Removing all URISaveCharacters from readableLayerName. The leftover chars are all invalid.
-  const allInvalidChars = readableLayerName.replace(uriSafeCharactersRegex, "");
+  const allInvalidChars = readableLayerName.replace(validLayerNameCharactersRegex, "");
   const allUniqueInvalidCharsAsSet = new Set(allInvalidChars);
   const allUniqueInvalidCharsAsString = "".concat(...allUniqueInvalidCharsAsSet.values());
   const isValid = allUniqueInvalidCharsAsString.length === 0;
@@ -62,6 +69,12 @@ export function validateReadableLayerName(
   allReadableLayerNames: string[],
   nameNotToCount?: string,
 ): ValidationResult {
+  if (readableLayerName.length < 1) {
+    return {
+      isValid: false,
+      message: messages["tracing.volume_layer_name_too_short"],
+    };
+  }
   if (nameNotToCount) {
     // nameNotToCount needs to be removed once if it is included in allReadableLayerNames.
     // This is needed in case of saving an existing volume layer's name when the name was not modified.
@@ -129,11 +142,11 @@ export default function AddVolumeLayerModal({
       : null;
   const [newLayerName, setNewLayerName] = useState(initialNewLayerName);
 
-  const resolutionInfo =
+  const magInfo =
     selectedSegmentationLayer == null
       ? getSomeMagInfoForDataset(dataset)
       : getMagInfo(selectedSegmentationLayer.resolutions);
-  const [resolutionIndices, setResolutionIndices] = useState([0, 10000]);
+  const [magIndices, setMagIndices] = useState([0, 10000]);
 
   const handleSetNewLayerName = (evt: React.ChangeEvent<HTMLInputElement>) =>
     setNewLayerName(evt.target.value);
@@ -154,12 +167,8 @@ export default function AddVolumeLayerModal({
       Toast.error(validationResult.message);
       return;
     }
-    const minResolutionAllowed = Math.max(
-      ...resolutionInfo.getMagByIndexOrThrow(resolutionIndices[0]),
-    );
-    const maxResolutionAllowed = Math.max(
-      ...resolutionInfo.getMagByIndexOrThrow(resolutionIndices[1]),
-    );
+    const minMagAllowed = Math.max(...magInfo.getMagByIndexOrThrow(magIndices[0]));
+    const maxMagAllowed = Math.max(...magInfo.getMagByIndexOrThrow(magIndices[1]));
 
     if (selectedSegmentationLayerName == null) {
       await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
@@ -167,8 +176,8 @@ export default function AddVolumeLayerModal({
         name: newLayerName,
         fallbackLayerName: undefined,
         magRestrictions: {
-          min: minResolutionAllowed,
-          max: maxResolutionAllowed,
+          min: minMagAllowed,
+          max: maxMagAllowed,
         },
       });
     } else {
@@ -194,8 +203,8 @@ export default function AddVolumeLayerModal({
         name: newLayerName,
         fallbackLayerName,
         magRestrictions: {
-          min: minResolutionAllowed,
-          max: maxResolutionAllowed,
+          min: minMagAllowed,
+          max: maxMagAllowed,
         },
         mappingName: maybeMappingName,
       });
@@ -234,10 +243,10 @@ export default function AddVolumeLayerModal({
         />
       ) : null}
       <RestrictMagnificationSlider
-        magInfo={resolutionInfo}
+        magInfo={magInfo}
         selectedSegmentationLayer={selectedSegmentationLayer}
-        magIndices={resolutionIndices}
-        setMagIndices={setResolutionIndices}
+        magIndices={magIndices}
+        setMagIndices={setMagIndices}
       />
       <Row justify="center" align="middle">
         <AsyncButton onClick={handleAddVolumeLayer} type="primary" icon={<PlusOutlined />}>

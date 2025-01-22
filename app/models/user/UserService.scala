@@ -2,6 +2,7 @@ package models.user
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -23,7 +24,7 @@ import play.silhouette.api.util.PasswordInfo
 import play.silhouette.impl.providers.CredentialsProvider
 import security.{PasswordHasher, TokenDAO}
 import utils.sql.SqlEscaping
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -237,14 +238,11 @@ class UserService @Inject()(conf: WkConf,
 
   def updateDatasetViewConfiguration(
       user: User,
-      datasetName: String,
-      organizationId: String,
+      datasetId: ObjectId,
       datasetConfiguration: DatasetViewConfiguration,
       layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(GlobalAccessContext) ?~> Messages(
-        "dataset.notFound",
-        datasetName)
+      dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId)
       layerMap = layerConfiguration.flatMap(_.asOpt[Map[String, JsValue]]).getOrElse(Map.empty)
       _ <- Fox.serialCombined(layerMap.toList) {
         case (name, config) =>
@@ -281,11 +279,11 @@ class UserService @Inject()(conf: WkConf,
     userExperiencesDAO.findAllExperiencesForUser(_user)
 
   def teamMembershipsFor(_user: ObjectId): Fox[List[TeamMembership]] =
-    userDAO.findTeamMembershipsForUser(_user)
+    userDAO.findTeamMembershipsForUser(_user) ?~> "user.team.memberships.failed"
 
   def teamManagerMembershipsFor(_user: ObjectId): Fox[List[TeamMembership]] =
     for {
-      teamMemberships <- teamMembershipsFor(_user)
+      teamMemberships <- teamMembershipsFor(_user) ?~> "user.team.memberships.failed"
     } yield teamMemberships.filter(_.isTeamManager)
 
   def teamManagerTeamIdsFor(_user: ObjectId): Fox[List[ObjectId]] =

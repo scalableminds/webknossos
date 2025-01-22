@@ -1,43 +1,46 @@
 import { FileOutlined, FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
-import { Link } from "react-router-dom";
+import type { DatasetUpdater } from "admin/admin_rest_api";
 import { Dropdown, type MenuProps, type TableProps, Tag, Tooltip } from "antd";
 import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/lib/table/interface";
-import * as React from "react";
-import _ from "lodash";
-import { diceCoefficient as dice } from "dice-coefficient";
-import type { OxalisState } from "oxalis/store";
-import type {
-  APIDatasetCompact,
-  APIDatasetId,
-  APIMaybeUnimportedDataset,
-  FolderItem,
-} from "types/api_flow_types";
-import type { DatasetFilteringMode } from "dashboard/dataset_view";
-import { stringToColor } from "libs/format_utils";
-import { trackAction } from "oxalis/model/helpers/analytics";
-import CategorizationLabel from "oxalis/view/components/categorization_label";
+import classNames from "classnames";
+import FixedExpandableTable from "components/fixed_expandable_table";
+import FormattedDate from "components/formatted_date";
 import DatasetActionView, {
   getDatasetActionContextMenu,
 } from "dashboard/advanced_dataset/dataset_action_view";
-import EditableTextIcon from "oxalis/view/components/editable_text_icon";
-import FormattedDate from "components/formatted_date";
+import type { DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
+import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/queries";
+import type { DatasetFilteringMode } from "dashboard/dataset_view";
+import {
+  type DnDDropItemProps,
+  generateSettingsForFolder,
+  useDatasetDrop,
+} from "dashboard/folders/folder_tree";
+import { diceCoefficient as dice } from "dice-coefficient";
+import { stringToColor } from "libs/format_utils";
+import Shortcut from "libs/shortcut_component";
 import * as Utils from "libs/utils";
-import FixedExpandableTable from "components/fixed_expandable_table";
-import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
+import _ from "lodash";
+import { Unicode } from "oxalis/constants";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
+import type { OxalisState } from "oxalis/store";
+import CategorizationLabel from "oxalis/view/components/categorization_label";
+import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import {
   ContextMenuContext,
   GenericContextMenuContainer,
   getContextMenuPositionFromEvent,
 } from "oxalis/view/context_menu";
-import Shortcut from "libs/shortcut_component";
-import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/queries";
+import * as React from "react";
+import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import { useSelector } from "react-redux";
-import type { DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
-import { Unicode } from "oxalis/constants";
-import type { DatasetUpdater } from "admin/admin_rest_api";
-import { generateSettingsForFolder, useDatasetDrop } from "dashboard/folders/folder_tree";
-import classNames from "classnames";
+import { Link } from "react-router-dom";
+import type {
+  APIDatasetCompact,
+  APIMaybeUnimportedDataset,
+  FolderItem,
+} from "types/api_flow_types";
 import type { EmptyObject } from "types/globals";
 
 type FolderItemWithName = FolderItem & { name: string };
@@ -57,8 +60,8 @@ type Props = {
   isUserAdmin: boolean;
   isUserDatasetManager: boolean;
   datasetFilteringMode: DatasetFilteringMode;
-  reloadDataset: (arg0: APIDatasetId) => Promise<void>;
-  updateDataset: (id: APIDatasetId, updater: DatasetUpdater) => void;
+  reloadDataset: (datasetId: string) => Promise<void>;
+  updateDataset: (datasetId: string, updater: DatasetUpdater) => void;
   addTagToSearch: (tag: string) => void;
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
@@ -236,9 +239,10 @@ const DraggableDatasetRow = ({
   const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
   // @ts-ignore
 
-  const datasetName = restProps["data-row-key"];
+  const datasetId = restProps["data-row-key"];
+  const dragItem: DnDDropItemProps = { index, datasetId };
   const [, drag, preview] = useDrag({
-    item: { index, datasetName },
+    item: dragItem,
     type: DraggableDatasetType,
     canDrag: () => isADataset,
   });
@@ -276,8 +280,11 @@ class DatasetRenderer {
     this.data = data;
     this.datasetTable = datasetTable;
   }
+  static getRowKey(dataset: APIDatasetCompact) {
+    return dataset.id;
+  }
   getRowKey() {
-    return this.data.name;
+    return DatasetRenderer.getRowKey(this.data);
   }
 
   renderTypeColumn() {
@@ -287,17 +294,12 @@ class DatasetRenderer {
     const selectedLayerName: string | null =
       this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0];
     const imgSrc = selectedLayerName
-      ? `/api/datasets/${this.data.owningOrganization}/${
-          this.data.name
-        }/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
+      ? `/api/datasets/${this.data.id}/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
       : "/assets/images/inactive-dataset-thumbnail.svg";
     const iconClassName = selectedLayerName ? "" : " icon-thumbnail";
     return (
       <>
-        <Link
-          to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
-          title="View Dataset"
-        >
+        <Link to={`/datasets/${getReadableURLPart(this.data)}/view`} title="View Dataset">
           <img
             src={imgSrc}
             className={`dataset-table-thumbnail ${iconClassName}`}
@@ -307,7 +309,7 @@ class DatasetRenderer {
         </Link>
         <div className="dataset-table-name-container">
           <Link
-            to={`/datasets/${this.data.owningOrganization}/${this.data.name}/view`}
+            to={`/datasets/${getReadableURLPart(this.data)}/view`}
             title="View Dataset"
             className="incognito-link dataset-table-name"
           >
@@ -363,8 +365,11 @@ class FolderRenderer {
     this.data = data;
     this.datasetTable = datasetTable;
   }
+  static getRowKey(folder: FolderItemWithName) {
+    return folder.key;
+  }
   getRowKey() {
-    return this.data.key;
+    return FolderRenderer.getRowKey(this.data);
   }
   renderNameColumn() {
     return (
@@ -433,8 +438,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
     });
   };
 
-  reloadSingleDataset = (datasetId: APIDatasetId): Promise<void> =>
-    this.props.reloadDataset(datasetId);
+  reloadSingleDataset = (datasetId: string): Promise<void> => this.props.reloadDataset(datasetId);
 
   getFilteredDatasets() {
     const filterByMode = (datasets: APIDatasetCompact[]) => {
@@ -573,9 +577,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
 
     let selectedRowKeys: string[] = [];
     if (selectedDatasets.length > 0) {
-      selectedRowKeys = selectedDatasets.map((ds) => ds.name);
-    } else if (context.selectedFolder) {
-      selectedRowKeys = [context.selectedFolder?.key];
+      selectedRowKeys = selectedDatasets.map(DatasetRenderer.getRowKey);
+    } else if (context.selectedFolder && "name" in context.selectedFolder) {
+      selectedRowKeys = [FolderRenderer.getRowKey(context.selectedFolder as FolderItemWithName)];
     }
 
     const columns: TableProps["columns"] = [
@@ -735,7 +739,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
               },
               onDoubleClick: () => {
                 if (isADataset) {
-                  window.location.href = `/datasets/${data.owningOrganization}/${data.name}/view`;
+                  window.location.href = `/datasets/${getReadableURLPart(data)}/view`;
                 } else {
                   context.setActiveFolderId(data.key);
                 }
@@ -762,7 +766,7 @@ export function DatasetTags({
 }: {
   dataset: APIDatasetCompact;
   onClickTag?: (t: string) => void;
-  updateDataset: (id: APIDatasetId, updater: DatasetUpdater) => void;
+  updateDataset: (datasetId: string, updater: DatasetUpdater) => void;
 }) {
   const editTagFromDataset = (
     shouldAddTag: boolean,
@@ -791,8 +795,7 @@ export function DatasetTags({
       };
     }
 
-    trackAction("Edit dataset tag");
-    updateDataset(dataset, updater);
+    updateDataset(dataset.id, updater);
   };
 
   return (

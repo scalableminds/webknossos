@@ -48,16 +48,16 @@ object CumsumParser extends LazyLogging {
       jsonReader.endObject()
 
       if (!correctOrder) {
-        r.close()
-        return parseImpl(f, maxReaderRange, boundingBoxList, start)
+        parseImpl(f, maxReaderRange, boundingBoxList, start)
+      } else {
+
+        val end = System.currentTimeMillis()
+        logger.info(s"Cumsum parsing took ${end - start} ms")
+
+        new BoundingBoxCache(cache,
+                             BoundingBoxFinder(positionSets._1, positionSets._2, positionSets._3, minBoundingBox),
+                             maxReaderRange)
       }
-
-      val end = System.currentTimeMillis()
-      logger.info(s"Cumsum parsing took ${end - start} ms")
-
-      new BoundingBoxCache(cache,
-                           BoundingBoxFinder(positionSets._1, positionSets._2, positionSets._3, minBoundingBox),
-                           maxReaderRange)
     } catch {
       case e: JsonParseException =>
         logger.error(s"Parse exception while parsing cumsum: ${e.getMessage}.")

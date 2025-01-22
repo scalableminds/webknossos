@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import models.user.{UserDAO, UserService}
 import play.api.libs.json._
 import slick.lifted.Rep
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject

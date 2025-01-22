@@ -3,7 +3,6 @@ package controllers
 import org.apache.pekko.actor.ActorSystem
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import mail.{DefaultMails, Send}
 
@@ -42,9 +41,9 @@ class OrganizationController @Inject()(
 
   def organizationsIsEmpty: Action[AnyContent] = Action.async { implicit request =>
     for {
-      allOrgs <- organizationDAO.findAll(GlobalAccessContext) ?~> "organization.list.failed"
+      orgaTableIsEmpty <- organizationDAO.isEmpty ?~> "organization.list.failed"
     } yield {
-      Ok(Json.toJson(allOrgs.isEmpty))
+      Ok(Json.toJson(orgaTableIsEmpty))
     }
   }
 
@@ -141,10 +140,7 @@ class OrganizationController @Inject()(
   def acceptTermsOfService(version: Int): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(request.identity.isOrganizationOwner) ?~> "termsOfService.onlyOrganizationOwner"
-      _ <- bool2Fox(conf.WebKnossos.TermsOfService.enabled) ?~> "termsOfService.notEnabled"
-      requiredVersion = conf.WebKnossos.TermsOfService.version
-      _ <- bool2Fox(version == requiredVersion) ?~> Messages("termsOfService.versionMismatch", requiredVersion, version)
-      _ <- organizationDAO.acceptTermsOfService(request.identity._organization, version, Instant.now)
+      _ <- organizationService.acceptTermsOfService(request.identity._organization, version)
     } yield Ok
   }
 
@@ -216,7 +212,7 @@ class OrganizationController @Inject()(
         mail = if (requestedPlan == PricingPlan.Team) {
           defaultMails.upgradePricingPlanToTeamMail _
         } else {
-          defaultMails.upgradePricingPlanToTeamMail _
+          defaultMails.upgradePricingPlanToPowerMail _
         }
         _ = Mailer ! Send(mail(request.identity, userEmail))
         _ = Mailer ! Send(

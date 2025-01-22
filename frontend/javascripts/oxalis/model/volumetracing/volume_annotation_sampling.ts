@@ -1,10 +1,10 @@
-import _ from "lodash";
-import type { Vector3, LabeledVoxelsMap, BucketAddress } from "oxalis/constants";
-import constants from "oxalis/constants";
 import { map3 } from "libs/utils";
-import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
+import _ from "lodash";
 import messages from "messages";
+import type { BucketAddress, LabeledVoxelsMap, Vector3 } from "oxalis/constants";
+import constants from "oxalis/constants";
+import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { DimensionMap } from "oxalis/model/dimensions";
 
 function upsampleVoxelMap(
@@ -18,19 +18,19 @@ function upsampleVoxelMap(
   thirdDimensionVoxelValue: number,
 ): LabeledVoxelsMap {
   // This method upsamples a given LabeledVoxelsMap. For each bucket in the LabeledVoxelsMap this function
-  // iterates over the buckets in the higher resolution that are covered by the bucket.
+  // iterates over the buckets in the higher mag that are covered by the bucket.
   // For each covered bucket all labeled voxel entries are upsampled with a kernel and marked in an array for the covered bucket.
   // Therefore all covered buckets with their marked array build the upsampled version of the given LabeledVoxelsMap.
   if (sourceZoomStep <= targetZoomStep) {
     throw new Error("Trying to upsample a LabeledVoxelMap with the down sample function.");
   }
 
-  const labeledVoxelMapInTargetResolution: LabeledVoxelsMap = new Map();
+  const labeledVoxelMapInTargetMag: LabeledVoxelsMap = new Map();
   const scaleToSource = map3((val, index) => val / sourceMag[index], targetMag);
   // This array serves multiple purposes. It has a name / variable for each purpose.
   const scaleToGoal = map3((val, index) => val / targetMag[index], sourceMag);
   const numberOfBucketWithinSourceBucket = scaleToGoal;
-  const singleVoxelBoundsInTargetResolution = scaleToGoal;
+  const singleVoxelBoundsInTargetMag = scaleToGoal;
   const boundsOfGoalBucketWithinSourceBucket = map3(
     (value) => Math.ceil(value * constants.BUCKET_WIDTH),
     scaleToSource,
@@ -109,26 +109,26 @@ function upsampleVoxelMap(
                   secondDimVoxelOffset
               ] === 1
             ) {
-              const kernelTopLeftVoxelInTargetResolution = [
-                kernelLeft * singleVoxelBoundsInTargetResolution[dimensionIndices[0]],
-                kernelTop * singleVoxelBoundsInTargetResolution[dimensionIndices[1]],
+              const kernelTopLeftVoxelInTargetMag = [
+                kernelLeft * singleVoxelBoundsInTargetMag[dimensionIndices[0]],
+                kernelTop * singleVoxelBoundsInTargetMag[dimensionIndices[1]],
               ];
 
               // The labeled voxel is upscaled using a kernel.
               for (
                 let firstKernelOffset = 0;
-                firstKernelOffset < singleVoxelBoundsInTargetResolution[dimensionIndices[0]];
+                firstKernelOffset < singleVoxelBoundsInTargetMag[dimensionIndices[0]];
                 firstKernelOffset++
               ) {
                 for (
                   let secondKernelOffset = 0;
-                  secondKernelOffset < singleVoxelBoundsInTargetResolution[dimensionIndices[1]];
+                  secondKernelOffset < singleVoxelBoundsInTargetMag[dimensionIndices[1]];
                   secondKernelOffset++
                 ) {
                   currentGoalVoxelMap[
-                    (kernelTopLeftVoxelInTargetResolution[0] + firstKernelOffset) *
+                    (kernelTopLeftVoxelInTargetMag[0] + firstKernelOffset) *
                       constants.BUCKET_WIDTH +
-                      kernelTopLeftVoxelInTargetResolution[1] +
+                      kernelTopLeftVoxelInTargetMag[1] +
                       secondKernelOffset
                   ] = 1;
                 }
@@ -140,16 +140,13 @@ function upsampleVoxelMap(
         }
 
         if (annotatedAtleastOneVoxel) {
-          labeledVoxelMapInTargetResolution.set(
-            currentGoalBucket.zoomedAddress,
-            currentGoalVoxelMap,
-          );
+          labeledVoxelMapInTargetMag.set(currentGoalBucket.zoomedAddress, currentGoalVoxelMap);
         }
       }
     }
   }
 
-  return labeledVoxelMapInTargetResolution;
+  return labeledVoxelMapInTargetMag;
 }
 
 function downsampleVoxelMap(
@@ -169,7 +166,7 @@ function downsampleVoxelMap(
     throw new Error("Trying to upsample a LabeledVoxelMap with the downsample function.");
   }
 
-  const labeledVoxelMapInTargetResolution: LabeledVoxelsMap = new Map();
+  const labeledVoxelMapInTargetMag: LabeledVoxelsMap = new Map();
   const scaleToSource = map3((val, index) => val / sourceMag[index], targetMag);
   const scaleToGoal = map3((val, index) => val / targetMag[index], sourceMag);
 
@@ -216,9 +213,9 @@ function downsampleVoxelMap(
       bucketOffset,
     );
     const goalVoxelMap =
-      labeledVoxelMapInTargetResolution.get(goalBucket.zoomedAddress) ||
+      labeledVoxelMapInTargetMag.get(goalBucket.zoomedAddress) ||
       new Uint8Array(constants.BUCKET_WIDTH ** 2).fill(0);
-    // Iterate over the voxelMap in the goal resolution and search in each voxel for a labeled voxel (kernel-wise iteration).
+    // Iterate over the voxelMap in the goal mag and search in each voxel for a labeled voxel (kernel-wise iteration).
     const kernelSize = map3((scaleValue) => Math.ceil(scaleValue), scaleToSource);
 
     // The next two for loops move the kernel.
@@ -264,10 +261,10 @@ function downsampleVoxelMap(
       }
     }
 
-    labeledVoxelMapInTargetResolution.set(goalBucket.zoomedAddress, goalVoxelMap);
+    labeledVoxelMapInTargetMag.set(goalBucket.zoomedAddress, goalVoxelMap);
   }
 
-  return labeledVoxelMapInTargetResolution;
+  return labeledVoxelMapInTargetMag;
 }
 
 export default function sampleVoxelMapToMagnification(

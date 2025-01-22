@@ -6,18 +6,22 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 trait DataFinder {
   private def getExactDataOffset(data: Array[Byte], bytesPerElement: Int): Vec3Int = {
     val bucketLength = DataLayer.bucketLength
-    for {
-      z <- 0 until bucketLength
-      y <- 0 until bucketLength
-      x <- 0 until bucketLength
-      scaledX = x * bytesPerElement
-      scaledY = y * bytesPerElement * bucketLength
-      scaledZ = z * bytesPerElement * bucketLength * bucketLength
-    } {
-      val voxelOffset = scaledX + scaledY + scaledZ
-      if (data.slice(voxelOffset, voxelOffset + bytesPerElement).exists(_ != 0)) return Vec3Int(x, y, z)
-    }
-    Vec3Int.zeros
+
+    Iterator
+      .tabulate(bucketLength, bucketLength, bucketLength) { (z, y, x) =>
+        val scaledX = x * bytesPerElement
+        val scaledY = y * bytesPerElement * bucketLength
+        val scaledZ = z * bytesPerElement * bucketLength * bucketLength
+        val voxelOffset = scaledX + scaledY + scaledZ
+        (x, y, z, voxelOffset)
+      }
+      .flatten
+      .flatten
+      .collectFirst {
+        case (x, y, z, voxelOffset) if data.slice(voxelOffset, voxelOffset + bytesPerElement).exists(_ != 0) =>
+          Vec3Int(x, y, z)
+      }
+      .getOrElse(Vec3Int.zeros)
   }
 
   def getPositionOfNonZeroData(data: Array[Byte],

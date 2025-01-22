@@ -1,28 +1,27 @@
+import { useIsMutating } from "@tanstack/react-query";
+import { type DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
+import { useEffectOnlyOnce, usePrevious } from "libs/react_hooks";
+import UserLocalStorage from "libs/user_local_storage";
+import _ from "lodash";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type {
-  APIDatasetId,
+  APIDataset,
   APIDatasetCompact,
   APIDatasetCompactWithoutStatusAndLayerNames,
   FolderItem,
-  APIDataset,
 } from "types/api_flow_types";
-import { type DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
-import UserLocalStorage from "libs/user_local_storage";
-import _ from "lodash";
 import {
-  useFolderHierarchyQuery,
-  useDatasetsInFolderQuery,
-  useDatasetSearchQuery,
   useCreateFolderMutation,
-  useUpdateFolderMutation,
-  useMoveFolderMutation,
+  useDatasetSearchQuery,
+  useDatasetsInFolderQuery,
   useDeleteFolderMutation,
-  useUpdateDatasetMutation,
+  useFolderHierarchyQuery,
   useFolderQuery,
+  useMoveFolderMutation,
+  useUpdateDatasetMutation,
+  useUpdateFolderMutation,
 } from "./queries";
-import { useIsMutating } from "@tanstack/react-query";
-import { useEffectOnlyOnce, usePrevious } from "libs/react_hooks";
 
 export type DatasetCollectionContextValue = {
   datasets: Array<APIDatasetCompact>;
@@ -30,11 +29,8 @@ export type DatasetCollectionContextValue = {
   isChecking: boolean;
   checkDatasets: () => Promise<void>;
   fetchDatasets: () => void;
-  reloadDataset: (
-    datasetId: APIDatasetId,
-    datasetsToUpdate?: Array<APIDatasetCompact>,
-  ) => Promise<void>;
-  updateCachedDataset: (id: APIDatasetId, updater: DatasetUpdater) => Promise<APIDataset>;
+  reloadDataset: (datasetId: string, datasetsToUpdate?: Array<APIDatasetCompact>) => Promise<void>;
+  updateCachedDataset: (datasetId: string, updater: DatasetUpdater) => Promise<APIDataset>;
   activeFolderId: string | null;
   setActiveFolderId: (id: string | null) => void;
   mostRecentlyUsedActiveFolderId: string | null;
@@ -157,12 +153,12 @@ export default function DatasetCollectionContextProvider({
     datasetSearchQuery.refetch();
   }
 
-  async function reloadDataset(datasetId: APIDatasetId) {
+  async function reloadDataset(datasetId: string) {
     await updateDatasetMutation.mutateAsync(datasetId);
   }
 
-  async function updateCachedDataset(id: APIDatasetId, updater: DatasetUpdater) {
-    return await updateDatasetMutation.mutateAsync([id, updater]);
+  async function updateCachedDataset(datasetId: string, updater: DatasetUpdater) {
+    return await updateDatasetMutation.mutateAsync([datasetId, updater]);
   }
 
   const getBreadcrumbs = (dataset: APIDatasetCompactWithoutStatusAndLayerNames) => {

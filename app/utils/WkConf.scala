@@ -128,7 +128,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val key: String = get[String]("datastore.key")
     val name: String = get[String]("datastore.name")
     val publicUri: Option[String] = getOptional[String]("datastore.publicUri")
-    val localFolderWhitelist: List[String] = getList[String]("datastore.localFolderWhitelist")
   }
 
   object Tracingstore {
@@ -155,6 +154,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     }
 
     val defaultSender: String = get[String]("mail.defaultSender")
+    def additionalFooter: String = get[String]("mail.additionalFooter")
 
     object Mailchimp {
       val host: String = get[String]("mail.mailchimp.host")
@@ -198,10 +198,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val projectID: String = get[String]("airbrake.projectID")
     val projectKey: String = get[String]("airbrake.projectKey")
     val environment: String = get[String]("airbrake.environment")
-  }
-
-  object GoogleAnalytics {
-    val trackingId: String = get[String]("googleAnalytics.trackingId")
   }
 
   object SlackNotifications {
@@ -259,7 +255,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       Silhouette,
       Jobs,
       Airbrake,
-      GoogleAnalytics,
       BackendAnalytics,
       Slick,
       Voxelytics,

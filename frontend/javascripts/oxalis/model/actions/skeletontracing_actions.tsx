@@ -13,7 +13,7 @@ import Store from "oxalis/store";
 import RemoveTreeModal from "oxalis/view/remove_tree_modal";
 import type { Key } from "react";
 import { batchActions } from "redux-batched-actions";
-import type { ServerSkeletonTracing, MetadataEntryProto } from "types/api_flow_types";
+import type { MetadataEntryProto, ServerSkeletonTracing } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
@@ -191,7 +191,7 @@ export const createNodeAction = (
   additionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   viewport: number,
-  resolution: number,
+  mag: number,
   treeId?: number | null | undefined,
   dontActivate: boolean = false,
   timestamp: number = Date.now(),
@@ -202,7 +202,7 @@ export const createNodeAction = (
     additionalCoordinates,
     rotation,
     viewport,
-    resolution,
+    mag,
     treeId,
     dontActivate,
     timestamp,

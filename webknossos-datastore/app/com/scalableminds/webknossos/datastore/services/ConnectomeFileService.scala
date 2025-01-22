@@ -84,14 +84,16 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
     extends FoxImplicits
     with LazyLogging {
 
-  private val dataBaseDir = Paths.get(config.Datastore.baseFolder)
+  private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
   private val connectomesDir = "connectomes"
   private val connectomeFileExtension = "hdf5"
 
   private lazy val connectomeFileCache = new Hdf5FileCache(30)
 
-  def exploreConnectomeFiles(organizationId: String, datasetName: String, dataLayerName: String): Set[String] = {
-    val layerDir = dataBaseDir.resolve(organizationId).resolve(datasetName).resolve(dataLayerName)
+  def exploreConnectomeFiles(organizationId: String,
+                             datasetDirectoryName: String,
+                             dataLayerName: String): Set[String] = {
+    val layerDir = dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName).resolve(dataLayerName)
     PathUtils
       .listFiles(layerDir.resolve(connectomesDir),
                  silent = true,
@@ -105,12 +107,12 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
   }
 
   def connectomeFilePath(organizationId: String,
-                         datasetName: String,
+                         datasetDirectoryName: String,
                          dataLayerName: String,
                          connectomeFileName: String): Path =
     dataBaseDir
       .resolve(organizationId)
-      .resolve(datasetName)
+      .resolve(datasetDirectoryName)
       .resolve(dataLayerName)
       .resolve(connectomesDir)
       .resolve(s"$connectomeFileName.$connectomeFileExtension")

@@ -20,29 +20,22 @@ import {
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
 import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
+import { formatNumber } from "libs/format_utils";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 import Toast, { guardedWithErrorToast } from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import { flatToNestedMatrix } from "oxalis/model/accessors/dataset_accessor";
+import { WkDevFlags } from "oxalis/api/wk_dev";
+import type { Vector3 } from "oxalis/constants";
+import { flatToNestedMatrix, getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
+import { checkLandmarksForThinPlateSpline } from "oxalis/model/helpers/transformation_helpers";
 import type { OxalisState } from "oxalis/store";
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
-import {
-  type APIDataLayer,
-  type APIDataset,
-  type APIDatasetId,
-  type APITeam,
-  areDatasetsIdentical,
-  type LayerLink,
-} from "types/api_flow_types";
+import type { APIDataLayer, APIDataset, APITeam, LayerLink } from "types/api_flow_types";
 import { syncValidator } from "types/validation";
 import type { WizardComponentProps } from "./common";
-import { useEffectOnlyOnce } from "libs/react_hooks";
-import { formatNumber } from "libs/format_utils";
-import { checkLandmarksForThinPlateSpline } from "oxalis/model/helpers/transformation_helpers";
-import type { Vector3 } from "oxalis/constants";
-import { WkDevFlags } from "oxalis/api/wk_dev";
 
 const FormItem = Form.Item;
 
@@ -78,10 +71,12 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
       ) as [APIDataset, APIDataLayer][]
     ).map(
       ([dataset, dataLayer]): LayerLink => ({
-        datasetId: {
+        datasetId: dataset.id,
+        dataSourceId: {
+          directoryName: dataset.directoryName,
           owningOrganization: dataset.owningOrganization,
-          name: dataset.name,
         },
+        datasetName: dataset.name,
         sourceName: dataLayer.name,
         newName: dataLayer.name,
         transformations: [],
@@ -124,13 +119,14 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
       if (useThinPlateSplines) {
         checkLandmarksForThinPlateSpline(sourcePoints, targetPoints);
       }
-      return layers.map((layer) => ({
-        ...layer,
-        // The first dataset will be transformed to match the second.
-        transformations: areDatasetsIdentical(layer.datasetId, linkedDatasets[0])
-          ? transformationArr
-          : [],
-      }));
+      return layers.map((layer) => {
+        const areDatasetsIdentical = layer.datasetId === linkedDatasets[0].id;
+        return {
+          ...layer,
+          // The first dataset will be transformed to match the second.
+          transformations: areDatasetsIdentical ? transformationArr : [],
+        };
+      });
     }
 
     const uploadableDatastores = props.datastores.filter((datastore) => datastore.allowsUpload);
@@ -172,7 +168,8 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
     const newDatasetName = form.getFieldValue(["name"]);
     setIsLoading(true);
     try {
-      await createDatasetComposition(datastoreToUse.url, {
+      const { newDatasetId } = await createDatasetComposition(datastoreToUse.url, {
+        // keep identifying dataset at orgaId & directoryPath as this is a datastore request.
         newDatasetName,
         targetFolderId: form.getFieldValue(["targetFolderId"]),
         organizationId: activeUser.organization,
@@ -180,40 +177,36 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
         layers: layersWithTransforms,
       });
 
-      const uniqueDatasets = _.uniqBy(
-        layersWithoutTransforms.map((layer) => layer.datasetId),
-        (id) => id.owningOrganization + "-" + id.name,
-      );
+      const uniqueDatasets = _.uniqBy(layersWithoutTransforms, (layer) => layer.datasetId);
       const datasetMarkdownLinks = uniqueDatasets
-        .map((el) => `- [${el.name}](/datasets/${el.owningOrganization}/${el.name})`)
+        .map(
+          (el) =>
+            `- [${el.datasetName}](/datasets/${getReadableURLPart({ name: el.datasetName, id: el.datasetId })})`,
+        )
         .join("\n");
 
-      await updateDatasetPartial(
-        { owningOrganization: activeUser.organization, name: newDatasetName },
-        {
-          description: [
-            "This dataset was composed from:",
-            datasetMarkdownLinks,
-            "",
-            "The layers were combined " +
-              (sourcePoints.length === 0
-                ? "without any transforms"
-                : `with ${
-                    useThinPlateSplines
-                      ? `Thin-Plate-Splines (${sourcePoints.length} correspondences)`
-                      : `an affine transformation (mean error: ${formatNumber(
-                          affineMeanError.meanError,
-                        )} vx)`
-                  }`) +
-              ".",
-          ].join("\n"),
-        },
-      );
+      await updateDatasetPartial(newDatasetId, {
+        description: [
+          "This dataset was composed from:",
+          datasetMarkdownLinks,
+          "",
+          "The layers were combined " +
+            (sourcePoints.length === 0
+              ? "without any transforms"
+              : `with ${
+                  useThinPlateSplines
+                    ? `Thin-Plate-Splines (${sourcePoints.length} correspondences)`
+                    : `an affine transformation (mean error: ${formatNumber(
+                        affineMeanError.meanError,
+                      )} vx)`
+                }`) +
+            ".",
+        ].join("\n"),
+      });
+      props.onAdded(newDatasetId, newDatasetName, false);
     } finally {
       setIsLoading(false);
     }
-
-    props.onAdded(activeUser.organization, newDatasetName, false);
   };
 
   return (
@@ -271,6 +264,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
                   <List.Item key={`layer-${idx}`}>
                     <LinkedLayerForm
                       datasetId={layer.datasetId}
+                      datasetName={layer.datasetName}
                       layer={layer}
                       index={idx}
                       onRemoveLayer={onRemoveLayer}
@@ -311,14 +305,16 @@ function LinkedLayerForm({
   onRemoveLayer,
   form,
   datasetId,
+  datasetName,
 }: {
   layer: LayerLink;
   index: number;
   onRemoveLayer: (layer: LayerLink) => void;
   form: FormInstance;
-  datasetId: APIDatasetId;
+  datasetId: string;
+  datasetName: string;
 }) {
-  const layers = Form.useWatch(["layers"]);
+  const layers = Form.useWatch(["layers"]) || [];
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: See comment below
   React.useEffect(() => {
@@ -380,11 +376,11 @@ function LinkedLayerForm({
             info="This is the layer which will be linked into the new dataset."
           >
             <a
-              href={`/datasets/${datasetId.owningOrganization}/${datasetId.name}/view`}
+              href={`/datasets/${getReadableURLPart({ name: datasetName, id: datasetId })}/view`}
               target="_blank"
               rel="noreferrer"
             >
-              {datasetId.name}
+              {datasetName}
             </a>{" "}
             / {layer.sourceName}
           </FormItemWithInfo>

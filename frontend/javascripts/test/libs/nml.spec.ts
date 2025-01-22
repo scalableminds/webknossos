@@ -6,7 +6,7 @@ import type { Node, SkeletonTracing, OxalisState } from "oxalis/store";
 import defaultState from "oxalis/default_state";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
-import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { findGroup } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import mock from "mock-require";
 import test, { type ExecutionContext } from "ava";
 import { TreeTypeEnum } from "oxalis/constants";
@@ -34,7 +34,7 @@ const createDummyNode = (id: number): Node => ({
   untransformedPosition: [id, id, id],
   additionalCoordinates: [],
   radius: id,
-  resolution: 10,
+  mag: 10,
   rotation: [id, id, id],
   timestamp: id,
   viewport: 1,

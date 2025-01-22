@@ -1,37 +1,37 @@
-import type * as THREE from "three";
+import app from "app";
+import type UpdatableTexture from "libs/UpdatableTexture";
+import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/async/latest_task_executor";
+import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
+import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
+import DiffableMap from "libs/diffable_map";
+import { M4x4, type Matrix4x4 } from "libs/mjs";
+import { map3 } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { M4x4, type Matrix4x4 } from "libs/mjs";
-import { createWorker } from "oxalis/workers/comlink_wrapper";
-import { map3 } from "libs/utils";
+import type { BucketAddress, Vector3, Vector4, ViewMode } from "oxalis/constants";
 import {
   getByteCount,
   getElementClass,
-  isLayerVisible,
   getLayerByName,
   getMagInfo,
-  invertAndTranspose,
   getTransformsForLayer,
+  invertAndTranspose,
+  isLayerVisible,
 } from "oxalis/model/accessors/dataset_accessor";
-import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
+import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/async/latest_task_executor";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import Store, { type PlaneRects, type SegmentMap } from "oxalis/store";
 import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
-import type UpdatableTexture from "libs/UpdatableTexture";
-import type { ViewMode, Vector3, Vector4, BucketAddress } from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
-import DiffableMap from "libs/diffable_map";
-import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
-import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
+import Store, { type PlaneRects, type SegmentMap } from "oxalis/store";
+import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
+import type * as THREE from "three";
+import type { AdditionalCoordinate } from "types/api_flow_types";
+import { getViewportRects } from "../accessors/view_mode_accessor";
+import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
 import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
-import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
-import { getViewportRects } from "../accessors/view_mode_accessor";
-import type { AdditionalCoordinate } from "types/api_flow_types";
-import app from "app";
 
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
 // 256**2 (entries) * 0.25 (load capacity) / 8 (layers) == 2048 buckets/layer
@@ -187,16 +187,16 @@ export default class LayerRenderingManager {
     const state = Store.getState();
     const { dataset, datasetConfiguration } = state;
     const layer = getLayerByName(dataset, this.name);
-    const resolutionInfo = getMagInfo(layer.resolutions);
-    const maximumResolutionIndex = resolutionInfo.getCoarsestMagIndex();
+    const magInfo = getMagInfo(layer.resolutions);
+    const maximumMagIndex = magInfo.getCoarsestMagIndex();
 
-    if (logZoomStep > maximumResolutionIndex) {
+    if (logZoomStep > maximumMagIndex) {
       // Don't render anything if the zoomStep is too high
       this.textureBucketManager.setActiveBuckets([]);
       return;
     }
 
-    const resolutions = getMagInfo(layer.resolutions).getDenseMags();
+    const mags = getMagInfo(layer.resolutions).getDenseMags();
     const layerMatrix = invertAndTranspose(
       getTransformsForLayer(dataset, layer, datasetConfiguration.nativelyRenderedLayerName)
         .affineMatrix,
@@ -237,7 +237,7 @@ export default class LayerRenderingManager {
         pickingPromise = this.latestTaskExecutor.schedule(() =>
           asyncBucketPick(
             viewMode,
-            resolutions,
+            mags,
             position,
             sphericalCapRadius,
             matrix,
@@ -262,7 +262,7 @@ export default class LayerRenderingManager {
           // In general, pull buckets which are not available but should be sent to the GPU
           const missingBuckets = bucketsWithPriorities
             .filter(({ bucket }) => !bucket.hasData())
-            .filter(({ bucket }) => resolutionInfo.hasIndex(bucket.zoomedAddress[3]))
+            .filter(({ bucket }) => magInfo.hasIndex(bucket.zoomedAddress[3]))
             .map(({ bucket, priority }) => ({
               bucket: bucket.zoomedAddress,
               priority,

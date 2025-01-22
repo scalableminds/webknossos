@@ -1,0 +1,1 @@
+-- unfortunately, ALTER TYPE ... ADD cannot not be reverted

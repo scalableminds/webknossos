@@ -22,14 +22,14 @@ for file in "$EVOLUTIONS_FOLDER"/*; do
         continue
     fi
 
-    mentioned_in_x=$([[ "$CONTENT_RELEASED" == *"$filename"* ]] && echo 1 || echo 0)
-    mentioned_in_y=$([[ "$CONTENT_UNRELEASED" == *"$filename"* ]] && echo 1 || echo 0)
+    mentioned_in_released=$([[ "$CONTENT_RELEASED" == *"$filename"* ]] && echo 1 || echo 0)
+    mentioned_in_unreleased=$([[ "$CONTENT_UNRELEASED" == *"$filename"* ]] && echo 1 || echo 0)
 
-    if (( mentioned_in_x == 1 && mentioned_in_y == 1 )); then
-        echo "Conflict: '$filename' is listed in both MIGRATIONS.released.md and MIGRATIONS.unreleased.md."
+    if (( mentioned_in_released == 1 && mentioned_in_unreleased == 1 )); then
+        echo "Conflict: '$filename' is listed in both $RELEASED_FILE and $UNRELEASED_FILE."
         exit_code=1
-    elif (( mentioned_in_x == 0 && mentioned_in_y == 0 )); then
-        echo "Missing: '$filename' is not listed in MIGRATIONS.released.md nor MIGRATIONS.unreleased.md."
+    elif (( mentioned_in_released == 0 && mentioned_in_unreleased == 0 )); then
+        echo "Missing: '$filename' is not listed in $RELEASED_FILE nor $UNRELEASED_FILE."
         exit_code=1
     fi
 

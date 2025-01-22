@@ -22,7 +22,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
 
   var request: WSRequest = wsClient.url(url)
   private var verbose: Boolean = true
-  private var slowRequestLoggingThreshold = 1 minute
+  private var slowRequestLoggingThreshold = 2 minutes
 
   def addQueryString(parameters: (String, String)*): RPCRequest = {
     request = request.addQueryStringParameters(parameters: _*)

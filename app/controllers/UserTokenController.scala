@@ -93,6 +93,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     } else {
       for {
         userBox <- bearerTokenService.userForTokenOpt(token).futureBox
+        _ = Thread.sleep(60 * 1000)
         sharingTokenAccessCtx = URLSharing.fallbackTokenAccessContext(token)(DBAccessContext(userBox))
         answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>

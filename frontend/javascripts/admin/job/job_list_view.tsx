@@ -157,14 +157,20 @@ function JobListView() {
     setSearchQuery(event.target.value);
   }
 
+  function getLinkToDataset(job: APIJob) {
+    // prefer updated link over legacy link.
+    if (job.datasetId != null)
+      return `/datasets/${getReadableURLPart({ name: job.datasetName || "unknown_name", id: job.datasetId })}/view`;
+    if (job.organizationId != null && (job.datasetName != null || job.datasetDirectoryName != null))
+      return `/datasets/${job.organizationId}/${job.datasetDirectoryName || job.datasetName}/view`;
+    return null;
+  }
+
   function renderDescription(__: any, job: APIJob) {
-    const linkToDataset =
-      job.datasetId != null
-        ? `/datasets/${getReadableURLPart({ name: job.datasetName || "unknown_name", id: job.datasetId })}/view` // prefer updated link over legacy link.
-        : `/datasets/${job.organizationId || ""}/${job.datasetDirectoryName || job.datasetName}/view`;
+    const linkToDataset = getLinkToDataset(job);
     if (job.type === APIJobType.CONVERT_TO_WKW && job.datasetName) {
       return <span>{`Conversion to WKW of ${job.datasetName}`}</span>;
-    } else if (job.type === APIJobType.EXPORT_TIFF && job.organizationId && job.datasetName) {
+    } else if (job.type === APIJobType.EXPORT_TIFF && linkToDataset != null) {
       const labelToAnnotationOrDataset =
         job.annotationId != null ? (
           <Link to={`/annotations/${job.annotationId}`}>
@@ -180,24 +186,20 @@ function JobListView() {
           {job.ndBoundingBox ? formatWkLibsNdBBox(job.ndBoundingBox) : job.boundingBox})
         </span>
       );
-    } else if (job.type === APIJobType.RENDER_ANIMATION && job.organizationId && job.datasetName) {
+    } else if (job.type === APIJobType.RENDER_ANIMATION && linkToDataset != null) {
       return (
         <span>
           Animation rendering for layer {job.layerName} of dataset{" "}
           <Link to={linkToDataset}>{job.datasetName}</Link>
         </span>
       );
-    } else if (job.type === APIJobType.COMPUTE_MESH_FILE && job.organizationId && job.datasetName) {
+    } else if (job.type === APIJobType.COMPUTE_MESH_FILE && linkToDataset != null) {
       return (
         <span>
           Mesh file computation for <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
-    } else if (
-      job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE &&
-      job.organizationId &&
-      job.datasetName
-    ) {
+    } else if (job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE && linkToDataset != null) {
       return (
         <span>
           Segment index file computation for <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
@@ -205,8 +207,7 @@ function JobListView() {
       );
     } else if (
       job.type === APIJobType.FIND_LARGEST_SEGMENT_ID &&
-      job.organizationId &&
-      job.datasetName &&
+      linkToDataset != null &&
       job.layerName
     ) {
       return (
@@ -215,24 +216,14 @@ function JobListView() {
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
-    } else if (
-      job.type === APIJobType.INFER_NUCLEI &&
-      job.organizationId &&
-      job.datasetName &&
-      job.layerName
-    ) {
+    } else if (job.type === APIJobType.INFER_NUCLEI && linkToDataset != null && job.layerName) {
       return (
         <span>
           Nuclei inferral for layer {job.layerName} of{" "}
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
-    } else if (
-      job.type === APIJobType.INFER_NEURONS &&
-      job.organizationId &&
-      job.datasetName &&
-      job.layerName
-    ) {
+    } else if (job.type === APIJobType.INFER_NEURONS && linkToDataset != null && job.layerName) {
       return (
         <span>
           Neuron inferral for layer {job.layerName} of{" "}
@@ -241,8 +232,7 @@ function JobListView() {
       );
     } else if (
       job.type === APIJobType.INFER_MITOCHONDRIA &&
-      job.organizationId &&
-      job.datasetName &&
+      linkToDataset != null &&
       job.layerName
     ) {
       return (
@@ -251,23 +241,14 @@ function JobListView() {
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
-    } else if (
-      job.type === APIJobType.ALIGN_SECTIONS &&
-      job.organizationId &&
-      job.datasetName &&
-      job.layerName
-    ) {
+    } else if (job.type === APIJobType.ALIGN_SECTIONS && linkToDataset != null && job.layerName) {
       return (
         <span>
           Align sections for layer {job.layerName} of{" "}
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
-    } else if (
-      job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION &&
-      job.organizationId &&
-      job.datasetName
-    ) {
+    } else if (job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION && linkToDataset != null) {
       return (
         <span>
           Materialize annotation for {job.layerName ? ` layer ${job.layerName} of ` : " "}
@@ -277,7 +258,7 @@ function JobListView() {
             : null}
         </span>
       );
-    } else if (job.type === APIJobType.TRAIN_MODEL && job.organizationId) {
+    } else if (job.type === APIJobType.TRAIN_MODEL) {
       const numberOfTrainingAnnotations = job.trainingAnnotations.length;
       return (
         <span>
@@ -285,7 +266,7 @@ function JobListView() {
           {getShowTrainingDataLink(job.trainingAnnotations)}
         </span>
       );
-    } else if (job.type === APIJobType.INFER_WITH_MODEL && job.organizationId) {
+    } else if (job.type === APIJobType.INFER_WITH_MODEL && linkToDataset != null) {
       return (
         <span>
           Run AI segmentation with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>

@@ -21,7 +21,7 @@ function transformBackendJobToAPIJob(job: any): APIJob {
     type: job.command,
     datasetName: job.commandArgs.dataset_name,
     datasetDirectoryName: job.commandArgs.dataset_directory_name,
-    organizationId: job.commandArgs.organization_id,
+    organizationId: job.commandArgs.organization_id || job.commandArgs.organization_name,
     layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
     annotationLayerName: job.commandArgs.annotation_layer_name,
     boundingBox: job.commandArgs.bbox,

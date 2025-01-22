@@ -197,7 +197,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
   private def performRequest: Fox[WSResponse] = {
     val before = Instant.now
     if (verbose) {
-      logger.debug(s"Sending $debugInfo RequestBody: '$requestBodyPreview'")
+      logger.debug(s"Sending $debugInfo, RequestBody: '$requestBodyPreview'")
     }
     request
       .execute()
@@ -211,7 +211,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
           val responseBodyPreview = result.bodyAsBytes.utf8String.take(2000)
           val durationLabel = if (logSlow) s" Duration: ${formatDuration(duration)}."
           val verboseErrorMsg =
-            s"Failed $debugInfo." +
+            s"Failed $debugInfo," +
               s" Status: ${result.status}.$durationLabel" +
               s" RequestBody: '$requestBodyPreview'" +
               s" ResponseBody: '$responseBodyPreview'"
@@ -257,7 +257,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
   private def parseProtoResponse[T <: GeneratedMessage](r: Fox[WSResponse])(companion: GeneratedMessageCompanion[T]) =
     r.flatMap { response =>
       if (verbose) {
-        logger.debug(s"Successful $debugInfo ResponseBody: <${response.body.length} bytes of protobuf data>")
+        logger.debug(s"Successful $debugInfo, ResponseBody: <${response.body.length} bytes of protobuf data>")
       }
       try {
         Full(companion.parseFrom(response.bodyAsBytes.toArray))
@@ -269,7 +269,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
       }
     }
 
-  private def debugInfo: String = f"RPC #$id to ${request.method} $url"
+  private def debugInfo: String = f"RPC $id: ${request.method} $url"
 
   private def requestBodyPreview: String =
     request.body match {

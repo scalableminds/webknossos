@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 
 ### Changed
+- Improved the scrolling behaviour of sliders: In order to scroll them, sliders need to be focused. It is also prevented that the parent element is scrolled together with the slider itself. [#8321](https://github.com/scalableminds/webknossos/pull/8321)
 
 ### Fixed
 

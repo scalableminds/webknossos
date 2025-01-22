@@ -51,15 +51,14 @@ export function Slider(props: SliderProps) {
     (event: { preventDefault: () => void; deltaY: number }) => {
       // differentiate between single value and range slider
       if (onWheelDisabled || value == null || min == null || max == null || !isFocused.current)
-        return _.noop;
+        return;
+      event.preventDefault();
+      const diff = getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
       if (range === false || range == null) {
-        event.preventDefault();
-        const newValue = value - getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
+        const newValue = value - diff;
         const clampedNewValue = clamp(min, newValue, max);
         if (onChange != null) onChange(clampedNewValue);
       } else if (range === true || typeof range === "object") {
-        event.preventDefault();
-        const diff = getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
         const newLowerValue = Math.round(value[0] + diff);
         const newUpperValue = Math.round(value[1] - diff);
         const clampedNewLowerValue = clamp(min, newLowerValue, Math.min(newUpperValue, max));
@@ -70,10 +69,16 @@ export function Slider(props: SliderProps) {
     [value, min, max, onChange, range, onWheelDisabled],
   );
 
+  // Reacts onWheel is passive by default, this means that it can't preventDefault.
+  // Thus we need to add the event listener manually.
+  // (See https://github.com/facebook/react/pull/19654)
   useEffect(() => {
     const sliderElement = sliderRef.current;
     if (sliderElement) {
       sliderElement.addEventListener("wheel", handleWheelEvent, { passive: false });
+      return () => {
+        sliderElement.removeEventListener("wheel", handleWheelEvent);
+      };
     }
   }, [handleWheelEvent]);
 

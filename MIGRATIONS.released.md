@@ -6,6 +6,17 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [25.01.0](https://github.com/scalableminds/webknossos/releases/tag/25.01.0) - 2025-01-22
+[Commits](https://github.com/scalableminds/webknossos/compare/24.12.0...25.01.0)
+- Removed support for HTTP API versions 3 and 4. [#8075](https://github.com/scalableminds/webknossos/pull/8075)
+- New FossilDB version `0.1.33` (docker image `scalableminds/fossildb:master__504`) is required.
+- Datastore config options `datastore.baseFolder` and `localFolderWhitelist` to `datastore.baseDirectory` and `localDirectoryWhitelist` respectively, to avoid confusion with the dashboard folders. [#8292](https://github.com/scalableminds/webknossos/pull/8292)
+
+### Postgres Evolutions:
+- [124-decouple-dataset-directory-from-name.sql](conf/evolutions/124-decouple-dataset-directory-from-name.sql)
+- [125-allow-dollar-in-layer-names.sql](conf/evolutions/125-allow-dollar-in-layer-names.sql)
+
+
 ## [24.12.0](https://github.com/scalableminds/webknossos/releases/tag/24.12.0) - 2024-12-05
 [Commits](https://github.com/scalableminds/webknossos/compare/24.11.1...24.12.0)
 

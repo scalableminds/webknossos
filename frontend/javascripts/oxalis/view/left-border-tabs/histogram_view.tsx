@@ -269,7 +269,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     const minMaxInputStyle = {
       width: "100%",
     };
-    const maybeCeilFn = this.props.supportFractionals ? Math.ceil : (val: number) => val;
+    const maybeCeilFn = this.props.supportFractionals ? (val: number) => val : Math.ceil;
     return (
       <Spin spinning={data === undefined}>
         <canvas ref={this.onCanvasRefChange} width={canvasWidth} height={canvasHeight} />

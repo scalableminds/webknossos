@@ -776,3 +776,16 @@ No migrations necessary.
 
 ## [18.07.0](https://github.com/scalableminds/webknossos/releases/tag/18.07.0) - 2018-07-05
 First release
+
+### Postgres Evolutions:
+- [001-add-organizations.sql](conf/evolutions/001-add-organizations.sql)
+- [002-add-dataset-urlsharing-token.sql](conf/evolutions/002-add-dataset-urlsharing-token.sql)
+- [003-add-dataset-displayname.sql](conf/evolutions/003-add-dataset-displayname.sql)
+- [004-add-initializing-annotation-state.sql](conf/evolutions/004-add-initializing-annotation-state.sql)
+- [005-add-openinstances-trigger.sql](conf/evolutions/005-add-openinstances-trigger.sql)
+- [007-unify-type-datalayer-name.sql](conf/evolutions/007-unify-type-datalayer-name.sql)
+- [008-task-instances-triggers.sql](conf/evolutions/008-task-instances-triggers.sql)
+- [009-remove-team-assignment-from-task.sql](conf/evolutions/009-remove-team-assignment-from-task.sql)
+- [010-add-organization-data.sql](conf/evolutions/010-add-organization-data.sql)
+- [011-add-isOrganizationTeam.sql](conf/evolutions/011-add-isOrganizationTeam.sql)
+- [012-add-foreign-keys.sql](conf/evolutions/012-add-foreign-keys.sql)

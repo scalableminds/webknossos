@@ -8,7 +8,7 @@ import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
+import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
@@ -77,6 +77,7 @@ class DataSourceService @Inject()(
             foundInboxSources = organizationDirs.flatMap(teamAwareInboxSources)
             _ = logFoundDatasources(foundInboxSources, verbose)
             _ <- dataSourceRepository.updateDataSources(foundInboxSources)
+            _ <- sendRealPaths(foundInboxSources)
           } yield ()
         case e =>
           val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir': $e"
@@ -85,6 +86,58 @@ class DataSourceService @Inject()(
       }
     } yield ()
   }
+
+  private def sendRealPaths(dataSources: List[InboxDataSource]) =
+    for {
+      _ <- Fox.successful(())
+      pathInfos = dataSources.map(ds => (ds, determineMagRealPathsForDataSource(ds))).map {
+        case (ds, paths) => DataSourcePathInfo(ds.id, paths)
+      }
+      _ <- dataSourceRepository.publishRealPaths(pathInfos)
+    } yield ()
+
+  private def determineMagRealPathsForDataSource(dataSource: InboxDataSource) = {
+    val organizationPath = dataBaseDir.resolve(dataSource.id.organizationId)
+    val datasetPath = organizationPath.resolve(dataSource.id.directoryName)
+    dataSource.toUsable match {
+      case Some(usableDataSource) => {
+        usableDataSource.dataLayers.flatMap { dataLayer =>
+          val layerPath = datasetPath.resolve(dataLayer.name)
+          dataLayer.mags.map { mag =>
+            val magPath = getMagPath(layerPath, mag)
+            val isLink = Files.isSymbolicLink(magPath) // TODO: Symbolic links to layers are not resolved!!!
+            val realPath = if (isLink) {
+              resolveRelativePath(datasetPath, Files.readSymbolicLink(layerPath))
+            } else {
+              layerPath.toAbsolutePath
+            }
+            MagPathInfo(dataLayer.name, mag.mag, layerPath.toAbsolutePath.toString, realPath.toString)
+          }
+        }
+      }
+      case None => List()
+    }
+  }
+
+  private def getMagPath(layerPath: Path, mag: MagLocator): Path =
+    mag.path match {
+      case Some(p) => Paths.get(p)
+      case None => {
+        // Code duplication in RemoteSourceDescriptorService.uriForMagLocator
+        val withScalarMag = layerPath.resolve(mag.mag.toMagLiteral(allowScalar = true))
+        val withVec3Mag = layerPath.resolve(mag.mag.toMagLiteral())
+        if (withScalarMag.toFile.exists) {
+          withScalarMag
+        } else withVec3Mag
+      }
+    }
+
+  private def resolveRelativePath(basePath: Path, relativePath: Path): Path =
+    if (relativePath.isAbsolute) {
+      relativePath
+    } else {
+      basePath.resolve(relativePath).normalize().toAbsolutePath
+    }
 
   private def logFoundDatasources(foundInboxSources: Seq[InboxDataSource], verbose: Boolean): Unit = {
     val shortForm =

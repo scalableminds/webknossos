@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerLike => DataLayer
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
+import com.scalableminds.webknossos.datastore.services.DataSourcePathInfo
 import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
@@ -33,6 +34,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                dataStoreDAO: DataStoreDAO,
                                datasetLastUsedTimesDAO: DatasetLastUsedTimesDAO,
                                datasetDataLayerDAO: DatasetLayerDAO,
+                               datasetMagsDAO: DatasetMagsDAO,
                                teamDAO: TeamDAO,
                                folderDAO: FolderDAO,
                                dataStoreService: DataStoreService,
@@ -336,6 +338,19 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     for {
       _ <- bool2Fox(dataset._uploader.isEmpty) ?~> "dataset.uploader.notEmpty"
       _ <- datasetDAO.updateUploader(dataset._id, Some(_uploader)) ?~> "dataset.uploader.forbidden"
+    } yield ()
+
+  def updateRealPath(datastore: DataStore, pathInfo: DataSourcePathInfo)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      dataset <- datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId) ?~> "dataset.notFound"
+      //_ <- datasetDAO.assertUpdateAccess(dataset._id) ?~> "dataset.update.forbidden"
+      _ <- datasetMagsDAO.updatePaths(dataset._id, pathInfo.magPathInfos)
+    } yield ()
+
+  def updateRealPaths(datastore: DataStore, pathInfos: List[DataSourcePathInfo])(
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- Fox.serialCombined(pathInfos)(updateRealPath(datastore, _))
     } yield ()
 
   def publicWrites(dataset: Dataset,

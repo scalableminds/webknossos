@@ -21,6 +21,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   ThinPlateSplineCorrespondences,
   DataLayerLike => DataLayer
 }
+import com.scalableminds.webknossos.datastore.services.MagPathInfo
 import com.scalableminds.webknossos.schema.Tables._
 import controllers.DatasetUpdateParameters
 
@@ -732,6 +733,22 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     }
     replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
+
+  def updatePaths(datasetId: ObjectId, magPaths: List[MagPathInfo]): Fox[Unit] =
+    for {
+      // TODO: Only update paths that have changed
+      _ <- Fox.serialCombined(magPaths)(pathInfo =>
+        for {
+          _ <- Fox.successful(())
+          magLiteral = s"(${pathInfo.mag.x}, ${pathInfo.mag.y}, ${pathInfo.mag.z})"
+          _ <- run(q"""UPDATE webknossos.dataset_mags
+                 SET path = ${pathInfo.path}, realPath = ${pathInfo.realPath}
+                 WHERE _dataset = $datasetId
+                  AND datalayername = ${pathInfo.layerName}
+                  AND mag = CAST($magLiteral AS webknossos.vector3)""".asUpdate)
+        } yield ())
+
+    } yield ()
 
 }
 

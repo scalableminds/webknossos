@@ -178,6 +178,8 @@ CREATE TABLE webknossos.dataset_mags(
   _dataset CHAR(24) NOT NULL,
   dataLayerName VARCHAR(256),
   mag webknossos.VECTOR3 NOT NULL,
+  path TEXT,
+  realPath TEXT,
   PRIMARY KEY (_dataset, dataLayerName, mag)
 );
 

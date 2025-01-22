@@ -7,12 +7,8 @@ import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.services.DataStoreStatus
-import com.scalableminds.webknossos.datastore.services.uploading.{
-  LinkedLayerIdentifier,
-  ReserveAdditionalInformation,
-  ReserveUploadInformation
-}
+import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
+import com.scalableminds.webknossos.datastore.services.uploading.{LinkedLayerIdentifier, ReserveAdditionalInformation, ReserveUploadInformation}
 import com.typesafe.scalalogging.LazyLogging
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
@@ -216,6 +212,22 @@ class WKRemoteDataStoreController @Inject()(
           }
         case e: JsError =>
           logger.warn("Data store reported invalid json for data source.")
+          Fox.successful(JsonBadRequest(JsError.toJson(e)))
+      }
+    }
+  }
+
+  def updatePaths(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    dataStoreService.validateAccess(name, key) { dataStore =>
+      request.body.validate[List[DataSourcePathInfo]] match {
+        case JsSuccess(infos, _) =>
+          for {
+            _ <- datasetService.updateRealPaths(dataStore, infos)(GlobalAccessContext)
+          } yield {
+            JsonOk
+          }
+        case e: JsError =>
+          logger.warn("Data store reported invalid json for data source paths.")
           Fox.successful(JsonBadRequest(JsError.toJson(e)))
       }
     }

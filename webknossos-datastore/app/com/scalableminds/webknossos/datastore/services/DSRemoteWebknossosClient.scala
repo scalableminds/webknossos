@@ -4,6 +4,7 @@ import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
@@ -33,6 +34,18 @@ object DataStoreStatus {
 case class TracingStoreInfo(name: String, url: String)
 object TracingStoreInfo {
   implicit val jsonFormat: OFormat[TracingStoreInfo] = Json.format[TracingStoreInfo]
+}
+
+case class DataSourcePathInfo(dataSourceId: DataSourceId, magPathInfos: List[MagPathInfo])
+
+object DataSourcePathInfo {
+  implicit val jsonFormat: OFormat[DataSourcePathInfo] = Json.format[DataSourcePathInfo]
+}
+
+case class MagPathInfo(layerName: String, mag: Vec3Int, path: String, realPath: String)
+
+object MagPathInfo {
+  implicit val jsonFormat: OFormat[MagPathInfo] = Json.format[MagPathInfo]
 }
 
 trait RemoteWebknossosClient {
@@ -103,6 +116,12 @@ class DSRemoteWebknossosClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .silent
       .put(dataSources)
+
+  def reportRealPaths(dataSourcePaths: List[DataSourcePathInfo]): Fox[_] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/paths")
+      .addQueryString("key" -> dataStoreKey)
+      .silent
+      .put(dataSourcePaths)
 
   def reserveDataSourceUpload(info: ReserveUploadInformation,
                               userTokenOpt: Option[String]): Fox[ReserveAdditionalInformation] =

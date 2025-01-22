@@ -13,7 +13,7 @@ import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class CreditTransaction(_id: ObjectId,
+case class CreditTransaction(_id: ObjectId = ObjectId.generate,
                              _organization: String,
                              creditChange: BigDecimal,
                              spentMoney: Option[BigDecimal],
@@ -58,7 +58,7 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""(_id IN (SELECT _organization FROM webknossos.users_ WHERE _multiUser = (SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId)))
       OR TRUE in (SELECT isSuperUser FROM webknossos.multiUsers_ WHERE _id IN (SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId))"""
- // TODO: updateAccessQ
+  // TODO: updateAccessQ
   override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = q"FALSE"
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[CreditTransaction]] =
@@ -81,7 +81,7 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        q"SELECT SUM(credit_change) FROM $existingCollectionName WHERE _organization = $organizationId AND $accessQuery"
+        q"SELECT COALESCE(SUM(spent_money), 0) FROM $existingCollectionName WHERE _organization = $organizationId AND $accessQuery"
           .as[BigDecimal])
       firstRow <- r.headOption
     } yield firstRow
@@ -94,8 +94,8 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
           (_organization, credit_change, spent_money, comment, _paid_job,
           state, expiration_date, created_at, updated_at, is_deleted)
           VALUES
-          (${transaction._organization}, ${transaction.creditChange.toString()},
-          ${transaction.spentMoney.map(_.toString)}, ${transaction.comment}, ${transaction._paidJob},
+          (${transaction._organization}, ${transaction.creditChange.toString()}::DECIMAL,
+          ${transaction.spentMoney.map(_.toString)}::DECIMAL, ${transaction.comment}, ${transaction._paidJob},
           'Pending', ${transaction.expirationDate}, ${transaction.createdAt},
           ${transaction.updatedAt}, ${transaction.isDeleted})
           """.asUpdate
@@ -118,11 +118,11 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
       // TODO: check write access
       _ <- run(
         q"""INSERT INTO webknossos.organization_credit_transactions
-          (_organization, credit_change, spent_money, comment, _paid_job,
+          (_id, _organization, credit_change, spent_money, comment, _paid_job,
           state, expiration_date, created_at, updated_at, is_deleted)
           VALUES
-          (${transaction._organization}, ${transaction.creditChange.toString()},
-          ${transaction.spentMoney.map(_.toString)}, ${transaction.comment}, ${transaction._paidJob},
+          (${transaction._id}, ${transaction._organization}, ${transaction.creditChange.toString()}::DECIMAL,
+          ${transaction.spentMoney.map(_.toString)}::DECIMAL, ${transaction.comment}, ${transaction._paidJob},
           ${transaction.state}, ${transaction.expirationDate}, ${transaction.createdAt},
           ${transaction.updatedAt}, ${transaction.isDeleted})
           """.asUpdate
@@ -161,7 +161,7 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
       _ <- run(q"""INSERT INTO webknossos.organization_credit_transactions
           (_organization, credit_change, comment, state)
           VALUES
-          (${refundedTransaction._organization}, ${refundAmount.toString()},
+          (${refundedTransaction._organization}, ${refundAmount.toString()}::DECIMAL,
           $refundComment, 'Complete')
           """.asUpdate)
       _ <- run(q"COMMIT TRANSACTION".as[Unit])

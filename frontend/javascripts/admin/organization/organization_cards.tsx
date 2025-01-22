@@ -291,6 +291,14 @@ export function PlanDashboardCard({
           <Row justify="center">Current Plan</Row>
         </Card>
       </Col>
+      <Col>
+        <Card actions={["TODO"]}>
+          <Row justify="center" align="middle" style={{ minHeight: 160, width: 188 }}>
+            <h3>{organization.creditBalance}</h3>
+          </Row>
+          <Row justify="center">WEBKNOSSOS Credits</Row>
+        </Card>
+      </Col>
     </Row>
   );
 }

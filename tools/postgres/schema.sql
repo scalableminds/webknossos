@@ -741,6 +741,7 @@ CREATE VIEW webknossos.credentials_ as SELECT * FROM webknossos.credentials WHER
 CREATE VIEW webknossos.maintenances_ as SELECT * FROM webknossos.maintenances WHERE NOT isDeleted;
 CREATE VIEW webknossos.aiModels_ as SELECT * FROM webknossos.aiModels WHERE NOT isDeleted;
 CREATE VIEW webknossos.aiInferences_ as SELECT * FROM webknossos.aiInferences WHERE NOT isDeleted;
+CREATE VIEW webknossos.organization_credit_transactions_ as SELECT * FROM webknossos.organization_credit_transactions WHERE NOT is_deleted;
 
 CREATE VIEW webknossos.userInfos AS
 SELECT
@@ -777,6 +778,7 @@ CREATE INDEX ON webknossos.projects(_team, isDeleted);
 CREATE INDEX ON webknossos.invites(tokenValue);
 CREATE INDEX ON webknossos.annotation_privateLinks(accessToken);
 CREATE INDEX ON webknossos.shortLinks(key);
+CREATE INDEX ON webknossos.organization_credit_transactions(state);
 
 ALTER TABLE webknossos.annotations
   ADD CONSTRAINT task_ref FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL DEFERRABLE,

@@ -1,11 +1,11 @@
-@(name: String, datasetName: String, jobLink: String)
+@(name: String, datasetName: String, jobLink: String, additionalFooter: String)
 
-@emailBaseTemplate() {
+@emailBaseTemplate(additionalFooter) {
 <p>Hi @{name},</p>
 
 <p>
-  Your dataset @{datasetName} is ready for exploration. 
-  WEBKNOSSOS has successfully uploaded and converted the dataset. 
+  Your dataset @{datasetName} is ready for exploration.
+  WEBKNOSSOS has successfully uploaded and converted the dataset.
   Click the button below to open the dataset or find it amongst your other datasets in the WEBKNOSSOS dashboard.
 </p>
 
@@ -33,13 +33,13 @@
 </p>
 <div style="text-align: center; margin-top: 10px; margin-bottom: 6px;">
   <img src="https://static.webknossos.org/mails/email-alignment-preview.600.jpg"
-    alt="A preview of the alignment services for a WEBKNOSSOS dataset" 
+    alt="A preview of the alignment services for a WEBKNOSSOS dataset"
     style="width: 300px; height: 150px;" />
 </div>
 
 <div style="text-align: center; margin-bottom: 20px;">
   <img src="https://static.webknossos.org/mails/email-segmentation-preview.600.jpg"
-    alt="A preview of a full, automated segmentation of a WEBKNOSSOS dataset" 
+    alt="A preview of a full, automated segmentation of a WEBKNOSSOS dataset"
     style="width: 300px; height: 150px;" />
 </div>
 

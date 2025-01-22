@@ -1,6 +1,6 @@
 import com.scalableminds.util.mvc.{CspHeaders, ExtendedController}
 import com.typesafe.scalalogging.LazyLogging
-import controllers.{Assets, SitemapController, WkorgProxyController}
+import controllers.{Assets, SitemapController, AboutPageRedirectController}
 
 import javax.inject.Inject
 import play.api.OptionalDevContext
@@ -18,7 +18,7 @@ class RequestHandler @Inject()(webCommands: WebCommands,
                                router: Router,
                                errorHandler: HttpErrorHandler,
                                httpConfiguration: HttpConfiguration,
-                               wkorgProxyController: WkorgProxyController,
+                               aboutPageRedirectController: AboutPageRedirectController,
                                filters: HttpFilters,
                                val cspConfig: CSPConfig,
                                conf: WkConf,
@@ -55,7 +55,7 @@ class RequestHandler @Inject()(webCommands: WebCommands,
       Some(Action { Ok("").as("text/javascript") })
     } else if (request.uri == "/favicon.ico") {
       Some(Action { NotFound })
-    } else Some(wkorgProxyController.proxyPageOrMainView)
+    } else Some(aboutPageRedirectController.redirectToAboutPageOrSendMainView)
 
   private def assetWithCsp(requestHeader: RequestHeader) = Action.async { implicit request =>
     addCspHeader(asset(requestHeader))

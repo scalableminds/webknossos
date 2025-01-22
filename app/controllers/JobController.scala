@@ -6,7 +6,7 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
 import models.job._
-import models.organization.OrganizationDAO
+import models.organization.{CreditTransactionService, OrganizationDAO, OrganizationService}
 import models.user.MultiUserDAO
 import play.api.i18n.Messages
 import play.api.libs.json._
@@ -64,6 +64,8 @@ class JobController @Inject()(
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     slackNotificationService: SlackNotificationService,
     organizationDAO: OrganizationDAO,
+    organizationService: OrganizationService,
+    creditTransactionService: CreditTransactionService,
     dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with Zarr3OutputHelper {
@@ -85,6 +87,7 @@ class JobController @Inject()(
     for {
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
       jobs <- jobDAO.findAll
+      // TODO: Consider adding paid credits to job public writes.
       jobsJsonList <- Fox.serialCombined(jobs.sortBy(_.created).reverse)(jobService.publicWrites)
     } yield Ok(Json.toJson(jobsJsonList))
   }
@@ -233,11 +236,16 @@ class JobController @Inject()(
             "organization.notFound",
             dataset._organization)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferNeurons.notAllowed.organization" ~> FORBIDDEN
+          _ <- organizationService.ensureOrganizationHasPaidPlan(organization._id)
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-          _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           command = JobCommand.infer_neurons
+          parsedBoundingBox <- jobService.parseBoundingBoxWithMagOpt(bbox, None)
+          costsInCredits = jobService.calculateJobCosts(parsedBoundingBox, command)
+          _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(organization._id, costsInCredits)) ?~> "job.notEnoughCredits" // TODO: add error message to messages.conf
+          // TODO: Disable this check. Credits should be enough to guard this.
+          _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
@@ -246,7 +254,13 @@ class JobController @Inject()(
             "layer_name" -> layerName,
             "bbox" -> bbox,
           )
+          creditTransactionComment = s"Spent $costsInCredits for AI neuron segmentation for dataset ${dataset.name}"
+          creditTransaction <- creditTransactionService.reserveCredits(organization._id,
+                                                                       costsInCredits,
+                                                                       creditTransactionComment,
+                                                                       None)
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunNeuronInferral"
+          _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
@@ -268,9 +282,13 @@ class JobController @Inject()(
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+          command = JobCommand.infer_mitochondria
+          parsedBoundingBox <- jobService.parseBoundingBoxWithMagOpt(bbox, None)
+          costsInCredits = jobService.calculateJobCosts(parsedBoundingBox, command)
+          _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(organization._id, costsInCredits)) ?~> "job.notEnoughCredits" // TODO: add error message to messages.conf
+          // TODO: Disable this check. Credits should be enough to guard this.
           _ <- bool2Fox(multiUser.isSuperUser) ?~> "job.inferMitochondria.notAllowed.onlySuperUsers"
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
-          command = JobCommand.infer_mitochondria
           commandArgs = Json.obj(
             "organization_id" -> dataset._organization,
             "dataset_name" -> dataset.name,
@@ -279,7 +297,13 @@ class JobController @Inject()(
             "layer_name" -> layerName,
             "bbox" -> bbox,
           )
+          creditTransactionComment = s"Spent $costsInCredits for AI mitochondria segmentation for dataset ${dataset.name}"
+          creditTransaction <- creditTransactionService.reserveCredits(organization._id,
+                                                                       costsInCredits,
+                                                                       creditTransactionComment,
+                                                                       None)
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunInferMitochondria"
+          _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
@@ -300,8 +324,14 @@ class JobController @Inject()(
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.alignSections.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
+          datasetBoundingBox <- datasetService
+            .dataSourceFor(dataset)
+            .flatMap(_.toUsable)
+            .map(_.boundingBox) ?~> "dataset.boundingBox.unset" // TODO: add error message to messages.conf
           _ <- Fox.runOptional(annotationId)(ObjectId.fromString)
           command = JobCommand.align_sections
+          costsInCredits = jobService.calculateJobCosts(datasetBoundingBox, command)
+          _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(organization._id, costsInCredits)) ?~> "job.notEnoughCredits" // TODO: add error message to messages.conf
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
@@ -310,7 +340,13 @@ class JobController @Inject()(
             "layer_name" -> layerName,
             "annotation_id" -> annotationId
           )
+          creditTransactionComment = s"Spent $costsInCredits for AI neuron segmentation for dataset ${dataset.name}"
+          creditTransaction <- creditTransactionService.reserveCredits(organization._id,
+                                                                       costsInCredits,
+                                                                       creditTransactionComment,
+                                                                       None)
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunAlignSections"
+          _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
@@ -454,10 +490,10 @@ class JobController @Inject()(
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.renderAnimation.notAllowed.organization" ~> FORBIDDEN
           userOrganization <- organizationDAO.findOne(request.identity._organization)
           animationJobOptions = request.body
-          _ <- Fox.runIf(userOrganization.pricingPlan == PricingPlan.Basic) {
+          _ <- Fox.runIf(PricingPlan.isPaidPlan(userOrganization.pricingPlan)) {
             bool2Fox(animationJobOptions.includeWatermark) ?~> "job.renderAnimation.mustIncludeWatermark"
           }
-          _ <- Fox.runIf(userOrganization.pricingPlan == PricingPlan.Basic) {
+          _ <- Fox.runIf(PricingPlan.isPaidPlan(userOrganization.pricingPlan)) {
             bool2Fox(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> "job.renderAnimation.resolutionMustBeSD"
           }
           layerName = animationJobOptions.layerName

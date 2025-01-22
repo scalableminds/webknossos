@@ -993,7 +993,8 @@ FOR EACH ROW EXECUTE FUNCTION webknossos.enforce_non_negative_balance();
 
 
 --- Stored procedure to revoke temporary credits from an organization
-CREATE OR REPLACE FUNCTION webknossos.revoke_expired_credits()
+--- TODO !!!!!! Fix revoked free credits not being revoked !!!!!!
+CREATE FUNCTION webknossos.revoke_expired_credits()
 RETURNS VOID AS $$
 DECLARE
     organization_id VARCHAR(256);

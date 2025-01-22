@@ -58,7 +58,7 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""(_id IN (SELECT _organization FROM webknossos.users_ WHERE _multiUser = (SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId)))
       OR TRUE in (SELECT isSuperUser FROM webknossos.multiUsers_ WHERE _id IN (SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId))"""
-
+ // TODO: updateAccessQ
   override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = q"FALSE"
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[CreditTransaction]] =
@@ -90,7 +90,7 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
     for {
       // TODO: check write access
       _ <- run(
-        q"""INSERT INTO webknossos.organization_transactions_
+        q"""INSERT INTO webknossos.organization_credit_transactions
           (_organization, credit_change, spent_money, comment, _paid_job,
           state, expiration_date, created_at, updated_at, is_deleted)
           VALUES
@@ -102,11 +102,22 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
       )
     } yield ()
 
+  def addJobIdToTransaction(transaction: CreditTransaction, jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      // TODO: check write access
+      _ <- run(
+        q"""UPDATE webknossos.organization_credit_transactions
+          SET _paid_job = $jobId
+          WHERE _id = ${transaction._id}
+          """.asUpdate
+      )
+    } yield ()
+
   def insertTransaction(transaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       // TODO: check write access
       _ <- run(
-        q"""INSERT INTO webknossos.organization_transactions_
+        q"""INSERT INTO webknossos.organization_credit_transactions
           (_organization, credit_change, spent_money, comment, _paid_job,
           state, expiration_date, created_at, updated_at, is_deleted)
           VALUES
@@ -122,7 +133,7 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
     for {
       // TODO: check write access
       _ <- run(
-        q"""UPDATE webknossos.organization_transactions
+        q"""UPDATE webknossos.organization_credit_transactions
           SET state = 'Completed', updated_at = NOW()
           WHERE _id = $transactionId
           """.asUpdate
@@ -131,10 +142,11 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
 
   def refundTransaction(transactionId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
+      // TODO: make this a proper sql transaction.
       _ <- run(q"START TRANSACTION".as[Unit])
       // TODO: check write access
       updatedTransactionCount <- run(
-        q"""UPDATE webknossos.organization_transactions
+        q"""UPDATE webknossos.organization_credit_transactions
           SET state = 'Refunded', updated_at = ${Instant.now}
           WHERE _id = $transactionId AND state = 'Pending'
           """.asUpdate
@@ -146,7 +158,7 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
         .map(jobId => s"Refund for job $jobId")
         .getOrElse(s"Refund for transaction ${refundedTransaction._id}")
       // insert refund transaction
-      _ <- run(q"""INSERT INTO webknossos.organization_transactions
+      _ <- run(q"""INSERT INTO webknossos.organization_credit_transactions
           (_organization, credit_change, comment, state)
           VALUES
           (${refundedTransaction._organization}, ${refundAmount.toString()},

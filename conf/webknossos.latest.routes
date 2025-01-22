@@ -289,6 +289,10 @@ GET           /aiModels/:id                                                     
 PUT           /aiModels/:id                                                                     controllers.AiModelController.updateAiModelInfo(id: String)
 DELETE        /aiModels/:id                                                                     controllers.AiModelController.deleteAiModel(id: String)
 
+# CreditTransactions
+POST          /creditTransactions/chargeUpCredits                                               controllers.CreditTransactionController.chargeUpCredits(organizationId: String, creditAmount: Int, moneySpent: String, comment: Option[String], expiresAt: Option[String])
+PATCH         /creditTransactions/:transactionId                                                controllers.CreditTransactionController.refundCreditTransaction(organizationId: String, transactionId: String)
+
 # Publications
 GET           /publications                                                                     controllers.PublicationController.listPublications()
 GET           /publications/:id                                                                 controllers.PublicationController.read(id: String)

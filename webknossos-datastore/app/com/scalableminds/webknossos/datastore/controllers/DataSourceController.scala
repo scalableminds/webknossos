@@ -485,8 +485,7 @@ class DataSourceController @Inject()(
             before <- Instant.nowFox
             usedStorageInBytes: List[DirectoryStorageReport] <- storageUsageService.measureStorage(organizationId,
                                                                                                    datasetDirectoryName)
-            after = Instant.now
-            _ = if (after - before > (10 seconds)) {
+            _ = if (Instant.since(before) > (10 seconds)) {
               val datasetLabel = datasetDirectoryName.map(n => s" dataset $n of").getOrElse("")
               Instant.logSince(before, s"Measuring storage for$datasetLabel orga $organizationId")
             }

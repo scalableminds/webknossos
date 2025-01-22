@@ -2,9 +2,9 @@ package com.scalableminds.webknossos.datastore.services
 
 import java.io._
 import java.nio.file.Path
-
 import com.google.gson.JsonParseException
 import com.google.gson.stream.JsonReader
+import com.scalableminds.util.time.Instant
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayerMapping
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure}
@@ -34,7 +34,7 @@ object MappingParser extends LazyLogging {
     parse(new InputStreamReader(new ByteArrayInputStream(a)), fromLongFn)
 
   private def parseImpl[T](r: Reader, fromLongFn: Long => T): Box[DataLayerMapping[T]] = {
-    val start = System.currentTimeMillis()
+    val before = Instant.now
 
     val jsonReader = new JsonReader(r)
     var nameOpt: Option[String] = None
@@ -53,8 +53,7 @@ object MappingParser extends LazyLogging {
     }
     jsonReader.endObject()
 
-    val end = System.currentTimeMillis()
-    logger.info(s"Mapping parsing took ${end - start} ms")
+    Instant.logSince(before, s"JSON Mapping parsing")
 
     for {
       name <- nameOpt

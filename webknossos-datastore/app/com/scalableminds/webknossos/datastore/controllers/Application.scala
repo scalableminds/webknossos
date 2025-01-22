@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.controllers
 
+import com.scalableminds.util.time.{DurationFormatting, Instant}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.ApplicationHealthService
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
@@ -11,19 +12,21 @@ import scala.concurrent.ExecutionContext
 
 class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthService: ApplicationHealthService)(
     implicit ec: ExecutionContext)
-    extends Controller {
+    extends Controller
+    with DurationFormatting {
 
   override def allowRemoteOrigin: Boolean = true
 
   def health: Action[AnyContent] = Action.async { implicit request =>
     log() {
       for {
-        before <- Fox.successful(System.currentTimeMillis())
+        before <- Instant.nowFox
         _ <- redisClient.checkHealth
-        afterRedis = System.currentTimeMillis()
+        afterRedis = Instant.now
         _ <- Fox.bool2Fox(applicationHealthService.getRecentProblem().isEmpty) ?~> "Java Internal Errors detected"
         _ = logger.info(
-          s"Answering ok for Datastore health check, took ${afterRedis - before} ms (Redis at ${redisClient.authority} ${afterRedis - before} ms)")
+          s"Answering ok for Datastore health check, took ${formatDuration(afterRedis - before)} (Redis at ${redisClient.authority} ${formatDuration(
+            afterRedis - before)})")
       } yield Ok("Ok")
     }
   }

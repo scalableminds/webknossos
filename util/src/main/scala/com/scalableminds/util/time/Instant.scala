@@ -1,7 +1,7 @@
 package com.scalableminds.util.time
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.typesafe.scalalogging.LazyLogging
+import com.typesafe.scalalogging.{LazyLogging, Logger}
 import net.liftweb.common.Box.tryo
 import play.api.libs.json._
 
@@ -71,8 +71,8 @@ object Instant extends FoxImplicits with LazyLogging with DurationFormatting {
 
   def nowFox(implicit ec: ExecutionContext): Fox[Instant] = Fox.successful(Instant.now)
 
-  def logSince(before: Instant, label: String): Unit =
-    logger.info(f"$label took ${formatDuration(Instant.since(before))}")
+  def logSince(before: Instant, label: String, l: Logger = logger): Unit =
+    l.info(f"$label took ${formatDuration(Instant.since(before))}")
 
   private def fromStringSync(instantLiteral: String): Option[Instant] =
     fromIsoString(instantLiteral).orElse(fromEpochMillisString(instantLiteral))

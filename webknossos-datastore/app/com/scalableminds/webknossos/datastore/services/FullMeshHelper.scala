@@ -71,6 +71,6 @@ trait FullMeshHelper extends LazyLogging {
   }
 
   protected def logMeshingDuration(before: Instant, label: String, lengthBytes: Int): Unit =
-    logger.info(s"Served $lengthBytes-byte STL mesh via $label, took ${Instant.since(before)}")
+    Instant.logSince(before, s"Served $lengthBytes-byte STL mesh via $label,")
 
 }

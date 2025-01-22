@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import ch.systemsx.cisd.hdf5._
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
+import com.scalableminds.util.time.Instant
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree, TreeTypeProto}
@@ -21,6 +22,7 @@ import java.nio.file.{Files, Paths}
 import javax.inject.Inject
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.ArraySeq
+import scala.concurrent.duration.DurationInt
 
 class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
   private val agglomerateDir = "agglomerates"
@@ -141,7 +143,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
                        mappingName: String,
                        agglomerateId: Long): Box[SkeletonTracing] =
     try {
-      val startTime = System.nanoTime()
+      val before = Instant.now
       val hdfFile =
         dataBaseDir
           .resolve(organizationId)
@@ -211,10 +213,11 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         datasetName = datasetDirectoryName,
         trees = trees
       )
-      val duration = System.nanoTime() - startTime
-      if (duration > 100 * 1e6) {
-        logger.info(s"Generating skeleton from agglomerate file took ${math
-          .round(duration / 1e6)} ms (${skeletonEdges.length} edges, ${nodes.length} nodes).")
+
+      if (Instant.since(before) > (100 milliseconds)) {
+        Instant.logSince(
+          before,
+          s"Generating skeleton from agglomerate file with ${skeletonEdges.length} edges, ${nodes.length} nodes")
       }
 
       Full(skeleton)

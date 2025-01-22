@@ -13,13 +13,13 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Highlights
 - The fill tool can now be adapted so that it only acts within a specified bounding box. Use the new "Restrict Floodfill" mode for that in the toolbar. [#8267](https://github.com/scalableminds/webknossos/pull/8267)
 - Added the option for "Selective Segment Visibility" for segmentation layers. Select this option in the left sidebar to only show segments that are currently active or hovered.  [#8281](https://github.com/scalableminds/webknossos/pull/8281)
-- Segment and tree names can be edited by doubleclicking them. [#8316](https://github.com/scalableminds/webknossos/pull/8316)
+- Segment and tree names can be edited by double-clicking them. [#8316](https://github.com/scalableminds/webknossos/pull/8316)
 
 ### Added
 - Added the total volume of a dataset to a tooltip in the dataset info tab. [#8229](https://github.com/scalableminds/webknossos/pull/8229)
 - Optimized performance of data loading with “fill value“ chunks. [#8271](https://github.com/scalableminds/webknossos/pull/8271)
 - Added the option to export a segmentation that was corrected with the proofreading tool to a new segmentation. [#8286](https://github.com/scalableminds/webknossos/pull/8286)
-- A segment can be activated with doubleclick now. [#8281](https://github.com/scalableminds/webknossos/pull/8281)
+- A segment can be activated with double-click now. [#8281](https://github.com/scalableminds/webknossos/pull/8281)
 - It is now possible to select the magnification of the layers on which an AI model will be trained. [#8266](https://github.com/scalableminds/webknossos/pull/8266)
 - Added support for translations in OME NGFF zarr datasets (translation within coordinateTransformations on datasets). [#8311](https://github.com/scalableminds/webknossos/pull/8311)
 - When the eraser tool is active, one can switch temporarily to the fill-segment tool by pressing shift and ctrl. Only pressing shift, switches to the pick-segment tool. [#8314](https://github.com/scalableminds/webknossos/pull/8314)

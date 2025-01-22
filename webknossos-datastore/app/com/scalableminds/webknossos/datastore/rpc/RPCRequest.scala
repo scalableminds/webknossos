@@ -7,7 +7,7 @@ import net.liftweb.common.{Failure, Full}
 import play.api.http.{HeaderNames, Status}
 import play.api.libs.json._
 import play.api.libs.ws._
-import com.scalableminds.util.time.Instant
+import com.scalableminds.util.time.{DurationFormatting, Instant}
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import java.io.File
@@ -17,6 +17,7 @@ import scala.concurrent.duration._
 class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
+    with DurationFormatting
     with MimeTypes {
 
   var request: WSRequest = wsClient.url(url)
@@ -202,14 +203,13 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
       .execute()
       .map { result =>
         val duration = Instant.since(before)
-        logger.info(duration.toString())
         val logSlow = verbose && duration > slowRequestLoggingThreshold
         if (Status.isSuccessful(result.status)) {
-          if (logSlow) logger.info(f"Slow $debugInfo took $duration)}")
+          if (logSlow) logger.info(f"Slow $debugInfo took ${formatDuration(duration)})}")
           Full(result)
         } else {
           val responseBodyPreview = result.bodyAsBytes.utf8String.take(2000)
-          val durationLabel = if (logSlow) s" Duration: $duration."
+          val durationLabel = if (logSlow) s" Duration: ${formatDuration(duration)}."
           val verboseErrorMsg =
             s"Failed $debugInfo." +
               s" Status: ${result.status}.$durationLabel" +

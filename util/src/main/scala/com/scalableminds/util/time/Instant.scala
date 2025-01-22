@@ -43,7 +43,7 @@ case class Instant(epochMillis: Long) extends Ordered[Instant] {
   def weekyear: Int = toZonedDateTime.get(java.time.temporal.IsoFields.WEEK_BASED_YEAR)
 }
 
-object Instant extends FoxImplicits with LazyLogging {
+object Instant extends FoxImplicits with LazyLogging with DurationFormatting {
   def now: Instant = Instant(System.currentTimeMillis())
 
   def max: Instant = Instant(253370761200000L)
@@ -71,7 +71,8 @@ object Instant extends FoxImplicits with LazyLogging {
 
   def nowFox(implicit ec: ExecutionContext): Fox[Instant] = Fox.successful(Instant.now)
 
-  def logSince(before: Instant, label: String): Unit = logger.info(f"$label took ${Instant.since(before)}")
+  def logSince(before: Instant, label: String): Unit =
+    logger.info(f"$label took ${formatDuration(Instant.since(before))}")
 
   private def fromStringSync(instantLiteral: String): Option[Instant] =
     fromIsoString(instantLiteral).orElse(fromEpochMillisString(instantLiteral))

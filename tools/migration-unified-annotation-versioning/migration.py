@@ -593,7 +593,8 @@ class Migration:
             query = f"""
                 WITH annotations AS (
                     SELECT _id, name, description, created, modified FROM webknossos.annotations
-                    WHERE _id = '65858e2e010000fd01d65fd2'
+                    WHERE modified < '{start_time}'
+                    {previous_start_query}
                     ORDER BY MD5(_id)
                     LIMIT {page_size}
                     OFFSET {page_size * page_num}

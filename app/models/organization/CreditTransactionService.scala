@@ -47,28 +47,20 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
       _ <- creditTransactionDAO.refundTransaction(transaction._id.toString)(GlobalAccessContext)
     } yield ()
 
-  def publicWrites(transaction: CreditTransaction): Fox[JsObject] = {
-    val creditChange = transaction.creditChange
-    val spentMoney = transaction.spentMoney
-    val comment = transaction.comment
-    val paidJob = transaction._paidJob
-    val state = transaction.state
-    val expirationDate = transaction.expirationDate
-
-    for {
-      _ <- bool2Fox(creditChange >= 0) ?~> "creditChange.negative"
-      _ <- bool2Fox(spentMoney.forall(_ >= 0)) ?~> "spentMoney.negative"
-      _ <- bool2Fox(state == CreditTransactionState.Pending) ?~> "state.notPending"
-    } yield
+  def publicWrites(transaction: CreditTransaction): Fox[JsObject] =
+    Fox.successful(
       Json.obj(
-        "creditChange" -> creditChange,
-        // TODO continue
-        "spentMoney" -> spentMoney,
-        "comment" -> comment,
-        "paidJob" -> paidJob,
-        "state" -> state,
-        "expirationDate" -> expirationDate
-      )
-  }
+        "id" -> transaction._id,
+        "organization_id" -> transaction._organization,
+        "creditChange" -> transaction.creditChange,
+        "spentMoney" -> transaction.spentMoney,
+        "comment" -> transaction.comment,
+        "paidJobId" -> transaction._paidJob,
+        "state" -> transaction.state,
+        "expirationDate" -> transaction.expirationDate,
+        "createdAt" -> transaction.createdAt,
+        "updatedAt" -> transaction.updatedAt,
+        "isDeleted" -> transaction.isDeleted
+      ))
 
 }

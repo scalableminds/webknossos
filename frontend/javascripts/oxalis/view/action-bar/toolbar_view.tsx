@@ -127,7 +127,6 @@ const handleToggleSelectiveVisibilityInProofreading = (value: boolean) => {
 const handleSetTool = (event: RadioChangeEvent) => {
   const value = event.target.value as AnnotationTool;
   Store.dispatch(setToolAction(value));
-  console.log("Tool set to", value);
 };
 
 const handleCreateCell = () => {

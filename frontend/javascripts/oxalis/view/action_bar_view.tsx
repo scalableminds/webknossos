@@ -237,7 +237,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const {
       dataset,
       is2d,
-      isReadOnly, // TODO_c are there any cases where this is true, that are not read-only annotations or view mode?
+      //isReadOnly, //TODO_c are there any cases where this is true, that are not read-only annotations or view mode?
       showVersionRestore,
       controlMode,
       hasSkeleton,

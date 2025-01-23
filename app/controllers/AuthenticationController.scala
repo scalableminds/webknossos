@@ -66,6 +66,8 @@ class AuthenticationController @Inject()(
   private lazy val ssoKey =
     conf.WebKnossos.User.ssoKey
 
+  private lazy val isOIDCEnabled = conf.Features.openIdConnectEnabled
+
   def register: Action[AnyContent] = Action.async { implicit request =>
     signUpForm
       .bindFromRequest()
@@ -408,7 +410,13 @@ class AuthenticationController @Inject()(
   private lazy val absoluteOpenIdConnectCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
 
   def loginViaOpenIdConnect(): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    openIdConnectClient.getRedirectUrl(absoluteOpenIdConnectCallbackURL).map(url => Ok(Json.obj("redirect_url" -> url)))
+    if (!isOIDCEnabled) {
+      Fox.successful(BadRequest("SSO is not enabled"))
+    } else {
+      openIdConnectClient
+        .getRedirectUrl(absoluteOpenIdConnectCallbackURL)
+        .map(url => Ok(Json.obj("redirect_url" -> url)))
+    }
   }
 
   private def loginUser(loginInfo: LoginInfo)(implicit request: Request[AnyContent]): Future[Result] =
@@ -458,6 +466,7 @@ class AuthenticationController @Inject()(
 
   def openIdCallback(): Action[AnyContent] = Action.async { implicit request =>
     for {
+      _ <- bool2Fox(isOIDCEnabled) ?~> "SSO is not enabled"
       (accessToken: JsObject, idToken: Option[JsObject]) <- openIdConnectClient.getAndValidateTokens(
         absoluteOpenIdConnectCallbackURL,
         request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),

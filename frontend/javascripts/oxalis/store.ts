@@ -336,11 +336,14 @@ export type DatasetConfiguration = {
   // that name (or id) should be rendered without any transforms.
   // This means, that all other layers should be transformed so that
   // they still correlated with each other.
+  // If other layers have the same transformation they will also be rendered
+  // natively as their transform and the inverse transform of the nativelyRenderedLayer
+  // layer cancel each other out.
   // If nativelyRenderedLayerName is null, all layers are rendered
   // as their transforms property signal it.
-  // Currently, the skeleton layer does not have transforms as a stored
-  // property. So, to render the skeleton layer natively, nativelyRenderedLayerName
-  // can be set to null.
+  // Currently, skeleton layers and volume layers without fallback do not have transforms
+  // as a stored property. So, to render the skeleton layer natively,
+  // nativelyRenderedLayerName can be set to null.
   readonly nativelyRenderedLayerName: string | null;
 };
 

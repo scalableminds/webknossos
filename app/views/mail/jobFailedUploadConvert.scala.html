@@ -1,10 +1,10 @@
-@(name: String, datasetName: String)
+@(name: String, datasetName: String, additionalFooter: String)
 
-@emailBaseTemplate() {
+@emailBaseTemplate(additionalFooter) {
 <p>Hi @{name},</p>
 
 <p>
-  oops, unfortunately WEBKNOSSOS could not upload and convert your dataset <i>@{datasetName}</i> automatically. 
+  oops, unfortunately WEBKNOSSOS could not upload and convert your dataset <i>@{datasetName}</i> automatically.
   This should not have happened and we are sorry about the inconvenience. Our engineers will investigate and fix the
   problem as soon as possible.
 </p>

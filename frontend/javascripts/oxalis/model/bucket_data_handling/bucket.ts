@@ -24,7 +24,7 @@ export enum BucketStateEnum {
   LOADED = "LOADED",
 }
 export type BucketStateEnumType = keyof typeof BucketStateEnum;
-// todop: adapt
+// todop: adapt when adding new dtypes
 export type BucketDataArray =
   | Int8Array
   | Uint8Array

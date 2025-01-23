@@ -49,7 +49,7 @@ function getSomeValue<T>(set: Set<T>): T {
 }
 
 const tmpPaddingBuffer = new Uint8Array(4 * constants.BUCKET_SIZE);
-// todop: adapt
+// todop: adapt when adding new dtypes
 function maybePadRgbData(
   src: Uint8Array | Int8Array | Int16Array | Float32Array,
   elementClass: ElementClass,
@@ -221,7 +221,7 @@ export default class TextureBucketManager {
       const dataTextureIndex = Math.floor(_index / bucketsPerTexture);
       const indexInDataTexture = _index % bucketsPerTexture;
       const data = bucket.getData();
-      // todop: adapt
+      // todop: adapt when adding new dtypes
       const TypedArrayClass =
         this.elementClass === "float"
           ? Float32Array
@@ -244,7 +244,6 @@ export default class TextureBucketManager {
         0,
         bucketHeightInTexture * indexInDataTexture,
         this.textureWidth,
-        // todop: remove / 2 again
         bucketHeightInTexture,
       );
       this.committedBucketSet.add(bucket);
@@ -292,9 +291,9 @@ export default class TextureBucketManager {
         channelCount,
         textureType,
         getRenderer(),
-        THREE.RedIntegerFormat,
+        THREE.RGIntegerFormat,
         // todop: don't hardcode
-        "R16I",
+        "RG16I",
       );
 
       this.dataTextures.push(dataTexture);

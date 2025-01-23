@@ -46,6 +46,7 @@ export const getRgbaAtXYIndex: ShaderModule = {
             ivec4 val = texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0);
 
             // todop: revert.
+            return vec4(val.x, val.x, val.y, val.y);
             if (val.x == 0) {
               return vec4(1., 0., 1., 1.);
             }

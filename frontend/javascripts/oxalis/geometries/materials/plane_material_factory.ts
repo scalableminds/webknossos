@@ -966,7 +966,12 @@ class PlaneMaterialFactory {
           // Bytes are stored as signed normalized integers (-1 to 1) in WebGL.
           // Therefore, we scale the range (-128 to 127) from -1 to 1, too.
           divisor = 128;
-        } else if (elementClass === "uint32" || elementClass === "float") {
+          // todop: adapt when adding new dtypes
+        } else if (
+          elementClass === "uint32" ||
+          elementClass === "float" ||
+          elementClass === "int16"
+        ) {
           divisor = 1;
         } else {
           divisor = 255;

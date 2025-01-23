@@ -125,10 +125,10 @@ export function getPackingDegree(byteCount: number, elementClass: ElementClass) 
   // Float textures can hold a float per channel, adjust the packing degree accordingly
   // 64-bit values need two texel per data voxel which is why their packing degree is lower than 1.
 
-  if (elementClass === "int16") {
-    // todop: can we avoid this edge case?
-    return 1;
-  }
+  // if (elementClass === "int16") {
+  //   // todop: can we avoid this edge case?
+  //   return 2;
+  // }
 
   if (byteCount === 1 || elementClass === "float") return 4;
   if (byteCount === 2) return 2;

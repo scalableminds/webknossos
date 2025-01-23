@@ -27,23 +27,7 @@ export const linearizeVec3ToIndexWithMod: ShaderModule = {
     }
 `,
 };
-export const getRgbaAtIndex: ShaderModule = {
-  code: `
-    vec4 getRgbaAtIndex(sampler2D dtexture, float textureWidth, float idx) {
-      int finalPosX = int(mod(idx, textureWidth));
-      int finalPosY = int(div(idx, textureWidth));
 
-      return texelFetch(
-          dtexture,
-          ivec2(
-            finalPosX,
-            finalPosY
-          ),
-          0
-      ).rgba;
-    }
-  `,
-};
 export const getRgbaAtXYIndex: ShaderModule = {
   code: `
     // Define this function for each segmentation and color layer, since iOS cannot handle
@@ -89,7 +73,6 @@ export const getColorForCoords: ShaderModule = {
   requirements: [
     linearizeVec3ToIndex,
     linearizeVec3ToIndexWithMod,
-    getRgbaAtIndex,
     getRgbaAtXYIndex,
     getAbsoluteCoords,
     getMagnificationFactors,

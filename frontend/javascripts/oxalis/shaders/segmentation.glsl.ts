@@ -11,17 +11,9 @@ import {
 import { hashCombine } from "./hashing.glsl";
 import { attemptMappingLookUp } from "./mappings.glsl";
 import type { ShaderModule } from "./shader_module_system";
-import { getRgbaAtIndex } from "./texture_access.glsl";
 
 export const convertCellIdToRGB: ShaderModule = {
-  requirements: [
-    hsvToRgb,
-    getRgbaAtIndex,
-    getElementOfPermutation,
-    aaStep,
-    colormapJet,
-    hashCombine,
-  ],
+  requirements: [hsvToRgb, getElementOfPermutation, aaStep, colormapJet, hashCombine],
   code: `
     highp uint vec4ToUint(vec4 idLow) {
       uint integerValue = (uint(idLow.a) << 24) | (uint(idLow.b) << 16) | (uint(idLow.g) << 8) | uint(idLow.r);
@@ -281,7 +273,7 @@ export const getCrossHairOverlay: ShaderModule = {
 };
 
 export const getSegmentId: ShaderModule = {
-  requirements: [getRgbaAtIndex, convertCellIdToRGB, attemptMappingLookUp],
+  requirements: [convertCellIdToRGB, attemptMappingLookUp],
   code: `
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>

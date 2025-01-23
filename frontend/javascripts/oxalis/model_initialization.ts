@@ -251,7 +251,7 @@ function validateSpecsForLayers(dataset: APIDataset, requiredBucketCapacity: num
   const setupDetails = computeDataTexturesSetup(
     specs,
     layers,
-    (layer) => getBitDepth(layer) >> 3,
+    (layer) => getBitDepth(layer) / 8,
     hasSegmentation(dataset),
     requiredBucketCapacity,
   );

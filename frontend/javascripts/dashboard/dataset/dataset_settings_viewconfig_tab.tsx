@@ -223,8 +223,8 @@ export default function DatasetSettingsViewConfigTab(props: {
         <Col span={6}>
           <FormItemWithInfo
             name={["defaultConfiguration", "rotation"]}
-            label="Rotation"
-            info="The default rotation that will be used in oblique and arbitrary view mode."
+            label="Rotation - Arbitrary View Modes"
+            info="The default rotation that will be used in oblique and flight view mode."
           >
             <Vector3Input />
           </FormItemWithInfo>

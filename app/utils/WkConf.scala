@@ -144,9 +144,9 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val publicUri: Option[String] = getOptional[String]("tracingstore.publicUri")
   }
 
-  object Proxy {
-    val prefix: String = get[String]("proxy.prefix")
-    val routes: List[String] = getList[String]("proxy.routes")
+  object AboutPageRedirect {
+    val prefix: String = get[String]("aboutPageRedirect.prefix")
+    val routes: List[String] = getList[String]("aboutPageRedirect.routes")
   }
 
   object Mail {
@@ -258,7 +258,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       Features,
       Tracingstore,
       Datastore,
-      Proxy,
+      AboutPageRedirect,
       Mail,
       Silhouette,
       Jobs,

@@ -252,54 +252,63 @@ export function PlanDashboardCard({
       ],
     ];
   }
+  const buyMoreCreditsAction = [
+    <span key="buyMoreCreditsAction" onClick={UpgradePricingPlanModal.orderWebknossosCredits}>
+      Buy more credits
+    </span>,
+  ];
 
   return (
-    <Row gutter={24} justify="space-between" align="stretch" style={{ marginBottom: 20 }}>
-      <Col>
-        <Card actions={upgradeUsersAction}>
-          <Row style={{ padding: "20px 35px" }}>
-            <Progress
-              type="dashboard"
-              percent={usedUsersPercentage}
-              format={() => `${activeUsersCount}/${maxUsersCountLabel}`}
-              strokeColor={hasExceededUserLimit ? redStrokeColor : greenStrokeColor}
-              status={hasExceededUserLimit ? "exception" : "active"}
-            />
-          </Row>
-          <Row justify="center">Users</Row>
-        </Card>
-      </Col>
-      <Col>
-        <Card actions={upgradeStorageAction}>
-          <Row style={{ padding: "20px 35px" }}>
-            <Progress
-              type="dashboard"
-              percent={usedStoragePercentage}
-              format={() => storageLabel}
-              strokeColor={hasExceededStorageLimit ? redStrokeColor : greenStrokeColor}
-              status={hasExceededStorageLimit ? "exception" : "active"}
-            />
-          </Row>
-          <Row justify="center">Storage</Row>
-        </Card>
-      </Col>
-      <Col>
-        <Card actions={upgradePlanAction}>
-          <Row justify="center" align="middle" style={{ minHeight: 160, width: 188 }}>
-            <h3>{organization.pricingPlan}</h3>
-          </Row>
-          <Row justify="center">Current Plan</Row>
-        </Card>
-      </Col>
-      <Col>
-        <Card actions={["TODO"]}>
-          <Row justify="center" align="middle" style={{ minHeight: 160, width: 188 }}>
-            <h3>{organization.creditBalance}</h3>
-          </Row>
-          <Row justify="center">WEBKNOSSOS Credits</Row>
-        </Card>
-      </Col>
-    </Row>
+    <>
+      <Row gutter={24} justify="space-between" align="stretch" style={{ marginBottom: 20 }}>
+        <Col span={12}>
+          <Card actions={upgradeUsersAction}>
+            <Row style={{ padding: "20px 35px" }} justify="center">
+              <Progress
+                type="dashboard"
+                percent={usedUsersPercentage}
+                format={() => `${activeUsersCount}/${maxUsersCountLabel}`}
+                strokeColor={hasExceededUserLimit ? redStrokeColor : greenStrokeColor}
+                status={hasExceededUserLimit ? "exception" : "active"}
+              />
+            </Row>
+            <Row justify="center">Users</Row>
+          </Card>
+        </Col>
+        <Col span={12}>
+          <Card actions={upgradeStorageAction}>
+            <Row style={{ padding: "20px 35px" }} justify="center">
+              <Progress
+                type="dashboard"
+                percent={usedStoragePercentage}
+                format={() => storageLabel}
+                strokeColor={hasExceededStorageLimit ? redStrokeColor : greenStrokeColor}
+                status={hasExceededStorageLimit ? "exception" : "active"}
+              />
+            </Row>
+            <Row justify="center">Storage</Row>
+          </Card>
+        </Col>
+      </Row>
+      <Row gutter={24} justify="space-between" align="stretch" style={{ marginBottom: 20 }}>
+        <Col span={12}>
+          <Card actions={upgradePlanAction}>
+            <Row justify="center" align="middle" style={{ minHeight: 160 }}>
+              <h3>{organization.pricingPlan}</h3>
+            </Row>
+            <Row justify="center">Current Plan</Row>
+          </Card>
+        </Col>
+        <Col span={12}>
+          <Card actions={buyMoreCreditsAction}>
+            <Row justify="center" align="middle" style={{ minHeight: 160 }}>
+              <h3>{organization.creditBalance}</h3>
+            </Row>
+            <Row justify="center">WEBKNOSSOS Credits</Row>
+          </Card>
+        </Col>
+      </Row>
+    </>
   );
 }
 

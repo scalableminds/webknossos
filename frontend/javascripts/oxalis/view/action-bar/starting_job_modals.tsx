@@ -59,6 +59,8 @@ import {
 } from "../jobs/train_ai_model";
 import DEFAULT_PREDICT_WORKFLOW from "./default-predict-workflow-template";
 import { isBoundingBoxExportable } from "./download_modal_view";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import { formatVoxels } from "libs/format_utils";
 
 const { ThinSpace } = Unicode;
 
@@ -106,23 +108,26 @@ type StartJobFormProps = Props & {
   buttonLabel?: string | null;
   isSkeletonSelectable?: boolean;
   showWorkflowYaml?: boolean;
+  jobCreditCostsPerGVx?: number;
 };
 
 type BoundingBoxSelectionProps = {
   isBoundingBoxConfigurable?: boolean;
   userBoundingBoxes: UserBoundingBox[];
   isSuperUser: boolean;
+  showVolume: boolean;
   onChangeSelectedBoundingBox: (bBoxId: number | null) => void;
   value: number | null;
 };
 
-function renderUserBoundingBox(bbox: UserBoundingBox | null | undefined) {
+function renderUserBoundingBox(bbox: UserBoundingBox | null | undefined, showVolume: boolean) {
   if (!bbox) {
     return null;
   }
 
   const upscaledColor = bbox.color.map((colorPart) => colorPart * 255) as any as Vector3;
   const colorAsHexString = rgbToHex(upscaledColor);
+  const volumeInVx = new BoundingBox(bbox.boundingBox).getVolume();
   return (
     <>
       <div
@@ -133,7 +138,8 @@ function renderUserBoundingBox(bbox: UserBoundingBox | null | undefined) {
           marginRight: 6,
         }}
       />
-      {bbox.name} ({computeArrayFromBoundingBox(bbox.boundingBox).join(", ")})
+      {bbox.name} ({computeArrayFromBoundingBox(bbox.boundingBox).join(", ")}
+      {showVolume ? `, ${formatVoxels(volumeInVx)}` : ""})
     </>
   );
 }
@@ -151,11 +157,13 @@ function ExperimentalInferenceAlert() {
 export function BoundingBoxSelection({
   userBoundingBoxes,
   setSelectedBoundingBoxId,
+  showVolume = false,
   style,
   value,
 }: {
   userBoundingBoxes: UserBoundingBox[];
   setSelectedBoundingBoxId?: (boundingBoxId: number | null) => void;
+  showVolume: boolean;
   style?: React.CSSProperties;
   value: number | null;
 }): JSX.Element {
@@ -174,7 +182,7 @@ export function BoundingBoxSelection({
     >
       {userBoundingBoxes.map((userBB) => (
         <Select.Option key={userBB.id} value={userBB.id}>
-          {renderUserBoundingBox(userBB)}
+          {renderUserBoundingBox(userBB, showVolume)}
         </Select.Option>
       ))}
     </Select>
@@ -185,6 +193,7 @@ function BoundingBoxSelectionFormItem({
   isBoundingBoxConfigurable,
   userBoundingBoxes,
   isSuperUser,
+  showVolume = false,
   onChangeSelectedBoundingBox,
   value: selectedBoundingBoxId,
 }: BoundingBoxSelectionProps): JSX.Element {
@@ -247,6 +256,7 @@ function BoundingBoxSelectionFormItem({
           userBoundingBoxes={userBoundingBoxes}
           setSelectedBoundingBoxId={onChangeSelectedBoundingBox}
           value={selectedBoundingBoxId}
+          showVolume={showVolume}
         />
       </Form.Item>
     </div>
@@ -523,15 +533,127 @@ function ShouldUseTreesFormItem() {
   );
 }
 
+function calculateJobCosts(
+  jobCreditCostsPerGVx: number,
+  selectedBoundingBox: UserBoundingBox | undefined,
+) {
+  const currentBoundingBoxVolume = selectedBoundingBox?.boundingBox
+    ? new BoundingBox(selectedBoundingBox?.boundingBox).getVolume()
+    : null;
+  const jobCosts =
+    jobCreditCostsPerGVx != null && currentBoundingBoxVolume != null
+      ? (currentBoundingBoxVolume / 1e9) * jobCreditCostsPerGVx
+      : null;
+  const jobCostsAsString = jobCosts != null ? (Math.ceil(jobCosts * 100) / 100).toFixed(2) : "";
+  return { jobCosts, jobCostsAsString, currentBoundingBoxVolume };
+}
+
+function JobCostInformation({
+  jobCreditCostsPerGVx,
+  isBoundingBoxConfigurable,
+  selectedBoundingBox,
+  isOrganizationOwner,
+}: {
+  jobCreditCostsPerGVx: number;
+  isBoundingBoxConfigurable: boolean;
+  selectedBoundingBox: UserBoundingBox | undefined;
+  isOrganizationOwner: boolean;
+}) {
+  const organizationCredits = useSelector(
+    (state: OxalisState) => state.activeOrganization?.creditBalance || 0,
+  );
+  const { jobCosts, jobCostsAsString, currentBoundingBoxVolume } = calculateJobCosts(
+    jobCreditCostsPerGVx,
+    selectedBoundingBox,
+  );
+  const orgaHasEnoughCredits = jobCosts ? organizationCredits >= jobCosts : true;
+  console.log("isBoundingBoxConfigurable", isBoundingBoxConfigurable);
+  return (
+    <>
+      <Row style={{ display: "grid", marginBottom: 16 }}>
+        <Alert
+          message={
+            <>
+              This is a credit-based paid job. The costs depend on the{" "}
+              {isBoundingBoxConfigurable
+                ? "selected bounding box."
+                : "bounding box of the selected dataset."}
+              <br />
+              This job costs {jobCreditCostsPerGVx} WEBKNOSSOS credits per Gigavoxel. Your
+              organization currently has {organizationCredits} WEBKNOSSOS credits.
+              <br />
+              {currentBoundingBoxVolume != null
+                ? `${isBoundingBoxConfigurable ? "The selected bounding box" : "This dataset"} has a volume of ${formatVoxels(currentBoundingBoxVolume)} resulting in costs of ${jobCostsAsString} WEBKNOSSOS credits.`
+                : "You do not have a bounding box selected."}
+            </>
+          }
+          type="info"
+          showIcon
+        />
+      </Row>
+      {jobCosts != null && !orgaHasEnoughCredits ? (
+        <div style={{ marginBottom: 42 }}>
+          <Form.Item
+            name="requireBoundingBoxForPaidJobs"
+            valuePropName="checked"
+            rules={[
+              {
+                validator: (_rule, _checked) => {
+                  if (jobCreditCostsPerGVx != null && currentBoundingBoxVolume == null) {
+                    return Promise.reject(
+                      "This is a paid job which needs a selected bounding box .",
+                    );
+                  } else if (jobCreditCostsPerGVx != null && !orgaHasEnoughCredits) {
+                    return Promise.reject(
+                      "Your organization does not have enough credits to start this job.",
+                    );
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
+          >
+            <Row>
+              <Alert
+                message={
+                  isOrganizationOwner ? (
+                    <>
+                      Your organization does not have enough credits to start this job. You can
+                      order more credits !here!{" "}
+                    </>
+                  ) : (
+                    "Your organization does not have enough credits to start this job. Please contact the organization owner to purchase more WEBKNOSSOS credits."
+                  )
+                }
+                type="error"
+                showIcon
+              />
+            </Row>
+          </Form.Item>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 function StartJobForm(props: StartJobFormProps) {
   const isBoundingBoxConfigurable = props.isBoundingBoxConfigurable || false;
   const isSkeletonSelectable = props.isSkeletonSelectable || false;
   const chooseSegmentationLayer = props.chooseSegmentationLayer || false;
-  const { handleClose, jobName, jobApiCall, fixedSelectedLayer, title, description } = props;
+  const {
+    handleClose,
+    jobName,
+    jobApiCall,
+    fixedSelectedLayer,
+    title,
+    description,
+    jobCreditCostsPerGVx,
+  } = props;
   const [form] = Form.useForm();
   const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),
   );
+
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
@@ -549,6 +671,16 @@ function StartJobForm(props: StartJobFormProps) {
     };
   });
   const userBoundingBoxes = defaultBBForLayers.concat(rawUserBoundingBoxes);
+  const selectedBoundingBoxId = Form.useWatch("boundingBoxId", form);
+  const selectedBoundingBox = isBoundingBoxConfigurable
+    ? userBoundingBoxes.find((bbox) => bbox.id === selectedBoundingBoxId)
+    : userBoundingBoxes.length === 1
+      ? userBoundingBoxes[0]
+      : undefined;
+  const { jobCosts, jobCostsAsString } =
+    jobCreditCostsPerGVx != null && selectedBoundingBox != null
+      ? calculateJobCosts(jobCreditCostsPerGVx, selectedBoundingBox)
+      : { jobCosts: null, jobCostsAsString: "" };
 
   const startJob = async ({
     layerName,
@@ -649,6 +781,7 @@ function StartJobForm(props: StartJobFormProps) {
         isSuperUser={isActiveUserSuperUser}
         onChangeSelectedBoundingBox={(bBoxId) => form.setFieldsValue({ boundingBoxId: bBoxId })}
         value={form.getFieldValue("boundingBoxId")}
+        showVolume={jobCreditCostsPerGVx != null}
       />
       {isSkeletonSelectable && <ShouldUseTreesFormItem />}
       {props.showWorkflowYaml ? (
@@ -657,9 +790,18 @@ function StartJobForm(props: StartJobFormProps) {
           setActive={setUseCustomWorkflow}
         />
       ) : null}
+      {jobCreditCostsPerGVx != null ? (
+        <JobCostInformation
+          jobCreditCostsPerGVx={jobCreditCostsPerGVx}
+          isBoundingBoxConfigurable={isBoundingBoxConfigurable}
+          selectedBoundingBox={selectedBoundingBox}
+          isOrganizationOwner={isActiveUserSuperUser}
+        />
+      ) : null}
       <div style={{ textAlign: "center" }}>
         <Button type="primary" size="large" htmlType="submit">
           {props.buttonLabel ? props.buttonLabel : title}
+          {jobCosts != null ? ` for ${jobCostsAsString} credits` : ""}
         </Button>
       </div>
     </Form>
@@ -701,6 +843,7 @@ export function NucleiDetectionForm() {
 }
 export function NeuronSegmentationForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
+  const { neuronInferralCostsPerGVx } = features();
   const dispatch = useDispatch();
   return (
     <StartJobForm
@@ -710,6 +853,7 @@ export function NeuronSegmentationForm() {
       title="AI Neuron Segmentation"
       suggestedDatasetSuffix="with_reconstructed_neurons"
       isBoundingBoxConfigurable
+      jobCreditCostsPerGVx={neuronInferralCostsPerGVx}
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, selectedBoundingBox }) => {
         if (!selectedBoundingBox) {
           return;
@@ -737,6 +881,7 @@ export function NeuronSegmentationForm() {
 
 export function MitochondriaSegmentationForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
+  const { mitochondriaInferralCostsPerGVx } = features();
   const dispatch = useDispatch();
   return (
     <StartJobForm
@@ -746,6 +891,7 @@ export function MitochondriaSegmentationForm() {
       title="AI Mitochondria Segmentation"
       suggestedDatasetSuffix="with_mitochondria_detected"
       isBoundingBoxConfigurable
+      jobCreditCostsPerGVx={mitochondriaInferralCostsPerGVx}
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, selectedBoundingBox }) => {
         if (!selectedBoundingBox) {
           return;
@@ -850,6 +996,7 @@ function CustomAiModelInferenceForm() {
 export function AlignSectionsForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const dispatch = useDispatch();
+  const { alignmentCostsPerGVx } = features();
   return (
     <StartJobForm
       handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
@@ -862,6 +1009,7 @@ export function AlignSectionsForm() {
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, annotationId }) =>
         startAlignSectionsJob(dataset.id, colorLayer.name, newDatasetName, annotationId)
       }
+      jobCreditCostsPerGVx={alignmentCostsPerGVx}
       description={
         <Space direction="vertical" size="middle">
           <Row>

@@ -17,7 +17,7 @@ import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import messages from "messages";
 import type React from "react";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { APIOrganization } from "types/api_flow_types";
 import { TeamAndPowerPlanUpgradeCards } from "./organization_cards";
 import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
@@ -296,9 +296,81 @@ function UpgradePricingPlanModal({
   );
 }
 
+function orderWebknossosCredits() {
+  renderIndependently((destroyCallback) => (
+    <OrderWebknossosCreditsModal destroy={destroyCallback} />
+  ));
+}
+
+function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
+  const userInputRef = useRef<HTMLInputElement | null>(null);
+  const [costsAsString, setCostsAsString] = useState<string>("5€/5.75$");
+  const recalculateCosts = (newCosts: number) => {
+    // TODOM: Remove magic numbers. E.g. put them into application configuration.
+    const totalCostInEuro = newCosts * 5;
+    const totalCostInDollar = newCosts * 5.75;
+    setCostsAsString(`${totalCostInEuro}€/${totalCostInDollar}$`);
+  };
+
+  const handleOrderCredits = async () => {
+    if (userInputRef.current) {
+      const requestedUsers = Number.parseInt(userInputRef.current.value);
+      // TODO: Implement the actual API call to order credits.
+      await sendUpgradePricingPlanUserEmail(requestedUsers);
+      Toast.success(messages["organization.plan.upgrage_request_sent"]);
+    }
+
+    destroy();
+  };
+
+  return (
+    <Modal
+      title={
+        <>
+          <UserAddOutlined style={{ color: "var(--ant-color-primary)" }} /> Upgrade User Quota
+        </>
+      }
+      okText={`Buy more WEBKNOSSOS Credits for ${costsAsString}`}
+      onOk={handleOrderCredits}
+      onCancel={destroy}
+      width={800}
+      open
+    >
+      <div className="drawing-upgrade-users">
+        <p style={{ marginRight: "30%" }}>
+          You can buy new WEBKNOSSOS credits to pay for premium jobs and services. Each credit costs
+          5€ or 5.75$.
+        </p>
+        <div>Amount of credits to order:</div>
+        <div>
+          <InputNumber
+            min={0}
+            defaultValue={1}
+            step={1}
+            ref={userInputRef}
+            size="large"
+            onChange={recalculateCosts}
+          />
+        </div>
+        Total resulting costs: {costsAsString}
+        <>
+          <Divider style={{ marginTop: 40 }} />
+          <p style={{ color: "#aaa", fontSize: 12 }}>
+            Ordering WEBKNOSSOS credits for your organization will send an email to the WEBKNOSSOS
+            sales team. They will top up your accound with the requested amount of credits and send
+            you an invoice with the required costs. We typically respond within one business day.
+            See our <a href="https://webknossos.org/faq">FAQ</a> for more information.
+          </p>
+        </>
+      </div>
+    </Modal>
+  );
+}
+
 export default {
   upgradePricingPlan,
   extendPricingPlan,
   upgradeUserQuota,
   upgradeStorageQuota,
+  orderWebknossosCredits,
 };

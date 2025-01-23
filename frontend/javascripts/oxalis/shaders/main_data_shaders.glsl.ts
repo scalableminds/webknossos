@@ -67,7 +67,8 @@ uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL;
 uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
 <% _.each(layerNamesWithSegmentation, function(name) { %>
-  uniform sampler2D <%= name %>_textures[<%= textureLayerInfos[name].dataTextureCount %>];
+  // todop: don't hardcode
+  uniform <%= name == "int16_color" ? "highp i" : "" %>sampler2D <%= name %>_textures[<%= textureLayerInfos[name].dataTextureCount %>];
   uniform float <%= name %>_data_texture_width;
   uniform float <%= name %>_alpha;
   uniform float <%= name %>_gammaCorrectionValue;
@@ -254,7 +255,8 @@ void main() {
         color_value = maybe_filtered_color.color.rgb;
         <% if (textureLayerInfos[name].packingDegree === 2.0) { %>
           // Handle 16-bit color layers
-          color_value = vec3(color_value.g * 256.0 + color_value.r);
+          // todop: re-add
+          // color_value = vec3(color_value.g * 256.0 + color_value.r);
         <% } %>
         <% if (textureLayerInfos[name].packingDegree === 1.0) { %>
           // Handle 32-bit color layers
@@ -276,15 +278,16 @@ void main() {
           );
         <% } else { %>
           // Keep the color in bounds of min and max
-          color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
+          // todop: re-add code below
+          // color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
           // Scale the color value according to the histogram settings.
           // Note: max == min would cause a division by 0. Thus we add 1 in this case and hide that value below
           // via mixing.
-          color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min + is_max_and_min_equal);
+          // color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min + is_max_and_min_equal);
         <% } %>
 
-
-        color_value = pow(color_value, 1. / vec3(<%= name %>_gammaCorrectionValue));
+        // todop: re-add
+        // color_value = pow(color_value, 1. / vec3(<%= name %>_gammaCorrectionValue));
 
         // Maybe invert the color using the inverting_factor
         color_value = abs(color_value - <%= name %>_is_inverted);

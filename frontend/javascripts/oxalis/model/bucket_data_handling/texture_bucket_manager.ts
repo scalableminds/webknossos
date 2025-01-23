@@ -221,12 +221,15 @@ export default class TextureBucketManager {
       const dataTextureIndex = Math.floor(_index / bucketsPerTexture);
       const indexInDataTexture = _index % bucketsPerTexture;
       const data = bucket.getData();
+      // todop: adapt
       const TypedArrayClass =
         this.elementClass === "float"
           ? Float32Array
-          : this.elementClass.startsWith("int")
+          : this.elementClass.startsWith("int8")
             ? Int8Array
-            : Uint8Array;
+            : this.elementClass.startsWith("int16")
+              ? Int16Array
+              : Uint8Array;
 
       const rawSrc = new TypedArrayClass(
         data.buffer,
@@ -241,6 +244,7 @@ export default class TextureBucketManager {
         0,
         bucketHeightInTexture * indexInDataTexture,
         this.textureWidth,
+        // todop: remove / 2 again
         bucketHeightInTexture,
       );
       this.committedBucketSet.add(bucket);
@@ -273,12 +277,14 @@ export default class TextureBucketManager {
   setupDataTextures(bytes: number, lookUpCuckooTable: CuckooTableVec5, layerIndex: number): void {
     for (let i = 0; i < this.dataTextureCount; i++) {
       const channelCount = getChannelCount(bytes, this.packingDegree, this.elementClass);
-      const textureType =
-        this.elementClass === "float"
-          ? THREE.FloatType
-          : this.elementClass.startsWith("int")
-            ? THREE.ByteType
-            : THREE.UnsignedByteType;
+      // todop: clean up
+      // const textureType =
+      //   this.elementClass === "float"
+      //     ? THREE.FloatType
+      //     : this.elementClass.startsWith("int")
+      //       ? THREE.ByteType
+      //       : THREE.UnsignedByteType;
+      const textureType = THREE.ShortType;
 
       const dataTexture = createUpdatableTexture(
         this.textureWidth,
@@ -286,8 +292,9 @@ export default class TextureBucketManager {
         channelCount,
         textureType,
         getRenderer(),
-        undefined,
-        this.elementClass === "int8" ? "RGBA8_SNORM" : undefined,
+        THREE.RedIntegerFormat,
+        // todop: don't hardcode
+        "R16I",
       );
 
       this.dataTextures.push(dataTexture);

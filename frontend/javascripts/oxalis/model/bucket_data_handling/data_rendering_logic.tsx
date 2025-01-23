@@ -117,9 +117,19 @@ export type DataTextureSizeAndCount = {
   packingDegree: number;
 };
 export function getPackingDegree(byteCount: number, elementClass: ElementClass) {
+  // How many voxels does one texel represent? E.g.,
+  // For uint8 layers, one texel stores 4 voxels => packingDegree == 4
+  // For uint16 layers, one texel stores 2 voxels => packignDegree == 2.
+  //
   // If the layer holds less than 4 byte per voxel, we can pack multiple voxels using rgba channels
   // Float textures can hold a float per channel, adjust the packing degree accordingly
   // 64-bit values need two texel per data voxel which is why their packing degree is lower than 1.
+
+  if (elementClass === "int16") {
+    // todop: can we avoid this edge case?
+    return 1;
+  }
+
   if (byteCount === 1 || elementClass === "float") return 4;
   if (byteCount === 2) return 2;
   if (byteCount === 8) return 0.5;

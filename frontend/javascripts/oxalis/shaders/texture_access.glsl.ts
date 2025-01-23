@@ -43,13 +43,20 @@ export const getRgbaAtXYIndex: ShaderModule = {
         <% if (textureLayerInfos[name].dataTextureCount === 1) { %>
             // Don't use if-else when there is only one data texture anyway
 
-            return texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba;
+            ivec4 val = texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0);
+
+            // todop: revert.
+            if (val.x == 0) {
+              return vec4(1., 0., 1., 1.);
+            }
+
+            return vec4(val);
         <% } else { %>
           if (textureIdx == 0.0) {
-            return texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba;
+            return vec4(texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba);
           } <% _.range(1, textureLayerInfos[name].dataTextureCount).forEach(textureIndex => { %>
           else if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
-            return texelFetch(<%= name + "_textures" %>[<%= textureIndex %>], ivec2(x, y), 0).rgba;
+            return vec4(texelFetch(<%= name + "_textures" %>[<%= textureIndex %>], ivec2(x, y), 0).rgba);
           }
           <% }) %>
           return vec4(0.5, 0.0, 0.0, 0.0);

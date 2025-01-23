@@ -45,6 +45,7 @@ const canvasHeight = 100;
 const canvasWidth = 318;
 
 export function isHistogramSupported(elementClass: ElementClass): boolean {
+  // todop: adapt for new dtypes
   return ["int8", "uint8", "int16", "uint16", "uint24", "uint32", "float"].includes(elementClass);
 }
 

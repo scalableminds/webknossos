@@ -24,9 +24,11 @@ export enum BucketStateEnum {
   LOADED = "LOADED",
 }
 export type BucketStateEnumType = keyof typeof BucketStateEnum;
+// todop: adapt
 export type BucketDataArray =
   | Int8Array
   | Uint8Array
+  | Int16Array
   | Uint16Array
   | Uint32Array
   | Float32Array
@@ -73,6 +75,7 @@ export class NullBucket {
 export type TypedArrayConstructor =
   | Int8ArrayConstructor
   | Uint8ArrayConstructor
+  | Int16ArrayConstructor
   | Uint16ArrayConstructor
   | Uint32ArrayConstructor
   | Float32ArrayConstructor
@@ -81,12 +84,14 @@ export const getConstructorForElementClass = (
   type: ElementClass,
 ): [TypedArrayConstructor, number] => {
   switch (type) {
+    // todop: adapt for new dtypes
     case "int8":
       return [Int8Array, 1];
     case "uint8":
       return [Uint8Array, 1];
 
     case "int16":
+      return [Int16Array, 1];
     case "uint16":
       return [Uint16Array, 1];
 

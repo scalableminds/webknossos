@@ -235,10 +235,11 @@ export function getDefaultValueRangeOfLayer(
     case "uint64":
       return [0, 2 ** 64 - 1];
 
-    // We do not fully support signed int data;
+    // todop: adapt for new dtypes
     case "int16":
-      return [0, 2 ** 15 - 1];
+      return [-(2 ** 15), 2 ** 15 - 1];
 
+    // We do not fully support all signed int data;
     case "int32":
       return [0, 2 ** 31 - 1];
 

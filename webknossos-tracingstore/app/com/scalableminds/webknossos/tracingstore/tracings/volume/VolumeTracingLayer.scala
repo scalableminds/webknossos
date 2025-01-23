@@ -16,7 +16,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   TemporaryTracingStore,
   TemporaryVolumeDataStore
 }
-import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
 import scala.concurrent.ExecutionContext
 import ucar.ma2.{Array => MultiArray}
@@ -66,7 +65,7 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit v
     bucketStreamFromTemporaryStore(layer)
 
   override def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)] =
-    throw new NotImplementedException // Temporary Volume Tracings do not support versioning
+    throw new UnsupportedOperationException // Temporary Volume Tracings do not support versioning
 }
 
 case class VolumeTracingLayer(

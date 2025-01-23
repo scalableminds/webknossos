@@ -265,8 +265,9 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
         title={
           isRenderedNatively
             ? `This layer is shown natively (i.e., without any transformations).${isDisabled ? "" : " Click to render this layer with its configured transforms."}`
-            : `This layer is rendered with ${typeToLabel[transform.type]
-            } transformation.${isDisabled ? "" : " Click to render this layer without any transforms."}`
+            : `This layer is rendered with ${
+                typeToLabel[transform.type]
+              } transformation.${isDisabled ? "" : " Click to render this layer without any transforms."}`
         }
       >
         <img
@@ -663,15 +664,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const possibleItems: MenuProps["items"] = [
       isVolumeTracing && !isDisabled && maybeFallbackLayer != null && isAdminOrManager
         ? {
-          label: this.getMergeWithFallbackLayerButton(layer),
-          key: "mergeWithFallbackLayerButton",
-        }
+            label: this.getMergeWithFallbackLayerButton(layer),
+            key: "mergeWithFallbackLayerButton",
+          }
         : null,
       this.props.dataset.isEditable
         ? {
-          label: this.getReloadDataButton(layerName, isHistogramAvailable, maybeFallbackLayer),
-          key: "reloadDataButton",
-        }
+            label: this.getReloadDataButton(layerName, isHistogramAvailable, maybeFallbackLayer),
+            key: "reloadDataButton",
+          }
         : null,
       {
         label: this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing),
@@ -679,18 +680,18 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       },
       isAnnotationLayer && !isOnlyAnnotationLayer
         ? {
-          label: (
-            <div className="flex-item">
-              {this.getDeleteAnnotationLayerDropdownOption(
-                readableName,
-                layerType,
-                layer.tracingId,
-                layer,
-              )}
-            </div>
-          ),
-          key: "deleteAnnotationLayer",
-        }
+            label: (
+              <div className="flex-item">
+                {this.getDeleteAnnotationLayerDropdownOption(
+                  readableName,
+                  layerType,
+                  layer.tracingId,
+                  layer,
+                )}
+              </div>
+            ),
+            key: "deleteAnnotationLayer",
+          }
         : null,
       hasHistogram && !isDisabled
         ? { label: this.getEditMinMaxButton(layerName, isInEditMode), key: "editMinMax" }
@@ -699,13 +700,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         ? { label: this.getClipButton(layerName, isInEditMode), key: "clipButton" }
         : null,
       this.props.dataset.dataStore.jobsEnabled &&
-        this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-          APIJobType.COMPUTE_SEGMENT_INDEX_FILE,
-        )
+      this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+        APIJobType.COMPUTE_SEGMENT_INDEX_FILE,
+      )
         ? {
-          label: this.getComputeSegmentIndexFileButton(layerName, isSegmentation),
-          key: "computeSegmentIndexFileButton",
-        }
+            label: this.getComputeSegmentIndexFileButton(layerName, isSegmentation),
+            key: "computeSegmentIndexFileButton",
+          }
         : null,
     ];
     const items = possibleItems.filter((el) => el);
@@ -799,10 +800,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <div className="flex-item">
             {isVolumeTracing ? (
               <FastTooltip
-                title={`This layer is a volume annotation.${maybeFallbackLayer
-                  ? ` It is based on the dataset's original layer ${maybeFallbackLayer}`
-                  : ""
-                  }`}
+                title={`This layer is a volume annotation.${
+                  maybeFallbackLayer
+                    ? ` It is based on the dataset's original layer ${maybeFallbackLayer}`
+                    : ""
+                }`}
                 placement="left"
               >
                 <i
@@ -1138,8 +1140,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       fallbackLayerInfo != null
         ? fallbackLayerInfo.resolutions
         : // This is only a heuristic. At some point, user configuration
-        // might make sense here.
-        getWidestMags(this.props.dataset);
+          // might make sense here.
+          getWidestMags(this.props.dataset);
 
     const getMaxDim = (mag: Vector3) => Math.max(...mag);
 
@@ -1242,33 +1244,22 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               paddingRight: 1,
             }}
           >
-<<<<<<< HEAD
-    <TransformationIcon layer={{ category: "skeleton" }} />
-    {
-      !isOnlyAnnotationLayer
-        ? this.getDeleteAnnotationLayerButton(
-          readableName,
-          AnnotationLayerEnum.Skeleton,
-          tracingId,
-        )
-        : null
-    }
-||||||| 71d1936736
-            <TransformationIcon layer={{ category: "skeleton" }} />
-            {!isOnlyAnnotationLayer ? this.getDeleteAnnotationLayerButton(readableName) : null}
-=======
             <TransformationIcon layer={{ category: "skeleton", name: tracingId }} />
-            {!isOnlyAnnotationLayer ? this.getDeleteAnnotationLayerButton(readableName) : null}
->>>>>>> 7f49ddaddb2c66d1fccb8f859d5f581764040cd3
-          </div >
-        </div >
-    {
-      showSkeletons?(
+            {!isOnlyAnnotationLayer
+              ? this.getDeleteAnnotationLayerButton(
+                  readableName,
+                  AnnotationLayerEnum.Skeleton,
+                  tracingId,
+                )
+              : null}
+          </div>
+        </div>
+        {showSkeletons ? (
           <div
-            style = {{
-          marginLeft: 10,
-        }}
-      >
+            style={{
+              marginLeft: 10,
+            }}
+          >
             <LogSliderSetting
               label="Node Radius"
               min={userSettings.nodeRadius.minimum}
@@ -1292,28 +1283,26 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               onChange={this.onChangeUser.particleSize}
               defaultValue={defaultState.userConfiguration.particleSize}
             />
-    {
-      this.props.isArbitraryMode ? (
-        <NumberSliderSetting
-          label={settings.clippingDistanceArbitrary}
-          min={userSettings.clippingDistanceArbitrary.minimum}
-          max={userSettings.clippingDistanceArbitrary.maximum}
-          value={userConfiguration.clippingDistanceArbitrary}
-          onChange={this.onChangeUser.clippingDistanceArbitrary}
-          defaultValue={defaultState.userConfiguration.clippingDistanceArbitrary}
-        />
-      ) : (
-        <LogSliderSetting
-          label={settings.clippingDistance}
-          roundTo={3}
-          min={userSettings.clippingDistance.minimum}
-          max={userSettings.clippingDistance.maximum}
-          value={userConfiguration.clippingDistance}
-          onChange={this.onChangeUser.clippingDistance}
-          defaultValue={defaultState.userConfiguration.clippingDistance}
-        />
-      )
-    }
+            {this.props.isArbitraryMode ? (
+              <NumberSliderSetting
+                label={settings.clippingDistanceArbitrary}
+                min={userSettings.clippingDistanceArbitrary.minimum}
+                max={userSettings.clippingDistanceArbitrary.maximum}
+                value={userConfiguration.clippingDistanceArbitrary}
+                onChange={this.onChangeUser.clippingDistanceArbitrary}
+                defaultValue={defaultState.userConfiguration.clippingDistanceArbitrary}
+              />
+            ) : (
+              <LogSliderSetting
+                label={settings.clippingDistance}
+                roundTo={3}
+                min={userSettings.clippingDistance.minimum}
+                max={userSettings.clippingDistance.maximum}
+                value={userConfiguration.clippingDistance}
+                onChange={this.onChangeUser.clippingDistance}
+                defaultValue={defaultState.userConfiguration.clippingDistance}
+              />
+            )}
             <SwitchSetting
               label={settings.overrideNodeRadius}
               value={userConfiguration.overrideNodeRadius}
@@ -1329,273 +1318,272 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               label={settings.highlightCommentedNodes}
               value={userConfiguration.highlightCommentedNodes}
               onChange={this.onChangeUser.highlightCommentedNodes}
-            />{ " " }
-          </div >
-        ) : null
-  }
+            />{" "}
+          </div>
+        ) : null}
       </React.Fragment>
     );
   };
 
-showAddVolumeLayerModal = () => {
-  this.setState({
-    isAddVolumeLayerModalVisible: true,
-  });
-};
-
-hideAddVolumeLayerModal = () => {
-  this.setState({
-    isAddVolumeLayerModalVisible: false,
-    segmentationLayerWasPreselected: false,
-    preselectedSegmentationLayerName: undefined,
-  });
-};
-
-addSkeletonAnnotationLayer = async () => {
-  this.props.addSkeletonLayerToAnnotation();
-  await Model.ensureSavedState();
-  location.reload();
-};
-
-saveViewConfigurationAsDefault = () => {
-  const { dataset, datasetConfiguration } = this.props;
-  const dataSource: Array<{
-    name: string;
-    description?: string;
-  }> = [{ name: "Position" }, { name: "Zoom" }, { name: "Rotation" }];
-  const additionalData: typeof dataSource = (
-    [
-      "fourBit",
-      "interpolation",
-      "renderMissingDataBlack",
-      "loadingStrategy",
-      "segmentationPatternOpacity",
-      "blendMode",
-      "selectiveSegmentVisibility",
-    ] as Array<keyof RecommendedConfiguration>
-  ).map((key) => ({
-    name: settings[key] as string,
-    description: settingsTooltips[key],
-  }));
-  dataSource.push(...additionalData);
-  Modal.confirm({
-    title: "Save current view configuration as default?",
-    width: 700,
-    content: (
-      <>
-        Do you really want to save your current view configuration as the dataset's default?
-        <br />
-        This will overwrite the current default view configuration.
-        <br />
-        This includes all color and segmentation layer settings, currently active mappings (even
-        those of disabled layers), as well as these additional settings:
-        <br />
-        <br />
-        {dataSource.map((field, index) => {
-          let delimiter = index === dataSource.length - 1 ? "" : ", ";
-          delimiter = index === dataSource.length - 2 ? " and " : delimiter;
-          return field.description ? (
-            <>
-              {field.name}{" "}
-              <FastTooltip title={field.description} key={`tooltip_${field.name}`}>
-                <InfoCircleOutlined style={{ color: "gray", marginRight: 0 }} />
-              </FastTooltip>
-              {delimiter}
-            </>
-          ) : (
-            `${field.name}${delimiter}`
-          );
-        })}
-        .
-      </>
-    ),
-    onOk: async () => {
-      try {
-        const { flycam, temporaryConfiguration } = Store.getState();
-        const position = V3.floor(getPosition(flycam));
-        const zoom = flycam.zoomStep;
-        const { activeMappingByLayer } = temporaryConfiguration;
-        const completeDatasetConfiguration = Object.assign({}, datasetConfiguration, {
-          position,
-          zoom,
-        });
-        const updatedLayers = {
-          ...completeDatasetConfiguration.layers,
-        } as DatasetConfiguration["layers"];
-        Object.keys(activeMappingByLayer).forEach((layerName) => {
-          const mappingInfo = activeMappingByLayer[layerName];
-          if (
-            mappingInfo.mappingStatus === MappingStatusEnum.ENABLED &&
-            mappingInfo.mappingName != null
-          ) {
-            updatedLayers[layerName] = {
-              ...updatedLayers[layerName],
-              mapping: {
-                name: mappingInfo.mappingName,
-                type: mappingInfo.mappingType,
-              },
-            };
-          } else {
-            updatedLayers[layerName] = {
-              ...updatedLayers[layerName],
-              mapping: null,
-            };
-          }
-        });
-        const updatedConfiguration = {
-          ...completeDatasetConfiguration,
-          layers: updatedLayers,
-        };
-        await updateDatasetDefaultConfiguration(dataset.id, updatedConfiguration);
-        Toast.success("Successfully saved the current view configuration as default.");
-      } catch (error) {
-        Toast.error(
-          "Failed to save the current view configuration as default. Please look at the console for more details.",
-        );
-        ErrorHandling.notify(error as Error);
-        console.error(error);
-      }
-    },
-  });
-};
-
-onSortLayerSettingsEnd = (event: DragEndEvent) => {
-  const { active, over } = event;
-
-  // Fix for having a grabbing cursor during dragging from https://github.com/clauderic/react-sortable-hoc/issues/328#issuecomment-1005835670.
-  document.body.classList.remove("is-dragging");
-  const { colorLayerOrder } = this.props.datasetConfiguration;
-
-  if (over) {
-    const oldIndex = colorLayerOrder.indexOf(active.id as string);
-    const newIndex = colorLayerOrder.indexOf(over.id as string);
-    const movedElement = colorLayerOrder[oldIndex];
-
-    const newIndexClipped = Math.min(newIndex, colorLayerOrder.length - 1);
-    const newLayerOrder = update(colorLayerOrder, {
-      $splice: [
-        [oldIndex, 1],
-        [newIndexClipped, 0, movedElement],
-      ],
+  showAddVolumeLayerModal = () => {
+    this.setState({
+      isAddVolumeLayerModalVisible: true,
     });
-    this.props.onChange("colorLayerOrder", newLayerOrder);
-  }
-};
+  };
 
-render() {
-  const { layers, colorLayerOrder } = this.props.datasetConfiguration;
-  const LayerSettings = this.LayerSettings;
+  hideAddVolumeLayerModal = () => {
+    this.setState({
+      isAddVolumeLayerModalVisible: false,
+      segmentationLayerWasPreselected: false,
+      preselectedSegmentationLayerName: undefined,
+    });
+  };
 
-  const segmentationLayerNames = Object.keys(layers).filter(
-    (layerName) => !getIsColorLayer(this.props.dataset, layerName),
-  );
-  const hasLessThanTwoColorLayers = colorLayerOrder.length < 2;
-  const colorLayerSettings = colorLayerOrder.map((layerName, index) => {
-    return (
-      <LayerSettings
-        key={layerName}
-        layerName={layerName}
-        layerConfiguration={layers[layerName]}
-        isColorLayer
-        isLastLayer={index === colorLayerOrder.length - 1}
-        hasLessThanTwoColorLayers={hasLessThanTwoColorLayers}
-      />
-    );
-  });
-  const segmentationLayerSettings = segmentationLayerNames.map((layerName, index) => {
-    return (
-      <LayerSettings
-        key={layerName}
-        layerName={layerName}
-        isLastLayer={index === segmentationLayerNames.length - 1}
-        layerConfiguration={layers[layerName]}
-        isColorLayer={false}
-      />
-    );
-  });
+  addSkeletonAnnotationLayer = async () => {
+    this.props.addSkeletonLayerToAnnotation();
+    await Model.ensureSavedState();
+    location.reload();
+  };
 
-  const state = Store.getState();
-  const canBeMadeHybrid =
-    this.props.tracing.skeleton === null &&
-    this.props.tracing.annotationType === APIAnnotationTypeEnum.Explorational &&
-    state.task === null;
-
-  return (
-    <div className="tracing-settings-menu">
-      <DndContext
-        onDragEnd={this.onSortLayerSettingsEnd}
-        onDragStart={() =>
-          colorLayerOrder.length > 1 && document.body.classList.add("is-dragging")
-        }
-      >
-        <SortableContext
-          items={colorLayerOrder.map((layerName) => layerName)}
-          strategy={verticalListSortingStrategy}
-        >
-          {colorLayerSettings}
-        </SortableContext>
-      </DndContext>
-
-      {segmentationLayerSettings}
-      {this.getSkeletonLayer()}
-
-      {this.props.tracing.restrictions.allowUpdate &&
-        this.props.controlMode === ControlModeEnum.TRACE ? (
+  saveViewConfigurationAsDefault = () => {
+    const { dataset, datasetConfiguration } = this.props;
+    const dataSource: Array<{
+      name: string;
+      description?: string;
+    }> = [{ name: "Position" }, { name: "Zoom" }, { name: "Rotation" }];
+    const additionalData: typeof dataSource = (
+      [
+        "fourBit",
+        "interpolation",
+        "renderMissingDataBlack",
+        "loadingStrategy",
+        "segmentationPatternOpacity",
+        "blendMode",
+        "selectiveSegmentVisibility",
+      ] as Array<keyof RecommendedConfiguration>
+    ).map((key) => ({
+      name: settings[key] as string,
+      description: settingsTooltips[key],
+    }));
+    dataSource.push(...additionalData);
+    Modal.confirm({
+      title: "Save current view configuration as default?",
+      width: 700,
+      content: (
         <>
-          <Divider />
+          Do you really want to save your current view configuration as the dataset's default?
+          <br />
+          This will overwrite the current default view configuration.
+          <br />
+          This includes all color and segmentation layer settings, currently active mappings (even
+          those of disabled layers), as well as these additional settings:
+          <br />
+          <br />
+          {dataSource.map((field, index) => {
+            let delimiter = index === dataSource.length - 1 ? "" : ", ";
+            delimiter = index === dataSource.length - 2 ? " and " : delimiter;
+            return field.description ? (
+              <>
+                {field.name}{" "}
+                <FastTooltip title={field.description} key={`tooltip_${field.name}`}>
+                  <InfoCircleOutlined style={{ color: "gray", marginRight: 0 }} />
+                </FastTooltip>
+                {delimiter}
+              </>
+            ) : (
+              `${field.name}${delimiter}`
+            );
+          })}
+          .
+        </>
+      ),
+      onOk: async () => {
+        try {
+          const { flycam, temporaryConfiguration } = Store.getState();
+          const position = V3.floor(getPosition(flycam));
+          const zoom = flycam.zoomStep;
+          const { activeMappingByLayer } = temporaryConfiguration;
+          const completeDatasetConfiguration = Object.assign({}, datasetConfiguration, {
+            position,
+            zoom,
+          });
+          const updatedLayers = {
+            ...completeDatasetConfiguration.layers,
+          } as DatasetConfiguration["layers"];
+          Object.keys(activeMappingByLayer).forEach((layerName) => {
+            const mappingInfo = activeMappingByLayer[layerName];
+            if (
+              mappingInfo.mappingStatus === MappingStatusEnum.ENABLED &&
+              mappingInfo.mappingName != null
+            ) {
+              updatedLayers[layerName] = {
+                ...updatedLayers[layerName],
+                mapping: {
+                  name: mappingInfo.mappingName,
+                  type: mappingInfo.mappingType,
+                },
+              };
+            } else {
+              updatedLayers[layerName] = {
+                ...updatedLayers[layerName],
+                mapping: null,
+              };
+            }
+          });
+          const updatedConfiguration = {
+            ...completeDatasetConfiguration,
+            layers: updatedLayers,
+          };
+          await updateDatasetDefaultConfiguration(dataset.id, updatedConfiguration);
+          Toast.success("Successfully saved the current view configuration as default.");
+        } catch (error) {
+          Toast.error(
+            "Failed to save the current view configuration as default. Please look at the console for more details.",
+          );
+          ErrorHandling.notify(error as Error);
+          console.error(error);
+        }
+      },
+    });
+  };
+
+  onSortLayerSettingsEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    // Fix for having a grabbing cursor during dragging from https://github.com/clauderic/react-sortable-hoc/issues/328#issuecomment-1005835670.
+    document.body.classList.remove("is-dragging");
+    const { colorLayerOrder } = this.props.datasetConfiguration;
+
+    if (over) {
+      const oldIndex = colorLayerOrder.indexOf(active.id as string);
+      const newIndex = colorLayerOrder.indexOf(over.id as string);
+      const movedElement = colorLayerOrder[oldIndex];
+
+      const newIndexClipped = Math.min(newIndex, colorLayerOrder.length - 1);
+      const newLayerOrder = update(colorLayerOrder, {
+        $splice: [
+          [oldIndex, 1],
+          [newIndexClipped, 0, movedElement],
+        ],
+      });
+      this.props.onChange("colorLayerOrder", newLayerOrder);
+    }
+  };
+
+  render() {
+    const { layers, colorLayerOrder } = this.props.datasetConfiguration;
+    const LayerSettings = this.LayerSettings;
+
+    const segmentationLayerNames = Object.keys(layers).filter(
+      (layerName) => !getIsColorLayer(this.props.dataset, layerName),
+    );
+    const hasLessThanTwoColorLayers = colorLayerOrder.length < 2;
+    const colorLayerSettings = colorLayerOrder.map((layerName, index) => {
+      return (
+        <LayerSettings
+          key={layerName}
+          layerName={layerName}
+          layerConfiguration={layers[layerName]}
+          isColorLayer
+          isLastLayer={index === colorLayerOrder.length - 1}
+          hasLessThanTwoColorLayers={hasLessThanTwoColorLayers}
+        />
+      );
+    });
+    const segmentationLayerSettings = segmentationLayerNames.map((layerName, index) => {
+      return (
+        <LayerSettings
+          key={layerName}
+          layerName={layerName}
+          isLastLayer={index === segmentationLayerNames.length - 1}
+          layerConfiguration={layers[layerName]}
+          isColorLayer={false}
+        />
+      );
+    });
+
+    const state = Store.getState();
+    const canBeMadeHybrid =
+      this.props.tracing.skeleton === null &&
+      this.props.tracing.annotationType === APIAnnotationTypeEnum.Explorational &&
+      state.task === null;
+
+    return (
+      <div className="tracing-settings-menu">
+        <DndContext
+          onDragEnd={this.onSortLayerSettingsEnd}
+          onDragStart={() =>
+            colorLayerOrder.length > 1 && document.body.classList.add("is-dragging")
+          }
+        >
+          <SortableContext
+            items={colorLayerOrder.map((layerName) => layerName)}
+            strategy={verticalListSortingStrategy}
+          >
+            {colorLayerSettings}
+          </SortableContext>
+        </DndContext>
+
+        {segmentationLayerSettings}
+        {this.getSkeletonLayer()}
+
+        {this.props.tracing.restrictions.allowUpdate &&
+        this.props.controlMode === ControlModeEnum.TRACE ? (
+          <>
+            <Divider />
+            <Row justify="center" align="middle">
+              <Button onClick={this.showAddVolumeLayerModal}>
+                <PlusOutlined />
+                Add Volume Annotation Layer
+              </Button>
+            </Row>
+          </>
+        ) : null}
+
+        {this.props.tracing.restrictions.allowUpdate && canBeMadeHybrid ? (
           <Row justify="center" align="middle">
-            <Button onClick={this.showAddVolumeLayerModal}>
+            <Button
+              onClick={this.addSkeletonAnnotationLayer}
+              style={{
+                marginTop: 10,
+              }}
+            >
               <PlusOutlined />
-              Add Volume Annotation Layer
+              Add Skeleton Annotation Layer
             </Button>
           </Row>
-        </>
-      ) : null}
+        ) : null}
 
-      {this.props.tracing.restrictions.allowUpdate && canBeMadeHybrid ? (
-        <Row justify="center" align="middle">
-          <Button
-            onClick={this.addSkeletonAnnotationLayer}
-            style={{
-              marginTop: 10,
-            }}
-          >
-            <PlusOutlined />
-            Add Skeleton Annotation Layer
-          </Button>
-        </Row>
-      ) : null}
+        {this.props.controlMode === ControlModeEnum.VIEW && this.props.isAdminOrDatasetManager ? (
+          <Row justify="center" align="middle">
+            <FastTooltip title="Save the current view configuration as default for all users.">
+              <Button onClick={this.saveViewConfigurationAsDefault}>
+                <SaveOutlined />
+                Save View Configuration as Default
+              </Button>
+            </FastTooltip>
+          </Row>
+        ) : null}
 
-      {this.props.controlMode === ControlModeEnum.VIEW && this.props.isAdminOrDatasetManager ? (
-        <Row justify="center" align="middle">
-          <FastTooltip title="Save the current view configuration as default for all users.">
-            <Button onClick={this.saveViewConfigurationAsDefault}>
-              <SaveOutlined />
-              Save View Configuration as Default
-            </Button>
-          </FastTooltip>
-        </Row>
-      ) : null}
+        {this.state.layerToMergeWithFallback != null ? (
+          <MaterializeVolumeAnnotationModal
+            selectedVolumeLayer={this.state.layerToMergeWithFallback}
+            handleClose={() => this.setState({ layerToMergeWithFallback: null })}
+          />
+        ) : null}
 
-      {this.state.layerToMergeWithFallback != null ? (
-        <MaterializeVolumeAnnotationModal
-          selectedVolumeLayer={this.state.layerToMergeWithFallback}
-          handleClose={() => this.setState({ layerToMergeWithFallback: null })}
-        />
-      ) : null}
-
-      {this.state.isAddVolumeLayerModalVisible ? (
-        <AddVolumeLayerModal
-          dataset={this.props.dataset}
-          onCancel={this.hideAddVolumeLayerModal}
-          tracing={this.props.tracing}
-          preselectedLayerName={this.state.preselectedSegmentationLayerName}
-          disableLayerSelection={this.state.segmentationLayerWasPreselected}
-        />
-      ) : null}
-    </div>
-  );
-}
+        {this.state.isAddVolumeLayerModalVisible ? (
+          <AddVolumeLayerModal
+            dataset={this.props.dataset}
+            onCancel={this.hideAddVolumeLayerModal}
+            tracing={this.props.tracing}
+            preselectedLayerName={this.state.preselectedSegmentationLayerName}
+            disableLayerSelection={this.state.segmentationLayerWasPreselected}
+          />
+        ) : null}
+      </div>
+    );
+  }
 }
 
 const mapStateToProps = (state: OxalisState) => ({

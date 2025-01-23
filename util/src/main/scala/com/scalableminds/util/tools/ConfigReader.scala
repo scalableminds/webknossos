@@ -4,8 +4,6 @@ import com.scalableminds.util.time.Instant
 import com.typesafe.config.Config
 import play.api.{ConfigLoader, Configuration}
 
-import scala.util.control.NonFatal
-
 trait ConfigReader {
   def raw: Configuration
 

@@ -5,6 +5,8 @@ let isWkReady = false;
 
 function setWkReady() {
   isWkReady = true;
+
+  setTimeout(() => {}, window._setupShaderEditor(0), 1000);
 }
 export function* listenForWkReady(): Saga<void> {
   yield* takeEvery("WK_READY", setWkReady);

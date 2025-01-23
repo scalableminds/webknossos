@@ -278,16 +278,16 @@ void main() {
           );
         <% } else { %>
           // Keep the color in bounds of min and max
-          // todop: re-add code below
-          // color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
+          // todop: re-add code below  (del me)
+          color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
           // Scale the color value according to the histogram settings.
           // Note: max == min would cause a division by 0. Thus we add 1 in this case and hide that value below
           // via mixing.
-          // color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min + is_max_and_min_equal);
+          color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min + is_max_and_min_equal);
         <% } %>
 
-        // todop: re-add
-        // color_value = pow(color_value, 1. / vec3(<%= name %>_gammaCorrectionValue));
+        // todop: re-add (del me)
+        color_value = pow(color_value, 1. / vec3(<%= name %>_gammaCorrectionValue));
 
         // Maybe invert the color using the inverting_factor
         color_value = abs(color_value - <%= name %>_is_inverted);

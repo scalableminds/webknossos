@@ -53,7 +53,7 @@ object MappingParser extends LazyLogging {
     }
     jsonReader.endObject()
 
-    Instant.logSince(before, s"JSON Mapping parsing")
+    Instant.logSince(before, s"JSON Mapping parsing", logger)
 
     for {
       name <- nameOpt

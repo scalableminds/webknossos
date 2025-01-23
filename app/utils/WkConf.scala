@@ -1,10 +1,10 @@
 package utils
 
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.ConfigReader
 import com.typesafe.scalalogging.LazyLogging
 import play.api.Configuration
 
-import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.duration._
 

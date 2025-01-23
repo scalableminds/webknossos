@@ -1,9 +1,8 @@
 package com.scalableminds.util.tools
 
+import com.scalableminds.util.time.Instant
 import com.typesafe.config.Config
 import play.api.{ConfigLoader, Configuration}
-
-import java.time.Instant
 
 trait ConfigReader {
   def raw: Configuration
@@ -11,7 +10,7 @@ trait ConfigReader {
   implicit val instantConfigLoader: ConfigLoader[Instant] = new ConfigLoader[Instant] {
     def load(rootConfig: Config, path: String): Instant = {
       val literal = rootConfig.getString(path)
-      Instant.parse(literal)
+      Instant.fromString(literal).get
     }
   }
 

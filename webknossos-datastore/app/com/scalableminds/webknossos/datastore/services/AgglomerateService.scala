@@ -217,7 +217,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
       if (Instant.since(before) > (100 milliseconds)) {
         Instant.logSince(
           before,
-          s"Generating skeleton from agglomerate file with ${skeletonEdges.length} edges, ${nodes.length} nodes")
+          s"Generating skeleton from agglomerate file with ${skeletonEdges.length} edges, ${nodes.length} nodes",
+          logger)
       }
 
       Full(skeleton)

@@ -744,7 +744,7 @@ class EditableMappingService @Inject()(
       newMappingId <- duplicate(Some(firstMappingId), version = None, Some(remoteFallbackLayer), userToken)
       _ <- Fox.serialCombined(editableMappingIds.tail)(editableMappingId =>
         mergeInto(newMappingId, editableMappingId, remoteFallbackLayer, userToken))
-      _ = Instant.logSince(before, s"Merging ${editableMappingIds.length} editable mappings")
+      _ = Instant.logSince(before, s"Merging ${editableMappingIds.length} editable mappings", logger)
     } yield newMappingId
 
   // read as: merge source into target (mutate target)

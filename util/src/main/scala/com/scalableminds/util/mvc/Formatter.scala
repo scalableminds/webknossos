@@ -1,5 +1,7 @@
 package com.scalableminds.util.mvc
 
+import com.scalableminds.util.tools.TextUtils
+
 import java.text.SimpleDateFormat
 import java.util.Date
 import scala.collection.mutable.ListBuffer
@@ -23,44 +25,54 @@ trait Formatter {
     id.takeRight(6)
 
   protected def formatDuration(duration: FiniteDuration): String = {
-    def pluralize(string: String, amount: Int): String =
-      if (amount == 1) string else s"${string}s"
+    val sign = if (duration.toMillis < 0) "-" else ""
+    var millisAbs = Math.abs(duration.toMillis).toInt
 
-    if (duration.toMillis < 1000) {
-      s"${duration.toMillis} ms"
-    } else if (duration.toMillis < 60 * 1000) {
-      val secondsFloat = duration.toMillis.toFloat / 1000
-      f"$secondsFloat%.2fs"
+    if (millisAbs < 1000) {
+      s"$sign${millisAbs}ms"
+    } else if (millisAbs < 59995) { // up to 2 decimals for < 60s
+      val wholeSeconds = Math.floor(millisAbs.toFloat / 1000).toInt
+      val centis = Math.round(millisAbs.toFloat / 10) % 100
+      val withTwoDecimals = f"$wholeSeconds.$centis%02d"
+      // now drop the decimals from the right if they are zeroes.
+      f"$sign${withTwoDecimals.reverse.dropWhile(_ == '0').dropWhile(_ == '.').reverse}s"
     } else {
-      val maxElements = 3
       val labelElements: ListBuffer[String] = new ListBuffer[String]
 
-      var seconds: Float = duration.toMillis.toFloat / 1000
-
-      val days = Math.floor(seconds / 3600 / 24).toInt
-      if (days > 0 && labelElements.length < maxElements) {
-        labelElements.addOne(pluralize(s"$days day", days))
-        seconds -= days * 24 * 3600
+      var days = Math.floor(millisAbs.toFloat / 1000 / 3600 / 24).toInt
+      if (millisAbs - days * 24 * 3600 * 1000 > 23 * 3600 * 1000 + 59 * 60 * 1000 + 59499) { // extra day to avoid 24h/60m/60s
+        days += 1
+      }
+      val includeSeconds = days == 0
+      if (days > 0) {
+        labelElements.addOne(TextUtils.pluralize(s"$days day", days))
+        millisAbs -= days * 24 * 3600 * 1000
       }
 
-      val hours = Math.floor(seconds / 3600).toInt
-      if (hours > 0 && labelElements.length < maxElements) {
+      var hours = Math.floor(millisAbs.toFloat / 3600 / 1000).toInt
+      if (millisAbs - hours * 3600 * 1000 > 59 * 60 * 1000 + 59499) { // extra hour to avoid 60m/60s
+        hours += 1
+      }
+      if (hours > 0) {
         labelElements.addOne(s"${hours}h")
-        seconds -= hours * 3600
+        millisAbs -= hours * 3600 * 1000
       }
 
-      val minutes = Math.floor(seconds / 60).toInt
-      if (minutes > 0 && labelElements.length < maxElements) {
+      var minutes = Math.floor(millisAbs.toFloat / 60 / 1000).toInt
+      if (millisAbs - minutes * 60 * 1000 > 59499) { // extra minute to avoid 60s
+        minutes += 1
+      }
+      if (minutes > 0) {
+        millisAbs -= minutes * 60 * 1000
         labelElements.addOne(s"${minutes}m")
-        seconds -= minutes * 60
       }
 
-      val wholeSeconds = Math.ceil(seconds).toInt
-      if (seconds >= 0 && labelElements.length < maxElements) {
-        labelElements += s"${wholeSeconds}s"
+      val seconds = Math.round(millisAbs.toFloat / 1000)
+      if (includeSeconds && seconds > 0) {
+        labelElements += s"${seconds}s"
       }
 
-      labelElements.mkString(" ")
+      sign + labelElements.mkString(" ")
     }
   }
 

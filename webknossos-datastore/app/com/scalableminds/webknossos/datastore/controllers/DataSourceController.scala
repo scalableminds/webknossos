@@ -487,7 +487,7 @@ class DataSourceController @Inject()(
                                                                                                    datasetDirectoryName)
             _ = if (Instant.since(before) > (10 seconds)) {
               val datasetLabel = datasetDirectoryName.map(n => s" dataset $n of").getOrElse("")
-              Instant.logSince(before, s"Measuring storage for$datasetLabel orga $organizationId")
+              Instant.logSince(before, s"Measuring storage for$datasetLabel orga $organizationId", logger)
             }
           } yield Ok(Json.toJson(usedStorageInBytes))
         }

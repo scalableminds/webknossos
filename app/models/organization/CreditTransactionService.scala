@@ -1,6 +1,6 @@
 package models.organization
 
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -34,7 +34,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
       insertedTransaction <- creditTransactionDAO.findOne(pendingCreditTransaction._id)
     } yield insertedTransaction
 
-  def doCreditTransaction(creditTransaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def doCreditTransaction(creditTransaction: CreditTransaction): Fox[Unit] =
     for {
       _ <- organizationService.ensureOrganizationHasPaidPlan(creditTransaction._organization)
       _ <- creditTransactionDAO.insertTransaction(creditTransaction)

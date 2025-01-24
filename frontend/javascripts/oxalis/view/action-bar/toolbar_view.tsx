@@ -846,7 +846,7 @@ const TOOL_NAMES = {
   AREA_MEASUREMENT: "Area Measurement Tool",
 };
 
-export default function ToolbarView({ isReadOnly = false }: { isReadOnly?: boolean }) {
+export default function ToolbarView({ isReadOnly }: { isReadOnly: boolean }) {
   const dispatch = useDispatch();
   const hasVolume = useSelector((state: OxalisState) => state.tracing?.volumes.length > 0);
   const hasSkeleton = useSelector((state: OxalisState) => state.tracing?.skeleton != null);

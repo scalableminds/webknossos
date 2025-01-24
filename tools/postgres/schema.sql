@@ -779,6 +779,7 @@ CREATE INDEX ON webknossos.invites(tokenValue);
 CREATE INDEX ON webknossos.annotation_privateLinks(accessToken);
 CREATE INDEX ON webknossos.shortLinks(key);
 CREATE INDEX ON webknossos.organization_credit_transactions(state);
+CREATE INDEX ON webknossos.organization_credit_transactions(expiration_date);
 
 ALTER TABLE webknossos.annotations
   ADD CONSTRAINT task_ref FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL DEFERRABLE,
@@ -995,7 +996,7 @@ FOR EACH ROW EXECUTE PROCEDURE webknossos.enforce_non_negative_balance();
 
 
 --- Stored procedure to revoke temporary credits from an organization
---- TODO !!!!!! Fix revoked free credits not being revoked !!!!!!
+--- TODO !!!!!! Fix refunded free credits not being revoked !!!!!!
 CREATE FUNCTION webknossos.revoke_expired_credits()
 RETURNS VOID AS $$
 DECLARE

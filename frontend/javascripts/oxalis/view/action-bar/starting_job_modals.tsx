@@ -28,6 +28,7 @@ import {
 import { LayerSelectionFormItem } from "components/layer_selection";
 import { Slider } from "components/slider";
 import features from "features";
+import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useGuardedFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
@@ -46,6 +47,7 @@ import {
   getReadableNameOfVolumeLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { MagInfo } from "oxalis/model/helpers/mag_info";
 import { Model, Store } from "oxalis/singletons";
 import type { OxalisState, UserBoundingBox } from "oxalis/store";
@@ -59,8 +61,6 @@ import {
 } from "../jobs/train_ai_model";
 import DEFAULT_PREDICT_WORKFLOW from "./default-predict-workflow-template";
 import { isBoundingBoxExportable } from "./download_modal_view";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import { formatVoxels } from "libs/format_utils";
 
 const { ThinSpace } = Unicode;
 

@@ -24,7 +24,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
       _ <- organizationService.ensureOrganizationHasPaidPlan(organizationId)
       pendingCreditTransaction = CreditTransaction(ObjectId.generate,
                                                    organizationId,
-                                                   creditsToSpent,
+                                                   -creditsToSpent,
                                                    None,
                                                    comment,
                                                    paidJob,

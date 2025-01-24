@@ -224,14 +224,13 @@ class JobService @Inject()(wkConf: WkConf,
       _ <- bool2Fox(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.edgeLengthExceeded"
     } yield ()
 
-  def getJobCostsPerGVx(jobCommand: JobCommand): Double = {
+  def getJobCostsPerGVx(jobCommand: JobCommand): Double =
     jobCommand match {
-      case JobCommand.infer_neurons => wkConf.Features.neuronInferralCostsPerGVx
+      case JobCommand.infer_neurons      => wkConf.Features.neuronInferralCostsPerGVx
       case JobCommand.infer_mitochondria => wkConf.Features.mitochondriaInferralCostsPerGVx
-      case JobCommand.align_sections => wkConf.Features.alignmentCostsPerGVx
-      case _ => throw new IllegalArgumentException(s"Unsupported job command $jobCommand")
+      case JobCommand.align_sections     => wkConf.Features.alignmentCostsPerGVx
+      case _                             => throw new IllegalArgumentException(s"Unsupported job command $jobCommand")
     }
-  }
 
   def calculateJobCosts(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): BigDecimal = {
     val costsPerGVx = getJobCostsPerGVx(jobCommand)
@@ -240,11 +239,10 @@ class JobService @Inject()(wkConf: WkConf,
     costs
   }
 
-  def parseBoundingBoxWithMagOpt(boundingBox: String, mag: Option[String]): Fox[BoundingBox] = {
+  def parseBoundingBoxWithMagOpt(boundingBox: String, mag: Option[String]): Fox[BoundingBox] =
     for {
       parsedBoundingBox <- BoundingBox.fromLiteral(boundingBox).toFox ?~> "job.invalidBoundingBox"
       parsedMag <- Vec3Int.fromMagLiteral(mag.getOrElse("1-1-1"), allowScalar = true) ?~> "job.invalidMag"
     } yield parsedBoundingBox / parsedMag
-  }
 
 }

@@ -262,9 +262,9 @@ class OrganizationController @Inject()(
         _ = Mailer ! Send(defaultMails.orderCreditsMail(request.identity, userEmail, requestedCredits))
         _ = Mailer ! Send(
           defaultMails.orderCreditsRequestMail(request.identity,
-            userEmail,
-            organization.name,
-            s"Purchase $requestedCredits WEBKNOSSOS credits."))
+                                               userEmail,
+                                               organization.name,
+                                               s"Purchase $requestedCredits WEBKNOSSOS credits."))
       } yield Ok
     }
 

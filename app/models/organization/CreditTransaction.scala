@@ -38,7 +38,7 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
     for {
       state <- CreditTransactionState.fromString(row.state).toFox
       id <- ObjectId.fromString(row._Id)
-      jobIdOpt <- row._PaidJob.map(ObjectId.fromStringSync)
+      jobIdOpt <- Fox.runOptional(row._PaidJob)(ObjectId.fromStringSync)
     } yield {
       CreditTransaction(
         id,
@@ -81,7 +81,7 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        q"SELECT COALESCE(SUM(spent_money), 0) FROM $existingCollectionName WHERE _organization = $organizationId AND $accessQuery"
+        q"SELECT COALESCE(SUM(credit_change), 0) FROM $existingCollectionName WHERE _organization = $organizationId AND $accessQuery"
           .as[BigDecimal])
       firstRow <- r.headOption
     } yield firstRow
@@ -91,10 +91,10 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
       // TODO: check write access
       _ <- run(
         q"""INSERT INTO webknossos.organization_credit_transactions
-          (_organization, credit_change, spent_money, comment, _paid_job,
+          (_id, _organization, credit_change, spent_money, comment, _paid_job,
           state, expiration_date, created_at, updated_at, is_deleted)
           VALUES
-          (${transaction._organization}, ${transaction.creditChange.toString()}::DECIMAL,
+          (${transaction._id}, ${transaction._organization}, ${transaction.creditChange.toString()}::DECIMAL,
           ${transaction.spentMoney.map(_.toString)}::DECIMAL, ${transaction.comment}, ${transaction._paidJob},
           'Pending', ${transaction.expirationDate}, ${transaction.createdAt},
           ${transaction.updatedAt}, ${transaction.isDeleted})
@@ -107,7 +107,7 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
       // TODO: check write access
       _ <- run(
         q"""UPDATE webknossos.organization_credit_transactions
-          SET _paid_job = $jobId
+          SET _paid_job = $jobId, updated_at = NOW()
           WHERE _id = ${transaction._id}
           """.asUpdate
       )
@@ -134,7 +134,7 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
       // TODO: check write access
       _ <- run(
         q"""UPDATE webknossos.organization_credit_transactions
-          SET state = 'Completed', updated_at = NOW()
+          SET state = ${CreditTransactionState.Completed}, updated_at = NOW()
           WHERE _id = $transactionId
           """.asUpdate
       )
@@ -143,28 +143,29 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
   def refundTransaction(transactionId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       // TODO: make this a proper sql transaction.
-      _ <- run(q"START TRANSACTION".as[Unit])
+      //_ <- run(q"START TRANSACTION".as[Unit])
       // TODO: check write access
       updatedTransactionCount <- run(
         q"""UPDATE webknossos.organization_credit_transactions
-          SET state = 'Refunded', updated_at = ${Instant.now}
-          WHERE _id = $transactionId AND state = 'Pending'
+          SET state = 'Refunded', updated_at = NOW()
+          WHERE _id = $transactionId AND state = ${CreditTransactionState.Pending}
           """.asUpdate
       )
-      _ <- bool2Fox(updatedTransactionCount < 1) ?~> s"Refunding failed. Transaction $transactionId not found or no longer pending."
+      _ <- bool2Fox(updatedTransactionCount == 1) ?~> s"Refunding failed. Transaction $transactionId not found or no longer pending."
       refundedTransaction <- findOne(transactionId)
       refundAmount = refundedTransaction.creditChange * -1
+      _ <- bool2Fox(refundAmount >= 0) ?~> s"Refunds must not be negative."
       refundComment = refundedTransaction._paidJob
-        .map(jobId => s"Refund for job $jobId")
-        .getOrElse(s"Refund for transaction ${refundedTransaction._id}")
+        .map(jobId => s"Refund for failed job $jobId.")
+        .getOrElse(s"Refund for transaction ${refundedTransaction._id}.")
       // insert refund transaction
       _ <- run(q"""INSERT INTO webknossos.organization_credit_transactions
-          (_organization, credit_change, comment, state)
+          (_id, _organization, credit_change, comment, _paid_job, state)
           VALUES
-          (${refundedTransaction._organization}, ${refundAmount.toString()}::DECIMAL,
-          $refundComment, 'Complete')
+          (${ObjectId.generate}, ${refundedTransaction._organization}, ${refundAmount.toString()}::DECIMAL,
+          $refundComment, ${refundedTransaction._paidJob}, ${CreditTransactionState.Completed})
           """.asUpdate)
-      _ <- run(q"COMMIT TRANSACTION".as[Unit])
+      //_ <- run(q"COMMIT TRANSACTION".as[Unit])
     } yield ()
 
   def findTransactionForJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =

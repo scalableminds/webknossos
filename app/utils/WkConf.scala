@@ -3,13 +3,17 @@ package utils
 import com.scalableminds.util.tools.ConfigReader
 import com.typesafe.scalalogging.LazyLogging
 import play.api.Configuration
+import security.CertificateValidationService
 
 import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.duration._
 
-class WkConf @Inject()(configuration: Configuration) extends ConfigReader with LazyLogging {
+class WkConf @Inject()(configuration: Configuration, certificateValidationService: CertificateValidationService)
+    extends ConfigReader
+    with LazyLogging {
   override def raw: Configuration = configuration
+  lazy val featureOverrides: Map[String, Boolean] = certificateValidationService.getFeatureOverrides
 
   object Http {
     val uri: String = get[String]("http.uri")
@@ -123,8 +127,12 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")
     val exportTiffMaxVolumeMVx: Long = get[Long]("features.exportTiffMaxVolumeMVx")
     val exportTiffMaxEdgeLengthVx: Long = get[Long]("features.exportTiffMaxEdgeLengthVx")
-    val openIdConnectEnabled: Boolean = get[Boolean]("features.openIdConnectEnabled")
-    val segmentAnythingEnabled: Boolean = get[Boolean]("features.segmentAnythingEnabled")
+    val openIdConnectEnabled: Boolean =
+      featureOverrides.getOrElse("openIdConnectEnabled", get[Boolean]("features.openIdConnectEnabled"))
+    val editableMappingsEnabled: Boolean =
+      featureOverrides.getOrElse("editableMappingsEnabled", get[Boolean]("features.editableMappingsEnabled"))
+    val segmentAnythingEnabled: Boolean =
+      featureOverrides.getOrElse("segmentAnythingEnabled", get[Boolean]("features.segmentAnythingEnabled"))
   }
 
   object Datastore {
@@ -139,9 +147,9 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val publicUri: Option[String] = getOptional[String]("tracingstore.publicUri")
   }
 
-  object Proxy {
-    val prefix: String = get[String]("proxy.prefix")
-    val routes: List[String] = getList[String]("proxy.routes")
+  object AboutPageRedirect {
+    val prefix: String = get[String]("aboutPageRedirect.prefix")
+    val routes: List[String] = getList[String]("aboutPageRedirect.routes")
   }
 
   object Mail {
@@ -253,7 +261,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       Features,
       Tracingstore,
       Datastore,
-      Proxy,
+      AboutPageRedirect,
       Mail,
       Silhouette,
       Jobs,

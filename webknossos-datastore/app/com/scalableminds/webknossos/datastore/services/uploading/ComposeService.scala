@@ -2,18 +2,7 @@ package com.scalableminds.webknossos.datastore.services.uploading
 
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.layers.{
-  N5DataLayer,
-  N5SegmentationLayer,
-  PrecomputedDataLayer,
-  PrecomputedSegmentationLayer,
-  WKWDataLayer,
-  WKWSegmentationLayer,
-  Zarr3DataLayer,
-  Zarr3SegmentationLayer,
-  ZarrDataLayer,
-  ZarrSegmentationLayer
-}
+import com.scalableminds.webknossos.datastore.dataformats.layers.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.{
@@ -103,30 +92,9 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- Fox.runIf(!layerIsRemote)(
         datasetSymlinkService.addSymlinksToOtherDatasetLayers(uploadDir, List(linkedLayerIdentifier)))
       editedLayer: DataLayer = layer match {
-        case l: PrecomputedDataLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: PrecomputedSegmentationLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: ZarrDataLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: ZarrSegmentationLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: N5DataLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: N5SegmentationLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: Zarr3DataLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: Zarr3SegmentationLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
+        case l: DataLayerWithMagLocators =>
+          l.mapped(name = composeLayer.newName,
+                   coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
         case l: WKWDataLayer =>
           l.copy(name = composeLayer.newName,
                  coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))

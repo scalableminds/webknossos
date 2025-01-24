@@ -4,6 +4,7 @@
 GET           /buildinfo                                                                        controllers.Application.buildInfo()
 GET           /features                                                                         controllers.Application.features()
 GET           /health                                                                           controllers.Application.health()
+GET           /checkCertificate                                                                 controllers.Application.checkCertificate()
 POST          /analytics/ingest                                                                 controllers.AnalyticsController.ingestAnalyticsEvents
 POST          /analytics/:eventType                                                             controllers.AnalyticsController.trackAnalyticsEvent(eventType)
 POST          /helpEmail                                                                        controllers.Application.helpEmail(message: String, currentUrl: String)

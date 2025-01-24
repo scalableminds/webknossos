@@ -6,10 +6,7 @@ import {
 import memoizeOne from "memoize-one";
 import { type AnnotationTool, IdentityTransform } from "oxalis/constants";
 import { AnnotationToolEnum } from "oxalis/constants";
-import {
-  getTransformsPerLayer,
-  getVisibleSegmentationLayer,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
 import {
   type AgglomerateState,
@@ -21,6 +18,7 @@ import {
 import type { OxalisState } from "oxalis/store";
 import type { APIOrganization, APIUser } from "types/api_flow_types";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
+import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
 import { isSkeletonLayerTransformed } from "./skeletontracing_accessor";
 
 const zoomInToUseToolMessage =

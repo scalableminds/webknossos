@@ -102,7 +102,7 @@ function resetMatrix(matrix: Matrix4x4, voxelSize: Vector3) {
   // Save position
   const position = [matrix[12], matrix[13], matrix[14]];
   // Reset rotation
-  const newMatrix = rotateOnAxis(M4x4.scale(scale, M4x4.identity(), []), Math.PI, [0, 0, 1]);
+  const newMatrix = rotateOnAxis(M4x4.scale(scale, M4x4.identity, []), Math.PI, [0, 0, 1]);
   // Restore position
   newMatrix[12] = position[0];
   newMatrix[13] = position[1];

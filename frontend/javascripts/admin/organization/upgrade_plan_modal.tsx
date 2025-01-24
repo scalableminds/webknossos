@@ -6,6 +6,7 @@ import {
 } from "@ant-design/icons";
 import {
   sendExtendPricingPlanEmail,
+  sendOrderCreditsEmail,
   sendUpgradePricingPlanEmail,
   sendUpgradePricingPlanStorageEmail,
   sendUpgradePricingPlanUserEmail,
@@ -305,8 +306,11 @@ function orderWebknossosCredits() {
 function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
   const userInputRef = useRef<HTMLInputElement | null>(null);
   const [costsAsString, setCostsAsString] = useState<string>("5€/5.75$");
-  const recalculateCosts = (newCosts: number) => {
+  const recalculateCosts = (newCosts: number | null) => {
     // TODOM: Remove magic numbers. E.g. put them into application configuration.
+    if (newCosts == null) {
+      return;
+    }
     const totalCostInEuro = newCosts * 5;
     const totalCostInDollar = newCosts * 5.75;
     setCostsAsString(`${totalCostInEuro}€/${totalCostInDollar}$`);
@@ -315,9 +319,8 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
   const handleOrderCredits = async () => {
     if (userInputRef.current) {
       const requestedUsers = Number.parseInt(userInputRef.current.value);
-      // TODO: Implement the actual API call to order credits.
-      await sendUpgradePricingPlanUserEmail(requestedUsers);
-      Toast.success(messages["organization.plan.upgrage_request_sent"]);
+      await sendOrderCreditsEmail(requestedUsers);
+      Toast.success(messages["organization.credit_request_sent"]);
     }
 
     destroy();

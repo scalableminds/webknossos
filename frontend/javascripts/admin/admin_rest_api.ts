@@ -1827,6 +1827,12 @@ export async function sendUpgradePricingPlanStorageEmail(requestedStorage: numbe
   });
 }
 
+export async function sendOrderCreditsEmail(requestedCredits: number): Promise<void> {
+  return Request.receiveJSON(`/api/pricing/requestCredits?requestedCredits=${requestedCredits}`, {
+    method: "POST",
+  });
+}
+
 export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
   return Request.receiveJSON("/api/pricing/status");
 }

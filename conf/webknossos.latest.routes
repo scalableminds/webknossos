@@ -245,6 +245,7 @@ POST          /pricing/requestExtension                                         
 POST          /pricing/requestUpgrade                                                           controllers.OrganizationController.sendUpgradePricingPlanEmail(requestedPlan: String)
 POST          /pricing/requestUsers                                                             controllers.OrganizationController.sendUpgradePricingPlanUsersEmail(requestedUsers: Int)
 POST          /pricing/requestStorage                                                           controllers.OrganizationController.sendUpgradePricingPlanStorageEmail(requestedStorage: Int)
+POST          /pricing/requestCredits                                                           controllers.OrganizationController.sendOrderCreditsEmail(requestedCredits: Int)
 GET           /pricing/status                                                                   controllers.OrganizationController.pricingStatus()
 GET           /termsOfService                                                                   controllers.OrganizationController.getTermsOfService()
 POST          /termsOfService/accept                                                            controllers.OrganizationController.acceptTermsOfService(version: Int)

@@ -253,6 +253,21 @@ class OrganizationController @Inject()(
       } yield Ok
     }
 
+  def sendOrderCreditsEmail(requestedCredits: Int): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- bool2Fox(request.identity.isOrganizationOwner) ?~> Messages("organization.creditOrder.notAuthorized")
+        organization <- organizationDAO.findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
+        userEmail <- userService.emailFor(request.identity)
+        _ = Mailer ! Send(defaultMails.orderCreditsMail(request.identity, userEmail, requestedCredits))
+        _ = Mailer ! Send(
+          defaultMails.orderCreditsRequestMail(request.identity,
+            userEmail,
+            organization.name,
+            s"Purchase $requestedCredits WEBKNOSSOS credits."))
+      } yield Ok
+    }
+
   def pricingStatus: Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {

@@ -103,13 +103,14 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
             Upgrading your WEBKNOSSOS plan will unlock more advanced features and increase your user
             and storage quotas.
           </p>
-          <p>
+          {/* React complaint here: <ul> cannot appear as a descendant of <p>. */}
+          <span>
             <ul>
               {powerPlanFeatures.map((feature) => (
                 <li key={feature.slice(0, 10)}>{feature}</li>
               ))}
             </ul>
-          </p>
+          </span>
         </Col>
         <Col span={6}>
           <Button

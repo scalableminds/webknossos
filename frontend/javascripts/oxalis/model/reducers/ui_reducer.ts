@@ -59,6 +59,7 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
         if (AvailableToolsInViewMode.includes(AnnotationToolEnum[action.tool])) {
           return setToolReducer(state, action.tool);
         }
+        return state;
       }
 
       return setToolReducer(state, action.tool);

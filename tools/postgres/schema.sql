@@ -954,7 +954,7 @@ AFTER UPDATE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateAnnotation();
 
 
-CREATE FUNCTION webknossos.onDeleteAnnotation() RETURNS trigger AS $$
+CREATE FUNCTION webknossos.onDeleteAnnotation() RETURNS TRIGGER AS $$
   BEGIN
     IF (OLD.typ = 'Task') AND (OLD.isDeleted = false) AND (OLD.state != 'Cancelled') THEN
       UPDATE webknossos.tasks SET pendingInstances = pendingInstances + 1 WHERE _id = OLD._task;
@@ -991,7 +991,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER enforce_balance_trigger
 BEFORE INSERT OR UPDATE ON webknossos.organization_credit_transactions
-FOR EACH ROW EXECUTE FUNCTION webknossos.enforce_non_negative_balance();
+FOR EACH ROW EXECUTE PROCEDURE webknossos.enforce_non_negative_balance();
 
 
 --- Stored procedure to revoke temporary credits from an organization

@@ -13,12 +13,10 @@ import {
   getLayerByName,
   getMagInfo,
   getMaybeSegmentIndexAvailability,
-  isLayerVisible,
-} from "../accessors/dataset_accessor";
-import {
   getTransformsForLayer,
   invertAndTranspose,
-} from "../accessors/dataset_layer_transformation_accessor";
+  isLayerVisible,
+} from "../accessors/dataset_accessor";
 import { getCurrentMag } from "../accessors/flycam_accessor";
 import { getViewportExtents } from "../accessors/view_mode_accessor";
 import {

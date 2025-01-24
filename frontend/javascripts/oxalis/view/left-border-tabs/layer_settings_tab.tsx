@@ -52,20 +52,12 @@ import {
   getLayerBoundingBox,
   getLayerByName,
   getMagInfo,
-  getWidestMags,
-} from "oxalis/model/accessors/dataset_accessor";
-import {
   getTransformsForLayer,
   getTransformsForLayerOrNull,
+  getWidestMags,
   hasDatasetTransforms,
-  isIdentityTransform,
-  isLayerWithoutTransformationConfigSupport,
-} from "oxalis/model/accessors/dataset_layer_transformation_accessor";
-import {
-  getMaxZoomValueForMag,
-  getNewPositionAndZoomChangeFromTransformationChange,
-  getPosition,
-} from "oxalis/model/accessors/flycam_accessor";
+} from "oxalis/model/accessors/dataset_accessor";
+import { getMaxZoomValueForMag, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   enforceSkeletonTracing,
   getActiveNode,
@@ -89,6 +81,10 @@ import {
   setNodeRadiusAction,
   setShowSkeletonsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import {
+  invertTransform,
+  transformPointUnscaled,
+} from "oxalis/model/helpers/transformation_helpers";
 import { Model } from "oxalis/singletons";
 import { api } from "oxalis/singletons";
 import type {
@@ -195,16 +191,10 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
       state.datasetConfiguration.nativelyRenderedLayerName,
     ),
   );
-  const canLayerHaveTransforms = !isLayerWithoutTransformationConfigSupport(layer);
-  const hasLayerTransformsConfigured = useSelector(
-    (state: OxalisState) => getTransformsForLayerOrNull(state.dataset, layer, null) != null,
-  );
-
   const showIcon = useSelector((state: OxalisState) => hasDatasetTransforms(state.dataset));
   if (!showIcon) {
     return null;
   }
-  const isRenderedNatively = transform == null || isIdentityTransform(transform);
 
   const typeToLabel = {
     affine: "an affine",
@@ -217,64 +207,69 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
     affine: "icon-affine-transformation.svg",
   };
 
-  // Cannot toggle transforms for a layer that cannot have no transforms or turn them on in case the layer has no transforms.
-  // Layers that cannot have transformations like skeleton layer and volume tracing layers without fallback
-  // automatically copy to the dataset transformation if all other layers have the same transformation.
-  const isDisabled =
-    !canLayerHaveTransforms || (isRenderedNatively && !hasLayerTransformsConfigured);
-
   const toggleLayerTransforms = () => {
     const state = Store.getState();
-    // Set nativelyRenderedLayerName to null in case the current layer is already natively rendered or does not have its own transformations configured (e.g. a skeleton layer) .
-    const nextNativelyRenderedLayerName = isRenderedNatively ? null : layer.name;
-    const activeTransformation = getTransformsForLayer(
+    const { nativelyRenderedLayerName } = state.datasetConfiguration;
+    if (
+      layer.category === "skeleton"
+        ? nativelyRenderedLayerName == null
+        : nativelyRenderedLayerName === layer.name
+    ) {
+      return;
+    }
+    // Transform current position using the inverse transform
+    // so that the user will still look at the same data location.
+    const currentPosition = getPosition(state.flycam);
+    const currentTransforms = getTransformsForLayer(
       state.dataset,
       layer,
       state.datasetConfiguration.nativelyRenderedLayerName,
     );
-    const nextTransform = getTransformsForLayer(
-      state.dataset,
-      layer,
-      nextNativelyRenderedLayerName,
-    );
-    const { scaleChange, newPosition } = getNewPositionAndZoomChangeFromTransformationChange(
-      activeTransformation,
-      nextTransform,
-      state,
+    const invertedTransform = invertTransform(currentTransforms);
+    const newPosition = transformPointUnscaled(invertedTransform)(currentPosition);
+
+    // Also transform a reference coordinate to determine how the scaling
+    // changed. Then, adapt the zoom accordingly.
+    const referenceOffset: Vector3 = [10, 10, 10];
+    const secondPosition = V3.add(currentPosition, referenceOffset, [0, 0, 0]);
+    const newSecondPosition = transformPointUnscaled(invertedTransform)(secondPosition);
+
+    const scaleChange = _.mean(
+      // Only consider XY for now to determine the zoom change (by slicing from 0 to 2)
+      V3.abs(V3.divide3(V3.sub(newPosition, newSecondPosition), referenceOffset)).slice(0, 2),
     );
     dispatch(
-      updateDatasetSettingAction("nativelyRenderedLayerName", nextNativelyRenderedLayerName),
+      updateDatasetSettingAction(
+        "nativelyRenderedLayerName",
+        layer.category === "skeleton" ? null : layer.name,
+      ),
     );
     dispatch(setPositionAction(newPosition));
     dispatch(setZoomStepAction(state.flycam.zoomStep * scaleChange));
-  };
-
-  const style = {
-    width: 14,
-    height: 14,
-    marginBottom: 4,
-    marginRight: 5,
-    ...(isDisabled
-      ? { cursor: "not-allowed", opacity: "0.5" }
-      : { cursor: "pointer", opacity: "1.0" }),
   };
 
   return (
     <div className="flex-item">
       <FastTooltip
         title={
-          isRenderedNatively
-            ? `This layer is shown natively (i.e., without any transformations).${isDisabled ? "" : " Click to render this layer with its configured transforms."}`
-            : `This layer is rendered with ${
+          transform != null
+            ? `This layer is rendered with ${
                 typeToLabel[transform.type]
-              } transformation.${isDisabled ? "" : " Click to render this layer without any transforms."}`
+              } transformation. Click to render this layer without any transforms.`
+            : "This layer is shown natively (i.e., without any transformations)."
         }
       >
         <img
-          src={`/assets/images/${typeToImage[isRenderedNatively ? "none" : transform.type]}`}
+          src={`/assets/images/${typeToImage[transform?.type || "none"]}`}
           alt="Transformed Layer Icon"
-          style={style}
-          onClick={isDisabled ? () => {} : toggleLayerTransforms}
+          style={{
+            cursor: transform != null ? "pointer" : "default",
+            width: 14,
+            height: 14,
+            marginBottom: 4,
+            marginRight: 5,
+          }}
+          onClick={toggleLayerTransforms}
         />
       </FastTooltip>
     </div>
@@ -311,8 +306,8 @@ function LayerInfoIconWithTooltip({
             </tr>
             <tr>
               <td style={{ fontSize: 10 }}>Min</td>
-              <td>{layer.boundingBox.topLeft[0]}</td>
-              <td>{layer.boundingBox.topLeft[1]}</td>
+              <td>{layer.boundingBox.topLeft[0]} </td>
+              <td>{layer.boundingBox.topLeft[1]} </td>
               <td>{layer.boundingBox.topLeft[2]}</td>
             </tr>
             <tr>
@@ -768,8 +763,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                 placement="left"
               >
                 <HoverIconButton
-                  icon={<LockOutlined className="icon-margin-right" />}
-                  hoveredIcon={<UnlockOutlined className="icon-margin-right" />}
+                  icon={<LockOutlined />}
+                  hoveredIcon={<UnlockOutlined />}
                   onClick={() => {
                     this.setState({
                       isAddVolumeLayerModalVisible: true,
@@ -1188,7 +1183,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const readableName = "Skeleton";
     const skeletonTracing = enforceSkeletonTracing(tracing);
     const isOnlyAnnotationLayer = tracing.annotationLayers.length === 1;
-    const { showSkeletons, tracingId } = skeletonTracing;
+    const { showSkeletons } = skeletonTracing;
     const activeNodeRadius = getActiveNode(skeletonTracing)?.radius ?? 0;
     return (
       <React.Fragment>
@@ -1238,7 +1233,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               paddingRight: 1,
             }}
           >
-            <TransformationIcon layer={{ category: "skeleton", name: tracingId }} />
+            <TransformationIcon layer={{ category: "skeleton" }} />
             {!isOnlyAnnotationLayer ? this.getDeleteAnnotationLayerButton(readableName) : null}
           </div>
         </div>

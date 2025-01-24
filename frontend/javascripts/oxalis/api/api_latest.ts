@@ -45,13 +45,13 @@ import {
 import UrlManager from "oxalis/controller/url_manager";
 import type { OxalisModel } from "oxalis/model";
 import {
+  flatToNestedMatrix,
   getLayerBoundingBox,
   getLayerByName,
   getMagInfo,
   getMappingInfo,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import { flatToNestedMatrix } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
   getPosition,

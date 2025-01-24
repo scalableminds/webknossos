@@ -2,8 +2,10 @@ import _ from "lodash";
 import messages from "messages";
 import type { UnregisterHandler } from "oxalis/api/api_latest";
 import type { Vector3 } from "oxalis/constants";
-import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
-import { getInverseSegmentationTransformer } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
+import {
+  getInverseSegmentationTransformer,
+  getVisibleSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
 import {
   getNodePosition,
   getSkeletonTracing,

@@ -1,9 +1,12 @@
-import { Card, Form, type FormInstance, Input, Select } from "antd";
+import { WarningOutlined } from "@ant-design/icons";
+import { Card, Form, type FormInstance, Input, Select, Space } from "antd";
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import features from "features";
 import messages from "messages";
+import { PRIMARY_COLOR } from "oxalis/constants";
 import type * as React from "react";
+import { Link } from "react-router-dom";
 import type { APIDataStore, APITeam, APIUser } from "types/api_flow_types";
 import { syncValidator } from "types/validation";
 
@@ -12,10 +15,12 @@ export function CardContainer({
   children,
   withoutCard,
   title,
+  subtitle,
 }: {
   children: React.ReactNode;
   withoutCard?: boolean;
   title: string;
+  subtitle?: JSX.Element;
 }) {
   if (withoutCard) {
     return <>{children}</>;
@@ -28,7 +33,14 @@ export function CardContainer({
           marginRight: "auto",
         }}
         bordered={false}
-        title={<h3>{title}</h3>}
+        title={
+          <>
+            <h3 style={{ lineHeight: "10px", marginTop: subtitle != null ? "22px" : "12px" }}>
+              {title}
+            </h3>
+            {subtitle}
+          </>
+        }
       >
         {children}
       </Card>

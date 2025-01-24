@@ -846,13 +846,11 @@ const TOOL_NAMES = {
   AREA_MEASUREMENT: "Area Measurement Tool",
 };
 
-export default function ToolbarView() {
+export default function ToolbarView({ isReadOnly = false }: { isReadOnly?: boolean }) {
   const dispatch = useDispatch();
   const hasVolume = useSelector((state: OxalisState) => state.tracing?.volumes.length > 0);
   const hasSkeleton = useSelector((state: OxalisState) => state.tracing?.skeleton != null);
-  const isViewMode = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
-  );
+
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
 
   const [lastForcefullyDisabledTool, setLastForcefullyDisabledTool] =
@@ -860,6 +858,7 @@ export default function ToolbarView() {
   const isVolumeModificationAllowed = useSelector(
     (state: OxalisState) => !hasEditableMapping(state),
   );
+  const isModificationAllowed = !isReadOnly && isVolumeModificationAllowed;
   const useLegacyBindings = useSelector(
     (state: OxalisState) => state.userConfiguration.useLegacyBindings,
   );
@@ -944,7 +943,7 @@ export default function ToolbarView() {
           <i className="fas fa-arrows-alt" />
         </ToolRadioButton>
 
-        {hasSkeleton ? (
+        {hasSkeleton && !isReadOnly ? (
           <ToolRadioButton
             name={TOOL_NAMES.SKELETON}
             description={skeletonToolDescription}
@@ -961,7 +960,7 @@ export default function ToolbarView() {
           </ToolRadioButton>
         ) : null}
 
-        {hasVolume && isVolumeModificationAllowed ? (
+        {hasVolume && isModificationAllowed ? (
           <React.Fragment>
             <ToolRadioButton
               name={TOOL_NAMES.BRUSH}
@@ -1108,7 +1107,7 @@ export default function ToolbarView() {
             </ToolRadioButton>
           </React.Fragment>
         ) : null}
-        {!isViewMode && (
+        {!isReadOnly && (
           <ToolRadioButton
             name={TOOL_NAMES.BOUNDING_BOX}
             description="Create, resize and modify bounding boxes."
@@ -1129,7 +1128,7 @@ export default function ToolbarView() {
           </ToolRadioButton>
         )}
 
-        {hasSkeleton && hasVolume ? (
+        {hasSkeleton && hasVolume && !isReadOnly ? (
           <ToolRadioButton
             name={TOOL_NAMES.PROOFREAD}
             description={

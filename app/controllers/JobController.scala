@@ -2,12 +2,12 @@ package controllers
 
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
-import models.job._
+import models.job.{JobCommand, _}
 import models.organization.{CreditTransactionService, OrganizationDAO, OrganizationService}
-import models.user.MultiUserDAO
+import models.user.{MultiUserDAO, User}
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -24,7 +24,9 @@ import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, FullAxisOrder, NDBoundingBox}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
+import models.job.JobCommand.JobCommand
 import models.team.PricingPlan
+import net.liftweb.common.Full
 
 object MovieResolutionSetting extends ExtendedEnumeration {
   val SD, HD = Value
@@ -242,8 +244,6 @@ class JobController @Inject()(
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           command = JobCommand.infer_neurons
           parsedBoundingBox <- jobService.parseBoundingBoxWithMagOpt(bbox, None)
-          costsInCredits = jobService.calculateJobCosts(parsedBoundingBox, command)
-          _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(organization._id, costsInCredits)) ?~> "job.notEnoughCredits" // TODO: add error message to messages.conf
           // TODO: Disable this check. Credits should be enough to guard this.
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           commandArgs = Json.obj(
@@ -254,15 +254,9 @@ class JobController @Inject()(
             "layer_name" -> layerName,
             "bbox" -> bbox,
           )
-          creditTransactionComment = s"Spent $costsInCredits for AI neuron segmentation for dataset ${dataset.name}"
-          creditTransaction <- creditTransactionService.reserveCredits(organization._id,
-                                                                       costsInCredits,
-                                                                       creditTransactionComment,
-                                                                       None)
-          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunNeuronInferral"
-          _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
-          js <- jobService.publicWrites(job)
-        } yield Ok(js)
+          creditTransactionComment = s"Run for AI neuron segmentation for dataset ${dataset.name}"
+          jobAsJs <- runPaidJob(command, commandArgs, parsedBoundingBox, creditTransactionComment, request.identity, dataset._dataStore)
+        } yield Ok(jobAsJs)
       }
     }
 
@@ -284,8 +278,6 @@ class JobController @Inject()(
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           command = JobCommand.infer_mitochondria
           parsedBoundingBox <- jobService.parseBoundingBoxWithMagOpt(bbox, None)
-          costsInCredits = jobService.calculateJobCosts(parsedBoundingBox, command)
-          _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(organization._id, costsInCredits)) ?~> "job.notEnoughCredits" // TODO: add error message to messages.conf
           // TODO: Disable this check. Credits should be enough to guard this.
           _ <- bool2Fox(multiUser.isSuperUser) ?~> "job.inferMitochondria.notAllowed.onlySuperUsers"
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
@@ -297,15 +289,9 @@ class JobController @Inject()(
             "layer_name" -> layerName,
             "bbox" -> bbox,
           )
-          creditTransactionComment = s"Spent $costsInCredits for AI mitochondria segmentation for dataset ${dataset.name}"
-          creditTransaction <- creditTransactionService.reserveCredits(organization._id,
-                                                                       costsInCredits,
-                                                                       creditTransactionComment,
-                                                                       None)
-          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunInferMitochondria"
-          _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
-          js <- jobService.publicWrites(job)
-        } yield Ok(js)
+          creditTransactionComment = s"Run for AI mitochondria segmentation for dataset ${dataset.name}"
+          jobAsJs <- runPaidJob(command, commandArgs, parsedBoundingBox, creditTransactionComment, request.identity, dataset._dataStore)
+        } yield Ok(jobAsJs)
       }
     }
 
@@ -330,25 +316,17 @@ class JobController @Inject()(
             .map(_.boundingBox) ?~> "dataset.boundingBox.unset" // TODO: add error message to messages.conf
           _ <- Fox.runOptional(annotationId)(ObjectId.fromString)
           command = JobCommand.align_sections
-          costsInCredits = jobService.calculateJobCosts(datasetBoundingBox, command)
-          _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(organization._id, costsInCredits)) ?~> "job.notEnoughCredits" // TODO: add error message to messages.conf
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
-            "dataset_directory_name" -> dataset.directoryName,
+            "dataset_directory_namejob" -> dataset.directoryName,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
             "annotation_id" -> annotationId
           )
-          creditTransactionComment = s"Spent $costsInCredits for AI neuron segmentation for dataset ${dataset.name}"
-          creditTransaction <- creditTransactionService.reserveCredits(organization._id,
-                                                                       costsInCredits,
-                                                                       creditTransactionComment,
-                                                                       None)
-          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunAlignSections"
-          _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
-          js <- jobService.publicWrites(job)
-        } yield Ok(js)
+          creditTransactionComment = s"Run AI neuron segmentation for dataset ${dataset.name}"
+          jobAsJs <- runPaidJob(command, commandArgs, datasetBoundingBox, creditTransactionComment, request.identity, dataset._dataStore)
+        } yield Ok(jobAsJs)
       }
     }
 
@@ -532,5 +510,30 @@ class JobController @Inject()(
         uri = s"${dataStore.publicUrl}/data/exports/$jobId/download"
       } yield Redirect(uri, Map(("token", Seq(userAuthToken.id))))
     }
+
+  private def runPaidJob(command: JobCommand,
+                 commandArgs: JsObject,
+                 jobBoundingBox: BoundingBox,
+                 creditTransactionComment: String,
+                 user: User,
+                 datastoreName: String)(implicit ctx: DBAccessContext): Fox[JsObject] = {
+    val costsInCredits = jobService.calculateJobCosts(jobBoundingBox, command)
+    for {
+      _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costsInCredits)) ?~> "job.notEnoughCredits" // TODO: add error message to messages.conf
+      creditTransaction <- creditTransactionService.reserveCredits(user._organization,
+                                                                   costsInCredits,
+                                                                   creditTransactionComment,
+                                                                   None)
+      job <- jobService.submitJob(command, commandArgs, user, datastoreName).futureBox.flatMap {
+        case Full(job) => Fox.successful(job)
+        case _ =>
+          creditTransactionService.refundTransactionWhenStartingJobFailed(creditTransaction)
+          Fox.failure("job.couldNotRunAlignSections")
+
+      }.toFox
+      _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
+      js <- jobService.publicWrites(job)
+    } yield js
+  }
 
 }

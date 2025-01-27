@@ -50,9 +50,19 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
   def refundTransactionForJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       transaction <- creditTransactionDAO.findTransactionForJob(jobId)
-      _ <- organizationService.ensureOrganizationHasPaidPlan(transaction._organization)
-      _ <- creditTransactionDAO.refundTransaction(transaction._id.toString)
+      _ <- refundTransaction(transaction)
     } yield ()
+
+  private def refundTransaction(creditTransaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- organizationService.ensureOrganizationHasPaidPlan(creditTransaction._organization)
+      _ <- creditTransactionDAO.refundTransaction(creditTransaction._id.toString)
+    } yield ()
+
+  // This method is explicitly named this way to warn that this method should only be called when starting a job has failed.
+  // Else refunding should be done via jobId.
+  def refundTransactionWhenStartingJobFailed(creditTransaction: CreditTransaction)(
+      implicit ctx: DBAccessContext): Fox[Unit] = refundTransaction(creditTransaction)
 
   def addJobIdToTransaction(creditTransaction: CreditTransaction, jobId: ObjectId)(
       implicit ctx: DBAccessContext): Fox[Unit] =

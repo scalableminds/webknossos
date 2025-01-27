@@ -163,11 +163,19 @@ export function setMappingNameReducer(
   mappingType: MappingType,
   isMappingEnabled: boolean = true,
 ) {
+  /*
+   * This function is responsible for updating the mapping name in the volume
+   * tracing object (which is also persisted on the back-end). Only null
+   * or the name of a HDF5 mapping is stored there, though.
+   */
   // Editable mappings or locked mappings cannot be disabled or switched for now
   if (volumeTracing.hasEditableMapping || volumeTracing.mappingIsLocked) {
     return state;
   }
-  // Only HDF5 mappings are persisted in volume annotations for now
+
+  // Clear the name for Non-HDF5 mappings or when the mapping got disabled,
+  // before persisting the name in volume annotations. JSON mappings are
+  // not stored in the back-end for now.
   if (mappingType !== "HDF5" || !isMappingEnabled) {
     mappingName = null;
   }

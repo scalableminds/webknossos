@@ -1244,7 +1244,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               ? this.getDeleteAnnotationLayerButton(
                   readableName,
                   AnnotationLayerEnum.Skeleton,
-                  tracingId,
+                  tracing.skeleton.tracingId,
                 )
               : null}
           </div>

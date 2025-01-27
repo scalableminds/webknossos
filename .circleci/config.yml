@@ -54,7 +54,7 @@ jobs:
             docker-compose run compile tools/postgres/dbtool.js check-evolutions-schema
       - run:
           name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
-          command: .circleci/not-on-master.sh tools/assert-complete-migrations.sh
+          command: tools/assert-complete-migrations.sh
       - run:
           name: Build frontend documentation
           command: |

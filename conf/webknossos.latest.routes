@@ -90,6 +90,7 @@ DELETE        /datasets/:datasetId/sharingToken                                 
 PATCH         /datasets/:datasetId/teams                                                        controllers.DatasetController.updateTeams(datasetId: String)
 GET           /datasets/:datasetId/layers/:layer/thumbnail                                      controllers.DatasetController.thumbnail(datasetId: String, layer: String, w: Option[Int], h: Option[Int], mappingName: Option[String], sharingToken: Option[String])
 POST          /datasets/:datasetId/layers/:layer/segmentAnythingMask                            controllers.DatasetController.segmentAnythingMask(datasetId: String, layer: String, intensityMin: Option[Float], intensityMax: Option[Float])
+GET           /datasets/:datasetId/layers/:layer/linkedMags                                     controllers.DatasetController.getLinkedMags(datasetId: String, layer: String)
 PUT           /datasets/:datasetId/clearThumbnailCache                                          controllers.DatasetController.removeFromThumbnailCache(datasetId: String)
 GET           /datasets/:datasetName/isValidNewName                                             controllers.DatasetController.isValidNewName(datasetName: String)
 GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: String, sharingToken: Option[String])

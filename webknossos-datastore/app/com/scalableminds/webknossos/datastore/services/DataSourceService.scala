@@ -132,7 +132,7 @@ class DataSourceService @Inject()(
 
   private def getMagPath(layerPath: Path, mag: MagLocator): (URI, Boolean) =
     mag.path match {
-      case Some(p) => (new URI(p), true)
+      case Some(p) => (new URI(p), true) // TODO: Handle case where protocol is file (not remote)
       case None => {
         // Code duplication in RemoteSourceDescriptorService.uriForMagLocator
         val withScalarMag = layerPath.resolve(mag.mag.toMagLiteral(allowScalar = true))

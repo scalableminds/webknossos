@@ -709,6 +709,11 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   }
 }
 
+case class DatasetMagInfo(datasetId: ObjectId, dataLayerName: String, mag: Vec3Int, path: String, realPath: String)
+
+object DatasetMagInfo {
+  implicit val jsonFormat: Format[DatasetMagInfo] = Json.format[DatasetMagInfo]
+}
 class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
   private def parseRow(row: DatasetMagsRow): Fox[Vec3Int] =
     for {
@@ -754,6 +759,38 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       )
     } yield ()
 
+  def findPathsForDatasetAndDatalayer(datasetId: ObjectId, dataLayerName: String): Fox[List[DatasetMagInfo]] =
+    for {
+      rows <- run(q"""SELECT  _dataset, datalayername, mag, path, realPath
+            FROM webknossos.dataset_mags
+            WHERE _dataset = $datasetId
+            AND datalayername = $dataLayerName""".as[DatasetMagsRow])
+      mags <- Fox.serialCombined(rows.toList)(parseRow)
+      magInfos = rows.toList.zip(mags).map {
+        case (row, mag) =>
+          DatasetMagInfo(datasetId,
+                         dataLayerName,
+                         mag,
+                         row.path.getOrElse("uninitialized"),
+                         row.realpath.getOrElse("uninitialized"))
+      }
+    } yield magInfos
+
+  def findAllByRealPath(realPath: String): Fox[List[DatasetMagInfo]] =
+    for {
+      rows <- run(q"""SELECT _dataset, datalayername, mag, path, realPath
+            FROM webknossos.dataset_mags
+            WHERE realPath = $realPath""".as[DatasetMagsRow])
+      mags <- Fox.serialCombined(rows.toList)(parseRow)
+      magInfos = rows.toList.zip(mags).map {
+        case (row, mag) =>
+          DatasetMagInfo(ObjectId(row._Dataset),
+                         row.datalayername,
+                         mag,
+                         row.path.getOrElse("uninitialized"),
+                         row.realpath.getOrElse("uninitialized"))
+      }
+    } yield magInfos
 }
 
 class DatasetLayerDAO @Inject()(

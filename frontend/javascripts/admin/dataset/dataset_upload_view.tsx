@@ -712,18 +712,15 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           withoutCard={withoutCard}
           title="Upload Dataset"
           subtitle={
-            <span style={{ fontSize: 12, color: "var(--ant-color-primary)", marginTop: 0 }}>
-              <Space direction="horizontal" size={4}>
-                Please note that uploaded data is private and only visible within your organization
-                by default.
-                <Link
-                  style={{ textDecoration: "underline" }}
-                  to="https://docs.webknossos.org/webknossos/datasets/settings.html#sharing-permissions-tab"
-                >
-                  Read more
-                </Link>
-              </Space>
-            </span>
+            <Space direction="horizontal" size={4}>
+              Per default, uploaded data is private and only visible within your organization.
+              <Link
+                style={{ color: "var(--ant-color-primary)" }}
+                to="https://docs.webknossos.org/webknossos/datasets/settings.html#sharing-permissions-tab"
+              >
+                Read more
+              </Link>
+            </Space>
           }
         >
           {hasPricingPlanExceededStorage(this.props.organization) ? (

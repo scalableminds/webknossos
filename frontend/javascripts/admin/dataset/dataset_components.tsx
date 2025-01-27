@@ -38,7 +38,7 @@ export function CardContainer({
             <h3 style={{ lineHeight: "10px", marginTop: subtitle != null ? "22px" : "12px" }}>
               {title}
             </h3>
-            {subtitle}
+            <span style={{ fontSize: 12, marginTop: 0, color: "grey" }}>{subtitle}</span>
           </>
         }
       >

@@ -19,8 +19,6 @@ class AnnotationStore @Inject()(
 
   private val cacheTimeout = 60 minutes
 
-  case class StoredResult(result: Fox[Annotation], timestamp: Long = System.currentTimeMillis)
-
   def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     requestFromCache(id).getOrElse(requestFromHandler(id, user)).futureBox.recover {
       case e =>

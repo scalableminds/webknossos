@@ -20,6 +20,7 @@ import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
 
 import java.io.{File, FileWriter}
+import java.net.URI
 import java.nio.file.{Files, Path, Paths}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -102,16 +103,26 @@ class DataSourceService @Inject()(
     dataSource.toUsable match {
       case Some(usableDataSource) => {
         usableDataSource.dataLayers.flatMap { dataLayer =>
-          val layerPath = datasetPath.resolve(dataLayer.name)
+          val rawLayerPath = datasetPath.resolve(dataLayer.name)
+          val absoluteLayerPath = if (Files.isSymbolicLink(rawLayerPath)) {
+            resolveRelativePath(datasetPath, Files.readSymbolicLink(rawLayerPath))
+          } else {
+            rawLayerPath.toAbsolutePath
+          }
           dataLayer.mags.map { mag =>
-            val magPath = getMagPath(layerPath, mag)
-            val isLink = Files.isSymbolicLink(magPath) // TODO: Symbolic links to layers are not resolved!!!
-            val realPath = if (isLink) {
-              resolveRelativePath(datasetPath, Files.readSymbolicLink(layerPath))
+            val (magURI, isRemote) = getMagPath(absoluteLayerPath, mag)
+            if (isRemote) {
+              MagPathInfo(dataLayer.name, mag.mag, magURI.toString, magURI.toString)
             } else {
-              layerPath.toAbsolutePath
+              val magPath = Paths.get(magURI)
+              val realPath = if (Files.isSymbolicLink(magPath)) {
+                resolveRelativePath(datasetPath, Files.readSymbolicLink(magPath))
+              } else {
+                magPath.toAbsolutePath
+              }
+              val unresolvedPath = rawLayerPath.toAbsolutePath.resolve(absoluteLayerPath.relativize(magPath))
+              MagPathInfo(dataLayer.name, mag.mag, unresolvedPath.toUri.toString, realPath.toUri.toString)
             }
-            MagPathInfo(dataLayer.name, mag.mag, layerPath.toAbsolutePath.toString, realPath.toString)
           }
         }
       }
@@ -119,16 +130,17 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def getMagPath(layerPath: Path, mag: MagLocator): Path =
+  private def getMagPath(layerPath: Path, mag: MagLocator): (URI, Boolean) =
     mag.path match {
-      case Some(p) => Paths.get(p)
+      case Some(p) => (new URI(p), true)
       case None => {
         // Code duplication in RemoteSourceDescriptorService.uriForMagLocator
         val withScalarMag = layerPath.resolve(mag.mag.toMagLiteral(allowScalar = true))
         val withVec3Mag = layerPath.resolve(mag.mag.toMagLiteral())
-        if (withScalarMag.toFile.exists) {
+        val path = if (withScalarMag.toFile.exists) {
           withScalarMag
         } else withVec3Mag
+        (path.toUri, false)
       }
     }
 

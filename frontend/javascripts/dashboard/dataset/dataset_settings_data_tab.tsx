@@ -34,7 +34,6 @@ import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_flow_t
 import type { ArbitraryObject } from "types/globals";
 import type { DataLayer } from "types/schemas/datasource.types";
 import { isValidJSON, syncValidator, validateDatasourceJSON } from "types/validation";
-import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
 
 const FormItem = Form.Item;
 
@@ -266,12 +265,6 @@ function SimpleDatasetForm({
                     }))}
                   />
                 </FormItemWithInfo>
-              </Col>
-            </Row>
-            <Row gutter={48}>
-              <Col span={24} xl={12} />
-              <Col span={24} xl={6}>
-                <AxisRotationSettingForDataset form={form} />
               </Col>
             </Row>
           </div>

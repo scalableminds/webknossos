@@ -103,9 +103,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (containerElement) {
       const react_root = createRoot(containerElement);
       react_root.render(
-        <p>Failed to load WEBKNOSSOS. Please try again or check the console for details.</p>,
+        <p style={{ margin: "20px" }}>
+          Failed to load WEBKNOSSOS. Please try again or check the console for details.
+        </p>,
       );
     }
+    return;
   }
 
   if (containerElement) {

@@ -1681,6 +1681,7 @@ class DataApi {
       colors?: Array<number>;
       hideUnmappedIds?: boolean;
       showLoadingIndicator?: boolean;
+      isMergerModeMapping?: boolean;
     } = {},
   ) {
     const layer = this.model.getLayerByName(layerName);
@@ -1689,7 +1690,12 @@ class DataApi {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
 
-    const { colors: mappingColors, hideUnmappedIds, showLoadingIndicator } = options;
+    const {
+      colors: mappingColors,
+      hideUnmappedIds,
+      showLoadingIndicator,
+      isMergerModeMapping,
+    } = options;
     if (mappingColors != null) {
       // Consider removing custom color support if this event is rarely used
       // (see `mappingColors` handling in mapping_saga.ts)
@@ -1705,6 +1711,7 @@ class DataApi {
       mappingColors,
       hideUnmappedIds,
       showLoadingIndicator,
+      isMergerModeMapping,
     };
     Store.dispatch(setMappingAction(layerName, "<custom mapping>", "JSON", mappingProperties));
   }

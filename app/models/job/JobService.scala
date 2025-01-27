@@ -224,7 +224,7 @@ class JobService @Inject()(wkConf: WkConf,
       _ <- bool2Fox(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.edgeLengthExceeded"
     } yield ()
 
-  def getJobCostsPerGVx(jobCommand: JobCommand): Double =
+  def getJobCostsPerGVx(jobCommand: JobCommand): BigDecimal =
     jobCommand match {
       case JobCommand.infer_neurons      => wkConf.Features.neuronInferralCostsPerGVx
       case JobCommand.infer_mitochondria => wkConf.Features.mitochondriaInferralCostsPerGVx

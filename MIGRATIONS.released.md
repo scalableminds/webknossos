@@ -6,6 +6,17 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [25.01.0](https://github.com/scalableminds/webknossos/releases/tag/25.01.0) - 2025-01-22
+[Commits](https://github.com/scalableminds/webknossos/compare/24.12.0...25.01.0)
+- Removed support for HTTP API versions 3 and 4. [#8075](https://github.com/scalableminds/webknossos/pull/8075)
+- New FossilDB version `0.1.33` (docker image `scalableminds/fossildb:master__504`) is required.
+- Datastore config options `datastore.baseFolder` and `localFolderWhitelist` to `datastore.baseDirectory` and `localDirectoryWhitelist` respectively, to avoid confusion with the dashboard folders. [#8292](https://github.com/scalableminds/webknossos/pull/8292)
+
+### Postgres Evolutions:
+- [124-decouple-dataset-directory-from-name.sql](conf/evolutions/124-decouple-dataset-directory-from-name.sql)
+- [125-allow-dollar-in-layer-names.sql](conf/evolutions/125-allow-dollar-in-layer-names.sql)
+
+
 ## [24.12.0](https://github.com/scalableminds/webknossos/releases/tag/24.12.0) - 2024-12-05
 [Commits](https://github.com/scalableminds/webknossos/compare/24.11.1...24.12.0)
 
@@ -765,3 +776,16 @@ No migrations necessary.
 
 ## [18.07.0](https://github.com/scalableminds/webknossos/releases/tag/18.07.0) - 2018-07-05
 First release
+
+### Postgres Evolutions:
+- [001-add-organizations.sql](conf/evolutions/001-add-organizations.sql)
+- [002-add-dataset-urlsharing-token.sql](conf/evolutions/002-add-dataset-urlsharing-token.sql)
+- [003-add-dataset-displayname.sql](conf/evolutions/003-add-dataset-displayname.sql)
+- [004-add-initializing-annotation-state.sql](conf/evolutions/004-add-initializing-annotation-state.sql)
+- [005-add-openinstances-trigger.sql](conf/evolutions/005-add-openinstances-trigger.sql)
+- [007-unify-type-datalayer-name.sql](conf/evolutions/007-unify-type-datalayer-name.sql)
+- [008-task-instances-triggers.sql](conf/evolutions/008-task-instances-triggers.sql)
+- [009-remove-team-assignment-from-task.sql](conf/evolutions/009-remove-team-assignment-from-task.sql)
+- [010-add-organization-data.sql](conf/evolutions/010-add-organization-data.sql)
+- [011-add-isOrganizationTeam.sql](conf/evolutions/011-add-isOrganizationTeam.sql)
+- [012-add-foreign-keys.sql](conf/evolutions/012-add-foreign-keys.sql)

@@ -246,7 +246,7 @@ trait NgffExplorationUtils extends FoxImplicits {
         axisOrder) ?~> "Could not extract voxel size from scale transforms"
       voxelSizeFactor = voxelSizeInAxisUnits * axisUnitFactors
       nameFromPath = remotePath.basename
-      datasetName = multiscale.name.getOrElse(nameFromPath)
+      datasetName = multiscale.name.flatMap(TextUtils.normalizeStrong).getOrElse(nameFromPath)
       layers <- Fox.serialCombined((0 until channelCount).toList)({ channelIndex: Int =>
         createLayer(remotePath,
                     credentialId,

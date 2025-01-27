@@ -154,7 +154,12 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     for {
       volumeTracingOpt <- baseAnnotation.volumeTracingId
       newVolumeTracingId <- volumeTracingOpt
-        .map(id => tracingStoreClient.duplicateVolumeTracing(id, magRestrictions = magRestrictions))
+        .map(
+          id =>
+            tracingStoreClient.duplicateVolumeTracing(id,
+                                                      editPosition = Some(params.editPosition),
+                                                      editRotation = Some(params.editRotation),
+                                                      magRestrictions = magRestrictions))
         .getOrElse(
           annotationService
             .createVolumeTracingBase(
@@ -434,13 +439,14 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
           .toList
         createAnnotationBaseResults: List[Fox[Unit]] = zipped.map(
           tuple =>
-            annotationService.createAnnotationBase(
+            annotationService.createAndSaveAnnotationBase(
               taskFox = tuple._3,
               requestingUser._id,
               skeletonTracingIdBox = tuple._2._1,
               volumeTracingIdBox = tuple._2._2,
               dataset._id,
-              description = tuple._1.map(_._1.description).openOr(None)
+              description = tuple._1.map(_._1.description).openOr(None),
+              tracingStoreClient
           ))
         warnings <- warnIfTeamHasNoAccess(fullTasks.map(_._1), dataset, requestingUser)
         zippedTasksAndAnnotations = taskObjects zip createAnnotationBaseResults

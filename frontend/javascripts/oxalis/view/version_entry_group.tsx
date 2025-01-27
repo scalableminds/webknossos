@@ -8,7 +8,7 @@ import type { APIUpdateActionBatch } from "types/api_flow_types";
 
 type Props = {
   batches: APIUpdateActionBatch[];
-  allowUpdate: boolean;
+  initialAllowUpdate: boolean;
   newestVersion: number;
   activeVersion: number;
   onRestoreVersion: (arg0: number) => Promise<void>;
@@ -62,10 +62,23 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
     }));
   };
 
+  componentDidMount() {
+    const newestBatch = this.props.batches.at(0);
+    const oldestBatch = this.props.batches.at(-1);
+    if (
+      newestBatch &&
+      oldestBatch &&
+      oldestBatch.version <= this.props.activeVersion &&
+      this.props.activeVersion <= newestBatch.version
+    ) {
+      this.setState({ expanded: true });
+    }
+  }
+
   render() {
     const {
       batches,
-      allowUpdate,
+      initialAllowUpdate,
       newestVersion,
       activeVersion,
       onRestoreVersion,
@@ -85,7 +98,7 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
         {this.state.expanded || !containsMultipleBatches
           ? batches.map((batch) => (
               <VersionEntry
-                allowUpdate={allowUpdate}
+                initialAllowUpdate={initialAllowUpdate}
                 isIndented={containsMultipleBatches}
                 actions={batch.value}
                 version={batch.version}

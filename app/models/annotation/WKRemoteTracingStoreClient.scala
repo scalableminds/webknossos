@@ -3,9 +3,11 @@ package models.annotation
 import java.io.File
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.ZipIO
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
+import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
@@ -33,14 +35,17 @@ class WKRemoteTracingStoreClient(
     tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
-  def baseInfo = s" Dataset: ${dataset.name} Tracingstore: ${tracingStore.url}"
+  private def baseInfo = s" Dataset: ${dataset.name} Tracingstore: ${tracingStore.url}"
 
-  def getSkeletonTracing(annotationLayer: AnnotationLayer, version: Option[Long]): Fox[FetchedAnnotationLayer] = {
+  def getSkeletonTracing(annotationId: ObjectId,
+                         annotationLayer: AnnotationLayer,
+                         version: Option[Long]): Fox[FetchedAnnotationLayer] = {
     logger.debug("Called to get SkeletonTracing." + baseInfo)
     for {
       _ <- bool2Fox(annotationLayer.typ == AnnotationLayerType.Skeleton) ?~> "annotation.download.fetch.notSkeleton"
       skeletonTracing <- rpc(s"${tracingStore.url}/tracings/skeleton/${annotationLayer.tracingId}")
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .addQueryString("annotationId" -> annotationId.toString)
         .addQueryStringOptional("version", version.map(_.toString))
         .withLongTimeout
         .getWithProtoResponse[SkeletonTracing](SkeletonTracing)
@@ -80,91 +85,89 @@ class WKRemoteTracingStoreClient(
       .postProtoWithJsonResponse[SkeletonTracings, List[Box[Option[String]]]](tracings)
   }
 
+  def saveAnnotationProto(annotationId: ObjectId, annotationProto: AnnotationProto): Fox[Unit] = {
+    logger.debug(
+      f"Called to save AnnotationProto $annotationId with layers ${annotationProto.annotationLayers.map(_.tracingId).mkString(",")}." + baseInfo)
+    rpc(s"${tracingStore.url}/tracings/annotation/save")
+      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryString("annotationId" -> annotationId.toString)
+      .postProto[AnnotationProto](annotationProto)
+  }
+
+  // Used in duplicate route. History and version are kept
+  def duplicateAnnotation(annotationId: ObjectId,
+                          newAnnotationId: ObjectId,
+                          version: Option[Long],
+                          isFromTask: Boolean,
+                          datasetBoundingBox: Option[BoundingBox]): Fox[AnnotationProto] = {
+    logger.debug(s"Called to duplicate annotation $annotationId." + baseInfo)
+    rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/duplicate").withLongTimeout
+      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryString("newAnnotationId" -> newAnnotationId.toString)
+      .addQueryStringOptional("version", version.map(_.toString))
+      .addQueryStringOptional("datasetBoundingBox", datasetBoundingBox.map(_.toLiteral))
+      .addQueryString("isFromTask" -> isFromTask.toString)
+      .postEmptyWithProtoResponse[AnnotationProto]()(AnnotationProto)
+  }
+
+  // Used in task creation. History is dropped, new version will be zero.
   def duplicateSkeletonTracing(skeletonTracingId: String,
-                               versionString: Option[String] = None,
-                               isFromTask: Boolean = false,
                                editPosition: Option[Vec3Int] = None,
                                editRotation: Option[Vec3Double] = None,
-                               boundingBox: Option[BoundingBox] = None): Fox[String] = {
-    logger.debug("Called to duplicate SkeletonTracing." + baseInfo)
+                               boundingBox: Option[BoundingBox] = None): Fox[String] =
     rpc(s"${tracingStore.url}/tracings/skeleton/$skeletonTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryStringOptional("version", versionString)
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
-      .addQueryString("fromTask" -> isFromTask.toString)
-      .postWithJsonResponse[String]
-  }
+      .postEmptyWithJsonResponse[String]()
 
+  // Used in task creation. History is dropped, new version will be zero.
   def duplicateVolumeTracing(volumeTracingId: String,
-                             isFromTask: Boolean = false,
-                             datasetBoundingBox: Option[BoundingBox] = None,
                              magRestrictions: MagRestrictions = MagRestrictions.empty,
-                             downsample: Boolean = false,
                              editPosition: Option[Vec3Int] = None,
                              editRotation: Option[Vec3Double] = None,
-                             boundingBox: Option[BoundingBox] = None): Fox[String] = {
-    logger.debug(s"Called to duplicate volume tracing $volumeTracingId. $baseInfo")
+                             boundingBox: Option[BoundingBox] = None): Fox[String] =
     rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryString("fromTask" -> isFromTask.toString)
-      .addQueryStringOptional("minMag", magRestrictions.minStr)
-      .addQueryStringOptional("maxMag", magRestrictions.maxStr)
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
-      .addQueryString("downsample" -> downsample.toString)
-      .postJsonWithJsonResponse[Option[BoundingBox], String](datasetBoundingBox)
+      .addQueryStringOptional("minMag", magRestrictions.minStr)
+      .addQueryStringOptional("maxMag", magRestrictions.maxStr)
+      .postEmptyWithJsonResponse[String]()
+
+  def mergeAnnotationsByIds(annotationIds: List[String],
+                            newAnnotationId: ObjectId,
+                            toTemporaryStore: Boolean): Fox[AnnotationProto] = {
+    logger.debug(s"Called to merge ${annotationIds.length} annotations by ids." + baseInfo)
+    rpc(s"${tracingStore.url}/tracings/annotation/mergedFromIds").withLongTimeout
+      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryString("toTemporaryStore" -> toTemporaryStore.toString)
+      .addQueryString("newAnnotationId" -> newAnnotationId.toString)
+      .postJsonWithProtoResponse[List[String], AnnotationProto](annotationIds)(AnnotationProto)
   }
 
-  def addSegmentIndex(volumeTracingId: String, dryRun: Boolean): Fox[Unit] =
-    rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/addSegmentIndex").withLongTimeout
-      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryString("dryRun" -> dryRun.toString)
-      .silent
-      .post()
-      .map(_ => ())
-
-  def mergeSkeletonTracingsByIds(tracingIds: List[String], persistTracing: Boolean): Fox[String] = {
-    logger.debug("Called to merge SkeletonTracings by ids." + baseInfo)
-    rpc(s"${tracingStore.url}/tracings/skeleton/mergedFromIds").withLongTimeout
-      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryString("persist" -> persistTracing.toString)
-      .postJsonWithJsonResponse[List[TracingSelector], String](tracingIds.map(TracingSelector(_)))
-  }
-
-  def mergeVolumeTracingsByIds(tracingIds: List[String], persistTracing: Boolean): Fox[String] = {
-    logger.debug("Called to merge VolumeTracings by ids." + baseInfo)
-    rpc(s"${tracingStore.url}/tracings/volume/mergedFromIds").withLongTimeout
-      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryString("persist" -> persistTracing.toString)
-      .postJsonWithJsonResponse[List[TracingSelector], String](tracingIds.map(TracingSelector(_)))
-  }
-
-  def mergeSkeletonTracingsByContents(tracings: SkeletonTracings, persistTracing: Boolean): Fox[String] = {
+  def mergeSkeletonTracingsByContents(tracings: SkeletonTracings): Fox[String] = {
     logger.debug("Called to merge SkeletonTracings by contents." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/mergedFromContents").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryString("persist" -> persistTracing.toString)
       .postProtoWithJsonResponse[SkeletonTracings, String](tracings)
   }
 
   def mergeVolumeTracingsByContents(tracings: VolumeTracings,
                                     dataSource: DataSourceLike,
-                                    initialData: List[Option[File]],
-                                    persistTracing: Boolean): Fox[String] = {
+                                    initialData: List[Option[File]]): Fox[String] = {
     logger.debug("Called to merge VolumeTracings by contents." + baseInfo)
     for {
       tracingId <- rpc(s"${tracingStore.url}/tracings/volume/mergedFromContents")
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-        .addQueryString("persist" -> persistTracing.toString)
         .postProtoWithJsonResponse[VolumeTracings, String](tracings)
       packedVolumeDataZips = packVolumeDataZips(initialData.flatten)
       _ = tracingDataSourceTemporaryStore.store(tracingId, dataSource)
       _ <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/initialDataMultiple").withLongTimeout
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-        .post(packedVolumeDataZips)
+        .postFile(packedVolumeDataZips)
     } yield tracingId
   }
 
@@ -174,11 +177,13 @@ class WKRemoteTracingStoreClient(
   def saveVolumeTracing(tracing: VolumeTracing,
                         initialData: Option[File] = None,
                         magRestrictions: MagRestrictions = MagRestrictions.empty,
-                        dataSource: Option[DataSourceLike] = None): Fox[String] = {
+                        dataSource: Option[DataSourceLike] = None,
+                        newTracingId: Option[String] = None): Fox[String] = {
     logger.debug("Called to create VolumeTracing." + baseInfo)
     for {
       tracingId <- rpc(s"${tracingStore.url}/tracings/volume/save")
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .addQueryStringOptional("newTracingId", newTracingId)
         .postProtoWithJsonResponse[VolumeTracing, String](tracing)
       _ = dataSource.foreach(d => tracingDataSourceTemporaryStore.store(tracingId, d))
       _ <- initialData match {
@@ -187,15 +192,16 @@ class WKRemoteTracingStoreClient(
             .addQueryString("token" -> RpcTokenHolder.webknossosToken)
             .addQueryStringOptional("minMag", magRestrictions.minStr)
             .addQueryStringOptional("maxMag", magRestrictions.maxStr)
-            .post(file)
+            .postFile(file)
         case _ =>
           Fox.successful(())
       }
     } yield tracingId
   }
 
-  def getVolumeTracing(annotationLayer: AnnotationLayer,
-                       version: Option[Long] = None,
+  def getVolumeTracing(annotationId: ObjectId,
+                       annotationLayer: AnnotationLayer,
+                       version: Option[Long],
                        skipVolumeData: Boolean,
                        volumeDataZipFormat: VolumeDataZipFormat,
                        voxelSize: Option[VoxelSize]): Fox[FetchedAnnotationLayer] = {
@@ -205,12 +211,14 @@ class WKRemoteTracingStoreClient(
       tracingId = annotationLayer.tracingId
       tracing <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId")
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .addQueryString("annotationId" -> annotationId.toString)
         .addQueryStringOptional("version", version.map(_.toString))
         .getWithProtoResponse[VolumeTracing](VolumeTracing)
       data <- Fox.runIf(!skipVolumeData) {
         rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataZip").withLongTimeout
           .addQueryString("token" -> RpcTokenHolder.webknossosToken)
           .addQueryString("volumeDataZipFormat" -> volumeDataZipFormat.toString)
+          .addQueryString("annotationId" -> annotationId.toString)
           .addQueryStringOptional("version", version.map(_.toString))
           .addQueryStringOptional("voxelSizeFactor", voxelSize.map(_.factor.toUriLiteral))
           .addQueryStringOptional("voxelSizeUnit", voxelSize.map(_.unit.toString))
@@ -221,7 +229,6 @@ class WKRemoteTracingStoreClient(
   }
 
   def getVolumeData(tracingId: String,
-                    version: Option[Long] = None,
                     volumeDataZipFormat: VolumeDataZipFormat,
                     voxelSize: Option[VoxelSize]): Fox[Array[Byte]] = {
     logger.debug("Called to get volume data." + baseInfo)
@@ -229,11 +236,17 @@ class WKRemoteTracingStoreClient(
       data <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataZip").withLongTimeout
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .addQueryString("volumeDataZipFormat" -> volumeDataZipFormat.toString)
-        .addQueryStringOptional("version", version.map(_.toString))
         .addQueryStringOptional("voxelSizeFactor", voxelSize.map(_.factor.toUriLiteral))
         .addQueryStringOptional("voxelSizeUnit", voxelSize.map(_.unit.toString))
         .getWithBytesResponse
     } yield data
   }
+
+  def resetToBase(annotationId: ObjectId): Fox[Unit] =
+    for {
+      _ <- rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/resetToBase").withLongTimeout
+        .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .postEmpty()
+    } yield ()
 
 }

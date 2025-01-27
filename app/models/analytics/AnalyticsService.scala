@@ -57,6 +57,7 @@ class AnalyticsService @Inject()(rpc: RPC,
       }
       val wrappedJson = Json.obj("api_key" -> conf.key, "events" -> List(analyticsEventJson))
       rpc(conf.uri).silent.postJson(wrappedJson)
+      ()
     }
     Fox.successful(())
   }

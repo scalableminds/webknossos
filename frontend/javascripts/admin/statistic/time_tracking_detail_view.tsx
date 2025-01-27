@@ -5,7 +5,6 @@ import { formatMilliseconds } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import _ from "lodash";
 import type { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "oxalis/constants";
-import { aggregateStatsForAllLayers } from "oxalis/model/accessors/annotation_accessor";
 import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import type { APITimeTrackingPerAnnotation } from "types/api_flow_types";
 
@@ -40,7 +39,7 @@ const renderRow = (
           </Col>
           <Col span={STATISTICS_SPAN}>
             <AnnotationStats
-              stats={aggregateStatsForAllLayers(timeEntry.annotationLayerStats)}
+              stats={timeEntry.annotationLayerStats}
               asInfoBlock={false}
               withMargin={false}
             />
@@ -63,7 +62,7 @@ const renderRow = (
           </Col>
           <Col span={STATISTICS_SPAN}>
             <AnnotationStats
-              stats={aggregateStatsForAllLayers(timeEntry.annotationLayerStats)}
+              stats={timeEntry.annotationLayerStats}
               asInfoBlock={false}
               withMargin={false}
             />

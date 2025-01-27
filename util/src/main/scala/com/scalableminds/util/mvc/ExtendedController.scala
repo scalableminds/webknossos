@@ -1,6 +1,7 @@
 package com.scalableminds.util.mvc
 
 import com.google.protobuf.CodedInputStream
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -131,7 +132,7 @@ class JsonResult(status: Int)
 
   val isSuccess: Boolean = List(OK) contains status
 
-  def createResult(content: JsValue)(implicit writeable: Writeable[JsValue]): Result =
+  private def createResult(content: JsValue)(implicit writeable: Writeable[JsValue]): Result =
     Result(header = ResponseHeader(status),
            body = HttpEntity.Strict(writeable.transform(content), writeable.contentType))
 
@@ -176,7 +177,7 @@ class JsonResult(status: Int)
     case Some(chain) => Some("chain" -> chain)
   }
 
-  def jsonHTMLResult(html: Html): JsObject = {
+  private def jsonHTMLResult(html: Html): JsObject = {
     val htmlJson = html.body match {
       case "" =>
         Json.obj()
@@ -187,7 +188,7 @@ class JsonResult(status: Int)
     htmlJson
   }
 
-  def jsonMessages(messages: Seq[(String, String)]): JsObject =
+  private def jsonMessages(messages: Seq[(String, String)]): JsObject =
     Json.obj("messages" -> messages.map(m => Json.obj(m._1 -> m._2)))
 }
 
@@ -236,8 +237,8 @@ trait ValidationHelpers {
 }
 
 trait RequestTokenHelper {
-  protected def urlOrHeaderToken(token: Option[String], request: Request[Any]): Option[String] =
-    token.orElse(request.headers.get("X-Auth-Token"))
+  implicit def tokenContextForRequest(implicit request: Request[Any]): TokenContext =
+    TokenContext(request.target.getQueryParameter("token").orElse(request.headers.get("X-Auth-Token")))
 }
 
 trait ExtendedController

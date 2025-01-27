@@ -186,6 +186,7 @@ annotation.volume.invalidLargestSegmentId=Cannot create tasks with fallback segm
 annotation.volume.magRestrictionsTooTight=Task type mag restrictions are too tight, resulting annotation has no magnifications.
 annotation.volume.magssDoNotMatch=Could not merge volume annotations, as their magnifications differ. Please ensure each annotation has the same set of mags.
 annotation.volume.largestSegmentIdExceedsRange=The largest segment id {0} specified for the annotation layer exceeds the range of its data type {1}
+annotation.volume.noEditableMapping=This volume tracing does not have an editable mapping (not a “proofreading” annotation layer)
 annotation.notFound=Annotation could not be found
 annotation.notFound.considerLoggingIn=Annotation could not be found. If the annotation is not public, you need to log in to see it.
 annotation.invalid=Invalid annotation
@@ -249,6 +250,9 @@ annotation.deleteLayer.explorationalsOnly=Could not delete a layer because it is
 annotation.deleteLayer.onlyLayer=Could not delete layer because it is the only layer in this annotation.
 annotation.layer.notFound=Layer could not be found.
 annotation.getNewestVersion.failed=Could not get the newest version information for this annotation layer
+annotation.idForTracing.failed=Could not find the annotation id for this tracing id.
+annotation.editableMapping.getAgglomerateGraph.failed=Could not look up an agglomerate graph for requested agglomerate.
+annotation.editableMapping.getAgglomerateIdsForSegments.failed=Could not look up agglomerate ids for requested segments.
 
 mesh.notFound=Mesh could not be found
 mesh.write.failed=Failed to convert mesh info to json

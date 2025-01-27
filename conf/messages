@@ -41,6 +41,7 @@ organization.alreadyJoined=Your account is already associated with the selected 
 organization.users.userLimitReached=Cannot add new user to this organization because it would exceed the organization’s user limit. Please ask the organization owner to upgrade.
 organization.pricingUpgrades.notAuthorized=You are not authorized to request any changes to your organization WEBKNOSSOS plan. Please ask the organization owner for permission.
 organization.creditOrder.notAuthorized=You are not authorized to order WEBKNOSSOS credits for your organization. Please ask the organization owner to do this instead.
+organization.creditOrder.notPositive=You cannot order a negative number of WEBKNOSSOS credits.
 
 termsOfService.versionMismatch=Terms of service version mismatch. Current version is {0}, received acceptance for {1}
 

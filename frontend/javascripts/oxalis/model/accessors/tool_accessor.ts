@@ -36,7 +36,7 @@ const getExplanationForDisabledVolume = (
   isJSONMappingActive: boolean,
 ) => {
   if (!isSegmentationTracingVisible) {
-    return "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable it in the left settings sidebar.";
+    return "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable one in the left settings sidebar or make a segmentation layer editable via the lock icon.";
   }
 
   if (isZoomInvalidForTracing) {

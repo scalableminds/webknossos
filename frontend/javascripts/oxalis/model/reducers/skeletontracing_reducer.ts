@@ -45,7 +45,7 @@ import type { OxalisState, SkeletonTracing, Tree, TreeGroup } from "oxalis/store
 import {
   GroupTypeEnum,
   getNodeKey,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import type { MetadataEntryProto } from "types/api_flow_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 
@@ -106,7 +106,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         trees,
         treeGroups: action.tracing.treeGroups || [],
         tracingId: action.tracing.id,
-        version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
         userBoundingBoxes,
         navigationList: {
@@ -442,11 +441,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           return update(state, {
             tracing: {
               skeleton: {
-                $set: update(action.tracing, {
-                  version: {
-                    $set: skeletonTracing.version,
-                  },
-                }),
+                $set: action.tracing,
               },
             },
           });

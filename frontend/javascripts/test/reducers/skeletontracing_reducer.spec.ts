@@ -8,7 +8,7 @@ import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import mock from "mock-require";
 import test from "ava";
-import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import type { OxalisState, SkeletonTracing, Node } from "oxalis/store";
 import defaultState from "oxalis/default_state";
 import { TreeTypeEnum, type Vector3 } from "oxalis/constants";
@@ -50,7 +50,6 @@ const initialSkeletonTracing: SkeletonTracing = {
   type: "skeleton",
   createdTimestamp: 0,
   tracingId: "tracingId",
-  version: 0,
   trees: {},
   treeGroups: [],
   activeGroupId: null,

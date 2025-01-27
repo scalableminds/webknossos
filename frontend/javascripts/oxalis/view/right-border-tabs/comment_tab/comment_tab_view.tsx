@@ -538,7 +538,11 @@ const CommentTabViewMemo = React.memo(
     }
 
     const updateActions = Array.from(
-      cachedDiffTrees(prevPops.skeletonTracing.trees, nextProps.skeletonTracing.trees),
+      cachedDiffTrees(
+        nextProps.skeletonTracing.tracingId,
+        prevPops.skeletonTracing.trees,
+        nextProps.skeletonTracing.trees,
+      ),
     );
     const relevantUpdateActions = updateActions.filter(
       (ua) =>

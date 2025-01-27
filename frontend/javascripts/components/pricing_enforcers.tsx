@@ -10,6 +10,7 @@ import { Alert, Button, type ButtonProps, Col, Popover, Result, Row } from "antd
 import type { PopoverProps } from "antd/lib";
 import type { TooltipPlacement } from "antd/lib/tooltip";
 import { rgbToHex } from "libs/utils";
+import _ from "lodash";
 import { PRIMARY_COLOR } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
@@ -160,13 +161,13 @@ export const PricingEnforcedSwitchSetting: React.FunctionComponent<
       activeOrganization={activeOrganization}
       placement="top"
     >
-      {/* The react element <></> is needed as a wrapper as otherwise 
+      {/* The react element <></> is needed as a wrapper as otherwise
       the PricingEnforcedPopover will not be rendered. */}
       <>
         <SwitchSetting
           label={label}
           value={defaultValue}
-          onChange={() => {}}
+          onChange={_.noop}
           disabled
           postSwitchIcon={<LockOutlined style={{ marginLeft: 5 }} />}
         />

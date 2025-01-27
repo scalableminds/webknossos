@@ -79,6 +79,7 @@ import Store from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import InputComponent from "oxalis/view/components/input_component";
+import TreeHierarchyView from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view";
 import {
   GroupTypeEnum,
   MISSING_GROUP_ID,
@@ -86,8 +87,7 @@ import {
   callDeep,
   createGroupToParentMap,
   createGroupToTreesMap,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import TreeHierarchyView from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view";
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import * as React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
@@ -134,12 +134,12 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
       }
     };
 
-    const tryParsingFileAsNml = async (file: File) => {
+    const tryParsingFileAsNml = async (file: File, warnAboutVolumes: boolean = true) => {
       try {
         const nmlString = await readFileAsText(file);
         const { trees, treeGroups, userBoundingBoxes, datasetName, containedVolumes } =
           await parseNml(nmlString);
-        if (containedVolumes) {
+        if (containedVolumes && warnAboutVolumes) {
           Toast.warning(
             "The NML file contained volume information which was ignored. Please upload the NML into the dashboard to create a new annotation which also contains the volume data.",
           );
@@ -210,7 +210,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         const nmlBlob = await nmlFileEntry.getData!(new BlobWriter());
         const nmlFile = new File([nmlBlob], nmlFileEntry.filename);
 
-        const nmlImportActions = await tryParsingFileAsNml(nmlFile);
+        const nmlImportActions = await tryParsingFileAsNml(nmlFile, false);
 
         const dataFileEntry = entries.find((entry: Entry) =>
           Utils.isFileExtensionEqualTo(entry.filename, "zip"),
@@ -240,21 +240,14 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
             tracing,
             oldVolumeTracing,
             dataFile,
+            tracing.version,
           );
 
-          if (oldVolumeTracing) {
-            Store.dispatch(importVolumeTracingAction());
-            Store.dispatch(
-              setVersionNumberAction(
-                oldVolumeTracing.version + 1,
-                "volume",
-                oldVolumeTracing.tracingId,
-              ),
-            );
-            Store.dispatch(setLargestSegmentIdAction(newLargestSegmentId));
-            await clearCache(dataset, oldVolumeTracing.tracingId);
-            await api.data.reloadBuckets(oldVolumeTracing.tracingId);
-          }
+          Store.dispatch(importVolumeTracingAction());
+          Store.dispatch(setVersionNumberAction(tracing.version + 1));
+          Store.dispatch(setLargestSegmentIdAction(newLargestSegmentId));
+          await clearCache(dataset, oldVolumeTracing.tracingId);
+          await api.data.reloadBuckets(oldVolumeTracing.tracingId);
         }
 
         await reader.close();
@@ -388,20 +381,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       return Array.from(mapGroupsAndTreesSorted([rootGroup], groupToTreesMap, sortBy));
     },
   );
-
-  handleChangeName = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    if (!this.props.skeletonTracing) {
-      return;
-    }
-
-    const { activeGroupId } = this.props.skeletonTracing;
-
-    if (activeGroupId != null) {
-      api.tracing.renameSkeletonGroup(activeGroupId, evt.target.value);
-    } else {
-      this.props.onChangeTreeName(evt.target.value);
-    }
-  };
 
   deleteGroup = (groupId: number, deleteRecursively: boolean = false) => {
     if (!this.props.skeletonTracing) {
@@ -929,10 +908,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     <i className="fas fa-arrow-left" />
                   </ButtonComponent>
                   <InputComponent
-                    onChange={this.handleChangeName}
+                    onChange={_.noop}
                     value={activeTreeName || activeGroupName}
-                    disabled={noTreesAndGroups || isEditingDisabled}
-                    title={isEditingDisabled ? isEditingDisabledMessage : undefined}
+                    disabled
+                    title="Edit the name by double-clicking the tree or by using the details table below the tree list. Note: This text field will be removed in a future update."
                     style={{ width: "80%" }}
                   />
                   <ButtonComponent

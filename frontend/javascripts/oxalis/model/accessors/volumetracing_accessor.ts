@@ -45,7 +45,7 @@ import type { SegmentHierarchyNode } from "oxalis/view/right-border-tabs/segment
 import {
   MISSING_GROUP_ID,
   getGroupByIdWithSubgroups,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import type {
   APIAnnotation,
   APIAnnotationInfo,
@@ -609,11 +609,25 @@ export function isMappingActivationAllowed(
   state: OxalisState,
   mappingName: string | null | undefined,
   layerName?: string | null | undefined,
+  isMergerModeMapping?: boolean,
 ): boolean {
   const isEditableMappingActive = hasEditableMapping(state, layerName);
   const isActiveMappingLocked = isMappingLocked(state, layerName);
 
-  if (!isEditableMappingActive && !isActiveMappingLocked) return true;
+  const activeMappingInfo = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    layerName,
+  );
+
+  const isAllowedBecauseOfMergerMode =
+    // a merger mode mapping should be enabled
+    isMergerModeMapping &&
+    // and currently no (or a merger mode) mapping exists
+    (activeMappingInfo.mappingName == null || activeMappingInfo.isMergerModeMapping);
+
+  if (!isEditableMappingActive && (!isActiveMappingLocked || isAllowedBecauseOfMergerMode)) {
+    return true;
+  }
 
   const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
 

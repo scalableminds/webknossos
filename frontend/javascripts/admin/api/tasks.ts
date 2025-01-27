@@ -29,8 +29,11 @@ export async function requestTask(): Promise<APIAnnotationWithTask> {
   const { messages: _messages, ...task } = taskWithMessages;
   return task;
 }
-export function getAnnotationsForTask(taskId: string): Promise<Array<APIAnnotation>> {
-  return Request.receiveJSON(`/api/tasks/${taskId}/annotations`);
+export function getAnnotationsForTask(
+  taskId: string,
+  options?: RequestOptions,
+): Promise<Array<APIAnnotation>> {
+  return Request.receiveJSON(`/api/tasks/${taskId}/annotations`, options);
 }
 export function deleteTask(taskId: string): Promise<void> {
   return Request.receiveJSON(`/api/tasks/${taskId}`, {

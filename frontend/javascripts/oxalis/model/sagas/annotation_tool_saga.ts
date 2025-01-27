@@ -11,8 +11,10 @@ import { getNextTool } from "oxalis/model/reducers/reducer_helpers";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { call, put, take } from "typed-redux-saga";
+import { ensureWkReady } from "./ready_sagas";
+
 export function* watchToolDeselection(): Saga<void> {
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   let previousTool = yield* select((state) => state.uiInformation.activeTool);
 
   while (true) {

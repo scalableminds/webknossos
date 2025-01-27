@@ -3,26 +3,29 @@ package com.scalableminds.webknossos.tracingstore.controllers
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
+import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
+import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
-import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
+import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingSelector}
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
-import net.liftweb.common.Empty
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
 
-class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingService,
-                                          val remoteWebknossosClient: TSRemoteWebknossosClient,
-                                          val accessTokenService: TracingStoreAccessTokenService,
-                                          val slackNotificationService: TSSlackNotificationService)(
+class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracingService,
+                                          remoteWebknossosClient: TSRemoteWebknossosClient,
+                                          annotationService: TSAnnotationService,
+                                          accessTokenService: TracingStoreAccessTokenService,
+                                          slackNotificationService: TSSlackNotificationService)(
     implicit val ec: ExecutionContext,
     val bodyParsers: PlayBodyParsers)
-    extends TracingController[SkeletonTracing, SkeletonTracings] {
+    extends Controller {
 
   implicit val tracingsCompanion: SkeletonTracings.type = SkeletonTracings
 
@@ -35,72 +38,102 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
   implicit def unpackMultiple(tracings: SkeletonTracings): List[Option[SkeletonTracing]] =
     tracings.tracings.toList.map(_.tracing)
 
-  def mergedFromContents(token: Option[String], persist: Boolean): Action[SkeletonTracings] =
-    Action.async(validateProto[SkeletonTracings]) { implicit request =>
-      log() {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
-          val tracings: List[Option[SkeletonTracing]] = request.body
-          for {
-            mergedTracing <- Fox.box2Fox(tracingService.merge(tracings.flatten, MergedVolumeStats.empty(), Empty))
-            processedTracing = tracingService.remapTooLargeTreeIds(mergedTracing)
-            newId <- tracingService.save(processedTracing, None, processedTracing.version, toCache = !persist)
-          } yield Ok(Json.toJson(newId))
-        }
-      }
-    }
-
-  def duplicate(token: Option[String],
-                tracingId: String,
-                version: Option[Long],
-                fromTask: Option[Boolean],
-                editPosition: Option[String],
-                editRotation: Option[String],
-                boundingBox: Option[String]): Action[AnyContent] =
-    Action.async { implicit request =>
-      log() {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
-          for {
-            tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
-            editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
-            editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
-            boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
-            newId <- tracingService.duplicate(tracing,
-                                              fromTask.getOrElse(false),
-                                              editPositionParsed,
-                                              editRotationParsed,
-                                              boundingBoxParsed)
-          } yield {
+  def save(): Action[SkeletonTracing] = Action.async(validateProto[SkeletonTracing]) { implicit request =>
+    log() {
+      logTime(slackNotificationService.noticeSlowRequest) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+          val tracing = request.body
+          skeletonTracingService.saveSkeleton(tracing, None, 0).map { newId =>
             Ok(Json.toJson(newId))
           }
         }
       }
     }
+  }
 
-  def updateActionLog(token: Option[String],
-                      tracingId: String,
-                      newestVersion: Option[Long],
-                      oldestVersion: Option[Long]): Action[AnyContent] = Action.async { implicit request =>
+  def saveMultiple(): Action[SkeletonTracings] = Action.async(validateProto[SkeletonTracings]) { implicit request =>
     log() {
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
-        for {
-          updateLog <- tracingService.updateActionLog(tracingId, newestVersion, oldestVersion)
-        } yield {
-          Ok(updateLog)
+      logTime(slackNotificationService.noticeSlowRequest) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+          val savedIds = Fox.sequence(request.body.map { tracingOpt: Option[SkeletonTracing] =>
+            tracingOpt match {
+              case Some(tracing) => skeletonTracingService.saveSkeleton(tracing, None, 0).map(Some(_))
+              case _             => Fox.successful(None)
+            }
+          })
+          savedIds.map(id => Ok(Json.toJson(id)))
         }
       }
     }
   }
 
-  def updateActionStatistics(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {
-    implicit request =>
+  def get(tracingId: String, annotationId: String, version: Option[Long]): Action[AnyContent] =
+    Action.async { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
           for {
-            statistics <- tracingService.updateActionStatistics(tracingId)
+            tracing <- annotationService.findSkeleton(annotationId, tracingId, version) ?~> Messages("tracing.notFound")
+          } yield Ok(tracing.toByteArray).as(protobufMimeType)
+        }
+      }
+    }
+
+  def getMultiple: Action[List[Option[TracingSelector]]] =
+    Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
+      log() {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+          for {
+            tracings <- annotationService.findMultipleSkeletons(request.body)
           } yield {
-            Ok(statistics)
+            Ok(tracings.toByteArray).as(protobufMimeType)
           }
         }
       }
-  }
+    }
+
+  def mergedFromContents: Action[SkeletonTracings] =
+    Action.async(validateProto[SkeletonTracings]) { implicit request =>
+      log() {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+          val tracings: List[Option[SkeletonTracing]] = request.body
+          for {
+            mergedTracing <- Fox.box2Fox(skeletonTracingService.merge(tracings.flatten, newVersion = 0L))
+            processedTracing = skeletonTracingService.remapTooLargeTreeIds(mergedTracing)
+            newId <- skeletonTracingService.saveSkeleton(processedTracing, None, processedTracing.version)
+          } yield Ok(Json.toJson(newId))
+        }
+      }
+    }
+
+  // Used in task creation. History is dropped. Caller is responsible to create and save a matching AnnotationProto object
+  def duplicate(tracingId: String,
+                editPosition: Option[String],
+                editRotation: Option[String],
+                boundingBox: Option[String]): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+            for {
+              annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+              editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
+              editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
+              boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
+              newestSourceVersion <- annotationService.currentMaterializableVersion(annotationId)
+              newTracingId <- annotationService.duplicateSkeletonTracing(
+                annotationId,
+                sourceTracingId = tracingId,
+                sourceVersion = newestSourceVersion,
+                newTracingId = TracingId.generate,
+                newVersion = 0,
+                editPosition = editPositionParsed,
+                editRotation = editRotationParsed,
+                boundingBox = boundingBoxParsed,
+                isFromTask = false
+              )
+            } yield Ok(Json.toJson(newTracingId))
+          }
+        }
+      }
+    }
 }

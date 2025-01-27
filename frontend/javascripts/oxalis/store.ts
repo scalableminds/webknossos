@@ -181,7 +181,7 @@ export type SegmentGroup = TreeGroup;
 export type MutableSegmentGroup = MutableTreeGroup;
 
 export type DataLayerType = APIDataLayer;
-export type Restrictions = APIRestrictions;
+export type Restrictions = APIRestrictions & { initialAllowUpdate: boolean };
 export type AllowedMode = APIAllowedMode;
 export type Settings = APISettings;
 export type DataStoreInfo = APIDataStore;
@@ -191,10 +191,13 @@ export type AnnotationVisibility = APIAnnotationVisibility;
 export type RestrictionsAndSettings = Restrictions & Settings;
 export type Annotation = {
   readonly annotationId: string;
+  readonly version: number;
+  readonly earliestAccessibleVersion: number;
   readonly restrictions: RestrictionsAndSettings;
   readonly visibility: AnnotationVisibility;
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
   readonly tags: Array<string>;
+  readonly stats: TracingStats | null | undefined;
   readonly description: string;
   readonly name: string;
   readonly organization: string;
@@ -208,7 +211,6 @@ export type Annotation = {
 };
 type TracingBase = {
   readonly createdTimestamp: number;
-  readonly version: number;
   readonly tracingId: string;
   readonly boundingBox: BoundingBoxType | null | undefined;
   readonly userBoundingBoxes: Array<UserBoundingBox>;
@@ -424,6 +426,7 @@ export type ActiveMappingInfo = {
   readonly hideUnmappedIds: boolean;
   readonly mappingStatus: MappingStatus;
   readonly mappingType: MappingType;
+  readonly isMergerModeMapping?: boolean;
 };
 export type TemporaryConfiguration = {
   readonly histogramData: HistogramDataForAllLayers;
@@ -465,23 +468,10 @@ export type ProgressInfo = {
   readonly processedActionCount: number;
   readonly totalActionCount: number;
 };
-export type IsBusyInfo = {
-  readonly skeleton: boolean;
-  readonly volumes: Record<string, boolean>;
-  readonly mappings: Record<string, boolean>;
-};
 export type SaveState = {
-  readonly isBusyInfo: IsBusyInfo;
-  readonly queue: {
-    readonly skeleton: Array<SaveQueueEntry>;
-    readonly volumes: Record<string, Array<SaveQueueEntry>>;
-    readonly mappings: Record<string, Array<SaveQueueEntry>>;
-  };
-  readonly lastSaveTimestamp: {
-    readonly skeleton: number;
-    readonly volumes: Record<string, number>;
-    readonly mappings: Record<string, number>;
-  };
+  readonly isBusy: boolean;
+  readonly queue: Array<SaveQueueEntry>;
+  readonly lastSaveTimestamp: number;
   readonly progressInfo: ProgressInfo;
 };
 export type Flycam = {
@@ -555,6 +545,7 @@ type UiInformation = {
   readonly hasOrganizations: boolean;
   readonly borderOpenStatus: BorderOpenStatus;
   readonly theme: Theme;
+  readonly isWkReady: boolean;
   readonly busyBlockingInfo: BusyBlockingInfo;
   readonly quickSelectState:
     | "inactive"

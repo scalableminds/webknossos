@@ -1,4 +1,8 @@
-import { createExplorational, getAnnotationInformation, getShortLink } from "admin/admin_rest_api";
+import {
+  createExplorational,
+  getShortLink,
+  getUnversionedAnnotationInformation,
+} from "admin/admin_rest_api";
 import AcceptInviteView from "admin/auth/accept_invite_view";
 import AuthTokenView from "admin/auth/auth_token_view";
 import ChangePasswordView from "admin/auth/change_password_view";
@@ -63,6 +67,7 @@ import VerifyEmailView from "admin/auth/verify_email_view";
 import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
 import AiModelListView from "admin/voxelytics/ai_model_list_view";
+import { CheckCertificateModal } from "components/check_certificate_modal";
 import ErrorBoundary from "components/error_boundary";
 import { CheckTermsOfServices } from "components/terms_of_services_check";
 import loadable from "libs/lazy_loader";
@@ -242,7 +247,9 @@ class ReactRouter extends React.Component<Props> {
 
   serverAuthenticationCallback = async ({ match }: ContextRouter) => {
     try {
-      const annotationInformation = await getAnnotationInformation(match.params.id || "");
+      const annotationInformation = await getUnversionedAnnotationInformation(
+        match.params.id || "",
+      );
       return annotationInformation.visibility === "Public";
     } catch (_ex) {
       // Annotation could not be found
@@ -257,6 +264,7 @@ class ReactRouter extends React.Component<Props> {
       <Router history={browserHistory}>
         <Layout>
           <DisableGenericDnd />
+          <CheckCertificateModal />
           <CheckTermsOfServices />
           <Navbar isAuthenticated={isAuthenticated} />
           <HelpButton />

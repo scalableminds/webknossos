@@ -12,7 +12,6 @@ import com.scalableminds.util.time.Instant
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import java.io.File
-import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 

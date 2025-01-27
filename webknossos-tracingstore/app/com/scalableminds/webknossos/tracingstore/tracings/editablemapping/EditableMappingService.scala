@@ -131,7 +131,7 @@ class EditableMappingService @Inject()(
         "createdTimestamp" -> editableMappingInfo.createdTimestamp
       )
 
-  def create(baseMappingName: String): Fox[(String, EditableMappingInfo)] = {
+  def create(baseMappingName: Option[String]): Fox[(String, EditableMappingInfo)] = {
     val newId = generateId
     val newEditableMappingInfo = EditableMappingInfo(
       baseMappingName = baseMappingName,
@@ -277,7 +277,7 @@ class EditableMappingService @Inject()(
         tracingDataStore,
         relyOnAgglomerateIds = updates.length <= 1
       )
-      updated <- updater.applyUpdatesAndSave(previousInfo, updates, dry = true) ?~> "editableMapping.update.failed"
+      _ <- updater.applyUpdatesAndSave(previousInfo, updates, dry = true) ?~> "editableMapping.update.failed"
     } yield ()
 
   def applyPendingUpdates(editableMappingId: String,
@@ -508,7 +508,7 @@ class EditableMappingService @Inject()(
     skeleton.toByteArray
   }
 
-  def getBaseSegmentToAgglomerate(mappingName: String,
+  def getBaseSegmentToAgglomerate(mappingName: Option[String],
                                   segmentIds: Set[Long],
                                   remoteFallbackLayer: RemoteFallbackLayer,
                                   userToken: Option[String]): Fox[Map[Long, Long]] = {

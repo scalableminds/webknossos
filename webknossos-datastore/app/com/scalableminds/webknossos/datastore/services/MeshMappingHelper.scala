@@ -51,7 +51,7 @@ trait MeshMappingHelper {
             case _                => if (omitMissing) Fox.successful(List.empty) else segmentIdsBox.toFox
           }
         } yield segmentIds
-      case (Some(mappingName), Some(tracingId)) =>
+      case (mappingNameOpt, Some(tracingId)) =>
         // An editable mapping tracing id is supplied. Ask the tracingstore for the segment ids. If it doesn’t know,
         // use the mappingName (here the editable mapping’s base mapping) to look it up from file.
         for {
@@ -65,17 +65,21 @@ trait MeshMappingHelper {
           else // the agglomerate id is not present in the editable mapping. Fetch its info from the base mapping.
             for {
               agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-              localSegmentIds <- agglomerateService.segmentIdsForAgglomerateId(
-                AgglomerateFileKey(
-                  organizationId,
-                  datasetDirectoryName,
-                  dataLayerName,
-                  mappingName
-                ),
-                agglomerateId
-              )
+              localSegmentIds <- mappingNameOpt match {
+                case Some(mappingName) =>
+                  agglomerateService.segmentIdsForAgglomerateId(
+                    AgglomerateFileKey(
+                      organizationId,
+                      datasetDirectoryName,
+                      dataLayerName,
+                      mappingName
+                    ),
+                    agglomerateId
+                  )
+                case None =>
+                  Full(List(agglomerateId)) // Proofreading with no base mapping. Segment id is mapped to self.
+              }
             } yield localSegmentIds
         } yield segmentIds
-      case _ => Fox.failure("Cannot determine segment ids for editable mapping without base mapping")
     }
 }

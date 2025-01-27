@@ -25,9 +25,9 @@ class MappingProvider(layer: SegmentationLayer) {
 
 object MappingProvider {
 
-  val mappingsDir = "mappings"
+  private val mappingsDir = "mappings"
 
-  val mappingFileExtension = "json"
+  private val mappingFileExtension = "json"
 
   def exploreMappings(layerDir: Path): Option[Set[String]] = {
     val mappingSet = PathUtils

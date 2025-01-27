@@ -275,7 +275,7 @@ class DataSourceController @Inject()(
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
         agglomerateList = agglomerateService.exploreAgglomerates(organizationId, datasetDirectoryName, dataLayerName)
-      } yield Ok(Json.toJson(agglomerateList + ""))
+      } yield Ok(Json.toJson(agglomerateList))
     }
   }
 

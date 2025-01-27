@@ -30,7 +30,7 @@ import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 class EditableMappingUpdater(
     editableMappingId: String,
-    baseMappingName: String,
+    baseMappingName: Option[String],
     oldVersion: Long,
     newVersion: Long,
     remoteFallbackLayer: RemoteFallbackLayer,

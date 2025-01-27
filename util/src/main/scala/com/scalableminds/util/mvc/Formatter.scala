@@ -25,22 +25,24 @@ trait Formatter {
     id.takeRight(6)
 
   protected def formatDuration(duration: FiniteDuration): String = {
+    val minuteRoundingThresholdMillisForRenderingMillis = 59995
+    val minuteRoundingThresholdMillisForRenderingSeconds = 59499
     val sign = if (duration.toMillis < 0) "-" else ""
     var millisAbs = Math.abs(duration.toMillis)
 
     if (millisAbs < 1000) {
       s"$sign${millisAbs}ms"
-    } else if (millisAbs < 59995) { // up to 2 decimals for < 60s
+    } else if (millisAbs < minuteRoundingThresholdMillisForRenderingMillis) { // up to 2 decimals for < 60s
       val wholeSeconds = Math.floor(millisAbs.toDouble / 1000).toLong
       val centis = Math.round(millisAbs.toDouble / 10) % 100
-      val withTwoDecimals = f"$wholeSeconds.$centis%02d"
-      // now drop the decimals from the right if they are zeroes.
-      f"$sign${withTwoDecimals.reverse.dropWhile(_ == '0').dropWhile(_ == '.').reverse}s"
+      if (centis == 0) f"$sign${wholeSeconds}s"
+      else if (centis % 10 == 0) f"$sign$wholeSeconds.${centis / 10}s"
+      else f"$sign$wholeSeconds.$centis%02ds"
     } else {
       val labelElements: ListBuffer[String] = new ListBuffer[String]
 
       var days = Math.floor(millisAbs.toDouble / 1000 / 3600 / 24).toLong
-      if (millisAbs - days * 24 * 3600 * 1000 > 23 * 3600 * 1000 + 59 * 60 * 1000 + 59499) { // extra day to avoid 24h/60m/60s
+      if (millisAbs - days * 24 * 3600 * 1000 > 23 * 3600 * 1000 + 59 * 60 * 1000 + minuteRoundingThresholdMillisForRenderingSeconds) { // extra day to avoid 24h/60m/60s
         days += 1
       }
       val includeSeconds = days == 0
@@ -50,7 +52,7 @@ trait Formatter {
       }
 
       var hours = Math.floor(millisAbs.toDouble / 3600 / 1000).toLong
-      if (millisAbs - hours * 3600 * 1000 > 59 * 60 * 1000 + 59499) { // extra hour to avoid 60m/60s
+      if (millisAbs - hours * 3600 * 1000 > 59 * 60 * 1000 + minuteRoundingThresholdMillisForRenderingSeconds) { // extra hour to avoid 60m/60s
         hours += 1
       }
       if (hours > 0) {
@@ -59,7 +61,7 @@ trait Formatter {
       }
 
       var minutes = Math.floor(millisAbs.toDouble / 60 / 1000).toLong
-      if (millisAbs - minutes * 60 * 1000 > 59499) { // extra minute to avoid 60s
+      if (millisAbs - minutes * 60 * 1000 > minuteRoundingThresholdMillisForRenderingSeconds) { // extra minute to avoid 60s
         minutes += 1
       }
       if (minutes > 0) {

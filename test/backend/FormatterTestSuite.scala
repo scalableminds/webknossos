@@ -44,6 +44,7 @@ class FormatterTestSuite extends PlaySpec with Formatter {
       assert(formatDuration(FiniteDuration(25 * 3600000 + 60000 + 1000, "ms")) == "1 day 1h 1m")
       assert(formatDuration(FiniteDuration(49 * 3600000 + 60000 + 500, "ms")) == "2 days 1h 1m")
       assert(formatDuration(FiniteDuration(24 * 24 * 3600000 + 60000 + 500, "ms")) == "24 days 1m")
+      assert(formatDuration(FiniteDuration(100L * 24 * 3600000 + 60000 + 500, "ms")) == "100 days 1m")
       assert(formatDuration(FiniteDuration(-50, "ms")) == "-50ms")
       assert(formatDuration(FiniteDuration(-5000, "ms")) == "-5s")
       assert(formatDuration(FiniteDuration(-1 * (49 * 3600000 + 60000 + 500), "ms")) == "-2 days 1h 1m")

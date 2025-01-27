@@ -2,7 +2,7 @@ import { message } from "antd";
 import window, { document } from "libs/window";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import UnthrottledStore, { startSagas } from "oxalis/store";
-import { ErrorInfo, createRoot } from "react-dom/client";
+import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
 
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
@@ -28,7 +28,6 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import Router from "router";
 
 import "../stylesheets/main.less";
-import { escalateErrorAction } from "oxalis/model/actions/actions";
 import GlobalThemeProvider, { getThemeFromUser } from "theme";
 
 // Suppress warning emitted by Olvy because it tries to eagerly initialize

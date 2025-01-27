@@ -1754,7 +1754,7 @@ export async function getOrganization(organizationId: string): Promise<APIOrgani
 }
 
 export async function checkAnyOrganizationExists(): Promise<boolean> {
-  return !(await Request.receiveJSON("/api/organiztionsIsEmpty"));
+  return !(await Request.receiveJSON("/api/organizationsIsEmpty"));
 }
 
 export async function deleteOrganization(organizationId: string): Promise<void> {

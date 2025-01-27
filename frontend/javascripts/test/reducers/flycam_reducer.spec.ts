@@ -36,7 +36,7 @@ const initialState = {
   flycam: {
     zoomStep: 2,
     additionalCoordinates: [],
-    currentMatrix: M4x4.identity(),
+    currentMatrix: M4x4.identity,
     spaceDirectionOrtho: [1, 1, 1],
   },
   temporaryConfiguration: {

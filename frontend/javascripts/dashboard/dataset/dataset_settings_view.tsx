@@ -25,11 +25,6 @@ import _ from "lodash";
 import messages from "messages";
 import { Unicode } from "oxalis/constants";
 import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import {
-  EXPECTED_TRANSFORMATION_LENGTH,
-  doAllLayersHaveTheSameRotation,
-  getRotationFromTransformationIn90DegreeSteps,
-} from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import type { DatasetConfiguration, OxalisState } from "oxalis/store";
 import * as React from "react";
 import { connect } from "react-redux";
@@ -42,7 +37,6 @@ import type {
   MutableAPIDataset,
 } from "types/api_flow_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-import type { DatasetRotation } from "./dataset_rotation_form_item";
 import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
 import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
 import DatasetSettingsMetadataTab from "./dataset_settings_metadata_tab";
@@ -82,7 +76,6 @@ export type FormData = {
   dataset: APIDataset;
   defaultConfiguration: DatasetConfiguration;
   defaultConfigurationLayersJson: string;
-  datasetRotation?: DatasetRotation;
 };
 
 class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, State> {
@@ -201,32 +194,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       form.setFieldsValue({
         dataSource,
       });
-      // Retrieve the initial dataset rotation settings from the data source config.
-      if (doAllLayersHaveTheSameRotation(dataSource.dataLayers)) {
-        const firstLayerTransformations = dataSource.dataLayers[0].coordinateTransformations;
-        let initialDatasetRotationSettings: DatasetRotation;
-        if (
-          !firstLayerTransformations ||
-          firstLayerTransformations.length !== EXPECTED_TRANSFORMATION_LENGTH
-        ) {
-          initialDatasetRotationSettings = {
-            x: 0,
-            y: 0,
-            z: 0,
-          };
-        } else {
-          initialDatasetRotationSettings = {
-            // First transformation is a translation to the coordinate system origin.
-            x: getRotationFromTransformationIn90DegreeSteps(firstLayerTransformations[1], "x"),
-            y: getRotationFromTransformationIn90DegreeSteps(firstLayerTransformations[2], "y"),
-            z: getRotationFromTransformationIn90DegreeSteps(firstLayerTransformations[3], "z"),
-            // Fifth transformation is a translation back to the original position.
-          };
-        }
-        form.setFieldsValue({
-          datasetRotation: initialDatasetRotationSettings,
-        });
-      }
       const datasetDefaultConfiguration = await getDatasetDefaultConfiguration(
         this.props.datasetId,
       );

@@ -32,8 +32,8 @@ import {
   getDatasetBoundingBox,
   getLayerBoundingBox,
   getLayerNameToIsDisabled,
+  getTransformsForLayerOrNull,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getTransformsForLayerOrNull } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import { getActiveMagIndicesForLayers, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";

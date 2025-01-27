@@ -2,7 +2,6 @@ import { V3 } from "libs/mjs";
 import memoizeOne from "memoize-one";
 import type { OrthoView, Point2, Vector3 } from "oxalis/constants";
 import { ContourModeEnum } from "oxalis/constants";
-import { globalToLayerTransformedPosition } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import {
@@ -52,21 +51,15 @@ export const getSegmentIdForPosition = memoizeOne(
     if (!layer) {
       return 0;
     }
-    const posInLayerSpace = globalToLayerTransformedPosition(
-      globalPos,
-      layer.name,
-      "segmentation",
-      Store.getState(),
-    );
 
     const segmentationCube = layer.cube;
     const segmentationLayerName = layer.name;
     const renderedZoomStepForCameraPosition = api.data.getRenderedZoomStepAtPosition(
       segmentationLayerName,
-      posInLayerSpace,
+      globalPos,
     );
     return segmentationCube.getMappedDataValue(
-      posInLayerSpace,
+      globalPos,
       additionalCoordinates,
       renderedZoomStepForCameraPosition,
     );
@@ -83,28 +76,22 @@ export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
   if (!layer) {
     return 0;
   }
-  const posInLayerSpace = globalToLayerTransformedPosition(
-    globalPos,
-    layer.name,
-    "segmentation",
-    Store.getState(),
-  );
 
   const segmentationCube = layer.cube;
   const segmentationLayerName = layer.name;
   const renderedZoomStepForCameraPosition = await api.data.getUltimatelyRenderedZoomStepAtPosition(
     segmentationLayerName,
-    posInLayerSpace,
+    globalPos,
   );
   // Make sure the corresponding bucket is loaded
   await api.data.getDataValue(
     segmentationLayerName,
-    posInLayerSpace,
+    globalPos,
     renderedZoomStepForCameraPosition,
     additionalCoordinates,
   );
   return segmentationCube.getMappedDataValue(
-    posInLayerSpace,
+    globalPos,
     additionalCoordinates,
     renderedZoomStepForCameraPosition,
   );

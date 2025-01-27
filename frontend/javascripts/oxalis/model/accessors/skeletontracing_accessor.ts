@@ -25,9 +25,9 @@ import type {
 } from "types/api_flow_types";
 import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
 import {
-  getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull,
   getTransformsForSkeletonLayer,
-} from "./dataset_layer_transformation_accessor";
+  getTransformsForSkeletonLayerOrNull,
+} from "./dataset_accessor";
 
 export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
   if (tracing.skeleton != null) {
@@ -218,7 +218,7 @@ export function getNodeAndTreeOrNull(
 
 export function isSkeletonLayerTransformed(state: OxalisState) {
   return (
-    getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
+    getTransformsForSkeletonLayerOrNull(
       state.dataset,
       state.datasetConfiguration.nativelyRenderedLayerName,
     ) != null
@@ -231,14 +231,16 @@ export function getNodePosition(node: Node, state: OxalisState): Vector3 {
 
 export function transformNodePosition(position: Vector3, state: OxalisState): Vector3 {
   const dataset = state.dataset;
-  const { nativelyRenderedLayerName } = state.datasetConfiguration;
+  const nativelyRenderedLayerName = state.datasetConfiguration.nativelyRenderedLayerName;
+
   const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
   return transformPointUnscaled(currentTransforms)(position);
 }
 
 export function untransformNodePosition(position: Vector3, state: OxalisState): Vector3 {
   const dataset = state.dataset;
-  const { nativelyRenderedLayerName } = state.datasetConfiguration;
+  const nativelyRenderedLayerName = state.datasetConfiguration.nativelyRenderedLayerName;
+
   const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
   return transformPointUnscaled(invertTransform(currentTransforms))(position);
 }

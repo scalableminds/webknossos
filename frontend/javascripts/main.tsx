@@ -13,7 +13,7 @@ import ErrorBoundary from "components/error_boundary";
 import { RootForFastTooltips } from "components/fast_tooltip";
 import { load as loadFeatureToggles } from "features";
 import checkBrowserFeatures from "libs/browser_feature_check";
-import ErrorHandling, { handleGenericError } from "libs/error_handling";
+import ErrorHandling from "libs/error_handling";
 import UserLocalStorage from "libs/user_local_storage";
 import { compress, decompress } from "lz-string";
 import { setupApi } from "oxalis/api/internal_api";
@@ -93,41 +93,41 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   message.config({ top: 30 });
   checkBrowserFeatures();
+  const containerElement = document.getElementById("main-container");
+
   try {
     await Promise.all([loadFeatureToggles(), loadActiveUser(), loadHasOrganizations()]);
     await Promise.all([loadOrganization()]);
-    const containerElement = document.getElementById("main-container");
-
-    if (containerElement) {
-      const react_root = createRoot(containerElement);
-      react_root.render(
-        <ErrorBoundary>
-          {/* @ts-ignore */}
-          <Provider store={Store}>
-            <QueryClientProvider client={reactQueryClient}>
-              {/* The DnDProvider is necessary for the TreeHierarchyView. Otherwise, the view may crash in
-        certain conditions. See https://github.com/scalableminds/webknossos/issues/5568 for context.
-        The fix is inspired by:
-        https://github.com/frontend-collective/react-sortable-tree/blob/9aeaf3d38b500d58e2bcc1d9b6febce12f8cc7b4/stories/barebones-no-context.js */}
-              <DndProvider backend={HTML5Backend}>
-                <GlobalThemeProvider>
-                  <RootForFastTooltips />
-                  <Router />
-                </GlobalThemeProvider>
-              </DndProvider>
-            </QueryClientProvider>
-          </Provider>
-        </ErrorBoundary>,
-      );
-    }
   } catch (e) {
     console.error("Failed to load WEBKNOSSOS due to the following error", e);
-    const containerElement = document.getElementById("main-container");
     if (containerElement) {
       const react_root = createRoot(containerElement);
       react_root.render(
         <p>Failed to load WEBKNOSSOS. Please try again or check the console for details.</p>,
       );
     }
+  }
+
+  if (containerElement) {
+    const react_root = createRoot(containerElement);
+    react_root.render(
+      <ErrorBoundary>
+        {/* @ts-ignore */}
+        <Provider store={Store}>
+          <QueryClientProvider client={reactQueryClient}>
+            {/* The DnDProvider is necessary for the TreeHierarchyView. Otherwise, the view may crash in
+        certain conditions. See https://github.com/scalableminds/webknossos/issues/5568 for context.
+        The fix is inspired by:
+        https://github.com/frontend-collective/react-sortable-tree/blob/9aeaf3d38b500d58e2bcc1d9b6febce12f8cc7b4/stories/barebones-no-context.js */}
+            <DndProvider backend={HTML5Backend}>
+              <GlobalThemeProvider>
+                <RootForFastTooltips />
+                <Router />
+              </GlobalThemeProvider>
+            </DndProvider>
+          </QueryClientProvider>
+        </Provider>
+      </ErrorBoundary>,
+    );
   }
 });

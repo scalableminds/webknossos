@@ -8,7 +8,11 @@ import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
-import com.scalableminds.webknossos.datastore.services.uploading.{LinkedLayerIdentifier, ReserveAdditionalInformation, ReserveUploadInformation}
+import com.scalableminds.webknossos.datastore.services.uploading.{
+  LinkedLayerIdentifier,
+  ReserveAdditionalInformation,
+  ReserveUploadInformation
+}
 import com.typesafe.scalalogging.LazyLogging
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, UploadDatasetEvent}

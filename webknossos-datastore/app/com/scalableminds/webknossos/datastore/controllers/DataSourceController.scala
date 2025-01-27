@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.explore.{
@@ -443,13 +444,12 @@ class DataSourceController @Inject()(
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationId)) {
           for {
-            before <- Fox.successful(System.currentTimeMillis())
+            before <- Instant.nowFox
             usedStorageInBytes: List[DirectoryStorageReport] <- storageUsageService.measureStorage(organizationId,
                                                                                                    datasetDirectoryName)
-            after = System.currentTimeMillis()
-            _ = if (after - before > (10 seconds).toMillis) {
+            _ = if (Instant.since(before) > (10 seconds)) {
               val datasetLabel = datasetDirectoryName.map(n => s" dataset $n of").getOrElse("")
-              logger.info(s"Measuring storage for$datasetLabel orga $organizationId took ${after - before} ms.")
+              Instant.logSince(before, s"Measuring storage for$datasetLabel orga $organizationId", logger)
             }
           } yield Ok(Json.toJson(usedStorageInBytes))
         }

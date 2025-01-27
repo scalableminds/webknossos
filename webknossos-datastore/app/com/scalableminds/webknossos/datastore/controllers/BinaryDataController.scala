@@ -22,6 +22,7 @@ import net.liftweb.common.Box.tryo
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{AnyContent, _}
+
 import scala.concurrent.duration.DurationInt
 import java.io.ByteArrayOutputStream
 import java.nio.{ByteBuffer, ByteOrder}
@@ -64,7 +65,7 @@ class BinaryDataController @Inject()(
           duration = Instant.since(t)
           _ = if (duration > (10 seconds))
             logger.info(
-              s"Complete data request for $organizationId/$datasetDirectoryName/$dataLayerName took $duration."
+              s"Complete data request for $organizationId/$datasetDirectoryName/$dataLayerName took ${formatDuration(duration)}."
                 + request.body.headOption
                   .map(firstReq => s" First of ${request.body.size} requests was $firstReq")
                   .getOrElse(""))

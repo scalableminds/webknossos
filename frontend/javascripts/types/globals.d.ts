@@ -16,6 +16,3 @@ export type ArbitraryObject = Record<string, any>;
 export type ArbitraryFunction = (...args: Array<any>) => any;
 export type Comparator<T> = (arg0: T, arg1: T) => -1 | 0 | 1;
 export type ArrayElement<A> = A extends readonly (infer T)[] ? T : never;
-export type Mutable<T> = {
-  -readonly [K in keyof T]: T[K];
-};

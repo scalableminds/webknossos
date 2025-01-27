@@ -204,7 +204,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
                 for {
                   timestampString <- tryo((entry \ "@timestamp").as[String]).toFox
                   timestamp <- if (timestampString.endsWith("Z"))
-                    Instant.fromString(timestampString)
+                    Instant.fromString(timestampString).toFox
                   else
                     Instant.fromLocalTimeString(timestampString)
                   values <- tryo(

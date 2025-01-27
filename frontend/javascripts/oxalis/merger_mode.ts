@@ -2,8 +2,10 @@ import _ from "lodash";
 import messages from "messages";
 import type { UnregisterHandler } from "oxalis/api/api_latest";
 import type { Vector3 } from "oxalis/constants";
-import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
-import { getInverseSegmentationTransformer } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
+import {
+  getInverseSegmentationTransformer,
+  getVisibleSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
 import {
   getNodePosition,
   getSkeletonTracing,
@@ -185,7 +187,7 @@ async function onCreateNode(
 
   if (updateMapping) {
     // Update mapping
-    api.data.setMapping(segmentationLayerName, idMapping);
+    api.data.setMapping(segmentationLayerName, idMapping, { isMergerModeMapping: true });
   }
 }
 
@@ -237,7 +239,9 @@ async function onDeleteNode(
     deleteIdMappingOfSegment(segmentId, nodeWithTreeId.treeId, mergerModeState);
 
     if (updateMapping) {
-      api.data.setMapping(segmentationLayerName, mergerModeState.idMapping);
+      api.data.setMapping(segmentationLayerName, mergerModeState.idMapping, {
+        isMergerModeMapping: true,
+      });
     }
   }
 }
@@ -284,7 +288,9 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: UpdateAction
       delete nodeSegmentMap[id];
     }
 
-    api.data.setMapping(segmentationLayerName, mergerModeState.idMapping);
+    api.data.setMapping(segmentationLayerName, mergerModeState.idMapping, {
+      isMergerModeMapping: true,
+    });
   }
 }
 
@@ -418,7 +424,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
     await Promise.all(nodesMappedPromises);
   }
 
-  api.data.setMapping(segmentationLayerName, idMapping);
+  api.data.setMapping(segmentationLayerName, idMapping, { isMergerModeMapping: true });
 }
 
 function resetState(mergerModeState: Partial<MergerModeState> = {}) {

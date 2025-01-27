@@ -1,13 +1,14 @@
 package com.scalableminds.webknossos.datastore.rpc
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.mvc.MimeTypes
+import com.scalableminds.util.mvc.{Formatter, MimeTypes}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
 import play.api.http.{HeaderNames, Status}
 import play.api.libs.json._
 import play.api.libs.ws._
+import com.scalableminds.util.time.Instant
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import java.io.File
@@ -18,10 +19,12 @@ import scala.concurrent.duration._
 class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
+    with Formatter
     with MimeTypes {
 
   var request: WSRequest = wsClient.url(url)
   private var verbose: Boolean = true
+  private var slowRequestLoggingThreshold = 2 minutes
 
   def addQueryString(parameters: (String, String)*): RPCRequest = {
     request = request.addQueryStringParameters(parameters: _*)
@@ -46,6 +49,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
       case (Some(username), Some(password)) => request = request.withAuth(username, password, WSAuthScheme.BASIC)
       case _                                => ()
     }
+    this
+  }
+
+  def withSlowRequestLoggingThreshold(slowRequestLoggingThreshold: FiniteDuration): RPCRequest = {
+    this.slowRequestLoggingThreshold = slowRequestLoggingThreshold
     this
   }
 
@@ -191,26 +199,35 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
   }
 
   private def performRequest: Fox[WSResponse] = {
+    val before = Instant.now
     if (verbose) {
-      logger.debug(
-        s"Sending WS request to $url (ID: $id). " +
-          s"RequestBody: '$requestBodyPreview'")
+      logger.debug(s"Sending $debugInfo, RequestBody: '$requestBodyPreview'")
     }
     request
       .execute()
       .map { result =>
+        val duration = Instant.since(before)
+        val logSlow = verbose && duration > slowRequestLoggingThreshold
         if (Status.isSuccessful(result.status)) {
+          if (logSlow) logger.info(f"Slow $debugInfo took ${formatDuration(duration)})}")
           Full(result)
         } else {
-          val errorMsg = s"Unsuccessful WS request to $url (ID: $id)." +
-            s"Status: ${result.status}. Response: ${new String(result.bodyAsBytes.toArray, StandardCharsets.UTF_8).take(2000)}"
-          logger.error(errorMsg)
-          Failure(errorMsg.take(400))
+          val responseBodyPreview = result.bodyAsBytes.utf8String.take(2000)
+          val durationLabel = if (logSlow) s" Duration: ${formatDuration(duration)}."
+          val verboseErrorMsg =
+            s"Failed $debugInfo," +
+              s" Status: ${result.status}.$durationLabel" +
+              s" RequestBody: '$requestBodyPreview'" +
+              s" ResponseBody: '$responseBodyPreview'"
+          logger.error(verboseErrorMsg)
+          val compactErrorMsg =
+            s"Failed $debugInfo. Response: ${result.status} '$responseBodyPreview'"
+          Failure(compactErrorMsg)
         }
       }
       .recover {
         case e =>
-          val errorMsg = s"Error sending WS request to $url (ID: $id): " +
+          val errorMsg = s"Error sending $debugInfo: " +
             s"${e.getMessage}\n${e.getStackTrace.mkString("\n    ")}"
           logger.error(errorMsg)
           Failure(errorMsg)
@@ -219,42 +236,23 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
 
   private def extractBytesResponse(r: Fox[WSResponse]): Fox[Array[Byte]] =
     r.flatMap { response =>
-      if (Status.isSuccessful(response.status)) {
-        val responseBytes = response.bodyAsBytes
-        if (verbose) {
-          logger.debug(
-            s"Successful request (ID: $id). " +
-              s"Body: '<${responseBytes.length} raw bytes>'")
-        }
-        Fox.successful(responseBytes.toArray)
-      } else {
-        logger.error(
-          s"Failed to send WS request to $url (ID: $id). " +
-            s"RequestBody: '$requestBodyPreview'. Status ${response.status}. " +
-            s"ResponseBody: '${response.body.take(100)}'")
-        Fox.failure("Unsuccessful WS request to $url (ID: $id)")
+      val responseBytes = response.bodyAsBytes
+      if (verbose) {
+        logger.debug(s"Successful $debugInfo. ResponseBody: <${responseBytes.length} raw bytes>")
       }
+      Fox.successful(responseBytes.toArray)
     }
 
   private def parseJsonResponse[T: Reads](r: Fox[WSResponse]): Fox[T] =
     r.flatMap { response =>
-      if (Status.isSuccessful(response.status)) {
-        if (verbose) {
-          logger.debug(
-            s"Successful request (ID: $id). " +
-              s"Body: '${response.body.take(100)}'")
-        }
-      } else {
-        logger.error(
-          s"Failed to send WS request to $url (ID: $id). " +
-            s"RequestBody: '$requestBodyPreview'. Status ${response.status}. " +
-            s"ResponseBody: '${response.body.take(100)}'")
+      if (verbose) {
+        logger.debug(s"Successful $debugInfo. ResponseBody: '${response.body.take(100)}'")
       }
       Json.parse(response.body).validate[T] match {
         case JsSuccess(value, _) =>
           Full(value)
         case JsError(e) =>
-          val errorMsg = s"Request returned invalid JSON (ID: $id): $e"
+          val errorMsg = s"$debugInfo returned invalid JSON: $e"
           logger.error(errorMsg)
           Failure(errorMsg)
       }
@@ -262,27 +260,20 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
 
   private def parseProtoResponse[T <: GeneratedMessage](r: Fox[WSResponse])(companion: GeneratedMessageCompanion[T]) =
     r.flatMap { response =>
-      if (Status.isSuccessful(response.status)) {
-        if (verbose) {
-          logger.debug(
-            s"Successful request (ID: $id). " +
-              s"Body: <${response.body.length} bytes of protobuf data>")
-        }
-      } else {
-        logger.error(
-          s"Failed to send WS request to $url (ID: $id). " +
-            s"RequestBody: '$requestBodyPreview'. Status ${response.status}. " +
-            s"ResponseBody: '${response.body.take(100)}'")
+      if (verbose) {
+        logger.debug(s"Successful $debugInfo, ResponseBody: <${response.body.length} bytes of protobuf data>")
       }
       try {
         Full(companion.parseFrom(response.bodyAsBytes.toArray))
       } catch {
         case e: Exception =>
-          val errorMsg = s"Request returned invalid Protocol Buffer Data (ID: $id): $e"
+          val errorMsg = s"$debugInfo returned invalid Protocol Buffer Data: $e"
           logger.error(errorMsg)
           Failure(errorMsg)
       }
     }
+
+  private def debugInfo: String = f"RPC $id: ${request.method} $url"
 
   private def requestBodyPreview: String =
     request.body match {
@@ -291,7 +282,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
         s"<${body.bytes.length} bytes of protobuf data>"
       case body: InMemoryBody
           if request.headers.getOrElse(HeaderNames.CONTENT_TYPE, List()).contains(octetStreamMimeType) =>
-        s"<${body.bytes.length} bytes of byte data>"
+        s"<${body.bytes.length} raw bytes>"
       case body: InMemoryBody =>
         body.bytes.take(100).utf8String + (if (body.bytes.size > 100) s"... <omitted ${body.bytes.size - 100} bytes>"
                                            else "")

@@ -3,11 +3,11 @@ import _ from "lodash";
 import type {
   ColorObject,
   LOG_LEVELS,
-  NestedMatrix4,
   Point3,
   TreeType,
   UnitLong,
   Vector3,
+  Vector4,
   Vector6,
 } from "oxalis/constants";
 import type {
@@ -61,17 +61,15 @@ export type ServerAdditionalAxis = {
   name: string;
 };
 
-export type AffineTransformation = {
-  type: "affine";
-  matrix: NestedMatrix4; // Stored in row major order.
-};
-
-export type ThinPlateSplineTransformation = {
-  type: "thin_plate_spline";
-  correspondences: { source: Vector3[]; target: Vector3[] };
-};
-
-export type CoordinateTransformation = AffineTransformation | ThinPlateSplineTransformation;
+export type CoordinateTransformation =
+  | {
+      type: "affine";
+      matrix: [Vector4, Vector4, Vector4, Vector4];
+    }
+  | {
+      type: "thin_plate_spline";
+      correspondences: { source: Vector3[]; target: Vector3[] };
+    };
 type APIDataLayerBase = {
   readonly name: string;
   readonly boundingBox: BoundingBoxObject;
@@ -97,8 +95,8 @@ export type APISegmentationLayer = APIDataLayerBase & {
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
 
 // Only used in rare cases to generalize over actual data layers and
-// a skeleton layer. The name should be the skeleton tracing id to very likely ensure it is unique.
-export type APISkeletonLayer = { category: "skeleton"; name: string };
+// a skeleton layer.
+export type APISkeletonLayer = { category: "skeleton" };
 
 export type LayerLink = {
   datasetId: string;

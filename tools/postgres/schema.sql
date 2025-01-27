@@ -350,7 +350,7 @@ CREATE TABLE webknossos.organization_usedStorage(
 );
 
 -- Create the enum type for transaction states
-CREATE TYPE webknossos.credit_transaction_state AS ENUM ('Pending', 'Completed', 'Refunded', 'Revoked');
+CREATE TYPE webknossos.credit_transaction_state AS ENUM ('Pending', 'Completed', 'Refunded', 'Revoked', 'Spent');
 
 -- Create the transactions table
 CREATE TABLE webknossos.organization_credit_transactions (
@@ -1074,7 +1074,7 @@ BEGIN
                   organization_id,
                   -credits_to_revoke,
                   CONCAT('Revoked free credits granted.'),
-                  'COMPLETED',
+                  'Completed',
                   CURRENT_TIMESTAMP,
                   CURRENT_TIMESTAMP
               );

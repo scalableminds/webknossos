@@ -118,7 +118,7 @@ class DSRemoteWebknossosClient @Inject()(
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/paths")
       .addQueryString("key" -> dataStoreKey)
       .silent
-      .put(dataSourcePaths)
+      .putJson(dataSourcePaths)
 
   def reserveDataSourceUpload(info: ReserveUploadInformation)(
       implicit tc: TokenContext): Fox[ReserveAdditionalInformation] =

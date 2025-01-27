@@ -20,7 +20,7 @@ import type {
   SegmentMap,
   VolumeTracing,
 } from "oxalis/store";
-import { getMappingInfo, getMaximumSegmentIdForLayer } from "../accessors/dataset_accessor";
+import { getMaximumSegmentIdForLayer } from "../accessors/dataset_accessor";
 import { mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
 
 export function updateVolumeTracing(

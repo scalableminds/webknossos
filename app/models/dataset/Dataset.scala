@@ -709,7 +709,12 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   }
 }
 
-case class DatasetMagInfo(datasetId: ObjectId, dataLayerName: String, mag: Vec3Int, path: String, realPath: String)
+case class DatasetMagInfo(datasetId: ObjectId,
+                          dataLayerName: String,
+                          mag: Vec3Int,
+                          path: String,
+                          realPath: String,
+                          hasLocalData: Boolean)
 
 object DatasetMagInfo {
   implicit val jsonFormat: Format[DatasetMagInfo] = Json.format[DatasetMagInfo]
@@ -740,13 +745,13 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
 
-  def updatePaths(datasetId: ObjectId, magPaths: List[MagPathInfo]): Fox[Unit] =
+  def updateMagPathsForDataset(datasetId: ObjectId, magPaths: List[MagPathInfo]): Fox[Unit] =
     for {
       _ <- Fox.successful(())
       updateQueries = magPaths.map(pathInfo => {
         val magLiteral = s"(${pathInfo.mag.x}, ${pathInfo.mag.y}, ${pathInfo.mag.z})"
         q"""UPDATE webknossos.dataset_mags
-                 SET path = ${pathInfo.path}, realPath = ${pathInfo.realPath}
+                 SET path = ${pathInfo.path}, realPath = ${pathInfo.realPath}, haslocaldata = ${pathInfo.hasLocalData}
                  WHERE _dataset = $datasetId
                   AND datalayername = ${pathInfo.layerName}
                   AND mag = CAST($magLiteral AS webknossos.vector3)""".asUpdate
@@ -761,7 +766,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   def findPathsForDatasetAndDatalayer(datasetId: ObjectId, dataLayerName: String): Fox[List[DatasetMagInfo]] =
     for {
-      rows <- run(q"""SELECT  _dataset, datalayername, mag, path, realPath
+      rows <- run(q"""SELECT  _dataset, datalayername, mag, path, realPath, hasLocalData
             FROM webknossos.dataset_mags
             WHERE _dataset = $datasetId
             AND datalayername = $dataLayerName""".as[DatasetMagsRow])
@@ -772,7 +777,8 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
                          dataLayerName,
                          mag,
                          row.path.getOrElse("uninitialized"),
-                         row.realpath.getOrElse("uninitialized"))
+                         row.realpath.getOrElse("uninitialized"),
+                         row.haslocaldata)
       }
     } yield magInfos
 
@@ -788,7 +794,8 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
                          row.datalayername,
                          mag,
                          row.path.getOrElse("uninitialized"),
-                         row.realpath.getOrElse("uninitialized"))
+                         row.realpath.getOrElse("uninitialized"),
+                         row.haslocaldata)
       }
     } yield magInfos
 }

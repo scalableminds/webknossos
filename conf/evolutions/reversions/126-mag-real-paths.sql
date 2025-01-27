@@ -4,6 +4,7 @@ do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 1
 
 ALTER TABLE webknossos.dataset_mags DROP COLUMN realPath;
 ALTER TABLE webknossos.dataset_mags DROP COLUMN path;
+ALTER TABLE webknossos.dataset_mags DROP COLUMN hasLocalData;
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 125;
 

@@ -180,6 +180,7 @@ CREATE TABLE webknossos.dataset_mags(
   mag webknossos.VECTOR3 NOT NULL,
   path TEXT,
   realPath TEXT,
+  hasLocalData BOOLEAN NOT NULL DEFAULT false,
   PRIMARY KEY (_dataset, dataLayerName, mag)
 );
 

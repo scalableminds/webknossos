@@ -42,7 +42,7 @@ object DataSourcePathInfo {
   implicit val jsonFormat: OFormat[DataSourcePathInfo] = Json.format[DataSourcePathInfo]
 }
 
-case class MagPathInfo(layerName: String, mag: Vec3Int, path: String, realPath: String)
+case class MagPathInfo(layerName: String, mag: Vec3Int, path: String, realPath: String, hasLocalData: Boolean)
 
 object MagPathInfo {
   implicit val jsonFormat: OFormat[MagPathInfo] = Json.format[MagPathInfo]

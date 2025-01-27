@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingPr
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
+import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import net.liftweb.common._
@@ -110,9 +110,9 @@ class DataSourceService @Inject()(
             rawLayerPath.toAbsolutePath
           }
           dataLayer.mags.map { mag =>
-            val (magURI, isRemote) = getMagPath(absoluteLayerPath, mag)
+            val (magURI, isRemote) = getMagURI(datasetPath, absoluteLayerPath, mag)
             if (isRemote) {
-              MagPathInfo(dataLayer.name, mag.mag, magURI.toString, magURI.toString)
+              MagPathInfo(dataLayer.name, mag.mag, magURI.toString, magURI.toString, hasLocalData = false)
             } else {
               val magPath = Paths.get(magURI)
               val realPath = if (Files.isSymbolicLink(magPath)) {
@@ -120,8 +120,15 @@ class DataSourceService @Inject()(
               } else {
                 magPath.toAbsolutePath
               }
-              val unresolvedPath = rawLayerPath.toAbsolutePath.resolve(absoluteLayerPath.relativize(magPath))
-              MagPathInfo(dataLayer.name, mag.mag, unresolvedPath.toUri.toString, realPath.toUri.toString)
+              // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
+              val isLocal = realPath.startsWith(datasetPath.toAbsolutePath)
+              val unresolvedPath =
+                rawLayerPath.toAbsolutePath.resolve(absoluteLayerPath.relativize(magPath)).normalize()
+              MagPathInfo(dataLayer.name,
+                          mag.mag,
+                          unresolvedPath.toUri.toString,
+                          realPath.toUri.toString,
+                          hasLocalData = isLocal)
             }
           }
         }
@@ -130,19 +137,15 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def getMagPath(layerPath: Path, mag: MagLocator): (URI, Boolean) =
-    mag.path match {
-      case Some(p) => (new URI(p), true) // TODO: Handle case where protocol is file (not remote)
-      case None => {
-        // Code duplication in RemoteSourceDescriptorService.uriForMagLocator
-        val withScalarMag = layerPath.resolve(mag.mag.toMagLiteral(allowScalar = true))
-        val withVec3Mag = layerPath.resolve(mag.mag.toMagLiteral())
-        val path = if (withScalarMag.toFile.exists) {
-          withScalarMag
-        } else withVec3Mag
-        (path.toUri, false)
-      }
-    }
+  private def getMagURI(datasetPath: Path, layerPath: Path, mag: MagLocator): (URI, Boolean) = {
+    val uri = remoteSourceDescriptorService.resolveMagPath(
+      datasetPath,
+      layerPath,
+      layerPath.getFileName.toString,
+      mag
+    )
+    (uri, DataVaultService.isRemoteScheme(uri.getScheme))
+  }
 
   private def resolveRelativePath(basePath: Path, relativePath: Path): Path =
     if (relativePath.isAbsolute) {

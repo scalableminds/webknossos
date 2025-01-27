@@ -343,7 +343,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   private def updateRealPath(pathInfo: DataSourcePathInfo)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val dataset = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).futureBox
     dataset.flatMap {
-      case Full(dataset) => datasetMagsDAO.updatePaths(dataset._id, pathInfo.magPathInfos)
+      case Full(dataset) => datasetMagsDAO.updateMagPathsForDataset(dataset._id, pathInfo.magPathInfos)
       case Empty => // Dataset reported but ignored (non-existing/forbidden org)
         Fox.successful(())
       case e: EmptyBox =>

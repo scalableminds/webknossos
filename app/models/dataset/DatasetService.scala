@@ -20,7 +20,7 @@ import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{User, UserService}
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.{Box, Empty, EmptyBox, Full}
 import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
 import utils.WkConf
@@ -340,17 +340,20 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- datasetDAO.updateUploader(dataset._id, Some(_uploader)) ?~> "dataset.uploader.forbidden"
     } yield ()
 
-  def updateRealPath(datastore: DataStore, pathInfo: DataSourcePathInfo)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      dataset <- datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId) ?~> "dataset.notFound"
-      //_ <- datasetDAO.assertUpdateAccess(dataset._id) ?~> "dataset.update.forbidden"
-      _ <- datasetMagsDAO.updatePaths(dataset._id, pathInfo.magPathInfos)
-    } yield ()
+  private def updateRealPath(pathInfo: DataSourcePathInfo)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val dataset = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).futureBox
+    dataset.flatMap {
+      case Full(dataset) => datasetMagsDAO.updatePaths(dataset._id, pathInfo.magPathInfos)
+      case Empty => // Dataset reported but ignored (non-existing/forbidden org)
+        Fox.successful(())
+      case e: EmptyBox =>
+        Fox.failure("dataset.notFound", e)
+    }
+  }
 
-  def updateRealPaths(datastore: DataStore, pathInfos: List[DataSourcePathInfo])(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateRealPaths(pathInfos: List[DataSourcePathInfo])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- Fox.serialCombined(pathInfos)(updateRealPath(datastore, _))
+      _ <- Fox.serialCombined(pathInfos)(updateRealPath)
     } yield ()
 
   def publicWrites(dataset: Dataset,

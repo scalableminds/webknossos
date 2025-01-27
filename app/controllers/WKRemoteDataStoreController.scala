@@ -218,11 +218,11 @@ class WKRemoteDataStoreController @Inject()(
   }
 
   def updatePaths(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    dataStoreService.validateAccess(name, key) { dataStore =>
+    dataStoreService.validateAccess(name, key) { _ =>
       request.body.validate[List[DataSourcePathInfo]] match {
         case JsSuccess(infos, _) =>
           for {
-            _ <- datasetService.updateRealPaths(dataStore, infos)(GlobalAccessContext)
+            _ <- datasetService.updateRealPaths(infos)(GlobalAccessContext)
           } yield {
             JsonOk
           }

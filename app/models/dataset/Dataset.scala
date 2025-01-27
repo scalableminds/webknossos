@@ -30,6 +30,7 @@ import models.organization.OrganizationDAO
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import play.utils.UriEncoding
+import slick.dbio.DBIO
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
@@ -736,18 +737,21 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   def updatePaths(datasetId: ObjectId, magPaths: List[MagPathInfo]): Fox[Unit] =
     for {
-      // TODO: Only update paths that have changed
-      _ <- Fox.serialCombined(magPaths)(pathInfo =>
-        for {
-          _ <- Fox.successful(())
-          magLiteral = s"(${pathInfo.mag.x}, ${pathInfo.mag.y}, ${pathInfo.mag.z})"
-          _ <- run(q"""UPDATE webknossos.dataset_mags
+      _ <- Fox.successful(())
+      updateQueries = magPaths.map(pathInfo => {
+        val magLiteral = s"(${pathInfo.mag.x}, ${pathInfo.mag.y}, ${pathInfo.mag.z})"
+        q"""UPDATE webknossos.dataset_mags
                  SET path = ${pathInfo.path}, realPath = ${pathInfo.realPath}
                  WHERE _dataset = $datasetId
                   AND datalayername = ${pathInfo.layerName}
-                  AND mag = CAST($magLiteral AS webknossos.vector3)""".asUpdate)
-        } yield ())
-
+                  AND mag = CAST($magLiteral AS webknossos.vector3)""".asUpdate
+      })
+      composedQuery = DBIO.sequence(updateQueries)
+      _ <- run(
+        composedQuery.transactionally.withTransactionIsolation(Serializable),
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError)
+      )
     } yield ()
 
 }

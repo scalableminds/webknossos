@@ -7,7 +7,10 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.OrganizationCreditTransactionsRow
 import com.scalableminds.webknossos.schema.Tables.OrganizationCreditTransactions
 import models.organization.CreditTransactionState.TransactionState
+import slick.dbio.{DBIO, Effect, NoStream}
+import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
+import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
@@ -144,30 +147,35 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
 
   def refundTransaction(transactionId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      // TODO: make this a proper sql transaction.
-      //_ <- run(q"START TRANSACTION".as[Unit])
-      // TODO: check write access
-      updatedTransactionCount <- run(
-        q"""UPDATE webknossos.organization_credit_transactions
-          SET state = 'Refunded', updated_at = NOW()
-          WHERE _id = $transactionId AND state = ${CreditTransactionState.Pending}
-          """.asUpdate
-      )
-      _ <- bool2Fox(updatedTransactionCount == 1) ?~> s"Refunding failed. Transaction $transactionId not found or no longer pending."
-      refundedTransaction <- findOne(transactionId)
-      refundAmount = refundedTransaction.creditChange * -1
-      _ <- bool2Fox(refundAmount >= 0) ?~> s"Refunds must not be negative."
-      refundComment = refundedTransaction._paidJob
+      transactionToRefund <- findOne(transactionId)
+      refundComment = transactionToRefund._paidJob
         .map(jobId => s"Refund for failed job $jobId.")
-        .getOrElse(s"Refund for transaction ${refundedTransaction._id}.")
-      // insert refund transaction
-      _ <- run(q"""INSERT INTO webknossos.organization_credit_transactions
+        .getOrElse(s"Refund for transaction $transactionId.")
+      setToRefunded = q"""UPDATE webknossos.organization_credit_transactions
+          SET state = ${CreditTransactionState.Refunded}, updated_at = NOW()
+          WHERE _id = $transactionId AND state = ${CreditTransactionState.Pending}
+          AND credit_change < 0
+          """.asUpdate
+      insertRefundTransaction = q"""
+        INSERT INTO webknossos.organization_credit_transactions
           (_id, _organization, credit_change, comment, _paid_job, state)
-          VALUES
-          (${ObjectId.generate}, ${refundedTransaction._organization}, ${refundAmount.toString()}::DECIMAL,
-          $refundComment, ${refundedTransaction._paidJob}, ${CreditTransactionState.Completed})
-          """.asUpdate)
-      //_ <- run(q"COMMIT TRANSACTION".as[Unit])
+        VALUES (
+          $transactionId,
+          ${transactionToRefund._organization},
+          (
+            SELECT credit_change * -1
+            FROM webknossos.organization_credit_transactions
+            WHERE _id = $transactionId
+              AND state = ${CreditTransactionState.Refunded}
+              AND credit_change < 0
+          ),
+          $refundComment,
+          ${transactionToRefund._paidJob},
+          ${CreditTransactionState.Completed}
+        )
+      """.asUpdate
+      updatedRows <- run(DBIO.sequence(List(setToRefunded, insertRefundTransaction)).transactionally)
+      _ <- bool2Fox(updatedRows.forall(_ == 1)) ?~> s"Failed to refund transaction ${transactionToRefund._id} properly."
     } yield ()
 
   def findTransactionForJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =

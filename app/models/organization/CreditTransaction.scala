@@ -7,10 +7,9 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.OrganizationCreditTransactionsRow
 import com.scalableminds.webknossos.schema.Tables.OrganizationCreditTransactions
 import models.organization.CreditTransactionState.TransactionState
-import slick.dbio.{DBIO, Effect, NoStream}
+import slick.dbio.DBIO
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject

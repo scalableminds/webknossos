@@ -1047,7 +1047,6 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                   : null}
               </>
             ),
-            disabled: isSkeletonLayerTransformed(state),
           },
           {
             key: "load-agglomerate-skeleton",

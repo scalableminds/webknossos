@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
+import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -71,6 +72,7 @@ class VolumeTracingService @Inject()(
     with VolumeDataZipHelper
     with ProtoGeometryImplicits
     with FoxImplicits
+    with Formatter
     with LazyLogging {
 
   implicit val volumeDataStore: FossilDBClient = tracingDataStore.volumeData
@@ -503,7 +505,8 @@ class VolumeTracingService @Inject()(
 
     zipResult.onComplete {
       case b: scala.util.Success[Box[Unit]] =>
-        logger.info(s"Zipping volume data for $tracingId took ${Instant.since(before)} ms. Result: ${b.get}")
+        logger.info(
+          s"Zipping volume data for $tracingId took ${formatDuration(Instant.since(before))}. Result: ${b.get}")
       case _ => ()
     }
     zipResult

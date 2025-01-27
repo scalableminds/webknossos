@@ -260,10 +260,12 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_MAPPING": {
-      const { mappingName, mapping, mappingColors, mappingType, layerName } = action;
+      const { mappingName, mapping, mappingColors, mappingType, layerName, isMergerModeMapping } =
+        action;
 
       // Editable mappings cannot be disabled or switched for now
-      if (!isMappingActivationAllowed(state, mappingName, layerName)) return state;
+      if (!isMappingActivationAllowed(state, mappingName, layerName, !!isMergerModeMapping))
+        return state;
 
       const hideUnmappedIds =
         action.hideUnmappedIds != null
@@ -280,6 +282,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
           hideUnmappedIds,
           mappingStatus:
             mappingName != null ? MappingStatusEnum.ACTIVATING : MappingStatusEnum.DISABLED,
+          isMergerModeMapping,
         },
         layerName,
       );

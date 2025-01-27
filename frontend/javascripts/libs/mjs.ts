@@ -220,10 +220,6 @@ const M4x4 = {
     r[2] = m[14];
     return r;
   },
-
-  identity(): Matrix4x4 {
-    return BareM4x4.identity;
-  },
 };
 
 const V2 = {

@@ -1,6 +1,7 @@
 package com.scalableminds.util.mvc
 
 import com.google.protobuf.CodedInputStream
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
@@ -46,7 +47,7 @@ trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHel
   private def formatChain(chain: Box[Failure], includeTime: Boolean = true)(
       implicit messages: MessagesProvider): String = chain match {
     case Full(failure) =>
-      val serverTimeMsg = if (includeTime) "[Server Time " + formatDate(System.currentTimeMillis()) + "] " else ""
+      val serverTimeMsg = if (includeTime) s"[Server Time ${Instant.now}] " else ""
       serverTimeMsg + " <~ " + formatFailure(failure) + formatChain(failure.chain, includeTime = false)
     case _ => ""
   }

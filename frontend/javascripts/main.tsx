@@ -2,7 +2,7 @@ import { message } from "antd";
 import window, { document } from "libs/window";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import UnthrottledStore, { startSagas } from "oxalis/store";
-import { createRoot } from "react-dom/client";
+import { createRoot, ErrorInfo } from "react-dom/client";
 import { Provider } from "react-redux";
 
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
@@ -13,7 +13,7 @@ import ErrorBoundary from "components/error_boundary";
 import { RootForFastTooltips } from "components/fast_tooltip";
 import { load as loadFeatureToggles } from "features";
 import checkBrowserFeatures from "libs/browser_feature_check";
-import ErrorHandling from "libs/error_handling";
+import ErrorHandling, { handleGenericError } from "libs/error_handling";
 import UserLocalStorage from "libs/user_local_storage";
 import { compress, decompress } from "lz-string";
 import { setupApi } from "oxalis/api/internal_api";
@@ -29,6 +29,7 @@ import Router from "router";
 
 import "../stylesheets/main.less";
 import GlobalThemeProvider, { getThemeFromUser } from "theme";
+import { escalateErrorAction } from "oxalis/model/actions/actions";
 
 // Suppress warning emitted by Olvy because it tries to eagerly initialize
 window.OlvyConfig = null;
@@ -76,7 +77,8 @@ async function loadHasOrganizations() {
   try {
     const hasOrganizations = await checkAnyOrganizationExists();
     Store.dispatch(setHasOrganizationsAction(hasOrganizations));
-  } catch (_e) {
+  } catch (e) {
+    Store.dispatch(escalateErrorAction(e));
     // pass
   }
 }

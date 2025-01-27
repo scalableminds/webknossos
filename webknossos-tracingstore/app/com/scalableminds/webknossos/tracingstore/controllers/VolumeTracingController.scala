@@ -35,8 +35,8 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   NeighborsParameters
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  MergedVolumeStats,
   MagRestrictions,
+  MergedVolumeStats,
   TSFullMeshService,
   UpdateMappingNameAction,
   VolumeDataZipFormat,

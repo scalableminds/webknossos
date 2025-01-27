@@ -2,6 +2,7 @@ package models.analytics
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox}
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -100,13 +101,14 @@ class AnalyticsSessionService @Inject()(wkConf: WkConf) extends LazyLogging {
   private lazy val pause: FiniteDuration = wkConf.BackendAnalytics.sessionPause
 
   // format: userId → (lastRefreshTimestamp, sessionId)
-  private lazy val sessionIdStore: scala.collection.mutable.Map[ObjectId, (Long, Long)] = scala.collection.mutable.Map()
+  private lazy val sessionIdStore: scala.collection.mutable.Map[ObjectId, (Instant, Long)] =
+    scala.collection.mutable.Map()
 
   def refreshAndGetSessionId(multiUserId: ObjectId): Long = {
-    val now: Long = System.currentTimeMillis()
+    val now = Instant.now
     sessionIdStore.synchronized {
-      val valueOld = sessionIdStore.getOrElse(multiUserId, (-1L, -1L))
-      val idToSet = if (valueOld._1 + pause.toMillis < now) now else valueOld._2
+      val valueOld = sessionIdStore.getOrElse(multiUserId, (Instant.zero, -1L))
+      val idToSet = if (valueOld._1 + pause < now) now.epochMillis else valueOld._2
       sessionIdStore.put(multiUserId, (now, idToSet))
       idToSet
     }

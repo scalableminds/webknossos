@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.slacknotification
 
+import com.scalableminds.util.time.Instant
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Json
@@ -8,11 +9,11 @@ import scala.concurrent.duration.DurationInt
 
 class SlackClient(rpc: RPC, slackUri: String, name: String, verboseLoggingEnabled: Boolean) extends LazyLogging {
 
-  private lazy val RateLimitInterval = 1 minute
-  private lazy val RateLimitMaxMessages = 30
+  private lazy val rateLimitInterval = 1 minute
+  private lazy val rateLimitMaxMessages = 30
 
   private var messagesSentSinceReset = 0
-  private var lastResetTimestamp: Long = 0L
+  private var lastResetTimestamp: Instant = Instant.zero
 
   def warn(title: String, msg: String): Unit =
     sendMessage(title, msg, "#ff8a00")
@@ -54,13 +55,13 @@ class SlackClient(rpc: RPC, slackUri: String, name: String, verboseLoggingEnable
 
   private def testAndSetRateLimit: Boolean =
     this.synchronized {
-      val currentTimestamp = System.currentTimeMillis()
-      if (currentTimestamp - lastResetTimestamp > RateLimitInterval.toMillis) {
+      val currentTimestamp = Instant.now
+      if (currentTimestamp - lastResetTimestamp > rateLimitInterval) {
         lastResetTimestamp = currentTimestamp
         messagesSentSinceReset = 1
         true
       } else {
-        if (messagesSentSinceReset < RateLimitMaxMessages) {
+        if (messagesSentSinceReset < rateLimitMaxMessages) {
           messagesSentSinceReset += 1
           true
         } else false

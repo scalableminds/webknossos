@@ -187,7 +187,7 @@ async function onCreateNode(
 
   if (updateMapping) {
     // Update mapping
-    api.data.setMapping(segmentationLayerName, idMapping);
+    api.data.setMapping(segmentationLayerName, idMapping, { isMergerModeMapping: true });
   }
 }
 
@@ -239,7 +239,9 @@ async function onDeleteNode(
     deleteIdMappingOfSegment(segmentId, nodeWithTreeId.treeId, mergerModeState);
 
     if (updateMapping) {
-      api.data.setMapping(segmentationLayerName, mergerModeState.idMapping);
+      api.data.setMapping(segmentationLayerName, mergerModeState.idMapping, {
+        isMergerModeMapping: true,
+      });
     }
   }
 }
@@ -282,7 +284,9 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: UpdateAction
       delete nodeSegmentMap[id];
     }
 
-    api.data.setMapping(segmentationLayerName, mergerModeState.idMapping);
+    api.data.setMapping(segmentationLayerName, mergerModeState.idMapping, {
+      isMergerModeMapping: true,
+    });
   }
 }
 
@@ -412,7 +416,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
     await Promise.all(nodesMappedPromises);
   }
 
-  api.data.setMapping(segmentationLayerName, idMapping);
+  api.data.setMapping(segmentationLayerName, idMapping, { isMergerModeMapping: true });
 }
 
 function resetState(mergerModeState: Partial<MergerModeState> = {}) {

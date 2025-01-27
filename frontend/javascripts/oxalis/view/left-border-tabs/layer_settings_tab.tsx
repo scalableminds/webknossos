@@ -919,7 +919,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <FastTooltip
         title={
           isSelectiveVisibilityDisabled
-            ? "This behavior is overriden by the 'selective segment visibility' button in the toolbar, because the proofreading tool is active."
+            ? "This behavior is overridden by the 'selective segment visibility' button in the toolbar, because the proofreading tool is active."
             : "When enabled, only hovered or active segments will be shown."
         }
       >

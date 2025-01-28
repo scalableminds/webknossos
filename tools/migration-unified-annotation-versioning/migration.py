@@ -71,7 +71,7 @@ class Migration:
                     newest_version = self.get_newest_version(tracing_id, update_collection)
                     versions += newest_version
                 if versions > 1:
-                    logger.info(f"{versions} versions for {annotation['_id']}{self.get_progress(offset=0)}")
+                    logger.info(f"{versions} versions for {annotation['_id']}{self.get_progress(offset=1)}")
             else:
                 logger.debug(f"Migrating annotation {annotation['_id']} (dry={self.args.dry}) ...")
                 mapping_id_map = self.build_mapping_id_map(annotation)

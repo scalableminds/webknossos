@@ -1,3 +1,4 @@
+import { TypedArray } from "oxalis/constants";
 import * as THREE from "three";
 
 /* The UpdatableTexture class exposes a way to partially update a texture.
@@ -75,13 +76,7 @@ class UpdatableTexture extends THREE.Texture {
     return this.renderer.properties.get(this).__webglTexture != null;
   }
 
-  update(
-    src: Float32Array | Uint8Array | Int8Array | Int16Array | Uint32Array,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-  ) {
+  update(src: TypedArray, x: number, y: number, width: number, height: number) {
     if (originalTexSubImage2D == null) {
       // See explanation at declaration of originalTexSubImage2D.
       originalTexSubImage2D = this.gl.texSubImage2D.bind(this.gl);

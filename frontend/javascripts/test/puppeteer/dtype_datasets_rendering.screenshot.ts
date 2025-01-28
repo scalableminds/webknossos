@@ -3,6 +3,7 @@ import type { DatasetLayerConfiguration, PartialDatasetConfiguration } from "oxa
 import "test/mocks/lz4";
 import urljoin from "url-join";
 import {
+  createAnnotationForDatasetScreenshot,
   getDefaultRequestOptions,
   getNewPage,
   screenshotDataset,
@@ -130,35 +131,49 @@ test.serial("Dataset IDs were retrieved successfully", (t) => {
   }
 });
 
-specs.map(async (spec) => {
-  test.serial(`it should render ${spec.name} correctly`, async (t) => {
-    await withRetry(
-      1,
-      async () => {
-        console.log("Making screenshot...");
-        const { screenshot, width, height } = await screenshotDataset(
-          await getNewPage(t.context.browser),
-          URL,
-          datasetNameToId[spec.datasetName],
-          spec.viewOverride,
-          spec.datasetConfig,
-        );
-        console.log("Comparing screenshot...");
-        const changedPixels = await compareScreenshot(
-          screenshot,
-          width,
-          height,
-          BASE_PATH,
-          spec.name,
-        );
-        return isPixelEquivalent(changedPixels, width, height);
-      },
-      (condition) => {
-        t.true(
-          condition,
-          `Dataset spec with name: "${spec.name}" does not look the same, see ${spec.name}.diff.png for the difference and ${spec.name}.new.png for the new screenshot.`,
-        );
-      },
+datasetNames.map(async (datasetName) => {
+  test(`it should render ${datasetName} correctly`, async (t) => {
+    console.time("Getting new page...");
+    console.timeEnd("Getting new page...");
+    console.time("Creating annotation...");
+    const annotation = await createAnnotationForDatasetScreenshot(
+      URL,
+      datasetNameToId[datasetName],
     );
+    console.timeEnd("Creating annotation...");
+    for (const spec of specs.filter((spec) => spec.datasetName === datasetName)) {
+      const page = await getNewPage(t.context.browser);
+      await withRetry(
+        1,
+        async () => {
+          console.time("Making screenshot...");
+          const { screenshot, width, height } = await screenshotDataset(
+            page,
+            URL,
+            datasetNameToId[spec.datasetName],
+            annotation,
+            spec.viewOverride,
+            spec.datasetConfig,
+          );
+          console.timeEnd("Making screenshot...");
+          console.time("Comparing screenshot...");
+          const changedPixels = await compareScreenshot(
+            screenshot,
+            width,
+            height,
+            BASE_PATH,
+            spec.name,
+          );
+          console.timeEnd("Comparing screenshot...");
+          return isPixelEquivalent(changedPixels, width, height);
+        },
+        (condition) => {
+          t.true(
+            condition,
+            `Dataset spec with name: "${spec.name}" does not look the same, see ${spec.name}.diff.png for the difference and ${spec.name}.new.png for the new screenshot.`,
+          );
+        },
+      );
+    }
   });
 });

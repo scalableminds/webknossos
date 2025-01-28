@@ -12,6 +12,7 @@ import type { RequestOptions } from "libs/request";
 import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
 import { sleep } from "libs/utils";
+import { APIAnnotation } from "types/api_flow_types";
 
 export const { WK_AUTH_TOKEN } = process.env;
 
@@ -37,19 +38,24 @@ export function getDefaultRequestOptions(baseUrl: string): RequestOptions {
   };
 }
 
+export async function createAnnotationForDatasetScreenshot(baseUrl: string, datasetId: string) {
+  const options = getDefaultRequestOptions(baseUrl);
+  return createExplorational(datasetId, "skeleton", false, null, null, null, options);
+}
+
 export async function screenshotDataset(
   page: Page,
   baseUrl: string,
   datasetId: string,
+  optAnnotation?: APIAnnotation,
   optionalViewOverride?: string | null | undefined,
   optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
 ): Promise<Screenshot> {
   return _screenshotAnnotationHelper(
     page,
+    async () => optAnnotation ?? createAnnotationForDatasetScreenshot(baseUrl, datasetId),
     baseUrl,
     datasetId,
-    "skeleton",
-    null,
     optionalViewOverride,
     optionalDatasetConfigOverride,
   );
@@ -65,10 +71,20 @@ export async function screenshotAnnotation(
 ): Promise<Screenshot> {
   return _screenshotAnnotationHelper(
     page,
+    () => {
+      const options = getDefaultRequestOptions(baseUrl);
+      return createExplorational(
+        datasetId,
+        "hybrid",
+        false,
+        fallbackLayerName,
+        null,
+        null,
+        options,
+      );
+    },
     baseUrl,
     datasetId,
-    "hybrid",
-    fallbackLayerName,
     optionalViewOverride,
     optionalDatasetConfigOverride,
   );
@@ -76,23 +92,14 @@ export async function screenshotAnnotation(
 
 async function _screenshotAnnotationHelper(
   page: Page,
+  getAnnotation: () => Promise<APIAnnotation>,
   baseUrl: string,
   datasetId: string,
-  typ: "skeleton" | "volume" | "hybrid",
-  fallbackLayerName: string | null,
   optionalViewOverride?: string | null | undefined,
   optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
-  const createdExplorational = await createExplorational(
-    datasetId,
-    typ,
-    false,
-    fallbackLayerName,
-    null,
-    null,
-    options,
-  );
+  const createdExplorational = await getAnnotation();
 
   if (optionalDatasetConfigOverride != null) {
     await updateDatasetConfiguration(datasetId, optionalDatasetConfigOverride, options);
@@ -204,7 +211,7 @@ async function waitForRenderingFinish(page: Page) {
   // If the screenshot of the page didn't change in the last x seconds, rendering should be finished
   while (currentShot == null || !isPixelEquivalent(changedPixels, width, height)) {
     console.log(`Waiting for rendering to finish. Changed pixels: ${changedPixels}`);
-    await sleep(5000);
+    await sleep(1000);
     currentShot = await page.screenshot({
       fullPage: true,
     });

@@ -141,6 +141,7 @@ datasetNames.map(async (datasetName) => {
           await getNewPage(t.context.browser),
           URL,
           datasetNameToId[datasetName],
+          undefined,
           viewOverrides[datasetName],
           datasetConfigOverrides[datasetName],
         );
@@ -308,6 +309,7 @@ test.serial(
           await getNewPage(t.context.browser),
           URL,
           datasetNameToId[datasetName],
+          undefined,
           viewOverride,
         );
         const changedPixels = await compareScreenshot(

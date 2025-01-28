@@ -15,6 +15,9 @@ import { sleep } from "libs/utils";
 
 export const { WK_AUTH_TOKEN } = process.env;
 
+// todop: change to false before merging
+const USE_LOCAL_CHROME = true;
+
 type Screenshot = {
   screenshot: Buffer;
   width: number;
@@ -201,7 +204,7 @@ async function waitForRenderingFinish(page: Page) {
   // If the screenshot of the page didn't change in the last x seconds, rendering should be finished
   while (currentShot == null || !isPixelEquivalent(changedPixels, width, height)) {
     console.log(`Waiting for rendering to finish. Changed pixels: ${changedPixels}`);
-    await sleep(20000);
+    await sleep(5000);
     currentShot = await page.screenshot({
       fullPage: true,
     });
@@ -328,7 +331,6 @@ export async function withRetry(
   testFn: () => Promise<boolean>,
   resolveFn: (arg0: boolean) => void,
 ) {
-  retryCount = 3;
   for (let i = 0; i < retryCount; i++) {
     const condition = await testFn();
 
@@ -352,37 +354,41 @@ export function setupBeforeEachAndAfterEach() {
   test.beforeEach(async (t) => {
     // TODO Consider removing running local screenshot tests entirely and only use Browserstack
 
-    // Use this for connecting to local Chrome browser instance
-    // t.context.browser = await puppeteer.launch({
-    //   args: [
-    //     "--headless=new",
-    //     "--hide-scrollbars",
-    //     "--no-sandbox",
-    //     "--disable-setuid-sandbox",
-    //     "--disable-dev-shm-usage",
-    //     "--use-gl=swiftshader",
-    //   ],
-    //   dumpio: true,
-    // });
-
-    const caps = {
-      browser: "chrome",
-      browser_version: "latest",
-      os: "os x",
-      os_version: "mojave",
-      name: t.title, // add test name to BrowserStack session
-      "browserstack.username": process.env.BROWSERSTACK_USERNAME,
-      "browserstack.accessKey": process.env.BROWSERSTACK_ACCESS_KEY,
-    };
-    const browser = await puppeteer.connect({
-      browserWSEndpoint: `ws://cdp.browserstack.com/puppeteer?caps=${encodeURIComponent(
-        JSON.stringify(caps),
-      )}`,
-    });
-    t.context.browser = browser;
+    if (USE_LOCAL_CHROME) {
+      // Use this for connecting to local Chrome browser instance
+      t.context.browser = await puppeteer.launch({
+        args: [
+          "--headless=new",
+          "--hide-scrollbars",
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          // "--use-gl-egl",
+          "--use-angle=gl-egl",
+        ],
+        dumpio: true,
+        executablePath: "/usr/bin/google-chrome", // this might need to be adapted to your local setup
+      });
+    } else {
+      const caps = {
+        browser: "chrome",
+        browser_version: "latest",
+        os: "os x",
+        os_version: "mojave",
+        name: t.title, // add test name to BrowserStack session
+        "browserstack.username": process.env.BROWSERSTACK_USERNAME,
+        "browserstack.accessKey": process.env.BROWSERSTACK_ACCESS_KEY,
+      };
+      const browser = await puppeteer.connect({
+        browserWSEndpoint: `ws://cdp.browserstack.com/puppeteer?caps=${encodeURIComponent(
+          JSON.stringify(caps),
+        )}`,
+      });
+      t.context.browser = browser;
+      console.log(`\nBrowserStack Session Id ${await getBrowserstackSessionId(browser)}\n`);
+    }
 
     console.log(`\nRunning chrome version ${await t.context.browser.version()}\n`);
-    console.log(`\nBrowserStack Session Id ${await getBrowserstackSessionId(browser)}\n`);
     global.Headers = Headers;
     global.fetch = fetch;
     global.Request = Request;

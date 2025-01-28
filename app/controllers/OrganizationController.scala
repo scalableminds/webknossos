@@ -260,7 +260,8 @@ class OrganizationController @Inject()(
         _ <- bool2Fox(request.identity.isOrganizationOwner) ?~> Messages("organization.creditOrder.notAuthorized")
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
         userEmail <- userService.emailFor(request.identity)
-        _ = logger.info(s"Received credit order for organization ${organization.name} with $requestedCredits credits by user $userEmail")
+        _ = logger.info(
+          s"Received credit order for organization ${organization.name} with $requestedCredits credits by user $userEmail")
         _ = Mailer ! Send(defaultMails.orderCreditsMail(request.identity, userEmail, requestedCredits))
         _ = Mailer ! Send(
           defaultMails.orderCreditsRequestMail(request.identity,

@@ -255,7 +255,12 @@ class JobController @Inject()(
             "bbox" -> bbox,
           )
           creditTransactionComment = s"Run for AI neuron segmentation for dataset ${dataset.name}"
-          jobAsJs <- runPaidJob(command, commandArgs, parsedBoundingBox, creditTransactionComment, request.identity, dataset._dataStore)
+          jobAsJs <- runPaidJob(command,
+                                commandArgs,
+                                parsedBoundingBox,
+                                creditTransactionComment,
+                                request.identity,
+                                dataset._dataStore)
         } yield Ok(jobAsJs)
       }
     }
@@ -290,7 +295,12 @@ class JobController @Inject()(
             "bbox" -> bbox,
           )
           creditTransactionComment = s"Run for AI mitochondria segmentation for dataset ${dataset.name}"
-          jobAsJs <- runPaidJob(command, commandArgs, parsedBoundingBox, creditTransactionComment, request.identity, dataset._dataStore)
+          jobAsJs <- runPaidJob(command,
+                                commandArgs,
+                                parsedBoundingBox,
+                                creditTransactionComment,
+                                request.identity,
+                                dataset._dataStore)
         } yield Ok(jobAsJs)
       }
     }
@@ -325,7 +335,12 @@ class JobController @Inject()(
             "annotation_id" -> annotationId
           )
           creditTransactionComment = s"Run AI neuron segmentation for dataset ${dataset.name}"
-          jobAsJs <- runPaidJob(command, commandArgs, datasetBoundingBox, creditTransactionComment, request.identity, dataset._dataStore)
+          jobAsJs <- runPaidJob(command,
+                                commandArgs,
+                                datasetBoundingBox,
+                                creditTransactionComment,
+                                request.identity,
+                                dataset._dataStore)
         } yield Ok(jobAsJs)
       }
     }
@@ -512,11 +527,11 @@ class JobController @Inject()(
     }
 
   private def runPaidJob(command: JobCommand,
-                 commandArgs: JsObject,
-                 jobBoundingBox: BoundingBox,
-                 creditTransactionComment: String,
-                 user: User,
-                 datastoreName: String)(implicit ctx: DBAccessContext): Fox[JsObject] = {
+                         commandArgs: JsObject,
+                         jobBoundingBox: BoundingBox,
+                         creditTransactionComment: String,
+                         user: User,
+                         datastoreName: String)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     val costsInCredits = jobService.calculateJobCosts(jobBoundingBox, command)
     for {
       _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costsInCredits)) ?~> "job.notEnoughCredits" // TODO: add error message to messages.conf
@@ -524,13 +539,17 @@ class JobController @Inject()(
                                                                    costsInCredits,
                                                                    creditTransactionComment,
                                                                    None)
-      job <- jobService.submitJob(command, commandArgs, user, datastoreName).futureBox.flatMap {
-        case Full(job) => Fox.successful(job)
-        case _ =>
-          creditTransactionService.refundTransactionWhenStartingJobFailed(creditTransaction)
-          Fox.failure("job.couldNotRunAlignSections")
+      job <- jobService
+        .submitJob(command, commandArgs, user, datastoreName)
+        .futureBox
+        .flatMap {
+          case Full(job) => Fox.successful(job)
+          case _ =>
+            creditTransactionService.refundTransactionWhenStartingJobFailed(creditTransaction)
+            Fox.failure("job.couldNotRunAlignSections")
 
-      }.toFox
+        }
+        .toFox
       _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
       js <- jobService.publicWrites(job)
     } yield js

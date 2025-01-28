@@ -1,4 +1,4 @@
-import { TypedArray } from "oxalis/constants";
+import type { TypedArray } from "oxalis/constants";
 import * as THREE from "three";
 
 /* The UpdatableTexture class exposes a way to partially update a texture.

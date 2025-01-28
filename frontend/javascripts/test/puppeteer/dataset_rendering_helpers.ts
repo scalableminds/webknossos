@@ -12,7 +12,7 @@ import type { RequestOptions } from "libs/request";
 import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
 import { sleep } from "libs/utils";
-import { APIAnnotation } from "types/api_flow_types";
+import type { APIAnnotation } from "types/api_flow_types";
 
 export const { WK_AUTH_TOKEN } = process.env;
 

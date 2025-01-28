@@ -88,7 +88,7 @@ class OrganizationController @Inject()(
     for {
       allOrgs <- organizationDAO.findAll(GlobalAccessContext) ?~> "organization.list.failed"
       org <- allOrgs.headOption.toFox ?~> "organization.list.failed"
-      js <- organizationService.publicWrites(org)
+      js <- organizationService.publicWrites(org)(GlobalAccessContext)
     } yield {
       if (allOrgs.length > 1) // Cannot list organizations publicly if there are multiple ones, due to privacy reasons
         Ok(JsNull)

@@ -238,7 +238,6 @@ class JobController @Inject()(
             "organization.notFound",
             dataset._organization)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferNeurons.notAllowed.organization" ~> FORBIDDEN
-          _ <- organizationService.ensureOrganizationHasPaidPlan(organization._id)
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
@@ -329,7 +328,7 @@ class JobController @Inject()(
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
-            "dataset_directory_namejob" -> dataset.directoryName,
+            "dataset_directory_name" -> dataset.directoryName,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
             "annotation_id" -> annotationId
@@ -534,7 +533,8 @@ class JobController @Inject()(
                          datastoreName: String)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     val costsInCredits = jobService.calculateJobCosts(jobBoundingBox, command)
     for {
-      _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costsInCredits)) ?~> "job.notEnoughCredits" // TODO: add error message to messages.conf
+      _ <- organizationService.ensureOrganizationHasPaidPlan(user._organization) ?~> "job.paidJob.notAllowed.noPaidPlan"
+      _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costsInCredits)) ?~> "job.notEnoughCredits"
       creditTransaction <- creditTransactionService.reserveCredits(user._organization,
                                                                    costsInCredits,
                                                                    creditTransactionComment,

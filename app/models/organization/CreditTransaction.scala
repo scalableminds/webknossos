@@ -159,7 +159,7 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
         INSERT INTO webknossos.organization_credit_transactions
           (_id, _organization, credit_change, comment, _paid_job, state)
         VALUES (
-          $transactionId,
+          ${ObjectId.generate},
           ${transactionToRefund._organization},
           (
             SELECT credit_change * -1

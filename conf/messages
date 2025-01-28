@@ -339,6 +339,10 @@ job.alignSections.notAllowed.organization = Aligning sections is only allowed fo
 job.additionalCoordinates.invalid = The passed additional coordinates are invalid.
 job.trainModel.notAllowed.organization = Training AI models is only allowed for datasets of your own organization.
 job.runInference.notAllowed.organization = Running inference is only allowed for datasets of your own organization.
+job.paidJob.notAllowed.noPaidPlan = You are not allowed to run this job because your organization does not have a paid plan.
+job.notEnoughCredits = Your organization does not have enough WEBKNOSSOS credits to run this job.
+
+creditTransaction.notPaidPlan = Your organization does not have a paid plan.
 
 voxelytics.disabled = Voxelytics workflow reporting and logging are not enabled for this WEBKNOSSOS instance.
 voxelytics.runNotFound = Workflow runs not found

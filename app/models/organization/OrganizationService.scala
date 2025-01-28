@@ -38,7 +38,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       "name" -> organization.name
     )
 
-  def publicWrites(organization: Organization, requestingUser: Option[User] = None): Fox[JsObject] = {
+  // TODO: Double check whether adding the implicit ctx does not break anything
+  def publicWrites(organization: Organization, requestingUser: Option[User] = None)(
+      implicit ctx: DBAccessContext): Fox[JsObject] = {
 
     val adminOnlyInfo = if (requestingUser.exists(_.isAdminOf(organization._id))) {
       Json.obj(
@@ -50,8 +52,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
       ownerBox <- userDAO.findOwnerByOrg(organization._id).futureBox
-      // TODO: Get rid of GlobalAccessContext here
-      creditBalance <- creditTransactionDAO.getCreditBalance(organization._id)(GlobalAccessContext)
+      creditBalance <- creditTransactionDAO.getCreditBalance(organization._id)
       ownerNameOpt = ownerBox.toOption.map(o => s"${o.firstName} ${o.lastName}")
     } yield
       Json.obj(
@@ -183,6 +184,6 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
   def ensureOrganizationHasPaidPlan(organizationId: String): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext)
-      _ <- bool2Fox(PricingPlan.isPaidPlan(organization.pricingPlan)) ?~> "creditTransaction.notPaid" // TODO: implement message
+      _ <- bool2Fox(PricingPlan.isPaidPlan(organization.pricingPlan)) ?~> "creditTransaction.notPaidPlan"
     } yield ()
 }

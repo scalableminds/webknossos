@@ -55,7 +55,7 @@ CREATE  FUNCTION webknossos.enforce_non_negative_balance() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER enforce_balance_trigger
+CREATE TRIGGER enforce_non_negative_balance_trigger
 BEFORE INSERT OR UPDATE ON webknossos.organization_credit_transactions
 FOR EACH ROW EXECUTE PROCEDURE webknossos.enforce_non_negative_balance();
 

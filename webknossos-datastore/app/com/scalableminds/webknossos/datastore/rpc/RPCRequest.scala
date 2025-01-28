@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.rpc
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.mvc.{Formatter, MimeTypes}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -28,6 +29,9 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     request = request.addQueryStringParameters(parameters: _*)
     this
   }
+
+  def withTokenFromContext(implicit tc: TokenContext): RPCRequest =
+    addQueryStringOptional("token", tc.userTokenOpt)
 
   def addHttpHeaders(hdrs: (String, String)*): RPCRequest = {
     request = request.addHttpHeaders(hdrs: _*)
@@ -102,65 +106,54 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     extractBytesResponse(performRequest)
   }
 
-  def post(): Fox[WSResponse] = {
+  def postEmpty(): Fox[WSResponse] = {
     request = request.withMethod("POST")
     performRequest
   }
 
-  def post(file: File): Fox[WSResponse] = {
+  def postEmptyWithJsonResponse[T: Reads](): Fox[T] = {
+    request = request.withMethod("POST")
+    parseJsonResponse(performRequest)
+  }
+
+  def postEmptyWithProtoResponse[T <: GeneratedMessage]()(companion: GeneratedMessageCompanion[T]): Fox[T] = {
+    request = request.withMethod("POST")
+    parseProtoResponse(performRequest)(companion)
+  }
+
+  def postFile(file: File): Fox[WSResponse] = {
     request = request.withBody(file).withMethod("POST")
     performRequest
   }
 
-  def postFormParseJson[T: Reads](parameters: Map[String, String]): Fox[T] = {
+  def postFormWithJsonResponse[T: Reads](parameters: Map[String, String]): Fox[T] = {
     request = request.withBody(parameters).withMethod("POST")
     parseJsonResponse(performRequest)
   }
 
-  def postWithJsonResponse[T: Reads]: Fox[T] = {
-    request = request.withMethod("POST")
+  def postJson[T: Writes](body: T): Fox[WSResponse] = {
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
+    performRequest
+  }
+
+  def postJsonWithJsonResponse[T: Writes, U: Reads](body: T): Fox[U] = {
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
     parseJsonResponse(performRequest)
   }
 
-  def postJsonWithBytesResponse[T: Writes](body: T = Json.obj()): Fox[Array[Byte]] = {
+  def postJsonWithBytesResponse[T: Writes](body: T): Fox[Array[Byte]] = {
     request =
       request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
     extractBytesResponse(performRequest)
   }
 
-  def post[T: Writes](body: T = Json.obj()): Fox[WSResponse] = {
+  def postJsonWithProtoResponse[J: Writes, T <: GeneratedMessage](body: J)(
+      companion: GeneratedMessageCompanion[T]): Fox[T] = {
     request =
       request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
-    performRequest
-  }
-
-  def postWithJsonResponse[TW: Writes, TR: Reads](body: TW = Json.obj()): Fox[TR] = {
-    request =
-      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
-    parseJsonResponse(performRequest)
-  }
-
-  def put[T: Writes](body: T = Json.obj()): Fox[WSResponse] = {
-    request =
-      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("PUT")
-    performRequest
-  }
-
-  def patch[T: Writes](body: T = Json.obj()): Fox[WSResponse] = {
-    request =
-      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("PATCH")
-    performRequest
-  }
-
-  def delete(): Fox[WSResponse] = {
-    request = request.withMethod("DELETE")
-    performRequest
-  }
-
-  def postJsonWithJsonResponse[T: Writes, U: Reads](body: T = Json.obj()): Fox[U] = {
-    request =
-      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
-    parseJsonResponse(performRequest)
+    parseProtoResponse(performRequest)(companion)
   }
 
   def postBytesWithBytesResponse(body: Array[Byte]): Fox[Array[Byte]] = {
@@ -168,17 +161,10 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     extractBytesResponse(performRequest)
   }
 
-  def postJsonWithProtoResponse[J: Writes, T <: GeneratedMessage](body: J = Json.obj())(
-      companion: GeneratedMessageCompanion[T]): Fox[T] = {
+  def postProto[T <: GeneratedMessage](body: T): Fox[Unit] = {
     request =
-      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
-    parseProtoResponse(performRequest)(companion)
-  }
-
-  def postJson[J: Writes](body: J = Json.obj()): Unit = {
-    request =
-      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
-    performRequest
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> protobufMimeType).withBody(body.toByteArray).withMethod("POST")
+    performRequest.map(_ => ())
   }
 
   def postProtoWithJsonResponse[T <: GeneratedMessage, J: Reads](body: T): Fox[J] = {
@@ -192,6 +178,23 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     request =
       request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> protobufMimeType).withBody(body.toByteArray).withMethod("POST")
     parseProtoResponse(performRequest)(companion)
+  }
+
+  def putJson[T: Writes](body: T): Fox[WSResponse] = {
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("PUT")
+    performRequest
+  }
+
+  def patchJson[T: Writes](body: T): Fox[WSResponse] = {
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("PATCH")
+    performRequest
+  }
+
+  def delete(): Fox[WSResponse] = {
+    request = request.withMethod("DELETE")
+    performRequest
   }
 
   private def performRequest: Fox[WSResponse] = {

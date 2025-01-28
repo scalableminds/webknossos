@@ -39,7 +39,7 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
         "LNAME" -> lastName,
       )
     )
-    rpc(uri).silent.withBasicAuth(conf.user, conf.password).put(userBody)
+    rpc(uri).silent.withBasicAuth(conf.user, conf.password).putJson(userBody)
   }
 
   def tagUser(user: User, tag: MailchimpTag): Unit =
@@ -63,7 +63,7 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
     val tagBody = Json.obj(
       "tags" -> List(Json.obj("name" -> MailchimpTag.format(tag), "status" -> "active"))
     )
-    rpc(uri).silent.withBasicAuth(conf.user, conf.password).post(tagBody)
+    rpc(uri).silent.withBasicAuth(conf.user, conf.password).postJson(tagBody)
   }
 
   def tagsForMultiUser(multiUser: MultiUser)(implicit ec: ExecutionContext): Fox[List[MailchimpTag]] =

@@ -51,7 +51,6 @@ GET      /v6/tasks/:id                                                        co
 POST     /v6/tasks                                                            controllers.LegacyApiController.createTaskV8()
 GET      /v6/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: String, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 
-
 # v6: support changes to v7
 GET      /v6/datasets                                                         controllers.LegacyApiController.listDatasetsV6(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
 GET      /v6/datasets/:organizationName/:datasetName                          controllers.LegacyApiController.readDatasetV6(organizationName: String, datasetName: String, sharingToken: Option[String])

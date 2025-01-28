@@ -64,7 +64,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
       tokenResponse <- rpc(serverInfos.token_endpoint)
         .silentIf(!conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled)
         .withBasicAuthOpt(Some(oidcConfig.clientId), oidcConfig.clientSecret)
-        .postFormParseJson[OpenIdConnectTokenResponse](
+        .postFormWithJsonResponse[OpenIdConnectTokenResponse](
           Map(
             "grant_type" -> "authorization_code",
             "client_id" -> oidcConfig.clientId,

@@ -10,9 +10,9 @@ import _ from "lodash";
 import messages from "messages";
 import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector2, Vector3 } from "oxalis/constants";
 import Constants, { ControlModeEnum, AnnotationStateFilterEnum } from "oxalis/constants";
-import type { SaveQueueType } from "oxalis/model/actions/save_actions";
 import type BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import {
+  parseProtoAnnotation,
   parseProtoListOfLong,
   parseProtoTracing,
   serializeProtoListOfLong,
@@ -28,69 +28,69 @@ import type {
   UserConfiguration,
   VolumeTracing,
 } from "oxalis/store";
-import type { Versions } from "oxalis/view/version_view";
 import ResumableJS from "resumablejs";
-import type {
-  APIAnnotation,
-  APIAnnotationInfo,
-  APIAnnotationType,
-  APIAnnotationVisibility,
-  APIAvailableTasksReport,
-  APIBuildInfo,
-  APICompoundType,
-  APIConnectomeFile,
-  APIDataSource,
-  APIDataSourceId,
-  APIDataStore,
-  APIDataset,
-  APIDatasetCompact,
-  APIFeatureToggles,
-  APIHistogramData,
-  APIMagRestrictions,
-  APIMapping,
-  APIMaybeUnimportedDataset,
-  APIMeshFile,
-  APIOrganization,
-  APIOrganizationCompact,
-  APIPricingPlanStatus,
-  APIProject,
-  APIProjectCreator,
-  APIProjectProgressReport,
-  APIProjectUpdater,
-  APIProjectWithStatus,
-  APIPublication,
-  APIScript,
-  APIScriptCreator,
-  APIScriptUpdater,
-  APITaskType,
-  APITeam,
-  APITimeInterval,
-  APITimeTrackingPerAnnotation,
-  APITimeTrackingPerUser,
-  APITimeTrackingSpan,
-  APITracingStore,
-  APIUpdateActionBatch,
-  APIUser,
-  APIUserCompact,
-  APIUserLoggedTime,
-  APIUserTheme,
-  AdditionalCoordinate,
-  AnnotationLayerDescriptor,
-  AnnotationViewConfiguration,
-  EditableLayerProperties,
-  ExperienceDomainList,
-  LayerLink,
-  MaintenanceInfo,
-  ServerEditableMapping,
-  ServerTracing,
-  ShortLink,
-  TracingType,
-  VoxelSize,
-  VoxelyticsChunkStatistics,
-  VoxelyticsLogLine,
-  VoxelyticsWorkflowListing,
-  VoxelyticsWorkflowReport,
-  ZarrPrivateLink,
+import {
+  type APIAnnotation,
+  type APIAnnotationInfo,
+  type APIAnnotationType,
+  type APIAnnotationVisibility,
+  type APIAvailableTasksReport,
+  type APIBuildInfo,
+  type APICompoundType,
+  type APIConnectomeFile,
+  type APIDataSource,
+  type APIDataSourceId,
+  type APIDataStore,
+  type APIDataset,
+  type APIDatasetCompact,
+  type APIFeatureToggles,
+  type APIHistogramData,
+  type APIMagRestrictions,
+  type APIMapping,
+  type APIMaybeUnimportedDataset,
+  type APIMeshFile,
+  type APIOrganization,
+  type APIOrganizationCompact,
+  type APIPricingPlanStatus,
+  type APIProject,
+  type APIProjectCreator,
+  type APIProjectProgressReport,
+  type APIProjectUpdater,
+  type APIProjectWithStatus,
+  type APIPublication,
+  type APIScript,
+  type APIScriptCreator,
+  type APIScriptUpdater,
+  type APITaskType,
+  type APITeam,
+  type APITimeInterval,
+  type APITimeTrackingPerAnnotation,
+  type APITimeTrackingPerUser,
+  type APITimeTrackingSpan,
+  type APITracingStore,
+  type APITracingStoreAnnotation,
+  type APIUpdateActionBatch,
+  type APIUser,
+  type APIUserCompact,
+  type APIUserLoggedTime,
+  type APIUserTheme,
+  type AdditionalCoordinate,
+  type AnnotationLayerDescriptor,
+  AnnotationLayerEnum,
+  type AnnotationViewConfiguration,
+  type ExperienceDomainList,
+  type LayerLink,
+  type MaintenanceInfo,
+  type ServerEditableMapping,
+  type ServerTracing,
+  type ShortLink,
+  type TracingType,
+  type VoxelSize,
+  type VoxelyticsChunkStatistics,
+  type VoxelyticsLogLine,
+  type VoxelyticsWorkflowListing,
+  type VoxelyticsWorkflowReport,
+  type ZarrPrivateLink,
 } from "types/api_flow_types";
 import type { ArbitraryObject } from "types/globals";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
@@ -487,7 +487,6 @@ export function reOpenAnnotation(
 
 export type EditableAnnotation = {
   name: string;
-  description: string;
   visibility: APIAnnotationVisibility;
   tags: Array<string>;
   viewConfiguration?: AnnotationViewConfiguration;
@@ -530,58 +529,14 @@ export function setOthersMayEditForAnnotation(
   );
 }
 
-export function updateAnnotationLayer(
-  annotationId: string,
-  annotationType: APIAnnotationType,
-  tracingId: string,
-  layerProperties: EditableLayerProperties,
-): Promise<{
-  name: string | null | undefined;
-}> {
-  return Request.sendJSONReceiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/editLayer/${tracingId}`,
-    {
-      method: "PATCH",
-      data: layerProperties,
-    },
-  );
-}
-
 type AnnotationLayerCreateDescriptor = {
-  typ: "Skeleton" | "Volume";
+  typ: AnnotationLayerEnum;
   name: string | null | undefined;
   autoFallbackLayer?: boolean;
   fallbackLayerName?: string | null | undefined;
   mappingName?: string | null | undefined;
   magRestrictions?: APIMagRestrictions | null | undefined;
 };
-
-export function addAnnotationLayer(
-  annotationId: string,
-  annotationType: APIAnnotationType,
-  newAnnotationLayer: AnnotationLayerCreateDescriptor,
-): Promise<APIAnnotation> {
-  return Request.sendJSONReceiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/addAnnotationLayer`,
-    {
-      method: "PATCH",
-      data: newAnnotationLayer,
-    },
-  );
-}
-
-export function deleteAnnotationLayer(
-  annotationId: string,
-  annotationType: APIAnnotationType,
-  layerName: string,
-): Promise<void> {
-  return Request.receiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/deleteAnnotationLayer?layerName=${layerName}`,
-    {
-      method: "PATCH",
-    },
-  );
-}
 
 export function finishAnnotation(
   annotationId: string,
@@ -639,7 +594,7 @@ export function duplicateAnnotation(
   });
 }
 
-export async function getAnnotationInformation(
+export async function getUnversionedAnnotationInformation(
   annotationId: string,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
@@ -692,14 +647,14 @@ export function createExplorational(
   if (typ === "skeleton") {
     layers = [
       {
-        typ: "Skeleton",
+        typ: AnnotationLayerEnum.Skeleton,
         name: "Skeleton",
       },
     ];
   } else if (typ === "volume") {
     layers = [
       {
-        typ: "Volume",
+        typ: AnnotationLayerEnum.Volume,
         name: fallbackLayerName,
         fallbackLayerName,
         autoFallbackLayer,
@@ -710,11 +665,11 @@ export function createExplorational(
   } else {
     layers = [
       {
-        typ: "Skeleton",
+        typ: AnnotationLayerEnum.Skeleton,
         name: "Skeleton",
       },
       {
-        typ: "Volume",
+        typ: AnnotationLayerEnum.Volume,
         name: fallbackLayerName,
         fallbackLayerName,
         autoFallbackLayer,
@@ -729,12 +684,14 @@ export function createExplorational(
 
 export async function getTracingsForAnnotation(
   annotation: APIAnnotation,
-  versions: Versions = {},
+  version?: number | null | undefined,
 ): Promise<Array<ServerTracing>> {
-  const skeletonLayers = annotation.annotationLayers.filter((layer) => layer.typ === "Skeleton");
+  const skeletonLayers = annotation.annotationLayers.filter(
+    (layer) => layer.typ === AnnotationLayerEnum.Skeleton,
+  );
   const fullAnnotationLayers = await Promise.all(
     annotation.annotationLayers.map((layer) =>
-      getTracingForAnnotationType(annotation, layer, versions),
+      getTracingForAnnotationType(annotation, layer, version),
     ),
   );
 
@@ -759,39 +716,28 @@ export async function acquireAnnotationMutex(
   return { canEdit, blockedByUser };
 }
 
-function extractVersion(
-  versions: Versions,
-  tracingId: string,
-  typ: "Volume" | "Skeleton",
-): number | null | undefined {
-  if (typ === "Skeleton") {
-    return versions.skeleton;
-  } else if (versions.volumes != null) {
-    return versions.volumes[tracingId];
-  }
-
-  return null;
-}
-
 export async function getTracingForAnnotationType(
   annotation: APIAnnotation,
   annotationLayerDescriptor: AnnotationLayerDescriptor,
-  versions: Versions = {},
+  version?: number | null | undefined,
 ): Promise<ServerTracing> {
   const { tracingId, typ } = annotationLayerDescriptor;
-  const version = extractVersion(versions, tracingId, typ);
   const tracingType = typ.toLowerCase() as "skeleton" | "volume";
-  const possibleVersionString = version != null ? `&version=${version}` : "";
-  const tracingArrayBuffer = await doWithToken((token) =>
-    Request.receiveArraybuffer(
-      `${annotation.tracingStore.url}/tracings/${tracingType}/${tracingId}?token=${token}${possibleVersionString}`,
+  const params = new URLSearchParams({ annotationId: annotation.id });
+  if (version != null) {
+    params.append("version", version.toString());
+  }
+  const tracingArrayBuffer = await doWithToken((token) => {
+    params.append("token", token);
+    return Request.receiveArraybuffer(
+      `${annotation.tracingStore.url}/tracings/${tracingType}/${tracingId}?${params}`,
       {
         headers: {
           Accept: "application/x-protobuf",
         },
       },
-    ),
-  );
+    );
+  });
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
 
   if (!process.env.IS_TESTING) {
@@ -815,8 +761,7 @@ export async function getTracingForAnnotationType(
 
 export function getUpdateActionLog(
   tracingStoreUrl: string,
-  tracingId: string,
-  versionedObjectType: SaveQueueType,
+  annotationId: string,
   oldestVersion?: number,
   newestVersion?: number,
 ): Promise<Array<APIUpdateActionBatch>> {
@@ -830,21 +775,48 @@ export function getUpdateActionLog(
       params.append("newestVersion", newestVersion.toString());
     }
     return Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/${versionedObjectType}/${tracingId}/updateActionLog?${params}`,
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
     );
   });
 }
 
-export function getNewestVersionForTracing(
+export function getNewestVersionForAnnotation(
   tracingStoreUrl: string,
-  tracingId: string,
-  tracingType: SaveQueueType,
+  annotationId: string,
 ): Promise<number> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/newestVersion?token=${token}`,
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}/newestVersion?token=${token}`,
     ).then((obj) => obj.version),
   );
+}
+
+export async function getAnnotationProto(
+  tracingStoreUrl: string,
+  annotationId: string,
+  version?: number | null | undefined,
+): Promise<APITracingStoreAnnotation> {
+  const params = new URLSearchParams();
+  if (version != null) {
+    params.append("version", version.toString());
+  }
+  const annotationArrayBuffer = await doWithToken((token) => {
+    params.append("token", token);
+    return Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}?${params}`,
+      {
+        headers: {
+          Accept: "application/x-protobuf",
+        },
+      },
+    );
+  });
+  const annotationProto = parseProtoAnnotation(annotationArrayBuffer);
+  if (!process.env.IS_TESTING) {
+    // Log to console as the decoded annotationProto is hard to inspect in the devtools otherwise.
+    console.log("Parsed protobuf annotation:", annotationProto);
+  }
+  return annotationProto;
 }
 
 export function hasSegmentIndexInDataStore(
@@ -894,6 +866,7 @@ export async function importVolumeTracing(
   tracing: Tracing,
   volumeTracing: VolumeTracing,
   dataFile: File,
+  version: number,
 ): Promise<number> {
   return doWithToken((token) =>
     Request.sendMultipartFormReceiveJSON(
@@ -901,22 +874,11 @@ export async function importVolumeTracing(
       {
         data: {
           dataFile,
-          currentVersion: volumeTracing.version,
+          currentVersion: version,
         },
       },
     ),
   );
-}
-
-export function convertToHybridTracing(
-  annotationId: string,
-  fallbackLayerName: string | null | undefined,
-): Promise<void> {
-  return Request.receiveJSON(`/api/annotations/Explorational/${annotationId}/makeHybrid`, {
-    method: "PATCH",
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ method: "PATCH"; fallbackLayer... Remove this comment to see the full error message
-    fallbackLayerName,
-  });
 }
 
 export async function downloadWithFilename(downloadUrl: string) {
@@ -932,16 +894,14 @@ export async function downloadAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
   showVolumeFallbackDownloadWarning: boolean = false,
-  versions: Versions = {},
+  version: number | null | undefined = null,
   downloadFileFormat: "zarr3" | "wkw" | "nml" = "wkw",
   includeVolumeData: boolean = true,
 ) {
-  const searchParams = new URLSearchParams();
-  Object.entries(versions).forEach(([key, val]) => {
-    if (val != null) {
-      searchParams.append(`${key}Version`, val.toString());
-    }
-  });
+  const params = new URLSearchParams();
+  if (version != null) {
+    params.append("version", version.toString());
+  }
 
   if (includeVolumeData && showVolumeFallbackDownloadWarning) {
     Toast.info(messages["annotation.no_fallback_data_included"], {
@@ -949,35 +909,20 @@ export async function downloadAnnotation(
     });
   }
   if (!includeVolumeData) {
-    searchParams.append("skipVolumeData", "true");
+    params.append("skipVolumeData", "true");
   } else {
     if (downloadFileFormat === "nml") {
       throw new Error(
         "Cannot download annotation with nml-only format while includeVolumeData is true",
       );
     }
-    searchParams.append("volumeDataZipFormat", downloadFileFormat);
+    params.append("volumeDataZipFormat", downloadFileFormat);
   }
 
-  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${searchParams}`;
+  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${params}`;
   await downloadWithFilename(downloadUrl);
 }
 
-// When the annotation is open, please use the corresponding method
-// in api_latest.js. It will take care of saving the annotation and
-// reloading it.
-export async function downsampleSegmentation(
-  annotationId: string,
-  annotationType: APIAnnotationType,
-  tracingId: string,
-): Promise<void> {
-  await Request.receiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/downsample?tracingId=${tracingId}`,
-    {
-      method: "PATCH",
-    },
-  );
-}
 // ### Datasets
 export async function getDatasets(
   isUnreported: boolean | null | undefined = null,
@@ -1366,17 +1311,20 @@ export async function triggerDatasetClearCache(
   dataSourceId: APIDataSourceId,
   layerName?: string,
 ): Promise<void> {
-  await doWithToken((token) =>
-    Request.triggerRequest(
-      `/data/triggers/reload/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}?token=${token}${
-        layerName ? `&layerName=${layerName}` : ""
-      }`,
+  await doWithToken((token) => {
+    const params = new URLSearchParams();
+    params.append("token", token);
+    if (layerName) {
+      params.append("layerName", layerName);
+    }
+    return Request.triggerRequest(
+      `/data/triggers/reload/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}?${params}`,
       {
         host: datastoreHost,
         method: "POST",
       },
-    ),
-  );
+    );
+  });
 }
 
 export async function deleteDatasetOnDisk(
@@ -1497,27 +1445,22 @@ export function fetchMapping(
   );
 }
 
-export function makeMappingEditable(
-  tracingStoreUrl: string,
-  tracingId: string,
-): Promise<ServerEditableMapping> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/makeMappingEditable?token=${token}`,
-      {
-        method: "POST",
-      },
-    ),
-  );
-}
-
 export function getEditableMappingInfo(
   tracingStoreUrl: string,
   tracingId: string,
+  annotationId: string,
+  version: number | undefined | null,
 ): Promise<ServerEditableMapping> {
-  return doWithToken((token) =>
-    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}/info?token=${token}`),
-  );
+  return doWithToken((token) => {
+    const params = new URLSearchParams({
+      token,
+      annotationId: `${annotationId}`,
+    });
+    if (version != null) {
+      params.append("version", version.toString());
+    }
+    return Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}/info?${params}`);
+  });
 }
 
 export function getPositionForSegmentInAgglomerate(
@@ -1528,14 +1471,14 @@ export function getPositionForSegmentInAgglomerate(
   segmentId: number,
 ): Promise<Vector3> {
   return doWithToken(async (token) => {
-    const urlParams = new URLSearchParams({
+    const params = new URLSearchParams({
       token,
       segmentId: `${segmentId}`,
     });
     const position = await Request.receiveJSON(
       `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${
         dataSourceId.directoryName
-      }/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${urlParams.toString()}`,
+      }/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${params.toString()}`,
     );
     return position;
   });
@@ -2001,9 +1944,10 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
     // Identity mapping, every segment is its own agglomerate
     listArrayBuffer = segmentIdBuffer;
   } else {
-    listArrayBuffer = await doWithToken((token) =>
-      Request.receiveArraybuffer(
-        `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?token=${token}`,
+    listArrayBuffer = await doWithToken((token) => {
+      const params = new URLSearchParams({ token });
+      return Request.receiveArraybuffer(
+        `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
         {
           method: "POST",
           body: segmentIdBuffer,
@@ -2011,8 +1955,8 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
             "Content-Type": "application/octet-stream",
           },
         },
-      ),
-    );
+      );
+    });
   }
   // Ensure that the values are bigint if the keys are bigint
   const adaptToType = Utils.isBigInt(segmentIds[0])
@@ -2027,14 +1971,21 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   tracingStoreUrl: string,
   tracingId: string,
   segmentIds: Array<T>,
+  annotationId: string,
+  version?: number | null | undefined,
 ): Promise<Mapping> {
+  const params = new URLSearchParams({ annotationId });
+  if (version != null) {
+    params.append("version", version.toString());
+  }
   const segmentIdBuffer = serializeProtoListOfLong<T>(
     // The tracing store expects the ids to be sorted
     segmentIds.sort(<T extends NumberLike>(a: T, b: T) => Number(a - b)),
   );
-  const listArrayBuffer: ArrayBuffer = await doWithToken((token) =>
-    Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?token=${token}`,
+  const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
+    params.append("token", token);
+    return Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
       {
         method: "POST",
         body: segmentIdBuffer,
@@ -2042,8 +1993,8 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
           "Content-Type": "application/octet-stream",
         },
       },
-    ),
-  );
+    );
+  });
 
   // Ensure that the values are bigint if the keys are bigint
   const adaptToType = Utils.isBigInt(segmentIds[0])
@@ -2062,7 +2013,7 @@ export function getEditableAgglomerateSkeleton(
 ): Promise<ArrayBuffer> {
   return doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
@@ -2224,7 +2175,7 @@ export async function getEdgesForAgglomerateMinCut(
 ): Promise<Array<MinCutTargetEdge>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphMinCut?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
       {
         data: {
           ...segmentsInfo,
@@ -2255,7 +2206,7 @@ export async function getNeighborsForAgglomerateNode(
 ): Promise<NeighborInfo> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
       {
         data: {
           ...segmentInfo,

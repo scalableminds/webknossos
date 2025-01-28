@@ -17,8 +17,6 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-
 import { CSS } from "@dnd-kit/utilities";
 import {
   clearCache,
-  convertToHybridTracing,
-  deleteAnnotationLayer,
   findDataPositionForLayer,
   findDataPositionForVolumeTracing,
   startComputeSegmentIndexFileJob,
@@ -28,7 +26,6 @@ import { Button, Col, Divider, Dropdown, type MenuProps, Modal, Row, Switch } fr
 import classnames from "classnames";
 import FastTooltip from "components/fast_tooltip";
 import { HoverIconButton } from "components/hover_icon_button";
-import LinkButton from "components/link_button";
 import update from "immutability-helper";
 import ErrorHandling from "libs/error_handling";
 import { M4x4, V3 } from "libs/mjs";
@@ -71,6 +68,10 @@ import {
 import { editAnnotationLayerAction } from "oxalis/model/actions/annotation_actions";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
+  pushSaveQueueTransaction,
+  pushSaveQueueTransactionIsolated,
+} from "oxalis/model/actions/save_actions";
+import {
   dispatchClipHistogramAsync,
   reloadHistogramAction,
   updateDatasetSettingAction,
@@ -85,6 +86,7 @@ import {
   invertTransform,
   transformPointUnscaled,
 } from "oxalis/model/helpers/transformation_helpers";
+import { addLayerToAnnotation, deleteAnnotationLayer } from "oxalis/model/sagas/update_actions";
 import { Model } from "oxalis/singletons";
 import { api } from "oxalis/singletons";
 import type {
@@ -115,6 +117,8 @@ import {
   type APIDataset,
   APIJobType,
   type APISkeletonLayer,
+  AnnotationLayerEnum,
+  type AnnotationLayerType,
   type EditableLayerProperties,
 } from "types/api_flow_types";
 import type { ValueOf } from "types/globals";
@@ -127,15 +131,11 @@ import { confirmAsync } from "../../../dashboard/dataset/helper_components";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
 import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_volume_layer_modal";
-import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 
 type DatasetSettingsProps = ReturnType<typeof mapStateToProps> &
   ReturnType<typeof mapDispatchToProps>;
 
 type State = {
-  // If this is set to not-null, the downsampling modal
-  // is shown for that VolumeTracing
-  volumeTracingToDownsample: VolumeTracing | null | undefined;
   isAddVolumeLayerModalVisible: boolean;
   preselectedSegmentationLayerName: string | undefined;
   segmentationLayerWasPreselected: boolean | undefined;
@@ -338,7 +338,6 @@ function LayerInfoIconWithTooltip({
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   onChangeUser: Record<keyof UserConfiguration, (...args: Array<any>) => any>;
   state: State = {
-    volumeTracingToDownsample: null,
     isAddVolumeLayerModalVisible: false,
     preselectedSegmentationLayerName: undefined,
     segmentationLayerWasPreselected: false,
@@ -433,26 +432,39 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     </div>
   );
 
-  getDeleteAnnotationLayerButton = (readableName: string, layer?: APIDataLayer) => (
+  getDeleteAnnotationLayerButton = (
+    readableName: string,
+    type: AnnotationLayerType,
+    tracingId: string,
+  ) => (
     <div className="flex-item">
       <FastTooltip title="Delete this annotation layer.">
         <i
-          onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
+          onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, type, tracingId)}
           className="fas fa-trash icon-margin-right"
         />
       </FastTooltip>
     </div>
   );
 
-  getDeleteAnnotationLayerDropdownOption = (readableName: string, layer?: APIDataLayer) => (
-    <div onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}>
+  getDeleteAnnotationLayerDropdownOption = (
+    readableName: string,
+    type: AnnotationLayerType,
+    tracingId: string,
+    layer?: APIDataLayer,
+  ) => (
+    <div
+      onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, type, tracingId, layer)}
+    >
       <i className="fas fa-trash icon-margin-right" />
       Delete this annotation layer
     </div>
   );
 
   deleteAnnotationLayerIfConfirmed = async (
-    readableAnnoationLayerName: string,
+    readableAnnotationLayerName: string,
+    type: AnnotationLayerType,
+    tracingId: string,
     layer?: APIDataLayer,
   ) => {
     const fallbackLayerNote =
@@ -461,7 +473,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         : "";
     const shouldDelete = await confirmAsync({
       title: `Deleting an annotation layer makes its content and history inaccessible. ${fallbackLayerNote}This cannot be undone. Are you sure you want to delete this layer?`,
-      okText: `Yes, delete annotation layer “${readableAnnoationLayerName}”`,
+      okText: `Yes, delete annotation layer “${readableAnnotationLayerName}”`,
       cancelText: "Cancel",
       maskClosable: true,
       closable: true,
@@ -475,12 +487,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       },
     });
     if (!shouldDelete) return;
+    this.props.deleteAnnotationLayer(tracingId, type, readableAnnotationLayerName);
     await Model.ensureSavedState();
-    await deleteAnnotationLayer(
-      this.props.tracing.annotationId,
-      this.props.tracing.annotationType,
-      readableAnnoationLayerName,
-    );
     location.reload();
   };
 
@@ -600,6 +608,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const { intensityRange } = layerSettings;
     const layer = getLayerByName(dataset, layerName);
     const isSegmentation = layer.category === "segmentation";
+    const layerType =
+      layer.category === "segmentation" ? AnnotationLayerEnum.Volume : AnnotationLayerEnum.Skeleton;
     const canBeMadeEditable =
       isSegmentation && layer.tracingId == null && this.props.controlMode === "TRACE";
     const isVolumeTracing = isSegmentation ? layer.tracingId != null : false;
@@ -667,7 +677,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         ? {
             label: (
               <div className="flex-item">
-                {this.getDeleteAnnotationLayerDropdownOption(readableName, layer)}
+                {this.getDeleteAnnotationLayerDropdownOption(
+                  readableName,
+                  layerType,
+                  layer.tracingId,
+                  layer,
+                )}
               </div>
             ),
             key: "deleteAnnotationLayer",
@@ -1152,21 +1167,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     }
 
     return (
-      <FastTooltip title="Open Dialog to Downsample Volume Data">
-        <LinkButton onClick={() => this.showDownsampleVolumeModal(volumeTracing)}>
-          <img
-            src="/assets/images/icon-downsampling.svg"
-            style={{
-              width: 20,
-              height: 20,
-              filter:
-                "invert(47%) sepia(52%) saturate(1836%) hue-rotate(352deg) brightness(99%) contrast(105%)",
-              verticalAlign: "top",
-              cursor: "pointer",
-            }}
-            alt="Magnification Icon"
-          />
-        </LinkButton>
+      <FastTooltip title="This volume tracing does not have data at all magnifications.">
+        <WarningOutlined
+          style={{
+            color: "var(--ant-color-warning)",
+          }}
+        />
       </FastTooltip>
     );
   };
@@ -1234,7 +1240,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             }}
           >
             <TransformationIcon layer={{ category: "skeleton" }} />
-            {!isOnlyAnnotationLayer ? this.getDeleteAnnotationLayerButton(readableName) : null}
+            {!isOnlyAnnotationLayer
+              ? this.getDeleteAnnotationLayerButton(
+                  readableName,
+                  AnnotationLayerEnum.Skeleton,
+                  tracing.skeleton.tracingId,
+                )
+              : null}
           </div>
         </div>
         {showSkeletons ? (
@@ -1308,18 +1320,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
-  showDownsampleVolumeModal = (volumeTracing: VolumeTracing) => {
-    this.setState({
-      volumeTracingToDownsample: volumeTracing,
-    });
-  };
-
-  hideDownsampleVolumeModal = () => {
-    this.setState({
-      volumeTracingToDownsample: null,
-    });
-  };
-
   showAddVolumeLayerModal = () => {
     this.setState({
       isAddVolumeLayerModalVisible: true,
@@ -1335,8 +1335,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   addSkeletonAnnotationLayer = async () => {
+    this.props.addSkeletonLayerToAnnotation();
     await Model.ensureSavedState();
-    await convertToHybridTracing(this.props.tracing.annotationId, null);
     location.reload();
   };
 
@@ -1560,14 +1560,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </Row>
         ) : null}
 
-        {this.state.volumeTracingToDownsample != null ? (
-          <DownsampleVolumeModal
-            hideDownsampleVolumeModal={this.hideDownsampleVolumeModal}
-            volumeTracing={this.state.volumeTracingToDownsample}
-            magsToDownsample={this.getVolumeMagsToDownsample(this.state.volumeTracingToDownsample)}
-          />
-        ) : null}
-
         {this.state.layerToMergeWithFallback != null ? (
           <MaterializeVolumeAnnotationModal
             selectedVolumeLayer={this.state.layerToMergeWithFallback}
@@ -1650,6 +1642,22 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   reloadHistogram(layerName: string) {
     dispatch(reloadHistogramAction(layerName));
+  },
+
+  addSkeletonLayerToAnnotation() {
+    dispatch(
+      pushSaveQueueTransactionIsolated(
+        addLayerToAnnotation({
+          typ: "Skeleton",
+          name: "skeleton",
+          fallbackLayerName: undefined,
+        }),
+      ),
+    );
+  },
+
+  deleteAnnotationLayer(tracingId: string, type: AnnotationLayerType, layerName: string) {
+    dispatch(pushSaveQueueTransaction([deleteAnnotationLayer(tracingId, layerName, type)]));
   },
 });
 

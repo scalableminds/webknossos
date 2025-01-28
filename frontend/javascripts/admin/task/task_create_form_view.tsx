@@ -1,10 +1,10 @@
 import { InboxOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 import {
   getActiveDatasetsOfMyOrganization,
-  getAnnotationInformation,
   getProjects,
   getScripts,
   getTaskTypes,
+  getUnversionedAnnotationInformation,
 } from "admin/admin_rest_api";
 import { createTaskFromNML, createTasks, getTask, updateTask } from "admin/api/tasks";
 import type {
@@ -485,17 +485,11 @@ function TaskCreateFormView({ taskId, history }: Props) {
                     return Promise.resolve();
                   }
 
-                  const annotationResponse =
-                    (await tryToAwaitPromise(
-                      getAnnotationInformation(value, {
-                        showErrorToast: false,
-                      }),
-                    )) ||
-                    (await tryToAwaitPromise(
-                      getAnnotationInformation(value, {
-                        showErrorToast: false,
-                      }),
-                    ));
+                  const annotationResponse = await tryToAwaitPromise(
+                    getUnversionedAnnotationInformation(value, {
+                      showErrorToast: false,
+                    }),
+                  );
 
                   if (annotationResponse?.dataSetName != null) {
                     form.setFieldsValue({

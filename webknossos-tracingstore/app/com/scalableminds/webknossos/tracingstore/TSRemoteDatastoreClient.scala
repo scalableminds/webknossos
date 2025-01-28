@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore
 
 import com.google.inject.Inject
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
@@ -40,37 +41,30 @@ class TSRemoteDatastoreClient @Inject()(
   private lazy val largestAgglomerateIdCache: AlfuCache[(RemoteFallbackLayer, Option[String], Option[String]), Long] =
     AlfuCache(timeToLive = 10 minutes)
 
-  def getAgglomerateSkeleton(userToken: Option[String],
-                             remoteFallbackLayer: RemoteFallbackLayer,
+  def getAgglomerateSkeleton(remoteFallbackLayer: RemoteFallbackLayer,
                              mappingNameOpt: Option[String],
-                             agglomerateId: Long): Fox[Array[Byte]] =
+                             agglomerateId: Long)(implicit tc: TokenContext): Fox[Array[Byte]] =
     for {
       mappingName <- mappingNameOpt.toFox ?~> "cannot get agglomerate skeleton without hdf5 base mapping"
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-      result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/skeleton/$agglomerateId")
-        .addQueryStringOptional("token", userToken)
-        .getWithBytesResponse
+      result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/skeleton/$agglomerateId").withTokenFromContext.getWithBytesResponse
     } yield result
 
-  def getData(remoteFallbackLayer: RemoteFallbackLayer,
-              dataRequests: List[WebknossosDataRequest],
-              userToken: Option[String]): Fox[(Array[Byte], List[Int])] =
+  def getData(remoteFallbackLayer: RemoteFallbackLayer, dataRequests: List[WebknossosDataRequest])(
+      implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-      response <- rpc(s"$remoteLayerUri/data").addQueryStringOptional("token", userToken).silent.post(dataRequests)
+      response <- rpc(s"$remoteLayerUri/data").withTokenFromContext.silent.postJson(dataRequests)
       _ <- bool2Fox(Status.isSuccessful(response.status))
       bytes = response.bodyAsBytes.toArray
       indices <- parseMissingBucketHeader(response.header(missingBucketsHeader)) ?~> "failed to parse missing bucket header"
     } yield (bytes, indices)
 
-  def getVoxelAtPosition(userToken: Option[String],
-                         remoteFallbackLayer: RemoteFallbackLayer,
-                         pos: Vec3Int,
-                         mag: Vec3Int): Fox[Array[Byte]] =
+  def getVoxelAtPosition(remoteFallbackLayer: RemoteFallbackLayer, pos: Vec3Int, mag: Vec3Int)(
+      implicit tc: TokenContext): Fox[Array[Byte]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-      result <- rpc(s"$remoteLayerUri/data")
-        .addQueryStringOptional("token", userToken)
+      result <- rpc(s"$remoteLayerUri/data").withTokenFromContext
         .addQueryString("x" -> pos.x.toString)
         .addQueryString("y" -> pos.y.toString)
         .addQueryString("z" -> pos.z.toString)
@@ -84,15 +78,12 @@ class TSRemoteDatastoreClient @Inject()(
 
   def getAgglomerateIdsForSegmentIds(remoteFallbackLayer: RemoteFallbackLayer,
                                      mappingNameOpt: Option[String],
-                                     segmentIdsOrdered: List[Long],
-                                     userToken: Option[String]): Fox[List[Long]] =
+                                     segmentIdsOrdered: List[Long])(implicit tc: TokenContext): Fox[List[Long]] =
     mappingNameOpt.map { mappingName =>
       for {
         remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
         segmentIdsOrderedProto = ListOfLong(items = segmentIdsOrdered)
-        result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/agglomeratesForSegments")
-          .addQueryStringOptional("token", userToken)
-          .silent
+        result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/agglomeratesForSegments").withTokenFromContext.silent
           .postProtoWithProtoResponse[ListOfLong, ListOfLong](segmentIdsOrderedProto)(ListOfLong)
       } yield result.items.toList
     }.getOrElse(Fox.successful(segmentIdsOrdered))
@@ -100,8 +91,7 @@ class TSRemoteDatastoreClient @Inject()(
   def getAgglomerateGraph(remoteFallbackLayer: RemoteFallbackLayer,
                           mappingNameOpt: Option[String],
                           agglomerateId: Long,
-                          segmentPosition: Option[Vec3Int],
-                          userToken: Option[String]): Fox[AgglomerateGraph] =
+                          segmentPosition: Option[Vec3Int])(implicit tc: TokenContext): Fox[AgglomerateGraph] =
     mappingNameOpt match {
       case None =>
         // Identity mapping: graph with just the agglomerate id as mapping.
@@ -114,17 +104,14 @@ class TSRemoteDatastoreClient @Inject()(
       case Some(mappingName) =>
         for {
           remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-          result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/agglomerateGraph/$agglomerateId").silent
-            .addQueryStringOptional("token", userToken)
-            .silent
+          result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/agglomerateGraph/$agglomerateId").silent.withTokenFromContext.silent
             .getWithProtoResponse[AgglomerateGraph](AgglomerateGraph)
         } yield result
     }
 
-  def getLargestAgglomerateId(remoteFallbackLayer: RemoteFallbackLayer,
-                              mappingNameOpt: Option[String],
-                              userToken: Option[String]): Fox[Long] = {
-    val cacheKey = (remoteFallbackLayer, mappingNameOpt, userToken)
+  def getLargestAgglomerateId(remoteFallbackLayer: RemoteFallbackLayer, mappingNameOpt: Option[String])(
+      implicit tc: TokenContext): Fox[Long] = {
+    val cacheKey = (remoteFallbackLayer, mappingNameOpt, tc.userTokenOpt)
     largestAgglomerateIdCache.getOrLoad(
       cacheKey,
       k =>
@@ -139,26 +126,20 @@ class TSRemoteDatastoreClient @Inject()(
     )
   }
 
-  def hasSegmentIndexFile(remoteFallbackLayer: RemoteFallbackLayer, userToken: Option[String]): Fox[Boolean] =
+  def hasSegmentIndexFile(remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[Boolean] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-      hasIndexFile <- rpc(s"$remoteLayerUri/hasSegmentIndex")
-        .addQueryStringOptional("token", userToken)
-        .silent
-        .getWithJsonResponse[Boolean]
+      hasIndexFile <- rpc(s"$remoteLayerUri/hasSegmentIndex").withTokenFromContext.silent.getWithJsonResponse[Boolean]
     } yield hasIndexFile
 
   def querySegmentIndex(remoteFallbackLayer: RemoteFallbackLayer,
                         segmentId: Long,
                         mag: Vec3Int,
                         mappingName: Option[String], // should be the baseMappingName in case of editable mappings
-                        editableMappingTracingId: Option[String],
-                        userToken: Option[String]): Fox[Seq[Vec3Int]] =
+                        editableMappingTracingId: Option[String])(implicit tc: TokenContext): Fox[Seq[Vec3Int]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-      positions <- rpc(s"$remoteLayerUri/segmentIndex/$segmentId")
-        .addQueryStringOptional("token", userToken)
-        .silent
+      positions <- rpc(s"$remoteLayerUri/segmentIndex/$segmentId").withTokenFromContext.silent
         .postJsonWithJsonResponse[GetSegmentIndexParameters, Seq[Vec3Int]](GetSegmentIndexParameters(
           mag,
           cubeSize = Vec3Int.ones, // Don't use the cubeSize parameter here (since we want to calculate indices later anyway)
@@ -175,13 +156,10 @@ class TSRemoteDatastoreClient @Inject()(
       segmentIds: Seq[Long],
       mag: Vec3Int,
       mappingName: Option[String], // should be the baseMappingName in case of editable mappings
-      editableMappingTracingId: Option[String],
-      userToken: Option[String]): Fox[Seq[(Long, Seq[Vec3Int])]] =
+      editableMappingTracingId: Option[String])(implicit tc: TokenContext): Fox[Seq[(Long, Seq[Vec3Int])]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-      result <- rpc(s"$remoteLayerUri/segmentIndex")
-        .addQueryStringOptional("token", userToken)
-        .silent
+      result <- rpc(s"$remoteLayerUri/segmentIndex").withTokenFromContext.silent
         .postJsonWithJsonResponse[GetMultipleSegmentIndexParameters, Seq[SegmentIndexData]](
           GetMultipleSegmentIndexParameters(segmentIds.toList,
                                             mag,
@@ -191,26 +169,23 @@ class TSRemoteDatastoreClient @Inject()(
 
     } yield result.map(data => (data.segmentId, data.positions))
 
-  def loadFullMeshStl(token: Option[String],
-                      remoteFallbackLayer: RemoteFallbackLayer,
-                      fullMeshRequest: FullMeshRequest): Fox[Array[Byte]] =
+  def loadFullMeshStl(remoteFallbackLayer: RemoteFallbackLayer, fullMeshRequest: FullMeshRequest)(
+      implicit tc: TokenContext): Fox[Array[Byte]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-      result <- rpc(s"$remoteLayerUri/meshes/fullMesh.stl")
-        .addQueryStringOptional("token", token)
+      result <- rpc(s"$remoteLayerUri/meshes/fullMesh.stl").withTokenFromContext
         .postJsonWithBytesResponse(fullMeshRequest)
     } yield result
 
-  def voxelSizeForTracingWithCache(tracingId: String, token: Option[String]): Fox[VoxelSize] =
-    voxelSizeCache.getOrLoad(tracingId, tId => voxelSizeForTracing(tId, token))
+  def voxelSizeForTracingWithCache(tracingId: String)(implicit tc: TokenContext): Fox[VoxelSize] =
+    voxelSizeCache.getOrLoad(tracingId, tId => voxelSizeForTracing(tId))
 
-  private def voxelSizeForTracing(tracingId: String, token: Option[String]): Fox[VoxelSize] =
+  private def voxelSizeForTracing(tracingId: String)(implicit tc: TokenContext): Fox[VoxelSize] =
     for {
       dataSourceId <- remoteWebknossosClient.getDataSourceIdForTracing(tracingId)
       dataStoreUri <- dataStoreUriWithCache(dataSourceId.organizationId, dataSourceId.directoryName)
       result <- rpc(
-        s"$dataStoreUri/data/datasets/${dataSourceId.organizationId}/${dataSourceId.directoryName}/readInboxDataSource")
-        .addQueryStringOptional("token", token)
+        s"$dataStoreUri/data/datasets/${dataSourceId.organizationId}/${dataSourceId.directoryName}/readInboxDataSource").withTokenFromContext
         .getWithJsonResponse[InboxDataSource]
       scale <- result.voxelSizeOpt ?~> "could not determine voxel size of dataset"
     } yield scale

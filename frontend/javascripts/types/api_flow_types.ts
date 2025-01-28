@@ -684,6 +684,9 @@ export type APIFeatureToggles = {
   readonly allowDeleteDatasets: boolean;
   readonly jobsEnabled: boolean;
   readonly voxelyticsEnabled: boolean;
+  readonly neuronInferralCostsPerGVx: number;
+  readonly mitochondriaInferralCostsPerGVx: number;
+  readonly alignmentCostsPerGVx: number;
   readonly publicDemoDatasetUrl: string;
   readonly exportTiffMaxVolumeMVx: number;
   readonly exportTiffMaxEdgeLengthVx: number;

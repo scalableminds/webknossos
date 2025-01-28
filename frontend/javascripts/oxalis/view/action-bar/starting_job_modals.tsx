@@ -163,7 +163,7 @@ export function BoundingBoxSelection({
 }: {
   userBoundingBoxes: UserBoundingBox[];
   setSelectedBoundingBoxId?: (boundingBoxId: number | null) => void;
-  showVolume: boolean;
+  showVolume?: boolean;
   style?: React.CSSProperties;
   value: number | null;
 }): JSX.Element {

@@ -975,6 +975,7 @@ class PlaneMaterialFactory {
           // todop: adapt when adding new dtypes
         } else if (
           elementClass === "uint32" ||
+          elementClass === "int32" ||
           elementClass === "float" ||
           elementClass === "int16"
         ) {

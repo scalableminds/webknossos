@@ -54,55 +54,81 @@ const specs: Array<{
 }> = [
   // uint8
   {
-    name: "dtype_uint8_color_zoomed_in",
+    name: "01_dtype_uint8_color_zoomed_in",
     datasetName: "dtype_test_uint8_color",
     viewOverride: "512,1,0,0,0.047",
     datasetConfig: datasetConfigHelper("uint8_color", 0, 10),
   },
   {
-    name: "dtype_uint8_color_zoomed_out",
+    name: "02_dtype_uint8_color_zoomed_out",
     datasetName: "dtype_test_uint8_color",
     viewOverride: "512,256,16,0,2.0",
     datasetConfig: datasetConfigHelper("uint8_color", 0, 255),
   },
   // int8
   {
-    name: "dtype_int8_color_zoomed_in",
+    name: "03_dtype_int8_color_zoomed_in",
     datasetName: "dtype_test_int8_color",
     viewOverride: "512,1,0,0,0.047",
     datasetConfig: datasetConfigHelper("int8_color", -10, 10),
   },
   {
-    name: "dtype_int8_color_zoomed_out",
+    name: "04_dtype_int8_color_zoomed_out",
     datasetName: "dtype_test_int8_color",
     viewOverride: "512,256,16,0,2.0",
     datasetConfig: datasetConfigHelper("int8_color", -128, 127),
   },
-  // int16
-  {
-    name: "dtype_int16_color_zoomed_in",
-    datasetName: "dtype_test_int16_color",
-    viewOverride: "512,1,0,0,0.047",
-    datasetConfig: datasetConfigHelper("int16_color", -10, 10),
-  },
-  {
-    name: "dtype_int16_color_zoomed_out",
-    datasetName: "dtype_test_int16_color",
-    viewOverride: "512,256,16,0,2.0",
-    datasetConfig: datasetConfigHelper("int16_color", -32768, 32768),
-  },
   // uint16
   {
-    name: "dtype_uint16_color_zoomed_in",
+    name: "05_dtype_uint16_color_zoomed_in",
     datasetName: "dtype_test_uint16_color",
     viewOverride: "512,1,0,0,0.047",
     datasetConfig: datasetConfigHelper("uint16_color", 0, 10),
   },
   {
-    name: "dtype_uint16_color_zoomed_out",
+    name: "06_dtype_uint16_color_zoomed_out",
     datasetName: "dtype_test_uint16_color",
     viewOverride: "512,256,16,0,2.0",
-    datasetConfig: datasetConfigHelper("uint16_color", 0, 65536),
+    datasetConfig: datasetConfigHelper("uint16_color", 0, 2 ** 16 - 1),
+  },
+  // int16
+  {
+    name: "07_dtype_int16_color_zoomed_in",
+    datasetName: "dtype_test_int16_color",
+    viewOverride: "512,1,0,0,0.047",
+    datasetConfig: datasetConfigHelper("int16_color", -10, 10),
+  },
+  {
+    name: "08_dtype_int16_color_zoomed_out",
+    datasetName: "dtype_test_int16_color",
+    viewOverride: "512,256,16,0,2.0",
+    datasetConfig: datasetConfigHelper("int16_color", -32768, 32768),
+  },
+  // uint32
+  {
+    name: "09_dtype_uint32_color_zoomed_in",
+    datasetName: "dtype_test_uint32_color",
+    viewOverride: "512,1,0,0,0.047",
+    datasetConfig: datasetConfigHelper("uint32_color", 0, 10),
+  },
+  {
+    name: "10_dtype_uint32_color_zoomed_out",
+    datasetName: "dtype_test_uint32_color",
+    viewOverride: "512,256,16,0,2.0",
+    datasetConfig: datasetConfigHelper("uint32_color", 0, 2 ** 32 - 1),
+  },
+  // int32
+  {
+    name: "11_dtype_int32_color_zoomed_in",
+    datasetName: "dtype_test_int32_color",
+    viewOverride: "512,1,0,0,0.047",
+    datasetConfig: datasetConfigHelper("int32_color", -10, 10),
+  },
+  {
+    name: "12_dtype_int32_color_zoomed_out",
+    datasetName: "dtype_test_int32_color",
+    viewOverride: "512,256,16,0,2.0",
+    datasetConfig: datasetConfigHelper("int32_color", -(2 ** 31), 2 ** 31 - 1),
   },
 ];
 const datasetNames = _.uniq(specs.map((spec) => spec.datasetName));

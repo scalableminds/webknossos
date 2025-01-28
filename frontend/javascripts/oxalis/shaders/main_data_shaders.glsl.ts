@@ -86,8 +86,8 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
 <% _.each(colorLayerNames, function(name) { %>
   uniform vec3 <%= name %>_color;
-  uniform <%= textureLayerInfos[name].packingDegree == 1 ? "uint" : "float" %> <%= name %>_min;
-  uniform <%= textureLayerInfos[name].packingDegree == 1 ? "uint" : "float" %> <%= name %>_max;
+  uniform <%= glslTypeForElementClass(textureLayerInfos[name].elementClass) %> <%= name %>_min;
+  uniform <%= glslTypeForElementClass(textureLayerInfos[name].elementClass) %> <%= name %>_max;
   uniform float <%= name %>_is_inverted;
 <% }) %>
 
@@ -195,6 +195,25 @@ ${compileShader(
   almostEq,
 )}
 
+// todop: move somewhere else?
+float scaleIntToFloat(int x, int a, int b) {
+    // Convert to uint for safer calculations
+    uint ux = uint(x);
+    uint ua = uint(a);
+    uint ub = uint(b);
+
+    // Calculate the range and offset
+    uint range = ub - ua; // Safe for overflow
+    uint offset = ux - ua; // Safe subtraction
+
+    // Handle edge case where range is zero
+    if (range == 0u) {
+        return 0.0; // Or another meaningful value, depending on your needs
+    }
+
+    // Normalize to [0, 1] as a float
+    return float(offset) / float(range);
+}
 
 void main() {
   vec3 worldCoordUVW = getWorldCoordUVW();
@@ -262,22 +281,37 @@ void main() {
         color_value = maybe_filtered_color.color.rgb;
         <% if (textureLayerInfos[name].packingDegree === 1.0) { %>
           // Handle 32-bit color layers
-          // Scale from [0,1] to [0,255] so that we can convert to an uint
-          // below.
-          uvec4 four_bytes = uvec4(255. * maybe_filtered_color.color);
 
-          highp uint hpv =
-            uint(four_bytes.a) * uint(pow(256., 3.))
-            + uint(four_bytes.b) * uint(pow(256., 2.))
-            + uint(four_bytes.g) * 256u
-            + uint(four_bytes.r);
+          <% if (textureLayerInfos[name].elementClass === "int32") { %>
+            ivec4 four_bytes = ivec4(255. * maybe_filtered_color.color);
+            // Combine bytes into an Int32 (assuming little-endian order)
+            highp int hpv = four_bytes.r | (four_bytes.g << 8) | (four_bytes.b << 16) | (four_bytes.a << 24);
 
-          uint min_uint = <%= name %>_min;
-          uint max_uint = <%= name %>_max;
-          hpv = clamp(hpv, min_uint, max_uint);
-          color_value = vec3(
-            float(hpv - min_uint) / (float(max_uint - min_uint) + is_max_and_min_equal)
-          );
+            int typed_min = <%= name %>_min;
+            int typed_max = <%= name %>_max;
+            hpv = clamp(hpv, typed_min, typed_max);
+
+            color_value = vec3(
+                scaleIntToFloat(hpv, typed_min, typed_max)
+            );
+          <% } else { %>
+            // Scale from [0,1] to [0,255] so that we can convert to an uint
+            // below.
+            uvec4 four_bytes = uvec4(255. * maybe_filtered_color.color);
+            highp uint hpv =
+              uint(four_bytes.a) * uint(pow(256., 3.))
+              + uint(four_bytes.b) * uint(pow(256., 2.))
+              + uint(four_bytes.g) * 256u
+              + uint(four_bytes.r);
+
+            uint typed_min = <%= name %>_min;
+            uint typed_max = <%= name %>_max;
+            hpv = clamp(hpv, typed_min, typed_max);
+            color_value = vec3(
+              float(hpv - typed_min) / (float(typed_max - typed_min) + is_max_and_min_equal)
+            );
+          <% } %>
+
         <% } else { %>
           // Keep the color in bounds of min and max
           color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
@@ -364,6 +398,7 @@ void main() {
     OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
     hasSegmentation,
     isFragment: true,
+    glslTypeForElementClass,
   });
 }
 
@@ -562,5 +597,16 @@ void main() {
     isFragment: false,
     generateTpsInitialization,
     generateCalculateTpsOffsetFunction,
+    glslTypeForElementClass,
   });
+}
+
+// todop: move somewhere else?
+function glslTypeForElementClass(elementClass: ElementClass) {
+  if (elementClass === "uint32") {
+    return "uint";
+  } else if (elementClass === "int32") {
+    return "int";
+  }
+  return "float";
 }

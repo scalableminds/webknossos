@@ -239,10 +239,10 @@ export function getDefaultValueRangeOfLayer(
     case "int16":
       return [-(2 ** 15), 2 ** 15 - 1];
 
-    // We do not fully support all signed int data;
     case "int32":
-      return [0, 2 ** 31 - 1];
+      return [-(2 ** 31), 2 ** 31 - 1];
 
+    // We do not fully support all signed int data;
     case "int64":
       return [0, 2 ** 63 - 1];
 

@@ -387,6 +387,15 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         glslPrefix: "",
       };
 
+    case "int32":
+      return {
+        textureType: THREE.UnsignedByteType,
+        TypedArrayClass: Uint8Array,
+        pixelFormat: undefined,
+        internalFormat: undefined,
+        glslPrefix: "",
+      };
+
     case "uint64":
       return {
         textureType: THREE.UnsignedByteType,
@@ -406,15 +415,6 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
       };
 
     // We do not fully support all signed int data;
-    case "int32":
-      return {
-        textureType: THREE.UnsignedByteType,
-        TypedArrayClass: Uint8Array,
-        pixelFormat: undefined,
-        internalFormat: undefined,
-        glslPrefix: "",
-      };
-
     case "int64":
       return {
         textureType: THREE.UnsignedByteType,

@@ -31,6 +31,7 @@ export type BucketDataArray =
   | Int16Array
   | Uint16Array
   | Uint32Array
+  | Int32Array
   | Float32Array
   | BigUint64Array;
 
@@ -77,9 +78,11 @@ export type TypedArrayConstructor =
   | Uint8ArrayConstructor
   | Int16ArrayConstructor
   | Uint16ArrayConstructor
+  | Int32ArrayConstructor
   | Uint32ArrayConstructor
   | Float32ArrayConstructor
   | BigUint64ArrayConstructor;
+
 export const getConstructorForElementClass = (
   type: ElementClass,
 ): [TypedArrayConstructor, number] => {
@@ -100,6 +103,7 @@ export const getConstructorForElementClass = (
       return [Uint8Array, 3];
 
     case "int32":
+      return [Int32Array, 1];
     case "uint32":
       return [Uint32Array, 1];
 

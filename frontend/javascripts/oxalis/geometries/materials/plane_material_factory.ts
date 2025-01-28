@@ -43,7 +43,10 @@ import {
   getBucketRetrievalSourceFn,
   needsLocalHdf5Mapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import {
+  getDtypeConfigForElementClass,
+  getPackingDegree,
+} from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
@@ -56,6 +59,7 @@ import type { DatasetLayerConfiguration } from "oxalis/store";
 import Store from "oxalis/store";
 import * as THREE from "three";
 import type { ElementClass } from "types/api_flow_types";
+import type { ValueOf } from "types/globals";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;
@@ -74,7 +78,7 @@ const DEFAULT_COLOR = new THREE.Vector3(255, 255, 255);
 
 function sanitizeName(name: string | null | undefined): string {
   // todop: remove again
-  return name;
+  return name || "unknown name";
   // if (name == null) {
   //   return "";
   // }
@@ -96,12 +100,14 @@ function getTextureLayerInfos(): Params["textureLayerInfos"] {
   // keyBy the sanitized layer name as the lookup will happen in the shader using the sanitized layer name
   const layersObject = _.keyBy(layers, (layer) => sanitizeName(layer.name));
 
-  return _.mapValues(layersObject, (layer) => {
+  return _.mapValues(layersObject, (layer): ValueOf<Params["textureLayerInfos"]> => {
     const elementClass = getElementClass(dataset, layer.name);
     return {
       packingDegree: getPackingDegree(getByteCount(dataset, layer.name), elementClass),
+      glslPrefix: getDtypeConfigForElementClass(elementClass).glslPrefix,
       dataTextureCount: Model.getLayerRenderingManagerByName(layer.name).dataTextureCount,
       isSigned: elementClass.startsWith("int"),
+      elementClass,
       unsanitizedName: layer.name,
     };
   });

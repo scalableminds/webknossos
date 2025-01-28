@@ -3,9 +3,9 @@ import Toast from "libs/toast";
 import { document } from "libs/window";
 import _ from "lodash";
 import constants from "oxalis/constants";
-import THREE from "three";
+import * as THREE from "three";
 import type { ElementClass } from "types/api_flow_types";
-import { TypedArrayConstructor } from "./bucket";
+import type { TypedArrayConstructor } from "./bucket";
 
 type GpuSpecs = {
   supportedTextureSize: number;
@@ -126,11 +126,6 @@ export function getPackingDegree(byteCount: number, elementClass: ElementClass) 
   // If the layer holds less than 4 byte per voxel, we can pack multiple voxels using rgba channels
   // Float textures can hold a float per channel, adjust the packing degree accordingly
   // 64-bit values need two texel per data voxel which is why their packing degree is lower than 1.
-
-  // if (elementClass === "int16") {
-  //   // todop: can we avoid this edge case?
-  //   return 2;
-  // }
 
   if (byteCount === 1 || elementClass === "float") return 4;
   if (byteCount === 2) return 2;
@@ -341,6 +336,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
   TypedArrayClass: TypedArrayConstructor;
   pixelFormat: THREE.PixelFormat | undefined;
   internalFormat: THREE.PixelFormatGPU | undefined;
+  glslPrefix: "" | "u" | "i";
 } {
   // todop: adapt for new dtypes
 
@@ -350,7 +346,8 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         textureType: THREE.ByteType,
         TypedArrayClass: Int8Array,
         pixelFormat: undefined,
-        internalFormat: undefined,
+        internalFormat: "RGBA8_SNORM",
+        glslPrefix: "",
       };
     case "uint8":
     case "uint24":
@@ -360,30 +357,16 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         TypedArrayClass: Uint8Array,
         pixelFormat: undefined,
         internalFormat: undefined,
+        glslPrefix: "",
       };
 
     case "uint16":
       return {
-        textureType: THREE.UnsignedByteType,
-        TypedArrayClass: Uint8Array,
-        pixelFormat: undefined,
-        internalFormat: undefined,
-      };
-
-    case "uint32":
-      return {
-        textureType: THREE.UnsignedByteType,
-        TypedArrayClass: Uint8Array,
-        pixelFormat: undefined,
-        internalFormat: undefined,
-      };
-
-    case "uint64":
-      return {
-        textureType: THREE.UnsignedByteType,
-        TypedArrayClass: Uint8Array,
-        pixelFormat: undefined,
-        internalFormat: undefined,
+        textureType: THREE.UnsignedShortType,
+        TypedArrayClass: Uint16Array,
+        pixelFormat: THREE.RGIntegerFormat,
+        internalFormat: "RG16UI",
+        glslPrefix: "u",
       };
 
     case "int16":
@@ -392,6 +375,25 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         TypedArrayClass: Int16Array,
         pixelFormat: THREE.RGIntegerFormat,
         internalFormat: "RG16I",
+        glslPrefix: "i",
+      };
+
+    case "uint32":
+      return {
+        textureType: THREE.UnsignedByteType,
+        TypedArrayClass: Uint8Array,
+        pixelFormat: undefined,
+        internalFormat: undefined,
+        glslPrefix: "",
+      };
+
+    case "uint64":
+      return {
+        textureType: THREE.UnsignedByteType,
+        TypedArrayClass: Uint8Array,
+        pixelFormat: undefined,
+        internalFormat: undefined,
+        glslPrefix: "",
       };
 
     case "float":
@@ -400,6 +402,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         TypedArrayClass: Float32Array,
         pixelFormat: undefined,
         internalFormat: undefined,
+        glslPrefix: "",
       };
 
     // We do not fully support all signed int data;
@@ -409,6 +412,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         TypedArrayClass: Uint8Array,
         pixelFormat: undefined,
         internalFormat: undefined,
+        glslPrefix: "",
       };
 
     case "int64":
@@ -417,6 +421,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         TypedArrayClass: Uint8Array,
         pixelFormat: undefined,
         internalFormat: undefined,
+        glslPrefix: "",
       };
 
     case "double":
@@ -425,6 +430,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         TypedArrayClass: Uint8Array,
         pixelFormat: undefined,
         internalFormat: undefined,
+        glslPrefix: "",
       };
 
     default:
@@ -433,6 +439,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         TypedArrayClass: Uint8Array,
         pixelFormat: undefined,
         internalFormat: undefined,
+        glslPrefix: "",
       };
   }
 }

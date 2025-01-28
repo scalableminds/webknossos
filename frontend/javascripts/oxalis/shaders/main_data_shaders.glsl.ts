@@ -35,6 +35,7 @@ import {
   isNan,
   transDim,
 } from "./utils.glsl";
+import type { ElementClass } from "types/api_flow_types";
 
 export type Params = {
   globalLayerCount: number;
@@ -43,7 +44,14 @@ export type Params = {
   segmentationLayerNames: string[];
   textureLayerInfos: Record<
     string,
-    { packingDegree: number; dataTextureCount: number; isSigned: boolean }
+    {
+      packingDegree: number;
+      dataTextureCount: number;
+      isSigned: boolean;
+      glslPrefix: "" | "i" | "u";
+      elementClass: ElementClass;
+      unsanitizedName: string;
+    }
   >;
   magnificationsCount: number;
   voxelSizeFactor: Vector3;
@@ -67,8 +75,7 @@ uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL;
 uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
 <% _.each(layerNamesWithSegmentation, function(name) { %>
-  // todop: don't hardcode
-  uniform <%= name == "int16_color" ? "highp i" : "" %>sampler2D <%= name %>_textures[<%= textureLayerInfos[name].dataTextureCount %>];
+  uniform highp <%= textureLayerInfos[name].glslPrefix %>sampler2D <%= name %>_textures[<%= textureLayerInfos[name].dataTextureCount %>];
   uniform float <%= name %>_data_texture_width;
   uniform float <%= name %>_alpha;
   uniform float <%= name %>_gammaCorrectionValue;
@@ -253,11 +260,6 @@ void main() {
 
         // color_value is usually between 0 and 1.
         color_value = maybe_filtered_color.color.rgb;
-        <% if (textureLayerInfos[name].packingDegree === 2.0) { %>
-          // Handle 16-bit color layers
-          // todop: re-add
-          // color_value = vec3(color_value.g * 256.0 + color_value.r);
-        <% } %>
         <% if (textureLayerInfos[name].packingDegree === 1.0) { %>
           // Handle 32-bit color layers
           // Scale from [0,1] to [0,255] so that we can convert to an uint
@@ -278,7 +280,6 @@ void main() {
           );
         <% } else { %>
           // Keep the color in bounds of min and max
-          // todop: re-add code below  (del me)
           color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
           // Scale the color value according to the histogram settings.
           // Note: max == min would cause a division by 0. Thus we add 1 in this case and hide that value below
@@ -286,7 +287,6 @@ void main() {
           color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min + is_max_and_min_equal);
         <% } %>
 
-        // todop: re-add (del me)
         color_value = pow(color_value, 1. / vec3(<%= name %>_gammaCorrectionValue));
 
         // Maybe invert the color using the inverting_factor

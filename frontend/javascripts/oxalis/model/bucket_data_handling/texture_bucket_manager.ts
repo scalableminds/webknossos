@@ -5,17 +5,17 @@ import { waitForCondition } from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
 import { WkDevFlags } from "oxalis/api/wk_dev";
-import constants from "oxalis/constants";
+import constants, { type TypedArray } from "oxalis/constants";
 import { getRenderer } from "oxalis/controller/renderer";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
-import type { DataBucket, TypedArrayConstructor } from "oxalis/model/bucket_data_handling/bucket";
+import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import {
   getBucketCapacity,
   getChannelCount,
   getDtypeConfigForElementClass,
   getPackingDegree,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import * as THREE from "three";
+import type * as THREE from "three";
 import type { ElementClass } from "types/api_flow_types";
 
 // A TextureBucketManager instance is responsible for making buckets available
@@ -51,10 +51,7 @@ function getSomeValue<T>(set: Set<T>): T {
 
 const tmpPaddingBuffer = new Uint8Array(4 * constants.BUCKET_SIZE);
 // todop: adapt when adding new dtypes
-function maybePadRgbData(
-  src: Uint8Array | Int8Array | Int16Array | Float32Array,
-  elementClass: ElementClass,
-) {
+function maybePadRgbData(src: TypedArray, elementClass: ElementClass) {
   if (elementClass !== "uint24") {
     return src;
   }
@@ -64,8 +61,11 @@ function maybePadRgbData(
   let idx = 0;
   let srcIdx = 0;
   while (srcIdx < 3 * constants.BUCKET_SIZE) {
+    // @ts-ignore BigInt is not a problem as this code here only handles uint24 data
     tmpPaddingBuffer[idx++] = src[srcIdx++];
+    // @ts-ignore BigInt is not a problem as this code here only handles uint24 data
     tmpPaddingBuffer[idx++] = src[srcIdx++];
+    // @ts-ignore BigInt is not a problem as this code here only handles uint24 data
     tmpPaddingBuffer[idx++] = src[srcIdx++];
     tmpPaddingBuffer[idx++] = 255;
   }

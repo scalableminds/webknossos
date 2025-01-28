@@ -7,7 +7,7 @@ import { transDim } from "./utils.glsl";
 export const linearizeVec3ToIndex: ShaderModule = {
   requirements: [],
   code: `
-    // E.g., the vector [9, 5, 2]  will be linearized to the scalar index 900 + 50 + 2, when base == 10
+    // E.g., the vector [9, 5, 2] will be linearized to the scalar index 900 + 50 + 2, when base == 10
     float linearizeVec3ToIndex(vec3 position, float base) {
       return position.z * base * base + position.y * base + position.x;
     }
@@ -43,15 +43,16 @@ export const getRgbaAtXYIndex: ShaderModule = {
         <% if (textureLayerInfos[name].dataTextureCount === 1) { %>
             // Don't use if-else when there is only one data texture anyway
 
-            ivec4 val = texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0);
+            <%= textureLayerInfos[name].glslPrefix %>vec4 val = texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0);
 
-            // todop: revert.
-            return vec4(val.x, val.x, val.y, val.y);
-            if (val.x == 0) {
-              return vec4(1., 0., 1., 1.);
-            }
-
-            return vec4(val);
+            // todop: can we generalize this somehow?
+            <% if (textureLayerInfos[name].elementClass === "int16") { %>
+              return vec4(val.x, val.x, val.y, val.y);
+            <% } else if (textureLayerInfos[name].elementClass === "uint16") { %>
+              return vec4(val.x, val.x, val.y, val.y) / 256.;
+            <% } else { %>
+              return vec4(val);
+            <% }%>
         <% } else { %>
           if (textureIdx == 0.0) {
             return vec4(texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba);

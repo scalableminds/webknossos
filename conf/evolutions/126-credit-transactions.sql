@@ -75,83 +75,89 @@ DECLARE
     revoked_credit_count DECIMAL(14, 4) := 0;
 BEGIN
     -- Iterate through organizations
-    FOR organization_id IN
-        SELECT DISTINCT _organization
-        FROM webknossos.organization_credit_transactions
-        WHERE expiration_date <= CURRENT_DATE
-          AND state = 'Completed'
-          AND credit_change > 0
-    LOOP
-        -- Reset credits to revoke
-        credits_to_revoke := 0;
-        free_credits_spent := 0;
+    BEGIN
+      FOR organization_id IN
+          SELECT DISTINCT _organization
+          FROM webknossos.organization_credit_transactions
+          WHERE expiration_date <= CURRENT_DATE
+            AND state = 'Completed'
+            AND credit_change > 0
+      LOOP
+          -- Reset credits to revoke
+          credits_to_revoke := 0;
+          free_credits_spent := 0;
 
-        -- Iterate through expired credits transactions for this organization starting from the most recent
-        FOR free_credits_transaction IN
-            SELECT *
-            FROM webknossos.organization_credit_transactions
-            WHERE _organization = organization_id
-              AND expiration_date <= CURRENT_DATE
-              AND state = 'Completed'
-              AND credit_change > 0
-            ORDER BY created_at DESC
-        LOOP
-            -- Calculate spent credits since the free credit transaction
-            SELECT COALESCE(SUM(credit_change), 0)
-            INTO spent_credits_since_then
-            FROM webknossos.organization_credit_transactions
-            WHERE _organization = organization_id
-              AND created_at > free_credits_transaction.created_at
-              AND credit_change < 0
-              AND state = 'Completed';
+          -- Iterate through expired credits transactions for this organization starting from the most recent
+          FOR free_credits_transaction IN
+              SELECT *
+              FROM webknossos.organization_credit_transactions
+              WHERE _organization = organization_id
+                AND expiration_date <= CURRENT_DATE
+                AND state = 'Completed'
+                AND credit_change > 0
+              ORDER BY created_at DESC
+          LOOP
+              -- Calculate spent credits since the free credit transaction
+              SELECT COALESCE(SUM(credit_change), 0)
+              INTO spent_credits_since_then
+              FROM webknossos.organization_credit_transactions
+              WHERE _organization = organization_id
+                AND created_at > free_credits_transaction.created_at
+                AND credit_change < 0
+                AND state = 'Completed';
 
-            -- Spent credits are negative, so we negate them for easier calculation
-            spent_credits_since_then := spent_credits_since_then * -1;
-            -- Check if the credits have been fully spent
-            IF spent_credits_since_then >= (free_credits_transaction.credit_change + free_credits_spent) THEN
-                -- Fully spent, update state to 'SPENT', no need to increase revoked_credit_count
-                free_credits_spent := free_credits_spent + free_credits_transaction.credit_change;
-                UPDATE webknossos.organization_credit_transactions
-                SET state = 'Spent', updated_at = NOW()
-                WHERE id = free_credits_transaction.id;
-            ELSE
-                -- Calculate the amount to revoke
-                credits_to_revoke := credits_to_revoke + (free_credits_transaction.credit_change + free_credits_spent - spent_credits_since_then);
-                free_credits_spent := free_credits_spent + spent_credits_since_then;
+              -- Spent credits are negative, so we negate them for easier calculation
+              spent_credits_since_then := spent_credits_since_then * -1;
+              -- Check if the credits have been fully spent
+              IF spent_credits_since_then >= (free_credits_transaction.credit_change + free_credits_spent) THEN
+                  -- Fully spent, update state to 'SPENT', no need to increase revoked_credit_count
+                  free_credits_spent := free_credits_spent + free_credits_transaction.credit_change;
+                  UPDATE webknossos.organization_credit_transactions
+                  SET state = 'Spent', updated_at = NOW()
+                  WHERE id = free_credits_transaction.id;
+              ELSE
+                  -- Calculate the amount to revoke
+                  credits_to_revoke := credits_to_revoke + (free_credits_transaction.credit_change + free_credits_spent - spent_credits_since_then);
+                  free_credits_spent := free_credits_spent + spent_credits_since_then;
 
-                -- Update transaction state to 'REVOKED'
-                UPDATE webknossos.organization_credit_transactions
-                SET state = 'Revoked', updated_at = NOW()
-                WHERE id = free_credits_transaction.id;
+                  -- Update transaction state to 'REVOKED'
+                  UPDATE webknossos.organization_credit_transactions
+                  SET state = 'Revoked', updated_at = NOW()
+                  WHERE id = free_credits_transaction.id;
 
-                -- Add the date to the revoked dates set
-                -- (In PostgreSQL, we don't need a set; we will use it for information in the comment)
-            END IF;
-        END LOOP;
+                  -- Add the date to the revoked dates set
+                  -- (In PostgreSQL, we don't need a set; we will use it for information in the comment)
+              END IF;
+          END LOOP;
 
-        -- If there are credits to revoke, create a revocation transaction
-        IF credits_to_revoke > 0 THEN
-            INSERT INTO webknossos.organization_credit_transactions (
-                _organization, credit_change, comment, state, created_at, updated_at
-            )
-            VALUES (
-                organization_id,
-                -credits_to_revoke,
-                CONCAT('Revoked free credits granted.'),
-                'Completed',
-                CURRENT_TIMESTAMP,
-                CURRENT_TIMESTAMP
-            );
-            -- Log the revocation action for this organization
-            revoked_credit_count := revoked_credit_count + credits_to_revoke;
-            revoked_organizations_count := revoked_organizations_count + 1;
-        END IF;
+          -- If there are credits to revoke, create a revocation transaction
+          IF credits_to_revoke > 0 THEN
+              INSERT INTO webknossos.organization_credit_transactions (
+                  _organization, credit_change, comment, state, created_at, updated_at
+              )
+              VALUES (
+                  organization_id,
+                  -credits_to_revoke,
+                  CONCAT('Revoked free credits granted.'),
+                  'Completed',
+                  CURRENT_TIMESTAMP,
+                  CURRENT_TIMESTAMP
+              );
+              -- Log the revocation action for this organization
+              revoked_credit_count := revoked_credit_count + credits_to_revoke;
+              revoked_organizations_count := revoked_organizations_count + 1;
+          END IF;
 
-    END LOOP;
+      END LOOP;
 
-    -- Final notice about revoked credits
-    RAISE NOTICE 'Revoked temporary credits for % organizations, total credits revoked: %', revoked_organizations_count, revoked_credit_count;
-
+      -- Final notice about revoked credits
+      RAISE NOTICE 'Revoked temporary credits for % organizations, total credits revoked: %', revoked_organizations_count, revoked_credit_count;
+    EXCEPTION
+      WHEN OTHERS THEN
+        RAISE NOTICE 'Failed to revoke credits: %', SQLERRM;
+        RAISE;
+    END;
+    COMMIT;
 END;
 $$ LANGUAGE plpgsql;
 

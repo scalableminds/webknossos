@@ -9,3 +9,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - config options `proxy.prefix` and `proxy.routes` were renamed to `aboutPageRedirect.prefix` and `aboutPageRedirect.routes` (as we no longer proxy, but redirect). [#8344](https://github.com/scalableminds/webknossos/pull/8344)
 
 ### Postgres Evolutions:
+- [126-credit-transactions.sql](conf/evolutions/126-credit-transactions.sql)

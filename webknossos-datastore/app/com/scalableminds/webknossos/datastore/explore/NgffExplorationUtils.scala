@@ -265,7 +265,6 @@ trait NgffExplorationUtils extends FoxImplicits {
       layerAndVoxelSizeTuples = layers.map((_, VoxelSize(voxelSizeFactor, unifiedAxisUnit)))
     } yield layerAndVoxelSizeTuples
 
-  <<<<<<< HEAD
   protected def getTranslation(multiscale: NgffMultiscalesItem): Option[List[CoordinateTransformation]] = {
     val is2d = !multiscale.axes.exists(_.name == "z")
     val baseTranslation = if (is2d) List(1.0, 1.0) else List(1.0, 1.0, 1.0)

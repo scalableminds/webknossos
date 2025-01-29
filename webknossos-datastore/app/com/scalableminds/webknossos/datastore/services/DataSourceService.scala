@@ -122,11 +122,7 @@ class DataSourceService @Inject()(
               MagPathInfo(dataLayer.name, mag.mag, magURI.toString, magURI.toString, hasLocalData = false)
             } else {
               val magPath = Paths.get(magURI)
-              val realPath = if (Files.isSymbolicLink(magPath)) {
-                resolveRelativePath(datasetPath, Files.readSymbolicLink(magPath))
-              } else {
-                magPath.toAbsolutePath
-              }
+              val realPath = magPath.toRealPath()
               // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
               val isLocal = realPath.startsWith(datasetPath.toAbsolutePath)
               val unresolvedPath =

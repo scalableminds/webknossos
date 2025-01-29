@@ -567,7 +567,6 @@ function JobCostInformation({
     selectedBoundingBox,
   );
   const orgaHasEnoughCredits = jobCosts ? organizationCredits >= jobCosts : true;
-  console.log("isBoundingBoxConfigurable", isBoundingBoxConfigurable);
   return (
     <>
       <Row style={{ display: "grid", marginBottom: 16 }}>

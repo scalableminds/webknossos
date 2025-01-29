@@ -119,7 +119,7 @@ class TSAnnotationController @Inject()(
                                                              newAnnotationId,
                                                              version,
                                                              isFromTask,
-                                                             datasetBoundingBoxParsed)
+                                                             datasetBoundingBoxParsed) ?~> "annotation.duplicate.failed"
             } yield Ok(annotationProto.toByteArray).as(protobufMimeType)
           }
         }

@@ -340,7 +340,7 @@ class AnnotationController @Inject()(
   def duplicate(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
-      newAnnotation <- duplicateAnnotation(annotation, request.identity)
+      newAnnotation <- duplicateAnnotation(annotation, request.identity) ?~> "annotation.duplicate.failed"
       restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound"
       json <- annotationService
         .publicWrites(newAnnotation, Some(request.identity), Some(restrictions)) ?~> "annotation.write.failed"

@@ -23,7 +23,7 @@ def main():
     before = time.time()
     annotations = read_annotation_list(args)
     src_stub = connect_to_fossildb(args.src, "source")
-    mappings = []
+    mappings = {}
     for annotation in annotations:
         annotation_id = annotation["_id"]
         id_mapping_for_annotation = {}
@@ -36,7 +36,7 @@ def main():
                 except Exception as e:
                     logger.info(f"exception while checking layer {tracing_id} of {annotation_id}: {e}")
         if id_mapping_for_annotation:
-            mappings.append(id_mapping_for_annotation)
+            mappings[annotation_id] = id_mapping_for_annotation
 
     outfile_name = "mapping_tracing_mapping.json"
     logger.info(f"Writing mapping to {outfile_name}...")

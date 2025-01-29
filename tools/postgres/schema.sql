@@ -1096,6 +1096,3 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Schedule the job to run every night at 00:01
--- SELECT cron.schedule('RevokeExpiredCredits', '1 0 * * *', $$CALL webknossos.revoke_expired_credits();$$);
-

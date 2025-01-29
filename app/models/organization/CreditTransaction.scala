@@ -186,4 +186,8 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
       parsed <- parseFirst(r, jobId)
     } yield parsed
 
+  def runRevokeExpiredCredits(): Fox[Unit] =
+    for {
+      _ <- run(q"CALL webknossos.revoke_expired_credits()".asUpdate)
+    } yield ()
 }

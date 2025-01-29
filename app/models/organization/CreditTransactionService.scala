@@ -3,16 +3,23 @@ package models.organization
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.pekko.actor.ActorSystem
+import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransactionDAO,
-                                         organizationService: OrganizationService)(implicit ec: ExecutionContext)
+                                         organizationService: OrganizationService,
+                                         val lifecycle: ApplicationLifecycle,
+                                         val system: ActorSystem)(implicit val ec: ExecutionContext)
     extends FoxImplicits
-    with LazyLogging {
+    with LazyLogging
+    with IntervalScheduler {
 
   def hasEnoughCredits(organizationId: String, creditsToSpent: BigDecimal)(
       implicit ctx: DBAccessContext): Fox[Boolean] =
@@ -84,4 +91,14 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
         "isDeleted" -> transaction.isDeleted
       ))
 
+  override protected def tickerInterval: FiniteDuration = 1 hour
+
+  override protected def tick(): Unit =
+    for {
+      _ <- Fox.successful(())
+      _ = logger.info("Starting revoking expired credits...")
+      _ <- creditTransactionDAO.runRevokeExpiredCredits()
+      _ = logger.info("Finished revoking expired credits.")
+    } yield ()
+  ()
 }

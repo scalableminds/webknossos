@@ -369,13 +369,14 @@ class EditableMappingService @Inject()(
     } yield bytes
 
   def createAdHocMesh(editableMappingLayer: EditableMappingLayer,
-                      request: WebknossosAdHocMeshRequest): Fox[(Array[Float], List[Int])] = {
+                      request: WebknossosAdHocMeshRequest)(implicit tc:TokenContext): Fox[(Array[Float], List[Int])] = {
     val adHocMeshRequest = AdHocMeshRequest(
       dataSource = None,
       dataLayer = editableMappingLayer,
       cuboid = request.cuboid(editableMappingLayer),
       segmentId = request.segmentId,
       voxelSizeFactor = request.voxelSizeFactorInUnit,
+      tokenContext = tc,
       mapping = None,
       mappingType = None,
       findNeighbors = request.findNeighbors

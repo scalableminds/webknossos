@@ -31,6 +31,7 @@ case class AdHocMeshRequest(dataSource: Option[DataSource],
                             cuboid: Cuboid,
                             segmentId: Long,
                             voxelSizeFactor: Vec3Double, // assumed to be in dataset’s unit
+                            tokenContext: TokenContext,
                             mapping: Option[String] = None,
                             mappingType: Option[String] = None,
                             additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
@@ -46,7 +47,7 @@ class AdHocMeshActor(val service: AdHocMeshService, val timeout: FiniteDuration)
 
   def receive: Receive = {
     case request: AdHocMeshRequest =>
-      sender() ! Await.result(service.requestAdHocMesh(request)(TokenContext(None)).futureBox, timeout)
+      sender() ! Await.result(service.requestAdHocMesh(request)(request.tokenContext).futureBox, timeout)
     case _ =>
       sender() ! Failure("Unexpected message sent to AdHocMeshActor.")
   }

@@ -1,6 +1,7 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import {
   getAiModels,
+  getOrganization,
   runInferenceJob,
   startAlignSectionsJob,
   startMaterializingVolumeAnnotationJob,
@@ -61,6 +62,7 @@ import {
 } from "../jobs/train_ai_model";
 import DEFAULT_PREDICT_WORKFLOW from "./default-predict-workflow-template";
 import { isBoundingBoxExportable } from "./download_modal_view";
+import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
 
 const { ThinSpace } = Unicode;
 
@@ -653,6 +655,7 @@ function StartJobForm(props: StartJobFormProps) {
     getUserBoundingBoxesFromState(state),
   );
 
+  const dispatch = useDispatch();
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
@@ -722,6 +725,11 @@ function StartJobForm(props: StartJobFormProps) {
 
       if (!apiJob) {
         return;
+      }
+      if (jobCreditCostsPerGVx != null && activeUser?.organization) {
+        // As the job did cost credits, refetch the organization to have a correct credit balance.
+        const updatedOrganization = await getOrganization(activeUser?.organization);
+        dispatch(setActiveOrganizationAction(updatedOrganization));
       }
 
       Toast.info(

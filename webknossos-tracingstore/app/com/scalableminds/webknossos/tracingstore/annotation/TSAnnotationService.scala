@@ -763,11 +763,11 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                         a.tracingId.foreach(actionTracingId =>
                           tracingIdMapMutable.put(actionTracingId, TracingId.generate))
                       }
-                      mappedTracingId <- tracingIdMapMutable.get(actionTracingId) ?~> "duplicating addLayer action for unknown layer"
+                      mappedTracingId <- tracingIdMapMutable.get(actionTracingId) ?~> s"Trying to duplicate addLayer update action v$version for unknown layer $actionTracingId. Current layer map: ${tracingIdMapMutable.toMap}"
                     } yield a.copy(tracingId = Some(mappedTracingId))
                   case a: LayerUpdateAction =>
                     for {
-                      mappedTracingId <- tracingIdMapMutable.get(a.actionTracingId) ?~> "duplicating layer action for unknown layer"
+                      mappedTracingId <- Fox.failure("nope!") ?~> s"Trying to duplicate layer update action v$version for unknown layer ${a.actionTracingId}. Current layer map: ${tracingIdMapMutable.toMap}, v0TracingIds: $v0TracingIds"
                     } yield a.withActionTracingId(mappedTracingId)
                   case a: UpdateAction =>
                     Fox.successful(a)

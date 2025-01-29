@@ -12,6 +12,7 @@ import models.task.TaskService
 import models.user._
 import models.user.time.TimeSpanService
 import models.voxelytics.LokiClient
+import security.CertificateValidationService
 import telemetry.SlackNotificationService
 import utils.sql.SqlClient
 
@@ -39,5 +40,6 @@ class WebknossosModule extends AbstractModule {
     bind(classOf[UsedStorageService]).asEagerSingleton()
     bind(classOf[ThumbnailCachingService]).asEagerSingleton()
     bind(classOf[TracingDataSourceTemporaryStore]).asEagerSingleton()
+    bind(classOf[CertificateValidationService]).asEagerSingleton()
   }
 }

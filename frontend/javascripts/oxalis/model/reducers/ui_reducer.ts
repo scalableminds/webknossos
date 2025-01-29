@@ -1,12 +1,12 @@
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState } from "oxalis/store";
 import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import {
-  setToolReducer,
   getNextTool,
   getPreviousTool,
+  setToolReducer,
 } from "oxalis/model/reducers/reducer_helpers";
 import { hideBrushReducer } from "oxalis/model/reducers/volumetracing_reducer_helpers";
+import type { OxalisState } from "oxalis/store";
 
 function UiReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
@@ -118,6 +118,13 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey(state, "uiInformation", {
         busyBlockingInfo: action.value,
       });
+    }
+
+    case "SET_IS_WK_READY": {
+      return updateKey(state, "uiInformation", { isWkReady: action.isReady });
+    }
+    case "WK_READY": {
+      return updateKey(state, "uiInformation", { isWkReady: true });
     }
 
     case "SET_QUICK_SELECT_STATE": {

@@ -1,9 +1,9 @@
+import type { Action } from "oxalis/model/actions/actions";
 // The typings are defined in effect-generators.js.flow.
 import type { OxalisState } from "oxalis/store";
-import type { Action } from "oxalis/model/actions/actions";
-import { select as _select, take as _take } from "typed-redux-saga";
 import type { Channel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
+import { select as _select, take as _take } from "typed-redux-saga";
 
 // Ensures that the type of state is known. Otherwise,
 // a statement such as

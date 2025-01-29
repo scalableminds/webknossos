@@ -69,4 +69,7 @@ object TextUtils {
       case Some(commaSeparatedStr) =>
         Fox.serialCombined(commaSeparatedStr.split(",").toList)(entry => parseEntry(entry))
     }
+
+  def pluralize(string: String, amount: Int): String =
+    if (amount == 1) string else s"${string}s"
 }

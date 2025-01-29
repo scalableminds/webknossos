@@ -1,30 +1,30 @@
-import { Button, Card, Checkbox, Form, Input, Radio, Select, InputNumber, Tooltip } from "antd";
-import { syncValidator } from "types/validation";
 import { InfoCircleOutlined } from "@ant-design/icons";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
-import { useEffect, useState } from "react";
-import _ from "lodash";
 import {
-  type APITaskType,
-  type TracingType,
-  TracingTypeEnum,
-  type APIAllowedMode,
-  type APIMagRestrictions,
-  type APITeam,
-} from "types/api_flow_types";
-import {
-  getEditableTeams,
   createTaskType,
-  updateTaskType,
+  getEditableTeams,
   getTaskType,
+  updateTaskType,
 } from "admin/admin_rest_api";
 import RecommendedConfigurationView, {
   getDefaultRecommendedConfiguration,
 } from "admin/tasktype/recommended_configuration_view";
-import { useFetch } from "libs/react_helpers";
+import { Button, Card, Checkbox, Form, Input, InputNumber, Radio, Select, Tooltip } from "antd";
 import type { RuleObject } from "antd/es/form";
+import { useFetch } from "libs/react_helpers";
 import { jsonStringify } from "libs/utils";
+import _ from "lodash";
+import { useEffect, useState } from "react";
+import type { RouteComponentProps } from "react-router-dom";
+import { withRouter } from "react-router-dom";
+import {
+  type APIAllowedMode,
+  type APIMagRestrictions,
+  type APITaskType,
+  type APITeam,
+  type TracingType,
+  TracingTypeEnum,
+} from "types/api_flow_types";
+import { syncValidator } from "types/validation";
 
 const RadioGroup = Radio.Group;
 const FormItem = Form.Item;
@@ -396,7 +396,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
                     valuePropName="checked"
                   >
                     <Checkbox>
-                      Allow Volume Interpolation
+                      Allow Volume Interpolation{" "}
                       <Tooltip
                         title="When enabled, it suffices to only label every 2nd slice. The skipped slices will be filled automatically by interpolating between the labeled slices."
                         placement="right"

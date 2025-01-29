@@ -1,19 +1,19 @@
+import type { ActionPattern, Predicate } from "@redux-saga/types";
 import { Modal } from "antd";
+import Toast from "libs/toast";
 import messages from "messages";
+import { MappingStatusEnum } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import type { ActiveMappingInfo, VolumeTracing } from "oxalis/store";
-import { call, put, takeEvery } from "typed-redux-saga";
-import Toast from "libs/toast";
 import { Store } from "oxalis/singletons";
-import type { ActionPattern } from "@redux-saga/types";
+import type { ActiveMappingInfo, VolumeTracing } from "oxalis/store";
+import { call, fork, put, take, takeEvery } from "typed-redux-saga";
 import {
   setMappingIsLockedAction,
   setVolumeBucketDataHasChangedAction,
 } from "../actions/volumetracing_actions";
-import { MappingStatusEnum } from "oxalis/constants";
 
 export function* takeEveryUnlessBusy<P extends ActionPattern>(
   actionDescriptor: P,
@@ -143,6 +143,40 @@ export function* requestBucketModificationInVolumeTracing(
   // Mark that bucket data has changed
   yield* put(setVolumeBucketDataHasChangedAction(volumeTracing.tracingId));
   return true;
+}
+
+export function* takeWithBatchActionSupport(actionType: Action["type"]) {
+  // Some actions can be dispatched within a "batch" action OR without that.
+  // takeWithBatchActionSupport is able to listen to actions in both cases.
+  return yield* take([
+    actionType,
+    ((action: Action) => {
+      if (!("meta" in action && action.meta.batch)) {
+        return false;
+      }
+      return action.payload.find((subaction) => subaction.type === actionType) != null;
+    }) as any,
+  ]);
+}
+
+export function* takeEveryWithBatchActionSupport(
+  actionType: Action["type"],
+  saga: (...args: any[]) => any,
+) {
+  // Some actions can be dispatched within a "batch" action OR without that.
+  // takeEveryWithBatchActionSupport is able to listen to actions in both cases.
+  yield* takeEvery(actionType, saga);
+  yield* takeEvery("*", function* handler(batchAction: Action) {
+    if (!("meta" in batchAction && batchAction.meta.batch)) {
+      return;
+    }
+    const actions = batchAction.payload;
+    for (const action of actions) {
+      if (action.type === actionType) {
+        yield* fork(saga, action);
+      }
+    }
+  });
 }
 
 export default {};

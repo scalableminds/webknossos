@@ -4,22 +4,24 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import type {
   BoundingBoxType,
+  FillMode,
   LabeledVoxelsMap,
   OrthoView,
   Vector2,
   Vector3,
-  FillMode,
 } from "oxalis/constants";
-import Constants, { FillModeEnum, Unicode } from "oxalis/constants";
+import Constants, { AnnotationToolEnum, FillModeEnum, Unicode } from "oxalis/constants";
 
+import _ from "lodash";
 import { getDatasetBoundingBox, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
+import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import {
-  finishAnnotationStrokeAction,
   type FloodFillAction,
+  finishAnnotationStrokeAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -31,13 +33,11 @@ import { Model } from "oxalis/singletons";
 import { call, put, takeEvery } from "typed-redux-saga";
 import { getUserBoundingBoxesThatContainPosition } from "../../accessors/tracing_accessor";
 import { applyLabeledVoxelMapToAllMissingMags } from "./helpers";
-import _ from "lodash";
 
 const NO_FLOODFILL_BBOX_TOAST_KEY = "NO_FLOODFILL_BBOX";
 const NO_SUCCESS_MSG_WHEN_WITHIN_MS = 500;
 
 export function* floodFill(): Saga<void> {
-  yield* take("INITIALIZE_VOLUMETRACING");
   yield* takeEvery("FLOOD_FILL", handleFloodFill);
 }
 
@@ -117,8 +117,9 @@ function* getBoundingBoxForFloodFill(
 
 function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const disabledInfosForTools = yield* select(getDisabledInfoForTools);
 
-  if (!allowUpdate) {
+  if (!allowUpdate || disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled) {
     return;
   }
 

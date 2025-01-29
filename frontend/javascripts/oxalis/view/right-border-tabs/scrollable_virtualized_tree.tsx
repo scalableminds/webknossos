@@ -1,8 +1,8 @@
 import { Tree as AntdTree, type TreeProps } from "antd";
 import type { BasicDataNode } from "antd/es/tree";
 import { throttle } from "lodash";
-import { forwardRef, useCallback, useRef } from "react";
 import type RcTree from "rc-tree";
+import { forwardRef, useCallback, useRef } from "react";
 
 const MIN_SCROLL_SPEED = 30;
 const MAX_SCROLL_SPEED = 200;

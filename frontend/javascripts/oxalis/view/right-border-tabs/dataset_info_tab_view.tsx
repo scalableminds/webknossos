@@ -1,13 +1,14 @@
-import type { Dispatch } from "redux";
-import { Typography, Tag } from "antd";
-import { SettingOutlined, InfoCircleOutlined, EditOutlined } from "@ant-design/icons";
-import { connect } from "react-redux";
-import Markdown from "libs/markdown_adapter";
-import React, { type CSSProperties } from "react";
-import { Link } from "react-router-dom";
-import type { APIDataset, APIUser } from "types/api_flow_types";
-import { ControlModeEnum, LongUnitToShortUnitMap } from "oxalis/constants";
+import { EditOutlined, InfoCircleOutlined, SettingOutlined } from "@ant-design/icons";
+import { Tag, Typography } from "antd";
 import { formatNumberToVolume, formatScale, formatVoxels } from "libs/format_utils";
+import Markdown from "libs/markdown_adapter";
+import { ControlModeEnum, LongUnitToShortUnitMap } from "oxalis/constants";
+import {
+  type TracingStats,
+  getSkeletonStats,
+  getStats,
+  getVolumeStats,
+} from "oxalis/model/accessors/annotation_accessor";
 import {
   getDatasetExtentAsString,
   getDatasetExtentInUnitAsProduct,
@@ -17,24 +18,26 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
 import {
-  getCombinedStats,
-  type CombinedTracingStats,
-} from "oxalis/model/accessors/annotation_accessor";
-import {
-  setAnnotationNameAction,
   setAnnotationDescriptionAction,
+  setAnnotationNameAction,
 } from "oxalis/model/actions/annotation_actions";
+import React, { type CSSProperties } from "react";
+import { connect } from "react-redux";
+import { Link } from "react-router-dom";
+import type { Dispatch } from "redux";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 
 import type { OxalisState, Task, Tracing } from "oxalis/store";
 
-import { formatUserName } from "oxalis/model/accessors/user_accessor";
-import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
-import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
-import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 import { getOrganization } from "admin/admin_rest_api";
-import { MarkdownModal } from "../components/markdown_modal";
 import FastTooltip from "components/fast_tooltip";
+import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
 import messages from "messages";
+import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
+import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
+import type { EmptyObject } from "types/globals";
+import { MarkdownModal } from "../components/markdown_modal";
 
 type StateProps = {
   annotation: Tracing;
@@ -203,14 +206,18 @@ export function AnnotationStats({
   asInfoBlock,
   withMargin,
 }: {
-  stats: CombinedTracingStats;
+  stats: TracingStats | EmptyObject;
   asInfoBlock: boolean;
   withMargin?: boolean | null | undefined;
 }) {
+  if (!stats || Object.keys(stats).length === 0) return null;
   const formatLabel = (str: string) => (asInfoBlock ? str : "");
   const useStyleWithMargin = withMargin != null ? withMargin : true;
   const styleWithLargeMarginBottom = { marginBottom: 14 };
   const styleWithSmallMargin = { margin: 2 };
+  const skeletonStats = getSkeletonStats(stats);
+  const volumeStats = getVolumeStats(stats);
+  const totalSegmentCount = volumeStats.reduce((sum, [_, volume]) => sum + volume.segmentCount, 0);
 
   return (
     <div
@@ -220,14 +227,14 @@ export function AnnotationStats({
       {asInfoBlock && <p className="sidebar-label">Statistics</p>}
       <table className={asInfoBlock ? "annotation-stats-table" : "annotation-stats-table-slim"}>
         <tbody>
-          {"treeCount" in stats ? (
+          {skeletonStats ? (
             <FastTooltip
               placement="left"
               html={`
-                  <p>Trees: ${safeNumberToStr(stats.treeCount)}</p>
-                  <p>Nodes: ${safeNumberToStr(stats.nodeCount)}</p>
-                  <p>Edges: ${safeNumberToStr(stats.edgeCount)}</p>
-                  <p>Branchpoints: ${safeNumberToStr(stats.branchPointCount)}</p>
+                  <p>Trees: ${safeNumberToStr(skeletonStats.treeCount)}</p>
+                  <p>Nodes: ${safeNumberToStr(skeletonStats.nodeCount)}</p>
+                  <p>Edges: ${safeNumberToStr(skeletonStats.edgeCount)}</p>
+                  <p>Branchpoints: ${safeNumberToStr(skeletonStats.branchPointCount)}</p>
                 `}
               wrapper="tr"
             >
@@ -239,17 +246,18 @@ export function AnnotationStats({
                 />
               </td>
               <td>
-                {stats.treeCount} {formatLabel(pluralize("Tree", stats.treeCount))}
+                {skeletonStats.treeCount} {formatLabel(pluralize("Tree", skeletonStats.treeCount))}
               </td>
             </FastTooltip>
           ) : null}
-          {"segmentCount" in stats ? (
+          {volumeStats.length > 0 ? (
             <FastTooltip
               placement="left"
-              title={`${stats.segmentCount} ${pluralize("Segment", stats.segmentCount)} – Only segments that were manually registered (either brushed or
-                                      interacted with) are counted in this statistic. Segmentation layers
-                                      created from automated workflows (also known as fallback layers) are not
-                                      considered currently.`}
+              html={`${totalSegmentCount}
+                      Only segments that were manually registered (either brushed or
+                      interacted with) are counted in this statistic. Segmentation layers
+                      created from automated workflows (also known as fallback layers) are not
+                      considered currently.`}
               wrapper="tr"
             >
               <td>
@@ -260,7 +268,7 @@ export function AnnotationStats({
                 />
               </td>
               <td>
-                {stats.segmentCount} {formatLabel(pluralize("Segment", stats.segmentCount))}
+                {totalSegmentCount} {formatLabel(pluralize("Segment", totalSegmentCount))}
               </td>
             </FastTooltip>
           ) : null}
@@ -294,7 +302,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   getAnnotationStatistics() {
     if (this.props.isDatasetViewMode) return null;
 
-    return <AnnotationStats stats={getCombinedStats(this.props.annotation)} asInfoBlock />;
+    return <AnnotationStats stats={getStats(this.props.annotation)} asInfoBlock />;
   }
 
   getKeyboardShortcuts() {
@@ -453,7 +461,9 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             <Typography.Text>
               {description}
               <FastTooltip title="Edit">
+                {/* biome-ignore lint/a11y/useFocusableInteractive: <explanation> */}
                 <div
+                  // biome-ignore lint/a11y/useSemanticElements: <explanation>
                   role="button"
                   className="ant-typography-edit"
                   style={{

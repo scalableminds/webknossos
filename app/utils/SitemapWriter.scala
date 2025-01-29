@@ -20,7 +20,7 @@ case class SitemapURL(url: String,
 
 class SitemapWriter @Inject()(publicationDAO: PublicationDAO, wkConf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits {
-  private val proxyURLs = wkConf.Proxy.routes.filter(!_.contains("*")).map(SitemapURL(_))
+  private val proxyURLs = wkConf.AboutPageRedirect.routes.filter(!_.contains("*")).map(SitemapURL(_))
   private lazy val outputFactory = XMLOutputFactory.newInstance()
 
   def getSitemap(prefix: String): Fox[String] = {

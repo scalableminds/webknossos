@@ -1,22 +1,33 @@
-import _ from "lodash";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
-  all,
-  call,
-  cancel,
-  fork,
-  takeEvery,
-  takeLatest,
-  take,
-  put,
-  race,
-  actionChannel,
-  flush,
-} from "typed-redux-saga";
-import { api } from "oxalis/singletons";
-import { buffers, eventChannel } from "redux-saga";
-import { select } from "oxalis/model/sagas/effect-generators";
+  fetchMapping,
+  getAgglomeratesForDatasetLayer,
+  getAgglomeratesForSegmentsFromDatastore,
+  getAgglomeratesForSegmentsFromTracingstore,
+  getMappingsForDatasetLayer,
+} from "admin/admin_rest_api";
 import { message } from "antd";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
+import { fastDiffSetAndMap, sleep } from "libs/utils";
+import _ from "lodash";
+import { MappingStatusEnum } from "oxalis/constants";
+import {
+  getLayerByName,
+  getMappingInfo,
+  getSegmentationLayers,
+  getVisibleSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
+import {
+  type BucketRetrievalSource,
+  getBucketRetrievalSourceFn,
+  getEditableMappingForVolumeTracingId,
+  needsLocalHdf5Mapping as getNeedsLocalHdf5Mapping,
+  isMappingActivationAllowed,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  type EnsureLayerMappingsAreLoadedAction,
+  setLayerMappingsAction,
+} from "oxalis/model/actions/dataset_actions";
 import type {
   OptionalMappingProperties,
   SetMappingAction,
@@ -27,23 +38,14 @@ import {
   setMappingAction,
 } from "oxalis/model/actions/settings_actions";
 import {
-  fetchMapping,
-  getMappingsForDatasetLayer,
-  getAgglomeratesForDatasetLayer,
-  getAgglomeratesForSegmentsFromDatastore,
-  getAgglomeratesForSegmentsFromTracingstore,
-} from "admin/admin_rest_api";
-import type { APIDataLayer, APIMapping } from "types/api_flow_types";
-import {
-  type EnsureLayerMappingsAreLoadedAction,
-  setLayerMappingsAction,
-} from "oxalis/model/actions/dataset_actions";
-import {
-  getLayerByName,
-  getMappingInfo,
-  getSegmentationLayers,
-  getVisibleSegmentationLayer,
-} from "oxalis/model/accessors/dataset_accessor";
+  MAPPING_MESSAGE_KEY,
+  setCacheResultForDiffMappings,
+} from "oxalis/model/bucket_data_handling/mappings";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
+import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
+import { api } from "oxalis/singletons";
+import { Model } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
   Mapping,
@@ -51,28 +53,27 @@ import type {
   NumberLike,
   NumberLikeMap,
 } from "oxalis/store";
-import ErrorHandling from "libs/error_handling";
-import {
-  MAPPING_MESSAGE_KEY,
-  setCacheResultForDiffMappings,
-} from "oxalis/model/bucket_data_handling/mappings";
-import { Model } from "oxalis/singletons";
-import {
-  isMappingActivationAllowed,
-  getEditableMappingForVolumeTracingId,
-  needsLocalHdf5Mapping as getNeedsLocalHdf5Mapping,
-  getBucketRetrievalSourceFn,
-  type BucketRetrievalSource,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import Toast from "libs/toast";
-import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
-import { updateSegmentAction } from "../actions/volumetracing_actions";
-import { MappingStatusEnum } from "oxalis/constants";
-import type DataCube from "../bucket_data_handling/data_cube";
-import { fastDiffSetAndMap, sleep } from "libs/utils";
-import type { Action } from "../actions/actions";
+import { buffers, eventChannel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
+import {
+  actionChannel,
+  all,
+  call,
+  cancel,
+  flush,
+  fork,
+  put,
+  race,
+  take,
+  takeEvery,
+  takeLatest,
+} from "typed-redux-saga";
+import type { APIDataLayer, APIMapping } from "types/api_flow_types";
+import type { Action } from "../actions/actions";
+import { updateSegmentAction } from "../actions/volumetracing_actions";
+import type DataCube from "../bucket_data_handling/data_cube";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
+import { ensureWkReady } from "./ready_sagas";
 
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
@@ -96,7 +97,9 @@ const takeLatestMappingChange = (
       );
       const mapping = getMappingInfo(activeMappingByLayer, layerName);
 
-      console.log("Changed from", lastBucketRetrievalSource, "to", bucketRetrievalSource);
+      if (process.env.NODE_ENV === "production") {
+        console.log("Changed from", lastBucketRetrievalSource, "to", bucketRetrievalSource);
+      }
 
       if (lastWatcherTask) {
         console.log("Cancel old bucket watcher");
@@ -137,7 +140,7 @@ export default function* watchActivatedMappings(): Saga<void> {
   };
   // Buffer actions since they might be dispatched before WK_READY
   const setMappingActionChannel = yield* actionChannel("SET_MAPPING");
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   yield* takeLatest(setMappingActionChannel, handleSetMapping, oldActiveMappingByLayer);
   yield* takeEvery(
     "ENSURE_LAYER_MAPPINGS_ARE_LOADED",
@@ -360,7 +363,13 @@ function* handleSetMapping(
     return;
   }
 
-  if (showLoadingIndicator) {
+  const visibleSegmentationLayerName = yield* select(
+    (state) => getVisibleSegmentationLayer(state)?.name,
+  );
+  if (showLoadingIndicator && layerName === visibleSegmentationLayerName) {
+    // Only show the message if the mapping belongs to the currently visible
+    // segmentation layer. Otherwise, the message would stay as long as the
+    // actual layer not visible.
     message.loading({
       content: "Activating Mapping",
       key: MAPPING_MESSAGE_KEY,
@@ -455,6 +464,8 @@ function* updateLocalHdf5Mapping(
           annotation.tracingStore.url,
           editableMapping.tracingId,
           Array.from(newSegmentIds),
+          annotation.annotationId,
+          annotation.version,
         )
       : yield* call(
           getAgglomeratesForSegmentsFromDatastore,

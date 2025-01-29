@@ -3,13 +3,13 @@ import { location } from "libs/window";
 import type { UnitLong, Vector3, Vector6 } from "oxalis/constants";
 import type {
   APIAnnotationType,
-  APIJob,
-  APIJobState,
-  APIJobManualState,
   APIEffectiveJobState,
+  APIJob,
+  APIJobManualState,
+  APIJobState,
+  AdditionalCoordinate,
   AiModel,
   RenderAnimationOptions,
-  AdditionalCoordinate,
 } from "types/api_flow_types";
 import { assertResponseLimit } from "./api_utils";
 
@@ -21,7 +21,7 @@ function transformBackendJobToAPIJob(job: any): APIJob {
     type: job.command,
     datasetName: job.commandArgs.dataset_name,
     datasetDirectoryName: job.commandArgs.dataset_directory_name,
-    organizationId: job.commandArgs.organization_id,
+    organizationId: job.commandArgs.organization_id || job.commandArgs.organization_name,
     layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
     annotationLayerName: job.commandArgs.annotation_layer_name,
     boundingBox: job.commandArgs.bbox,
@@ -208,6 +208,8 @@ function startSegmentationAnnotationDependentJob(
   annotationId: string,
   annotationType: APIAnnotationType,
   mergeSegments?: boolean,
+  includesEditableMapping?: boolean,
+  boundingBox?: Vector6,
 ): Promise<APIJob> {
   const requestURL = new URL(`/api/jobs/run/${jobURLPath}/${datasetId}`, location.origin);
   if (volumeLayerName != null) {
@@ -222,6 +224,12 @@ function startSegmentationAnnotationDependentJob(
   if (mergeSegments != null) {
     requestURL.searchParams.append("mergeSegments", mergeSegments.toString());
   }
+  if (includesEditableMapping != null) {
+    requestURL.searchParams.append("includesEditableMapping", includesEditableMapping.toString());
+  }
+  if (boundingBox) {
+    requestURL.searchParams.append("boundingBox", boundingBox.join(","));
+  }
   return Request.receiveJSON(requestURL.href, {
     method: "POST",
   });
@@ -235,6 +243,8 @@ export function startMaterializingVolumeAnnotationJob(
   annotationId: string,
   annotationType: APIAnnotationType,
   mergeSegments: boolean,
+  includesEditableMapping: boolean,
+  boundingBox?: Vector6,
 ): Promise<APIJob> {
   return startSegmentationAnnotationDependentJob(
     "materializeVolumeAnnotation",
@@ -245,6 +255,8 @@ export function startMaterializingVolumeAnnotationJob(
     annotationId,
     annotationType,
     mergeSegments,
+    includesEditableMapping,
+    boundingBox,
   );
 }
 

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
@@ -33,7 +34,7 @@ class VolumeSegmentIndexBuffer(tracingId: String,
                                remoteDatastoreClient: TSRemoteDatastoreClient,
                                fallbackLayer: Option[RemoteFallbackLayer],
                                additionalAxes: Option[Seq[AdditionalAxis]],
-                               userToken: Option[String])
+                               tc: TokenContext)
     extends KeyValueStoreImplicits
     with SegmentIndexKeyHelper
     with ProtoGeometryImplicits
@@ -86,12 +87,7 @@ class VolumeSegmentIndexBuffer(tracingId: String,
         .fillEmpty(ListOfVec3IntProto.of(Seq()))
       data <- fallbackLayer match {
         case Some(layer) if fossilDbData.length == 0 =>
-          remoteDatastoreClient.querySegmentIndex(layer,
-                                                  segmentId,
-                                                  mag,
-                                                  mappingName,
-                                                  editableMappingTracingId,
-                                                  userToken)
+          remoteDatastoreClient.querySegmentIndex(layer, segmentId, mag, mappingName, editableMappingTracingId)(tc)
         case _ => Fox.successful(fossilDbData.values.map(vec3IntFromProto))
       }
     } yield ListOfVec3IntProto(data.map(vec3IntToProto))
@@ -168,13 +164,8 @@ class VolumeSegmentIndexBuffer(tracingId: String,
       fileBucketPositions <- fallbackLayer match {
         case Some(layer) =>
           for {
-            fileBucketPositionsOpt <- Fox.runIf(missesSoFar.nonEmpty)(
-              remoteDatastoreClient.querySegmentIndexForMultipleSegments(layer,
-                                                                         missesSoFar,
-                                                                         mag,
-                                                                         mappingName,
-                                                                         editableMappingTracingId,
-                                                                         userToken))
+            fileBucketPositionsOpt <- Fox.runIf(missesSoFar.nonEmpty)(remoteDatastoreClient
+              .querySegmentIndexForMultipleSegments(layer, missesSoFar, mag, mappingName, editableMappingTracingId)(tc))
             fileBucketPositions = fileBucketPositionsOpt.getOrElse(Seq())
             _ = fileBucketPositions.map {
               case (segmentId, positions) =>

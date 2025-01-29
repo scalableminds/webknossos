@@ -151,7 +151,7 @@ class AiModelController @Inject()(
         )
         existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
                                                                        request.identity._organization)
-        _ <- bool2Fox(existingAiModelsCount == 0) ?~> "model.nameInUse"
+        _ <- bool2Fox(existingAiModelsCount == 0) ?~> "aiModel.nameInUse"
         newTrainingJob <- jobService
           .submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunTrainModel"
         newAiModel = AiModel(

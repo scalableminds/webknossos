@@ -1,58 +1,60 @@
-import * as THREE from "three";
+import app from "app";
+import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
+import { V3 } from "libs/mjs";
+import type TPS3D from "libs/thin_plate_spline";
+import * as Utils from "libs/utils";
 import _ from "lodash";
 import { BLEND_MODES, Identity4x4, type OrthoView, type Vector3 } from "oxalis/constants";
 import {
-  ViewModeValues,
+  AnnotationToolEnum,
+  MappingStatusEnum,
   OrthoViewValues,
   OrthoViews,
-  MappingStatusEnum,
-  AnnotationToolEnum,
+  ViewModeValues,
 } from "oxalis/constants";
-import { calculateGlobalPos, getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
-import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import {
-  getActiveCellId,
-  getActiveSegmentationTracing,
-  getActiveSegmentPosition,
-  getBucketRetrievalSourceFn,
-  needsLocalHdf5Mapping,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import {
+  getByteCount,
   getColorLayers,
   getDataLayers,
-  getByteCount,
-  getElementClass,
   getDatasetBoundingBox,
+  getElementClass,
   getEnabledLayers,
-  getSegmentationLayerWithMappingSupport,
-  getMappingInfoForSupportedLayer,
-  getVisibleSegmentationLayer,
   getLayerByName,
-  invertAndTranspose,
-  getTransformsForLayer,
-  getMagInfoByLayer,
   getMagInfo,
-  getTransformsPerLayer,
+  getMagInfoByLayer,
+  getMappingInfoForSupportedLayer,
+  getSegmentationLayerWithMappingSupport,
+  getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getTransformsForLayer,
+  getTransformsPerLayer,
+  invertAndTranspose,
+} from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndicesForLayers,
   getUnrenderableLayerInfosForCurrentZoom,
   getZoomValue,
 } from "oxalis/model/accessors/flycam_accessor";
+import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
+import { calculateGlobalPos, getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
+import {
+  getActiveCellId,
+  getActiveSegmentPosition,
+  getActiveSegmentationTracing,
+  getBucketRetrievalSourceFn,
+  needsLocalHdf5Mapping,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import shaderEditor from "oxalis/model/helpers/shader_editor";
+import getMainFragmentShader, { getMainVertexShader } from "oxalis/shaders/main_data_shaders.glsl";
 import { Model } from "oxalis/singletons";
 import type { DatasetLayerConfiguration } from "oxalis/store";
 import Store from "oxalis/store";
-import * as Utils from "libs/utils";
-import app from "app";
-import getMainFragmentShader, { getMainVertexShader } from "oxalis/shaders/main_data_shaders.glsl";
-import shaderEditor from "oxalis/model/helpers/shader_editor";
+import * as THREE from "three";
 import type { ElementClass } from "types/api_flow_types";
-import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
-import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
-import { V3 } from "libs/mjs";
-import type TPS3D from "libs/thin_plate_spline";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;
@@ -245,8 +247,7 @@ class PlaneMaterialFactory {
     this.uniforms.activeMagIndices = {
       value: Object.values(activeMagIndices),
     };
-    const nativelyRenderedLayerName =
-      Store.getState().datasetConfiguration.nativelyRenderedLayerName;
+    const { nativelyRenderedLayerName } = Store.getState().datasetConfiguration;
     const dataset = Store.getState().dataset;
     for (const dataLayer of Model.getAllLayers()) {
       const layerName = sanitizeName(dataLayer.name);

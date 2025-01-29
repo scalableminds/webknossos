@@ -1,9 +1,9 @@
-import { MenuOutlined, InfoCircleOutlined } from "@ant-design/icons";
-import { List, Collapse, Tooltip, type CollapseProps } from "antd";
-import { settings, settingsTooltips } from "messages";
+import { InfoCircleOutlined, MenuOutlined } from "@ant-design/icons";
 import { DndContext, type DragEndEvent } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Collapse, type CollapseProps, List, Tooltip } from "antd";
+import { settings, settingsTooltips } from "messages";
 
 // Example taken and modified from https://ant.design/components/table/#components-table-demo-drag-sorting-handler.
 

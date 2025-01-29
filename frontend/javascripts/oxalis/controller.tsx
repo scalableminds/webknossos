@@ -1,34 +1,34 @@
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
-import { connect } from "react-redux";
-import type { Location as HistoryLocation, Action as HistoryAction } from "history";
-import * as React from "react";
-import _ from "lodash";
-import { APIAnnotationTypeEnum, type APICompoundType } from "types/api_flow_types";
-import { HANDLED_ERROR } from "oxalis/model_initialization";
-import { InputKeyboardNoLoop } from "libs/input";
-import { fetchGistContent } from "libs/gist";
-import { initializeSceneController } from "oxalis/controller/scene_controller";
-import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
-import { setIsInAnnotationViewAction } from "oxalis/model/actions/ui_actions";
-import { setViewModeAction, updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
-import { wkReadyAction } from "oxalis/model/actions/actions";
-import ApiLoader from "oxalis/api/api_loader";
-import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
-import BrainSpinner, { BrainSpinnerWithError, CoverWithLogin } from "components/brain_spinner";
-import { Model } from "oxalis/singletons";
-import PlaneController from "oxalis/controller/viewmodes/plane_controller";
-import type { OxalisState, TraceOrViewCommand } from "oxalis/store";
-import Store from "oxalis/store";
-import Toast from "libs/toast";
-import UrlManager from "oxalis/controller/url_manager";
-import * as Utils from "libs/utils";
-import type { APIUser, APIOrganization } from "types/api_flow_types";
 import app from "app";
+import BrainSpinner, { BrainSpinnerWithError, CoverWithLogin } from "components/brain_spinner";
+import type { Action as HistoryAction, Location as HistoryLocation } from "history";
+import { fetchGistContent } from "libs/gist";
+import { InputKeyboardNoLoop } from "libs/input";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import window, { document, location } from "libs/window";
+import _ from "lodash";
+import messages from "messages";
+import ApiLoader from "oxalis/api/api_loader";
 import type { ViewMode } from "oxalis/constants";
 import constants, { ControlModeEnum } from "oxalis/constants";
-import messages from "messages";
-import window, { document, location } from "libs/window";
+import { initializeSceneController } from "oxalis/controller/scene_controller";
+import UrlManager from "oxalis/controller/url_manager";
+import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
+import PlaneController from "oxalis/controller/viewmodes/plane_controller";
+import { wkReadyAction } from "oxalis/model/actions/actions";
+import { redoAction, saveNowAction, undoAction } from "oxalis/model/actions/save_actions";
+import { setViewModeAction, updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
+import { setIsInAnnotationViewAction } from "oxalis/model/actions/ui_actions";
+import { HANDLED_ERROR } from "oxalis/model_initialization";
+import { Model } from "oxalis/singletons";
+import type { OxalisState, TraceOrViewCommand } from "oxalis/store";
+import Store from "oxalis/store";
+import * as React from "react";
+import { connect } from "react-redux";
+import type { RouteComponentProps } from "react-router-dom";
+import { withRouter } from "react-router-dom";
+import { APIAnnotationTypeEnum, type APICompoundType } from "types/api_flow_types";
+import type { APIOrganization, APIUser } from "types/api_flow_types";
 import type DataLayer from "./model/data_layer";
 
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
@@ -90,14 +90,12 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   tryFetchingModel() {
     this.props.setControllerStatus("loading");
     // Preview a working annotation version if the showVersionRestore URL parameter is supplied
-    const versions = Utils.hasUrlParam("showVersionRestore")
-      ? {
-          skeleton: Utils.hasUrlParam("skeletonVersion")
-            ? Number.parseInt(Utils.getUrlParamValue("skeletonVersion"))
-            : 1,
-        }
+    const version = Utils.hasUrlParam("showVersionRestore")
+      ? Utils.hasUrlParam("version")
+        ? Number.parseInt(Utils.getUrlParamValue("version"))
+        : 1
       : undefined;
-    Model.fetch(this.props.initialMaybeCompoundType, this.props.initialCommandType, true, versions)
+    Model.fetch(this.props.initialMaybeCompoundType, this.props.initialCommandType, true, version)
       .then(() => this.modelFetchDone())
       .catch((error) => {
         this.props.setControllerStatus("failedLoading");

@@ -1,5 +1,6 @@
+import _ from "lodash";
 import constants from "oxalis/constants";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
 
@@ -132,7 +133,7 @@ export function useRepeatedButtonTrigger(
   return {
     // Don't do anything on click to avoid that the trigger
     // is called twice on touch start.
-    onClick: () => {},
+    onClick: _.noop,
     onTouchStart,
     onTouchEnd,
   };

@@ -1,4 +1,3 @@
-import { Dropdown, Tooltip, Space, Tree as AntdTree, type TreeProps, type GetRef } from "antd";
 import {
   ArrowLeftOutlined,
   ArrowRightOutlined,
@@ -8,24 +7,23 @@ import {
   SearchOutlined,
   ShrinkOutlined,
 } from "@ant-design/icons";
-import { useDispatch, useSelector } from "react-redux";
-import React, { useEffect, useRef, useState } from "react";
+import { Tree as AntdTree, Dropdown, type GetRef, Space, Tooltip, type TreeProps } from "antd";
+import type { EventDataNode } from "antd/es/tree";
+import { useLifecycle } from "beautiful-react-hooks";
+import { InputKeyboard } from "libs/input";
+import { useEffectOnlyOnce } from "libs/react_hooks";
+import { compareBy, localeCompareBy } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import { Comment, commentListId } from "oxalis/view/right-border-tabs/comment_tab/comment";
-import { compareBy, localeCompareBy } from "libs/utils";
-import { InputKeyboard } from "libs/input";
-import { MarkdownModal } from "oxalis/view/components/markdown_modal";
-import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
+import messages from "messages";
+import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 import { getActiveNode, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
-  setActiveNodeAction,
   createCommentAction,
   deleteCommentAction,
+  setActiveNodeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import ButtonComponent from "oxalis/view/components/button_component";
-import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
-import InputComponent from "oxalis/view/components/input_component";
+import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import type {
   CommentType,
   MutableCommentType,
@@ -34,16 +32,18 @@ import type {
   Tree,
   TreeMap,
 } from "oxalis/store";
-import messages from "messages";
-import AdvancedSearchPopover from "../advanced_search_popover";
+import ButtonComponent from "oxalis/view/components/button_component";
+import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
+import InputComponent from "oxalis/view/components/input_component";
+import { MarkdownModal } from "oxalis/view/components/markdown_modal";
+import { Comment, commentListId } from "oxalis/view/right-border-tabs/comment_tab/comment";
 import type { MenuProps } from "rc-menu";
-import type { Comparator } from "types/globals";
-import type { EventDataNode } from "antd/es/tree";
+import React, { useEffect, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
-import { useEffectOnlyOnce } from "libs/react_hooks";
+import type { Comparator } from "types/globals";
+import AdvancedSearchPopover from "../advanced_search_popover";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
-import { useLifecycle } from "beautiful-react-hooks";
-import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 
 const commentTabId = "commentTabId";
 enum SortByEnum {
@@ -538,7 +538,11 @@ const CommentTabViewMemo = React.memo(
     }
 
     const updateActions = Array.from(
-      cachedDiffTrees(prevPops.skeletonTracing.trees, nextProps.skeletonTracing.trees),
+      cachedDiffTrees(
+        nextProps.skeletonTracing.tracingId,
+        prevPops.skeletonTracing.trees,
+        nextProps.skeletonTracing.trees,
+      ),
     );
     const relevantUpdateActions = updateActions.filter(
       (ua) =>

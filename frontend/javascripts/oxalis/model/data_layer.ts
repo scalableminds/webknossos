@@ -1,7 +1,7 @@
+import ErrorHandling from "libs/error_handling";
 import type { Vector3 } from "oxalis/constants";
 import { getLayerBoundingBox, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import ErrorHandling from "libs/error_handling";
 import LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import Mappings from "oxalis/model/bucket_data_handling/mappings";
 import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
@@ -21,7 +21,12 @@ class DataLayer {
   fallbackLayerInfo: DataLayerType | null | undefined;
   isSegmentation: boolean;
 
-  constructor(layerInfo: DataLayerType, textureWidth: number, dataTextureCount: number) {
+  constructor(
+    layerInfo: DataLayerType,
+    textureWidth: number,
+    dataTextureCount: number,
+    tracingId: string,
+  ) {
     this.name = layerInfo.name;
     this.fallbackLayer =
       "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
@@ -46,7 +51,7 @@ class DataLayer {
       this.name,
     );
     this.pullQueue = new PullQueue(this.cube, layerInfo.name, dataset.dataStore);
-    this.pushQueue = new PushQueue(this.cube);
+    this.pushQueue = new PushQueue(this.cube, tracingId);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
 
     if (this.isSegmentation) {

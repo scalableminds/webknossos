@@ -1,19 +1,19 @@
-import type { Action } from "oxalis/model/actions/actions";
-import { MappingStatusEnum } from "oxalis/constants";
-import type { OxalisState, ActiveMappingInfo } from "oxalis/store";
 import { clamp } from "libs/utils";
+import { MappingStatusEnum } from "oxalis/constants";
 import {
   getLayerByName,
+  getMappingInfo,
   getSegmentationLayers,
   getVisibleSegmentationLayers,
-  getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { updateKey, updateKey2, updateKey3 } from "oxalis/model/helpers/deep_update";
-import { userSettings } from "types/schemas/user_settings.schema";
 import {
   hasEditableMapping,
   isMappingActivationAllowed,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import type { Action } from "oxalis/model/actions/actions";
+import { updateKey, updateKey2, updateKey3 } from "oxalis/model/helpers/deep_update";
+import type { ActiveMappingInfo, OxalisState } from "oxalis/store";
+import { userSettings } from "types/schemas/user_settings.schema";
 import { setRotationReducer } from "./flycam_reducer";
 
 //
@@ -260,10 +260,12 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_MAPPING": {
-      const { mappingName, mapping, mappingColors, mappingType, layerName } = action;
+      const { mappingName, mapping, mappingColors, mappingType, layerName, isMergerModeMapping } =
+        action;
 
       // Editable mappings cannot be disabled or switched for now
-      if (!isMappingActivationAllowed(state, mappingName, layerName)) return state;
+      if (!isMappingActivationAllowed(state, mappingName, layerName, !!isMergerModeMapping))
+        return state;
 
       const hideUnmappedIds =
         action.hideUnmappedIds != null
@@ -280,6 +282,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
           hideUnmappedIds,
           mappingStatus:
             mappingName != null ? MappingStatusEnum.ACTIVATING : MappingStatusEnum.DISABLED,
+          isMergerModeMapping,
         },
         layerName,
       );

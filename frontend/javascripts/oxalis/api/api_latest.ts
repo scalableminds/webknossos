@@ -1,6 +1,5 @@
 import {
   doWithToken,
-  downsampleSegmentation,
   finishAnnotation,
   getMappingsForDatasetLayer,
   sendAnalyticsEvent,
@@ -45,13 +44,13 @@ import {
 import UrlManager from "oxalis/controller/url_manager";
 import type { OxalisModel } from "oxalis/model";
 import {
-  flatToNestedMatrix,
   getLayerBoundingBox,
   getLayerByName,
   getMagInfo,
   getMappingInfo,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
+import { flatToNestedMatrix } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
   getPosition,
@@ -177,7 +176,6 @@ import {
   createGroupToSegmentsMap,
   moveGroupsHelper,
 } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import type { Versions } from "oxalis/view/version_view";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_flow_types";
@@ -1114,13 +1112,14 @@ class TracingApi {
     newMaybeCompoundType: APICompoundType | null,
     newAnnotationId: string,
     newControlMode: ControlMode,
-    versions?: Versions,
+    version?: number | undefined | null,
     keepUrlState: boolean = false,
+    keepUrlSearch: boolean = true,
   ) {
     if (newControlMode === ControlModeEnum.VIEW)
       throw new Error("Restarting with view option is not supported");
     Store.dispatch(restartSagaAction());
-    UrlManager.reset(keepUrlState);
+    UrlManager.reset(keepUrlState, keepUrlSearch);
 
     newMaybeCompoundType =
       newMaybeCompoundType != null ? coalesce(APICompoundTypeEnum, newMaybeCompoundType) : null;
@@ -1133,7 +1132,7 @@ class TracingApi {
         type: newControlMode,
       },
       false,
-      versions,
+      version,
     );
     Store.dispatch(discardSaveQueuesAction());
     Store.dispatch(wkReadyAction());
@@ -1508,27 +1507,6 @@ class TracingApi {
    */
   setVolumeTool(tool: AnnotationTool) {
     this.setAnnotationTool(tool);
-  }
-
-  /**
-   * Use this method to create a complete magnification pyramid by downsampling the lowest present mag (e.g., mag 1).
-     This method will save the current changes and then reload the page after the downsampling
-     has finished.
-     This function can only be used for non-tasks.
-      Note that this invoking this method will not block the UI. Thus, user actions can be performed during the
-     downsampling. The caller should prohibit this (e.g., by showing a not-closable modal during the process).
-   */
-  async downsampleSegmentation(volumeTracingId: string) {
-    const state = Store.getState();
-    const { annotationId, annotationType } = state.tracing;
-
-    if (state.task != null) {
-      throw new Error("Cannot downsample segmentation for a task.");
-    }
-
-    await this.save();
-    await downsampleSegmentation(annotationId, annotationType, volumeTracingId);
-    await this.hardReload();
   }
 
   /**

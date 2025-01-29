@@ -1,7 +1,8 @@
 package com.scalableminds.util.time
 
+import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.typesafe.scalalogging.LazyLogging
+import com.typesafe.scalalogging.{LazyLogging, Logger}
 import net.liftweb.common.Box.tryo
 import play.api.libs.json._
 
@@ -43,7 +44,7 @@ case class Instant(epochMillis: Long) extends Ordered[Instant] {
   def weekyear: Int = toZonedDateTime.get(java.time.temporal.IsoFields.WEEK_BASED_YEAR)
 }
 
-object Instant extends FoxImplicits with LazyLogging {
+object Instant extends FoxImplicits with LazyLogging with Formatter {
   def now: Instant = Instant(System.currentTimeMillis())
 
   def max: Instant = Instant(253370761200000L)
@@ -51,9 +52,6 @@ object Instant extends FoxImplicits with LazyLogging {
   def zero: Instant = Instant(0L)
 
   def in(duration: FiniteDuration): Instant = now + duration
-
-  def fromString(instantLiteral: String)(implicit ec: ExecutionContext): Fox[Instant] =
-    fromStringSync(instantLiteral).toFox
 
   def fromZonedDateTime(zonedDateTime: ZonedDateTime): Instant = Instant(zonedDateTime.toInstant.toEpochMilli)
 
@@ -73,9 +71,10 @@ object Instant extends FoxImplicits with LazyLogging {
 
   def nowFox(implicit ec: ExecutionContext): Fox[Instant] = Fox.successful(Instant.now)
 
-  def logSince(before: Instant, label: String): Unit = logger.info(f"$label took ${Instant.since(before)}")
+  def logSince(before: Instant, label: String, l: Logger = logger): Unit =
+    l.info(f"$label took ${formatDuration(Instant.since(before))}")
 
-  private def fromStringSync(instantLiteral: String): Option[Instant] =
+  def fromString(instantLiteral: String): Option[Instant] =
     fromIsoString(instantLiteral).orElse(fromEpochMillisString(instantLiteral))
 
   private def fromIsoString(instantLiteral: String): Option[Instant] =
@@ -93,7 +92,7 @@ object Instant extends FoxImplicits with LazyLogging {
         }
         .orElse {
           json.validate[String].flatMap { instantString =>
-            val parsedOpt = fromStringSync(instantString)
+            val parsedOpt = fromString(instantString)
             parsedOpt match {
               case Some(parsed) => JsSuccess(parsed)
               case None         => JsError(f"instant.invalid: $instantString")

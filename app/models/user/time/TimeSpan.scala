@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationState.AnnotationState
 import models.annotation.AnnotationType.AnnotationType
-import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
@@ -96,7 +96,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                 AND a.state IN ${SqlToken.tupleFromList(annotationStates)}
                 GROUP BY a._id, t._id, p.name
               )
-              SELECT ti._annotation, ti._task, ti.projectName, ti.timeSummed, JSON_AGG(al.statistics) AS layerStatistics
+              SELECT ti._annotation, ti._task, ti.projectName, ti.timeSummed, JSON_OBJECT_AGG(al.tracingId, al.statistics) AS layerStatistics
               FROM timeSummedPerAnnotation ti
               JOIN webknossos.annotation_layers al ON al._annotation = ti._annotation
               GROUP BY ti._annotation, ti._task, ti.projectName, ti.timeSummed
@@ -104,7 +104,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           """.as[(String, Option[String], Option[String], Long, String)]
         )
         parsed = tuples.map { t =>
-          val layerStats: JsArray = Json.parse(t._5).validate[JsArray].getOrElse(Json.arr())
+          val layerStats: JsObject = Json.parse(t._5).validate[JsObject].getOrElse(Json.obj())
           Json.obj(
             "annotation" -> t._1,
             "task" -> t._2,

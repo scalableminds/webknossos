@@ -19,7 +19,7 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
 import type { DataLayerType, VolumeTracing } from "oxalis/store";
 import Store from "oxalis/store";
@@ -124,7 +124,13 @@ export async function requestWithFallback(
   const requestUrl = shouldUseDataStore
     ? getDataStoreUrl(maybeVolumeTracing?.fallbackLayer)
     : getTracingStoreUrl();
-  const bucketBuffers = await requestFromStore(requestUrl, layerInfo, batch, maybeVolumeTracing);
+  const bucketBuffers = await requestFromStore(
+    requestUrl,
+    layerInfo,
+    batch,
+    maybeVolumeTracing,
+    maybeVolumeTracing != null ? state.tracing.annotationId : undefined,
+  );
   const missingBucketIndices = getNullIndices(bucketBuffers);
 
   // If buckets could not be found on the tracing store (e.g. this happens when the buckets
@@ -154,6 +160,7 @@ export async function requestWithFallback(
     layerInfo,
     fallbackBatch,
     maybeVolumeTracing,
+    maybeVolumeTracing != null ? state.tracing.annotationId : undefined,
     true,
   );
   return bucketBuffers.map((bucket, idx) => {
@@ -170,6 +177,7 @@ export async function requestFromStore(
   layerInfo: DataLayerType,
   batch: Array<BucketAddress>,
   maybeVolumeTracing: VolumeTracing | null | undefined,
+  maybeAnnotationId: string | undefined,
   isVolumeFallback: boolean = false,
 ): Promise<Array<Uint8Array | null | undefined>> {
   const state = Store.getState();
@@ -198,7 +206,7 @@ export async function requestFromStore(
   const magInfo = getMagInfo(layerInfo.resolutions);
   const version =
     !isVolumeFallback && isSegmentation && maybeVolumeTracing != null
-      ? maybeVolumeTracing.version
+      ? state.tracing.version
       : null;
   const bucketInfo = batch.map((zoomedAddress) =>
     createRequestBucketInfo(
@@ -213,8 +221,14 @@ export async function requestFromStore(
   try {
     return await doWithToken(async (token) => {
       const startingTime = window.performance.now();
+      const params = new URLSearchParams({
+        token,
+      });
+      if (maybeAnnotationId != null) {
+        params.append("annotationId", maybeAnnotationId);
+      }
       const { buffer: responseBuffer, headers } =
-        await Request.sendJSONReceiveArraybufferWithHeaders(`${dataUrl}/data?token=${token}`, {
+        await Request.sendJSONReceiveArraybufferWithHeaders(`${dataUrl}/data?${params}`, {
           data: bucketInfo,
           timeout: REQUEST_TIMEOUT,
           showErrorToast: false,
@@ -273,7 +287,7 @@ function sliceBufferIntoPieces(
 
 export async function createCompressedUpdateBucketActions(
   batch: Array<DataBucket>,
-): Promise<UpdateAction[]> {
+): Promise<UpdateActionWithoutIsolationRequirement[]> {
   return _.flatten(
     await Promise.all(
       _.chunk(batch, COMPRESSION_BATCH_SIZE).map(async (batchSubset) => {
@@ -286,7 +300,7 @@ export async function createCompressedUpdateBucketActions(
         return compressedBase64Strings.map((compressedBase64, index) => {
           const bucket = batchSubset[index];
           const bucketInfo = createSendBucketInfo(bucket.zoomedAddress, bucket.cube.magInfo);
-          return updateBucket(bucketInfo, compressedBase64);
+          return updateBucket(bucketInfo, compressedBase64, bucket.getTracingId());
         });
       }),
     ),

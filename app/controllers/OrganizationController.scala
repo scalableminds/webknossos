@@ -127,13 +127,12 @@ class OrganizationController @Inject()(
       needsAcceptance = conf.WebKnossos.TermsOfService.enabled &&
         organization.lastTermsOfServiceAcceptanceVersion < conf.WebKnossos.TermsOfService.version
       acceptanceDeadline = conf.WebKnossos.TermsOfService.acceptanceDeadline
-      deadlinePassed = acceptanceDeadline.toEpochMilli < System.currentTimeMillis()
     } yield
       Ok(
         Json.obj(
           "acceptanceNeeded" -> needsAcceptance,
-          "acceptanceDeadline" -> acceptanceDeadline.toEpochMilli,
-          "acceptanceDeadlinePassed" -> deadlinePassed
+          "acceptanceDeadline" -> acceptanceDeadline,
+          "acceptanceDeadlinePassed" -> acceptanceDeadline.isPast
         ))
   }
 

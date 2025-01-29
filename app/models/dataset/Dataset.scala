@@ -719,18 +719,35 @@ case class DatasetMagInfo(datasetId: ObjectId,
 object DatasetMagInfo {
   implicit val jsonFormat: Format[DatasetMagInfo] = Json.format[DatasetMagInfo]
 }
-class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
-  private def parseRow(row: DatasetMagsRow): Fox[Vec3Int] =
+class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+    extends SQLDAO[MagPathInfo, DatasetMagsRow, DatasetMags](sqlClient) {
+  protected val collection = DatasetMags
+
+  protected def idColumn(x: DatasetMags): Rep[String] = x._Dataset
+
+  protected def isDeletedColumn(x: DatasetMags): Rep[Boolean] = false
+
+  protected def parse(row: DatasetMagsRow): Fox[MagPathInfo] =
     for {
       mag <- Vec3Int.fromList(parseArrayLiteral(row.mag).map(_.toInt)) ?~> "could not parse mag"
+    } yield
+      MagPathInfo(row.datalayername,
+                  mag,
+                  row.path.getOrElse("uninitialized"),
+                  row.realpath.getOrElse("uninitialized"),
+                  hasLocalData = row.haslocaldata)
+
+  private def parseMag(magArrayLiteral: String): Fox[Vec3Int] =
+    for {
+      mag <- Vec3Int.fromList(parseArrayLiteral(magArrayLiteral).map(_.toInt)) ?~> "could not parse mag"
     } yield mag
 
   def findMagForLayer(datasetId: ObjectId, dataLayerName: String): Fox[List[Vec3Int]] =
     for {
       rows <- run(DatasetMags.filter(r => r._Dataset === datasetId.id && r.datalayername === dataLayerName).result)
         .map(_.toList)
-      rowsParsed <- Fox.combined(rows.map(parseRow)) ?~> "could not parse mag row"
-    } yield rowsParsed
+      mags <- Fox.combined(rows.map(r => parseMag(r.mag))) ?~> "could not parse mag row"
+    } yield mags
 
   def updateMags(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
     val clearQuery = q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId".asUpdate
@@ -766,28 +783,21 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   def findPathsForDatasetAndDatalayer(datasetId: ObjectId, dataLayerName: String): Fox[List[DatasetMagInfo]] =
     for {
-      rows <- run(q"""SELECT  _dataset, datalayername, mag, path, realPath, hasLocalData
+      rows <- run(q"""SELECT $columns
             FROM webknossos.dataset_mags
             WHERE _dataset = $datasetId
             AND datalayername = $dataLayerName""".as[DatasetMagsRow])
-      mags <- Fox.serialCombined(rows.toList)(parseRow)
-      magInfos = rows.toList.zip(mags).map {
-        case (row, mag) =>
-          DatasetMagInfo(datasetId,
-                         dataLayerName,
-                         mag,
-                         row.path.getOrElse("uninitialized"),
-                         row.realpath.getOrElse("uninitialized"),
-                         row.haslocaldata)
-      }
-    } yield magInfos
+      magInfos <- Fox.combined(rows.toList.map(parse))
+      datasetMagInfos = magInfos.map(magInfo =>
+        DatasetMagInfo(datasetId, magInfo.layerName, magInfo.mag, magInfo.path, magInfo.realPath, magInfo.hasLocalData))
+    } yield datasetMagInfos
 
   def findAllByRealPath(realPath: String): Fox[List[DatasetMagInfo]] =
     for {
-      rows <- run(q"""SELECT _dataset, datalayername, mag, path, realPath
+      rows <- run(q"""SELECT $columns
             FROM webknossos.dataset_mags
             WHERE realPath = $realPath""".as[DatasetMagsRow])
-      mags <- Fox.serialCombined(rows.toList)(parseRow)
+      mags <- Fox.serialCombined(rows.toList)(r => parseMag(r.mag))
       magInfos = rows.toList.zip(mags).map {
         case (row, mag) =>
           DatasetMagInfo(ObjectId(row._Dataset),
@@ -798,6 +808,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
                          row.haslocaldata)
       }
     } yield magInfos
+
 }
 
 class DatasetLayerDAO @Inject()(

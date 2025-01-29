@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added the possibility to use the "merger mode" even when the user has annotated volume data in the current layer (as long as no other mapping is active). [#8335](https://github.com/scalableminds/webknossos/pull/8335)
 
 ### Changed
+- When using a zarr link to a data layer as another layers source, the user's token is used to access the data. [#8322](https://github.com/scalableminds/webknossos/pull/8322/)
 
 ### Fixed
 - Fixed a bug that lead to trees being dropped when merging to trees together. [#8359](https://github.com/scalableminds/webknossos/pull/8359)

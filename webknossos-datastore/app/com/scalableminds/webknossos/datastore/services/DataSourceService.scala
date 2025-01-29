@@ -91,13 +91,20 @@ class DataSourceService @Inject()(
   private def sendRealPaths(dataSources: List[InboxDataSource]) =
     for {
       _ <- Fox.successful(())
-      pathInfos = dataSources.map(ds => (ds, determineMagRealPathsForDataSource(ds))).map {
-        case (ds, paths) => DataSourcePathInfo(ds.id, paths)
+      magPathBoxes = dataSources.map(ds => (ds, determineMagRealPathsForDataSource(ds)))
+      pathInfos = magPathBoxes.map {
+        case (ds, Full(magPaths)) => DataSourcePathInfo(ds.id, magPaths)
+        case (ds, Failure(msg, _, _)) =>
+          logger.error(s"Failed to determine real paths for mags of $ds: $msg")
+          DataSourcePathInfo(ds.id, List())
+        case (ds, Empty) =>
+          logger.error(s"Failed to determine real paths for mags of $ds")
+          DataSourcePathInfo(ds.id, List())
       }
       _ <- dataSourceRepository.publishRealPaths(pathInfos)
     } yield ()
 
-  private def determineMagRealPathsForDataSource(dataSource: InboxDataSource) = {
+  private def determineMagRealPathsForDataSource(dataSource: InboxDataSource) = tryo {
     val organizationPath = dataBaseDir.resolve(dataSource.id.organizationId)
     val datasetPath = organizationPath.resolve(dataSource.id.directoryName)
     dataSource.toUsable match {

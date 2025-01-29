@@ -340,16 +340,19 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- datasetDAO.updateUploader(dataset._id, Some(_uploader)) ?~> "dataset.uploader.forbidden"
     } yield ()
 
-  private def updateRealPath(pathInfo: DataSourcePathInfo)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val dataset = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).futureBox
-    dataset.flatMap {
-      case Full(dataset) => datasetMagsDAO.updateMagPathsForDataset(dataset._id, pathInfo.magPathInfos)
-      case Empty => // Dataset reported but ignored (non-existing/forbidden org)
-        Fox.successful(())
-      case e: EmptyBox =>
-        Fox.failure("dataset.notFound", e)
+  private def updateRealPath(pathInfo: DataSourcePathInfo)(implicit ctx: DBAccessContext): Fox[Unit] =
+    if (pathInfo.magPathInfos.isEmpty) {
+      Fox.successful(())
+    } else {
+      val dataset = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).futureBox
+      dataset.flatMap {
+        case Full(dataset) => datasetMagsDAO.updateMagPathsForDataset(dataset._id, pathInfo.magPathInfos)
+        case Empty => // Dataset reported but ignored (non-existing/forbidden org)
+          Fox.successful(())
+        case e: EmptyBox =>
+          Fox.failure("dataset.notFound", e)
+      }
     }
-  }
 
   def updateRealPaths(pathInfos: List[DataSourcePathInfo])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {

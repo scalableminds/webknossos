@@ -11,13 +11,8 @@ class InstantTestSuite extends PlaySpec {
 
   "Instant" should {
     "be parsed from strings in different formats" in {
-      assert(
-        Instant.fromString("1707389459123")(global).await(handleFoxJustification).contains(Instant(1707389459123L)))
-      assert(
-        Instant
-          .fromString("2024-02-08T10:50:59.123Z")(global)
-          .await(handleFoxJustification)
-          .contains(Instant(1707389459123L)))
+      assert(Instant.fromString("1707389459123").contains(Instant(1707389459123L)))
+      assert(Instant.fromString("2024-02-08T10:50:59.123Z").contains(Instant(1707389459123L)))
     }
     "be parsed from json in different formats" in {
       assert(JsonHelper.parseAndValidateJson[Instant]("1707389459123").contains(Instant(1707389459123L)))

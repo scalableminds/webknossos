@@ -8,7 +8,6 @@ import {
   isLayerVisible,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
-import { isBusy } from "oxalis/model/accessors/save_accessor";
 import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -18,7 +17,6 @@ import type DataLayer from "oxalis/model/data_layer";
 import { getTotalSaveQueueLength } from "oxalis/model/reducers/save_reducer";
 import type { TraceOrViewCommand } from "oxalis/store";
 import Store from "oxalis/store";
-import type { Versions } from "oxalis/view/version_view";
 import type { APICompoundType } from "types/api_flow_types";
 
 import { globalToLayerTransformedPosition } from "./model/accessors/dataset_layer_transformation_accessor";
@@ -35,14 +33,14 @@ export class OxalisModel {
     initialMaybeCompoundType: APICompoundType | null,
     initialCommandType: TraceOrViewCommand,
     initialFetch: boolean,
-    versions?: Versions,
+    version?: number | undefined | null,
   ) {
     try {
       const initializationInformation = await initialize(
         initialMaybeCompoundType,
         initialCommandType,
         initialFetch,
-        versions,
+        version,
       );
 
       if (initializationInformation) {
@@ -292,8 +290,7 @@ export class OxalisModel {
 
   stateSaved() {
     const state = Store.getState();
-    const storeStateSaved =
-      !isBusy(state.save.isBusyInfo) && getTotalSaveQueueLength(state.save.queue) === 0;
+    const storeStateSaved = !state.save.isBusy && getTotalSaveQueueLength(state.save.queue) === 0;
 
     const pushQueuesSaved = _.reduce(
       this.dataLayers,
@@ -350,7 +347,7 @@ export class OxalisModel {
       // The dispatch of the saveNowAction IN the while loop is deliberate.
       // Otherwise if an update action is pushed to the save queue during the Utils.sleep,
       // the while loop would continue running until the next save would be triggered.
-      if (!isBusy(Store.getState().save.isBusyInfo)) {
+      if (!Store.getState().save.isBusy) {
         Store.dispatch(saveNowAction());
       }
 

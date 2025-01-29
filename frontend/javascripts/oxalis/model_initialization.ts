@@ -1,12 +1,13 @@
 import {
   getAnnotationCompoundInformation,
-  getAnnotationInformation,
+  getAnnotationProto,
   getDataset,
   getDatasetViewConfiguration,
   getEditableMappingInfo,
   getEmptySandboxAnnotationInformation,
   getSharingTokenFromUrlParameters,
   getTracingsForAnnotation,
+  getUnversionedAnnotationInformation,
   getUserConfiguration,
 } from "admin/admin_rest_api";
 import {
@@ -39,6 +40,7 @@ import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontraci
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import {
+  batchedAnnotationInitializationAction,
   dispatchMaybeFetchMeshFilesAsync,
   initializeAnnotationAction,
   updateCurrentMeshFileAction,
@@ -92,13 +94,13 @@ import type {
   UserConfiguration,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import type { Versions } from "oxalis/view/version_view";
 import type {
   APIAnnotation,
   APICompoundType,
   APIDataLayer,
   APIDataset,
   APISegmentationLayer,
+  APITracingStoreAnnotation,
   MutableAPIDataset,
   ServerEditableMapping,
   ServerTracing,
@@ -106,7 +108,11 @@ import type {
 } from "types/api_flow_types";
 import type { Mutable } from "types/globals";
 import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
-import { convertServerAdditionalAxesToFrontEnd } from "./model/reducers/reducer_helpers";
+import { setVersionNumberAction } from "./model/actions/save_actions";
+import {
+  convertServerAdditionalAxesToFrontEnd,
+  convertServerAnnotationToFrontendAnnotation,
+} from "./model/reducers/reducer_helpers";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
@@ -115,7 +121,7 @@ export async function initialize(
   initialMaybeCompoundType: APICompoundType | null,
   initialCommandType: TraceOrViewCommand,
   initialFetch: boolean,
-  versions?: Versions,
+  version?: number | undefined | null,
 ): Promise<
   | {
       dataLayers: DataLayerCollection;
@@ -126,14 +132,44 @@ export async function initialize(
 > {
   Store.dispatch(setControlModeAction(initialCommandType.type));
   let annotation: APIAnnotation | null | undefined;
+  let annotationProto: APITracingStoreAnnotation | null | undefined;
   let datasetId: string;
 
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
-    annotation =
-      initialMaybeCompoundType != null
-        ? await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType)
-        : await getAnnotationInformation(annotationId);
+    if (initialMaybeCompoundType != null) {
+      annotation = await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType);
+    } else {
+      let unversionedAnnotation = await getUnversionedAnnotationInformation(annotationId);
+      annotationProto = await getAnnotationProto(
+        unversionedAnnotation.tracingStore.url,
+        unversionedAnnotation.id,
+        version,
+      );
+      const layersWithStats = annotationProto.annotationLayers.map((protoLayer) => {
+        return {
+          tracingId: protoLayer.tracingId,
+          name: protoLayer.name,
+          typ: protoLayer.typ,
+          stats:
+            // Only when the newest version is requested (version==null),
+            // the stats are available in unversionedAnnotation.
+            version == null
+              ? (_.find(
+                  unversionedAnnotation.annotationLayers,
+                  (layer) => layer.tracingId === protoLayer.tracingId,
+                )?.stats ?? {})
+              : {},
+        };
+      });
+      const completeAnnotation = {
+        ...unversionedAnnotation,
+        description: annotationProto.description,
+        annotationProto: annotationProto.earliestAccessibleVersion,
+        annotationLayers: layersWithStats,
+      };
+      annotation = completeAnnotation;
+    }
     datasetId = annotation.datasetId;
 
     if (!annotation.restrictions.allowAccess) {
@@ -159,7 +195,7 @@ export async function initialize(
   const [dataset, initialUserSettings, serverTracings] = await fetchParallel(
     annotation,
     datasetId,
-    versions,
+    version,
   );
   const serverVolumeTracings = getServerVolumeTracings(serverTracings);
   const serverVolumeTracingIds = serverVolumeTracings.map((volumeTracing) => volumeTracing.id);
@@ -204,8 +240,16 @@ export async function initialize(
     const editableMappings = await fetchEditableMappings(
       annotation.tracingStore.url,
       serverVolumeTracings,
+      annotation.id,
+      version,
     );
-    initializeTracing(annotation, serverTracings, editableMappings);
+    initializeAnnotation(
+      annotation,
+      annotationProto?.version ?? 1,
+      annotationProto?.earliestAccessibleVersion ?? 0,
+      serverTracings,
+      editableMappings,
+    );
   } else {
     // In view only tracings we need to set the view mode too.
     const { allowedModes } = determineAllowedModes();
@@ -227,22 +271,24 @@ export async function initialize(
 async function fetchParallel(
   annotation: APIAnnotation | null | undefined,
   datasetId: string,
-  versions?: Versions,
+  version: number | undefined | null,
 ): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>]> {
   return Promise.all([
     getDataset(datasetId, getSharingTokenFromUrlParameters()),
     getUserConfiguration(), // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
-    annotation ? getTracingsForAnnotation(annotation, versions) : [],
+    annotation ? getTracingsForAnnotation(annotation, version) : [],
   ]);
 }
 
 async function fetchEditableMappings(
   tracingStoreUrl: string,
   serverVolumeTracings: ServerVolumeTracing[],
+  annotationId: string,
+  version: number | undefined | null,
 ): Promise<ServerEditableMapping[]> {
   const promises = serverVolumeTracings
     .filter((tracing) => tracing.hasEditableMapping)
-    .map((tracing) => getEditableMappingInfo(tracingStoreUrl, tracing.id));
+    .map((tracing) => getEditableMappingInfo(tracingStoreUrl, tracing.id, annotationId, version));
   return Promise.all(promises);
 }
 
@@ -276,8 +322,10 @@ function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
   }
 }
 
-function initializeTracing(
+function initializeAnnotation(
   _annotation: APIAnnotation,
+  version: number,
+  earliestAccessibleVersion: number,
   serverTracings: Array<ServerTracing>,
   editableMappings: Array<ServerEditableMapping>,
 ) {
@@ -297,7 +345,11 @@ function initializeTracing(
     if (controlMode === ControlModeEnum.SANDBOX) {
       annotation = {
         ...annotation,
-        restrictions: { ...annotation.restrictions, allowUpdate: true, allowSave: false },
+        restrictions: {
+          ...annotation.restrictions,
+          allowUpdate: true,
+          allowSave: false,
+        },
       };
     } else if (controlMode === ControlModeEnum.TRACE) {
       annotation = {
@@ -309,25 +361,32 @@ function initializeTracing(
       };
     }
 
-    Store.dispatch(initializeAnnotationAction(annotation));
+    const initializationActions = [];
+    initializationActions.push(
+      initializeAnnotationAction(
+        convertServerAnnotationToFrontendAnnotation(annotation, version, earliestAccessibleVersion),
+      ),
+    );
     getServerVolumeTracings(serverTracings).map((volumeTracing) => {
       ErrorHandling.assert(
         getSegmentationLayers(dataset).length > 0,
         messages["tracing.volume_missing_segmentation"],
       );
-      Store.dispatch(initializeVolumeTracingAction(volumeTracing));
+      initializationActions.push(initializeVolumeTracingAction(volumeTracing));
     });
 
-    editableMappings.map((mapping) => Store.dispatch(initializeEditableMappingAction(mapping)));
+    editableMappings.map((mapping) =>
+      initializationActions.push(initializeEditableMappingAction(mapping)),
+    );
 
     const skeletonTracing = getNullableSkeletonTracing(serverTracings);
 
     if (skeletonTracing != null) {
-      // To generate a huge amount of dummy trees, use:
-      // import generateDummyTrees from "./model/helpers/generate_dummy_trees";
-      // tracing.trees = generateDummyTrees(1, 200000);
-      Store.dispatch(initializeSkeletonTracingAction(skeletonTracing));
+      initializationActions.push(initializeSkeletonTracingAction(skeletonTracing));
     }
+
+    Store.dispatch(batchedAnnotationInitializationAction(initializationActions));
+    Store.dispatch(setVersionNumberAction(version));
   }
 
   // Initialize 'flight', 'oblique' or 'orthogonal' mode
@@ -379,13 +438,14 @@ function initializeDataset(
   // Make sure subsequent fetch calls are always for the same dataset
   if (!initialFetch) {
     ErrorHandling.assert(
-      _.isEqual(dataset.dataSource.id.name, Store.getState().dataset.name),
+      _.isEqual(dataset.id, Store.getState().dataset.id),
       messages["dataset.changed_without_reload"],
     );
   }
 
   ErrorHandling.assertExtendContext({
-    dataSet: dataset.dataSource.id.name,
+    datasetName: dataset.name,
+    datasetId: dataset.id,
   });
   const mutableDataset = dataset as any as MutableAPIDataset;
   const volumeTracings = getServerVolumeTracings(serverTracings);
@@ -403,7 +463,10 @@ function initializeDataset(
 function initializeAdditionalCoordinates(mutableDataset: MutableAPIDataset) {
   const unifiedAdditionalCoordinates = getUnifiedAdditionalCoordinates(mutableDataset);
   const initialAdditionalCoordinates = Utils.values(unifiedAdditionalCoordinates).map(
-    ({ name, bounds }) => ({ name, value: Math.floor((bounds[1] - bounds[0]) / 2) }),
+    ({ name, bounds }) => ({
+      name,
+      value: Math.floor((bounds[1] - bounds[0]) / 2),
+    }),
   );
 
   Store.dispatch(setAdditionalCoordinatesAction(initialAdditionalCoordinates));
@@ -454,6 +517,7 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
       layer,
       textureInformation.textureSize,
       textureInformation.textureCount,
+      layer.name, // In case of a volume tracing layer the layer name will equal its tracingId.
     );
   }
 

@@ -6,13 +6,10 @@ import {
   writeTypeCheckingFile,
 } from "test/e2e-setup";
 import type { APIAnnotation } from "types/api_flow_types";
-import { APIAnnotationTypeEnum } from "types/api_flow_types";
+import { AnnotationLayerEnum, APIAnnotationTypeEnum } from "types/api_flow_types";
 import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import {
-  getNullableSkeletonTracing,
-  getSkeletonDescriptor,
-} from "oxalis/model/accessors/skeletontracing_accessor";
+import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import { sendRequestWithToken, addVersionNumbers } from "oxalis/model/sagas/save_saga";
 import * as UpdateActions from "oxalis/model/sagas/update_actions";
@@ -20,7 +17,10 @@ import * as api from "admin/admin_rest_api";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
 import test from "ava";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
+import type { SaveQueueEntry } from "oxalis/store";
+
 const datasetId = "59e9cfbdba632ac2ab8b23b3";
+
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
 });
@@ -30,7 +30,7 @@ test.before("Reset database", async () => {
 });
 test("getAnnotationInformation()", async (t) => {
   const annotationId = "570ba0092a7c0e980056fe9b";
-  const annotation = await api.getAnnotationInformation(annotationId);
+  const annotation = await api.getUnversionedAnnotationInformation(annotationId);
   t.is(annotation.id, annotationId);
   writeTypeCheckingFile(annotation, "annotation", "APIAnnotation");
   t.snapshot(annotation);
@@ -38,7 +38,7 @@ test("getAnnotationInformation()", async (t) => {
 test("getAnnotationInformation() for public annotation while logged out", async (t) => {
   setCurrToken("invalidToken");
   const annotationId = "88135c192faeb34c0081c05d";
-  const annotation = await api.getAnnotationInformation(annotationId);
+  const annotation = await api.getUnversionedAnnotationInformation(annotationId);
   t.is(annotation.id, annotationId);
   t.snapshot(annotation);
   setCurrToken(tokenUserA);
@@ -73,35 +73,30 @@ test.serial("finishAnnotation() and reOpenAnnotation() for explorational", async
 });
 test.serial("editAnnotation()", async (t) => {
   const annotationId = "68135c192faeb34c0081c05d";
-  const originalAnnotation = await api.getAnnotationInformation(annotationId);
-  const { name, visibility, description } = originalAnnotation;
+  const originalAnnotation = await api.getUnversionedAnnotationInformation(annotationId);
+  const { visibility } = originalAnnotation;
   const newName = "new name";
   const newVisibility = "Public";
-  const newDescription = "new description";
   await api.editAnnotation(annotationId, APIAnnotationTypeEnum.Explorational, {
-    name: newName,
     visibility: newVisibility,
-    description: newDescription,
+    name: newName,
   });
-  const editedAnnotation = await api.getAnnotationInformation(annotationId);
+  const editedAnnotation = await api.getUnversionedAnnotationInformation(annotationId);
   t.is(editedAnnotation.name, newName);
   t.is(editedAnnotation.visibility, newVisibility);
-  t.is(editedAnnotation.description, newDescription);
   t.is(editedAnnotation.id, annotationId);
-  t.is(editedAnnotation.annotationLayers[0].typ, "Skeleton");
+  t.is(editedAnnotation.annotationLayers[0].typ, AnnotationLayerEnum.Skeleton);
   t.is(editedAnnotation.annotationLayers[0].tracingId, "ae417175-f7bb-4a34-8187-d9c3b50143af");
   t.snapshot(replaceVolatileValues(editedAnnotation));
   await api.editAnnotation(annotationId, APIAnnotationTypeEnum.Explorational, {
-    name,
     visibility,
-    description,
   });
 });
 test.serial("finishAllAnnotations()", async (t) => {
   const annotationIds = ["78135c192faeb34c0081c05d", "78135c192faeb34c0081c05e"];
   await api.finishAllAnnotations(annotationIds);
   const finishedAnnotations = await Promise.all(
-    annotationIds.map((id) => api.getAnnotationInformation(id)),
+    annotationIds.map((id) => api.getUnversionedAnnotationInformation(id)),
   );
   t.is(finishedAnnotations.length, 2);
   finishedAnnotations.forEach((annotation) => {
@@ -115,7 +110,7 @@ test.serial("createExplorational() and finishAnnotation()", async (t) => {
   const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
   t.snapshot(replaceVolatileValues(createdExplorational));
   await api.finishAnnotation(createdExplorational.id, APIAnnotationTypeEnum.Explorational);
-  const finishedAnnotation = await api.getAnnotationInformation(createdExplorational.id);
+  const finishedAnnotation = await api.getUnversionedAnnotationInformation(createdExplorational.id);
   t.is(finishedAnnotation.state, "Finished");
 });
 test.serial("getTracingsForAnnotation()", async (t) => {
@@ -143,12 +138,9 @@ test.serial("getTracingsForAnnotation() for hybrid", async (t) => {
   });
 });
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'queue' implicitly has an 'any' type.
-async function sendUpdateActionsForSkeleton(explorational: APIAnnotation, queue) {
-  const skeletonTracing = getSkeletonDescriptor(explorational);
-  if (skeletonTracing == null) throw new Error("No skeleton annotation present.");
+async function sendUpdateActions(explorational: APIAnnotation, queue: SaveQueueEntry[]) {
   return sendRequestWithToken(
-    `${explorational.tracingStore.url}/tracings/skeleton/${skeletonTracing.tracingId}/update?token=`,
+    `${explorational.tracingStore.url}/tracings/annotation/${explorational.id}/update?token=`,
     {
       method: "POST",
       data: queue,
@@ -159,9 +151,11 @@ async function sendUpdateActionsForSkeleton(explorational: APIAnnotation, queue)
 
 test.serial("Send update actions and compare resulting tracing", async (t) => {
   const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
+  const tracingId = createdExplorational.annotationLayers[0].tracingId;
   const initialSkeleton = {
     activeNodeId: undefined,
     userBoundingBoxes: [],
+    tracingId,
   };
   const [saveQueue] = addVersionNumbers(
     createSaveQueueFromUpdateActions(
@@ -173,13 +167,14 @@ test.serial("Send update actions and compare resulting tracing", async (t) => {
     ),
     0,
   );
-  await sendUpdateActionsForSkeleton(createdExplorational, saveQueue);
+  await sendUpdateActions(createdExplorational, saveQueue);
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
   t.snapshot(replaceVolatileValues(tracings[0]));
 });
 test("Send complex update actions and compare resulting tracing", async (t) => {
   const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
-  const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 5));
+  const { tracingId } = createdExplorational.annotationLayers[0];
+  const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 6));
   const treeGroups = [
     {
       groupId: 1,
@@ -198,9 +193,8 @@ test("Send complex update actions and compare resulting tracing", async (t) => {
       ],
     },
   ];
-
-  const createTreesUpdateActions = Array.from(diffTrees({}, trees));
-  const updateTreeGroupsUpdateAction = UpdateActions.updateTreeGroups(treeGroups);
+  const createTreesUpdateActions = Array.from(diffTrees(tracingId, {}, trees));
+  const updateTreeGroupsUpdateAction = UpdateActions.updateTreeGroups(treeGroups, tracingId);
   const [saveQueue] = addVersionNumbers(
     createSaveQueueFromUpdateActions(
       [createTreesUpdateActions, [updateTreeGroupsUpdateAction]],
@@ -208,7 +202,7 @@ test("Send complex update actions and compare resulting tracing", async (t) => {
     ),
     0,
   );
-  await sendUpdateActionsForSkeleton(createdExplorational, saveQueue);
+  await sendUpdateActions(createdExplorational, saveQueue);
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
   writeTypeCheckingFile(tracings[0], "tracing", "ServerSkeletonTracing");
   t.snapshot(replaceVolatileValues(tracings[0]));
@@ -216,8 +210,9 @@ test("Send complex update actions and compare resulting tracing", async (t) => {
 
 test("Update Metadata for Skeleton Tracing", async (t) => {
   const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
-  const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 5));
-  const createTreesUpdateActions = Array.from(diffTrees({}, trees));
+  const { tracingId } = createdExplorational.annotationLayers[0];
+  const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 6));
+  const createTreesUpdateActions = Array.from(diffTrees(tracingId, {}, trees));
   const metadata = [
     {
       key: "city",
@@ -236,13 +231,32 @@ test("Update Metadata for Skeleton Tracing", async (t) => {
     ...trees[1],
     metadata,
   };
-  const updateTreeAction = UpdateActions.updateTree(trees[1]);
+
+  const updateTreeAction = UpdateActions.updateTree(trees[1], tracingId);
   const [saveQueue] = addVersionNumbers(
     createSaveQueueFromUpdateActions([createTreesUpdateActions, [updateTreeAction]], 123456789),
     0,
   );
 
-  await sendUpdateActionsForSkeleton(createdExplorational, saveQueue);
+  await sendUpdateActions(createdExplorational, saveQueue);
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
   t.snapshot(replaceVolatileValues(tracings[0]));
+});
+
+test.serial("Send update actions for updating metadata", async (t) => {
+  const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
+  const newDescription = "new description";
+  const [saveQueue] = addVersionNumbers(
+    createSaveQueueFromUpdateActions(
+      [[UpdateActions.updateMetadataOfAnnotation(newDescription)]],
+      123456789,
+    ),
+    0,
+  );
+  await sendUpdateActions(createdExplorational, saveQueue);
+  const annotation = await api.getAnnotationProto(
+    createdExplorational.tracingStore.url,
+    createdExplorational.id,
+  );
+  t.is(annotation.description, newDescription);
 });

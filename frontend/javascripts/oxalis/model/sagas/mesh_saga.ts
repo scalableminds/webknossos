@@ -82,6 +82,7 @@ import type {
   UpdateSegmentAction,
 } from "../actions/volumetracing_actions";
 import type { MagInfo } from "../helpers/mag_info";
+import { ensureSceneControllerReady, ensureWkReady } from "./ready_sagas";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
@@ -673,7 +674,7 @@ function* _refreshMeshWithMap(
 
 // Avoid redundant fetches of mesh files for the same layer by
 // storing Deferreds per layer lazily.
-const fetchDeferredsPerLayer: Record<string, Deferred<Array<APIMeshFile>, unknown>> = {};
+let fetchDeferredsPerLayer: Record<string, Deferred<Array<APIMeshFile>, unknown>> = {};
 function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   const { segmentationLayer, dataset, mustRequest, autoActivate, callback } = action;
 
@@ -1202,7 +1203,7 @@ export function* handleAdditionalCoordinateUpdate(): Saga<void> {
   // We want to prevent iterating through all additional coordinates to adjust the mesh visibility, so we store the
   // previous additional coordinates in this method. Thus we have to catch SET_ADDITIONAL_COORDINATES actions in a
   // while-true loop and register this saga in the root saga instead of calling from the mesh saga.
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
 
   let previousAdditionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const { segmentMeshController } = yield* call(getSceneController);
@@ -1277,13 +1278,14 @@ function* handleBatchSegmentColorChange(
 }
 
 export default function* meshSaga(): Saga<void> {
+  fetchDeferredsPerLayer = {};
   // Buffer actions since they might be dispatched before WK_READY
   const loadAdHocMeshActionChannel = yield* actionChannel("LOAD_AD_HOC_MESH_ACTION");
   const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
   const maybeFetchMeshFilesActionChannel = yield* actionChannel("MAYBE_FETCH_MESH_FILES");
 
-  yield* take("SCENE_CONTROLLER_READY");
-  yield* take("WK_READY");
+  yield* call(ensureSceneControllerReady);
+  yield* call(ensureWkReady);
   yield* takeEvery(maybeFetchMeshFilesActionChannel, maybeFetchMeshFiles);
   yield* takeEvery(loadAdHocMeshActionChannel, loadAdHocMeshFromAction);
   yield* takeEvery(loadPrecomputedMeshActionChannel, loadPrecomputedMesh);

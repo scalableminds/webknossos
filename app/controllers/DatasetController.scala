@@ -472,7 +472,7 @@ class DatasetController @Inject()(userService: UserService,
             request.body.mag,
             request.body.additionalCoordinates
           ) ?~> "segmentAnything.getData.failed"
-          _ = logger.info(s"Data loading for SAM took ${Instant.since(beforeDataLoading)}")
+          _ = Instant.logSince(beforeDataLoading, "Data loading for SAM", logger)
           _ = logger.debug(
             s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}, range: $intensityMin-$intensityMax...")
           _ <- bool2Fox(
@@ -492,7 +492,7 @@ class DatasetController @Inject()(userService: UserService,
             intensityMin,
             intensityMax
           ) ?~> "segmentAnything.getMask.failed"
-          _ = logger.info(s"Fetching SAM masks from torchserve took ${Instant.since(beforeMask)}")
+          _ = Instant.logSince(beforeMask, "Fetching SAM masks from torchserve", logger)
           _ = logger.debug(s"Received ${mask.length} bytes of mask from SAM server, forwarding to front-end...")
         } yield Ok(mask)
       }

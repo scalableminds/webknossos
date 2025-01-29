@@ -264,7 +264,6 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     contourList: [],
     largestSegmentId,
     tracingId: tracing.id,
-    version: tracing.version,
     boundingBox: convertServerBoundingBoxToFrontend(tracing.boundingBox),
     fallbackLayer: tracing.fallbackLayer,
     userBoundingBoxes,

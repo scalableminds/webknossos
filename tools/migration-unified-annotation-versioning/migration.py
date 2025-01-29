@@ -71,7 +71,7 @@ class Migration:
                     newest_version = self.get_newest_version(tracing_id, update_collection)
                     versions += newest_version
                 if versions > 1:
-                    logger.info(f"{versions} versions for {annotation['_id']}{self.get_progress()}")
+                    logger.info(f"{versions} versions for {annotation['_id']}{self.get_progress(offset=1)}")
             else:
                 logger.debug(f"Migrating annotation {annotation['_id']} (dry={self.args.dry}) ...")
                 mapping_id_map = self.build_mapping_id_map(annotation)
@@ -86,7 +86,7 @@ class Migration:
                 logger.debug("writing annotationProtos...")
                 self.create_and_save_annotation_proto(annotation, materialized_versions, mapping_id_map)
                 if time.time() - before > 1 or self.args.verbose:
-                    log_since(before, f"Migrating annotation {annotation['_id']} ({len(materialized_versions)} materialized versions)", self.get_progress())
+                    log_since(before, f"Migrating annotation {annotation['_id']} ({len(materialized_versions)} materialized versions)", self.get_progress(offset=1))
                 checkpoint_logger.info(annotation['_id'])
         except Exception:
             logger.exception(f"Exception while migrating annotation {annotation['_id']}:")
@@ -570,7 +570,7 @@ class Migration:
     def read_annotation_list(self):
         checkpoint_set = self.read_checkpoints()
         before = time.time()
-        start_time = str(datetime.datetime.now())
+        start_time = str(datetime.datetime.now(datetime.timezone.utc))
         if self.args.start is not None:
             start_time = self.args.start
         previous_start_label = ""
@@ -628,9 +628,12 @@ class Migration:
         slash_pos = key.find('/')
         return replacement_prefix + key[slash_pos:]
 
-    def get_progress(self) -> str:
+    # Current progress as formatted string.
+    # offset is added to done_count to account for incrementing done_count only *after* logging (in the finally block)
+    def get_progress(self, offset: int) -> str:
         with self.done_count_lock:
             done_count = self.done_count
+        done_count += offset
         percentage = 100.0 * done_count / self.total_count
         duration = time.time() - self.before
         if done_count > 0:

@@ -9,7 +9,7 @@ import EdgeCollection from "oxalis/model/edge_collection";
 import mock from "mock-require";
 import test from "ava";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import type { OxalisState, SkeletonTracing, Node } from "oxalis/store";
+import type { OxalisState, SkeletonTracing, Node, Tree, MutableNode } from "oxalis/store";
 import defaultState from "oxalis/default_state";
 import { TreeTypeEnum, type Vector3 } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
@@ -1058,6 +1058,105 @@ test("SkeletonTracing should merge two trees with comments and branchPoints", (t
   ]);
   t.is(newSkeletonTracing.trees[3].comments.length, 2);
   t.is(newSkeletonTracing.trees[3].branchPoints.length, 1);
+});
+test("SkeletonTracing shouldn't merge two trees of different type", (t) => {
+  const nodes: MutableNode[] = [
+    {
+      id: 0,
+      untransformedPosition: [0, 0, 0],
+      radius: 10,
+      mag: 10,
+      rotation: [0, 0, 0],
+      timestamp: 0,
+      viewport: 1,
+      interpolation: true,
+      additionalCoordinates: [],
+      bitDepth: 8,
+    },
+    {
+      id: 1,
+      untransformedPosition: [0, 0, 0],
+      radius: 10,
+      mag: 10,
+      rotation: [0, 0, 0],
+      timestamp: 0,
+      viewport: 1,
+      interpolation: true,
+      additionalCoordinates: [],
+      bitDepth: 8,
+    },
+    {
+      id: 2,
+      untransformedPosition: [0, 0, 0],
+      radius: 10,
+      mag: 10,
+      rotation: [0, 0, 0],
+      timestamp: 0,
+      viewport: 1,
+      interpolation: true,
+      additionalCoordinates: [],
+      bitDepth: 8,
+    },
+  ];
+  const newAgglomerateTree: Tree = {
+    treeId: 1,
+    name: "Tree001",
+    nodes: new DiffableMap([
+      [0, nodes[0]],
+      [1, nodes[1]],
+      [2, nodes[2]],
+    ]),
+    timestamp: Date.now(),
+    branchPoints: [],
+    edges: EdgeCollection.loadFromArray([
+      {
+        source: 0,
+        target: 1,
+      },
+      { source: 1, target: 2 },
+      { source: 2, target: 3 },
+    ]),
+    comments: [],
+    color: [23, 23, 23],
+    groupId: MISSING_GROUP_ID,
+    isVisible: true,
+    type: TreeTypeEnum.DEFAULT,
+    edgesAreVisible: true,
+    metadata: [],
+  };
+  const initialStateWithAgglomerateNodes = update(initialState, {
+    tracing: {
+      skeleton: {
+        trees: {
+          3: {
+            $set: newAgglomerateTree,
+          },
+        },
+      },
+    },
+  });
+  const createNodeAction = SkeletonTracingActions.createNodeAction(
+    position,
+    null,
+    rotation,
+    viewport,
+    mag,
+  );
+  // Create a new agglomerate tree with 3 nodes; then add two nodes to the first tree of type default.
+  const newState = ChainReducer<OxalisState, Action>(initialStateWithAgglomerateNodes)
+    // Add two more nodes to tree with id 1.
+    .apply(SkeletonTracingReducer, createNodeAction) // For tree 1
+    .apply(SkeletonTracingReducer, createNodeAction) // For tree 1
+    .unpack();
+  t.not(newState, initialState);
+  const newSkeletonTracing = enforceSkeletonTracing(newState.tracing);
+  t.is(_.size(newSkeletonTracing.trees), 3);
+  t.is(newSkeletonTracing.trees[1].nodes.size(), 2);
+  t.is(newSkeletonTracing.trees[3].nodes.size(), 3);
+  // Trying to merge those trees should fail as they have a different type.
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(5, 2);
+  const stateAfterMerge = SkeletonTracingReducer(newState, mergeTreesAction);
+  t.is(stateAfterMerge, newState);
 });
 test("SkeletonTracing should rename the active tree", (t) => {
   const newName = "SuperTestName";

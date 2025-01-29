@@ -38,7 +38,6 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       "name" -> organization.name
     )
 
-  // TODO: Double check whether adding the implicit ctx does not break anything
   def publicWrites(organization: Organization, requestingUser: Option[User] = None)(
       implicit ctx: DBAccessContext): Fox[JsObject] = {
 

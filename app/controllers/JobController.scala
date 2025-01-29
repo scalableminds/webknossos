@@ -322,7 +322,7 @@ class JobController @Inject()(
           datasetBoundingBox <- datasetService
             .dataSourceFor(dataset)
             .flatMap(_.toUsable)
-            .map(_.boundingBox) ?~> "dataset.boundingBox.unset" // TODO: add error message to messages.conf
+            .map(_.boundingBox) ?~> "dataset.boundingBox.unset"
           _ <- Fox.runOptional(annotationId)(ObjectId.fromString)
           command = JobCommand.align_sections
           commandArgs = Json.obj(

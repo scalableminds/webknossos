@@ -61,7 +61,7 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
         transaction <- creditTransactionDAO.findOne(transactionId)
         _ <- bool2Fox(transaction._organization == organizationId) ?~> "Transaction is not for this organization"
         _ <- organizationService.ensureOrganizationHasPaidPlan(organizationId)
-        _ <- creditTransactionDAO.refundTransaction(transactionId)
+        _ <- creditTransactionDAO.refundTransaction(transaction._id)
       } yield Ok
     }
 

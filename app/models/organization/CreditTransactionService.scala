@@ -41,7 +41,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
       insertedTransaction <- creditTransactionDAO.findOne(pendingCreditTransaction._id)
     } yield insertedTransaction
 
-  def doCreditTransaction(creditTransaction: CreditTransaction): Fox[Unit] =
+  def doCreditTransaction(creditTransaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- organizationService.ensureOrganizationHasPaidPlan(creditTransaction._organization)
       _ <- creditTransactionDAO.insertTransaction(creditTransaction)
@@ -51,7 +51,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
     for {
       transaction <- creditTransactionDAO.findTransactionForJob(jobId)
       _ <- organizationService.ensureOrganizationHasPaidPlan(transaction._organization)
-      _ <- creditTransactionDAO.commitTransaction(transaction._id.toString)
+      _ <- creditTransactionDAO.commitTransaction(transaction._id)
     } yield ()
 
   def refundTransactionForJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -63,7 +63,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
   private def refundTransaction(creditTransaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- organizationService.ensureOrganizationHasPaidPlan(creditTransaction._organization)
-      _ <- creditTransactionDAO.refundTransaction(creditTransaction._id.toString)
+      _ <- creditTransactionDAO.refundTransaction(creditTransaction._id)
     } yield ()
 
   // This method is explicitly named this way to warn that this method should only be called when starting a job has failed.

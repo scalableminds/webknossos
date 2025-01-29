@@ -96,8 +96,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const containerElement = document.getElementById("main-container");
 
   try {
-    await Promise.all([loadFeatureToggles(), loadActiveUser(), loadHasOrganizations()]);
-    await Promise.all([loadOrganization()]);
+    await loadHasOrganizations();
   } catch (e) {
     console.error("Failed to load WEBKNOSSOS due to the following error", e);
     if (containerElement) {
@@ -110,6 +109,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     return;
   }
+  await Promise.all([loadFeatureToggles(), loadActiveUser()]);
+  await loadOrganization();
 
   if (containerElement) {
     const react_root = createRoot(containerElement);

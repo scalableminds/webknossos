@@ -977,7 +977,7 @@ CREATE  FUNCTION webknossos.enforce_non_negative_balance() RETURNS TRIGGER AS $$
     SELECT COALESCE(SUM(credit_change), 0)
     INTO current_balance
     FROM webknossos.organization_credit_transactions
-    WHERE _organization = NEW._organization;
+    WHERE _organization = NEW._organization AND _id != NEW._id;
     -- Add the new transaction's credit change to calculate the new balance
     new_balance := current_balance + COALESCE(NEW.credit_change, 0);
     -- Check if the new balance is negative

@@ -213,7 +213,9 @@ export function getDefaultValueRangeOfLayer(
   dataset: APIDataset,
   layerName: string,
 ): [number, number] {
-  const maxFloatValue = 3.40282347e38;
+  // Note that the IEEE-754 states the following max value for single-precision floating-point: 3.40282347e38
+  // However, highp floats in textures only go until 2^127 (see https://webglreport.com/ for example).
+  const maxFloatValue = 2 ** 127;
   // biome-ignore lint/correctness/noPrecisionLoss: This number literal will lose precision at runtime. The value at runtime will be inf.
   const maxDoubleValue = 1.79769313486232e308;
   const elementClass = getElementClass(dataset, layerName);

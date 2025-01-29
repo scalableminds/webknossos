@@ -130,6 +130,19 @@ const specs: Array<{
     viewOverride: "512,256,16,0,2.0",
     datasetConfig: datasetConfigHelper("int32_color", -(2 ** 31), 2 ** 31 - 1),
   },
+  // float
+  {
+    name: "13_dtype_float32_color_zoomed_in",
+    datasetName: "dtype_test_float32_color",
+    viewOverride: "512,1,0,0,0.047",
+    datasetConfig: datasetConfigHelper("float32_color", -10, 10),
+  },
+  {
+    name: "14_dtype_float32_color_zoomed_out",
+    datasetName: "dtype_test_float32_color",
+    viewOverride: "512,256,16,0,2.0",
+    datasetConfig: datasetConfigHelper("float32_color", -(2 ** 127), 2 ** 127),
+  },
 ];
 const datasetNames = _.uniq(specs.map((spec) => spec.datasetName));
 

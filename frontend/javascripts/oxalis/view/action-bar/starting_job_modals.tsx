@@ -47,6 +47,7 @@ import {
   getActiveSegmentationTracingLayer,
   getReadableNameOfVolumeLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { MagInfo } from "oxalis/model/helpers/mag_info";
@@ -62,7 +63,6 @@ import {
 } from "../jobs/train_ai_model";
 import DEFAULT_PREDICT_WORKFLOW from "./default-predict-workflow-template";
 import { isBoundingBoxExportable } from "./download_modal_view";
-import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
 
 const { ThinSpace } = Unicode;
 

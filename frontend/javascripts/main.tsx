@@ -53,7 +53,7 @@ const localStoragePersister = createSyncStoragePersister({
   key: "query-cache-v3",
 });
 
-async function loadActiveUser() {
+async function tryToLoadActiveUser() {
   // Try to retrieve the currently active user if logged in
   try {
     const user = await getActiveUser({
@@ -96,7 +96,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   const containerElement = document.getElementById("main-container");
 
   try {
-    await Promise.all([loadFeatureToggles(), loadHasOrganizations()]);
+    await Promise.all([
+      loadFeatureToggles(),
+      // This function call cannot error as it has a try-catch built-in
+      tryToLoadActiveUser(),
+      // *Don't* ignore errors in this request. We only want
+      // to show an onboarding screen if the back-end replied
+      // with hasOrganizations==true.
+      loadHasOrganizations(),
+    ]);
+    await loadOrganization();
   } catch (e) {
     console.error("Failed to load WEBKNOSSOS due to the following error", e);
     if (containerElement) {
@@ -109,8 +118,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     return;
   }
-  await loadActiveUser();
-  await loadOrganization();
 
   if (containerElement) {
     const react_root = createRoot(containerElement);

@@ -350,13 +350,16 @@ CREATE TABLE webknossos.organization_usedStorage(
 );
 
 -- Create the enum type for transaction states
-CREATE TYPE webknossos.credit_transaction_state AS ENUM ('Pending', 'Completed', 'Refunded', 'Revoked', 'Spent');
+CREATE TYPE webknossos.credit_transaction_state AS ENUM ('Pending', 'Completed', 'Refunded', 'Revoked', 'Partially Revoked' 'Spent');
 
 -- Create the transactions table
+-- TODO: For each negative credit_change, save how much temporary credits were used.
 CREATE TABLE webknossos.organization_credit_transactions (
     _id CHAR(24) PRIMARY KEY,
     _organization VARCHAR(256) NOT NULL,
     credit_change DECIMAL(14, 4) NOT NULL,
+    refundable_credit_change DECIMAL(14, 4) NOT NULL CHECK (refundable_credit_change >= 0), -- Ensure non-negative values
+    refunded_transaction_id CHAR(24) DEFAULT NULL,
     spent_money DECIMAL(14, 4),
     comment TEXT NOT NULL,
     _paid_job CHAR(24),
@@ -779,7 +782,6 @@ CREATE INDEX ON webknossos.invites(tokenValue);
 CREATE INDEX ON webknossos.annotation_privateLinks(accessToken);
 CREATE INDEX ON webknossos.shortLinks(key);
 CREATE INDEX ON webknossos.organization_credit_transactions(state);
-CREATE INDEX ON webknossos.organization_credit_transactions(expiration_date);
 
 ALTER TABLE webknossos.annotations
   ADD CONSTRAINT task_ref FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL DEFERRABLE,
@@ -969,21 +971,12 @@ AFTER DELETE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();
 
 CREATE  FUNCTION webknossos.enforce_non_negative_balance() RETURNS TRIGGER AS $$
-  DECLARE
-    current_balance DECIMAL(14, 4);
-    new_balance DECIMAL(14, 4);
   BEGIN
-    -- Calculate the current credit balance for the affected organization
-    SELECT COALESCE(SUM(credit_change), 0)
-    INTO current_balance
-    FROM webknossos.organization_credit_transactions
-    WHERE _organization = NEW._organization AND _id != NEW._id;
-    -- Add the new transaction's credit change to calculate the new balance
-    new_balance := current_balance + COALESCE(NEW.credit_change, 0);
-    -- Check if the new balance is negative
-    IF new_balance < 0 THEN
-        RAISE EXCEPTION 'Transaction would result in a negative credit balance for organization %', NEW._organization;
-    END IF;
+    -- Assert that the new balance is non-negative
+    ASSERT (SELECT COALESCE(SUM(credit_change), 0) + COALESCE(NEW.credit_change, 0)
+            INTO new_balance
+            FROM webknossos.organization_credit_transactions
+            WHERE _organization = NEW._organization AND _id != NEW._id) >= 0, 'Transaction would result in a negative credit balance for organization %', NEW._organization;
     -- Allow the transaction
     RETURN NEW;
   END;
@@ -997,14 +990,16 @@ FOR EACH ROW EXECUTE PROCEDURE webknossos.enforce_non_negative_balance();
 
 --- Stored procedure to revoke temporary credits from an organization
 --- TODO !!!!!! Fix refunded free credits not being revoked !!!!!!
+--- TODO: Maybe implement in scala? as a big transaction?
 CREATE FUNCTION webknossos.revoke_expired_credits()
 RETURNS VOID AS $$
 DECLARE
     organization_id VARCHAR(256);
     free_credits_transaction RECORD;
     credits_to_revoke DECIMAL(14, 4) := 0;
+    total_credits_to_revoke DECIMAL(14, 4) := 0;
     spent_credits_since_then DECIMAL(14, 4) := 0;
-    free_credits_spent DECIMAL(14, 4) := 0;
+    free_credits_spent_of_already_processed_transactions DECIMAL(14, 4) := 0;
     transaction RECORD;
     revoked_organizations_count INTEGER := 0;
     revoked_credit_count DECIMAL(14, 4) := 0;
@@ -1019,8 +1014,9 @@ BEGIN
             AND credit_change > 0
       LOOP
           -- Reset credits to revoke
-          credits_to_revoke := 0;
-          free_credits_spent := 0;
+          total_credits_to_revoke := 0;
+          -- Record how much free credits have been spent to avoid double counting a transaction with negative credit_change
+          free_credits_spent_of_already_processed_transactions := 0;
 
           -- Iterate through expired credits transactions for this organization starting from the most recent
           FOR free_credits_transaction IN
@@ -1032,28 +1028,27 @@ BEGIN
                 AND credit_change > 0
               ORDER BY created_at DESC
           LOOP
-              -- Calculate spent credits since the free credit transaction
+              -- Calculate spent credits since the free credit transaction; including subtracting the refunded transactions
               SELECT COALESCE(SUM(credit_change), 0)
               INTO spent_credits_since_then
               FROM webknossos.organization_credit_transactions
               WHERE _organization = organization_id
                 AND created_at > free_credits_transaction.created_at
-                AND credit_change < 0
-                AND state = 'Completed';
+                AND (credit_change < 0 AND state = 'Completed') OR (credit_change > 0 AND state = 'Completed' AND refunded_transaction_id IS NOT NULL);
 
               -- Spent credits are negative, so we negate them for easier calculation
               spent_credits_since_then := spent_credits_since_then * -1;
               -- Check if the credits have been fully spent
-              IF spent_credits_since_then >= (free_credits_transaction.credit_change + free_credits_spent) THEN
+              IF spent_credits_since_then >= (free_credits_transaction.credit_change + free_credits_spent_of_already_processed_transactions) THEN
                   -- Fully spent, update state to 'SPENT', no need to increase revoked_credit_count
-                  free_credits_spent := free_credits_spent + free_credits_transaction.credit_change;
+                  free_credits_spent_of_already_processed_transactions := free_credits_spent_of_already_processed_transactions + free_credits_transaction.credit_change;
                   UPDATE webknossos.organization_credit_transactions
                   SET state = 'Spent', updated_at = NOW()
                   WHERE id = free_credits_transaction.id;
               ELSE
                   -- Calculate the amount to revoke
-                  credits_to_revoke := credits_to_revoke + (free_credits_transaction.credit_change + free_credits_spent - spent_credits_since_then);
-                  free_credits_spent := free_credits_spent + spent_credits_since_then;
+                  total_credits_to_revoke := total_credits_to_revoke + (free_credits_transaction.credit_change + free_credits_spent_of_already_processed_transactions - spent_credits_since_then);
+                  free_credits_spent_of_already_processed_transactions := free_credits_spent_of_already_processed_transactions + spent_credits_since_then;
 
                   -- Update transaction state to 'REVOKED'
                   UPDATE webknossos.organization_credit_transactions
@@ -1066,20 +1061,20 @@ BEGIN
           END LOOP;
 
           -- If there are credits to revoke, create a revocation transaction
-          IF credits_to_revoke > 0 THEN
+          IF total_credits_to_revoke > 0 THEN
               INSERT INTO webknossos.organization_credit_transactions (
                   _organization, credit_change, comment, state, created_at, updated_at
               )
               VALUES (
                   organization_id,
-                  -credits_to_revoke,
+                  -total_credits_to_revoke,
                   CONCAT('Revoked free credits granted.'),
                   'Completed',
                   CURRENT_TIMESTAMP,
                   CURRENT_TIMESTAMP
               );
               -- Log the revocation action for this organization
-              revoked_credit_count := revoked_credit_count + credits_to_revoke;
+              revoked_credit_count := revoked_credit_count + total_credits_to_revoke;
               revoked_organizations_count := revoked_organizations_count + 1;
           END IF;
 

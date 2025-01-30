@@ -26,7 +26,6 @@ CREATE VIEW webknossos.organization_credit_transactions_ as SELECT * FROM webkno
 
 --- Create index (useful for stored procedures)
 CREATE INDEX ON webknossos.organization_credit_transactions(state);
-CREATE INDEX ON webknossos.organization_credit_transactions(expiration_date);
 
 --- Add foreign key constraints
 ALTER TABLE webknossos.organization_credit_transactions

@@ -32,6 +32,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
       pendingCreditTransaction = CreditTransaction(ObjectId.generate,
                                                    organizationId,
                                                    -creditsToSpent,
+                                                   -creditsToSpent,
                                                    None,
                                                    comment,
                                                    paidJob,

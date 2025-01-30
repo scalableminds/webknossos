@@ -18,6 +18,7 @@ import scala.concurrent.ExecutionContext
 case class CreditTransaction(_id: ObjectId = ObjectId.generate,
                              _organization: String,
                              creditChange: BigDecimal,
+                             refundableCreditChange: BigDecimal,
                              spentMoney: Option[BigDecimal],
                              comment: String,
                              _paidJob: Option[ObjectId],
@@ -46,6 +47,7 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
         id,
         row._Organization,
         row.creditChange,
+        row.refundableCreditChange,
         row.spentMoney,
         row.comment,
         jobIdOpt,
@@ -96,13 +98,13 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
       _ <- assertUpdateAccess(transaction._id)
       _ <- run(
         q"""INSERT INTO webknossos.organization_credit_transactions
-          (_id, _organization, credit_change, spent_money, comment, _paid_job,
+          (_id, _organization, credit_change, refundable_credit_change, spent_money, comment, _paid_job,
           state, expiration_date, created_at, updated_at, is_deleted)
           VALUES
           (${transaction._id}, ${transaction._organization}, ${transaction.creditChange.toString()}::DECIMAL,
-          ${transaction.spentMoney.map(_.toString)}::DECIMAL, ${transaction.comment}, ${transaction._paidJob},
-          'Pending', ${transaction.expirationDate}, ${transaction.createdAt},
-          ${transaction.updatedAt}, ${transaction.isDeleted})
+          ${transaction.refundableCreditChange.toString()}::DECIMAL, ${transaction.spentMoney.map(_.toString)}::DECIMAL,
+          ${transaction.comment}, ${transaction._paidJob}, 'Pending', ${transaction.expirationDate},
+          ${transaction.createdAt}, ${transaction.updatedAt}, ${transaction.isDeleted})
           """.asUpdate
       )
     } yield ()
@@ -123,13 +125,13 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
       _ <- assertUpdateAccess(transaction._id)
       _ <- run(
         q"""INSERT INTO webknossos.organization_credit_transactions
-          (_id, _organization, credit_change, spent_money, comment, _paid_job,
+          (_id, _organization, credit_change, refundable_credit_change, spent_money, comment, _paid_job,
           state, expiration_date, created_at, updated_at, is_deleted)
           VALUES
           (${transaction._id}, ${transaction._organization}, ${transaction.creditChange.toString()}::DECIMAL,
-          ${transaction.spentMoney.map(_.toString)}::DECIMAL, ${transaction.comment}, ${transaction._paidJob},
-          ${transaction.state}, ${transaction.expirationDate}, ${transaction.createdAt},
-          ${transaction.updatedAt}, ${transaction.isDeleted})
+          ${transaction.refundableCreditChange.toString()}::DECIMAL, ${transaction.spentMoney.map(_.toString)}::DECIMAL,
+          ${transaction.comment}, ${transaction._paidJob}, ${transaction.state}, ${transaction.expirationDate},
+          ${transaction.createdAt}, ${transaction.updatedAt}, ${transaction.isDeleted})
           """.asUpdate
       )
     } yield ()
@@ -139,7 +141,7 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
       _ <- assertUpdateAccess(transactionId)
       _ <- run(
         q"""UPDATE webknossos.organization_credit_transactions
-          SET state = ${CreditTransactionState.Completed}, updated_at = NOW()
+          SET state = ${CreditTransactionState.Completed}, refundable_credit_change = 0::DECIMAL, updated_at = NOW()
           WHERE _id = $transactionId AND state
           """.asUpdate
       )
@@ -159,17 +161,19 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
           """.asUpdate
       insertRefundTransaction = q"""
         INSERT INTO webknossos.organization_credit_transactions
-          (_id, _organization, credit_change, comment, _paid_job, state)
+          (_id, _organization, credit_change, refundable_credit_change, refunded_transaction_id, comment, _paid_job, state)
         VALUES (
           ${ObjectId.generate},
           ${transactionToRefund._organization},
           (
-            SELECT credit_change * -1
+            SELECT refundable_credit_change * -1
             FROM webknossos.organization_credit_transactions
             WHERE _id = $transactionId
               AND state = ${CreditTransactionState.Refunded}
               AND credit_change < 0
           ),
+          0::DECIMAL,
+          $transactionId,
           $refundComment,
           ${transactionToRefund._paidJob},
           ${CreditTransactionState.Completed}
@@ -177,6 +181,14 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
       """.asUpdate
       updatedRows <- run(DBIO.sequence(List(setToRefunded, insertRefundTransaction)).transactionally)
       _ <- bool2Fox(updatedRows.forall(_ == 1)) ?~> s"Failed to refund transaction ${transactionToRefund._id} properly."
+    } yield ()
+
+  def reduceRefundableCredits(transaction: CreditTransaction, amountToSubtract: BigDecimal): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.organization_credit_transactions
+          SET refundable_credit_change = refundable_credit_change - $amountToSubtract, updated_at = NOW()
+          WHERE _id = ${transaction._id}
+          """.asUpdate)
     } yield ()
 
   def findTransactionForJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =
@@ -188,6 +200,128 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
       parsed <- parseFirst(r, jobId)
     } yield parsed
 
+// TODO: Maybe remove this outer while loop here.
+  private def findAllOrganizationsWithExpiredCredits: Fox[List[String]] =
+    for {
+      r <- run(q"""SELECT DISTINCT _organization
+        FROM webknossos.organization_credit_transactions
+        WHERE expiration_date <= NOW()
+        AND state = ${CreditTransactionState.Completed}
+      AND credit_change > 0""".as[String])
+    } yield r.toList
+
+  private def revokeExpiredCreditsForOrganization(organizationId: String): Fox[Unit] =
+    // TODO: Make this a transaction to have either all credits revoked of the organization or none
+    for {
+      transactionsWithExpiredCredits <- run(q"""SELECT *
+            FROM webknossos.organization_credit_transactions
+            WHERE _organization = $organizationId
+              AND expiration_date <= NOW()
+              AND state = 'Completed'
+              AND credit_change > 0
+            ORDER BY created_at DESC
+         """.as[OrganizationCreditTransactionsRow])
+      parsed <- parseAll(transactionsWithExpiredCredits)
+      // TODO Warp in start transaction and commit transaction and on failure rollback
+      _ <- Fox.serialCombined(parsed)(revokeExpiredCreditsTransaction)
+    } yield ()
+
+  // TODO: renaming this function
+  private def revokeExpiredCreditsTransaction(transaction: CreditTransaction): Fox[(CreditTransaction, BigDecimal)] =
+    for {
+      // Sums up all spent credits since the transaction which are completed and subtracts refunded transactions.
+      spentCreditsSinceTransactionNegResult <- run(q"""SELECT COALESCE(SUM(credit_change), 0)
+              FROM webknossos.organization_credit_transactions
+              WHERE _organization = ${transaction._organization}
+                AND created_at > free_credits_transaction.created_at
+                AND
+                  (credit_change < 0 AND state = 'Completed')
+                  OR
+                  (credit_change > 0 AND state = 'Completed' AND refunded_transaction_id IS NOT NULL);
+         """.as[BigDecimal])
+      // Sums up all spent credits since the transaction which are already marked as completely spent.
+      alreadySpentFreeTokensResult <- run(q"""SELECT COALESCE(SUM(credit_change), 0)
+              FROM webknossos.organization_credit_transactions
+              WHERE _organization = ${transaction._organization}
+                AND created_at > free_credits_transaction.created_at
+                AND credit_change > 0
+                AND state = 'SPENT';
+         """.as[BigDecimal])
+      spentCreditsSinceTransactionNegative <- spentCreditsSinceTransactionNegResult.headOption.toFox
+      alreadySpentFreeTokens <- alreadySpentFreeTokensResult.headOption.toFox
+      spentCreditsSinceTransactionPositive = spentCreditsSinceTransactionNegative * -1
+      freeCreditsAvailable = transaction.creditChange + alreadySpentFreeTokens
+      creditsToRevoke <- if (spentCreditsSinceTransactionPositive >= freeCreditsAvailable) {
+        // Fully spent, update state to 'SPENT', no need to increase revoked_credit_count
+        for {
+          _ <- run(q"""UPDATE webknossos.organization_credit_transactions
+                SET state = ${CreditTransactionState.Spent}, updated_at = NOW()
+                WHERE id = free_credits_transaction.id;
+             """.asUpdate)
+        } yield BigDecimal(0)
+      } else {
+        val amountToSubtractFromRefundableCredits = freeCreditsAvailable - spentCreditsSinceTransactionPositive
+        for {
+          leftOverCreditsToRevoke <- revokeRefundableCreditsFromPendingTransactions(
+            amountToSubtractFromRefundableCredits,
+            transaction)
+          stateOfExpiredTransaction = if (leftOverCreditsToRevoke == transaction.creditChange)
+            CreditTransactionState.Revoked
+          else {
+            if (leftOverCreditsToRevoke > 0) CreditTransactionState.PartiallyRevoked else CreditTransactionState.Spent
+          }
+          _ <- run(q"""UPDATE webknossos.organization_credit_transactions
+                SET state = $stateOfExpiredTransaction, updated_at = NOW()
+                WHERE id = free_credits_transaction.id;
+             """.asUpdate)
+          // TODO: All revoking should be done in a single transaction
+          // Thus we only return the amount left over to be revoked and the transaction is self.
+          /*
+          revokingTransaction = CreditTransaction(ObjectId.generate,
+                                                transaction._organization,
+                                                -leftOverCreditsToRevoke,
+                                                0,
+                                                None,
+            s"Revoked expired credits ",
+                                                None,
+                                                CreditTransactionState.Completed,
+                                                None,
+                                                Instant.now,
+                                                Instant.now) */
+        } yield leftOverCreditsToRevoke
+      }
+
+    } yield (transaction, creditsToRevoke)
+
+  private def revokeRefundableCreditsFromPendingTransactions(amountToSubtract: BigDecimal,
+                                                             transaction: CreditTransaction): Fox[BigDecimal] = {
+    val pendingTransactionsSince = transaction.createdAt
+    for {
+      qualifiedTransactionsResult <- run(q"""SELECT *
+            FROM webknossos.organization_credit_transactions
+            WHERE _organization = ${transaction._organization}
+              AND created_at > $pendingTransactionsSince
+              AND credit_change < 0
+              AND state = ${CreditTransactionState.Pending}
+            ORDER BY created_at ASC
+         """.as[OrganizationCreditTransactionsRow])
+      qualifiedTransactions <- parseAll(qualifiedTransactionsResult)
+      leftOverCredits <- Fox.foldLeft(qualifiedTransactions.iterator, amountToSubtract) {
+        case (leftOverCreditsToRevoke, transaction) =>
+          if (transaction.refundableCreditChange <= 0) {
+            Fox.successful(leftOverCreditsToRevoke)
+          } else {
+            val creditsToSubtract = leftOverCreditsToRevoke.min(transaction.refundableCreditChange)
+            for {
+              _ <- reduceRefundableCredits(transaction, creditsToSubtract)
+            } yield leftOverCreditsToRevoke - creditsToSubtract
+          }
+
+      }
+    } yield leftOverCredits // Still left over credits to revoke
+  }
+
+  // TOOD: Send slack notification when revoking credits failed for an organization (send a summary of the failed organizations)
   def runRevokeExpiredCredits(): Fox[Unit] =
     for {
       _ <- run(q"CALL webknossos.revoke_expired_credits()".asUpdate)

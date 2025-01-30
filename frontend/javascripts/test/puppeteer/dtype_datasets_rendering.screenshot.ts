@@ -13,6 +13,10 @@ import {
 } from "./dataset_rendering_helpers";
 import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
 import _ from "lodash";
+import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import Semaphore from "semaphore-promise";
+
+const semaphore = new Semaphore(4);
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
@@ -28,9 +32,9 @@ setupBeforeEachAndAfterEach();
 
 const datasetConfigHelper = (
   layerName: string,
-  min: number,
-  max: number,
+  minMax: [number, number],
 ): PartialDatasetConfiguration => {
+  const [min, max] = minMax;
   const layerConfig = {
     alpha: 100,
     intensityRange: [min, max],
@@ -46,6 +50,17 @@ const datasetConfigHelper = (
   };
 };
 
+const zoomedIn = {
+  postfix: "zoomed_in",
+  viewOverride: "512,1,0,0,0.047",
+};
+const zoomedOut = {
+  postfix: "zoomed_out",
+  viewOverride: "512,256,16,0,2.0",
+};
+
+// const dtypes = ["uint8", "int8", "uint16", "int16", "uint32", "int32", "float"];
+
 const specs: Array<{
   name: string;
   datasetName: string;
@@ -54,94 +69,112 @@ const specs: Array<{
 }> = [
   // uint8
   {
-    name: "01_dtype_uint8_color_zoomed_in",
+    name: `01_dtype_uint8_color_${zoomedIn.postfix}`,
     datasetName: "dtype_test_uint8_color",
-    viewOverride: "512,1,0,0,0.047",
-    datasetConfig: datasetConfigHelper("uint8_color", 0, 10),
+    viewOverride: zoomedIn.viewOverride,
+    datasetConfig: datasetConfigHelper("uint8_color", [0, 10]),
   },
   {
-    name: "02_dtype_uint8_color_zoomed_out",
+    name: `02_dtype_uint8_color_${zoomedOut.postfix}`,
     datasetName: "dtype_test_uint8_color",
-    viewOverride: "512,256,16,0,2.0",
-    datasetConfig: datasetConfigHelper("uint8_color", 0, 255),
+    viewOverride: zoomedOut.viewOverride,
+    datasetConfig: datasetConfigHelper(
+      "uint8_color",
+      getSupportedValueRangeForElementClass("uint8"),
+    ),
   },
   // int8
   {
-    name: "03_dtype_int8_color_zoomed_in",
+    name: `03_dtype_int8_color_${zoomedIn.postfix}`,
     datasetName: "dtype_test_int8_color",
-    viewOverride: "512,1,0,0,0.047",
-    datasetConfig: datasetConfigHelper("int8_color", -10, 10),
+    viewOverride: zoomedIn.viewOverride,
+    datasetConfig: datasetConfigHelper("int8_color", [-10, 10]),
   },
   {
-    name: "04_dtype_int8_color_zoomed_out",
+    name: `04_dtype_int8_color_${zoomedOut.postfix}`,
     datasetName: "dtype_test_int8_color",
-    viewOverride: "512,256,16,0,2.0",
-    datasetConfig: datasetConfigHelper("int8_color", -128, 127),
+    viewOverride: zoomedOut.viewOverride,
+    datasetConfig: datasetConfigHelper("int8_color", getSupportedValueRangeForElementClass("int8")),
   },
   // uint16
   {
-    name: "05_dtype_uint16_color_zoomed_in",
+    name: `05_dtype_uint16_color_${zoomedIn.postfix}`,
     datasetName: "dtype_test_uint16_color",
-    viewOverride: "512,1,0,0,0.047",
-    datasetConfig: datasetConfigHelper("uint16_color", 0, 10),
+    viewOverride: zoomedIn.viewOverride,
+    datasetConfig: datasetConfigHelper("uint16_color", [0, 10]),
   },
   {
-    name: "06_dtype_uint16_color_zoomed_out",
+    name: `06_dtype_uint16_color_${zoomedOut.postfix}`,
     datasetName: "dtype_test_uint16_color",
-    viewOverride: "512,256,16,0,2.0",
-    datasetConfig: datasetConfigHelper("uint16_color", 0, 2 ** 16 - 1),
+    viewOverride: zoomedOut.viewOverride,
+    datasetConfig: datasetConfigHelper(
+      "uint16_color",
+      getSupportedValueRangeForElementClass("uint16"),
+    ),
   },
   // int16
   {
-    name: "07_dtype_int16_color_zoomed_in",
+    name: `07_dtype_int16_color_${zoomedIn.postfix}`,
     datasetName: "dtype_test_int16_color",
-    viewOverride: "512,1,0,0,0.047",
-    datasetConfig: datasetConfigHelper("int16_color", -10, 10),
+    viewOverride: zoomedIn.viewOverride,
+    datasetConfig: datasetConfigHelper("int16_color", [-10, 10]),
   },
   {
-    name: "08_dtype_int16_color_zoomed_out",
+    name: `08_dtype_int16_color_${zoomedOut.postfix}`,
     datasetName: "dtype_test_int16_color",
-    viewOverride: "512,256,16,0,2.0",
-    datasetConfig: datasetConfigHelper("int16_color", -32768, 32768),
+    viewOverride: zoomedOut.viewOverride,
+    datasetConfig: datasetConfigHelper(
+      "int16_color",
+      getSupportedValueRangeForElementClass("int16"),
+    ),
   },
   // uint32
   {
-    name: "09_dtype_uint32_color_zoomed_in",
+    name: `09_dtype_uint32_color_${zoomedIn.postfix}`,
     datasetName: "dtype_test_uint32_color",
-    viewOverride: "512,1,0,0,0.047",
-    datasetConfig: datasetConfigHelper("uint32_color", 0, 10),
+    viewOverride: zoomedIn.viewOverride,
+    datasetConfig: datasetConfigHelper("uint32_color", [0, 10]),
   },
   {
-    name: "10_dtype_uint32_color_zoomed_out",
+    name: `10_dtype_uint32_color_${zoomedOut.postfix}`,
     datasetName: "dtype_test_uint32_color",
-    viewOverride: "512,256,16,0,2.0",
-    datasetConfig: datasetConfigHelper("uint32_color", 0, 2 ** 32 - 1),
+    viewOverride: zoomedOut.viewOverride,
+    datasetConfig: datasetConfigHelper(
+      "uint32_color",
+      getSupportedValueRangeForElementClass("uint32"),
+    ),
   },
   // int32
   {
-    name: "11_dtype_int32_color_zoomed_in",
+    name: `11_dtype_int32_color_${zoomedIn.postfix}`,
     datasetName: "dtype_test_int32_color",
-    viewOverride: "512,1,0,0,0.047",
-    datasetConfig: datasetConfigHelper("int32_color", -10, 10),
+    viewOverride: zoomedIn.viewOverride,
+    datasetConfig: datasetConfigHelper("int32_color", [-10, 10]),
   },
   {
-    name: "12_dtype_int32_color_zoomed_out",
+    name: `12_dtype_int32_color_${zoomedOut.postfix}`,
     datasetName: "dtype_test_int32_color",
-    viewOverride: "512,256,16,0,2.0",
-    datasetConfig: datasetConfigHelper("int32_color", -(2 ** 31), 2 ** 31 - 1),
+    viewOverride: zoomedOut.viewOverride,
+    datasetConfig: datasetConfigHelper(
+      "int32_color",
+      getSupportedValueRangeForElementClass("int32"),
+    ),
   },
   // float
   {
-    name: "13_dtype_float32_color_zoomed_in",
+    name: `13_dtype_float32_color_${zoomedIn.postfix}`,
     datasetName: "dtype_test_float32_color",
-    viewOverride: "512,1,0,0,0.047",
-    datasetConfig: datasetConfigHelper("float32_color", -10, 10),
+    viewOverride: zoomedIn.viewOverride,
+    datasetConfig: datasetConfigHelper("float32_color", [-10, 10]),
   },
   {
-    name: "14_dtype_float32_color_zoomed_out",
+    name: `14_dtype_float32_color_${zoomedOut.postfix}`,
     datasetName: "dtype_test_float32_color",
-    viewOverride: "512,256,16,0,2.0",
-    datasetConfig: datasetConfigHelper("float32_color", -(2 ** 127), 2 ** 127),
+    viewOverride: zoomedOut.viewOverride,
+    datasetConfig: datasetConfigHelper(
+      "float32_color",
+      getSupportedValueRangeForElementClass("float"),
+    ),
   },
 ];
 const datasetNames = _.uniq(specs.map((spec) => spec.datasetName));
@@ -172,47 +205,50 @@ test.serial("Dataset IDs were retrieved successfully", (t) => {
 
 datasetNames.map(async (datasetName) => {
   test(`it should render ${datasetName} correctly`, async (t) => {
-    console.time("Getting new page...");
-    console.timeEnd("Getting new page...");
     console.time("Creating annotation...");
     const annotation = await createAnnotationForDatasetScreenshot(
       URL,
       datasetNameToId[datasetName],
     );
     console.timeEnd("Creating annotation...");
-    for (const spec of specs.filter((spec) => spec.datasetName === datasetName)) {
-      const page = await getNewPage(t.context.browser);
-      await withRetry(
-        1,
-        async () => {
-          console.time("Making screenshot...");
-          const { screenshot, width, height } = await screenshotDataset(
-            page,
-            URL,
-            datasetNameToId[spec.datasetName],
-            annotation,
-            spec.viewOverride,
-            spec.datasetConfig,
-          );
-          console.timeEnd("Making screenshot...");
-          console.time("Comparing screenshot...");
-          const changedPixels = await compareScreenshot(
-            screenshot,
-            width,
-            height,
-            BASE_PATH,
-            spec.name,
-          );
-          console.timeEnd("Comparing screenshot...");
-          return isPixelEquivalent(changedPixels, width, height);
-        },
-        (condition) => {
-          t.true(
-            condition,
-            `Dataset spec with name: "${spec.name}" does not look the same, see ${spec.name}.diff.png for the difference and ${spec.name}.new.png for the new screenshot.`,
-          );
-        },
-      );
+    const release = await semaphore.acquire();
+    try {
+      for (const spec of specs.filter((spec) => spec.datasetName === datasetName)) {
+        const page = await getNewPage(t.context.browser);
+        await withRetry(
+          1,
+          async () => {
+            console.time("Making screenshot...");
+            const { screenshot, width, height } = await screenshotDataset(
+              page,
+              URL,
+              datasetNameToId[spec.datasetName],
+              annotation,
+              spec.viewOverride,
+              spec.datasetConfig,
+            );
+            console.timeEnd("Making screenshot...");
+            console.time("Comparing screenshot...");
+            const changedPixels = await compareScreenshot(
+              screenshot,
+              width,
+              height,
+              BASE_PATH,
+              spec.name,
+            );
+            console.timeEnd("Comparing screenshot...");
+            return isPixelEquivalent(changedPixels, width, height);
+          },
+          (condition) => {
+            t.true(
+              condition,
+              `Dataset spec with name: "${spec.name}" does not look the same, see ${spec.name}.diff.png for the difference and ${spec.name}.new.png for the new screenshot.`,
+            );
+          },
+        );
+      }
+    } finally {
+      release();
     }
   });
 });

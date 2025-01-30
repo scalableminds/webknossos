@@ -102,11 +102,12 @@ function getTextureLayerInfos(): Params["textureLayerInfos"] {
 
   return _.mapValues(layersObject, (layer): ValueOf<Params["textureLayerInfos"]> => {
     const elementClass = getElementClass(dataset, layer.name);
+    const dtypeConfig = getDtypeConfigForElementClass(elementClass);
     return {
       packingDegree: getPackingDegree(getByteCount(dataset, layer.name), elementClass),
-      glslPrefix: getDtypeConfigForElementClass(elementClass).glslPrefix,
+      glslPrefix: dtypeConfig.glslPrefix,
       dataTextureCount: Model.getLayerRenderingManagerByName(layer.name).dataTextureCount,
-      isSigned: elementClass.startsWith("int"),
+      isSigned: dtypeConfig.isSigned,
       elementClass,
       unsanitizedName: layer.name,
     };

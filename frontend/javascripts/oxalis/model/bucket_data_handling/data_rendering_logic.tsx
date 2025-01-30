@@ -331,12 +331,62 @@ export function getGpuFactorsWithLabels() {
   ];
 }
 
+export function getSupportedValueRangeForElementClass(
+  elementClass: ElementClass,
+): [number, number] {
+  switch (elementClass) {
+    case "int8":
+      return [-(2 ** 7), 2 ** 7 - 1];
+    case "uint8":
+    case "uint24":
+      // Since uint24 layers are multi-channel, their intensity ranges are equal to uint8
+      return [0, 2 ** 8 - 1];
+
+    case "uint16":
+      return [0, 2 ** 16 - 1];
+
+    case "uint32":
+      return [0, 2 ** 32 - 1];
+
+    case "uint64":
+      return [0, 2 ** 64 - 1];
+
+    // todop: adapt for new dtypes
+    case "int16":
+      return [-(2 ** 15), 2 ** 15 - 1];
+
+    case "int32":
+      return [-(2 ** 31), 2 ** 31 - 1];
+
+    case "float": {
+      // Note that the IEEE-754 states the following max value for single-precision floating-point: 3.40282347e38
+      // However, highp floats in textures only go until 2^127 (see https://webglreport.com/ for example).
+      const maxFloatValue = 2 ** 127;
+      return [-maxFloatValue, maxFloatValue];
+    }
+
+    // The following dtypes are not fully supported.
+    case "int64":
+      return [0, 2 ** 63 - 1];
+
+    case "double": {
+      // biome-ignore lint/correctness/noPrecisionLoss: This number literal will lose precision at runtime. The value at runtime will be inf.
+      const maxDoubleValue = 1.79769313486232e308;
+      return [-maxDoubleValue, maxDoubleValue];
+    }
+
+    default:
+      return [0, 255];
+  }
+}
+
 export function getDtypeConfigForElementClass(elementClass: ElementClass): {
   textureType: THREE.TextureDataType;
   TypedArrayClass: TypedArrayConstructor;
   pixelFormat: THREE.PixelFormat | undefined;
   internalFormat: THREE.PixelFormatGPU | undefined;
   glslPrefix: "" | "u" | "i";
+  isSigned: boolean;
 } {
   // todop: adapt for new dtypes
 
@@ -348,6 +398,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         pixelFormat: undefined,
         internalFormat: "RGBA8_SNORM",
         glslPrefix: "",
+        isSigned: true,
       };
     case "uint8":
     case "uint24":
@@ -358,6 +409,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         pixelFormat: undefined,
         internalFormat: undefined,
         glslPrefix: "",
+        isSigned: false,
       };
 
     case "uint16":
@@ -367,6 +419,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         pixelFormat: THREE.RGIntegerFormat,
         internalFormat: "RG16UI",
         glslPrefix: "u",
+        isSigned: false,
       };
 
     case "int16":
@@ -376,6 +429,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         pixelFormat: THREE.RGIntegerFormat,
         internalFormat: "RG16I",
         glslPrefix: "i",
+        isSigned: true,
       };
 
     case "uint32":
@@ -385,6 +439,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         pixelFormat: undefined,
         internalFormat: undefined,
         glslPrefix: "",
+        isSigned: false,
       };
 
     case "int32":
@@ -394,6 +449,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         pixelFormat: undefined,
         internalFormat: undefined,
         glslPrefix: "",
+        isSigned: true,
       };
 
     case "uint64":
@@ -403,6 +459,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         pixelFormat: undefined,
         internalFormat: undefined,
         glslPrefix: "",
+        isSigned: false,
       };
 
     case "float":
@@ -412,6 +469,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         pixelFormat: undefined,
         internalFormat: undefined,
         glslPrefix: "",
+        isSigned: true,
       };
 
     // We do not fully support all signed int data;
@@ -422,6 +480,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         pixelFormat: undefined,
         internalFormat: undefined,
         glslPrefix: "",
+        isSigned: true,
       };
 
     case "double":
@@ -431,6 +490,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         pixelFormat: undefined,
         internalFormat: undefined,
         glslPrefix: "",
+        isSigned: true,
       };
 
     default:
@@ -440,6 +500,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         pixelFormat: undefined,
         internalFormat: undefined,
         glslPrefix: "",
+        isSigned: false,
       };
   }
 }

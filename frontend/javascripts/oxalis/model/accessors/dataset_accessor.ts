@@ -44,6 +44,7 @@ import {
   invertTransform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
+import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
 
 function _getMagInfo(magnifications: Array<Vector3>): MagInfo {
   return new MagInfo(magnifications);
@@ -213,50 +214,8 @@ export function getDefaultValueRangeOfLayer(
   dataset: APIDataset,
   layerName: string,
 ): [number, number] {
-  // Note that the IEEE-754 states the following max value for single-precision floating-point: 3.40282347e38
-  // However, highp floats in textures only go until 2^127 (see https://webglreport.com/ for example).
-  const maxFloatValue = 2 ** 127;
-  // biome-ignore lint/correctness/noPrecisionLoss: This number literal will lose precision at runtime. The value at runtime will be inf.
-  const maxDoubleValue = 1.79769313486232e308;
   const elementClass = getElementClass(dataset, layerName);
-
-  switch (elementClass) {
-    case "int8":
-      return [-(2 ** 7), 2 ** 7 - 1];
-    case "uint8":
-    case "uint24":
-      // Since uint24 layers are multi-channel, their intensity ranges are equal to uint8
-      return [0, 2 ** 8 - 1];
-
-    case "uint16":
-      return [0, 2 ** 16 - 1];
-
-    case "uint32":
-      return [0, 2 ** 32 - 1];
-
-    case "uint64":
-      return [0, 2 ** 64 - 1];
-
-    // todop: adapt for new dtypes
-    case "int16":
-      return [-(2 ** 15), 2 ** 15 - 1];
-
-    case "int32":
-      return [-(2 ** 31), 2 ** 31 - 1];
-
-    // We do not fully support all signed int data;
-    case "int64":
-      return [0, 2 ** 63 - 1];
-
-    case "float":
-      return [-maxFloatValue, maxFloatValue];
-
-    case "double":
-      return [-maxDoubleValue, maxDoubleValue];
-
-    default:
-      return [0, 255];
-  }
+  return getSupportedValueRangeForElementClass(elementClass);
 }
 
 export function getLayerBoundingBox(dataset: APIDataset, layerName: string): BoundingBox {

@@ -334,13 +334,15 @@ class EditableMappingUpdater(
       agglomerateId2 <- agglomerateIdForSegmentId(segmentId2) ?~> "Failed to look up agglomerate ids for merge action segments"
       agglomerateGraph1 <- agglomerateGraphForIdWithFallback(mapping, agglomerateId1) ?~> s"Failed to get agglomerate graph for id $agglomerateId1"
       agglomerateGraph2 <- agglomerateGraphForIdWithFallback(mapping, agglomerateId2) ?~> s"Failed to get agglomerate graph for id $agglomerateId2"
-      _ <- bool2Fox(agglomerateGraph2.segments.contains(segmentId2)) ?~> s"Segment $segmentId2 as queried by position ${update.segmentPosition2} is not contained in fetched agglomerate graph for agglomerate $agglomerateId2"
+      _ <- bool2Fox(agglomerateGraph2.segments.contains(segmentId2)) ?~> s"Segment $segmentId2 as queried by position ${update.segmentPosition2} is not contained in fetched agglomerate graph for agglomerate $agglomerateId2. actionTimestamp: ${update.actionTimestamp}, graph segments: ${agglomerateGraph2.segments}"
       mergedGraphOpt = mergeGraph(agglomerateGraph1, agglomerateGraph2, segmentId1, segmentId2)
       _ <- Fox.runOptional(mergedGraphOpt) { mergedGraph =>
         for {
           _ <- updateSegmentToAgglomerate(agglomerateGraph2.segments, agglomerateId1) ?~> s"Failed to update segment to agglomerate buffer"
           _ = updateAgglomerateGraph(agglomerateId1, mergedGraph)
-          _ = updateAgglomerateGraph(agglomerateId2, AgglomerateGraph(List.empty, List.empty, List.empty, List.empty))
+          _ = if (agglomerateId1 != agglomerateId2)
+            // The second agglomerate vanishes, as all its segments have been moved to agglomerateId1
+            updateAgglomerateGraph(agglomerateId2, AgglomerateGraph(List.empty, List.empty, List.empty, List.empty))
         } yield ()
       }
     } yield mapping
@@ -349,19 +351,30 @@ class EditableMappingUpdater(
                          agglomerateGraph2: AgglomerateGraph,
                          segmentId1: Long,
                          segmentId2: Long): Option[AgglomerateGraph] = {
-    val segment1IsValid = agglomerateGraph1.segments.contains(segmentId1)
-    val segment2IsValid = agglomerateGraph2.segments.contains(segmentId2)
-    if (segment1IsValid && segment2IsValid) {
-      val newEdge = AgglomerateEdge(segmentId1, segmentId2)
-      val newEdgeAffinity = 255.0f
-      Some(
-        AgglomerateGraph(
-          segments = agglomerateGraph1.segments ++ agglomerateGraph2.segments,
-          edges = newEdge +: (agglomerateGraph1.edges ++ agglomerateGraph2.edges),
-          affinities = newEdgeAffinity +: (agglomerateGraph1.affinities ++ agglomerateGraph2.affinities),
-          positions = agglomerateGraph1.positions ++ agglomerateGraph2.positions
-        ))
-    } else None
+    val newEdgeAffinity = 255.0f
+    val newEdge = AgglomerateEdge(segmentId1, segmentId2)
+    if (agglomerateGraph1 == agglomerateGraph2) {
+      // Agglomerate is merged with itself. Insert new edge anyway, if it does not exist yet
+      if (agglomerateGraph1.edges.contains(newEdge)) {
+        Some(agglomerateGraph1)
+      } else {
+        Some(
+          agglomerateGraph1.copy(edges = newEdge +: agglomerateGraph1.edges,
+                                 affinities = newEdgeAffinity +: agglomerateGraph1.affinities))
+      }
+    } else {
+      val segment1IsValid = agglomerateGraph1.segments.contains(segmentId1)
+      val segment2IsValid = agglomerateGraph2.segments.contains(segmentId2)
+      if (segment1IsValid && segment2IsValid) {
+        Some(
+          AgglomerateGraph(
+            segments = agglomerateGraph1.segments ++ agglomerateGraph2.segments,
+            edges = newEdge +: (agglomerateGraph1.edges ++ agglomerateGraph2.edges),
+            affinities = newEdgeAffinity +: (agglomerateGraph1.affinities ++ agglomerateGraph2.affinities),
+            positions = agglomerateGraph1.positions ++ agglomerateGraph2.positions
+          ))
+      } else None
+    }
   }
 
   def revertToVersion(sourceVersion: Long)(implicit ec: ExecutionContext): Fox[Unit] =

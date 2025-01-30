@@ -13,7 +13,10 @@ import {
 } from "./dataset_rendering_helpers";
 import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
 import _ from "lodash";
-import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import {
+  getDtypeConfigForElementClass,
+  getSupportedValueRangeForElementClass,
+} from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import Semaphore from "semaphore-promise";
 
 const semaphore = new Semaphore(4);
@@ -32,8 +35,16 @@ setupBeforeEachAndAfterEach();
 
 const datasetConfigHelper = (
   layerName: string,
-  minMax: [number, number],
+  minMax: [number, number] | undefined,
 ): PartialDatasetConfiguration => {
+  const base = {
+    segmentationPatternOpacity: 20,
+    segmentationOpacity: 100,
+    loadingStrategy: "BEST_QUALITY_FIRST",
+  } as const;
+  if (minMax == null) {
+    return base;
+  }
   const [min, max] = minMax;
   const layerConfig = {
     alpha: 100,
@@ -41,12 +52,12 @@ const datasetConfigHelper = (
     min: min,
     max: max,
   } as Partial<DatasetLayerConfiguration>;
+
   return {
     layers: {
       [layerName]: layerConfig,
     },
-    segmentationPatternOpacity: 50,
-    loadingStrategy: "BEST_QUALITY_FIRST",
+    ...base,
   };
 };
 
@@ -59,124 +70,71 @@ const zoomedOut = {
   viewOverride: "512,256,16,0,2.0",
 };
 
-// const dtypes = ["uint8", "int8", "uint16", "int16", "uint32", "int32", "float"];
+const dtypes = ["uint8", "int8", "uint16", "int16", "uint32", "int32", "float32"] as const;
 
-const specs: Array<{
+// todop:
+// segmentation
+//  uint16: hover does not work
+//  int16: hover does not work (and colors are not ideal, but maybe this is alright)
+//  uint32: (colors are correlated)
+//  int32: hover does not work
+
+type Spec = {
   name: string;
   datasetName: string;
   viewOverride: string;
   datasetConfig: PartialDatasetConfiguration;
-}> = [
-  // uint8
-  {
-    name: `01_dtype_uint8_color_${zoomedIn.postfix}`,
-    datasetName: "dtype_test_uint8_color",
-    viewOverride: zoomedIn.viewOverride,
-    datasetConfig: datasetConfigHelper("uint8_color", [0, 10]),
-  },
-  {
-    name: `02_dtype_uint8_color_${zoomedOut.postfix}`,
-    datasetName: "dtype_test_uint8_color",
-    viewOverride: zoomedOut.viewOverride,
-    datasetConfig: datasetConfigHelper(
-      "uint8_color",
-      getSupportedValueRangeForElementClass("uint8"),
-    ),
-  },
-  // int8
-  {
-    name: `03_dtype_int8_color_${zoomedIn.postfix}`,
-    datasetName: "dtype_test_int8_color",
-    viewOverride: zoomedIn.viewOverride,
-    datasetConfig: datasetConfigHelper("int8_color", [-10, 10]),
-  },
-  {
-    name: `04_dtype_int8_color_${zoomedOut.postfix}`,
-    datasetName: "dtype_test_int8_color",
-    viewOverride: zoomedOut.viewOverride,
-    datasetConfig: datasetConfigHelper("int8_color", getSupportedValueRangeForElementClass("int8")),
-  },
-  // uint16
-  {
-    name: `05_dtype_uint16_color_${zoomedIn.postfix}`,
-    datasetName: "dtype_test_uint16_color",
-    viewOverride: zoomedIn.viewOverride,
-    datasetConfig: datasetConfigHelper("uint16_color", [0, 10]),
-  },
-  {
-    name: `06_dtype_uint16_color_${zoomedOut.postfix}`,
-    datasetName: "dtype_test_uint16_color",
-    viewOverride: zoomedOut.viewOverride,
-    datasetConfig: datasetConfigHelper(
-      "uint16_color",
-      getSupportedValueRangeForElementClass("uint16"),
-    ),
-  },
-  // int16
-  {
-    name: `07_dtype_int16_color_${zoomedIn.postfix}`,
-    datasetName: "dtype_test_int16_color",
-    viewOverride: zoomedIn.viewOverride,
-    datasetConfig: datasetConfigHelper("int16_color", [-10, 10]),
-  },
-  {
-    name: `08_dtype_int16_color_${zoomedOut.postfix}`,
-    datasetName: "dtype_test_int16_color",
-    viewOverride: zoomedOut.viewOverride,
-    datasetConfig: datasetConfigHelper(
-      "int16_color",
-      getSupportedValueRangeForElementClass("int16"),
-    ),
-  },
-  // uint32
-  {
-    name: `09_dtype_uint32_color_${zoomedIn.postfix}`,
-    datasetName: "dtype_test_uint32_color",
-    viewOverride: zoomedIn.viewOverride,
-    datasetConfig: datasetConfigHelper("uint32_color", [0, 10]),
-  },
-  {
-    name: `10_dtype_uint32_color_${zoomedOut.postfix}`,
-    datasetName: "dtype_test_uint32_color",
-    viewOverride: zoomedOut.viewOverride,
-    datasetConfig: datasetConfigHelper(
-      "uint32_color",
-      getSupportedValueRangeForElementClass("uint32"),
-    ),
-  },
-  // int32
-  {
-    name: `11_dtype_int32_color_${zoomedIn.postfix}`,
-    datasetName: "dtype_test_int32_color",
-    viewOverride: zoomedIn.viewOverride,
-    datasetConfig: datasetConfigHelper("int32_color", [-10, 10]),
-  },
-  {
-    name: `12_dtype_int32_color_${zoomedOut.postfix}`,
-    datasetName: "dtype_test_int32_color",
-    viewOverride: zoomedOut.viewOverride,
-    datasetConfig: datasetConfigHelper(
-      "int32_color",
-      getSupportedValueRangeForElementClass("int32"),
-    ),
-  },
-  // float
-  {
-    name: `13_dtype_float32_color_${zoomedIn.postfix}`,
-    datasetName: "dtype_test_float32_color",
-    viewOverride: zoomedIn.viewOverride,
-    datasetConfig: datasetConfigHelper("float32_color", [-10, 10]),
-  },
-  {
-    name: `14_dtype_float32_color_${zoomedOut.postfix}`,
-    datasetName: "dtype_test_float32_color",
-    viewOverride: zoomedOut.viewOverride,
-    datasetConfig: datasetConfigHelper(
-      "float32_color",
-      getSupportedValueRangeForElementClass("float"),
-    ),
-  },
-];
+};
+
+const specs: Array<Spec> = _.flatten(
+  dtypes.map((dtype): Spec[] => {
+    const elementClass = dtype === "float32" ? "float" : dtype;
+
+    const colorSpecs = [
+      {
+        name: `dtype_${dtype}_color_${zoomedIn.postfix}`,
+        datasetName: `dtype_test_${dtype}_color`,
+        viewOverride: zoomedIn.viewOverride,
+        datasetConfig: datasetConfigHelper(`${dtype}_color`, [
+          getDtypeConfigForElementClass(elementClass).isSigned ? -10 : 0,
+          10,
+        ]),
+      },
+      {
+        name: `dtype_${dtype}_color_${zoomedOut.postfix}`,
+        datasetName: `dtype_test_${dtype}_color`,
+        viewOverride: zoomedOut.viewOverride,
+        datasetConfig: datasetConfigHelper(
+          `${dtype}_color`,
+          getSupportedValueRangeForElementClass(elementClass),
+        ),
+      },
+    ];
+
+    // No segmentation support for float
+    const segmentationSpecs =
+      elementClass === "float"
+        ? []
+        : [
+            {
+              name: `dtype_${dtype}_segmentation_${zoomedIn.postfix}`,
+              datasetName: `dtype_test_${dtype}_segmentation`,
+              viewOverride: zoomedIn.viewOverride,
+              datasetConfig: datasetConfigHelper(`${dtype}_segmentation`, undefined),
+            },
+            {
+              name: `dtype_${dtype}_segmentation_${zoomedOut.postfix}`,
+              datasetName: `dtype_test_${dtype}_segmentation`,
+              viewOverride: zoomedOut.viewOverride,
+              datasetConfig: datasetConfigHelper(`${dtype}_segmentation`, undefined),
+            },
+          ];
+
+    return segmentationSpecs;
+    // return [...colorSpecs, ...segmentationSpecs];
+  }),
+);
+
 const datasetNames = _.uniq(specs.map((spec) => spec.datasetName));
 
 const datasetNameToId: Record<string, string> = {};

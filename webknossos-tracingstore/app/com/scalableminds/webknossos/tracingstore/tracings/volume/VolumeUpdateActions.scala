@@ -373,7 +373,8 @@ object CompactVolumeUpdateAction {
         "name" -> o.name,
         "value" -> (Json.obj("actionTracingId" -> o.actionTracingId,
                              "actionTimestamp" -> o.actionTimestamp,
-                             "actionAuthorId" -> o.actionAuthorId) ++ o.value)
+                             "actionAuthorId" -> o.actionAuthorId) ++ o.value),
+        "isCompacted" -> true
       )
   }
 }

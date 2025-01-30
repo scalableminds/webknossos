@@ -341,7 +341,7 @@ class EditableMappingUpdater(
           _ <- updateSegmentToAgglomerate(agglomerateGraph2.segments, agglomerateId1) ?~> s"Failed to update segment to agglomerate buffer"
           _ = updateAgglomerateGraph(agglomerateId1, mergedGraph)
           _ = if (agglomerateId1 != agglomerateId2)
-            // The second agglomerate vanishes, all its segments have been moved to agglomerateId1
+            // The second agglomerate vanishes, as all its segments have been moved to agglomerateId1
             updateAgglomerateGraph(agglomerateId2, AgglomerateGraph(List.empty, List.empty, List.empty, List.empty))
         } yield ()
       }
@@ -355,7 +355,6 @@ class EditableMappingUpdater(
     val newEdge = AgglomerateEdge(segmentId1, segmentId2)
     if (agglomerateGraph1 == agglomerateGraph2) {
       // Agglomerate is merged with itself. Insert new edge anyway, if it does not exist yet
-      val newEdge = AgglomerateEdge(segmentId1, segmentId2)
       if (agglomerateGraph1.edges.contains(newEdge)) {
         Some(agglomerateGraph1)
       } else {

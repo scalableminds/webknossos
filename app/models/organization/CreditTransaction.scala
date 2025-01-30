@@ -1,15 +1,17 @@
 package models.organization
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.OrganizationCreditTransactionsRow
 import com.scalableminds.webknossos.schema.Tables.OrganizationCreditTransactions
 import models.organization.CreditTransactionState.TransactionState
+import net.liftweb.common.Full
 import slick.dbio.DBIO
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
+import telemetry.SlackNotificationService
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
@@ -23,6 +25,7 @@ case class CreditTransaction(_id: ObjectId = ObjectId.generate,
                              comment: String,
                              _paidJob: Option[ObjectId],
                              state: TransactionState,
+                             slackNotificationService: SlackNotificationService,
                              expirationDate: Option[Instant],
                              createdAt: Instant = Instant.now,
                              updatedAt: Instant = Instant.now,
@@ -210,8 +213,10 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
       AND credit_change > 0""".as[String])
     } yield r.toList
 
-  private def revokeExpiredCreditsForOrganization(organizationId: String): Fox[Unit] =
+  private def revokeExpiredCreditsForOrganization(organizationId: String): Fox[Unit] = {
     // TODO: Make this a transaction to have either all credits revoked of the organization or none
+    val organizationsWhereRevokingFailed = List()
+
     for {
       transactionsWithExpiredCredits <- run(q"""SELECT *
             FROM webknossos.organization_credit_transactions
@@ -223,11 +228,41 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
          """.as[OrganizationCreditTransactionsRow])
       parsed <- parseAll(transactionsWithExpiredCredits)
       // TODO Warp in start transaction and commit transaction and on failure rollback
-      _ <- Fox.serialCombined(parsed)(revokeExpiredCreditsTransaction)
+      _ <- run(q"BEGIN TRANSACTION".asUpdate)
+
+      _ <- Fox
+        .foldLeft(parsed.iterator, BigDecimal(0)) {
+          case (accCreditsToRevoke, transaction) =>
+            revokeExpiredCreditsTransaction(transaction).map(accCreditsToRevoke + _)
+        }
+        .map(totalCreditsToRevoke => {
+          val revokingTransaction = CreditTransaction(
+            ObjectId.generate,
+            organizationId,
+            totalCreditsToRevoke,
+            0,
+            None,
+            s"Revoked expired credits", // TODO: Consider including the ids of the free credits transactions which were revoked in the comment.
+            None,
+            CreditTransactionState.Completed,
+            None,
+            Instant.now,
+            Instant.now
+          )
+          insertTransaction(revokingTransaction)(GlobalAccessContext)
+        }.futureBox.flatMap {
+          case Full(_) => run(q"COMMIT TRANSACTION".asUpdate).map(_ => Fox.successful(()))
+          case _       =>
+            // TODO: slackNotificationService not working
+            // slackNotificationService.warn("Failed to revoke expired credits for organization", s"$organizationId.")
+            logger.error(s"Failed to revoke expired credits for organization $organizationId.")
+            run(q"ROLLBACK TRANSACTION".asUpdate).map(_ => Fox.successful(()))
+        })
     } yield ()
+  }
 
   // TODO: renaming this function
-  private def revokeExpiredCreditsTransaction(transaction: CreditTransaction): Fox[(CreditTransaction, BigDecimal)] =
+  private def revokeExpiredCreditsTransaction(transaction: CreditTransaction): Fox[BigDecimal] =
     for {
       // Sums up all spent credits since the transaction which are completed and subtracts refunded transactions.
       spentCreditsSinceTransactionNegResult <- run(q"""SELECT COALESCE(SUM(credit_change), 0)
@@ -274,24 +309,12 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
                 SET state = $stateOfExpiredTransaction, updated_at = NOW()
                 WHERE id = free_credits_transaction.id;
              """.asUpdate)
-          // TODO: All revoking should be done in a single transaction
-          // Thus we only return the amount left over to be revoked and the transaction is self.
-          /*
-          revokingTransaction = CreditTransaction(ObjectId.generate,
-                                                transaction._organization,
-                                                -leftOverCreditsToRevoke,
-                                                0,
-                                                None,
-            s"Revoked expired credits ",
-                                                None,
-                                                CreditTransactionState.Completed,
-                                                None,
-                                                Instant.now,
-                                                Instant.now) */
+          // TODO: Consider to make a revoking transaction for each transaction that has left over credits to be revoked and not together-.
+          // This makes amount of queries per transaction lower and thus more efficient. / less deadlocky.
         } yield leftOverCreditsToRevoke
       }
 
-    } yield (transaction, creditsToRevoke)
+    } yield creditsToRevoke
 
   private def revokeRefundableCreditsFromPendingTransactions(amountToSubtract: BigDecimal,
                                                              transaction: CreditTransaction): Fox[BigDecimal] = {
@@ -321,9 +344,10 @@ class CreditTransactionDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executio
     } yield leftOverCredits // Still left over credits to revoke
   }
 
-  // TOOD: Send slack notification when revoking credits failed for an organization (send a summary of the failed organizations)
+  // TODO: Send slack notification when revoking credits failed for an organization (send a summary of the failed organizations)
   def runRevokeExpiredCredits(): Fox[Unit] =
     for {
-      _ <- run(q"CALL webknossos.revoke_expired_credits()".asUpdate)
+      orgas <- findAllOrganizationsWithExpiredCredits
+      _ <- Fox.serialCombined(orgas)(revokeExpiredCreditsForOrganization)
     } yield ()
 }

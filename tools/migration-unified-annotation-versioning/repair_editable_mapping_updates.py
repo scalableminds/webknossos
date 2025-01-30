@@ -27,33 +27,32 @@ def main():
         for annotation_id in id_mapping.keys():
             for editable_mapping_id, tracing_id in id_mapping[annotation_id].items():
                 logger.info(f"{editable_mapping_id} → {tracing_id} for annotation {annotation_id}...")
-                migrate_updates(stub, annotation_id, editable_mapping_id, tracing_id, json_encoder, json_decoder)
+            migrate_updates(stub, annotation_id, id_mapping[annotation_id], json_encoder, json_decoder)
 
         log_since(before, f"Repairing all {len(id_mapping)} annotations")
 
 
-def migrate_updates(stub, annotation_id, editable_mapping_id, tracing_id, json_encoder, json_decoder):
-    updates = fetch_updates(stub, annotation_id, json_encoder, json_decoder)
-
-
-def fetch_updates(stub, annotation_id: str, json_encoder, json_decoder) -> List[Tuple[int, int, bytes]]:
-    batch_size = 100
+def migrate_updates(stub, annotation_id, id_mapping_for_annotation, json_encoder, json_decoder):
+    get_batch_size = 100 # in update groups
+    put_buffer_size = 100 # in update groups
+    put_buffer = []
     newest_version = get_newest_version(stub, annotation_id, "annotationUpdates")
-    updates = []
-    for batch_start, batch_end in reversed(list(batch_range(newest_version + 1, batch_size))):
-        update_groups = get_update_batch(stub, annotation_id, batch_start, batch_end - 1)
-        for version, update_group in reversed(update_groups):
-            # TODO
-            update_group, timestamp, revert_source_version = self.process_update_group(tracing_id, layer_type, update_group, json_encoder, json_decoder)
-            if revert_source_version is not None:
-                next_version = revert_source_version
-                included_revert = True
-            else:
-                next_version -= 1
-            if revert_source_version is None:  # skip the revert itself too, since we’re ironing them out
-                updates.append((timestamp, version, update_group))
-    updates.reverse()
-    return updates
+    for batch_start, batch_end in reversed(list(batch_range(newest_version + 1, get_batch_size))):
+        update_groups_batch = get_update_batch(stub, annotation_id, batch_start, batch_end - 1)
+        for version, update_group_bytes in update_groups_batch:
+            update_group = json_decoder.decode(update_group_bytes)
+            group_changed = False
+            for update in update_group:
+                if "actionTracingId" in update and update["actionTracingId"] in id_mapping_for_annotation:
+                    update["actionTracingId"] = id_mapping_for_annotation[update["actionTracingId"]]
+                    group_changed = True
+            if group_changed:
+                put_buffer.append((version, update_group))
+                if len(put_buffer) >= put_buffer_size:
+                    logger.info("putting")
+                    put_buffer = []
+    if len(put_buffer) > 0:
+        logger.info("putting")
 
 
 def get_update_batch(stub, annotation_id: str, batch_start: int, batch_end_inclusive: int) -> List[Tuple[int, bytes]]:

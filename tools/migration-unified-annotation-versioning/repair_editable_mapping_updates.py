@@ -40,7 +40,7 @@ def repair_updates_of_annotation(stub, annotation_id, id_mapping_for_annotation,
     newest_version = get_newest_version(stub, annotation_id, "annotationUpdates")
     if newest_version > 10000:
         logger.info(f"Newest version of {annotation_id} is {newest_version}. This may take some time...")
-    for batch_start, batch_end in reversed(list(batch_range(newest_version + 1, get_batch_size))):
+    for batch_start, batch_end in list(batch_range(newest_version + 1, get_batch_size)):
         update_groups_batch = get_update_batch(stub, annotation_id, batch_start, batch_end - 1)
         for version, update_group_bytes in update_groups_batch:
             update_group = json_decoder.decode(update_group_bytes)
@@ -76,18 +76,15 @@ def get_update_batch(stub, annotation_id: str, batch_start: int, batch_end_inclu
         proto.GetMultipleVersionsRequest(collection="annotationUpdates", key=annotation_id, oldestVersion=batch_start, newestVersion=batch_end_inclusive)
     )
     assert_grpc_success(reply)
-    reply.versions.reverse()
-    reply.values.reverse()
     return list(zip(reply.versions, reply.values))
 
 
 def get_newest_version(stub, tracing_id: str, collection: str) -> int:
-    getReply = stub.Get(
+    reply = stub.Get(
         proto.GetRequest(collection=collection, key=tracing_id, mayBeEmpty=True)
     )
-    if getReply.success:
-        return getReply.actualVersion
-    return 0
+    assert_grpc_success(reply)
+    return reply.actualVersion
 
 
 if __name__ == '__main__':

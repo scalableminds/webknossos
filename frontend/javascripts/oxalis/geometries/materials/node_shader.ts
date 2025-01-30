@@ -3,7 +3,7 @@ import type TPS3D from "libs/thin_plate_spline";
 import _ from "lodash";
 import { ViewModeValues, ViewModeValuesIndices } from "oxalis/constants";
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
-import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_accessor";
+import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import shaderEditor from "oxalis/model/helpers/shader_editor";

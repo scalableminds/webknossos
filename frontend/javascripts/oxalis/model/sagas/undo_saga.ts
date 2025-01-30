@@ -48,6 +48,7 @@ import { Model } from "oxalis/singletons";
 import type { SegmentGroup, SegmentMap, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import type { Task } from "redux-saga";
 import { actionChannel, all, call, delay, fork, join, put, take } from "typed-redux-saga";
+import { ensureWkReady } from "./ready_sagas";
 
 const UndoRedoRelevantBoundingBoxActions = AllUserBoundingBoxActions.filter(
   (action) => action !== "SET_USER_BOUNDING_BOXES",
@@ -175,7 +176,7 @@ export function* manageUndoStates(): Saga<never> {
     }
   > = {};
 
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
 
   // Initialization of the local state variables from above.
   prevSkeletonTracingOrNull = yield* select((state) => state.tracing.skeleton);

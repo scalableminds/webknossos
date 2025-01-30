@@ -7,7 +7,7 @@ import Store from "oxalis/store";
 import { call } from "redux-saga/effects";
 import { escalateErrorAction } from "../actions/actions";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
-import type { UpdateAction } from "../sagas/update_actions";
+import type { UpdateActionWithoutIsolationRequirement } from "../sagas/update_actions";
 
 // Only process the PushQueue after there was no user interaction (or bucket modification due to
 // downsampling) for PUSH_DEBOUNCE_TIME milliseconds.
@@ -17,6 +17,7 @@ const PUSH_DEBOUNCE_TIME = 1000;
 
 class PushQueue {
   cube: DataCube;
+  tracingId: string;
 
   // The pendingBuckets contains all buckets that should be:
   // - snapshotted,
@@ -34,15 +35,16 @@ class PushQueue {
 
   // Helper to ensure the Store's save queue is filled in the correct
   // order.
-  private fifoResolver = new AsyncFifoResolver<UpdateAction[]>();
+  private fifoResolver = new AsyncFifoResolver<UpdateActionWithoutIsolationRequirement[]>();
 
   // If the timestamp is defined, it encodes when the first bucket
   // was added to the PushQueue that will be part of the next (to be created)
   // transaction.
   private waitTimeStartTimeStamp: number | null = null;
 
-  constructor(cube: DataCube) {
+  constructor(cube: DataCube, tracingId: string) {
     this.cube = cube;
+    this.tracingId = tracingId;
     this.pendingBuckets = new Set();
   }
 
@@ -131,7 +133,7 @@ class PushQueue {
 
   push = createDebouncedAbortableParameterlessCallable(this.pushImpl, PUSH_DEBOUNCE_TIME, this);
 
-  async pushTransaction(batch: Array<DataBucket>): Promise<void> {
+  private async pushTransaction(batch: Array<DataBucket>): Promise<void> {
     /*
      * Create a transaction from the batch and push it into the save queue.
      */
@@ -152,7 +154,7 @@ class PushQueue {
       const items = await this.fifoResolver.orderedWaitFor(
         createCompressedUpdateBucketActions(batch),
       );
-      Store.dispatch(pushSaveQueueTransaction(items, "volume", this.cube.layerName));
+      Store.dispatch(pushSaveQueueTransaction(items));
 
       this.compressingBucketCount -= batch.length;
     } catch (error) {

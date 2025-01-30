@@ -398,12 +398,14 @@ function SkeletonSpecificButtons() {
   );
   const isEditableMappingActive =
     segmentationTracingLayer != null && !!segmentationTracingLayer.hasEditableMapping;
-  const isMappingLocked =
-    segmentationTracingLayer != null && !!segmentationTracingLayer.mappingIsLocked;
-  const isMergerModeDisabled = isEditableMappingActive || isMappingLocked;
+  const isMappingLockedWithNonNull =
+    segmentationTracingLayer != null &&
+    !!segmentationTracingLayer.mappingIsLocked &&
+    segmentationTracingLayer.mappingName != null;
+  const isMergerModeDisabled = isEditableMappingActive || isMappingLockedWithNonNull;
   const mergerModeTooltipText = isEditableMappingActive
     ? "Merger mode cannot be enabled while an editable mapping is active."
-    : isMappingLocked
+    : isMappingLockedWithNonNull
       ? "Merger mode cannot be enabled while a mapping is locked. Please create a new annotation and use the merger mode there."
       : "Toggle Merger Mode - When enabled, skeletons that connect multiple segments will merge those segments.";
 
@@ -917,6 +919,7 @@ export default function ToolbarView() {
     isControlOrMetaPressed,
     isAltPressed,
   );
+  const areEditableMappingsEnabled = features().editableMappingsEnabled;
 
   const skeletonToolDescription = useLegacyBindings
     ? "Use left-click to move around and right-click to create new skeleton nodes"
@@ -1123,12 +1126,17 @@ export default function ToolbarView() {
         {hasSkeleton && hasVolume ? (
           <ToolRadioButton
             name={TOOL_NAMES.PROOFREAD}
-            description="Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
+            description={
+              "Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
+            }
             disabledExplanation={
-              isAgglomerateMappingEnabled.reason ||
-              disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation
+              areEditableMappingsEnabled
+                ? isAgglomerateMappingEnabled.reason ||
+                  disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation
+                : "Proofreading tool is only available on webknossos.org"
             }
             disabled={
+              !areEditableMappingsEnabled ||
               !isAgglomerateMappingEnabled.value ||
               disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled
             }
@@ -1199,6 +1207,7 @@ function ToolSpecificSettings({
       ? "The quick select tool is now working without AI. Activate AI for better results."
       : "The quick select tool is now working with AI."
     : "The quick select tool with AI is only available on webknossos.org";
+  const areEditableMappingsEnabled = features().editableMappingsEnabled;
   const toggleQuickSelectStrategy = () => {
     dispatch(
       updateUserSettingAction("quickSelect", {
@@ -1265,7 +1274,9 @@ function ToolSpecificSettings({
 
       {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? <FloodFillSettings /> : null}
 
-      {adaptedActiveTool === AnnotationToolEnum.PROOFREAD ? <ProofReadingComponents /> : null}
+      {adaptedActiveTool === AnnotationToolEnum.PROOFREAD && areEditableMappingsEnabled ? (
+        <ProofReadingComponents />
+      ) : null}
 
       {MeasurementTools.includes(adaptedActiveTool) ? (
         <MeasurementToolSwitch activeTool={adaptedActiveTool} />

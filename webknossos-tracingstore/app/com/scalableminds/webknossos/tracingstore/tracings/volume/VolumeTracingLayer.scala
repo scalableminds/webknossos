@@ -1,25 +1,21 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator}
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.tracingstore.tracings.{
-  FossilDBClient,
-  TemporaryTracingStore,
-  TemporaryVolumeDataStore
-}
-import sun.reflect.generics.reflectiveObjects.NotImplementedException
+import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, TemporaryTracingService}
+import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
-import ucar.ma2.{Array => MultiArray}
 
 trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTracingBucketHelper with FoxImplicits {
 
@@ -32,7 +28,7 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: Ex
     extends AbstractVolumeTracingBucketProvider {
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
-  val temporaryVolumeDataStore: TemporaryVolumeDataStore = layer.volumeDataCache
+  val temporaryTracingService: TemporaryTracingService = layer.temporaryTracingService
 
   override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     loadBucket(layer, readInstruction.bucket, readInstruction.version)
@@ -48,39 +44,32 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit v
     extends AbstractVolumeTracingBucketProvider {
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
-  val temporaryVolumeDataStore: TemporaryVolumeDataStore = layer.volumeDataCache
-  val temporaryTracingStore: TemporaryTracingStore[VolumeTracing] = layer.temporaryTracingStore
+  val temporaryTracingService: TemporaryTracingService = layer.temporaryTracingService
 
   override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
-      _ <- assertTracingStillInCache(layer)
+      _ <- temporaryTracingService.assertTracingStillPresent(layer.name)
       data <- loadBucket(layer, readInstruction.bucket, readInstruction.version)
     } yield data
-
-  private def assertTracingStillInCache(layer: VolumeTracingLayer)(implicit ec: ExecutionContext): Fox[Unit] =
-    for {
-      _ <- bool2Fox(temporaryTracingStore.contains(layer.name)) ?~> "Temporary Volume Tracing expired"
-    } yield ()
 
   override def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
     bucketStreamFromTemporaryStore(layer)
 
   override def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)] =
-    throw new NotImplementedException // Temporary Volume Tracings do not support versioning
+    throw new UnsupportedOperationException // Temporary Volume Tracings do not support versioning
 }
 
 case class VolumeTracingLayer(
     name: String,
     volumeTracingService: VolumeTracingService,
+    temporaryTracingService: TemporaryTracingService,
     isTemporaryTracing: Boolean = false,
     includeFallbackDataIfAvailable: Boolean = false,
     tracing: VolumeTracing,
-    userToken: Option[String],
-    additionalAxes: Option[Seq[AdditionalAxis]]
-)(implicit val volumeDataStore: FossilDBClient,
-  implicit val volumeDataCache: TemporaryVolumeDataStore,
-  implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
-  implicit val ec: ExecutionContext)
+    tokenContext: TokenContext,
+    additionalAxes: Option[Seq[AdditionalAxis]],
+    volumeDataStore: FossilDBClient,
+)(implicit val ec: ExecutionContext)
     extends SegmentationLayer
     with ProtoGeometryImplicits {
 

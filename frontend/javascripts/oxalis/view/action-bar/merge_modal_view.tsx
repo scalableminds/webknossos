@@ -1,7 +1,7 @@
 import {
   getAnnotationCompoundInformation,
-  getAnnotationInformation,
   getTracingForAnnotationType,
+  getUnversionedAnnotationInformation,
 } from "admin/admin_rest_api";
 import { Alert, Button, Form, Modal, Select, Spin, Tooltip } from "antd";
 import { makeComponentLazy } from "libs/react_helpers";
@@ -145,7 +145,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
     const { selectedExplorativeAnnotation } = this.state;
 
     if (selectedExplorativeAnnotation != null) {
-      const annotation = await getAnnotationInformation(selectedExplorativeAnnotation);
+      const annotation = await getUnversionedAnnotationInformation(selectedExplorativeAnnotation);
       this.mergeAnnotationIntoActiveTracing(annotation);
     }
   };

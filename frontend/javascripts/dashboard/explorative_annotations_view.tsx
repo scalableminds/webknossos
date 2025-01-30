@@ -48,7 +48,6 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import { AnnotationContentTypes } from "oxalis/constants";
-import { getCombinedStatsFromServerAnnotation } from "oxalis/model/accessors/annotation_accessor";
 import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import Store from "oxalis/store";
@@ -709,7 +708,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         width: 150,
         render: (__: any, annotation: APIAnnotationInfo) => (
           <AnnotationStats
-            stats={getCombinedStatsFromServerAnnotation(annotation)}
+            stats={_.mapValues(
+              _.keyBy(annotation.annotationLayers, (layer) => layer.tracingId),
+              (layer) => layer.stats,
+            )}
             asInfoBlock={false}
             withMargin={false}
           />

@@ -1,13 +1,13 @@
 package com.scalableminds.webknossos.datastore.services
 
-import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.pekko.actor.ActorSystem
 import play.api.i18n.{Messages, MessagesProvider}
 
 import scala.concurrent.ExecutionContext
@@ -29,7 +29,7 @@ class DataSourceRepository @Inject()(
     } yield (dataSource, dataLayer)
 
   def findUsable(id: DataSourceId): Option[DataSource] =
-    find(id).flatMap(_.toUsable)
+    get(id).flatMap(_.toUsable)
 
   def updateDataSource(dataSource: InboxDataSource): Fox[Unit] =
     for {

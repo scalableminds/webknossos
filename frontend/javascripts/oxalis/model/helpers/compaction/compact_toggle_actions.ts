@@ -5,7 +5,7 @@
 // See compactToggleActions for the high-level logic of the compaction.
 import _ from "lodash";
 import type {
-  UpdateAction,
+  UpdateActionWithoutIsolationRequirement,
   UpdateTreeVisibilityUpdateAction,
 } from "oxalis/model/sagas/update_actions";
 import { updateTreeGroupVisibility, updateTreeVisibility } from "oxalis/model/sagas/update_actions";
@@ -137,9 +137,9 @@ function isCommonAncestorToggler(
 }
 
 export default function compactToggleActions(
-  updateActions: UpdateAction[],
+  updateActions: UpdateActionWithoutIsolationRequirement[],
   tracing: SkeletonTracing | VolumeTracing,
-): UpdateAction[] {
+): UpdateActionWithoutIsolationRequirement[] {
   if (tracing.type !== "skeleton") {
     // Don't do anything if this is not a skeleton tracing
     return updateActions;
@@ -148,7 +148,7 @@ export default function compactToggleActions(
   const skeletonTracing = tracing;
 
   // Extract the toggleActions which we are interested in
-  const [toggleActions, remainingActions] = _.partition<UpdateAction>(
+  const [toggleActions, remainingActions] = _.partition<UpdateActionWithoutIsolationRequirement>(
     updateActions,
     (ua) => ua.name === "updateTreeVisibility",
   );
@@ -176,8 +176,8 @@ export default function compactToggleActions(
   // If less than 50% of the toggled trees are exceptions, we should use the compaction
   const shouldUseToggleGroup = exceptions.length < 0.5 * affectedTreeCount;
   const compactedToggleActions = [
-    updateTreeGroupVisibility(commonAncestor, commonVisibility),
-    ...exceptions.map((tree) => updateTreeVisibility(tree)),
+    updateTreeGroupVisibility(commonAncestor, commonVisibility, tracing.tracingId),
+    ...exceptions.map((tree) => updateTreeVisibility(tree, tracing.tracingId)),
   ];
   const finalToggleActions = shouldUseToggleGroup ? compactedToggleActions : toggleActions;
   return remainingActions.concat(finalToggleActions);

@@ -4,3 +4,4 @@ counts.py
 logs/
 *.dat
 result.json
+mapping_tracing_mapping.json

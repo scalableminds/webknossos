@@ -8,6 +8,7 @@ import { Alert, Button, Card, Col, Progress, Row } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
+import { roundTo } from "libs/utils";
 import Constants from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 import type React from "react";
@@ -303,7 +304,7 @@ export function PlanDashboardCard({
         <Col span={12}>
           <Card actions={buyMoreCreditsAction}>
             <Row justify="center" align="middle" style={{ minHeight: 160 }}>
-              <h3>{organization.creditBalance}</h3>
+              <h3>{roundTo(organization.creditBalance, 2)}</h3>
             </Row>
             <Row justify="center">WEBKNOSSOS Credits</Row>
           </Card>

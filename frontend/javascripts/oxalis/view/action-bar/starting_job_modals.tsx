@@ -38,6 +38,7 @@ import {
   computeArrayFromBoundingBox,
   computeBoundingBoxFromBoundingBoxObject,
   rgbToHex,
+  roundTo,
 } from "libs/utils";
 import _ from "lodash";
 import { ControlModeEnum, Unicode, type Vector3 } from "oxalis/constants";
@@ -581,7 +582,7 @@ function JobCostInformation({
                 : "bounding box of the selected dataset."}
               <br />
               This job costs {jobCreditCostsPerGVx} WEBKNOSSOS credits per Gigavoxel. Your
-              organization currently has {organizationCredits} WEBKNOSSOS credits.
+              organization currently has {roundTo(organizationCredits, 2)} WEBKNOSSOS credits.
               <br />
               {currentBoundingBoxVolume != null
                 ? `${isBoundingBoxConfigurable ? "The selected bounding box" : "This dataset"} has a volume of ${formatVoxels(currentBoundingBoxVolume)} resulting in costs of ${jobCostsAsString} WEBKNOSSOS credits.`

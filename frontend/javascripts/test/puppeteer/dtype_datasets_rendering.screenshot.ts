@@ -130,8 +130,8 @@ const specs: Array<Spec> = _.flatten(
             },
           ];
 
-    return segmentationSpecs;
-    // return [...colorSpecs, ...segmentationSpecs];
+    // return segmentationSpecs;
+    return [...colorSpecs, ...segmentationSpecs];
   }),
 );
 

@@ -100,8 +100,8 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   uniform highp uint COLOR_CUCKOO_ELEMENTS_PER_TEXEL;
   uniform highp uint COLOR_CUCKOO_TWIDTH;
 
-  uniform vec4 activeCellIdHigh;
-  uniform vec4 activeCellIdLow;
+  uniform uint activeCellIdHigh;
+  uniform uint activeCellIdLow;
   uniform bool isMouseInActiveViewport;
   uniform bool showBrush;
   uniform bool isProofreading;
@@ -138,10 +138,10 @@ uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
 uniform float planeID;
 uniform vec3 addressSpaceDimensions;
-uniform vec4 hoveredSegmentIdLow;
-uniform vec4 hoveredSegmentIdHigh;
-uniform vec4 hoveredUnmappedSegmentIdLow;
-uniform vec4 hoveredUnmappedSegmentIdHigh;
+uniform uint hoveredSegmentIdLow;
+uniform uint hoveredSegmentIdHigh;
+uniform uint hoveredUnmappedSegmentIdLow;
+uniform uint hoveredUnmappedSegmentIdHigh;
 
 // For some reason, taking the dataset scale from the uniform results in imprecise
 // rendering of the brush circle (and issues in the arbitrary modes). That's why it
@@ -248,20 +248,33 @@ void main() {
   vec4 data_color = vec4(0.0);
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
-    vec4 <%= segmentationName %>_id_low = vec4(0.);
-    vec4 <%= segmentationName %>_id_high = vec4(0.);
-    vec4 <%= segmentationName %>_unmapped_id_low = vec4(0.);
-    vec4 <%= segmentationName %>_unmapped_id_high = vec4(0.);
+    uint <%= segmentationName %>_id_low = 0u;
+    uint <%= segmentationName %>_id_high = 0u;
+    uint <%= segmentationName %>_unmapped_id_low = 0u;
+    uint <%= segmentationName %>_unmapped_id_high = 0u;
     float <%= segmentationName %>_effective_alpha = <%= segmentationName %>_alpha * (1. - <%= segmentationName %>_unrenderable);
 
     if (<%= segmentationName %>_effective_alpha > 0.) {
       vec4[2] unmapped_segment_id;
       vec4[2] segment_id;
       getSegmentId_<%= segmentationName %>(worldCoordUVW, unmapped_segment_id, segment_id);
-      <%= segmentationName %>_unmapped_id_low = unmapped_segment_id[1];
-      <%= segmentationName %>_unmapped_id_high = unmapped_segment_id[0];
-      <%= segmentationName %>_id_low = segment_id[1];
-      <%= segmentationName %>_id_high = segment_id[0];
+
+      {
+        highp uint hpv_low = vec4ToIntToUint(unmapped_segment_id[1]);
+        highp uint hpv_high = vec4ToIntToUint(unmapped_segment_id[0]);
+
+        <%= segmentationName %>_unmapped_id_low = uint(hpv_low);
+        <%= segmentationName %>_unmapped_id_high = uint(hpv_high);
+      }
+
+      {
+        highp uint hpv_low = vec4ToIntToUint(segment_id[1]);
+        highp uint hpv_high = vec4ToIntToUint(segment_id[0]);
+
+        <%= segmentationName %>_id_low = uint(hpv_low);
+        <%= segmentationName %>_id_high = uint(hpv_high);
+      }
+
     }
 
   <% }) %>
@@ -296,6 +309,7 @@ void main() {
 
         // color_value is usually between 0 and 1.
         color_value = maybe_filtered_color.color.rgb;
+
         <% if (textureLayerInfos[name].packingDegree === 1.0) { %>
           // Handle 32-bit color layers
 
@@ -366,7 +380,7 @@ void main() {
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
 
     // Color map (<= to fight rounding mistakes)
-    if ( length(<%= segmentationName %>_id_low) > 0.1 || length(<%= segmentationName %>_id_high) > 0.1 ) {
+    if ( <%= segmentationName %>_id_low != 0u || <%= segmentationName %>_id_high != 0u ) {
       // Increase cell opacity when cell is hovered or if it is the active activeCell
       bool isHoveredSegment = hoveredSegmentIdLow == <%= segmentationName %>_id_low
         && hoveredSegmentIdHigh == <%= segmentationName %>_id_high;

@@ -229,23 +229,23 @@ class PlaneMaterialFactory {
       // value which is why it is spread over two uniforms,
       // named as `-High` and `-Low`.
       hoveredSegmentIdHigh: {
-        value: new THREE.Vector4(0, 0, 0, 0),
+        value: 0,
       },
       hoveredSegmentIdLow: {
-        value: new THREE.Vector4(0, 0, 0, 0),
+        value: 0,
       },
       hoveredUnmappedSegmentIdHigh: {
-        value: new THREE.Vector4(0, 0, 0, 0),
+        value: 0,
       },
       hoveredUnmappedSegmentIdLow: {
-        value: new THREE.Vector4(0, 0, 0, 0),
+        value: 0,
       },
       // The same is done for the active cell id.
       activeCellIdHigh: {
-        value: new THREE.Vector4(0, 0, 0, 0),
+        value: 0,
       },
       activeCellIdLow: {
-        value: new THREE.Vector4(0, 0, 0, 0),
+        value: 0,
       },
       isUnmappedSegmentHighlighted: {
         value: false,
@@ -792,10 +792,10 @@ class PlaneMaterialFactory {
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.hoveredSegmentId,
           (hoveredSegmentId) => {
-            const [high, low] = Utils.convertNumberTo64Bit(hoveredSegmentId);
+            const [high, low] = Utils.convertNumberTo64BitTuple(Math.abs(hoveredSegmentId));
 
-            this.uniforms.hoveredSegmentIdLow.value.set(...low);
-            this.uniforms.hoveredSegmentIdHigh.value.set(...high);
+            this.uniforms.hoveredSegmentIdLow.value = low;
+            this.uniforms.hoveredSegmentIdHigh.value = high;
           },
         ),
       );
@@ -803,10 +803,10 @@ class PlaneMaterialFactory {
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.hoveredUnmappedSegmentId,
           (hoveredUnmappedSegmentId) => {
-            const [high, low] = Utils.convertNumberTo64Bit(hoveredUnmappedSegmentId);
+            const [high, low] = Utils.convertNumberTo64BitTuple(Math.abs(hoveredUnmappedSegmentId));
 
-            this.uniforms.hoveredUnmappedSegmentIdLow.value.set(...low);
-            this.uniforms.hoveredUnmappedSegmentIdHigh.value.set(...high);
+            this.uniforms.hoveredUnmappedSegmentIdLow.value = low;
+            this.uniforms.hoveredUnmappedSegmentIdHigh.value = high;
           },
         ),
       );
@@ -950,10 +950,10 @@ class PlaneMaterialFactory {
       return;
     }
 
-    const [high, low] = Utils.convertNumberTo64Bit(activeCellId);
+    const [high, low] = Utils.convertNumberTo64BitTuple(Math.abs(activeCellId));
 
-    this.uniforms.activeCellIdLow.value.set(...low);
-    this.uniforms.activeCellIdHigh.value.set(...high);
+    this.uniforms.activeCellIdLow.value = low;
+    this.uniforms.activeCellIdHigh.value = high;
   }
 
   updateUniformsForLayer(

@@ -15,9 +15,30 @@ import type { ShaderModule } from "./shader_module_system";
 export const convertCellIdToRGB: ShaderModule = {
   requirements: [hsvToRgb, getElementOfPermutation, aaStep, colormapJet, hashCombine],
   code: `
+    // todop: delete
+    // highp uint vec4ToUint2(vec4 color) {
+    //   uvec4 four_bytes = uvec4(255. * color);
+    //   highp uint hpv =
+    //     uint(four_bytes.a) * uint(pow(256., 3.))
+    //     + uint(four_bytes.b) * uint(pow(256., 2.))
+    //     + uint(four_bytes.g) * 256u
+    //     + uint(four_bytes.r);
+    //   return hpv;
+    // }
+
     highp uint vec4ToUint(vec4 idLow) {
       uint integerValue = (uint(idLow.a) << 24) | (uint(idLow.b) << 16) | (uint(idLow.g) << 8) | uint(idLow.r);
       return integerValue;
+    }
+
+    highp int vec4ToInt(vec4 color) {
+      ivec4 four_bytes = ivec4(color);
+      highp int hpv = four_bytes.r | (four_bytes.g << 8) | (four_bytes.b << 16) | (four_bytes.a << 24);
+      return hpv;
+    }
+
+    highp uint vec4ToIntToUint(vec4 idLow) {
+      return uint(abs(vec4ToInt(idLow)));
     }
 
     vec4 uintToVec4(uint integerValue) {
@@ -48,7 +69,7 @@ export const convertCellIdToRGB: ShaderModule = {
       return vec3(customColor) / 255.;
     }
 
-    vec3 convertCellIdToRGB(vec4 idHigh, vec4 idLow) {
+    vec3 convertCellIdToRGB(uint idHigh_uint, uint idLow_uint) {
       /*
       This function maps from a segment id to a color with a pattern.
       For the color, the jet color map is used. For the patterns, we employ the following
@@ -64,6 +85,9 @@ export const convertCellIdToRGB: ShaderModule = {
       If custom colors were provided via mappings, the color values are used from there.
       The patterns are still painted on top of these, though.
       */
+
+      vec4 idHigh = uintToVec4(idHigh_uint);
+      vec4 idLow = uintToVec4(idLow_uint);
 
       // Since collisions of ids are bound to happen, using all 64 bits is not
       // necessary, which is why we simply combine the 32-bit tuple into one 32-bit value.
@@ -314,10 +338,10 @@ export const getSegmentId: ShaderModule = {
       mapped_id[0] = dtype_normalizer * segment_id[0]; // High
       mapped_id[1] = dtype_normalizer * segment_id[1]; // Low
 
-      uint high_integer = vec4ToUint(mapped_id[0]);
-      uint low_integer = vec4ToUint(mapped_id[1]);
-
       if (shouldApplyMappingOnGPU) {
+        uint high_integer = vec4ToUint(mapped_id[0]);
+        uint low_integer = vec4ToUint(mapped_id[1]);
+
         ivec2 mapped_entry = is_mapping_64bit
           ? attemptMappingLookUp64(high_integer, low_integer, mapping_seeds[0])
           : attemptMappingLookUp32(low_integer, mapping_seeds[0]);

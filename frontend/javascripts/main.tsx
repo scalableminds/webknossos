@@ -111,7 +111,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (containerElement) {
       const react_root = createRoot(containerElement);
       react_root.render(
-        <p style={{ margin: "20px" }}>
+        <p style={{ margin: 20, marginTop: -20 }}>
           Failed to load WEBKNOSSOS. Please try again or check the console for details.
         </p>,
       );

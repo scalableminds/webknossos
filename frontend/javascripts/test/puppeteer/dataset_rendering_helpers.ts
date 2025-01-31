@@ -288,7 +288,7 @@ async function openSandboxView(
   console.log("Finished rendering annotation view");
 }
 
-async function screenshotTracingView(page: Page): Promise<Screenshot> {
+export async function screenshotTracingView(page: Page): Promise<Screenshot> {
   console.log("Screenshot annotation view");
   // Take screenshots of the other rendered planes
   const PLANE_IDS = [

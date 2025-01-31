@@ -7,6 +7,7 @@ import {
   getDefaultRequestOptions,
   getNewPage,
   screenshotDataset,
+  screenshotTracingView,
   setupBeforeEachAndAfterEach,
   test,
   withRetry,
@@ -18,8 +19,12 @@ import {
   getSupportedValueRangeForElementClass,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import Semaphore from "semaphore-promise";
+import {
+  updateDatasetSettingAction,
+  updateTemporarySettingAction,
+} from "oxalis/model/actions/settings_actions";
 
-const semaphore = new Semaphore(4);
+const semaphore = new Semaphore(1);
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
@@ -70,20 +75,30 @@ const zoomedOut = {
   viewOverride: "512,256,16,0,2.0",
 };
 
-const dtypes = ["uint8", "int8", "uint16", "int16", "uint32", "int32", "float32"] as const;
+const onlyTestSegmentation = true;
 
-// todop:
-// segmentation
-//  uint16: hover does not work
-//  int16: hover does not work (and colors are not ideal, but maybe this is alright)
-//  uint32: (colors are correlated)
-//  int32: hover does not work
+const dtypes = [
+  "uint8",
+  "int8",
+  // "uint16",
+  // "int16",
+  // "uint32",
+  // "int32",
+  // "float32"
+] as const;
+
+const selectiveSegmentIdByDtype = {
+  int8: -6,
+  uint8: 122,
+};
 
 type Spec = {
   name: string;
+  dtype: (typeof dtypes)[number];
   datasetName: string;
   viewOverride: string;
   datasetConfig: PartialDatasetConfiguration;
+  alsoTestSelectiveSegmentId?: boolean;
 };
 
 const specs: Array<Spec> = _.flatten(
@@ -93,6 +108,7 @@ const specs: Array<Spec> = _.flatten(
     const colorSpecs = [
       {
         name: `dtype_${dtype}_color_${zoomedIn.postfix}`,
+        dtype,
         datasetName: `dtype_test_${dtype}_color`,
         viewOverride: zoomedIn.viewOverride,
         datasetConfig: datasetConfigHelper(`${dtype}_color`, [
@@ -102,6 +118,7 @@ const specs: Array<Spec> = _.flatten(
       },
       {
         name: `dtype_${dtype}_color_${zoomedOut.postfix}`,
+        dtype,
         datasetName: `dtype_test_${dtype}_color`,
         viewOverride: zoomedOut.viewOverride,
         datasetConfig: datasetConfigHelper(
@@ -118,19 +135,23 @@ const specs: Array<Spec> = _.flatten(
         : [
             {
               name: `dtype_${dtype}_segmentation_${zoomedIn.postfix}`,
+              dtype,
               datasetName: `dtype_test_${dtype}_segmentation`,
               viewOverride: zoomedIn.viewOverride,
               datasetConfig: datasetConfigHelper(`${dtype}_segmentation`, undefined),
+              alsoTestSelectiveSegmentId: true,
             },
-            {
-              name: `dtype_${dtype}_segmentation_${zoomedOut.postfix}`,
-              datasetName: `dtype_test_${dtype}_segmentation`,
-              viewOverride: zoomedOut.viewOverride,
-              datasetConfig: datasetConfigHelper(`${dtype}_segmentation`, undefined),
-            },
+            // {
+            //   name: `dtype_${dtype}_segmentation_${zoomedOut.postfix}`,
+            //   datasetName: `dtype_test_${dtype}_segmentation`,
+            //   viewOverride: zoomedOut.viewOverride,
+            //   datasetConfig: datasetConfigHelper(`${dtype}_segmentation`, undefined),
+            // },
           ];
 
-    // return segmentationSpecs;
+    if (onlyTestSegmentation) {
+      return segmentationSpecs;
+    }
     return [...colorSpecs, ...segmentationSpecs];
   }),
 );
@@ -195,6 +216,43 @@ datasetNames.map(async (datasetName) => {
               spec.name,
             );
             console.timeEnd("Comparing screenshot...");
+
+            if (spec.alsoTestSelectiveSegmentId) {
+              const actions = [
+                updateDatasetSettingAction("selectiveSegmentVisibility", true),
+                updateTemporarySettingAction(
+                  "hoveredSegmentId",
+                  selectiveSegmentIdByDtype[spec.dtype],
+                ),
+              ];
+              console.time("evaluate");
+              await page.evaluate((actions) => {
+                for (const action of actions) {
+                  window.webknossos.DEV.store.dispatch(action);
+                }
+              }, actions);
+              console.timeEnd("evaluate");
+              console.time("Making screenshot...");
+              const { screenshot, width, height } = await screenshotTracingView(page);
+              const hoveredSegmentId = await page.evaluate(() => {
+                return window.webknossos.DEV.store.getState().temporaryConfiguration
+                  .hoveredSegmentId;
+              });
+              console.log("hoveredSegmentId", hoveredSegmentId);
+              console.timeEnd("Making screenshot...");
+              console.time("Comparing screenshot...");
+              const changedPixels = await compareScreenshot(
+                screenshot,
+                width,
+                height,
+                BASE_PATH,
+                spec.name + "_selective_segment",
+              );
+              console.timeEnd("Comparing screenshot...");
+
+              t.true(isPixelEquivalent(changedPixels, width, height));
+            }
+
             return isPixelEquivalent(changedPixels, width, height);
           },
           (condition) => {

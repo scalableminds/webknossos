@@ -857,10 +857,8 @@ export default function ToolbarView({ isReadOnly }: { isReadOnly: boolean }) {
 
   const [lastForcefullyDisabledTool, setLastForcefullyDisabledTool] =
     useState<AnnotationTool | null>(null);
-  const isVolumeModificationAllowed = useSelector(
-    (state: OxalisState) => !hasEditableMapping(state),
-  );
-  const isModificationAllowed = !isReadOnly && isVolumeModificationAllowed;
+  const isVolumeModificationAllowed =
+    useSelector((state: OxalisState) => !hasEditableMapping(state)) && !isReadOnly;
   const useLegacyBindings = useSelector(
     (state: OxalisState) => state.userConfiguration.useLegacyBindings,
   );
@@ -962,7 +960,7 @@ export default function ToolbarView({ isReadOnly }: { isReadOnly: boolean }) {
           </ToolRadioButton>
         ) : null}
 
-        {hasVolume && isModificationAllowed ? (
+        {hasVolume && isVolumeModificationAllowed ? (
           <React.Fragment>
             <ToolRadioButton
               name={TOOL_NAMES.BRUSH}

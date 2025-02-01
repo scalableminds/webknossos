@@ -181,6 +181,18 @@ type UploadFormFieldTypes = {
   datastoreUrl: string;
 };
 
+export const dataPrivacyInfo = (
+  <Space direction="horizontal" size={4}>
+    Per default, imported data is private and only visible within your organization.
+    <Link
+      style={{ color: "var(--ant-color-primary)" }}
+      to="https://docs.webknossos.org/webknossos/datasets/settings.html#sharing-permissions-tab"
+    >
+      Read more
+    </Link>
+  </Space>
+);
+
 class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   state: State = {
     isUploading: false,
@@ -708,21 +720,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           padding: 5,
         }}
       >
-        <CardContainer
-          withoutCard={withoutCard}
-          title="Upload Dataset"
-          subtitle={
-            <Space direction="horizontal" size={4}>
-              Per default, uploaded data is private and only visible within your organization.
-              <Link
-                style={{ color: "var(--ant-color-primary)" }}
-                to="https://docs.webknossos.org/webknossos/datasets/settings.html#sharing-permissions-tab"
-              >
-                Read more
-              </Link>
-            </Space>
-          }
-        >
+        <CardContainer withoutCard={withoutCard} title="Upload Dataset" subtitle={dataPrivacyInfo}>
           {hasPricingPlanExceededStorage(this.props.organization) ? (
             <Alert
               type="error"

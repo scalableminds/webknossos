@@ -46,6 +46,7 @@ class SlackClient(rpc: RPC, slackUri: String, name: String, verboseLoggingEnable
         rpc(slackUri).postJson(
           Json.obj("attachments" -> Json.arr(jsonMessage))
         )
+        ()
       } else {
         logger.warn(
           s"Not sending slack notification as rate limit of $messagesSentSinceReset was reached. Message was: $jsonMessage")

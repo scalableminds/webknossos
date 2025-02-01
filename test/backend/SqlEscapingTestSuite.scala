@@ -23,7 +23,7 @@ class SqlEscapingTestSuite extends PlaySpec with SqlTypeImplicits with SqlEscapi
     "handle null" in {
       assert(parseArrayLiteral(null) == List())
     }
-    "handle emptystring" in {
+    "handle empty string" in {
       assert(parseArrayLiteral("") == List())
     }
     "handle empty array literal" in {

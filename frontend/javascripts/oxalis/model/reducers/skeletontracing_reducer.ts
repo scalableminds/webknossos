@@ -106,7 +106,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         trees,
         treeGroups: action.tracing.treeGroups || [],
         tracingId: action.tracing.id,
-        version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
         userBoundingBoxes,
         navigationList: {
@@ -442,11 +441,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           return update(state, {
             tracing: {
               skeleton: {
-                $set: update(action.tracing, {
-                  version: {
-                    $set: skeletonTracing.version,
-                  },
-                }),
+                $set: action.tracing,
               },
             },
           });
@@ -963,8 +958,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           const isProofreadingActive =
             state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
           const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
-          const oldTrees = getTreesWithType(skeletonTracing, treeType);
-          const mergeResult = mergeTrees(oldTrees, sourceNodeId, targetNodeId);
+          const oldTrees = skeletonTracing.trees;
+          const mergeResult = mergeTrees(oldTrees, sourceNodeId, targetNodeId, treeType);
           if (mergeResult == null) {
             return state;
           }

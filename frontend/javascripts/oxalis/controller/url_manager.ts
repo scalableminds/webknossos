@@ -99,10 +99,14 @@ class UrlManager {
     this.initialState = this.parseUrlHash();
   }
 
-  reset(keepUrlState: boolean = false): void {
+  reset(keepUrlState: boolean = false, keepUrlSearch: boolean = false): void {
     // don't use location.hash = ""; since it refreshes the page
     if (!keepUrlState) {
-      window.history.replaceState({}, "", location.pathname + location.search);
+      window.history.replaceState(
+        {},
+        "",
+        location.pathname + (keepUrlSearch ? location.search : ""),
+      );
     }
 
     this.initialize();

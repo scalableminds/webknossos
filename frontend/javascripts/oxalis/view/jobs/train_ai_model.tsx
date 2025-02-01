@@ -1,7 +1,7 @@
 import {
-  getAnnotationInformation,
   getDataset,
   getTracingForAnnotationType,
+  getUnversionedAnnotationInformation,
   runTraining,
 } from "admin/admin_rest_api";
 import { getAnnotationsForTask } from "admin/api/tasks";
@@ -42,11 +42,12 @@ import { Model } from "oxalis/singletons";
 import type { HybridTracing, OxalisState, UserBoundingBox, VolumeTracing } from "oxalis/store";
 import React, { useRef, useState } from "react";
 import { useSelector } from "react-redux";
-import type {
-  APIAnnotation,
-  APIDataLayer,
-  APIDataset,
-  ServerVolumeTracing,
+import {
+  type APIAnnotation,
+  type APIDataLayer,
+  type APIDataset,
+  AnnotationLayerEnum,
+  type ServerVolumeTracing,
 } from "types/api_flow_types";
 
 const { TextArea } = Input;
@@ -702,7 +703,7 @@ function AnnotationsCsvInput({
 
     const newAnnotationsWithDatasets = await Promise.all(
       annotationIdsForTraining.map(async (annotationId) => {
-        const annotation = await getAnnotationInformation(annotationId);
+        const annotation = await getUnversionedAnnotationInformation(annotationId);
         const dataset = await getDataset(annotation.datasetId);
 
         const volumeServerTracings: ServerVolumeTracing[] = await Promise.all(
@@ -720,7 +721,7 @@ function AnnotationsCsvInput({
         let userBoundingBoxes = volumeTracings[0]?.userBoundingBoxes;
         if (!userBoundingBoxes) {
           const skeletonLayer = annotation.annotationLayers.find(
-            (layer) => layer.typ === "Skeleton",
+            (layer) => layer.typ === AnnotationLayerEnum.Skeleton,
           );
           if (skeletonLayer) {
             const skeletonTracing = await getTracingForAnnotationType(annotation, skeletonLayer);

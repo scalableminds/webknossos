@@ -123,11 +123,14 @@ PUT           /datastores/:name                                                 
 # Tracingstores
 GET           /tracingstore                                                                     controllers.TracingStoreController.listOne()
 POST          /tracingstores/:name/handleTracingUpdateReport                                    controllers.WKRemoteTracingStoreController.handleTracingUpdateReport(name: String, key: String)
+POST          /tracingstores/:name/updateAnnotation                                             controllers.WKRemoteTracingStoreController.updateAnnotation(name: String, key: String, annotationId: String)
 POST          /tracingstores/:name/validateUserAccess                                           controllers.UserTokenController.validateAccessViaTracingstore(name: String, key: String, token: Option[String])
 PUT           /tracingstores/:name                                                              controllers.TracingStoreController.update(name: String)
 GET           /tracingstores/:name/dataSource                                                   controllers.WKRemoteTracingStoreController.dataSourceForTracing(name: String, key: String, tracingId: String)
 GET           /tracingstores/:name/dataSourceId                                                 controllers.WKRemoteTracingStoreController.dataSourceIdForTracing(name: String, key: String, tracingId: String)
+GET           /tracingstores/:name/annotationId                                                 controllers.WKRemoteTracingStoreController.annotationIdForTracing(name: String, key: String, tracingId: String)
 GET           /tracingstores/:name/dataStoreUri/:datasetDirectoryName                           controllers.WKRemoteTracingStoreController.dataStoreUriForDataset(name: String, key: String, organizationId: Option[String], datasetDirectoryName: String)
+POST          /tracingstores/:name/createTracing                                                controllers.WKRemoteTracingStoreController.createTracing(name: String, key: String, annotationId: String, previousVersion: Long)
 
 # User access tokens for datastore authentication
 POST          /userToken/generate                                                               controllers.UserTokenController.generateTokenForDataStore()
@@ -145,25 +148,16 @@ PUT           /annotations/:typ/:id/reset                                       
 PATCH         /annotations/:typ/:id/transfer                                                    controllers.AnnotationController.transfer(typ: String, id: String)
 PATCH         /annotations/:typ/:id/editLockedState                                             controllers.AnnotationController.editLockedState(typ: String, id: String, isLockedByOwner: Boolean)
 
-GET           /annotations/:id/info                                                             controllers.AnnotationController.infoWithoutType(id: String, timestamp: Long)
-PATCH         /annotations/:id/makeHybrid                                                       controllers.AnnotationController.makeHybridWithoutType(id: String, fallbackLayerName: Option[String])
-PATCH         /annotations/:id/downsample                                                       controllers.AnnotationController.downsampleWithoutType(id: String, tracingId: String)
-PATCH         /annotations/:id/addAnnotationLayer                                               controllers.AnnotationController.addAnnotationLayerWithoutType(id: String)
-PATCH         /annotations/:id/deleteAnnotationLayer                                            controllers.AnnotationController.deleteAnnotationLayerWithoutType(id: String, layerName: String)
+GET           /annotations/:id/info                                                             controllers.AnnotationController.infoWithoutType(id: String, timestamp: Option[Long])
 DELETE        /annotations/:id                                                                  controllers.AnnotationController.cancelWithoutType(id: String)
 POST          /annotations/:id/merge/:mergedTyp/:mergedId                                       controllers.AnnotationController.mergeWithoutType(id: String, mergedTyp: String, mergedId: String)
-GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
+GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: String, version: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: String)
-PATCH         /annotations/addSegmentIndicesToAll                                               controllers.AnnotationController.addSegmentIndicesToAll(parallelBatchCount: Int, dryRun: Boolean, skipTracings: Option[String])
 
-GET           /annotations/:typ/:id/info                                                        controllers.AnnotationController.info(typ: String, id: String, timestamp: Long)
-PATCH         /annotations/:typ/:id/makeHybrid                                                  controllers.AnnotationController.makeHybrid(typ: String, id: String, fallbackLayerName: Option[String])
-PATCH         /annotations/:typ/:id/downsample                                                  controllers.AnnotationController.downsample(typ: String, id: String, tracingId: String)
-PATCH         /annotations/:typ/:id/addAnnotationLayer                                          controllers.AnnotationController.addAnnotationLayer(typ: String, id: String)
-PATCH         /annotations/:typ/:id/deleteAnnotationLayer                                       controllers.AnnotationController.deleteAnnotationLayer(typ: String, id: String, layerName: String)
+GET           /annotations/:typ/:id/info                                                        controllers.AnnotationController.info(typ: String, id: String, timestamp: Option[Long])
 DELETE        /annotations/:typ/:id                                                             controllers.AnnotationController.cancel(typ: String, id: String)
 POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                                  controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
-GET           /annotations/:typ/:id/download                                                    controllers.AnnotationIOController.download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
+GET           /annotations/:typ/:id/download                                                    controllers.AnnotationIOController.download(typ: String, id: String, version: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 
 GET           /annotations/source/:accessTokenOrId                                              controllers.AnnotationPrivateLinkController.annotationSource(accessTokenOrId: String, userToken: Option[String])
 
@@ -266,7 +260,7 @@ POST          /jobs/run/computeMeshFile/:datasetId                              
 POST          /jobs/run/computeSegmentIndexFile/:datasetId                                      controllers.JobController.runComputeSegmentIndexFileJob(datasetId: String, layerName: String)
 POST          /jobs/run/exportTiff/:datasetId                                                   controllers.JobController.runExportTiffJob(datasetId: String, bbox: String, additionalCoordinates: Option[String], layerName: Option[String], mag: Option[String], annotationLayerName: Option[String], annotationId: Option[String], asOmeTiff: Boolean)
 POST          /jobs/run/inferNuclei/:datasetId                                                  controllers.JobController.runInferNucleiJob(datasetId: String, layerName: String, newDatasetName: String)
-POST          /jobs/run/inferNeurons/:datasetId                                                 controllers.JobController.runInferNeuronsJob(datasetId: String, layerName: String, bbox: String, newDatasetName: String)
+POST          /jobs/run/inferNeurons/:datasetId                                                 controllers.JobController.runInferNeuronsJob(datasetId: String, layerName: String, bbox: String, newDatasetName: String, doSplitMergerEvaluation: Boolean, annotationId: Option[String], evalUseSparseTracing: Option[Boolean], evalMaxEdgeLength: Option[Double], evalSparseTubeThresholdNm: Option[Double], evalMinMergerPathLengthNm: Option[Double])
 POST          /jobs/run/inferMitochondria/:datasetId                                            controllers.JobController.runInferMitochondriaJob(datasetId: String, layerName: String, bbox: String, newDatasetName: String)
 POST          /jobs/run/alignSections/:datasetId                                                controllers.JobController.runAlignSectionsJob(datasetId: String, layerName: String, newDatasetName: String, annotationId: Option[String])
 POST          /jobs/run/materializeVolumeAnnotation/:datasetId                                  controllers.JobController.runMaterializeVolumeAnnotationJob(datasetId: String, fallbackLayerName: String, annotationId: String, annotationType: String, newDatasetName: String, outputSegmentationLayerName: String, mergeSegments: Boolean, volumeLayerName: Option[String], includesEditableMapping: Boolean, boundingBox: Option[String])

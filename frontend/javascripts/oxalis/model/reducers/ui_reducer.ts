@@ -120,6 +120,13 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_IS_WK_READY": {
+      return updateKey(state, "uiInformation", { isWkReady: action.isReady });
+    }
+    case "WK_READY": {
+      return updateKey(state, "uiInformation", { isWkReady: true });
+    }
+
     case "SET_QUICK_SELECT_STATE": {
       return updateKey(state, "uiInformation", {
         quickSelectState: action.state,

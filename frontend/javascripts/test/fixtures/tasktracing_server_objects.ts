@@ -1,5 +1,11 @@
-import type { ServerSkeletonTracing, APIAnnotation } from "types/api_flow_types";
+import {
+  type ServerSkeletonTracing,
+  type APIAnnotation,
+  AnnotationLayerEnum,
+  type APITracingStoreAnnotation,
+} from "types/api_flow_types";
 
+const TRACING_ID = "e90133de-b2db-4912-8261-8b6f84f7edab";
 export const tracing: ServerSkeletonTracing = {
   typ: "Skeleton",
   trees: [
@@ -59,7 +65,6 @@ export const tracing: ServerSkeletonTracing = {
   },
   additionalAxes: [],
   zoomLevel: 2,
-  version: 0,
   id: "e90133de-b2db-4912-8261-8b6f84f7edab",
 };
 export const annotation: APIAnnotation = {
@@ -69,6 +74,7 @@ export const annotation: APIAnnotation = {
   id: "5b1fd1cf97000027049c67ee",
   name: "",
   description: "",
+  stats: {},
   typ: "Task",
   task: {
     id: "5b1fd1cb97000027049c67ec",
@@ -120,8 +126,8 @@ export const annotation: APIAnnotation = {
   annotationLayers: [
     {
       name: "Skeleton",
-      tracingId: "e90133de-b2db-4912-8261-8b6f84f7edab",
-      typ: "Skeleton",
+      tracingId: TRACING_ID,
+      typ: AnnotationLayerEnum.Skeleton,
       stats: {},
     },
   ],
@@ -173,6 +179,18 @@ export const annotation: APIAnnotation = {
       id: "5b1e45f9a00000a000abc2c3",
       name: "Connectomics department",
       organization: "Connectomics department",
+    },
+  ],
+};
+export const annotationProto: APITracingStoreAnnotation = {
+  description: "task-annotation-description",
+  version: 1,
+  earliestAccessibleVersion: 0,
+  annotationLayers: [
+    {
+      tracingId: TRACING_ID,
+      name: "Skeleton",
+      typ: AnnotationLayerEnum.Skeleton,
     },
   ],
 };

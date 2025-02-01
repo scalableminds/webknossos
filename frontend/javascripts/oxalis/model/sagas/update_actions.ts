@@ -10,7 +10,11 @@ import type {
   UserBoundingBox,
   VolumeTracing,
 } from "oxalis/store";
-import type { AdditionalCoordinate, MetadataEntryProto } from "types/api_flow_types";
+import type {
+  APIMagRestrictions,
+  AdditionalCoordinate,
+  MetadataEntryProto,
+} from "types/api_flow_types";
 
 export type NodeWithTreeId = {
   treeId: number;
@@ -34,9 +38,14 @@ export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAct
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
 export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
-type UpdateUserBoundingBoxesUpdateAction = ReturnType<typeof updateUserBoundingBoxes>;
+type UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
+  typeof updateUserBoundingBoxesInSkeletonTracing
+>;
+type UpdateUserBoundingBoxesInVolumeTracingUpdateAction = ReturnType<
+  typeof updateUserBoundingBoxesInVolumeTracing
+>;
 export type UpdateBucketUpdateAction = ReturnType<typeof updateBucket>;
-type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
+export type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
 
 type UpdateTreeGroupsUpdateAction = ReturnType<typeof updateTreeGroups>;
 
@@ -46,10 +55,23 @@ export type RevertToVersionUpdateAction = ReturnType<typeof revertToVersion>;
 export type RemoveFallbackLayerUpdateAction = ReturnType<typeof removeFallbackLayer>;
 export type UpdateTdCameraUpdateAction = ReturnType<typeof updateTdCamera>;
 export type UpdateMappingNameUpdateAction = ReturnType<typeof updateMappingName>;
+export type AddLayerToAnnotationUpdateAction = ReturnType<typeof addLayerToAnnotation>;
+export type DeleteAnnotationLayerUpdateAction = ReturnType<typeof deleteAnnotationLayer>;
+export type UpdateAnnotationLayerNameUpdateAction = ReturnType<typeof updateAnnotationLayerName>;
+export type UpdateMetadataOfAnnotationUpdateAction = ReturnType<typeof updateMetadataOfAnnotation>;
 export type SplitAgglomerateUpdateAction = ReturnType<typeof splitAgglomerate>;
 export type MergeAgglomerateUpdateAction = ReturnType<typeof mergeAgglomerate>;
 
+// There are two types of UpdateActions. The ones that *need* to be in a separate transaction
+// group. And the ones that don't have this requirement.
 export type UpdateAction =
+  | UpdateActionWithoutIsolationRequirement
+  | UpdateActionWithIsolationRequirement;
+
+export type UpdateActionWithIsolationRequirement =
+  | RevertToVersionUpdateAction
+  | AddLayerToAnnotationUpdateAction;
+export type UpdateActionWithoutIsolationRequirement =
   | UpdateTreeUpdateAction
   | DeleteTreeUpdateAction
   | MergeTreeUpdateAction
@@ -61,7 +83,8 @@ export type UpdateAction =
   | DeleteEdgeUpdateAction
   | UpdateSkeletonTracingUpdateAction
   | UpdateVolumeTracingUpdateAction
-  | UpdateUserBoundingBoxesUpdateAction
+  | UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
+  | UpdateUserBoundingBoxesInVolumeTracingUpdateAction
   | CreateSegmentUpdateAction
   | UpdateSegmentUpdateAction
   | DeleteSegmentUpdateAction
@@ -70,14 +93,17 @@ export type UpdateAction =
   | UpdateTreeVisibilityUpdateAction
   | UpdateTreeEdgesVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
-  | RevertToVersionUpdateAction
   | UpdateSegmentGroupsUpdateAction
   | UpdateTreeGroupsUpdateAction
   | RemoveFallbackLayerUpdateAction
   | UpdateTdCameraUpdateAction
   | UpdateMappingNameUpdateAction
+  | DeleteAnnotationLayerUpdateAction
+  | UpdateAnnotationLayerNameUpdateAction
+  | UpdateMetadataOfAnnotationUpdateAction
   | SplitAgglomerateUpdateAction
   | MergeAgglomerateUpdateAction;
+
 // This update action is only created in the frontend for display purposes
 type CreateTracingUpdateAction = {
   name: "createTracing";
@@ -91,11 +117,13 @@ type ImportVolumeTracingUpdateAction = {
   value: {
     largestSegmentId: number;
   };
-}; // This update action is only created by the backend
-type AddSegmentIndexUpdateAction = {
+};
+// This update action is only created by the backend
+export type AddSegmentIndexUpdateAction = {
   name: "addSegmentIndex";
   value: {
     actionTimestamp: number;
+    actionTracingId: string;
   };
 };
 type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {
@@ -107,6 +135,8 @@ type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {
 
 type AsServerAction<A extends { value: any }> = ReturnType<AddServerValuesFn<A>>;
 
+// When the server delivers update actions (e.g., when requesting the version history
+// of an annotation), ServerUpdateActions are sent which include some additional information.
 export type ServerUpdateAction = AsServerAction<
   | UpdateAction
   // These two actions are never sent by the frontend and, therefore, don't exist in the UpdateAction type
@@ -115,10 +145,11 @@ export type ServerUpdateAction = AsServerAction<
   | CreateTracingUpdateAction
 >;
 
-export function createTree(tree: Tree) {
+export function createTree(tree: Tree, actionTracingId: string) {
   return {
     name: "createTree",
     value: {
+      actionTracingId,
       id: tree.treeId,
       updatedId: undefined,
       color: tree.color,
@@ -134,18 +165,20 @@ export function createTree(tree: Tree) {
     },
   } as const;
 }
-export function deleteTree(treeId: number) {
+export function deleteTree(treeId: number, actionTracingId: string) {
   return {
     name: "deleteTree",
     value: {
+      actionTracingId,
       id: treeId,
     },
   } as const;
 }
-export function updateTree(tree: Tree) {
+export function updateTree(tree: Tree, actionTracingId: string) {
   return {
     name: "updateTree",
     value: {
+      actionTracingId,
       id: tree.treeId,
       updatedId: tree.treeId,
       color: tree.color,
@@ -161,58 +194,78 @@ export function updateTree(tree: Tree) {
     },
   } as const;
 }
-export function updateTreeVisibility(tree: Tree) {
+export function updateTreeVisibility(tree: Tree, actionTracingId: string) {
   const { treeId, isVisible } = tree;
   return {
     name: "updateTreeVisibility",
     value: {
+      actionTracingId,
       treeId,
       isVisible,
     },
   } as const;
 }
-export function updateTreeEdgesVisibility(tree: Tree) {
+export function updateTreeEdgesVisibility(tree: Tree, actionTracingId: string) {
   const { treeId, edgesAreVisible } = tree;
   return {
     name: "updateTreeEdgesVisibility",
     value: {
+      actionTracingId,
       treeId,
       edgesAreVisible,
     },
   } as const;
 }
-export function updateTreeGroupVisibility(groupId: number | null | undefined, isVisible: boolean) {
+export function updateTreeGroupVisibility(
+  groupId: number | null | undefined,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
   return {
     name: "updateTreeGroupVisibility",
     value: {
+      actionTracingId,
       treeGroupId: groupId,
       isVisible,
     },
   } as const;
 }
-export function mergeTree(sourceTreeId: number, targetTreeId: number) {
+export function mergeTree(sourceTreeId: number, targetTreeId: number, actionTracingId: string) {
   return {
     name: "mergeTree",
     value: {
+      actionTracingId,
       sourceId: sourceTreeId,
       targetId: targetTreeId,
     },
   } as const;
 }
-export function createEdge(treeId: number, sourceNodeId: number, targetNodeId: number) {
+export function createEdge(
+  treeId: number,
+  sourceNodeId: number,
+  targetNodeId: number,
+  actionTracingId: string,
+) {
   return {
     name: "createEdge",
     value: {
+      actionTracingId,
       treeId,
       source: sourceNodeId,
       target: targetNodeId,
     },
   } as const;
 }
-export function deleteEdge(treeId: number, sourceNodeId: number, targetNodeId: number) {
+export function deleteEdge(
+  treeId: number,
+  sourceNodeId: number,
+  targetNodeId: number,
+  actionTracingId: string,
+) {
   return {
     name: "deleteEdge",
     value: {
+      actionTracingId,
       treeId,
       source: sourceNodeId,
       target: targetNodeId,
@@ -231,11 +284,12 @@ export type UpdateActionNode = Omit<Node, "untransformedPosition"> & {
   treeId: number;
 };
 
-export function createNode(treeId: number, node: Node) {
+export function createNode(treeId: number, node: Node, actionTracingId: string) {
   const { untransformedPosition, mag, ...restNode } = node;
   return {
     name: "createNode",
     value: {
+      actionTracingId,
       ...restNode,
       position: untransformedPosition,
       treeId,
@@ -243,21 +297,23 @@ export function createNode(treeId: number, node: Node) {
     } as CreateActionNode,
   } as const;
 }
-export function updateNode(treeId: number, node: Node) {
+export function updateNode(treeId: number, node: Node, actionTracingId: string) {
   const { untransformedPosition, ...restNode } = node;
   return {
     name: "updateNode",
     value: {
+      actionTracingId,
       ...restNode,
       position: untransformedPosition,
       treeId,
     } as UpdateActionNode,
   } as const;
 }
-export function deleteNode(treeId: number, nodeId: number) {
+export function deleteNode(treeId: number, nodeId: number, actionTracingId: string) {
   return {
     name: "deleteNode",
     value: {
+      actionTracingId,
       treeId,
       nodeId,
     },
@@ -265,6 +321,7 @@ export function deleteNode(treeId: number, nodeId: number) {
 }
 export function updateSkeletonTracing(
   tracing: {
+    tracingId: string;
     activeNodeId: number | null | undefined;
   },
   editPosition: Vector3,
@@ -273,8 +330,9 @@ export function updateSkeletonTracing(
   zoomLevel: number,
 ) {
   return {
-    name: "updateTracing",
+    name: "updateSkeletonTracing",
     value: {
+      actionTracingId: tracing.tracingId,
       activeNode: tracing.activeNodeId,
       editPosition,
       editPositionAdditionalCoordinates,
@@ -287,10 +345,12 @@ export function moveTreeComponent(
   sourceTreeId: number,
   targetTreeId: number,
   nodeIds: Array<number>,
+  actionTracingId: string,
 ) {
   return {
     name: "moveTreeComponent",
     value: {
+      actionTracingId,
       sourceId: sourceTreeId,
       targetId: targetTreeId,
       nodeIds,
@@ -305,8 +365,9 @@ export function updateVolumeTracing(
   zoomLevel: number,
 ) {
   return {
-    name: "updateTracing",
+    name: "updateVolumeTracing",
     value: {
+      actionTracingId: tracing.tracingId,
       activeSegmentId: tracing.activeCellId,
       editPosition: position,
       editPositionAdditionalCoordinates,
@@ -316,10 +377,26 @@ export function updateVolumeTracing(
     },
   } as const;
 }
-export function updateUserBoundingBoxes(userBoundingBoxes: Array<UserBoundingBox>) {
+export function updateUserBoundingBoxesInSkeletonTracing(
+  userBoundingBoxes: Array<UserBoundingBox>,
+  actionTracingId: string,
+) {
   return {
-    name: "updateUserBoundingBoxes",
+    name: "updateUserBoundingBoxesInSkeletonTracing",
     value: {
+      actionTracingId,
+      boundingBoxes: convertUserBoundingBoxesFromFrontendToServer(userBoundingBoxes),
+    },
+  } as const;
+}
+export function updateUserBoundingBoxesInVolumeTracing(
+  userBoundingBoxes: Array<UserBoundingBox>,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateUserBoundingBoxesInVolumeTracing",
+    value: {
+      actionTracingId,
       boundingBoxes: convertUserBoundingBoxesFromFrontendToServer(userBoundingBoxes),
     },
   } as const;
@@ -331,11 +408,13 @@ export function createSegmentVolumeAction(
   color: Vector3 | null,
   groupId: number | null | undefined,
   metadata: MetadataEntryProto[],
+  actionTracingId: string,
   creationTime: number | null | undefined = Date.now(),
 ) {
   return {
     name: "createSegment",
     value: {
+      actionTracingId,
       id,
       anchorPosition,
       name,
@@ -355,11 +434,13 @@ export function updateSegmentVolumeAction(
   color: Vector3 | null,
   groupId: number | null | undefined,
   metadata: Array<MetadataEntryProto>,
+  actionTracingId: string,
   creationTime: number | null | undefined = Date.now(),
 ) {
   return {
     name: "updateSegment",
     value: {
+      actionTracingId,
       id,
       anchorPosition,
       additionalCoordinates,
@@ -371,44 +452,54 @@ export function updateSegmentVolumeAction(
     },
   } as const;
 }
-export function deleteSegmentVolumeAction(id: number) {
+export function deleteSegmentVolumeAction(id: number, actionTracingId: string) {
   return {
     name: "deleteSegment",
     value: {
+      actionTracingId,
       id,
     },
   } as const;
 }
-export function deleteSegmentDataVolumeAction(id: number) {
+export function deleteSegmentDataVolumeAction(id: number, actionTracingId: string) {
   return {
     name: "deleteSegmentData",
     value: {
+      actionTracingId,
       id,
     },
   } as const;
 }
-export function updateBucket(bucketInfo: SendBucketInfo, base64Data: string) {
+export function updateBucket(
+  bucketInfo: SendBucketInfo,
+  base64Data: string,
+  actionTracingId: string,
+) {
   return {
     name: "updateBucket",
-    value: Object.assign({}, bucketInfo, {
+    value: {
+      actionTracingId,
+      ...bucketInfo,
       base64Data,
-    }),
+    },
   } as const;
 }
 
-export function updateSegmentGroups(segmentGroups: Array<SegmentGroup>) {
+export function updateSegmentGroups(segmentGroups: Array<SegmentGroup>, actionTracingId: string) {
   return {
     name: "updateSegmentGroups",
     value: {
+      actionTracingId,
       segmentGroups,
     },
   } as const;
 }
 
-export function updateTreeGroups(treeGroups: Array<TreeGroup>) {
+export function updateTreeGroups(treeGroups: Array<TreeGroup>, actionTracingId: string) {
   return {
     name: "updateTreeGroups",
     value: {
+      actionTracingId,
       treeGroups,
     },
   } as const;
@@ -421,10 +512,12 @@ export function revertToVersion(version: number) {
     },
   } as const;
 }
-export function removeFallbackLayer() {
+export function removeFallbackLayer(actionTracingId: string) {
   return {
     name: "removeFallbackLayer",
-    value: {},
+    value: {
+      actionTracingId,
+    },
   } as const;
 }
 export function updateTdCamera() {
@@ -445,10 +538,16 @@ export function updateMappingName(
   mappingName: string | null | undefined,
   isEditable: boolean | null | undefined,
   isLocked: boolean | undefined,
+  actionTracingId: string,
 ) {
   return {
     name: "updateMappingName",
-    value: { mappingName, isEditable, isLocked },
+    value: {
+      actionTracingId,
+      mappingName,
+      isEditable,
+      isLocked,
+    },
   } as const;
 }
 export function splitAgglomerate(
@@ -456,9 +555,11 @@ export function splitAgglomerate(
   segmentId1: NumberLike,
   segmentId2: NumberLike,
   mag: Vector3,
+  actionTracingId: string,
 ): {
   name: "splitAgglomerate";
   value: {
+    actionTracingId: string;
     agglomerateId: number;
     segmentId1: number | undefined;
     segmentId2: number | undefined;
@@ -473,6 +574,7 @@ export function splitAgglomerate(
   return {
     name: "splitAgglomerate",
     value: {
+      actionTracingId,
       // TODO: Proper 64 bit support (#6921)
       agglomerateId: Number(agglomerateId),
       segmentId1: Number(segmentId1),
@@ -487,9 +589,11 @@ export function mergeAgglomerate(
   segmentId1: NumberLike,
   segmentId2: NumberLike,
   mag: Vector3,
+  actionTracingId: string,
 ): {
   name: "mergeAgglomerate";
   value: {
+    actionTracingId: string;
     agglomerateId1: number;
     agglomerateId2: number;
     segmentId1: number | undefined;
@@ -505,6 +609,7 @@ export function mergeAgglomerate(
   return {
     name: "mergeAgglomerate",
     value: {
+      actionTracingId,
       // TODO: Proper 64 bit support (#6921)
       agglomerateId1: Number(agglomerateId1),
       agglomerateId2: Number(agglomerateId2),
@@ -512,6 +617,47 @@ export function mergeAgglomerate(
       segmentId2: Number(segmentId2),
       mag,
     },
+  } as const;
+}
+
+type AnnotationLayerCreationParameters = {
+  typ: "Skeleton" | "Volume";
+  name: string | null | undefined;
+  autoFallbackLayer?: boolean;
+  fallbackLayerName?: string | null | undefined;
+  mappingName?: string | null | undefined;
+  magRestrictions?: APIMagRestrictions | null | undefined;
+};
+
+export function addLayerToAnnotation(parameters: AnnotationLayerCreationParameters) {
+  return {
+    name: "addLayerToAnnotation",
+    value: { layerParameters: parameters },
+  } as const;
+}
+
+export function deleteAnnotationLayer(
+  tracingId: string,
+  layerName: string,
+  typ: "Skeleton" | "Volume",
+) {
+  return {
+    name: "deleteLayerFromAnnotation",
+    value: { tracingId, layerName, typ },
+  } as const;
+}
+
+export function updateAnnotationLayerName(tracingId: string, newLayerName: string) {
+  return {
+    name: "updateLayerMetadata",
+    value: { tracingId, layerName: newLayerName },
+  } as const;
+}
+
+export function updateMetadataOfAnnotation(description: string) {
+  return {
+    name: "updateMetadataOfAnnotation",
+    value: { description },
   } as const;
 }
 

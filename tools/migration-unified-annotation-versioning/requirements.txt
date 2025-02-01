@@ -1,0 +1,6 @@
+grpcio==1.68.0
+argparse==1.4.0
+psycopg2-binary==2.9.10
+protobuf==5.28.3
+rich==13.9.4
+msgspec==0.18.6

@@ -61,18 +61,19 @@ class DatasetErrorLoggingService @Inject()(
           Fox.successful(data)
         }
       case Failure(msg, Full(e: InternalError), _) =>
-        logger.error(s"Caught internal error while $label for $dataSourceId:", e)
+        logger.error(s"Caught internal error ($msg) while $label for $dataSourceId:", e)
         applicationHealthService.pushError(e)
         Fox.failure(msg, Full(e))
       case Failure(msg, Full(exception), _) =>
         if (shouldLog(dataSourceId.organizationId, dataSourceId.directoryName)) {
-          logger.error(s"Error while $label for $dataSourceId Stack trace: ${TextUtils.stackTraceAsString(exception)} ")
+          logger.error(
+            s"Error while $label for $dataSourceId: $msg – Stack trace: ${TextUtils.stackTraceAsString(exception)} ")
           registerLogged(dataSourceId.organizationId, dataSourceId.directoryName)
         }
         Fox.failure(msg, Full(exception))
       case Failure(msg, Empty, _) =>
         if (shouldLog(dataSourceId.organizationId, dataSourceId.directoryName)) {
-          logger.error(s"Error while $label for $dataSourceId, Empty failure")
+          logger.error(s"Error while $label for $dataSourceId, Failure without exception: $msg")
           registerLogged(dataSourceId.organizationId, dataSourceId.directoryName)
         }
         Fox.failure(msg)

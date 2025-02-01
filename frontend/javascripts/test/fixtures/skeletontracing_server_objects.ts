@@ -1,6 +1,13 @@
-import type { ServerSkeletonTracing, APIAnnotation } from "types/api_flow_types";
+import {
+  type ServerSkeletonTracing,
+  type APIAnnotation,
+  AnnotationLayerEnum,
+  type APITracingStoreAnnotation,
+} from "types/api_flow_types";
+
+const TRACING_ID = "47e37793-d0be-4240-a371-87ce68561a13";
 export const tracing: ServerSkeletonTracing = {
-  typ: "Skeleton",
+  typ: AnnotationLayerEnum.Skeleton,
   id: "47e37793-d0be-4240-a371-87ce68561a13",
   trees: [
     {
@@ -154,7 +161,6 @@ export const tracing: ServerSkeletonTracing = {
   },
   additionalAxes: [],
   zoomLevel: 2,
-  version: 7,
 };
 export const annotation: APIAnnotation = {
   description: "",
@@ -176,9 +182,9 @@ export const annotation: APIAnnotation = {
   },
   annotationLayers: [
     {
-      name: "Skeleton",
-      tracingId: "47e37793-d0be-4240-a371-87ce68561a13",
-      typ: "Skeleton",
+      name: AnnotationLayerEnum.Skeleton,
+      tracingId: TRACING_ID,
+      typ: AnnotationLayerEnum.Skeleton,
       stats: {},
     },
   ],
@@ -208,4 +214,17 @@ export const annotation: APIAnnotation = {
   contributors: [],
   othersMayEdit: false,
   isLockedByOwner: false,
+};
+
+export const annotationProto: APITracingStoreAnnotation = {
+  description: "skeleton-annotation-description",
+  version: 1,
+  earliestAccessibleVersion: 0,
+  annotationLayers: [
+    {
+      tracingId: TRACING_ID,
+      name: "skeleton layer name",
+      typ: AnnotationLayerEnum.Skeleton,
+    },
+  ],
 };

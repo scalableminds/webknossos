@@ -1,10 +1,8 @@
-import { WarningOutlined } from "@ant-design/icons";
-import { Card, Form, type FormInstance, Input, Select, Space } from "antd";
+import { Card, Form, type FormInstance, Input, Select } from "antd";
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import features from "features";
 import messages from "messages";
-import { PRIMARY_COLOR } from "oxalis/constants";
 import type * as React from "react";
 import { Link } from "react-router-dom";
 import type { APIDataStore, APITeam, APIUser } from "types/api_flow_types";

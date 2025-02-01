@@ -4,7 +4,6 @@ import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import features from "features";
 import messages from "messages";
 import type * as React from "react";
-import { Link } from "react-router-dom";
 import type { APIDataStore, APITeam, APIUser } from "types/api_flow_types";
 import { syncValidator } from "types/validation";
 

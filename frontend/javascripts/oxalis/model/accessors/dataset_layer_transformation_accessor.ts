@@ -402,7 +402,11 @@ function hasValidTransformationPattern(transformations: CoordinateTransformation
 }
 
 function _doAllLayersHaveTheSameRotation(dataLayers: Array<APIDataLayer>): boolean {
-  const firstDataLayerTransformations = dataLayers[0]?.coordinateTransformations;
+  if (dataLayers.length === 0) {
+    // The dataset does not have any layers. Therefore no layers can be rotated.
+    return false;
+  }
+  const firstDataLayerTransformations = dataLayers[0].coordinateTransformations;
   if (firstDataLayerTransformations == null || firstDataLayerTransformations.length === 0) {
     // No transformations in all layers compatible with setting a rotation for the whole dataset.
     return dataLayers.every(

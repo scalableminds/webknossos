@@ -1,11 +1,19 @@
 import Deferred from "libs/async/deferred";
 import Date from "libs/date";
 import { getUid } from "libs/uid_generator";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import type {
+  UpdateAction,
+  UpdateActionWithIsolationRequirement,
+  UpdateActionWithoutIsolationRequirement,
+} from "oxalis/model/sagas/update_actions";
 import type { Dispatch } from "redux";
 export type SaveQueueType = "skeleton" | "volume" | "mapping";
 
-export type PushSaveQueueTransaction = ReturnType<typeof pushSaveQueueTransaction>;
+export type PushSaveQueueTransaction = {
+  type: "PUSH_SAVE_QUEUE_TRANSACTION";
+  items: UpdateAction[];
+  transactionId: string;
+};
 type SaveNowAction = ReturnType<typeof saveNowAction>;
 export type ShiftSaveQueueAction = ReturnType<typeof shiftSaveQueueAction>;
 type DiscardSaveQueuesAction = ReturnType<typeof discardSaveQueuesAction>;
@@ -28,18 +36,25 @@ export type SaveAction =
   | RedoAction
   | DisableSavingAction;
 
+// The action creators pushSaveQueueTransaction and pushSaveQueueTransactionIsolated
+// are typed so that update actions that need isolation are isolated in a group each.
+// From this point on, we can assume that the groups fulfil the isolation requirement.
 export const pushSaveQueueTransaction = (
-  items: Array<UpdateAction>,
-  saveQueueType: SaveQueueType,
-  tracingId: string,
-  transactionId: string = getUid(),
-) =>
+  items: Array<UpdateActionWithoutIsolationRequirement>,
+): PushSaveQueueTransaction =>
   ({
     type: "PUSH_SAVE_QUEUE_TRANSACTION",
     items,
-    saveQueueType,
-    tracingId,
-    transactionId,
+    transactionId: getUid(),
+  }) as const;
+
+export const pushSaveQueueTransactionIsolated = (
+  item: UpdateActionWithIsolationRequirement,
+): PushSaveQueueTransaction =>
+  ({
+    type: "PUSH_SAVE_QUEUE_TRANSACTION",
+    items: [item],
+    transactionId: getUid(),
   }) as const;
 
 export const saveNowAction = () =>
@@ -47,16 +62,10 @@ export const saveNowAction = () =>
     type: "SAVE_NOW",
   }) as const;
 
-export const shiftSaveQueueAction = (
-  count: number,
-  saveQueueType: SaveQueueType,
-  tracingId: string,
-) =>
+export const shiftSaveQueueAction = (count: number) =>
   ({
     type: "SHIFT_SAVE_QUEUE",
     count,
-    saveQueueType,
-    tracingId,
   }) as const;
 
 export const discardSaveQueuesAction = () =>
@@ -64,36 +73,22 @@ export const discardSaveQueuesAction = () =>
     type: "DISCARD_SAVE_QUEUES",
   }) as const;
 
-export const setSaveBusyAction = (
-  isBusy: boolean,
-  saveQueueType: SaveQueueType,
-  tracingId: string,
-) =>
+export const setSaveBusyAction = (isBusy: boolean) =>
   ({
     type: "SET_SAVE_BUSY",
     isBusy,
-    saveQueueType,
-    tracingId,
   }) as const;
 
-export const setLastSaveTimestampAction = (saveQueueType: SaveQueueType, tracingId: string) =>
+export const setLastSaveTimestampAction = () =>
   ({
     type: "SET_LAST_SAVE_TIMESTAMP",
     timestamp: Date.now(),
-    saveQueueType,
-    tracingId,
   }) as const;
 
-export const setVersionNumberAction = (
-  version: number,
-  saveQueueType: SaveQueueType,
-  tracingId: string,
-) =>
+export const setVersionNumberAction = (version: number) =>
   ({
     type: "SET_VERSION_NUMBER",
     version,
-    saveQueueType,
-    tracingId,
   }) as const;
 
 export const undoAction = (callback?: () => void) =>

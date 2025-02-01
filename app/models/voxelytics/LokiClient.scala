@@ -204,7 +204,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
                 for {
                   timestampString <- tryo((entry \ "@timestamp").as[String]).toFox
                   timestamp <- if (timestampString.endsWith("Z"))
-                    Instant.fromString(timestampString)
+                    Instant.fromString(timestampString).toFox
                   else
                     Instant.fromLocalTimeString(timestampString)
                   values <- tryo(
@@ -248,7 +248,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
             ))
         _ <- rpc(s"${conf.uri}/loki/api/v1/push").silent
           .addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType)
-          .post[JsValue](Json.obj("streams" -> streams))
+          .postJson[JsValue](Json.obj("streams" -> streams))
       } yield ()
     } else {
       Fox.successful(())

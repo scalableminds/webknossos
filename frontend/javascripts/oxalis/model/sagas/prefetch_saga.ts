@@ -20,7 +20,8 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { Model } from "oxalis/singletons";
 import type { OxalisState } from "oxalis/store";
-import { call, take, throttle } from "typed-redux-saga";
+import { call, throttle } from "typed-redux-saga";
+import { ensureWkReady } from "./ready_sagas";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
@@ -28,7 +29,8 @@ const prefetchStrategiesArbitrary = [new PrefetchStrategyArbitrary()];
 const prefetchStrategiesPlane = [new PrefetchStrategySkeleton(), new PrefetchStrategyVolume()];
 
 export function* watchDataRelevantChanges(): Saga<void> {
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
+
   const previousProperties = {};
   // Initiate the prefetching once and then only for data relevant changes
   yield* call(triggerDataPrefetching, previousProperties);

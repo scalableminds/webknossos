@@ -17,11 +17,12 @@ import {
   MISSING_GROUP_ID,
   findGroup,
 } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import type {
-  APIAnnotation,
-  AnnotationLayerDescriptor,
-  ServerSkeletonTracing,
-  ServerTracing,
+import {
+  type APIAnnotation,
+  type AnnotationLayerDescriptor,
+  AnnotationLayerEnum,
+  type ServerSkeletonTracing,
+  type ServerTracing,
 } from "types/api_flow_types";
 import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
 import {
@@ -41,7 +42,7 @@ export function getSkeletonDescriptor(
   annotation: APIAnnotation,
 ): AnnotationLayerDescriptor | null | undefined {
   const skeletonLayers = annotation.annotationLayers.filter(
-    (descriptor) => descriptor.typ === "Skeleton",
+    (descriptor) => descriptor.typ === AnnotationLayerEnum.Skeleton,
   );
 
   if (skeletonLayers.length > 0) {

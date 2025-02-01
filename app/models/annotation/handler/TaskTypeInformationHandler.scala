@@ -34,7 +34,7 @@ class TaskTypeInformationHandler @Inject()(taskTypeDAO: TaskTypeDAO,
       user <- userOpt ?~> "user.notAuthorised"
       datasetId <- finishedAnnotations.headOption.map(_._dataset).toFox
       mergedAnnotation <- annotationMerger.mergeN(taskTypeId,
-                                                  persistTracing = false,
+                                                  toTemporaryStore = true,
                                                   user._id,
                                                   datasetId,
                                                   taskType._team,

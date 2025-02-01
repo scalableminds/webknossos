@@ -308,7 +308,7 @@ export default class LayerRenderingManager {
         (storeState) => getSegmentsForLayer(storeState, this.name),
         (newSegments) => {
           const cuckoo = this.getCustomColorCuckooTable();
-          for (const updateAction of cachedDiffSegmentLists(prevSegments, newSegments)) {
+          for (const updateAction of cachedDiffSegmentLists(this.name, prevSegments, newSegments)) {
             if (
               updateAction.name === "updateSegment" ||
               updateAction.name === "createSegment" ||

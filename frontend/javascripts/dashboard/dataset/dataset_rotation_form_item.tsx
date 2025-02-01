@@ -151,9 +151,12 @@ export type DatasetRotation = {
 export const AxisRotationSettingForDataset: React.FC<AxisRotationSettingForDatasetProps> = ({
   form,
 }: AxisRotationSettingForDatasetProps) => {
-  const dataLayers: APIDataLayer[] = form?.getFieldValue(["dataSource", "dataLayers"]);
-  const isRotationOnly = useMemo(() => doAllLayersHaveTheSameRotation(dataLayers), [dataLayers]);
-
+  // form -> dataSource -> dataLayers can be undefined in case of the add remote dataset form which is initially empty.
+  const dataLayers: APIDataLayer[] | undefined = form?.getFieldValue(["dataSource", "dataLayers"]);
+  const isRotationOnly = useMemo(
+    () => (dataLayers ? doAllLayersHaveTheSameRotation(dataLayers) : false),
+    [dataLayers],
+  );
   if (!isRotationOnly) {
     return (
       <Tooltip

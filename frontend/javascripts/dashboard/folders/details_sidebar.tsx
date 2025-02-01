@@ -182,10 +182,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
 
         {fullDataset && (
           /* The key is crucial to enforce rerendering when the dataset changes. This is necessary for the MetadataTable to work correctly. */
-          <MetadataTable
-            datasetOrFolder={fullDataset}
-            key={`${fullDataset.dataSource.id.name}#dataset`}
-          />
+          <MetadataTable datasetOrFolder={fullDataset} key={`${fullDataset.id}#dataset`} />
         )}
       </Spin>
 

@@ -34,6 +34,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
                                                    -creditsToSpent,
                                                    -creditsToSpent,
                                                    None,
+                                                   None,
                                                    comment,
                                                    paidJob,
                                                    CreditTransactionState.Pending,

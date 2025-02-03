@@ -45,6 +45,7 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
         organizationId,
         BigDecimal(creditAmount),
         BigDecimal(0), // Charge up transactions are not refundable per default and do not need a marker on how much refundable credits are left.
+        None,
         Some(moneySpentInDecimal),
         commentNoOptional,
         None,

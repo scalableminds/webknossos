@@ -350,7 +350,7 @@ CREATE TABLE webknossos.organization_usedStorage(
 );
 
 -- Create the enum type for transaction states
-CREATE TYPE webknossos.credit_transaction_state AS ENUM ('Pending', 'Completed', 'Refunded', 'Revoked', 'Partially Revoked' 'Spent');
+CREATE TYPE webknossos.credit_transaction_state AS ENUM ('Pending', 'Completed', 'Refunded', 'Revoked', 'Partially Revoked', 'Spent');
 
 -- Create the transactions table
 -- TODO: For each negative credit_change, save how much temporary credits were used.

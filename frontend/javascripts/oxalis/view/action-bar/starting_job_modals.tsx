@@ -79,7 +79,7 @@ export type StartAIJobModalState =
 
 // "materialize_volume_annotation" is only used in this module
 const jobNameToImagePath = {
-  infer_neurons: "infer_neurons_example.jpg",
+  infer_neurons: "neuron_inferral_example.jpg",
   infer_nuclei: "nuclei_inferral_example.jpg",
   infer_mitochondria: "mito_inferral_example.jpg",
   align_sections: "align_example.png",

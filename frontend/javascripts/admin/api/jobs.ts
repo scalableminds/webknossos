@@ -188,12 +188,37 @@ export function startNeuronInferralJob(
   layerName: string,
   bbox: Vector6,
   newDatasetName: string,
+  doSplitMergerEvaluation: boolean,
+  annotationId?: string,
+  useSparseTracing?: boolean,
+  evalMaxEdgeLength?: number,
+  evalSparseTubeThresholdNm?: number,
+  evalMinMergerPathLengthNm?: number,
 ): Promise<APIJob> {
   const urlParams = new URLSearchParams({
     layerName,
     bbox: bbox.join(","),
     newDatasetName,
+    doSplitMergerEvaluation: doSplitMergerEvaluation.toString(),
   });
+  if (doSplitMergerEvaluation) {
+    if (!annotationId) {
+      throw new Error("annotationId is required when doSplitMergerEvaluation is true");
+    }
+    urlParams.append("annotationId", `${annotationId}`);
+    if (useSparseTracing != null) {
+      urlParams.append("evalUseSparseTracing", `${useSparseTracing}`);
+    }
+    if (evalMaxEdgeLength != null) {
+      urlParams.append("evalMaxEdgeLength", `${evalMaxEdgeLength}`);
+    }
+    if (evalSparseTubeThresholdNm != null) {
+      urlParams.append("evalSparseTubeThresholdNm", `${evalSparseTubeThresholdNm}`);
+    }
+    if (evalMinMergerPathLengthNm != null) {
+      urlParams.append("evalMinMergerPathLengthNm", `${evalMinMergerPathLengthNm}`);
+    }
+  }
   return Request.receiveJSON(`/api/jobs/run/inferNeurons/${datasetId}?${urlParams.toString()}`, {
     method: "POST",
   });

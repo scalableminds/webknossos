@@ -228,10 +228,17 @@ class JobController @Inject()(
   def runInferNeuronsJob(datasetId: String,
                          layerName: String,
                          bbox: String,
-                         newDatasetName: String): Action[AnyContent] =
+                         newDatasetName: String,
+                         doSplitMergerEvaluation: Boolean,
+                         annotationId: Option[String],
+                         evalUseSparseTracing: Option[Boolean],
+                         evalMaxEdgeLength: Option[Double],
+                         evalSparseTubeThresholdNm: Option[Double],
+                         evalMinMergerPathLengthNm: Option[Double]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
+
           datasetIdValidated <- ObjectId.fromString(datasetId)
           dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
@@ -241,6 +248,7 @@ class JobController @Inject()(
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+          annotationIdParsed <- Fox.runIf(doSplitMergerEvaluation)(annotationId.toFox) ?~> "job.inferNeurons.annotationIdEvalParamsMissing"
           command = JobCommand.infer_neurons
           parsedBoundingBox <- jobService.parseBoundingBoxWithMagOpt(bbox, None)
           // TODO: Disable this check. Credits should be enough to guard this.
@@ -252,6 +260,12 @@ class JobController @Inject()(
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
             "bbox" -> bbox,
+            "do_split_merger_evaluation" -> doSplitMergerEvaluation,
+            "annotation_id" -> annotationIdParsed,
+            "eval_use_sparse_tracing" -> evalUseSparseTracing,
+            "eval_max_edge_length" -> evalMaxEdgeLength,
+            "eval_sparse_tube_threshold_nm" -> evalSparseTubeThresholdNm,
+            "eval_min_merger_path_length_nm" -> evalMinMergerPathLengthNm,
           )
           creditTransactionComment = s"Run for AI neuron segmentation for dataset ${dataset.name}"
           jobAsJs <- runPaidJob(command,

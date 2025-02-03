@@ -32,7 +32,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
       pendingCreditTransaction = CreditTransaction(ObjectId.generate,
                                                    organizationId,
                                                    -creditsToSpent,
-                                                   -creditsToSpent,
+                                                   creditsToSpent,
                                                    None,
                                                    None,
                                                    comment,
@@ -93,13 +93,15 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
         "isDeleted" -> transaction.isDeleted
       ))
 
+  def revokeExpiredCredits(): Fox[Unit] = creditTransactionDAO.runRevokeExpiredCredits()
+
   override protected def tickerInterval: FiniteDuration = 1 hour
 
   override protected def tick(): Unit =
     for {
       _ <- Fox.successful(())
       _ = logger.info("Starting revoking expired credits...")
-      _ <- creditTransactionDAO.runRevokeExpiredCredits()
+      _ <- revokeExpiredCredits()
       _ = logger.info("Finished revoking expired credits.")
     } yield ()
   ()

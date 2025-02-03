@@ -127,7 +127,7 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
 
   def insertNewPendingTransaction(transaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- assertUpdateAccess(transaction._id)
+      _ <- readAccessQuery
       _ <- run(
         q"""INSERT INTO webknossos.organization_credit_transactions
           (_id, _organization, credit_change, refundable_credit_change, spent_money, comment, _paid_job,
@@ -135,7 +135,7 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
           VALUES
           (${transaction._id}, ${transaction._organization}, ${transaction.creditChange.toString()}::DECIMAL,
           ${transaction.refundableCreditChange.toString()}::DECIMAL, ${transaction.spentMoney.map(_.toString)}::DECIMAL,
-          ${transaction.comment}, ${transaction._paidJob}, 'Pending', ${transaction.expirationDate},
+          ${transaction.comment}, ${transaction._paidJob}, ${CreditTransactionState.Pending}, ${transaction.expirationDate},
           ${transaction.createdAt}, ${transaction.updatedAt}, ${transaction.isDeleted})
           """.asUpdate
       )
@@ -307,7 +307,7 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
       WHERE _organization = ${transaction._organization}
         AND created_at > ${transaction.createdAt}
         AND credit_change > 0
-        AND state = 'SPENT'
+        AND state = ${CreditTransactionState.Spent}
     """.as[BigDecimal]
 
       // Extract values from query results
@@ -317,7 +317,7 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
       freeCreditsAvailable = transaction.creditChange + alreadySpentFreeTokens
 
       _ = if (spentCreditsSinceTransactionPositive >= freeCreditsAvailable) {
-        // Fully spent, update state to 'SPENT'
+        // Fully spent, update state to 'Spent'
         q"""
         UPDATE webknossos.organization_credit_transactions
         SET state = ${CreditTransactionState.Spent}, updated_at = NOW()

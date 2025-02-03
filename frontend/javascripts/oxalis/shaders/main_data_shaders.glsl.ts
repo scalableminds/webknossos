@@ -260,17 +260,19 @@ void main() {
       vec4[2] segment_id;
       getSegmentId_<%= segmentationName %>(worldCoordUVW, unmapped_segment_id, segment_id);
 
+      <% const vec4ToSomeIntFn = textureLayerInfos[segmentationName].isSigned ? "vec4ToIntToUint" : "vec4ToUint"; %>
+
       {
-        highp uint hpv_low = vec4ToIntToUint(unmapped_segment_id[1]);
-        highp uint hpv_high = vec4ToIntToUint(unmapped_segment_id[0]);
+        highp uint hpv_low = <%= vec4ToSomeIntFn %>(unmapped_segment_id[1]);
+        highp uint hpv_high = <%= vec4ToSomeIntFn %>(unmapped_segment_id[0]);
 
         <%= segmentationName %>_unmapped_id_low = uint(hpv_low);
         <%= segmentationName %>_unmapped_id_high = uint(hpv_high);
       }
 
       {
-        highp uint hpv_low = vec4ToIntToUint(segment_id[1]);
-        highp uint hpv_high = vec4ToIntToUint(segment_id[0]);
+        highp uint hpv_low = <%= vec4ToSomeIntFn %>(segment_id[1]);
+        highp uint hpv_high = <%= vec4ToSomeIntFn %>(segment_id[0]);
 
         <%= segmentationName %>_id_low = uint(hpv_low);
         <%= segmentationName %>_id_high = uint(hpv_high);

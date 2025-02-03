@@ -62,7 +62,9 @@ export const getRgbaAtXYIndex: ShaderModule = {
                 formatNumberAsGLSLFloat(
                   textureLayerInfos[name].isColor ?
                     (
-                      textureLayerInfos[name].elementClass === "uint8" ? 255 : (textureLayerInfos[name].elementClass === "int8" ? 127 : 1)
+                      textureLayerInfos[name].elementClass === "uint8" ?
+                        255
+                        : (textureLayerInfos[name].elementClass === "int8" ? 127 : 1)
                     )
                     : (textureLayerInfos[name].isSigned ? 127 : 255)
                 )

@@ -298,8 +298,10 @@ class ActionBarView extends React.PureComponent<Props, State> {
           {getIsAIAnalysisEnabled() && isAdminOrDatasetManager
             ? this.renderStartAIJobButton(shouldDisableAIJobButton, tooltip)
             : null}
-          {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
+          {constants.MODES_PLANE.indexOf(viewMode) > -1 ? (
+            <ToolbarView isReadOnly={isReadOnly} />
+          ) : null}
         </div>
         <AddNewLayoutModal
           addLayout={this.addNewLayout}

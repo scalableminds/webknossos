@@ -217,7 +217,13 @@ class JobController @Inject()(
   def runInferNeuronsJob(datasetId: ObjectId,
                          layerName: String,
                          bbox: String,
-                         newDatasetName: String): Action[AnyContent] =
+                         newDatasetName: String,
+                         doSplitMergerEvaluation: Boolean,
+                         annotationId: Option[String],
+                         evalUseSparseTracing: Option[Boolean],
+                         evalMaxEdgeLength: Option[Double],
+                         evalSparseTubeThresholdNm: Option[Double],
+                         evalMinMergerPathLengthNm: Option[Double]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -230,6 +236,7 @@ class JobController @Inject()(
           _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
+          annotationIdParsed <- Fox.runIf(doSplitMergerEvaluation)(annotationId.toFox) ?~> "job.inferNeurons.annotationIdEvalParamsMissing"
           command = JobCommand.infer_neurons
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
@@ -238,6 +245,12 @@ class JobController @Inject()(
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
             "bbox" -> bbox,
+            "do_split_merger_evaluation" -> doSplitMergerEvaluation,
+            "annotation_id" -> annotationIdParsed,
+            "eval_use_sparse_tracing" -> evalUseSparseTracing,
+            "eval_max_edge_length" -> evalMaxEdgeLength,
+            "eval_sparse_tube_threshold_nm" -> evalSparseTubeThresholdNm,
+            "eval_min_merger_path_length_nm" -> evalMinMergerPathLengthNm,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunNeuronInferral"
           js <- jobService.publicWrites(job)

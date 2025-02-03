@@ -46,15 +46,34 @@ export const getRgbaAtXYIndex: ShaderModule = {
             <%= textureLayerInfos[name].glslPrefix %>vec4 val = texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0);
 
             // todop: can we generalize this somehow?
+            // debug;
             <% if (textureLayerInfos[name].elementClass === "int16") { %>
-              return vec4(val.x, val.x, val.y, val.y);
+              // return vec4(val.x, val.x, val.y, val.y);
+              // return vec4(val.x, 0., val.y, 0.) / 127.;
+              return vec4(val.x, 0., val.y, 0.);
             <% } else if (textureLayerInfos[name].elementClass === "uint16") { %>
-              return vec4(val.x, val.x, val.y, val.y) / 256.;
+              // return vec4(val.x, val.x, val.y, val.y) / 256.;
+              // return vec4(val.x, 0., val.y, 0.) / 255.;
+
+              return vec4(val.x, 0., val.y, 0.);
             <% } else { %>
-              return vec4(val);
+              // UnsignedByteType
+              float dtype_normalizer = <%=
+                formatNumberAsGLSLFloat(
+                  textureLayerInfos[name].isColor ?
+                    (
+                      textureLayerInfos[name].elementClass === "uint8" ? 255 : (textureLayerInfos[name].elementClass === "int8" ? 127 : 1)
+                    )
+                    : (textureLayerInfos[name].isSigned ? 127 : 255)
+                )
+              %>;
+
+              return dtype_normalizer * vec4(val);
+
             <% }%>
         <% } else { %>
           if (textureIdx == 0.0) {
+            // todop: use same scaling logic as above
             return vec4(texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba);
           } <% _.range(1, textureLayerInfos[name].dataTextureCount).forEach(textureIndex => { %>
           else if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {

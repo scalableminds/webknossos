@@ -145,6 +145,13 @@ export const getMaybeFilteredColorOrFallback: ShaderModule = {
         color[1] = fallbackColor;
       }
 
+      // if (color[1].x * 256. > 55126.) {
+      //   // debug
+      //   color[1] = vec4(1.);
+      // } else {
+      //     color[1] = vec4(0.);
+      // }
+
       return color;
     }
   `,

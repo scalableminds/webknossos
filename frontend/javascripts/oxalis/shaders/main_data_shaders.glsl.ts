@@ -51,6 +51,7 @@ export type Params = {
       glslPrefix: "" | "i" | "u";
       elementClass: ElementClass;
       unsanitizedName: string;
+      isColor: boolean;
     }
   >;
   magnificationsCount: number;

@@ -109,6 +109,7 @@ function getTextureLayerInfos(): Params["textureLayerInfos"] {
       dataTextureCount: Model.getLayerRenderingManagerByName(layer.name).dataTextureCount,
       isSigned: dtypeConfig.isSigned,
       elementClass,
+      isColor: layer.category === "color",
       unsanitizedName: layer.name,
     };
   });
@@ -969,21 +970,13 @@ class PlaneMaterialFactory {
     if (!isSegmentationLayer) {
       let divisor;
       if (intensityRange) {
-        if (elementClass === "int8") {
-          // Bytes are stored as signed normalized integers (-1 to 1) in WebGL.
-          // Therefore, we scale the range (-128 to 127) from -1 to 1, too.
-          divisor = 128;
-          // todop: adapt when adding new dtypes
-        } else if (
-          elementClass === "uint32" ||
-          elementClass === "int32" ||
-          elementClass === "float" ||
-          elementClass === "int16" ||
-          elementClass === "uint16"
-        ) {
+        // todop: adapt when adding new dtypes
+        // Bytes are stored as signed normalized integers (-1 to 1) in WebGL.
+        // Therefore, we scale the range (-128 to 127) from -1 to 1, too.
+        if (elementClass === "uint32" || elementClass === "int32" || elementClass === "float") {
           divisor = 1;
         } else {
-          divisor = 255;
+          divisor = 1;
         }
         this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
         this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;

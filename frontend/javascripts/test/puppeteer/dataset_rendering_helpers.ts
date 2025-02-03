@@ -16,6 +16,9 @@ import type { APIAnnotation } from "types/api_flow_types";
 
 export const { WK_AUTH_TOKEN } = process.env;
 
+const PAGE_WIDTH = 1920;
+const PAGE_HEIGHT = 1080;
+
 // todop: change to false before merging
 const USE_LOCAL_CHROME = true;
 // Only relevant when USE_LOCAL_CHROME. Set to false to actually see the browser open.
@@ -207,8 +210,8 @@ async function waitForTracingViewLoad(page: Page) {
 }
 
 async function waitForRenderingFinish(page: Page) {
-  const width = 1920;
-  const height = 1080;
+  const width = PAGE_WIDTH;
+  const height = PAGE_HEIGHT;
   let currentShot;
   let lastShot = await page.screenshot({
     fullPage: true,
@@ -299,7 +302,7 @@ export async function screenshotTracingView(page: Page): Promise<Screenshot> {
   console.log("Screenshot annotation view");
   // Take screenshots of the other rendered planes
   const PLANE_IDS = [
-    "#screenshot_target_inputcatcher_TDView",
+    // "#screenshot_target_inputcatcher_TDView",
     "#screenshot_target_inputcatcher_PLANE_XY",
     "#screenshot_target_inputcatcher_PLANE_YZ",
     "#screenshot_target_inputcatcher_PLANE_XZ",
@@ -330,8 +333,8 @@ export async function screenshotTracingView(page: Page): Promise<Screenshot> {
 export async function getNewPage(browser: Browser) {
   const page = await browser.newPage();
   page.setViewport({
-    width: 1920,
-    height: 1080,
+    width: PAGE_WIDTH,
+    height: PAGE_HEIGHT,
   });
   page.setExtraHTTPHeaders({
     // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | undefined' is not assignable to typ... Remove this comment to see the full error message

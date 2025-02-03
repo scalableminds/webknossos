@@ -69,25 +69,25 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
 
   implicit val getOrganizationCreditTransactions: GetResult[CreditTransaction] = GetResult(r => {
     CreditTransaction(
-      ObjectId.fromStringSync(r.nextString).getOrElse(throw new RuntimeException(s"Invalid CreditTransaction id")),
-      r.nextString,
-      r.nextBigDecimal,
-      r.nextBigDecimal,
-      r.nextStringOption
+      ObjectId.fromStringSync(r.nextString()).getOrElse(throw new RuntimeException(s"Invalid CreditTransaction id")),
+      r.nextString(),
+      r.nextBigDecimal(),
+      r.nextBigDecimal(),
+      r.nextStringOption()
         .map(ObjectId.fromStringSync)
         .getOrElse(throw new RuntimeException(s"Invalid CreditTransaction id")),
-      r.nextBigDecimalOption,
-      r.nextString,
-      r.nextStringOption
+      r.nextBigDecimalOption(),
+      r.nextString(),
+      r.nextStringOption()
         .map(ObjectId.fromStringSync)
         .getOrElse(throw new RuntimeException(s"Invalid CreditTransaction jobId")),
       CreditTransactionState
-        .fromString(r.nextString)
+        .fromString(r.nextString())
         .getOrElse(throw new RuntimeException(s"Invalid CreditTransaction state")),
-      r.nextDateOption.map(Instant.fromDate),
-      Instant.fromSql(r.nextTimestamp),
-      Instant.fromSql(r.nextTimestamp),
-      r.nextBoolean
+      r.nextDateOption().map(Instant.fromDate),
+      Instant.fromSql(r.nextTimestamp()),
+      Instant.fromSql(r.nextTimestamp()),
+      r.nextBoolean()
     )
   })
 

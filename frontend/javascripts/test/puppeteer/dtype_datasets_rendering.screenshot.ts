@@ -93,6 +93,7 @@ const selectiveSegmentIdByDtype: Partial<Record<DType, number>> = {
   int8: -6,
   uint16: 33280,
   int16: -527,
+  int32: 34087034,
 };
 
 type Spec = {

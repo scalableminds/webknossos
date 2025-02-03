@@ -67,4 +67,11 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
       } yield Ok
     }
 
+  def revokeExpiredCredits(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can manually revoke expired credits"
+      _ <- creditTransactionService.revokeExpiredCredits()
+    } yield Ok
+  }
+
 }

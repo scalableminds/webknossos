@@ -19,6 +19,7 @@ PUT           /maintenances/:id                                                 
 DELETE        /maintenances/:id                                                                 controllers.MaintenanceController.delete(id)
 POST          /maintenances                                                                     controllers.MaintenanceController.create()
 POST          /maintenances/adHoc                                                               controllers.MaintenanceController.createAdHocMaintenance()
+GET           /maintenance/revokeExpiredCredits                                                 controllers.CreditTransactionController.revokeExpiredCredits()
 
 # Authentication
 POST          /auth/register                                                                    controllers.AuthenticationController.register()

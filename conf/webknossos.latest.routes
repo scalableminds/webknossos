@@ -256,6 +256,7 @@ GET           /time/overview                                                    
 GET           /jobs/request                                                                     controllers.WKRemoteWorkerController.requestJobs(key: String)
 GET           /jobs                                                                             controllers.JobController.list()
 GET           /jobs/status                                                                      controllers.JobController.status()
+GET           /jobs/getCosts                                                                    controllers.JobController.getJobCosts(command: String, boundingBox: String)
 POST          /jobs/run/convertToWkw/:datasetId                                                 controllers.JobController.runConvertToWkwJob(datasetId: String, scale: String, unit: Option[String])
 POST          /jobs/run/computeMeshFile/:datasetId                                              controllers.JobController.runComputeMeshFileJob(datasetId: String, layerName: String, mag: String, agglomerateView: Option[String])
 POST          /jobs/run/computeSegmentIndexFile/:datasetId                                      controllers.JobController.runComputeSegmentIndexFileJob(datasetId: String, layerName: String)

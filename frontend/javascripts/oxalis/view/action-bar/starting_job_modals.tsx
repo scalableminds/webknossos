@@ -1,6 +1,7 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import {
   getAiModels,
+  getJobCosts,
   getOrganization,
   runInferenceJob,
   startAlignSectionsJob,
@@ -31,7 +32,7 @@ import { Slider } from "components/slider";
 import features from "features";
 import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
-import { useGuardedFetch } from "libs/react_helpers";
+import { useFetch, useGuardedFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
 import {
   clamp,
@@ -536,40 +537,26 @@ function ShouldUseTreesFormItem() {
   );
 }
 
-function calculateJobCosts(
-  jobCreditCostsPerGVx: number,
-  selectedBoundingBox: UserBoundingBox | undefined,
-) {
-  const currentBoundingBoxVolume = selectedBoundingBox?.boundingBox
-    ? new BoundingBox(selectedBoundingBox?.boundingBox).getVolume()
-    : null;
-  const jobCosts =
-    jobCreditCostsPerGVx != null && currentBoundingBoxVolume != null
-      ? (currentBoundingBoxVolume / 1e9) * jobCreditCostsPerGVx
-      : null;
-  const jobCostsAsString = jobCosts != null ? (Math.ceil(jobCosts * 100) / 100).toFixed(2) : "";
-  return { jobCosts, jobCostsAsString, currentBoundingBoxVolume };
-}
-
 function JobCostInformation({
+  jobCosts,
   jobCreditCostsPerGVx,
   isBoundingBoxConfigurable,
-  selectedBoundingBox,
+  boundingBoxForJob,
   isOrganizationOwner,
 }: {
+  jobCosts: string | undefined;
   jobCreditCostsPerGVx: number;
   isBoundingBoxConfigurable: boolean;
-  selectedBoundingBox: UserBoundingBox | undefined;
+  boundingBoxForJob: UserBoundingBox | undefined;
   isOrganizationOwner: boolean;
 }) {
   const organizationCredits = useSelector(
     (state: OxalisState) => state.activeOrganization?.creditBalance || 0,
   );
-  const { jobCosts, jobCostsAsString, currentBoundingBoxVolume } = calculateJobCosts(
-    jobCreditCostsPerGVx,
-    selectedBoundingBox,
-  );
-  const orgaHasEnoughCredits = jobCosts ? organizationCredits >= jobCosts : true;
+  const currentBoundingBoxVolume = boundingBoxForJob?.boundingBox
+    ? new BoundingBox(boundingBoxForJob?.boundingBox).getVolume()
+    : null;
+  const orgaHasEnoughCredits = jobCosts ? organizationCredits >= Number.parseFloat(jobCosts) : true;
   return (
     <>
       <Row style={{ display: "grid", marginBottom: 16 }}>
@@ -585,7 +572,7 @@ function JobCostInformation({
               organization currently has {roundTo(organizationCredits, 2)} WEBKNOSSOS credits.
               <br />
               {currentBoundingBoxVolume != null
-                ? `${isBoundingBoxConfigurable ? "The selected bounding box" : "This dataset"} has a volume of ${formatVoxels(currentBoundingBoxVolume)} resulting in costs of ${jobCostsAsString} WEBKNOSSOS credits.`
+                ? `${isBoundingBoxConfigurable ? "The selected bounding box" : "This dataset"} has a volume of ${formatVoxels(currentBoundingBoxVolume)} resulting in costs of ${jobCosts} WEBKNOSSOS credits.`
                 : "You do not have a bounding box selected."}
             </>
           }
@@ -675,15 +662,15 @@ function StartJobForm(props: StartJobFormProps) {
   });
   const userBoundingBoxes = defaultBBForLayers.concat(rawUserBoundingBoxes);
   const selectedBoundingBoxId = Form.useWatch("boundingBoxId", form);
-  const selectedBoundingBox = isBoundingBoxConfigurable
-    ? userBoundingBoxes.find((bbox) => bbox.id === selectedBoundingBoxId)
-    : userBoundingBoxes.length === 1
-      ? userBoundingBoxes[0]
-      : undefined;
-  const { jobCosts, jobCostsAsString } =
-    jobCreditCostsPerGVx != null && selectedBoundingBox != null
-      ? calculateJobCosts(jobCreditCostsPerGVx, selectedBoundingBox)
-      : { jobCosts: null, jobCostsAsString: "" };
+  const boundingBoxForJob = userBoundingBoxes.find((bbox) => bbox.id === selectedBoundingBoxId);
+  const jobCosts = useFetch(
+    async () =>
+      boundingBoxForJob
+        ? getJobCosts(jobName, computeArrayFromBoundingBox(boundingBoxForJob.boundingBox))
+        : undefined,
+    undefined,
+    [boundingBoxForJob, jobName],
+  );
 
   const startJob = async ({
     layerName,
@@ -802,14 +789,15 @@ function StartJobForm(props: StartJobFormProps) {
         <JobCostInformation
           jobCreditCostsPerGVx={jobCreditCostsPerGVx}
           isBoundingBoxConfigurable={isBoundingBoxConfigurable}
-          selectedBoundingBox={selectedBoundingBox}
+          jobCosts={jobCosts}
+          boundingBoxForJob={boundingBoxForJob}
           isOrganizationOwner={isActiveUserSuperUser}
         />
       ) : null}
       <div style={{ textAlign: "center" }}>
         <Button type="primary" size="large" htmlType="submit">
           {props.buttonLabel ? props.buttonLabel : title}
-          {jobCosts != null ? ` for ${jobCostsAsString} credits` : ""}
+          {jobCosts != null ? ` for ${jobCosts} credits` : ""}
         </Button>
       </div>
     </Form>

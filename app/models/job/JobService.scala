@@ -39,6 +39,8 @@ class JobService @Inject()(wkConf: WkConf,
     with LazyLogging
     with Formatter {
 
+  private lazy val BigDecimalMathContext = new java.math.MathContext(4)
+
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 
@@ -224,7 +226,7 @@ class JobService @Inject()(wkConf: WkConf,
       _ <- bool2Fox(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.edgeLengthExceeded"
     } yield ()
 
-  def getJobCostsPerGVx(jobCommand: JobCommand): BigDecimal =
+  private def getJobCostsPerGVx(jobCommand: JobCommand): BigDecimal =
     jobCommand match {
       case JobCommand.infer_neurons      => wkConf.Features.neuronInferralCostsPerGVx
       case JobCommand.infer_mitochondria => wkConf.Features.mitochondriaInferralCostsPerGVx
@@ -236,7 +238,8 @@ class JobService @Inject()(wkConf: WkConf,
     val costsPerGVx = getJobCostsPerGVx(jobCommand)
     val volumeInGVx = boundingBoxInTargetMag.volume / math.pow(10, 9)
     val costs = BigDecimal(volumeInGVx) * costsPerGVx
-    costs
+    // TODO: Make the decimal round up after 4 places behind comma.
+    if (costs < BigDecimal(0.001)) BigDecimal(0.001) else costs
   }
 
   def parseBoundingBoxWithMagOpt(boundingBox: String, mag: Option[String]): Fox[BoundingBox] =

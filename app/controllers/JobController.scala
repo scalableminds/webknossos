@@ -525,6 +525,18 @@ class JobController @Inject()(
       } yield Redirect(uri, Map(("token", Seq(userAuthToken.id))))
     }
 
+  def getJobCosts(command: String, boundingBoxInMag: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        boundingBox <- BoundingBox.fromLiteral(boundingBoxInMag).toFox
+        jobCommand <- JobCommand.fromString(command).toFox
+        jobCosts = jobService.calculateJobCosts(boundingBox, jobCommand)
+        js = Json.obj(
+          "costsInCredits" -> jobCosts.toString(),
+        )
+      } yield Ok(js)
+    }
+
   private def runPaidJob(command: JobCommand,
                          commandArgs: JsObject,
                          jobBoundingBox: BoundingBox,

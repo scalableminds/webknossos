@@ -1,13 +1,12 @@
 package models.organization
 
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.OrganizationCreditTransactionsRow
 import com.scalableminds.webknossos.schema.Tables.OrganizationCreditTransactions
 import models.organization.CreditTransactionState.TransactionState
-import net.liftweb.common.Full
 import slick.dbio.DBIO
 import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api._

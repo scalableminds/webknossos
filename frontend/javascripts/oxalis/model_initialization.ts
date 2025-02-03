@@ -106,6 +106,8 @@ import type {
   ServerTracing,
   ServerVolumeTracing,
 } from "types/api_flow_types";
+import type { Mutable } from "types/globals";
+import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
 import { setVersionNumberAction } from "./model/actions/save_actions";
 import {
   convertServerAdditionalAxesToFrontEnd,
@@ -540,6 +542,7 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
 
   const originalLayers = dataset.dataSource.dataLayers;
   const newLayers = originalLayers.slice();
+  const allLayersSameRotation = doAllLayersHaveTheSameRotation(originalLayers);
 
   for (const tracing of tracings) {
     // The tracing always contains the layer information for the user segmentation.
@@ -557,6 +560,16 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
     const boundingBox = getDatasetBoundingBox(dataset).asServerBoundingBox();
     const mags = tracing.mags || [];
     const tracingHasMagList = mags.length > 0;
+    let coordinateTransformsMaybe = {};
+    if (allLayersSameRotation) {
+      coordinateTransformsMaybe = {
+        coordinateTransformations: originalLayers?.[0].coordinateTransformations,
+      };
+    } else if (fallbackLayer?.coordinateTransformations) {
+      coordinateTransformsMaybe = {
+        coordinateTransformations: fallbackLayer.coordinateTransformations,
+      };
+    }
     // Legacy tracings don't have the `tracing.mags` property
     // since they were created before WK started to maintain multiple magnifications
     // in volume annotations. Therefore, this code falls back to mag (1, 1, 1) for
@@ -578,6 +591,7 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
       fallbackLayer: tracing.fallbackLayer,
       fallbackLayerInfo: fallbackLayer,
       additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
+      ...coordinateTransformsMaybe,
     };
     if (fallbackLayerIndex > -1) {
       newLayers[fallbackLayerIndex] = tracingLayer;
@@ -903,13 +917,32 @@ function applyAnnotationSpecificViewConfiguration(
    * Apply annotation-specific view configurations to the dataset settings which are persisted
    * per user per dataset. The AnnotationViewConfiguration currently only holds the "isDisabled"
    * information per layer which should override the isDisabled information in DatasetConfiguration.
+   * Moreover, due to another annotation nativelyRenderedLayerName might be set to a layer which does
+   * not exist in this view / annotation. In this case, the nativelyRenderedLayerName should be set to null.
    */
 
-  if (!annotation) {
-    return originalDatasetSettings;
+  const initialDatasetSettings: Mutable<DatasetConfiguration> =
+    _.cloneDeep(originalDatasetSettings);
+
+  if (originalDatasetSettings.nativelyRenderedLayerName) {
+    const isNativelyRenderedNamePresent =
+      dataset.dataSource.dataLayers.some(
+        (layer) =>
+          layer.name === originalDatasetSettings.nativelyRenderedLayerName ||
+          (layer.category === "segmentation" &&
+            layer.fallbackLayer === originalDatasetSettings.nativelyRenderedLayerName),
+      ) ||
+      annotation?.annotationLayers.some(
+        (layer) => layer.name === originalDatasetSettings.nativelyRenderedLayerName,
+      );
+    if (!isNativelyRenderedNamePresent) {
+      initialDatasetSettings.nativelyRenderedLayerName = null;
+    }
   }
 
-  const initialDatasetSettings: DatasetConfiguration = _.cloneDeep(originalDatasetSettings);
+  if (!annotation) {
+    return initialDatasetSettings;
+  }
 
   if (annotation.viewConfiguration) {
     // The annotation already contains a viewConfiguration. Merge that into the

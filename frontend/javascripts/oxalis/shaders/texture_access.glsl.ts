@@ -42,30 +42,18 @@ export const getRgbaAtXYIndex: ShaderModule = {
 
         <% if (textureLayerInfos[name].dataTextureCount === 1) { %>
             // Don't use if-else when there is only one data texture anyway
-
             <%= textureLayerInfos[name].glslPrefix %>vec4 val = texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0);
 
             // todop: can we generalize this somehow?
             // debug;
-            <% if (textureLayerInfos[name].elementClass === "int16") { %>
-              // return vec4(val.x, val.x, val.y, val.y);
-              // return vec4(val.x, 0., val.y, 0.) / 127.;
-              return vec4(val.x, 0., val.y, 0.);
-            <% } else if (textureLayerInfos[name].elementClass === "uint16") { %>
-              // return vec4(val.x, val.x, val.y, val.y) / 256.;
-              // return vec4(val.x, 0., val.y, 0.) / 255.;
-
+            <% if (textureLayerInfos[name].elementClass.endsWith("int16")) { %>
               return vec4(val.x, 0., val.y, 0.);
             <% } else { %>
               // UnsignedByteType
               float dtype_normalizer = <%=
                 formatNumberAsGLSLFloat(
-                  textureLayerInfos[name].isColor ?
-                    (
-                      textureLayerInfos[name].elementClass === "uint8" ?
-                        255
-                        : (textureLayerInfos[name].elementClass === "int8" ? 127 : 1)
-                    )
+                  textureLayerInfos[name].isColor && !textureLayerInfos[name].elementClass.endsWith("int8")
+                    ? 1
                     : (textureLayerInfos[name].isSigned ? 127 : 255)
                 )
               %>;

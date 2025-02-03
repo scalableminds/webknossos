@@ -23,6 +23,7 @@ test("Shader syntax: Ortho Mode", (t: ExecutionContext<any>) => {
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     textureLayerInfos: {
       ["color_layer_1"]: {
+        isColor: true,
         packingDegree: 4.0,
         dataTextureCount: 1,
         isSigned: false,
@@ -31,6 +32,7 @@ test("Shader syntax: Ortho Mode", (t: ExecutionContext<any>) => {
         elementClass: "uint8",
       },
       ["color_layer_2"]: {
+        isColor: true,
         packingDegree: 4.0,
         dataTextureCount: 1,
         isSigned: false,
@@ -63,6 +65,7 @@ test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t: ExecutionContext<
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     textureLayerInfos: {
       ["color_layer_1"]: {
+        isColor: true,
         packingDegree: 4.0,
         dataTextureCount: 1,
         isSigned: false,
@@ -71,6 +74,7 @@ test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t: ExecutionContext<
         elementClass: "uint8",
       },
       ["color_layer_2"]: {
+        isColor: true,
         packingDegree: 4.0,
         dataTextureCount: 1,
         isSigned: false,
@@ -79,6 +83,7 @@ test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t: ExecutionContext<
         elementClass: "uint8",
       },
       ["segmentationLayer"]: {
+        isColor: true,
         packingDegree: 1.0,
         dataTextureCount: 4,
         isSigned: false,
@@ -104,6 +109,7 @@ test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t: ExecutionContext<
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     textureLayerInfos: {
       ["color_layer_1"]: {
+        isColor: true,
         packingDegree: 4.0,
         dataTextureCount: 1,
         isSigned: false,
@@ -112,6 +118,7 @@ test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t: ExecutionContext<
         elementClass: "uint8",
       },
       ["color_layer_2"]: {
+        isColor: true,
         packingDegree: 4.0,
         dataTextureCount: 1,
         isSigned: false,
@@ -120,6 +127,7 @@ test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t: ExecutionContext<
         elementClass: "uint8",
       },
       ["segmentationLayer"]: {
+        isColor: false,
         packingDegree: 1.0,
         dataTextureCount: 4,
         isSigned: false,
@@ -146,6 +154,7 @@ test("Shader syntax: Arbitrary Mode (no segmentation available)", (t: ExecutionC
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     textureLayerInfos: {
       ["color_layer_1"]: {
+        isColor: true,
         packingDegree: 4.0,
         dataTextureCount: 1,
         isSigned: false,
@@ -154,6 +163,7 @@ test("Shader syntax: Arbitrary Mode (no segmentation available)", (t: ExecutionC
         elementClass: "uint8",
       },
       ["color_layer_2"]: {
+        isColor: true,
         packingDegree: 4.0,
         dataTextureCount: 1,
         isSigned: false,
@@ -179,6 +189,7 @@ test("Shader syntax: Arbitrary Mode (segmentation available)", (t: ExecutionCont
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     textureLayerInfos: {
       ["color_layer_1"]: {
+        isColor: true,
         packingDegree: 4.0,
         dataTextureCount: 1,
         isSigned: false,
@@ -187,6 +198,7 @@ test("Shader syntax: Arbitrary Mode (segmentation available)", (t: ExecutionCont
         elementClass: "uint8",
       },
       ["color_layer_2"]: {
+        isColor: true,
         packingDegree: 4.0,
         dataTextureCount: 1,
         isSigned: false,
@@ -195,6 +207,7 @@ test("Shader syntax: Arbitrary Mode (segmentation available)", (t: ExecutionCont
         elementClass: "uint8",
       },
       ["segmentationLayer"]: {
+        isColor: false,
         packingDegree: 1.0,
         dataTextureCount: 4,
         isSigned: false,
@@ -220,6 +233,7 @@ test("Shader syntax: Ortho Mode (rgb and float layer)", (t: ExecutionContext<any
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     textureLayerInfos: {
       ["color_layer_1"]: {
+        isColor: true,
         packingDegree: 1.0,
         dataTextureCount: 1,
         isSigned: false,
@@ -228,6 +242,7 @@ test("Shader syntax: Ortho Mode (rgb and float layer)", (t: ExecutionContext<any
         elementClass: "uint8",
       },
       ["color_layer_2"]: {
+        isColor: true,
         packingDegree: 4.0,
         dataTextureCount: 1,
         isSigned: false,

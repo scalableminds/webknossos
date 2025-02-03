@@ -35,6 +35,7 @@ import type {
 } from "types/api_flow_types";
 import type { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
+import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
 import { MagInfo, convertToDenseMag } from "../helpers/mag_info";
 import {
   type Transform,
@@ -44,7 +45,6 @@ import {
   invertTransform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
-import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
 
 function _getMagInfo(magnifications: Array<Vector3>): MagInfo {
   return new MagInfo(magnifications);

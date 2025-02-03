@@ -24,7 +24,7 @@ import {
   updateTemporarySettingAction,
 } from "oxalis/model/actions/settings_actions";
 
-const semaphore = new Semaphore(2);
+const semaphore = new Semaphore(3);
 const onlyTestSegmentation = false;
 
 const dtypes = [
@@ -37,6 +37,7 @@ const dtypes = [
   "int32",
   "float32",
 ] as const;
+type DType = (typeof dtypes)[number];
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
@@ -87,7 +88,7 @@ const zoomedOut = {
   viewOverride: "512,256,16,0,2.0",
 };
 
-const selectiveSegmentIdByDtype = {
+const selectiveSegmentIdByDtype: Partial<Record<DType, number>> = {
   uint8: 122,
   int8: -6,
   uint16: 33280,
@@ -96,7 +97,7 @@ const selectiveSegmentIdByDtype = {
 
 type Spec = {
   name: string;
-  dtype: (typeof dtypes)[number];
+  dtype: DType;
   datasetName: string;
   viewOverride: string;
   datasetConfig: PartialDatasetConfiguration;
@@ -226,7 +227,7 @@ datasetNames.map(async (datasetName) => {
                 updateDatasetSettingAction("selectiveSegmentVisibility", true),
                 updateTemporarySettingAction(
                   "hoveredSegmentId",
-                  selectiveSegmentIdByDtype[spec.dtype],
+                  selectiveSegmentIdByDtype[spec.dtype] ?? null,
                 ),
               ];
               console.time("evaluate");

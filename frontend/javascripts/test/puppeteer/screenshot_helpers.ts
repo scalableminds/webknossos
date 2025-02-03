@@ -38,10 +38,7 @@ async function deleteScreenshotIfExists(path: string, name: string): Promise<voi
         resolve();
       });
     });
-  } catch (error) {
-    // If the error is related to the file not existing, ignore it
-    console.log(`Could not delete ${path}. Error: ${error}`);
-  }
+  } catch {}
 }
 
 function saveScreenshot(png: PNG, path: string, name: string): Promise<void> {

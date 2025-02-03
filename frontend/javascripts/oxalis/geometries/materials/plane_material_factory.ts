@@ -793,7 +793,9 @@ class PlaneMaterialFactory {
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.hoveredSegmentId,
           (hoveredSegmentId) => {
-            const [high, low] = Utils.convertNumberTo64BitTuple(Math.abs(hoveredSegmentId));
+            const [high, low] = Utils.convertNumberTo64BitTuple(
+              hoveredSegmentId != null ? Math.abs(hoveredSegmentId) : null,
+            );
 
             this.uniforms.hoveredSegmentIdLow.value = low;
             this.uniforms.hoveredSegmentIdHigh.value = high;
@@ -804,7 +806,9 @@ class PlaneMaterialFactory {
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.hoveredUnmappedSegmentId,
           (hoveredUnmappedSegmentId) => {
-            const [high, low] = Utils.convertNumberTo64BitTuple(Math.abs(hoveredUnmappedSegmentId));
+            const [high, low] = Utils.convertNumberTo64BitTuple(
+              hoveredUnmappedSegmentId != null ? Math.abs(hoveredUnmappedSegmentId) : null,
+            );
 
             this.uniforms.hoveredUnmappedSegmentIdLow.value = low;
             this.uniforms.hoveredUnmappedSegmentIdHigh.value = high;

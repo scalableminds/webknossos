@@ -978,7 +978,8 @@ class PlaneMaterialFactory {
           elementClass === "uint32" ||
           elementClass === "int32" ||
           elementClass === "float" ||
-          elementClass === "int16"
+          elementClass === "int16" ||
+          elementClass === "uint16"
         ) {
           divisor = 1;
         } else {

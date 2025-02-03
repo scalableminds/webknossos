@@ -53,6 +53,7 @@ export async function screenshotDataset(
   baseUrl: string,
   datasetId: string,
   optAnnotation?: APIAnnotation,
+  onLoaded?: () => Promise<void>,
   optionalViewOverride?: string | null | undefined,
   optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
 ): Promise<Screenshot> {
@@ -61,6 +62,7 @@ export async function screenshotDataset(
     async () => optAnnotation ?? createAnnotationForDatasetScreenshot(baseUrl, datasetId),
     baseUrl,
     datasetId,
+    onLoaded,
     optionalViewOverride,
     optionalDatasetConfigOverride,
   );
@@ -71,6 +73,7 @@ export async function screenshotAnnotation(
   baseUrl: string,
   datasetId: string,
   fallbackLayerName: string | null,
+  onLoaded?: () => Promise<void>,
   optionalViewOverride?: string | null | undefined,
   optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
 ): Promise<Screenshot> {
@@ -90,6 +93,7 @@ export async function screenshotAnnotation(
     },
     baseUrl,
     datasetId,
+    onLoaded,
     optionalViewOverride,
     optionalDatasetConfigOverride,
   );
@@ -100,6 +104,7 @@ async function _screenshotAnnotationHelper(
   getAnnotation: () => Promise<APIAnnotation>,
   baseUrl: string,
   datasetId: string,
+  onLoaded?: () => Promise<void>,
   optionalViewOverride?: string | null | undefined,
   optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
 ): Promise<Screenshot> {
@@ -110,7 +115,7 @@ async function _screenshotAnnotationHelper(
     await updateDatasetConfiguration(datasetId, optionalDatasetConfigOverride, options);
   }
 
-  await openTracingView(page, baseUrl, createdExplorational.id, optionalViewOverride);
+  await openTracingView(page, baseUrl, createdExplorational.id, onLoaded, optionalViewOverride);
   return screenshotTracingView(page);
 }
 
@@ -165,7 +170,7 @@ export async function screenshotDatasetWithMappingLink(
     null,
     options,
   );
-  await openTracingView(page, baseUrl, createdExplorational.id, optionalViewOverride);
+  await openTracingView(page, baseUrl, createdExplorational.id, undefined, optionalViewOverride);
   await waitForMappingEnabled(page);
   return screenshotTracingView(page);
 }
@@ -249,6 +254,7 @@ async function openTracingView(
   page: Page,
   baseUrl: string,
   annotationId: string,
+  onLoaded?: () => Promise<void>,
   optionalViewOverride?: string | null | undefined,
 ) {
   const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
@@ -259,6 +265,9 @@ async function openTracingView(
   });
   await waitForTracingViewLoad(page);
   console.log("Loaded annotation view");
+  if (onLoaded != null) {
+    await onLoaded();
+  }
   await waitForRenderingFinish(page);
   console.log("Finished rendering annotation view");
 }

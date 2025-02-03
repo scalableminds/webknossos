@@ -142,6 +142,7 @@ datasetNames.map(async (datasetName) => {
           URL,
           datasetNameToId[datasetName],
           undefined,
+          undefined,
           viewOverrides[datasetName],
           datasetConfigOverrides[datasetName],
         );
@@ -181,6 +182,7 @@ annotationSpecs.map(async (annotationSpec) => {
             URL,
             datasetNameToId[datasetName],
             fallbackLayerName,
+            undefined,
             viewOverrides[datasetName],
             datasetConfigOverrides[datasetName],
           );
@@ -309,6 +311,7 @@ test.serial(
           await getNewPage(t.context.browser),
           URL,
           datasetNameToId[datasetName],
+          undefined,
           undefined,
           viewOverride,
         );

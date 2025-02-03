@@ -21,11 +21,28 @@ import {
 import Semaphore from "semaphore-promise";
 import {
   updateDatasetSettingAction,
+  updateLayerSettingAction,
   updateTemporarySettingAction,
 } from "oxalis/model/actions/settings_actions";
+import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
+import { Action } from "oxalis/model/actions/actions";
 
-const semaphore = new Semaphore(3);
-const onlyTestSegmentation = false;
+const semaphore = new Semaphore(2);
+const testColor = true;
+const testSegmentation = true;
+
+function matchWildcard(pattern: string, str: string) {
+  // Escape special regex characters in the pattern, except for '*'
+  const escapedPattern = pattern.replace(/[-\/\\^$+?.()|[\]{}]/g, "\\$&");
+  // Replace '*' with '.*' to match any sequence of characters
+  const regexPattern = "^" + escapedPattern.replace(/\*/g, ".*") + "$";
+  // Create a new RegExp object
+  const regex = new RegExp(regexPattern);
+  // Test if the string matches the pattern
+  return regex.test(str);
+}
+
+const wildcard = "uint32*segmentation";
 
 const dtypes = [
   // biome-ignore format: don't format array (for easier commenting-out)
@@ -155,10 +172,15 @@ const specs: Array<Spec> = _.flatten(
             },
           ];
 
-    if (onlyTestSegmentation) {
+    if (testSegmentation && testColor) {
+      return [...colorSpecs, ...segmentationSpecs];
+    } else if (testSegmentation) {
       return segmentationSpecs;
+    } else if (testColor) {
+      return colorSpecs;
+    } else {
+      throw new Error("Both testColor and testSegmentation are set to false.");
     }
-    return [...colorSpecs, ...segmentationSpecs];
   }),
 );
 
@@ -198,17 +220,51 @@ datasetNames.map(async (datasetName) => {
     console.timeEnd("Creating annotation...");
     const release = await semaphore.acquire();
     try {
+      const page = await getNewPage(t.context.browser);
       for (const spec of specs.filter((spec) => spec.datasetName === datasetName)) {
-        const page = await getNewPage(t.context.browser);
         await withRetry(
           1,
           async () => {
+            // if (!matchWildcard(wildcard, spec.name)) {
+            //   console.log(`Skipping ${spec.name} as it does not match wildcard=${wildcard}`);
+            //   return true;
+            // }
+            console.log(`Starting: ${spec.name}...`);
+            const { datasetConfig } = spec;
+            const onLoaded = async () => {
+              const [x, y, z, _, zoomValue] = spec.viewOverride
+                .split(",")
+                .map((el) => Number.parseFloat(el));
+
+              const actions: Action[] = [
+                updateDatasetSettingAction("selectiveSegmentVisibility", false),
+                updateTemporarySettingAction("hoveredSegmentId", null),
+                setPositionAction([x, y, z]),
+                setZoomStepAction(zoomValue),
+              ];
+              if (datasetConfig?.layers != null) {
+                const layerName = Object.keys(datasetConfig.layers)[0];
+                const { intensityRange } = datasetConfig.layers[layerName];
+
+                actions.push(updateLayerSettingAction(layerName, "intensityRange", intensityRange));
+              }
+
+              console.log("Dispatching", actions);
+              await page.evaluate((actions) => {
+                return window.webknossos.apiReady().then((api) => {
+                  for (const action of actions) {
+                    window.webknossos.DEV.store.dispatch(action);
+                  }
+                });
+              }, actions);
+            };
             console.time("Making screenshot...");
             const { screenshot, width, height } = await screenshotDataset(
               page,
               URL,
               datasetNameToId[spec.datasetName],
               annotation,
+              onLoaded,
               spec.viewOverride,
               spec.datasetConfig,
             );
@@ -269,8 +325,8 @@ datasetNames.map(async (datasetName) => {
             );
           },
         );
-        page.close();
       }
+      page.close();
     } finally {
       release();
     }

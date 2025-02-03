@@ -1,10 +1,12 @@
 import WkDev from "oxalis/api/wk_dev";
+import { ApiType } from "oxalis/api/api_loader"
 
 declare global {
   interface Window {
     needsRerender: boolean;
     webknossos: {
       DEV: WkDev;
+      apiReady: ApiType["apiReady"]
     };
   }
 }

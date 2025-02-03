@@ -35,16 +35,26 @@ DROP VIEW webknossos.aiInferences_;
 DO $$
   DECLARE
     r RECORD;
+    column_type TEXT;
   BEGIN
     FOR r IN
       SELECT table_schema, table_name, column_name, data_type
       FROM information_schema.columns
       WHERE table_schema = 'webknossos'
-        AND data_type IN ('character varying', 'character')
+        AND data_type IN ('character varying', 'character','character[]','character varying[]')
       LOOP
+        IF r.data_type = 'character varying' THEN
+          column_type := 'TEXT';
+        ELSIF r.data_type = 'character' THEN
+          column_type := 'TEXT';
+        ELSIF r.data_type LIKE 'character[]' THEN
+          column_type := 'TEXT[]';
+        ELSIF r.data_type LIKE 'character varying[]' THEN
+          column_type := 'TEXT[]';
+        END IF;
         EXECUTE format(
-          'ALTER TABLE %I.%I ALTER COLUMN %I SET DATA TYPE TEXT',
-          r.table_schema, r.table_name, r.column_name
+          'ALTER TABLE %I.%I ALTER COLUMN %I SET DATA TYPE %s',
+          r.table_schema, r.table_name, r.column_name, column_type
           );
       END LOOP;
   END $$;

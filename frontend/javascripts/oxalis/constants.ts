@@ -223,6 +223,8 @@ export const MeasurementTools: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.AREA_MEASUREMENT,
 ];
 
+export const AvailableToolsInViewMode = [...MeasurementTools, AnnotationToolEnum.MOVE];
+
 export type AnnotationTool = keyof typeof AnnotationToolEnum;
 export enum ContourModeEnum {
   DRAW = "DRAW",

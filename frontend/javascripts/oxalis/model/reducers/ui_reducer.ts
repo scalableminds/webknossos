@@ -1,3 +1,4 @@
+import { AnnotationToolEnum, AvailableToolsInViewMode, ControlModeEnum } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
 import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import {
@@ -55,6 +56,9 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_TOOL": {
       if (!state.tracing.restrictions.allowUpdate) {
+        if (AvailableToolsInViewMode.includes(AnnotationToolEnum[action.tool])) {
+          return setToolReducer(state, action.tool);
+        }
         return state;
       }
 

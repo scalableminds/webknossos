@@ -50,3 +50,7 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER enforce_non_negative_balance_trigger
 BEFORE INSERT OR UPDATE ON webknossos.organization_credit_transactions
 FOR EACH ROW EXECUTE PROCEDURE webknossos.enforce_non_negative_balance();
+
+UPDATE webknossos.releaseInformation SET schemaVersion = 126;
+
+COMMIT TRANSACTION;

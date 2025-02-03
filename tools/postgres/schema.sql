@@ -353,7 +353,6 @@ CREATE TABLE webknossos.organization_usedStorage(
 CREATE TYPE webknossos.credit_transaction_state AS ENUM ('Pending', 'Completed', 'Refunded', 'Revoked', 'Partially Revoked', 'Spent');
 
 -- Create the transactions table
--- TODO: For each negative credit_change, save how much temporary credits were used.
 CREATE TABLE webknossos.organization_credit_transactions (
     _id CHAR(24) PRIMARY KEY,
     _organization VARCHAR(256) NOT NULL,
@@ -970,7 +969,7 @@ CREATE TRIGGER onDeleteAnnotationTrigger
 AFTER DELETE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();
 
-CREATE  FUNCTION webknossos.enforce_non_negative_balance() RETURNS TRIGGER AS $$
+CREATE FUNCTION webknossos.enforce_non_negative_balance() RETURNS TRIGGER AS $$
   BEGIN
     -- Assert that the new balance is non-negative
     ASSERT (SELECT COALESCE(SUM(credit_change), 0) + COALESCE(NEW.credit_change, 0)
@@ -987,107 +986,4 @@ CREATE TRIGGER enforce_non_negative_balance_trigger
 BEFORE INSERT OR UPDATE ON webknossos.organization_credit_transactions
 FOR EACH ROW EXECUTE PROCEDURE webknossos.enforce_non_negative_balance();
 
-
---- Stored procedure to revoke temporary credits from an organization
---- TODO !!!!!! Fix refunded free credits not being revoked !!!!!!
---- TODO: Maybe implement in scala? as a big transaction?
-CREATE FUNCTION webknossos.revoke_expired_credits()
-RETURNS VOID AS $$
-DECLARE
-    organization_id VARCHAR(256);
-    free_credits_transaction RECORD;
-    credits_to_revoke DECIMAL(14, 4) := 0;
-    total_credits_to_revoke DECIMAL(14, 4) := 0;
-    spent_credits_since_then DECIMAL(14, 4) := 0;
-    free_credits_spent_of_already_processed_transactions DECIMAL(14, 4) := 0;
-    transaction RECORD;
-    revoked_organizations_count INTEGER := 0;
-    revoked_credit_count DECIMAL(14, 4) := 0;
-BEGIN
-    -- Iterate through organizations
-    BEGIN
-      FOR organization_id IN
-          SELECT DISTINCT _organization
-          FROM webknossos.organization_credit_transactions
-          WHERE expiration_date <= CURRENT_DATE
-            AND state = 'Completed'
-            AND credit_change > 0
-      LOOP
-          -- Reset credits to revoke
-          total_credits_to_revoke := 0;
-          -- Record how much free credits have been spent to avoid double counting a transaction with negative credit_change
-          free_credits_spent_of_already_processed_transactions := 0;
-
-          -- Iterate through expired credits transactions for this organization starting from the most recent
-          FOR free_credits_transaction IN
-              SELECT *
-              FROM webknossos.organization_credit_transactions
-              WHERE _organization = organization_id
-                AND expiration_date <= CURRENT_DATE
-                AND state = 'Completed'
-                AND credit_change > 0
-              ORDER BY created_at DESC
-          LOOP
-              -- Calculate spent credits since the free credit transaction; including subtracting the refunded transactions
-              SELECT COALESCE(SUM(credit_change), 0)
-              INTO spent_credits_since_then
-              FROM webknossos.organization_credit_transactions
-              WHERE _organization = organization_id
-                AND created_at > free_credits_transaction.created_at
-                AND (credit_change < 0 AND state = 'Completed') OR (credit_change > 0 AND state = 'Completed' AND refunded_transaction_id IS NOT NULL);
-
-              -- Spent credits are negative, so we negate them for easier calculation
-              spent_credits_since_then := spent_credits_since_then * -1;
-              -- Check if the credits have been fully spent
-              IF spent_credits_since_then >= (free_credits_transaction.credit_change + free_credits_spent_of_already_processed_transactions) THEN
-                  -- Fully spent, update state to 'SPENT', no need to increase revoked_credit_count
-                  free_credits_spent_of_already_processed_transactions := free_credits_spent_of_already_processed_transactions + free_credits_transaction.credit_change;
-                  UPDATE webknossos.organization_credit_transactions
-                  SET state = 'Spent', updated_at = NOW()
-                  WHERE id = free_credits_transaction.id;
-              ELSE
-                  -- Calculate the amount to revoke
-                  total_credits_to_revoke := total_credits_to_revoke + (free_credits_transaction.credit_change + free_credits_spent_of_already_processed_transactions - spent_credits_since_then);
-                  free_credits_spent_of_already_processed_transactions := free_credits_spent_of_already_processed_transactions + spent_credits_since_then;
-
-                  -- Update transaction state to 'REVOKED'
-                  UPDATE webknossos.organization_credit_transactions
-                  SET state = 'Revoked', updated_at = NOW()
-                  WHERE id = free_credits_transaction.id;
-
-                  -- Add the date to the revoked dates set
-                  -- (In PostgreSQL, we don't need a set; we will use it for information in the comment)
-              END IF;
-          END LOOP;
-
-          -- If there are credits to revoke, create a revocation transaction
-          IF total_credits_to_revoke > 0 THEN
-              INSERT INTO webknossos.organization_credit_transactions (
-                  _organization, credit_change, comment, state, created_at, updated_at
-              )
-              VALUES (
-                  organization_id,
-                  -total_credits_to_revoke,
-                  CONCAT('Revoked free credits granted.'),
-                  'Completed',
-                  CURRENT_TIMESTAMP,
-                  CURRENT_TIMESTAMP
-              );
-              -- Log the revocation action for this organization
-              revoked_credit_count := revoked_credit_count + total_credits_to_revoke;
-              revoked_organizations_count := revoked_organizations_count + 1;
-          END IF;
-
-      END LOOP;
-
-      -- Final notice about revoked credits
-      RAISE NOTICE 'Revoked temporary credits for % organizations, total credits revoked: %', revoked_organizations_count, revoked_credit_count;
-    EXCEPTION
-      WHEN OTHERS THEN
-        RAISE NOTICE 'Failed to revoke credits: %', SQLERRM;
-        RAISE;
-    END;
-    COMMIT;
-END;
-$$ LANGUAGE plpgsql;
 

@@ -2,9 +2,6 @@ START TRANSACTION;
 
 do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 126, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
--- Drop the stored procedure for revoking expired credits
-DROP FUNCTION IF EXISTS webknossos.revoke_expired_credits();
-
 -- Drop the trigger and its associated function asserting non negative balance
 DROP TRIGGER IF EXISTS enforce_non_negative_balance_trigger ON webknossos.organization_credit_transactions;
 DROP FUNCTION IF EXISTS webknossos.enforce_non_negative_balance();

@@ -61,7 +61,7 @@ import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import type { APIDataLayer, APIJob } from "types/api_flow_types";
+import { type APIDataLayer, type APIJob, APIJobType } from "types/api_flow_types";
 import {
   CollapsibleWorkflowYamlEditor,
   TrainAiModelFromAnnotationTab,
@@ -72,20 +72,20 @@ import { isBoundingBoxExportable } from "./download_modal_view";
 const { ThinSpace } = Unicode;
 
 export type StartAIJobModalState =
-  | "neuron_inferral"
-  | "nuclei_inferral"
-  | "mitochondria_inferral"
+  | APIJobType.INFER_NEURONS
+  | APIJobType.INFER_NUCLEI
+  | APIJobType.INFER_MITOCHONDRIA
   | "invisible";
 
 // "materialize_volume_annotation" is only used in this module
 const jobNameToImagePath = {
-  neuron_inferral: "neuron_inferral_example.jpg",
-  nuclei_inferral: "nuclei_inferral_example.jpg",
-  mitochondria_inferral: "mito_inferral_example.jpg",
+  infer_neurons: "infer_neurons_example.jpg",
+  infer_nuclei: "nuclei_inferral_example.jpg",
+  infer_mitochondria: "mito_inferral_example.jpg",
   align_sections: "align_example.png",
   materialize_volume_annotation: "materialize_volume_annotation_example.jpg",
   invisible: "",
-  inference: "",
+  infer_with_model: "",
 } as const;
 
 type Props = {
@@ -105,7 +105,7 @@ type JobApiCallArgsType = {
 };
 type StartJobFormProps = Props & {
   jobApiCall: (arg0: JobApiCallArgsType, form: FormInstance<any>) => Promise<void | APIJob>;
-  jobName: keyof typeof jobNameToImagePath;
+  jobName: APIJobType;
   description: React.ReactNode;
   jobSpecificInputFields?: React.ReactNode | undefined;
   isBoundingBoxConfigurable?: boolean;
@@ -395,15 +395,15 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
           <Space align="center">
             <Radio.Button
               className="aIJobSelection"
-              checked={aIJobModalState === "neuron_inferral"}
-              onClick={() => dispatch(setAIJobModalStateAction("neuron_inferral"))}
+              checked={aIJobModalState === "infer_neurons"}
+              onClick={() => dispatch(setAIJobModalStateAction(APIJobType.INFER_NEURONS))}
             >
               <Card bordered={false}>
                 <Space direction="vertical" size="small">
                   <Row className="ai-job-title">Neuron segmentation</Row>
                   <Row>
                     <img
-                      src={`/assets/images/${jobNameToImagePath.neuron_inferral}`}
+                      src={`/assets/images/${jobNameToImagePath.infer_neurons}`}
                       alt={"Neuron segmentation example"}
                       style={centerImageStyle}
                     />
@@ -415,15 +415,15 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
               <Radio.Button
                 className="aIJobSelection"
                 disabled={!isSuperUser}
-                checked={aIJobModalState === "mitochondria_inferral"}
-                onClick={() => dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
+                checked={aIJobModalState === "infer_mitochondria"}
+                onClick={() => dispatch(setAIJobModalStateAction(APIJobType.INFER_MITOCHONDRIA))}
               >
                 <Card bordered={false}>
                   <Space direction="vertical" size="small">
                     <Row className="ai-job-title">Mitochondria detection</Row>
                     <Row>
                       <img
-                        src={`/assets/images/${jobNameToImagePath.mitochondria_inferral}`}
+                        src={`/assets/images/${jobNameToImagePath.infer_mitochondria}`}
                         alt={"Mitochondria detection example"}
                         style={centerImageStyle}
                       />
@@ -436,15 +436,15 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
               <Radio.Button
                 className="aIJobSelection"
                 disabled
-                checked={aIJobModalState === "nuclei_inferral"}
-                onClick={() => dispatch(setAIJobModalStateAction("nuclei_inferral"))}
+                checked={aIJobModalState === "infer_nuclei"}
+                onClick={() => dispatch(setAIJobModalStateAction(APIJobType.INFER_NUCLEI))}
               >
                 <Card bordered={false}>
                   <Space direction="vertical" size="small">
                     <Row className="ai-job-title">Nuclei detection</Row>
                     <Row>
                       <img
-                        src={`/assets/images/${jobNameToImagePath.nuclei_inferral}`}
+                        src={`/assets/images/${jobNameToImagePath.infer_nuclei}`}
                         alt={"Nuclei detection example"}
                         style={centerImageStyle}
                       />
@@ -454,9 +454,9 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
               </Radio.Button>
             </Tooltip>
           </Space>
-          {aIJobModalState === "neuron_inferral" ? <NeuronSegmentationForm /> : null}
-          {aIJobModalState === "nuclei_inferral" ? <NucleiDetectionForm /> : null}
-          {aIJobModalState === "mitochondria_inferral" ? <MitochondriaSegmentationForm /> : null}
+          {aIJobModalState === "infer_neurons" ? <NeuronSegmentationForm /> : null}
+          {aIJobModalState === "infer_nuclei" ? <NucleiDetectionForm /> : null}
+          {aIJobModalState === "infer_mitochondria" ? <MitochondriaSegmentationForm /> : null}
           {aIJobModalState === "align_sections" ? <AlignSectionsForm /> : null}
         </>
       )}
@@ -626,8 +626,8 @@ function JobCostInformation({
         </div>
       ) : null}
     </>
-    );
-  }
+  );
+}
 type SplitMergerEvaluationSettings = {
   useSparseTracing?: boolean;
   maxEdgeLength?: number;
@@ -889,7 +889,7 @@ export function NucleiDetectionForm() {
     <StartJobForm
       handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
       buttonLabel="Start AI nuclei detection"
-      jobName={"nuclei_inferral"}
+      jobName={APIJobType.INFER_NUCLEI}
       title="AI Nuclei Segmentation"
       suggestedDatasetSuffix="with_nuclei"
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) =>
@@ -924,7 +924,7 @@ export function NeuronSegmentationForm() {
   return (
     <StartJobForm
       handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
-      jobName={"neuron_inferral"}
+      jobName={APIJobType.INFER_NEURONS}
       buttonLabel="Start AI neuron segmentation"
       title="AI Neuron Segmentation"
       suggestedDatasetSuffix="with_reconstructed_neurons"
@@ -999,7 +999,7 @@ export function MitochondriaSegmentationForm() {
   return (
     <StartJobForm
       handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
-      jobName={"mitochondria_inferral"}
+      jobName={APIJobType.INFER_MITOCHONDRIA}
       buttonLabel="Start AI mitochondria segmentation"
       title="AI Mitochondria Segmentation"
       suggestedDatasetSuffix="with_mitochondria_detected"
@@ -1053,7 +1053,7 @@ function CustomAiModelInferenceForm() {
   return (
     <StartJobForm
       handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
-      jobName="inference"
+      jobName={APIJobType.INFER_WITH_MODEL}
       buttonLabel="Start inference with custom AI model"
       title="AI Inference"
       suggestedDatasetSuffix="with_custom_model"
@@ -1113,7 +1113,7 @@ export function AlignSectionsForm() {
   return (
     <StartJobForm
       handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
-      jobName={"align_sections"}
+      jobName={APIJobType.ALIGN_SECTIONS}
       buttonLabel="Start section alignment job"
       title="Section Alignment"
       suggestedDatasetSuffix="aligned"
@@ -1217,7 +1217,7 @@ export function MaterializeVolumeAnnotationModal({
       <StartJobForm
         handleClose={handleClose}
         title="Start Materializing this Volume Annotation"
-        jobName={"materialize_volume_annotation"}
+        jobName={APIJobType.MATERIALIZE_VOLUME_ANNOTATION}
         suggestedDatasetSuffix="with_merged_segmentation"
         chooseSegmentationLayer
         isBoundingBoxConfigurable={includesEditableMapping}

@@ -35,7 +35,7 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can charge up credits"
       moneySpentInDecimal <- tryo(BigDecimal(moneySpent)) ?~> s"moneySpent $moneySpent is not a valid decimal"
-      _ <- bool2Fox(moneySpentInDecimal > 0) ?~> "moneySpent must be a positive number"
+      _ <- bool2Fox(moneySpentInDecimal > 0 || expiresAt.nonEmpty) ?~> "moneySpent must be a positive number"
       _ <- bool2Fox(creditAmount > 0) ?~> "creditAmount must be a positive number"
       commentNoOptional = comment.getOrElse(s"Charge up for $creditAmount credits for $moneySpent Euro.")
       _ <- organizationService.ensureOrganizationHasPaidPlan(organizationId)

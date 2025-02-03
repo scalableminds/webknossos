@@ -154,15 +154,16 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
 
   def insertTransaction(transaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- assertUpdateAccess(transaction._id)
+      _ <- readAccessQuery
       _ <- run(q"""INSERT INTO webknossos.organization_credit_transactions
-          (_id, _organization, credit_change, refundable_credit_change, spent_money, comment, _paid_job,
+          (_id, _organization, credit_change, refundable_credit_change, refunded_transaction_id, spent_money, comment, _paid_job,
           state, expiration_date, created_at, updated_at, is_deleted)
           VALUES
           (${transaction._id}, ${transaction._organization}, ${transaction.creditChange.toString()}::DECIMAL,
-          ${transaction.refundableCreditChange.toString()}::DECIMAL, ${transaction.spentMoney.map(_.toString)}::DECIMAL,
-          ${transaction.comment}, ${transaction._paidJob}, ${transaction.state}, ${transaction.expirationDate},
-          ${transaction.createdAt}, ${transaction.updatedAt}, ${transaction.isDeleted})
+          ${transaction.refundableCreditChange.toString()}::DECIMAL, ${transaction.refunded_transaction_id},
+          ${transaction.spentMoney.map(_.toString)}::DECIMAL, ${transaction.comment}, ${transaction._paidJob},
+          ${transaction.state}, ${transaction.expirationDate}, ${transaction.createdAt}, ${transaction.updatedAt},
+          ${transaction.isDeleted})
           """.asUpdate)
 
     } yield ()

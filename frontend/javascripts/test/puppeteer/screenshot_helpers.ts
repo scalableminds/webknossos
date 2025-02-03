@@ -27,6 +27,23 @@ function openScreenshot(path: string, name: string): Promise<PNG | null> {
   });
 }
 
+async function deleteScreenshotIfExists(path: string, name: string): Promise<void> {
+  try {
+    // Delete the file
+    await new Promise<void>((resolve, reject) => {
+      fs.unlink(`${path}/${name}.png`, (unlinkErr) => {
+        if (unlinkErr) {
+          return reject(unlinkErr);
+        }
+        resolve();
+      });
+    });
+  } catch (error) {
+    // If the error is related to the file not existing, ignore it
+    console.log(`Could not delete ${path}. Error: ${error}`);
+  }
+}
+
 function saveScreenshot(png: PNG, path: string, name: string): Promise<void> {
   return new Promise((resolve) => {
     png
@@ -86,6 +103,11 @@ export async function compareScreenshot(
     await Promise.all([
       saveScreenshot(diff, path, `${name}.diff`),
       saveScreenshot(newScreenshot, path, `${name}.new`),
+    ]);
+  } else {
+    await Promise.all([
+      deleteScreenshotIfExists(path, `${name}.diff`),
+      deleteScreenshotIfExists(path, `${name}.new`),
     ]);
   }
 

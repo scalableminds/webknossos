@@ -18,6 +18,8 @@ export const { WK_AUTH_TOKEN } = process.env;
 
 // todop: change to false before merging
 const USE_LOCAL_CHROME = true;
+// Only relevant when USE_LOCAL_CHROME. Set to false to actually see the browser open.
+const HEADLESS = false;
 
 type Screenshot = {
   screenshot: Buffer;
@@ -191,9 +193,14 @@ async function waitForMappingEnabled(page: Page) {
 
 async function waitForTracingViewLoad(page: Page) {
   let inputCatchers;
+  let iterationCount = 0;
 
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'length' does not exist on type 'ElementH... Remove this comment to see the full error message
   while (inputCatchers == null || inputCatchers.length < 4) {
+    iterationCount++;
+    if (iterationCount > 5) {
+      console.log("Waiting suspiciously long for page to load...");
+    }
     await sleep(500);
     inputCatchers = await page.$(".inputcatcher");
   }
@@ -364,15 +371,17 @@ export function setupBeforeEachAndAfterEach() {
     if (USE_LOCAL_CHROME) {
       // Use this for connecting to local Chrome browser instance
       t.context.browser = await puppeteer.launch({
-        args: [
-          "--headless=new",
-          "--hide-scrollbars",
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-          "--disable-dev-shm-usage",
-          // "--use-gl-egl",
-          "--use-angle=gl-egl",
-        ],
+        args: HEADLESS
+          ? [
+              "--headless=false",
+              "--hide-scrollbars",
+              "--no-sandbox",
+              "--disable-setuid-sandbox",
+              "--disable-dev-shm-usage",
+              "--use-angle=gl-egl",
+            ]
+          : [],
+        headless: HEADLESS ? "new" : false, // use "new" to suppress warnings
         dumpio: true,
         executablePath: "/usr/bin/google-chrome", // this might need to be adapted to your local setup
       });

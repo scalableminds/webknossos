@@ -24,7 +24,19 @@ import {
   updateTemporarySettingAction,
 } from "oxalis/model/actions/settings_actions";
 
-const semaphore = new Semaphore(1);
+const semaphore = new Semaphore(2);
+const onlyTestSegmentation = false;
+
+const dtypes = [
+  // biome-ignore format: don't format array (for easier commenting-out)
+  "uint8",
+  "int8",
+  "uint16",
+  "int16",
+  "uint32",
+  "int32",
+  "float32",
+] as const;
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
@@ -75,21 +87,11 @@ const zoomedOut = {
   viewOverride: "512,256,16,0,2.0",
 };
 
-const onlyTestSegmentation = true;
-
-const dtypes = [
-  "uint8",
-  "int8",
-  // "uint16",
-  // "int16",
-  // "uint32",
-  // "int32",
-  // "float32"
-] as const;
-
 const selectiveSegmentIdByDtype = {
-  int8: -6,
   uint8: 122,
+  int8: -6,
+  uint16: 33280,
+  int16: -527,
 };
 
 type Spec = {
@@ -141,12 +143,13 @@ const specs: Array<Spec> = _.flatten(
               datasetConfig: datasetConfigHelper(`${dtype}_segmentation`, undefined),
               alsoTestSelectiveSegmentId: true,
             },
-            // {
-            //   name: `dtype_${dtype}_segmentation_${zoomedOut.postfix}`,
-            //   datasetName: `dtype_test_${dtype}_segmentation`,
-            //   viewOverride: zoomedOut.viewOverride,
-            //   datasetConfig: datasetConfigHelper(`${dtype}_segmentation`, undefined),
-            // },
+            {
+              name: `dtype_${dtype}_segmentation_${zoomedOut.postfix}`,
+              dtype,
+              datasetName: `dtype_test_${dtype}_segmentation`,
+              viewOverride: zoomedOut.viewOverride,
+              datasetConfig: datasetConfigHelper(`${dtype}_segmentation`, undefined),
+            },
           ];
 
     if (onlyTestSegmentation) {
@@ -217,7 +220,8 @@ datasetNames.map(async (datasetName) => {
             );
             console.timeEnd("Comparing screenshot...");
 
-            if (spec.alsoTestSelectiveSegmentId) {
+            let success = true;
+            if (spec.alsoTestSelectiveSegmentId && selectiveSegmentIdByDtype[spec.dtype] != null) {
               const actions = [
                 updateDatasetSettingAction("selectiveSegmentVisibility", true),
                 updateTemporarySettingAction(
@@ -250,10 +254,10 @@ datasetNames.map(async (datasetName) => {
               );
               console.timeEnd("Comparing screenshot...");
 
-              t.true(isPixelEquivalent(changedPixels, width, height));
+              success = isPixelEquivalent(changedPixels, width, height);
             }
 
-            return isPixelEquivalent(changedPixels, width, height);
+            return success && isPixelEquivalent(changedPixels, width, height);
           },
           (condition) => {
             t.true(
@@ -262,6 +266,7 @@ datasetNames.map(async (datasetName) => {
             );
           },
         );
+        page.close();
       }
     } finally {
       release();

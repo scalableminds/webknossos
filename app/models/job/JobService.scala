@@ -39,8 +39,6 @@ class JobService @Inject()(wkConf: WkConf,
     with LazyLogging
     with Formatter {
 
-  private lazy val BigDecimalMathContext = new java.math.MathContext(4)
-
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 

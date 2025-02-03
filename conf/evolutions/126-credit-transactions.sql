@@ -38,7 +38,6 @@ CREATE FUNCTION webknossos.enforce_non_negative_balance() RETURNS TRIGGER AS $$
   BEGIN
     -- Assert that the new balance is non-negative
     ASSERT (SELECT COALESCE(SUM(credit_change), 0) + COALESCE(NEW.credit_change, 0)
-            INTO new_balance
             FROM webknossos.organization_credit_transactions
             WHERE _organization = NEW._organization AND _id != NEW._id) >= 0, 'Transaction would result in a negative credit balance for organization %', NEW._organization;
     -- Allow the transaction

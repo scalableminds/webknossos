@@ -31,19 +31,6 @@ const semaphore = new Semaphore(1);
 const testColor = true;
 const testSegmentation = true;
 
-// function matchWildcard(pattern: string, str: string) {
-//   // Escape special regex characters in the pattern, except for '*'
-//   const escapedPattern = pattern.replace(/[-\/\\^$+?.()|[\]{}]/g, "\\$&");
-//   // Replace '*' with '.*' to match any sequence of characters
-//   const regexPattern = "^" + escapedPattern.replace(/\*/g, ".*") + "$";
-//   // Create a new RegExp object
-//   const regex = new RegExp(regexPattern);
-//   // Test if the string matches the pattern
-//   return regex.test(str);
-// }
-
-// const wildcard = "uint32*segmentation";
-
 const dtypes = [
   // biome-ignore format: don't format array (for easier commenting-out)
   "uint8",
@@ -230,10 +217,6 @@ datasetNames.map(async (datasetName) => {
       await withRetry(
         1,
         async () => {
-          // if (!matchWildcard(wildcard, spec.name)) {
-          //   console.log(`Skipping ${spec.name} as it does not match wildcard=${wildcard}`);
-          //   return true;
-          // }
           console.log(`Starting: ${spec.name}...`);
           const { datasetConfig } = spec;
           const onLoaded = async () => {

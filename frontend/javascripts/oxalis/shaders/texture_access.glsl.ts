@@ -40,32 +40,53 @@ export const getRgbaAtXYIndex: ShaderModule = {
         // here which checks for each case individually. The else-if-branches are constructed via
         // lodash templates.
 
-        <% if (textureLayerInfos[name].dataTextureCount === 1) { %>
+        <%
+          const textureLayerInfo = textureLayerInfos[name];
+          const elementClass = textureLayerInfo.elementClass;
+        %>
+
+        <%= textureLayerInfo.glslPrefix %>vec4 val;
+        float dtype_normalizer = <%=
+          formatNumberAsGLSLFloat((() => {
+            if (textureLayerInfo.isColor && !elementClass.endsWith("int8")) {
+              return 1;
+            } else if (
+              textureLayerInfo.isSigned && !elementClass.endsWith("int32") && !elementClass.endsWith("int64")
+            ) {
+              return 127;
+            } else {
+              return 255;
+            }
+          })())
+        %>;
+
+        <% if (textureLayerInfo.dataTextureCount === 1) { %>
             // Don't use if-else when there is only one data texture anyway
-            <%= textureLayerInfos[name].glslPrefix %>vec4 val = texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0);
+            val = texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0);
 
             // todop: can we generalize this somehow?
             // debug;
-            <% if (textureLayerInfos[name].elementClass.endsWith("int16")) { %>
+            <% if (elementClass.endsWith("int16")) { %>
               return vec4(val.x, 0., val.y, 0.);
             <% } else { %>
-              float dtype_normalizer = <%=
-                formatNumberAsGLSLFloat(
-                  textureLayerInfos[name].isColor && !textureLayerInfos[name].elementClass.endsWith("int8")
-                    ? 1
-                    : (textureLayerInfos[name].isSigned && !textureLayerInfos[name].elementClass.endsWith("int32") && !textureLayerInfos[name].elementClass.endsWith("int64") ? 127 : 255)
-                )
-              %>;
-
               return dtype_normalizer * vec4(val);
             <% }%>
         <% } else { %>
           if (textureIdx == 0.0) {
-            // todop: use same scaling logic as above
-            return vec4(texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba);
-          } <% _.range(1, textureLayerInfos[name].dataTextureCount).forEach(textureIndex => { %>
+            val = (texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0));
+            <% if (elementClass.endsWith("int16")) { %>
+              return vec4(val.x, 0., val.y, 0.);
+            <% } else { %>
+              return dtype_normalizer * vec4(val);
+            <% }%>
+          } <% _.range(1, textureLayerInfo.dataTextureCount).forEach(textureIndex => { %>
           else if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
-            return vec4(texelFetch(<%= name + "_textures" %>[<%= textureIndex %>], ivec2(x, y), 0).rgba);
+            val = (texelFetch(<%= name + "_textures" %>[<%= textureIndex %>], ivec2(x, y), 0));
+            <% if (elementClass.endsWith("int16")) { %>
+              return vec4(val.x, 0., val.y, 0.);
+            <% } else { %>
+              return dtype_normalizer * vec4(val);
+            <% }%>
           }
           <% }) %>
           return vec4(0.5, 0.0, 0.0, 0.0);

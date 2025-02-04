@@ -1,84 +1,65 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.google.inject.Inject
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
+import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
+import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.models.{
-  AdditionalCoordinate,
-  BucketPosition,
-  UnsignedInteger,
-  UnsignedIntegerArray,
-  VoxelSize,
-  WebknossosAdHocMeshRequest
-}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
-import com.scalableminds.webknossos.tracingstore.{
-  TSRemoteDatastoreClient,
-  TSRemoteWebknossosClient,
-  TracingStoreRedisStore
-}
+import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files
 import play.api.libs.Files.TemporaryFileCreator
-import play.api.libs.json.{JsObject, JsValue, Json}
 
 import java.io._
 import java.nio.file.Paths
+import java.util.Base64
 import java.util.zip.Deflater
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 class VolumeTracingService @Inject()(
-    val tracingDataStore: TracingDataStore,
-    val tracingStoreWkRpcClient: TSRemoteWebknossosClient,
-    val adHocMeshServiceHolder: AdHocMeshServiceHolder,
-    implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
-    implicit val temporaryVolumeDataStore: TemporaryVolumeDataStore,
-    implicit val ec: ExecutionContext,
-    val handledGroupIdStore: TracingStoreRedisStore,
-    val uncommittedUpdatesStore: TracingStoreRedisStore,
-    editableMappingService: EditableMappingService,
-    val temporaryTracingIdStore: TracingStoreRedisStore,
+    tracingDataStore: TracingDataStore,
+    adHocMeshServiceHolder: AdHocMeshServiceHolder,
+    temporaryFileCreator: TemporaryFileCreator,
+    volumeSegmentIndexService: VolumeSegmentIndexService,
+    val temporaryTracingService: TemporaryTracingService,
     val remoteDatastoreClient: TSRemoteDatastoreClient,
-    val remoteWebknossosClient: TSRemoteWebknossosClient,
-    val temporaryFileCreator: TemporaryFileCreator,
-    val tracingMigrationService: VolumeTracingMigrationService,
-    volumeSegmentIndexService: VolumeSegmentIndexService
-) extends TracingService[VolumeTracing]
-    with VolumeTracingBucketHelper
-    with VolumeTracingDownsampling
+    val remoteWebknossosClient: TSRemoteWebknossosClient
+)(implicit val ec: ExecutionContext)
+    extends VolumeTracingBucketHelper
     with WKWDataFormatHelper
     with FallbackDataHelper
     with DataFinder
+    with ColorGenerator
+    with BoundingBoxMerger
     with VolumeDataZipHelper
     with ProtoGeometryImplicits
     with FoxImplicits
+    with Formatter
     with LazyLogging {
 
   implicit val volumeDataStore: FossilDBClient = tracingDataStore.volumeData
 
   implicit val tracingCompanion: VolumeTracing.type = VolumeTracing
-
-  implicit val updateActionJsonFormat: VolumeUpdateAction.volumeUpdateActionFormat.type =
-    VolumeUpdateAction.volumeUpdateActionFormat
 
   val tracingType: TracingType = TracingType.volume
 
@@ -93,14 +74,23 @@ class VolumeTracingService @Inject()(
   adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService
 
-  private val fallbackLayerCache: AlfuCache[String, Option[RemoteFallbackLayer]] = AlfuCache(maxCapacity = 100)
+  // (tracingId, fallbackLayerNameOpt, userTokenOpt) → remoteFallbackLayerOpt
+  private val fallbackLayerCache: AlfuCache[(String, Option[String], Option[String]), Option[RemoteFallbackLayer]] =
+    AlfuCache(maxCapacity = 100)
 
-  override def currentVersion(tracingId: String): Fox[Long] =
-    tracingDataStore.volumes.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
+  def saveVolume(tracing: VolumeTracing,
+                 tracingId: Option[String],
+                 version: Long,
+                 toTemporaryStore: Boolean = false): Fox[String] = {
+    val id = tracingId.getOrElse(TracingId.generate)
+    if (toTemporaryStore) {
+      temporaryTracingService.saveVolume(id, tracing).map(_ => id)
+    } else {
+      tracingDataStore.volumes.put(id, version, tracing).map(_ => id)
+    }
+  }
 
-  override def currentVersion(tracing: VolumeTracing): Long = tracing.version
-
-  override protected def updateSegmentIndex(
+  private def updateSegmentIndex(
       segmentIndexBuffer: VolumeSegmentIndexBuffer,
       bucketPosition: BucketPosition,
       bucketBytes: Array[Byte],
@@ -116,75 +106,44 @@ class VolumeTracingService @Inject()(
                                                mappingName,
                                                editableMappingTracingId) ?~> "volumeSegmentIndex.update.failed"
 
-  def handleUpdateGroup(tracingId: String,
-                        updateGroup: UpdateActionGroup[VolumeTracing],
-                        previousVersion: Long,
-                        userToken: Option[String]): Fox[Unit] =
+  def applyBucketMutatingActions(tracingId: String,
+                                 tracing: VolumeTracing,
+                                 updateActions: List[BucketMutatingVolumeUpdateAction],
+                                 newVersion: Long)(implicit tc: TokenContext): Fox[Unit] =
     for {
       // warning, may be called multiple times with the same version number (due to transaction management).
       // frontend ensures that each bucket is only updated once per transaction
-      fallbackLayer <- getFallbackLayer(tracingId)
-      tracing <- find(tracingId) ?~> "tracing.notFound"
-      segmentIndexBuffer <- Fox.successful(
-        new VolumeSegmentIndexBuffer(
-          tracingId,
-          volumeSegmentIndexClient,
-          updateGroup.version,
-          remoteDatastoreClient,
-          fallbackLayer,
-          AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
-          userToken
-        ))
-      updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(find(tracingId)) { (tracingFox, action) =>
-        tracingFox.futureBox.flatMap {
-          case Full(tracing) =>
-            action match {
-              case a: UpdateBucketVolumeAction =>
-                if (tracing.getHasEditableMapping) {
-                  Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
-                } else
-                  updateBucket(tracingId, tracing, a, segmentIndexBuffer, updateGroup.version) ?~> "Failed to save volume data."
-              case a: UpdateTracingVolumeAction =>
-                Fox.successful(
-                  tracing.copy(
-                    activeSegmentId = Some(a.activeSegmentId),
-                    editPosition = a.editPosition,
-                    editRotation = a.editRotation,
-                    largestSegmentId = a.largestSegmentId,
-                    zoomLevel = a.zoomLevel,
-                    editPositionAdditionalCoordinates =
-                      AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates)
-                  ))
-              case a: RevertToVersionVolumeAction =>
-                revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, tracing, userToken)
-              case a: DeleteSegmentDataVolumeAction =>
-                if (!tracing.getHasSegmentIndex) {
-                  Fox.failure("Cannot delete segment data for annotations without segment index.")
-                } else
-                  deleteSegmentData(tracingId, tracing, a, segmentIndexBuffer, updateGroup.version, userToken) ?~> "Failed to delete segment data."
-              case _: UpdateTdCamera        => Fox.successful(tracing)
-              case a: ApplyableVolumeAction => Fox.successful(a.applyOn(tracing))
-              case _                        => Fox.failure("Unknown action.")
-            }
-          case Empty =>
-            Fox.empty
-          case f: Failure =>
-            f.toFox
-        }
+      fallbackLayerOpt <- getFallbackLayer(tracingId, tracing)
+      segmentIndexBuffer = new VolumeSegmentIndexBuffer(
+        tracingId,
+        volumeSegmentIndexClient,
+        newVersion,
+        remoteDatastoreClient,
+        fallbackLayerOpt,
+        AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
+        tc
+      )
+      _ <- Fox.serialCombined(updateActions) {
+        case a: UpdateBucketVolumeAction =>
+          if (tracing.getHasEditableMapping) {
+            Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
+          } else
+            updateBucket(tracingId, tracing, a, segmentIndexBuffer, newVersion) ?~> "Failed to save volume data."
+        case a: DeleteSegmentDataVolumeAction =>
+          if (!tracing.getHasSegmentIndex) {
+            Fox.failure("Cannot delete segment data for annotations without segment index.")
+          } else
+            deleteSegmentData(tracingId, tracing, a, segmentIndexBuffer, newVersion) ?~> "Failed to delete segment data."
+        case _ => Fox.failure("Unknown bucket-mutating action.")
       }
       _ <- segmentIndexBuffer.flush()
-      _ <- save(updatedTracing.copy(version = updateGroup.version), Some(tracingId), updateGroup.version)
-      _ <- tracingDataStore.volumeUpdates.put(
-        tracingId,
-        updateGroup.version,
-        updateGroup.actions.map(_.addTimestamp(updateGroup.timestamp)).map(_.transformToCompact))
-    } yield Fox.successful(())
+    } yield ()
 
   private def updateBucket(tracingId: String,
                            volumeTracing: VolumeTracing,
                            action: UpdateBucketVolumeAction,
                            segmentIndexBuffer: VolumeSegmentIndexBuffer,
-                           updateGroupVersion: Long): Fox[VolumeTracing] =
+                           updateGroupVersion: Long)(implicit tc: TokenContext): Fox[VolumeTracing] =
     for {
       _ <- assertMagIsValid(volumeTracing, action.mag) ?~> s"Received a mag-${action.mag.toMagLiteral(allowScalar = true)} bucket, which is invalid for this annotation."
       bucketPosition = BucketPosition(action.position.x,
@@ -194,15 +153,16 @@ class VolumeTracingService @Inject()(
                                       action.additionalCoordinates)
       _ <- bool2Fox(!bucketPosition.hasNegativeComponent) ?~> s"Received a bucket at negative position ($bucketPosition), must be positive"
       dataLayer = volumeTracingLayer(tracingId, volumeTracing)
-      _ <- saveBucket(dataLayer, bucketPosition, action.data, updateGroupVersion) ?~> "failed to save bucket"
-      mappingName <- baseMappingName(volumeTracing)
+      actionBucketData <- action.base64Data.map(Base64.getDecoder.decode).toFox
+      _ <- saveBucket(dataLayer, bucketPosition, actionBucketData, updateGroupVersion) ?~> "failed to save bucket"
+      mappingName <- getMappingNameUnlessEditable(volumeTracing)
       _ <- Fox.runIfOptionTrue(volumeTracing.hasSegmentIndex) {
         for {
           previousBucketBytes <- loadBucket(dataLayer, bucketPosition, Some(updateGroupVersion - 1L)).futureBox
           _ <- updateSegmentIndex(
             segmentIndexBuffer,
             bucketPosition,
-            action.data,
+            actionBucketData,
             previousBucketBytes,
             volumeTracing.elementClass,
             mappingName,
@@ -212,35 +172,34 @@ class VolumeTracingService @Inject()(
       }
     } yield volumeTracing.copy(volumeBucketDataHasChanged = Some(true))
 
-  override def editableMappingTracingId(tracing: VolumeTracing, tracingId: String): Option[String] =
+  def editableMappingTracingId(tracing: VolumeTracing, tracingId: String): Option[String] =
     if (tracing.getHasEditableMapping) Some(tracingId) else None
 
-  override def baseMappingName(tracing: VolumeTracing): Fox[Option[String]] =
+  private def getMappingNameUnlessEditable(tracing: VolumeTracing): Fox[Option[String]] =
     if (tracing.getHasEditableMapping)
-      tracing.mappingName.map(editableMappingService.getBaseMappingName).getOrElse(Fox.successful(None))
+      Fox.failure("getMappingNameUnlessEditable called on volumeTracing with editableMapping!")
     else Fox.successful(tracing.mappingName)
 
   private def deleteSegmentData(tracingId: String,
                                 volumeTracing: VolumeTracing,
                                 a: DeleteSegmentDataVolumeAction,
                                 segmentIndexBuffer: VolumeSegmentIndexBuffer,
-                                version: Long,
-                                userToken: Option[String]): Fox[VolumeTracing] =
+                                version: Long)(implicit tc: TokenContext): Fox[VolumeTracing] =
     for {
       _ <- Fox.successful(())
       dataLayer = volumeTracingLayer(tracingId, volumeTracing)
+      fallbackLayer <- getFallbackLayer(tracingId, volumeTracing)
       possibleAdditionalCoordinates = AdditionalAxis.coordinateSpace(dataLayer.additionalAxes).map(Some(_))
       additionalCoordinateList = if (possibleAdditionalCoordinates.isEmpty) {
         List(None)
       } else {
         possibleAdditionalCoordinates.toList
       }
-      mappingName <- baseMappingName(volumeTracing)
+      mappingName <- getMappingNameUnlessEditable(volumeTracing)
       _ <- Fox.serialCombined(volumeTracing.mags.toList)(magProto =>
         Fox.serialCombined(additionalCoordinateList)(additionalCoordinates => {
           val mag = vec3IntFromProto(magProto)
           for {
-            fallbackLayer <- getFallbackLayer(tracingId)
             bucketPositionsRaw <- volumeSegmentIndexService.getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
               fallbackLayer,
               tracingId,
@@ -250,8 +209,7 @@ class VolumeTracingService @Inject()(
               mappingName,
               editableMappingTracingId(volumeTracing, tracingId),
               additionalCoordinates,
-              dataLayer.additionalAxes,
-              userToken
+              dataLayer.additionalAxes
             )
             bucketPositions = bucketPositionsRaw.values
               .map(vec3IntFromProto)
@@ -290,34 +248,35 @@ class VolumeTracingService @Inject()(
       bool2Fox(mag.isIsotropic)
     }
 
-  private def revertToVolumeVersion(tracingId: String,
-                                    sourceVersion: Long,
-                                    newVersion: Long,
-                                    tracing: VolumeTracing,
-                                    userToken: Option[String]): Fox[VolumeTracing] = {
+  def revertVolumeData(tracingId: String,
+                       sourceVersion: Long,
+                       sourceTracing: VolumeTracing,
+                       newVersion: Long,
+                       tracingBeforeRevert: VolumeTracing)(implicit tc: TokenContext): Fox[Unit] = {
+    val before = Instant.now
 
-    val dataLayer = volumeTracingLayer(tracingId, tracing)
-    val bucketStream = dataLayer.volumeBucketProvider.bucketStreamWithVersion()
+    val dataLayer = volumeTracingLayer(tracingId, tracingBeforeRevert)
+    val bucketStreamBeforeRevert =
+      dataLayer.volumeBucketProvider.bucketStreamWithVersion(version = Some(tracingBeforeRevert.version))
 
     for {
-      fallbackLayer <- getFallbackLayer(tracingId)
+      fallbackLayer <- getFallbackLayer(tracingId, tracingBeforeRevert)
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
                                                         volumeSegmentIndexClient,
                                                         newVersion,
                                                         remoteDatastoreClient,
                                                         fallbackLayer,
                                                         dataLayer.additionalAxes,
-                                                        userToken)
-      sourceTracing <- find(tracingId, Some(sourceVersion))
-      mappingName <- baseMappingName(sourceTracing)
-      _ <- Fox.serialCombined(bucketStream) {
+                                                        tc)
+      mappingName <- getMappingNameUnlessEditable(sourceTracing)
+      _ <- Fox.serialCombined(bucketStreamBeforeRevert) {
         case (bucketPosition, dataBeforeRevert, version) =>
           if (version > sourceVersion) {
             loadBucket(dataLayer, bucketPosition, Some(sourceVersion)).futureBox.map {
               case Full(dataAfterRevert) =>
                 for {
                   _ <- saveBucket(dataLayer, bucketPosition, dataAfterRevert, newVersion)
-                  _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
+                  _ <- Fox.runIfOptionTrue(tracingBeforeRevert.hasSegmentIndex)(
                     updateSegmentIndex(
                       segmentIndexBuffer,
                       bucketPosition,
@@ -330,9 +289,9 @@ class VolumeTracingService @Inject()(
                 } yield ()
               case Empty =>
                 for {
-                  dataAfterRevert <- Fox.successful(Array[Byte](0))
+                  dataAfterRevert <- Fox.successful(revertedValue)
                   _ <- saveBucket(dataLayer, bucketPosition, dataAfterRevert, newVersion)
-                  _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
+                  _ <- Fox.runIfOptionTrue(tracingBeforeRevert.hasSegmentIndex)(
                     updateSegmentIndex(
                       segmentIndexBuffer,
                       bucketPosition,
@@ -348,13 +307,15 @@ class VolumeTracingService @Inject()(
           } else Fox.successful(())
       }
       _ <- segmentIndexBuffer.flush()
-    } yield sourceTracing
+      _ = Instant.logSince(
+        before,
+        s"Reverting volume data of $tracingId from v${tracingBeforeRevert.version} to v$sourceVersion, creating v$newVersion")
+    } yield ()
   }
 
-  def initializeWithDataMultiple(tracingId: String,
-                                 tracing: VolumeTracing,
-                                 initialData: File,
-                                 userToken: Option[String])(implicit mp: MessagesProvider): Fox[Set[Vec3Int]] =
+  def initializeWithDataMultiple(tracingId: String, tracing: VolumeTracing, initialData: File)(
+      implicit mp: MessagesProvider,
+      tc: TokenContext): Fox[Set[Vec3Int]] =
     if (tracing.version != 0L)
       Failure("Tracing has already been edited.")
     else {
@@ -367,7 +328,7 @@ class VolumeTracingService @Inject()(
             _ = if (magSet.nonEmpty) magSets.add(magSet)
           } yield ()
         }
-        mappingName <- baseMappingName(tracing)
+        mappingName <- getMappingNameUnlessEditable(tracing)
         mags <-
         // if none of the tracings contained any volume data do not save buckets, use full mag list, as already initialized on wk-side
         if (magSets.isEmpty)
@@ -391,7 +352,7 @@ class VolumeTracingService @Inject()(
                 mergedVolume.largestSegmentId.toLong,
                 tracing.elementClass)
               destinationDataLayer = volumeTracingLayer(tracingId, tracing)
-              fallbackLayer <- getFallbackLayer(tracingId)
+              fallbackLayer <- getFallbackLayer(tracingId, tracing)
               segmentIndexBuffer = new VolumeSegmentIndexBuffer(
                 tracingId,
                 volumeSegmentIndexClient,
@@ -399,7 +360,7 @@ class VolumeTracingService @Inject()(
                 remoteDatastoreClient,
                 fallbackLayer,
                 AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
-                userToken
+                tc
               )
               _ <- mergedVolume.withMergedBuckets { (bucketPosition, bytes) =>
                 for {
@@ -424,16 +385,15 @@ class VolumeTracingService @Inject()(
   def initializeWithData(tracingId: String,
                          tracing: VolumeTracing,
                          initialData: File,
-                         magRestrictions: MagRestrictions,
-                         userToken: Option[String]): Fox[Set[Vec3Int]] =
+                         magRestrictions: MagRestrictions)(implicit tc: TokenContext): Fox[Set[Vec3Int]] =
     if (tracing.version != 0L) {
       Failure("Tracing has already been edited.")
     } else {
       val dataLayer = volumeTracingLayer(tracingId, tracing)
       val savedMags = new mutable.HashSet[Vec3Int]()
       for {
-        fallbackLayer <- getFallbackLayer(tracingId)
-        mappingName <- baseMappingName(tracing)
+        fallbackLayer <- getFallbackLayer(tracingId, tracing)
+        mappingName <- getMappingNameUnlessEditable(tracing)
         segmentIndexBuffer = new VolumeSegmentIndexBuffer(
           tracingId,
           volumeSegmentIndexClient,
@@ -441,7 +401,7 @@ class VolumeTracingService @Inject()(
           remoteDatastoreClient,
           fallbackLayer,
           AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
-          userToken
+          tc
         )
         _ <- withBucketsFromZip(initialData) { (bucketPosition, bytes) =>
           if (magRestrictions.isForbidden(bucketPosition.mag)) {
@@ -471,10 +431,11 @@ class VolumeTracingService @Inject()(
       }
     }
 
-  def allDataZip(tracingId: String,
-                 tracing: VolumeTracing,
-                 volumeDataZipFormat: VolumeDataZipFormat,
-                 voxelSize: Option[VoxelSize])(implicit ec: ExecutionContext): Fox[Files.TemporaryFile] = {
+  def allDataZip(
+      tracingId: String,
+      tracing: VolumeTracing,
+      volumeDataZipFormat: VolumeDataZipFormat,
+      voxelSize: Option[VoxelSize])(implicit ec: ExecutionContext, tc: TokenContext): Fox[Files.TemporaryFile] = {
     val zipped = temporaryFileCreator.create(tracingId, ".zip")
     val os = new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString)))
     allDataToOutputStream(tracingId, tracing, volumeDataZipFormat, voxelSize, os).map(_ => zipped)
@@ -484,7 +445,7 @@ class VolumeTracingService @Inject()(
                                     tracing: VolumeTracing,
                                     volumeDataZipFormmat: VolumeDataZipFormat,
                                     voxelSize: Option[VoxelSize],
-                                    os: OutputStream)(implicit ec: ExecutionContext): Fox[Unit] = {
+                                    os: OutputStream)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val buckets: Iterator[NamedStream] = volumeDataZipFormmat match {
       case VolumeDataZipFormat.wkw =>
@@ -503,102 +464,103 @@ class VolumeTracingService @Inject()(
 
     zipResult.onComplete {
       case b: scala.util.Success[Box[Unit]] =>
-        logger.info(s"Zipping volume data for $tracingId took ${Instant.since(before)} ms. Result: ${b.get}")
+        logger.info(
+          s"Zipping volume data for $tracingId took ${formatDuration(Instant.since(before))}. Result: ${b.get}")
       case _ => ()
     }
     zipResult
   }
 
-  def isTemporaryTracing(tracingId: String): Fox[Boolean] =
-    temporaryTracingIdStore.contains(temporaryIdKey(tracingId))
-
   def data(tracingId: String,
            tracing: VolumeTracing,
            dataRequests: DataRequestCollection,
-           includeFallbackDataIfAvailable: Boolean = false,
-           userToken: Option[String] = None): Fox[(Array[Byte], List[Int])] =
+           includeFallbackDataIfAvailable: Boolean = false)(implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] =
     for {
-      isTemporaryTracing <- isTemporaryTracing(tracingId)
-      dataLayer = volumeTracingLayer(tracingId, tracing, isTemporaryTracing, includeFallbackDataIfAvailable, userToken)
+      isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
+      dataLayer = volumeTracingLayer(tracingId, tracing, isTemporaryTracing, includeFallbackDataIfAvailable)
       requests = dataRequests.map(r =>
         DataServiceDataRequest(null, dataLayer, r.cuboid(dataLayer), r.settings.copy(appliedAgglomerate = None)))
       data <- binaryDataService.handleDataRequests(requests)
     } yield data
 
-  def duplicate(tracingId: String,
-                sourceTracing: VolumeTracing,
-                fromTask: Boolean,
-                datasetBoundingBox: Option[BoundingBox],
-                magRestrictions: MagRestrictions,
-                editPosition: Option[Vec3Int],
-                editRotation: Option[Vec3Double],
-                boundingBox: Option[BoundingBox],
-                mappingName: Option[String],
-                userToken: Option[String]): Fox[(String, VolumeTracing)] = {
-    val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, fromTask, datasetBoundingBox)
-    val tracingWithMagRestrictions = restrictMagList(tracingWithBB, magRestrictions)
+  def adaptVolumeForDuplicate(sourceTracingId: String,
+                              newTracingId: String,
+                              sourceTracing: VolumeTracing,
+                              isFromTask: Boolean,
+                              boundingBox: Option[BoundingBox],
+                              datasetBoundingBox: Option[BoundingBox],
+                              magRestrictions: MagRestrictions,
+                              editPosition: Option[Vec3Int],
+                              editRotation: Option[Vec3Double],
+                              newVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[VolumeTracing] = {
+    val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, isFromTask, datasetBoundingBox)
+    val tracingWithMagRestrictions = VolumeTracingMags.restrictMagList(tracingWithBB, magRestrictions)
     for {
-      fallbackLayer <- getFallbackLayer(tracingId)
-      hasSegmentIndex <- VolumeSegmentIndexService.canHaveSegmentIndex(remoteDatastoreClient, fallbackLayer, userToken)
+      fallbackLayer <- getFallbackLayer(sourceTracingId, tracingWithMagRestrictions)
+      hasSegmentIndex <- VolumeSegmentIndexService.canHaveSegmentIndex(remoteDatastoreClient, fallbackLayer)
       newTracing = tracingWithMagRestrictions.copy(
         createdTimestamp = System.currentTimeMillis(),
         editPosition = editPosition.map(vec3IntToProto).getOrElse(tracingWithMagRestrictions.editPosition),
         editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracingWithMagRestrictions.editRotation),
         boundingBox = boundingBoxOptToProto(boundingBox).getOrElse(tracingWithMagRestrictions.boundingBox),
-        mappingName = mappingName.orElse(tracingWithMagRestrictions.mappingName),
-        version = 0,
+        mappingName =
+          if (tracingWithMagRestrictions.getHasEditableMapping) Some(newTracingId)
+          else tracingWithMagRestrictions.mappingName,
+        version = newVersion,
         // Adding segment index on duplication if the volume tracing allows it. This will be used in duplicateData
         hasSegmentIndex = Some(hasSegmentIndex)
       )
       _ <- bool2Fox(newTracing.mags.nonEmpty) ?~> "magRestrictions.tooTight"
-      newId <- save(newTracing, None, newTracing.version)
-      _ <- duplicateData(tracingId, sourceTracing, newId, newTracing, userToken)
-    } yield (newId, newTracing)
+    } yield newTracing
   }
 
-  @SuppressWarnings(Array("OptionGet")) //We suppress this warning because we check the option beforehand
   private def addBoundingBoxFromTaskIfRequired(tracing: VolumeTracing,
-                                               fromTask: Boolean,
-                                               datasetBoundingBox: Option[BoundingBox]): VolumeTracing =
-    if (fromTask && datasetBoundingBox.isDefined) {
-      val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
-      tracing
-        .addUserBoundingBoxes(
-          NamedBoundingBoxProto(newId,
-                                Some("task bounding box"),
-                                Some(true),
-                                Some(getRandomColor),
-                                tracing.boundingBox))
-        .withBoundingBox(datasetBoundingBox.get)
-    } else tracing
+                                               isFromTask: Boolean,
+                                               datasetBoundingBoxOpt: Option[BoundingBox]): VolumeTracing =
+    datasetBoundingBoxOpt match {
+      case Some(datasetBoundingBox) if isFromTask =>
+        val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
+        tracing
+          .addUserBoundingBoxes(
+            NamedBoundingBoxProto(newId,
+                                  Some("task bounding box"),
+                                  Some(true),
+                                  Some(getRandomColor),
+                                  tracing.boundingBox))
+          .withBoundingBox(datasetBoundingBox)
+      case _ => tracing
+    }
 
-  private def duplicateData(sourceId: String,
-                            sourceTracing: VolumeTracing,
-                            destinationId: String,
-                            destinationTracing: VolumeTracing,
-                            userToken: Option[String]): Fox[Unit] =
+  def duplicateVolumeData(sourceTracingId: String,
+                          sourceTracing: VolumeTracing,
+                          newTracingId: String,
+                          newTracing: VolumeTracing)(implicit tc: TokenContext): Fox[Unit] = {
+    var bucketCount = 0
+    val before = Instant.now
     for {
-      isTemporaryTracing <- isTemporaryTracing(sourceId)
-      sourceDataLayer = volumeTracingLayer(sourceId, sourceTracing, isTemporaryTracing)
-      buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream()
-      destinationDataLayer = volumeTracingLayer(destinationId, destinationTracing)
-      fallbackLayer <- getFallbackLayer(sourceId)
+      isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(sourceTracingId)
+      sourceDataLayer = volumeTracingLayer(sourceTracingId, sourceTracing, isTemporaryTracing)
+      buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream(
+        Some(sourceTracing.version))
+      destinationDataLayer = volumeTracingLayer(newTracingId, newTracing)
+      fallbackLayer <- getFallbackLayer(sourceTracingId, sourceTracing)
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(
-        destinationId,
+        newTracingId,
         volumeSegmentIndexClient,
-        destinationTracing.version,
+        newTracing.version,
         remoteDatastoreClient,
         fallbackLayer,
         AdditionalAxis.fromProtosAsOpt(sourceTracing.additionalAxes),
-        userToken
+        tc
       )
-      mappingName <- baseMappingName(sourceTracing)
+      mappingName <- getMappingNameUnlessEditable(sourceTracing)
       _ <- Fox.serialCombined(buckets) {
         case (bucketPosition, bucketData) =>
-          if (destinationTracing.mags.contains(vec3IntToProto(bucketPosition.mag))) {
+          if (newTracing.mags.contains(vec3IntToProto(bucketPosition.mag))) {
             for {
-              _ <- saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
-              _ <- Fox.runIfOptionTrue(destinationTracing.hasSegmentIndex)(
+              _ <- saveBucket(destinationDataLayer, bucketPosition, bucketData, newTracing.version)
+              _ = bucketCount += 1
+              _ <- Fox.runIfOptionTrue(newTracing.hasSegmentIndex)(
                 updateSegmentIndex(
                   segmentIndexBuffer,
                   bucketPosition,
@@ -606,90 +568,59 @@ class VolumeTracingService @Inject()(
                   Empty,
                   sourceTracing.elementClass,
                   mappingName,
-                  editableMappingTracingId(sourceTracing, sourceId)
+                  editableMappingTracingId(sourceTracing, sourceTracingId)
                 ))
             } yield ()
           } else Fox.successful(())
       }
+      _ = Instant.logSince(
+        before,
+        s"Duplicating $bucketCount volume buckets from $sourceTracingId v${sourceTracing.version} to $newTracingId v${newTracing.version}.")
       _ <- segmentIndexBuffer.flush()
     } yield ()
+  }
 
-  private def volumeTracingLayer(tracingId: String,
-                                 tracing: VolumeTracing,
-                                 isTemporaryTracing: Boolean = false,
-                                 includeFallbackDataIfAvailable: Boolean = false,
-                                 userToken: Option[String] = None): VolumeTracingLayer =
+  private def volumeTracingLayer(
+      tracingId: String,
+      tracing: VolumeTracing,
+      isTemporaryTracing: Boolean = false,
+      includeFallbackDataIfAvailable: Boolean = false)(implicit tc: TokenContext): VolumeTracingLayer =
     VolumeTracingLayer(
       name = tracingId,
       isTemporaryTracing = isTemporaryTracing,
       volumeTracingService = this,
+      temporaryTracingService = this.temporaryTracingService,
+      volumeDataStore = volumeDataStore,
       includeFallbackDataIfAvailable = includeFallbackDataIfAvailable,
       tracing = tracing,
-      userToken = userToken,
+      tokenContext = tc,
       additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes)
     )
 
-  def updateActionLog(tracingId: String,
-                      newestVersion: Option[Long] = None,
-                      oldestVersion: Option[Long] = None): Fox[JsValue] = {
-    def versionedTupleToJson(tuple: (Long, List[CompactVolumeUpdateAction])): JsObject =
-      Json.obj(
-        "version" -> tuple._1,
-        "value" -> Json.toJson(tuple._2)
-      )
-
-    for {
-      volumeTracings <- tracingDataStore.volumeUpdates.getMultipleVersionsAsVersionValueTuple(
-        tracingId,
-        newestVersion,
-        oldestVersion)(fromJsonBytes[List[CompactVolumeUpdateAction]])
-      updateActionGroupsJs = volumeTracings.map(versionedTupleToJson)
-    } yield Json.toJson(updateActionGroupsJs)
-  }
-
-  def updateMagList(tracingId: String,
-                    tracing: VolumeTracing,
-                    mags: Set[Vec3Int],
-                    toCache: Boolean = false): Fox[String] =
+  def updateMagList(tracingId: String, tracing: VolumeTracing, mags: Set[Vec3Int]): Fox[String] =
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
-      _ <- bool2Fox(mags.nonEmpty) ?~> "Mag restrictions result in zero mags"
-      id <- save(tracing.copy(mags = mags.toList.sortBy(_.maxDim).map(vec3IntToProto)),
-                 Some(tracingId),
-                 tracing.version,
-                 toCache)
+      _ <- bool2Fox(mags.nonEmpty) ?~> "Initializing without any mags. No data or mag restrictions too tight?"
+      id <- saveVolume(tracing.copy(mags = mags.toList.sortBy(_.maxDim).map(vec3IntToProto)),
+                       Some(tracingId),
+                       tracing.version)
     } yield id
-
-  def downsample(tracingId: String,
-                 oldTracingId: String,
-                 tracing: VolumeTracing,
-                 userToken: Option[String]): Fox[Unit] =
-    for {
-      resultingMags <- downsampleWithLayer(tracingId,
-                                           oldTracingId,
-                                           tracing,
-                                           volumeTracingLayer(tracingId, tracing),
-                                           this,
-                                           userToken)
-      _ <- updateMagList(tracingId, tracing, resultingMags.toSet)
-    } yield ()
 
   def volumeBucketsAreEmpty(tracingId: String): Boolean =
     volumeDataStore.getMultipleKeys(None, Some(tracingId), limit = Some(1))(toBox).isEmpty
 
-  def createAdHocMesh(tracingId: String,
-                      request: WebknossosAdHocMeshRequest,
-                      userToken: Option[String]): Fox[(Array[Float], List[Int])] =
+  def createAdHocMesh(tracingId: String, tracing: VolumeTracing, request: WebknossosAdHocMeshRequest)(
+      implicit tc: TokenContext): Fox[(Array[Float], List[Int])] =
     for {
-      tracing <- find(tracingId) ?~> "tracing.notFound"
-      segmentationLayer = volumeTracingLayer(tracingId,
-                                             tracing,
-                                             includeFallbackDataIfAvailable = true,
-                                             userToken = userToken)
+      isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
+      volumeLayer = volumeTracingLayer(tracingId,
+                                       tracing,
+                                       includeFallbackDataIfAvailable = true,
+                                       isTemporaryTracing = isTemporaryTracing)
       adHocMeshRequest = AdHocMeshRequest(
         None,
-        segmentationLayer,
-        request.cuboid(segmentationLayer),
+        volumeLayer,
+        request.cuboid(volumeLayer),
         request.segmentId,
         request.voxelSizeFactorInUnit,
         None,
@@ -700,10 +631,11 @@ class VolumeTracingService @Inject()(
       result <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
     } yield result
 
-  def findData(tracingId: String): Fox[Option[Vec3Int]] =
+  def findData(tracingId: String, tracing: VolumeTracing)(implicit tc: TokenContext): Fox[Option[Vec3Int]] =
     for {
-      tracing <- find(tracingId) ?~> "tracing.notFound"
-      volumeLayer = volumeTracingLayer(tracingId, tracing)
+      _ <- Fox.successful(())
+      isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
+      volumeLayer = volumeTracingLayer(tracingId, tracing, isTemporaryTracing = isTemporaryTracing)
       bucketStream = volumeLayer.bucketProvider.bucketStream(Some(tracing.version))
       bucketPosOpt = if (bucketStream.hasNext) {
         val bucket = bucketStream.next()
@@ -716,7 +648,8 @@ class VolumeTracingService @Inject()(
 
   def merge(tracings: Seq[VolumeTracing],
             mergedVolumeStats: MergedVolumeStats,
-            newEditableMappingIdOpt: Option[String]): Box[VolumeTracing] = {
+            newEditableMappingIdOpt: Option[String],
+            newVersion: Long): Box[VolumeTracing] = {
     def mergeTwoWithStats(tracingAWithIndex: Box[(VolumeTracing, Int)],
                           tracingBWithIndex: Box[(VolumeTracing, Int)]): Box[(VolumeTracing, Int)] =
       for {
@@ -732,7 +665,7 @@ class VolumeTracingService @Inject()(
     } yield
       tracing.copy(
         createdTimestamp = System.currentTimeMillis(),
-        version = 0L,
+        version = newVersion,
         mappingName = newEditableMappingIdOpt,
         hasSegmentIndex = Some(mergedVolumeStats.createdSegmentIndex)
       )
@@ -786,25 +719,26 @@ class VolumeTracingService @Inject()(
       case (None, None)       => None
     }
 
-  private def bucketStreamFromSelector(selector: TracingSelector,
-                                       tracing: VolumeTracing): Iterator[(BucketPosition, Array[Byte])] = {
-    val dataLayer = volumeTracingLayer(selector.tracingId, tracing)
+  private def bucketStreamFor(tracingId: String, tracing: VolumeTracing)(
+      implicit tc: TokenContext): Iterator[(BucketPosition, Array[Byte])] = {
+    val dataLayer = volumeTracingLayer(tracingId, tracing)
     dataLayer.bucketProvider.bucketStream(Some(tracing.version))
   }
 
-  def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
-                      tracings: Seq[VolumeTracing],
-                      newId: String,
-                      newVersion: Long,
-                      toCache: Boolean,
-                      userToken: Option[String])(implicit mp: MessagesProvider): Fox[MergedVolumeStats] = {
+  def mergeVolumeData(
+      tracingIds: Seq[String],
+      tracings: Seq[VolumeTracing],
+      newId: String,
+      newVersion: Long,
+      toTemporaryStore: Boolean)(implicit mp: MessagesProvider, tc: TokenContext): Fox[MergedVolumeStats] = {
+    val before = Instant.now
     val elementClass = tracings.headOption.map(_.elementClass).getOrElse(elementClassToProto(ElementClass.uint8))
 
     val magSets = new mutable.HashSet[Set[Vec3Int]]()
-    tracingSelectors.zip(tracings).foreach {
-      case (selector, tracing) =>
+    tracingIds.zip(tracings).foreach {
+      case (tracingId, tracing) =>
         val magSet = new mutable.HashSet[Vec3Int]()
-        bucketStreamFromSelector(selector, tracing).foreach {
+        bucketStreamFor(tracingId, tracing).foreach {
           case (bucketPosition, _) =>
             magSet.add(bucketPosition.mag)
         }
@@ -814,9 +748,6 @@ class VolumeTracingService @Inject()(
     }
 
     val shouldCreateSegmentIndex = volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(tracings)
-
-    logger.info(
-      s"Merging ${tracings.length} volume tracings into new $newId. CreateSegmentIndex = $shouldCreateSegmentIndex")
 
     // If none of the tracings contained any volume data. Do not save buckets, do not touch mag list
     if (magSets.isEmpty)
@@ -830,15 +761,15 @@ class VolumeTracingService @Inject()(
 
       val mergedVolume = new MergedVolume(elementClass)
 
-      tracingSelectors.zip(tracings).foreach {
-        case (selector, tracing) =>
-          val bucketStream = bucketStreamFromSelector(selector, tracing)
+      tracingIds.zip(tracings).foreach {
+        case (tracingId, tracing) =>
+          val bucketStream = bucketStreamFor(tracingId, tracing)
           mergedVolume.addLabelSetFromBucketStream(bucketStream, magsIntersection)
       }
 
-      tracingSelectors.zip(tracings).zipWithIndex.foreach {
-        case ((selector, tracing), sourceVolumeIndex) =>
-          val bucketStream = bucketStreamFromSelector(selector, tracing)
+      tracingIds.zip(tracings).zipWithIndex.foreach {
+        case ((tracingIds, tracing), sourceVolumeIndex) =>
+          val bucketStream = bucketStreamFor(tracingIds, tracing)
           mergedVolume.addFromBucketStream(sourceVolumeIndex, bucketStream, Some(magsIntersection))
       }
       for {
@@ -848,17 +779,25 @@ class VolumeTracingService @Inject()(
           elementClass)
         mergedAdditionalAxes <- Fox.box2Fox(AdditionalAxis.mergeAndAssertSameAdditionalAxes(tracings.map(t =>
           AdditionalAxis.fromProtosAsOpt(t.additionalAxes))))
-        fallbackLayer <- getFallbackLayer(tracingSelectors.head.tracingId)
+        firstTracingId <- tracingIds.headOption ?~> "merge.noTracings"
+        firstTracing <- tracings.headOption ?~> "merge.noTracings"
+        fallbackLayer <- getFallbackLayer(firstTracingId, firstTracing)
         segmentIndexBuffer = new VolumeSegmentIndexBuffer(newId,
                                                           volumeSegmentIndexClient,
                                                           newVersion,
                                                           remoteDatastoreClient,
                                                           fallbackLayer,
                                                           mergedAdditionalAxes,
-                                                          userToken)
+                                                          tc)
         _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
           for {
-            _ <- saveBucket(newId, elementClass, bucketPosition, bucketBytes, newVersion, toCache, mergedAdditionalAxes)
+            _ <- saveBucket(newId,
+                            elementClass,
+                            bucketPosition,
+                            bucketBytes,
+                            newVersion,
+                            toTemporaryStore,
+                            mergedAdditionalAxes)
             _ <- Fox.runIf(shouldCreateSegmentIndex)(
               updateSegmentIndex(segmentIndexBuffer,
                                  bucketPosition,
@@ -870,78 +809,22 @@ class VolumeTracingService @Inject()(
           } yield ()
         }
         _ <- segmentIndexBuffer.flush()
+        _ = Instant.logSince(
+          before,
+          s"Merging buckets from ${tracings.length} volume tracings into new $newId, with createSegmentIndex = $shouldCreateSegmentIndex")
       } yield mergedVolume.stats(shouldCreateSegmentIndex)
     }
   }
 
-  def addSegmentIndex(tracingId: String,
-                      tracing: VolumeTracing,
-                      currentVersion: Long,
-                      userToken: Option[String],
-                      dryRun: Boolean): Fox[Option[Int]] = {
-    var processedBucketCount = 0
-    for {
-      isTemporaryTracing <- isTemporaryTracing(tracingId)
-      sourceDataLayer = volumeTracingLayer(tracingId, tracing, isTemporaryTracing)
-      buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream()
-      fallbackLayer <- getFallbackLayer(tracingId)
-      mappingName <- baseMappingName(tracing)
-      segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
-                                                        volumeSegmentIndexClient,
-                                                        currentVersion + 1L,
-                                                        remoteDatastoreClient,
-                                                        fallbackLayer,
-                                                        sourceDataLayer.additionalAxes,
-                                                        userToken)
-      _ <- Fox.serialCombined(buckets) {
-        case (bucketPosition, bucketData) =>
-          processedBucketCount += 1
-          updateSegmentIndex(segmentIndexBuffer,
-                             bucketPosition,
-                             bucketData,
-                             Empty,
-                             tracing.elementClass,
-                             mappingName,
-                             editableMappingTracingId(tracing, tracingId))
-      }
-      _ <- Fox.runIf(!dryRun)(segmentIndexBuffer.flush())
-      updateGroup = UpdateActionGroup[VolumeTracing](
-        tracing.version + 1L,
-        System.currentTimeMillis(),
-        None,
-        List(AddSegmentIndex()),
-        None,
-        None,
-        "dummyTransactionId",
-        1,
-        0
-      )
-      _ <- Fox.runIf(!dryRun)(handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken))
-    } yield Some(processedBucketCount)
-  }
-
-  def checkIfSegmentIndexMayBeAdded(tracingId: String, tracing: VolumeTracing, userToken: Option[String])(
-      implicit ec: ExecutionContext): Fox[Boolean] =
-    for {
-      fallbackLayerOpt <- Fox.runIf(tracing.fallbackLayer.isDefined)(
-        remoteFallbackLayerFromVolumeTracing(tracing, tracingId))
-      canHaveSegmentIndex <- VolumeSegmentIndexService.canHaveSegmentIndex(remoteDatastoreClient,
-                                                                           fallbackLayerOpt,
-                                                                           userToken)
-      alreadyHasSegmentIndex = tracing.hasSegmentIndex.getOrElse(false)
-    } yield canHaveSegmentIndex && !alreadyHasSegmentIndex
-
-  def importVolumeData(tracingId: String,
-                       tracing: VolumeTracing,
-                       zipFile: File,
-                       currentVersion: Int,
-                       userToken: Option[String])(implicit mp: MessagesProvider): Fox[Long] =
+  def importVolumeData(tracingId: String, tracing: VolumeTracing, zipFile: File, currentVersion: Int)(
+      implicit mp: MessagesProvider,
+      tc: TokenContext): Fox[Long] =
     if (currentVersion != tracing.version)
       Fox.failure("version.mismatch")
     else {
       val magSet = magSetFromZipfile(zipFile)
       val magsDoMatch =
-        magSet.isEmpty || magSet == resolveLegacyMagList(tracing.mags).map(vec3IntFromProto).toSet
+        magSet.isEmpty || magSet == VolumeTracingMags.resolveLegacyMagList(tracing.mags).map(vec3IntFromProto).toSet
 
       if (!magsDoMatch)
         Fox.failure("annotation.volume.magssDoNotMatch")
@@ -960,8 +843,8 @@ class VolumeTracingService @Inject()(
             mergedVolume.largestSegmentId.toLong,
             tracing.elementClass)
           dataLayer = volumeTracingLayer(tracingId, tracing)
-          fallbackLayer <- getFallbackLayer(tracingId)
-          mappingName <- baseMappingName(tracing)
+          fallbackLayer <- getFallbackLayer(tracingId, tracing)
+          mappingName <- getMappingNameUnlessEditable(tracing)
           segmentIndexBuffer <- Fox.successful(
             new VolumeSegmentIndexBuffer(tracingId,
                                          volumeSegmentIndexClient,
@@ -969,7 +852,7 @@ class VolumeTracingService @Inject()(
                                          remoteDatastoreClient,
                                          fallbackLayer,
                                          dataLayer.additionalAxes,
-                                         userToken))
+                                         tc))
           _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
             for {
               _ <- saveBucket(volumeLayer, bucketPosition, bucketBytes, tracing.version + 1)
@@ -990,54 +873,25 @@ class VolumeTracingService @Inject()(
             } yield ()
           }
           _ <- segmentIndexBuffer.flush()
-          updateGroup = UpdateActionGroup[VolumeTracing](
-            tracing.version + 1,
-            System.currentTimeMillis(),
-            None,
-            List(ImportVolumeData(Some(mergedVolume.largestSegmentId.toPositiveLong))),
-            None,
-            None,
-            "dummyTransactionId",
-            1,
-            0
-          )
-          _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken)
         } yield mergedVolume.largestSegmentId.toPositiveLong
       }
     }
 
-  def dummyTracing: VolumeTracing = ???
+  def getFallbackLayer(tracingId: String, tracing: VolumeTracing)(
+      implicit tc: TokenContext): Fox[Option[RemoteFallbackLayer]] =
+    fallbackLayerCache.getOrLoad((tracingId, tracing.fallbackLayer, tc.userTokenOpt),
+                                 t => getFallbackLayerFromWebknossos(t._1, t._2))
 
-  def mergeEditableMappings(tracingsWithIds: List[(VolumeTracing, String)], userToken: Option[String]): Fox[String] =
-    if (tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
+  private def getFallbackLayerFromWebknossos(tracingId: String, fallbackLayerName: Option[String])(
+      implicit tc: TokenContext) =
+    Fox[Option[RemoteFallbackLayer]] {
       for {
-        remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds)(tracingWithId =>
-          remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
-        remoteFallbackLayer <- remoteFallbackLayers.headOption.toFox
-        _ <- bool2Fox(remoteFallbackLayers.forall(_ == remoteFallbackLayer)) ?~> "Cannot merge editable mappings based on different dataset layers"
-        editableMappingIds <- Fox.serialCombined(tracingsWithIds)(tracingWithId => tracingWithId._1.mappingName)
-        _ <- bool2Fox(editableMappingIds.length == tracingsWithIds.length) ?~> "Not all volume tracings have editable mappings"
-        newEditableMappingId <- editableMappingService.merge(editableMappingIds, remoteFallbackLayer, userToken)
-      } yield newEditableMappingId
-    } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.getHasEditableMapping)) {
-      Fox.empty
-    } else {
-      Fox.failure("Cannot merge tracings with and without editable mappings")
+        dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId)
+        dataSourceId = dataSource.id
+        fallbackLayer = dataSource.dataLayers
+          .find(_.name == fallbackLayerName.getOrElse(""))
+          .map(RemoteFallbackLayer.fromDataLayerAndDataSource(_, dataSourceId))
+      } yield fallbackLayer
     }
-
-  def getFallbackLayer(tracingId: String): Fox[Option[RemoteFallbackLayer]] =
-    fallbackLayerCache.getOrLoad(tracingId, t => getFallbackLayerFromWebknossos(t))
-
-  private def getFallbackLayerFromWebknossos(tracingId: String) = Fox[Option[RemoteFallbackLayer]] {
-    for {
-      tracing <- find(tracingId)
-      dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId)
-      dataSourceId = dataSource.id
-      fallbackLayerName = tracing.fallbackLayer
-      fallbackLayer = dataSource.dataLayers
-        .find(_.name == fallbackLayerName.getOrElse(""))
-        .map(RemoteFallbackLayer.fromDataLayerAndDataSource(_, dataSourceId))
-    } yield fallbackLayer
-  }
 
 }

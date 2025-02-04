@@ -353,7 +353,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
               </div>
               {this.props.showVersionRestore ? (
                 <Sider id="version-restore-sider" width={400} theme={this.props.UITheme}>
-                  <VersionView allowUpdate={isUpdateTracingAllowed} />
+                  <VersionView />
                 </Sider>
               ) : null}
             </Layout>
@@ -385,6 +385,7 @@ function mapStateToProps(state: OxalisState) {
       state.uiInformation.measurementToolInfo.lastMeasuredPosition,
     additionalCoordinates: state.flycam.additionalCoordinates,
     UITheme: state.uiInformation.theme,
+    isWkReady: state.uiInformation.isWkReady,
   };
 }
 

@@ -38,7 +38,6 @@ const NO_FLOODFILL_BBOX_TOAST_KEY = "NO_FLOODFILL_BBOX";
 const NO_SUCCESS_MSG_WHEN_WITHIN_MS = 500;
 
 export function* floodFill(): Saga<void> {
-  yield* take("INITIALIZE_VOLUMETRACING");
   yield* takeEvery("FLOOD_FILL", handleFloodFill);
 }
 

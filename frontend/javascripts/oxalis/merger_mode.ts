@@ -2,10 +2,8 @@ import _ from "lodash";
 import messages from "messages";
 import type { UnregisterHandler } from "oxalis/api/api_latest";
 import type { Vector3 } from "oxalis/constants";
-import {
-  getInverseSegmentationTransformer,
-  getVisibleSegmentationLayer,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { getInverseSegmentationTransformer } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import {
   getNodePosition,
   getSkeletonTracing,
@@ -187,7 +185,7 @@ async function onCreateNode(
 
   if (updateMapping) {
     // Update mapping
-    api.data.setMapping(segmentationLayerName, idMapping);
+    api.data.setMapping(segmentationLayerName, idMapping, { isMergerModeMapping: true });
   }
 }
 
@@ -239,7 +237,9 @@ async function onDeleteNode(
     deleteIdMappingOfSegment(segmentId, nodeWithTreeId.treeId, mergerModeState);
 
     if (updateMapping) {
-      api.data.setMapping(segmentationLayerName, mergerModeState.idMapping);
+      api.data.setMapping(segmentationLayerName, mergerModeState.idMapping, {
+        isMergerModeMapping: true,
+      });
     }
   }
 }
@@ -265,7 +265,11 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: UpdateAction
     // If the segment of the node changed, it is like the node got deleted and a copy got created somewhere else.
     // Thus we use the onNodeDelete and onNodeCreate method to update the mapping.
     if (nodeSegmentMap[id] != null) {
-      await onDeleteNode(mergerModeState, { nodeId: id, treeId }, false);
+      await onDeleteNode(
+        mergerModeState,
+        { nodeId: id, treeId, actionTracingId: mergerModeState.prevTracing.tracingId },
+        false,
+      );
     }
 
     if (segmentId != null && segmentId > 0) {
@@ -282,12 +286,18 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: UpdateAction
       delete nodeSegmentMap[id];
     }
 
-    api.data.setMapping(segmentationLayerName, mergerModeState.idMapping);
+    api.data.setMapping(segmentationLayerName, mergerModeState.idMapping, {
+      isMergerModeMapping: true,
+    });
   }
 }
 
 function updateState(mergerModeState: MergerModeState, skeletonTracing: SkeletonTracing) {
-  const diff = cachedDiffTrees(mergerModeState.prevTracing.trees, skeletonTracing.trees);
+  const diff = cachedDiffTrees(
+    skeletonTracing.tracingId,
+    mergerModeState.prevTracing.trees,
+    skeletonTracing.trees,
+  );
 
   for (const action of diff) {
     switch (action.name) {
@@ -412,7 +422,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
     await Promise.all(nodesMappedPromises);
   }
 
-  api.data.setMapping(segmentationLayerName, idMapping);
+  api.data.setMapping(segmentationLayerName, idMapping, { isMergerModeMapping: true });
 }
 
 function resetState(mergerModeState: Partial<MergerModeState> = {}) {

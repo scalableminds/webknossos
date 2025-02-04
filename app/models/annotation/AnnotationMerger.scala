@@ -2,11 +2,7 @@ package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.annotation.{
-  AnnotationLayer,
-  AnnotationLayerStatistics,
-  AnnotationLayerType
-}
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
@@ -25,12 +21,11 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
   def mergeTwo(
       annotationA: Annotation,
       annotationB: Annotation,
-      persistTracing: Boolean,
       issuingUser: User
   )(implicit ctx: DBAccessContext): Fox[Annotation] =
     mergeN(
       ObjectId.generate,
-      persistTracing,
+      toTemporaryStore = false,
       issuingUser._id,
       annotationB._dataset,
       annotationB._team,
@@ -40,7 +35,7 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
 
   def mergeN(
       newId: ObjectId,
-      persistTracing: Boolean,
+      toTemporaryStore: Boolean,
       userId: ObjectId,
       datasetId: ObjectId,
       teamId: ObjectId,
@@ -51,7 +46,7 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
       Fox.empty
     else {
       for {
-        mergedAnnotationLayers <- mergeTracingsOfAnnotations(annotations, datasetId, persistTracing)
+        mergedAnnotationLayers <- mergeAnnotationsInTracingstore(annotations, datasetId, newId, toTemporaryStore) ?~> "Failed to merge annotations in tracingstore."
       } yield {
         Annotation(
           newId,
@@ -65,56 +60,18 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
       }
     }
 
-  private def mergeTracingsOfAnnotations(annotations: List[Annotation], datasetId: ObjectId, persistTracing: Boolean)(
-      implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] =
+  private def mergeAnnotationsInTracingstore(
+      annotations: List[Annotation],
+      datasetId: ObjectId,
+      newAnnotationId: ObjectId,
+      toTemporaryStore: Boolean)(implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] =
     for {
       dataset <- datasetDAO.findOne(datasetId)
       tracingStoreClient: WKRemoteTracingStoreClient <- tracingStoreService.clientFor(dataset)
-      skeletonLayers = annotations.flatMap(_.annotationLayers.find(_.typ == AnnotationLayerType.Skeleton))
-      volumeLayers = annotations.flatMap(_.annotationLayers.find(_.typ == AnnotationLayerType.Volume))
-      mergedSkeletonTracingId <- mergeSkeletonTracings(tracingStoreClient,
-                                                       skeletonLayers.map(_.tracingId),
-                                                       persistTracing)
-      mergedVolumeTracingId <- mergeVolumeTracings(tracingStoreClient, volumeLayers.map(_.tracingId), persistTracing)
-      mergedSkeletonName = allEqual(skeletonLayers.map(_.name))
-      mergedVolumeName = allEqual(volumeLayers.map(_.name))
-      mergedSkeletonLayer = mergedSkeletonTracingId.map(
-        id =>
-          AnnotationLayer(id,
-                          AnnotationLayerType.Skeleton,
-                          mergedSkeletonName.getOrElse(AnnotationLayer.defaultSkeletonLayerName),
-                          AnnotationLayerStatistics.unknown))
-      mergedVolumeLayer = mergedVolumeTracingId.map(
-        id =>
-          AnnotationLayer(id,
-                          AnnotationLayerType.Volume,
-                          mergedVolumeName.getOrElse(AnnotationLayer.defaultVolumeLayerName),
-                          AnnotationLayerStatistics.unknown))
-    } yield List(mergedSkeletonLayer, mergedVolumeLayer).flatten
+      mergedAnnotationProto <- tracingStoreClient.mergeAnnotationsByIds(annotations.map(_.id),
+                                                                        newAnnotationId,
+                                                                        toTemporaryStore)
+      layers = mergedAnnotationProto.annotationLayers.map(AnnotationLayer.fromProto)
+    } yield layers.toList
 
-  private def allEqual(str: List[String]): Option[String] =
-    // returns the str if all names are equal, None otherwise
-    str.headOption.map(name => str.forall(_ == name)).flatMap { _ =>
-      str.headOption
-    }
-
-  private def mergeSkeletonTracings(tracingStoreClient: WKRemoteTracingStoreClient,
-                                    skeletonTracingIds: List[String],
-                                    persistTracing: Boolean) =
-    if (skeletonTracingIds.isEmpty)
-      Fox.successful(None)
-    else
-      tracingStoreClient
-        .mergeSkeletonTracingsByIds(skeletonTracingIds, persistTracing)
-        .map(Some(_)) ?~> "Failed to merge skeleton tracings."
-
-  private def mergeVolumeTracings(tracingStoreClient: WKRemoteTracingStoreClient,
-                                  volumeTracingIds: List[String],
-                                  persistTracing: Boolean) =
-    if (volumeTracingIds.isEmpty)
-      Fox.successful(None)
-    else
-      tracingStoreClient
-        .mergeVolumeTracingsByIds(volumeTracingIds, persistTracing)
-        .map(Some(_)) ?~> "Failed to merge volume tracings."
 }

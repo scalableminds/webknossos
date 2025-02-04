@@ -10,7 +10,7 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
 
   lazy val map: scala.collection.mutable.Map[K, V] = scala.collection.mutable.Map()
 
-  def find(id: K): Option[V] =
+  def get(id: K): Option[V] =
     map.synchronized {
       map.get(id)
     }
@@ -20,12 +20,12 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
       map.contains(id)
     )
 
-  def findAll: Seq[V] =
+  def getAll: Seq[V] =
     map.synchronized {
       map.values.toList
     }
 
-  def findAllConditionalWithKey(predicate: K => Boolean): scala.collection.Map[K, V] =
+  def getAllConditionalWithKey(predicate: K => Boolean): scala.collection.Map[K, V] =
     map.synchronized {
       map.view.filterKeys(predicate).toMap
     }

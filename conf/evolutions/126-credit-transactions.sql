@@ -4,7 +4,7 @@ do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 1
 
 
 -- Create the enum type for transaction states
-CREATE TYPE webknossos.credit_transaction_state AS ENUM ('Pending', 'Completed', 'Refunded', 'Revoked', 'Partially Revoked', 'Spent');
+CREATE TYPE webknossos.credit_transaction_state AS ENUM ('Pending', 'Completed', 'Refunded', 'Revoked', 'PartiallyRevoked', 'Spent');
 
 -- Create the transactions table
 CREATE TABLE webknossos.organization_credit_transactions (

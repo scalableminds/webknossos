@@ -16,6 +16,10 @@ trait SqlTypeImplicits {
     override def apply(v1: PositionedResult): ObjectId = ObjectId(v1.<<)
   }
 
+  implicit protected object GetObjectIdOpt extends GetResult[Option[ObjectId]] {
+    override def apply(v1: PositionedResult): Option[ObjectId] = v1.nextStringOption().map(ObjectId(_))
+  }
+
   implicit protected object GetInstant extends GetResult[Instant] {
     override def apply(v1: PositionedResult): Instant = Instant.fromSql(v1.<<)
   }

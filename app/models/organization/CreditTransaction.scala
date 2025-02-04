@@ -67,29 +67,38 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
       )
     }
 
-  implicit val getOrganizationCreditTransactions: GetResult[CreditTransaction] = GetResult(r => {
+  implicit val getOrganizationCreditTransactions: GetResult[CreditTransaction] = GetResult { prs =>
+    import prs._
+    val transactionId = <<[ObjectId]
+    val organizationId = <<[String]
+    val creditChange = <<[BigDecimal]
+    val refundableCreditChange = <<[BigDecimal]
+    val refundedTransactionId = <<?[ObjectId]
+    val spentMoney = <<?[BigDecimal]
+    val comment = <<[String]
+    val paidJobId = <<?[ObjectId]
+    val stateOpt = CreditTransactionState.fromString(<<[String])
+    val state = stateOpt.getOrElse(throw new RuntimeException(s"Unknown credit transaction state: $stateOpt"))
+    val expiresAt = <<?[Instant]
+    val createdAt = <<[Instant]
+    val updatedAt = <<[Instant]
+    val isDeleted = <<[Boolean]
     CreditTransaction(
-      ObjectId.fromStringSync(r.nextString()).getOrElse(throw new RuntimeException(s"Invalid CreditTransaction id")),
-      r.nextString(),
-      r.nextBigDecimal(),
-      r.nextBigDecimal(),
-      r.nextStringOption()
-        .map(ObjectId.fromStringSync)
-        .getOrElse(throw new RuntimeException(s"Invalid CreditTransaction id")),
-      r.nextBigDecimalOption(),
-      r.nextString(),
-      r.nextStringOption()
-        .map(ObjectId.fromStringSync)
-        .getOrElse(throw new RuntimeException(s"Invalid CreditTransaction jobId")),
-      CreditTransactionState
-        .fromString(r.nextString())
-        .getOrElse(throw new RuntimeException(s"Invalid CreditTransaction state")),
-      r.nextDateOption().map(Instant.fromDate),
-      Instant.fromSql(r.nextTimestamp()),
-      Instant.fromSql(r.nextTimestamp()),
-      r.nextBoolean()
+      transactionId,
+      organizationId,
+      creditChange,
+      refundableCreditChange,
+      refundedTransactionId,
+      spentMoney,
+      comment,
+      paidJobId,
+      state,
+      expiresAt,
+      createdAt,
+      updatedAt,
+      isDeleted
     )
-  })
+  }
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""(_id IN (SELECT _organization FROM webknossos.users_ WHERE _multiUser = (SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId)))
@@ -262,6 +271,7 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
   private def revokeExpiredCreditsForOrganization(organizationId: String): Fox[List[CreditTransaction]] = {
     // TODO: Make this a transaction to have either all credits revoked of the organization or none
     var transactionsWhereRevokingFailed: List[CreditTransaction] = List()
+    logger.info(s"revokeExpiredCreditsForOrganization for organization $organizationId")
 
     for {
       transactionsWithExpiredCredits <- run(q"""SELECT *
@@ -316,7 +326,7 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
       spentCreditsSinceTransactionPositive = spentCreditsSinceTransactionNegative * -1
       freeCreditsAvailable = transaction.creditChange + alreadySpentFreeTokens
 
-      _ = if (spentCreditsSinceTransactionPositive >= freeCreditsAvailable) {
+      _ <- if (spentCreditsSinceTransactionPositive >= freeCreditsAvailable) {
         // Fully spent, update state to 'Spent'
         q"""
         UPDATE webknossos.organization_credit_transactions
@@ -325,39 +335,40 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
       """.asUpdate
       } else {
         val amountToSubtractFromRefundableCredits = freeCreditsAvailable - spentCreditsSinceTransactionPositive
-        revokeRefundableCreditsFromPendingTransactions(amountToSubtractFromRefundableCredits, transaction).flatMap {
-          leftOverCreditsToRevoke =>
-            val stateOfExpiredTransaction =
-              if (leftOverCreditsToRevoke == transaction.creditChange) CreditTransactionState.Revoked
-              else if (leftOverCreditsToRevoke > 0) CreditTransactionState.PartiallyRevoked
-              else CreditTransactionState.Spent
+        for {
+          leftOverCreditsToRevoke <- revokeRefundableCreditsFromPendingTransactions(
+            amountToSubtractFromRefundableCredits,
+            transaction)
+          stateOfExpiredTransaction = if (leftOverCreditsToRevoke == transaction.creditChange)
+            CreditTransactionState.Revoked
+          else if (leftOverCreditsToRevoke > 0) CreditTransactionState.PartiallyRevoked
+          else CreditTransactionState.Spent
 
-            val updateTransactionStateQuery = q"""
+          _ <- q"""
             UPDATE webknossos.organization_credit_transactions
             SET state = $stateOfExpiredTransaction, updated_at = NOW()
             WHERE _id = ${transaction._id}
           """.asUpdate
-            val insertRevokedTransactionQuery = if (leftOverCreditsToRevoke > 0) {
-              val revokingTransaction = CreditTransaction(
-                ObjectId.generate,
-                transaction._organization,
-                leftOverCreditsToRevoke,
-                0,
-                None,
-                None,
-                s"Revoked expired credits for transaction ${transaction._id}",
-                None,
-                CreditTransactionState.Completed,
-                None,
-                Instant.now,
-                Instant.now
-              )
-              insertRevokingTransaction(revokingTransaction)
-            } else {
-              DBIO.successful(0)
-            }
-            DBIO.sequence(Seq(updateTransactionStateQuery, insertRevokedTransactionQuery))
-        }
+          _ <- if (leftOverCreditsToRevoke > 0) {
+            val revokingTransaction = CreditTransaction(
+              ObjectId.generate,
+              transaction._organization,
+              leftOverCreditsToRevoke,
+              0,
+              None,
+              None,
+              s"Revoked expired credits for transaction ${transaction._id}",
+              None,
+              CreditTransactionState.Completed,
+              None,
+              Instant.now,
+              Instant.now
+            )
+            insertRevokingTransaction(revokingTransaction)
+          } else {
+            DBIO.successful(0)
+          }
+        } yield ()
       }
     } yield ()
 
@@ -365,7 +376,6 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
       amountToSubtract: BigDecimal,
       transaction: CreditTransaction
   ): DBIO[BigDecimal] = {
-
     val pendingTransactionsSince = transaction.createdAt
     for {
       // Fetch transactions that are pending and eligible for refundable credit reduction
@@ -375,6 +385,7 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
       WHERE _organization = ${transaction._organization}
         AND created_at > $pendingTransactionsSince
         AND credit_change < 0
+        AND refundable_credit_change > 0
         AND state = ${CreditTransactionState.Pending}
       ORDER BY created_at ASC
     """.as[CreditTransaction]
@@ -383,13 +394,10 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
       leftOverCredits <- qualifiedTransactions.foldLeft(DBIO.successful(amountToSubtract)) {
         (leftOverCreditsToRevokeDBIO, transaction) =>
           leftOverCreditsToRevokeDBIO.flatMap { leftOverCreditsToRevoke =>
-            if (transaction.refundableCreditChange <= 0) {
-              DBIO.successful(leftOverCreditsToRevoke) // Skip if no refundable credits
-            } else {
-              val creditsToSubtract = leftOverCreditsToRevoke.min(transaction.refundableCreditChange)
-              reduceRefundableCredits(transaction, creditsToSubtract).map(_ =>
-                leftOverCreditsToRevoke - creditsToSubtract) // Subtract from leftOverCredits
-            }
+            val creditsToSubtract = leftOverCreditsToRevoke.min(transaction.refundableCreditChange)
+            logger.info(s"Subtracting $creditsToSubtract from refundable credits for transaction ${transaction._id}")
+            reduceRefundableCredits(transaction, creditsToSubtract).map(_ =>
+              leftOverCreditsToRevoke - creditsToSubtract) // Subtract from leftOverCredits
           }
       }
     } yield leftOverCredits

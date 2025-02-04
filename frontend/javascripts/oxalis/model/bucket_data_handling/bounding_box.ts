@@ -3,6 +3,7 @@ import { map3, mod } from "libs/utils";
 import _ from "lodash";
 import type { BoundingBoxType, OrthoView, Vector2, Vector3, Vector4 } from "oxalis/constants";
 import constants, { Vector3Indicies } from "oxalis/constants";
+import type { BoundingBoxObject } from "oxalis/store";
 import Dimensions from "../dimensions";
 import type { MagInfo } from "../helpers/mag_info";
 
@@ -22,6 +23,13 @@ class BoundingBox {
         this.max[i] = Math.min(this.max[i], boundingBox.max[i]);
       }
     }
+  }
+
+  static fromBoundBoxObject(boundingBox: BoundingBoxObject): BoundingBox {
+    return new BoundingBox({
+      min: boundingBox.topLeft,
+      max: V3.add(boundingBox.topLeft, [boundingBox.width, boundingBox.height, boundingBox.depth]),
+    });
   }
 
   getMinUV(activeViewport: OrthoView): Vector2 {
@@ -204,6 +212,10 @@ class BoundingBox {
     const min = align(this.min, strategy === "ceil" || strategy === "shrink" ? V3.ceil : V3.floor);
     const max = align(this.max, strategy === "floor" || strategy === "shrink" ? V3.floor : V3.ceil);
     return new BoundingBox({ min, max });
+  }
+
+  alignFromMag1ToMag(mag: Vector3, strategy: "shrink" | "grow" | "ceil" | "floor"): BoundingBox {
+    return this.alignWithMag(mag, strategy).fromMag1ToMag(mag);
   }
 
   /*

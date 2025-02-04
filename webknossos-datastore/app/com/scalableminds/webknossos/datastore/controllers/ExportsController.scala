@@ -31,12 +31,12 @@ class ExportsController @Inject()(webknossosClient: DSRemoteWebknossosClient,
     extends Controller
     with FoxImplicits {
 
-  private val dataBaseDir: Path = Paths.get(config.Datastore.baseFolder)
+  private val dataBaseDir: Path = Paths.get(config.Datastore.baseDirectory)
 
   override def allowRemoteOrigin: Boolean = true
 
-  def download(token: Option[String], jobId: String): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.downloadJobExport(jobId), urlOrHeaderToken(token, request)) {
+  def download(jobId: String): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.downloadJobExport(jobId)) {
       for {
         exportProperties <- webknossosClient.getJobExportProperties(jobId)
         fullPath = exportProperties.fullPathIn(dataBaseDir)

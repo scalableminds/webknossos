@@ -11,7 +11,7 @@ import {
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { cancelJob, getJobs } from "admin/admin_rest_api";
-import { Input, Spin, Table, Tooltip, Typography } from "antd";
+import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import { confirmAsync } from "dashboard/dataset/helper_components";
@@ -59,6 +59,50 @@ export const TOOLTIP_MESSAGES_AND_ICONS = {
 const refreshInterval = 5000;
 const { Column } = Table;
 const { Search } = Input;
+
+export const getShowTrainingDataLink = (
+  trainingAnnotations: {
+    annotationId: string;
+  }[],
+) => {
+  return trainingAnnotations == null ? null : trainingAnnotations.length > 1 ? (
+    <a
+      href="#"
+      onClick={() => {
+        Modal.info({
+          content: (
+            <div>
+              The following annotations were used during training:
+              <ul>
+                {trainingAnnotations.map((annotation: { annotationId: string }, index: number) => (
+                  <li key={`annotation_${index}`}>
+                    <a
+                      href={`/annotations/${annotation.annotationId}`}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      Annotation {index + 1}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ),
+        });
+      }}
+    >
+      Show Training Data
+    </a>
+  ) : (
+    <a
+      href={`/annotations/${trainingAnnotations[0].annotationId}`}
+      target="_blank"
+      rel="noreferrer noopener"
+    >
+      Show Training Data
+    </a>
+  );
+};
 
 type State = {
   isLoading: boolean;
@@ -113,14 +157,20 @@ function JobListView() {
     setSearchQuery(event.target.value);
   }
 
+  function getLinkToDataset(job: APIJob) {
+    // prefer updated link over legacy link.
+    if (job.datasetId != null)
+      return `/datasets/${getReadableURLPart({ name: job.datasetName || "unknown_name", id: job.datasetId })}/view`;
+    if (job.organizationId != null && (job.datasetName != null || job.datasetDirectoryName != null))
+      return `/datasets/${job.organizationId}/${job.datasetDirectoryName || job.datasetName}/view`;
+    return null;
+  }
+
   function renderDescription(__: any, job: APIJob) {
-    const linkToDataset =
-      job.datasetId != null
-        ? `/datasets/${getReadableURLPart({ name: job.datasetName || "unknown_name", id: job.datasetId })}/view` // prefer updated link over legacy link.
-        : `/datasets/${job.organizationId || ""}/${job.datasetDirectoryName || job.datasetName}/view`;
+    const linkToDataset = getLinkToDataset(job);
     if (job.type === APIJobType.CONVERT_TO_WKW && job.datasetName) {
       return <span>{`Conversion to WKW of ${job.datasetName}`}</span>;
-    } else if (job.type === APIJobType.EXPORT_TIFF && job.organizationId && job.datasetName) {
+    } else if (job.type === APIJobType.EXPORT_TIFF && linkToDataset != null) {
       const labelToAnnotationOrDataset =
         job.annotationId != null ? (
           <Link to={`/annotations/${job.annotationId}`}>
@@ -136,24 +186,20 @@ function JobListView() {
           {job.ndBoundingBox ? formatWkLibsNdBBox(job.ndBoundingBox) : job.boundingBox})
         </span>
       );
-    } else if (job.type === APIJobType.RENDER_ANIMATION && job.organizationId && job.datasetName) {
+    } else if (job.type === APIJobType.RENDER_ANIMATION && linkToDataset != null) {
       return (
         <span>
           Animation rendering for layer {job.layerName} of dataset{" "}
           <Link to={linkToDataset}>{job.datasetName}</Link>
         </span>
       );
-    } else if (job.type === APIJobType.COMPUTE_MESH_FILE && job.organizationId && job.datasetName) {
+    } else if (job.type === APIJobType.COMPUTE_MESH_FILE && linkToDataset != null) {
       return (
         <span>
           Mesh file computation for <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
-    } else if (
-      job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE &&
-      job.organizationId &&
-      job.datasetName
-    ) {
+    } else if (job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE && linkToDataset != null) {
       return (
         <span>
           Segment index file computation for <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
@@ -161,8 +207,7 @@ function JobListView() {
       );
     } else if (
       job.type === APIJobType.FIND_LARGEST_SEGMENT_ID &&
-      job.organizationId &&
-      job.datasetName &&
+      linkToDataset != null &&
       job.layerName
     ) {
       return (
@@ -171,24 +216,14 @@ function JobListView() {
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
-    } else if (
-      job.type === APIJobType.INFER_NUCLEI &&
-      job.organizationId &&
-      job.datasetName &&
-      job.layerName
-    ) {
+    } else if (job.type === APIJobType.INFER_NUCLEI && linkToDataset != null && job.layerName) {
       return (
         <span>
           Nuclei inferral for layer {job.layerName} of{" "}
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
-    } else if (
-      job.type === APIJobType.INFER_NEURONS &&
-      job.organizationId &&
-      job.datasetName &&
-      job.layerName
-    ) {
+    } else if (job.type === APIJobType.INFER_NEURONS && linkToDataset != null && job.layerName) {
       return (
         <span>
           Neuron inferral for layer {job.layerName} of{" "}
@@ -197,8 +232,7 @@ function JobListView() {
       );
     } else if (
       job.type === APIJobType.INFER_MITOCHONDRIA &&
-      job.organizationId &&
-      job.datasetName &&
+      linkToDataset != null &&
       job.layerName
     ) {
       return (
@@ -207,23 +241,14 @@ function JobListView() {
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
-    } else if (
-      job.type === APIJobType.ALIGN_SECTIONS &&
-      job.organizationId &&
-      job.datasetName &&
-      job.layerName
-    ) {
+    } else if (job.type === APIJobType.ALIGN_SECTIONS && linkToDataset != null && job.layerName) {
       return (
         <span>
-          Aligned sections for layer {job.layerName} of{" "}
+          Align sections for layer {job.layerName} of{" "}
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
-    } else if (
-      job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION &&
-      job.organizationId &&
-      job.datasetName
-    ) {
+    } else if (job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION && linkToDataset != null) {
       return (
         <span>
           Materialize annotation for {job.layerName ? ` layer ${job.layerName} of ` : " "}
@@ -231,6 +256,20 @@ function JobListView() {
           {job.mergeSegments
             ? ". This includes merging the segments that were merged via merger mode."
             : null}
+        </span>
+      );
+    } else if (job.type === APIJobType.TRAIN_MODEL) {
+      const numberOfTrainingAnnotations = job.trainingAnnotations.length;
+      return (
+        <span>
+          {`Train model on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
+          {getShowTrainingDataLink(job.trainingAnnotations)}
+        </span>
+      );
+    } else if (job.type === APIJobType.INFER_WITH_MODEL && linkToDataset != null) {
+      return (
+        <span>
+          Run AI segmentation with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
         </span>
       );
     } else {
@@ -324,8 +363,17 @@ function JobListView() {
         </span>
       );
     } else {
-      // The above if-branches should be exhaustive over all job types
-      Utils.assertNever(job.type);
+      // unknown job type
+      return (
+        <span>
+          {job.resultLink && (
+            <a href={job.resultLink} title="Result">
+              Result
+            </a>
+          )}
+          {job.result && <p>{job.result}</p>}
+        </span>
+      );
     }
   }
 

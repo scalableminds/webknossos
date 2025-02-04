@@ -225,7 +225,7 @@ class ThumbnailDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionContext
                       mimeType: String,
                       mag: Vec3Int,
                       mag1BoundingBox: BoundingBox): Fox[Unit] = {
-    val mappingName = mappingNameOpt.getOrElse("") // in sql, nullable columns can’t be primary key, so we encode no mapping with emptystring
+    val mappingName = mappingNameOpt.getOrElse("") // in sql, nullable columns can’t be primary key, so we encode no mapping with empty string
     for {
       _ <- run(q"""INSERT INTO webknossos.dataset_thumbnails (
             _dataset, dataLayerName, width, height, mappingName, image, mimetype, mag, mag1BoundingBox, created)

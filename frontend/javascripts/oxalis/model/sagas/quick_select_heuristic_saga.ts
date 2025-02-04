@@ -50,8 +50,8 @@ import {
   getEnabledColorLayers,
   getLayerBoundingBox,
   getMagInfo,
-  getTransformsForLayer,
 } from "../accessors/dataset_accessor";
+import { getTransformsForLayer } from "../accessors/dataset_layer_transformation_accessor";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
 import {

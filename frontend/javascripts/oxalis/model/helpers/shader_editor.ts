@@ -1,6 +1,6 @@
 // @ts-nocheck
-import window, { document } from "libs/window";
 import app from "app";
+import window, { document } from "libs/window";
 
 export default {
   addBucketManagers(textureBucketManager) {

@@ -1,19 +1,9 @@
 package com.scalableminds.webknossos.datastore.services.uploading
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.layers.{
-  N5DataLayer,
-  N5SegmentationLayer,
-  PrecomputedDataLayer,
-  PrecomputedSegmentationLayer,
-  WKWDataLayer,
-  WKWSegmentationLayer,
-  Zarr3DataLayer,
-  Zarr3SegmentationLayer,
-  ZarrDataLayer,
-  ZarrSegmentationLayer
-}
+import com.scalableminds.webknossos.datastore.dataformats.layers.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.{
@@ -61,7 +51,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
   private def uploadDirectory(organizationId: String, datasetDirectoryName: String): Path =
     dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName)
 
-  def composeDataset(composeRequest: ComposeRequest, userToken: Option[String]): Fox[(DataSource, String)] =
+  def composeDataset(composeRequest: ComposeRequest)(implicit tc: TokenContext): Fox[(DataSource, String)] =
     for {
       _ <- dataSourceService.assertDataDirWritable(composeRequest.organizationId)
       reserveUploadInfo = ReserveUploadInformation(
@@ -74,7 +64,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
         List(),
         Some(composeRequest.targetFolderId)
       )
-      reservedAdditionalInfo <- remoteWebknossosClient.reserveDataSourceUpload(reserveUploadInfo, userToken) ?~> "Failed to reserve upload."
+      reservedAdditionalInfo <- remoteWebknossosClient.reserveDataSourceUpload(reserveUploadInfo) ?~> "Failed to reserve upload."
       directory = uploadDirectory(composeRequest.organizationId, reservedAdditionalInfo.directoryName)
       _ = PathUtils.ensureDirectory(directory)
       dataSource <- createDatasource(composeRequest,
@@ -87,7 +77,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer, uploadDir: Path): Fox[DataLayer] =
     for {
-      dataSource <- Fox.option2Fox(dataSourceRepository.find(composeLayer.dataSourceId))
+      dataSource <- Fox.option2Fox(dataSourceRepository.get(composeLayer.dataSourceId))
       ds <- Fox.option2Fox(dataSource.toUsable)
       layer <- Fox.option2Fox(ds.dataLayers.find(_.name == composeLayer.sourceName))
       applyCoordinateTransformations = (cOpt: Option[List[CoordinateTransformation]]) =>
@@ -103,30 +93,9 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- Fox.runIf(!layerIsRemote)(
         datasetSymlinkService.addSymlinksToOtherDatasetLayers(uploadDir, List(linkedLayerIdentifier)))
       editedLayer: DataLayer = layer match {
-        case l: PrecomputedDataLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: PrecomputedSegmentationLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: ZarrDataLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: ZarrSegmentationLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: N5DataLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: N5SegmentationLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: Zarr3DataLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: Zarr3SegmentationLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
+        case l: DataLayerWithMagLocators =>
+          l.mapped(name = composeLayer.newName,
+                   coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
         case l: WKWDataLayer =>
           l.copy(name = composeLayer.newName,
                  coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))

@@ -1,6 +1,6 @@
-@(senderName: String, organizationName: String, inviteTokenValue: String, uri: String, autoVerify: Boolean )
+@(senderName: String, organizationName: String, inviteTokenValue: String, uri: String, autoVerify: Boolean, additionalFooter: String )
 
-@emailBaseTemplate() {
+@emailBaseTemplate(additionalFooter) {
 
   <p>Hello,</p>
 

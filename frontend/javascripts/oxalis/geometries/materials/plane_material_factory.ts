@@ -24,11 +24,13 @@ import {
   getMagInfoByLayer,
   getMappingInfoForSupportedLayer,
   getSegmentationLayerWithMappingSupport,
+  getVisibleSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
+import {
   getTransformsForLayer,
   getTransformsPerLayer,
-  getVisibleSegmentationLayer,
   invertAndTranspose,
-} from "oxalis/model/accessors/dataset_accessor";
+} from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndicesForLayers,
   getUnrenderableLayerInfosForCurrentZoom,
@@ -261,8 +263,7 @@ class PlaneMaterialFactory {
     this.uniforms.activeMagIndices = {
       value: Object.values(activeMagIndices),
     };
-    const nativelyRenderedLayerName =
-      Store.getState().datasetConfiguration.nativelyRenderedLayerName;
+    const { nativelyRenderedLayerName } = Store.getState().datasetConfiguration;
     const dataset = Store.getState().dataset;
     for (const dataLayer of Model.getAllLayers()) {
       const layerName = sanitizeName(dataLayer.name);

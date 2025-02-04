@@ -1,3 +1,4 @@
+import _ from "lodash";
 import constants from "oxalis/constants";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
@@ -132,7 +133,7 @@ export function useRepeatedButtonTrigger(
   return {
     // Don't do anything on click to avoid that the trigger
     // is called twice on touch start.
-    onClick: () => {},
+    onClick: _.noop,
     onTouchStart,
     onTouchEnd,
   };

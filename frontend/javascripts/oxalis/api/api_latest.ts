@@ -1,6 +1,5 @@
 import {
   doWithToken,
-  downsampleSegmentation,
   finishAnnotation,
   getMappingsForDatasetLayer,
   sendAnalyticsEvent,
@@ -45,13 +44,13 @@ import {
 import UrlManager from "oxalis/controller/url_manager";
 import type { OxalisModel } from "oxalis/model";
 import {
-  flatToNestedMatrix,
   getLayerBoundingBox,
   getLayerByName,
   getMagInfo,
   getMappingInfo,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
+import { flatToNestedMatrix } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
   getPosition,
@@ -138,6 +137,7 @@ import {
   setSegmentGroupsAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { Bucket, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import type DataLayer from "oxalis/model/data_layer";
@@ -176,8 +176,7 @@ import {
   callDeep,
   createGroupToSegmentsMap,
   moveGroupsHelper,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import type { Versions } from "oxalis/view/version_view";
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_flow_types";
@@ -661,7 +660,10 @@ class TracingApi {
     const maximumVolume = options?.maximumVolume ?? Constants.REGISTER_SEGMENTS_BB_MAX_VOLUME_VX;
     const maximumSegmentCount =
       options?.maximumSegmentCount ?? Constants.REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT;
-    const shape = Utils.computeShapeFromBoundingBox({ min, max });
+    const boundingBoxInMag1 = new BoundingBox({
+      min,
+      max,
+    });
 
     const segmentationLayerName = api.data.getVisibleSegmentationLayerName();
     if (segmentationLayerName == null) {
@@ -681,10 +683,8 @@ class TracingApi {
       throw new Error("No mag could be found.");
     }
 
-    const volume =
-      Math.ceil(shape[0] / currentMag[0]) *
-      Math.ceil(shape[1] / currentMag[1]) *
-      Math.ceil(shape[2] / currentMag[2]);
+    const boundingBoxInMag = boundingBoxInMag1.fromMag1ToMag(currentMag);
+    const volume = boundingBoxInMag.getVolume();
     if (volume > maximumVolume) {
       throw new Error(
         `The volume of the bounding box exceeds ${maximumVolume} vx, please make it smaller. Currently, the bounding box has a volume of ${volume} vx in the active magnification (${currentMag.join("-")}).`,
@@ -704,12 +704,15 @@ class TracingApi {
       existingMagIndex,
     );
     const [dx, dy, dz] = currentMag;
-
+    // getDataForBoundingBox grows the bounding box to be mag-aligned which can change the dimensions
+    const boundingBoxInMag1MagAligned = boundingBoxInMag1.alignWithMag(currentMag, "grow");
+    const dataMin = boundingBoxInMag1MagAligned.min;
+    const dataMax = boundingBoxInMag1MagAligned.max;
     const segmentIdToPosition = new Map();
     let idx = 0;
-    for (let z = min[2]; z < max[2]; z += dz) {
-      for (let y = min[1]; y < max[1]; y += dy) {
-        for (let x = min[0]; x < max[0]; x += dx) {
+    for (let z = dataMin[2]; z < dataMax[2]; z += dz) {
+      for (let y = dataMin[1]; y < dataMax[1]; y += dy) {
+        for (let x = dataMin[0]; x < dataMax[0]; x += dx) {
           const id = data[idx];
           if (id !== 0 && !segmentIdToPosition.has(id)) {
             segmentIdToPosition.set(id, [x, y, z]);
@@ -1114,13 +1117,14 @@ class TracingApi {
     newMaybeCompoundType: APICompoundType | null,
     newAnnotationId: string,
     newControlMode: ControlMode,
-    versions?: Versions,
+    version?: number | undefined | null,
     keepUrlState: boolean = false,
+    keepUrlSearch: boolean = true,
   ) {
     if (newControlMode === ControlModeEnum.VIEW)
       throw new Error("Restarting with view option is not supported");
     Store.dispatch(restartSagaAction());
-    UrlManager.reset(keepUrlState);
+    UrlManager.reset(keepUrlState, keepUrlSearch);
 
     newMaybeCompoundType =
       newMaybeCompoundType != null ? coalesce(APICompoundTypeEnum, newMaybeCompoundType) : null;
@@ -1133,7 +1137,7 @@ class TracingApi {
         type: newControlMode,
       },
       false,
-      versions,
+      version,
     );
     Store.dispatch(discardSaveQueuesAction());
     Store.dispatch(wkReadyAction());
@@ -1511,27 +1515,6 @@ class TracingApi {
   }
 
   /**
-   * Use this method to create a complete magnification pyramid by downsampling the lowest present mag (e.g., mag 1).
-     This method will save the current changes and then reload the page after the downsampling
-     has finished.
-     This function can only be used for non-tasks.
-      Note that this invoking this method will not block the UI. Thus, user actions can be performed during the
-     downsampling. The caller should prohibit this (e.g., by showing a not-closable modal during the process).
-   */
-  async downsampleSegmentation(volumeTracingId: string) {
-    const state = Store.getState();
-    const { annotationId, annotationType } = state.tracing;
-
-    if (state.task != null) {
-      throw new Error("Cannot downsample segmentation for a task.");
-    }
-
-    await this.save();
-    await downsampleSegmentation(annotationId, annotationType, volumeTracingId);
-    await this.hardReload();
-  }
-
-  /**
    * Disables the saving for the current annotation.
    * WARNING: Cannot be undone. Only do this if you know what you are doing.
    */
@@ -1681,6 +1664,7 @@ class DataApi {
       colors?: Array<number>;
       hideUnmappedIds?: boolean;
       showLoadingIndicator?: boolean;
+      isMergerModeMapping?: boolean;
     } = {},
   ) {
     const layer = this.model.getLayerByName(layerName);
@@ -1689,7 +1673,12 @@ class DataApi {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
 
-    const { colors: mappingColors, hideUnmappedIds, showLoadingIndicator } = options;
+    const {
+      colors: mappingColors,
+      hideUnmappedIds,
+      showLoadingIndicator,
+      isMergerModeMapping,
+    } = options;
     if (mappingColors != null) {
       // Consider removing custom color support if this event is rarely used
       // (see `mappingColors` handling in mapping_saga.ts)
@@ -1705,6 +1694,7 @@ class DataApi {
       mappingColors,
       hideUnmappedIds,
       showLoadingIndicator,
+      isMergerModeMapping,
     };
     Store.dispatch(setMappingAction(layerName, "<custom mapping>", "JSON", mappingProperties));
   }

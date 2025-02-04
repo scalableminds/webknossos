@@ -11,14 +11,13 @@ export const UNDO_HISTORY_SIZE = 20;
 export const SETTINGS_RETRY_DELAY = 15 * 1000;
 export const SETTINGS_MAX_RETRY_COUNT = 20; // 20 * 15s == 5m
 
-export const MAXIMUM_ACTION_COUNT_PER_BATCH = {
-  skeleton: 5000,
-  volume: 1000, // Since volume saving is slower, use a lower value here.
-  mapping: Number.POSITIVE_INFINITY, // The back-end does not accept transactions for mappings.
-} as const;
+export const MAXIMUM_ACTION_COUNT_PER_BATCH = 1000;
 
-export const MAXIMUM_ACTION_COUNT_PER_SAVE = {
-  skeleton: 15000,
-  volume: 3000,
-  mapping: Number.POSITIVE_INFINITY, // The back-end does not accept transactions for mappings.
-} as const;
+// See #8274.
+// This constant used to be the following:
+// export const MAXIMUM_ACTION_COUNT_PER_SAVE = {
+//   skeleton: 15000,
+//   volume: 3000,
+//   mapping: Number.POSITIVE_INFINITY, // The back-end does not accept transactions for mappings.
+// } as const;
+export const MAXIMUM_ACTION_COUNT_PER_SAVE = 3000;

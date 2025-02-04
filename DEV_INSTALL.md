@@ -67,6 +67,9 @@ psql -c "CREATE USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
 psql -c "ALTER USER postgres WITH SUPERUSER;"
 psql -c "GRANT ALL PRIVILEGES ON DATABASE webknossos TO postgres;"
 
+# Enable corepack for nodeJs and yarn
+corepack enable
+
 # Checkout the WEBKNOSSOS git repository
 git clone git@github.com:scalableminds/webknossos.git
 ```
@@ -76,16 +79,14 @@ Note: On arm64-based Macs (e.g. M1), you need to run WEBKNOSSOS in an x86_64 env
 ## Ubuntu 22.04 LTS
 
 ```bash
-sudo apt install -y curl ca-certificates wget
+sudo apt update
+sudo apt install -y curl ca-certificates wget git postgresql postgresql-client unzip zip redis-server build-essential libblosc1 libbrotli1 libdraco-dev cmake
 
 # Install nvm, node 18
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 source ~/.bashrc
 nvm install 18
 nvm use 18
-
-sudo apt update
-sudo apt install -y git postgresql postgresql-client unzip zip redis-server build-essential libblosc1 libbrotli1 libdraco-dev cmake
 
  # Install sdkman, java, scala and sbt
 curl -s "https://get.sdkman.io" | bash
@@ -98,8 +99,14 @@ source "$HOME/.sdkman/bin/sdkman-init.sh"
 
 # Assign a password to PostgreSQL user
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
+
 # Clone the git repo to the current directory
 git clone git@github.com:scalableminds/webknossos.git
+cd webknossos
+
+# Enable node corepack to select the right yarn, install node packages
+corepack enable
+yarn install
 ```
 
 On older Ubuntu distributions: Please make sure to have the correct versions of node, PostgreSQL and java installed.

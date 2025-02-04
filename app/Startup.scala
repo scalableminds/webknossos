@@ -1,5 +1,6 @@
 import org.apache.pekko.actor.{ActorSystem, Props}
 import cleanup.CleanUpService
+import com.scalableminds.util.time.Instant
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
 import files.TempFileService
@@ -35,7 +36,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
                         slackNotificationService: SlackNotificationService)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
-  private val beforeStartup = System.currentTimeMillis()
+  private val beforeStartup = Instant.now
 
   logger.info(s"Executing Startup: Start actors, register cleanup services and stop hooks...")
 
@@ -89,10 +90,10 @@ class Startup @Inject()(actorSystem: ActorSystem,
   }
 
   initialDataService.insert.futureBox.map {
-    case Full(_) => logger.info(s"Webknossos startup took ${System.currentTimeMillis() - beforeStartup} ms.")
+    case Full(_) => Instant.logSince(beforeStartup, "Webknossos startup", logger)
     case Failure(msg, _, _) =>
       logger.info("No initial data inserted: " + msg)
-      logger.info(s"Webknossos startup took ${System.currentTimeMillis() - beforeStartup} ms.")
+      Instant.logSince(beforeStartup, "Webknossos startup", logger)
     case _ => ()
   }
 

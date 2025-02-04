@@ -49,7 +49,6 @@ export const getRgbaAtXYIndex: ShaderModule = {
             <% if (textureLayerInfos[name].elementClass.endsWith("int16")) { %>
               return vec4(val.x, 0., val.y, 0.);
             <% } else { %>
-              // UnsignedByteType
               float dtype_normalizer = <%=
                 formatNumberAsGLSLFloat(
                   textureLayerInfos[name].isColor && !textureLayerInfos[name].elementClass.endsWith("int8")
@@ -59,7 +58,6 @@ export const getRgbaAtXYIndex: ShaderModule = {
               %>;
 
               return dtype_normalizer * vec4(val);
-
             <% }%>
         <% } else { %>
           if (textureIdx == 0.0) {

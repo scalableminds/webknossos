@@ -77,7 +77,7 @@ export type Uniforms = Record<
 const DEFAULT_COLOR = new THREE.Vector3(255, 255, 255);
 
 function sanitizeName(name: string | null | undefined): string {
-  // todop: remove again
+  // todop (late): remove again
   return name || "unknown name";
   // if (name == null) {
   //   return "";

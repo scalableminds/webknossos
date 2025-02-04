@@ -31,9 +31,11 @@ import {
   almostEq,
   div,
   formatNumberAsGLSLFloat,
+  glslTypeForElementClass,
   inverse,
   isFlightMode,
   isNan,
+  scaleToFloat,
   transDim,
 } from "./utils.glsl";
 
@@ -194,44 +196,8 @@ ${compileShader(
   hasSegmentation ? getCrossHairOverlay : null,
   hasSegmentation ? getSegmentationAlphaIncrement : null,
   almostEq,
+  scaleToFloat,
 )}
-
-// todop: move somewhere else?
-float scaleIntToFloat(int x, int a, int b) {
-  // Convert to uint for safer calculations
-  uint ux = uint(x);
-  uint ua = uint(a);
-  uint ub = uint(b);
-
-  // Calculate the range and offset
-  uint range = ub - ua; // Safe for overflow
-  uint offset = ux - ua; // Safe subtraction
-
-  // Handle edge case where range is zero
-  if (range == 0u) {
-    return 0.0; // Or another meaningful value, depending on your needs
-  }
-
-  // Normalize to [0, 1] as a float
-  return float(offset) / float(range);
-}
-float scaleFloatToFloat(float x, float a, float b) {
-  if (a == b) {
-    return 0.0;
-  }
-
-  if (b - a < pow(2., 126.)) {
-    return (x - a) / (b - a);
-  } else {
-    // For large intervals, floating point precision can collaps
-    // to 0. Therefore, we make all values a bit smaller before
-    // doing further arithmetics.
-    float mul = 0.25;
-    float nom = mul * x - mul * a;
-    float denom = mul * b - mul * a;
-    return nom / denom;
-  }
-}
 
 void main() {
   vec3 worldCoordUVW = getWorldCoordUVW();
@@ -642,14 +608,4 @@ void main() {
     generateCalculateTpsOffsetFunction,
     glslTypeForElementClass,
   });
-}
-
-// todop: move somewhere else?
-function glslTypeForElementClass(elementClass: ElementClass) {
-  if (elementClass === "uint32" || elementClass === "uint64") {
-    return "uint";
-  } else if (elementClass === "int32" || elementClass === "int64") {
-    return "int";
-  }
-  return "float";
 }

@@ -99,7 +99,7 @@ type Props = OwnProps & StateProps;
 const subMenuCloseDelay = 10;
 
 function useOlvy() {
-  // todop: revert
+  // todop (late): revert
   const [isInitialized, _setIsInitialized] = useState(false);
   // Initialize Olvy after mounting
   useEffect(() => {

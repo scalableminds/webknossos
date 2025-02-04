@@ -359,6 +359,7 @@ export const getSegmentId: ShaderModule = {
         segment_id[1] = vec4(segment_id[1].r, segment_id[1].g, 0.0, 0.0);
       <% } %>
 
+      // todop: test mappings
       // debug
       float dtype_normalizer = 1.;
       mapped_id[0] = dtype_normalizer * segment_id[0]; // High

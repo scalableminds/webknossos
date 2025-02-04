@@ -142,9 +142,10 @@ datasetNames.map(async (datasetName) => {
           URL,
           datasetNameToId[datasetName],
           undefined,
-          undefined,
-          viewOverrides[datasetName],
-          datasetConfigOverrides[datasetName],
+          {
+            viewOverride: viewOverrides[datasetName],
+            datasetConfigOverride: datasetConfigOverrides[datasetName],
+          },
         );
         const changedPixels = await compareScreenshot(
           screenshot,
@@ -182,9 +183,10 @@ annotationSpecs.map(async (annotationSpec) => {
             URL,
             datasetNameToId[datasetName],
             fallbackLayerName,
-            undefined,
-            viewOverrides[datasetName],
-            datasetConfigOverrides[datasetName],
+            {
+              viewOverride: viewOverrides[datasetName],
+              datasetConfigOverride: datasetConfigOverrides[datasetName],
+            },
           );
           const changedPixels = await compareScreenshot(
             screenshot,
@@ -312,8 +314,9 @@ test.serial(
           URL,
           datasetNameToId[datasetName],
           undefined,
-          undefined,
-          viewOverride,
+          {
+            viewOverride: viewOverride,
+          },
         );
         const changedPixels = await compareScreenshot(
           screenshot,

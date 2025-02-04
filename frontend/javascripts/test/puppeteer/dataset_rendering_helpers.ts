@@ -49,23 +49,25 @@ export async function createAnnotationForDatasetScreenshot(baseUrl: string, data
   return createExplorational(datasetId, "skeleton", false, null, null, null, options);
 }
 
+type ScreenshotOptions = {
+  onLoaded?: () => Promise<void>;
+  viewOverride?: string | null | undefined;
+  datasetConfigOverride?: PartialDatasetConfiguration | null | undefined;
+};
+
 export async function screenshotDataset(
   page: Page,
   baseUrl: string,
   datasetId: string,
   optAnnotation?: APIAnnotation,
-  onLoaded?: () => Promise<void>,
-  optionalViewOverride?: string | null | undefined,
-  optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
+  options?: ScreenshotOptions,
 ): Promise<Screenshot> {
   return _screenshotAnnotationHelper(
     page,
     async () => optAnnotation ?? createAnnotationForDatasetScreenshot(baseUrl, datasetId),
     baseUrl,
     datasetId,
-    onLoaded,
-    optionalViewOverride,
-    optionalDatasetConfigOverride,
+    options,
   );
 }
 
@@ -74,14 +76,12 @@ export async function screenshotAnnotation(
   baseUrl: string,
   datasetId: string,
   fallbackLayerName: string | null,
-  onLoaded?: () => Promise<void>,
-  optionalViewOverride?: string | null | undefined,
-  optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
+  options?: ScreenshotOptions,
 ): Promise<Screenshot> {
   return _screenshotAnnotationHelper(
     page,
     () => {
-      const options = getDefaultRequestOptions(baseUrl);
+      const requestOptions = getDefaultRequestOptions(baseUrl);
       return createExplorational(
         datasetId,
         "hybrid",
@@ -89,14 +89,12 @@ export async function screenshotAnnotation(
         fallbackLayerName,
         null,
         null,
-        options,
+        requestOptions,
       );
     },
     baseUrl,
     datasetId,
-    onLoaded,
-    optionalViewOverride,
-    optionalDatasetConfigOverride,
+    options,
   );
 }
 
@@ -105,18 +103,22 @@ async function _screenshotAnnotationHelper(
   getAnnotation: () => Promise<APIAnnotation>,
   baseUrl: string,
   datasetId: string,
-  onLoaded?: () => Promise<void>,
-  optionalViewOverride?: string | null | undefined,
-  optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
+  options?: ScreenshotOptions,
 ): Promise<Screenshot> {
-  const options = getDefaultRequestOptions(baseUrl);
+  const requestOptions = getDefaultRequestOptions(baseUrl);
   const createdExplorational = await getAnnotation();
 
-  if (optionalDatasetConfigOverride != null) {
-    await updateDatasetConfiguration(datasetId, optionalDatasetConfigOverride, options);
+  if (options?.datasetConfigOverride != null) {
+    await updateDatasetConfiguration(datasetId, options.datasetConfigOverride, requestOptions);
   }
 
-  await openTracingView(page, baseUrl, createdExplorational.id, onLoaded, optionalViewOverride);
+  await openTracingView(
+    page,
+    baseUrl,
+    createdExplorational.id,
+    options?.onLoaded,
+    options?.viewOverride,
+  );
   return screenshotTracingView(page);
 }
 
@@ -124,11 +126,11 @@ export async function screenshotDatasetView(
   page: Page,
   baseUrl: string,
   datasetId: string,
-  optionalViewOverride?: string | null | undefined,
+  viewOverride?: string | null | undefined,
 ): Promise<Screenshot> {
   const url = `${baseUrl}/datasets/${datasetId}`;
 
-  await openDatasetView(page, url, optionalViewOverride);
+  await openDatasetView(page, url, viewOverride);
   return screenshotTracingView(page);
 }
 
@@ -159,7 +161,7 @@ export async function screenshotDatasetWithMappingLink(
   page: Page,
   baseUrl: string,
   datasetId: string,
-  optionalViewOverride: string | null | undefined,
+  viewOverride: string | null | undefined,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
   const createdExplorational = await createExplorational(
@@ -171,7 +173,7 @@ export async function screenshotDatasetWithMappingLink(
     null,
     options,
   );
-  await openTracingView(page, baseUrl, createdExplorational.id, undefined, optionalViewOverride);
+  await openTracingView(page, baseUrl, createdExplorational.id, undefined, viewOverride);
   await waitForMappingEnabled(page);
   return screenshotTracingView(page);
 }
@@ -179,9 +181,9 @@ export async function screenshotSandboxWithMappingLink(
   page: Page,
   baseUrl: string,
   datasetId: string,
-  optionalViewOverride: string | null | undefined,
+  viewOverride: string | null | undefined,
 ): Promise<Screenshot> {
-  await openSandboxView(page, baseUrl, datasetId, optionalViewOverride);
+  await openSandboxView(page, baseUrl, datasetId, viewOverride);
   await waitForMappingEnabled(page);
   return screenshotTracingView(page);
 }
@@ -256,9 +258,9 @@ async function openTracingView(
   baseUrl: string,
   annotationId: string,
   onLoaded?: () => Promise<void>,
-  optionalViewOverride?: string | null | undefined,
+  viewOverride?: string | null | undefined,
 ) {
-  const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
+  const urlSlug = viewOverride != null ? `#${viewOverride}` : "";
   const url = urljoin(baseUrl, `/annotations/${annotationId}${urlSlug}`);
   console.log(`Opening annotation view at ${url}`);
   await page.goto(url, {
@@ -276,9 +278,9 @@ async function openTracingView(
 async function openDatasetView(
   page: Page,
   baseUrl: string,
-  optionalViewOverride?: string | null | undefined,
+  viewOverride?: string | null | undefined,
 ) {
-  const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
+  const urlSlug = viewOverride != null ? `#${viewOverride}` : "";
   const url = urljoin(baseUrl, `/view${urlSlug}`);
   console.log(`Opening dataset view at ${url}`);
   await page.goto(url, {
@@ -294,9 +296,9 @@ async function openSandboxView(
   page: Page,
   baseUrl: string,
   datasetId: string,
-  optionalViewOverride: string | null | undefined,
+  viewOverride: string | null | undefined,
 ) {
-  const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
+  const urlSlug = viewOverride != null ? `#${viewOverride}` : "";
   const url = urljoin(baseUrl, `/datasets/${datasetId}/sandbox/skeleton${urlSlug}`);
   console.log(`Opening sandbox annotation view at ${url}`);
   await page.goto(url, {

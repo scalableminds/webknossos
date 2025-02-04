@@ -251,9 +251,11 @@ datasetNames.map(async (datasetName) => {
             URL,
             datasetNameToId[spec.datasetName],
             annotation,
-            onLoaded,
-            spec.viewOverride,
-            spec.datasetConfig,
+            {
+              onLoaded,
+              viewOverride: spec.viewOverride,
+              datasetConfigOverride: spec.datasetConfig,
+            },
           );
           console.timeEnd("Making screenshot...");
           console.time("Comparing screenshot...");

@@ -162,7 +162,7 @@ export default class LayerRenderingManager {
 
     const layerIndex = getGlobalLayerIndexForLayerName(this.name);
 
-    this.textureBucketManager.setupDataTextures(bytes, getSharedLookUpCuckooTable(), layerIndex);
+    this.textureBucketManager.setupDataTextures(getSharedLookUpCuckooTable(), layerIndex);
     shaderEditor.addBucketManagers(this.textureBucketManager);
 
     if (this.cube.isSegmentation) {

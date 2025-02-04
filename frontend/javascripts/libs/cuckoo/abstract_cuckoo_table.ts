@@ -50,7 +50,6 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     this._texture = createUpdatableTexture(
       textureWidth,
       textureWidth,
-      this.getClass().getTextureChannelCount(),
       this.getClass().getTextureType(),
       getRenderer(),
       this.getClass().getTextureFormat(),
@@ -91,7 +90,6 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
       // Use 1x1 texture to avoid WebGL warnings.
       1,
       1,
-      this.getTextureChannelCount(),
       this.getTextureType(),
       getRenderer(),
       this.getTextureFormat(),

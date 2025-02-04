@@ -118,6 +118,8 @@ export type DataTextureSizeAndCount = {
   textureCount: number;
   packingDegree: number;
 };
+
+// todop: move this to getDtypeConfigForElementClass?
 export function getPackingDegree(byteCount: number, elementClass: ElementClass) {
   // How many voxels does one texel represent? E.g.,
   // For uint8 layers, one texel stores 4 voxels => packingDegree == 4
@@ -384,7 +386,7 @@ export function getSupportedValueRangeForElementClass(
 export function getDtypeConfigForElementClass(elementClass: ElementClass): {
   textureType: THREE.TextureDataType;
   TypedArrayClass: TypedArrayConstructor;
-  pixelFormat: THREE.PixelFormat | undefined;
+  pixelFormat: THREE.PixelFormat;
   internalFormat: THREE.PixelFormatGPU | undefined;
   glslPrefix: "" | "u" | "i";
   isSigned: boolean;
@@ -397,7 +399,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
       return {
         textureType: THREE.ByteType,
         TypedArrayClass: Int8Array,
-        pixelFormat: undefined,
+        pixelFormat: THREE.RGBAFormat,
         internalFormat: "RGBA8_SNORM",
         glslPrefix: "",
         isSigned: true,
@@ -408,7 +410,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
       return {
         textureType: THREE.UnsignedByteType,
         TypedArrayClass: Uint8Array,
-        pixelFormat: undefined,
+        pixelFormat: THREE.RGBAFormat,
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: false,
@@ -438,7 +440,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
       return {
         textureType: THREE.UnsignedByteType,
         TypedArrayClass: Uint8Array,
-        pixelFormat: undefined,
+        pixelFormat: THREE.RGBAFormat,
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: false,
@@ -448,7 +450,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
       return {
         textureType: THREE.UnsignedByteType,
         TypedArrayClass: Uint8Array,
-        pixelFormat: undefined,
+        pixelFormat: THREE.RGBAFormat,
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: true,
@@ -458,7 +460,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
       return {
         textureType: THREE.UnsignedByteType,
         TypedArrayClass: Uint8Array,
-        pixelFormat: undefined,
+        pixelFormat: THREE.RGBAFormat,
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: false,
@@ -468,7 +470,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
       return {
         textureType: THREE.UnsignedByteType,
         TypedArrayClass: Uint8Array,
-        pixelFormat: undefined,
+        pixelFormat: THREE.RGBAFormat,
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: true,
@@ -478,7 +480,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
       return {
         textureType: THREE.FloatType,
         TypedArrayClass: Float32Array,
-        pixelFormat: undefined,
+        pixelFormat: THREE.RGBAFormat,
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: true,
@@ -489,7 +491,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
       return {
         textureType: THREE.UnsignedByteType,
         TypedArrayClass: Uint8Array,
-        pixelFormat: undefined,
+        pixelFormat: THREE.RGBAFormat,
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: true,
@@ -499,7 +501,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
       return {
         textureType: THREE.UnsignedByteType,
         TypedArrayClass: Uint8Array,
-        pixelFormat: undefined,
+        pixelFormat: THREE.RGBAFormat,
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: false,

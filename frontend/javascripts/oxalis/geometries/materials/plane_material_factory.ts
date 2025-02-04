@@ -970,8 +970,6 @@ class PlaneMaterialFactory {
   ): void {
     const { alpha, intensityRange, isDisabled, isInverted, gammaCorrectionValue } = settings;
 
-    // In UnsignedByte textures the byte values are scaled to [0, 1] (inclusive),
-    // in Float textures they are not.
     if (!isSegmentationLayer) {
       if (intensityRange) {
         this.uniforms[`${name}_min`].value = intensityRange[0];

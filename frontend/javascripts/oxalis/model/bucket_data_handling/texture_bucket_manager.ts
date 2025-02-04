@@ -265,10 +265,8 @@ export default class TextureBucketManager {
     return [this.lookUpCuckooTable._texture].concat(this.dataTextures);
   }
 
-  setupDataTextures(bytes: number, lookUpCuckooTable: CuckooTableVec5, layerIndex: number): void {
+  setupDataTextures(lookUpCuckooTable: CuckooTableVec5, layerIndex: number): void {
     for (let i = 0; i < this.dataTextureCount; i++) {
-      const channelCount = getChannelCount(bytes, this.packingDegree, this.elementClass);
-
       const { textureType, pixelFormat, internalFormat } = getDtypeConfigForElementClass(
         this.elementClass,
       );
@@ -276,7 +274,6 @@ export default class TextureBucketManager {
       const dataTexture = createUpdatableTexture(
         this.textureWidth,
         this.textureWidth,
-        channelCount,
         textureType,
         getRenderer(),
         pixelFormat,

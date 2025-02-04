@@ -359,11 +359,8 @@ export const getSegmentId: ShaderModule = {
         segment_id[1] = vec4(segment_id[1].r, segment_id[1].g, 0.0, 0.0);
       <% } %>
 
-      // todop: test mappings
-      // debug
-      float dtype_normalizer = 1.;
-      mapped_id[0] = dtype_normalizer * segment_id[0]; // High
-      mapped_id[1] = dtype_normalizer * segment_id[1]; // Low
+      mapped_id[0] = segment_id[0]; // High
+      mapped_id[1] = segment_id[1]; // Low
 
       if (shouldApplyMappingOnGPU) {
         uint high_integer = vec4ToUint(mapped_id[0]);
@@ -392,9 +389,6 @@ export const getSegmentId: ShaderModule = {
           mapped_id[1] = vec4(0.0);
         }
       }
-
-      segment_id[0] *= dtype_normalizer;
-      segment_id[1] *= dtype_normalizer;
     }
 <% }) %>
   `,

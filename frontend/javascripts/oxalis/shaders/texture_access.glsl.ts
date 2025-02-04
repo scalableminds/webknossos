@@ -64,8 +64,6 @@ export const getRgbaAtXYIndex: ShaderModule = {
             // Don't use if-else when there is only one data texture anyway
             val = texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0);
 
-            // todop: can we generalize this somehow?
-            // debug;
             <% if (elementClass.endsWith("int16")) { %>
               return vec4(val.x, 0., val.y, 0.);
             <% } else { %>

@@ -355,9 +355,10 @@ export type TypedArray =
   | Uint32Array
   | Float32Array
   | Float64Array
-  | BigUint64Array;
+  | BigUint64Array
+  | BigInt64Array;
 
-export type TypedArrayWithoutBigInt = Exclude<TypedArray, BigUint64Array>;
+export type TypedArrayWithoutBigInt = Exclude<TypedArray, BigUint64Array | BigInt64Array>;
 
 export const PRIMARY_COLOR: Vector3 = [86, 96, 255];
 

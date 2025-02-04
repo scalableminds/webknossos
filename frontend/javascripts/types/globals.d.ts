@@ -1,5 +1,5 @@
-import WkDev from "oxalis/api/wk_dev";
 import { ApiType } from "oxalis/api/api_loader"
+import WkDev from "oxalis/api/wk_dev";
 
 declare global {
   interface Window {

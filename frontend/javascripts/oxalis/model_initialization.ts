@@ -268,8 +268,6 @@ function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
       });
     } else if (layer.category === "segmentation" && layer.elementClass === "uint24") {
       Toast.error(messages["dataset.unsupported_segmentation_class_uint24"]);
-    } else if (layer.category === "segmentation" && layer.elementClass === "int64") {
-      Toast.error(messages["dataset.unsupported_segmentation_class_int64"]);
     }
   }
 }

@@ -348,9 +348,6 @@ export function getSupportedValueRangeForElementClass(
     case "uint32":
       return [0, 2 ** 32 - 1];
 
-    case "uint64":
-      return [0, 2 ** 64 - 1];
-
     // todop: adapt for new dtypes
     case "int16":
       return [-(2 ** 15), 2 ** 15 - 1];
@@ -366,8 +363,6 @@ export function getSupportedValueRangeForElementClass(
     }
 
     // The following dtypes are not fully supported.
-    case "int64":
-      return [0, 2 ** 63 - 1];
 
     case "double": {
       // biome-ignore lint/correctness/noPrecisionLoss: This number literal will lose precision at runtime. The value at runtime will be inf.
@@ -375,6 +370,11 @@ export function getSupportedValueRangeForElementClass(
       return [-maxDoubleValue, maxDoubleValue];
     }
 
+    // Int64 types are only supported for segmentations (which don't need to call this
+    // function as there will be no histogram). Still, for the record: 2 ** 53 - 1
+    // is currently the maximum supported "64-bit" segment id due to JS Number.
+    case "uint64":
+    case "int64":
     default:
       return [0, 255];
   }
@@ -462,17 +462,6 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         isSigned: false,
       };
 
-    case "float":
-      return {
-        textureType: THREE.FloatType,
-        TypedArrayClass: Float32Array,
-        pixelFormat: undefined,
-        internalFormat: undefined,
-        glslPrefix: "",
-        isSigned: true,
-      };
-
-    // We do not fully support all signed int data;
     case "int64":
       return {
         textureType: THREE.UnsignedByteType,
@@ -483,6 +472,17 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         isSigned: true,
       };
 
+    case "float":
+      return {
+        textureType: THREE.FloatType,
+        TypedArrayClass: Float32Array,
+        pixelFormat: undefined,
+        internalFormat: undefined,
+        glslPrefix: "",
+        isSigned: true,
+      };
+
+    // We do not fully support all signed int data
     case "double":
       return {
         textureType: THREE.UnsignedByteType,

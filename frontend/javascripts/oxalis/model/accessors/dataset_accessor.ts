@@ -400,11 +400,17 @@ export function isElementClassSupported(layerInfo: DataLayerType): boolean {
     case "int16":
     case "int32":
     case "float":
-    case "uint64":
       return true;
 
+    case "uint64":
+    case "int64": {
+      // We only support 64 bit for segmentation (note that only segment ids
+      // below 2**53 - 1 will be handled properly due to the JS Number type currently).
+      return layerInfo.category === "segmentation";
+    }
+
+    // todop: adapt
     case "double":
-    case "int64":
     default:
       return false;
   }

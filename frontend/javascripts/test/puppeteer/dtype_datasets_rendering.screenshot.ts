@@ -25,24 +25,24 @@ import {
   updateTemporarySettingAction,
 } from "oxalis/model/actions/settings_actions";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-import { Action } from "oxalis/model/actions/actions";
+import type { Action } from "oxalis/model/actions/actions";
 
-const semaphore = new Semaphore(2);
+const semaphore = new Semaphore(1);
 const testColor = true;
 const testSegmentation = true;
 
-function matchWildcard(pattern: string, str: string) {
-  // Escape special regex characters in the pattern, except for '*'
-  const escapedPattern = pattern.replace(/[-\/\\^$+?.()|[\]{}]/g, "\\$&");
-  // Replace '*' with '.*' to match any sequence of characters
-  const regexPattern = "^" + escapedPattern.replace(/\*/g, ".*") + "$";
-  // Create a new RegExp object
-  const regex = new RegExp(regexPattern);
-  // Test if the string matches the pattern
-  return regex.test(str);
-}
+// function matchWildcard(pattern: string, str: string) {
+//   // Escape special regex characters in the pattern, except for '*'
+//   const escapedPattern = pattern.replace(/[-\/\\^$+?.()|[\]{}]/g, "\\$&");
+//   // Replace '*' with '.*' to match any sequence of characters
+//   const regexPattern = "^" + escapedPattern.replace(/\*/g, ".*") + "$";
+//   // Create a new RegExp object
+//   const regex = new RegExp(regexPattern);
+//   // Test if the string matches the pattern
+//   return regex.test(str);
+// }
 
-const wildcard = "uint32*segmentation";
+// const wildcard = "uint32*segmentation";
 
 const dtypes = [
   // biome-ignore format: don't format array (for easier commenting-out)
@@ -52,6 +52,8 @@ const dtypes = [
   "int16",
   "uint32",
   "int32",
+  "uint64",
+  "int64",
   "float32",
 ] as const;
 type DType = (typeof dtypes)[number];
@@ -64,7 +66,7 @@ let URL = "http://localhost:9000/";
 
 console.log(`[Info] Executing tests on URL ${URL}.`);
 
-setupBeforeEachAndAfterEach();
+setupBeforeEachAndAfterEach(semaphore);
 
 // These datasets are available on our dev instance (e.g., master.webknossos.xyz)
 
@@ -112,6 +114,8 @@ const selectiveSegmentIdByDtype: Partial<Record<DType, number>> = {
   int16: -527,
   uint32: 2181570682,
   int32: 34087034,
+  uint64: 4575085335741433,
+  int64: -142971416741958,
 };
 
 type Spec = {
@@ -127,31 +131,34 @@ const specs: Array<Spec> = _.flatten(
   dtypes.map((dtype): Spec[] => {
     const elementClass = dtype === "float32" ? "float" : dtype;
 
-    const colorSpecs = [
-      {
-        name: `dtype_${dtype}_color_${zoomedIn.postfix}`,
-        dtype,
-        datasetName: `dtype_test_${dtype}_color`,
-        viewOverride: zoomedIn.viewOverride,
-        datasetConfig: datasetConfigHelper(`${dtype}_color`, [
-          getDtypeConfigForElementClass(elementClass).isSigned ? -10 : 0,
-          10,
-        ]),
-      },
-      {
-        name: `dtype_${dtype}_color_${zoomedOut.postfix}`,
-        dtype,
-        datasetName: `dtype_test_${dtype}_color`,
-        viewOverride: zoomedOut.viewOverride,
-        datasetConfig: datasetConfigHelper(
-          `${dtype}_color`,
-          getSupportedValueRangeForElementClass(elementClass),
-        ),
-      },
-    ];
+    // No color support for 64 bit
+    const colorSpecs = ["uint64", "int64"].includes(elementClass)
+      ? []
+      : [
+          {
+            name: `dtype_${dtype}_color_${zoomedIn.postfix}`,
+            dtype,
+            datasetName: `dtype_test_${dtype}_color`,
+            viewOverride: zoomedIn.viewOverride,
+            datasetConfig: datasetConfigHelper(`${dtype}_color`, [
+              getDtypeConfigForElementClass(elementClass).isSigned ? -10 : 0,
+              10,
+            ]),
+          },
+          {
+            name: `dtype_${dtype}_color_${zoomedOut.postfix}`,
+            dtype,
+            datasetName: `dtype_test_${dtype}_color`,
+            viewOverride: zoomedOut.viewOverride,
+            datasetConfig: datasetConfigHelper(
+              `${dtype}_color`,
+              getSupportedValueRangeForElementClass(elementClass),
+            ),
+          },
+        ];
 
-    // No segmentation support for float
     const segmentationSpecs =
+      // No segmentation support for float
       elementClass === "float"
         ? []
         : [
@@ -218,56 +225,82 @@ datasetNames.map(async (datasetName) => {
       datasetNameToId[datasetName],
     );
     console.timeEnd("Creating annotation...");
-    const release = await semaphore.acquire();
-    try {
-      const page = await getNewPage(t.context.browser);
-      for (const spec of specs.filter((spec) => spec.datasetName === datasetName)) {
-        await withRetry(
-          1,
-          async () => {
-            // if (!matchWildcard(wildcard, spec.name)) {
-            //   console.log(`Skipping ${spec.name} as it does not match wildcard=${wildcard}`);
-            //   return true;
-            // }
-            console.log(`Starting: ${spec.name}...`);
-            const { datasetConfig } = spec;
-            const onLoaded = async () => {
-              const [x, y, z, _, zoomValue] = spec.viewOverride
-                .split(",")
-                .map((el) => Number.parseFloat(el));
+    const page = await getNewPage(t.context.browser);
+    for (const spec of specs.filter((spec) => spec.datasetName === datasetName)) {
+      await withRetry(
+        1,
+        async () => {
+          // if (!matchWildcard(wildcard, spec.name)) {
+          //   console.log(`Skipping ${spec.name} as it does not match wildcard=${wildcard}`);
+          //   return true;
+          // }
+          console.log(`Starting: ${spec.name}...`);
+          const { datasetConfig } = spec;
+          const onLoaded = async () => {
+            const [x, y, z, _, zoomValue] = spec.viewOverride
+              .split(",")
+              .map((el) => Number.parseFloat(el));
 
-              const actions: Action[] = [
-                updateDatasetSettingAction("selectiveSegmentVisibility", false),
-                updateTemporarySettingAction("hoveredSegmentId", null),
-                setPositionAction([x, y, z]),
-                setZoomStepAction(zoomValue),
-              ];
-              if (datasetConfig?.layers != null) {
-                const layerName = Object.keys(datasetConfig.layers)[0];
-                const { intensityRange } = datasetConfig.layers[layerName];
+            const actions: Action[] = [
+              updateDatasetSettingAction("selectiveSegmentVisibility", false),
+              updateTemporarySettingAction("hoveredSegmentId", null),
+              setPositionAction([x, y, z]),
+              setZoomStepAction(zoomValue),
+            ];
+            if (datasetConfig?.layers != null) {
+              const layerName = Object.keys(datasetConfig.layers)[0];
+              const { intensityRange } = datasetConfig.layers[layerName];
 
-                actions.push(updateLayerSettingAction(layerName, "intensityRange", intensityRange));
+              actions.push(updateLayerSettingAction(layerName, "intensityRange", intensityRange));
+            }
+
+            await page.evaluate((actions) => {
+              return window.webknossos.apiReady().then(() => {
+                for (const action of actions) {
+                  window.webknossos.DEV.store.dispatch(action);
+                }
+              });
+            }, actions);
+          };
+          console.time("Making screenshot...");
+          const { screenshot, width, height } = await screenshotDataset(
+            page,
+            URL,
+            datasetNameToId[spec.datasetName],
+            annotation,
+            onLoaded,
+            spec.viewOverride,
+            spec.datasetConfig,
+          );
+          console.timeEnd("Making screenshot...");
+          console.time("Comparing screenshot...");
+          const changedPixels = await compareScreenshot(
+            screenshot,
+            width,
+            height,
+            BASE_PATH,
+            spec.name,
+          );
+          console.timeEnd("Comparing screenshot...");
+
+          let success = true;
+          if (spec.alsoTestSelectiveSegmentId && selectiveSegmentIdByDtype[spec.dtype] != null) {
+            const actions = [
+              updateDatasetSettingAction("selectiveSegmentVisibility", true),
+              updateTemporarySettingAction(
+                "hoveredSegmentId",
+                selectiveSegmentIdByDtype[spec.dtype] ?? null,
+              ),
+            ];
+            console.time("evaluate");
+            await page.evaluate((actions) => {
+              for (const action of actions) {
+                window.webknossos.DEV.store.dispatch(action);
               }
-
-              console.log("Dispatching", actions);
-              await page.evaluate((actions) => {
-                return window.webknossos.apiReady().then((api) => {
-                  for (const action of actions) {
-                    window.webknossos.DEV.store.dispatch(action);
-                  }
-                });
-              }, actions);
-            };
+            }, actions);
+            console.timeEnd("evaluate");
             console.time("Making screenshot...");
-            const { screenshot, width, height } = await screenshotDataset(
-              page,
-              URL,
-              datasetNameToId[spec.datasetName],
-              annotation,
-              onLoaded,
-              spec.viewOverride,
-              spec.datasetConfig,
-            );
+            const { screenshot, width, height } = await screenshotTracingView(page);
             console.timeEnd("Making screenshot...");
             console.time("Comparing screenshot...");
             const changedPixels = await compareScreenshot(
@@ -275,60 +308,23 @@ datasetNames.map(async (datasetName) => {
               width,
               height,
               BASE_PATH,
-              spec.name,
+              spec.name + "_selective_segment",
             );
             console.timeEnd("Comparing screenshot...");
 
-            let success = true;
-            if (spec.alsoTestSelectiveSegmentId && selectiveSegmentIdByDtype[spec.dtype] != null) {
-              const actions = [
-                updateDatasetSettingAction("selectiveSegmentVisibility", true),
-                updateTemporarySettingAction(
-                  "hoveredSegmentId",
-                  selectiveSegmentIdByDtype[spec.dtype] ?? null,
-                ),
-              ];
-              console.time("evaluate");
-              await page.evaluate((actions) => {
-                for (const action of actions) {
-                  window.webknossos.DEV.store.dispatch(action);
-                }
-              }, actions);
-              console.timeEnd("evaluate");
-              console.time("Making screenshot...");
-              const { screenshot, width, height } = await screenshotTracingView(page);
-              const hoveredSegmentId = await page.evaluate(() => {
-                return window.webknossos.DEV.store.getState().temporaryConfiguration
-                  .hoveredSegmentId;
-              });
-              console.log("hoveredSegmentId", hoveredSegmentId);
-              console.timeEnd("Making screenshot...");
-              console.time("Comparing screenshot...");
-              const changedPixels = await compareScreenshot(
-                screenshot,
-                width,
-                height,
-                BASE_PATH,
-                spec.name + "_selective_segment",
-              );
-              console.timeEnd("Comparing screenshot...");
+            success = isPixelEquivalent(changedPixels, width, height);
+          }
 
-              success = isPixelEquivalent(changedPixels, width, height);
-            }
-
-            return success && isPixelEquivalent(changedPixels, width, height);
-          },
-          (condition) => {
-            t.true(
-              condition,
-              `Dataset spec with name: "${spec.name}" does not look the same, see ${spec.name}.diff.png for the difference and ${spec.name}.new.png for the new screenshot.`,
-            );
-          },
-        );
-      }
-      page.close();
-    } finally {
-      release();
+          return success && isPixelEquivalent(changedPixels, width, height);
+        },
+        (condition) => {
+          t.true(
+            condition,
+            `Dataset spec with name: "${spec.name}" does not look the same, see ${spec.name}.diff.png for the difference and ${spec.name}.new.png for the new screenshot.`,
+          );
+        },
+      );
     }
+    page.close();
   });
 });

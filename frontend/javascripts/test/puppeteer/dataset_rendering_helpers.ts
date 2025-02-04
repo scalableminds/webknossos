@@ -13,6 +13,7 @@ import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
 import { sleep } from "libs/utils";
 import type { APIAnnotation } from "types/api_flow_types";
+import type Semaphore from "semaphore-promise";
 
 export const { WK_AUTH_TOKEN } = process.env;
 
@@ -22,7 +23,7 @@ const PAGE_HEIGHT = 1080;
 // todop: change to false before merging
 const USE_LOCAL_CHROME = true;
 // Only relevant when USE_LOCAL_CHROME. Set to false to actually see the browser open.
-const HEADLESS = false;
+const HEADLESS = true;
 
 type Screenshot = {
   screenshot: Buffer;
@@ -374,12 +375,14 @@ export async function withRetry(
 // https://github.com/avajs/ava/blob/main/docs/recipes/typescript.md#typing-tcontext
 export const test = anyTest as TestFn<{
   browser: Browser;
+  release?: () => void;
 }>;
 
-export function setupBeforeEachAndAfterEach() {
+export function setupBeforeEachAndAfterEach(semaphore?: Semaphore) {
   test.beforeEach(async (t) => {
-    // TODO Consider removing running local screenshot tests entirely and only use Browserstack
-
+    if (semaphore) {
+      t.context.release = await semaphore.acquire();
+    }
     if (USE_LOCAL_CHROME) {
       // Use this for connecting to local Chrome browser instance
       t.context.browser = await puppeteer.launch({
@@ -426,6 +429,9 @@ export function setupBeforeEachAndAfterEach() {
   });
 
   test.afterEach.always(async (t) => {
+    if (t.context.release != null) {
+      t.context.release();
+    }
     await t.context.browser.close();
   });
 }

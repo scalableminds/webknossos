@@ -51,6 +51,44 @@ export const convertCellIdToRGB: ShaderModule = {
       return id;
     }
 
+    void uint64ToUint64(vec4 lowColor, vec4 highColor, out highp uint absLow, out highp uint absHigh) {
+      absLow = vec4ToUint(lowColor);
+      absHigh = vec4ToUint(highColor);
+    }
+
+    void int32ToUint64(vec4 lowColor, vec4 highColor, out highp uint absLow, out highp uint absHigh) {
+      absLow = vec4ToIntToUint(lowColor);
+      absHigh = 0u;
+    }
+
+    void uint32ToUint64(vec4 lowColor, vec4 highColor, out highp uint absLow, out highp uint absHigh) {
+      absLow = vec4ToUint(lowColor);
+      absHigh = 0u;
+    }
+
+    void int64ToUint64(vec4 lowColor, vec4 highColor, out highp uint absLow, out highp uint absHigh) {
+      // Extract low and high 32-bit parts
+      highp int low = vec4ToInt(lowColor);
+      highp int high = vec4ToInt(highColor);
+
+      // Check if the number is negative
+      if (high < 0) {
+        // Calculate the two's complement (absolute value)
+        highp uint low_uint = uint(low);
+        highp uint high_uint = uint(high);
+        highp uint combinedLow = ~low_uint + 1u; // Add 1 to the bitwise NOT of low
+        highp uint combinedHigh = ~high_uint + uint(combinedLow == 0u ? 1u : 0u); // Add carry if low overflows
+
+        // Output absolute value as two uint32
+        absLow = combinedLow;
+        absHigh = combinedHigh;
+      } else {
+        // The number is already positive
+        absLow = uint(low);
+        absHigh = uint(high);
+      }
+    }
+
     vec3 attemptCustomColorLookUp(uint integerValue, uint seed) {
       highp uint h0 = hashCombine(seed, integerValue);
       // See getDiminishedEntryCapacity() for an explanation about the -1

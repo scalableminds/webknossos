@@ -260,19 +260,28 @@ void main() {
       vec4[2] segment_id;
       getSegmentId_<%= segmentationName %>(worldCoordUVW, unmapped_segment_id, segment_id);
 
-      <% const vec4ToSomeIntFn = textureLayerInfos[segmentationName].isSigned ? "vec4ToIntToUint" : "vec4ToUint"; %>
+      <%
+        const vec4ToSomeIntFn =
+          textureLayerInfos[segmentationName].elementClass.endsWith("int64")
+            ? textureLayerInfos[segmentationName].isSigned ? "int64ToUint64" : "uint64ToUint64"
+            : textureLayerInfos[segmentationName].isSigned ? "int32ToUint64" : "uint32ToUint64"
+      %>
 
       {
-        highp uint hpv_low = <%= vec4ToSomeIntFn %>(unmapped_segment_id[1]);
-        highp uint hpv_high = <%= vec4ToSomeIntFn %>(unmapped_segment_id[0]);
+        highp uint hpv_low;
+        highp uint hpv_high;
+
+        <%= vec4ToSomeIntFn %>(unmapped_segment_id[1], unmapped_segment_id[0], hpv_low, hpv_high);
 
         <%= segmentationName %>_unmapped_id_low = uint(hpv_low);
         <%= segmentationName %>_unmapped_id_high = uint(hpv_high);
       }
 
       {
-        highp uint hpv_low = <%= vec4ToSomeIntFn %>(segment_id[1]);
-        highp uint hpv_high = <%= vec4ToSomeIntFn %>(segment_id[0]);
+        highp uint hpv_low;
+        highp uint hpv_high;
+
+        <%= vec4ToSomeIntFn %>(segment_id[1], segment_id[0], hpv_low, hpv_high);
 
         <%= segmentationName %>_id_low = uint(hpv_low);
         <%= segmentationName %>_id_high = uint(hpv_high);
@@ -637,9 +646,9 @@ void main() {
 
 // todop: move somewhere else?
 function glslTypeForElementClass(elementClass: ElementClass) {
-  if (elementClass === "uint32") {
+  if (elementClass === "uint32" || elementClass === "uint64") {
     return "uint";
-  } else if (elementClass === "int32") {
+  } else if (elementClass === "int32" || elementClass === "int64") {
     return "int";
   }
   return "float";

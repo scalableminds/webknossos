@@ -45,6 +45,8 @@ const canvasHeight = 100;
 const canvasWidth = 318;
 
 export function isHistogramSupported(elementClass: ElementClass): boolean {
+  // Note that histograms are only supported for color layers. This is why
+  // (u)int64 is not listed here.
   // todop: adapt for new dtypes
   return ["int8", "uint8", "int16", "uint16", "uint24", "uint32", "int32", "float"].includes(
     elementClass,

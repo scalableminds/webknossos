@@ -33,7 +33,8 @@ export type BucketDataArray =
   | Uint32Array
   | Int32Array
   | Float32Array
-  | BigUint64Array;
+  | BigUint64Array
+  | BigInt64Array;
 
 const WARNING_THROTTLE_THRESHOLD = 10000;
 
@@ -81,6 +82,7 @@ export type TypedArrayConstructor =
   | Int32ArrayConstructor
   | Uint32ArrayConstructor
   | Float32ArrayConstructor
+  | BigInt64ArrayConstructor
   | BigUint64ArrayConstructor;
 
 export const getConstructorForElementClass = (
@@ -111,6 +113,7 @@ export const getConstructorForElementClass = (
       return [Float32Array, 1];
 
     case "int64":
+      return [BigInt64Array, 1];
     case "uint64":
       return [BigUint64Array, 1];
 

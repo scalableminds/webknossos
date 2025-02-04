@@ -679,7 +679,6 @@ class PlaneMaterialFactory {
         (layerSettings) => {
           let updatedLayerVisibility = false;
           for (const dataLayer of Model.getAllLayers()) {
-            const { elementClass } = dataLayer.cube;
             const settings = layerSettings[dataLayer.name];
 
             if (settings != null) {
@@ -700,7 +699,7 @@ class PlaneMaterialFactory {
 
               oldVisibilityPerLayer[dataLayer.name] = isLayerEnabled;
               const name = sanitizeName(dataLayer.name);
-              this.updateUniformsForLayer(settings, name, elementClass, isSegmentationLayer);
+              this.updateUniformsForLayer(settings, name, isSegmentationLayer);
             }
           }
           if (updatedLayerVisibility) {
@@ -964,7 +963,6 @@ class PlaneMaterialFactory {
   updateUniformsForLayer(
     settings: DatasetLayerConfiguration,
     name: string,
-    elementClass: ElementClass,
     isSegmentationLayer: boolean,
   ): void {
     const { alpha, intensityRange, isDisabled, isInverted, gammaCorrectionValue } = settings;
@@ -972,18 +970,9 @@ class PlaneMaterialFactory {
     // In UnsignedByte textures the byte values are scaled to [0, 1] (inclusive),
     // in Float textures they are not.
     if (!isSegmentationLayer) {
-      let divisor;
       if (intensityRange) {
-        // todop: adapt when adding new dtypes
-        // Bytes are stored as signed normalized integers (-1 to 1) in WebGL.
-        // Therefore, we scale the range (-128 to 127) from -1 to 1, too.
-        if (elementClass === "uint32" || elementClass === "int32" || elementClass === "float") {
-          divisor = 1;
-        } else {
-          divisor = 1;
-        }
-        this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
-        this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;
+        this.uniforms[`${name}_min`].value = intensityRange[0];
+        this.uniforms[`${name}_max`].value = intensityRange[1];
       }
       this.uniforms[`${name}_is_inverted`].value = isInverted ? 1.0 : 0;
 

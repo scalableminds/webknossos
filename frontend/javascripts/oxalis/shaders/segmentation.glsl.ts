@@ -15,17 +15,6 @@ import type { ShaderModule } from "./shader_module_system";
 export const convertCellIdToRGB: ShaderModule = {
   requirements: [hsvToRgb, getElementOfPermutation, aaStep, colormapJet, hashCombine],
   code: `
-    // todop: delete
-    // highp uint vec4ToUint2(vec4 color) {
-    //   uvec4 four_bytes = uvec4(255. * color);
-    //   highp uint hpv =
-    //     uint(four_bytes.a) * uint(pow(256., 3.))
-    //     + uint(four_bytes.b) * uint(pow(256., 2.))
-    //     + uint(four_bytes.g) * 256u
-    //     + uint(four_bytes.r);
-    //   return hpv;
-    // }
-
     highp uint vec4ToUint(vec4 idLow) {
       uint integerValue = (uint(idLow.a) << 24) | (uint(idLow.b) << 16) | (uint(idLow.g) << 8) | uint(idLow.r);
       return integerValue;

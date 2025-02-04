@@ -50,7 +50,6 @@ function getSomeValue<T>(set: Set<T>): T {
 }
 
 const tmpPaddingBuffer = new Uint8Array(4 * constants.BUCKET_SIZE);
-// todop: adapt when adding new dtypes
 function maybePadRgbData(src: TypedArray, elementClass: ElementClass) {
   if (elementClass !== "uint24") {
     return src;

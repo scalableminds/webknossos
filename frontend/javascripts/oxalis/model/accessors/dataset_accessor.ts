@@ -391,6 +391,8 @@ export function getBitDepth(layerInfo: DataLayer | DataLayerType): number {
   }
 }
 export function isElementClassSupported(layerInfo: DataLayerType): boolean {
+  // This function needs to be adapted when a new dtype should/element class needs
+  // to be supported.
   switch (layerInfo.elementClass) {
     case "uint8":
     case "uint16":
@@ -409,7 +411,6 @@ export function isElementClassSupported(layerInfo: DataLayerType): boolean {
       return layerInfo.category === "segmentation";
     }
 
-    // todop: adapt
     case "double":
     default:
       return false;

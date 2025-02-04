@@ -334,6 +334,8 @@ export function getGpuFactorsWithLabels() {
 export function getSupportedValueRangeForElementClass(
   elementClass: ElementClass,
 ): [number, number] {
+  // This function needs to be adapted when a new dtype should/element class needs
+  // to be supported.
   switch (elementClass) {
     case "int8":
       return [-(2 ** 7), 2 ** 7 - 1];
@@ -348,7 +350,6 @@ export function getSupportedValueRangeForElementClass(
     case "uint32":
       return [0, 2 ** 32 - 1];
 
-    // todop: adapt for new dtypes
     case "int16":
       return [-(2 ** 15), 2 ** 15 - 1];
 
@@ -362,7 +363,7 @@ export function getSupportedValueRangeForElementClass(
       return [-maxFloatValue, maxFloatValue];
     }
 
-    // The following dtypes are not fully supported.
+    // The following dtype(s) are not fully supported.
 
     case "double": {
       // biome-ignore lint/correctness/noPrecisionLoss: This number literal will lose precision at runtime. The value at runtime will be inf.
@@ -388,7 +389,8 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
   glslPrefix: "" | "u" | "i";
   isSigned: boolean;
 } {
-  // todop: adapt for new dtypes
+  // This function needs to be adapted when a new dtype should/element class needs
+  // to be supported.
 
   switch (elementClass) {
     case "int8":

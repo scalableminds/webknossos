@@ -24,7 +24,9 @@ export enum BucketStateEnum {
   LOADED = "LOADED",
 }
 export type BucketStateEnumType = keyof typeof BucketStateEnum;
-// todop: adapt when adding new dtypes
+
+// This type needs to be adapted when a new dtype should/element class needs
+// to be supported.
 export type BucketDataArray =
   | Int8Array
   | Uint8Array
@@ -89,7 +91,8 @@ export const getConstructorForElementClass = (
   type: ElementClass,
 ): [TypedArrayConstructor, number] => {
   switch (type) {
-    // todop: adapt for new dtypes
+    // This function needs to be adapted when a new dtype should/element class needs
+    // to be supported.
     case "int8":
       return [Int8Array, 1];
     case "uint8":

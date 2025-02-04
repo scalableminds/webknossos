@@ -99,29 +99,28 @@ type Props = OwnProps & StateProps;
 const subMenuCloseDelay = 10;
 
 function useOlvy() {
-  // todop (late): revert
-  const [isInitialized, _setIsInitialized] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   // Initialize Olvy after mounting
   useEffect(() => {
-    // const OlvyConfig = {
-    //   organisation: "webknossos",
-    //   // This target needs to be an empty string as else olvy will eagerly init the modal and thus fetch all its contents.
-    //   target: "",
-    //   type: "modal",
-    //   view: {
-    //     showSearch: false,
-    //     compact: false,
-    //     showHeader: true,
-    //     // only applies when widget type is embed. you cannot hide header for modal and sidebar widgets
-    //     showUnreadIndicator: false,
-    //     unreadIndicatorColor: "#cc1919",
-    //     unreadIndicatorPosition: "top-right",
-    //   },
-    // };
+    const OlvyConfig = {
+      organisation: "webknossos",
+      // This target needs to be an empty string as else olvy will eagerly init the modal and thus fetch all its contents.
+      target: "",
+      type: "modal",
+      view: {
+        showSearch: false,
+        compact: false,
+        showHeader: true,
+        // only applies when widget type is embed. you cannot hide header for modal and sidebar widgets
+        showUnreadIndicator: false,
+        unreadIndicatorColor: "#cc1919",
+        unreadIndicatorPosition: "top-right",
+      },
+    };
 
     if (window.Olvy != null) {
-      // window.Olvy.init(OlvyConfig);
-      // setIsInitialized(true);
+      window.Olvy.init(OlvyConfig);
+      setIsInitialized(true);
     }
   }, []);
   return isInitialized;

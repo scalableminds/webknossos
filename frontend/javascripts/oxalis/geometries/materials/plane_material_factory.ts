@@ -75,18 +75,21 @@ export type Uniforms = Record<
 >;
 
 const DEFAULT_COLOR = new THREE.Vector3(255, 255, 255);
+// todop (late): set to false for prod
+const DISABLE_SANITIZING_FOR_DEBUGGING = false;
 
 function sanitizeName(name: string | null | undefined): string {
-  // todop (late): remove again
-  return name || "unknown name";
-  // if (name == null) {
-  //   return "";
-  // }
+  if (DISABLE_SANITIZING_FOR_DEBUGGING) {
+    return name || "unknown name";
+  }
+  if (name == null) {
+    return "";
+  }
 
   // Variables must start with a-z,A-Z or _. Names can contain a-z,A-Z,0-9 or _.
   // User variable names cannot start with gl_ or contain a double _.
   // Base64 encode the layer name and remove = characters to make sure variable names are valid
-  // return `layer_${btoa(name).replace(/=+/g, "")}`;
+  return `layer_${btoa(name).replace(/=+/g, "")}`;
 }
 
 function getSanitizedColorLayerNames() {

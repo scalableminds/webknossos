@@ -35,6 +35,7 @@ case class ReserveUploadInformation(
     organization: String,
     totalFileCount: Long,
     filePaths: Option[List[String]],
+    totalFileSize: Option[Long],
     layersToLink: Option[List[LinkedLayerIdentifier]],
     initialTeams: List[String], // team ids
     folderId: Option[String])
@@ -125,6 +126,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
    */
   private def redisKeyForFileCount(uploadId: String): String =
     s"upload___${uploadId}___fileCount"
+  private def redisKeyForTotalFileSize(uploadId: String): String =
+    s"upload___${uploadId}___totalFileSize"
+  private def redisKeyForCurrentUploadedTotalFileSize(uploadId: String): String =
+    s"upload___${uploadId}___currentUploadedTotalFileSize"
   private def redisKeyForFileNameSet(uploadId: String): String =
     s"upload___${uploadId}___fileNameSet"
   private def redisKeyForDataSourceId(uploadId: String): String =
@@ -163,6 +168,13 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- dataSourceService.assertDataDirWritable(reserveUploadInfo.organization)
       _ <- runningUploadMetadataStore.insert(redisKeyForFileCount(reserveUploadInfo.uploadId),
                                              String.valueOf(reserveUploadInfo.totalFileCount))
+      _ <- Fox.runOptional(reserveUploadInfo.totalFileSize){fileSize =>
+        Fox.combined(List(
+        runningUploadMetadataStore.insert(redisKeyForTotalFileSize(reserveUploadInfo.uploadId),
+          String.valueOf(fileSize)),
+        runningUploadMetadataStore.insert(redisKeyForCurrentUploadedTotalFileSize(reserveUploadInfo.uploadId), "0")))
+      }
+      _ <- runningUploadMetadataStore.insert(redisKeyForCurrentUploadedTotalFileSize(reserveUploadInfo.uploadId), "0")
       _ <- runningUploadMetadataStore.insert(
         redisKeyForDataSourceId(reserveUploadInfo.uploadId),
         Json.stringify(
@@ -239,6 +251,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
       (filePath, uploadDir) <- getFilePathAndDirOfUploadId(uploadFileId)
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
+      totalFileSize <- runningUploadMetadataStore.find(redisKeyForTotalFileSize(uploadId))
+      _ <- Fox.runOptional(totalFileSize){maxFileSize => bool2Fox(runningUploadMetadataStore.find(redisKeyForCurrentUploadedTotalFileSize(uploadId)).getOrElse("0").toLong + chunkSize >  maxFileSize.toLong)}
       _ <- Fox.runIf(!isFileKnown) {
         runningUploadMetadataStore
           .insertIntoSet(redisKeyForFileNameSet(uploadId), filePath)

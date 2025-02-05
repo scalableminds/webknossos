@@ -19,6 +19,8 @@ import type { TraceOrViewCommand } from "oxalis/store";
 import Store from "oxalis/store";
 import type { APICompoundType } from "types/api_flow_types";
 
+import { globalToLayerTransformedPosition } from "./model/accessors/dataset_layer_transformation_accessor";
+import { invertTransform, transformPointUnscaled } from "./model/helpers/transformation_helpers";
 import { initialize } from "./model_initialization";
 
 // TODO: Non-reactive
@@ -222,8 +224,15 @@ export class OxalisModel {
     );
 
     const getIdForPos = (pos: Vector3, usableZoomStep: number) => {
-      const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
-      const id = cube.getDataValue(pos, additionalCoordinates, null, usableZoomStep);
+      const state = Store.getState();
+      const additionalCoordinates = state.flycam.additionalCoordinates;
+      const posInLayerSpace = globalToLayerTransformedPosition(
+        pos,
+        segmentationLayer.name,
+        "segmentation",
+        state,
+      );
+      const id = cube.getDataValue(posInLayerSpace, additionalCoordinates, null, usableZoomStep);
       return {
         // Note that this id can be an unmapped id even when
         // a mapping is active, if it is a HDF5 mapping that is partially loaded

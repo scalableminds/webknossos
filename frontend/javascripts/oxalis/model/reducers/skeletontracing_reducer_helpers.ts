@@ -661,12 +661,19 @@ export function mergeTrees(
   trees: TreeMap,
   sourceNodeId: number,
   targetNodeId: number,
+  treeType: TreeType,
 ): [TreeMap, number, number] | null {
   // targetTree will be removed (the content will be merged into sourceTree).
   const sourceTree = findTreeByNodeId(trees, sourceNodeId); // should be activeTree, so that the active tree "survives"
   const targetTree = findTreeByNodeId(trees, targetNodeId);
 
-  if (targetTree == null || sourceTree == null || targetTree === sourceTree) {
+  if (
+    targetTree == null ||
+    sourceTree == null ||
+    targetTree === sourceTree ||
+    sourceTree.type !== treeType ||
+    targetTree.type !== treeType
+  ) {
     return null;
   }
 

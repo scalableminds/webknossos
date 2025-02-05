@@ -105,7 +105,7 @@ class Migration:
                     mapping_id_map[tracing_id] = editable_mapping_id
         return mapping_id_map
 
-    def fetch_updates(self, tracing_or_mapping_id: str, layer_type: str, collection: str, json_encoder, json_decoder) -> Tuple[List[Tuple[int, int, bytes]], bool]:
+    def fetch_updates(self, tracing_id: str, tracing_or_mapping_id: str, layer_type: str, collection: str, json_encoder, json_decoder) -> Tuple[List[Tuple[int, int, bytes]], bool]:
         batch_size = 100
         newest_version = self.get_newest_version(tracing_or_mapping_id, collection)
         updates_for_layer = []
@@ -118,7 +118,7 @@ class Migration:
             for version, update_group in reversed(update_groups):
                 if version > next_version:
                     continue
-                update_group, timestamp, revert_source_version = self.process_update_group(tracing_or_mapping_id, layer_type, update_group, json_encoder, json_decoder)
+                update_group, timestamp, revert_source_version = self.process_update_group(tracing_id, layer_type, update_group, json_encoder, json_decoder)
                 if revert_source_version is not None:
                     next_version = revert_source_version
                     included_revert = True
@@ -135,7 +135,7 @@ class Migration:
         layers = list(annotation["layers"].items())
         for tracing_id, layer_type in layers:
             collection = self.update_collection_for_layer_type(layer_type)
-            _, layer_included_revert = self.fetch_updates(tracing_id, layer_type, collection, json_encoder=json_encoder, json_decoder=json_decoder)
+            _, layer_included_revert = self.fetch_updates(tracing_id, tracing_id, layer_type, collection, json_encoder=json_encoder, json_decoder=json_decoder)
             if layer_included_revert:
                 return True
         return False
@@ -148,12 +148,12 @@ class Migration:
         tracing_ids_and_mapping_ids = []
         for tracing_id, layer_type in layers:
             collection = self.update_collection_for_layer_type(layer_type)
-            layer_updates, _ = self.fetch_updates(tracing_id, layer_type, collection, json_encoder=json_encoder, json_decoder=json_decoder)
+            layer_updates, _ = self.fetch_updates(tracing_id, tracing_id, layer_type, collection, json_encoder=json_encoder, json_decoder=json_decoder)
             all_update_groups.append(layer_updates)
             tracing_ids_and_mapping_ids.append(tracing_id)
             if tracing_id in mapping_id_map:
                 mapping_id = mapping_id_map[tracing_id]
-                layer_updates, _ = self.fetch_updates(mapping_id, "editableMapping", "editableMappingUpdates", json_encoder=json_encoder, json_decoder=json_decoder)
+                layer_updates, _ = self.fetch_updates(tracing_id, mapping_id, "editableMapping", "editableMappingUpdates", json_encoder=json_encoder, json_decoder=json_decoder)
                 all_update_groups.append(layer_updates)
                 tracing_ids_and_mapping_ids.append(mapping_id)
 
@@ -239,7 +239,7 @@ class Migration:
 
             # add actionTracingId
             if not name == "updateTdCamera":
-                update["value"]["actionTracingId"] = tracing_id
+                update["value"]["actionTracingId"] = tracing_id # even for mappings, this is the tracing_id of their corresponding volume layer
 
             # identify compact update actions, and mark them
             if (name == "updateBucket" and "position" not in update_value) \

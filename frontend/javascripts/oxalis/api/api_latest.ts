@@ -44,13 +44,13 @@ import {
 import UrlManager from "oxalis/controller/url_manager";
 import type { OxalisModel } from "oxalis/model";
 import {
-  flatToNestedMatrix,
   getLayerBoundingBox,
   getLayerByName,
   getMagInfo,
   getMappingInfo,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
+import { flatToNestedMatrix } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
   getPosition,
@@ -137,6 +137,7 @@ import {
   setSegmentGroupsAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { Bucket, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import type DataLayer from "oxalis/model/data_layer";
@@ -659,7 +660,10 @@ class TracingApi {
     const maximumVolume = options?.maximumVolume ?? Constants.REGISTER_SEGMENTS_BB_MAX_VOLUME_VX;
     const maximumSegmentCount =
       options?.maximumSegmentCount ?? Constants.REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT;
-    const shape = Utils.computeShapeFromBoundingBox({ min, max });
+    const boundingBoxInMag1 = new BoundingBox({
+      min,
+      max,
+    });
 
     const segmentationLayerName = api.data.getVisibleSegmentationLayerName();
     if (segmentationLayerName == null) {
@@ -679,10 +683,8 @@ class TracingApi {
       throw new Error("No mag could be found.");
     }
 
-    const volume =
-      Math.ceil(shape[0] / currentMag[0]) *
-      Math.ceil(shape[1] / currentMag[1]) *
-      Math.ceil(shape[2] / currentMag[2]);
+    const boundingBoxInMag = boundingBoxInMag1.fromMag1ToMag(currentMag);
+    const volume = boundingBoxInMag.getVolume();
     if (volume > maximumVolume) {
       throw new Error(
         `The volume of the bounding box exceeds ${maximumVolume} vx, please make it smaller. Currently, the bounding box has a volume of ${volume} vx in the active magnification (${currentMag.join("-")}).`,
@@ -702,12 +704,15 @@ class TracingApi {
       existingMagIndex,
     );
     const [dx, dy, dz] = currentMag;
-
+    // getDataForBoundingBox grows the bounding box to be mag-aligned which can change the dimensions
+    const boundingBoxInMag1MagAligned = boundingBoxInMag1.alignWithMag(currentMag, "grow");
+    const dataMin = boundingBoxInMag1MagAligned.min;
+    const dataMax = boundingBoxInMag1MagAligned.max;
     const segmentIdToPosition = new Map();
     let idx = 0;
-    for (let z = min[2]; z < max[2]; z += dz) {
-      for (let y = min[1]; y < max[1]; y += dy) {
-        for (let x = min[0]; x < max[0]; x += dx) {
+    for (let z = dataMin[2]; z < dataMax[2]; z += dz) {
+      for (let y = dataMin[1]; y < dataMax[1]; y += dy) {
+        for (let x = dataMin[0]; x < dataMax[0]; x += dx) {
           const id = data[idx];
           if (id !== 0 && !segmentIdToPosition.has(id)) {
             segmentIdToPosition.set(id, [x, y, z]);

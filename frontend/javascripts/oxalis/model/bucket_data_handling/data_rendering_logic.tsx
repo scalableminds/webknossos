@@ -134,18 +134,7 @@ export function getPackingDegree(byteCount: number, elementClass: ElementClass) 
   if (byteCount === 8) return 0.5;
   return 1;
 }
-export function getChannelCount(
-  byteCount: number,
-  packingDegree: number,
-  elementClass: ElementClass,
-) {
-  if (elementClass === "float") {
-    // Float textures can hold a float per channel, so divide bytes by 4
-    return (byteCount / 4) * packingDegree;
-  } else {
-    return byteCount * packingDegree;
-  }
-}
+
 export function getBucketCapacity(
   dataTextureCount: number,
   textureWidth: number,

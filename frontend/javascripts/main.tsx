@@ -53,7 +53,7 @@ const localStoragePersister = createSyncStoragePersister({
   key: "query-cache-v3",
 });
 
-async function loadActiveUser() {
+async function tryToLoadActiveUser() {
   // Try to retrieve the currently active user if logged in
   try {
     const user = await getActiveUser({
@@ -73,12 +73,8 @@ async function loadActiveUser() {
 
 async function loadHasOrganizations() {
   // Check whether any organizations exist
-  try {
-    const hasOrganizations = await checkAnyOrganizationExists();
-    Store.dispatch(setHasOrganizationsAction(hasOrganizations));
-  } catch (_e) {
-    // pass
-  }
+  const hasOrganizations = await checkAnyOrganizationExists();
+  Store.dispatch(setHasOrganizationsAction(hasOrganizations));
 }
 
 async function loadOrganization() {
@@ -97,9 +93,31 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   message.config({ top: 30 });
   checkBrowserFeatures();
-  await Promise.all([loadFeatureToggles(), loadActiveUser(), loadHasOrganizations()]);
-  await Promise.all([loadOrganization()]);
   const containerElement = document.getElementById("main-container");
+
+  try {
+    await Promise.all([
+      loadFeatureToggles(),
+      // This function call cannot error as it has a try-catch built-in
+      tryToLoadActiveUser(),
+      // *Don't* ignore errors in this request. We only want
+      // to show an onboarding screen if the back-end replied
+      // with hasOrganizations==true.
+      loadHasOrganizations(),
+    ]);
+    await loadOrganization();
+  } catch (e) {
+    console.error("Failed to load WEBKNOSSOS due to the following error", e);
+    if (containerElement) {
+      const react_root = createRoot(containerElement);
+      react_root.render(
+        <p style={{ margin: 20, marginTop: -20 }}>
+          Failed to load WEBKNOSSOS. Please try again or check the console for details.
+        </p>,
+      );
+    }
+    return;
+  }
 
   if (containerElement) {
     const react_root = createRoot(containerElement);

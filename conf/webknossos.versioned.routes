@@ -22,9 +22,9 @@ GET      /v8/datasets/:organizationId/:datasetName/sharingToken               co
 PATCH    /v8/datasets/:organizationId/:datasetName/teams                      controllers.LegacyApiController.updateDatasetTeamsV8(organizationId: String, datasetName: String)
 GET      /v8/datasets/:organizationId/:datasetName/isValidNewName             controllers.LegacyApiController.isValidNewNameV8(datasetName: String, organizationId: String)
 GET      /v8/datasets/:organizationId/:datasetName                            controllers.LegacyApiController.readDatasetV8(organizationId: String, datasetName: String, sharingToken: Option[String])
-GET      /v8/tasks/:id                                                        controllers.LegacyApiController.readTaskV8(id: String)
+GET      /v8/tasks/:id                                                        controllers.LegacyApiController.readTaskV8(id: ObjectId)
 POST     /v8/tasks                                                            controllers.LegacyApiController.createTaskV8()
-GET      /v8/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: String, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET      /v8/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: ObjectId, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 
 ->       /v8/                                                                 webknossos.latest.Routes
 #v7: support changes to v9
@@ -33,12 +33,12 @@ GET      /v7/datasets/:organizationId/:datasetName/sharingToken               co
 PATCH    /v7/datasets/:organizationId/:datasetName/teams                      controllers.LegacyApiController.updateDatasetTeamsV8(organizationId: String, datasetName: String)
 GET      /v7/datasets/:organizationId/:datasetName/isValidNewName             controllers.LegacyApiController.isValidNewNameV8(datasetName: String, organizationId: String)
 GET      /v7/datasets/:organizationId/:datasetName                            controllers.LegacyApiController.readDatasetV8(organizationId: String, datasetName: String, sharingToken: Option[String])
-GET      /v7/tasks/:id                                                        controllers.LegacyApiController.readTaskV8(id: String)
+GET      /v7/tasks/:id                                                        controllers.LegacyApiController.readTaskV8(id: ObjectId)
 POST     /v7/tasks                                                            controllers.LegacyApiController.createTaskV8()
-GET      /v7/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: String, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET      /v7/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: ObjectId, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 
 # v7: support changes to v8
-GET      /v7/datasets                                                         controllers.LegacyApiController.listDatasetsV7(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
+GET      /v7/datasets                                                         controllers.LegacyApiController.listDatasetsV7(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
 
 ->       /v7/                                                                 webknossos.latest.Routes
 
@@ -47,12 +47,12 @@ PATCH    /v6/datasets/:organizationId/:datasetName                            co
 GET      /v6/datasets/:organizationId/:datasetName/sharingToken               controllers.LegacyApiController.getDatasetSharingTokenV8(organizationId: String, datasetName: String)
 PATCH    /v6/datasets/:organizationId/:datasetName/teams                      controllers.LegacyApiController.updateDatasetTeamsV8(organizationId: String, datasetName: String)
 GET      /v6/datasets/:organizationId/:datasetName/isValidNewName             controllers.LegacyApiController.isValidNewNameV8(datasetName: String, organizationId: String)
-GET      /v6/tasks/:id                                                        controllers.LegacyApiController.readTaskV8(id: String)
+GET      /v6/tasks/:id                                                        controllers.LegacyApiController.readTaskV8(id: ObjectId)
 POST     /v6/tasks                                                            controllers.LegacyApiController.createTaskV8()
-GET      /v6/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: String, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET      /v6/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: ObjectId, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 
 # v6: support changes to v7
-GET      /v6/datasets                                                         controllers.LegacyApiController.listDatasetsV6(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
+GET      /v6/datasets                                                         controllers.LegacyApiController.listDatasetsV6(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
 GET      /v6/datasets/:organizationName/:datasetName                          controllers.LegacyApiController.readDatasetV6(organizationName: String, datasetName: String, sharingToken: Option[String])
 
 ->       /v6/                                                                 webknossos.latest.Routes
@@ -63,12 +63,12 @@ PATCH    /v5/datasets/:organizationId/:datasetName                            co
 GET      /v5/datasets/:organizationId/:datasetName/sharingToken               controllers.LegacyApiController.getDatasetSharingTokenV8(organizationId: String, datasetName: String)
 PATCH    /v5/datasets/:organizationId/:datasetName/teams                      controllers.LegacyApiController.updateDatasetTeamsV8(organizationId: String, datasetName: String)
 GET      /v5/datasets/:organizationId/:datasetName/isValidNewName             controllers.LegacyApiController.isValidNewNameV8(datasetName: String, organizationId: String)
-GET      /v5/tasks/:id                                                        controllers.LegacyApiController.readTaskV8(id: String)
+GET      /v5/tasks/:id                                                        controllers.LegacyApiController.readTaskV8(id: ObjectId)
 POST     /v5/tasks                                                            controllers.LegacyApiController.createTaskV8()
-GET      /v5/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: String, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET      /v5/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: ObjectId, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 
 # v5: support changes to v7
-GET      /v5/datasets                                                         controllers.LegacyApiController.listDatasetsV6(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
+GET      /v5/datasets                                                         controllers.LegacyApiController.listDatasetsV6(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
 GET      /v5/datasets/:organizationName/:datasetName                          controllers.LegacyApiController.readDatasetV6(organizationName: String, datasetName: String, sharingToken: Option[String])
 
 # v5: support changes to v6

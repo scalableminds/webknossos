@@ -10,7 +10,6 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { BucketAddress, Vector3, Vector4, ViewMode } from "oxalis/constants";
 import {
-  getByteCount,
   getElementClass,
   getLayerByName,
   getMagInfo,
@@ -153,12 +152,10 @@ export default class LayerRenderingManager {
 
   setupDataTextures(): void {
     const { dataset } = Store.getState();
-    const bytes = getByteCount(dataset, this.name);
     const elementClass = getElementClass(dataset, this.name);
     this.textureBucketManager = new TextureBucketManager(
       this.textureWidth,
       this.dataTextureCount,
-      bytes,
       elementClass,
     );
 

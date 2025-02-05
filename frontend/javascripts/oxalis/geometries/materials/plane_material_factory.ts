@@ -13,7 +13,6 @@ import {
   ViewModeValues,
 } from "oxalis/constants";
 import {
-  getByteCount,
   getColorLayers,
   getDataLayers,
   getDatasetBoundingBox,
@@ -45,10 +44,7 @@ import {
   getBucketRetrievalSourceFn,
   needsLocalHdf5Mapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  getDtypeConfigForElementClass,
-  getPackingDegree,
-} from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import { getDtypeConfigForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
@@ -107,7 +103,7 @@ function getTextureLayerInfos(): Params["textureLayerInfos"] {
     const elementClass = getElementClass(dataset, layer.name);
     const dtypeConfig = getDtypeConfigForElementClass(elementClass);
     return {
-      packingDegree: getPackingDegree(getByteCount(dataset, layer.name), elementClass),
+      packingDegree: dtypeConfig.packingDegree,
       glslPrefix: dtypeConfig.glslPrefix,
       dataTextureCount: Model.getLayerRenderingManagerByName(layer.name).dataTextureCount,
       isSigned: dtypeConfig.isSigned,

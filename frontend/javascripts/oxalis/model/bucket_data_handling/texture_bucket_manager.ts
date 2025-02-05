@@ -12,7 +12,6 @@ import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import {
   getBucketCapacity,
   getDtypeConfigForElementClass,
-  getPackingDegree,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import type * as THREE from "three";
 import type { ElementClass } from "types/api_flow_types";
@@ -94,15 +93,10 @@ export default class TextureBucketManager {
   packingDegree: number;
   elementClass: ElementClass;
 
-  constructor(
-    textureWidth: number,
-    dataTextureCount: number,
-    bytes: number,
-    elementClass: ElementClass,
-  ) {
+  constructor(textureWidth: number, dataTextureCount: number, elementClass: ElementClass) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
     // Otherwise, we don't pack bytes together (packingDegree = 1)
-    this.packingDegree = getPackingDegree(bytes, elementClass);
+    this.packingDegree = getDtypeConfigForElementClass(elementClass).packingDegree;
     this.elementClass = elementClass;
     this.maximumCapacity = getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree);
     this.textureWidth = textureWidth;

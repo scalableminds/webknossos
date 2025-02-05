@@ -119,22 +119,6 @@ export type DataTextureSizeAndCount = {
   packingDegree: number;
 };
 
-// todop: move this to getDtypeConfigForElementClass?
-export function getPackingDegree(byteCount: number, elementClass: ElementClass) {
-  // How many voxels does one texel represent? E.g.,
-  // For uint8 layers, one texel stores 4 voxels => packingDegree == 4
-  // For uint16 layers, one texel stores 2 voxels => packignDegree == 2.
-  //
-  // If the layer holds less than 4 byte per voxel, we can pack multiple voxels using rgba channels
-  // Float textures can hold a float per channel, adjust the packing degree accordingly
-  // 64-bit values need two texel per data voxel which is why their packing degree is lower than 1.
-
-  if (byteCount === 1 || elementClass === "float") return 4;
-  if (byteCount === 2) return 2;
-  if (byteCount === 8) return 0.5;
-  return 1;
-}
-
 export function getBucketCapacity(
   dataTextureCount: number,
   textureWidth: number,
@@ -169,12 +153,11 @@ function getDataTextureCount(
 // Only exported for testing
 export function calculateTextureSizeAndCountForLayer(
   specs: GpuSpecs,
-  byteCount: number,
   elementClass: ElementClass,
   requiredBucketCapacity: number,
 ): DataTextureSizeAndCount {
   let textureSize = specs.supportedTextureSize;
-  const packingDegree = getPackingDegree(byteCount, elementClass);
+  const { packingDegree } = getDtypeConfigForElementClass(elementClass);
 
   // Try to half the texture size as long as it does not require more
   // data textures. This ensures that we maximize the number of simultaneously
@@ -201,7 +184,6 @@ function buildTextureInformationMap<
   },
 >(
   layers: Array<Layer>,
-  getByteCountForLayer: (arg0: Layer) => number,
   specs: GpuSpecs,
   requiredBucketCapacity: number,
 ): Map<Layer, DataTextureSizeAndCount> {
@@ -209,7 +191,6 @@ function buildTextureInformationMap<
   layers.forEach((layer) => {
     const sizeAndCount = calculateTextureSizeAndCountForLayer(
       specs,
-      getByteCountForLayer(layer),
       layer.elementClass,
       requiredBucketCapacity,
     );
@@ -279,16 +260,9 @@ export function computeDataTexturesSetup<
     elementClass: ElementClass;
     category: "color" | "segmentation";
   },
->(
-  specs: GpuSpecs,
-  layers: Array<Layer>,
-  getByteCountForLayer: (arg0: Layer) => number,
-  hasSegmentation: boolean,
-  requiredBucketCapacity: number,
-) {
+>(specs: GpuSpecs, layers: Array<Layer>, hasSegmentation: boolean, requiredBucketCapacity: number) {
   const textureInformationPerLayer = buildTextureInformationMap(
     layers,
-    getByteCountForLayer,
     specs,
     requiredBucketCapacity,
   );
@@ -379,6 +353,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
   internalFormat: THREE.PixelFormatGPU | undefined;
   glslPrefix: "" | "u" | "i";
   isSigned: boolean;
+  packingDegree: number;
 } {
   // This function needs to be adapted when a new dtype should/element class needs
   // to be supported.
@@ -392,8 +367,18 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         internalFormat: "RGBA8_SNORM",
         glslPrefix: "",
         isSigned: true,
+        packingDegree: 4,
       };
     case "uint8":
+      return {
+        textureType: THREE.UnsignedByteType,
+        TypedArrayClass: Uint8Array,
+        pixelFormat: THREE.RGBAFormat,
+        internalFormat: undefined,
+        glslPrefix: "",
+        isSigned: false,
+        packingDegree: 4,
+      };
     case "uint24":
       // Since uint24 layers are multi-channel, their intensity ranges are equal to uint8
       return {
@@ -403,6 +388,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: false,
+        packingDegree: 1,
       };
 
     case "uint16":
@@ -413,6 +399,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         internalFormat: "RG16UI",
         glslPrefix: "u",
         isSigned: false,
+        packingDegree: 2,
       };
 
     case "int16":
@@ -423,6 +410,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         internalFormat: "RG16I",
         glslPrefix: "i",
         isSigned: true,
+        packingDegree: 2,
       };
 
     case "uint32":
@@ -433,6 +421,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: false,
+        packingDegree: 1,
       };
 
     case "int32":
@@ -443,6 +432,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: true,
+        packingDegree: 1,
       };
 
     case "uint64":
@@ -453,6 +443,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: false,
+        packingDegree: 0.5,
       };
 
     case "int64":
@@ -463,6 +454,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: true,
+        packingDegree: 0.5,
       };
 
     case "float":
@@ -473,9 +465,10 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: true,
+        packingDegree: 4,
       };
 
-    // We do not fully support all signed int data
+    // We do not fully support double
     case "double":
       return {
         textureType: THREE.UnsignedByteType,
@@ -484,6 +477,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: true,
+        packingDegree: 0.5,
       };
 
     default:
@@ -494,6 +488,7 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: false,
+        packingDegree: 1,
       };
   }
 }

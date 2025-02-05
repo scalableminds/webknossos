@@ -24,7 +24,6 @@ import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/
 import UrlManager from "oxalis/controller/url_manager";
 import {
   determineAllowedModes,
-  getBitDepth,
   getDataLayers,
   getDatasetBoundingBox,
   getDatasetCenter,
@@ -299,7 +298,6 @@ function validateSpecsForLayers(dataset: APIDataset, requiredBucketCapacity: num
   const setupDetails = computeDataTexturesSetup(
     specs,
     layers,
-    (layer) => getBitDepth(layer) / 8,
     hasSegmentation(dataset),
     requiredBucketCapacity,
   );

@@ -21,10 +21,9 @@ class MeshController @Inject()(meshDAO: MeshDAO,
     extends Controller
     with FoxImplicits {
 
-  def get(id: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def get(id: ObjectId): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
-      idValidated <- ObjectId.fromString(id)
-      meshInfo <- meshDAO.findOne(idValidated) ?~> "mesh.notFound" ~> NOT_FOUND
+      meshInfo <- meshDAO.findOne(id) ?~> "mesh.notFound" ~> NOT_FOUND
       _ <- annotationDAO.findOne(meshInfo._annotation) ?~> "annotation.notFound" ~> NOT_FOUND
       meshInfoJs <- meshService.publicWrites(meshInfo) ?~> "mesh.write.failed"
     } yield JsonOk(meshInfoJs)
@@ -43,46 +42,41 @@ class MeshController @Inject()(meshDAO: MeshDAO,
       } yield Ok(js)
   }
 
-  def update(id: String): Action[MeshInfoParameters] = sil.SecuredAction.async(validateJson[MeshInfoParameters]) {
+  def update(id: ObjectId): Action[MeshInfoParameters] = sil.SecuredAction.async(validateJson[MeshInfoParameters]) {
     implicit request =>
       val params = request.body
       for {
-        idValidated <- ObjectId.fromString(id)
-        meshInfo <- meshDAO.findOne(idValidated) ?~> "mesh.notFound" ~> NOT_FOUND
+        meshInfo <- meshDAO.findOne(id) ?~> "mesh.notFound" ~> NOT_FOUND
         _ <- annotationDAO.assertUpdateAccess(meshInfo._annotation) ?~> "notAllowed" ~> FORBIDDEN
         _ <- annotationDAO.assertUpdateAccess(params.annotationId) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- meshDAO
-          .updateOne(idValidated, params.annotationId, params.description, params.position) ?~> "mesh.update.failed"
-        updated <- meshDAO.findOne(idValidated) ?~> "mesh.notFound"
+        _ <- meshDAO.updateOne(id, params.annotationId, params.description, params.position) ?~> "mesh.update.failed"
+        updated <- meshDAO.findOne(id) ?~> "mesh.notFound"
         js <- meshService.publicWrites(updated) ?~> "mesh.write.failed"
       } yield Ok(js)
   }
 
-  def getData(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def getData(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      idValidated <- ObjectId.fromString(id)
-      meshInfo <- meshDAO.findOne(idValidated) ?~> "mesh.notFound" ~> NOT_FOUND
+      meshInfo <- meshDAO.findOne(id) ?~> "mesh.notFound" ~> NOT_FOUND
       _ <- annotationDAO.findOne(meshInfo._annotation) ?~> "annotation.notFound" ~> NOT_FOUND
-      data <- meshDAO.getData(idValidated) ?~> "mesh.data.get.failed"
+      data <- meshDAO.getData(id) ?~> "mesh.data.get.failed"
     } yield Ok(data)
   }
 
-  def updateData(id: String): Action[RawBuffer] = sil.SecuredAction.async(parse.raw) { implicit request =>
+  def updateData(id: ObjectId): Action[RawBuffer] = sil.SecuredAction.async(parse.raw) { implicit request =>
     for {
-      idValidated <- ObjectId.fromString(id)
-      meshInfo <- meshDAO.findOne(idValidated) ?~> "mesh.notFound" ~> NOT_FOUND
+      meshInfo <- meshDAO.findOne(id) ?~> "mesh.notFound" ~> NOT_FOUND
       _ <- annotationDAO.assertUpdateAccess(meshInfo._annotation) ?~> "notAllowed" ~> FORBIDDEN
       byteString <- request.body.asBytes(maxLength = 1024 * 1024 * 1024) ?~> "mesh.data.read.failed"
-      _ <- meshDAO.updateData(idValidated, byteString.toArray) ?~> "mesh.data.save.failed"
+      _ <- meshDAO.updateData(id, byteString.toArray) ?~> "mesh.data.save.failed"
     } yield Ok
   }
 
-  def delete(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      idValidated <- ObjectId.fromString(id)
-      meshInfo <- meshDAO.findOne(idValidated) ?~> "mesh.notFound" ~> NOT_FOUND
+      meshInfo <- meshDAO.findOne(id) ?~> "mesh.notFound" ~> NOT_FOUND
       _ <- annotationDAO.assertUpdateAccess(meshInfo._annotation) ?~> "notAllowed" ~> FORBIDDEN
-      _ <- meshDAO.deleteOne(idValidated) ?~> "mesh.delete.failed"
+      _ <- meshDAO.deleteOne(id) ?~> "mesh.delete.failed"
     } yield Ok
   }
 

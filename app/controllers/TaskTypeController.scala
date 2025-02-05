@@ -47,10 +47,9 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
     }
   }
 
-  def get(taskTypeId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def get(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      taskTypeIdValidated <- ObjectId.fromString(taskTypeId) ?~> "taskType.id.invalid"
-      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
+      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound" ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team))
       js <- taskTypeService.publicWrites(taskType)
     } yield Ok(js)
@@ -63,11 +62,10 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
     } yield Ok(Json.toJson(js))
   }
 
-  def update(taskTypeId: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
+  def update(taskTypeId: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskTypeFromForm =>
       for {
-        taskTypeIdValidated <- ObjectId.fromString(taskTypeId) ?~> "taskType.id.invalid"
-        taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
+        taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound" ~> NOT_FOUND
         _ <- bool2Fox(taskTypeFromForm.tracingType == taskType.tracingType) ?~> "taskType.tracingTypeImmutable"
         _ <- bool2Fox(taskTypeFromForm.settings.magRestrictions == taskType.settings.magRestrictions) ?~> "taskType.magRestrictionsImmutable"
         updatedTaskType = taskTypeFromForm.copy(_id = taskType._id)
@@ -86,14 +84,13 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
     }
   }
 
-  def delete(taskTypeId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def delete(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      taskTypeIdValidated <- ObjectId.fromString(taskTypeId) ?~> "taskType.id.invalid"
-      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
+      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound" ~> NOT_FOUND
       _ <- Fox
         .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN
-      _ <- taskTypeDAO.deleteOne(taskTypeIdValidated) ?~> "taskType.deleteFailure"
-      _ <- taskDAO.removeAllWithTaskTypeAndItsAnnotations(taskTypeIdValidated) ?~> "taskType.deleteFailure"
+      _ <- taskTypeDAO.deleteOne(taskTypeId) ?~> "taskType.deleteFailure"
+      _ <- taskDAO.removeAllWithTaskTypeAndItsAnnotations(taskTypeId) ?~> "taskType.deleteFailure"
       _ = logger.info(s"TaskType $taskTypeId was deleted.")
     } yield JsonOk(Messages("taskType.deleteSuccess", taskType.summary))
   }

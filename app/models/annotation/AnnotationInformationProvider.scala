@@ -18,27 +18,26 @@ class AnnotationInformationProvider @Inject()(
     extends play.api.http.Status
     with FoxImplicits {
 
-  def provideAnnotation(typ: String, id: String, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def provideAnnotation(typ: String, id: ObjectId, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] =
     provideAnnotation(typ, id, Some(user))
 
-  def provideAnnotation(typ: String, id: String, userOpt: Option[User])(
+  def provideAnnotation(typ: String, id: ObjectId, userOpt: Option[User])(
       implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       annotationIdentifier <- AnnotationIdentifier.parse(typ, id)
       annotation <- provideAnnotation(annotationIdentifier, userOpt) ?~> "annotation.notFound"
     } yield annotation
 
-  def provideAnnotation(id: String, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def provideAnnotation(id: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     // this function only supports task/explorational look ups, not compound annotations
     for {
-      annotationIdValidated <- ObjectId.fromString(id)
-      _annotation <- annotationDAO.findOne(annotationIdValidated) ?~> "annotation.notFound"
+      _annotation <- annotationDAO.findOne(id) ?~> "annotation.notFound"
       typ = if (_annotation._task.isEmpty) AnnotationType.Explorational else AnnotationType.Task
-      annotationIdentifier = AnnotationIdentifier(typ, annotationIdValidated)
+      annotationIdentifier = AnnotationIdentifier(typ, id)
       annotation <- provideAnnotation(annotationIdentifier, userOpt) ?~> "annotation.notFound"
     } yield annotation
 
-  def provideAnnotation(id: String, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def provideAnnotation(id: ObjectId, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] =
     provideAnnotation(id, Some(user))
 
   def provideAnnotation(annotationIdentifier: AnnotationIdentifier, userOpt: Option[User])(
@@ -51,7 +50,7 @@ class AnnotationInformationProvider @Inject()(
     } else
       Fox.successful(annotation.name)
 
-  def restrictionsFor(typ: String, id: String)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =
+  def restrictionsFor(typ: String, id: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =
     for {
       annotationIdentifier <- AnnotationIdentifier.parse(typ, id)
       restrictions <- restrictionsFor(annotationIdentifier)

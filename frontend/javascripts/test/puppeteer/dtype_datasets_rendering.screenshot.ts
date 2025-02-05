@@ -66,16 +66,19 @@ const datasetConfigHelper = (
     segmentationOpacity: 100,
     loadingStrategy: "BEST_QUALITY_FIRST",
   } as const;
-  if (minMax == null) {
-    return base;
-  }
-  const [min, max] = minMax;
-  const layerConfig = {
+
+  let layerConfig: Partial<DatasetLayerConfiguration> = {
     alpha: 100,
-    intensityRange: [min, max],
-    min: min,
-    max: max,
-  } as Partial<DatasetLayerConfiguration>;
+  };
+  if (minMax != null) {
+    const [min, max] = minMax;
+    layerConfig = {
+      ...layerConfig,
+      intensityRange: [min, max],
+      min: min,
+      max: max,
+    } as Partial<DatasetLayerConfiguration>;
+  }
 
   return {
     layers: {

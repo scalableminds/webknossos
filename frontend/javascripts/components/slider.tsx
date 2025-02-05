@@ -112,7 +112,7 @@ export function Slider(props: SliderProps) {
     <div
       ref={sliderRef}
       onDoubleClick={handleDoubleClick}
-      style={{ flexGrow: 1, touchAction: "none" }}
+      style={{ flexGrow: 1, touchAction: "none", userSelect: isFocused ? "none" : "auto" }}
       onFocus={() => (isFocused.current = true)}
       onBlur={() => (isFocused.current = false)}
     >

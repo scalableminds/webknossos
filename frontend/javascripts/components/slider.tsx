@@ -49,21 +49,28 @@ export function Slider(props: SliderProps) {
 
   const handleWheelEvent = useCallback(
     (event: { preventDefault: () => void; deltaY: number }) => {
-      // differentiate between single value and range slider
-      if (onWheelDisabled || value == null || min == null || max == null || !isFocused.current)
+      if (
+        onWheelDisabled ||
+        value == null ||
+        min == null ||
+        max == null ||
+        !isFocused.current ||
+        onChange == null
+      )
         return;
       event.preventDefault();
       const diff = getWheelStepFromEvent(ensuredStep, event.deltaY, wheelStep);
+      // differentiate between single value and range slider
       if (range === false || range == null) {
         const newValue = value - diff;
         const clampedNewValue = clamp(min, newValue, max);
-        if (onChange != null) onChange(clampedNewValue);
+        onChange(clampedNewValue);
       } else if (range === true || typeof range === "object") {
         const newLowerValue = Math.round(value[0] + diff);
         const newUpperValue = Math.round(value[1] - diff);
         const clampedNewLowerValue = clamp(min, newLowerValue, Math.min(newUpperValue, max));
         const clampedNewUpperValue = clamp(newLowerValue, newUpperValue, max);
-        if (onChange != null) onChange([clampedNewLowerValue, clampedNewUpperValue]);
+        onChange([clampedNewLowerValue, clampedNewUpperValue]);
       }
     },
     [value, min, max, onChange, range, onWheelDisabled],

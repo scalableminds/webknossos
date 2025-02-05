@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.inject.ApplicationLifecycle
 
 import javax.inject.Inject
@@ -71,12 +71,18 @@ class DatasetErrorLoggingService @Inject()(
           registerLogged(dataSourceId.organizationId, dataSourceId.directoryName)
         }
         Fox.failure(msg, Full(exception))
-      case Failure(msg, Empty, _) =>
+      case Failure(msg, Empty, chain) =>
         if (shouldLog(dataSourceId.organizationId, dataSourceId.directoryName)) {
-          logger.error(s"Error while $label for $dataSourceId, Failure without exception: $msg")
+          logger.error(s"Error while $label for $dataSourceId, Failure without exception: $msg ${formatChain(chain)}")
           registerLogged(dataSourceId.organizationId, dataSourceId.directoryName)
         }
         Fox.failure(msg)
       case other => other.toFox
     }
+
+  private def formatChain(chain: Box[Failure]): String = chain match {
+    case Full(failure) =>
+      " <~ " + failure.msg + formatChain(failure.chain)
+    case _ => ""
+  }
 }

@@ -11,7 +11,6 @@ import { createUpdatableTexture } from "oxalis/geometries/materials/plane_materi
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import {
   getBucketCapacity,
-  getChannelCount,
   getDtypeConfigForElementClass,
   getPackingDegree,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";

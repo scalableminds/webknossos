@@ -60,7 +60,6 @@ import { Model } from "oxalis/singletons";
 import type { DatasetLayerConfiguration } from "oxalis/store";
 import Store from "oxalis/store";
 import * as THREE from "three";
-import type { ElementClass } from "types/api_flow_types";
 import type { ValueOf } from "types/globals";
 
 type ShaderMaterialOptions = {

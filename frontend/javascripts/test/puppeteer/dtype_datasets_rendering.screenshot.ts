@@ -1,4 +1,3 @@
-import path from "node:path";
 import type { DatasetLayerConfiguration, PartialDatasetConfiguration } from "oxalis/store";
 import "test/mocks/lz4";
 import urljoin from "url-join";

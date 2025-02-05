@@ -682,7 +682,7 @@ class AnnotationService @Inject()(
     }
   }
 
-  def transferAnnotationToUser(typ: String, id: String, userId: ObjectId, issuingUser: User)(
+  def transferAnnotationToUser(typ: String, id: ObjectId, userId: ObjectId, issuingUser: User)(
       implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       annotation <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser) ?~> "annotation.notFound"

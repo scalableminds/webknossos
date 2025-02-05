@@ -103,15 +103,14 @@ class DatasetController @Inject()(userService: UserService,
       (__ \ "metadata").readNullable[JsArray] and
       (__ \ "folderId").readNullable[ObjectId]).tupled
 
-  def removeFromThumbnailCache(datasetId: String): Action[AnyContent] =
+  def removeFromThumbnailCache(datasetId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        _ <- thumbnailCachingService.removeFromCache(datasetIdValidated)
+        _ <- thumbnailCachingService.removeFromCache(datasetId)
       } yield Ok
     }
 
-  def thumbnail(datasetId: String,
+  def thumbnail(datasetId: ObjectId,
                 dataLayerName: String,
                 w: Option[Int],
                 h: Option[Int],
@@ -120,9 +119,8 @@ class DatasetController @Inject()(userService: UserService,
     sil.UserAwareAction.async { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        _ <- datasetDAO.findOne(datasetIdValidated)(ctx) ?~> notFoundMessage(datasetId) ~> NOT_FOUND // To check Access Rights
-        image <- thumbnailService.getThumbnailWithCache(datasetIdValidated, dataLayerName, w, h, mappingName)
+        _ <- datasetDAO.findOne(datasetId)(ctx) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND // To check Access Rights
+        image <- thumbnailService.getThumbnailWithCache(datasetId, dataLayerName, w, h, mappingName)
       } yield {
         addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")
       }
@@ -165,9 +163,9 @@ class DatasetController @Inject()(userService: UserService,
       // Optional filtering: List only datasets of the requesting user’s organization
       onlyMyOrganization: Option[Boolean],
       // Optional filtering: List only datasets uploaded by the user with this id
-      uploaderId: Option[String],
+      uploaderId: Option[ObjectId],
       // Optional filtering: List only datasets in the folder with this id
-      folderId: Option[String],
+      folderId: Option[ObjectId],
       // Optional filtering: If a folderId was specified, this parameter controls whether subfolders should be considered, too (default: false)
       recursive: Option[Boolean],
       // Optional filtering: List only datasets with names matching this search query
@@ -178,8 +176,7 @@ class DatasetController @Inject()(userService: UserService,
       compact: Option[Boolean]
   ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
-      folderIdValidated <- Fox.runOptional(folderId)(ObjectId.fromString)
-      uploaderIdValidated <- Fox.runOptional(uploaderId)(ObjectId.fromString)
+      _ <- Fox.successful(())
       organizationIdOpt = if (onlyMyOrganization.getOrElse(false))
         request.identity.map(_._organization)
       else
@@ -190,8 +187,8 @@ class DatasetController @Inject()(userService: UserService,
             isActive,
             isUnreported,
             organizationIdOpt,
-            folderIdValidated,
-            uploaderIdValidated,
+            folderId,
+            uploaderId,
             searchQuery,
             request.identity.map(_._id),
             recursive.getOrElse(false),
@@ -203,8 +200,8 @@ class DatasetController @Inject()(userService: UserService,
           datasets <- datasetDAO.findAllWithSearch(isActive,
                                                    isUnreported,
                                                    organizationIdOpt,
-                                                   folderIdValidated,
-                                                   uploaderIdValidated,
+                                                   folderId,
+                                                   uploaderId,
                                                    searchQuery,
                                                    recursive.getOrElse(false),
                                                    limit) ?~> "dataset.list.failed"
@@ -243,10 +240,9 @@ class DatasetController @Inject()(userService: UserService,
       }
     } yield js.flatten
 
-  def accessList(datasetId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def accessList(datasetId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      datasetIdValidated <- ObjectId.fromString(datasetId)
-      dataset <- datasetDAO.findOne(datasetIdValidated) ?~> notFoundMessage(datasetIdValidated.toString) ~> NOT_FOUND
+      dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
       organization <- organizationDAO.findOne(dataset._organization)
       allowedTeams <- teamService.allowedTeamIdsForDataset(dataset, cumulative = true) ?~> "allowedTeams.notFound"
       usersByTeams <- userDAO.findAllByTeams(allowedTeams)
@@ -256,15 +252,14 @@ class DatasetController @Inject()(userService: UserService,
     } yield Ok(Json.toJson(usersJs))
   }
 
-  def read(datasetId: String,
+  def read(datasetId: ObjectId,
            // Optional sharing token allowing access to datasets your team does not normally have access to.")
            sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       log() {
         val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId)
-          dataset <- datasetDAO.findOne(datasetIdValidated)(ctx) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId)(ctx) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ~> NOT_FOUND
           _ <- Fox.runOptional(request.identity)(user =>
             datasetLastUsedTimesDAO.updateForDatasetAndUser(dataset._id, user._id))
@@ -284,12 +279,11 @@ class DatasetController @Inject()(userService: UserService,
       }
     }
 
-  def health(datasetId: String, sharingToken: Option[String]): Action[AnyContent] =
+  def health(datasetId: ObjectId, sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        dataset <- datasetDAO.findOne(datasetIdValidated)(ctx) ?~> notFoundMessage(datasetIdValidated.toString) ~> NOT_FOUND
+        dataset <- datasetDAO.findOne(datasetId)(ctx) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
         usableDataSource <- dataSource.toUsable.toFox ?~> "dataset.notImported"
         datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataset.noLayers"
@@ -300,29 +294,27 @@ class DatasetController @Inject()(userService: UserService,
       } yield Ok("Ok")
     }
 
-  def updatePartial(datasetId: String): Action[DatasetUpdateParameters] =
+  def updatePartial(datasetId: ObjectId): Action[DatasetUpdateParameters] =
     sil.SecuredAction.async(validateJson[DatasetUpdateParameters]) { implicit request =>
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        dataset <- datasetDAO.findOne(datasetIdValidated) ?~> notFoundMessage(datasetIdValidated.toString) ~> NOT_FOUND
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
         _ <- Fox.runOptional(request.body.metadata)(assertNoDuplicateMetadataKeys)
         _ <- datasetDAO.updatePartial(dataset._id, request.body)
-        updated <- datasetDAO.findOne(datasetIdValidated)
+        updated <- datasetDAO.findOne(datasetId)
         _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
         js <- datasetService.publicWrites(updated, Some(request.identity))
       } yield Ok(js)
     }
 
   // Note that there exists also updatePartial (which will only expect the changed fields)
-  def update(datasetId: String): Action[JsValue] =
+  def update(datasetId: ObjectId): Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyUsing(datasetPublicReads) {
         case (description, datasetName, legacyDatasetDisplayName, sortingKey, isPublic, tags, metadata, folderId) =>
           val name = if (legacyDatasetDisplayName.isDefined) legacyDatasetDisplayName else datasetName
           for {
-            datasetIdValidated <- ObjectId.fromString(datasetId)
-            dataset <- datasetDAO.findOne(datasetIdValidated) ?~> notFoundMessage(datasetIdValidated.toString) ~> NOT_FOUND
+            dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
             maybeUpdatedMetadata = metadata.getOrElse(dataset.metadata)
             _ <- assertNoDuplicateMetadataKeys(maybeUpdatedMetadata)
             _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
@@ -336,18 +328,17 @@ class DatasetController @Inject()(userService: UserService,
               maybeUpdatedMetadata,
               folderId.getOrElse(dataset._folder)
             )
-            updated <- datasetDAO.findOne(datasetIdValidated)
+            updated <- datasetDAO.findOne(datasetId)
             _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
             js <- datasetService.publicWrites(updated, Some(request.identity))
           } yield Ok(Json.toJson(js))
       }
     }
 
-  def updateTeams(datasetId: String): Action[List[ObjectId]] =
+  def updateTeams(datasetId: ObjectId): Action[List[ObjectId]] =
     sil.SecuredAction.async(validateJson[List[ObjectId]]) { implicit request =>
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        dataset <- datasetDAO.findOne(datasetIdValidated) ?~> notFoundMessage(datasetIdValidated.toString) ~> NOT_FOUND
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
         includeMemberOnlyTeams = request.identity.isDatasetManager
         userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
@@ -359,24 +350,22 @@ class DatasetController @Inject()(userService: UserService,
       } yield Ok(Json.toJson(newTeams))
     }
 
-  def getSharingToken(datasetId: String): Action[AnyContent] =
+  def getSharingToken(datasetId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        dataset <- datasetDAO.findOne(datasetIdValidated) ?~> notFoundMessage(datasetIdValidated.toString) ~> NOT_FOUND
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- bool2Fox(dataset._organization == request.identity._organization) ~> FORBIDDEN
         token <- datasetService.getSharingToken(dataset._id)
       } yield Ok(Json.obj("sharingToken" -> token.trim))
     }
 
-  def deleteSharingToken(datasetId: String): Action[AnyContent] =
+  def deleteSharingToken(datasetId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        dataset <- datasetDAO.findOne(datasetIdValidated) ?~> notFoundMessage(datasetIdValidated.toString) ~> NOT_FOUND
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- bool2Fox(dataset._organization == request.identity._organization) ~> FORBIDDEN
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- datasetDAO.updateSharingTokenById(datasetIdValidated, None)
+        _ <- datasetDAO.updateSharingTokenById(datasetId, None)
       } yield Ok
     }
 
@@ -438,17 +427,16 @@ class DatasetController @Inject()(userService: UserService,
       case _             => Messages("dataset.notFoundConsiderLogin", datasetName)
     }
 
-  def segmentAnythingMask(datasetId: String,
+  def segmentAnythingMask(datasetId: ObjectId,
                           dataLayerName: String,
                           intensityMin: Option[Float],
                           intensityMax: Option[Float]): Action[SegmentAnythingMaskParameters] =
     sil.SecuredAction.async(validateJson[SegmentAnythingMaskParameters]) { implicit request =>
       log() {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId)
           _ <- bool2Fox(conf.Features.segmentAnythingEnabled) ?~> "segmentAnything.notEnabled"
           _ <- bool2Fox(conf.SegmentAnything.uri.nonEmpty) ?~> "segmentAnything.noUri"
-          dataset <- datasetDAO.findOne(datasetIdValidated) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
           dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
           usableDataSource <- dataSource.toUsable ?~> "dataset.notImported"
           dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataset.noLayers"

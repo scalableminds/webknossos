@@ -35,29 +35,44 @@ DROP VIEW webknossos.aiInferences_;
 DO $$
   DECLARE
     r RECORD;
-    column_type TEXT;
   BEGIN
     FOR r IN
-      SELECT table_schema, table_name, column_name, data_type
+      SELECT table_schema, table_name, column_name, data_type, column_default
       FROM information_schema.columns
       WHERE table_schema = 'webknossos'
-        AND data_type IN ('character varying', 'character','character[]','character varying[]')
+        AND data_type IN ('character varying', 'character')
       LOOP
-        IF r.data_type = 'character varying' THEN
-          column_type := 'TEXT';
-        ELSIF r.data_type = 'character' THEN
-          column_type := 'TEXT';
-        ELSIF r.data_type LIKE 'character[]' THEN
-          column_type := 'TEXT[]';
-        ELSIF r.data_type LIKE 'character varying[]' THEN
-          column_type := 'TEXT[]';
-        END IF;
+        -- Alter column type
         EXECUTE format(
-          'ALTER TABLE %I.%I ALTER COLUMN %I SET DATA TYPE %s',
-          r.table_schema, r.table_name, r.column_name, column_type
+          'ALTER TABLE %I.%I ALTER COLUMN %I SET DATA TYPE TEXT',
+          r.table_schema, r.table_name, r.column_name
           );
+
+        -- Check if the column has a default value that needs updating
+        IF r.column_default IS NOT NULL AND r.column_default LIKE '%%::character%%' THEN
+          -- Update the default value to match the new type
+          EXECUTE format(
+            'ALTER TABLE %I.%I ALTER COLUMN %I SET DEFAULT ''''::TEXT',
+            r.table_schema, r.table_name, r.column_name
+            );
+        END IF;
       END LOOP;
   END $$;
+
+-- Change array columns to TEXT[]
+ALTER TABLE webknossos.annotations ALTER COLUMN tags SET DATA TYPE TEXT[];
+ALTER TABLE webknossos.annotations ALTER COLUMN tags SET DEFAULT '{}'::TEXT[];
+ALTER TABLE webknossos.datasets ALTER COLUMN tags SET DATA TYPE TEXT[];
+ALTER TABLE webknossos.datasets ALTER COLUMN tags SET DEFAULT '{}'::TEXT[];
+ALTER TABLE webknossos.dataset_layers ALTER COLUMN mappings SET DATA TYPE TEXT[];
+ALTER TABLE webknossos.workers ALTER COLUMN supportedjobcommands SET DATA TYPE TEXT[];
+ALTER TABLE webknossos.workers ALTER COLUMN supportedjobcommands SET DEFAULT array[]::TEXT[];
+
+-- Change custom default values
+ALTER TABLE webknossos.multiusers ALTER COLUMN _lastloggedinidentity SET DEFAULT NULL;
+ALTER TABLE webknossos.organizations ALTER COLUMN _id_old SET DEFAULT NULL;
+ALTER TABLE webknossos.users ALTER COLUMN lasttasktypeid SET DEFAULT NULL;
+ALTER TABLE webknossos.workers ALTER COLUMN name SET DEFAULT 'Unnamed Worker'::text;
 
 -- Recreate views
 

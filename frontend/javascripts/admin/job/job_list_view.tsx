@@ -7,10 +7,11 @@ import {
   EyeOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
+  PlayCircleOutlined,
   QuestionCircleTwoTone,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { cancelJob, getJobs } from "admin/admin_rest_api";
+import { cancelJob, getJobs, resumeJob } from "admin/admin_rest_api";
 import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
@@ -296,6 +297,18 @@ function JobListView() {
           icon={<CloseCircleOutlined key="cancel" className="icon-margin-right" />}
         >
           Cancel
+        </AsyncLink>
+      );
+    } else if (job.state === "FAILURE") {
+      return (
+        <AsyncLink
+          href="#"
+          onClick={async () => {
+            resumeJob(job.id).then(() => fetchData());
+          }}
+          icon={<PlayCircleOutlined key="resume" className="icon-margin-right" />}
+        >
+          Resume
         </AsyncLink>
       );
     } else if (

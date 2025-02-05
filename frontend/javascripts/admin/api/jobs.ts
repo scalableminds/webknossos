@@ -74,6 +74,12 @@ export async function cancelJob(jobId: string): Promise<APIJob> {
   });
 }
 
+export async function resumeJob(jobId: string): Promise<APIJob> {
+  return Request.receiveJSON(`/api/jobs/${jobId}/resume`, {
+    method: "PATCH",
+  });
+}
+
 export async function startConvertToWkwJob(
   datasetId: string,
   scale: Vector3,

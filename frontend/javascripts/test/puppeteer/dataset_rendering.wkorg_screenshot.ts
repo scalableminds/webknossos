@@ -16,7 +16,10 @@ checkBrowserstackCredentials();
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
 });
-const BASE_PATH = path.join(__dirname, "../../../../frontend/javascripts/test/screenshots-wkorg");
+const SCREENSHOTS_BASE_PATH = path.join(
+  __dirname,
+  "../../../../frontend/javascripts/test/screenshots-wkorg",
+);
 const URL = "https://webknossos.org";
 
 console.log(`[Info] Executing tests on URL ${URL}.`);
@@ -59,7 +62,7 @@ test.serial(`it should render dataset ${demoDatasetName} correctly`, async (t) =
         screenshot,
         width,
         height,
-        BASE_PATH,
+        SCREENSHOTS_BASE_PATH,
         demoDatasetName,
       );
       return isPixelEquivalent(changedPixels, width, height);

@@ -1,8 +1,12 @@
 import urljoin from "url-join";
 import "test/mocks/lz4";
 import type { PartialDatasetConfiguration } from "oxalis/store";
-import path from "node:path";
-import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
+import {
+  compareScreenshot,
+  getUrlForScreenshotTests,
+  isPixelEquivalent,
+  SCREENSHOTS_BASE_PATH,
+} from "./screenshot_helpers";
 import {
   test,
   getNewPage,
@@ -27,21 +31,8 @@ checkBrowserstackCredentials();
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
 });
-const BASE_PATH = path.join(__dirname, "../../../../frontend/javascripts/test/screenshots");
-let URL = "https://master.webknossos.xyz/";
 
-if (!process.env.URL) {
-  console.warn(
-    "[Warning] No url specified, assuming dev master. If you want to specify a URL, prepend URL=<url> to the command.",
-  );
-} else {
-  URL = process.env.URL;
-
-  // Prepend https:// if not specified
-  if (!/^https?:\/\//i.test(URL)) {
-    URL = `https://${URL}`;
-  }
-}
+const URL = getUrlForScreenshotTests();
 
 console.log(`[Info] Executing tests on URL ${URL}.`);
 
@@ -151,7 +142,7 @@ datasetNames.map(async (datasetName) => {
           screenshot,
           width,
           height,
-          BASE_PATH,
+          SCREENSHOTS_BASE_PATH,
           datasetName,
         );
         return isPixelEquivalent(changedPixels, width, height);
@@ -192,7 +183,7 @@ annotationSpecs.map(async (annotationSpec) => {
             screenshot,
             width,
             height,
-            BASE_PATH,
+            SCREENSHOTS_BASE_PATH,
             `annotation_${datasetName}_${fallbackLayerName}`,
           );
           return isPixelEquivalent(changedPixels, width, height);
@@ -224,7 +215,7 @@ test.serial("it should render a dataset with mappings correctly", async (t) => {
         screenshot,
         width,
         height,
-        BASE_PATH,
+        SCREENSHOTS_BASE_PATH,
         `${datasetName}_with_mapping_${mappingName}`,
       );
       return isPixelEquivalent(changedPixels, width, height);
@@ -255,7 +246,7 @@ test.serial(
           screenshot,
           width,
           height,
-          BASE_PATH,
+          SCREENSHOTS_BASE_PATH,
           `${datasetName}_with_mapping_link`,
         );
         return isPixelEquivalent(changedPixels, width, height);
@@ -287,7 +278,7 @@ test.serial(
           screenshot,
           width,
           height,
-          BASE_PATH, // Should look the same as an explorative tracing on the same dataset with the same mapping link
+          SCREENSHOTS_BASE_PATH, // Should look the same as an explorative tracing on the same dataset with the same mapping link
           `${datasetName}_with_mapping_link`,
         );
         return isPixelEquivalent(changedPixels, width, height);
@@ -322,7 +313,7 @@ test.serial(
           screenshot,
           width,
           height,
-          BASE_PATH,
+          SCREENSHOTS_BASE_PATH,
           `${datasetName}_with_meshes_link`,
         );
         return isPixelEquivalent(changedPixels, width, height);

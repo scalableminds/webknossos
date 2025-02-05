@@ -12,7 +12,12 @@ import {
   test,
   withRetry,
 } from "./dataset_rendering_helpers";
-import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
+import {
+  compareScreenshot,
+  getUrlForScreenshotTests,
+  isPixelEquivalent,
+  SCREENSHOTS_BASE_PATH,
+} from "./screenshot_helpers";
 import _ from "lodash";
 import {
   getDtypeConfigForElementClass,
@@ -48,8 +53,7 @@ type DType = (typeof dtypes)[number];
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
 });
-const BASE_PATH = path.join(__dirname, "../../../../frontend/javascripts/test/screenshots");
-let URL = "http://localhost:9000/";
+const URL = getUrlForScreenshotTests();
 
 console.log(`[Info] Executing tests on URL ${URL}.`);
 
@@ -258,6 +262,7 @@ datasetNames.map(async (datasetName) => {
               onLoaded,
               viewOverride: spec.viewOverride,
               datasetConfigOverride: spec.datasetConfig,
+              ignore3DViewport: true,
             },
           );
           console.timeEnd("Making screenshot...");
@@ -266,7 +271,7 @@ datasetNames.map(async (datasetName) => {
             screenshot,
             width,
             height,
-            BASE_PATH,
+            SCREENSHOTS_BASE_PATH,
             spec.name,
           );
           console.timeEnd("Comparing screenshot...");
@@ -288,14 +293,14 @@ datasetNames.map(async (datasetName) => {
             }, actions);
             console.timeEnd("evaluate");
             console.time("Making screenshot...");
-            const { screenshot, width, height } = await screenshotTracingView(page);
+            const { screenshot, width, height } = await screenshotTracingView(page, true);
             console.timeEnd("Making screenshot...");
             console.time("Comparing screenshot...");
             const changedPixels = await compareScreenshot(
               screenshot,
               width,
               height,
-              BASE_PATH,
+              SCREENSHOTS_BASE_PATH,
               spec.name + "_selective_segment",
             );
             console.timeEnd("Comparing screenshot...");

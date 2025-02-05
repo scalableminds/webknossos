@@ -77,7 +77,6 @@ export type Uniforms = Record<
 >;
 
 const DEFAULT_COLOR = new THREE.Vector3(255, 255, 255);
-// todop (late): set to false for prod
 const DISABLE_SANITIZING_FOR_DEBUGGING = false;
 
 function sanitizeName(name: string | null | undefined): string {

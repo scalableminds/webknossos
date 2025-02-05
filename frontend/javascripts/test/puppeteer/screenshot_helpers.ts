@@ -1,6 +1,31 @@
 import { PNG } from "pngjs";
 import fs from "node:fs";
 import pixelmatch from "pixelmatch";
+import path from "node:path";
+
+export const SCREENSHOTS_BASE_PATH = path.join(
+  __dirname,
+  "../../../../frontend/javascripts/test/screenshots",
+);
+
+export function getUrlForScreenshotTests() {
+  let URL = "https://master.webknossos.xyz/";
+
+  if (!process.env.URL) {
+    console.warn(
+      "[Warning] No url specified, assuming dev master. If you want to specify a URL, prepend URL=<url> to the command.",
+    );
+  } else {
+    URL = process.env.URL;
+
+    // Prepend https:// if not specified
+    if (!/^https?:\/\//i.test(URL)) {
+      URL = `https://${URL}`;
+    }
+  }
+
+  return URL;
+}
 
 export function isPixelEquivalent(changedPixels: number, width: number, height: number) {
   // There may be a difference of 0.1 %

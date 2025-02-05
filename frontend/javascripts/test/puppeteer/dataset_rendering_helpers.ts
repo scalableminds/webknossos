@@ -53,6 +53,7 @@ type ScreenshotOptions = {
   onLoaded?: () => Promise<void>;
   viewOverride?: string | null | undefined;
   datasetConfigOverride?: PartialDatasetConfiguration | null | undefined;
+  ignore3DViewport?: boolean;
 };
 
 export async function screenshotDataset(
@@ -119,7 +120,7 @@ async function _screenshotAnnotationHelper(
     options?.onLoaded,
     options?.viewOverride,
   );
-  return screenshotTracingView(page);
+  return screenshotTracingView(page, options?.ignore3DViewport);
 }
 
 export async function screenshotDatasetView(
@@ -310,11 +311,14 @@ async function openSandboxView(
   console.log("Finished rendering annotation view");
 }
 
-export async function screenshotTracingView(page: Page): Promise<Screenshot> {
+export async function screenshotTracingView(
+  page: Page,
+  ignore3DViewport?: boolean,
+): Promise<Screenshot> {
   console.log("Screenshot annotation view");
   // Take screenshots of the other rendered planes
   const PLANE_IDS = [
-    // "#screenshot_target_inputcatcher_TDView",
+    ...(ignore3DViewport ? [] : ["#screenshot_target_inputcatcher_TDView"]),
     "#screenshot_target_inputcatcher_PLANE_XY",
     "#screenshot_target_inputcatcher_PLANE_YZ",
     "#screenshot_target_inputcatcher_PLANE_XZ",

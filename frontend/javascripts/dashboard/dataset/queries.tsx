@@ -496,11 +496,6 @@ function diffDatasets(
     .map((id) => newDatasetsDict[id])
     .filter((newDataset) => {
       const oldDataset = oldDatasetsDict[newDataset.id];
-      // Ignore updates when migrating to new renamable datasets.
-      const didUpgradeToRenamableDS = ("directoryName" in oldDataset && "directoryName" in newDataset); // TODO: Can be remove after a few weeks / months.
-      if(didUpgradeToRenamableDS) {
-        return false;
-      }
       return !_.isEqualWith(oldDataset, newDataset, (_oldValue, _newValue, key) => {
         if (key === "lastUsedByUser") {
           // Ignore the lastUsedByUser timestamp when diffing datasets.

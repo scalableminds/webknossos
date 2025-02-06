@@ -47,7 +47,6 @@ import {
 import { hasPricingPlanExceededStorage } from "admin/organization/pricing_plan_utils";
 import type { FormInstance } from "antd/lib/form";
 import classnames from "classnames";
-import Redirect from "components/redirect";
 import FolderSelection from "dashboard/folders/folder_selection";
 import features from "features";
 import ErrorHandling from "libs/error_handling";

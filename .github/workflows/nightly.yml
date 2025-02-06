@@ -5,11 +5,6 @@ on:
   schedule:
     # Runs every day at 12:00 AM UTC
     - cron: '0 0 * * *'
-  push:
-    branches: ["*"] # Trigger on any branch
-
-env:
-  BRANCH_NAME: master  # Default branch for cron triggers
 
 jobs:
   nightly-screenshot-tests:
@@ -19,30 +14,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Determine Trigger Source
-        id: trigger-source
+      - name: Process and Log Branch Name
         run: |
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            LAST_COMMIT_MESSAGE=$(git log -1 --pretty=%B)
-            echo "Last commit message: $LAST_COMMIT_MESSAGE"
-            if [[ "$LAST_COMMIT_MESSAGE" == *"trigger screenshot tests"* ]]; then
-              echo "TRIGGER_SNAPSHOT_TESTS=true" >> $GITHUB_ENV
-              echo "BRANCH_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
-            else
-              echo "TRIGGER_SNAPSHOT_TESTS=false" >> $GITHUB_ENV
-            fi
-          else
-            echo "TRIGGER_SNAPSHOT_TESTS=true" >> $GITHUB_ENV
-          fi
-
-      - name: Skip if Not a Trigger
-        if: env.TRIGGER_SNAPSHOT_TESTS == 'false'
-        run: exit 0
-
-      - name: Set sanitized branch name
-        id: sanitize-branch
-        run: |
-          echo "SANITIZED_BRANCH_NAME=$(echo $BRANCH_NAME | tr -dc '[:alpha:]' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "BRANCH_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
+          SANITIZED_BRANCH_NAME=$(echo "${{ github.ref_name }}" | tr -dc '[:alpha:]' | tr '[:upper:]' '[:lower:]')
+          echo "SANITIZED_BRANCH_NAME=$SANITIZED_BRANCH_NAME" >> $GITHUB_ENV
+          echo "Sanitized branch name: $SANITIZED_BRANCH_NAME"
 
       - name: Remove dev-deployment
         run: |

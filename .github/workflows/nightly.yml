@@ -37,7 +37,7 @@ jobs:
 
       - name: Skip if Not a Trigger
         if: env.TRIGGER_SNAPSHOT_TESTS == 'false'
-        run: echo "Skipping workflow as the commit message did not contain 'trigger screenshot tests'."
+        run: exit 0
 
       - name: Set sanitized branch name
         id: sanitize-branch

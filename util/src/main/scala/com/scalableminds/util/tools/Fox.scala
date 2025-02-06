@@ -257,8 +257,6 @@ object Fox extends FoxImplicits {
       runNext(functions, t)
   }
 
-
-
   def firstSuccess[T](foxes: Seq[Fox[T]])(implicit ec: ExecutionContext): Fox[T] = {
     def runNext(remainingFoxes: Seq[Fox[T]]): Fox[T] =
       remainingFoxes match {

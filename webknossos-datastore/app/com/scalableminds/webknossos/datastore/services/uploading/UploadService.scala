@@ -168,11 +168,13 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- dataSourceService.assertDataDirWritable(reserveUploadInfo.organization)
       _ <- runningUploadMetadataStore.insert(redisKeyForFileCount(reserveUploadInfo.uploadId),
                                              String.valueOf(reserveUploadInfo.totalFileCount))
-      _ <- Fox.runOptional(reserveUploadInfo.totalFileSize){fileSize =>
-        Fox.combined(List(
-        runningUploadMetadataStore.insert(redisKeyForTotalFileSize(reserveUploadInfo.uploadId),
-          String.valueOf(fileSize)),
-        runningUploadMetadataStore.insert(redisKeyForCurrentUploadedTotalFileSize(reserveUploadInfo.uploadId), "0")))
+      _ <- Fox.runOptional(reserveUploadInfo.totalFileSize) { fileSize =>
+        Fox.combined(
+          List(
+            runningUploadMetadataStore.insert(redisKeyForTotalFileSize(reserveUploadInfo.uploadId),
+                                              String.valueOf(fileSize)),
+            runningUploadMetadataStore.insert(redisKeyForCurrentUploadedTotalFileSize(reserveUploadInfo.uploadId), "0")
+          ))
       }
       _ <- runningUploadMetadataStore.insert(redisKeyForCurrentUploadedTotalFileSize(reserveUploadInfo.uploadId), "0")
       _ <- runningUploadMetadataStore.insert(
@@ -252,7 +254,12 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       (filePath, uploadDir) <- getFilePathAndDirOfUploadId(uploadFileId)
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
       totalFileSize <- runningUploadMetadataStore.find(redisKeyForTotalFileSize(uploadId))
-      _ <- Fox.runOptional(totalFileSize){maxFileSize => bool2Fox(runningUploadMetadataStore.find(redisKeyForCurrentUploadedTotalFileSize(uploadId)).getOrElse("0").toLong + chunkSize >  maxFileSize.toLong)}
+      _ <- Fox.runOptional(totalFileSize) { maxFileSize =>
+        runningUploadMetadataStore
+          .find(redisKeyForCurrentUploadedTotalFileSize(uploadId))
+          .flatMap(alreadyUploadedAmountOfBytes =>
+            bool2Fox(alreadyUploadedAmountOfBytes.getOrElse("0").toLong + chunkSize <= maxFileSize.toLong))
+      } ?~> "dataset.upload.moreBytesThanReserved"
       _ <- Fox.runIf(!isFileKnown) {
         runningUploadMetadataStore
           .insertIntoSet(redisKeyForFileNameSet(uploadId), filePath)

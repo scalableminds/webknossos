@@ -122,6 +122,7 @@ class DataSourceController @Inject()(
               0,
               List.empty,
               None,
+              None,
               request.body.initialTeamIds,
               request.body.folderId
             )
@@ -413,6 +414,7 @@ class DataSourceController @Inject()(
               organization = organizationId,
               totalFileCount = 1,
               filePaths = None,
+              totalFileSize = None,
               layersToLink = None,
               initialTeams = List.empty,
               folderId = folderId,

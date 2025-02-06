@@ -47,6 +47,7 @@ import {
 import { hasPricingPlanExceededStorage } from "admin/organization/pricing_plan_utils";
 import type { FormInstance } from "antd/lib/form";
 import classnames from "classnames";
+import Redirect from "components/redirect";
 import FolderSelection from "dashboard/folders/folder_selection";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
@@ -184,12 +185,14 @@ type UploadFormFieldTypes = {
 export const dataPrivacyInfo = (
   <Space direction="horizontal" size={4}>
     Per default, imported data is private and only visible within your organization.
-    <Link
+    <a
       style={{ color: "var(--ant-color-primary)" }}
-      to="https://docs.webknossos.org/webknossos/datasets/settings.html#sharing-permissions-tab"
+      href="https://docs.webknossos.org/webknossos/datasets/settings.html#sharing-permissions-tab"
+      target="_blank"
+      rel="noopener noreferrer"
     >
       Read more
-    </Link>
+    </a>
   </Space>
 );
 

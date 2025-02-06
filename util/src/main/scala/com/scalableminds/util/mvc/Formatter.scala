@@ -1,6 +1,9 @@
 package com.scalableminds.util.mvc
 
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.TextUtils
+import net.liftweb.common.{Box, Failure, Full, ParamFailure}
+import play.api.i18n.{Messages, MessagesProvider}
 
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -76,6 +79,36 @@ trait Formatter {
 
       sign + labelElements.mkString(" ")
     }
+  }
+
+  protected def formatFailureChain(failure: Failure,
+                                   includeStackTraces: Boolean = false,
+                                   includeTime: Boolean = false,
+                                   messagesProviderOpt: Option[MessagesProvider] = None): String = {
+
+    def formatStackTrace(failure: Failure) =
+      failure.exception match {
+        case Full(exception) if includeStackTraces => s" Stack trace: ${TextUtils.stackTraceAsString(exception)} "
+        case _                                     => ""
+      }
+
+    def formatNextChain(chainBox: Box[Failure]): String = chainBox match {
+      case Full(chainFailure) =>
+        " <~ " + formatFailureChain(chainFailure, includeStackTraces, includeTime = false, messagesProviderOpt)
+      case _ => ""
+    }
+
+    def formatMsg(msg: String): String =
+      messagesProviderOpt.map(mp => Messages(msg)(mp)).getOrElse(msg)
+
+    def formatOneFailure(failure: Failure): String =
+      failure match {
+        case ParamFailure(msg, _, _, param) => formatMsg(msg) + " " + param.toString
+        case Failure(msg, _, _)             => formatMsg(msg)
+      }
+
+    val serverTimeMsg = if (includeTime) s"[Server Time ${Instant.now}] " else ""
+    serverTimeMsg + formatOneFailure(failure) + formatStackTrace(failure) + formatNextChain(failure.chain)
   }
 
 }

@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Full}
+import play.api.i18n.MessagesProvider
 import ucar.ma2.{Array => MultiArray}
 
 import javax.inject.Inject

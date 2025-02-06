@@ -2,12 +2,13 @@ package com.scalableminds.webknossos.datastore.services
 
 import org.apache.pekko.actor.ActorSystem
 import com.google.inject.name.Named
-import com.scalableminds.util.tools.{Fox, TextUtils}
+import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Failure, Full}
 import play.api.inject.ApplicationLifecycle
 
 import javax.inject.Inject
@@ -19,6 +20,7 @@ class DatasetErrorLoggingService @Inject()(
     val applicationHealthService: ApplicationHealthService,
     @Named("webknossos-datastore") val system: ActorSystem)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
+    with Formatter
     with LazyLogging {
 
   private val errorCountThresholdPerDataset = 5
@@ -30,10 +32,10 @@ class DatasetErrorLoggingService @Inject()(
   // Not doing any synchronization here since wrong counts don’t do much harm, and synchronizing would be slow
   private val recentErrors: scala.collection.mutable.Map[(String, String), Int] = scala.collection.mutable.Map()
 
-  def shouldLog(organizationId: String, datasetName: String): Boolean =
+  private def shouldLog(organizationId: String, datasetName: String): Boolean =
     recentErrors.getOrElse((organizationId, datasetName), 0) < errorCountThresholdPerDataset
 
-  def registerLogged(organizationId: String, datasetName: String): Unit = {
+  private def registerLogged(organizationId: String, datasetName: String): Unit = {
     val previousErrorCount = recentErrors.getOrElse((organizationId, datasetName), 0)
     if (previousErrorCount >= errorCountThresholdPerDataset - 1) {
       logger.info(
@@ -64,25 +66,13 @@ class DatasetErrorLoggingService @Inject()(
         logger.error(s"Caught internal error ($msg) while $label for $dataSourceId:", e)
         applicationHealthService.pushError(e)
         Fox.failure(msg, Full(e))
-      case Failure(msg, Full(exception), _) =>
+      case f: Failure =>
         if (shouldLog(dataSourceId.organizationId, dataSourceId.directoryName)) {
-          logger.error(
-            s"Error while $label for $dataSourceId: $msg – Stack trace: ${TextUtils.stackTraceAsString(exception)} ")
+          logger.error(s"Error while $label for $dataSourceId: ${formatFailureChain(f, includeStackTraces = true)}")
           registerLogged(dataSourceId.organizationId, dataSourceId.directoryName)
         }
-        Fox.failure(msg, Full(exception))
-      case Failure(msg, Empty, chain) =>
-        if (shouldLog(dataSourceId.organizationId, dataSourceId.directoryName)) {
-          logger.error(s"Error while $label for $dataSourceId, Failure without exception: $msg ${formatChain(chain)}")
-          registerLogged(dataSourceId.organizationId, dataSourceId.directoryName)
-        }
-        Fox.failure(msg)
+        f.toFox
       case other => other.toFox
     }
 
-  private def formatChain(chain: Box[Failure]): String = chain match {
-    case Full(failure) =>
-      " <~ " + failure.msg + formatChain(failure.chain)
-    case _ => ""
-  }
 }

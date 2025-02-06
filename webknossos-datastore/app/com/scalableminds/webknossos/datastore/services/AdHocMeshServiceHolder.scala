@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.datastore.services
 
 import org.apache.pekko.actor.ActorSystem
-import javax.inject.Inject
+import play.api.i18n.MessagesProvider
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 

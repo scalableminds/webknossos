@@ -40,23 +40,10 @@ trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHel
     allowRemoteOriginIfSelected(addNoCacheHeaderFallback(result))
   }
 
-  private def formatChainOpt(chain: Box[Failure])(implicit messages: MessagesProvider): Option[String] = chain match {
-    case Full(_) => Some(formatChain(chain))
-    case _       => None
-  }
-
-  private def formatChain(chain: Box[Failure], includeTime: Boolean = true)(
-      implicit messages: MessagesProvider): String = chain match {
-    case Full(failure) =>
-      val serverTimeMsg = if (includeTime) s"[Server Time ${Instant.now}] " else ""
-      serverTimeMsg + " <~ " + formatFailure(failure) + formatChain(failure.chain, includeTime = false)
-    case _ => ""
-  }
-
-  private def formatFailure(failure: Failure)(implicit messages: MessagesProvider): String =
-    failure match {
-      case ParamFailure(msg, _, _, param) => Messages(msg) + " " + param.toString
-      case Failure(msg, _, _)             => Messages(msg)
+  private def formatChainOpt(chainBox: Box[Failure])(implicit messages: MessagesProvider): Option[String] =
+    chainBox match {
+      case Full(chain) => Some(formatFailureChain(chain, includeTime = true, messagesProviderOpt = Some(messages)))
+      case _           => None
     }
 
   private def jsonMessages(msgs: JsArray): JsObject =

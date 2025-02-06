@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
 import org.apache.pekko.actor.ActorSystem
-import play.api.i18n.MessagesProvider
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

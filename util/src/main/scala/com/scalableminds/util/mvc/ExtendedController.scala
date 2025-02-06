@@ -2,7 +2,6 @@ package com.scalableminds.util.mvc
 
 import com.google.protobuf.CodedInputStream
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._

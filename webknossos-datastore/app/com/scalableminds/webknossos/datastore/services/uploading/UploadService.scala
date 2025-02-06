@@ -648,6 +648,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       }
       _ <- runningUploadMetadataStore.remove(redisKeyForFileCount(uploadId))
       _ <- runningUploadMetadataStore.remove(redisKeyForFileNameSet(uploadId))
+      _ <- runningUploadMetadataStore.remove(redisKeyForTotalFileSize(uploadId))
+      _ <- runningUploadMetadataStore.remove(redisKeyForCurrentUploadedTotalFileSize(uploadId))
     } yield ()
 
   private def cleanUpOrphanUploads(): Fox[Unit] =

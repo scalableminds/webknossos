@@ -35,7 +35,7 @@ case class ReserveUploadInformation(
     organization: String,
     totalFileCount: Long,
     filePaths: Option[List[String]],
-    totalFileSize: Option[Long],
+    totalFileSizeInBytes: Option[Long],
     layersToLink: Option[List[LinkedLayerIdentifier]],
     initialTeams: List[String], // team ids
     folderId: Option[String])
@@ -126,10 +126,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
    */
   private def redisKeyForFileCount(uploadId: String): String =
     s"upload___${uploadId}___fileCount"
-  private def redisKeyForTotalFileSize(uploadId: String): String =
-    s"upload___${uploadId}___totalFileSize"
-  private def redisKeyForCurrentUploadedTotalFileSize(uploadId: String): String =
-    s"upload___${uploadId}___currentUploadedTotalFileSize"
+  private def redisKeyForTotalFileSizeInBytes(uploadId: String): String =
+    s"upload___${uploadId}___totalFileSizeInBytes"
+  private def redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId: String): String =
+    s"upload___${uploadId}___currentUploadedTotalFileSizeInBytes"
   private def redisKeyForFileNameSet(uploadId: String): String =
     s"upload___${uploadId}___fileNameSet"
   private def redisKeyForDataSourceId(uploadId: String): String =
@@ -168,15 +168,15 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- dataSourceService.assertDataDirWritable(reserveUploadInfo.organization)
       _ <- runningUploadMetadataStore.insert(redisKeyForFileCount(reserveUploadInfo.uploadId),
                                              String.valueOf(reserveUploadInfo.totalFileCount))
-      _ <- Fox.runOptional(reserveUploadInfo.totalFileSize) { fileSize =>
+      _ <- Fox.runOptional(reserveUploadInfo.totalFileSizeInBytes) { fileSize =>
         Fox.combined(
           List(
-            runningUploadMetadataStore.insert(redisKeyForTotalFileSize(reserveUploadInfo.uploadId),
+            runningUploadMetadataStore.insert(redisKeyForTotalFileSizeInBytes(reserveUploadInfo.uploadId),
                                               String.valueOf(fileSize)),
-            runningUploadMetadataStore.insert(redisKeyForCurrentUploadedTotalFileSize(reserveUploadInfo.uploadId), "0")
+            runningUploadMetadataStore.insert(redisKeyForCurrentUploadedTotalFileSizeInBytes(reserveUploadInfo.uploadId), "0")
           ))
       }
-      _ <- runningUploadMetadataStore.insert(redisKeyForCurrentUploadedTotalFileSize(reserveUploadInfo.uploadId), "0")
+      _ <- runningUploadMetadataStore.insert(redisKeyForCurrentUploadedTotalFileSizeInBytes(reserveUploadInfo.uploadId), "0")
       _ <- runningUploadMetadataStore.insert(
         redisKeyForDataSourceId(reserveUploadInfo.uploadId),
         Json.stringify(
@@ -253,10 +253,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
       (filePath, uploadDir) <- getFilePathAndDirOfUploadId(uploadFileId)
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
-      totalFileSize <- runningUploadMetadataStore.find(redisKeyForTotalFileSize(uploadId))
-      _ <- Fox.runOptional(totalFileSize) { maxFileSize =>
+      totalFileSizeInBytesOpt <- runningUploadMetadataStore.find(redisKeyForTotalFileSizeInBytes(uploadId))
+      _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
         runningUploadMetadataStore
-          .find(redisKeyForCurrentUploadedTotalFileSize(uploadId))
+          .find(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId))
           .flatMap(alreadyUploadedAmountOfBytes =>
             bool2Fox(alreadyUploadedAmountOfBytes.getOrElse("0").toLong + chunkSize <= maxFileSize.toLong))
       } ?~> "dataset.upload.moreBytesThanReserved"
@@ -648,8 +648,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       }
       _ <- runningUploadMetadataStore.remove(redisKeyForFileCount(uploadId))
       _ <- runningUploadMetadataStore.remove(redisKeyForFileNameSet(uploadId))
-      _ <- runningUploadMetadataStore.remove(redisKeyForTotalFileSize(uploadId))
-      _ <- runningUploadMetadataStore.remove(redisKeyForCurrentUploadedTotalFileSize(uploadId))
+      _ <- runningUploadMetadataStore.remove(redisKeyForTotalFileSizeInBytes(uploadId))
+      _ <- runningUploadMetadataStore.remove(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId))
     } yield ()
 
   private def cleanUpOrphanUploads(): Fox[Unit] =

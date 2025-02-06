@@ -86,7 +86,6 @@ class DataSourceController @Inject()(
         UserAccessRequest.administrateDataSources(request.body.organization)) {
         for {
           isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
-
           _ <- if (!isKnownUpload) {
             (dsRemoteWebknossosClient.reserveDataSourceUpload(request.body) ?~> "dataset.upload.validation.failed")
               .flatMap(reserveUploadAdditionalInfo =>
@@ -414,7 +413,7 @@ class DataSourceController @Inject()(
               organization = organizationId,
               totalFileCount = 1,
               filePaths = None,
-              totalFileSize = None,
+              totalFileSizeInBytes = None,
               layersToLink = None,
               initialTeams = List.empty,
               folderId = folderId,

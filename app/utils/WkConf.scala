@@ -204,6 +204,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
 
   object Jobs {
     val workerLivenessTimeout: FiniteDuration = get[FiniteDuration]("jobs.workerLivenessTimeout")
+    val monthlyFreeCredits: Int = get[Int]("jobs.monthlyFreeCredits")
   }
 
   object Airbrake {

@@ -1,6 +1,6 @@
 package models.organization
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
@@ -94,15 +94,20 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
       ))
 
   def revokeExpiredCredits(): Fox[Unit] = creditTransactionDAO.runRevokeExpiredCredits()
+  def handOutMonthlyFreeCredits(): Fox[Unit] = creditTransactionDAO.handOutMonthlyFreeCredits()(GlobalAccessContext)
 
   override protected def tickerInterval: FiniteDuration = 1 hour
 
+  // TODO: make this class a singleton or put this somewhere else as this is executed for each instance of the service
   override protected def tick(): Unit =
     for {
       _ <- Fox.successful(())
       _ = logger.info("Starting revoking expired credits...")
       _ <- revokeExpiredCredits()
       _ = logger.info("Finished revoking expired credits.")
+      _ = logger.info("Staring handing out free monthly credits.")
+      _ <- handOutMonthlyFreeCredits()
+      _ = logger.info("Finished handing out free monthly credits.")
     } yield ()
   ()
 }

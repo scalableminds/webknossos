@@ -11,8 +11,8 @@ import slick.dbio.DBIO
 import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import slick.sql.SqlAction
 import telemetry.SlackNotificationService
+import utils.WkConf
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
@@ -23,7 +23,7 @@ case class CreditTransaction(_id: ObjectId = ObjectId.generate,
                              _organization: String,
                              creditChange: BigDecimal,
                              refundableCreditChange: BigDecimal,
-                             refunded_transaction_id: Option[ObjectId] = None,
+                             refundedTransactionId: Option[ObjectId] = None,
                              spentMoney: Option[BigDecimal],
                              comment: String,
                              _paidJob: Option[ObjectId],
@@ -33,8 +33,10 @@ case class CreditTransaction(_id: ObjectId = ObjectId.generate,
                              updatedAt: Instant = Instant.now,
                              isDeleted: Boolean = false)
 
-class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotificationService, sqlClient: SqlClient)(
-    implicit ec: ExecutionContext)
+class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
+                                     conf: WkConf,
+                                     slackNotificationService: SlackNotificationService,
+                                     sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[CreditTransaction, OrganizationCreditTransactionsRow, OrganizationCreditTransactions](sqlClient) {
 
   protected val collection = OrganizationCreditTransactions
@@ -169,7 +171,7 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
           state, expiration_date, created_at, updated_at, is_deleted)
           VALUES
           (${transaction._id}, ${transaction._organization}, ${transaction.creditChange.toString()}::DECIMAL,
-          ${transaction.refundableCreditChange.toString()}::DECIMAL, ${transaction.refunded_transaction_id},
+          ${transaction.refundableCreditChange.toString()}::DECIMAL, ${transaction.refundedTransactionId},
           ${transaction.spentMoney.map(_.toString)}::DECIMAL, ${transaction.comment}, ${transaction._paidJob},
           ${transaction.state}, ${transaction.expirationDate}, ${transaction.createdAt}, ${transaction.updatedAt},
           ${transaction.isDeleted})
@@ -178,7 +180,7 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
     } yield ()
 
   private def insertRevokingTransaction(transaction: CreditTransaction): DBIOAction[Int, NoStream, Effect] = {
-    // assert(transaction.state == CreditTransactionState.Revoked)
+    assert(transaction.state == CreditTransactionState.Completed)
     assert(transaction.refundableCreditChange == 0)
     assert(transaction.spentMoney.isEmpty)
     assert(transaction.creditChange < 0, "Revoking transactions must have a negative credit change")
@@ -241,14 +243,6 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
       _ <- bool2Fox(updatedRows.forall(_ == 1)) ?~> s"Failed to refund transaction ${transactionToRefund._id} properly."
     } yield ()
 
-  def reduceRefundableCredits(transaction: CreditTransaction,
-                              amountToSubtract: BigDecimal): SqlAction[Int, NoStream, Effect] =
-    q"""UPDATE webknossos.organization_credit_transactions
-          SET refundable_credit_change = refundable_credit_change - ${amountToSubtract.toString()}::DECIMAL,
-            updated_at = NOW()
-          WHERE _id = ${transaction._id}
-          """.asUpdate
-
   def findTransactionForJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =
     for {
       accessQuery <- readAccessQuery
@@ -296,7 +290,6 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
     } yield transactionsWhereRevokingFailed
   }
 
-  // TODO: renaming this function
   private def revokeExpiredCreditsTransaction(transaction: CreditTransaction): DBIO[Unit] = {
     logger.info(s"revokeExpiredCreditsTransaction for transaction ${transaction._id}")
     for {
@@ -306,30 +299,17 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
       FROM webknossos.organization_credit_transactions
       WHERE _organization = ${transaction._organization}
         AND created_at > ${transaction.createdAt}
-        AND (
-          (credit_change < 0 AND state = ${CreditTransactionState.Completed})
-          OR
-          (credit_change > 0 AND state = ${CreditTransactionState.Completed} AND refunded_transaction_id IS NOT NULL)
-        )
-    """.as[BigDecimal]
-
-      // Query: Sums up all spent credits since the transaction which are already marked as completely spent.
-      alreadySpentFreeTokensResult <- q"""
-      SELECT COALESCE(SUM(credit_change), 0)
-      FROM webknossos.organization_credit_transactions
-      WHERE _organization = ${transaction._organization}
-        AND created_at > ${transaction.createdAt}
-        AND credit_change > 0
-        AND state = ${CreditTransactionState.Spent}
+        AND (credit_change < 0)
+          OR (credit_change > 0 AND refunded_transaction_id IS NOT NULL) -- Counts also revoked transactions
+          OR (credit_change > 0 AND expiration_date <= NOW()) -- Counts also expired transactions
     """.as[BigDecimal]
 
       // Extract values from query results
       spentCreditsSinceTransactionNegative = spentCreditsSinceTransactionNegResult.headOption.getOrElse(BigDecimal(0))
-      alreadySpentFreeTokens = alreadySpentFreeTokensResult.headOption.getOrElse(BigDecimal(0))
       spentCreditsSinceTransactionPositive = spentCreditsSinceTransactionNegative * -1
-      freeCreditsAvailable = transaction.creditChange // + alreadySpentFreeTokens
+      freeCreditsAvailable = transaction.creditChange - spentCreditsSinceTransactionPositive
 
-      _ <- if (spentCreditsSinceTransactionPositive >= freeCreditsAvailable) {
+      _ <- if (freeCreditsAvailable <= 0) {
         // Fully spent, update state to 'Spent'
         q"""
         UPDATE webknossos.organization_credit_transactions
@@ -337,75 +317,32 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
         WHERE _id = ${transaction._id}
       """.asUpdate
       } else {
-        val amountToSubtractFromRefundableCredits = freeCreditsAvailable
+        val stateOfExpiredTransaction = if (freeCreditsAvailable == transaction.creditChange) {
+          CreditTransactionState.Revoked
+        } else { CreditTransactionState.PartiallyRevoked }
+        val revokingTransaction = CreditTransaction(
+          ObjectId.generate,
+          transaction._organization,
+          -freeCreditsAvailable,
+          0,
+          None,
+          None,
+          s"Revoked expired credits for transaction ${transaction._id}",
+          None,
+          CreditTransactionState.Completed,
+          None,
+        )
         for {
-          leftOverCreditsToRevoke <- revokeRefundableCreditsFromPendingTransactions(
-            amountToSubtractFromRefundableCredits,
-            transaction)
-          stateOfExpiredTransaction = if (leftOverCreditsToRevoke == transaction.creditChange)
-            CreditTransactionState.Revoked
-          else if (leftOverCreditsToRevoke > 0) CreditTransactionState.PartiallyRevoked
-          else CreditTransactionState.Spent
-
           _ <- q"""
             UPDATE webknossos.organization_credit_transactions
             SET state = $stateOfExpiredTransaction, updated_at = NOW()
             WHERE _id = ${transaction._id}
           """.asUpdate
-          _ <- if (leftOverCreditsToRevoke > 0) {
-            val revokingTransaction = CreditTransaction(
-              ObjectId.generate,
-              transaction._organization,
-              -leftOverCreditsToRevoke,
-              0,
-              None,
-              None,
-              s"Revoked expired credits for transaction ${transaction._id}",
-              None,
-              CreditTransactionState.Revoked, // TODO: this is how a boolean whether the transaction is a revoking transaction should be stored in the db. But this should be handled more cleanly
-              None,
-              Instant.now,
-              Instant.now,
-            )
-            insertRevokingTransaction(revokingTransaction)
-          } else {
-            DBIO.successful(0)
-          }
+          _ <- insertRevokingTransaction(revokingTransaction)
         } yield ()
       }
       _ = logger.info(s"revokeExpiredCreditsTransaction for transaction ${transaction._id} finished")
     } yield ()
-  }
-
-  private def revokeRefundableCreditsFromPendingTransactions(
-      amountToSubtract: BigDecimal,
-      transaction: CreditTransaction
-  ): DBIO[BigDecimal] = {
-    val pendingTransactionsSince = transaction.createdAt
-    for {
-      // Fetch transactions that are pending and eligible for refundable credit reduction
-      qualifiedTransactions <- q"""
-      SELECT *
-      FROM webknossos.organization_credit_transactions
-      WHERE _organization = ${transaction._organization}
-        AND created_at > $pendingTransactionsSince
-        AND credit_change < 0
-        AND refundable_credit_change > 0
-        AND state = ${CreditTransactionState.Pending}
-      ORDER BY created_at ASC
-    """.as[CreditTransaction]
-
-      // Iterate over transactions and subtract refundable credits
-      leftOverCredits <- qualifiedTransactions.foldLeft(DBIO.successful(amountToSubtract)) {
-        (leftOverCreditsToRevokeDBIO, transaction) =>
-          leftOverCreditsToRevokeDBIO.flatMap { leftOverCreditsToRevoke =>
-            val creditsToSubtract = leftOverCreditsToRevoke.min(transaction.refundableCreditChange)
-            logger.info(s"Subtracting $creditsToSubtract from refundable credits for transaction ${transaction._id}")
-            reduceRefundableCredits(transaction, creditsToSubtract).map(_ =>
-              leftOverCreditsToRevoke - creditsToSubtract) // Subtract from leftOverCredits
-          }
-      }
-    } yield leftOverCredits
   }
 
   def runRevokeExpiredCredits(): Fox[Unit] =
@@ -422,4 +359,43 @@ class CreditTransactionDAO @Inject()(slackNotificationService: SlackNotification
                                       s"${failedTransactions.mkString("\n")}")
       }
     } yield ()
+
+  def handOutMonthlyFreeCredits()(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      organizations <- organizationDAO.findAll
+      _ <- Fox.serialCombined(organizations) { orga =>
+        insertFreeCreditsForThisMonth(orga._id)
+      }
+    } yield ()
+
+  private def insertFreeCreditsForThisMonth(organizationId: String): Fox[Unit] = {
+    val freeCredits = CreditTransaction(
+      ObjectId.generate,
+      organizationId,
+      conf.Jobs.monthlyFreeCredits,
+      0,
+      None,
+      Some(BigDecimal(0)),
+      "Free credits for this month",
+      None,
+      CreditTransactionState.Completed,
+      None
+    )
+    run(q"""
+          INSERT INTO credit_transactions
+            (_id, _organization, credit_change, refundable_credit_change, refunded_transaction_id, spent_money, comment,
+             _paid_job, state, expiration_date)
+          VALUES
+            (${freeCredits._id}, ${freeCredits._organization}, ${freeCredits.creditChange.toString()}::DECIMAL,
+            ${freeCredits.refundableCreditChange.toString()}::DECIMAL, ${freeCredits.refundedTransactionId},
+            ${freeCredits.spentMoney.map(_.toString)}::DECIMAL, ${freeCredits.comment}, ${freeCredits._paidJob},
+            ${freeCredits.state}, ${freeCredits.expirationDate})
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM credit_transactions
+            WHERE _organization = ${freeCredits._organization}
+            AND DATE_TRUNC('month', expiration_date) = DATE_TRUNC('month', CURRENT_DATE)
+          )
+       """.asUpdate).map(_ => ())
+  }
 }

@@ -18,6 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Measurement tools are now accessible when viewing datasets outside of an annotation. [#8334](https://github.com/scalableminds/webknossos/pull/8334)
 
 ### Changed
+- Improved the scrolling behaviour of sliders: Sliders must be focused to scroll them. Additionally, parent element scrolling is prevented when using the slider. [#8321](https://github.com/scalableminds/webknossos/pull/8321) [#8321](https://github.com/scalableminds/webknossos/pull/8321)
 
 ### Fixed
 - Fixed a silent bug in the dashboard when refreshing newest dataset list. [#8386](https://github.com/scalableminds/webknossos/pull/8386) 

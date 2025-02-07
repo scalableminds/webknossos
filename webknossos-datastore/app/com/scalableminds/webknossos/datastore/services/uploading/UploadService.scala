@@ -173,10 +173,12 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
           List(
             runningUploadMetadataStore.insert(redisKeyForTotalFileSizeInBytes(reserveUploadInfo.uploadId),
                                               String.valueOf(fileSize)),
-            runningUploadMetadataStore.insert(redisKeyForCurrentUploadedTotalFileSizeInBytes(reserveUploadInfo.uploadId), "0")
+            runningUploadMetadataStore
+              .insert(redisKeyForCurrentUploadedTotalFileSizeInBytes(reserveUploadInfo.uploadId), "0")
           ))
       }
-      _ <- runningUploadMetadataStore.insert(redisKeyForCurrentUploadedTotalFileSizeInBytes(reserveUploadInfo.uploadId), "0")
+      _ <- runningUploadMetadataStore.insert(redisKeyForCurrentUploadedTotalFileSizeInBytes(reserveUploadInfo.uploadId),
+                                             "0")
       _ <- runningUploadMetadataStore.insert(
         redisKeyForDataSourceId(reserveUploadInfo.uploadId),
         Json.stringify(

@@ -316,7 +316,10 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       ? unfinishedUploadToContinue.uploadId
       : `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${newDatasetName}__${getRandomString()}`;
     const filePaths = formValues.zipFile.map((file) => file.path || "");
-    const totalFileSizeInBytes = formValues.zipFile.reduce((accSize, file) => accSize + file.size, 0);
+    const totalFileSizeInBytes = formValues.zipFile.reduce(
+      (accSize, file) => accSize + file.size,
+      0,
+    );
     const reserveUploadInformation = {
       uploadId,
       name: newDatasetName,

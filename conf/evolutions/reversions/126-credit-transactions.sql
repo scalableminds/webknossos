@@ -6,6 +6,11 @@ do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 1
 DROP TRIGGER IF EXISTS enforce_non_negative_balance_trigger ON webknossos.organization_credit_transactions;
 DROP FUNCTION IF EXISTS webknossos.enforce_non_negative_balance();
 
+DROP FUNCTION IF EXISTS webknossos.generate_object_id();
+DROP FUNCTION IF EXISTS FUNCTION webknossos.hand_out_monthly_free_credits(free_credits_amount DECIMAL);
+DROP SEQUENCE webknossos.objectid_sequence;
+
+
 -- Drop the foreign key constraints
 ALTER TABLE webknossos.organization_credit_transactions
   DROP CONSTRAINT IF EXISTS organization_ref,

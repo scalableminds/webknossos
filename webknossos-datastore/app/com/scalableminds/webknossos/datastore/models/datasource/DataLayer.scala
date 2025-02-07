@@ -62,6 +62,21 @@ object ElementClass extends ExtendedEnumeration {
     asInt.toByte
   }
 
+  def isSigned(elementClass: ElementClass.Value): Boolean =
+    elementClass match {
+      case ElementClass.uint8  => false
+      case ElementClass.uint16 => false
+      case ElementClass.uint24 => false
+      case ElementClass.uint32 => false
+      case ElementClass.uint64 => false
+      case ElementClass.float  => true
+      case ElementClass.double => true
+      case ElementClass.int8   => true
+      case ElementClass.int16  => true
+      case ElementClass.int32  => true
+      case ElementClass.int64  => true
+    }
+
   def bytesPerElement(elementClass: ElementClass.Value): Int = elementClass match {
     case ElementClass.uint8  => 1
     case ElementClass.uint16 => 2

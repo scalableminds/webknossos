@@ -15,8 +15,6 @@ import telemetry.SlackNotificationService
 import utils.WkConf
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
@@ -362,41 +360,7 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
       }
     } yield ()
 
-  def handOutMonthlyFreeCredits()(implicit ctx: DBAccessContext): Fox[Unit] =
-    run(q"CALL hand_out_monthly_free_credits(${conf.Jobs.monthlyFreeCredits})".asUpdate).map(_ => ())
-
-  private def insertFreeCreditsForThisMonth(organizationId: String): Fox[Unit] = {
-    val today = LocalDate.now()
-    val nextMonth = today.plusMonths(1)
-    val firstDayOfNexMonth = nextMonth.withDayOfMonth(1)
-    val expiryDate = firstDayOfNexMonth.format(DateTimeFormatter.ISO_LOCAL_DATE)
-    val freeCredits = CreditTransaction(
-      ObjectId.generate,
-      organizationId,
-      conf.Jobs.monthlyFreeCredits,
-      0,
-      None,
-      Some(BigDecimal(0)),
-      "Free credits for this month",
-      None,
-      CreditTransactionState.Completed,
-      Instant.fromString(expiryDate)
-    )
-    run(q"""
-      INSERT INTO webknossos.organization_credit_transactions
-        (_id, _organization, credit_change, refundable_credit_change, refunded_transaction_id, spent_money, comment,
-         _paid_job, state, expiration_date)
-      SELECT
-        ${freeCredits._id}, ${freeCredits._organization}, ${freeCredits.creditChange.toString()}::DECIMAL,
-        ${freeCredits.refundableCreditChange.toString()}::DECIMAL, ${freeCredits.refundedTransactionId},
-        ${freeCredits.spentMoney.map(_.toString)}::DECIMAL, ${freeCredits.comment}, ${freeCredits._paidJob},
-        ${freeCredits.state}, ${freeCredits.expirationDate}
-      WHERE NOT EXISTS (
-        SELECT 1
-        FROM webknossos.organization_credit_transactions
-        WHERE _organization = ${freeCredits._organization}
-        AND DATE_TRUNC('month', ${freeCredits.expirationDate}::TIMESTAMPTZ) = DATE_TRUNC('month', NOW())
-      )
-    """.asUpdate).map(_ => ())
-  }
+  def handOutMonthlyFreeCredits(): Fox[Unit] =
+    run(q"SELECT webknossos.hand_out_monthly_free_credits(${conf.Jobs.monthlyFreeCredits}::DECIMAL)".as[Unit]).map(_ =>
+      ())
 }

@@ -94,7 +94,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
       ))
 
   def revokeExpiredCredits(): Fox[Unit] = creditTransactionDAO.runRevokeExpiredCredits()
-  def handOutMonthlyFreeCredits(): Fox[Unit] = creditTransactionDAO.handOutMonthlyFreeCredits()(GlobalAccessContext)
+  def handOutMonthlyFreeCredits(): Fox[Unit] = creditTransactionDAO.handOutMonthlyFreeCredits()
 
   override protected def tickerInterval: FiniteDuration = 1 minute
 

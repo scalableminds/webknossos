@@ -109,8 +109,7 @@ then
 elif [ $cmd == "test-screenshot" ]
 then
   ensureUpToDateTests
-  # todop: revert
-  export NODE_PATH="$testBundlePath" && ava $(find "$testBundlePath" -name "dtype_datasets_rendering.screenshot.js") "$@"
+  export NODE_PATH="$testBundlePath" && ava $(find "$testBundlePath" -name "*.screenshot.js") "$@"
 elif [ $cmd == "test-wkorg-screenshot" ]
 then
   ensureUpToDateTests

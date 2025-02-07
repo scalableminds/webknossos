@@ -985,4 +985,36 @@ CREATE TRIGGER enforce_non_negative_balance_trigger
 BEFORE INSERT OR UPDATE ON webknossos.organization_credit_transactions
 FOR EACH ROW EXECUTE PROCEDURE webknossos.enforce_non_negative_balance();
 
+CREATE FUNCTION webknossos.hand_out_monthly_free_credits(free_credits_amount DECIMAL) RETURNS VOID AS $$
+DECLARE
+    org_id UUID;
+    next_month_first_day DATE;
+    existing_transaction_count INT;
+BEGIN
+    -- Calculate the first day of the next month
+    next_month_first_day := DATE_TRUNC('MONTH', NOW()) + INTERVAL '1 MONTH';
+
+    -- Loop through all organizations
+    FOR org_id IN (SELECT _id FROM webknossos.organizations) LOOP
+        -- Check if there is already a free credit transaction for this organization in the current month
+        SELECT COUNT(*) INTO existing_transaction_count
+        FROM webknossos.organization_credit_transactions
+        WHERE _organization = org_id
+          AND DATE_TRUNC('MONTH', expiration_date) = DATE_TRUNC('MONTH', NOW());
+
+        -- Insert free credits only if no record exists for this month
+        IF existing_transaction_count = 0 THEN
+            INSERT INTO webknossos.organization_credit_transactions
+                (_id, _organization, credit_change, refundable_credit_change, refunded_transaction_id, spent_money,
+                comment, _paid_job, state, expiration_date)
+            VALUES
+                (gen_random_uuid(), org_id, free_credits_amount, 0, NULL, 0,
+                 'Free credits for this month', NULL, 'Completed', next_month_first_day);
+        END IF;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
 

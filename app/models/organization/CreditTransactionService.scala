@@ -96,7 +96,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
   def revokeExpiredCredits(): Fox[Unit] = creditTransactionDAO.runRevokeExpiredCredits()
   def handOutMonthlyFreeCredits(): Fox[Unit] = creditTransactionDAO.handOutMonthlyFreeCredits()(GlobalAccessContext)
 
-  override protected def tickerInterval: FiniteDuration = 1 hour
+  override protected def tickerInterval: FiniteDuration = 1 minute
 
   // TODO: make this class a singleton or put this somewhere else as this is executed for each instance of the service
   override protected def tick(): Unit =

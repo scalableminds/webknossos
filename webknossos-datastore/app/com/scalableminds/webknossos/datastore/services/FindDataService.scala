@@ -139,11 +139,19 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
   def createHistogram(dataSource: DataSource, dataLayer: DataLayer): Fox[List[Histogram]] = {
 
-    def calculateHistogramValues(data: Array[_ >: UByte with Byte with UShort with UInt with ULong with Float],
-                                 bytesPerElement: Int,
-                                 isUint24: Boolean) = {
+    def calculateHistogramValues(
+        data: Array[_ >: UByte with Byte with UShort with Short with UInt with Int with ULong with Long with Float],
+        bytesPerElement: Int,
+        elementClass: ElementClass.Value) = {
+      val isUint24 = dataLayer.elementClass == ElementClass.uint24
       val counts = if (isUint24) Array.ofDim[Long](768) else Array.ofDim[Long](256)
-      var extrema: (Double, Double) = (0, math.pow(256, bytesPerElement) - 1)
+      var extrema: (Double, Double) =
+        (
+          if (ElementClass.isSigned(elementClass))
+            (-math.pow(2, 8 * bytesPerElement - 1), math.pow(2, 8 * bytesPerElement - 1) - 1)
+          else
+            (0, math.pow(2, 8 * bytesPerElement) - 1)
+        )
 
       if (data.nonEmpty) {
         data match {
@@ -161,10 +169,16 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
             byteData.foreach(el => counts(el.toInt + 128) += 1)
             extrema = (-128, 128)
           }
-          case shortData: Array[UShort] =>
+          case shortData: Array[UShort] => {
             shortData.foreach(el => counts((el / UShort(256)).toInt) += 1)
+          }
+          case shortData: Array[Short] => {
+            shortData.foreach(el => counts((el / 256.toShort + 128).toInt) += 1)
+          }
           case uintData: Array[UInt] =>
             uintData.foreach(el => counts((el / UInt(16777216)).toInt) += 1)
+          case intData: Array[Int] =>
+            intData.foreach(el => counts((el / 16777216 + 128).toInt) += 1)
           case longData: Array[ULong] =>
             longData.foreach(el => counts((el / ULong(math.pow(2, 56).toLong)).toInt) += 1)
           case floatData: Array[Float] =>
@@ -191,8 +205,10 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
         dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, mag) ?~> "dataset.noData"
         isUint24 = dataLayer.elementClass == ElementClass.uint24
         convertedData = toMaybeUnsigned(
-          filterZeroes(convertData(dataConcatenated, dataLayer.elementClass), skip = isUint24))
-      } yield calculateHistogramValues(convertedData, dataLayer.bytesPerElement, isUint24)
+          filterZeroes(convertData(dataConcatenated, dataLayer.elementClass), skip = isUint24),
+          ElementClass.isSigned(dataLayer.elementClass)
+        )
+      } yield calculateHistogramValues(convertedData, dataLayer.bytesPerElement, dataLayer.elementClass)
 
     if (dataLayer.resolutions.nonEmpty)
       histogramForPositions(createPositions(dataLayer, 2).distinct, dataLayer.resolutions.minBy(_.maxDim))

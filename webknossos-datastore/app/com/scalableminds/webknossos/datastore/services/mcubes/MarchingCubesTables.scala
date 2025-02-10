@@ -5,7 +5,7 @@ import com.scalableminds.util.geometry.Vec3Double
 object MarchingCubesTable {
 
   val triangleTable: Array[Array[Vec3Double]] = Array(
-    Array(),
+    Array.empty[Vec3Double],
     Array(Vec3Double(0, 0.5, 0), Vec3Double(0, 0, 0.5), Vec3Double(0.5, 0, 0)),
     Array(Vec3Double(1, 0, 0.5), Vec3Double(1, 0.5, 0), Vec3Double(0.5, 0, 0)),
     Array(Vec3Double(0, 0.5, 0), Vec3Double(0, 0, 0.5), Vec3Double(1, 0.5, 0), Vec3Double(1, 0.5, 0), Vec3Double(0, 0, 0.5), Vec3Double(1, 0, 0.5)),
@@ -260,7 +260,7 @@ object MarchingCubesTable {
     Array(Vec3Double(0, 0, 0.5), Vec3Double(0, 0.5, 0), Vec3Double(1, 0.5, 0), Vec3Double(0, 0, 0.5), Vec3Double(1, 0.5, 0), Vec3Double(1, 0, 0.5)),
     Array(Vec3Double(1, 0.5, 0), Vec3Double(1, 0, 0.5), Vec3Double(0.5, 0, 0)),
     Array(Vec3Double(0, 0, 0.5), Vec3Double(0, 0.5, 0), Vec3Double(0.5, 0, 0)),
-    Array()
+    Array.empty[Vec3Double],
   )
 
 }

@@ -245,7 +245,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
   private def parseJsonResponse[T: Reads](r: Fox[WSResponse]): Fox[T] =
     r.flatMap { response =>
       if (verbose) {
-        logger.debug(s"Successful $debugInfo. ResponseBody: '${response.body.take(100)}'")
+        logger.debug(s"Successful $debugInfo. ResponseBody: '${response.body[String].take(100)}'")
       }
       Json.parse(response.body).validate[T] match {
         case JsSuccess(value, _) =>

@@ -17,7 +17,7 @@ trait JsonImplicits {
     override def writes(number: Number): JsValue =
       tryo(number.longValue())
         .map(JsNumber(_))
-        .orElse(tryo(number.floatValue()).map(JsNumber(_)))
+        .orElse(tryo(BigDecimal(number.doubleValue())).map(JsNumber(_)))
         .getOrElse(JsNumber(number.doubleValue()))
   }
 

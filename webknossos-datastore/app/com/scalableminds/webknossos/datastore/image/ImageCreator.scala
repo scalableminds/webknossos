@@ -186,8 +186,8 @@ object ImageCreator extends LazyLogging {
         com.scalableminds.util.tools.Math.clamp(
           (com.scalableminds.util.tools.Math
             .clamp(value, intensityRange._1, intensityRange._2) - intensityRange._1) / (intensityRange._2 - intensityRange._1) * 255.0,
-          0,
-          255
+          0.0,
+          255.0
         ))
       .toInt
 

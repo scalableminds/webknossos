@@ -63,9 +63,9 @@ object ZarrHeader extends JsonImplicits {
     val compressor = None
 
     val additionalAxesShapeEntries =
-      dataLayer.additionalAxes.map(axes => axes.map(_.bounds(1)).toArray).getOrElse(Array.empty)
+      dataLayer.additionalAxes.map(axes => axes.map(_.bounds(1)).toArray).getOrElse(Array.empty[Int])
     val additionalAxesChunksEntries =
-      dataLayer.additionalAxes.map(axes => axes.map(_ => 1).toArray).getOrElse(Array.empty)
+      dataLayer.additionalAxes.map(axes => axes.map(_ => 1).toArray).getOrElse(Array.empty[Int])
 
     val shape = Array(channels) ++ additionalAxesShapeEntries ++ Array(
       // Zarr can't handle data sets that don't start at 0, so we extend the shape to include "true" coords

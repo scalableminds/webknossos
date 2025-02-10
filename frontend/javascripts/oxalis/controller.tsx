@@ -172,6 +172,12 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     window.webknossos = new ApiLoader(Model);
     app.vent.emit("webknossos:ready");
     Store.dispatch(wkReadyAction());
+    console.log(
+      "WK_READY",
+      window.performance.timeOrigin +
+        window.performance.now() -
+        window.performance.timing.connectStart,
+    );
     setTimeout(() => {
       // Give wk (sagas and bucket loading) a bit time to catch air before
       // showing the UI as "ready". The goal here is to avoid that the

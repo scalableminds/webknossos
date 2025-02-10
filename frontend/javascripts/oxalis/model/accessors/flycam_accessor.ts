@@ -45,6 +45,32 @@ import { getTransformsForLayer, invertAndTranspose } from "./dataset_layer_trans
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
+
+
+function estimateTotalBucketCountForZoomLevel(
+  mag: Vector3,
+  zoomFactor: number,
+  viewportRects: OrthoViewRects,
+  voxelSizeFactor: Array<Vector3>
+) {
+
+  const voxelSizeSmallest = Math.min(...voxelSizeFactor);
+  const viewportSizeX = viewportRects["PLANE_XY"].width;
+  const viewportSizeY = viewportRects["PLANE_XY"].height;
+  const viewportSizeZ = viewportRects["PLANE_YZ"].width;
+
+  const numBucketsX = 2 + zoomFactor * voxelSizeSmallest / voxelSizeFactor[0] * viewportSizeX / mag[0] / 32;
+  const numBucketsY = 2 + zoomFactor * voxelSizeSmallest / voxelSizeFactor[1] * viewportSizeY / mag[1] / 32;
+  const numBucketsZ = 2 + zoomFactor * voxelSizeSmallest / voxelSizeFactor[2] * viewportSizeZ / mag[2] / 32;
+
+  const thickness = 3; // load a bucket slice behind and in front of the visible one for smooth transitions.
+
+  const numBuckets = numBucketsX * numBucketsY * thickness + numBucketsY * numBucketsZ * thickness + numBucketsX * numBucketsZ * thickness - numBucketsX * thickness**2 - numBucketsY * thickness**2 - numBucketsZ * thickness**2;
+
+  return numBuckets;
+}
+
+
 function calculateTotalBucketCountForZoomLevel(
   viewMode: ViewMode,
   loadingStrategy: LoadingStrategy,
@@ -166,6 +192,13 @@ export function _getMaximumZoomForAllMags(
 
   while (currentIterationCount < maximumIterationCount && currentMagIndex < mags.length) {
     const nextZoomValue = currentMaxZoomValue * ZOOM_STEP_INTERVAL;
+    const nextCapacityNew = estimateTotalBucketCountForZoomLevel(
+      mags[currentMagIndex],
+      nextZoomValue,
+      viewportRects,
+      voxelSizeFactor,
+    );
+    /*
     const nextCapacity = calculateTotalBucketCountForZoomLevel(
       viewMode,
       loadingStrategy,
@@ -179,8 +212,10 @@ export function _getMaximumZoomForAllMags(
       // when exactly meeting the limit.
       maximumCapacity + 1,
     );
+    console.log("next capacity", nextCapacity, nextCapacityNew);
+    */
 
-    if (nextCapacity > maximumCapacity) {
+    if (nextCapacityNew > maximumCapacity) {
       maxZoomValueThresholds.push(currentMaxZoomValue);
       currentMagIndex++;
     }
@@ -425,7 +460,6 @@ export function getMaxZoomValueForMag(
     // This should never happen as long as a valid target mag is passed to this function.
     throw new Error("Zoom range could not be determined for target magnification.");
   }
-  console.log(`getMaxZoomValueForMag took ${window.performance.now() - before}`);
   return maxZoom;
 }
 

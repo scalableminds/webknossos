@@ -417,6 +417,7 @@ export function getMaxZoomValueForMag(
   layerName: string,
   targetMag: Vector3,
 ): number {
+  const before = window.performance.now();
   const targetMagIdentifier = Math.max(...targetMag);
   // Extract the max value from the range
   const maxZoom = getValidZoomRangeForMag(state, layerName, targetMagIdentifier)[1];
@@ -424,6 +425,7 @@ export function getMaxZoomValueForMag(
     // This should never happen as long as a valid target mag is passed to this function.
     throw new Error("Zoom range could not be determined for target magnification.");
   }
+  console.log(`getMaxZoomValueForMag took ${window.performance.now() - before}`);
   return maxZoom;
 }
 

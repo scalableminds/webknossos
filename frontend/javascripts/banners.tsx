@@ -102,6 +102,7 @@ export function MaintenanceBanner() {
   );
 
   async function pollMaintenances() {
+    return;
     const newScheduledMaintenances = await listCurrentAndUpcomingMaintenances();
 
     const closestUpcomingMaintenance = newScheduledMaintenances

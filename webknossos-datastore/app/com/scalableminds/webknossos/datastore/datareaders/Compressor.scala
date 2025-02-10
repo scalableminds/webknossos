@@ -33,9 +33,9 @@ object CompressionSetting {
     override def reads(json: JsValue): JsResult[CompressionSetting] =
       json
         .validate[String]
-        .map(StringCompressionSetting)
-        .orElse(json.validate[Int].map(IntCompressionSetting))
-        .orElse(json.validate[Boolean].map(BoolCompressionSetting))
+        .map(StringCompressionSetting.apply)
+        .orElse(json.validate[Int].map(IntCompressionSetting.apply))
+        .orElse(json.validate[Boolean].map(BoolCompressionSetting.apply))
 
     override def writes(compressionSetting: CompressionSetting): JsValue =
       compressionSetting match {

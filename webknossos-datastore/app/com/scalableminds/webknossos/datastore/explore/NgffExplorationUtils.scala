@@ -247,7 +247,7 @@ trait NgffExplorationUtils extends FoxImplicits {
       voxelSizeFactor = voxelSizeInAxisUnits * axisUnitFactors
       nameFromPath = remotePath.basename
       datasetName = multiscale.name.flatMap(TextUtils.normalizeStrong).getOrElse(nameFromPath)
-      layers <- Fox.serialCombined((0 until channelCount).toList)({ channelIndex: Int =>
+      layers <- Fox.serialCombined((0 until channelCount).toList)({ (channelIndex: Int) =>
         createLayer(remotePath,
                     credentialId,
                     multiscale,

@@ -250,7 +250,7 @@ object Zarr3ArrayHeader extends JsonImplicits {
         "chunk_key_encoding" -> zarrArrayHeader.chunk_key_encoding,
         "fill_value" -> zarrArrayHeader.fill_value,
         "attributes" -> Json.toJsFieldJsValueWrapper(zarrArrayHeader.attributes.getOrElse(JsObject.empty)),
-        "codecs" -> zarrArrayHeader.codecs.map { codec: CodecConfiguration =>
+        "codecs" -> zarrArrayHeader.codecs.map { (codec: CodecConfiguration) =>
           val configurationJson = if (codec.includeConfiguration) Json.obj("configuration" -> codec) else Json.obj()
           Json.obj("name" -> codec.name) ++ configurationJson
         }.map(JsonHelper.removeGeneratedTypeFieldFromJsonRecursively),

@@ -4,11 +4,13 @@ import java.awt.image.{BufferedImage, DataBufferByte}
 import java.io._
 import javax.imageio._
 import javax.imageio.stream._
+import java.{util => ju}
+import javax.imageio
 
 class ImageWriter(imageType: String, imageExt: String) {
   val imageQuality = 1F
-  val iter = ImageIO.getImageWritersByFormatName(imageType)
-  val writer = iter.next()
+  val iter: ju.Iterator[imageio.ImageWriter] = ImageIO.getImageWritersByFormatName(imageType)
+  val writer: imageio.ImageWriter = iter.next()
   val iwp: ImageWriteParam = writer.getDefaultWriteParam()
 
   def writeToFile(buffered: BufferedImage): File = {
@@ -16,7 +18,7 @@ class ImageWriter(imageType: String, imageExt: String) {
     writeToFile(buffered, file)
   }
 
-  def writeToFile(buffered: BufferedImage, file: File) = {
+  def writeToFile(buffered: BufferedImage, file: File): File = {
     if (file.exists) file.delete
     var output: FileImageOutputStream = null
     try {
@@ -31,7 +33,7 @@ class ImageWriter(imageType: String, imageExt: String) {
     file
   }
 
-  def writeToOutputStream(buffered: BufferedImage)(output: OutputStream) =
+  def writeToOutputStream(buffered: BufferedImage)(output: OutputStream): Unit =
     try {
       writer.setOutput(ImageIO.createImageOutputStream(output))
       val image = new IIOImage(buffered, null, null)

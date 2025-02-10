@@ -122,11 +122,11 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     readAccessQWithPrefix(requestingUserId, SqlToken.raw(""))
 
-  protected def readAccessQWithPrefix(requestingUserId: ObjectId, userPrefix: SqlToken) =
+  protected def readAccessQWithPrefix(requestingUserId: ObjectId, userPrefix: SqlToken): SqlToken =
     q"""(${userPrefix}_id IN (SELECT _user FROM webknossos.user_team_roles WHERE _team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId AND isTeamManager)))
         OR (${userPrefix}_organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))
         OR ${userPrefix}_id = $requestingUserId"""
-  override protected def deleteAccessQ(requestingUserId: ObjectId) =
+  override protected def deleteAccessQ(requestingUserId: ObjectId): SqlToken =
     q"_organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)"
 
   private def listAccessQ(requestingUserId: ObjectId) = listAccessQWithPrefix(requestingUserId, SqlToken.raw(""))

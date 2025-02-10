@@ -163,7 +163,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       (vertices: Array[Float], neighbors) <- loadMeshChunkFromAdHoc(tracing, adHocMeshRequest, annotationId, tracingId)
       nextPositions: List[VoxelPosition] = generateNextTopLeftsFromNeighbors(topLeft, neighbors, chunkSize, visited)
       _ = visited ++= nextPositions
-      neighborVerticesNested <- Fox.serialCombined(nextPositions) { position: VoxelPosition =>
+      neighborVerticesNested <- Fox.serialCombined(nextPositions) { (position: VoxelPosition) =>
         getAllAdHocChunksWithNeighborLogic(tracing,
                                            annotationId,
                                            tracingId,

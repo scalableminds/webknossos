@@ -163,7 +163,7 @@ class DatasetArray(vaultPath: VaultPath,
     } else {
       val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
       val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse)
-      val copiedFuture = Fox.combined(chunkIndices.map { chunkIndex: Array[Int] =>
+      val copiedFuture = Fox.combined(chunkIndices.map { (chunkIndex: Array[Int]) =>
         for {
           sourceChunk: MultiArray <- getSourceChunkDataWithCache(fullAxisOrder.permuteIndicesWkToArray(chunkIndex))
           sourceChunkInWkFOrder: MultiArray = MultiArrayUtils

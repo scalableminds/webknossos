@@ -140,7 +140,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
     val groupedByOrga = dataSources.groupBy(_.id.organizationId).toList
     Fox
-      .serialCombined(groupedByOrga) { orgaTuple: (String, List[InboxDataSource]) =>
+      .serialCombined(groupedByOrga) { ((orgaTuple: (String, List[InboxDataSource]))) =>
         organizationDAO
           .findOne(orgaTuple._1)
           .futureBox
@@ -225,7 +225,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     }).flatten.futureBox
 
   private def insertNewDataset(dataSource: InboxDataSource, datasetName: String, dataStore: DataStore) =
-    publicationForFirstDataset.flatMap { publicationId: Option[ObjectId] =>
+    publicationForFirstDataset.flatMap { ((publicationId: Option[ObjectId])) =>
       createDataset(dataStore, ObjectId.generate, datasetName, dataSource, publicationId).map(_._id)
     }.futureBox
 

@@ -108,7 +108,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       (vertices: Array[Float], neighbors) <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
       nextPositions: List[VoxelPosition] = generateNextTopLeftsFromNeighbors(topLeft, neighbors, chunkSize, visited)
       _ = visited ++= nextPositions
-      neighborVerticesNested <- Fox.serialCombined(nextPositions) { position: VoxelPosition =>
+      neighborVerticesNested <- Fox.serialCombined(nextPositions) { (position: VoxelPosition) =>
         getAllAdHocChunks(dataSource, segmentationLayer, fullMeshRequest, position, chunkSize, visited)
       }
       allVertices: List[Array[Float]] = vertices +: neighborVerticesNested.flatten
@@ -144,7 +144,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                                                                            meshFileName,
                                                                                            segmentIds)
       allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods.head.chunks
-      stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { chunkRange: MeshChunk =>
+      stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { (chunkRange: MeshChunk) =>
         readMeshChunkAsStl(organizationId,
                            datasetDirectoryName,
                            layerName,

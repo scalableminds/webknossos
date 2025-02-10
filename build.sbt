@@ -1,20 +1,33 @@
 import sbt._
 
 ThisBuild / version := "wk"
-ThisBuild / scalaVersion := "2.13.14"
-ThisBuild / scapegoatVersion := "2.1.6"
+ThisBuild / scalaVersion := "3.4.3"
+// ThisBuild / scalaVersion := "2.13.14"
+crossScalaVersions ++= Seq("2.13.11", "3.3.4")
+// ThisBuild / scapegoatVersion := "2.1.6"
+ThisBuild / scalafixDependencies += "io.github.dedis" %% "scapegoat-scalafix" % "1.1.4"
+inThisBuild(
+  List(
+    semanticdbEnabled := true,
+    semanticdbVersion := scalafixSemanticdb.revision
+  )
+)
+
+// fix jni for scala version 3
+sbtJniCoreScope := Compile
 val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
+  "-explain",      // More detailed compiler output
+  "-Xcheck-null",  // Additional null checks
+  "-explain-types", // Explain type errors in detail
   "-release:11",
   "-feature",
   "-deprecation",
   "-language:implicitConversions",
   "-language:postfixOps",
-  "-Xlint:unused",
-  "-Xlint:deprecation",
-  s"-Wconf:src=target/.*:s",
-  s"-Wconf:src=webknossos-datastore/target/.*:s",
-  s"-Wconf:src=webknossos-tracingstore/target/.*:s"
+  s"-Wconf=src:target/.*:s",
+  s"-Wconf=src:webknossos-datastore/target/.*:s",
+  s"-Wconf=asrc:webknossos-tracingstore/target/.*:s"
 ) ++ failOnWarning
 ThisBuild / javacOptions ++= Seq(
   "-Xlint:unchecked",
@@ -30,8 +43,8 @@ PlayKeys.devSettings := Seq("play.server.pekko.requestTimeout" -> "10000s", "pla
 // Disable unused import warnings, only in sbt console REPL
 Compile / console / scalacOptions -= "-Xlint:unused"
 
-scapegoatIgnoredFiles := Seq(".*/Tables.scala", ".*/Routes.scala", ".*/.*mail.*template\\.scala")
-scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
+// scapegoatIgnoredFiles := Seq(".*/Tables.scala", ".*/Routes.scala", ".*/.*mail.*template\\.scala")
+// scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
 
 // Allow path binding for ObjectId
 routesImport += "com.scalableminds.util.objectid.ObjectId"

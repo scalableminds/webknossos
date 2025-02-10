@@ -188,7 +188,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
       _ <- reportUpdates(annotationId, updateGroups)
       currentCommittedVersion: Fox[Long] = annotationService.currentMaterializableVersion(annotationId)
       newVersion <- updateGroups.foldLeft(currentCommittedVersion) { (previousVersion, updateGroup) =>
-        previousVersion.flatMap { prevVersion: Long =>
+        previousVersion.flatMap { (prevVersion: Long) =>
           if (prevVersion + 1 == updateGroup.version) {
             for {
               _ <- handleUpdateGroup(annotationId, updateGroup)

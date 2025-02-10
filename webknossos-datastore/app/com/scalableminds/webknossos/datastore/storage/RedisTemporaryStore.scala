@@ -22,8 +22,8 @@ trait RedisTemporaryStore extends LazyLogging {
   def removeAllConditional(pattern: String): Fox[Unit] =
     withExceptionHandler {
       val keysOpt: Option[List[Option[String]]] = r.keys(pattern)
-      keysOpt.foreach { keys: Seq[Option[String]] =>
-        keys.flatMap { key: Option[String] =>
+      keysOpt.foreach { (keys: Seq[Option[String]]) =>
+        keys.flatMap { (key: Option[String]) =>
           key.flatMap(r.del(_))
         }
       }
@@ -32,8 +32,8 @@ trait RedisTemporaryStore extends LazyLogging {
   def findAllConditional(pattern: String): Fox[Seq[String]] =
     withExceptionHandler {
       val keysOpt: Option[List[Option[String]]] = r.keys(pattern)
-      keysOpt.map { keys: Seq[Option[String]] =>
-        keys.flatMap { key: Option[String] =>
+      keysOpt.map { (keys: Seq[Option[String]]) =>
+        keys.flatMap { (key: Option[String]) =>
           key.flatMap(r.get(_))
         }
       }.getOrElse(Seq())

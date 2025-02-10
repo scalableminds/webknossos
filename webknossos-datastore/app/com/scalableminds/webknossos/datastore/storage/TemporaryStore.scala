@@ -42,7 +42,7 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
 
   def removeAllConditional(predicate: K => Boolean): Unit =
     map.synchronized {
-      map.keySet.filter(predicate).foreach { key: K =>
+      map.keySet.filter(predicate).foreach { (key: K) =>
         map -= key
       }
     }

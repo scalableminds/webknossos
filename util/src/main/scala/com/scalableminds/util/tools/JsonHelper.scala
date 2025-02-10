@@ -128,7 +128,7 @@ object JsonHelper extends BoxImplicits with LazyLogging {
   private def removeKeyRecursively(jsValue: JsValue, keyToRemove: String): JsValue =
     jsValue match {
       case JsObject(fields) =>
-        val processedAsMap = fields.filter { case (k, _) => k != keyToRemove }.view.mapValues { value: JsValue =>
+        val processedAsMap = fields.filter { case (k, _) => k != keyToRemove }.view.mapValues { (value: JsValue) =>
           removeKeyRecursively(value, keyToRemove)
         }.toMap
         Json.toJson(processedAsMap)

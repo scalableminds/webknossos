@@ -8,7 +8,9 @@ import net.liftweb.common.{Box, Failure, Full}
 import org.apache.commons.io.FileUtils
 
 import scala.jdk.CollectionConverters.IteratorHasAsScala
-import scala.reflect.io.Directory
+import java.nio.file.{Files, Paths, SimpleFileVisitor, FileVisitResult}
+import java.nio.file.attribute.BasicFileAttributes
+import org.apache.commons.io.FileUtils
 import scala.util.Random
 
 object PathUtils extends PathUtils
@@ -184,12 +186,14 @@ trait PathUtils extends LazyLogging {
     } else path.getParent
 
   def deleteDirectoryRecursively(path: Path): Box[Unit] = {
-    val directory = new Directory(new File(path.toString))
-    if (!directory.exists)
+    try {
+      if (Files.exists(path)) {
+        FileUtils.deleteDirectory(path.toFile) // Using Apache Commons IO
+      }
       Full(())
-    else if (directory.deleteRecursively()) {
-      Full(())
-    } else Failure(f"Failed to delete directory $path")
+    } catch {
+      case ex: Exception => Failure(s"Failed to delete directory $path: ${ex.getMessage}")
+    }
   }
 
   // use when you want to move a directory to a subdir of itself. Otherwise, just go for FileUtils.moveDirectory

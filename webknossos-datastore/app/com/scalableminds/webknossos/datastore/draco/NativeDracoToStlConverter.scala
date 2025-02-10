@@ -1,9 +1,10 @@
 package com.scalableminds.webknossos.datastore.draco
 
-import com.github.sbt.jni.nativeLoader
+// to make the code below work the core project should be included as a dependency via
+// sbtJniCoreScope := Compile
+import com.github.sbt.jni.syntax.NativeLoader
 
-@nativeLoader("webknossosJni0")
-class NativeDracoToStlConverter() {
+class NativeDracoToStlConverter() extends NativeLoader("webknossosJni0") {
   @native def dracoToStl(a: Array[Byte],
                          offsetX: Float,
                          offsetY: Float,

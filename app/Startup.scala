@@ -102,7 +102,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
 
     val errorMessageBuilder = mutable.ListBuffer[String]()
     val capturingProcessLogger =
-      ProcessLogger((o: String) => errorMessageBuilder.append(o), (e: String) => errorMessageBuilder.append(e))
+      ProcessLogger(((o: String)) => errorMessageBuilder.append(o), ((e: String)) => errorMessageBuilder.append(e))
 
     val result = Process("./tools/postgres/dbtool.js check-db-schema", None, "POSTGRES_URL" -> postgresUrl) ! capturingProcessLogger
     if (result == 0) {
@@ -117,7 +117,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
   private def ensurePostgresDatabase(): Unit = {
     logger.info(s"Ensuring Postgres database…")
     val processLogger =
-      ProcessLogger((o: String) => logger.info(s"dbtool: $o"), (e: String) => logger.error(s"dbtool: $e"))
+      ProcessLogger(((o: String)) => logger.info(s"dbtool: $o"), ((e: String)) => logger.error(s"dbtool: $e"))
 
     // this script is copied to the stage directory in AssetCompilation
     val result = Process("./tools/postgres/dbtool.js ensure-db", None, "POSTGRES_URL" -> postgresUrl) ! processLogger

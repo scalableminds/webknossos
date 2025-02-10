@@ -167,7 +167,7 @@ class FossilDBClient(collection: String,
       parsedValues: List[Box[T]] = reply.values.map { v =>
         fromByteArray(v.toByteArray)
       }.toList
-      values <- Fox.combined(parsedValues.map { box: Box[T] =>
+      values <- Fox.combined(parsedValues.map { (box: Box[T]) =>
         box.toFox
       })
     } yield reply.versions.zip(values).toList) ?~> "Could not get multiple versions from FossilDB"

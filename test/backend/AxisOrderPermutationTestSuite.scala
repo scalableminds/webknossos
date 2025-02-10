@@ -8,7 +8,7 @@ class AxisOrderPermutationTestSuite extends PlaySpec {
   private def permute(permutation: Array[Int], str: String): String =
     permutation.map(i => str(i)).mkString("")
 
-  def orderFromStringChars(str: String) = FullAxisOrder(str.map(char => Axis(name = char.toString)))
+  def orderFromStringChars(str: String): FullAxisOrder = FullAxisOrder(str.map(char => Axis(name = char.toString)))
 
   private def permuteAxisOrderArrayCtoWkC(str: String) = {
     val axisOrder = orderFromStringChars(str)

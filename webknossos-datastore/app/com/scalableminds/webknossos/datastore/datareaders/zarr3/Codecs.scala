@@ -28,7 +28,7 @@ object TransposeSetting {
   implicit object TransposeSettingFormat extends Format[TransposeSetting] {
 
     override def reads(json: JsValue): JsResult[TransposeSetting] =
-      json.validate[String].map(StringTransposeSetting).orElse(json.validate[Array[Int]].map(IntArrayTransposeSetting))
+      json.validate[String].map(StringTransposeSetting.apply).orElse(json.validate[Array[Int]].map(IntArrayTransposeSetting.apply))
 
     override def writes(transposeSetting: TransposeSetting): JsValue =
       transposeSetting match {

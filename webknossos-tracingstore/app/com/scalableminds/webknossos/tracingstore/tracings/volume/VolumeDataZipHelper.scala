@@ -54,7 +54,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
             .read(is) {
               case (header, buckets) =>
                 if (header.numChunksPerShard == 1) {
-                  parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
+                  parseWKWFilePath(fileName.toString).map { (bucketPosition: BucketPosition) =>
                     if (buckets.hasNext) {
                       val data = buckets.next()
                       if (!isRevertedElement(data)) {
@@ -130,7 +130,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
     val magSet = new mutable.HashSet[Vec3Int]()
     ZipIO.withUnziped(zipFile) {
       case (fileName, _) =>
-        getMagFromWkwOrZarrHeaderFilePath(fileName.toString).map { mag: Vec3Int =>
+        getMagFromWkwOrZarrHeaderFilePath(fileName.toString).map { (mag: Vec3Int) =>
           magSet.add(mag)
         }
     }

@@ -12,7 +12,7 @@ abstract class ExtendedEnumeration extends Enumeration {
     values.find(_.toString == s)
 
   def fromCommaSeparated(valuesStr: String)(implicit ec: ExecutionContext): Fox[List[Value]] =
-    parseCommaSeparated(Some(valuesStr)) { typ: String =>
+    parseCommaSeparated(Some(valuesStr)) { (typ: String) =>
       fromString(typ)
     }
 }

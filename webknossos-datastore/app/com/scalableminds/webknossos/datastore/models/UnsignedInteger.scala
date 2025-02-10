@@ -50,7 +50,7 @@ class UInt8(val signed: Byte) extends UnsignedInteger {
   override def toPositiveLong: Long =
     if (signed >= 0) signed.toLong else signed.toLong + Byte.MaxValue.toLong + Byte.MaxValue.toLong + 2L
   override def toLong: Long = toPositiveLong
-  override def toString = s"UInt8($signed)"
+  override def toString: String = s"UInt8($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {
     case that: UInt8 => that.signed == signed
@@ -64,7 +64,7 @@ class UInt16(val signed: Short) extends UnsignedInteger {
   override def toPositiveLong: Long =
     if (signed >= 0) signed.toLong else signed.toLong + Short.MaxValue.toLong + Short.MaxValue.toLong + 2L
   override def toLong: Long = toPositiveLong
-  override def toString = s"UInt16($signed)"
+  override def toString: String = s"UInt16($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {
     case that: UInt16 => that.signed == signed
@@ -78,7 +78,7 @@ class UInt32(val signed: Int) extends UnsignedInteger {
   override def toPositiveLong: Long =
     if (signed >= 0) signed.toLong else signed.toLong + Int.MaxValue.toLong + Int.MaxValue.toLong + 2L
   override def toLong: Long = toPositiveLong
-  override def toString = s"UInt32($signed)"
+  override def toString: String = s"UInt32($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {
     case that: UInt32 => that.signed == signed
@@ -92,7 +92,7 @@ class UInt64(val signed: Long) extends UnsignedInteger {
   override def toPositiveLong: Long =
     if (signed >= 0) signed else throw new Exception("Cannot convert UInt64 with value >= 2^63 to Long")
   override def toLong: Long = signed
-  override def toString = s"UInt64($signed)"
+  override def toString: String = s"UInt64($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {
     case that: UInt64 => that.signed == signed
@@ -138,7 +138,7 @@ object UnsignedIntegerArray {
     val shortBuffer = byteBuffer.asShortBuffer()
     val intBuffer = byteBuffer.asIntBuffer()
     val longBuffer = byteBuffer.asLongBuffer()
-    dataTyped.foreach { elem: UnsignedInteger =>
+    dataTyped.foreach { (elem: UnsignedInteger) =>
       elem match {
         case e: UInt8  => byteBuffer.put(e.signed)
         case e: UInt16 => shortBuffer.put(e.signed)

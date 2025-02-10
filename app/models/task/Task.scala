@@ -64,11 +64,11 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       )
     }
 
-  override protected def readAccessQ(requestingUserId: ObjectId) =
+  override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""((SELECT _team FROM webknossos.projects p WHERE _project = p._id) IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId)
       or ((SELECT _organization FROM webknossos.teams WHERE webknossos.teams._id = (SELECT _team FROM webknossos.projects p WHERE _project = p._id))
         in (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)))"""
-  override protected def deleteAccessQ(requestingUserId: ObjectId) =
+  override protected def deleteAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""((SELECT _team FROM webknossos.projects p WHERE _project = p._id) IN (SELECT _team FROM webknossos.user_team_roles WHERE isTeamManager AND _user = $requestingUserId)
       or ((SELECT _organization FROM webknossos.teams WHERE webknossos.teams._id = (SELECT _team FROM webknossos.projects p WHERE _project = p._id))
         in (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)))"""

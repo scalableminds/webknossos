@@ -211,7 +211,7 @@ case class ByteArrayValue(v: Array[Byte]) extends SqlValue {
 case class EnumerationArrayValue(v: List[Enumeration#Value], sqlEnumName: String) extends SqlValue with SqlEscaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v.map(_.toString).toArray, Types.ARRAY)
 
-  override def placeholder = s"?::$sqlEnumName[]"
+  override def placeholder: String = s"?::$sqlEnumName[]"
 
   override def debugInfo: String = "{" + v.mkString(",") + "}"
 }
@@ -248,6 +248,6 @@ case class NoneValue() extends SqlValue {
 }
 
 private object GetUpdateValue extends GetResult[Int] {
-  def apply(pr: PositionedResult) =
+  def apply(pr: PositionedResult): Int =
     throw new Exception("Update statements should not return a ResultSet")
 }

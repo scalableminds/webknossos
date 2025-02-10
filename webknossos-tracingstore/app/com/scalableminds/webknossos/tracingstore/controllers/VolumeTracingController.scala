@@ -91,7 +91,7 @@ class VolumeTracingController @Inject()(
     log() {
       logTime(slackNotificationService.noticeSlowRequest) {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-          val savedIds = Fox.sequence(request.body.map { tracingOpt: Option[VolumeTracing] =>
+          val savedIds = Fox.sequence(request.body.map { (tracingOpt: Option[VolumeTracing]) =>
             tracingOpt match {
               case Some(tracing) => volumeTracingService.saveVolume(tracing, None, 0).map(Some(_))
               case _             => Fox.successful(None)

@@ -336,7 +336,7 @@ class EditableMappingService @Inject()(
   }
 
   def collectSegmentIds(data: Array[UnsignedInteger]): Set[Long] =
-    data.toSet.map { u: UnsignedInteger =>
+    data.toSet.map { (u: UnsignedInteger) =>
       u.toPositiveLong
     }
 

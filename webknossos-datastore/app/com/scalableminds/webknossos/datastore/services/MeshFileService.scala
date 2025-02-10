@@ -282,7 +282,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
                                         segmentIds: List[Long],
                                         lodScaleMultiplier: Double): List[MeshSegmentInfo] =
     meshFileCache
-      .withCachedHdf5(meshFilePath) { cachedMeshFile: CachedHdf5File =>
+      .withCachedHdf5(meshFilePath) { (cachedMeshFile: CachedHdf5File) =>
         segmentIds.flatMap(segmentId => listMeshChunksForSegment(cachedMeshFile, segmentId, lodScaleMultiplier))
       }
       .toOption

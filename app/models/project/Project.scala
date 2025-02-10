@@ -18,6 +18,7 @@ import utils.sql.{SQLDAO, SqlClient}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
+import utils.sql.SqlToken
 
 case class Project(
     _id: ObjectId,
@@ -76,11 +77,11 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.isdeleted
       ))
 
-  override protected def readAccessQ(requestingUserId: ObjectId) =
+  override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""(_team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId))
         OR _owner = $requestingUserId
         OR _organization = (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)"""
-  override protected def deleteAccessQ(requestingUserId: ObjectId) = q"_owner = $requestingUserId"
+  override protected def deleteAccessQ(requestingUserId: ObjectId): SqlToken = q"_owner = $requestingUserId"
 
   // read operations
 

@@ -113,11 +113,11 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.isdeleted
       ))
 
-  override protected def readAccessQ(requestingUserId: ObjectId) =
+  override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""_id IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId)
         OR _organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)"""
 
-  override protected def deleteAccessQ(requestingUserId: ObjectId) =
+  override protected def deleteAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""NOT isOrganizationTeam
         AND _organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)"""
 

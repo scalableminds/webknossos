@@ -151,7 +151,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
     for {
       set <- tryo(UnsignedIntegerArray.toSetFromByteArray(bytes, elementClass)).toFox
     } yield
-      set.filter(!_.isZero).map { u: UnsignedInteger =>
+      set.filter(!_.isZero).map { (u: UnsignedInteger) =>
         u.toPositiveLong
       }
 

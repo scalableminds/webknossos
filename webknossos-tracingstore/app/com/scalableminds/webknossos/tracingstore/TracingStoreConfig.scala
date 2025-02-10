@@ -25,7 +25,7 @@ class TracingStoreConfig @Inject()(configuration: Configuration) extends ConfigR
       val address: String = get[String]("tracingstore.redis.address")
       val port: Int = get[Int]("tracingstore.redis.port")
     }
-    val children = List(WebKnossos, Fossildb)
+    val children: List[Object] = List(WebKnossos, Fossildb)
   }
 
   object SlackNotifications {
@@ -33,5 +33,5 @@ class TracingStoreConfig @Inject()(configuration: Configuration) extends ConfigR
     val verboseLoggingEnabled: Boolean = get[Boolean]("slackNotifications.verboseLoggingEnabled")
   }
 
-  val children = List(Http, Tracingstore, SlackNotifications)
+  val children: List[Object] = List(Http, Tracingstore, SlackNotifications)
 }

@@ -300,7 +300,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
     new Fox(futureBox.map(_ ?~! s))
 
   // Add error message only in case of Failure, pass through Empty
-  def ?=>(s: String): Fox[A] =
+  def ?->(s: String): Fox[A] =
     futureBox.flatMap {
       case f: Failure =>
         new Fox(Future.successful(f)) ?~> s

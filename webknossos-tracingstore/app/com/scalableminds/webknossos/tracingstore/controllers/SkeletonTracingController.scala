@@ -55,7 +55,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
     log() {
       logTime(slackNotificationService.noticeSlowRequest) {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-          val savedIds = Fox.sequence(request.body.map { tracingOpt: Option[SkeletonTracing] =>
+          val savedIds = Fox.sequence(request.body.map { (tracingOpt: Option[SkeletonTracing]) =>
             tracingOpt match {
               case Some(tracing) => skeletonTracingService.saveSkeleton(tracing, None, 0).map(Some(_))
               case _             => Fox.successful(None)

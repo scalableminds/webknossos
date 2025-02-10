@@ -240,7 +240,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       )
     }
 
-  override protected def anonymousReadAccessQ(sharingToken: Option[String]) =
+  override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken =
     q"visibility = ${AnnotationVisibility.Public}"
 
   private def listAccessQ(requestingUserId: ObjectId, prefix: SqlToken): SqlToken =
@@ -289,7 +289,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
           )
         )"""
 
-  override protected def deleteAccessQ(requestingUserId: ObjectId) =
+  override protected def deleteAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""(_team IN (SELECT _team FROM webknossos.user_team_roles WHERE isTeamManager AND _user = $requestingUserId) OR _user = $requestingUserId
        OR (SELECT _organization FROM webknossos.teams WHERE webknossos.teams._id = _team)
         IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))"""

@@ -264,7 +264,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileKey)(initHDFReader)
 
     tryo {
-      val agglomerateIds = segmentIds.map { segmentId: Long =>
+      val agglomerateIds = segmentIds.map { (segmentId: Long) =>
         cachedAgglomerateFile.agglomerateIdCache.withCache(segmentId,
                                                            cachedAgglomerateFile.reader,
                                                            cachedAgglomerateFile.dataset)(readHDF)

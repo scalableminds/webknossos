@@ -17,7 +17,7 @@ case class Month(month: Int, year: Int) extends Interval with Ordered[Month] {
 
   def compare(p: Month): Int = 12 * (year - p.year) + (month - p.month)
 
-  override def toString = f"$year%d-$month%02d"
+  override def toString: String = f"$year%d-$month%02d"
 
   def start: Instant =
     Instant.fromZonedDateTime(asZonedDateTime.`with`(TemporalAdjusters.firstDayOfMonth()).`with`(LocalTime.MIN))
@@ -35,7 +35,7 @@ object Month {
 case class Week(week: Int, year: Int) extends Interval with Ordered[Week] {
 
   def compare(p: Week): Int = 53 * (year - p.year) + (week - p.week)
-  override def toString = f"$year%d-W$week%02d"
+  override def toString: String = f"$year%d-W$week%02d"
 
   def start: Instant =
     Instant.fromZonedDateTime(
@@ -60,7 +60,7 @@ case class Day(day: Int, month: Int, year: Int) extends Interval with Ordered[Da
 
   def compare(p: Day): Int = 500 * (year - p.year) + 40 * (month - p.month) + (day - p.day)
 
-  override def toString = f"$year%d-$month%02d-$day%02d"
+  override def toString: String = f"$year%d-$month%02d-$day%02d"
 
   def start: Instant =
     Instant.fromZonedDateTime(asZonedDateTime.`with`(LocalTime.MIN))

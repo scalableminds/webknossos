@@ -325,6 +325,22 @@ export async function screenshotTracingView(
   ];
   const screenshots = [];
 
+  async function setOpacity(value: number) {
+    await page.evaluate(() => {
+      const element = document.getElementById("TDViewControls");
+      if (element) {
+        element.style.opacity = `${value}`;
+      }
+    });
+  }
+  let revertOpacityIfNecessary = async () => {};
+  if (!ignore3DViewport) {
+    await setOpacity(0);
+    revertOpacityIfNecessary = async () => {
+      await setOpacity(1);
+    };
+  }
+
   for (const planeId of PLANE_IDS) {
     const element = await page.$(planeId);
     if (element == null)
@@ -332,6 +348,8 @@ export async function screenshotTracingView(
     const screenshot = await element.screenshot();
     screenshots.push(screenshot);
   }
+
+  await revertOpacityIfNecessary();
 
   // Concatenate all screenshots
   const img = await mergeImg(screenshots);

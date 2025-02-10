@@ -30,6 +30,11 @@ import Router from "router";
 import "../stylesheets/main.less";
 import GlobalThemeProvider, { getThemeFromUser } from "theme";
 
+console.log(
+  "ENTRYPOINT MAIN.TSX",
+  window.performance.timeOrigin + window.performance.now() - window.performance.timing.connectStart,
+);
+
 // Suppress warning emitted by Olvy because it tries to eagerly initialize
 window.OlvyConfig = null;
 

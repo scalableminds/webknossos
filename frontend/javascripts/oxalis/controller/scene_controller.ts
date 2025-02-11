@@ -558,6 +558,7 @@ class SceneController {
     this.storePropertyUnsubscribers = [];
 
     getRenderer().dispose();
+    // @ts-ignore
     this.renderer = null;
 
     this.datasetBoundingBox.destroy();

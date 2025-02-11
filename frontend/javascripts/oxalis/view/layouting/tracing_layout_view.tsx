@@ -126,8 +126,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     // componentWillUnmount will trigger later would crash otherwise.
     setTimeout(() => {
       destroySceneController();
+      Store.dispatch(resetStoreAction());
     }, 100);
-    Store.dispatch(resetStoreAction());
     Store.dispatch(cancelSagaAction());
 
     if (!FORCE_PAGE_RELOAD_WHEN_EXITING) {

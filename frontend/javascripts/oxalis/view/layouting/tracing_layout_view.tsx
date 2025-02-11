@@ -72,6 +72,8 @@ type State = {
 };
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
 
+const FORCE_PAGE_RELOAD_WHEN_EXITING = false;
+
 class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   lastTouchTimeStamp: number | null = null;
 
@@ -107,6 +109,17 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   }
 
   componentWillUnmount() {
+    console.log("TracingLayoutView.componentWillUnmount");
+    // Model.destroy();
+    // setTimeout(() => {
+    //   destroySceneController();
+    // }, 100);
+    // Store.dispatch(restartSagaAction());
+    // Store.dispatch(resetStoreAction());
+
+    if (!FORCE_PAGE_RELOAD_WHEN_EXITING) {
+      return;
+    }
     // Replace entire document with loading message
     if (document.body != null) {
       const mainContainer = document.getElementById("main-container");

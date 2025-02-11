@@ -8,6 +8,7 @@ import _ from "lodash";
 import messages from "messages";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
 import Constants from "oxalis/constants";
+import UrlManager from "oxalis/controller/url_manager";
 import type { ControllerStatus } from "oxalis/controller";
 import OxalisController from "oxalis/controller";
 import MergerModeController from "oxalis/controller/merger_mode_controller";
@@ -50,7 +51,7 @@ import TabTitle from "../components/tab_title_component";
 import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { FloatingMobileControls } from "./floating_mobile_controls";
-import { resetStoreAction, restartSagaAction } from "oxalis/model/actions/actions";
+import { resetStoreAction } from "oxalis/model/actions/actions";
 
 const { Sider } = Layout;
 
@@ -119,19 +120,20 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
   componentWillUnmount() {
     console.log("TracingLayoutView.componentWillUnmount");
+    UrlManager.stopUrlUpdater();
     Model.destroy();
     // this is a workaround because otherwise inner components where
     // componentWillUnmount will trigger later would crash otherwise.
     setTimeout(() => {
       destroySceneController();
     }, 100);
-    Store.dispatch(restartSagaAction());
     Store.dispatch(resetStoreAction());
+    Store.dispatch(cancelSagaAction());
 
     if (!FORCE_PAGE_RELOAD_WHEN_EXITING) {
       return;
     }
-    Store.dispatch(cancelSagaAction());
+
     // Replace entire document with loading message
     if (document.body != null) {
       const mainContainer = document.getElementById("main-container");

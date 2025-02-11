@@ -93,6 +93,7 @@ export type PartialUrlManagerState = Partial<UrlManagerState>;
 class UrlManager {
   baseUrl: string = "";
   initialState: PartialUrlManagerState = {};
+  stopStoreListening?: () => void;
 
   initialize() {
     this.baseUrl = location.pathname + location.search;
@@ -232,9 +233,16 @@ class UrlManager {
   }
 
   startUrlUpdater(): void {
-    Store.subscribe(() => this.update());
+    this.stopStoreListening = Store.subscribe(() => this.update());
 
     window.onhashchange = () => this.onHashChange();
+  }
+
+  stopUrlUpdater(): void {
+    if (this.stopStoreListening != null) {
+      this.stopStoreListening();
+    }
+    window.onhashchange = null;
   }
 
   getUrlState(state: OxalisState): UrlManagerState & { mode: ViewMode } {

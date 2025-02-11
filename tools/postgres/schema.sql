@@ -418,6 +418,14 @@ CREATE TABLE webknossos.multiUsers(
   CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object')
 );
 
+CREATE TABLE webknossos.webauthnCredentials(
+  _id INTEGER PRIMARY KEY,
+  _multiUser CHAR(24) NOT NULL,
+  name TEXT NOT NULL,
+  publicKeyCose BYTEA NOT NULL,
+  signatureCount INTEGER
+);
+
 
 CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword');
 CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
@@ -871,6 +879,8 @@ ALTER TABLE webknossos.aiInferences
 ALTER TABLE webknossos.aiModel_trainingAnnotations
   ADD FOREIGN KEY (_aiModel) REFERENCES webknossos.aiModels(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
   ADD FOREIGN KEY (_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.webauthnCredentials
+  ADD FOREIGN KEY (_multiUser) REFERENCES webknossos.multiUsers(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 
 
 CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$
@@ -943,4 +953,3 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER onDeleteAnnotationTrigger
 AFTER DELETE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();
-

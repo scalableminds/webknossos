@@ -1,6 +1,7 @@
 import {
   CheckCircleOutlined,
   CheckOutlined,
+  CodeOutlined,
   CodeSandboxOutlined,
   CopyOutlined,
   DeleteOutlined,
@@ -74,9 +75,11 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
 import * as React from "react";
+import CommandPalette from "react-command-palette";
 import { connect } from "react-redux";
 import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_flow_types";
 import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_flow_types";
+import { mapMenuActionsToCommands } from "../components/command_palette_helper";
 import CreateAnimationModal from "./create_animation_modal";
 import { PrivateLinksModal } from "./private_links_view";
 
@@ -721,6 +724,20 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         label: `${isAnnotationLockedByUser ? "Unlock" : "Lock"} Annotation`,
       });
     }
+
+    menuItems.push({
+      label: (
+        <CommandPalette
+          commands={mapMenuActionsToCommands(menuItems)}
+          hotKeys={["ctrl+shift+k", "command+shift+k"]}
+          trigger="Command Palette"
+          closeOnSelect
+          resetInputOnOpen
+        />
+      ),
+      icon: <CodeOutlined />,
+      key: "command-palette",
+    });
 
     return (
       <>

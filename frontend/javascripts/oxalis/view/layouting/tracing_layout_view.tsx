@@ -8,6 +8,7 @@ import _ from "lodash";
 import messages from "messages";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
 import Constants from "oxalis/constants";
+import UrlManager from "oxalis/controller/url_manager";
 import type { ControllerStatus } from "oxalis/controller";
 import OxalisController from "oxalis/controller";
 import MergerModeController from "oxalis/controller/merger_mode_controller";
@@ -113,6 +114,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   }
 
   componentWillUnmount() {
+    UrlManager.stopUrlUpdater();
     Store.dispatch(cancelSagaAction());
 
     // Replace entire document with loading message

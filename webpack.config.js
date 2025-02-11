@@ -1,6 +1,6 @@
 module.exports = function (env = {}) {
   /* eslint import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
-  env.production = true;
+  // env.production = true;
   const webpack = require("webpack");
   const { EsbuildPlugin } = require("esbuild-loader");
   const path = require("path");

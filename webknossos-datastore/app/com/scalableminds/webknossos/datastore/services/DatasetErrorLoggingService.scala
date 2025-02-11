@@ -14,10 +14,11 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class DatasetErrorLoggingService @Inject()(
+class DatasetErrorLoggingService @Inject() (
     val lifecycle: ApplicationLifecycle,
     val applicationHealthService: ApplicationHealthService,
-    @Named("webknossos-datastore") val system: ActorSystem)(implicit val ec: ExecutionContext)
+    @Named("webknossos-datastore") val system: ActorSystem
+)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with LazyLogging {
 
@@ -37,7 +38,8 @@ class DatasetErrorLoggingService @Inject()(
     val previousErrorCount = recentErrors.getOrElse((organizationId, datasetName), 0)
     if (previousErrorCount >= errorCountThresholdPerDataset - 1) {
       logger.info(
-        s"Got >= $errorCountThresholdPerDataset bucket loading errors for dataset $organizationId/$datasetName, muting them until next reset (interval = $tickerInterval) or dataset reload")
+        s"Got >= $errorCountThresholdPerDataset bucket loading errors for dataset $organizationId/$datasetName, muting them until next reset (interval = $tickerInterval) or dataset reload"
+      )
     }
     recentErrors((organizationId, datasetName)) = previousErrorCount + 1
   }
@@ -67,7 +69,8 @@ class DatasetErrorLoggingService @Inject()(
       case Failure(msg, Full(exception), _) =>
         if (shouldLog(dataSourceId.organizationId, dataSourceId.directoryName)) {
           logger.error(
-            s"Error while $label for $dataSourceId: $msg – Stack trace: ${TextUtils.stackTraceAsString(exception)} ")
+            s"Error while $label for $dataSourceId: $msg – Stack trace: ${TextUtils.stackTraceAsString(exception)} "
+          )
           registerLogged(dataSourceId.organizationId, dataSourceId.directoryName)
         }
         Fox.failure(msg, Full(exception))

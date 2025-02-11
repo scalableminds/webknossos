@@ -1,12 +1,12 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
-import com.scalableminds.webknossos.datastore.controllers.Controller
+import com.scalableminds.util.mvc.ControllerUtils
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 
 import javax.inject.Inject
 
-class StandaloneTracingstore @Inject()() extends Controller {
+class StandaloneTracingstore @Inject() (cc: ControllerComponents) extends AbstractController(cc) with ControllerUtils {
 
   def buildInfo: Action[AnyContent] = Action {
     addNoCacheHeaderFallback(
@@ -14,8 +14,11 @@ class StandaloneTracingstore @Inject()() extends Controller {
         Ok(
           Json.obj(
             "webknossosTracingstore" -> Json.toJson(
-              webknossosTracingstore.BuildInfo.toMap.view.mapValues(_.toString).toMap)
+              webknossosTracingstore.BuildInfo.toMap.view.mapValues(_.toString).toMap
+            )
           )
-        )))
+        )
+      )
+    )
   }
 }

@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import java.nio.file.{Files, Path, Paths}
-
 import com.google.inject.Inject
+import com.scalableminds.util.mvc.ControllerUtils
 import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.services.{
@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessRequest
 }
 import play.api.libs.json.{Json, OFormat}
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 
 import scala.concurrent.ExecutionContext
 
@@ -25,10 +25,14 @@ object JobExportProperties {
   implicit val jsonFormat: OFormat[JobExportProperties] = Json.format[JobExportProperties]
 }
 
-class ExportsController @Inject()(webknossosClient: DSRemoteWebknossosClient,
-                                  accessTokenService: DataStoreAccessTokenService,
-                                  config: DataStoreConfig)(implicit ec: ExecutionContext)
-    extends Controller
+class ExportsController @Inject() (
+    webknossosClient: DSRemoteWebknossosClient,
+    accessTokenService: DataStoreAccessTokenService,
+    config: DataStoreConfig,
+    cc: ControllerComponents
+)(implicit ec: ExecutionContext)
+    extends AbstractController(cc)
+    with ControllerUtils
     with FoxImplicits {
 
   private val dataBaseDir: Path = Paths.get(config.Datastore.baseDirectory)

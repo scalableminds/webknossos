@@ -54,7 +54,7 @@ case class SqlToken(sql: String, values: List[SqlValue] = List()) {
     new StreamingInvokerAction[Vector[R], R, Effect] {
       def statements: List[String] = List(sql)
 
-      protected[this] def createInvoker(statements: Iterable[String]): StatementInvoker[R] = new StatementInvoker[R] {
+      protected def createInvoker(statements: Iterable[String]): StatementInvoker[R] = new StatementInvoker[R] {
         val getStatement: String = statements.head
 
         protected def setParam(st: PreparedStatement): Unit = {
@@ -67,7 +67,7 @@ case class SqlToken(sql: String, values: List[SqlValue] = List()) {
 
       override def getDumpInfo = DumpInfo(DumpInfo.simpleNameFor(getClass), mainInfo = s"[$debugInfo]")
 
-      protected[this] def createBuilder: mutable.Builder[R, Vector[R]] = Vector.newBuilder[R]
+      protected def createBuilder: mutable.Builder[R, Vector[R]] = Vector.newBuilder[R]
     }
 
   def asUpdate: SqlAction[Int, NoStream, Effect] = as[Int](GetUpdateValue).head
@@ -227,12 +227,14 @@ case class BoundingBoxValue(v: BoundingBox) extends SqlValue with SqlEscaping {
     override def toString: String = s"($x,$y,$z,$width,$height,$depth)"
   }
 
-  private val bboxSql = BoundingBoxSql(v.topLeft.x.toDouble,
-                                       v.topLeft.y.toDouble,
-                                       v.topLeft.z.toDouble,
-                                       v.width.toDouble,
-                                       v.height.toDouble,
-                                       v.depth.toDouble)
+  private val bboxSql = BoundingBoxSql(
+    v.topLeft.x.toDouble,
+    v.topLeft.y.toDouble,
+    v.topLeft.z.toDouble,
+    v.width.toDouble,
+    v.height.toDouble,
+    v.depth.toDouble
+  )
 
   override def setParameter(pp: PositionedParameters): Unit =
     pp.setObject(bboxSql, Types.OTHER)

@@ -17,19 +17,23 @@ import scala.concurrent.ExecutionContext
 
 case class RemoteSourceDescriptor(uri: URI, credential: Option[DataVaultCredential])
 
-class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemoteWebknossosClient,
-                                              dataStoreConfig: DataStoreConfig,
-                                              dataVaultService: DataVaultService) {
+class RemoteSourceDescriptorService @Inject() (
+    dSRemoteWebknossosClient: DSRemoteWebknossosClient,
+    dataStoreConfig: DataStoreConfig,
+    dataVaultService: DataVaultService
+) {
 
-  def vaultPathFor(baseDir: Path, datasetId: DataSourceId, layerName: String, magLocator: MagLocator)(
-      implicit ec: ExecutionContext): Fox[VaultPath] =
+  def vaultPathFor(baseDir: Path, datasetId: DataSourceId, layerName: String, magLocator: MagLocator)(implicit
+      ec: ExecutionContext
+  ): Fox[VaultPath] =
     for {
       remoteSourceDescriptor <- remoteSourceDescriptorFor(baseDir, datasetId, layerName, magLocator)
       vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor)
     } yield vaultPath
 
-  def removeVaultFromCache(baseDir: Path, datasetId: DataSourceId, layerName: String, magLocator: MagLocator)(
-      implicit ec: ExecutionContext): Fox[Unit] =
+  def removeVaultFromCache(baseDir: Path, datasetId: DataSourceId, layerName: String, magLocator: MagLocator)(implicit
+      ec: ExecutionContext
+  ): Fox[Unit] =
     for {
       remoteSource <- remoteSourceDescriptorFor(baseDir, datasetId, layerName, magLocator)
       _ = dataVaultService.removeVaultFromCache(remoteSource)
@@ -39,17 +43,20 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
       baseDir: Path,
       datasetId: DataSourceId,
       layerName: String,
-      magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[RemoteSourceDescriptor] =
+      magLocator: MagLocator
+  )(implicit ec: ExecutionContext): Fox[RemoteSourceDescriptor] =
     for {
       credentialBox <- credentialFor(magLocator: MagLocator).futureBox
       uri <- uriForMagLocator(baseDir, datasetId, layerName, magLocator).toFox
       remoteSource = RemoteSourceDescriptor(uri, credentialBox.toOption)
     } yield remoteSource
 
-  private def uriForMagLocator(baseDir: Path,
-                               dataSourceId: DataSourceId,
-                               layerName: String,
-                               magLocator: MagLocator): Box[URI] = tryo {
+  private def uriForMagLocator(
+      baseDir: Path,
+      dataSourceId: DataSourceId,
+      layerName: String,
+      magLocator: MagLocator
+  ): Box[URI] = tryo {
     val localDatasetDir = baseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
     val localLayerDir = localDatasetDir.resolve(layerName)
     magLocator.path match {
@@ -60,12 +67,15 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
         } else if (uri.getScheme == null || uri.getScheme == DataVaultService.schemeFile) {
           val localPath = Paths.get(uri.getPath)
           if (localPath.isAbsolute) {
-            if (dataStoreConfig.Datastore.localDirectoryWhitelist.exists(whitelistEntry =>
-                  localPath.toString.startsWith(whitelistEntry)))
+            if (
+              dataStoreConfig.Datastore.localDirectoryWhitelist
+                .exists(whitelistEntry => localPath.toString.startsWith(whitelistEntry))
+            )
               uri
             else
               throw new Exception(
-                s"Absolute path $localPath in local file system is not in path whitelist. Consider adding it to datastore.localDirectoryWhitelist")
+                s"Absolute path $localPath in local file system is not in path whitelist. Consider adding it to datastore.localDirectoryWhitelist"
+              )
           } else { // relative local path, resolve in dataset dir
             val magPathRelativeToDataset = localDatasetDir.resolve(localPath)
             val magPathRelativeToLayer = localDatasetDir.resolve(layerName).resolve(localPath)

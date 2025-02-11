@@ -14,28 +14,32 @@ import utils.sql.{SimpleSQLDAO, SqlClient}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class AvailableTaskCountsEntry(id: String,
-                                    user: String,
-                                    totalAvailableTasks: Int,
-                                    availableTasksByProjects: Map[String, Int])
+case class AvailableTaskCountsEntry(
+    id: String,
+    user: String,
+    totalAvailableTasks: Int,
+    availableTasksByProjects: Map[String, Int]
+)
 object AvailableTaskCountsEntry {
   implicit val jsonFormat: OFormat[AvailableTaskCountsEntry] = Json.format[AvailableTaskCountsEntry]
 }
 
-case class ProjectProgressEntry(projectName: String,
-                                paused: Boolean,
-                                priority: Long,
-                                totalTasks: Int,
-                                totalInstances: Int,
-                                pendingInstances: Int,
-                                finishedInstances: Int,
-                                activeInstances: Int,
-                                billedMilliseconds: Long)
+case class ProjectProgressEntry(
+    projectName: String,
+    paused: Boolean,
+    priority: Long,
+    totalTasks: Int,
+    totalInstances: Int,
+    pendingInstances: Int,
+    finishedInstances: Int,
+    activeInstances: Int,
+    billedMilliseconds: Long
+)
 object ProjectProgressEntry {
   implicit val jsonFormat: OFormat[ProjectProgressEntry] = Json.format[ProjectProgressEntry]
 }
 
-class ReportDAO @Inject()(sqlClient: SqlClient, annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext)
+class ReportDAO @Inject() (sqlClient: SqlClient, annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   def projectProgress(teamId: ObjectId): Fox[List[ProjectProgressEntry]] =
@@ -123,9 +127,9 @@ class ReportDAO @Inject()(sqlClient: SqlClient, annotationDAO: AnnotationDAO)(im
             OR pmt.modified > NOW() - INTERVAL '30 days'
           )
         """.as[(String, Boolean, Long, Int, Int, Int, Int, Int, Long)])
-    } yield {
-      r.toList.map(row => ProjectProgressEntry(row._1, row._2, row._3, row._4, row._5, row._6, row._7, row._8, row._9))
-    }
+    } yield r.toList.map(row =>
+      ProjectProgressEntry(row._1, row._2, row._3, row._4, row._5, row._6, row._7, row._8, row._9)
+    )
 
   def getAvailableTaskCountsByProjectsFor(userId: ObjectId): Fox[Map[String, Int]] =
     for {
@@ -156,11 +160,13 @@ class ReportDAO @Inject()(sqlClient: SqlClient, annotationDAO: AnnotationDAO)(im
 
 }
 
-class ReportController @Inject()(reportDAO: ReportDAO,
-                                 teamDAO: TeamDAO,
-                                 userDAO: UserDAO,
-                                 userService: UserService,
-                                 sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+class ReportController @Inject() (
+    reportDAO: ReportDAO,
+    teamDAO: TeamDAO,
+    userDAO: UserDAO,
+    userService: UserService,
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
 
@@ -185,12 +191,12 @@ class ReportController @Inject()(reportDAO: ReportDAO,
     val foxes = users.map { user =>
       for {
         pendingTaskCountsByProjects <- reportDAO.getAvailableTaskCountsByProjectsFor(user._id)
-      } yield {
-        AvailableTaskCountsEntry(user._id.toString,
-                                 user.name,
-                                 pendingTaskCountsByProjects.values.sum,
-                                 pendingTaskCountsByProjects)
-      }
+      } yield AvailableTaskCountsEntry(
+        user._id.toString,
+        user.name,
+        pendingTaskCountsByProjects.values.sum,
+        pendingTaskCountsByProjects
+      )
     }
     Fox.combined(foxes.toList)
   }

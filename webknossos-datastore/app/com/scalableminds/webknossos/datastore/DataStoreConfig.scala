@@ -6,7 +6,7 @@ import play.api.Configuration
 
 import scala.concurrent.duration._
 
-class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigReader {
+class DataStoreConfig @Inject() (configuration: Configuration) extends ConfigReader {
   override def raw: Configuration = configuration
 
   object Http {

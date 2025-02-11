@@ -56,11 +56,13 @@ trait PathUtils extends LazyLogging {
     else
       None
 
-  private def listDirectoryEntries[A](directory: Path,
-                                      maxDepth: Int,
-                                      dropCount: Int,
-                                      silent: Boolean,
-                                      filters: (Path => Boolean)*)(f: Iterator[Path] => Box[A]): Box[A] =
+  private def listDirectoryEntries[A](
+      directory: Path,
+      maxDepth: Int,
+      dropCount: Int,
+      silent: Boolean,
+      filters: (Path => Boolean)*
+  )(f: Iterator[Path] => Box[A]): Box[A] =
     try {
       val directoryStream = Files.walk(directory, maxDepth, FileVisitOption.FOLLOW_LINKS)
       val r = f(directoryStream.iterator().asScala.drop(dropCount).filter(d => filters.forall(_(d))))
@@ -94,27 +96,33 @@ trait PathUtils extends LazyLogging {
   def listDirectories(directory: Path, silent: Boolean, filters: (Path => Boolean)*): Box[List[Path]] =
     listDirectoryEntries(directory, 1, 1, silent, filters :+ directoryFilter*)(r => Full(r.toList))
 
-  def listDirectoriesRecursive(directory: Path,
-                               silent: Boolean,
-                               maxDepth: Int,
-                               filters: (Path => Boolean)*): Box[List[Path]] =
+  def listDirectoriesRecursive(
+      directory: Path,
+      silent: Boolean,
+      maxDepth: Int,
+      filters: (Path => Boolean)*
+  ): Box[List[Path]] =
     listDirectoryEntries(directory, maxDepth, 0, silent, filters :+ directoryFilter*)(r => Full(r.toList))
 
   def listFiles(directory: Path, silent: Boolean, filters: (Path => Boolean)*): Box[List[Path]] =
     listDirectoryEntries(directory, 1, 1, silent, filters :+ fileFilter*)(r => Full(r.toList))
 
-  def listFilesRecursive(directory: Path,
-                         silent: Boolean,
-                         maxDepth: Int,
-                         filters: (Path => Boolean)*): Box[List[Path]] =
+  def listFilesRecursive(
+      directory: Path,
+      silent: Boolean,
+      maxDepth: Int,
+      filters: (Path => Boolean)*
+  ): Box[List[Path]] =
     listDirectoryEntries(directory, maxDepth, 1, silent, filters :+ fileFilter*)(r => Full(r.toList))
 
   def lazyFileStream[A](directory: Path, silent: Boolean, filters: (Path => Boolean)*)(
-      f: Iterator[Path] => Box[A]): Box[A] =
+      f: Iterator[Path] => Box[A]
+  ): Box[A] =
     listDirectoryEntries(directory, 1, 1, silent, filters :+ fileFilter*)(f)
 
   def lazyFileStreamRecursive[A](directory: Path, silent: Boolean, filters: (Path => Boolean)*)(
-      f: Iterator[Path] => Box[A]): Box[A] =
+      f: Iterator[Path] => Box[A]
+  ): Box[A] =
     listDirectoryEntries(directory, Int.MaxValue, 1, silent, filters :+ fileFilter*)(f)
 
   def ensureDirectory(path: Path): Path = {
@@ -124,9 +132,9 @@ trait PathUtils extends LazyLogging {
   }
 
   def ensureDirectoryBox(dir: Path): Box[Path] =
-    try {
+    try
       Full(PathUtils.ensureDirectory(dir))
-    } catch {
+    catch {
       case _: AccessDeniedException => Failure("Could not create directory: Access denied")
     }
 
@@ -153,13 +161,12 @@ trait PathUtils extends LazyLogging {
    */
   def cutOffPathAtLastOccurrenceOf(path: Path, cutOffList: List[String]): Path = {
     var lastCutOffIndex = -1
-    path.iterator().asScala.zipWithIndex.foreach {
-      case (subPath, idx) =>
-        cutOffList.foreach(e => {
-          if (subPath.toString.contains(e)) {
-            lastCutOffIndex = idx
-          }
-        })
+    path.iterator().asScala.zipWithIndex.foreach { case (subPath, idx) =>
+      cutOffList.foreach { e =>
+        if (subPath.toString.contains(e)) {
+          lastCutOffIndex = idx
+        }
+      }
     }
     lastCutOffIndex match {
       case -1 => path
@@ -185,8 +192,8 @@ trait PathUtils extends LazyLogging {
       Paths.get("")
     } else path.getParent
 
-  def deleteDirectoryRecursively(path: Path): Box[Unit] = {
-      try {
+  def deleteDirectoryRecursively(path: Path): Box[Unit] =
+    try {
       if (Files.exists(path)) {
         FileUtils.deleteDirectory(path.toFile) // Using Apache Commons IO
       }
@@ -194,7 +201,6 @@ trait PathUtils extends LazyLogging {
     } catch {
       case ex: Exception => Failure(s"Failed to delete directory $path: ${ex.getMessage}")
     }
-  }
 
   // use when you want to move a directory to a subdir of itself. Otherwise, just go for FileUtils.moveDirectory
   def moveDirectoryViaTemp(source: Path, dst: Path): Box[Unit] = tryo {

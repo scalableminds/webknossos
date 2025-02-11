@@ -28,7 +28,7 @@ object DataVaultService {
     List(schemeS3, schemeHttps, schemeHttp, schemeGS).contains(uriScheme)
 }
 
-class DataVaultService @Inject()(ws: WSClient) extends LazyLogging {
+class DataVaultService @Inject() (ws: WSClient) extends LazyLogging {
 
   private val vaultCache: AlfuCache[RemoteSourceDescriptor, DataVault] =
     AlfuCache(maxCapacity = 100)

@@ -17,7 +17,8 @@ trait FullMeshHelper extends LazyLogging {
       oldTopLeft: VoxelPosition,
       neighborIds: List[Int],
       chunkSize: Vec3Int,
-      visited: collection.mutable.Set[VoxelPosition]): List[VoxelPosition] = {
+      visited: collection.mutable.Set[VoxelPosition]
+  ): List[VoxelPosition] = {
     // front_xy, front_xz, front_yz, back_xy, back_xz, back_yz
     val neighborLookup = Seq(
       Vec3Int(0, 0, -1),
@@ -25,13 +26,15 @@ trait FullMeshHelper extends LazyLogging {
       Vec3Int(-1, 0, 0),
       Vec3Int(0, 0, 1),
       Vec3Int(0, 1, 0),
-      Vec3Int(1, 0, 0),
+      Vec3Int(1, 0, 0)
     )
     val neighborPositions = neighborIds.map { neighborId =>
       val neighborMultiplier = neighborLookup(neighborId)
-      oldTopLeft.move(neighborMultiplier.x * chunkSize.x * oldTopLeft.mag.x,
-                      neighborMultiplier.y * chunkSize.y * oldTopLeft.mag.y,
-                      neighborMultiplier.z * chunkSize.z * oldTopLeft.mag.z)
+      oldTopLeft.move(
+        neighborMultiplier.x * chunkSize.x * oldTopLeft.mag.x,
+        neighborMultiplier.y * chunkSize.y * oldTopLeft.mag.y,
+        neighborMultiplier.z * chunkSize.z * oldTopLeft.mag.z
+      )
     }
     neighborPositions.filterNot(visited.contains)
   }
@@ -49,11 +52,9 @@ trait FullMeshHelper extends LazyLogging {
       output.putFloat(norm.x)
       output.putFloat(norm.y)
       output.putFloat(norm.z)
-      for (vertexIndex <- 0 until 3) {
-        for (dimIndex <- 0 until 3) {
+      for (vertexIndex <- 0 until 3)
+        for (dimIndex <- 0 until 3)
           output.putFloat(vertexBuffer(9 * faceIndex + 3 * vertexIndex + dimIndex))
-        }
-      }
       output.put(unused)
     }
     output.array()

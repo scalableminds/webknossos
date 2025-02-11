@@ -2,10 +2,10 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.mvc.ControllerUtils
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
-import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
@@ -14,18 +14,20 @@ import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingSel
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
 
-class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracingService,
-                                          remoteWebknossosClient: TSRemoteWebknossosClient,
-                                          annotationService: TSAnnotationService,
-                                          accessTokenService: TracingStoreAccessTokenService,
-                                          slackNotificationService: TSSlackNotificationService)(
-    implicit val ec: ExecutionContext,
-    val bodyParsers: PlayBodyParsers)
-    extends Controller {
+class SkeletonTracingController @Inject() (
+    skeletonTracingService: SkeletonTracingService,
+    remoteWebknossosClient: TSRemoteWebknossosClient,
+    annotationService: TSAnnotationService,
+    accessTokenService: TracingStoreAccessTokenService,
+    slackNotificationService: TSSlackNotificationService,
+    cc: ControllerComponents
+)(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
+    extends AbstractController(cc)
+    with ControllerUtils {
 
   implicit val tracingsCompanion: SkeletonTracings.type = SkeletonTracings
 
@@ -84,9 +86,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
             tracings <- annotationService.findMultipleSkeletons(request.body)
-          } yield {
-            Ok(tracings.toByteArray).as(protobufMimeType)
-          }
+          } yield Ok(tracings.toByteArray).as(protobufMimeType)
         }
       }
     }
@@ -106,10 +106,12 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
     }
 
   // Used in task creation. History is dropped. Caller is responsible to create and save a matching AnnotationProto object
-  def duplicate(tracingId: String,
-                editPosition: Option[String],
-                editRotation: Option[String],
-                boundingBox: Option[String]): Action[AnyContent] =
+  def duplicate(
+      tracingId: String,
+      editPosition: Option[String],
+      editRotation: Option[String],
+      boundingBox: Option[String]
+  ): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {

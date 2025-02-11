@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.tools.ConfigReader
 import play.api.Configuration
 
-class TracingStoreConfig @Inject()(configuration: Configuration) extends ConfigReader {
+class TracingStoreConfig @Inject() (configuration: Configuration) extends ConfigReader {
   override def raw: Configuration = configuration
 
   object Http {

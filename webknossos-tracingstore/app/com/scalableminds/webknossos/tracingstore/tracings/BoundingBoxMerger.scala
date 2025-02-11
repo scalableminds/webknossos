@@ -6,20 +6,21 @@ import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 
 trait BoundingBoxMerger extends ProtoGeometryImplicits {
 
-  protected def combineBoundingBoxes(boundingBoxAOpt: Option[ProtoBoundingBox],
-                                     boundingBoxBOpt: Option[ProtoBoundingBox]): Option[ProtoBoundingBox] =
+  protected def combineBoundingBoxes(
+      boundingBoxAOpt: Option[ProtoBoundingBox],
+      boundingBoxBOpt: Option[ProtoBoundingBox]
+  ): Option[ProtoBoundingBox] =
     for {
       boundinBoxA <- boundingBoxAOpt
       boundinBoxB <- boundingBoxBOpt
-    } yield {
-      com.scalableminds.util.geometry.BoundingBox
-        .union(List[com.scalableminds.util.geometry.BoundingBox](boundinBoxA, boundinBoxB))
-    }
+    } yield com.scalableminds.util.geometry.BoundingBox
+      .union(List[com.scalableminds.util.geometry.BoundingBox](boundinBoxA, boundinBoxB))
 
-  protected def combineUserBoundingBoxes(singleBoundingBoxAOpt: Option[ProtoBoundingBox],
-                                         singleBoundingBoxBOpt: Option[ProtoBoundingBox],
-                                         userBoundingBoxesA: Seq[ProtoNamedBoundingBox],
-                                         userBoundingBoxesB: Seq[ProtoNamedBoundingBox],
+  protected def combineUserBoundingBoxes(
+      singleBoundingBoxAOpt: Option[ProtoBoundingBox],
+      singleBoundingBoxBOpt: Option[ProtoBoundingBox],
+      userBoundingBoxesA: Seq[ProtoNamedBoundingBox],
+      userBoundingBoxesB: Seq[ProtoNamedBoundingBox]
   ): Seq[ProtoNamedBoundingBox] = {
     // note that the singleBoundingBox field is deprecated but still supported here to avoid database evolutions
     val singleBoundingBoxes =

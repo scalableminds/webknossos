@@ -21,34 +21,40 @@ import models.aimodels.AiModelCategory.AiModelCategory
 import models.organization.OrganizationDAO
 import play.api.i18n.Messages
 
-case class TrainingAnnotationSpecification(annotationId: ObjectId,
-                                           colorLayerName: String,
-                                           segmentationLayerName: String,
-                                           mag: Vec3Int)
+case class TrainingAnnotationSpecification(
+    annotationId: ObjectId,
+    colorLayerName: String,
+    segmentationLayerName: String,
+    mag: Vec3Int
+)
 
 object TrainingAnnotationSpecification {
   implicit val jsonFormat: OFormat[TrainingAnnotationSpecification] = Json.format[TrainingAnnotationSpecification]
 }
 
-case class RunTrainingParameters(trainingAnnotations: List[TrainingAnnotationSpecification],
-                                 name: String,
-                                 comment: Option[String],
-                                 aiModelCategory: Option[AiModelCategory],
-                                 workflowYaml: Option[String])
+case class RunTrainingParameters(
+    trainingAnnotations: List[TrainingAnnotationSpecification],
+    name: String,
+    comment: Option[String],
+    aiModelCategory: Option[AiModelCategory],
+    workflowYaml: Option[String]
+)
 
 object RunTrainingParameters {
   implicit val jsonFormat: OFormat[RunTrainingParameters] = Json.format[RunTrainingParameters]
 }
 
-case class RunInferenceParameters(annotationId: Option[ObjectId],
-                                  aiModelId: ObjectId,
-                                  datasetDirectoryName: String,
-                                  organizationId: String,
-                                  colorLayerName: String,
-                                  boundingBox: String,
-                                  newDatasetName: String,
-                                  maskAnnotationLayerName: Option[String],
-                                  workflowYaml: Option[String])
+case class RunInferenceParameters(
+    annotationId: Option[ObjectId],
+    aiModelId: ObjectId,
+    datasetDirectoryName: String,
+    organizationId: String,
+    colorLayerName: String,
+    boundingBox: String,
+    newDatasetName: String,
+    maskAnnotationLayerName: Option[String],
+    workflowYaml: Option[String]
+)
 
 object RunInferenceParameters {
   implicit val jsonFormat: OFormat[RunInferenceParameters] = Json.format[RunInferenceParameters]
@@ -60,17 +66,19 @@ object UpdateAiModelParameters {
   implicit val jsonFormat: OFormat[UpdateAiModelParameters] = Json.format[UpdateAiModelParameters]
 }
 
-case class RegisterAiModelParameters(id: ObjectId, // must be a valid MongoDB ObjectId
-                                     dataStoreName: String,
-                                     name: String,
-                                     comment: Option[String],
-                                     category: Option[AiModelCategory])
+case class RegisterAiModelParameters(
+    id: ObjectId, // must be a valid MongoDB ObjectId
+    dataStoreName: String,
+    name: String,
+    comment: Option[String],
+    category: Option[AiModelCategory]
+)
 
 object RegisterAiModelParameters {
   implicit val jsonFormat: OFormat[RegisterAiModelParameters] = Json.format[RegisterAiModelParameters]
 }
 
-class AiModelController @Inject()(
+class AiModelController @Inject() (
     aiModelDAO: AiModelDAO,
     aiModelService: AiModelService,
     sil: Silhouette[WkEnv],
@@ -82,49 +90,43 @@ class AiModelController @Inject()(
     datasetService: DatasetService,
     jobService: JobService,
     datasetDAO: DatasetDAO,
-    dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    dataStoreDAO: DataStoreDAO
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
   def readAiModelInfo(aiModelId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    {
-      for {
-        _ <- userService.assertIsSuperUser(request.identity)
-        aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
-        jsResult <- aiModelService.publicWrites(aiModel)
-      } yield Ok(jsResult)
-    }
+    for {
+      _ <- userService.assertIsSuperUser(request.identity)
+      aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
+      jsResult <- aiModelService.publicWrites(aiModel)
+    } yield Ok(jsResult)
   }
 
   def readAiInferenceInfo(aiInferenceId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    {
-      for {
-        _ <- userService.assertIsSuperUser(request.identity)
-        aiInference <- aiInferenceDAO.findOne(aiInferenceId) ?~> "aiInference.notFound" ~> NOT_FOUND
-        jsResult <- aiInferenceService.publicWrites(aiInference, request.identity)
-      } yield Ok(jsResult)
-    }
+    for {
+      _ <- userService.assertIsSuperUser(request.identity)
+      aiInference <- aiInferenceDAO.findOne(aiInferenceId) ?~> "aiInference.notFound" ~> NOT_FOUND
+      jsResult <- aiInferenceService.publicWrites(aiInference, request.identity)
+    } yield Ok(jsResult)
   }
 
   def listAiModels: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    {
-      for {
-        _ <- userService.assertIsSuperUser(request.identity)
-        aiModels <- aiModelDAO.findAll
-        jsResults <- Fox.serialCombined(aiModels)(aiModelService.publicWrites)
-      } yield Ok(Json.toJson(jsResults))
-    }
+    for {
+      _ <- userService.assertIsSuperUser(request.identity)
+      aiModels <- aiModelDAO.findAll
+      jsResults <- Fox.serialCombined(aiModels)(aiModelService.publicWrites)
+    } yield Ok(Json.toJson(jsResults))
   }
 
   def listAiInferences: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    {
-      for {
-        _ <- userService.assertIsSuperUser(request.identity)
-        aiInferences <- aiInferenceDAO.findAll
-        jsResults <- Fox.serialCombined(aiInferences)(inference =>
-          aiInferenceService.publicWrites(inference, request.identity))
-      } yield Ok(Json.toJson(jsResults))
-    }
+    for {
+      _ <- userService.assertIsSuperUser(request.identity)
+      aiInferences <- aiInferenceDAO.findAll
+      jsResults <- Fox.serialCombined(aiInferences)(inference =>
+        aiInferenceService.publicWrites(inference, request.identity)
+      )
+    } yield Ok(Json.toJson(jsResults))
   }
 
   def runTraining: Action[RunTrainingParameters] = sil.SecuredAction.async(validateJson[RunTrainingParameters]) {
@@ -132,14 +134,19 @@ class AiModelController @Inject()(
       for {
         _ <- userService.assertIsSuperUser(request.identity)
         trainingAnnotations = request.body.trainingAnnotations
-        _ <- bool2Fox(trainingAnnotations.nonEmpty || request.body.workflowYaml.isDefined) ?~> "aiModel.training.zeroAnnotations"
+        _ <- bool2Fox(
+          trainingAnnotations.nonEmpty || request.body.workflowYaml.isDefined
+        ) ?~> "aiModel.training.zeroAnnotations"
         firstAnnotationId <- trainingAnnotations.headOption.map(_.annotationId).toFox
         annotation <- annotationDAO.findOne(firstAnnotationId)
         dataset <- datasetDAO.findOne(annotation._dataset)
-        _ <- bool2Fox(request.identity._organization == dataset._organization) ?~> "job.trainModel.notAllowed.organization" ~> FORBIDDEN
+        _ <- bool2Fox(
+          request.identity._organization == dataset._organization
+        ) ?~> "job.trainModel.notAllowed.organization" ~> FORBIDDEN
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
-        _ <- Fox
-          .serialCombined(request.body.trainingAnnotations.map(_.annotationId))(annotationDAO.findOne) ?~> "annotation.notFound"
+        _ <- Fox.serialCombined(request.body.trainingAnnotations.map(_.annotationId))(
+          annotationDAO.findOne
+        ) ?~> "annotation.notFound"
         modelId = ObjectId.generate
         organization <- organizationDAO.findOne(request.identity._organization)
         jobCommand = JobCommand.train_model
@@ -149,11 +156,17 @@ class AiModelController @Inject()(
           "model_id" -> modelId,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml
         )
-        existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
-                                                                       request.identity._organization)
+        existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(
+          request.body.name,
+          request.identity._organization
+        )
         _ <- bool2Fox(existingAiModelsCount == 0) ?~> "aiModel.nameInUse"
-        newTrainingJob <- jobService
-          .submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunTrainModel"
+        newTrainingJob <- jobService.submitJob(
+          jobCommand,
+          commandArgs,
+          request.identity,
+          dataStore.name
+        ) ?~> "job.couldNotRunTrainModel"
         newAiModel = AiModel(
           _id = modelId,
           _organization = request.identity._organization,
@@ -176,8 +189,11 @@ class AiModelController @Inject()(
         _ <- userService.assertIsSuperUser(request.identity)
         organization <- organizationDAO.findOne(request.body.organizationId)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
-          request.body.organizationId)
-        _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
+          request.body.organizationId
+        )
+        _ <- bool2Fox(
+          request.identity._organization == organization._id
+        ) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
         dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body.datasetDirectoryName, organization._id)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         _ <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
@@ -194,7 +210,12 @@ class AiModelController @Inject()(
           "new_dataset_name" -> request.body.newDatasetName,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml
         )
-        newInferenceJob <- jobService.submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunInferWithModel"
+        newInferenceJob <- jobService.submitJob(
+          jobCommand,
+          commandArgs,
+          request.identity,
+          dataStore.name
+        ) ?~> "job.couldNotRunInferWithModel"
         newAiInference = AiInference(
           _id = ObjectId.generate,
           _organization = request.identity._organization,
@@ -217,7 +238,8 @@ class AiModelController @Inject()(
         _ <- userService.assertIsSuperUser(request.identity)
         aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
         _ <- aiModelDAO.updateOne(
-          aiModel.copy(name = request.body.name, comment = request.body.comment, modified = Instant.now))
+          aiModel.copy(name = request.body.name, comment = request.body.comment, modified = Instant.now)
+        )
         updatedAiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
         jsResult <- aiModelService.publicWrites(updatedAiModel)
       } yield Ok(jsResult)
@@ -241,7 +263,8 @@ class AiModelController @Inject()(
             request.body.name,
             request.body.comment,
             request.body.category
-          ))
+          )
+        )
       } yield Ok
     }
 

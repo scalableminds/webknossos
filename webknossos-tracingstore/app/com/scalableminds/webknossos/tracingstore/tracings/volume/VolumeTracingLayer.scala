@@ -68,7 +68,7 @@ case class VolumeTracingLayer(
     tracing: VolumeTracing,
     tokenContext: TokenContext,
     additionalAxes: Option[Seq[AdditionalAxis]],
-    volumeDataStore: FossilDBClient,
+    volumeDataStore: FossilDBClient
 )(implicit val ec: ExecutionContext)
     extends SegmentationLayer
     with ProtoGeometryImplicits {
@@ -96,9 +96,11 @@ case class VolumeTracingLayer(
     else
       new VolumeTracingBucketProvider(this)
 
-  override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                              dataSourceId: DataSourceId,
-                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
+  override def bucketProvider(
+      remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+      dataSourceId: DataSourceId,
+      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]
+  ): BucketProvider =
     volumeBucketProvider
 
   def bucketProvider: AbstractVolumeTracingBucketProvider = volumeBucketProvider

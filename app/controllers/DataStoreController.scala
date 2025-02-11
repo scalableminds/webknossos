@@ -15,10 +15,12 @@ import security.WkEnv
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
-                                    dataStoreService: DataStoreService,
-                                    sil: Silhouette[WkEnv],
-                                    multiUserDAO: MultiUserDAO)(implicit ec: ExecutionContext)
+class DataStoreController @Inject() (
+    dataStoreDAO: DataStoreDAO,
+    dataStoreService: DataStoreService,
+    sil: Silhouette[WkEnv],
+    multiUserDAO: MultiUserDAO
+)(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
 
@@ -28,22 +30,20 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
       (__ \ "publicUrl").read[String] and
       (__ \ "key").read[String] and
       (__ \ "isScratch").readNullable[Boolean] and
-      (__ \ "allowsUpload").readNullable[Boolean])(DataStore.fromForm _)
+      (__ \ "allowsUpload").readNullable[Boolean])(DataStore.fromForm)
 
   private val dataStorePublicReads: Reads[DataStore] =
     ((__ \ "name").read[String] and
       (__ \ "url").read[String] and
       (__ \ "publicUrl").read[String] and
       (__ \ "isScratch").readNullable[Boolean] and
-      (__ \ "allowsUpload").readNullable[Boolean])(DataStore.fromUpdateForm _)
+      (__ \ "allowsUpload").readNullable[Boolean])(DataStore.fromUpdateForm)
 
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
       dataStores <- dataStoreDAO.findAll ?~> "dataStore.list.failed"
       js <- Fox.serialCombined(dataStores)(d => dataStoreService.publicWrites(d))
-    } yield {
-      Ok(Json.toJson(js))
-    }
+    } yield Ok(Json.toJson(js))
   }
 
   def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
@@ -54,7 +54,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
             _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
             _ <- dataStoreDAO.insertOne(dataStore) ?~> "dataStore.create.failed"
             js <- dataStoreService.publicWrites(dataStore)
-          } yield { Ok(Json.toJson(js)) }
+          } yield Ok(Json.toJson(js))
         case _ => Future.successful(JsonBadRequest(Messages("dataStore.name.alreadyTaken")))
       }
     }
@@ -76,7 +76,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
         _ <- bool2Fox(dataStore.name == name)
         _ <- dataStoreDAO.updateOne(dataStore) ?~> "dataStore.create.failed"
         js <- dataStoreService.publicWrites(dataStore)
-      } yield { Ok(Json.toJson(js)) }
+      } yield Ok(Json.toJson(js))
     }
   }
 }

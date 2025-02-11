@@ -13,9 +13,11 @@ trait Zarr3Layer extends DataLayerWithMagLocators {
 
   val dataFormat: DataFormat.Value = DataFormat.zarr3
 
-  def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                     dataSourceId: DataSourceId,
-                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]) =
+  def bucketProvider(
+      remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+      dataSourceId: DataSourceId,
+      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]
+  ) =
     new DatasetArrayBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)

@@ -7,11 +7,10 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-/**
-  * Used to store a mapping from tracing id to datasource. This makes it possible for WK to answer a
+/** Used to store a mapping from tracing id to datasource. This makes it possible for WK to answer a
   * /tracingstores/:name/dataSource request before an annotation is created. This happens when uploading an annotation.
   */
-class TracingDataSourceTemporaryStore @Inject()(temporaryStore: TemporaryStore[String, DataSourceLike]) {
+class TracingDataSourceTemporaryStore @Inject() (temporaryStore: TemporaryStore[String, DataSourceLike]) {
 
   private val timeOut = 7 * 24 hours
 

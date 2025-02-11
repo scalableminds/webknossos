@@ -1,13 +1,13 @@
 package models.shortlinks
 
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables
-import com.scalableminds.webknossos.schema.Tables.{Shortlinks, ShortlinksRow}
+import com.scalableminds.webknossos.schema.Tables._
 import play.api.libs.json.{Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SqlClient, SQLDAO}
+import utils.sql.{SQLDAO, SqlClient}
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.webknossos.schema.Tables
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -18,13 +18,13 @@ object ShortLink {
   implicit val jsonFormat: OFormat[ShortLink] = Json.format[ShortLink]
 }
 
-class ShortLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class ShortLinkDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[ShortLink, ShortlinksRow, Shortlinks](sqlClient) {
+
   protected val collection = Shortlinks
-
   protected def idColumn(x: Shortlinks): Rep[String] = x._Id
-
   override protected def isDeletedColumn(x: Tables.Shortlinks): Rep[Boolean] = false
+  protected def getResult = GetResultShortlinksRow
 
   protected def parse(r: ShortlinksRow): Fox[ShortLink] =
     Fox.successful(

@@ -11,7 +11,7 @@ import utils.WkConf
 import java.nio.{ByteBuffer, ByteOrder}
 import javax.inject.Inject
 
-class WKRemoteSegmentAnythingClient @Inject()(rpc: RPC, conf: WkConf) {
+class WKRemoteSegmentAnythingClient @Inject() (rpc: RPC, conf: WkConf) {
 
   def getMask(
       imageData: Array[Byte],
@@ -25,7 +25,8 @@ class WKRemoteSegmentAnythingClient @Inject()(rpc: RPC, conf: WkConf) {
       pointYOpt: Option[Int],
       dataShape: Vec3Int, // two of the axes will be at most 1024, the other is the "depth". Axis order varies depending on viewport
       intensityMin: Option[Float],
-      intensityMax: Option[Float]): Fox[Array[Byte]] = {
+      intensityMax: Option[Float]
+  ): Fox[Array[Byte]] = {
     val interactionInputLengthInBytes = 1 + (
       if (samInteractionType == SAMInteractionType.BOUNDING_BOX) 4 + 4 + 4 + 4 else 4 + 4
     )
@@ -52,8 +53,10 @@ class WKRemoteSegmentAnythingClient @Inject()(rpc: RPC, conf: WkConf) {
     val imageWithMetadata = buffer.array()
     System.arraycopy(imageData, 0, imageWithMetadata, metadataLengthInBytes, imageData.length)
     rpc(s"${conf.SegmentAnything.uri}/predictions/sam2_hiera_b")
-      .withBasicAuthOpt(if (conf.SegmentAnything.user.isEmpty) None else Some(conf.SegmentAnything.user),
-                        Some(conf.SegmentAnything.password))
+      .withBasicAuthOpt(
+        if (conf.SegmentAnything.user.isEmpty) None else Some(conf.SegmentAnything.user),
+        Some(conf.SegmentAnything.password)
+      )
       .postBytesWithBytesResponse(imageWithMetadata)
   }
 }

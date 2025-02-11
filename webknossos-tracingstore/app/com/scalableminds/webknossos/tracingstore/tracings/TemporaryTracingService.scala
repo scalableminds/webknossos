@@ -14,12 +14,13 @@ import scala.concurrent.duration.DurationInt
 
 // This services holds temporary stores, meant for temporary tracings only (e.g. compound projects)
 // They cannot be used for download or updating/versioning
-class TemporaryTracingService @Inject()(
+class TemporaryTracingService @Inject() (
     skeletonStore: TemporaryTracingStore[SkeletonTracing],
     volumeStore: TemporaryTracingStore[VolumeTracing],
     volumeDataStore: TemporaryTracingStore[Array[Byte]],
     annotationStore: TemporaryTracingStore[AnnotationProto],
-    temporaryTracingIdStore: TracingStoreRedisStore)(implicit ec: ExecutionContext) {
+    temporaryTracingIdStore: TracingStoreRedisStore
+)(implicit ec: ExecutionContext) {
 
   implicit def skeletonTracingCompanion: GeneratedMessageCompanion[SkeletonTracing] = SkeletonTracing
   implicit def volumeTracingCompanion: GeneratedMessageCompanion[VolumeTracing] = VolumeTracing

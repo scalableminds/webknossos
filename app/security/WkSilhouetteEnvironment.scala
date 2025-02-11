@@ -18,11 +18,12 @@ trait WkEnv extends Env {
   type A = CombinedAuthenticator
 }
 
-class WkSilhouetteEnvironment @Inject()(
+class WkSilhouetteEnvironment @Inject() (
     conf: WkConf,
     tokenDAO: TokenDAO,
     userService: UserService,
-    cookieHeaderEncoding: CookieHeaderEncoding)(implicit val executionContext: ExecutionContext)
+    cookieHeaderEncoding: CookieHeaderEncoding
+)(implicit val executionContext: ExecutionContext)
     extends Environment[WkEnv] {
   private val eventBusObject = EventBus()
 

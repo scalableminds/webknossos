@@ -24,7 +24,7 @@ trait IntervalScheduler {
 
   private var scheduled: Cancellable = scala.compiletime.uninitialized
 
-  lifecycle.addStopHook((() => stop()))
+  lifecycle.addStopHook(() => stop())
 
   if (enabled) {
     scheduled = system.scheduler.scheduleWithFixedDelay(tickerInitialDelay, tickerInterval)(() => tick())

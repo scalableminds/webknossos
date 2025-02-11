@@ -23,23 +23,30 @@ class ZarrArrayExplorer(mag: Vec3Int = Vec3Int.ones)(implicit val ec: ExecutionC
       zarrHeader <- zarrayPath.parseAsJson[ZarrHeader] ?~> s"failed to read zarr header at $zarrayPath"
       elementClass <- zarrHeader.elementClass ?~> "failed to read element class from zarr header"
       guessedAxisOrder = AxisOrder.asZyxFromRank(zarrHeader.rank)
-      boundingBox <- zarrHeader.boundingBox(guessedAxisOrder) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
+      boundingBox <- zarrHeader.boundingBox(
+        guessedAxisOrder
+      ) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
       magLocator = MagLocator(mag, Some(remotePath.toUri.toString), None, Some(guessedAxisOrder), None, credentialId)
-      layer: ZarrLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
-        ZarrSegmentationLayer(name,
-                              boundingBox,
-                              elementClass,
-                              List(magLocator),
-                              largestSegmentId = None,
-                              dataFormat = DataFormat.zarr)
-      } else
-        ZarrDataLayer(name,
-                      Category.color,
-                      boundingBox,
-                      elementClass,
-                      List(magLocator),
-                      additionalAxes = None,
-                      dataFormat = DataFormat.zarr)
+      layer: ZarrLayer =
+        if (looksLikeSegmentationLayer(name, elementClass)) {
+          ZarrSegmentationLayer(
+            name,
+            boundingBox,
+            elementClass,
+            List(magLocator),
+            largestSegmentId = None,
+            dataFormat = DataFormat.zarr
+          )
+        } else
+          ZarrDataLayer(
+            name,
+            Category.color,
+            boundingBox,
+            elementClass,
+            List(magLocator),
+            additionalAxes = None,
+            dataFormat = DataFormat.zarr
+          )
     } yield List((layer, VoxelSize.fromFactorWithDefaultUnit(Vec3Double.ones)))
 
 }

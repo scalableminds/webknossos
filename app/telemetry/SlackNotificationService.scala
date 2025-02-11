@@ -6,12 +6,14 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import utils.WkConf
 
-class SlackNotificationService @Inject()(rpc: RPC, config: WkConf) extends LazyLogging {
+class SlackNotificationService @Inject() (rpc: RPC, config: WkConf) extends LazyLogging {
 
-  private lazy val slackClient = new SlackClient(rpc,
-                                                 config.SlackNotifications.uri,
-                                                 name = s"WEBKNOSSOS at ${config.Http.uri}",
-                                                 config.SlackNotifications.verboseLoggingEnabled)
+  private lazy val slackClient = new SlackClient(
+    rpc,
+    config.SlackNotifications.uri,
+    name = s"WEBKNOSSOS at ${config.Http.uri}",
+    config.SlackNotifications.verboseLoggingEnabled
+  )
 
   def warnWithException(title: String, ex: Throwable, msg: String): Unit =
     slackClient.warn(

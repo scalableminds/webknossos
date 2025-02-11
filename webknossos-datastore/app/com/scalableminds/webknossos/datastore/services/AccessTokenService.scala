@@ -67,32 +67,43 @@ trait AccessTokenService {
   private lazy val accessAnswersCache: AlfuCache[(UserAccessRequest, Option[String]), UserAccessAnswer] =
     AlfuCache(timeToLive = AccessExpiration, timeToIdle = AccessExpiration)
 
-  def validateAccessFromTokenContextForSyncBlock(accessRequest: UserAccessRequest)(
-      block: => Result)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Result] =
+  def validateAccessFromTokenContextForSyncBlock(
+      accessRequest: UserAccessRequest
+  )(block: => Result)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Result] =
     validateAccessFromTokenContext(accessRequest) {
       Future.successful(block)
     }
 
-  def validateAccessFromTokenContext(accessRequest: UserAccessRequest)(
-      block: => Future[Result])(implicit ec: ExecutionContext, tc: TokenContext): Fox[Result] =
+  def validateAccessFromTokenContext(
+      accessRequest: UserAccessRequest
+  )(block: => Future[Result])(implicit ec: ExecutionContext, tc: TokenContext): Fox[Result] =
     for {
-      userAccessAnswer <- hasUserAccess(accessRequest) ?~> "Failed to check data access, token may be expired, consider reloading."
+      userAccessAnswer <- hasUserAccess(
+        accessRequest
+      ) ?~> "Failed to check data access, token may be expired, consider reloading."
       result <- executeBlockOnPositiveAnswer(userAccessAnswer, block)
     } yield result
 
-  private def hasUserAccess(accessRequest: UserAccessRequest)(implicit ec: ExecutionContext,
-                                                              tc: TokenContext): Fox[UserAccessAnswer] =
-    accessAnswersCache.getOrLoad((accessRequest, tc.userTokenOpt),
-                                 _ => remoteWebknossosClient.requestUserAccess(accessRequest))
+  private def hasUserAccess(
+      accessRequest: UserAccessRequest
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[UserAccessAnswer] =
+    accessAnswersCache.getOrLoad(
+      (accessRequest, tc.userTokenOpt),
+      _ => remoteWebknossosClient.requestUserAccess(accessRequest)
+    )
 
   def assertUserAccess(accessRequest: UserAccessRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
     for {
-      userAccessAnswer <- hasUserAccess(accessRequest) ?~> "Failed to check data access, token may be expired, consider reloading."
+      userAccessAnswer <- hasUserAccess(
+        accessRequest
+      ) ?~> "Failed to check data access, token may be expired, consider reloading."
       _ <- Fox.bool2Fox(userAccessAnswer.granted) ?~> userAccessAnswer.msg.getOrElse("Access forbidden.")
     } yield ()
 
-  private def executeBlockOnPositiveAnswer(userAccessAnswer: UserAccessAnswer,
-                                           block: => Future[Result]): Future[Result] =
+  private def executeBlockOnPositiveAnswer(
+      userAccessAnswer: UserAccessAnswer,
+      block: => Future[Result]
+  ): Future[Result] =
     userAccessAnswer match {
       case UserAccessAnswer(true, _) =>
         block
@@ -103,5 +114,5 @@ trait AccessTokenService {
     }
 }
 
-class DataStoreAccessTokenService @Inject()(val remoteWebknossosClient: DSRemoteWebknossosClient)
+class DataStoreAccessTokenService @Inject() (val remoteWebknossosClient: DSRemoteWebknossosClient)
     extends AccessTokenService

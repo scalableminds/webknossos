@@ -10,17 +10,18 @@ trait EditableMappingUpdateAction extends LayerUpdateAction {
 
 // we switched from positions to segment ids in https://github.com/scalableminds/webknossos/pull/7742.
 // Both are now optional to support applying old update actions stored in the db.
-case class SplitAgglomerateUpdateAction(agglomerateId: Long, // Unused, we now look this up by position/segment
-                                        segmentPosition1: Option[Vec3Int],
-                                        segmentPosition2: Option[Vec3Int],
-                                        segmentId1: Option[Long],
-                                        segmentId2: Option[Long],
-                                        mag: Vec3Int,
-                                        actionTracingId: String,
-                                        actionTimestamp: Option[Long] = None,
-                                        actionAuthorId: Option[String] = None,
-                                        info: Option[String] = None)
-    extends EditableMappingUpdateAction {
+case class SplitAgglomerateUpdateAction(
+    agglomerateId: Long, // Unused, we now look this up by position/segment
+    segmentPosition1: Option[Vec3Int],
+    segmentPosition2: Option[Vec3Int],
+    segmentId1: Option[Long],
+    segmentId2: Option[Long],
+    mag: Vec3Int,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[String] = None,
+    info: Option[String] = None
+) extends EditableMappingUpdateAction {
   override def addTimestamp(timestamp: Long): EditableMappingUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def addAuthorId(authorId: Option[String]): UpdateAction =
@@ -35,18 +36,19 @@ object SplitAgglomerateUpdateAction {
 
 // we switched from positions to segment ids in https://github.com/scalableminds/webknossos/pull/7742.
 // Both are now optional to support applying old update actions stored in the db.
-case class MergeAgglomerateUpdateAction(agglomerateId1: Long, // Unused, we now look this up by position/segment
-                                        agglomerateId2: Long, // Unused, we now look this up by position/segment
-                                        segmentPosition1: Option[Vec3Int],
-                                        segmentPosition2: Option[Vec3Int],
-                                        segmentId1: Option[Long],
-                                        segmentId2: Option[Long],
-                                        mag: Vec3Int,
-                                        actionTracingId: String,
-                                        actionTimestamp: Option[Long] = None,
-                                        actionAuthorId: Option[String] = None,
-                                        info: Option[String] = None)
-    extends EditableMappingUpdateAction {
+case class MergeAgglomerateUpdateAction(
+    agglomerateId1: Long, // Unused, we now look this up by position/segment
+    agglomerateId2: Long, // Unused, we now look this up by position/segment
+    segmentPosition1: Option[Vec3Int],
+    segmentPosition2: Option[Vec3Int],
+    segmentId1: Option[Long],
+    segmentId2: Option[Long],
+    mag: Vec3Int,
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[String] = None,
+    info: Option[String] = None
+) extends EditableMappingUpdateAction {
   override def addTimestamp(timestamp: Long): EditableMappingUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def addAuthorId(authorId: Option[String]): UpdateAction =

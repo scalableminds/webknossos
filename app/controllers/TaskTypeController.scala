@@ -18,11 +18,13 @@ import security.WkEnv
 
 import scala.concurrent.ExecutionContext
 
-class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
-                                   taskDAO: TaskDAO,
-                                   taskTypeService: TaskTypeService,
-                                   userService: UserService,
-                                   sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+class TaskTypeController @Inject() (
+    taskTypeDAO: TaskTypeDAO,
+    taskDAO: TaskDAO,
+    taskTypeService: TaskTypeService,
+    userService: UserService,
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
 
@@ -32,12 +34,14 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
       (__ \ "teamId").read[ObjectId] and
       (__ \ "settings").read[AnnotationSettings] and
       (__ \ "recommendedConfiguration").readNullable[JsValue] and
-      (__ \ "tracingType").read[TracingType.Value])(taskTypeService.fromForm _)
+      (__ \ "tracingType").read[TracingType.Value])(taskTypeService.fromForm)
 
   def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskType =>
       for {
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(
+          userService.isTeamManagerOrAdminOf(request.identity, taskType._team)
+        ) ?~> "notAllowed" ~> FORBIDDEN
         _ <- taskTypeDAO
           .findOneBySummaryAndOrganization(taskType.summary, request.identity._organization)(GlobalAccessContext)
           .reverse ?~> Messages("taskType.summary.alreadyTaken", taskType.summary)
@@ -67,15 +71,21 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
       for {
         taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound" ~> NOT_FOUND
         _ <- bool2Fox(taskTypeFromForm.tracingType == taskType.tracingType) ?~> "taskType.tracingTypeImmutable"
-        _ <- bool2Fox(taskTypeFromForm.settings.magRestrictions == taskType.settings.magRestrictions) ?~> "taskType.magRestrictionsImmutable"
+        _ <- bool2Fox(
+          taskTypeFromForm.settings.magRestrictions == taskType.settings.magRestrictions
+        ) ?~> "taskType.magRestrictionsImmutable"
         updatedTaskType = taskTypeFromForm.copy(_id = taskType._id)
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- Fox
-          .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, updatedTaskType._team)) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(
+          userService.isTeamManagerOrAdminOf(request.identity, taskType._team)
+        ) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(
+          userService.isTeamManagerOrAdminOf(request.identity, updatedTaskType._team)
+        ) ?~> "notAllowed" ~> FORBIDDEN
         _ <- Fox.runIf(taskTypeFromForm.summary != taskType.summary) {
           taskTypeDAO
             .findOneBySummaryAndOrganization(taskTypeFromForm.summary, request.identity._organization)(
-              GlobalAccessContext)
+              GlobalAccessContext
+            )
             .reverse ?~> Messages("taskType.summary.alreadyTaken", taskTypeFromForm.summary)
         }
         _ <- taskTypeDAO.updateOne(updatedTaskType)
@@ -87,8 +97,9 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
   def delete(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound" ~> NOT_FOUND
-      _ <- Fox
-        .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN
+      _ <- Fox.assertTrue(
+        userService.isTeamManagerOrAdminOf(request.identity, taskType._team)
+      ) ?~> "notAllowed" ~> FORBIDDEN
       _ <- taskTypeDAO.deleteOne(taskTypeId) ?~> "taskType.deleteFailure"
       _ <- taskDAO.removeAllWithTaskTypeAndItsAnnotations(taskTypeId) ?~> "taskType.deleteFailure"
       _ = logger.info(s"TaskType $taskTypeId was deleted.")

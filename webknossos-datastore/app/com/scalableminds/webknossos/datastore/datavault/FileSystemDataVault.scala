@@ -15,8 +15,9 @@ import scala.jdk.CollectionConverters._
 
 class FileSystemDataVault extends DataVault {
 
-  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] =
+  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(implicit
+      ec: ExecutionContext
+  ): Fox[(Array[Byte], Encoding.Value)] =
     for {
       localPath <- vaultPathToLocalPath(path)
       bytes <- readBytesLocal(localPath, range)
@@ -76,24 +77,28 @@ class FileSystemDataVault extends DataVault {
   }
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
-    vaultPathToLocalPath(path).map(
-      localPath =>
-        if (Files.isDirectory(localPath))
-          Files
-            .list(localPath)
-            .filter(file => Files.isDirectory(file))
-            .collect(Collectors.toList())
-            .asScala
-            .toList
-            .map(dir => new VaultPath(dir.toUri, this))
-            .take(maxItems)
-        else List.empty)
+    vaultPathToLocalPath(path).map(localPath =>
+      if (Files.isDirectory(localPath))
+        Files
+          .list(localPath)
+          .filter(file => Files.isDirectory(file))
+          .collect(Collectors.toList())
+          .asScala
+          .toList
+          .map(dir => new VaultPath(dir.toUri, this))
+          .take(maxItems)
+      else List.empty
+    )
 
   private def vaultPathToLocalPath(path: VaultPath)(implicit ec: ExecutionContext): Fox[Path] = {
     val uri = path.toUri
     for {
-      _ <- bool2Fox(uri.getScheme == DataVaultService.schemeFile) ?~> "trying to read from FileSystemDataVault, but uri scheme is not file"
-      _ <- bool2Fox(uri.getHost == null || uri.getHost.isEmpty) ?~> s"trying to read from FileSystemDataVault, but hostname ${uri.getHost} is non-empty"
+      _ <- bool2Fox(
+        uri.getScheme == DataVaultService.schemeFile
+      ) ?~> "trying to read from FileSystemDataVault, but uri scheme is not file"
+      _ <- bool2Fox(
+        uri.getHost == null || uri.getHost.isEmpty
+      ) ?~> s"trying to read from FileSystemDataVault, but hostname ${uri.getHost} is non-empty"
       localPath = Paths.get(uri.getPath)
       _ <- bool2Fox(localPath.isAbsolute) ?~> "trying to read from FileSystemDataVault, but hostname is non-empty"
     } yield localPath

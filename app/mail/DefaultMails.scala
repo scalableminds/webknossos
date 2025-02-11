@@ -9,18 +9,20 @@ import java.net.URL
 import javax.inject.Inject
 import scala.util.Try
 
-class DefaultMails @Inject()(conf: WkConf) {
+class DefaultMails @Inject() (conf: WkConf) {
 
   private val uri = conf.Http.uri
   private val defaultSender = conf.Mail.defaultSender
   private val newOrganizationMailingList = conf.WebKnossos.newOrganizationMailingList
   private val additionalFooter = conf.Mail.additionalFooter
 
-  def registerAdminNotifierMail(name: String,
-                                email: String,
-                                organization: Organization,
-                                autoActivate: Boolean,
-                                recipient: String): Mail =
+  def registerAdminNotifierMail(
+      name: String,
+      email: String,
+      organization: Organization,
+      autoActivate: Boolean,
+      recipient: String
+  ): Mail =
     Mail(
       from = defaultSender,
       subject =
@@ -78,12 +80,14 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(newOrganizationMailingList)
     )
 
-  def inviteMail(recipient: String,
-                 inviteTokenValue: String,
-                 autoVerify: Boolean,
-                 organizationName: String,
-                 senderName: String): Mail = {
-    val host = Try { new URL(uri) }.toOption.getOrElse(uri)
+  def inviteMail(
+      recipient: String,
+      inviteTokenValue: String,
+      autoVerify: Boolean,
+      organizationName: String,
+      senderName: String
+  ): Mail = {
+    val host = Try(new URL(uri)).toOption.getOrElse(uri)
     Mail(
       from = defaultSender,
       subject = s"$senderName invited you to join their WEBKNOSSOS organization at $host",
@@ -141,10 +145,12 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(userEmail)
     )
 
-  def upgradePricingPlanRequestMail(user: User,
-                                    userEmail: String,
-                                    organizationName: String,
-                                    messageBody: String): Mail =
+  def upgradePricingPlanRequestMail(
+      user: User,
+      userEmail: String,
+      organizationName: String,
+      messageBody: String
+  ): Mail =
     Mail(
       from = defaultSender,
       subject = "Request to upgrade WEBKNOSSOS plan",
@@ -153,12 +159,14 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List("hello@webknossos.org")
     )
 
-  def jobSuccessfulGenericMail(user: User,
-                               userEmail: String,
-                               datasetName: String,
-                               jobLink: String,
-                               jobTitle: String,
-                               jobDescription: String): Mail =
+  def jobSuccessfulGenericMail(
+      user: User,
+      userEmail: String,
+      datasetName: String,
+      jobLink: String,
+      jobTitle: String,
+      jobDescription: String
+  ): Mail =
     Mail(
       from = defaultSender,
       subject = s"$jobTitle is ready",
@@ -176,11 +184,13 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(userEmail)
     )
 
-  def jobSuccessfulSegmentationMail(user: User,
-                                    userEmail: String,
-                                    datasetName: String,
-                                    jobLink: String,
-                                    jobTitle: String): Mail =
+  def jobSuccessfulSegmentationMail(
+      user: User,
+      userEmail: String,
+      datasetName: String,
+      jobLink: String,
+      jobTitle: String
+  ): Mail =
     Mail(
       from = defaultSender,
       subject = s"Your $jobTitle is ready",

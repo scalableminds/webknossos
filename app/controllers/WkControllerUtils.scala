@@ -1,0 +1,59 @@
+package controllers
+
+import play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
+import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext}
+import com.scalableminds.util.mvc.ControllerUtils
+import com.scalableminds.util.tools.Fox
+import models.user.User
+import play.api.i18n.{Messages, MessagesProvider}
+import play.api.libs.json._
+import play.api.mvc.{Request, Result}
+import security.{UserAwareRequestLogging, WkEnv}
+
+import scala.concurrent.ExecutionContext
+
+trait WkControllerUtils extends ControllerUtils with UserAwareRequestLogging {
+
+  private def jsonErrorWrites(errors: JsError)(implicit m: MessagesProvider): JsObject =
+    Json.obj(
+      "errors" -> errors.errors.map(error =>
+        error._2.foldLeft(Json.obj("field" -> error._1.toJsonString)) { case (js, e) =>
+          js ++ Json.obj("error" -> Messages(e.message))
+        }
+      )
+    )
+
+  def withJsonBodyAs[A](
+      f: A => Fox[Result]
+  )(implicit rds: Reads[A], request: Request[JsValue], ec: ExecutionContext): Fox[Result] =
+    withJsonBodyUsing(rds)(f)
+
+  def withJsonBodyUsing[A](reads: Reads[A])(
+      f: A => Fox[Result]
+  )(implicit request: Request[JsValue], ec: ExecutionContext): Fox[Result] =
+    withJsonUsing(request.body, reads)(f)
+
+  def withJsonAs[A](json: JsReadable)(
+      f: A => Fox[Result]
+  )(implicit rds: Reads[A], m: MessagesProvider, ec: ExecutionContext): Fox[Result] =
+    withJsonUsing(json, rds)(f)
+
+  private def withJsonUsing[A](json: JsReadable, reads: Reads[A])(
+      f: A => Fox[Result]
+  )(implicit m: MessagesProvider, ec: ExecutionContext): Fox[Result] =
+    json.validate(reads) match {
+      case JsSuccess(result, _) =>
+        f(result)
+      case e: JsError =>
+        Fox.successful(JsonBadRequest(jsonErrorWrites(e), Messages("format.json.invalid")))
+    }
+
+  implicit def userToDBAccess(user: User): DBAccessContext =
+    AuthorizedAccessContext(user)
+
+  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, ?]): DBAccessContext =
+    DBAccessContext(request.identity)
+
+  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, ?]): DBAccessContext =
+    DBAccessContext(Some(request.identity))
+}

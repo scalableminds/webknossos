@@ -11,10 +11,12 @@ import scala.concurrent.ExecutionContext
 trait DatasetDeleter extends LazyLogging with DirectoryConstants {
   def dataBaseDir: Path
 
-  def deleteOnDisk(organizationId: String,
-                   datasetName: String,
-                   isInConversion: Boolean = false,
-                   reason: Option[String] = None)(implicit ec: ExecutionContext): Fox[Unit] = {
+  def deleteOnDisk(
+      organizationId: String,
+      datasetName: String,
+      isInConversion: Boolean = false,
+      reason: Option[String] = None
+  )(implicit ec: ExecutionContext): Fox[Unit] = {
     @tailrec
     def deleteWithRetry(sourcePath: Path, targetPath: Path, retryCount: Int = 0): Fox[Unit] =
       try {
@@ -28,7 +30,7 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
         Fox.successful(())
       } catch {
         case _: java.nio.file.FileAlreadyExistsException => deleteWithRetry(sourcePath, targetPath, retryCount + 1)
-        case e: Exception                                => Fox.failure(s"Deleting dataset failed: ${e.toString}", Full(e))
+        case e: Exception => Fox.failure(s"Deleting dataset failed: ${e.toString}", Full(e))
       }
 
     val dataSourcePath =
@@ -40,13 +42,17 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
       val targetPath = trashPath.resolve(datasetName)
       new File(trashPath.toString).mkdirs()
 
-      logger.info(
-        s"Deleting dataset by moving it from $dataSourcePath to $targetPath${if (reason.isDefined) s" because ${reason.getOrElse("")}"
-        else "..."}")
+      logger.info(s"Deleting dataset by moving it from $dataSourcePath to $targetPath${
+          if (reason.isDefined) s" because ${reason.getOrElse("")}"
+          else "..."
+        }")
       deleteWithRetry(dataSourcePath, targetPath)
     } else {
-      Fox.successful(logger.info(
-        s"Dataset deletion requested for dataset at $dataSourcePath, but it does not exist. Skipping deletion on disk."))
+      Fox.successful(
+        logger.info(
+          s"Dataset deletion requested for dataset at $dataSourcePath, but it does not exist. Skipping deletion on disk."
+        )
+      )
     }
 
   }

@@ -35,32 +35,36 @@ object ExploreRemoteDatasetResponse {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetResponse] = Json.format[ExploreRemoteDatasetResponse]
 }
 
-case class ExploreRemoteLayerParameters(remoteUri: String,
-                                        credentialId: Option[String],
-                                        preferredVoxelSize: Option[VoxelSize])
+case class ExploreRemoteLayerParameters(
+    remoteUri: String,
+    credentialId: Option[String],
+    preferredVoxelSize: Option[VoxelSize]
+)
 
 object ExploreRemoteLayerParameters {
   implicit val jsonFormat: OFormat[ExploreRemoteLayerParameters] = Json.format[ExploreRemoteLayerParameters]
 }
 
 // Calls explorers on dataset uris compatible with DataVaults (can also be file:/// for local)
-class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
-                                          remoteWebknossosClient: DSRemoteWebknossosClient,
-                                          dataStoreConfig: DataStoreConfig)
-    extends ExploreLayerUtils
+class ExploreRemoteLayerService @Inject() (
+    dataVaultService: DataVaultService,
+    remoteWebknossosClient: DSRemoteWebknossosClient,
+    dataStoreConfig: DataStoreConfig
+) extends ExploreLayerUtils
     with FoxImplicits
     with LazyLogging {
 
   def exploreRemoteDatasource(parameters: List[ExploreRemoteLayerParameters], reportMutable: ListBuffer[String])(
-      implicit ec: ExecutionContext): Fox[GenericDataSource[DataLayer]] =
+      implicit ec: ExecutionContext
+  ): Fox[GenericDataSource[DataLayer]] =
     for {
-      exploredLayersNested <- Fox.serialCombined(parameters)(
-        parameters =>
-          exploreRemoteLayersForOneUri(
-            parameters.remoteUri,
-            parameters.credentialId,
-            reportMutable
-        ))
+      exploredLayersNested <- Fox.serialCombined(parameters)(parameters =>
+        exploreRemoteLayersForOneUri(
+          parameters.remoteUri,
+          parameters.credentialId,
+          reportMutable
+        )
+      )
       layersWithVoxelSizes = exploredLayersNested.flatten
       preferredVoxelSize = parameters.flatMap(_.preferredVoxelSize).headOption
       _ <- bool2Fox(layersWithVoxelSizes.nonEmpty) ?~> "Detected zero layers"
@@ -72,12 +76,15 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       )
     } yield dataSource
 
-  private def exploreRemoteLayersForOneUri(layerUri: String,
-                                           credentialId: Option[String],
-                                           reportMutable: ListBuffer[String])(
-      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+  private def exploreRemoteLayersForOneUri(
+      layerUri: String,
+      credentialId: Option[String],
+      reportMutable: ListBuffer[String]
+  )(implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
-      uri <- tryo(new URI(removeNeuroglancerPrefixesFromUri(removeHeaderFileNamesFromUriSuffix(layerUri)))) ?~> s"Received invalid URI: $layerUri"
+      uri <- tryo(
+        new URI(removeNeuroglancerPrefixesFromUri(removeHeaderFileNamesFromUriSuffix(layerUri)))
+      ) ?~> s"Received invalid URI: $layerUri"
       _ <- bool2Fox(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
       _ <- assertLocalPathInWhitelist(uri)
       credentialOpt: Option[DataVaultCredential] <- Fox.runOptional(credentialId)(remoteWebknossosClient.getCredential)
@@ -98,25 +105,29 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
           new PrecomputedExplorer,
           new NeuroglancerUriExplorer(dataVaultService)
         ),
-        reportMutable,
+        reportMutable
       )
     } yield layersWithVoxelSizes
 
   private def assertLocalPathInWhitelist(uri: URI)(implicit ec: ExecutionContext): Fox[Unit] =
     if (uri.getScheme == DataVaultService.schemeFile) {
-      bool2Fox(dataStoreConfig.Datastore.localDirectoryWhitelist.exists(whitelistEntry =>
-        uri.getPath.startsWith(whitelistEntry))) ?~> s"Absolute path ${uri.getPath} in local file system is not in path whitelist. Consider adding it to datastore.localDirectoryWhitelist"
+      bool2Fox(
+        dataStoreConfig.Datastore.localDirectoryWhitelist.exists(whitelistEntry =>
+          uri.getPath.startsWith(whitelistEntry)
+        )
+      ) ?~> s"Absolute path ${uri.getPath} in local file system is not in path whitelist. Consider adding it to datastore.localDirectoryWhitelist"
     } else Fox.successful(())
 
   private val MAX_RECURSIVE_SEARCH_DEPTH = 3
 
   private val MAX_EXPLORED_ITEMS_PER_LEVEL = 10
 
-  private def recursivelyExploreRemoteLayerAtPaths(remotePathsWithDepth: List[(VaultPath, Int)],
-                                                   credentialId: Option[String],
-                                                   explorers: List[RemoteLayerExplorer],
-                                                   reportMutable: ListBuffer[String])(
-      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+  private def recursivelyExploreRemoteLayerAtPaths(
+      remotePathsWithDepth: List[(VaultPath, Int)],
+      credentialId: Option[String],
+      explorers: List[RemoteLayerExplorer],
+      reportMutable: ListBuffer[String]
+  )(implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     remotePathsWithDepth match {
       case Nil =>
         Fox.empty
@@ -125,42 +136,45 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
         else {
           explorePathsWithAllExplorersAndGetFirstMatch(path, explorers, credentialId, reportMutable).futureBox.flatMap(
             explorationResultOfPath =>
-              handleExploreResultOfPath(explorationResultOfPath,
-                                        path,
-                                        searchDepth,
-                                        remainingPaths,
-                                        credentialId,
-                                        explorers,
-                                        reportMutable))
+              handleExploreResultOfPath(
+                explorationResultOfPath,
+                path,
+                searchDepth,
+                remainingPaths,
+                credentialId,
+                explorers,
+                reportMutable
+              )
+          )
         }
     }
 
-  private def explorePathsWithAllExplorersAndGetFirstMatch(path: VaultPath,
-                                                           explorers: List[RemoteLayerExplorer],
-                                                           credentialId: Option[String],
-                                                           reportMutable: ListBuffer[String])(
-      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+  private def explorePathsWithAllExplorersAndGetFirstMatch(
+      path: VaultPath,
+      explorers: List[RemoteLayerExplorer],
+      credentialId: Option[String],
+      reportMutable: ListBuffer[String]
+  )(implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     Fox
       .sequence(explorers.map { explorer =>
-        {
-          explorer
-            .explore(path, credentialId)
-            .futureBox
-            .flatMap {
-              handleExploreResult(_, explorer, path, reportMutable)
-            }
-            .toFox
-        }
+        explorer
+          .explore(path, credentialId)
+          .futureBox
+          .flatMap {
+            handleExploreResult(_, explorer, path, reportMutable)
+          }
+          .toFox
       })
       .map(explorationResults => Fox.firstSuccess(explorationResults.map(_.toFox)))
       .toFox
       .flatten
 
-  private def handleExploreResult(explorationResult: Box[List[(DataLayerWithMagLocators, VoxelSize)]],
-                                  explorer: RemoteLayerExplorer,
-                                  path: VaultPath,
-                                  reportMutable: ListBuffer[String])(
-      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] = explorationResult match {
+  private def handleExploreResult(
+      explorationResult: Box[List[(DataLayerWithMagLocators, VoxelSize)]],
+      explorer: RemoteLayerExplorer,
+      path: VaultPath,
+      reportMutable: ListBuffer[String]
+  )(implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] = explorationResult match {
     case Full(layersWithVoxelSizes) =>
       reportMutable += s"Found ${layersWithVoxelSizes.length} ${explorer.name} layers at $path."
       Fox.successful(layersWithVoxelSizes)
@@ -172,14 +186,15 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       Fox.empty
   }
 
-  private def handleExploreResultOfPath(explorationResultOfPath: Box[List[(DataLayerWithMagLocators, VoxelSize)]],
-                                        path: VaultPath,
-                                        searchDepth: Int,
-                                        remainingPaths: List[(VaultPath, Int)],
-                                        credentialId: Option[String],
-                                        explorers: List[RemoteLayerExplorer],
-                                        reportMutable: ListBuffer[String])(
-      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+  private def handleExploreResultOfPath(
+      explorationResultOfPath: Box[List[(DataLayerWithMagLocators, VoxelSize)]],
+      path: VaultPath,
+      searchDepth: Int,
+      remainingPaths: List[(VaultPath, Int)],
+      credentialId: Option[String],
+      explorers: List[RemoteLayerExplorer],
+      reportMutable: ListBuffer[String]
+  )(implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     explorationResultOfPath match {
       case Full(layersWithVoxelSizes) =>
         Fox.successful(layersWithVoxelSizes)
@@ -188,10 +203,12 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
           extendedRemainingPaths <- path
             .listDirectory(maxItems = MAX_EXPLORED_ITEMS_PER_LEVEL)
             .map(dirs => remainingPaths ++ dirs.map((_, searchDepth + 1)))
-          foundLayers <- recursivelyExploreRemoteLayerAtPaths(extendedRemainingPaths,
-                                                              credentialId,
-                                                              explorers,
-                                                              reportMutable)
+          foundLayers <- recursivelyExploreRemoteLayerAtPaths(
+            extendedRemainingPaths,
+            credentialId,
+            explorers,
+            reportMutable
+          )
         } yield foundLayers
       case _ =>
         Fox.successful(List.empty)

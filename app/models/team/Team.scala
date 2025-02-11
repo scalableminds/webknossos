@@ -34,23 +34,23 @@ case class Team(
 
 }
 
-class TeamService @Inject()(organizationDAO: OrganizationDAO,
-                            annotationDAO: AnnotationDAO,
-                            teamDAO: TeamDAO,
-                            projectDAO: ProjectDAO,
-                            taskTypeDAO: TaskTypeDAO)(implicit ec: ExecutionContext)
+class TeamService @Inject() (
+    organizationDAO: OrganizationDAO,
+    annotationDAO: AnnotationDAO,
+    teamDAO: TeamDAO,
+    projectDAO: ProjectDAO,
+    taskTypeDAO: TaskTypeDAO
+)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
   def publicWrites(team: Team, organizationOpt: Option[Organization] = None): Fox[JsObject] =
     for {
       organization <- Fox.fillOption(organizationOpt)(organizationDAO.findOne(team._organization)(GlobalAccessContext))
-    } yield {
-      Json.obj(
-        "id" -> team._id.toString,
-        "name" -> team.name,
-        "organization" -> organization._id
-      )
-    }
+    } yield Json.obj(
+      "id" -> team._id.toString,
+      "name" -> team.name,
+      "organization" -> organization._id
+    )
 
   def assertNoReferences(teamId: ObjectId)(implicit mp: MessagesProvider): Fox[Unit] =
     for {
@@ -62,16 +62,18 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(annotationCount == 0) ?~> Messages("team.inUse.annotations", annotationCount)
     } yield ()
 
-  def allowedTeamsForFolder(folderId: ObjectId, cumulative: Boolean, requestingUser: Option[User] = None)(
-      implicit ctx: DBAccessContext): Fox[List[Team]] =
+  def allowedTeamsForFolder(folderId: ObjectId, cumulative: Boolean, requestingUser: Option[User] = None)(implicit
+      ctx: DBAccessContext
+  ): Fox[List[Team]] =
     for {
       teamIds <- allowedTeamIdsForFolder(folderId, cumulative)
       teams <- teamDAO.findAllByIds(teamIds)
       teamsFiltered = removeForeignOrganizationTeams(teams, requestingUser)
     } yield teamsFiltered
 
-  def allowedTeamsForDataset(dataset: Dataset, cumulative: Boolean, requestingUser: Option[User] = None)(
-      implicit ctx: DBAccessContext): Fox[List[Team]] =
+  def allowedTeamsForDataset(dataset: Dataset, cumulative: Boolean, requestingUser: Option[User] = None)(implicit
+      ctx: DBAccessContext
+  ): Fox[List[Team]] =
     for {
       teamIds <- allowedTeamIdsForDataset(dataset, cumulative)
       teams <- teamDAO.findAllByIds(teamIds)
@@ -95,12 +97,13 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
     teams.filter(team => requestingUser.map(_._organization).contains(team._organization))
 }
 
-class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class TeamDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Team, TeamsRow, Teams](sqlClient) {
-  protected val collection = Teams
 
+  protected val collection = Teams
   protected def idColumn(x: Teams): Rep[String] = x._Id
   protected def isDeletedColumn(x: Teams): Rep[Boolean] = x.isdeleted
+  protected def getResult = GetResultTeamsRow
 
   protected def parse(r: TeamsRow): Fox[Team] =
     Fox.successful(
@@ -111,7 +114,8 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.isorganizationteam,
         Instant.fromSql(r.created),
         r.isdeleted
-      ))
+      )
+    )
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""_id IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId)
@@ -131,7 +135,8 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def countByNameAndOrganization(teamName: String, organizationId: String): Fox[Int] =
     for {
       countList <- run(
-        q"SELECT COUNT(*) FROM webknossos.teams WHERE name = $teamName AND _organization = $organizationId".as[Int])
+        q"SELECT COUNT(*) FROM webknossos.teams WHERE name = $teamName AND _organization = $organizationId".as[Int]
+      )
       count <- countList.headOption
     } yield count
 
@@ -169,7 +174,8 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        q"SELECT _id FROM $existingCollectionName WHERE _organization = $organizationId AND $accessQuery".as[String])
+        q"SELECT _id FROM $existingCollectionName WHERE _organization = $organizationId AND $accessQuery".as[String]
+      )
       parsed <- Fox.serialCombined(r.toList)(col => ObjectId.fromString(col))
     } yield parsed
 

@@ -29,10 +29,11 @@ object TracingStore {
     TracingStore(name, url, publicUrl, "")
 }
 
-class TracingStoreService @Inject()(
+class TracingStoreService @Inject() (
     tracingStoreDAO: TracingStoreDAO,
     rpc: RPC,
-    tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore)(implicit ec: ExecutionContext)
+    tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore
+)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
     with Results {
@@ -42,10 +43,12 @@ class TracingStoreService @Inject()(
       Json.obj(
         "name" -> tracingStore.name,
         "url" -> tracingStore.publicUrl
-      ))
+      )
+    )
 
-  def validateAccess(name: String, key: String)(block: TracingStore => Future[Result])(
-      implicit m: MessagesProvider): Fox[Result] =
+  def validateAccess(name: String, key: String)(
+      block: TracingStore => Future[Result]
+  )(implicit m: MessagesProvider): Fox[Result] =
     tracingStoreDAO
       .findOneByKey(key) // Check if key is valid
       .flatMap(tracingStore => block(tracingStore)) // Run underlying action
@@ -60,12 +63,13 @@ class TracingStoreService @Inject()(
     } yield new WKRemoteTracingStoreClient(tracingStore, dataset, rpc, tracingDataSourceTemporaryStore)
 }
 
-class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class TracingStoreDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[TracingStore, TracingstoresRow, Tracingstores](sqlClient) {
   protected val collection = Tracingstores
 
   protected def idColumn(x: Tracingstores): Rep[String] = x.name
   protected def isDeletedColumn(x: Tracingstores): Rep[Boolean] = x.isdeleted
+  protected def getResult = GetResultTracingstoresRow
 
   protected def parse(r: TracingstoresRow): Fox[TracingStore] =
     Fox.successful(
@@ -75,7 +79,8 @@ class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
         r.publicurl,
         r.key,
         r.isdeleted
-      ))
+      )
+    )
 
   def findOneByKey(key: String): Fox[TracingStore] =
     for {

@@ -26,8 +26,9 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) exte
   // This will be set after the first completed range request by looking at the response headers of a HEAD request and the response headers of a GET request
   private var supportsRangeRequests: Option[Boolean] = None
 
-  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] = {
+  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(implicit
+      ec: ExecutionContext
+  ): Fox[(Array[Byte], Encoding.Value)] = {
     val uri = path.toUri
     for {
       response <- range match {
@@ -36,10 +37,11 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) exte
         case Complete()           => getComplete(uri)
       }
       encoding <- Encoding.fromRfc7231String(response.header("Content-Encoding").getOrElse("")).toFox
-      result <- if (Status.isSuccessful(response.status)) {
-        Fox.successful((response.bodyAsBytes.toArray, encoding))
-      } else if (response.status == 404) Fox.empty
-      else Fox.failure(s"Https read failed for uri $uri: ${response.status} ${response.statusText}")
+      result <-
+        if (Status.isSuccessful(response.status)) {
+          Fox.successful((response.bodyAsBytes.toArray, encoding))
+        } else if (response.status == 404) Fox.empty
+        else Fox.failure(s"Https read failed for uri $uri: ${response.status} ${response.statusText}")
     } yield result
 
   }
@@ -52,13 +54,13 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) exte
 
   private def getHeaderInformation(uri: URI)(implicit ec: ExecutionContext): Fox[(Boolean, Long)] =
     headerInfoCache.getOrLoad(
-      uri, { uri =>
+      uri,
+      uri =>
         for {
           response <- ws.url(uri.toString).withRequestTimeout(readTimeout).head().toFox
           acceptsPartialRequests = response.headerValues("Accept-Ranges").contains("bytes")
           dataSize = response.header("Content-Length").map(_.toLong).getOrElse(0L)
         } yield (acceptsPartialRequests, dataSize)
-      }
     )
 
   private def getWithRange(uri: URI, range: NumericRange[Long])(implicit ec: ExecutionContext): Fox[WSResponse] =
@@ -85,7 +87,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) exte
         case None =>
           for {
             headerInfos <- getHeaderInformation(uri)
-          } yield {
+          } yield
             if (!headerInfos._1) {
               // Head is not conclusive, do the range request and check the response afterwards (see updateRangeRequestsSupportedForResponse)
               true
@@ -93,7 +95,6 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) exte
               supportsRangeRequests = Some(true)
               true
             }
-          }
       }
       _ <- Fox.bool2Fox(supported) ?~> s"Range requests are not supported for this data vault at $uri"
     } yield ()

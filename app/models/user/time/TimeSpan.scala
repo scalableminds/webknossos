@@ -44,12 +44,13 @@ object TimeSpan {
 
 }
 
-class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class TimeSpanDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[TimeSpan, TimespansRow, Timespans](sqlClient) {
   protected val collection = Timespans
 
   protected def idColumn(x: Timespans): Rep[String] = x._Id
   protected def isDeletedColumn(x: Timespans): Rep[Boolean] = x.isdeleted
+  protected def getResult = GetResultTimespansRow
 
   protected def parse(r: TimespansRow): Fox[TimeSpan] =
     Fox.successful(
@@ -62,7 +63,8 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.numberofupdates,
         Instant.fromSql(r.created),
         r.isdeleted
-      ))
+      )
+    )
 
   def findAllByUser(userId: ObjectId): Fox[List[TimeSpan]] =
     for {
@@ -70,12 +72,14 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def summedByAnnotationForUser(userId: ObjectId,
-                                start: Instant,
-                                end: Instant,
-                                annotationTypes: List[AnnotationType],
-                                annotationStates: List[AnnotationState],
-                                projectIds: List[ObjectId]): Fox[JsValue] =
+  def summedByAnnotationForUser(
+      userId: ObjectId,
+      start: Instant,
+      end: Instant,
+      annotationTypes: List[AnnotationType],
+      annotationStates: List[AnnotationState],
+      projectIds: List[ObjectId]
+  ): Fox[JsValue] =
     if (annotationTypes.isEmpty) Fox.successful(Json.arr())
     else {
       val projectQuery = projectIdsFilterQuery(projectIds)
@@ -116,12 +120,14 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       } yield Json.toJson(parsed)
     }
 
-  def findAllByUserWithTask(userId: ObjectId,
-                            start: Instant,
-                            end: Instant,
-                            annotationTypes: List[AnnotationType],
-                            annotationStates: List[AnnotationState],
-                            projectIds: List[ObjectId]): Fox[JsValue] =
+  def findAllByUserWithTask(
+      userId: ObjectId,
+      start: Instant,
+      end: Instant,
+      annotationTypes: List[AnnotationType],
+      annotationStates: List[AnnotationState],
+      projectIds: List[ObjectId]
+  ): Fox[JsValue] =
     if (annotationTypes.isEmpty) Fox.successful(Json.arr())
     else {
       val projectQuery = projectIdsFilterQuery(projectIds)
@@ -144,36 +150,44 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
               AND $projectQuery
               AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
               AND a.state IN ${SqlToken.tupleFromList(annotationStates)}
-            """.as[(String,
-                    String,
-                    String,
-                    String,
-                    String,
-                    String,
-                    Option[String],
-                    Option[String],
-                    Option[String],
-                    Option[String],
-                    String,
-                    Instant,
-                    Long)])
+            """.as[
+            (
+                String,
+                String,
+                String,
+                String,
+                String,
+                String,
+                Option[String],
+                Option[String],
+                Option[String],
+                Option[String],
+                String,
+                Instant,
+                Long
+            )
+          ]
+        )
       } yield Json.toJson(tuples.map(formatTimespanTuple))
     }
 
   private def formatTimespanTuple(
-      tuple: (String,
-              String,
-              String,
-              String,
-              String,
-              String,
-              Option[String],
-              Option[String],
-              Option[String],
-              Option[String],
-              String,
-              Instant,
-              Long)) =
+      tuple: (
+          String,
+          String,
+          String,
+          String,
+          String,
+          String,
+          Option[String],
+          Option[String],
+          Option[String],
+          Option[String],
+          String,
+          Instant,
+          Long
+      )
+  ) =
     Json.obj(
       "userId" -> tuple._1,
       "userEmail" -> tuple._2,
@@ -194,12 +208,14 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     if (projectIds.isEmpty) q"TRUE" // Query did not filter by project, include all
     else q"p._id IN ${SqlToken.tupleFromList(projectIds)}"
 
-  def timeOverview(start: Instant,
-                   end: Instant,
-                   users: List[ObjectId],
-                   annotationTypes: List[AnnotationType],
-                   annotationStates: List[AnnotationState],
-                   projectIds: List[ObjectId]): Fox[List[JsObject]] =
+  def timeOverview(
+      start: Instant,
+      end: Instant,
+      users: List[ObjectId],
+      annotationTypes: List[AnnotationType],
+      annotationStates: List[AnnotationState],
+      projectIds: List[ObjectId]
+  ): Fox[List[JsObject]] =
     if (users.isEmpty || annotationTypes.isEmpty) Fox.successful(List.empty)
     else {
       val projectQuery = projectIdsFilterQuery(projectIds)
@@ -245,11 +261,12 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(
         q"""INSERT INTO webknossos.timespans(_id, _user, _annotation, time, lastUpdate, numberOfUpdates, created, isDeleted)
                 VALUES(${t._id}, ${t._user}, ${t._annotation}, ${t.time}, ${t.lastUpdate},
-                ${t.numberOfUpdates}, ${t.created}, ${t.isDeleted})""".asUpdate)
+                ${t.numberOfUpdates}, ${t.created}, ${t.isDeleted})""".asUpdate
+      )
     } yield ()
 
   def updateOne(t: TimeSpan): Fox[Unit] =
-    for { //note that t.created is skipped
+    for { // note that t.created is skipped
       _ <- run(q"""UPDATE webknossos.timespans
                    SET
                     _user = ${t._user},

@@ -22,11 +22,13 @@ trait WKWDataFormatHelper {
     path match {
       case CubeRx(_, magStr, z, y, x) =>
         Vec3Int.fromMagLiteral(magStr, allowScalar = true).map { mag =>
-          BucketPosition(x.toInt * mag.x * DataLayer.bucketLength,
-                         y.toInt * mag.y * DataLayer.bucketLength,
-                         z.toInt * mag.z * DataLayer.bucketLength,
-                         mag,
-                         None)
+          BucketPosition(
+            x.toInt * mag.x * DataLayer.bucketLength,
+            y.toInt * mag.y * DataLayer.bucketLength,
+            z.toInt * mag.z * DataLayer.bucketLength,
+            mag,
+            None
+          )
         }
       case _ =>
         None

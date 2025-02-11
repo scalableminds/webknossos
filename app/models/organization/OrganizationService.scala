@@ -18,16 +18,18 @@ import utils.WkConf
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
-                                    multiUserDAO: MultiUserDAO,
-                                    userDAO: UserDAO,
-                                    teamDAO: TeamDAO,
-                                    dataStoreDAO: DataStoreDAO,
-                                    folderDAO: FolderDAO,
-                                    folderService: FolderService,
-                                    userService: UserService,
-                                    rpc: RPC,
-                                    conf: WkConf)(implicit ec: ExecutionContext)
+class OrganizationService @Inject() (
+    organizationDAO: OrganizationDAO,
+    multiUserDAO: MultiUserDAO,
+    userDAO: UserDAO,
+    teamDAO: TeamDAO,
+    dataStoreDAO: DataStoreDAO,
+    folderDAO: FolderDAO,
+    folderService: FolderService,
+    userService: UserService,
+    rpc: RPC,
+    conf: WkConf
+)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 
@@ -50,24 +52,24 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
       ownerBox <- userDAO.findOwnerByOrg(organization._id).futureBox
       ownerNameOpt = ownerBox.toOption.map(o => s"${o.firstName} ${o.lastName}")
-    } yield
-      Json.obj(
-        "id" -> organization._id,
-        "name" -> organization._id, // Included for backwards compatibility
-        "additionalInformation" -> organization.additionalInformation,
-        "enableAutoVerify" -> organization.enableAutoVerify,
-        "name" -> organization.name,
-        "pricingPlan" -> organization.pricingPlan,
-        "paidUntil" -> organization.paidUntil,
-        "includedUsers" -> organization.includedUsers,
-        "includedStorageBytes" -> organization.includedStorageBytes,
-        "usedStorageBytes" -> usedStorageBytes,
-        "ownerName" -> ownerNameOpt
-      ) ++ adminOnlyInfo
+    } yield Json.obj(
+      "id" -> organization._id,
+      "name" -> organization._id, // Included for backwards compatibility
+      "additionalInformation" -> organization.additionalInformation,
+      "enableAutoVerify" -> organization.enableAutoVerify,
+      "name" -> organization.name,
+      "pricingPlan" -> organization.pricingPlan,
+      "paidUntil" -> organization.paidUntil,
+      "includedUsers" -> organization.includedUsers,
+      "includedStorageBytes" -> organization.includedStorageBytes,
+      "usedStorageBytes" -> usedStorageBytes,
+      "ownerName" -> ownerNameOpt
+    ) ++ adminOnlyInfo
   }
 
-  def findOneByInviteByIdOrDefault(inviteOpt: Option[Invite], organizationIdOpt: Option[String])(
-      implicit ctx: DBAccessContext): Fox[Organization] =
+  def findOneByInviteByIdOrDefault(inviteOpt: Option[Invite], organizationIdOpt: Option[String])(implicit
+      ctx: DBAccessContext
+  ): Fox[Organization] =
     inviteOpt match {
       case Some(invite) => organizationDAO.findOne(invite._organization)
       case None =>
@@ -86,7 +88,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
   def assertMayCreateOrganization(requestingUser: Option[User]): Fox[Unit] = {
     val activatedInConfig = bool2Fox(conf.Features.isWkorgInstance) ?~> "allowOrganizationCreation.notEnabled"
     val userIsSuperUser = requestingUser.toFox.flatMap(user =>
-      multiUserDAO.findOne(user._multiUser)(GlobalAccessContext).flatMap(multiUser => bool2Fox(multiUser.isSuperUser)))
+      multiUserDAO.findOne(user._multiUser)(GlobalAccessContext).flatMap(multiUser => bool2Fox(multiUser.isSuperUser))
+    )
 
     // If at least one of the conditions is fulfilled, success is returned.
     Fox
@@ -110,8 +113,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         .replaceAll(" ", "_")
       existingOrganization <- organizationDAO.findOne(organizationId)(GlobalAccessContext).futureBox
       _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.id.alreadyInUse"
-      initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
-      else (PricingPlan.Custom, None, None)
+      initialPricingParameters =
+        if (conf.Features.isWkorgInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
+        else (PricingPlan.Custom, None, None)
       organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName, JsArray.empty)
 
       organization = Organization(
@@ -144,17 +148,21 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     } yield ()
   }
 
-  def assertUsersCanBeAdded(organizationId: String, usersToAddCount: Int = 1)(implicit ctx: DBAccessContext,
-                                                                              ec: ExecutionContext): Fox[Unit] =
+  def assertUsersCanBeAdded(organizationId: String, usersToAddCount: Int = 1)(implicit
+      ctx: DBAccessContext,
+      ec: ExecutionContext
+  ): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(organizationId)
       userCount <- userDAO.countAllForOrganization(organizationId)
       _ <- Fox.runOptional(organization.includedUsers)(includedUsers =>
-        bool2Fox(userCount + usersToAddCount <= includedUsers))
+        bool2Fox(userCount + usersToAddCount <= includedUsers)
+      )
     } yield ()
 
-  private def fallbackOnOwnerEmail(possiblyEmptyEmail: String, organization: Organization)(
-      implicit ctx: DBAccessContext): Fox[String] =
+  private def fallbackOnOwnerEmail(possiblyEmptyEmail: String, organization: Organization)(implicit
+      ctx: DBAccessContext
+  ): Fox[String] =
     if (possiblyEmptyEmail.nonEmpty) {
       Fox.successful(possiblyEmptyEmail)
     } else {
@@ -167,8 +175,10 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
   def newUserMailRecipient(organization: Organization)(implicit ctx: DBAccessContext): Fox[String] =
     fallbackOnOwnerEmail(organization.newUserMailingList, organization)
 
-  def acceptTermsOfService(organizationId: String, version: Int)(implicit ctx: DBAccessContext,
-                                                                 m: MessagesProvider): Fox[Unit] =
+  def acceptTermsOfService(organizationId: String, version: Int)(implicit
+      ctx: DBAccessContext,
+      m: MessagesProvider
+  ): Fox[Unit] =
     for {
       _ <- bool2Fox(conf.WebKnossos.TermsOfService.enabled) ?~> "termsOfService.notEnabled"
       requiredVersion = conf.WebKnossos.TermsOfService.version

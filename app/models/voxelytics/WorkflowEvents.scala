@@ -8,42 +8,46 @@ trait WorkflowEvent {}
 
 case class RunStateChangeEvent(state: VoxelyticsRunState, timestamp: Instant) extends WorkflowEvent
 
-case class TaskStateChangeEvent(taskName: String,
-                                state: VoxelyticsRunState,
-                                timestamp: Instant,
-                                artifacts: Map[String, WorkflowDescriptionArtifact])
-    extends WorkflowEvent
+case class TaskStateChangeEvent(
+    taskName: String,
+    state: VoxelyticsRunState,
+    timestamp: Instant,
+    artifacts: Map[String, WorkflowDescriptionArtifact]
+) extends WorkflowEvent
 
-case class ChunkStateChangeEvent(taskName: String,
-                                 executionId: String,
-                                 chunkName: String,
-                                 timestamp: Instant,
-                                 state: VoxelyticsRunState)
-    extends WorkflowEvent
+case class ChunkStateChangeEvent(
+    taskName: String,
+    executionId: String,
+    chunkName: String,
+    timestamp: Instant,
+    state: VoxelyticsRunState
+) extends WorkflowEvent
 
 case class RunHeartbeatEvent(timestamp: Instant) extends WorkflowEvent
 
-case class ChunkProfilingEvent(taskName: String,
-                               executionId: String,
-                               chunkName: String,
-                               hostname: String,
-                               pid: Long,
-                               memory: Double,
-                               cpuUser: Double,
-                               cpuSystem: Double,
-                               timestamp: Instant)
-    extends WorkflowEvent
+case class ChunkProfilingEvent(
+    taskName: String,
+    executionId: String,
+    chunkName: String,
+    hostname: String,
+    pid: Long,
+    memory: Double,
+    cpuUser: Double,
+    cpuSystem: Double,
+    timestamp: Instant
+) extends WorkflowEvent
 
-case class ArtifactFileChecksumEvent(taskName: String,
-                                     artifactName: String,
-                                     path: String,
-                                     resolvedPath: String,
-                                     checksumMethod: String,
-                                     checksum: String,
-                                     fileSize: Long,
-                                     lastModified: Instant,
-                                     timestamp: Instant)
-    extends WorkflowEvent
+case class ArtifactFileChecksumEvent(
+    taskName: String,
+    artifactName: String,
+    path: String,
+    resolvedPath: String,
+    checksumMethod: String,
+    checksum: String,
+    fileSize: Long,
+    lastModified: Instant,
+    timestamp: Instant
+) extends WorkflowEvent
 
 object RunStateChangeEvent {
   implicit val jsonFormat: OFormat[RunStateChangeEvent] = Json.format[RunStateChangeEvent]

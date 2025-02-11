@@ -19,7 +19,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import com.scalableminds.util.tools.JsonHelper
 
-trait KeyValueStoreImplicits /*extends BoxImplicits */{
+trait KeyValueStoreImplicits /*extends BoxImplicits */ {
 
   implicit def stringToByteArray(s: String): Array[Byte] = s.toCharArray.toIndexedSeq.map((c: Char) => c.toByte).toArray
 
@@ -31,8 +31,9 @@ trait KeyValueStoreImplicits /*extends BoxImplicits */{
 
   implicit def toProtoBytes[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
 
-  implicit def fromProtoBytes[T <: GeneratedMessage](a: Array[Byte])(
-      implicit companion: GeneratedMessageCompanion[T]): Box[T] = tryo(companion.parseFrom(a))
+  implicit def fromProtoBytes[T <: GeneratedMessage](a: Array[Byte])(implicit
+      companion: GeneratedMessageCompanion[T]
+  ): Box[T] = tryo(companion.parseFrom(a))
 }
 
 case class VersionedKey(key: String, version: Long)
@@ -42,9 +43,11 @@ case class VersionedKeyValuePair[T](versionedKey: VersionedKey, value: T) {
   def version: Long = versionedKey.version
 }
 
-class FossilDBClient(collection: String,
-                     config: TracingStoreConfig,
-                     slackNotificationService: TSSlackNotificationService)(implicit ec: ExecutionContext)
+class FossilDBClient(
+    collection: String,
+    config: TracingStoreConfig,
+    slackNotificationService: TSSlackNotificationService
+)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
   private val address = config.Tracingstore.Fossildb.address
@@ -59,7 +62,8 @@ class FossilDBClient(collection: String,
   def checkHealth(verbose: Boolean = false): Fox[Unit] = {
     val resultFox = for {
       reply: HealthCheckResponse <- wrapException(
-        Grpc.guavaFuture2ScalaFuture(healthStub.check(HealthCheckRequest.getDefaultInstance)))
+        Grpc.guavaFuture2ScalaFuture(healthStub.check(HealthCheckRequest.getDefaultInstance))
+      )
       replyString = reply.getStatus.toString
       _ <- bool2Fox(replyString == "SERVING") ?~> replyString
       _ = if (verbose)
@@ -95,19 +99,26 @@ class FossilDBClient(collection: String,
               messageWithCauses.append(cause.toString)
               cause = cause.getCause
             }
-            new com.scalableminds.util.tools.Failure(s"Request to FossilDB failed: ${messageWithCauses}", Full(e), Empty)
+            new com.scalableminds.util.tools.Failure(
+              s"Request to FossilDB failed: ${messageWithCauses}",
+              Full(e),
+              Empty
+            )
         }
         Future.successful(box)
     }
 
-  private def assertSuccess(success: Boolean,
-                            errorMessage: Option[String],
-                            mayBeEmpty: Option[Boolean] = None): Fox[Unit] =
+  private def assertSuccess(
+      success: Boolean,
+      errorMessage: Option[String],
+      mayBeEmpty: Option[Boolean] = None
+  ): Fox[Unit] =
     if (mayBeEmpty.getOrElse(false) && errorMessage.contains("No such element")) Fox.empty
     else bool2Fox(success) ?~> errorMessage.getOrElse("")
 
-  def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(
-      implicit fromByteArray: Array[Byte] => Box[T]): Fox[VersionedKeyValuePair[T]] =
+  def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(implicit
+      fromByteArray: Array[Byte] => Box[T]
+  ): Fox[VersionedKeyValuePair[T]] =
     for {
       reply <- wrapException(stub.get(GetRequest(collection, key, version, mayBeEmpty)))
       _ <- assertSuccess(reply.success, reply.errorMessage, mayBeEmpty)
@@ -115,24 +126,30 @@ class FossilDBClient(collection: String,
         .map(VersionedKeyValuePair(VersionedKey(key, reply.actualVersion), _))
     } yield result
 
-  def getVersion(key: String,
-                 version: Option[Long] = None,
-                 mayBeEmpty: Option[Boolean] = None,
-                 emptyFallback: Option[Long] = None): Fox[Long] =
+  def getVersion(
+      key: String,
+      version: Option[Long] = None,
+      mayBeEmpty: Option[Boolean] = None,
+      emptyFallback: Option[Long] = None
+  ): Fox[Long] =
     for {
       reply <- wrapException(stub.get(GetRequest(collection, key, version, mayBeEmpty)))
-      result <- if (reply.success)
-        Fox.successful(reply.actualVersion)
-      else if (mayBeEmpty.contains(true) && emptyFallback.isDefined && reply.errorMessage.contains("No such element")) {
-        emptyFallback.toFox
-      } else Fox.failure(s"Could not get from FossilDB: ${reply.errorMessage.getOrElse("")}")
+      result <-
+        if (reply.success)
+          Fox.successful(reply.actualVersion)
+        else if (
+          mayBeEmpty.contains(true) && emptyFallback.isDefined && reply.errorMessage.contains("No such element")
+        ) {
+          emptyFallback.toFox
+        } else Fox.failure(s"Could not get from FossilDB: ${reply.errorMessage.getOrElse("")}")
     } yield result
 
   def getMultipleKeys[T](
       startAfterKey: Option[String],
       prefix: Option[String],
       version: Option[Long] = None,
-      limit: Option[Int] = None)(implicit fromByteArray: Array[Byte] => Box[T]): List[VersionedKeyValuePair[T]] = {
+      limit: Option[Int] = None
+  )(implicit fromByteArray: Array[Byte] => Box[T]): List[VersionedKeyValuePair[T]] = {
     def flatCombineTuples[A, B, C](keys: List[A], versions: List[B], values: List[Box[C]]) = {
       val boxTuples: List[Box[(A, B, C)]] = keys.zip(versions).zip(values).map {
         case ((k, v), Full(value)) => Full(k, v, value)
@@ -152,7 +169,8 @@ class FossilDBClient(collection: String,
   }
 
   def getMultipleVersions[T](key: String, newestVersion: Option[Long] = None, oldestVersion: Option[Long] = None)(
-      implicit fromByteArray: Array[Byte] => Box[T]): Fox[List[T]] =
+      implicit fromByteArray: Array[Byte] => Box[T]
+  ): Fox[List[T]] =
     for {
       versionValueTuples <- getMultipleVersionsAsVersionValueTuple(key, newestVersion, oldestVersion)
     } yield versionValueTuples.map(_._2)
@@ -160,10 +178,12 @@ class FossilDBClient(collection: String,
   def getMultipleVersionsAsVersionValueTuple[T](
       key: String,
       newestVersion: Option[Long] = None,
-      oldestVersion: Option[Long] = None)(implicit fromByteArray: Array[Byte] => Box[T]): Fox[List[(Long, T)]] =
+      oldestVersion: Option[Long] = None
+  )(implicit fromByteArray: Array[Byte] => Box[T]): Fox[List[(Long, T)]] =
     (for {
       reply <- wrapException(
-        stub.getMultipleVersions(GetMultipleVersionsRequest(collection, key, newestVersion, oldestVersion)))
+        stub.getMultipleVersions(GetMultipleVersionsRequest(collection, key, newestVersion, oldestVersion))
+      )
       _ <- assertSuccess(reply.success, reply.errorMessage)
       parsedValues: List[Box[T]] = reply.values.map { v =>
         fromByteArray(v.toByteArray)

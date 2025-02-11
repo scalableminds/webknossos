@@ -55,12 +55,13 @@ object Project {
 
 }
 
-class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class ProjectDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Project, ProjectsRow, Projects](sqlClient) {
-  protected val collection = Projects
 
+  protected val collection = Projects
   protected def idColumn(x: Projects): Rep[String] = x._Id
   protected def isDeletedColumn(x: Projects): Rep[Boolean] = x.isdeleted
+  protected def getResult = GetResultProjectsRow
 
   protected def parse(r: ProjectsRow): Fox[Project] =
     Fox.successful(
@@ -75,7 +76,8 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.isblacklistedfromreport,
         Instant.fromSql(r.created),
         r.isdeleted
-      ))
+      )
+    )
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""(_team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId))
@@ -179,25 +181,23 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     deleteOneWithNameSuffix(projectId)
 }
 
-class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userService: UserService, taskDAO: TaskDAO)(
-    implicit ec: ExecutionContext)
-    extends LazyLogging
+class ProjectService @Inject() (projectDAO: ProjectDAO, teamDAO: TeamDAO, userService: UserService, taskDAO: TaskDAO)(
+    implicit ec: ExecutionContext
+) extends LazyLogging
     with FoxImplicits {
 
   def deleteOne(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] = {
     val futureFox: Future[Fox[Boolean]] = for {
       removalSuccessBox <- projectDAO.deleteOne(projectId).futureBox
-    } yield {
-      removalSuccessBox match {
-        case Full(_) =>
-          for {
-            _ <- taskDAO.removeAllWithProjectAndItsAnnotations(projectId)
-            _ = logger.info(s"Project $projectId was deleted.")
-          } yield true
-        case _ =>
-          logger.warn(s"Tried to remove project $projectId without permission.")
-          Fox.successful(false)
-      }
+    } yield removalSuccessBox match {
+      case Full(_) =>
+        for {
+          _ <- taskDAO.removeAllWithProjectAndItsAnnotations(projectId)
+          _ = logger.info(s"Project $projectId was deleted.")
+        } yield true
+      case _ =>
+        logger.warn(s"Tried to remove project $projectId without permission.")
+        Fox.successful(false)
     }
     futureFox.toFox.flatten
   }
@@ -206,27 +206,24 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
     for {
       owner <- userService.findOneCached(project._owner).flatMap(u => userService.compactWrites(u)).futureBox
       teamNameOpt <- teamDAO.findOne(project._team)(GlobalAccessContext).map(_.name).toFutureOption
-    } yield {
-      Json.obj(
-        "name" -> project.name,
-        "team" -> project._team.toString,
-        "teamName" -> teamNameOpt,
-        "owner" -> owner.toOption,
-        "priority" -> project.priority,
-        "paused" -> project.paused,
-        "expectedTime" -> project.expectedTime,
-        "isBlacklistedFromReport" -> project.isBlacklistedFromReport,
-        "id" -> project._id.toString,
-        "created" -> project.created
-      )
-    }
+    } yield Json.obj(
+      "name" -> project.name,
+      "team" -> project._team.toString,
+      "teamName" -> teamNameOpt,
+      "owner" -> owner.toOption,
+      "priority" -> project.priority,
+      "paused" -> project.paused,
+      "expectedTime" -> project.expectedTime,
+      "isBlacklistedFromReport" -> project.isBlacklistedFromReport,
+      "id" -> project._id.toString,
+      "created" -> project.created
+    )
 
-  def publicWritesWithStatus(project: Project, pendingInstances: Long, tracingTime: Long)(
-      implicit ctx: DBAccessContext): Fox[JsObject] =
+  def publicWritesWithStatus(project: Project, pendingInstances: Long, tracingTime: Long)(implicit
+      ctx: DBAccessContext
+  ): Fox[JsObject] =
     for {
       projectJson <- publicWrites(project)
-    } yield {
-      projectJson ++ Json.obj("pendingInstances" -> JsNumber(pendingInstances), "tracingTime" -> tracingTime)
-    }
+    } yield projectJson ++ Json.obj("pendingInstances" -> JsNumber(pendingInstances), "tracingTime" -> tracingTime)
 
 }

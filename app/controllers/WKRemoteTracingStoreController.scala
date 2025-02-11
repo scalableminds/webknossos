@@ -29,22 +29,22 @@ import utils.WkConf
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStoreService,
-                                               wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                                               timeSpanService: TimeSpanService,
-                                               datasetService: DatasetService,
-                                               organizationDAO: OrganizationDAO,
-                                               userDAO: UserDAO,
-                                               annotationInformationProvider: AnnotationInformationProvider,
-                                               analyticsService: AnalyticsService,
-                                               annotationService: AnnotationService,
-                                               datasetDAO: DatasetDAO,
-                                               annotationDAO: AnnotationDAO,
-                                               annotationLayerDAO: AnnotationLayerDAO,
-                                               wkConf: WkConf,
-                                               tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore)(
-    implicit ec: ExecutionContext,
-    playBodyParsers: PlayBodyParsers)
+class WKRemoteTracingStoreController @Inject() (
+    tracingStoreService: TracingStoreService,
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+    timeSpanService: TimeSpanService,
+    datasetService: DatasetService,
+    organizationDAO: OrganizationDAO,
+    userDAO: UserDAO,
+    annotationInformationProvider: AnnotationInformationProvider,
+    analyticsService: AnalyticsService,
+    annotationService: AnnotationService,
+    datasetDAO: DatasetDAO,
+    annotationDAO: AnnotationDAO,
+    annotationLayerDAO: AnnotationLayerDAO,
+    wkConf: WkConf,
+    tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore
+)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -66,12 +66,14 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           layerIdsToUpdate = existingLayerIds.intersect(newLayerIds)
           layerIdsToInsert = newLayerIds.diff(existingLayerIds)
           _ <- Fox.serialCombined(layerIdsToDelete.toList)(
-            annotationLayerDAO.deleteOneByTracingId(annotationIdValidated, _))
+            annotationLayerDAO.deleteOneByTracingId(annotationIdValidated, _)
+          )
           _ <- Fox.serialCombined(newLayersProto.filter(l => layerIdsToInsert.contains(l.tracingId))) { layerProto =>
             annotationLayerDAO.insertOne(annotationIdValidated, AnnotationLayer.fromProto(layerProto))
           }
           _ <- Fox.serialCombined(newLayersProto.filter(l => layerIdsToUpdate.contains(l.tracingId)))(l =>
-            annotationLayerDAO.updateName(annotationIdValidated, l.tracingId, l.name))
+            annotationLayerDAO.updateName(annotationIdValidated, l.tracingId, l.name)
+          )
           // Layer stats are ignored here, they are sent eagerly when saving updates
           _ <- annotationDAO.updateDescription(annotationIdValidated, request.body.description)
         } yield Ok
@@ -90,11 +92,14 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           _ <- annotationDAO.updateModified(annotation._id, Instant.now)
           _ = report.statistics.map(statistics => annotationService.updateStatistics(annotation._id, statistics))
           userBox <- bearerTokenService.userForTokenOpt(report.userToken).futureBox
-          trackTime = report.significantChangesCount > 0 || !wkConf.WebKnossos.User.timeTrackingOnlyWithSignificantChanges
+          trackTime =
+            report.significantChangesCount > 0 || !wkConf.WebKnossos.User.timeTrackingOnlyWithSignificantChanges
           _ <- Fox.runOptional(userBox)(user =>
-            Fox.runIf(trackTime)(timeSpanService.logUserInteraction(report.timestamps, user, annotation)))
+            Fox.runIf(trackTime)(timeSpanService.logUserInteraction(report.timestamps, user, annotation))
+          )
           _ <- Fox.runOptional(userBox)(user =>
-            Fox.runIf(user._id != annotation._user)(annotationDAO.addContributor(annotation._id, user._id)))
+            Fox.runIf(user._id != annotation._user)(annotationDAO.addContributor(annotation._id, user._id))
+          )
           _ = userBox.map { user =>
             userDAO.updateLastActivity(user._id)
             if (report.significantChangesCount > 0) {
@@ -120,7 +125,9 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           case Some(dataSource) => Fox.successful(Ok(Json.toJson(dataSource)))
           case None =>
             for {
-              annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
+              annotation <- annotationInformationProvider.annotationForTracing(
+                tracingId
+              ) ?~> s"No annotation for tracing $tracingId"
               dataset <- datasetDAO.findOne(annotation._dataset)
               dataSource <- datasetService.dataSourceFor(dataset)
             } yield Ok(Json.toJson(dataSource))
@@ -133,7 +140,9 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
+          annotation <- annotationInformationProvider.annotationForTracing(
+            tracingId
+          ) ?~> s"No annotation for tracing $tracingId"
           dataset <- datasetDAO.findOne(annotation._dataset)
           organization <- organizationDAO.findOne(dataset._organization)
         } yield Ok(Json.toJson(DataSourceId(dataset.directoryName, organization._id)))
@@ -148,16 +157,20 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           Fox.successful(Ok(Json.toJson(ObjectId.dummyId)))
         } else {
           for {
-            annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
+            annotation <- annotationInformationProvider.annotationForTracing(
+              tracingId
+            ) ?~> s"No annotation for tracing $tracingId"
           } yield Ok(Json.toJson(annotation._id))
         }
       }
     }
 
-  def dataStoreUriForDataset(name: String,
-                             key: String,
-                             organizationId: Option[String],
-                             datasetDirectory: String): Action[AnyContent] =
+  def dataStoreUriForDataset(
+      name: String,
+      key: String,
+      organizationId: Option[String],
+      datasetDirectory: String
+  ): Action[AnyContent] =
     Action.async { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
@@ -165,18 +178,21 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           organizationIdWithFallback <- Fox.fillOption(organizationId) {
             datasetDAO.getOrganizationIdForDataset(datasetDirectory)(GlobalAccessContext)
           } ?~> Messages("dataset.noAccess", datasetDirectory) ~> FORBIDDEN
-          dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectory, organizationIdWithFallback) ?~> Messages(
-            "dataset.noAccess",
-            datasetDirectory) ~> FORBIDDEN
+          dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(
+            datasetDirectory,
+            organizationIdWithFallback
+          ) ?~> Messages("dataset.noAccess", datasetDirectory) ~> FORBIDDEN
           dataStore <- datasetService.dataStoreFor(dataset)
         } yield Ok(Json.toJson(dataStore.url))
       }
     }
 
-  def createTracing(name: String,
-                    key: String,
-                    annotationId: String,
-                    previousVersion: Long): Action[AnnotationLayerParameters] =
+  def createTracing(
+      name: String,
+      key: String,
+      annotationId: String,
+      previousVersion: Long
+  ): Action[AnnotationLayerParameters] =
     Action.async(validateJson[AnnotationLayerParameters]) { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
@@ -184,11 +200,13 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           annotationIdValidated <- ObjectId.fromString(annotationId)
           annotation <- annotationDAO.findOne(annotationIdValidated) ?~> "annotation.notFound"
           dataset <- datasetDAO.findOne(annotation._dataset)
-          tracingEither <- annotationService.createTracingForExplorational(dataset,
-                                                                           request.body,
-                                                                           Some(annotation._id),
-                                                                           annotation.annotationLayers,
-                                                                           Some(previousVersion))
+          tracingEither <- annotationService.createTracingForExplorational(
+            dataset,
+            request.body,
+            Some(annotation._id),
+            annotation.annotationLayers,
+            Some(previousVersion)
+          )
           tracing: GeneratedMessage = tracingEither match {
             case Left(s: SkeletonTracing) => s
             case Right(v: VolumeTracing)  => v

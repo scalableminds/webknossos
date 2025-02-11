@@ -37,19 +37,21 @@ object RpcTokenHolder {
   lazy val webknossosToken: String = RandomIDGenerator.generateBlocking()
 }
 
-class UserTokenController @Inject()(datasetDAO: DatasetDAO,
-                                    datasetService: DatasetService,
-                                    annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
-                                    userService: UserService,
-                                    organizationDAO: OrganizationDAO,
-                                    annotationInformationProvider: AnnotationInformationProvider,
-                                    annotationStore: AnnotationStore,
-                                    dataStoreService: DataStoreService,
-                                    tracingStoreService: TracingStoreService,
-                                    jobDAO: JobDAO,
-                                    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                                    conf: WkConf,
-                                    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+class UserTokenController @Inject() (
+    datasetDAO: DatasetDAO,
+    datasetService: DatasetService,
+    annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
+    userService: UserService,
+    organizationDAO: OrganizationDAO,
+    annotationInformationProvider: AnnotationInformationProvider,
+    annotationStore: AnnotationStore,
+    dataStoreService: DataStoreService,
+    tracingStoreService: TracingStoreService,
+    jobDAO: JobDAO,
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+    conf: WkConf,
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   private val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
@@ -85,8 +87,9 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
        - a user token (allow what that user may do)
        - a dataset sharing token (allow seeing dataset / annotations that token belongs to)
    */
-  private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
-      implicit ec: ExecutionContext): Fox[Result] =
+  private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(implicit
+      ec: ExecutionContext
+  ): Fox[Result] =
     if (token.contains(RpcTokenHolder.webknossosToken)) {
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
@@ -108,19 +111,19 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
       } yield Ok(Json.toJson(answer))
     }
 
-  private def handleDataSourceAccess(dataSourceId: DataSourceId, mode: AccessMode, userBox: Box[User])(
-      implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
+  private def handleDataSourceAccess(dataSourceId: DataSourceId, mode: AccessMode, userBox: Box[User])(implicit
+      ctx: DBAccessContext
+  ): Fox[UserAccessAnswer] = {
     // Write access is explicitly handled here depending on userBox,
     // Read access is ensured in findOneBySourceName, depending on the implicit DBAccessContext (to allow sharingTokens)
 
     def tryRead: Fox[UserAccessAnswer] =
       for {
         dataSourceBox <- datasetDAO.findOneByDataSourceId(dataSourceId).futureBox
-      } yield
-        dataSourceBox match {
-          case Full(_) => UserAccessAnswer(granted = true)
-          case _       => UserAccessAnswer(granted = false, Some("No read access on dataset"))
-        }
+      } yield dataSourceBox match {
+        case Full(_) => UserAccessAnswer(granted = true)
+        case _       => UserAccessAnswer(granted = false, Some("No read access on dataset"))
+      }
 
     def tryWrite: Fox[UserAccessAnswer] =
       for {
@@ -134,9 +137,10 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
         case Full(user) =>
           for {
             // if dataSourceId is empty, the request asks if the user may administrate in *any* (i.e. their own) organization
-            relevantOrganization <- if (dataSourceId.organizationId.isEmpty)
-              Fox.successful(user._organization)
-            else organizationDAO.findOne(dataSourceId.organizationId).map(_._id)
+            relevantOrganization <-
+              if (dataSourceId.organizationId.isEmpty)
+                Fox.successful(user._organization)
+              else organizationDAO.findOne(dataSourceId.organizationId).map(_._id)
             isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, relevantOrganization)
           } yield UserAccessAnswer(isTeamManagerOrAdmin || user.isDatasetManager)
         case _ => Fox.successful(UserAccessAnswer(granted = false, Some("invalid access token")))
@@ -158,22 +162,28 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     }
   }
 
-  private def handleTracingAccess(tracingId: String,
-                                  mode: AccessMode,
-                                  userBox: Box[User],
-                                  token: Option[String]): Fox[UserAccessAnswer] =
+  private def handleTracingAccess(
+      tracingId: String,
+      mode: AccessMode,
+      userBox: Box[User],
+      token: Option[String]
+  ): Fox[UserAccessAnswer] =
     if (tracingId == TracingId.dummy)
       Fox.successful(UserAccessAnswer(granted = true))
     else
       for {
-        annotation <- annotationInformationProvider.annotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
+        annotation <- annotationInformationProvider.annotationForTracing(tracingId)(
+          GlobalAccessContext
+        ) ?~> "annotation.notFound"
         result <- handleAnnotationAccess(annotation._id.toString, mode, userBox, token)
       } yield result
 
-  private def handleAnnotationAccess(annotationId: String,
-                                     mode: AccessMode,
-                                     userBox: Box[User],
-                                     token: Option[String]): Fox[UserAccessAnswer] = {
+  private def handleAnnotationAccess(
+      annotationId: String,
+      mode: AccessMode,
+      userBox: Box[User],
+      token: Option[String]
+  ): Fox[UserAccessAnswer] = {
     // Access is explicitly checked by userBox, not by DBAccessContext, as there is no token sharing for annotations
     // Optionally, an accessToken can be provided which explicitly looks up the read right the private link table
 
@@ -202,13 +212,13 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
           .futureBox
         allowedByToken = annotationAccessByToken.exists(annotation._id == _._annotation)
         restrictions <- annotationInformationProvider.restrictionsFor(
-          AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
+          AnnotationIdentifier(annotation.typ, annotation._id)
+        )(GlobalAccessContext) ?~> "restrictions.notFound"
         allowedByUser <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
         allowed = allowedByToken || allowedByUser
-      } yield {
+      } yield
         if (allowed) UserAccessAnswer(granted = true)
         else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
-      }
     }
   }
 

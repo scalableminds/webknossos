@@ -22,21 +22,19 @@ case class Script(
     isDeleted: Boolean = false
 )
 
-class ScriptService @Inject()(userDAO: UserDAO, userService: UserService) {
+class ScriptService @Inject() (userDAO: UserDAO, userService: UserService) {
 
   def publicWrites(script: Script): Fox[JsObject] = {
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
       owner <- userDAO.findOne(script._owner) ?~> "user.notFound"
       ownerJs <- userService.compactWrites(owner)
-    } yield {
-      Json.obj(
-        "id" -> script._id.toString,
-        "name" -> script.name,
-        "gist" -> script.gist,
-        "owner" -> ownerJs
-      )
-    }
+    } yield Json.obj(
+      "id" -> script._id.toString,
+      "name" -> script.name,
+      "gist" -> script.gist,
+      "owner" -> ownerJs
+    )
   }
 
   def assertValidScriptName(scriptName: String)(implicit ec: ExecutionContext): Fox[Unit] =
@@ -48,12 +46,13 @@ object Script {
     Script(ObjectId.generate, _owner, name, gist)
 }
 
-class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class ScriptDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Script, ScriptsRow, Scripts](sqlClient) {
   protected val collection = Scripts
 
   protected def idColumn(x: Scripts): Rep[String] = x._Id
   protected def isDeletedColumn(x: Scripts): Rep[Boolean] = x.isdeleted
+  protected def getResult = GetResultScriptsRow
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"(SELECT _organization FROM webknossos.users_ u WHERE u._id = _owner) = (SELECT _organization FROM webknossos.users_ u WHERE u._id = $requestingUserId)"
@@ -67,7 +66,8 @@ class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.gist,
         Instant.fromSql(r.created),
         r.isdeleted
-      ))
+      )
+    )
 
   def insertOne(s: Script): Fox[Unit] =
     for {
@@ -76,7 +76,7 @@ class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
 
   def updateOne(s: Script)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for { //note that s.created is skipped
+    for { // note that s.created is skipped
       _ <- assertUpdateAccess(s._id)
       _ <- run(q"""UPDATE webknossos.scripts
                    SET

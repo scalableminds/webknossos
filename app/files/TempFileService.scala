@@ -15,11 +15,10 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.util.Random
 
-/**
-  * Avoiding Java TemporaryFiles because of seeming openJDK regression,
-  * see discussion at https://github.com/scalableminds/webknossos/issues/6173
+/** Avoiding Java TemporaryFiles because of seeming openJDK regression, see discussion at
+  * https://github.com/scalableminds/webknossos/issues/6173
   */
-class TempFileService @Inject()(cleanUpService: CleanUpService)(implicit ec: ExecutionContext) extends LazyLogging {
+class TempFileService @Inject() (cleanUpService: CleanUpService)(implicit ec: ExecutionContext) extends LazyLogging {
 
   private val tmpDir: Path = Paths.get(System.getProperty("java.io.tmpdir")).resolve("webknossosTempFiles")
 
@@ -41,12 +40,11 @@ class TempFileService @Inject()(cleanUpService: CleanUpService)(implicit ec: Exe
 
   private def cleanUpExpiredFiles(): Fox[Unit] = {
     val now = Instant.now
-    activeTempFiles.foreach {
-      case (path, expiryTime) =>
-        if (expiryTime < now) {
-          tryo(Files.delete(path))
-          activeTempFiles.remove((path, expiryTime))
-        }
+    activeTempFiles.foreach { case (path, expiryTime) =>
+      if (expiryTime < now) {
+        tryo(Files.delete(path))
+        activeTempFiles.remove((path, expiryTime))
+      }
     }
     Fox.successful(())
   }

@@ -28,13 +28,13 @@ case class MeshInfo(
 case class MeshInfoParameters(
     annotationId: ObjectId,
     description: String,
-    position: Vec3Int,
+    position: Vec3Int
 )
 object MeshInfoParameters {
   implicit val jsonFormat: OFormat[MeshInfoParameters] = Json.format[MeshInfoParameters]
 }
 
-class MeshService @Inject()()(implicit ec: ExecutionContext) {
+class MeshService @Inject() ()(implicit ec: ExecutionContext) {
   def publicWrites(meshInfo: MeshInfo): Fox[JsObject] =
     Fox.successful(
       Json.obj(
@@ -42,7 +42,8 @@ class MeshService @Inject()()(implicit ec: ExecutionContext) {
         "annotationId" -> meshInfo._annotation.toString,
         "description" -> meshInfo.description,
         "position" -> meshInfo.position
-      ))
+      )
+    )
 
   def compactWrites(meshInfo: MeshInfo): Fox[JsObject] =
     Fox.successful(
@@ -50,16 +51,17 @@ class MeshService @Inject()()(implicit ec: ExecutionContext) {
         "id" -> meshInfo._id.toString,
         "description" -> meshInfo.description,
         "position" -> meshInfo.position
-      ))
+      )
+    )
 }
 
-class MeshDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class MeshDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[MeshInfo, MeshesRow, Meshes](sqlClient) {
   protected val collection = Meshes
 
   protected def idColumn(x: Meshes): Rep[String] = x._Id
-
   protected def isDeletedColumn(x: Meshes): Rep[Boolean] = x.isdeleted
+  protected def getResult = GetResultMeshesRow
 
   private val infoColumns = SqlToken.raw((columnsList diff Seq("data")).mkString(", "))
   type InfoTuple = (ObjectId, ObjectId, String, String, Instant, Boolean)
@@ -70,16 +72,14 @@ class MeshDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   private def parseInfo(r: InfoTuple): Fox[MeshInfo] =
     for {
       position <- Vec3Int.fromList(parseArrayLiteral(r._4).map(_.toInt)) ?~> "could not parse mesh position"
-    } yield {
-      MeshInfo(
-        r._1, //_id
-        r._2, //_annotation
-        r._3, // description
-        position,
-        r._5, //created
-        r._6 //isDeleted
-      )
-    }
+    } yield MeshInfo(
+      r._1, // _id
+      r._2, // _annotation
+      r._3, // description
+      position,
+      r._5, // created
+      r._6 // isDeleted
+    )
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[MeshInfo] =
     for {
@@ -96,8 +96,9 @@ class MeshDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                 """.asUpdate)
     } yield ()
 
-  def updateOne(id: ObjectId, annotationId: ObjectId, description: String, position: Vec3Int)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateOne(id: ObjectId, annotationId: ObjectId, description: String, position: Vec3Int)(implicit
+      ctx: DBAccessContext
+  ): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q"""UPDATE webknossos.meshes

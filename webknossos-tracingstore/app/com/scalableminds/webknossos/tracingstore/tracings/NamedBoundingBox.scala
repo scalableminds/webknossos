@@ -7,12 +7,13 @@ import com.scalableminds.webknossos.datastore.geometry.{NamedBoundingBoxProto =>
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.SkeletonUpdateActionHelper
 
-case class NamedBoundingBox(id: Int,
-                            name: Option[String],
-                            isVisible: Option[Boolean],
-                            color: Option[Color],
-                            boundingBox: BoundingBox)
-    extends ProtoGeometryImplicits
+case class NamedBoundingBox(
+    id: Int,
+    name: Option[String],
+    isVisible: Option[Boolean],
+    color: Option[Color],
+    boundingBox: BoundingBox
+) extends ProtoGeometryImplicits
     with SkeletonUpdateActionHelper {
   def toProto: ProtoBoundingBox = ProtoBoundingBox(id, name, isVisible, colorOptToProto(color), boundingBox)
 }

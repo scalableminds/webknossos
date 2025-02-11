@@ -15,27 +15,30 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
 trait SegmentIndexKeyHelper extends AdditionalCoordinateKey {
-  protected def segmentIndexKey(tracingId: String,
-                                segmentId: Long,
-                                mag: Vec3Int,
-                                additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-                                axes: Option[Seq[AdditionalAxis]]): String =
+  protected def segmentIndexKey(
+      tracingId: String,
+      segmentId: Long,
+      mag: Vec3Int,
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+      axes: Option[Seq[AdditionalAxis]]
+  ): String =
     s"$tracingId/$segmentId/${mag
-      .toMagLiteral()}${additionalCoordinatesKeyPart(additionalCoordinates.getOrElse(Seq()), axes.getOrElse(Seq()), "/")}"
+        .toMagLiteral()}${additionalCoordinatesKeyPart(additionalCoordinates.getOrElse(Seq()), axes.getOrElse(Seq()), "/")}"
 }
 
 // To introduce buffering for updating the segment-to-bucket index for a volume tracing
 // read provides fallback data from fossildb / segment index file
 // while write is done only locally in-memory, until flush is called
 // This saves a lot of db interactions (since adjacent bucket updates usually touch the same segments)
-class VolumeSegmentIndexBuffer(tracingId: String,
-                               volumeSegmentIndexClient: FossilDBClient,
-                               version: Long,
-                               remoteDatastoreClient: TSRemoteDatastoreClient,
-                               fallbackLayer: Option[RemoteFallbackLayer],
-                               additionalAxes: Option[Seq[AdditionalAxis]],
-                               tc: TokenContext)
-    extends KeyValueStoreImplicits
+class VolumeSegmentIndexBuffer(
+    tracingId: String,
+    volumeSegmentIndexClient: FossilDBClient,
+    version: Long,
+    remoteDatastoreClient: TSRemoteDatastoreClient,
+    fallbackLayer: Option[RemoteFallbackLayer],
+    additionalAxes: Option[Seq[AdditionalAxis]],
+    tc: TokenContext
+) extends KeyValueStoreImplicits
     with SegmentIndexKeyHelper
     with ProtoGeometryImplicits
     with LazyLogging {
@@ -47,19 +50,22 @@ class VolumeSegmentIndexBuffer(tracingId: String,
   private lazy val fileSegmentIndexCache: mutable.Map[String, ListOfVec3IntProto] =
     new mutable.HashMap[String, ListOfVec3IntProto]()
 
-  def put(segmentId: Long,
-          mag: Vec3Int,
-          additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-          segmentPositions: ListOfVec3IntProto): Unit =
+  def put(
+      segmentId: Long,
+      mag: Vec3Int,
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+      segmentPositions: ListOfVec3IntProto
+  ): Unit =
     segmentIndexBuffer(segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)) =
       segmentPositions
 
-  def getWithFallback(segmentId: Long,
-                      mag: Vec3Int,
-                      mappingName: Option[String],
-                      editableMappingTracingId: Option[String],
-                      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
-      implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] = {
+  def getWithFallback(
+      segmentId: Long,
+      mag: Vec3Int,
+      mappingName: Option[String],
+      editableMappingTracingId: Option[String],
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]]
+  )(implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] = {
     val key = segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)
     segmentIndexBuffer.get(key) match {
       case Some(positions) => Fox.successful(positions)
@@ -74,11 +80,13 @@ class VolumeSegmentIndexBuffer(tracingId: String,
       }
     } yield ()
 
-  private def getFallback(segmentId: Long,
-                          mag: Vec3Int,
-                          mappingName: Option[String],
-                          editableMappingTracingId: Option[String],
-                          additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit ec: ExecutionContext) = {
+  private def getFallback(
+      segmentId: Long,
+      mag: Vec3Int,
+      mappingName: Option[String],
+      editableMappingTracingId: Option[String],
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]]
+  )(implicit ec: ExecutionContext) = {
     val key = segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)
     for {
       fossilDbData <- volumeSegmentIndexClient
@@ -98,7 +106,8 @@ class VolumeSegmentIndexBuffer(tracingId: String,
       mag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
       additionalAxes: Option[Seq[AdditionalAxis]],
-      segmentIds: List[Long])(implicit ec: ExecutionContext): Fox[(List[(Long, Seq[Vec3Int])], List[Long])] = {
+      segmentIds: List[Long]
+  )(implicit ec: ExecutionContext): Fox[(List[(Long, Seq[Vec3Int])], List[Long])] = {
     var misses = List[Long]()
     var hits = List[(Long, Seq[Vec3Int])]()
     for {
@@ -111,19 +120,21 @@ class VolumeSegmentIndexBuffer(tracingId: String,
             .map(_.value)
             .fillEmpty(ListOfVec3IntProto.of(Seq()))
           wasMiss = bucketPositions.length == 0
-          _ = if (wasMiss) misses = segmentId :: misses
-          else hits = (segmentId, bucketPositions.values.map(vec3IntFromProto)) :: hits
-        } yield ())
-      _ = misses.map(
-        segmentId =>
-          fileSegmentIndexCache
-            .get(segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)) match {
-            case Some(positions) => {
-              hits = (segmentId, positions.values.map(vec3IntFromProto)) :: hits
-              misses = misses.filterNot(_ == segmentId)
-            }
-            case None => ()
-        })
+          _ =
+            if (wasMiss) misses = segmentId :: misses
+            else hits = (segmentId, bucketPositions.values.map(vec3IntFromProto)) :: hits
+        } yield ()
+      )
+      _ = misses.map(segmentId =>
+        fileSegmentIndexCache.get(
+          segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)
+        ) match {
+          case Some(positions) =>
+            hits = (segmentId, positions.values.map(vec3IntFromProto)) :: hits
+            misses = misses.filterNot(_ == segmentId)
+          case None => ()
+        }
+      )
     } yield (hits, misses)
   }
 
@@ -132,46 +143,54 @@ class VolumeSegmentIndexBuffer(tracingId: String,
       mag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]]
   ): (List[(Long, Seq[Vec3Int])], List[Long]) = {
-    val hits = segmentIds.flatMap(id => {
+    val hits = segmentIds.flatMap { id =>
       val key = segmentIndexKey(tracingId, id, mag, additionalCoordinates, additionalAxes)
       val values = segmentIndexBuffer.get(key).map(_.values.map(vec3IntFromProto))
       values match {
         case Some(positions) => Some(id, positions)
         case None            => None
       }
-    })
+    }
     val misses = segmentIds.filterNot(id => hits.exists(_._1 == id))
     (hits, misses)
   }
 
   // Get a map from segment to bucket position (e.g. an index) from all sources (buffer, fossilDB, file)
-  def getSegmentToBucketIndexMap(segmentIds: List[Long],
-                                 mag: Vec3Int,
-                                 mappingName: Option[String],
-                                 editableMappingTracingId: Option[String],
-                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
-      implicit ec: ExecutionContext): Fox[List[(Long, Seq[Vec3Int])]] =
+  def getSegmentToBucketIndexMap(
+      segmentIds: List[Long],
+      mag: Vec3Int,
+      mappingName: Option[String],
+      editableMappingTracingId: Option[String],
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]]
+  )(implicit ec: ExecutionContext): Fox[List[(Long, Seq[Vec3Int])]] =
     for {
       _ <- Fox.successful(())
 
       (bufferHits, bufferMisses) = getSegmentsFromBufferNoteMisses(segmentIds, mag, additionalCoordinates)
-      (mutableIndexHits, mutableIndexMisses) <- getSegmentsFromFossilDBNoteMisses(tracingId,
-                                                                                  mag,
-                                                                                  additionalCoordinates,
-                                                                                  additionalAxes,
-                                                                                  bufferMisses)
+      (mutableIndexHits, mutableIndexMisses) <- getSegmentsFromFossilDBNoteMisses(
+        tracingId,
+        mag,
+        additionalCoordinates,
+        additionalAxes,
+        bufferMisses
+      )
       missesSoFar = bufferMisses ++ mutableIndexMisses
       fileBucketPositions <- fallbackLayer match {
         case Some(layer) =>
           for {
-            fileBucketPositionsOpt <- Fox.runIf(missesSoFar.nonEmpty)(remoteDatastoreClient
-              .querySegmentIndexForMultipleSegments(layer, missesSoFar, mag, mappingName, editableMappingTracingId)(tc))
+            fileBucketPositionsOpt <- Fox.runIf(missesSoFar.nonEmpty)(
+              remoteDatastoreClient.querySegmentIndexForMultipleSegments(
+                layer,
+                missesSoFar,
+                mag,
+                mappingName,
+                editableMappingTracingId
+              )(tc)
+            )
             fileBucketPositions = fileBucketPositionsOpt.getOrElse(Seq())
-            _ = fileBucketPositions.map {
-              case (segmentId, positions) =>
-                fileSegmentIndexCache(
-                  segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)) =
-                  ListOfVec3IntProto(positions.map(vec3IntToProto))
+            _ = fileBucketPositions.map { case (segmentId, positions) =>
+              fileSegmentIndexCache(segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)) =
+                ListOfVec3IntProto(positions.map(vec3IntToProto))
             }
 
           } yield fileBucketPositions

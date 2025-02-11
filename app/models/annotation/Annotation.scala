@@ -63,12 +63,16 @@ case class Annotation(
 
   def skeletonTracingId(implicit ec: ExecutionContext): Fox[Option[String]] =
     for {
-      _ <- bool2Fox(annotationLayers.count(_.typ == AnnotationLayerType.Skeleton) <= 1) ?~> "annotation.multiLayers.skeleton.notImplemented"
+      _ <- bool2Fox(
+        annotationLayers.count(_.typ == AnnotationLayerType.Skeleton) <= 1
+      ) ?~> "annotation.multiLayers.skeleton.notImplemented"
     } yield annotationLayers.find(_.typ == AnnotationLayerType.Skeleton).map(_.tracingId)
 
   def volumeTracingId(implicit ec: ExecutionContext): Fox[Option[String]] =
     for {
-      _ <- bool2Fox(annotationLayers.count(_.typ == AnnotationLayerType.Volume) <= 1) ?~> "annotation.multiLayers.volume.notImplemented"
+      _ <- bool2Fox(
+        annotationLayers.count(_.typ == AnnotationLayerType.Volume) <= 1
+      ) ?~> "annotation.multiLayers.volume.notImplemented"
     } yield annotationLayers.find(_.typ == AnnotationLayerType.Volume).map(_.tracingId)
 
   def volumeAnnotationLayers: List[AnnotationLayer] = annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
@@ -77,44 +81,44 @@ case class Annotation(
 
 }
 
-case class AnnotationCompactInfo(id: ObjectId,
-                                 typ: AnnotationType.Value,
-                                 name: String,
-                                 description: String,
-                                 ownerId: ObjectId,
-                                 ownerFirstName: String,
-                                 ownerLastName: String,
-                                 othersMayEdit: Boolean,
-                                 teamIds: Seq[ObjectId],
-                                 teamNames: Seq[String],
-                                 teamOrganizationIds: Seq[String],
-                                 modified: Instant,
-                                 tags: Set[String],
-                                 state: AnnotationState.Value = Active,
-                                 isLockedByOwner: Boolean,
-                                 dataSetName: String,
-                                 visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
-                                 tracingTime: Option[Long] = None,
-                                 organization: String,
-                                 tracingIds: Seq[String],
-                                 annotationLayerNames: Seq[String],
-                                 annotationLayerTypes: Seq[String],
-                                 annotationLayerStatistics: Seq[JsObject])
+case class AnnotationCompactInfo(
+    id: ObjectId,
+    typ: AnnotationType.Value,
+    name: String,
+    description: String,
+    ownerId: ObjectId,
+    ownerFirstName: String,
+    ownerLastName: String,
+    othersMayEdit: Boolean,
+    teamIds: Seq[ObjectId],
+    teamNames: Seq[String],
+    teamOrganizationIds: Seq[String],
+    modified: Instant,
+    tags: Set[String],
+    state: AnnotationState.Value = Active,
+    isLockedByOwner: Boolean,
+    dataSetName: String,
+    visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
+    tracingTime: Option[Long] = None,
+    organization: String,
+    tracingIds: Seq[String],
+    annotationLayerNames: Seq[String],
+    annotationLayerTypes: Seq[String],
+    annotationLayerStatistics: Seq[JsObject]
+)
 
-class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionContext)
+class AnnotationLayerDAO @Inject() (SQLClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(SQLClient) {
 
   private def parse(r: AnnotationLayersRow): Fox[AnnotationLayer] =
     for {
       typ <- AnnotationLayerType.fromString(r.typ)
-    } yield {
-      AnnotationLayer(
-        r.tracingid,
-        typ,
-        r.name,
-        Json.parse(r.statistics).as[JsObject],
-      )
-    }
+    } yield AnnotationLayer(
+      r.tracingid,
+      typ,
+      r.name,
+      Json.parse(r.statistics).as[JsObject]
+    )
 
   def findAnnotationLayersFor(annotationId: ObjectId): Fox[List[AnnotationLayer]] =
     for {
@@ -135,8 +139,10 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
       _ <- run(insertOneQuery(annotationId, annotationLayer))
     } yield ()
 
-  def insertLayerQueries(annotationId: ObjectId,
-                         layers: List[AnnotationLayer]): List[SqlAction[Int, NoStream, Effect]] =
+  def insertLayerQueries(
+      annotationId: ObjectId,
+      layers: List[AnnotationLayer]
+  ): List[SqlAction[Int, NoStream, Effect]] =
     layers.map { annotationLayer =>
       insertOneQuery(annotationId, annotationLayer)
     }
@@ -201,13 +207,15 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
     } yield ()
 }
 
-class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: AnnotationLayerDAO)(
-    implicit ec: ExecutionContext)
-    extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
+class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: AnnotationLayerDAO)(implicit
+    ec: ExecutionContext
+) extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
   protected val collection = Annotations
 
   protected def idColumn(x: Annotations): Rep[String] = x._Id
   protected def isDeletedColumn(x: Annotations): Rep[Boolean] = x.isdeleted
+
+  protected def getResult = GetResultAnnotationsRow
 
   protected def parse(r: AnnotationsRow): Fox[Annotation] =
     for {
@@ -216,29 +224,27 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       viewconfigurationOpt <- Fox.runOptional(r.viewconfiguration)(JsonHelper.parseAndValidateJson[JsObject](_))
       visibility <- AnnotationVisibility.fromString(r.visibility).toFox
       annotationLayers <- annotationLayerDAO.findAnnotationLayersFor(ObjectId(r._Id))
-    } yield {
-      Annotation(
-        ObjectId(r._Id),
-        ObjectId(r._Dataset),
-        r._Task.map(ObjectId(_)),
-        ObjectId(r._Team),
-        ObjectId(r._User),
-        annotationLayers,
-        r.description,
-        visibility,
-        r.name,
-        viewconfigurationOpt,
-        state,
-        r.islockedbyowner,
-        parseArrayLiteral(r.tags).toSet,
-        r.tracingtime,
-        typ,
-        r.othersmayedit,
-        Instant.fromSql(r.created),
-        Instant.fromSql(r.modified),
-        r.isdeleted
-      )
-    }
+    } yield Annotation(
+      ObjectId(r._Id),
+      ObjectId(r._Dataset),
+      r._Task.map(ObjectId(_)),
+      ObjectId(r._Team),
+      ObjectId(r._User),
+      annotationLayers,
+      r.description,
+      visibility,
+      r.name,
+      viewconfigurationOpt,
+      state,
+      r.islockedbyowner,
+      parseArrayLiteral(r.tags).toSet,
+      r.tracingtime,
+      typ,
+      r.othersmayedit,
+      Instant.fromSql(r.created),
+      Instant.fromSql(r.modified),
+      r.isdeleted
+    )
 
   override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken =
     q"visibility = ${AnnotationVisibility.Public}"
@@ -313,11 +319,13 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       case None        => q"state != ${AnnotationState.Cancelled}"
     }
 
-  def findAllFor(userId: ObjectId,
-                 isFinished: Option[Boolean],
-                 annotationType: AnnotationType,
-                 limit: Int,
-                 pageNumber: Int = 0)(implicit ctx: DBAccessContext): Fox[List[Annotation]] = {
+  def findAllFor(
+      userId: ObjectId,
+      isFinished: Option[Boolean],
+      annotationType: AnnotationType,
+      limit: Int,
+      pageNumber: Int = 0
+  )(implicit ctx: DBAccessContext): Fox[List[Annotation]] = {
     val stateQuery = getStateQuery(isFinished)
     for {
       accessQuery <- readAccessQuery
@@ -371,31 +379,32 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     // format: on
   }
 
-  /**
-    * Find all annotations which are listable by the user specified in 'forUser'
+  /** Find all annotations which are listable by the user specified in 'forUser'
     *
     * @param isFinished
-    * If set to `true`, only finished annotations are returned. If set to `false`, only active annotations are returned.
-    * If set to `None`, all non-cancelled annotations are returned.
+    *   If set to `true`, only finished annotations are returned. If set to `false`, only active annotations are
+    *   returned. If set to `None`, all non-cancelled annotations are returned.
     * @param forUser
-    * If set, only annotations of this user are returned. If not set, all annotations are returned.
+    *   If set, only annotations of this user are returned. If not set, all annotations are returned.
     * @param filterOwnedOrShared
-    * If `true`, the function lists only annotations owned by the user or explicitly shared with them (used for the
-    * user's own dashboard). If `false`, it lists all annotations the viewer is allowed to see.
+    *   If `true`, the function lists only annotations owned by the user or explicitly shared with them (used for the
+    *   user's own dashboard). If `false`, it lists all annotations the viewer is allowed to see.
     * @param limit
-    * The maximum number of annotations to return.
+    *   The maximum number of annotations to return.
     * @param pageNumber
-    * The page number to return. The first page is 0.
+    *   The page number to return. The first page is 0.
     */
   def findAllListableExplorationals(
       isFinished: Option[Boolean],
       forUser: Option[ObjectId],
       filterOwnedOrShared: Boolean,
       limit: Int,
-      pageNumber: Int = 0)(implicit ctx: DBAccessContext): Fox[List[AnnotationCompactInfo]] =
+      pageNumber: Int = 0
+  )(implicit ctx: DBAccessContext): Fox[List[AnnotationCompactInfo]] =
     for {
-      accessQuery <- if (filterOwnedOrShared) accessQueryFromAccessQWithPrefix(listAccessQ, q"a.")
-      else accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, q"a.")
+      accessQuery <-
+        if (filterOwnedOrShared) accessQueryFromAccessQWithPrefix(listAccessQ, q"a.")
+        else accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, q"a.")
       stateQuery = getStateQuery(isFinished)
       userQuery = forUser.map(u => q"a._user = $u").getOrElse(q"TRUE")
       typQuery = q"a.typ = ${AnnotationType.Explorational}"
@@ -483,8 +492,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     } yield r
   }
 
-  def countAllFor(userId: ObjectId, isFinished: Option[Boolean], annotationType: AnnotationType)(
-      implicit ctx: DBAccessContext): Fox[Int] = {
+  def countAllFor(userId: ObjectId, isFinished: Option[Boolean], annotationType: AnnotationType)(implicit
+      ctx: DBAccessContext
+  ): Fox[Int] = {
     val stateQuery = getStateQuery(isFinished)
     for {
       accessQuery <- readAccessQuery
@@ -541,8 +551,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       firstRow <- r.headOption
     } yield firstRow
 
-  def findAllByTaskIdAndType(taskId: ObjectId, typ: AnnotationType)(
-      implicit ctx: DBAccessContext): Fox[List[Annotation]] =
+  def findAllByTaskIdAndType(taskId: ObjectId, typ: AnnotationType)(implicit
+      ctx: DBAccessContext
+  ): Fox[List[Annotation]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
@@ -572,12 +583,14 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
 
   // count operations
 
-  def countActiveAnnotationsFor(userId: ObjectId, typ: AnnotationType, excludedTeamIds: List[ObjectId])(
-      implicit ctx: DBAccessContext): Fox[Int] =
+  def countActiveAnnotationsFor(userId: ObjectId, typ: AnnotationType, excludedTeamIds: List[ObjectId])(implicit
+      ctx: DBAccessContext
+  ): Fox[Int] =
     for {
       accessQuery <- readAccessQuery
-      excludeTeamsQ = if (excludedTeamIds.isEmpty) q"TRUE"
-      else q"(NOT t._id IN ${SqlToken.tupleFromList(excludedTeamIds)})"
+      excludeTeamsQ =
+        if (excludedTeamIds.isEmpty) q"TRUE"
+        else q"(NOT t._id IN ${SqlToken.tupleFromList(excludedTeamIds)})"
       countList <- run(q"""SELECT COUNT(*)
                            FROM (
                              SELECT a._id
@@ -683,9 +696,11 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       q"DELETE FROM webknossos.annotations WHERE _id = $id AND state = ${AnnotationState.Initializing}".asUpdate
     val composed = DBIO.sequence(List(deleteLayersQuery, deleteAnnotationQuery)).transactionally
     for {
-      _ <- run(composed.withTransactionIsolation(Serializable),
-               retryCount = 50,
-               retryIfErrorContains = List(transactionSerializationError))
+      _ <- run(
+        composed.withTransactionIsolation(Serializable),
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError)
+      )
       _ = logger.info(s"Aborted initializing task annotation $id")
     } yield ()
   }
@@ -712,7 +727,8 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       _ <- run(
         query.withTransactionIsolation(Serializable),
         retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)) ?~> "FAILED: run in AnnotationSQLDAO.updateState"
+        retryIfErrorContains = List(transactionSerializationError)
+      ) ?~> "FAILED: run in AnnotationSQLDAO.updateState"
       _ = logger.info(s"Updated state of Annotation $id to $state, access context: ${ctx.toStringAnonymous}")
     } yield ()
 
@@ -723,9 +739,11 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       _ <- run(
         query.withTransactionIsolation(Serializable),
         retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)) ?~> "FAILED: run in AnnotationSQLDAO.updateState"
+        retryIfErrorContains = List(transactionSerializationError)
+      ) ?~> "FAILED: run in AnnotationSQLDAO.updateState"
       _ = logger.info(
-        s"Updated isLockedByOwner of Annotation $id to $isLocked, access context: ${ctx.toStringAnonymous}")
+        s"Updated isLockedByOwner of Annotation $id to $isLocked, access context: ${ctx.toStringAnonymous}"
+      )
     } yield ()
 
   def updateDescription(id: ObjectId, description: String)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -764,8 +782,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   def updateOthersMayEdit(id: ObjectId, othersMayEdit: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     updateBooleanCol(id, _.othersmayedit, othersMayEdit)
 
-  def updateViewConfiguration(id: ObjectId, viewConfiguration: Option[JsObject])(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateViewConfiguration(id: ObjectId, viewConfiguration: Option[JsObject])(implicit
+      ctx: DBAccessContext
+  ): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q"UPDATE webknossos.annotations SET viewConfiguration = $viewConfiguration WHERE _id = $id".asUpdate)
@@ -779,8 +798,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                    ON CONFLICT DO NOTHING""".asUpdate)
     } yield ()
 
-  def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(implicit
+      ctx: DBAccessContext
+  ): Fox[Unit] = {
     val clearQuery = q"DELETE FROM webknossos.annotation_sharedTeams WHERE _annotation = $annotationId".asUpdate
     val insertQueries = teams.map(teamId => q"""INSERT INTO webknossos.annotation_sharedTeams(_annotation, _team)
                                                 VALUES($annotationId, $teamId)""".asUpdate)
@@ -788,9 +808,11 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
     for {
       _ <- assertUpdateAccess(annotationId)
-      _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable),
-               retryCount = 50,
-               retryIfErrorContains = List(transactionSerializationError))
+      _ <- run(
+        composedQuery.transactionally.withTransactionIsolation(Serializable),
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError)
+      )
     } yield ()
   }
 }

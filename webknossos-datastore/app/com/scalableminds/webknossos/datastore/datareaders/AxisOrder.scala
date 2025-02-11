@@ -64,17 +64,16 @@ case class FullAxisOrder(axes: Seq[Axis]) {
     val permutationMutable: Array[Int] = Array.fill(axes.length)(0)
 
     var additionalAxisIndex = 0
-    axes.zipWithIndex.foreach {
-      case (axis, index) =>
-        axis.name match {
-          case "z" => permutationMutable(rank - 1) = index
-          case "y" => permutationMutable(rank - 2) = index
-          case "x" => permutationMutable(rank - 3) = index
-          case "c" => permutationMutable(rank - 4) = index
-          case _ =>
-            permutationMutable(additionalAxisIndex) = index
-            additionalAxisIndex += 1
-        }
+    axes.zipWithIndex.foreach { case (axis, index) =>
+      axis.name match {
+        case "z" => permutationMutable(rank - 1) = index
+        case "y" => permutationMutable(rank - 2) = index
+        case "x" => permutationMutable(rank - 3) = index
+        case "c" => permutationMutable(rank - 4) = index
+        case _ =>
+          permutationMutable(additionalAxisIndex) = index
+          additionalAxisIndex += 1
+      }
     }
     permutationMutable
   }
@@ -84,9 +83,8 @@ case class FullAxisOrder(axes: Seq[Axis]) {
 
   private lazy val wkToArrayPermutation: Array[Int] = {
     val permutationMutable: Array[Int] = Array.fill(arrayToWkPermutation.length)(0)
-    arrayToWkPermutation.zipWithIndex.foreach {
-      case (p, i) =>
-        permutationMutable(p) = i
+    arrayToWkPermutation.zipWithIndex.foreach { case (p, i) =>
+      permutationMutable(p) = i
     }
     permutationMutable
   }
@@ -107,9 +105,11 @@ case class FullAxisOrder(axes: Seq[Axis]) {
 
 object FullAxisOrder {
 
-  def fromAxisOrderAndAdditionalAxes(rank: Int,
-                                     axisOrder: AxisOrder,
-                                     additionalAxes: Option[Seq[AdditionalAxis]]): FullAxisOrder = {
+  def fromAxisOrderAndAdditionalAxes(
+      rank: Int,
+      axisOrder: AxisOrder,
+      additionalAxes: Option[Seq[AdditionalAxis]]
+  ): FullAxisOrder = {
     val asArray: Array[Axis] = Array.fill(rank)(Axis(""))
     asArray(axisOrder.x) = Axis("x")
     asArray(axisOrder.y) = Axis("y")
@@ -122,9 +122,8 @@ object FullAxisOrder {
     if (!axisOrder.hasZAxis) {
       asArray(asArray.length - 1) = Axis("z") // Adapter for reading 2D datasets
     }
-    for (additionalAxis <- additionalAxes.getOrElse(Seq.empty)) {
+    for (additionalAxis <- additionalAxes.getOrElse(Seq.empty))
       asArray(additionalAxis.index) = Axis(additionalAxis.name)
-    }
     FullAxisOrder(asArray.toVector)
   }
 

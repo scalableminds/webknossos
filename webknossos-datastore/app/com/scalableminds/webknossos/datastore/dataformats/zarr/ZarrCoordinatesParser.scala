@@ -25,23 +25,28 @@ object ZarrCoordinatesParser {
       channelCoordinate <- parsedCoordinates.headOption ~> NOT_FOUND
       _ <- bool2Fox(channelCoordinate == 0) ?~> "zarr.invalidFirstChunkCoord" ~> NOT_FOUND
       _ <- bool2Fox(parsedCoordinates.length >= 4) ?~> "zarr.notEnoughCoordinates" ~> NOT_FOUND
-      (x, y, z) = (parsedCoordinates(parsedCoordinates.length - 3),
-                   parsedCoordinates(parsedCoordinates.length - 2),
-                   parsedCoordinates(parsedCoordinates.length - 1))
+      (x, y, z) = (
+        parsedCoordinates(parsedCoordinates.length - 3),
+        parsedCoordinates(parsedCoordinates.length - 2),
+        parsedCoordinates(parsedCoordinates.length - 1)
+      )
       reorderedAdditionalAxes = reorderedAdditionalAxesOpt.getOrElse(List.empty)
-      _ <- bool2Fox(reorderedAdditionalAxes.length == parsedCoordinates.length - 4) ?~> "zarr.invalidAdditionalCoordinates" ~> NOT_FOUND
+      _ <- bool2Fox(
+        reorderedAdditionalAxes.length == parsedCoordinates.length - 4
+      ) ?~> "zarr.invalidAdditionalCoordinates" ~> NOT_FOUND
       requestContainsAdditionalCoordinates = parsedCoordinates.length > 4
-      additionalCoordinates = if (requestContainsAdditionalCoordinates)
-        Some(
-          parsedCoordinates
-            .slice(1, parsedCoordinates.length - 3)
-            .zipWithIndex
-            .map({
-              case (coordinate, index) =>
+      additionalCoordinates =
+        if (requestContainsAdditionalCoordinates)
+          Some(
+            parsedCoordinates
+              .slice(1, parsedCoordinates.length - 3)
+              .zipWithIndex
+              .map { case (coordinate, index) =>
                 new AdditionalCoordinate(name = reorderedAdditionalAxes(index).name, value = coordinate)
-            })
-            .toList)
-      else None
+              }
+              .toList
+          )
+        else None
     } yield (x, y, z, additionalCoordinates)
   }
 }

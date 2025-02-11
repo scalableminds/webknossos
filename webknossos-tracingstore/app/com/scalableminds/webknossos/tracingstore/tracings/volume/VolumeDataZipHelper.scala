@@ -27,13 +27,15 @@ import scala.concurrent.ExecutionContext
 
 trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with BoxImplicits with LazyLogging {
 
-  protected def withBucketsFromZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Fox[Unit])(
-      implicit ec: ExecutionContext): Fox[Unit] =
+  protected def withBucketsFromZip(
+      zipFile: File
+  )(block: (BucketPosition, Array[Byte]) => Fox[Unit])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       format <- detectVolumeDataZipFormat(zipFile).toFox
-      _ <- if (format == VolumeDataZipFormat.wkw)
-        withBucketsFromWkwZip(zipFile)(block)
-      else withBucketsFromZarr3Zip(zipFile)(block)
+      _ <-
+        if (format == VolumeDataZipFormat.wkw)
+          withBucketsFromWkwZip(zipFile)(block)
+        else withBucketsFromZarr3Zip(zipFile)(block)
     } yield ()
 
   private def detectVolumeDataZipFormat(zipFile: File): Box[VolumeDataZipFormat] =
@@ -45,8 +47,9 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
       } else VolumeDataZipFormat.wkw
     }
 
-  private def withBucketsFromWkwZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Fox[Unit])(
-      implicit ec: ExecutionContext): Fox[Unit] =
+  private def withBucketsFromWkwZip(
+      zipFile: File
+  )(block: (BucketPosition, Array[Byte]) => Fox[Unit])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- ZipIO.withUnzipedAsync(zipFile) {
         case (fileName, is) if fileName.toString.endsWith(".wkw") && !fileName.toString.endsWith("header.wkw") =>
@@ -70,8 +73,9 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
       }
     } yield ()
 
-  private def withBucketsFromZarr3Zip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Fox[Unit])(
-      implicit ec: ExecutionContext): Fox[Unit] =
+  private def withBucketsFromZarr3Zip(
+      zipFile: File
+  )(block: (BucketPosition, Array[Byte]) => Fox[Unit])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       firstHeaderFilePath <- ZipIO
         .entries(new ZipFile(zipFile))
@@ -80,16 +84,15 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
       firstHeaderString <- ZipIO.readAt(new ZipFile(zipFile), firstHeaderFilePath).toFox
       firstHeader <- JsonHelper.parseAndValidateJson[Zarr3ArrayHeader](firstHeaderString).toFox
       _ <- firstHeader.assertValid.toFox
-      _ <- ZipIO.withUnzipedAsync(zipFile) {
-        case (filename, inputStream) =>
-          if (filename.endsWith(Zarr3ArrayHeader.FILENAME_ZARR_JSON)) Fox.successful(())
-          else {
-            parseZarrChunkPath(filename.toString, firstHeader).map { bucketPosition =>
-              val dataCompressed = IOUtils.toByteArray(inputStream)
-              val data = compressor.decompress(dataCompressed)
-              block(bucketPosition, data)
-            }.getOrElse(Fox.successful(()))
-          }
+      _ <- ZipIO.withUnzipedAsync(zipFile) { case (filename, inputStream) =>
+        if (filename.endsWith(Zarr3ArrayHeader.FILENAME_ZARR_JSON)) Fox.successful(())
+        else {
+          parseZarrChunkPath(filename.toString, firstHeader).map { bucketPosition =>
+            val dataCompressed = IOUtils.toByteArray(inputStream)
+            val data = compressor.decompress(dataCompressed)
+            block(bucketPosition, data)
+          }.getOrElse(Fox.successful(()))
+        }
       }
     } yield ()
 
@@ -128,11 +131,10 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
 
   protected def magSetFromZipfile(zipFile: File): Set[Vec3Int] = {
     val magSet = new mutable.HashSet[Vec3Int]()
-    ZipIO.withUnziped(zipFile) {
-      case (fileName, _) =>
-        getMagFromWkwOrZarrHeaderFilePath(fileName.toString).map { (mag: Vec3Int) =>
-          magSet.add(mag)
-        }
+    ZipIO.withUnziped(zipFile) { case (fileName, _) =>
+      getMagFromWkwOrZarrHeaderFilePath(fileName.toString).map { (mag: Vec3Int) =>
+        magSet.add(mag)
+      }
     }
     magSet.toSet
   }
@@ -149,8 +151,9 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
     }
   }
 
-  protected def withZipsFromMultiZipAsync[T](multiZip: File)(block: (Int, File) => Fox[Unit])(
-      implicit ec: ExecutionContext): Fox[Unit] = {
+  protected def withZipsFromMultiZipAsync[T](
+      multiZip: File
+  )(block: (Int, File) => Fox[Unit])(implicit ec: ExecutionContext): Fox[Unit] = {
     var index: Int = 0
     val unzipResult = ZipIO.withUnzipedAsync(multiZip) {
       case (_, is) =>
@@ -181,5 +184,6 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
         BloscCompressor.keyShuffle -> IntCompressionSetting(BloscCompressor.defaultShuffle),
         BloscCompressor.keyBlocksize -> IntCompressionSetting(BloscCompressor.defaultBlocksize),
         BloscCompressor.keyTypesize -> IntCompressionSetting(BloscCompressor.defaultTypesize)
-      ))
+      )
+    )
 }

@@ -62,9 +62,7 @@ abstract class Compressor {
   protected def passThrough(is: InputStream, os: OutputStream): Unit = {
     val bytes = new Array[Byte](4096)
     var read = is.read(bytes)
-    while ({
-      read >= 0
-    }) {
+    while (read >= 0) {
       if (read > 0)
         os.write(bytes, 0, read)
       read = is.read(bytes)
@@ -108,10 +106,10 @@ class Lz4Compressor extends Compressor {
 
 class ZlibCompressor(val properties: Map[String, CompressionSetting]) extends Compressor {
   val level: Int = properties.get("level") match {
-    case None                                        => 1 //default value
+    case None                                        => 1 // default value
     case Some(IntCompressionSetting(levelInt))       => validateLevel(levelInt)
     case Some(StringCompressionSetting(levelString)) => validateLevel(levelString.toInt)
-    case _                                           => throw new IllegalArgumentException("Invalid compression level: " + level)
+    case _ => throw new IllegalArgumentException("Invalid compression level: " + level)
   }
 
   override def toString: String = "compressor=" + getId + "/level=" + level
@@ -147,10 +145,10 @@ class ZlibCompressor(val properties: Map[String, CompressionSetting]) extends Co
 
 class GzipCompressor(val properties: Map[String, CompressionSetting]) extends Compressor {
   val level: Int = properties.get("level") match {
-    case None                                        => 1 //default value
+    case None                                        => 1 // default value
     case Some(IntCompressionSetting(levelInt))       => validateLevel(levelInt)
     case Some(StringCompressionSetting(levelString)) => validateLevel(levelString.toInt)
-    case _                                           => throw new IllegalArgumentException("Invalid compression level: " + level)
+    case _ => throw new IllegalArgumentException("Invalid compression level: " + level)
   }
 
   override def toString: String = "compressor=" + getId + "/level=" + level
@@ -215,7 +213,8 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     if (!BloscCompressor.supportedCnames.contains(cname))
       throw new IllegalArgumentException(
         "blosc: compressor not supported: '" + cname + "'; expected one of " +
-          BloscCompressor.supportedCnames.mkString(","))
+          BloscCompressor.supportedCnames.mkString(",")
+      )
     cname
   }
 
@@ -223,7 +222,7 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     case None                                         => BloscCompressor.defaultCLevel
     case Some(StringCompressionSetting(clevelString)) => validateClevel(clevelString.toInt)
     case Some(IntCompressionSetting(clevelInt))       => validateClevel(clevelInt)
-    case _                                            => throw new IllegalArgumentException("Blosc clevel must be int or string")
+    case _ => throw new IllegalArgumentException("Blosc clevel must be int or string")
   }
 
   private def validateClevel(clevel: Int): Int = {
@@ -236,7 +235,7 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     case None                                          => BloscCompressor.defaultShuffle
     case Some(StringCompressionSetting(shuffleString)) => validateShuffle(shuffleString.toInt)
     case Some(IntCompressionSetting(shuffleInt))       => validateShuffle(shuffleInt)
-    case _                                             => throw new IllegalArgumentException("Blosc shuffle must be int or string")
+    case _ => throw new IllegalArgumentException("Blosc shuffle must be int or string")
   }
 
   private def validateShuffle(shuffle: Int): Int = {
@@ -245,7 +244,8 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
 
     if (!BloscCompressor.supportedShuffle.contains(shuffle))
       throw new IllegalArgumentException(
-        "blosc: shuffle type not supported: '" + shuffle + "'; expected one of " + supportedShuffleNames.mkString(","))
+        "blosc: shuffle type not supported: '" + shuffle + "'; expected one of " + supportedShuffleNames.mkString(",")
+      )
     shuffle
   }
 
@@ -253,14 +253,14 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     case None                                            => BloscCompressor.defaultBlocksize
     case Some(StringCompressionSetting(blockSizeString)) => blockSizeString.toInt
     case Some(IntCompressionSetting(blockSizeInt))       => blockSizeInt
-    case _                                               => throw new IllegalArgumentException("Blosc blocksize must be int or string")
+    case _ => throw new IllegalArgumentException("Blosc blocksize must be int or string")
   }
 
   val typesize: Int = properties.get(BloscCompressor.keyTypesize) match {
     case None                                           => BloscCompressor.defaultTypesize
     case Some(StringCompressionSetting(typeSizeString)) => typeSizeString.toInt
     case Some(IntCompressionSetting(typeSizeInt))       => typeSizeInt
-    case _                                              => throw new IllegalArgumentException("Blosc typesize must be int or string")
+    case _ => throw new IllegalArgumentException("Blosc typesize must be int or string")
   }
 
   override def getId = "blosc"

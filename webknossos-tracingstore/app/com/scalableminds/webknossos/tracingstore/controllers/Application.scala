@@ -1,19 +1,22 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
-import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.mvc.{ControllerUtils, Formatter}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import com.scalableminds.webknossos.tracingstore.tracings.TracingDataStore
 
 import javax.inject.Inject
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 
 import scala.concurrent.ExecutionContext
 
-class Application @Inject()(tracingDataStore: TracingDataStore, redisClient: TracingStoreRedisStore)(
-    implicit ec: ExecutionContext)
-    extends Controller
+class Application @Inject() (
+    tracingDataStore: TracingDataStore,
+    redisClient: TracingStoreRedisStore,
+    cc: ControllerComponents
+)(implicit ec: ExecutionContext)
+    extends AbstractController(cc)
+    with ControllerUtils
     with Formatter {
 
   override def allowRemoteOrigin: Boolean = true
@@ -28,7 +31,9 @@ class Application @Inject()(tracingDataStore: TracingDataStore, redisClient: Tra
         afterRedis = Instant.now
         _ = logger.info(
           s"Answering ok for Tracingstore health check, took ${formatDuration(afterRedis - before)} (FossilDB at ${tracingDataStore.healthClient.authority} ${formatDuration(
-            afterFossil - before)}, Redis at ${redisClient.authority} ${formatDuration(afterRedis - afterFossil)}).")
+              afterFossil - before
+            )}, Redis at ${redisClient.authority} ${formatDuration(afterRedis - afterFossil)})."
+        )
       } yield Ok("Ok")
     }
   }

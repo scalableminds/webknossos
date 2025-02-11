@@ -10,12 +10,13 @@ import play.api.routing.Router
 import scala.concurrent.Future
 
 @Singleton
-class ErrorHandler @Inject()(env: Environment,
-                             config: Configuration,
-                             sourceMapper: OptionalSourceMapper,
-                             router: Provider[Router],
-                             val messagesApi: MessagesApi)
-    extends DefaultHttpErrorHandler(env, config, sourceMapper, router)
+class ErrorHandler @Inject() (
+    env: Environment,
+    config: Configuration,
+    sourceMapper: OptionalSourceMapper,
+    router: Provider[Router],
+    val messagesApi: MessagesApi
+) extends DefaultHttpErrorHandler(env, config, sourceMapper, router)
     with SecuredErrorHandler
     with I18nSupport {
 

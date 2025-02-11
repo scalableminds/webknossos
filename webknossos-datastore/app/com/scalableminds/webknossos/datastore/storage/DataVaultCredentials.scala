@@ -15,12 +15,13 @@ object HttpBasicAuthCredential {
   implicit val jsonFormat: OFormat[HttpBasicAuthCredential] = Json.format[HttpBasicAuthCredential]
 }
 
-case class S3AccessKeyCredential(name: String,
-                                 accessKeyId: String,
-                                 secretAccessKey: String,
-                                 user: String,
-                                 organization: String)
-    extends DataVaultCredential
+case class S3AccessKeyCredential(
+    name: String,
+    accessKeyId: String,
+    secretAccessKey: String,
+    user: String,
+    organization: String
+) extends DataVaultCredential
 
 object S3AccessKeyCredential {
   implicit val jsonFormat: OFormat[S3AccessKeyCredential] = Json.format[S3AccessKeyCredential]
@@ -38,11 +39,13 @@ case class LegacyDataVaultCredential(user: String, password: Option[String]) ext
     HttpBasicAuthCredential(name = "", username = user, password = password.getOrElse(""), user = "", organization = "")
 
   def toS3AccessKey: S3AccessKeyCredential =
-    S3AccessKeyCredential(name = "",
-                          accessKeyId = user,
-                          secretAccessKey = password.getOrElse(""),
-                          user = "",
-                          organization = "")
+    S3AccessKeyCredential(
+      name = "",
+      accessKeyId = user,
+      secretAccessKey = password.getOrElse(""),
+      user = "",
+      organization = ""
+    )
 }
 
 object LegacyDataVaultCredential {

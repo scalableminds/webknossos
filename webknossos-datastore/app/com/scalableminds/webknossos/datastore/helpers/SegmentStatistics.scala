@@ -9,10 +9,12 @@ import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
 
-case class SegmentStatisticsParameters(mag: Vec3Int,
-                                       segmentIds: List[Long],
-                                       mappingName: Option[String],
-                                       additionalCoordinates: Option[Seq[AdditionalCoordinate]])
+case class SegmentStatisticsParameters(
+    mag: Vec3Int,
+    segmentIds: List[Long],
+    mappingName: Option[String],
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]]
+)
 object SegmentStatisticsParameters {
   implicit val jsonFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
 }
@@ -27,7 +29,9 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
       getTypedDataForBucketPosition: (
           Vec3Int,
           Vec3Int,
-          Option[Seq[AdditionalCoordinate]]) => Fox[Array[UnsignedInteger]])(implicit ec: ExecutionContext): Fox[Long] =
+          Option[Seq[AdditionalCoordinate]]
+      ) => Fox[Array[UnsignedInteger]]
+  )(implicit ec: ExecutionContext): Fox[Long] =
     for {
       bucketPositionsProtos: ListOfVec3IntProto <- getBucketPositions(segmentId, mag)
       bucketPositionsInMag = bucketPositionsProtos.values.map(vec3IntFromProto)
@@ -35,37 +39,44 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
         for {
           dataTyped: Array[UnsignedInteger] <- getTypedDataForBucketPosition(bucketPosition, mag, additionalCoordinates)
           count = dataTyped.count(unsignedInteger => unsignedInteger.toPositiveLong == segmentId)
-        } yield count.toLong)
+        } yield count.toLong
+      )
       counts <- Fox.combined(volumeBoxes.map(_.toFox))
     } yield counts.sum
 
   // Returns the bounding box in voxels in the target mag
-  def calculateSegmentBoundingBox(segmentId: Long,
-                                  mag: Vec3Int,
-                                  additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-                                  getBucketPositions: (Long, Vec3Int) => Fox[ListOfVec3IntProto],
-                                  getTypedDataForBucketPosition: (
-                                      Vec3Int,
-                                      Vec3Int,
-                                      Option[Seq[AdditionalCoordinate]]) => Fox[Array[UnsignedInteger]])(
-      implicit ec: ExecutionContext): Fox[BoundingBox] =
+  def calculateSegmentBoundingBox(
+      segmentId: Long,
+      mag: Vec3Int,
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+      getBucketPositions: (Long, Vec3Int) => Fox[ListOfVec3IntProto],
+      getTypedDataForBucketPosition: (
+          Vec3Int,
+          Vec3Int,
+          Option[Seq[AdditionalCoordinate]]
+      ) => Fox[Array[UnsignedInteger]]
+  )(implicit ec: ExecutionContext): Fox[BoundingBox] =
     for {
       allBucketPositions: ListOfVec3IntProto <- getBucketPositions(segmentId, mag)
       relevantBucketPositions = filterOutInnerBucketPositions(allBucketPositions)
-      boundingBoxMutable = scala.collection.mutable.ListBuffer[Int](Int.MaxValue,
-                                                                    Int.MaxValue,
-                                                                    Int.MaxValue,
-                                                                    Int.MinValue,
-                                                                    Int.MinValue,
-                                                                    Int.MinValue) //topleft, bottomright
-      _ <- Fox.serialCombined(relevantBucketPositions.iterator)(
-        bucketPosition =>
-          extendBoundingBoxByData(mag,
-                                  segmentId,
-                                  boundingBoxMutable,
-                                  bucketPosition,
-                                  additionalCoordinates,
-                                  getTypedDataForBucketPosition))
+      boundingBoxMutable = scala.collection.mutable.ListBuffer[Int](
+        Int.MaxValue,
+        Int.MaxValue,
+        Int.MaxValue,
+        Int.MinValue,
+        Int.MinValue,
+        Int.MinValue
+      ) // topleft, bottomright
+      _ <- Fox.serialCombined(relevantBucketPositions.iterator)(bucketPosition =>
+        extendBoundingBoxByData(
+          mag,
+          segmentId,
+          boundingBoxMutable,
+          bucketPosition,
+          additionalCoordinates,
+          getTypedDataForBucketPosition
+        )
+      )
     } yield
       if (boundingBoxMutable.exists(item => item == Int.MaxValue || item == Int.MinValue)) {
         BoundingBox.empty
@@ -89,7 +100,8 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
       val maxZ = bucketPositions.values.map(_.z).max
       bucketPositions.values
         .filter(pos =>
-          pos.x == minX || pos.x == maxX || pos.y == minY || pos.y == maxY || pos.z == minZ || pos.z == maxZ)
+          pos.x == minX || pos.x == maxX || pos.y == minY || pos.y == maxY || pos.z == minZ || pos.z == maxZ
+        )
         .map(vec3IntFromProto)
     }
 
@@ -99,33 +111,39 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
       mutableBoundingBox: scala.collection.mutable.ListBuffer[Int],
       bucketPosition: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-      getTypedDataForBucketPosition: (Vec3Int,
-                                      Vec3Int,
-                                      Option[Seq[AdditionalCoordinate]]) => Fox[Array[UnsignedInteger]]): Fox[Unit] =
+      getTypedDataForBucketPosition: (
+          Vec3Int,
+          Vec3Int,
+          Option[Seq[AdditionalCoordinate]]
+      ) => Fox[Array[UnsignedInteger]]
+  ): Fox[Unit] =
     for {
       dataTyped: Array[UnsignedInteger] <- getTypedDataForBucketPosition(bucketPosition, mag, additionalCoordinates)
       bucketTopLeftInTargetMagVoxels = bucketPosition * DataLayer.bucketLength
       _ = scanDataAndExtendBoundingBox(dataTyped, bucketTopLeftInTargetMagVoxels, segmentId, mutableBoundingBox)
     } yield ()
 
-  private def scanDataAndExtendBoundingBox(dataTyped: Array[UnsignedInteger],
-                                           bucketTopLeftInTargetMagVoxels: Vec3Int,
-                                           segmentId: Long,
-                                           mutableBoundingBox: scala.collection.mutable.ListBuffer[Int]): Unit =
+  private def scanDataAndExtendBoundingBox(
+      dataTyped: Array[UnsignedInteger],
+      bucketTopLeftInTargetMagVoxels: Vec3Int,
+      segmentId: Long,
+      mutableBoundingBox: scala.collection.mutable.ListBuffer[Int]
+  ): Unit =
     for {
       x <- 0 until DataLayer.bucketLength
       y <- 0 until DataLayer.bucketLength
       z <- 0 until DataLayer.bucketLength
       index = z * DataLayer.bucketLength * DataLayer.bucketLength + y * DataLayer.bucketLength + x
-    } yield {
+    } yield
       if (dataTyped(index).toPositiveLong == segmentId) {
         val voxelPosition = bucketTopLeftInTargetMagVoxels + Vec3Int(x, y, z)
         extendBoundingBoxByPosition(mutableBoundingBox, voxelPosition)
       }
-    }
 
-  private def extendBoundingBoxByPosition(mutableBoundingBox: scala.collection.mutable.ListBuffer[Int],
-                                          position: Vec3Int): Unit = {
+  private def extendBoundingBoxByPosition(
+      mutableBoundingBox: scala.collection.mutable.ListBuffer[Int],
+      position: Vec3Int
+  ): Unit = {
     mutableBoundingBox(0) = Math.min(mutableBoundingBox(0), position.x)
     mutableBoundingBox(1) = Math.min(mutableBoundingBox(1), position.y)
     mutableBoundingBox(2) = Math.min(mutableBoundingBox(2), position.z)

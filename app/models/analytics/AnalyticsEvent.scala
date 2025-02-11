@@ -19,12 +19,12 @@ trait AnalyticsEvent {
   def userProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[AnalyticsEventJsonUserProperties] =
     for {
       isSuperUser <- analyticsLookUpService.isSuperUser(user._multiUser)
-    } yield {
-      AnalyticsEventJsonUserProperties(user._organization,
-                                       user.isAdmin,
-                                       isSuperUser,
-                                       analyticsLookUpService.webknossos_uri)
-    }
+    } yield AnalyticsEventJsonUserProperties(
+      user._organization,
+      user.isAdmin,
+      isSuperUser,
+      analyticsLookUpService.webknossos_uri
+    )
 
   def user: User
 
@@ -32,15 +32,15 @@ trait AnalyticsEvent {
     for {
       eventProperties <- eventProperties(analyticsLookUpService)
       userProperties <- userProperties(analyticsLookUpService)
-    } yield {
-      AnalyticsEventJson(eventType, userId, Instant.now, userProperties, eventProperties, sessionId)
-    }
+    } yield AnalyticsEventJson(eventType, userId, Instant.now, userProperties, eventProperties, sessionId)
 }
 
-case class AnalyticsEventJsonUserProperties(organizationId: String,
-                                            isOrganizationAdmin: Boolean,
-                                            isSuperUser: Boolean,
-                                            webknossosUri: String)
+case class AnalyticsEventJsonUserProperties(
+    organizationId: String,
+    isOrganizationAdmin: Boolean,
+    isSuperUser: Boolean,
+    webknossosUri: String
+)
 
 object AnalyticsEventJsonUserProperties {
   implicit val jsonWrites: OWrites[AnalyticsEventJsonUserProperties] = Json.writes[AnalyticsEventJsonUserProperties]
@@ -58,12 +58,14 @@ object AnalyticsEventJsonUserProperties {
   }
 }
 
-case class AnalyticsEventJson(eventType: String,
-                              userId: ObjectId,
-                              time: Instant,
-                              userProperties: AnalyticsEventJsonUserProperties,
-                              eventProperties: JsObject,
-                              sessionId: Long)
+case class AnalyticsEventJson(
+    eventType: String,
+    userId: ObjectId,
+    time: Instant,
+    userProperties: AnalyticsEventJsonUserProperties,
+    eventProperties: JsObject,
+    sessionId: Long
+)
 
 object AnalyticsEventJson {
   implicit val jsonWrites: OWrites[AnalyticsEventJson] = Json.writes[AnalyticsEventJson]
@@ -78,15 +80,14 @@ object AnalyticsEventJson {
           .validate[AnalyticsEventJsonUserProperties]
         eventProperties <- (json \ "event_properties").orElse(json \ "eventProperties").validate[JsObject]
         sessionId <- (json \ "session_id").orElse(json \ "sessionId").validate[Long]
-      } yield
-        AnalyticsEventJson(
-          eventType,
-          userId,
-          time,
-          userProperties,
-          eventProperties,
-          sessionId
-        )
+      } yield AnalyticsEventJson(
+        eventType,
+        userId,
+        time,
+        userProperties,
+        eventProperties,
+        sessionId
+      )
 
   }
 }
@@ -137,11 +138,11 @@ case class OpenAnnotationEvent(user: User, annotation: Annotation) extends Analy
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
     for {
       owner_multiuser_id <- analyticsLookUpService.multiUserIdFor(annotation._user)
-    } yield {
-      Json.obj("annotation_id" -> annotation._id.id,
-               "annotation_owner_multiuser_id" -> owner_multiuser_id,
-               "annotation_dataset_id" -> annotation._dataset.id)
-    }
+    } yield Json.obj(
+      "annotation_id" -> annotation._id.id,
+      "annotation_owner_multiuser_id" -> owner_multiuser_id,
+      "annotation_dataset_id" -> annotation._dataset.id
+    )
 }
 
 case class UploadAnnotationEvent(user: User, annotation: Annotation)(implicit ec: ExecutionContext)
@@ -151,9 +152,9 @@ case class UploadAnnotationEvent(user: User, annotation: Annotation)(implicit ec
     Fox.successful(Json.obj("annotation_id" -> annotation._id.id))
 }
 
-case class DownloadAnnotationEvent(user: User, annotationId: String, annotationType: String)(
-    implicit ec: ExecutionContext)
-    extends AnalyticsEvent {
+case class DownloadAnnotationEvent(user: User, annotationId: String, annotationType: String)(implicit
+    ec: ExecutionContext
+) extends AnalyticsEvent {
   def eventType: String = "download_annotation"
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
     Fox.successful(Json.obj("annotation_id" -> annotationId, "annotation_type" -> annotationType))
@@ -166,9 +167,9 @@ case class UpdateAnnotationEvent(user: User, annotation: Annotation, changesCoun
     Fox.successful(Json.obj("annotation_id" -> annotation._id.id, "changes_count" -> changesCount))
 }
 
-case class UpdateAnnotationViewOnlyEvent(user: User, annotation: Annotation, changesCount: Int)(
-    implicit ec: ExecutionContext)
-    extends AnalyticsEvent {
+case class UpdateAnnotationViewOnlyEvent(user: User, annotation: Annotation, changesCount: Int)(implicit
+    ec: ExecutionContext
+) extends AnalyticsEvent {
   def eventType: String = "update_annotation_view_only"
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
     Fox.successful(Json.obj("annotation_id" -> annotation._id.id, "changes_count" -> changesCount))
@@ -179,15 +180,14 @@ case class OpenDatasetEvent(user: User, dataset: Dataset)(implicit ec: Execution
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
     for {
       uploader_multiuser_id <- Fox.runOptional(dataset._uploader)(uploader =>
-        analyticsLookUpService.multiUserIdFor(uploader))
-    } yield {
-      Json.obj(
-        "dataset_id" -> dataset._id.id,
-        "dataset_name" -> dataset.name,
-        "dataset_organization_id" -> dataset._organization,
-        "dataset_uploader_multiuser_id" -> uploader_multiuser_id
+        analyticsLookUpService.multiUserIdFor(uploader)
       )
-    }
+    } yield Json.obj(
+      "dataset_id" -> dataset._id.id,
+      "dataset_name" -> dataset.name,
+      "dataset_organization_id" -> dataset._organization,
+      "dataset_uploader_multiuser_id" -> uploader_multiuser_id
+    )
 }
 
 case class RunJobEvent(user: User, command: JobCommand)(implicit ec: ExecutionContext) extends AnalyticsEvent {
@@ -202,9 +202,9 @@ case class FailedJobEvent(user: User, command: JobCommand)(implicit ec: Executio
     Fox.successful(Json.obj("command" -> command.toString))
 }
 
-case class UploadDatasetEvent(user: User, dataset: Dataset, dataStore: DataStore, datasetSizeBytes: Long)(
-    implicit ec: ExecutionContext)
-    extends AnalyticsEvent {
+case class UploadDatasetEvent(user: User, dataset: Dataset, dataStore: DataStore, datasetSizeBytes: Long)(implicit
+    ec: ExecutionContext
+) extends AnalyticsEvent {
   def eventType: String = "upload_dataset"
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
     Fox.successful(
@@ -214,7 +214,8 @@ case class UploadDatasetEvent(user: User, dataset: Dataset, dataStore: DataStore
         "dataset_size_bytes" -> datasetSizeBytes,
         "datastore_uri" -> dataStore.publicUrl,
         "dataset_organization_id" -> dataset._organization
-      ))
+      )
+    )
 }
 
 case class ChangeDatasetSettingsEvent(user: User, dataset: Dataset)(implicit ec: ExecutionContext)
@@ -224,9 +225,9 @@ case class ChangeDatasetSettingsEvent(user: User, dataset: Dataset)(implicit ec:
     Fox.successful(Json.obj("dataset_id" -> dataset._id.id))
 }
 
-case class FrontendAnalyticsEvent(user: User, eventType: String, eventProperties: JsObject)(
-    implicit ec: ExecutionContext)
-    extends AnalyticsEvent {
+case class FrontendAnalyticsEvent(user: User, eventType: String, eventProperties: JsObject)(implicit
+    ec: ExecutionContext
+) extends AnalyticsEvent {
   override def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
     Fox.successful(eventProperties ++ Json.obj("is_frontend_event" -> true))
 }

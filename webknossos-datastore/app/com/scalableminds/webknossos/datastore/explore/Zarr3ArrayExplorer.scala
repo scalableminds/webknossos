@@ -24,16 +24,21 @@ class Zarr3ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerE
       _ <- zarrHeader.assertValid.toFox
       elementClass <- zarrHeader.elementClass ?~> "failed to read element class from zarr header"
       guessedAxisOrder = AxisOrder.asCxyzFromRank(zarrHeader.rank)
-      boundingBox <- zarrHeader.boundingBox(guessedAxisOrder) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
-      magLocator = MagLocator(Vec3Int.ones,
-                              Some(remotePath.toUri.toString),
-                              None,
-                              Some(guessedAxisOrder),
-                              None,
-                              credentialId)
-      layer: Zarr3Layer = if (looksLikeSegmentationLayer(name, elementClass)) {
-        Zarr3SegmentationLayer(name, boundingBox, elementClass, List(magLocator), largestSegmentId = None)
-      } else Zarr3DataLayer(name, Category.color, boundingBox, elementClass, List(magLocator))
+      boundingBox <- zarrHeader.boundingBox(
+        guessedAxisOrder
+      ) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
+      magLocator = MagLocator(
+        Vec3Int.ones,
+        Some(remotePath.toUri.toString),
+        None,
+        Some(guessedAxisOrder),
+        None,
+        credentialId
+      )
+      layer: Zarr3Layer =
+        if (looksLikeSegmentationLayer(name, elementClass)) {
+          Zarr3SegmentationLayer(name, boundingBox, elementClass, List(magLocator), largestSegmentId = None)
+        } else Zarr3DataLayer(name, Category.color, boundingBox, elementClass, List(magLocator))
     } yield List((layer, VoxelSize.fromFactorWithDefaultUnit(Vec3Double.ones)))
 
 }

@@ -25,17 +25,20 @@ case class UploadedVolumeLayer(tracing: VolumeTracing, dataZipLocation: String, 
     otherFiles.get(dataZipLocation)
 }
 
-case class SharedParsingParameters(useZipName: Boolean,
-                                   overwritingDatasetId: Option[String] = None,
-                                   userOrganizationId: String,
-                                   isTaskUpload: Boolean = false)
+case class SharedParsingParameters(
+    useZipName: Boolean,
+    overwritingDatasetId: Option[String] = None,
+    userOrganizationId: String,
+    isTaskUpload: Boolean = false
+)
 
-class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlParser: NmlParser) extends LazyLogging {
+class AnnotationUploadService @Inject() (tempFileService: TempFileService, nmlParser: NmlParser) extends LazyLogging {
 
-  private def extractFromNmlFile(file: File, name: String, sharedParsingParameters: SharedParsingParameters)(
-      implicit m: MessagesProvider,
+  private def extractFromNmlFile(file: File, name: String, sharedParsingParameters: SharedParsingParameters)(implicit
+      m: MessagesProvider,
       ec: ExecutionContext,
-      ctx: DBAccessContext): Fox[NmlParseResult] =
+      ctx: DBAccessContext
+  ): Fox[NmlParseResult] =
     extractFromNml(new FileInputStream(file), name, sharedParsingParameters)
 
   private def formatChain(chain: Box[Failure]): String = chain match {
@@ -44,12 +47,12 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
     case _ => ""
   }
 
-  private def extractFromNml(inputStream: InputStream,
-                             name: String,
-                             sharedParsingParameters: SharedParsingParameters,
-                             basePath: Option[String] = None)(implicit m: MessagesProvider,
-                                                              ec: ExecutionContext,
-                                                              ctx: DBAccessContext): Fox[NmlParseResult] = {
+  private def extractFromNml(
+      inputStream: InputStream,
+      name: String,
+      sharedParsingParameters: SharedParsingParameters,
+      basePath: Option[String] = None
+  )(implicit m: MessagesProvider, ec: ExecutionContext, ctx: DBAccessContext): Fox[NmlParseResult] = {
     val parserOutput =
       nmlParser.parse(
         name,
@@ -65,7 +68,10 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
     }
   }
 
-  private def extractFromZip(file: File, zipFileName: Option[String], sharedParsingParameters: SharedParsingParameters,
+  private def extractFromZip(
+      file: File,
+      zipFileName: Option[String],
+      sharedParsingParameters: SharedParsingParameters
   )(implicit m: MessagesProvider, ec: ExecutionContext, ctx: DBAccessContext): Fox[MultiNmlParseResult] = {
     val name = zipFileName getOrElse file.getName
     var otherFiles = Map.empty[String, File]
@@ -86,8 +92,10 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
     Fox.combined(pendingResults).map(parsedResults => MultiNmlParseResult(parsedResults, otherFiles))
   }
 
-  def wrapOrPrefixGroups(parseResults: List[NmlParseResult],
-                         shouldCreateGroupForEachFile: Boolean): List[NmlParseResult] =
+  def wrapOrPrefixGroups(
+      parseResults: List[NmlParseResult],
+      shouldCreateGroupForEachFile: Boolean
+  ): List[NmlParseResult] =
     if (shouldCreateGroupForEachFile)
       wrapInGroups(parseResults)
     else
@@ -104,12 +112,14 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
     if (parseResults.length > 1) {
       parseResults.map {
         case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, datasetId, description, wkUrl) =>
-          NmlParseSuccess(name,
-                          Some(renameTrees(name, skeletonTracing)),
-                          uploadedVolumeLayers,
-                          datasetId,
-                          description,
-                          wkUrl)
+          NmlParseSuccess(
+            name,
+            Some(renameTrees(name, skeletonTracing)),
+            uploadedVolumeLayers,
+            datasetId,
+            description,
+            wkUrl
+          )
         case r => r
       }
     } else {
@@ -146,50 +156,53 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
 
     parseResults.map {
       case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, datasetId, description, wkUrl) =>
-        NmlParseSuccess(name,
-                        Some(wrapTreesInGroup(name, skeletonTracing)),
-                        wrapVolumeLayers(name, uploadedVolumeLayers),
-                        datasetId,
-                        description,
-                        wkUrl)
+        NmlParseSuccess(
+          name,
+          Some(wrapTreesInGroup(name, skeletonTracing)),
+          wrapVolumeLayers(name, uploadedVolumeLayers),
+          datasetId,
+          description,
+          wkUrl
+        )
       case r => r
     }
   }
 
-  def extractFromFiles(files: Seq[(File, String)], sharedParams: SharedParsingParameters)(
-      implicit m: MessagesProvider,
+  def extractFromFiles(files: Seq[(File, String)], sharedParams: SharedParsingParameters)(implicit
+      m: MessagesProvider,
       ec: ExecutionContext,
-      ctx: DBAccessContext): Fox[MultiNmlParseResult] =
-    Fox.foldLeft(files.iterator, NmlResults.MultiNmlParseResult()) {
-      case (collectedResults, (file, name)) =>
-        if (name.endsWith(".zip")) {
-          tryo(new java.util.zip.ZipFile(file)).map(ZipIO.forallZipEntries(_)(_.getName.endsWith(".zip"))) match {
-            case Full(allZips) =>
-              if (allZips) {
-                for {
-                  parsedZipResult <- extractFromZip(file, Some(name), sharedParams)
-                  otherFiles = parsedZipResult.otherFiles.toSeq.map(tuple => (tuple._2, tuple._1))
-                  parsedFileResults <- extractFromFiles(otherFiles, sharedParams)
-                } yield collectedResults.combineWith(parsedFileResults)
-              } else {
-                for {
-                  parsedFile <- extractFromFile(file, name, sharedParams)
-                } yield collectedResults.combineWith(parsedFile)
-              }
-            case _ => Fox.successful(collectedResults)
-          }
-        } else {
-          for {
-            parsedFromFile <- extractFromFile(file, name, sharedParams)
-          } yield collectedResults.combineWith(parsedFromFile)
-
+      ctx: DBAccessContext
+  ): Fox[MultiNmlParseResult] =
+    Fox.foldLeft(files.iterator, NmlResults.MultiNmlParseResult()) { case (collectedResults, (file, name)) =>
+      if (name.endsWith(".zip")) {
+        tryo(new java.util.zip.ZipFile(file)).map(ZipIO.forallZipEntries(_)(_.getName.endsWith(".zip"))) match {
+          case Full(allZips) =>
+            if (allZips) {
+              for {
+                parsedZipResult <- extractFromZip(file, Some(name), sharedParams)
+                otherFiles = parsedZipResult.otherFiles.toSeq.map(tuple => (tuple._2, tuple._1))
+                parsedFileResults <- extractFromFiles(otherFiles, sharedParams)
+              } yield collectedResults.combineWith(parsedFileResults)
+            } else {
+              for {
+                parsedFile <- extractFromFile(file, name, sharedParams)
+              } yield collectedResults.combineWith(parsedFile)
+            }
+          case _ => Fox.successful(collectedResults)
         }
+      } else {
+        for {
+          parsedFromFile <- extractFromFile(file, name, sharedParams)
+        } yield collectedResults.combineWith(parsedFromFile)
+
+      }
     }
 
-  private def extractFromFile(file: File, fileName: String, sharedParsingParameters: SharedParsingParameters)(
-      implicit m: MessagesProvider,
+  private def extractFromFile(file: File, fileName: String, sharedParsingParameters: SharedParsingParameters)(implicit
+      m: MessagesProvider,
       ec: ExecutionContext,
-      ctx: DBAccessContext): Fox[MultiNmlParseResult] =
+      ctx: DBAccessContext
+  ): Fox[MultiNmlParseResult] =
     if (fileName.endsWith(".zip")) {
       logger.trace("Extracting from Zip file")
       extractFromZip(file, Some(fileName), sharedParsingParameters)

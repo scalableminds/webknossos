@@ -33,18 +33,20 @@ object TreeUtils {
     else
       trees.map(_.treeId).max
 
-  def mergeTrees(sourceTrees: Seq[Tree],
-                 targetTrees: Seq[Tree],
-                 nodeMapping: FunctionalNodeMapping,
-                 groupMapping: FunctionalGroupMapping): Seq[Tree] = {
+  def mergeTrees(
+      sourceTrees: Seq[Tree],
+      targetTrees: Seq[Tree],
+      nodeMapping: FunctionalNodeMapping,
+      groupMapping: FunctionalGroupMapping
+  ): Seq[Tree] = {
     val treeMaxId = maxTreeId(targetTrees)
 
     val sourceNodeIds: Set[Int] = sourceTrees.flatMap(_.nodes.map(_.id)).toSet
 
-    val mappedSourceTrees = sourceTrees.map(
-      tree =>
-        applyNodeMapping(tree.withTreeId(tree.treeId + treeMaxId), nodeMapping, sourceNodeIds)
-          .copy(groupId = tree.groupId.map(groupMapping(_))))
+    val mappedSourceTrees = sourceTrees.map(tree =>
+      applyNodeMapping(tree.withTreeId(tree.treeId + treeMaxId), nodeMapping, sourceNodeIds)
+        .copy(groupId = tree.groupId.map(groupMapping(_)))
+    )
 
     targetTrees ++ mappedSourceTrees
   }
@@ -53,8 +55,11 @@ object TreeUtils {
     tree
       .withNodes(tree.nodes.map(node => node.withId(f(node.id))))
       .withEdges(tree.edges.map(edge => edge.withSource(f(edge.source)).withTarget(f(edge.target))))
-      .withComments(tree.comments.map(comment =>
-        comment.withNodeId(f(comment.nodeId)).withContent(updateNodeReferences(comment.content, f, sourceNodeIds))))
+      .withComments(
+        tree.comments.map(comment =>
+          comment.withNodeId(f(comment.nodeId)).withContent(updateNodeReferences(comment.content, f, sourceNodeIds))
+        )
+      )
       .withBranchPoints(tree.branchPoints.map(bp => bp.withNodeId(f(bp.nodeId))))
 
   private def updateNodeReferences(comment: String, f: Int => Int, sourceNodeIds: Set[Int]) = {
@@ -68,8 +73,7 @@ object TreeUtils {
 
   def calculateNodeMapping(sourceTrees: Seq[Tree], targetTrees: Seq[Tree]): Int => Int = {
     val nodeIdOffset = calculateNodeOffset(sourceTrees, targetTrees)
-    (nodeId: Int) =>
-      nodeId + nodeIdOffset
+    (nodeId: Int) => nodeId + nodeIdOffset
   }
 
   private def calculateNodeOffset(sourceTrees: Seq[Tree], targetTrees: Seq[Tree]) =

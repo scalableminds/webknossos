@@ -25,7 +25,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.io.Source
 
-class DataSourceService @Inject()(
+class DataSourceService @Inject() (
     config: DataStoreConfig,
     dataSourceRepository: DataSourceRepository,
     remoteSourceDescriptorService: RemoteSourceDescriptorService,
@@ -57,7 +57,9 @@ class DataSourceService @Inject()(
   def assertDataDirWritable(organizationId: String): Fox[Unit] = {
     val orgaPath = dataBaseDir.resolve(organizationId)
     if (orgaPath.toFile.exists()) {
-      Fox.bool2Fox(Files.isWritable(dataBaseDir.resolve(organizationId))) ?~> "Datastore cannot write to organization data directory."
+      Fox.bool2Fox(
+        Files.isWritable(dataBaseDir.resolve(organizationId))
+      ) ?~> "Datastore cannot write to organization data directory."
     } else {
       tryo {
         Files.createDirectory(orgaPath)
@@ -89,7 +91,7 @@ class DataSourceService @Inject()(
   private def logFoundDatasources(foundInboxSources: Seq[InboxDataSource], verbose: Boolean): Unit = {
     val shortForm =
       s"Finished scanning inbox ($dataBaseDir): ${foundInboxSources.count(_.isUsable)} active, ${foundInboxSources
-        .count(!_.isUsable)} inactive"
+          .count(!_.isUsable)} inactive"
     val msg = if (verbose) {
       val byTeam: Map[String, Seq[InboxDataSource]] = foundInboxSources.groupBy(_.id.organizationId)
       shortForm + ". " + byTeam.keys.map { team =>
@@ -176,7 +178,9 @@ class DataSourceService @Inject()(
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
       _ <- Fox.runIf(!expectExisting)(ensureDirectoryBox(dataSourcePath))
       _ <- Fox.runIf(!expectExisting)(bool2Fox(!Files.exists(propertiesFile))) ?~> "dataSource.alreadyPresent"
-      _ <- Fox.runIf(expectExisting)(backupPreviousProperties(dataSourcePath)) ?~> "Could not update datasource-properties.json"
+      _ <- Fox.runIf(expectExisting)(
+        backupPreviousProperties(dataSourcePath)
+      ) ?~> "Could not update datasource-properties.json"
       _ <- JsonHelper.jsonToFile(propertiesFile, dataSource) ?~> "Could not update datasource-properties.json"
       _ <- dataSourceRepository.updateDataSource(dataSource)
     } yield ()
@@ -229,9 +233,11 @@ class DataSourceService @Inject()(
           else
             UnusableDataSource(id, "Error: Zero layer Dataset", Some(dataSource.scale), Some(Json.toJson(dataSource)))
         case e =>
-          UnusableDataSource(id,
-                             s"Error: Invalid json format in $propertiesFile: $e",
-                             existingDataSourceProperties = JsonHelper.jsonFromFile(propertiesFile, path).toOption)
+          UnusableDataSource(
+            id,
+            s"Error: Invalid json format in $propertiesFile: $e",
+            existingDataSourceProperties = JsonHelper.jsonFromFile(propertiesFile, path).toOption
+          )
       }
     } else {
       UnusableDataSource(id, "Not imported yet.")
@@ -249,7 +255,8 @@ class DataSourceService @Inject()(
         dataLayerOpt <- dataLayers
         dataLayer <- dataLayerOpt
         _ = dataLayer.mags.foreach(mag =>
-          remoteSourceDescriptorService.removeVaultFromCache(dataBaseDir, dataSource.id, dataLayer.name, mag))
+          remoteSourceDescriptorService.removeVaultFromCache(dataBaseDir, dataSource.id, dataLayer.name, mag)
+        )
       } yield dataLayer.mags.length
     } yield removedEntriesList.sum
 

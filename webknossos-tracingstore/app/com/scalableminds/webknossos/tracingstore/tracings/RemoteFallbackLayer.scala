@@ -14,10 +14,12 @@ import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRem
 
 import scala.concurrent.ExecutionContext
 
-case class RemoteFallbackLayer(organizationId: String,
-                               datasetDirectoryName: String,
-                               layerName: String,
-                               elementClass: ElementClassProto)
+case class RemoteFallbackLayer(
+    organizationId: String,
+    datasetDirectoryName: String,
+    layerName: String,
+    elementClass: ElementClassProto
+)
 
 object RemoteFallbackLayer extends ProtoGeometryImplicits {
   def fromDataLayerAndDataSource(dataLayer: DataLayerLike, dataSource: DataSourceId): RemoteFallbackLayer =
@@ -30,16 +32,21 @@ trait FallbackDataHelper {
   private lazy val fallbackDataCache: AlfuCache[FallbackDataKey, (Array[Byte], List[Int])] =
     AlfuCache(maxCapacity = 3000)
 
-  def remoteFallbackLayerFromVolumeTracing(tracing: VolumeTracing, tracingId: String)(
-      implicit ec: ExecutionContext): Fox[RemoteFallbackLayer] =
+  def remoteFallbackLayerFromVolumeTracing(tracing: VolumeTracing, tracingId: String)(implicit
+      ec: ExecutionContext
+  ): Fox[RemoteFallbackLayer] =
     for {
-      layerName <- tracing.fallbackLayer.toFox ?~> "This feature is only defined on volume annotations with fallback segmentation layer."
+      layerName <-
+        tracing.fallbackLayer.toFox ?~> "This feature is only defined on volume annotations with fallback segmentation layer."
       datasetId <- remoteWebknossosClient.getDataSourceIdForTracing(tracingId)
     } yield RemoteFallbackLayer(datasetId.organizationId, datasetId.directoryName, layerName, tracing.elementClass)
 
-  def getFallbackDataFromDatastore(remoteFallbackLayer: RemoteFallbackLayer, dataRequests: List[WebknossosDataRequest])(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], List[Int])] =
-    fallbackDataCache.getOrLoad(FallbackDataKey(remoteFallbackLayer, dataRequests, tc.userTokenOpt),
-                                k => remoteDatastoreClient.getData(k.remoteFallbackLayer, k.dataRequests))
+  def getFallbackDataFromDatastore(
+      remoteFallbackLayer: RemoteFallbackLayer,
+      dataRequests: List[WebknossosDataRequest]
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[(Array[Byte], List[Int])] =
+    fallbackDataCache.getOrLoad(
+      FallbackDataKey(remoteFallbackLayer, dataRequests, tc.userTokenOpt),
+      k => remoteDatastoreClient.getData(k.remoteFallbackLayer, k.dataRequests)
+    )
 }

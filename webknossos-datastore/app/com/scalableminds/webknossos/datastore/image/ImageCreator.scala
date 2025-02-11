@@ -43,20 +43,21 @@ object ImageCreator extends LazyLogging {
     createSpriteSheet(images, params, targetType)
   }
 
-  private def calculateSprites(data: Array[Byte],
-                               params: ImageCreatorParameters,
-                               targetType: Int): List[BufferedImage] = {
+  private def calculateSprites(
+      data: Array[Byte],
+      params: ImageCreatorParameters,
+      targetType: Int
+  ): List[BufferedImage] = {
     val imageData =
       if (params.useHalfBytes) {
         val r = new Array[Byte](data.length * 2)
-        data.zipWithIndex.foreach {
-          case (b, idx) =>
-            r(2 * idx) = (b & 0xF0).toByte
-            r(2 * idx + 1) = (b & 0x0F << 4).toByte
+        data.zipWithIndex.foreach { case (b, idx) =>
+          r(2 * idx) = (b & 0xf0).toByte
+          r(2 * idx + 1) = (b & 0x0f << 4).toByte
         }
         r
       } else if (params.blackAndWhite) {
-        data.map(d => if (d != 0x00) 0xFF.toByte else 0x00.toByte)
+        data.map(d => if (d != 0x00) 0xff.toByte else 0x00.toByte)
       } else
         data
 
@@ -66,9 +67,11 @@ object ImageCreator extends LazyLogging {
     }
   }
 
-  private def createSpriteSheet(bufferedImages: List[BufferedImage],
-                                params: ImageCreatorParameters,
-                                targetType: Int): Option[CombinedImage] =
+  private def createSpriteSheet(
+      bufferedImages: List[BufferedImage],
+      params: ImageCreatorParameters,
+      targetType: Int
+  ): Option[CombinedImage] =
     if (bufferedImages.isEmpty) {
       logger.warn("No images supplied for sprite sheet generation.")
       None
@@ -80,65 +83,66 @@ object ImageCreator extends LazyLogging {
       val pages = bufferedImages
         .sliding(imagesPerPage, imagesPerPage)
         .zipWithIndex
-        .map {
-          case (pageImages, page) =>
-            val depth = math.ceil(pageImages.size.toFloat / params.imagesPerRow).toInt
-            val imageWidth = params.imageWidth.getOrElse(subpartWidth * params.imagesPerRow)
-            val imageHeight = params.imageHeight.getOrElse(subpartHeight * depth)
+        .map { case (pageImages, page) =>
+          val depth = math.ceil(pageImages.size.toFloat / params.imagesPerRow).toInt
+          val imageWidth = params.imageWidth.getOrElse(subpartWidth * params.imagesPerRow)
+          val imageHeight = params.imageHeight.getOrElse(subpartHeight * depth)
 
-            val finalImage = new BufferedImage(imageWidth, imageHeight, targetType)
+          val finalImage = new BufferedImage(imageWidth, imageHeight, targetType)
 
-            val info = pageImages.zipWithIndex.map {
-              case (image, idx) =>
-                assert(image.getWidth() == subpartWidth, "Wrong image size!")
-                assert(image.getHeight() == subpartHeight, "Wrong image size!")
-                val w = idx % params.imagesPerRow * params.slideWidth
-                val h = idx / params.imagesPerRow * params.slideHeight
-                finalImage.createGraphics().drawImage(image, w, h, null)
-                ImagePartInfo(page, w, h, subpartHeight, subpartWidth)
-            }
-            CombinedPage(finalImage, info, PageInfo(page, page * imagesPerPage, pageImages.size))
+          val info = pageImages.zipWithIndex.map { case (image, idx) =>
+            assert(image.getWidth() == subpartWidth, "Wrong image size!")
+            assert(image.getHeight() == subpartHeight, "Wrong image size!")
+            val w = idx % params.imagesPerRow * params.slideWidth
+            val h = idx / params.imagesPerRow * params.slideHeight
+            finalImage.createGraphics().drawImage(image, w, h, null)
+            ImagePartInfo(page, w, h, subpartHeight, subpartWidth)
+          }
+          CombinedPage(finalImage, info, PageInfo(page, page * imagesPerPage, pageImages.size))
         }
         .toList
       Some(CombinedImage(pages))
     }
 
-  private def toRGBArray(b: Array[Byte],
-                         elementClass: ElementClass.Value,
-                         isSegmentation: Boolean,
-                         intensityRange: Option[(Double, Double)],
-                         color: Option[Color],
-                         invertColor: Boolean) = {
+  private def toRGBArray(
+      b: Array[Byte],
+      elementClass: ElementClass.Value,
+      isSegmentation: Boolean,
+      intensityRange: Option[(Double, Double)],
+      color: Option[Color],
+      invertColor: Boolean
+  ) = {
     val bytesPerElement = ElementClass.bytesPerElement(elementClass)
     val colored = new Array[Int](b.length / bytesPerElement)
     var idx = 0
     val l = b.length
     while (idx + bytesPerElement <= l) {
-      colored(idx / bytesPerElement) = {
-        if (isSegmentation)
-          idToRGB(b(idx))
-        else {
-          val colorRed = applyColor(color.map(_.r).getOrElse(1d), invertColor)
-          val colorGreen = applyColor(color.map(_.g).getOrElse(1d), invertColor)
-          val colorBlue = applyColor(color.map(_.b).getOrElse(1d), invertColor)
-          elementClass match {
-            case ElementClass.uint8 =>
-              val grayNormalized = normalizeIntensityUint8(intensityRange, b(idx))
-              (0xFF << 24) | (colorRed(grayNormalized) << 16) | (colorGreen(grayNormalized) << 8) | (colorBlue(
-                grayNormalized) << 0)
-            case ElementClass.uint16 =>
-              val grayNormalized = normalizeIntensityUint16(intensityRange, b(idx), b(idx + 1))
-              (0xFF << 24) | (colorRed(grayNormalized) << 16) | (colorGreen(grayNormalized) << 8) | (colorBlue(
-                grayNormalized) << 0)
-            case ElementClass.uint24 => // assume uint24 rgb color data
-              (0xFF << 24) | ((b(idx) & 0xFF) << 16) | ((b(idx + 1) & 0xFF) << 8) | ((b(idx + 2) & 0xFF) << 0)
-            case ElementClass.float =>
-              val grayNormalized = normalizeIntensityFloat(intensityRange, b(idx), b(idx + 1), b(idx + 2), b(idx + 3))
-              (0xFF << 24) | (colorRed(grayNormalized) << 16) | (colorGreen(grayNormalized) << 8) | (colorBlue(
-                grayNormalized) << 0)
-            case _ =>
-              throw new Exception(s"Unsupported ElementClass for color layer thumbnail: $elementClass")
-          }
+      colored(idx / bytesPerElement) = if (isSegmentation)
+        idToRGB(b(idx))
+      else {
+        val colorRed = applyColor(color.map(_.r).getOrElse(1d), invertColor)
+        val colorGreen = applyColor(color.map(_.g).getOrElse(1d), invertColor)
+        val colorBlue = applyColor(color.map(_.b).getOrElse(1d), invertColor)
+        elementClass match {
+          case ElementClass.uint8 =>
+            val grayNormalized = normalizeIntensityUint8(intensityRange, b(idx))
+            (0xff << 24) | (colorRed(grayNormalized) << 16) | (colorGreen(grayNormalized) << 8) | (colorBlue(
+              grayNormalized
+            ) << 0)
+          case ElementClass.uint16 =>
+            val grayNormalized = normalizeIntensityUint16(intensityRange, b(idx), b(idx + 1))
+            (0xff << 24) | (colorRed(grayNormalized) << 16) | (colorGreen(grayNormalized) << 8) | (colorBlue(
+              grayNormalized
+            ) << 0)
+          case ElementClass.uint24 => // assume uint24 rgb color data
+            (0xff << 24) | ((b(idx) & 0xff) << 16) | ((b(idx + 1) & 0xff) << 8) | ((b(idx + 2) & 0xff) << 0)
+          case ElementClass.float =>
+            val grayNormalized = normalizeIntensityFloat(intensityRange, b(idx), b(idx + 1), b(idx + 2), b(idx + 3))
+            (0xff << 24) | (colorRed(grayNormalized) << 16) | (colorGreen(grayNormalized) << 8) | (colorBlue(
+              grayNormalized
+            ) << 0)
+          case _ =>
+            throw new Exception(s"Unsupported ElementClass for color layer thumbnail: $elementClass")
         }
       }
       idx += bytesPerElement
@@ -148,35 +152,39 @@ object ImageCreator extends LazyLogging {
 
   private def applyColor(colorFactor: Double, invertColor: Boolean): Int => Int =
     if (invertColor)
-      (valueByte: Int) => (Math.abs(valueByte - 255) * colorFactor).toInt & 0xFF
+      (valueByte: Int) => (Math.abs(valueByte - 255) * colorFactor).toInt & 0xff
     else
-      (valueByte: Int) => (valueByte * colorFactor).toInt & 0xFF
+      (valueByte: Int) => (valueByte * colorFactor).toInt & 0xff
 
   private def normalizeIntensityUint8(intensityRangeOpt: Option[(Double, Double)], grayByte: Byte): Int =
     intensityRangeOpt match {
-      case None => grayByte & 0xFF
+      case None => grayByte & 0xff
       case Some(intensityRange) =>
-        val grayInt = grayByte & 0xFF
+        val grayInt = grayByte & 0xff
         normalizeIntensityImpl(grayInt.toDouble, intensityRange)
     }
 
-  private def normalizeIntensityUint16(intensityRangeOpt: Option[(Double, Double)],
-                                       grayLowerByte: Byte,
-                                       grayUpperByte: Byte): Int =
+  private def normalizeIntensityUint16(
+      intensityRangeOpt: Option[(Double, Double)],
+      grayLowerByte: Byte,
+      grayUpperByte: Byte
+  ): Int =
     intensityRangeOpt match {
-      case None => grayUpperByte & 0xFF
+      case None => grayUpperByte & 0xff
       case Some(intensityRange) =>
-        val grayInt = ((grayUpperByte & 0xFF) << 8) | (grayLowerByte & 0xFF)
+        val grayInt = ((grayUpperByte & 0xff) << 8) | (grayLowerByte & 0xff)
         normalizeIntensityImpl(grayInt.toDouble, intensityRange)
     }
 
-  private def normalizeIntensityFloat(intensityRangeOpt: Option[(Double, Double)],
-                                      byte0: Byte,
-                                      byte1: Byte,
-                                      byte2: Byte,
-                                      byte3: Byte): Int = {
+  private def normalizeIntensityFloat(
+      intensityRangeOpt: Option[(Double, Double)],
+      byte0: Byte,
+      byte1: Byte,
+      byte2: Byte,
+      byte3: Byte
+  ): Int = {
     val intensityRange = intensityRangeOpt.getOrElse((0.0, 255.0))
-    val grayInt = ((byte3 & 0xFF) << 24) | ((byte2 & 0xFF) << 16) | ((byte1 & 0xFF) << 8) | (byte0 & 0xFF)
+    val grayInt = ((byte3 & 0xff) << 24) | ((byte2 & 0xff) << 16) | ((byte1 & 0xff) << 8) | (byte0 & 0xff)
     normalizeIntensityImpl(java.lang.Float.intBitsToFloat(grayInt).toDouble, intensityRange)
   }
 
@@ -184,11 +192,15 @@ object ImageCreator extends LazyLogging {
     Math
       .round(
         com.scalableminds.util.tools.Math.clamp(
-          (com.scalableminds.util.tools.Math
-            .clamp(value, intensityRange._1, intensityRange._2) - intensityRange._1) / (intensityRange._2 - intensityRange._1) * 255.0,
+          (com.scalableminds.util.tools.Math.clamp(
+            value,
+            intensityRange._1,
+            intensityRange._2
+          ) - intensityRange._1) / (intensityRange._2 - intensityRange._1) * 255.0,
           0.0,
           255.0
-        ))
+        )
+      )
       .toInt
 
   private def idToRGB(b: Byte) = {
@@ -209,21 +221,23 @@ object ImageCreator extends LazyLogging {
       val rByte = (r * 255).toByte
       val gByte = (g * 255).toByte
       val bByte = (b * 255).toByte
-      (0xFF << 24) | ((rByte & 0xFF) << 16) | ((gByte & 0xFF) << 8) | ((bByte & 0xFF) << 0)
+      (0xff << 24) | ((rByte & 0xff) << 16) | ((gByte & 0xff) << 8) | ((bByte & 0xff) << 0)
     }
 
     b match {
       case 0 => (0x64 << 24) | (0x64 << 16) | (0x64 << 8) | (0x64 << 0)
       case _ =>
         val golden_ratio = 0.618033988749895
-        val hue = ((b & 0xFF) * golden_ratio) % 1.0
+        val hue = ((b & 0xff) * golden_ratio) % 1.0
         hueToRGB(hue)
     }
   }
 
-  private def createBufferedImageFromBytes(b: Array[Byte],
-                                           targetType: Int,
-                                           params: ImageCreatorParameters): Option[BufferedImage] =
+  private def createBufferedImageFromBytes(
+      b: Array[Byte],
+      targetType: Int,
+      params: ImageCreatorParameters
+  ): Option[BufferedImage] =
     try {
       val bufferedImage = new BufferedImage(params.slideWidth, params.slideHeight, targetType)
       bufferedImage.setRGB(
@@ -231,12 +245,14 @@ object ImageCreator extends LazyLogging {
         0,
         params.slideWidth,
         params.slideHeight,
-        toRGBArray(b,
-                   params.elementClass,
-                   params.isSegmentation,
-                   params.intensityRange,
-                   params.color,
-                   params.invertColor.getOrElse(false)),
+        toRGBArray(
+          b,
+          params.elementClass,
+          params.isSegmentation,
+          params.intensityRange,
+          params.color,
+          params.invertColor.getOrElse(false)
+        ),
         0,
         params.slideWidth
       )

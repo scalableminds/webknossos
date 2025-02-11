@@ -17,11 +17,13 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class AnalyticsService @Inject()(rpc: RPC,
-                                 wkConf: WkConf,
-                                 analyticsLookUpService: AnalyticsLookUpService,
-                                 analyticsSessionService: AnalyticsSessionService,
-                                 analyticsDAO: AnalyticsDAO)(implicit ec: ExecutionContext)
+class AnalyticsService @Inject() (
+    rpc: RPC,
+    wkConf: WkConf,
+    analyticsLookUpService: AnalyticsLookUpService,
+    analyticsSessionService: AnalyticsSessionService,
+    analyticsDAO: AnalyticsDAO
+)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   private lazy val conf = wkConf.BackendAnalytics
@@ -40,9 +42,9 @@ class AnalyticsService @Inject()(rpc: RPC,
   def ingest(jsonEvents: List[AnalyticsEventJson], apiKey: String): Fox[Unit] =
     for {
       resolvedWellKnownUris <- wellKnownUris ?~> "wellKnownUris configuration is incorrect"
-      _ <- bool2Fox(jsonEvents.forall(ev => {
+      _ <- bool2Fox(jsonEvents.forall { ev =>
         resolvedWellKnownUris.get(ev.userProperties.webknossosUri).forall(wellKnownApiKey => wellKnownApiKey == apiKey)
-      })) ?~> "Provided API key is not correct for provided webknossosUri" ~> UNAUTHORIZED
+      }) ?~> "Provided API key is not correct for provided webknossosUri" ~> UNAUTHORIZED
       _ <- analyticsDAO.insertMany(jsonEvents)
     } yield ()
 
@@ -77,7 +79,7 @@ class AnalyticsService @Inject()(rpc: RPC,
   }
 }
 
-class AnalyticsLookUpService @Inject()(userDAO: UserDAO, multiUserDAO: MultiUserDAO, wkConf: WkConf)
+class AnalyticsLookUpService @Inject() (userDAO: UserDAO, multiUserDAO: MultiUserDAO, wkConf: WkConf)
     extends LazyLogging {
   implicit val ctx: DBAccessContext = GlobalAccessContext
 
@@ -94,7 +96,7 @@ class AnalyticsLookUpService @Inject()(userDAO: UserDAO, multiUserDAO: MultiUser
   def webknossos_uri: String = wkConf.Http.uri
 }
 
-class AnalyticsSessionService @Inject()(wkConf: WkConf) extends LazyLogging {
+class AnalyticsSessionService @Inject() (wkConf: WkConf) extends LazyLogging {
   // Maintains session IDs per multiUser. The value is the start time of the session.
   // After an inactivity pause a new session id is assigned.
 

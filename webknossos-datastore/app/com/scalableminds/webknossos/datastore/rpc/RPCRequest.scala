@@ -149,8 +149,9 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     extractBytesResponse(performRequest)
   }
 
-  def postJsonWithProtoResponse[J: Writes, T <: GeneratedMessage](body: J)(
-      companion: GeneratedMessageCompanion[T]): Fox[T] = {
+  def postJsonWithProtoResponse[J: Writes, T <: GeneratedMessage](
+      body: J
+  )(companion: GeneratedMessageCompanion[T]): Fox[T] = {
     request =
       request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
     parseProtoResponse(performRequest)(companion)
@@ -173,8 +174,9 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     parseJsonResponse(performRequest)
   }
 
-  def postProtoWithProtoResponse[T <: GeneratedMessage, J <: GeneratedMessage](body: T)(
-      companion: GeneratedMessageCompanion[J]): Fox[J] = {
+  def postProtoWithProtoResponse[T <: GeneratedMessage, J <: GeneratedMessage](
+      body: T
+  )(companion: GeneratedMessageCompanion[J]): Fox[J] = {
     request =
       request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> protobufMimeType).withBody(body.toByteArray).withMethod("POST")
     parseProtoResponse(performRequest)(companion)
@@ -224,12 +226,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
           Failure(compactErrorMsg)
         }
       }
-      .recover {
-        case e =>
-          val errorMsg = s"Error sending $debugInfo: " +
-            s"${e.getMessage}\n${e.getStackTrace.mkString("\n    ")}"
-          logger.error(errorMsg)
-          Failure(errorMsg)
+      .recover { case e =>
+        val errorMsg = s"Error sending $debugInfo: " +
+          s"${e.getMessage}\n${e.getStackTrace.mkString("\n    ")}"
+        logger.error(errorMsg)
+        Failure(errorMsg)
       }
   }
 
@@ -262,9 +263,9 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
       if (verbose) {
         logger.debug(s"Successful $debugInfo, ResponseBody: <${response.body.length} bytes of protobuf data>")
       }
-      try {
+      try
         Full(companion.parseFrom(response.bodyAsBytes.toArray))
-      } catch {
+      catch {
         case e: Exception =>
           val errorMsg = s"$debugInfo returned invalid Protocol Buffer Data: $e"
           logger.error(errorMsg)

@@ -5,10 +5,12 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, Data
 
 import java.nio.file.Path
 
-case class DataServiceRequestSettings(halfByte: Boolean = false,
-                                      appliedAgglomerate: Option[String] = None,
-                                      version: Option[Long] = None,
-                                      additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
+case class DataServiceRequestSettings(
+    halfByte: Boolean = false,
+    appliedAgglomerate: Option[String] = None,
+    version: Option[Long] = None,
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
+)
 
 object DataServiceRequestSettings {
   val default: DataServiceRequestSettings = DataServiceRequestSettings(halfByte = false)

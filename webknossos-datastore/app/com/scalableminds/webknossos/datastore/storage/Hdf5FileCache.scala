@@ -76,11 +76,12 @@ class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, Cach
 
   def withCachedHdf5[T](filePath: Path)(block: CachedHdf5File => T): Box[T] =
     for {
-      _ <- if (filePath.toFile.exists()) {
-        Full(true)
-      } else {
-        Failure("mesh.file.open.failed")
-      }
+      _ <-
+        if (filePath.toFile.exists()) {
+          Full(true)
+        } else {
+          Failure("mesh.file.open.failed")
+        }
       result = Using(this.getCachedHdf5File(filePath)(CachedHdf5File.fromPath)) {
         block
       }

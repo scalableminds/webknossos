@@ -36,11 +36,12 @@ package object inbox {
       }
   }
 
-  case class UnusableDataSource[+T <: DataLayerLike](id: DataSourceId,
-                                                     status: String,
-                                                     scale: Option[VoxelSize] = None,
-                                                     existingDataSourceProperties: Option[JsValue] = None)
-      extends GenericInboxDataSource[T] {
+  case class UnusableDataSource[+T <: DataLayerLike](
+      id: DataSourceId,
+      status: String,
+      scale: Option[VoxelSize] = None,
+      existingDataSourceProperties: Option[JsValue] = None
+  ) extends GenericInboxDataSource[T] {
     val toUsable: Option[GenericDataSource[T]] = None
 
     val voxelSizeOpt: Option[VoxelSize] = scale

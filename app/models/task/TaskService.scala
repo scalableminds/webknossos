@@ -16,16 +16,18 @@ import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
-class TaskService @Inject()(conf: WkConf,
-                            datasetDAO: DatasetDAO,
-                            scriptDAO: ScriptDAO,
-                            userService: UserService,
-                            annotationDAO: AnnotationDAO,
-                            taskTypeDAO: TaskTypeDAO,
-                            teamDAO: TeamDAO,
-                            scriptService: ScriptService,
-                            taskTypeService: TaskTypeService,
-                            projectDAO: ProjectDAO)(implicit ec: ExecutionContext)
+class TaskService @Inject() (
+    conf: WkConf,
+    datasetDAO: DatasetDAO,
+    scriptDAO: ScriptDAO,
+    userService: UserService,
+    annotationDAO: AnnotationDAO,
+    taskTypeDAO: TaskTypeDAO,
+    teamDAO: TeamDAO,
+    scriptService: ScriptService,
+    taskTypeService: TaskTypeService,
+    projectDAO: ProjectDAO
+)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
   def publicWrites(task: Task)(implicit ctx: DBAccessContext): Fox[JsObject] =
@@ -39,26 +41,24 @@ class TaskService @Inject()(conf: WkConf,
       scriptJs <- scriptInfo.toFox.flatMap(s => scriptService.publicWrites(s)).futureBox
       project <- projectDAO.findOne(task._project)
       team <- teamDAO.findOne(project._team)(GlobalAccessContext)
-    } yield {
-      Json.obj(
-        "id" -> task._id.toString,
-        "projectId" -> project._id.id,
-        "projectName" -> project.name,
-        "team" -> team.name,
-        "type" -> taskTypeJs,
-        "datasetName" -> dataset.name,
-        "datasetId" -> dataset._id, // Only used for csv serialization in frontend.
-        "neededExperience" -> task.neededExperience,
-        "created" -> task.created,
-        "status" -> status,
-        "script" -> scriptJs.toOption,
-        "tracingTime" -> task.tracingTime,
-        "creationInfo" -> task.creationInfo,
-        "boundingBox" -> task.boundingBox,
-        "editPosition" -> task.editPosition,
-        "editRotation" -> task.editRotation
-      )
-    }
+    } yield Json.obj(
+      "id" -> task._id.toString,
+      "projectId" -> project._id.id,
+      "projectName" -> project.name,
+      "team" -> team.name,
+      "type" -> taskTypeJs,
+      "datasetName" -> dataset.name,
+      "datasetId" -> dataset._id, // Only used for csv serialization in frontend.
+      "neededExperience" -> task.neededExperience,
+      "created" -> task.created,
+      "status" -> status,
+      "script" -> scriptJs.toOption,
+      "tracingTime" -> task.tracingTime,
+      "creationInfo" -> task.creationInfo,
+      "boundingBox" -> task.boundingBox,
+      "editPosition" -> task.editPosition,
+      "editRotation" -> task.editRotation
+    )
 
   def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[List[ObjectId]] =
     if (user.isAdmin)
@@ -66,8 +66,9 @@ class TaskService @Inject()(conf: WkConf,
     else {
       for {
         numberOfOpen <- countOpenNonAdminTasks(user)
-        teams <- if (numberOfOpen < conf.WebKnossos.Tasks.maxOpenPerUser) userService.teamIdsFor(user._id)
-        else userService.teamManagerTeamIdsFor(user._id)
+        teams <-
+          if (numberOfOpen < conf.WebKnossos.Tasks.maxOpenPerUser) userService.teamIdsFor(user._id)
+          else userService.teamManagerTeamIdsFor(user._id)
         _ <- bool2Fox(teams.nonEmpty) ?~> Messages("task.tooManyOpenOnes")
       } yield teams
     }

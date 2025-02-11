@@ -13,8 +13,9 @@ case class TaskCreationResult(tasks: List[JsObject], warnings: List[String])
 object TaskCreationResult extends JsonResultAttribues with Status {
   implicit val jsonFormat: Format[TaskCreationResult] = Json.format[TaskCreationResult]
 
-  def fromTaskJsFoxes(taskJsons: List[Fox[JsObject]], warnings: List[String])(
-      implicit ec: ExecutionContext): Future[TaskCreationResult] = {
+  def fromTaskJsFoxes(taskJsons: List[Fox[JsObject]], warnings: List[String])(implicit
+      ec: ExecutionContext
+  ): Future[TaskCreationResult] = {
     val taskJsonFuture: Future[List[Box[JsObject]]] = Fox.sequence(taskJsons)
     taskJsonFuture.map { taskJsonBoxes =>
       TaskCreationResult.fromBoxResults(taskJsonBoxes, warnings)

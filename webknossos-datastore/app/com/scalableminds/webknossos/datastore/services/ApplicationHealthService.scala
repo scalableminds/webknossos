@@ -8,7 +8,7 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 case class HealthProblem(timestamp: Instant, msg: String)
 
-class ApplicationHealthService @Inject()(slackNotificationService: DSSlackNotificationService) {
+class ApplicationHealthService @Inject() (slackNotificationService: DSSlackNotificationService) {
   private var encounteredProblems: List[HealthProblem] = List()
 
   def pushError(e: InternalError): Unit = {

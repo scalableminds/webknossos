@@ -20,13 +20,19 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
 
   def readBytes(range: Option[NumericRange[Long]] = None)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
-      bytesAndEncoding <- dataVault.readBytesAndEncoding(this, RangeSpecifier.fromRangeOpt(range)) ?-> "Failed to read from vault path"
+      bytesAndEncoding <- dataVault.readBytesAndEncoding(
+        this,
+        RangeSpecifier.fromRangeOpt(range)
+      ) ?-> "Failed to read from vault path"
       decoded <- decode(bytesAndEncoding) ?~> s"Failed to decode ${bytesAndEncoding._2}-encoded response."
     } yield decoded
 
   def readLastBytes(byteCount: Int)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
-      bytesAndEncoding <- dataVault.readBytesAndEncoding(this, SuffixLength(byteCount)) ?-> "Failed to read from vault path"
+      bytesAndEncoding <- dataVault.readBytesAndEncoding(
+        this,
+        SuffixLength(byteCount)
+      ) ?-> "Failed to read from vault path"
       decoded <- decode(bytesAndEncoding) ?~> s"Failed to decode ${bytesAndEncoding._2}-encoded response."
     } yield decoded
 
@@ -48,12 +54,12 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
     val brotliInputStream = new BrotliInputStream(new ByteArrayInputStream(bytes))
     val out = new ByteArrayOutputStream
     var read = brotliInputStream.read
-    try {
+    try
       while (read > -1) {
         out.write(read)
         read = brotliInputStream.read
       }
-    } catch {
+    catch {
       case _: IOException =>
     }
     out.toByteArray

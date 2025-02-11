@@ -7,9 +7,9 @@ import utils.sql.{SimpleSQLDAO, SqlClient, SqlToken}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class AnalyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
+class AnalyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
   def insertMany(events: Iterable[AnalyticsEventJson]): Fox[Unit] = {
-    val values = events.map(ev => {
+    val values = events.map { ev =>
       SqlToken.tupleFromValues(
         ObjectId.generate,
         ev.time,
@@ -22,7 +22,7 @@ class AnalyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
         ev.userProperties.isSuperUser,
         ev.userProperties.webknossosUri
       )
-    })
+    }
 
     for {
       _ <- run(q"""

@@ -1,10 +1,10 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.mvc.ControllerUtils
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
-import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
@@ -16,17 +16,20 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
 
-class EditableMappingController @Inject()(
+class EditableMappingController @Inject() (
     volumeTracingService: VolumeTracingService,
     annotationService: TSAnnotationService,
     remoteWebknossosClient: TSRemoteWebknossosClient,
     accessTokenService: TracingStoreAccessTokenService,
-    editableMappingService: EditableMappingService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller {
+    editableMappingService: EditableMappingService,
+    cc: ControllerComponents
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    extends AbstractController(cc)
+    with ControllerUtils {
 
   def editableMappingInfo(tracingId: String, annotationId: String, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
@@ -79,7 +82,8 @@ class EditableMappingController @Inject()(
               editableMappingInfo,
               annotation.version,
               tracingId,
-              remoteFallbackLayer) ?~> "annotation.editableMapping.getAgglomerateIdsForSegments.failed"
+              remoteFallbackLayer
+            ) ?~> "annotation.editableMapping.getAgglomerateIdsForSegments.failed"
             agglomerateIdsSorted = relevantMapping.toSeq.sortBy(_._1).map(_._2)
           } yield Ok(ListOfLong(agglomerateIdsSorted).toByteArray)
         }
@@ -96,11 +100,13 @@ class EditableMappingController @Inject()(
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId)
-            edges <- editableMappingService.agglomerateGraphMinCut(tracingId,
-                                                                   tracing.version,
-                                                                   editableMappingInfo,
-                                                                   request.body,
-                                                                   remoteFallbackLayer)
+            edges <- editableMappingService.agglomerateGraphMinCut(
+              tracingId,
+              tracing.version,
+              editableMappingInfo,
+              request.body,
+              remoteFallbackLayer
+            )
           } yield Ok(Json.toJson(edges))
         }
       }
@@ -116,11 +122,13 @@ class EditableMappingController @Inject()(
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId)
-            (segmentId, edges) <- editableMappingService.agglomerateGraphNeighbors(tracingId,
-                                                                                   editableMappingInfo,
-                                                                                   tracing.version,
-                                                                                   request.body,
-                                                                                   remoteFallbackLayer)
+            (segmentId, edges) <- editableMappingService.agglomerateGraphNeighbors(
+              tracingId,
+              editableMappingInfo,
+              tracing.version,
+              request.body,
+              remoteFallbackLayer
+            )
           } yield Ok(Json.obj("segmentId" -> segmentId, "neighbors" -> Json.toJson(edges)))
         }
       }
@@ -135,11 +143,13 @@ class EditableMappingController @Inject()(
           _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
           editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId)
           remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-          agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(tracingId,
-                                                                                                tracing.version,
-                                                                                                editableMappingInfo,
-                                                                                                remoteFallbackLayer,
-                                                                                                agglomerateId)
+          agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(
+            tracingId,
+            tracing.version,
+            editableMappingInfo,
+            remoteFallbackLayer,
+            agglomerateId
+          )
         } yield Ok(agglomerateSkeletonBytes)
       }
     }

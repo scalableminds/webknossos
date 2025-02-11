@@ -26,17 +26,19 @@ import play.api.libs.ws.WSResponse
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-case class AnnotationUpdatesReport(annotationId: String,
-                                   timestamps: List[Instant],
-                                   statistics: Option[JsObject],
-                                   significantChangesCount: Int,
-                                   viewChangesCount: Int,
-                                   userToken: Option[String])
+case class AnnotationUpdatesReport(
+    annotationId: String,
+    timestamps: List[Instant],
+    statistics: Option[JsObject],
+    significantChangesCount: Int,
+    viewChangesCount: Int,
+    userToken: Option[String]
+)
 object AnnotationUpdatesReport {
   implicit val jsonFormat: OFormat[AnnotationUpdatesReport] = Json.format[AnnotationUpdatesReport]
 }
 
-class TSRemoteWebknossosClient @Inject()(
+class TSRemoteWebknossosClient @Inject() (
     rpc: RPC,
     config: TracingStoreConfig,
     val lifecycle: ApplicationLifecycle
@@ -102,9 +104,11 @@ class TSRemoteWebknossosClient @Inject()(
       .silent
       .postProto(annotationProto)
 
-  def createTracingFor(annotationId: String,
-                       layerParameters: AnnotationLayerParameters,
-                       previousVersion: Long): Fox[Either[SkeletonTracing, VolumeTracing]] = {
+  def createTracingFor(
+      annotationId: String,
+      layerParameters: AnnotationLayerParameters,
+      previousVersion: Long
+  ): Fox[Either[SkeletonTracing, VolumeTracing]] = {
     val req = rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/createTracing")
       .addQueryString("annotationId" -> annotationId)
       .addQueryString("previousVersion" -> previousVersion.toString) // used for fetching old precedence layers
@@ -128,5 +132,5 @@ class TSRemoteWebknossosClient @Inject()(
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 }
 
-class TracingStoreAccessTokenService @Inject()(val remoteWebknossosClient: TSRemoteWebknossosClient)
+class TracingStoreAccessTokenService @Inject() (val remoteWebknossosClient: TSRemoteWebknossosClient)
     extends AccessTokenService

@@ -26,7 +26,8 @@ object PrecomputedArray extends LazyLogging {
       axisOrderOpt: Option[AxisOrder],
       channelIndex: Option[Int],
       additionalAxes: Option[Seq[AdditionalAxis]],
-      sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[PrecomputedArray] =
+      sharedChunkContentsCache: AlfuCache[String, MultiArray]
+  )(implicit ec: ExecutionContext): Fox[PrecomputedArray] =
     for {
       headerBytes <- (magPath.parent / PrecomputedHeader.FILENAME_INFO)
         .readBytes() ?~> s"Could not read header at ${PrecomputedHeader.FILENAME_INFO}"
@@ -44,26 +45,30 @@ object PrecomputedArray extends LazyLogging {
           channelIndex,
           additionalAxes,
           sharedChunkContentsCache
-        )) ?~> "Could not open neuroglancerPrecomputed array"
+        )
+      ) ?~> "Could not open neuroglancerPrecomputed array"
     } yield array
 }
 
-class PrecomputedArray(vaultPath: VaultPath,
-                       dataSourceId: DataSourceId,
-                       layerName: String,
-                       header: PrecomputedScaleHeader,
-                       axisOrder: AxisOrder,
-                       channelIndex: Option[Int],
-                       additionalAxes: Option[Seq[AdditionalAxis]],
-                       sharedChunkContentsCache: AlfuCache[String, MultiArray])
-    extends DatasetArray(vaultPath,
-                         dataSourceId,
-                         layerName,
-                         header,
-                         axisOrder,
-                         channelIndex,
-                         additionalAxes,
-                         sharedChunkContentsCache)
+class PrecomputedArray(
+    vaultPath: VaultPath,
+    dataSourceId: DataSourceId,
+    layerName: String,
+    header: PrecomputedScaleHeader,
+    axisOrder: AxisOrder,
+    channelIndex: Option[Int],
+    additionalAxes: Option[Seq[AdditionalAxis]],
+    sharedChunkContentsCache: AlfuCache[String, MultiArray]
+) extends DatasetArray(
+      vaultPath,
+      dataSourceId,
+      layerName,
+      header,
+      axisOrder,
+      channelIndex,
+      additionalAxes,
+      sharedChunkContentsCache
+    )
     with FoxImplicits
     with LazyLogging {
 
@@ -71,11 +76,7 @@ class PrecomputedArray(vaultPath: VaultPath,
   override protected def getChunkFilename(chunkIndex: Array[Int]): String = {
 
     val bbox = header.chunkIndexToNDimensionalBoundingBox(chunkIndex)
-    bbox
-      .map(dim => {
-        s"${dim._1}-${dim._2}"
-      })
-      .mkString(header.dimension_separator.toString)
+    bbox.map(dim => s"${dim._1}-${dim._2}").mkString(header.dimension_separator.toString)
   }
 
   // SHARDING
@@ -91,7 +92,7 @@ class PrecomputedArray(vaultPath: VaultPath,
   private def getHashForChunk(chunkIndex: Array[Int]): Long =
     CompressedMortonCode.encode(chunkIndex, header.gridSize)
 
-  private lazy val minishardMask = {
+  private lazy val minishardMask =
     header.precomputedScale.sharding match {
       case Some(shardingSpec: ShardingSpecification) =>
         if (shardingSpec.minishard_bits == 0) {
@@ -106,9 +107,8 @@ class PrecomputedArray(vaultPath: VaultPath,
         }
       case None => 0
     }
-  }
 
-  private lazy val shardMask = {
+  private lazy val shardMask =
     header.precomputedScale.sharding match {
       case Some(shardingSpec: ShardingSpecification) =>
         val oneMask = Long.MinValue // 0xFFFFFFFFFFFFFFFF
@@ -117,7 +117,6 @@ class PrecomputedArray(vaultPath: VaultPath,
         shardMask & (~minishardMask)
       case None => 0
     }
-  }
 
   private lazy val minishardCount = 1 << header.precomputedScale.sharding.map(_.minishard_bits).getOrElse(0)
 
@@ -146,9 +145,12 @@ class PrecomputedArray(vaultPath: VaultPath,
     // See https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/sharded.md#shard-index-format
     index
       .grouped(16) // 16 Bytes: 2 uint64 numbers: start_offset, end_offset
-      .map((bytes: Array[Byte]) => {
-        (BigInt(bytes.take(8).reverse).toLong, BigInt(bytes.slice(8, 16).reverse).toLong) // bytes reversed because they are stored little endian
-      })
+      .map { (bytes: Array[Byte]) =>
+        (
+          BigInt(bytes.take(8).reverse).toLong,
+          BigInt(bytes.slice(8, 16).reverse).toLong
+        ) // bytes reversed because they are stored little endian
+      }
       .toSeq
 
   private def getMinishardInfo(chunkHash: Long): (Long, Long) =
@@ -173,8 +175,10 @@ class PrecomputedArray(vaultPath: VaultPath,
 
   }
 
-  private def getMinishardIndexRange(minishardNumber: Int,
-                                     parsedShardIndex: Seq[(Long, Long)]): NumericRange.Exclusive[Long] = {
+  private def getMinishardIndexRange(
+      minishardNumber: Int,
+      parsedShardIndex: Seq[(Long, Long)]
+  ): NumericRange.Exclusive[Long] = {
     val miniShardIndexStart: Long = (shardIndexRange.end) + parsedShardIndex(minishardNumber)._1
     val miniShardIndexEnd: Long = (shardIndexRange.end) + parsedShardIndex(minishardNumber)._2
     Range.Long(miniShardIndexStart, miniShardIndexEnd, 1)
@@ -204,9 +208,8 @@ class PrecomputedArray(vaultPath: VaultPath,
      */
     val chunkIds = new Array[Long](n)
     chunkIds(0) = longArray(0)
-    for (i <- 1 until n) {
+    for (i <- 1 until n)
       chunkIds(i) = longArray(i) + chunkIds(i - 1)
-    }
     /*
      From: https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/sharded.md#minishard-index-format
      The size of the data for chunk i is stored as array[2, i].
@@ -226,12 +229,14 @@ class PrecomputedArray(vaultPath: VaultPath,
     chunkIds.lazyZip(chunkStartOffsets).lazyZip(chunkSizes).toArray
   }
 
-  private def getMinishardIndex(shardPath: VaultPath, minishardNumber: Int)(
-      implicit ec: ExecutionContext): Fox[Array[(Long, Long, Long)]] =
+  private def getMinishardIndex(shardPath: VaultPath, minishardNumber: Int)(implicit
+      ec: ExecutionContext
+  ): Fox[Array[(Long, Long, Long)]] =
     minishardIndexCache.getOrLoad((shardPath, minishardNumber), readMinishardIndex)
 
-  private def readMinishardIndex(vaultPathAndMinishardNumber: (VaultPath, Int))(
-      implicit ec: ExecutionContext): Fox[Array[(Long, Long, Long)]] = {
+  private def readMinishardIndex(
+      vaultPathAndMinishardNumber: (VaultPath, Int)
+  )(implicit ec: ExecutionContext): Fox[Array[(Long, Long, Long)]] = {
     val (vaultPath, minishardNumber) = vaultPathAndMinishardNumber
     for {
       index <- getShardIndex(vaultPath)
@@ -242,24 +247,32 @@ class PrecomputedArray(vaultPath: VaultPath,
     } yield minishardIndex
   }
 
-  private def getChunkRange(chunkId: Long, minishardIndex: Array[(Long, Long, Long)])(
-      implicit ec: ExecutionContext): Fox[NumericRange.Exclusive[Long]] =
+  private def getChunkRange(chunkId: Long, minishardIndex: Array[(Long, Long, Long)])(implicit
+      ec: ExecutionContext
+  ): Fox[NumericRange.Exclusive[Long]] =
     for {
-      chunkSpecification <- Fox.option2Fox(minishardIndex.find(_._1 == chunkId)) ?~> s"Could not find chunk id $chunkId in minishard index"
+      chunkSpecification <- Fox.option2Fox(
+        minishardIndex.find(_._1 == chunkId)
+      ) ?~> s"Could not find chunk id $chunkId in minishard index"
       chunkStart = (shardIndexRange.end) + chunkSpecification._2
       chunkEnd = (shardIndexRange.end) + chunkSpecification._2 + chunkSpecification._3
     } yield Range.Long(chunkStart, chunkEnd, 1)
 
-  override def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
-      implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] = {
+  override def getShardedChunkPathAndRange(
+      chunkIndex: Array[Int]
+  )(implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] = {
     val chunkIdentifier = getHashForChunk(chunkIndex)
     val minishardInfo = getMinishardInfo(chunkIdentifier)
     val shardPath = getPathForShard(minishardInfo._1)
     for {
-      minishardIndex <- getMinishardIndex(shardPath, minishardInfo._2.toInt) ?~> f"Could not get minishard index for chunkIndex ${chunkIndex
-        .mkString(",")}"
-      chunkRange: NumericRange.Exclusive[Long] <- getChunkRange(chunkIdentifier, minishardIndex) ?~> s"Could not get chunk range for chunkIndex ${chunkIndex
-        .mkString(",")}  with chunkIdentifier $chunkIdentifier in minishard index."
+      minishardIndex <- getMinishardIndex(
+        shardPath,
+        minishardInfo._2.toInt
+      ) ?~> f"Could not get minishard index for chunkIndex ${chunkIndex.mkString(",")}"
+      chunkRange: NumericRange.Exclusive[Long] <- getChunkRange(
+        chunkIdentifier,
+        minishardIndex
+      ) ?~> s"Could not get chunk range for chunkIndex ${chunkIndex.mkString(",")}  with chunkIdentifier $chunkIdentifier in minishard index."
     } yield (shardPath, chunkRange)
   }
 

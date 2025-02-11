@@ -6,11 +6,13 @@ import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 
-class TSSlackNotificationService @Inject()(rpc: RPC, config: TracingStoreConfig) extends LazyLogging {
-  private lazy val slackClient = new SlackClient(rpc,
-                                                 config.SlackNotifications.uri,
-                                                 name = s"WEBKNOSSOS tracingstore at ${config.Http.uri}",
-                                                 config.SlackNotifications.verboseLoggingEnabled)
+class TSSlackNotificationService @Inject() (rpc: RPC, config: TracingStoreConfig) extends LazyLogging {
+  private lazy val slackClient = new SlackClient(
+    rpc,
+    config.SlackNotifications.uri,
+    name = s"WEBKNOSSOS tracingstore at ${config.Http.uri}",
+    config.SlackNotifications.verboseLoggingEnabled
+  )
 
   def noticeSlowRequest(msg: String): Unit =
     slackClient.info(

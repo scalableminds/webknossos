@@ -24,9 +24,11 @@ trait DataFinder {
       .getOrElse(Vec3Int.zeros)
   }
 
-  def getPositionOfNonZeroData(data: Array[Byte],
-                               globalPositionOffset: Vec3Int,
-                               bytesPerElement: Int): Option[Vec3Int] =
+  def getPositionOfNonZeroData(
+      data: Array[Byte],
+      globalPositionOffset: Vec3Int,
+      bytesPerElement: Int
+  ): Option[Vec3Int] =
     if (data.nonEmpty && data.exists(_ != 0)) Some(globalPositionOffset.move(getExactDataOffset(data, bytesPerElement)))
     else None
 }

@@ -12,7 +12,7 @@ import com.scalableminds.util.tools.{Box, Full}
 
 import scala.concurrent.ExecutionContext
 
-class SkeletonTracingService @Inject()(
+class SkeletonTracingService @Inject() (
     tracingDataStore: TracingDataStore,
     temporaryTracingService: TemporaryTracingService
 )(implicit val ec: ExecutionContext)
@@ -24,10 +24,12 @@ class SkeletonTracingService @Inject()(
 
   implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
 
-  def saveSkeleton(tracing: SkeletonTracing,
-                   tracingId: Option[String],
-                   version: Long,
-                   toTemporaryStore: Boolean = false): Fox[String] = {
+  def saveSkeleton(
+      tracing: SkeletonTracing,
+      tracingId: Option[String],
+      version: Long,
+      toTemporaryStore: Boolean = false
+  ): Fox[String] = {
     val id = tracingId.getOrElse(TracingId.generate)
     if (toTemporaryStore) {
       temporaryTracingService.saveSkeleton(id, tracing).map(_ => id)
@@ -36,12 +38,14 @@ class SkeletonTracingService @Inject()(
     }
   }
 
-  def adaptSkeletonForDuplicate(tracing: SkeletonTracing,
-                                fromTask: Boolean,
-                                editPosition: Option[Vec3Int],
-                                editRotation: Option[Vec3Double],
-                                boundingBox: Option[BoundingBox],
-                                newVersion: Long): SkeletonTracing = {
+  def adaptSkeletonForDuplicate(
+      tracing: SkeletonTracing,
+      fromTask: Boolean,
+      editPosition: Option[Vec3Int],
+      editRotation: Option[Vec3Double],
+      boundingBox: Option[BoundingBox],
+      newVersion: Long
+  ): SkeletonTracing = {
     val taskBoundingBox = if (fromTask) {
       tracing.boundingBox.map { bb =>
         val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
@@ -65,36 +69,37 @@ class SkeletonTracingService @Inject()(
   def merge(tracings: Seq[SkeletonTracing], newVersion: Long): Box[SkeletonTracing] =
     for {
       tracing <- tracings.map(Full(_)).reduceLeft(mergeTwo)
-    } yield
-      tracing.copy(
-        createdTimestamp = System.currentTimeMillis(),
-        version = newVersion,
-      )
+    } yield tracing.copy(
+      createdTimestamp = System.currentTimeMillis(),
+      version = newVersion
+    )
 
   private def mergeTwo(tracingA: Box[SkeletonTracing], tracingB: Box[SkeletonTracing]): Box[SkeletonTracing] =
     for {
       tracingA <- tracingA
       tracingB <- tracingB
       mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
-        Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtosAsOpt(t.additionalAxes)))
+        Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtosAsOpt(t.additionalAxes))
+      )
       nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
       groupMapping = GroupUtils.calculateTreeGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
       mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping, groupMapping)
       mergedGroups = GroupUtils.mergeTreeGroups(tracingA.treeGroups, tracingB.treeGroups, groupMapping)
       mergedBoundingBox = combineBoundingBoxes(tracingA.boundingBox, tracingB.boundingBox)
-      userBoundingBoxes = combineUserBoundingBoxes(tracingA.userBoundingBox,
-                                                   tracingB.userBoundingBox,
-                                                   tracingA.userBoundingBoxes,
-                                                   tracingB.userBoundingBoxes)
-    } yield
-      tracingA.copy(
-        trees = mergedTrees,
-        treeGroups = mergedGroups,
-        boundingBox = mergedBoundingBox,
-        userBoundingBox = None,
-        userBoundingBoxes = userBoundingBoxes,
-        additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes)
+      userBoundingBoxes = combineUserBoundingBoxes(
+        tracingA.userBoundingBox,
+        tracingB.userBoundingBox,
+        tracingA.userBoundingBoxes,
+        tracingB.userBoundingBoxes
       )
+    } yield tracingA.copy(
+      trees = mergedTrees,
+      treeGroups = mergedGroups,
+      boundingBox = mergedBoundingBox,
+      userBoundingBox = None,
+      userBoundingBoxes = userBoundingBoxes,
+      additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes)
+    )
 
   // Can be removed again when https://github.com/scalableminds/webknossos/issues/5009 is fixed
   def remapTooLargeTreeIds(skeletonTracing: SkeletonTracing): SkeletonTracing =

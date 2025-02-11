@@ -42,7 +42,9 @@ trait Formatter {
       val labelElements: ListBuffer[String] = new ListBuffer[String]
 
       var days = Math.floor(millisAbs.toDouble / 1000 / 3600 / 24).toLong
-      if (millisAbs - days * 24 * 3600 * 1000 > 23 * 3600 * 1000 + 59 * 60 * 1000 + minuteRoundingThresholdMillisForRenderingSeconds) { // extra day to avoid 24h/60m/60s
+      if (
+        millisAbs - days * 24 * 3600 * 1000 > 23 * 3600 * 1000 + 59 * 60 * 1000 + minuteRoundingThresholdMillisForRenderingSeconds
+      ) { // extra day to avoid 24h/60m/60s
         days += 1
       }
       val includeSeconds = days == 0

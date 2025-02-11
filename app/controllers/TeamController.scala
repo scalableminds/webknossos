@@ -14,9 +14,9 @@ import com.scalableminds.util.objectid.ObjectId
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class TeamController @Inject()(teamDAO: TeamDAO, userDAO: UserDAO, teamService: TeamService, sil: Silhouette[WkEnv])(
-    implicit ec: ExecutionContext)
-    extends Controller {
+class TeamController @Inject() (teamDAO: TeamDAO, userDAO: UserDAO, teamService: TeamService, sil: Silhouette[WkEnv])(
+    implicit ec: ExecutionContext
+) extends Controller {
 
   private def teamNameReads: Reads[String] =
     (__ \ "name").read[String]

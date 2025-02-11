@@ -8,7 +8,7 @@ import java.nio.file.{Files, Path}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class DatasetSymlinkService @Inject()(dataSourceService: DataSourceService)(implicit ec: ExecutionContext)
+class DatasetSymlinkService @Inject() (dataSourceService: DataSourceService)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
   val dataBaseDir: Path = dataSourceService.dataBaseDir
@@ -18,7 +18,9 @@ class DatasetSymlinkService @Inject()(dataSourceService: DataSourceService)(impl
         val layerPath = layerToLink.pathIn(dataBaseDir)
         val newLayerPath = datasetDir.resolve(layerToLink.newLayerName.getOrElse(layerToLink.layerName))
         for {
-          _ <- bool2Fox(!Files.exists(newLayerPath)) ?~> s"Cannot symlink layer at $newLayerPath: a layer with this name already exists."
+          _ <- bool2Fox(
+            !Files.exists(newLayerPath)
+          ) ?~> s"Cannot symlink layer at $newLayerPath: a layer with this name already exists."
           _ <- bool2Fox(Files.exists(layerPath)) ?~> s"Cannot symlink to layer at $layerPath: The layer does not exist."
           _ <- tryo {
             Files.createSymbolicLink(newLayerPath, newLayerPath.getParent.relativize(layerPath))

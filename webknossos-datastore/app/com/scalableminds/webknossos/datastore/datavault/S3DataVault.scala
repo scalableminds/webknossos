@@ -42,11 +42,12 @@ import scala.jdk.FutureConverters._
 import scala.jdk.OptionConverters.RichOptional
 import scala.util.{Failure => TryFailure, Success => TrySuccess}
 
-class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
-                  uri: URI,
-                  ws: WSClient,
-                  implicit val ec: ExecutionContext)
-    extends DataVault {
+class S3DataVault(
+    s3AccessKeyCredential: Option[S3AccessKeyCredential],
+    uri: URI,
+    ws: WSClient,
+    implicit val ec: ExecutionContext
+) extends DataVault {
   private lazy val bucketName = S3DataVault.hostBucketFromUri(uri) match {
     case Some(value) => value
     case None        => throw new Exception(s"Could not parse S3 bucket for ${uri.toString}")
@@ -64,14 +65,16 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
   private def getRequest(bucketName: String, key: String): GetObjectRequest =
     GetObjectRequest.builder.bucket(bucketName).key(key).build()
 
-  private def performGetObjectRequest(request: GetObjectRequest)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], String)] = {
+  private def performGetObjectRequest(
+      request: GetObjectRequest
+  )(implicit ec: ExecutionContext): Fox[(Array[Byte], String)] = {
     val responseTransformer: AsyncResponseTransformer[GetObjectResponse, ResponseBytes[GetObjectResponse]] =
       AsyncResponseTransformer.toBytes
     for {
       client <- clientFox
       responseBytesObject: ResponseBytes[GetObjectResponse] <- notFoundToEmpty(
-        client.getObject(request, responseTransformer).asScala)
+        client.getObject(request, responseTransformer).asScala
+      )
       encoding = responseBytesObject.response().contentEncoding()
     } yield (responseBytesObject.asByteArray(), if (encoding == null) "" else encoding)
   }
@@ -101,8 +104,9 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
         Future.successful(BoxFailure(exception.getMessage, Full(exception), Empty))
     }
 
-  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] =
+  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(implicit
+      ec: ExecutionContext
+  ): Fox[(Array[Byte], Encoding.Value)] =
     for {
       objectKey <- Fox.box2Fox(S3DataVault.objectKeyFromUri(path.toUri))
       request = range match {
@@ -119,11 +123,13 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       prefixKey <- Fox.box2Fox(S3DataVault.objectKeyFromUri(path.toUri))
       s3SubPrefixKeys <- getObjectSummaries(bucketName, prefixKey, maxItems)
       vaultPaths <- tryo(
-        s3SubPrefixKeys.map(key => new VaultPath(new URI(s"${uri.getScheme}://$bucketName/$key"), this))).toFox
+        s3SubPrefixKeys.map(key => new VaultPath(new URI(s"${uri.getScheme}://$bucketName/$key"), this))
+      ).toFox
     } yield vaultPaths
 
-  private def getObjectSummaries(bucketName: String, keyPrefix: String, maxItems: Int)(
-      implicit ec: ExecutionContext): Fox[List[String]] = {
+  private def getObjectSummaries(bucketName: String, keyPrefix: String, maxItems: Int)(implicit
+      ec: ExecutionContext
+  ): Fox[List[String]] = {
     val maxKeys = maxItems + 5 // since commonPrefixes will may out some results, we request a few more first
     val listObjectsRequest =
       ListObjectsV2Request.builder().bucket(bucketName).prefix(keyPrefix).delimiter("/").maxKeys(maxKeys).build()
@@ -147,8 +153,9 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
 }
 
 object S3DataVault {
-  def create(remoteSourceDescriptor: RemoteSourceDescriptor, ws: WSClient)(
-      implicit ec: ExecutionContext): S3DataVault = {
+  def create(remoteSourceDescriptor: RemoteSourceDescriptor, ws: WSClient)(implicit
+      ec: ExecutionContext
+  ): S3DataVault = {
     val credential = remoteSourceDescriptor.credential.flatMap {
       case f: S3AccessKeyCredential     => Some(f)
       case f: LegacyDataVaultCredential => Some(f.toS3AccessKey)
@@ -199,7 +206,8 @@ object S3DataVault {
           AwsBasicCredentials.builder
             .accessKeyId(s3AccessKeyCredential.accessKeyId)
             .secretAccessKey(s3AccessKeyCredential.secretAccessKey)
-            .build())
+            .build()
+        )
       case None if sys.env.contains("AWS_ACCESS_KEY_ID") || sys.env.contains("AWS_ACCESS_KEY") =>
         EnvironmentVariableCredentialsProvider.create()
       case None =>
@@ -214,28 +222,28 @@ object S3DataVault {
     val httpsUri = new URI("https", uri.getAuthority, "", "", "")
     val httpsFuture = ws.url(httpsUri.toString).get()
 
-    val protocolFuture = httpsFuture.transformWith({
+    val protocolFuture = httpsFuture.transformWith {
       case TrySuccess(_) => Future.successful("https")
       case TryFailure(_) => Future.successful("http")
-    })
+    }
     for {
       protocol <- protocolFuture.toFox
     } yield protocol
   }
 
-  private def getAmazonS3Client(credentialOpt: Option[S3AccessKeyCredential], uri: URI, ws: WSClient)(
-      implicit ec: ExecutionContext): Fox[S3AsyncClient] = {
+  private def getAmazonS3Client(credentialOpt: Option[S3AccessKeyCredential], uri: URI, ws: WSClient)(implicit
+      ec: ExecutionContext
+  ): Fox[S3AsyncClient] = {
     val basic =
       S3AsyncClient.builder().credentialsProvider(getCredentialsProvider(credentialOpt)).crossRegionAccessEnabled(true)
     if (isNonAmazonHost(uri)) {
       for {
         protocol <- determineProtocol(uri, ws)
-      } yield
-        basic
-          .forcePathStyle(true)
-          .endpointOverride(new URI(s"${protocol}://${uri.getAuthority}"))
-          .region(AwsHostNameUtils.parseSigningRegion(uri.getAuthority, "s3").toScala.getOrElse(Region.US_EAST_1))
-          .build()
+      } yield basic
+        .forcePathStyle(true)
+        .endpointOverride(new URI(s"${protocol}://${uri.getAuthority}"))
+        .region(AwsHostNameUtils.parseSigningRegion(uri.getAuthority, "s3").toScala.getOrElse(Region.US_EAST_1))
+        .build()
     } else Fox.successful(basic.region(Region.US_EAST_1).build())
   }
 

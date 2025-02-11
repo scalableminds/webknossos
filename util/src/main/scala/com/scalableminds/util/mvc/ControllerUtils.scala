@@ -2,6 +2,7 @@ package com.scalableminds.util.mvc
 
 import com.google.protobuf.CodedInputStream
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.requestlogging.RequestLogging
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -45,8 +46,9 @@ trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHel
     case _       => None
   }
 
-  private def formatChain(chain: Box[Failure], includeTime: Boolean = true)(
-      implicit messages: MessagesProvider): String = chain match {
+  private def formatChain(chain: Box[Failure], includeTime: Boolean = true)(implicit
+      messages: MessagesProvider
+  ): String = chain match {
     case Full(failure) =>
       val serverTimeMsg = if (includeTime) s"[Server Time ${Instant.now}] " else ""
       serverTimeMsg + " <~ " + formatFailure(failure) + formatChain(failure.chain, includeTime = false)
@@ -93,19 +95,22 @@ trait CspHeaders extends HeaderNames {
   def addCspHeader(result: Result): Result =
     result.withHeaders((CONTENT_SECURITY_POLICY, contentSecurityPolicyDirectivesString))
 
-  def addCspHeader(action: Action[AnyContent])(implicit request: Request[AnyContent],
-                                               ec: ExecutionContext): Future[Result] =
+  def addCspHeader(
+      action: Action[AnyContent]
+  )(implicit request: Request[AnyContent], ec: ExecutionContext): Future[Result] =
     action.apply(request).map(addCspHeader)
 }
 
 trait ResultImplicits extends BoxToResultHelpers with I18nSupport {
 
-  implicit def fox2FutureResult[T <: Result](b: Fox[T])(implicit ec: ExecutionContext,
-                                                        messages: MessagesProvider): Future[Result] =
+  implicit def fox2FutureResult[T <: Result](
+      b: Fox[T]
+  )(implicit ec: ExecutionContext, messages: MessagesProvider): Future[Result] =
     b.futureBox.map(asResult)
 
-  implicit def futureBox2Result[T <: Result](b: Box[Future[T]])(implicit ec: ExecutionContext,
-                                                                messages: MessagesProvider): Future[Result] =
+  implicit def futureBox2Result[T <: Result](
+      b: Box[Future[T]]
+  )(implicit ec: ExecutionContext, messages: MessagesProvider): Future[Result] =
     b match {
       case Full(f) =>
         f.map(value => asResult(Full(value)))
@@ -115,8 +120,9 @@ trait ResultImplicits extends BoxToResultHelpers with I18nSupport {
         Future.successful(asResult(f))
     }
 
-  implicit def boxFuture2Result[T <: Result](f: Future[Box[T]])(implicit ec: ExecutionContext,
-                                                                messages: MessagesProvider): Future[Result] =
+  implicit def boxFuture2Result[T <: Result](
+      f: Future[Box[T]]
+  )(implicit ec: ExecutionContext, messages: MessagesProvider): Future[Result] =
     f.map { b =>
       asResult(b)
     }
@@ -133,8 +139,10 @@ class JsonResult(status: Int)
   val isSuccess: Boolean = List(OK) contains status
 
   private def createResult(content: JsValue)(implicit writeable: Writeable[JsValue]): Result =
-    Result(header = ResponseHeader(status),
-           body = HttpEntity.Strict(writeable.transform(content), writeable.contentType))
+    Result(
+      header = ResponseHeader(status),
+      body = HttpEntity.Strict(writeable.transform(content), writeable.contentType)
+    )
 
   private def messageTypeFromStatus =
     if (isSuccess)
@@ -220,9 +228,11 @@ trait ValidationHelpers {
       _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
     )
 
-  def validateProto[A <: GeneratedMessage](implicit bodyParsers: PlayBodyParsers,
-                                           companion: GeneratedMessageCompanion[A],
-                                           ec: ExecutionContext): BodyParser[A] =
+  def validateProto[A <: GeneratedMessage](implicit
+      bodyParsers: PlayBodyParsers,
+      companion: GeneratedMessageCompanion[A],
+      ec: ExecutionContext
+  ): BodyParser[A] =
     bodyParsers.raw.validate { raw =>
       if (raw.size < raw.memoryThreshold) {
         Box(raw.asBytes())
@@ -241,15 +251,15 @@ trait RequestTokenHelper {
     TokenContext(request.target.getQueryParameter("token").orElse(request.headers.get("X-Auth-Token")))
 }
 
-trait ExtendedController
+trait ControllerUtils
     extends JsonResults
     with BoxImplicits
     with FoxImplicits
     with ResultImplicits
     with Status
     with I18nSupport
-    with InjectedController
     with MimeTypes
     with ValidationHelpers
     with LazyLogging
     with RequestTokenHelper
+    with RequestLogging

@@ -28,10 +28,12 @@ object FolderParameters {
   implicit val jsonFormat: OFormat[FolderParameters] = Json.format[FolderParameters]
 }
 
-class FolderService @Inject()(teamDAO: TeamDAO,
-                              teamService: TeamService,
-                              folderDAO: FolderDAO,
-                              organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
+class FolderService @Inject() (
+    teamDAO: TeamDAO,
+    teamService: TeamService,
+    folderDAO: FolderDAO,
+    organizationDAO: OrganizationDAO
+)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   val defaultRootName: String = "Datasets"
@@ -39,23 +41,26 @@ class FolderService @Inject()(teamDAO: TeamDAO,
   def publicWrites(
       folder: Folder,
       requestingUser: Option[User] = None,
-      requestingUserOrganization: Option[Organization] = None)(implicit ctx: DBAccessContext): Fox[JsObject] =
+      requestingUserOrganization: Option[Organization] = None
+  )(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       teams <- teamService.allowedTeamsForFolder(folder._id, cumulative = false, requestingUser)
-      teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t, requestingUserOrganization)) ?~> "dataset.list.teamWritesFailed"
+      teamsJs <- Fox.serialCombined(teams)(t =>
+        teamService.publicWrites(t, requestingUserOrganization)
+      ) ?~> "dataset.list.teamWritesFailed"
       teamsCumulative <- teamService.allowedTeamsForFolder(folder._id, cumulative = true, requestingUser)
       teamsCumulativeJs <- Fox.serialCombined(teamsCumulative)(t =>
-        teamService.publicWrites(t, requestingUserOrganization)) ?~> "dataset.list.teamWritesFailed"
+        teamService.publicWrites(t, requestingUserOrganization)
+      ) ?~> "dataset.list.teamWritesFailed"
       isEditable <- folderDAO.isEditable(folder._id)
-    } yield
-      Json.obj(
-        "id" -> folder._id,
-        "name" -> folder.name,
-        "metadata" -> folder.metadata,
-        "allowedTeams" -> teamsJs,
-        "allowedTeamsCumulative" -> teamsCumulativeJs,
-        "isEditable" -> isEditable
-      )
+    } yield Json.obj(
+      "id" -> folder._id,
+      "name" -> folder.name,
+      "metadata" -> folder.metadata,
+      "allowedTeams" -> teamsJs,
+      "allowedTeamsCumulative" -> teamsCumulativeJs,
+      "isEditable" -> isEditable
+    )
 
   def publicWritesWithParent(folderWithParent: FolderWithParent, allEditableIds: Set[ObjectId]): JsObject =
     Json.obj(
@@ -66,8 +71,9 @@ class FolderService @Inject()(teamDAO: TeamDAO,
       "isEditable" -> allEditableIds.contains(folderWithParent._id)
     )
 
-  def updateAllowedTeams(folderId: ObjectId, teams: List[ObjectId], requestingUser: User)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateAllowedTeams(folderId: ObjectId, teams: List[ObjectId], requestingUser: User)(implicit
+      ctx: DBAccessContext
+  ): Fox[Unit] =
     for {
       _ <- folderDAO.findOne(folderId) ?~> "folder.notFound"
       includeMemberOnlyTeams = requestingUser.isDatasetManager
@@ -82,8 +88,9 @@ class FolderService @Inject()(teamDAO: TeamDAO,
   def assertValidFolderName(name: String): Fox[Unit] =
     bool2Fox(!name.contains("/")) ?~> "folder.nameMustNotContainSlash"
 
-  def getOrCreateFromPathLiteral(folderPathLiteral: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[ObjectId] =
+  def getOrCreateFromPathLiteral(folderPathLiteral: String, organizationId: String)(implicit
+      ctx: DBAccessContext
+  ): Fox[ObjectId] =
     for {
       organization <- organizationDAO.findOne(organizationId)
       foldersWithParents: Seq[FolderWithParent] <- folderDAO.findTreeOf(organization._rootFolder)
@@ -99,14 +106,17 @@ class FolderService @Inject()(teamDAO: TeamDAO,
       targetFolderId <- createMissingFoldersForPathNames(existingFolderId, remainingPathNames)
     } yield targetFolderId
 
-  private def findLowestMatchingFolder(root: FolderWithParent,
-                                       foldersWithParents: Seq[FolderWithParent],
-                                       pathNames: List[String]): (ObjectId, List[String]) = {
+  private def findLowestMatchingFolder(
+      root: FolderWithParent,
+      foldersWithParents: Seq[FolderWithParent],
+      pathNames: List[String]
+  ): (ObjectId, List[String]) = {
 
     @tailrec
     def findFolderIter(currentParent: FolderWithParent, remainingPathNames: List[String]): (ObjectId, List[String]) = {
       val nextOpt = foldersWithParents.find(folder =>
-        folder._parent.contains(currentParent._id) && remainingPathNames.headOption.contains(folder.name))
+        folder._parent.contains(currentParent._id) && remainingPathNames.headOption.contains(folder.name)
+      )
       nextOpt match {
         case Some(next) => findFolderIter(next, remainingPathNames.drop(1))
         case None       => (currentParent._id, remainingPathNames)
@@ -116,8 +126,9 @@ class FolderService @Inject()(teamDAO: TeamDAO,
     findFolderIter(root, pathNames.drop(1))
   }
 
-  private def createMissingFoldersForPathNames(parentFolderId: ObjectId, remainingPathNames: List[String])(
-      implicit ctx: DBAccessContext): Fox[ObjectId] =
+  private def createMissingFoldersForPathNames(parentFolderId: ObjectId, remainingPathNames: List[String])(implicit
+      ctx: DBAccessContext
+  ): Fox[ObjectId] =
     remainingPathNames match {
       case pathNamesHead :: pathNamesTail =>
         for {
@@ -129,12 +140,13 @@ class FolderService @Inject()(teamDAO: TeamDAO,
     }
 }
 
-class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class FolderDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Folder, FoldersRow, Folders](sqlClient) {
 
   protected val collection = Folders
   protected def idColumn(x: Folders): Rep[String] = x._Id
   protected def isDeletedColumn(x: Folders): Rep[Boolean] = x.isdeleted
+  protected def getResult = GetResultFoldersRow
 
   protected def parse(r: FoldersRow): Fox[Folder] =
     for {

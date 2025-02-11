@@ -11,7 +11,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
-class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
+class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
   private def runsWithStateQ(staleTimeout: FiniteDuration): SqlToken =
     q"""SELECT
@@ -108,9 +108,11 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         ) running_chunks ON running_chunks.name = tc.name AND running_chunks.executionId = tc.executionId AND running_chunks.chunkName = tc.chunkName
         WHERE TRUE ${taskName.map(t => q"AND tc.name = $t").getOrElse(q"")}"""
 
-  private def latestCompleteOrSkippedTaskQ(runIds: List[ObjectId],
-                                           taskName: Option[String],
-                                           staleTimeout: FiniteDuration) =
+  private def latestCompleteOrSkippedTaskQ(
+      runIds: List[ObjectId],
+      taskName: Option[String],
+      staleTimeout: FiniteDuration
+  ) =
     q"""SELECT
           DISTINCT ON (t.name)
           t.name,
@@ -156,24 +158,23 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           ORDER BY a.path, ts.beginTime DESC
         ) o ON o.path = a.path AND t.state = ${VoxelyticsRunState.SKIPPED}
         """.as[(String, String, String, String, Long, Long, String, String, String, Option[String], Option[String])])
-    } yield
-      r.toList.map(
-        row =>
-          ArtifactEntry(
-            artifactId = ObjectId(row._1),
-            taskId = ObjectId(row._2),
-            name = row._3,
-            path = row._4,
-            fileSize = row._5,
-            inodeCount = row._6,
-            version = row._7,
-            metadata = Json.parse(row._8).as[JsObject],
-            taskName = row._9,
-            foreignWorkflow = (row._10, row._11) match {
-              case (Some(workflow_hash), Some(run)) => Some((workflow_hash, run))
-              case _                                => None
-            }
-        ))
+    } yield r.toList.map(row =>
+      ArtifactEntry(
+        artifactId = ObjectId(row._1),
+        taskId = ObjectId(row._2),
+        name = row._3,
+        path = row._4,
+        fileSize = row._5,
+        inodeCount = row._6,
+        version = row._7,
+        metadata = Json.parse(row._8).as[JsObject],
+        taskName = row._9,
+        foreignWorkflow = (row._10, row._11) match {
+          case (Some(workflow_hash), Some(run)) => Some((workflow_hash, run))
+          case _                                => None
+        }
+      )
+    )
 
   def findTasks(runId: ObjectId): Fox[List[TaskEntry]] =
     for {
@@ -187,17 +188,20 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         FROM webknossos.voxelytics_tasks t
         WHERE _run = $runId
         """.as[(String, String, String, String, String)])
-    } yield
-      r.toList.map(
-        row =>
-          TaskEntry(taskId = ObjectId(row._1),
-                    runId = ObjectId(row._2),
-                    name = row._3,
-                    task = row._4,
-                    config = Json.parse(row._5).as[JsObject]))
+    } yield r.toList.map(row =>
+      TaskEntry(
+        taskId = ObjectId(row._1),
+        runId = ObjectId(row._2),
+        name = row._3,
+        task = row._4,
+        config = Json.parse(row._5).as[JsObject]
+      )
+    )
 
-  def findWorkflowsByHashAndOrganization(organizationId: String,
-                                         workflowHashes: Set[String]): Fox[List[WorkflowEntry]] =
+  def findWorkflowsByHashAndOrganization(
+      organizationId: String,
+      workflowHashes: Set[String]
+  ): Fox[List[WorkflowEntry]] =
     for {
       r <- run(q"""
         SELECT name, hash
@@ -276,40 +280,42 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         ) chunks ON chunks._task = t._id
         WHERE
           r._id IN ${SqlToken.tupleFromList(runIds)}
-        """.as[(String,
-                String,
-                String,
-                String,
-                String,
-                Option[Instant],
-                Option[Instant],
-                Option[String],
-                Long,
-                Long,
-                Long,
-                Long,
-                Long)])
+        """.as[
+          (
+              String,
+              String,
+              String,
+              String,
+              String,
+              Option[Instant],
+              Option[Instant],
+              Option[String],
+              Long,
+              Long,
+              Long,
+              Long,
+              Long
+          )
+        ]
+      )
       results <- Fox.combined(
-        r.toList.map(
-          row =>
-            for {
-              state <- VoxelyticsRunState.fromString(row._5).toFox
-            } yield
-              TaskRunEntry(
-                runId = ObjectId(row._1),
-                runName = row._2,
-                taskId = ObjectId(row._3),
-                taskName = row._4,
-                state = state,
-                beginTime = row._6,
-                endTime = row._7,
-                currentExecutionId = row._8,
-                chunkCounts = ChunkCounts(total = row._9,
-                                          failed = row._10,
-                                          skipped = row._11,
-                                          complete = row._12,
-                                          cancelled = row._13)
-            )))
+        r.toList.map(row =>
+          for {
+            state <- VoxelyticsRunState.fromString(row._5).toFox
+          } yield TaskRunEntry(
+            runId = ObjectId(row._1),
+            runName = row._2,
+            taskId = ObjectId(row._3),
+            taskName = row._4,
+            state = state,
+            beginTime = row._6,
+            endTime = row._7,
+            currentExecutionId = row._8,
+            chunkCounts =
+              ChunkCounts(total = row._9, failed = row._10, skipped = row._11, complete = row._12, cancelled = row._13)
+          )
+        )
+      )
     } yield results
 
   def findCombinedTaskRuns(runIds: List[ObjectId], staleTimeout: FiniteDuration): Fox[List[CombinedTaskRunEntry]] =
@@ -343,26 +349,29 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           GROUP BY l.taskName
         ) chunks ON chunks.taskName = l.taskName
         """.as[(String, Option[String], Long, Long, Long, Long, Long)])
-    } yield
-      r.toList.map(
-        row =>
-          CombinedTaskRunEntry(
-            taskName = row._1,
-            currentExecutionId = row._2,
-            chunkCounts =
-              ChunkCounts(total = row._3, failed = row._4, skipped = row._5, complete = row._6, cancelled = row._7)))
+    } yield r.toList.map(row =>
+      CombinedTaskRunEntry(
+        taskName = row._1,
+        currentExecutionId = row._2,
+        chunkCounts =
+          ChunkCounts(total = row._3, failed = row._4, skipped = row._5, complete = row._6, cancelled = row._7)
+      )
+    )
 
-  def findRuns(currentUser: User,
-               runIds: Option[List[ObjectId]],
-               workflowHash: Option[String],
-               staleTimeout: FiniteDuration,
-               allowUnlisted: Boolean): Fox[List[RunEntry]] = {
+  def findRuns(
+      currentUser: User,
+      runIds: Option[List[ObjectId]],
+      workflowHash: Option[String],
+      staleTimeout: FiniteDuration,
+      allowUnlisted: Boolean
+  ): Fox[List[RunEntry]] = {
     val runIdsQ =
       runIds.map(runIds => q" AND r._id IN ${SqlToken.tupleFromList(runIds)}").getOrElse(q"")
     val workflowHashQ =
       workflowHash.map(workflowHash => q" AND r.workflow_hash = $workflowHash").getOrElse(q"")
     for {
-      r <- run(q"""
+      r <- run(
+        q"""
         SELECT
           r._id,
           r.name,
@@ -380,33 +389,37 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         WHERE TRUE
           $runIdsQ
           $workflowHashQ
-        """
-        .as[(String, String, String, String, String, String, String, String, String, Option[Instant], Option[Instant])])
+        """.as[
+          (String, String, String, String, String, String, String, String, String, Option[Instant], Option[Instant])
+        ]
+      )
       results <- Fox.combined(
-        r.toList.map(
-          row =>
-            for {
-              state <- VoxelyticsRunState.fromString(row._9).toFox
-            } yield
-              RunEntry(
-                id = ObjectId(row._1),
-                name = row._2,
-                hostUserName = row._3,
-                hostName = row._4,
-                voxelyticsVersion = row._5,
-                workflowHash = row._6,
-                workflowYamlContent = row._7,
-                workflowConfig = Json.parse(row._8).as[JsObject],
-                state = state,
-                beginTime = row._10,
-                endTime = row._11
-            )))
+        r.toList.map(row =>
+          for {
+            state <- VoxelyticsRunState.fromString(row._9).toFox
+          } yield RunEntry(
+            id = ObjectId(row._1),
+            name = row._2,
+            hostUserName = row._3,
+            hostName = row._4,
+            voxelyticsVersion = row._5,
+            workflowHash = row._6,
+            workflowYamlContent = row._7,
+            workflowConfig = Json.parse(row._8).as[JsObject],
+            state = state,
+            beginTime = row._10,
+            endTime = row._11
+          )
+        )
+      )
     } yield results
   }
 
-  def findWorkflowTaskCounts(currentUser: User,
-                             workflowHashes: Set[String],
-                             staleTimeout: FiniteDuration): Fox[Map[String, TaskCounts]] = {
+  def findWorkflowTaskCounts(
+      currentUser: User,
+      workflowHashes: Set[String],
+      staleTimeout: FiniteDuration
+  ): Fox[Map[String, TaskCounts]] = {
     val organizationId = currentUser._organization
     for {
       r <- run(q"""
@@ -414,9 +427,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         SELECT
           w.hash,
           COUNT(any_tasks.state) AS total,
-          SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) IN ${SqlToken.tupleFromValues(
-        VoxelyticsRunState.FAILED,
-        VoxelyticsRunState.STALE)} THEN 1 ELSE 0 END) AS failed,
+          SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) IN ${SqlToken
+          .tupleFromValues(VoxelyticsRunState.FAILED, VoxelyticsRunState.STALE)} THEN 1 ELSE 0 END) AS failed,
           SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) = ${VoxelyticsRunState.SKIPPED} THEN 1 ELSE 0 END) AS skipped,
           SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) = ${VoxelyticsRunState.COMPLETE} THEN 1 ELSE 0 END) AS complete,
           SUM(CASE WHEN COALESCE(running_tasks.state, any_tasks.state) = ${VoxelyticsRunState.CANCELLED} THEN 1 ELSE 0 END) AS cancelled,
@@ -452,23 +464,28 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         WHERE w.hash IN ${SqlToken.tupleFromList(workflowHashes)} AND w._organization = $organizationId
         GROUP BY w.hash
         """.as[(String, Long, Long, Long, Long, Long, Long, Long)])
-    } yield
-      r.toList
-        .map(
-          row =>
-            (row._1,
-             TaskCounts(total = row._2,
-                        failed = row._3,
-                        skipped = row._4,
-                        complete = row._5,
-                        cancelled = row._6,
-                        fileSize = row._7,
-                        inodeCount = row._8)))
-        .toMap
+    } yield r.toList
+      .map(row =>
+        (
+          row._1,
+          TaskCounts(
+            total = row._2,
+            failed = row._3,
+            skipped = row._4,
+            complete = row._5,
+            cancelled = row._6,
+            fileSize = row._7,
+            inodeCount = row._8
+          )
+        )
+      )
+      .toMap
   }
 
-  def findRunsForWorkflowListing(currentUser: User,
-                                 staleTimeout: FiniteDuration): Fox[List[WorkflowListingRunEntry]] = {
+  def findRunsForWorkflowListing(
+      currentUser: User,
+      staleTimeout: FiniteDuration
+  ): Fox[List[WorkflowListingRunEntry]] = {
     val organizationId = currentUser._organization
     for {
       r <- run(
@@ -499,7 +516,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
             t._run AS _run,
             COUNT(t._id) AS total,
             SUM(CASE WHEN ts.state IN ${SqlToken
-          .tupleFromValues(VoxelyticsRunState.FAILED, VoxelyticsRunState.STALE)} THEN 1 ELSE 0 END) AS failed,
+            .tupleFromValues(VoxelyticsRunState.FAILED, VoxelyticsRunState.STALE)} THEN 1 ELSE 0 END) AS failed,
             SUM(CASE WHEN ts.state = ${VoxelyticsRunState.SKIPPED} THEN 1 ELSE 0 END) AS skipped,
             SUM(CASE WHEN ts.state = ${VoxelyticsRunState.COMPLETE} THEN 1 ELSE 0 END) AS complete,
             SUM(CASE WHEN ts.state = ${VoxelyticsRunState.CANCELLED} THEN 1 ELSE 0 END) AS cancelled,
@@ -516,52 +533,57 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         ) tasks ON tasks._run = r._id
         LEFT JOIN webknossos.users_ u ON r._user = u._id
         WHERE r._organization = $organizationId
-        """.as[(String,
-                String,
-                String,
-                String,
-                String,
-                String,
-                String,
-                Option[Instant],
-                Option[Instant],
-                Long,
-                Long,
-                Long,
-                Long,
-                Long,
-                Long,
-                Long,
-                Option[String],
-                Option[String])])
+        """.as[
+          (
+              String,
+              String,
+              String,
+              String,
+              String,
+              String,
+              String,
+              Option[Instant],
+              Option[Instant],
+              Long,
+              Long,
+              Long,
+              Long,
+              Long,
+              Long,
+              Long,
+              Option[String],
+              Option[String]
+          )
+        ]
+      )
       results <- Fox.combined(
-        r.toList.map(
-          row =>
-            for {
-              state <- VoxelyticsRunState.fromString(row._7).toFox
-            } yield
-              WorkflowListingRunEntry(
-                id = ObjectId(row._1),
-                name = row._2,
-                hostUserName = row._3,
-                hostName = row._4,
-                voxelyticsVersion = row._5,
-                workflowHash = row._6,
-                state = state,
-                beginTime = row._8,
-                endTime = row._9,
-                taskCounts = TaskCounts(
-                  total = row._10,
-                  failed = row._11,
-                  skipped = row._12,
-                  complete = row._13,
-                  cancelled = row._14,
-                  fileSize = row._15,
-                  inodeCount = row._16
-                ),
-                userFirstName = row._17,
-                userLastName = row._18
-            )))
+        r.toList.map(row =>
+          for {
+            state <- VoxelyticsRunState.fromString(row._7).toFox
+          } yield WorkflowListingRunEntry(
+            id = ObjectId(row._1),
+            name = row._2,
+            hostUserName = row._3,
+            hostName = row._4,
+            voxelyticsVersion = row._5,
+            workflowHash = row._6,
+            state = state,
+            beginTime = row._8,
+            endTime = row._9,
+            taskCounts = TaskCounts(
+              total = row._10,
+              failed = row._11,
+              skipped = row._12,
+              complete = row._13,
+              cancelled = row._14,
+              fileSize = row._15,
+              inodeCount = row._16
+            ),
+            userFirstName = row._17,
+            userLastName = row._18
+          )
+        )
+      )
     } yield results
   }
 
@@ -612,9 +634,11 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         """.as[String])
     } yield userId.headOption.map(ObjectId(_))
 
-  def getChunkStatistics(runIds: List[ObjectId],
-                         taskName: String,
-                         staleTimeout: FiniteDuration): Fox[List[ChunkStatisticsEntry]] = {
+  def getChunkStatistics(
+      runIds: List[ObjectId],
+      taskName: String,
+      staleTimeout: FiniteDuration
+  ): Fox[List[ChunkStatisticsEntry]] = {
     for {
       r <- run(
         q"""
@@ -702,49 +726,54 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         ) durations ON durations.executionId = exec.executionId
         ORDER BY times.beginTime ASC NULLS LAST
         """.as[
-          (String,
-           Long,
-           Long,
-           Long,
-           Long,
-           Long,
-           Option[Instant],
-           Option[Instant],
-           Double,
-           Double,
-           Double,
-           Double,
-           Double,
-           Double,
-           Double,
-           Double,
-           Double,
-           Double,
-           Double,
-           Double,
-           Double,
-           Double)])
-    } yield
-      r.toList.map(
-        row =>
-          ChunkStatisticsEntry(
-            executionId = row._1,
-            chunkCounts =
-              ChunkCounts(total = row._2, failed = row._3, skipped = row._4, complete = row._5, cancelled = row._6),
-            beginTime = row._7,
-            endTime = row._8,
-            wallTime = row._9,
-            memory = StatisticsEntry(max = row._10, median = row._11, stddev = row._12),
-            cpuUser = StatisticsEntry(max = row._13, median = row._14, stddev = row._15),
-            cpuSystem = StatisticsEntry(max = row._16, median = row._17, stddev = row._18),
-            duration = StatisticsEntry(max = row._19, median = row._20, stddev = row._21, sum = Some(row._22))
-        ))
+          (
+              String,
+              Long,
+              Long,
+              Long,
+              Long,
+              Long,
+              Option[Instant],
+              Option[Instant],
+              Double,
+              Double,
+              Double,
+              Double,
+              Double,
+              Double,
+              Double,
+              Double,
+              Double,
+              Double,
+              Double,
+              Double,
+              Double,
+              Double
+          )
+        ]
+      )
+    } yield r.toList.map(row =>
+      ChunkStatisticsEntry(
+        executionId = row._1,
+        chunkCounts =
+          ChunkCounts(total = row._2, failed = row._3, skipped = row._4, complete = row._5, cancelled = row._6),
+        beginTime = row._7,
+        endTime = row._8,
+        wallTime = row._9,
+        memory = StatisticsEntry(max = row._10, median = row._11, stddev = row._12),
+        cpuUser = StatisticsEntry(max = row._13, median = row._14, stddev = row._15),
+        cpuSystem = StatisticsEntry(max = row._16, median = row._17, stddev = row._18),
+        duration = StatisticsEntry(max = row._19, median = row._20, stddev = row._21, sum = Some(row._22))
+      )
+    )
   }
 
-  def getArtifactChecksums(runIds: List[ObjectId],
-                           taskName: String,
-                           artifactName: Option[String],
-                           staleTimeout: FiniteDuration): Fox[List[ArtifactChecksumEntry]] =
+  def getArtifactChecksums(
+      runIds: List[ObjectId],
+      taskName: String,
+      artifactName: Option[String],
+      staleTimeout: FiniteDuration
+  ): Fox[List[ArtifactChecksumEntry]] =
     for {
       r <- run(q"""
         WITH latest_complete_tasks AS (${latestCompleteOrSkippedTaskQ(runIds, Some(taskName), staleTimeout)})
@@ -769,39 +798,40 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         WHERE ${artifactName.map(a => q"a.name = $a").getOrElse(q"")}
         ORDER BY af.path
         """.as[(String, String, String, String, Instant, String, String, Long, Instant)])
-    } yield
-      r.toList.map(
-        row =>
-          ArtifactChecksumEntry(
-            taskName = row._1,
-            artifactName = row._2,
-            path = row._3,
-            resolvedPath = row._4,
-            timestamp = row._5,
-            checksumMethod = row._6,
-            checksum = row._7,
-            fileSize = row._8,
-            lastModified = row._9
-        ))
+    } yield r.toList.map(row =>
+      ArtifactChecksumEntry(
+        taskName = row._1,
+        artifactName = row._2,
+        path = row._3,
+        resolvedPath = row._4,
+        timestamp = row._5,
+        checksumMethod = row._6,
+        checksum = row._7,
+        fileSize = row._8,
+        lastModified = row._9
+      )
+    )
 
   def upsertArtifactChecksumEvents(runId: ObjectId, events: List[ArtifactFileChecksumEvent]): Fox[Unit] =
     for {
       _ <- run(q"""
         WITH insert_values(_run, taskName, artifactName, path, resolvedPath, checksumMethod, checksum, fileSize, lastModified, timestamp) AS (
           VALUES ${SqlToken.joinByComma(
-        events.map(
-          ev =>
-            SqlToken.tupleFromValues(runId,
-                                     ev.taskName,
-                                     ev.artifactName,
-                                     ev.path,
-                                     ev.resolvedPath,
-                                     ev.checksumMethod,
-                                     ev.checksum,
-                                     ev.fileSize,
-                                     ev.lastModified,
-                                     ev.timestamp)),
-      )}
+          events.map(ev =>
+            SqlToken.tupleFromValues(
+              runId,
+              ev.taskName,
+              ev.artifactName,
+              ev.path,
+              ev.resolvedPath,
+              ev.checksumMethod,
+              ev.checksum,
+              ev.fileSize,
+              ev.lastModified,
+              ev.timestamp
+            )
+          )
+        )}
         )
         INSERT INTO webknossos.voxelytics_artifactFileChecksumEvents (_artifact, path, resolvedPath, checksumMethod, checksum, fileSize, lastModified, timestamp)
         SELECT
@@ -831,19 +861,21 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
       _ <- run(q"""
         WITH insert_values(_run, taskName, executionId, chunkName, hostname, pid, memory, cpuUser, cpuSystem, timestamp) AS (
           VALUES ${SqlToken.joinByComma(
-        events.map(
-          ev =>
-            SqlToken.tupleFromValues(runId,
-                                     ev.taskName,
-                                     ev.executionId,
-                                     ev.chunkName,
-                                     ev.hostname,
-                                     ev.pid,
-                                     ev.memory,
-                                     ev.cpuUser,
-                                     ev.cpuSystem,
-                                     ev.timestamp)),
-      )}
+          events.map(ev =>
+            SqlToken.tupleFromValues(
+              runId,
+              ev.taskName,
+              ev.executionId,
+              ev.chunkName,
+              ev.hostname,
+              ev.pid,
+              ev.memory,
+              ev.cpuUser,
+              ev.cpuSystem,
+              ev.timestamp
+            )
+          )
+        )}
         )
         INSERT INTO webknossos.voxelytics_chunkProfilingEvents (_chunk, hostname, pid, memory, cpuUser, cpuSystem, timestamp)
         SELECT
@@ -878,26 +910,28 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
     } yield ()
 
   def upsertChunkStates(runId: ObjectId, events: List[ChunkStateChangeEvent]): Fox[Unit] = {
-    val values = events.map(
-      ev =>
-        SqlToken.tupleFromValues(
-          runId,
-          ev.taskName,
-          ObjectId.generate,
-          ev.executionId,
-          ev.chunkName,
-          if (ev.state == VoxelyticsRunState.RUNNING) {
-            Some(ev.timestamp)
-          } else {
-            None
-          },
-          if (ev.state == VoxelyticsRunState.COMPLETE || ev.state == VoxelyticsRunState.CANCELLED || ev.state == VoxelyticsRunState.FAILED) {
-            Some(ev.timestamp)
-          } else {
-            None
-          },
-          ev.state
-      ))
+    val values = events.map(ev =>
+      SqlToken.tupleFromValues(
+        runId,
+        ev.taskName,
+        ObjectId.generate,
+        ev.executionId,
+        ev.chunkName,
+        if (ev.state == VoxelyticsRunState.RUNNING) {
+          Some(ev.timestamp)
+        } else {
+          None
+        },
+        if (
+          ev.state == VoxelyticsRunState.COMPLETE || ev.state == VoxelyticsRunState.CANCELLED || ev.state == VoxelyticsRunState.FAILED
+        ) {
+          Some(ev.timestamp)
+        } else {
+          None
+        },
+        ev.state
+      )
+    )
 
     for {
       _ <- run(q"""
@@ -925,23 +959,25 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
   }
 
   def updateTaskStates(runId: ObjectId, events: List[TaskStateChangeEvent]): Fox[Unit] = {
-    val values = events.map(
-      ev =>
-        SqlToken.tupleFromValues(
-          runId,
-          ev.taskName,
-          if (ev.state == VoxelyticsRunState.RUNNING) {
-            Some(ev.timestamp)
-          } else {
-            None
-          },
-          if (ev.state == VoxelyticsRunState.COMPLETE || ev.state == VoxelyticsRunState.CANCELLED || ev.state == VoxelyticsRunState.FAILED) {
-            Some(ev.timestamp)
-          } else {
-            None
-          },
-          ev.state
-      ))
+    val values = events.map(ev =>
+      SqlToken.tupleFromValues(
+        runId,
+        ev.taskName,
+        if (ev.state == VoxelyticsRunState.RUNNING) {
+          Some(ev.timestamp)
+        } else {
+          None
+        },
+        if (
+          ev.state == VoxelyticsRunState.COMPLETE || ev.state == VoxelyticsRunState.CANCELLED || ev.state == VoxelyticsRunState.FAILED
+        ) {
+          Some(ev.timestamp)
+        } else {
+          None
+        },
+        ev.state
+      )
+    )
     for {
       _ <- run(q"""
         WITH insert_values(_run, taskName, beginTime, endTime, state) AS (
@@ -963,22 +999,24 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
   }
 
   def updateRunStates(runId: ObjectId, events: List[RunStateChangeEvent]): Fox[Unit] = {
-    val values = events.map(
-      ev =>
-        SqlToken.tupleFromValues(
-          runId,
-          if (ev.state == VoxelyticsRunState.RUNNING) {
-            Some(ev.timestamp)
-          } else {
-            None
-          },
-          if (ev.state == VoxelyticsRunState.COMPLETE || ev.state == VoxelyticsRunState.CANCELLED || ev.state == VoxelyticsRunState.FAILED) {
-            Some(ev.timestamp)
-          } else {
-            None
-          },
-          ev.state
-      ))
+    val values = events.map(ev =>
+      SqlToken.tupleFromValues(
+        runId,
+        if (ev.state == VoxelyticsRunState.RUNNING) {
+          Some(ev.timestamp)
+        } else {
+          None
+        },
+        if (
+          ev.state == VoxelyticsRunState.COMPLETE || ev.state == VoxelyticsRunState.CANCELLED || ev.state == VoxelyticsRunState.FAILED
+        ) {
+          Some(ev.timestamp)
+        } else {
+          None
+        },
+        ev.state
+      )
+    )
     for {
       _ <- run(q"""
         UPDATE webknossos.voxelytics_runs u
@@ -1004,28 +1042,32 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         """.asUpdate)
     } yield ()
 
-  def upsertRun(organizationId: String,
-                userId: ObjectId,
-                name: String,
-                username: String,
-                hostname: String,
-                voxelyticsVersion: String,
-                workflowHash: String,
-                workflowYamlContent: Option[String],
-                workflowConfig: JsValue): Fox[ObjectId] =
+  def upsertRun(
+      organizationId: String,
+      userId: ObjectId,
+      name: String,
+      username: String,
+      hostname: String,
+      voxelyticsVersion: String,
+      workflowHash: String,
+      workflowYamlContent: Option[String],
+      workflowConfig: JsValue
+  ): Fox[ObjectId] =
     for {
       _ <- run(q"""
         INSERT INTO webknossos.voxelytics_runs (_id, _organization, _user, name, username, hostname, voxelyticsVersion, workflow_hash, workflow_yamlContent, workflow_config)
-        VALUES ${SqlToken.tupleFromValues(ObjectId.generate,
-                                          organizationId,
-                                          userId,
-                                          name,
-                                          username,
-                                          hostname,
-                                          voxelyticsVersion,
-                                          workflowHash,
-                                          workflowYamlContent,
-                                          workflowConfig)}
+        VALUES ${SqlToken.tupleFromValues(
+          ObjectId.generate,
+          organizationId,
+          userId,
+          name,
+          username,
+          hostname,
+          voxelyticsVersion,
+          workflowHash,
+          workflowYamlContent,
+          workflowConfig
+        )}
         ON CONFLICT (_organization, name)
           DO UPDATE SET
             _user = EXCLUDED._user,
@@ -1062,24 +1104,28 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
       objectId <- objectIdList.headOption
     } yield ObjectId(objectId)
 
-  def upsertArtifact(taskId: ObjectId,
-                     name: String,
-                     path: String,
-                     fileSize: Long,
-                     inodeCount: Long,
-                     version: String,
-                     metadata: JsValue): Fox[ObjectId] =
+  def upsertArtifact(
+      taskId: ObjectId,
+      name: String,
+      path: String,
+      fileSize: Long,
+      inodeCount: Long,
+      version: String,
+      metadata: JsValue
+  ): Fox[ObjectId] =
     for {
       _ <- run(q"""
         INSERT INTO webknossos.voxelytics_artifacts (_id, _task, name, path, fileSize, inodeCount, version, metadata)
-        VALUES ${SqlToken.tupleFromValues(ObjectId.generate,
-                                          taskId,
-                                          name,
-                                          path,
-                                          fileSize,
-                                          inodeCount,
-                                          version,
-                                          metadata)}
+        VALUES ${SqlToken.tupleFromValues(
+          ObjectId.generate,
+          taskId,
+          name,
+          path,
+          fileSize,
+          inodeCount,
+          version,
+          metadata
+        )}
         ON CONFLICT (_task, name)
           DO UPDATE SET
             path = EXCLUDED.path,
@@ -1101,17 +1147,20 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
       _ <- run(q"""
         WITH insert_values(_run, _id, taskName, artifactName, path, fileSize, inodeCount, version, metadata) AS (
           VALUES ${SqlToken.joinByComma(
-        artifacts.map(
-          ev =>
-            SqlToken.tupleFromValues(runId,
-                                     ObjectId.generate,
-                                     ev._1,
-                                     ev._2,
-                                     ev._3.path,
-                                     ev._3.file_size,
-                                     ev._3.inode_count,
-                                     ev._3.version,
-                                     ev._3.metadataAsJson)))}
+          artifacts.map(ev =>
+            SqlToken.tupleFromValues(
+              runId,
+              ObjectId.generate,
+              ev._1,
+              ev._2,
+              ev._3.path,
+              ev._3.file_size,
+              ev._3.inode_count,
+              ev._3.version,
+              ev._3.metadataAsJson
+            )
+          )
+        )}
         )
         INSERT INTO webknossos.voxelytics_artifacts (_id, _task, name, path, fileSize, inodeCount, version, metadata)
         SELECT

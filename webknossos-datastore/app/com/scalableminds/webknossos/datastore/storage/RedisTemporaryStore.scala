@@ -50,9 +50,7 @@ trait RedisTemporaryStore extends LazyLogging {
   def insert(id: String, value: String, expirationOpt: Option[FiniteDuration] = None): Fox[Unit] =
     withExceptionHandler {
       expirationOpt
-        .map(
-          expiration => r.setex(id, expiration.toSeconds, value)
-        )
+        .map(expiration => r.setex(id, expiration.toSeconds, value))
         .getOrElse(
           r.set(id, value)
         )
@@ -80,11 +78,11 @@ trait RedisTemporaryStore extends LazyLogging {
     }
 
   def withExceptionHandler[B](f: => B): Fox[B] =
-    try {
+    try
       r.synchronized {
         Fox.successful(f)
       }
-    } catch {
+    catch {
       case e: Exception =>
         val msg = "Redis access exception: " + e.getMessage
         logger.error(msg)

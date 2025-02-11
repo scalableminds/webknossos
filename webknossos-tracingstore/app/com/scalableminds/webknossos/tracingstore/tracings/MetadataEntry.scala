@@ -4,11 +4,13 @@ import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import play.api.libs.json.{Json, OFormat}
 import play.api.libs.json.Json.WithDefaultValues
 
-case class MetadataEntry(key: String,
-                         stringValue: Option[String] = None,
-                         boolValue: Option[Boolean] = None,
-                         numberValue: Option[Double] = None,
-                         stringListValue: Option[Seq[String]] = None) {
+case class MetadataEntry(
+    key: String,
+    stringValue: Option[String] = None,
+    boolValue: Option[Boolean] = None,
+    numberValue: Option[Double] = None,
+    stringListValue: Option[Seq[String]] = None
+) {
   def toProto: MetadataEntryProto = MetadataEntryProto(
     key,
     stringValue,

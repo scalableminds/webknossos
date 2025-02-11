@@ -9,7 +9,7 @@ import security.CertificateValidationService
 import javax.inject.Inject
 import scala.concurrent.duration._
 
-class WkConf @Inject()(configuration: Configuration, certificateValidationService: CertificateValidationService)
+class WkConf @Inject() (configuration: Configuration, certificateValidationService: CertificateValidationService)
     extends ConfigReader
     with LazyLogging {
   override def raw: Configuration = configuration

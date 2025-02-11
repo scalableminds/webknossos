@@ -3,8 +3,7 @@ package com.scalableminds.webknossos.datastore.models.requests
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, VoxelPosition}
 
-/**
-  * Mag-aware BoundingBox
+/** Mag-aware BoundingBox
   */
 case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
 
@@ -21,8 +20,7 @@ case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
   def isSingleBucket(bucketLength: Int): Boolean =
     width == bucketLength && height == bucketLength && depth == bucketLength && topLeft == topLeft.toBucket.topLeft
 
-  /**
-    * Returns all buckets that are within the cuboid spanned by top-left and bottom-right
+  /** Returns all buckets that are within the cuboid spanned by top-left and bottom-right
     */
   def allBucketsInCuboid: Seq[BucketPosition] = {
     val minBucket = topLeft.toBucket

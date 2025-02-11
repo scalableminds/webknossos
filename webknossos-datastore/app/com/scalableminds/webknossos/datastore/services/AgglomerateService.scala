@@ -24,7 +24,7 @@ import scala.annotation.tailrec
 import scala.collection.compat.immutable.ArraySeq
 import scala.concurrent.duration.DurationInt
 
-class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
+class AgglomerateService @Inject() (config: DataStoreConfig) extends DataConverter with LazyLogging {
   private val agglomerateDir = "agglomerates"
   private val agglomerateFileExtension = "hdf5"
   private val datasetName = "/segment_to_agglomerate"
@@ -36,9 +36,11 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   def exploreAgglomerates(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Set[String] = {
     val layerDir = dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName).resolve(dataLayerName)
     PathUtils
-      .listFiles(layerDir.resolve(agglomerateDir),
-                 silent = true,
-                 PathUtils.fileExtensionFilter(agglomerateFileExtension))
+      .listFiles(
+        layerDir.resolve(agglomerateDir),
+        silent = true,
+        PathUtils.fileExtensionFilter(agglomerateFileExtension)
+      )
       .map { paths =>
         paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
       }
@@ -51,16 +53,19 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
 
     val agglomerateFileKey = AgglomerateFileKey.fromDataRequest(request)
 
-    def convertToAgglomerate(input: Array[Long],
-                             bytesPerElement: Int,
-                             bufferFunc: (ByteBuffer, Long) => ByteBuffer): Array[Byte] = {
+    def convertToAgglomerate(
+        input: Array[Long],
+        bytesPerElement: Int,
+        bufferFunc: (ByteBuffer, Long) => ByteBuffer
+    ): Array[Byte] = {
 
       val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileKey)(initHDFReader)
 
       val agglomerateIds = cachedAgglomerateFile.cache match {
         case Left(agglomerateIdCache) =>
           input.map(el =>
-            agglomerateIdCache.withCache(el, cachedAgglomerateFile.reader, cachedAgglomerateFile.dataset)(readHDF))
+            agglomerateIdCache.withCache(el, cachedAgglomerateFile.reader, cachedAgglomerateFile.dataset)(readHDF)
+          )
         case Right(boundingBoxCache) =>
           boundingBoxCache.withCache(request, input, cachedAgglomerateFile.reader)(readHDF)
       }
@@ -124,8 +129,10 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
 
     val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
 
-    val agglomerateIdCache = new AgglomerateIdCache(config.Datastore.Cache.AgglomerateFile.maxSegmentIdEntries,
-                                                    config.Datastore.Cache.AgglomerateFile.blockSize)
+    val agglomerateIdCache = new AgglomerateIdCache(
+      config.Datastore.Cache.AgglomerateFile.maxSegmentIdEntries,
+      config.Datastore.Cache.AgglomerateFile.blockSize
+    )
 
     val defaultCache: Either[AgglomerateIdCache, BoundingBoxCache] =
       if (Files.exists(cumsumPath)) {
@@ -137,11 +144,13 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     CachedAgglomerateFile(reader, reader.`object`().openDataSet(datasetName), agglomerateIdCache, defaultCache)
   }
 
-  def generateSkeleton(organizationId: String,
-                       datasetDirectoryName: String,
-                       dataLayerName: String,
-                       mappingName: String,
-                       agglomerateId: Long): Box[SkeletonTracing] =
+  def generateSkeleton(
+      organizationId: String,
+      datasetDirectoryName: String,
+      dataLayerName: String,
+      mappingName: String,
+      agglomerateId: Long
+  ): Box[SkeletonTracing] =
     try {
       val before = Instant.now
       val hdfFile =
@@ -176,22 +185,20 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
             .uint64()
             .readMatrixBlockWithOffset("/agglomerate_to_positions", nodeCount.toInt, 3, positionsRange(0), 0)
         }
-      val edges: Array[Array[Long]] = {
+      val edges: Array[Array[Long]] =
         if (edgeCount == 0L) {
           Array.empty[Array[Long]]
         } else {
           reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_edges", edgeCount.toInt, 2, edgesRange(0), 0)
         }
-      }
 
       val nodeIdStartAtOneOffset = 1
 
-      val nodes = positions.zipWithIndex.map {
-        case (pos, idx) =>
-          NodeDefaults.createInstance.copy(
-            id = idx + nodeIdStartAtOneOffset,
-            position = Vec3IntProto(pos(0).toInt, pos(1).toInt, pos(2).toInt)
-          )
+      val nodes = positions.zipWithIndex.map { case (pos, idx) =>
+        NodeDefaults.createInstance.copy(
+          id = idx + nodeIdStartAtOneOffset,
+          position = Vec3IntProto(pos(0).toInt, pos(1).toInt, pos(2).toInt)
+        )
       }
 
       val skeletonEdges = edges.map { e =>
@@ -207,7 +214,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
           edges = ArraySeq.unsafeWrapArray(skeletonEdges),
           name = s"agglomerate $agglomerateId ($mappingName)",
           `type` = Some(TreeTypeProto.AGGLOMERATE)
-        ))
+        )
+      )
 
       val skeleton = SkeletonTracingDefaults.createInstance.copy(
         datasetName = datasetDirectoryName,
@@ -218,7 +226,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         Instant.logSince(
           before,
           s"Generating skeleton from agglomerate file with ${skeletonEdges.length} edges, ${nodes.length} nodes",
-          logger)
+          logger
+        )
       }
 
       Full(skeleton)
@@ -265,9 +274,11 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
 
     tryo {
       val agglomerateIds = segmentIds.map { (segmentId: Long) =>
-        cachedAgglomerateFile.agglomerateIdCache.withCache(segmentId,
-                                                           cachedAgglomerateFile.reader,
-                                                           cachedAgglomerateFile.dataset)(readHDF)
+        cachedAgglomerateFile.agglomerateIdCache.withCache(
+          segmentId,
+          cachedAgglomerateFile.reader,
+          cachedAgglomerateFile.dataset
+        )(readHDF)
       }
       cachedAgglomerateFile.finishAccess()
       agglomerateIds
@@ -289,20 +300,24 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     val reader: IHDF5Reader = HDF5FactoryProvider.get.openForReading(hdfFile)
     for {
       agglomerateIdArr: Array[Long] <- tryo(
-        reader.uint64().readArrayBlockWithOffset("/segment_to_agglomerate", 1, segmentId))
+        reader.uint64().readArrayBlockWithOffset("/segment_to_agglomerate", 1, segmentId)
+      )
       agglomerateId = agglomerateIdArr(0)
       segmentsRange: Array[Long] <- tryo(
-        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId))
+        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
+      )
       segmentIndex <- binarySearchForSegment(segmentsRange(0), segmentsRange(1), segmentId, reader)
       position <- tryo(reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_positions", 1, 3, segmentIndex, 0)(0))
     } yield Vec3Int(position(0).toInt, position(1).toInt, position(2).toInt)
   }
 
   @tailrec
-  private def binarySearchForSegment(rangeStart: Long,
-                                     rangeEnd: Long,
-                                     segmentId: Long,
-                                     reader: IHDF5Reader): Box[Long] =
+  private def binarySearchForSegment(
+      rangeStart: Long,
+      rangeEnd: Long,
+      segmentId: Long,
+      reader: IHDF5Reader
+  ): Box[Long] =
     if (rangeStart > rangeEnd) Failure("Could not find segmentId in agglomerate file")
     else {
       val middle = rangeStart + (rangeEnd - rangeStart) / 2
@@ -355,7 +370,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         // unsafeWrapArray is fine, because the underlying arrays are never mutated
         segments = ArraySeq.unsafeWrapArray(segmentIds),
         edges = ArraySeq.unsafeWrapArray(
-          edges.map(e => AgglomerateEdge(source = segmentIds(e(0).toInt), target = segmentIds(e(1).toInt)))),
+          edges.map(e => AgglomerateEdge(source = segmentIds(e(0).toInt), target = segmentIds(e(1).toInt)))
+        ),
         positions =
           ArraySeq.unsafeWrapArray(positions.map(pos => Vec3IntProto(pos(0).toInt, pos(1).toInt, pos(2).toInt))),
         affinities = ArraySeq.unsafeWrapArray(affinities)

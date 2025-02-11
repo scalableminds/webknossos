@@ -20,7 +20,8 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
       StorageOptions
         .newBuilder()
         .setCredentials(
-          ServiceAccountCredentials.fromStream(new ByteArrayInputStream(credential.secretJson.toString.getBytes)))
+          ServiceAccountCredentials.fromStream(new ByteArrayInputStream(credential.secretJson.toString.getBytes))
+        )
         .build()
     case _ => StorageOptions.newBuilder().build()
   }
@@ -32,57 +33,60 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
   // dashes, excluding chars that may be part of the bucket name (e.g. underscore).
   private lazy val bucket: String = uri.getAuthority
 
-  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] = {
+  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(implicit
+      ec: ExecutionContext
+  ): Fox[(Array[Byte], Encoding.Value)] = {
 
     val objName = path.toUri.getPath.tail
     val blobId = BlobId.of(bucket, objName)
     for {
-      bytes <- try {
-        range match {
-          case StartEnd(r) =>
-            val blobReader = storage.reader(blobId)
-            blobReader.seek(r.start)
-            blobReader.limit(r.end)
-            val bb = ByteBuffer.allocateDirect(r.length)
-            blobReader.read(bb)
-            val arr = new Array[Byte](r.length)
-            bb.position(0)
-            bb.get(arr)
-            Fox.successful(arr)
-          case SuffixLength(l) =>
-            val blobReader = storage.reader(blobId)
-            blobReader.seek(-l)
-            val bb = ByteBuffer.allocateDirect(l)
-            blobReader.read(bb)
-            val arr = new Array[Byte](l)
-            bb.position(0)
-            bb.get(arr)
-            Fox.successful(arr)
-          case Complete() => Fox.successful(storage.readAllBytes(bucket, objName))
+      bytes <-
+        try
+          range match {
+            case StartEnd(r) =>
+              val blobReader = storage.reader(blobId)
+              blobReader.seek(r.start)
+              blobReader.limit(r.end)
+              val bb = ByteBuffer.allocateDirect(r.length)
+              blobReader.read(bb)
+              val arr = new Array[Byte](r.length)
+              bb.position(0)
+              bb.get(arr)
+              Fox.successful(arr)
+            case SuffixLength(l) =>
+              val blobReader = storage.reader(blobId)
+              blobReader.seek(-l)
+              val bb = ByteBuffer.allocateDirect(l)
+              blobReader.read(bb)
+              val arr = new Array[Byte](l)
+              bb.position(0)
+              bb.get(arr)
+              Fox.successful(arr)
+            case Complete() => Fox.successful(storage.readAllBytes(bucket, objName))
+          }
+        catch {
+          case s: StorageException =>
+            if (s.getCode == 404)
+              Fox.empty
+            else Fox.failure(s.getMessage)
+          case t: Throwable => Fox.failure(t.getMessage)
         }
-      } catch {
-        case s: StorageException =>
-          if (s.getCode == 404)
-            Fox.empty
-          else Fox.failure(s.getMessage)
-        case t: Throwable => Fox.failure(t.getMessage)
-      }
       blobInfo <- tryo(BlobInfo.newBuilder(blobId).setContentType("text/plain").build)
       encoding <- Encoding.fromRfc7231String(Option(blobInfo.getContentEncoding).getOrElse(""))
     } yield (bytes, encoding)
   }
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
-    tryo({
+    tryo {
       val objName = path.toUri.getPath.tail
       val blobs =
         storage.list(bucket, Storage.BlobListOption.prefix(objName), Storage.BlobListOption.currentDirectory())
       val subDirectories = blobs.getValues.asScala.toList.filter(_.isDirectory).take(maxItems)
       val paths = subDirectories.map(dirBlob =>
-        new VaultPath(new URI(s"${uri.getScheme}://$bucket/${dirBlob.getBlobId.getName}"), this))
+        new VaultPath(new URI(s"${uri.getScheme}://$bucket/${dirBlob.getBlobId.getName}"), this)
+      )
       paths
-    })
+    }
 
   private def getUri = uri
   private def getCredential = credential

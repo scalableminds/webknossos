@@ -43,11 +43,13 @@ class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) extends FoxImplicits {
 
 object AlfuCache {
 
-  def apply[K, V](maxCapacity: Int = 1000,
-                  timeToLive: FiniteDuration = 2 hours,
-                  timeToIdle: FiniteDuration = 1 hour,
-                  weighFn: Option[(K, Box[V]) => Int] = None,
-                  onRemovalFn: Option[(K, Box[V]) => Unit] = None): AlfuCache[K, V] = {
+  def apply[K, V](
+      maxCapacity: Int = 1000,
+      timeToLive: FiniteDuration = 2 hours,
+      timeToIdle: FiniteDuration = 1 hour,
+      weighFn: Option[(K, Box[V]) => Int] = None,
+      onRemovalFn: Option[(K, Box[V]) => Unit] = None
+  ): AlfuCache[K, V] = {
     val weigher = weighFn.map { weigh =>
       new CacheItemWeigher(weigh)
     }.getOrElse(Weigher.singletonWeigher[K, Box[V]])

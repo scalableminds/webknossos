@@ -34,35 +34,38 @@ case class Task(
     isDeleted: Boolean = false
 )
 
-class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class TaskDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Task, TasksRow, Tasks](sqlClient) {
-  protected val collection = Tasks
 
+  protected val collection = Tasks
   protected def idColumn(x: Tasks): profile.api.Rep[String] = x._Id
   protected def isDeletedColumn(x: Tasks): profile.api.Rep[Boolean] = x.isdeleted
+  protected def getResult = GetResultTasksRow
 
   protected def parse(r: TasksRow): Fox[Task] =
     for {
-      editPosition <- Vec3Int.fromList(parseArrayLiteral(r.editposition).map(_.toInt)) ?~> "could not parse edit position"
-      editRotation <- Vec3Double.fromList(parseArrayLiteral(r.editrotation).map(_.toDouble)) ?~> "could not parse edit rotation"
-    } yield {
-      Task(
-        ObjectId(r._Id),
-        ObjectId(r._Project),
-        r._Script.map(ObjectId(_)),
-        ObjectId(r._Tasktype),
-        Experience(r.neededexperienceDomain, r.neededexperienceValue),
-        r.totalinstances,
-        r.pendinginstances,
-        r.tracingtime,
-        r.boundingbox.map(b => parseArrayLiteral(b).map(_.toInt)).flatMap(BoundingBox.fromSQL),
-        editPosition,
-        editRotation,
-        r.creationinfo,
-        Instant.fromSql(r.created),
-        r.isdeleted
-      )
-    }
+      editPosition <- Vec3Int.fromList(
+        parseArrayLiteral(r.editposition).map(_.toInt)
+      ) ?~> "could not parse edit position"
+      editRotation <- Vec3Double.fromList(
+        parseArrayLiteral(r.editrotation).map(_.toDouble)
+      ) ?~> "could not parse edit rotation"
+    } yield Task(
+      ObjectId(r._Id),
+      ObjectId(r._Project),
+      r._Script.map(ObjectId(_)),
+      ObjectId(r._Tasktype),
+      Experience(r.neededexperienceDomain, r.neededexperienceValue),
+      r.totalinstances,
+      r.pendinginstances,
+      r.tracingtime,
+      r.boundingbox.map(b => parseArrayLiteral(b).map(_.toInt)).flatMap(BoundingBox.fromSQL),
+      editPosition,
+      editRotation,
+      r.creationinfo,
+      Instant.fromSql(r.created),
+      r.isdeleted
+    )
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""((SELECT _team FROM webknossos.projects p WHERE _project = p._id) IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId)
@@ -92,8 +95,9 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findAllByTaskType(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Task]] =
     findAllByProjectAndTaskTypeAndIdsAndUser(None, Some(taskTypeId), None, None, None)
 
-  def findAllByProject(projectId: ObjectId, limit: Int, pageNumber: Int)(
-      implicit ctx: DBAccessContext): Fox[List[Task]] =
+  def findAllByProject(projectId: ObjectId, limit: Int, pageNumber: Int)(implicit
+      ctx: DBAccessContext
+  ): Fox[List[Task]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"""SELECT $columns
@@ -148,9 +152,11 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         AND pendingInstances > 0
         LIMIT 1"""
 
-  def assignNext(userId: ObjectId,
-                 teamIds: List[ObjectId],
-                 isTeamManagerOrAdmin: Boolean = false): Fox[(ObjectId, ObjectId)] = {
+  def assignNext(
+      userId: ObjectId,
+      teamIds: List[ObjectId],
+      isTeamManagerOrAdmin: Boolean = false
+  ): Fox[(ObjectId, ObjectId)] = {
 
     val annotationId = ObjectId.generate
     val now = Instant.now
@@ -275,7 +281,8 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def listExperienceDomains(organizationId: String): Fox[List[String]] =
     for {
       rowsRaw <- run(
-        q"SELECT domain FROM webknossos.experienceDomains WHERE _organization = $organizationId".as[String])
+        q"SELECT domain FROM webknossos.experienceDomains WHERE _organization = $organizationId".as[String]
+      )
     } yield rowsRaw.toList
 
   def insertOne(t: Task): Fox[Unit] =
@@ -297,14 +304,17 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     val query = for { c <- Tasks if c._Id === id.id } yield c.totalinstances
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(query.update(newTotalInstances).withTransactionIsolation(Serializable),
-               retryCount = 50,
-               retryIfErrorContains = List(transactionSerializationError))
+      _ <- run(
+        query.update(newTotalInstances).withTransactionIsolation(Serializable),
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError)
+      )
     } yield ()
   }
 
-  def incrementTotalInstancesOfAllWithProject(projectId: ObjectId, delta: Long)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def incrementTotalInstancesOfAllWithProject(projectId: ObjectId, delta: Long)(implicit
+      ctx: DBAccessContext
+  ): Fox[Unit] =
     for {
       accessQuery <- readAccessQuery
       _ <- run(

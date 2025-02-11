@@ -11,10 +11,12 @@ import com.scalableminds.util.objectid.ObjectId
 import scala.annotation.{nowarn, tailrec}
 import scala.concurrent.ExecutionContext
 
-class AnnotationInformationHandlerSelector @Inject()(projectInformationHandler: ProjectInformationHandler,
-                                                     taskInformationHandler: TaskInformationHandler,
-                                                     taskTypeInformationHandler: TaskTypeInformationHandler,
-                                                     savedTracingInformationHandler: SavedTracingInformationHandler) {
+class AnnotationInformationHandlerSelector @Inject() (
+    projectInformationHandler: ProjectInformationHandler,
+    taskInformationHandler: TaskInformationHandler,
+    taskTypeInformationHandler: TaskTypeInformationHandler,
+    savedTracingInformationHandler: SavedTracingInformationHandler
+) {
   val informationHandlers: Map[AnnotationType, AnnotationInformationHandler] = Map(
     AnnotationType.CompoundProject -> projectInformationHandler,
     AnnotationType.CompoundTask -> taskInformationHandler,

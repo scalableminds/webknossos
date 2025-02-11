@@ -85,8 +85,9 @@ case class Job(
   def resultLinkPublic(organizationId: String, webknossosPublicUrl: String): Option[String] =
     for {
       resultLink <- resultLink(organizationId)
-      resultLinkPublic = if (resultLink.startsWith("/")) s"$webknossosPublicUrl$resultLink"
-      else s"$resultLink"
+      resultLinkPublic =
+        if (resultLink.startsWith("/")) s"$webknossosPublicUrl$resultLink"
+        else s"$resultLink"
     } yield resultLinkPublic
 
   def resultLinkSlackFormatted(organizationId: String, webknossosPublicUrl: String): String =
@@ -101,37 +102,36 @@ case class Job(
     }.getOrElse("")
 }
 
-class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Job, JobsRow, Jobs](sqlClient) {
   protected val collection = Jobs
 
   protected def idColumn(x: Jobs): Rep[String] = x._Id
   protected def isDeletedColumn(x: Jobs): Rep[Boolean] = x.isdeleted
+  protected def getResult = GetResultJobsRow
 
   protected def parse(r: JobsRow): Fox[Job] =
     for {
       manualStateOpt <- Fox.runOptional(r.manualstate)(JobState.fromString)
       state <- JobState.fromString(r.state)
       command <- JobCommand.fromString(r.command)
-    } yield {
-      Job(
-        ObjectId(r._Id),
-        ObjectId(r._Owner),
-        r._Datastore.trim,
-        command,
-        Json.parse(r.commandargs).as[JsObject],
-        state,
-        manualStateOpt,
-        r._Worker.map(ObjectId(_)),
-        r._VoxelyticsWorkflowhash,
-        r.latestrunid,
-        r.returnvalue,
-        r.started.map(_.getTime),
-        r.ended.map(_.getTime),
-        Instant.fromSql(r.created),
-        r.isdeleted
-      )
-    }
+    } yield Job(
+      ObjectId(r._Id),
+      ObjectId(r._Owner),
+      r._Datastore.trim,
+      command,
+      Json.parse(r.commandargs).as[JsObject],
+      state,
+      manualStateOpt,
+      r._Worker.map(ObjectId(_)),
+      r._VoxelyticsWorkflowhash,
+      r.latestrunid,
+      r.returnvalue,
+      r.started.map(_.getTime),
+      r.ended.map(_.getTime),
+      Instant.fromSql(r.created),
+      r.isdeleted
+    )
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""
@@ -200,8 +200,10 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findAllUnfinishedByWorker(workerId: ObjectId): Fox[List[Job]] =
     for {
       r <- run(q"""SELECT $columns from $existingCollectionName
-                   WHERE _worker = $workerId AND state IN ${SqlToken
-        .tupleFromValues(JobState.PENDING, JobState.STARTED)}
+                   WHERE _worker = $workerId AND state IN ${SqlToken.tupleFromValues(
+          JobState.PENDING,
+          JobState.STARTED
+        )}
                    AND manualState IS NULL
                    ORDER BY created""".as[JobsRow])
       parsed <- parseAll(r)

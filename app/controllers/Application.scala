@@ -16,15 +16,17 @@ import utils.{ApiVersioning, StoreModules, WkConf}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class Application @Inject()(actorSystem: ActorSystem,
-                            userService: UserService,
-                            releaseInformationDAO: ReleaseInformationDAO,
-                            organizationDAO: OrganizationDAO,
-                            conf: WkConf,
-                            defaultMails: DefaultMails,
-                            storeModules: StoreModules,
-                            sil: Silhouette[WkEnv],
-                            certificateValidationService: CertificateValidationService)(implicit ec: ExecutionContext)
+class Application @Inject() (
+    actorSystem: ActorSystem,
+    userService: UserService,
+    releaseInformationDAO: ReleaseInformationDAO,
+    organizationDAO: OrganizationDAO,
+    conf: WkConf,
+    defaultMails: DefaultMails,
+    storeModules: StoreModules,
+    sil: Silhouette[WkEnv],
+    certificateValidationService: CertificateValidationService
+)(implicit ec: ExecutionContext)
     extends Controller
     with ApiVersioning {
 
@@ -35,27 +37,28 @@ class Application @Inject()(actorSystem: ActorSystem,
   def buildInfo: Action[AnyContent] = sil.UserAwareAction.async {
     for {
       schemaVersion <- releaseInformationDAO.getSchemaVersion.futureBox
-    } yield {
-      addRemoteOriginHeaders(
-        Ok(
-          Json.obj(
-            "webknossos" -> Json.toJson(
-              webknossos.BuildInfo.toMap.view.mapValues(_.toString).filterKeys(_ != "certificatePublicKey").toMap),
-            "schemaVersion" -> schemaVersion.toOption,
-            "httpApiVersioning" -> Json.obj(
-              "currentApiVersion" -> CURRENT_API_VERSION,
-              "oldestSupportedApiVersion" -> OLDEST_SUPPORTED_API_VERSION
-            ),
-            "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,
-            "localTracingStoreEnabled" -> storeModules.localTracingStoreEnabled
-          ))
+    } yield addRemoteOriginHeaders(
+      Ok(
+        Json.obj(
+          "webknossos" -> Json.toJson(
+            webknossos.BuildInfo.toMap.view.mapValues(_.toString).filterKeys(_ != "certificatePublicKey").toMap
+          ),
+          "schemaVersion" -> schemaVersion.toOption,
+          "httpApiVersioning" -> Json.obj(
+            "currentApiVersion" -> CURRENT_API_VERSION,
+            "oldestSupportedApiVersion" -> OLDEST_SUPPORTED_API_VERSION
+          ),
+          "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,
+          "localTracingStoreEnabled" -> storeModules.localTracingStoreEnabled
+        )
       )
-    }
+    )
   }
 
   // This only changes on server restart, so we can cache the full result.
   private lazy val cachedFeaturesResult: Result = addNoCacheHeaderFallback(
-    Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise())).as(jsonMimeType))
+    Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise())).as(jsonMimeType)
+  )
 
   def features: Action[AnyContent] = sil.UserAwareAction {
     cachedFeaturesResult
@@ -90,7 +93,7 @@ class Application @Inject()(actorSystem: ActorSystem,
 
 }
 
-class ReleaseInformationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class ReleaseInformationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient)
     with FoxImplicits {
   def getSchemaVersion(implicit ec: ExecutionContext): Fox[Int] =

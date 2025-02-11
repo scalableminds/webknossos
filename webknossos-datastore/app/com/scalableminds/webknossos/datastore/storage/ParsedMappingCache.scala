@@ -19,10 +19,12 @@ case class CachedMapping(
 object CachedMapping {
 
   def fromMappingRequest(mappingRequest: DataServiceMappingRequest): CachedMapping =
-    storage.CachedMapping(mappingRequest.dataSource.id.organizationId,
-                          mappingRequest.dataSource.id.directoryName,
-                          mappingRequest.dataLayer.name,
-                          mappingRequest.mapping)
+    storage.CachedMapping(
+      mappingRequest.dataSource.id.organizationId,
+      mappingRequest.dataSource.id.directoryName,
+      mappingRequest.dataLayer.name,
+      mappingRequest.mapping
+    )
 }
 
 class ParsedMappingCache(val maxEntries: Int)
@@ -30,8 +32,8 @@ class ParsedMappingCache(val maxEntries: Int)
     with FoxImplicits {
 
   def withCache[T](mappingRequest: DataServiceMappingRequest)(
-      loadFn: DataServiceMappingRequest => Fox[AbstractDataLayerMapping])(f: AbstractDataLayerMapping => T)(
-      implicit ec: ExecutionContext): Fox[T] = {
+      loadFn: DataServiceMappingRequest => Fox[AbstractDataLayerMapping]
+  )(f: AbstractDataLayerMapping => T)(implicit ec: ExecutionContext): Fox[T] = {
 
     val cachedMappingInfo = CachedMapping.fromMappingRequest(mappingRequest)
 

@@ -44,7 +44,7 @@ case class NamedFileStream(name: String, file: File) extends NamedStream {
         val in = stream()
         val buffer = new Array[Byte](1024)
         var len = 0
-        while 
+        while
           len = in.read(buffer)
           if (len > 0) {
             out.write(buffer, 0, len)
@@ -70,9 +70,7 @@ object FileIO {
       } catch {
         case ex: Exception =>
           Failure(ex.getMessage)
-      } finally {
-        p.close()
-      }
+      } finally p.close()
     } catch {
       case ex: Exception =>
         Failure(ex.getMessage)
@@ -81,11 +79,10 @@ object FileIO {
   def createTempFile(data: String, fileType: String = ".tmp"): File = {
     val temp = File.createTempFile("temp", System.nanoTime().toString + fileType)
     val out = new PrintWriter(temp)
-    try {
+    try
       out.print(data)
-    } finally {
+    finally
       out.close()
-    }
     temp
   }
 

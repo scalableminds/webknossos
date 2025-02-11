@@ -11,9 +11,11 @@ import ucar.ma2.{Array => MultiArray}
 
 trait ZarrLayer extends DataLayerWithMagLocators {
 
-  def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                     dataSourceId: DataSourceId,
-                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]) =
+  def bucketProvider(
+      remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+      dataSourceId: DataSourceId,
+      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]
+  ) =
     new DatasetArrayBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
@@ -35,7 +37,7 @@ case class ZarrDataLayer(
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
     override val additionalAxes: Option[Seq[AdditionalAxis]],
-    override val dataFormat: DataFormat.Value,
+    override val dataFormat: DataFormat.Value
 ) extends ZarrLayer
 
 object ZarrDataLayer {
@@ -54,7 +56,7 @@ case class ZarrSegmentationLayer(
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
-    override val dataFormat: DataFormat.Value,
+    override val dataFormat: DataFormat.Value
 ) extends SegmentationLayer
     with ZarrLayer
 

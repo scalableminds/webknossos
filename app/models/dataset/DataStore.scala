@@ -32,12 +32,14 @@ case class DataStore(
 object DataStore {
   implicit val dataStoreFormat: Format[DataStore] = Json.format[DataStore]
 
-  def fromForm(name: String,
-               url: String,
-               publicUrl: String,
-               key: String,
-               isScratch: Option[Boolean],
-               allowsUpload: Option[Boolean]): DataStore =
+  def fromForm(
+      name: String,
+      url: String,
+      publicUrl: String,
+      key: String,
+      isScratch: Option[Boolean],
+      allowsUpload: Option[Boolean]
+  ): DataStore =
     DataStore(
       name,
       url,
@@ -50,35 +52,38 @@ object DataStore {
       None
     )
 
-  def fromUpdateForm(name: String,
-                     url: String,
-                     publicUrl: String,
-                     isScratch: Option[Boolean],
-                     allowsUpload: Option[Boolean]): DataStore =
+  def fromUpdateForm(
+      name: String,
+      url: String,
+      publicUrl: String,
+      isScratch: Option[Boolean],
+      allowsUpload: Option[Boolean]
+  ): DataStore =
     fromForm(name, url, publicUrl, "", isScratch, allowsUpload)
 }
 
-class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO, jobService: JobService, conf: WkConf)(
-    implicit ec: ExecutionContext)
-    extends FoxImplicits
+class DataStoreService @Inject() (dataStoreDAO: DataStoreDAO, jobService: JobService, conf: WkConf)(implicit
+    ec: ExecutionContext
+) extends FoxImplicits
     with Results {
 
   def publicWrites(dataStore: DataStore): Fox[JsObject] =
     for {
       jobsSupportedByAvailableWorkers <- jobService.jobsSupportedByAvailableWorkers(dataStore.name)
       jobsEnabled = conf.Features.jobsEnabled && jobsSupportedByAvailableWorkers.nonEmpty
-    } yield
-      Json.obj(
-        "name" -> dataStore.name,
-        "url" -> dataStore.publicUrl,
-        "allowsUpload" -> dataStore.allowsUpload,
-        "jobsSupportedByAvailableWorkers" -> Json.toJson(
-          if (conf.Features.jobsEnabled) jobsSupportedByAvailableWorkers else List.empty),
-        "jobsEnabled" -> jobsEnabled
-      )
+    } yield Json.obj(
+      "name" -> dataStore.name,
+      "url" -> dataStore.publicUrl,
+      "allowsUpload" -> dataStore.allowsUpload,
+      "jobsSupportedByAvailableWorkers" -> Json.toJson(
+        if (conf.Features.jobsEnabled) jobsSupportedByAvailableWorkers else List.empty
+      ),
+      "jobsEnabled" -> jobsEnabled
+    )
 
-  def validateAccess(name: String, key: String)(block: DataStore => Future[Result])(
-      implicit m: MessagesProvider): Fox[Result] =
+  def validateAccess(name: String, key: String)(
+      block: DataStore => Future[Result]
+  )(implicit m: MessagesProvider): Fox[Result] =
     (for {
       dataStore <- dataStoreDAO.findOneByName(name)(GlobalAccessContext)
       _ <- bool2Fox(key == dataStore.key)
@@ -86,12 +91,13 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO, jobService: JobServ
     } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Messages("dataStore.notFound"))))
 }
 
-class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class DataStoreDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[DataStore, DatastoresRow, Datastores](sqlClient) {
   protected val collection = Datastores
 
   protected def idColumn(x: Datastores): Rep[String] = x.name
   protected def isDeletedColumn(x: Datastores): Rep[Boolean] = x.isdeleted
+  protected def getResult = GetResultDatastoresRow
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"(onlyAllowedOrganization IS NULL) OR (onlyAllowedOrganization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId))"
@@ -108,7 +114,8 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
         r.allowsupload,
         r.reportusedstorageenabled,
         r.onlyallowedorganization
-      ))
+      )
+    )
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
@@ -152,7 +159,8 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
   def updateReportUsedStorageEnabledByName(name: String, reportUsedStorageEnabled: Boolean): Fox[Unit] =
     for {
       _ <- run(
-        q"UPDATE webknossos.dataStores SET reportUsedStorageEnabled = $reportUsedStorageEnabled WHERE name = $name".asUpdate)
+        q"UPDATE webknossos.dataStores SET reportUsedStorageEnabled = $reportUsedStorageEnabled WHERE name = $name".asUpdate
+      )
     } yield ()
 
   def insertOne(d: DataStore): Fox[Unit] =

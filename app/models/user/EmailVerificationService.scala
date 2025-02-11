@@ -13,12 +13,13 @@ import utils.WkConf
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class EmailVerificationService @Inject()(conf: WkConf,
-                                         emailVerificationKeyDAO: EmailVerificationKeyDAO,
-                                         multiUserDAO: MultiUserDAO,
-                                         defaultMails: DefaultMails,
-                                         actorSystem: ActorSystem)
-    extends LazyLogging {
+class EmailVerificationService @Inject() (
+    conf: WkConf,
+    emailVerificationKeyDAO: EmailVerificationKeyDAO,
+    multiUserDAO: MultiUserDAO,
+    defaultMails: DefaultMails,
+    actorSystem: ActorSystem
+) extends LazyLogging {
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
@@ -28,12 +29,14 @@ class EmailVerificationService @Inject()(conf: WkConf,
       multiUser <- multiUserDAO.findOne(user._multiUser)(ctx)
       key: String = RandomIDGenerator.generateBlocking(32)
       expiration = conf.WebKnossos.User.EmailVerification.linkExpiry.map(Instant.now + _)
-      evk: EmailVerificationKey = EmailVerificationKey(ObjectId.generate,
-                                                       key,
-                                                       multiUser.email,
-                                                       multiUser._id,
-                                                       expiration,
-                                                       isUsed = false)
+      evk: EmailVerificationKey = EmailVerificationKey(
+        ObjectId.generate,
+        key,
+        multiUser.email,
+        multiUser._id,
+        expiration,
+        isUsed = false
+      )
       _ <- emailVerificationKeyDAO.insertOne(evk)
       fullVerificationLink = s"${conf.Http.uri}/verifyEmail/$key"
       _ = logger.info(s"Sending email verification mail for user with email ${multiUser.email}")
@@ -63,8 +66,8 @@ class EmailVerificationService @Inject()(conf: WkConf,
       _ <- emailVerificationKeyDAO.markAsUsed(evk._id)
     } yield ()
 
-  def assertEmailVerifiedOrResendVerificationMail(user: User)(
-      implicit ctx: DBAccessContext,
+  def assertEmailVerifiedOrResendVerificationMail(user: User)(implicit
+      ctx: DBAccessContext,
       ec: ExecutionContext
   ): Fox[Unit] =
     for {
@@ -73,8 +76,8 @@ class EmailVerificationService @Inject()(conf: WkConf,
       _ <- Fox.bool2Fox(emailVerificationOk) ?~> "user.email.notVerified"
     } yield ()
 
-  private def userHasVerifiedEmail(user: User)(
-      implicit ctx: DBAccessContext
+  private def userHasVerifiedEmail(user: User)(implicit
+      ctx: DBAccessContext
   ): Fox[Boolean] =
     for {
       multiUser: MultiUser <- multiUserDAO.findOne(user._multiUser) ?~> "user.notFound"

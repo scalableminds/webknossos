@@ -25,52 +25,61 @@ import java.net.URI
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class WKExploreRemoteLayerParameters(remoteUri: String,
-                                          credentialIdentifier: Option[String],
-                                          credentialSecret: Option[String],
-                                          preferredVoxelSize: Option[VoxelSize],
-                                          dataStoreName: Option[String])
+case class WKExploreRemoteLayerParameters(
+    remoteUri: String,
+    credentialIdentifier: Option[String],
+    credentialSecret: Option[String],
+    preferredVoxelSize: Option[VoxelSize],
+    dataStoreName: Option[String]
+)
 
 object WKExploreRemoteLayerParameters {
   implicit val jsonFormat: OFormat[WKExploreRemoteLayerParameters] = Json.format[WKExploreRemoteLayerParameters]
 }
 
-case class ExploreAndAddRemoteDatasetParameters(remoteUri: String,
-                                                datasetName: String,
-                                                folderPath: Option[String],
-                                                dataStoreName: Option[String])
+case class ExploreAndAddRemoteDatasetParameters(
+    remoteUri: String,
+    datasetName: String,
+    folderPath: Option[String],
+    dataStoreName: Option[String]
+)
 
 object ExploreAndAddRemoteDatasetParameters {
   implicit val jsonFormat: OFormat[ExploreAndAddRemoteDatasetParameters] =
     Json.format[ExploreAndAddRemoteDatasetParameters]
 }
 
-class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService,
-                                            organizationDAO: OrganizationDAO,
-                                            dataStoreDAO: DataStoreDAO,
-                                            datasetService: DatasetService,
-                                            wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                                            rpc: RPC)
-    extends FoxImplicits
+class WKExploreRemoteLayerService @Inject() (
+    credentialService: CredentialService,
+    organizationDAO: OrganizationDAO,
+    dataStoreDAO: DataStoreDAO,
+    datasetService: DatasetService,
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+    rpc: RPC
+) extends FoxImplicits
     with ExploreLayerUtils
     with LazyLogging {
 
   private lazy val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  def exploreRemoteDatasource(parameters: List[WKExploreRemoteLayerParameters], requestingUser: User)(
-      implicit ec: ExecutionContext): Fox[ExploreRemoteDatasetResponse] =
+  def exploreRemoteDatasource(parameters: List[WKExploreRemoteLayerParameters], requestingUser: User)(implicit
+      ec: ExecutionContext
+  ): Fox[ExploreRemoteDatasetResponse] =
     for {
-      credentialIds <- Fox.serialCombined(parameters)(
-        parameters =>
-          storeCredentials(parameters.remoteUri,
-                           parameters.credentialIdentifier,
-                           parameters.credentialSecret,
-                           requestingUser))
-      parametersWithCredentialId = parameters.zip(credentialIds).map {
-        case (originalParameters, credentialId) =>
-          ExploreRemoteLayerParameters(originalParameters.remoteUri,
-                                       credentialId.map(_.toString),
-                                       originalParameters.preferredVoxelSize)
+      credentialIds <- Fox.serialCombined(parameters)(parameters =>
+        storeCredentials(
+          parameters.remoteUri,
+          parameters.credentialIdentifier,
+          parameters.credentialSecret,
+          requestingUser
+        )
+      )
+      parametersWithCredentialId = parameters.zip(credentialIds).map { case (originalParameters, credentialId) =>
+        ExploreRemoteLayerParameters(
+          originalParameters.remoteUri,
+          credentialId.map(_.toString),
+          originalParameters.preferredVoxelSize
+        )
       }
       datastore <- selectDataStore(parameters.map(_.dataStoreName))
       client: WKRemoteDataStoreClient = new WKRemoteDataStoreClient(datastore, rpc)
@@ -88,25 +97,33 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
       }
     } yield dataStore
 
-  private def storeCredentials(layerUri: String,
-                               credentialIdentifier: Option[String],
-                               credentialSecret: Option[String],
-                               requestingUser: User)(implicit ec: ExecutionContext): Fox[Option[ObjectId]] =
+  private def storeCredentials(
+      layerUri: String,
+      credentialIdentifier: Option[String],
+      credentialSecret: Option[String],
+      requestingUser: User
+  )(implicit ec: ExecutionContext): Fox[Option[ObjectId]] =
     for {
       uri <- tryo(new URI(removeHeaderFileNamesFromUriSuffix(layerUri))) ?~> s"Received invalid URI: $layerUri"
-      credentialOpt = credentialService.createCredentialOpt(uri,
-                                                            credentialIdentifier,
-                                                            credentialSecret,
-                                                            requestingUser._id,
-                                                            requestingUser._organization)
+      credentialOpt = credentialService.createCredentialOpt(
+        uri,
+        credentialIdentifier,
+        credentialSecret,
+        requestingUser._id,
+        requestingUser._organization
+      )
       _ <- bool2Fox(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
-      credentialId <- Fox.runOptional(credentialOpt)(c => credentialService.insertOne(c)) ?~> "dataVault.credential.insert.failed"
+      credentialId <- Fox.runOptional(credentialOpt)(c =>
+        credentialService.insertOne(c)
+      ) ?~> "dataVault.credential.insert.failed"
     } yield credentialId
 
-  def addRemoteDatasource(dataSource: GenericDataSource[DataLayer],
-                          datasetName: String,
-                          user: User,
-                          folderId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def addRemoteDatasource(
+      dataSource: GenericDataSource[DataLayer],
+      datasetName: String,
+      user: User,
+      folderId: Option[ObjectId]
+  )(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(user._organization)
       dataStore <- dataStoreDAO.findOneWithUploadsAllowed

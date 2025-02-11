@@ -10,10 +10,12 @@ import scala.concurrent.duration._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class TracingDataStore @Inject()(config: TracingStoreConfig,
-                                 lifecycle: ApplicationLifecycle,
-                                 slackNotificationService: TSSlackNotificationService,
-                                 val system: ActorSystem)(implicit ec: ExecutionContext)
+class TracingDataStore @Inject() (
+    config: TracingStoreConfig,
+    lifecycle: ApplicationLifecycle,
+    slackNotificationService: TSSlackNotificationService,
+    val system: ActorSystem
+)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   val healthClient = new FossilDBClient("healthCheckOnly", config, slackNotificationService)

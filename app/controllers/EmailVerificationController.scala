@@ -10,9 +10,10 @@ import security.WkEnv
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class EmailVerificationController @Inject()(emailVerificationService: EmailVerificationService, sil: Silhouette[WkEnv])(
-    implicit ec: ExecutionContext,
-    val bodyParsers: PlayBodyParsers)
+class EmailVerificationController @Inject() (
+    emailVerificationService: EmailVerificationService,
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 

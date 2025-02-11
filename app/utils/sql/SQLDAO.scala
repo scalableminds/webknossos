@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import slick.jdbc.GetResult
 import slick.lifted.{AbstractTable, Rep, TableQuery}
 
 import javax.inject.Inject
@@ -11,9 +12,10 @@ import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
 import slick.jdbc.PostgresProfile.api._
 
-abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SecuredSQLDAO(sqlClient) {
   protected def collection: TableQuery[X]
+  implicit protected def getResult: GetResult[R]
   override protected def collectionName: String =
     collection.shaped.value.schemaName.map(_ + ".").getOrElse("") + collection.shaped.value.tableName
 
@@ -26,34 +28,32 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
 
   protected def notdel(r: X): Rep[Boolean] = isDeletedColumn(r) === false
 
-  protected def parse(row: X#TableElementType): Fox[C]
+  protected def parse(row: R): Fox[C]
 
-  protected def parseFirst(rowSeq: Seq[X#TableElementType], queryLabel: ObjectId): Fox[C] =
+  protected def parseFirst(rowSeq: Seq[R], queryLabel: ObjectId): Fox[C] =
     parseFirst(rowSeq, queryLabel.toString)
 
-  protected def parseFirst(rowSeq: Seq[X#TableElementType], queryLabel: String): Fox[C] =
+  protected def parseFirst(rowSeq: Seq[R], queryLabel: String): Fox[C] =
     for {
       firstRow <- rowSeq.headOption.toFox // No error chain here, as this should stay Fox.Empty
       parsed <- parse(firstRow) ?~> s"Parsing failed for row in $collectionName queried by $queryLabel"
     } yield parsed
 
-  protected def parseAll(rowSeq: Seq[X#TableElementType]): Fox[List[C]] =
+  protected def parseAll(rowSeq: Seq[R]): Fox[List[C]] =
     Fox.combined(rowSeq.toList.map(parse)) ?~> s"Parsing failed for a row in $collectionName during list query"
 
   @nowarn // suppress warning about unused implicit ctx, as it is used in subclasses
   def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[C] =
-    run(collection.filter(r => isDeletedColumn(r) === false && idColumn(r) === id.id).result.headOption).map {
-      case Some(r) =>
-        parse(r) ?~> ("sql: could not parse database row for object" + id)
-      case _ =>
-        Fox.empty
-    }.flatten
+    for {
+      rows <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id".as[R])
+      parsed <- parseFirst(rows, "id")
+    } yield parsed
 
   @nowarn // suppress warning about unused implicit ctx, as it is used in subclasses
   def findAll(implicit ctx: DBAccessContext): Fox[List[C]] =
     for {
-      r <- run(collection.filter(row => notdel(row)).result)
-      parsed <- Fox.combined(r.toList.map(parse))
+      r <- run(q"SELECT $columns FROM $existingCollectionName".as[R])
+      parsed <- parseAll(r)
     } yield parsed
 
   def deleteOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
@@ -71,11 +71,13 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
       collectionToken = SqlToken.raw(collectionName)
       nameColumnToken = SqlToken.raw(nameColumn)
       _ <- run(
-        q"UPDATE $collectionToken SET isDeleted = TRUE, $nameColumnToken = CONCAT($nameColumnToken, $deletedSuffix) WHERE _id = $id".asUpdate)
+        q"UPDATE $collectionToken SET isDeleted = TRUE, $nameColumnToken = CONCAT($nameColumnToken, $deletedSuffix) WHERE _id = $id".asUpdate
+      )
     } yield ()
 
-  protected def updateStringCol(id: ObjectId, column: X => Rep[String], newValue: String)(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
+  protected def updateStringCol(id: ObjectId, column: X => Rep[String], newValue: String)(implicit
+      ctx: DBAccessContext
+  ): Fox[Unit] = {
     val query = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
     for {
       _ <- assertUpdateAccess(id)
@@ -83,12 +85,14 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
     } yield ()
   }
 
-  protected def updateObjectIdCol(id: ObjectId, column: X => Rep[String], newValue: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  protected def updateObjectIdCol(id: ObjectId, column: X => Rep[String], newValue: ObjectId)(implicit
+      ctx: DBAccessContext
+  ): Fox[Unit] =
     updateStringCol(id, column, newValue.id)
 
-  protected def updateBooleanCol(id: ObjectId, column: X => Rep[Boolean], newValue: Boolean)(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
+  protected def updateBooleanCol(id: ObjectId, column: X => Rep[Boolean], newValue: Boolean)(implicit
+      ctx: DBAccessContext
+  ): Fox[Unit] = {
     val query = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
     for {
       _ <- assertUpdateAccess(id)

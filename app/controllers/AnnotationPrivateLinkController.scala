@@ -16,13 +16,14 @@ import security.{WkEnv, WkSilhouetteEnvironment}
 import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
-class AnnotationPrivateLinkController @Inject()(
+class AnnotationPrivateLinkController @Inject() (
     annotationDAO: AnnotationDAO,
     annotationService: AnnotationService,
     annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     annotationPrivateLinkService: AnnotationPrivateLinkService,
-    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -36,9 +37,10 @@ class AnnotationPrivateLinkController @Inject()(
           case Full(a) => Fox.successful(a)
           case _       => findAnnotationByIdAndUserToken(accessTokenOrId, userToken)
         }
-        writtenAnnotation <- annotationService.writesAsAnnotationSource(annotation,
-                                                                        accessViaPrivateLink =
-                                                                          annotationByLinkBox.nonEmpty)
+        writtenAnnotation <- annotationService.writesAsAnnotationSource(
+          annotation,
+          accessViaPrivateLink = annotationByLinkBox.nonEmpty
+        )
       } yield Ok(writtenAnnotation)
   }
 
@@ -91,7 +93,8 @@ class AnnotationPrivateLinkController @Inject()(
         annotationId <- ObjectId.fromString(params.annotation)
         _ <- annotationDAO.assertUpdateAccess(annotationId) ?~> "notAllowed" ~> FORBIDDEN
         _ <- annotationPrivateLinkDAO.insertOne(
-          AnnotationPrivateLink(_id, annotationId, accessToken, params.expirationDateTime)) ?~> "create.failed"
+          AnnotationPrivateLink(_id, annotationId, accessToken, params.expirationDateTime)
+        ) ?~> "create.failed"
         inserted <- annotationPrivateLinkDAO.findOne(_id)
         js <- annotationPrivateLinkService.publicWrites(inserted)
       } yield Ok(js)

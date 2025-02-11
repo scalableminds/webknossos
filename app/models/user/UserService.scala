@@ -29,21 +29,23 @@ import utils.WkConf
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class UserService @Inject()(conf: WkConf,
-                            userDAO: UserDAO,
-                            multiUserDAO: MultiUserDAO,
-                            userExperiencesDAO: UserExperiencesDAO,
-                            userDatasetConfigurationDAO: UserDatasetConfigurationDAO,
-                            userDatasetLayerConfigurationDAO: UserDatasetLayerConfigurationDAO,
-                            organizationDAO: OrganizationDAO,
-                            teamDAO: TeamDAO,
-                            teamMembershipService: TeamMembershipService,
-                            datasetDAO: DatasetDAO,
-                            tokenDAO: TokenDAO,
-                            emailVerificationService: EmailVerificationService,
-                            defaultMails: DefaultMails,
-                            passwordHasher: PasswordHasher,
-                            actorSystem: ActorSystem)(implicit ec: ExecutionContext)
+class UserService @Inject() (
+    conf: WkConf,
+    userDAO: UserDAO,
+    multiUserDAO: MultiUserDAO,
+    userExperiencesDAO: UserExperiencesDAO,
+    userDatasetConfigurationDAO: UserDatasetConfigurationDAO,
+    userDatasetLayerConfigurationDAO: UserDatasetLayerConfigurationDAO,
+    organizationDAO: OrganizationDAO,
+    teamDAO: TeamDAO,
+    teamMembershipService: TeamMembershipService,
+    datasetDAO: DatasetDAO,
+    tokenDAO: TokenDAO,
+    emailVerificationService: EmailVerificationService,
+    defaultMails: DefaultMails,
+    passwordHasher: PasswordHasher,
+    actorSystem: ActorSystem
+)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
     with SqlEscaping
@@ -89,15 +91,17 @@ class UserService @Inject()(conf: WkConf,
   def findOneCached(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
     userCache.getOrLoad((userId, ctx.toStringAnonymous), _ => userDAO.findOne(userId))
 
-  def insert(organizationId: String,
-             email: String,
-             firstName: String,
-             lastName: String,
-             isActive: Boolean,
-             passwordInfo: PasswordInfo,
-             isAdmin: Boolean,
-             isOrganizationOwner: Boolean,
-             isEmailVerified: Boolean): Fox[User] = {
+  def insert(
+      organizationId: String,
+      email: String,
+      firstName: String,
+      lastName: String,
+      isActive: Boolean,
+      passwordInfo: PasswordInfo,
+      isAdmin: Boolean,
+      isOrganizationOwner: Boolean,
+      isEmailVerified: Boolean
+  ): Fox[User] = {
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
       _ <- Fox.assertTrue(multiUserDAO.emailNotPresentYet(email)(GlobalAccessContext)) ?~> "user.email.alreadyInUse"
@@ -141,17 +145,20 @@ class UserService @Inject()(conf: WkConf,
       existingIdentity: Box[User] <- userDAO
         .findOneByOrgaAndMultiUser(organizationId, originalUser._multiUser)(GlobalAccessContext)
         .futureBox
-      _ <- if (multiUser.isSuperUser && existingIdentity.isEmpty) {
-        joinOrganization(originalUser, organizationId, autoActivate = true, isAdmin = true, isUnlisted = true)
-      } else Fox.successful(())
+      _ <-
+        if (multiUser.isSuperUser && existingIdentity.isEmpty) {
+          joinOrganization(originalUser, organizationId, autoActivate = true, isAdmin = true, isUnlisted = true)
+        } else Fox.successful(())
     } yield ()
 
-  def joinOrganization(originalUser: User,
-                       organizationId: String,
-                       autoActivate: Boolean,
-                       isAdmin: Boolean,
-                       isUnlisted: Boolean = false,
-                       isOrganizationOwner: Boolean = false): Fox[User] =
+  def joinOrganization(
+      originalUser: User,
+      organizationId: String,
+      autoActivate: Boolean,
+      isAdmin: Boolean,
+      isUnlisted: Boolean = false,
+      isOrganizationOwner: Boolean = false
+  ): Fox[User] =
     for {
       newUserId <- Fox.successful(ObjectId.generate)
       organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
@@ -173,7 +180,8 @@ class UserService @Inject()(conf: WkConf,
       _ <- userDAO.insertOne(user)
       _ <- userDAO.insertTeamMembership(user._id, organizationTeamMembership)(GlobalAccessContext)
       _ = logger.info(
-        s"Multiuser ${originalUser._multiUser} joined organization $organizationId with new user id $newUserId.")
+        s"Multiuser ${originalUser._multiUser} joined organization $organizationId with new user id $newUserId."
+      )
     } yield user
 
   def emailFor(user: User)(implicit ctx: DBAccessContext): Fox[String] =
@@ -181,16 +189,18 @@ class UserService @Inject()(conf: WkConf,
       multiUser <- multiUserDAO.findOne(user._multiUser)
     } yield multiUser.email
 
-  def update(user: User,
-             firstName: String,
-             lastName: String,
-             email: String,
-             activated: Boolean,
-             isAdmin: Boolean,
-             isDatasetManager: Boolean,
-             teamMemberships: List[TeamMembership],
-             experiences: Map[String, Int],
-             lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[User] = {
+  def update(
+      user: User,
+      firstName: String,
+      lastName: String,
+      email: String,
+      activated: Boolean,
+      isAdmin: Boolean,
+      isDatasetManager: Boolean,
+      teamMemberships: List[TeamMembership],
+      experiences: Map[String, Int],
+      lastTaskTypeId: Option[String]
+  )(implicit ctx: DBAccessContext): Fox[User] = {
 
     if (user.isDeactivated && activated) {
       logger.info(s"Activating user ${user._id}. Access context: ${ctx.toStringAnonymous}")
@@ -199,13 +209,15 @@ class UserService @Inject()(conf: WkConf,
     for {
       oldEmail <- emailFor(user)
       _ <- Fox.runIf(oldEmail != email)(multiUserDAO.updateEmail(user._multiUser, email))
-      _ <- userDAO.updateValues(user._id,
-                                firstName,
-                                lastName,
-                                isAdmin,
-                                isDatasetManager,
-                                isDeactivated = !activated,
-                                lastTaskTypeId)
+      _ <- userDAO.updateValues(
+        user._id,
+        firstName,
+        lastName,
+        isAdmin,
+        isDatasetManager,
+        isDeactivated = !activated,
+        lastTaskTypeId
+      )
       _ <- userDAO.updateTeamMembershipsForUser(user._id, teamMemberships)
       _ <- userExperiencesDAO.updateExperiencesForUser(user, experiences)
       _ = removeUserFromCache(user._id)
@@ -240,24 +252,28 @@ class UserService @Inject()(conf: WkConf,
       user: User,
       datasetId: ObjectId,
       datasetConfiguration: DatasetViewConfiguration,
-      layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
+      layerConfiguration: Option[JsValue]
+  )(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
     for {
       dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId)
       layerMap = layerConfiguration.flatMap(_.asOpt[Map[String, JsValue]]).getOrElse(Map.empty)
-      _ <- Fox.serialCombined(layerMap.toList) {
-        case (name, config) =>
-          config.asOpt[LayerViewConfiguration] match {
-            case Some(viewConfiguration) =>
-              userDatasetLayerConfigurationDAO.updateDatasetConfigurationForUserAndDatasetAndLayer(user._id,
-                                                                                                   dataset._id,
-                                                                                                   name,
-                                                                                                   viewConfiguration)
-            case None => Fox.successful(())
-          }
+      _ <- Fox.serialCombined(layerMap.toList) { case (name, config) =>
+        config.asOpt[LayerViewConfiguration] match {
+          case Some(viewConfiguration) =>
+            userDatasetLayerConfigurationDAO.updateDatasetConfigurationForUserAndDatasetAndLayer(
+              user._id,
+              dataset._id,
+              name,
+              viewConfiguration
+            )
+          case None => Fox.successful(())
+        }
       }
-      _ <- userDatasetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id,
-                                                                                   dataset._id,
-                                                                                   datasetConfiguration)
+      _ <- userDatasetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(
+        user._id,
+        dataset._id,
+        datasetConfiguration
+      )
     } yield ()
 
   def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -308,9 +324,11 @@ class UserService @Inject()(conf: WkConf,
       teamManagerTeamIds <- teamManagerTeamIdsFor(user._id)
     } yield teamManagerTeamIds.contains(_team) || user.isAdminOf(team._organization)) ?~> "team.admin.notAllowed"
 
-  private def isTeamManagerInOrg(user: User,
-                                 organizationId: String,
-                                 teamManagerMemberships: Option[List[TeamMembership]] = None): Fox[Boolean] =
+  private def isTeamManagerInOrg(
+      user: User,
+      organizationId: String,
+      teamManagerMemberships: Option[List[TeamMembership]] = None
+  ): Fox[Boolean] =
     for {
       teamManagerMemberships <- Fox.fillOption(teamManagerMemberships)(teamManagerMembershipsFor(user._id))
     } yield teamManagerMemberships.nonEmpty && organizationId == user._organization
@@ -337,73 +355,73 @@ class UserService @Inject()(conf: WkConf,
       novelUserExperienceInfos = multiUser.novelUserExperienceInfos
       teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
       experiences <- experiencesFor(user._id)
-    } yield {
-      Json.obj(
-        "id" -> user._id.toString,
-        "email" -> multiUser.email,
-        "firstName" -> user.firstName,
-        "lastName" -> user.lastName,
-        "isAdmin" -> user.isAdmin,
-        "isOrganizationOwner" -> user.isOrganizationOwner,
-        "isDatasetManager" -> user.isDatasetManager,
-        "isActive" -> !user.isDeactivated,
-        "teams" -> teamMembershipsJs,
-        "experiences" -> experiences,
-        "lastActivity" -> user.lastActivity,
-        "isAnonymous" -> false,
-        "isEditable" -> isEditable,
-        "organization" -> organization._id,
-        "novelUserExperienceInfos" -> novelUserExperienceInfos,
-        "selectedTheme" -> multiUser.selectedTheme,
-        "created" -> user.created,
-        "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString),
-        "isSuperUser" -> multiUser.isSuperUser,
-        "isEmailVerified" -> (multiUser.isEmailVerified || !conf.WebKnossos.User.EmailVerification.activated),
-      )
-    }
+    } yield Json.obj(
+      "id" -> user._id.toString,
+      "email" -> multiUser.email,
+      "firstName" -> user.firstName,
+      "lastName" -> user.lastName,
+      "isAdmin" -> user.isAdmin,
+      "isOrganizationOwner" -> user.isOrganizationOwner,
+      "isDatasetManager" -> user.isDatasetManager,
+      "isActive" -> !user.isDeactivated,
+      "teams" -> teamMembershipsJs,
+      "experiences" -> experiences,
+      "lastActivity" -> user.lastActivity,
+      "isAnonymous" -> false,
+      "isEditable" -> isEditable,
+      "organization" -> organization._id,
+      "novelUserExperienceInfos" -> novelUserExperienceInfos,
+      "selectedTheme" -> multiUser.selectedTheme,
+      "created" -> user.created,
+      "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString),
+      "isSuperUser" -> multiUser.isSuperUser,
+      "isEmailVerified" -> (multiUser.isEmailVerified || !conf.WebKnossos.User.EmailVerification.activated)
+    )
   }
 
   def publicWritesCompact(userCompactInfo: UserCompactInfo): Fox[JsObject] =
     for {
       _ <- Fox.successful(())
-      teamsJson = parseArrayLiteral(userCompactInfo.teamIdsAsArrayLiteral).indices.map(
-        idx =>
-          Json.obj(
-            "id" -> parseArrayLiteral(userCompactInfo.teamIdsAsArrayLiteral)(idx),
-            "name" -> parseArrayLiteral(userCompactInfo.teamNamesAsArrayLiteral)(idx),
-            "isTeamManager" -> parseArrayLiteral(userCompactInfo.teamManagersAsArrayLiteral)(idx).toBoolean
-        ))
+      teamsJson = parseArrayLiteral(userCompactInfo.teamIdsAsArrayLiteral).indices.map(idx =>
+        Json.obj(
+          "id" -> parseArrayLiteral(userCompactInfo.teamIdsAsArrayLiteral)(idx),
+          "name" -> parseArrayLiteral(userCompactInfo.teamNamesAsArrayLiteral)(idx),
+          "isTeamManager" -> parseArrayLiteral(userCompactInfo.teamManagersAsArrayLiteral)(idx).toBoolean
+        )
+      )
       experienceJson = Json.obj(
         parseArrayLiteral(userCompactInfo.experienceValuesAsArrayLiteral).zipWithIndex
           .filter(valueAndIndex => tryo(valueAndIndex._1.toInt).isDefined)
           .map(valueAndIndex =>
-            (parseArrayLiteral(userCompactInfo.experienceDomainsAsArrayLiteral)(valueAndIndex._2),
-             Json.toJsFieldJsValueWrapper(valueAndIndex._1.toInt))): _*)
-      novelUserExperienceInfos <- Json.parse(userCompactInfo.novelUserExperienceInfos).validate[JsObject]
-    } yield {
-      Json.obj(
-        "id" -> userCompactInfo._id,
-        "email" -> userCompactInfo.email,
-        "firstName" -> userCompactInfo.firstName,
-        "lastName" -> userCompactInfo.lastName,
-        "isAdmin" -> userCompactInfo.isAdmin,
-        "isOrganizationOwner" -> userCompactInfo.isOrganizationOwner,
-        "isDatasetManager" -> userCompactInfo.isDatasetManager,
-        "isActive" -> !userCompactInfo.isDeactivated,
-        "teams" -> teamsJson,
-        "experiences" -> experienceJson,
-        "lastActivity" -> userCompactInfo.lastActivity,
-        "isAnonymous" -> false,
-        "isEditable" -> userCompactInfo.isEditable,
-        "organization" -> userCompactInfo.organizationId,
-        "novelUserExperienceInfos" -> novelUserExperienceInfos,
-        "selectedTheme" -> userCompactInfo.selectedTheme,
-        "created" -> userCompactInfo.created,
-        "lastTaskTypeId" -> userCompactInfo.lastTaskTypeId,
-        "isSuperUser" -> userCompactInfo.isSuperUser,
-        "isEmailVerified" -> userCompactInfo.isEmailVerified,
+            (
+              parseArrayLiteral(userCompactInfo.experienceDomainsAsArrayLiteral)(valueAndIndex._2),
+              Json.toJsFieldJsValueWrapper(valueAndIndex._1.toInt)
+            )
+          )*
       )
-    }
+      novelUserExperienceInfos <- Json.parse(userCompactInfo.novelUserExperienceInfos).validate[JsObject]
+    } yield Json.obj(
+      "id" -> userCompactInfo._id,
+      "email" -> userCompactInfo.email,
+      "firstName" -> userCompactInfo.firstName,
+      "lastName" -> userCompactInfo.lastName,
+      "isAdmin" -> userCompactInfo.isAdmin,
+      "isOrganizationOwner" -> userCompactInfo.isOrganizationOwner,
+      "isDatasetManager" -> userCompactInfo.isDatasetManager,
+      "isActive" -> !userCompactInfo.isDeactivated,
+      "teams" -> teamsJson,
+      "experiences" -> experienceJson,
+      "lastActivity" -> userCompactInfo.lastActivity,
+      "isAnonymous" -> false,
+      "isEditable" -> userCompactInfo.isEditable,
+      "organization" -> userCompactInfo.organizationId,
+      "novelUserExperienceInfos" -> novelUserExperienceInfos,
+      "selectedTheme" -> userCompactInfo.selectedTheme,
+      "created" -> userCompactInfo.created,
+      "lastTaskTypeId" -> userCompactInfo.lastTaskTypeId,
+      "isSuperUser" -> userCompactInfo.isSuperUser,
+      "isEmailVerified" -> userCompactInfo.isEmailVerified
+    )
 
   def compactWrites(user: User): Fox[JsObject] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
@@ -411,17 +429,15 @@ class UserService @Inject()(conf: WkConf,
       teamMemberships <- teamMembershipsFor(user._id)
       email <- emailFor(user)
       teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
-    } yield {
-      Json.obj(
-        "id" -> user._id.toString,
-        "email" -> email,
-        "firstName" -> user.firstName,
-        "lastName" -> user.lastName,
-        "isAdmin" -> user.isAdmin,
-        "isDatasetManager" -> user.isDatasetManager,
-        "isAnonymous" -> false,
-        "teams" -> teamMembershipsJs
-      )
-    }
+    } yield Json.obj(
+      "id" -> user._id.toString,
+      "email" -> email,
+      "firstName" -> user.firstName,
+      "lastName" -> user.lastName,
+      "isAdmin" -> user.isAdmin,
+      "isDatasetManager" -> user.isDatasetManager,
+      "isAnonymous" -> false,
+      "teams" -> teamMembershipsJs
+    )
   }
 }

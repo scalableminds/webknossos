@@ -37,26 +37,27 @@ object MultiComponentTreeSplitter {
           treeGroupsMutable = newTreeGroup +: treeGroupsMutable
         }
 
-        connectedSets.asScala.zipWithIndex.map {
-          case (connectedNodeSet, index) =>
-            val nodes = tree.nodes.filter(node => connectedNodeSet.contains(node.id))
-            val edges = tree.edges.filter(edge =>
-              connectedNodeSet.contains(edge.source) && connectedNodeSet.contains(edge.target))
-            val branchPoints = tree.branchPoints.filter(bp => connectedNodeSet.contains(bp.nodeId))
-            val comments = tree.comments.filter(comment => connectedNodeSet.contains(comment.nodeId))
-            largestTreeId += 1
-            val treeId = largestTreeId
-            val name = tree.name + "_" + index
-            Tree(treeId,
-                 nodes,
-                 edges,
-                 tree.color,
-                 branchPoints,
-                 comments,
-                 name,
-                 tree.createdTimestamp,
-                 Some(largestGroupId),
-                 tree.isVisible)
+        connectedSets.asScala.zipWithIndex.map { case (connectedNodeSet, index) =>
+          val nodes = tree.nodes.filter(node => connectedNodeSet.contains(node.id))
+          val edges =
+            tree.edges.filter(edge => connectedNodeSet.contains(edge.source) && connectedNodeSet.contains(edge.target))
+          val branchPoints = tree.branchPoints.filter(bp => connectedNodeSet.contains(bp.nodeId))
+          val comments = tree.comments.filter(comment => connectedNodeSet.contains(comment.nodeId))
+          largestTreeId += 1
+          val treeId = largestTreeId
+          val name = tree.name + "_" + index
+          Tree(
+            treeId,
+            nodes,
+            edges,
+            tree.color,
+            branchPoints,
+            comments,
+            name,
+            tree.createdTimestamp,
+            Some(largestGroupId),
+            tree.isVisible
+          )
         }
       }
     }

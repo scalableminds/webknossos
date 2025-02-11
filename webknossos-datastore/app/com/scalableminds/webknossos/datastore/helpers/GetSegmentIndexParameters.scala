@@ -21,7 +21,7 @@ case class GetMultipleSegmentIndexParameters(
     mag: Vec3Int,
     additionalCoordinates: Option[Seq[AdditionalCoordinate]],
     mappingName: Option[String],
-    editableMappingTracingId: Option[String],
+    editableMappingTracingId: Option[String]
 )
 
 object GetMultipleSegmentIndexParameters {

@@ -22,12 +22,13 @@ import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.IteratorHasAsScala
 
 // Calls explorers on local datasets that have already been uploaded to the binaryData dir
-class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
+class ExploreLocalLayerService @Inject() (dataVaultService: DataVaultService)
     extends ExploreLayerUtils
     with FoxImplicits {
 
-  def exploreLocal(path: Path, dataSourceId: DataSourceId, layerDirectory: String = "")(
-      implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
+  def exploreLocal(path: Path, dataSourceId: DataSourceId, layerDirectory: String = "")(implicit
+      ec: ExecutionContext
+  ): Fox[DataSourceWithMagLocators] =
     for {
       _ <- Fox.successful(())
       explored = Seq(
@@ -41,53 +42,65 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       dataSource <- Fox.firstSuccess(explored) ?~> "Could not explore local data source"
     } yield dataSource
 
-  private def exploreLocalZarrArray(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(
-      implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
+  private def exploreLocalZarrArray(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(implicit
+      ec: ExecutionContext
+  ): Fox[DataSourceWithMagLocators] =
     for {
-      magDirectories <- tryo(Files.list(path.resolve(layerDirectory)).iterator().asScala.toList).toFox ?~> s"Could not resolve color directory as child of $path"
-      layersWithVoxelSizes <- Fox.combined(magDirectories.map(dir =>
-        for {
-          remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(dir.toUri, None))
-          mag <- Fox
-            .option2Fox(Vec3Int.fromMagLiteral(dir.getFileName.toString, allowScalar = true)) ?~> s"invalid mag: ${dir.getFileName}"
-          vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
-          layersWithVoxelSizes <- new ZarrArrayExplorer(mag).explore(vaultPath, None)
-        } yield layersWithVoxelSizes))
+      magDirectories <- tryo(
+        Files.list(path.resolve(layerDirectory)).iterator().asScala.toList
+      ).toFox ?~> s"Could not resolve color directory as child of $path"
+      layersWithVoxelSizes <- Fox.combined(
+        magDirectories.map(dir =>
+          for {
+            remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(dir.toUri, None))
+            mag <- Fox.option2Fox(
+              Vec3Int.fromMagLiteral(dir.getFileName.toString, allowScalar = true)
+            ) ?~> s"invalid mag: ${dir.getFileName}"
+            vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
+            layersWithVoxelSizes <- new ZarrArrayExplorer(mag).explore(vaultPath, None)
+          } yield layersWithVoxelSizes
+        )
+      )
       (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes.flatten, None)
       relativeLayers = layers.map(selectLastTwoDirectories)
       dataSource = new DataSourceWithMagLocators(dataSourceId, relativeLayers, voxelSize)
     } yield dataSource
 
-  private def exploreLocalNgffV0_4Array(path: Path, dataSourceId: DataSourceId)(
-      implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
+  private def exploreLocalNgffV0_4Array(path: Path, dataSourceId: DataSourceId)(implicit
+      ec: ExecutionContext
+  ): Fox[DataSourceWithMagLocators] =
     exploreLocalLayer(
       layers => layers.map(selectLastTwoDirectories),
       new NgffV0_4Explorer
     )(path, dataSourceId, "")
 
-  private def exploreLocalNgffV0_5Array(path: Path, dataSourceId: DataSourceId)(
-      implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
+  private def exploreLocalNgffV0_5Array(path: Path, dataSourceId: DataSourceId)(implicit
+      ec: ExecutionContext
+  ): Fox[DataSourceWithMagLocators] =
     exploreLocalLayer(
       layers => layers.map(selectLastTwoDirectories),
       new NgffV0_5Explorer
     )(path, dataSourceId, "")
 
   private def exploreLocalNeuroglancerPrecomputed(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(
-      implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
+      implicit ec: ExecutionContext
+  ): Fox[DataSourceWithMagLocators] =
     exploreLocalLayer(
       layers => layers.map(selectLastDirectory),
       new PrecomputedExplorer
     )(path, dataSourceId, layerDirectory)
 
-  private def exploreLocalN5Multiscales(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(
-      implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
+  private def exploreLocalN5Multiscales(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(implicit
+      ec: ExecutionContext
+  ): Fox[DataSourceWithMagLocators] =
     exploreLocalLayer(
       layers => layers.map(selectLastDirectory),
       new N5MultiscalesExplorer
     )(path, dataSourceId, layerDirectory)
 
-  private def exploreLocalN5Array(path: Path, dataSourceId: DataSourceId)(
-      implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
+  private def exploreLocalN5Array(path: Path, dataSourceId: DataSourceId)(implicit
+      ec: ExecutionContext
+  ): Fox[DataSourceWithMagLocators] =
     for {
       _ <- Fox.successful(())
       // Go down subdirectories until we find a directory with an attributes.json file that matches N5Header
@@ -100,13 +113,14 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
               Json.parse(new String(attributesBytes)).validate[N5Header].isSuccess
             } catch {
               case _: Exception => false
-          }
+            }
         )
         .getOrElse(path)
       explored <- exploreLocalLayer(
         layers =>
           layers.map(l =>
-            l.mapped(magMapping = m => m.copy(path = m.path.map(_.stripPrefix(path.toAbsolutePath.toUri.toString))))),
+            l.mapped(magMapping = m => m.copy(path = m.path.map(_.stripPrefix(path.toAbsolutePath.toUri.toString))))
+          ),
         new N5ArrayExplorer
       )(layerPath, dataSourceId, "")
     } yield explored
@@ -119,14 +133,17 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
 
   private def exploreLocalLayer(
       makeLayersRelative: List[DataLayerWithMagLocators] => List[DataLayerWithMagLocators],
-      explorer: RemoteLayerExplorer)(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(
-      implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
+      explorer: RemoteLayerExplorer
+  )(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(implicit
+      ec: ExecutionContext
+  ): Fox[DataSourceWithMagLocators] =
     for {
       _ <- Fox.successful(())
-      layer = if (layerDirectory.isEmpty) {
-        val subdirs = Files.list(path).iterator().asScala.toList
-        if (subdirs.size == 1) subdirs.head.getFileName.toString else layerDirectory
-      } else layerDirectory
+      layer =
+        if (layerDirectory.isEmpty) {
+          val subdirs = Files.list(path).iterator().asScala.toList
+          if (subdirs.size == 1) subdirs.head.getFileName.toString else layerDirectory
+        } else layerDirectory
       fullPath <- Fox.successful(path.resolve(layer))
       remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(fullPath.toUri, None))
       vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"

@@ -28,12 +28,14 @@ object OpenGraphPageType extends ExtendedEnumeration {
   val dataset, annotation, workflow, unknown = Value
 }
 
-class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
-                                 organizationDAO: OrganizationDAO,
-                                 datasetLayerDAO: DatasetLayerDAO,
-                                 annotationDAO: AnnotationDAO,
-                                 shortLinkDAO: ShortLinkDAO,
-                                 conf: WkConf) {
+class OpenGraphService @Inject() (
+    datasetDAO: DatasetDAO,
+    organizationDAO: OrganizationDAO,
+    datasetLayerDAO: DatasetLayerDAO,
+    annotationDAO: AnnotationDAO,
+    shortLinkDAO: ShortLinkDAO,
+    conf: WkConf
+) {
 
   private val thumbnailWidth = 1000
   private val thumbnailHeight = 300
@@ -47,8 +49,10 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
   private val workflowRouteRegex = "^/workflows/([^/^#]+)".r
   private val annotationRouteRegex = "^/annotations/([^/^#]+)".r
 
-  def getOpenGraphTags(uriPath: String, sharingToken: Option[String])(implicit ec: ExecutionContext,
-                                                                      ctx: DBAccessContext): Future[OpenGraphTags] =
+  def getOpenGraphTags(uriPath: String, sharingToken: Option[String])(implicit
+      ec: ExecutionContext,
+      ctx: DBAccessContext
+  ): Future[OpenGraphTags] =
     for {
       tagsBox <- getOpenGraphTagsImpl(uriPath, sharingToken).futureBox
       // In any error case, fall back to default, so the html template does not break
@@ -58,9 +62,10 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
       }
     } yield tags
 
-  private def getOpenGraphTagsImpl(uriPath: String, sharingToken: Option[String])(
-      implicit ec: ExecutionContext,
-      ctx: DBAccessContext): Fox[OpenGraphTags] =
+  private def getOpenGraphTagsImpl(uriPath: String, sharingToken: Option[String])(implicit
+      ec: ExecutionContext,
+      ctx: DBAccessContext
+  ): Fox[OpenGraphTags] =
     for {
       (uriPathResolved, sharingTokenResolved) <- resolveShortLinkIfNeeded(uriPath, sharingToken)
       ctxWithToken = URLSharing.fallbackTokenAccessContext(sharingTokenResolved)
@@ -81,8 +86,9 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
       }
     } yield tags
 
-  private def resolveShortLinkIfNeeded(uriPath: String, sharingToken: Option[String])(
-      implicit ec: ExecutionContext): Fox[(String, Option[String])] =
+  private def resolveShortLinkIfNeeded(uriPath: String, sharingToken: Option[String])(implicit
+      ec: ExecutionContext
+  ): Fox[(String, Option[String])] =
     uriPath match {
       case shortLinkRouteRegex(key) =>
         for {
@@ -102,8 +108,10 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
       case _                       => OpenGraphPageType.unknown
     }
 
-  private def datasetOpenGraphTags(uriPath: String, token: Option[String])(implicit ec: ExecutionContext,
-                                                                           ctx: DBAccessContext): Fox[OpenGraphTags] =
+  private def datasetOpenGraphTags(uriPath: String, token: Option[String])(implicit
+      ec: ExecutionContext,
+      ctx: DBAccessContext
+  ): Fox[OpenGraphTags] =
     uriPath match {
       case datasetRoute1Regex(datasetIdStr) =>
         val validDatasetIdOpt = getDatasetIdFromURIPath(datasetIdStr)
@@ -133,7 +141,8 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
       datasetIdOpt: Option[ObjectId],
       organizationIdOpt: Option[String],
       datasetNameOpt: Option[String],
-      token: Option[String])(implicit ec: ExecutionContext, ctx: DBAccessContext) =
+      token: Option[String]
+  )(implicit ec: ExecutionContext, ctx: DBAccessContext) =
     for {
       dataset <- (datasetIdOpt, organizationIdOpt, datasetNameOpt) match {
         case (Some(datasetId), None, None) =>
@@ -145,16 +154,16 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
       layers <- datasetLayerDAO.findAllForDataset(dataset._id)
       layerOpt = layers.find(_.category == Category.color)
       organization <- organizationDAO.findOne(dataset._organization)
-    } yield
-      OpenGraphTags(
-        Some(s"${dataset.name} | WEBKNOSSOS"),
-        Some("View this dataset in WEBKNOSSOS"),
-        thumbnailUri(dataset, layerOpt, organization, token)
-      )
+    } yield OpenGraphTags(
+      Some(s"${dataset.name} | WEBKNOSSOS"),
+      Some("View this dataset in WEBKNOSSOS"),
+      thumbnailUri(dataset, layerOpt, organization, token)
+    )
 
-  private def annotationOpenGraphTags(uriPath: String, token: Option[String])(
-      implicit ec: ExecutionContext,
-      ctx: DBAccessContext): Fox[OpenGraphTags] =
+  private def annotationOpenGraphTags(uriPath: String, token: Option[String])(implicit
+      ec: ExecutionContext,
+      ctx: DBAccessContext
+  ): Fox[OpenGraphTags] =
     uriPath match {
       case annotationRouteRegex(annotationId) =>
         for {
@@ -164,19 +173,20 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
           organization <- organizationDAO.findOne(dataset._organization)
           layers <- datasetLayerDAO.findAllForDataset(dataset._id)
           layerOpt = layers.find(_.category == Category.color)
-        } yield
-          OpenGraphTags(
-            Some(s"${annotation.nameOpt.getOrElse(dataset.name)} | WEBKNOSSOS"),
-            Some(s"View this annotation on dataset ${dataset.name} in WEBKNOSSOS"),
-            thumbnailUri(dataset, layerOpt, organization, token)
-          )
+        } yield OpenGraphTags(
+          Some(s"${annotation.nameOpt.getOrElse(dataset.name)} | WEBKNOSSOS"),
+          Some(s"View this annotation on dataset ${dataset.name} in WEBKNOSSOS"),
+          thumbnailUri(dataset, layerOpt, organization, token)
+        )
       case _ => Fox.failure("not a matching uri")
     }
 
-  private def thumbnailUri(dataset: Dataset,
-                           layerOpt: Option[DataLayerLike],
-                           organization: Organization,
-                           token: Option[String]): Option[String] =
+  private def thumbnailUri(
+      dataset: Dataset,
+      layerOpt: Option[DataLayerLike],
+      organization: Organization,
+      token: Option[String]
+  ): Option[String] =
     layerOpt.map { layer =>
       val tokenParam = token.map(t => s"&sharingToken=$t").getOrElse("")
       s"${conf.Http.uri}/api/datasets/${organization._id}/${dataset.name}/layers/${layer.name}/thumbnail?w=$thumbnailWidth&h=$thumbnailHeight$tokenParam"
@@ -187,7 +197,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
       case OpenGraphPageType.dataset    => Some("View this dataset in WEBKNOSSOS")
       case OpenGraphPageType.annotation => Some("View this annotation in WEBKNOSSOS")
       case OpenGraphPageType.workflow   => Some("View this voxelytics workflow report in WEBKNOSSOS")
-      case _                            => None // most clients will fall back to <meta name="description">, see template
+      case _ => None // most clients will fall back to <meta name="description">, see template
     }
     OpenGraphTags(
       Some("WEBKNOSSOS"),

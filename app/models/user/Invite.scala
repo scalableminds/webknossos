@@ -29,19 +29,22 @@ case class Invite(
     isDeleted: Boolean = false
 )
 
-class InviteService @Inject()(conf: WkConf,
-                              actorSystem: ActorSystem,
-                              defaultMails: DefaultMails,
-                              organizationDAO: OrganizationDAO,
-                              inviteDAO: InviteDAO)(implicit ec: ExecutionContext)
+class InviteService @Inject() (
+    conf: WkConf,
+    actorSystem: ActorSystem,
+    defaultMails: DefaultMails,
+    organizationDAO: OrganizationDAO,
+    inviteDAO: InviteDAO
+)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
   private val tokenValueGenerator = new RandomIDGenerator
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 
-  def inviteOneRecipient(recipient: String, sender: User, autoActivate: Boolean)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def inviteOneRecipient(recipient: String, sender: User, autoActivate: Boolean)(implicit
+      ctx: DBAccessContext
+  ): Fox[Unit] =
     for {
       invite <- generateInvite(sender._organization, autoActivate)
       _ <- inviteDAO.insertOne(invite)
@@ -51,22 +54,23 @@ class InviteService @Inject()(conf: WkConf,
   private def generateInvite(organizationId: String, autoActivate: Boolean): Future[Invite] =
     for {
       tokenValue <- tokenValueGenerator.generate
-    } yield
-      Invite(
-        ObjectId.generate,
-        tokenValue,
-        organizationId,
-        autoActivate,
-        Instant.in(conf.WebKnossos.User.inviteExpiry)
-      )
+    } yield Invite(
+      ObjectId.generate,
+      tokenValue,
+      organizationId,
+      autoActivate,
+      Instant.in(conf.WebKnossos.User.inviteExpiry)
+    )
 
-  private def sendInviteMail(recipient: String, sender: User, invite: Invite)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  private def sendInviteMail(recipient: String, sender: User, invite: Invite)(implicit
+      ctx: DBAccessContext
+  ): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(invite._organization)
       _ = logger.info("sending invite mail")
       _ = Mailer ! Send(
-        defaultMails.inviteMail(recipient, invite.tokenValue, invite.autoActivate, organization.name, sender.name))
+        defaultMails.inviteMail(recipient, invite.tokenValue, invite.autoActivate, organization.name, sender.name)
+      )
     } yield ()
 
   def removeExpiredInvites(): Fox[Unit] =
@@ -83,13 +87,14 @@ class InviteService @Inject()(conf: WkConf,
 
 }
 
-class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class InviteDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Invite, InvitesRow, Invites](sqlClient) {
   protected val collection = Invites
 
   protected def idColumn(x: Invites): Rep[String] = x._Id
 
   protected def isDeletedColumn(x: Invites): Rep[Boolean] = x.isdeleted
+  protected def getResult = GetResultInvitesRow
 
   protected def parse(r: InvitesRow): Fox[Invite] =
     Fox.successful(
@@ -101,7 +106,8 @@ class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         Instant.fromSql(r.expirationdatetime),
         Instant.fromSql(r.created),
         r.isdeleted
-      ))
+      )
+    )
 
   def findOneByTokenValue(tokenValue: String): Fox[Invite] =
     for {
@@ -115,7 +121,8 @@ class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(
         q"""INSERT INTO webknossos.invites(_id, tokenValue, _organization, autoActivate, expirationDateTime, created, isDeleted)
             VALUES(${i._id}, ${i.tokenValue}, ${i._organization}, ${i.autoActivate},
-            ${i.expirationDateTime}, ${i.created}, ${i.isDeleted})""".asUpdate)
+            ${i.expirationDateTime}, ${i.created}, ${i.isDeleted})""".asUpdate
+      )
     } yield ()
 
   def deleteAllExpired(): Fox[Unit] = {

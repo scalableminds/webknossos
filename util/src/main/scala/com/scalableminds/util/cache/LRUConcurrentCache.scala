@@ -36,8 +36,7 @@ trait LRUConcurrentCache[K, V] {
       value
     }
 
-  /**
-    * Use if load function returns Option and only Some should be cached
+  /** Use if load function returns Option and only Some should be cached
     */
   def getOrLoadAndPutOptional(key: K)(loadFunction: K => Option[V]): Option[V] =
     get(key).orElse {

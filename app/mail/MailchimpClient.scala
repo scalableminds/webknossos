@@ -14,7 +14,7 @@ import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
-class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUserDAO) extends LazyLogging {
+class MailchimpClient @Inject() (wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUserDAO) extends LazyLogging {
 
   private lazy val conf = wkConf.Mail.Mailchimp
 
@@ -36,7 +36,7 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
       "status" -> "subscribed",
       "merge_fields" -> Json.obj(
         "FNAME" -> firstName,
-        "LNAME" -> lastName,
+        "LNAME" -> lastName
       )
     )
     rpc(uri).silent.withBasicAuth(conf.user, conf.password).putJson(userBody)

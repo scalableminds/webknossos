@@ -15,11 +15,12 @@ import play.api.libs.json.Json
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataStore,
-                                            val remoteDatastoreClient: TSRemoteDatastoreClient,
-                                            val remoteWebknossosClient: TSRemoteWebknossosClient,
-                                            editableMappingService: EditableMappingService)
-    extends KeyValueStoreImplicits
+class EditableMappingMergeService @Inject() (
+    val tracingDataStore: TracingDataStore,
+    val remoteDatastoreClient: TSRemoteDatastoreClient,
+    val remoteWebknossosClient: TSRemoteWebknossosClient,
+    editableMappingService: EditableMappingService
+) extends KeyValueStoreImplicits
     with UpdateGroupHandling
     with FallbackDataHelper {
 
@@ -32,24 +33,35 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
    * So that it itself can be merged again.
    * The earliestAccessibleVersion property ensures that the fully merged annotation is still the earliest accessible one.
    */
-  def mergeEditableMappings(annotationIds: List[String],
-                            newAnnotationId: String,
-                            newVolumeTracingId: String,
-                            tracingsWithIds: List[(VolumeTracing, String)],
-                            toTemporaryStore: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+  def mergeEditableMappings(
+      annotationIds: List[String],
+      newAnnotationId: String,
+      newVolumeTracingId: String,
+      tracingsWithIds: List[(VolumeTracing, String)],
+      toTemporaryStore: Boolean
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     if (tracingsWithIds.nonEmpty && tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
       for {
         before <- Instant.nowFox
-        _ <- bool2Fox(!toTemporaryStore) ?~> "Cannot merge editable mappings to temporary store (trying to merge compound annotations?)"
+        _ <- bool2Fox(
+          !toTemporaryStore
+        ) ?~> "Cannot merge editable mappings to temporary store (trying to merge compound annotations?)"
         remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds)(tracingWithId =>
-          remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
-        remoteFallbackLayer <- SequenceUtils.findUniqueElement(remoteFallbackLayers) ?~> "Cannot merge editable mappings based on different dataset layers"
+          remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2)
+        )
+        remoteFallbackLayer <- SequenceUtils.findUniqueElement(
+          remoteFallbackLayers
+        ) ?~> "Cannot merge editable mappings based on different dataset layers"
         editableMappingInfos <- Fox.serialCombined(tracingsWithIds) { tracingWithId =>
           tracingDataStore.editableMappingsInfo.get(tracingWithId._2)(fromProtoBytes[EditableMappingInfo])
         }
-        baseMappingName <- SequenceUtils.findUniqueElement(editableMappingInfos.map(_.value.baseMappingName)) ?~> "Cannot merge editable mappings based on different base mappings"
-        linearizedEditableMappingUpdates: List[UpdateAction] <- mergeEditableMappingUpdates(annotationIds,
-                                                                                            newVolumeTracingId)
+        baseMappingName <- SequenceUtils.findUniqueElement(
+          editableMappingInfos.map(_.value.baseMappingName)
+        ) ?~> "Cannot merge editable mappings based on different base mappings"
+        linearizedEditableMappingUpdates: List[UpdateAction] <- mergeEditableMappingUpdates(
+          annotationIds,
+          newVolumeTracingId
+        )
         targetVersion = linearizedEditableMappingUpdates.length
         _ <- Fox.runIf(!toTemporaryStore) {
           var updateVersion = 1L
@@ -76,7 +88,8 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
         _ <- updater.applyUpdatesAndSave(editableMappingInfo, linearizedEditableMappingUpdates)
         _ = Instant.logSince(
           before,
-          s"Merging ${tracingsWithIds.length} editable mappings by applying ${linearizedEditableMappingUpdates.length} updates")
+          s"Merging ${tracingsWithIds.length} editable mappings by applying ${linearizedEditableMappingUpdates.length} updates"
+        )
       } yield targetVersion
     } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.getHasEditableMapping)) {
       Fox.empty
@@ -84,13 +97,15 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
       Fox.failure("Cannot merge annotations with and without editable mappings")
     }
 
-  private def mergeEditableMappingUpdates(annotationIds: List[String], newTracingId: String)(
-      implicit ec: ExecutionContext): Fox[List[EditableMappingUpdateAction]] =
+  private def mergeEditableMappingUpdates(annotationIds: List[String], newTracingId: String)(implicit
+      ec: ExecutionContext
+  ): Fox[List[EditableMappingUpdateAction]] =
     for {
       updatesByAnnotation <- Fox.serialCombined(annotationIds) { annotationId =>
         for {
           updateGroups <- tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(annotationId)(
-            fromJsonBytes[List[UpdateAction]])
+            fromJsonBytes[List[UpdateAction]]
+          )
           updatesIroned: Seq[UpdateAction] = ironOutReverts(updateGroups)
           editableMappingUpdates = updatesIroned.flatMap {
             case a: EditableMappingUpdateAction => Some(a.withActionTracingId(newTracingId))

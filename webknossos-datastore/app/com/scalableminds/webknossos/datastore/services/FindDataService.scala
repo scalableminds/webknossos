@@ -16,16 +16,18 @@ import scala.concurrent.ExecutionContext
 case class Histogram(elementCounts: Array[Long], numberOfElements: Int, min: Double, max: Double)
 object Histogram { implicit val jsonFormat: OFormat[Histogram] = Json.format[Histogram] }
 
-class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(implicit ec: ExecutionContext)
+class FindDataService @Inject() (dataServicesHolder: BinaryDataServiceHolder)(implicit ec: ExecutionContext)
     extends DataConverter
     with DataFinder
     with FoxImplicits {
   val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
 
-  private def getDataFor(dataSource: DataSource,
-                         dataLayer: DataLayer,
-                         position: Vec3Int,
-                         mag: Vec3Int): Fox[Array[Byte]] = {
+  private def getDataFor(
+      dataSource: DataSource,
+      dataLayer: DataLayer,
+      position: Vec3Int,
+      mag: Vec3Int
+  ): Fox[Array[Byte]] = {
     val request = DataRequest(
       VoxelPosition(position.x, position.y, position.z, mag),
       DataLayer.bucketLength,
@@ -33,20 +35,21 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       DataLayer.bucketLength
     )
     binaryDataService.handleDataRequest(
-      DataServiceDataRequest(dataSource, dataLayer, request.cuboid(dataLayer), request.settings))
+      DataServiceDataRequest(dataSource, dataLayer, request.cuboid(dataLayer), request.settings)
+    )
   }
 
   private def concatenateBuckets(buckets: Seq[Array[Byte]]): Array[Byte] =
     buckets.foldLeft(Array[Byte]()) { (acc, i) =>
-      {
-        acc ++ i
-      }
+      acc ++ i
     }
 
-  private def getConcatenatedDataFor(dataSource: DataSource,
-                                     dataLayer: DataLayer,
-                                     positions: List[Vec3Int],
-                                     mag: Vec3Int) =
+  private def getConcatenatedDataFor(
+      dataSource: DataSource,
+      dataLayer: DataLayer,
+      positions: List[Vec3Int],
+      mag: Vec3Int
+  ) =
     for {
       dataBucketWise: Seq[Array[Byte]] <- Fox
         .sequenceOfFulls(positions.map(getDataFor(dataSource, dataLayer, _, mag)))
@@ -67,7 +70,9 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
         val spaceBetweenDepth = dataLayer.boundingBox.depth / power
         val topLeft = dataLayer.boundingBox.topLeft
 
-        if (spaceBetweenWidth < DataLayer.bucketLength && spaceBetweenHeight < DataLayer.bucketLength && spaceBetweenDepth < DataLayer.bucketLength) {
+        if (
+          spaceBetweenWidth < DataLayer.bucketLength && spaceBetweenHeight < DataLayer.bucketLength && spaceBetweenDepth < DataLayer.bucketLength
+        ) {
           None
         } else {
           Some(
@@ -75,10 +80,11 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
               z <- 1 until power
               y <- 1 until power
               x <- 1 until power
-            } yield
-              Vec3Int(topLeft.x + x * spaceBetweenWidth,
-                      topLeft.y + y * spaceBetweenHeight,
-                      topLeft.z + z * spaceBetweenDepth)).toList
+            } yield Vec3Int(
+              topLeft.x + x * spaceBetweenWidth,
+              topLeft.y + y * spaceBetweenHeight,
+              topLeft.z + z * spaceBetweenDepth
+            )).toList
           )
         }
       }
@@ -97,8 +103,10 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     positions.map(_.alignWithGridFloor(Vec3Int.full(DataLayer.bucketLength))).distinct
   }
 
-  private def checkAllPositionsForData(dataSource: DataSource,
-                                       dataLayer: DataLayer): Fox[Option[(Vec3Int, Vec3Int)]] = {
+  private def checkAllPositionsForData(
+      dataSource: DataSource,
+      dataLayer: DataLayer
+  ): Fox[Option[(Vec3Int, Vec3Int)]] = {
 
     def searchPositionIter(positions: List[Vec3Int], mag: Vec3Int): Fox[Option[Vec3Int]] =
       positions match {
@@ -122,11 +130,10 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
         case head :: tail =>
           (for {
             foundPosition <- searchPositionIter(positions, head)
-          } yield
-            foundPosition match {
-              case Some(position) => Fox.successful(Some((position, head)))
-              case None           => magIter(positions, tail)
-            }).flatten
+          } yield foundPosition match {
+            case Some(position) => Fox.successful(Some((position, head)))
+            case None           => magIter(positions, tail)
+          }).flatten
       }
 
     magIter(createPositions(dataLayer).distinct, dataLayer.resolutions.sortBy(_.maxDim))
@@ -139,9 +146,11 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
   def createHistogram(dataSource: DataSource, dataLayer: DataLayer): Fox[List[Histogram]] = {
 
-    def calculateHistogramValues(data: Array[? >: UByte & UShort & UInt & ULong & Float],
-                                 bytesPerElement: Int,
-                                 isUint24: Boolean) = {
+    def calculateHistogramValues(
+        data: Array[? >: UByte & UShort & UInt & ULong & Float],
+        bytesPerElement: Int,
+        isUint24: Boolean
+    ) = {
       val counts = if (isUint24) Array.ofDim[Long](768) else Array.ofDim[Long](256)
       var extrema: (Double, Double) = (0, math.pow(256, bytesPerElement) - 1)
 
@@ -164,8 +173,8 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
           case longData: Array[ULong] =>
             longData.foreach(el => counts((el / ULong(math.pow(2, 56).toLong)).toInt) += 1)
           case floatData: Array[Float] =>
-            val (min, max) = floatData.foldLeft((floatData(0), floatData(0))) {
-              case ((currMin, currMax), e) => (math.min(currMin, e), math.max(currMax, e))
+            val (min, max) = floatData.foldLeft((floatData(0), floatData(0))) { case ((currMin, currMax), e) =>
+              (math.min(currMin, e), math.max(currMax, e))
             }
             val bucketSize = (max - min) / 255
             val finalBucketSize = if (bucketSize == 0f) 1f else bucketSize
@@ -175,9 +184,9 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       }
       if (isUint24) {
         val listOfCounts = counts.grouped(256).toList
-        listOfCounts.map(counts => {
+        listOfCounts.map { counts =>
           counts(0) = 0; Histogram(counts, counts.sum.toInt, extrema._1, extrema._2)
-        })
+        }
       } else
         List(Histogram(counts, data.length, extrema._1, extrema._2))
     }

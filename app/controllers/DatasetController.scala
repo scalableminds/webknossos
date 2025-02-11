@@ -64,32 +64,34 @@ case class SegmentAnythingMaskParameters(
     selectionBottomRightX: Option[Int],
     selectionBottomRightY: Option[Int],
     pointX: Option[Int], // in target-mag, relative to paddedBoundingBox topleft
-    pointY: Option[Int],
+    pointY: Option[Int]
 )
 
 object SegmentAnythingMaskParameters {
   implicit val jsonFormat: Format[SegmentAnythingMaskParameters] = Json.format[SegmentAnythingMaskParameters]
 }
 
-class DatasetController @Inject()(userService: UserService,
-                                  userDAO: UserDAO,
-                                  datasetService: DatasetService,
-                                  dataStoreDAO: DataStoreDAO,
-                                  datasetLastUsedTimesDAO: DatasetLastUsedTimesDAO,
-                                  organizationDAO: OrganizationDAO,
-                                  teamDAO: TeamDAO,
-                                  wKRemoteSegmentAnythingClient: WKRemoteSegmentAnythingClient,
-                                  teamService: TeamService,
-                                  datasetDAO: DatasetDAO,
-                                  folderService: FolderService,
-                                  thumbnailService: ThumbnailService,
-                                  thumbnailCachingService: ThumbnailCachingService,
-                                  conf: WkConf,
-                                  authenticationService: AccessibleBySwitchingService,
-                                  analyticsService: AnalyticsService,
-                                  mailchimpClient: MailchimpClient,
-                                  wkExploreRemoteLayerService: WKExploreRemoteLayerService,
-                                  sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+class DatasetController @Inject() (
+    userService: UserService,
+    userDAO: UserDAO,
+    datasetService: DatasetService,
+    dataStoreDAO: DataStoreDAO,
+    datasetLastUsedTimesDAO: DatasetLastUsedTimesDAO,
+    organizationDAO: OrganizationDAO,
+    teamDAO: TeamDAO,
+    wKRemoteSegmentAnythingClient: WKRemoteSegmentAnythingClient,
+    teamService: TeamService,
+    datasetDAO: DatasetDAO,
+    folderService: FolderService,
+    thumbnailService: ThumbnailService,
+    thumbnailCachingService: ThumbnailCachingService,
+    conf: WkConf,
+    authenticationService: AccessibleBySwitchingService,
+    analyticsService: AnalyticsService,
+    mailchimpClient: MailchimpClient,
+    wkExploreRemoteLayerService: WKExploreRemoteLayerService,
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with MetadataAssertions {
 
@@ -110,20 +112,22 @@ class DatasetController @Inject()(userService: UserService,
       } yield Ok
     }
 
-  def thumbnail(datasetId: ObjectId,
-                dataLayerName: String,
-                w: Option[Int],
-                h: Option[Int],
-                mappingName: Option[String],
-                sharingToken: Option[String]): Action[AnyContent] =
+  def thumbnail(
+      datasetId: ObjectId,
+      dataLayerName: String,
+      w: Option[Int],
+      h: Option[Int],
+      mappingName: Option[String],
+      sharingToken: Option[String]
+  ): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
       for {
-        _ <- datasetDAO.findOne(datasetId)(ctx) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND // To check Access Rights
+        _ <- datasetDAO.findOne(datasetId)(ctx) ?~> notFoundMessage(
+          datasetId.toString
+        ) ~> NOT_FOUND // To check Access Rights
         image <- thumbnailService.getThumbnailWithCache(datasetId, dataLayerName, w, h, mappingName)
-      } yield {
-        addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")
-      }
+      } yield addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")
     }
 
   def exploreRemoteDataset(): Action[List[WKExploreRemoteLayerParameters]] =
@@ -139,16 +143,21 @@ class DatasetController @Inject()(userService: UserService,
       val adaptedParameters =
         WKExploreRemoteLayerParameters(request.body.remoteUri, None, None, None, request.body.dataStoreName)
       for {
-        exploreResponse <- wkExploreRemoteLayerService.exploreRemoteDatasource(List(adaptedParameters),
-                                                                               request.identity)
+        exploreResponse <- wkExploreRemoteLayerService.exploreRemoteDatasource(
+          List(adaptedParameters),
+          request.identity
+        )
         dataSource <- exploreResponse.dataSource ?~> "dataset.explore.failed"
         _ <- bool2Fox(dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
         folderIdOpt <- Fox.runOptional(request.body.folderPath)(folderPath =>
-          folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> "dataset.explore.autoAdd.getFolder.failed"
-        _ <- wkExploreRemoteLayerService.addRemoteDatasource(dataSource,
-                                                             request.body.datasetName,
-                                                             request.identity,
-                                                             folderIdOpt) ?~> "dataset.explore.autoAdd.failed"
+          folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)
+        ) ?~> "dataset.explore.autoAdd.getFolder.failed"
+        _ <- wkExploreRemoteLayerService.addRemoteDatasource(
+          dataSource,
+          request.body.datasetName,
+          request.identity,
+          folderIdOpt
+        ) ?~> "dataset.explore.autoAdd.failed"
       } yield Ok
     }
 
@@ -177,47 +186,53 @@ class DatasetController @Inject()(userService: UserService,
   ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
       _ <- Fox.successful(())
-      organizationIdOpt = if (onlyMyOrganization.getOrElse(false))
-        request.identity.map(_._organization)
-      else
-        organizationId
-      js <- if (compact.getOrElse(false)) {
-        for {
-          datasetInfos <- datasetDAO.findAllCompactWithSearch(
-            isActive,
-            isUnreported,
-            organizationIdOpt,
-            folderId,
-            uploaderId,
-            searchQuery,
-            request.identity.map(_._id),
-            recursive.getOrElse(false),
-            limitOpt = limit
-          )
-        } yield Json.toJson(datasetInfos)
-      } else {
-        for {
-          datasets <- datasetDAO.findAllWithSearch(isActive,
-                                                   isUnreported,
-                                                   organizationIdOpt,
-                                                   folderId,
-                                                   uploaderId,
-                                                   searchQuery,
-                                                   recursive.getOrElse(false),
-                                                   limit) ?~> "dataset.list.failed"
-          js <- listGrouped(datasets, request.identity) ?~> "dataset.list.grouping.failed"
-        } yield Json.toJson(js)
-      }
+      organizationIdOpt =
+        if (onlyMyOrganization.getOrElse(false))
+          request.identity.map(_._organization)
+        else
+          organizationId
+      js <-
+        if (compact.getOrElse(false)) {
+          for {
+            datasetInfos <- datasetDAO.findAllCompactWithSearch(
+              isActive,
+              isUnreported,
+              organizationIdOpt,
+              folderId,
+              uploaderId,
+              searchQuery,
+              request.identity.map(_._id),
+              recursive.getOrElse(false),
+              limitOpt = limit
+            )
+          } yield Json.toJson(datasetInfos)
+        } else {
+          for {
+            datasets <- datasetDAO.findAllWithSearch(
+              isActive,
+              isUnreported,
+              organizationIdOpt,
+              folderId,
+              uploaderId,
+              searchQuery,
+              recursive.getOrElse(false),
+              limit
+            ) ?~> "dataset.list.failed"
+            js <- listGrouped(datasets, request.identity) ?~> "dataset.list.grouping.failed"
+          } yield Json.toJson(js)
+        }
       _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
     } yield addRemoteOriginHeaders(Ok(js))
   }
 
-  private def listGrouped(datasets: List[Dataset], requestingUser: Option[User])(
-      implicit ctx: DBAccessContext,
-      m: MessagesProvider): Fox[List[JsObject]] =
+  private def listGrouped(datasets: List[Dataset], requestingUser: Option[User])(implicit
+      ctx: DBAccessContext,
+      m: MessagesProvider
+  ): Fox[List[JsObject]] =
     for {
       requestingUserTeamManagerMemberships <- Fox.runOptional(requestingUser)(user =>
-        userService.teamManagerMembershipsFor(user._id))
+        userService.teamManagerMembershipsFor(user._id)
+      )
       groupedByOrga = datasets.groupBy(_._organization).toList
       js <- Fox.serialCombined(groupedByOrga) { (byOrgaTuple: (String, List[Dataset])) =>
         for {
@@ -232,7 +247,8 @@ class DatasetController @Inject()(userService: UserService,
                   requestingUser,
                   Some(organization),
                   Some(dataStore),
-                  requestingUserTeamManagerMemberships) ?~> Messages("dataset.list.writesFailed", d.name)
+                  requestingUserTeamManagerMemberships
+                ) ?~> Messages("dataset.list.writesFailed", d.name)
               }
             } yield resultByDataStore
           }
@@ -252,9 +268,11 @@ class DatasetController @Inject()(userService: UserService,
     } yield Ok(Json.toJson(usersJs))
   }
 
-  def read(datasetId: ObjectId,
-           // Optional sharing token allowing access to datasets your team does not normally have access to.")
-           sharingToken: Option[String]): Action[AnyContent] =
+  def read(
+      datasetId: ObjectId,
+      // Optional sharing token allowing access to datasets your team does not normally have access to.")
+      sharingToken: Option[String]
+  ): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       log() {
         val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
@@ -262,7 +280,8 @@ class DatasetController @Inject()(userService: UserService,
           dataset <- datasetDAO.findOne(datasetId)(ctx) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ~> NOT_FOUND
           _ <- Fox.runOptional(request.identity)(user =>
-            datasetLastUsedTimesDAO.updateForDatasetAndUser(dataset._id, user._id))
+            datasetLastUsedTimesDAO.updateForDatasetAndUser(dataset._id, user._id)
+          )
           // Access checked above via dataset. In case of shared dataset/annotation, show datastore even if not otherwise accessible
           dataStore <- datasetService.dataStoreFor(dataset)(GlobalAccessContext)
           js <- datasetService.publicWrites(dataset, request.identity, Some(organization), Some(dataStore))
@@ -273,9 +292,7 @@ class DatasetController @Inject()(userService: UserService,
             }
             userDAO.updateLastActivity(user._id)
           }
-        } yield {
-          Ok(Json.toJson(js))
-        }
+        } yield Ok(Json.toJson(js))
       }
     }
 
@@ -289,8 +306,10 @@ class DatasetController @Inject()(userService: UserService,
         datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataset.noLayers"
         _ <- datasetService
           .clientFor(dataset)(GlobalAccessContext)
-          .flatMap(_.findPositionWithData(dataset, datalayer.name).flatMap(posWithData =>
-            bool2Fox(posWithData.value("position") != JsNull))) ?~> "dataset.loadingDataFailed"
+          .flatMap(
+            _.findPositionWithData(dataset, datalayer.name)
+              .flatMap(posWithData => bool2Fox(posWithData.value("position") != JsNull))
+          ) ?~> "dataset.loadingDataFailed"
       } yield Ok("Ok")
     }
 
@@ -317,7 +336,9 @@ class DatasetController @Inject()(userService: UserService,
             dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
             maybeUpdatedMetadata = metadata.getOrElse(dataset.metadata)
             _ <- assertNoDuplicateMetadataKeys(maybeUpdatedMetadata)
-            _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+            _ <- Fox.assertTrue(
+              datasetService.isEditableBy(dataset, Some(request.identity))
+            ) ?~> "notAllowed" ~> FORBIDDEN
             _ <- datasetDAO.updateFields(
               dataset._id,
               description,
@@ -377,12 +398,11 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async { implicit request =>
       for {
         validName <- datasetService.assertValidDatasetName(datasetName).futureBox
-      } yield
-        validName match {
-          case Full(_)            => Ok(Json.obj("isValid" -> true))
-          case Failure(msg, _, _) => Ok(Json.obj("isValid" -> false, "errors" -> Messages(msg)))
-          case _                  => Ok(Json.obj("isValid" -> false, "errors" -> List("Unknown error")))
-        }
+      } yield validName match {
+        case Full(_)            => Ok(Json.obj("isValid" -> true))
+        case Failure(msg, _, _) => Ok(Json.obj("isValid" -> false, "errors" -> Messages(msg)))
+        case _                  => Ok(Json.obj("isValid" -> false, "errors" -> List("Unknown error")))
+      }
     }
 
   def getOrganizationForDataset(datasetName: String): Action[AnyContent] = sil.UserAwareAction.async {
@@ -400,22 +420,28 @@ class DatasetController @Inject()(userService: UserService,
           case Full(dataset) =>
             Fox.successful(
               Ok(
-                Json.obj("id" -> dataset._id,
-                         "name" -> dataset.name,
-                         "organization" -> dataset._organization,
-                         "directoryName" -> dataset.directoryName)))
+                Json.obj(
+                  "id" -> dataset._id,
+                  "name" -> dataset.name,
+                  "organization" -> dataset._organization,
+                  "directoryName" -> dataset.directoryName
+                )
+              )
+            )
           case Empty =>
             for {
               user <- request.identity.toFox ~> Unauthorized
               dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(GlobalAccessContext)
               // Just checking if the user can switch to an organization to access the dataset.
               _ <- authenticationService.getOrganizationToSwitchTo(user, Some(dataset._id), None, None)
-            } yield
-              Ok(
-                Json.obj("id" -> dataset._id,
-                         "name" -> dataset.name,
-                         "organization" -> dataset._organization,
-                         "directoryName" -> dataset.directoryName))
+            } yield Ok(
+              Json.obj(
+                "id" -> dataset._id,
+                "name" -> dataset.name,
+                "organization" -> dataset._organization,
+                "directoryName" -> dataset.directoryName
+              )
+            )
           case _ => Fox.failure(notFoundMessage(datasetName))
         }) ?~> notFoundMessage(datasetName) ~> NOT_FOUND
       } yield result
@@ -427,10 +453,12 @@ class DatasetController @Inject()(userService: UserService,
       case _             => Messages("dataset.notFoundConsiderLogin", datasetName)
     }
 
-  def segmentAnythingMask(datasetId: ObjectId,
-                          dataLayerName: String,
-                          intensityMin: Option[Float],
-                          intensityMax: Option[Float]): Action[SegmentAnythingMaskParameters] =
+  def segmentAnythingMask(
+      datasetId: ObjectId,
+      dataLayerName: String,
+      intensityMin: Option[Float],
+      intensityMax: Option[Float]
+  ): Action[SegmentAnythingMaskParameters] =
     sil.SecuredAction.async(validateJson[SegmentAnythingMaskParameters]) { implicit request =>
       log() {
         for {
@@ -442,16 +470,26 @@ class DatasetController @Inject()(userService: UserService,
           dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataset.noLayers"
           datastoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
           targetMagSelectedBbox: BoundingBox = request.body.surroundingBoundingBox / request.body.mag
-          _ <- bool2Fox(targetMagSelectedBbox.size.sorted.z <= 1024 && targetMagSelectedBbox.size.sorted.y <= 1024) ?~> s"Target-mag selected bbox must be smaller than 1024×1024×depth (or transposed), got ${targetMagSelectedBbox.size}"
+          _ <- bool2Fox(
+            targetMagSelectedBbox.size.sorted.z <= 1024 && targetMagSelectedBbox.size.sorted.y <= 1024
+          ) ?~> s"Target-mag selected bbox must be smaller than 1024×1024×depth (or transposed), got ${targetMagSelectedBbox.size}"
           // The maximum depth of 16 also needs to be adapted in the front-end
           // (at the time of writing, in MAX_DEPTH_FOR_SAM in quick_select_settings.tsx).
-          _ <- bool2Fox(targetMagSelectedBbox.size.sorted.x <= 16) ?~> s"Target-mag selected bbox depth must be at most 16"
-          _ <- bool2Fox(targetMagSelectedBbox.size.sorted.z == targetMagSelectedBbox.size.sorted.y) ?~> s"Target-mag selected bbox must equally sized long edges, got ${targetMagSelectedBbox.size}"
+          _ <- bool2Fox(
+            targetMagSelectedBbox.size.sorted.x <= 16
+          ) ?~> s"Target-mag selected bbox depth must be at most 16"
+          _ <- bool2Fox(
+            targetMagSelectedBbox.size.sorted.z == targetMagSelectedBbox.size.sorted.y
+          ) ?~> s"Target-mag selected bbox must equally sized long edges, got ${targetMagSelectedBbox.size}"
           _ <- Fox.runIf(request.body.interactionType == SAMInteractionType.BOUNDING_BOX)(
-            bool2Fox(request.body.selectionTopLeftX.isDefined &&
-              request.body.selectionTopLeftY.isDefined && request.body.selectionBottomRightX.isDefined && request.body.selectionBottomRightY.isDefined)) ?~> "Missing selectionTopLeft and selectionBottomRight parameters for bounding box interaction."
-          _ <- Fox.runIf(request.body.interactionType == SAMInteractionType.POINT)(bool2Fox(
-            request.body.pointX.isDefined && request.body.pointY.isDefined)) ?~> "Missing pointX and pointY parameters for point interaction."
+            bool2Fox(
+              request.body.selectionTopLeftX.isDefined &&
+                request.body.selectionTopLeftY.isDefined && request.body.selectionBottomRightX.isDefined && request.body.selectionBottomRightY.isDefined
+            )
+          ) ?~> "Missing selectionTopLeft and selectionBottomRight parameters for bounding box interaction."
+          _ <- Fox.runIf(request.body.interactionType == SAMInteractionType.POINT)(
+            bool2Fox(request.body.pointX.isDefined && request.body.pointY.isDefined)
+          ) ?~> "Missing pointX and pointY parameters for point interaction."
           beforeDataLoading = Instant.now
           data <- datastoreClient.getLayerData(
             dataset,
@@ -462,9 +500,11 @@ class DatasetController @Inject()(userService: UserService,
           ) ?~> "segmentAnything.getData.failed"
           _ = Instant.logSince(beforeDataLoading, "Data loading for SAM", logger)
           _ = logger.debug(
-            s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}, range: $intensityMin-$intensityMax...")
+            s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}, range: $intensityMin-$intensityMax..."
+          )
           _ <- bool2Fox(
-            !(dataLayer.elementClass == ElementClass.float || dataLayer.elementClass == ElementClass.double) || (intensityMin.isDefined && intensityMax.isDefined)) ?~> "For float and double data, a supplied intensity range is required."
+            !(dataLayer.elementClass == ElementClass.float || dataLayer.elementClass == ElementClass.double) || (intensityMin.isDefined && intensityMax.isDefined)
+          ) ?~> "For float and double data, a supplied intensity range is required."
           beforeMask = Instant.now
           mask <- wKRemoteSegmentAnythingClient.getMask(
             data,

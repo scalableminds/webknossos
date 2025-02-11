@@ -58,6 +58,8 @@ trait SqlTypeImplicits {
       case None        => NoneValue()
     }
 
+  implicit def noneTypeToSqlValue[T](v: None.type): SqlValue = NoneValue()
+
   implicit def stringIterableToSqlValue(v: Iterable[String]): SqlValue = StringArrayValue(v.toList)
 
   implicit def byteArrayToSqlValue(v: Array[Byte]): SqlValue = ByteArrayValue(v)
@@ -116,7 +118,8 @@ trait SqlTypeImplicits {
   implicit def iterableToSqlValueList[T](v: Iterable[T])(implicit innerConversion: T => SqlValue): List[SqlValue] =
     v.map(innerConversion(_)).toList
 
-  implicit def nestedIterableToSqlValueLists[T](v: Iterable[Iterable[T]])(
-      implicit innerConversion: T => SqlValue): List[List[SqlValue]] =
+  implicit def nestedIterableToSqlValueLists[T](v: Iterable[Iterable[T]])(implicit
+      innerConversion: T => SqlValue
+  ): List[List[SqlValue]] =
     v.map(i => i.map(innerConversion(_)).toList).toList
 }

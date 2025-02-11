@@ -10,17 +10,15 @@ import play.api.libs.json._
 
 case class TeamMembership(teamId: ObjectId, isTeamManager: Boolean)
 
-class TeamMembershipService @Inject()(teamDAO: TeamDAO) {
+class TeamMembershipService @Inject() (teamDAO: TeamDAO) {
   def publicWrites(teamMembership: TeamMembership)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       team <- teamDAO.findOne(teamMembership.teamId)
-    } yield {
-      Json.obj(
-        "id" -> teamMembership.teamId,
-        "name" -> team.name,
-        "isTeamManager" -> teamMembership.isTeamManager
-      )
-    }
+    } yield Json.obj(
+      "id" -> teamMembership.teamId,
+      "name" -> team.name,
+      "isTeamManager" -> teamMembership.isTeamManager
+    )
 
   def publicReads(): Reads[TeamMembership] =
     ((__ \ "id").read[ObjectId] and

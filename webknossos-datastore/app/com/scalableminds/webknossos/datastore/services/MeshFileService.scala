@@ -56,14 +56,16 @@ object MeshFileInfo {
   implicit val jsonFormat: OFormat[MeshFileInfo] = Json.format[MeshFileInfo]
 }
 
-case class NeuroglancerSegmentManifest(chunkShape: Vec3Float,
-                                       gridOrigin: Vec3Float,
-                                       numLods: Int,
-                                       lodScales: Array[Float],
-                                       vertexOffsets: Array[Vec3Float],
-                                       numChunksPerLod: Array[Int],
-                                       chunkPositions: List[List[Vec3Int]],
-                                       chunkByteSizes: List[List[Long]])
+case class NeuroglancerSegmentManifest(
+    chunkShape: Vec3Float,
+    gridOrigin: Vec3Float,
+    numLods: Int,
+    lodScales: Array[Float],
+    vertexOffsets: Array[Vec3Float],
+    numChunksPerLod: Array[Int],
+    chunkPositions: List[List[Vec3Int]],
+    chunkByteSizes: List[List[Long]]
+)
 
 object NeuroglancerSegmentManifest {
   def fromBytes(manifestBytes: Array[Byte]): NeuroglancerSegmentManifest = {
@@ -79,54 +81,52 @@ object NeuroglancerSegmentManifest {
     val numLods = dis.readInt
 
     val lodScales = new Array[Float](numLods)
-    for (d <- 0 until numLods) {
+    for (d <- 0 until numLods)
       lodScales(d) = dis.readFloat
-    }
 
     val vertexOffsets = new Array[Vec3Float](numLods)
-    for (d <- 0 until numLods) {
+    for (d <- 0 until numLods)
       vertexOffsets(d) = Vec3Float(x = dis.readFloat, y = dis.readFloat, z = dis.readFloat)
-    }
 
     val numChunksPerLod = new Array[Int](numLods)
-    for (lod <- 0 until numLods) {
+    for (lod <- 0 until numLods)
       numChunksPerLod(lod) = dis.readInt()
-    }
 
     val chunkPositionsList = new ListBuffer[List[Vec3Int]]
     val chunkSizes = new ListBuffer[List[Long]]
     for (lod <- 0 until numLods) {
       val currentChunkPositions = (ListBuffer[Int](), ListBuffer[Int](), ListBuffer[Int]())
-      for (row <- 0 until 3; _ <- 0 until numChunksPerLod(lod)) {
+      for (row <- 0 until 3; _ <- 0 until numChunksPerLod(lod))
         row match {
           case 0 => currentChunkPositions._1.append(dis.readInt)
           case 1 => currentChunkPositions._2.append(dis.readInt)
           case 2 => currentChunkPositions._3.append(dis.readInt)
         }
-      }
 
       chunkPositionsList.append(
         currentChunkPositions._1
           .lazyZip(currentChunkPositions._2)
           .lazyZip(currentChunkPositions._3)
           .map(Vec3Int(_, _, _))
-          .toList)
+          .toList
+      )
 
       val currentChunkSizes = ListBuffer[Long]()
-      for (_ <- 0 until numChunksPerLod(lod)) {
+      for (_ <- 0 until numChunksPerLod(lod))
         currentChunkSizes.append(dis.readInt.toLong) // Converting to long for convenient + safe summing later
-      }
       chunkSizes.append(currentChunkSizes.toList)
     }
 
-    NeuroglancerSegmentManifest(chunkShape,
-                                gridOrigin,
-                                numLods,
-                                lodScales,
-                                vertexOffsets,
-                                numChunksPerLod,
-                                chunkPositionsList.toList,
-                                chunkSizes.toList)
+    NeuroglancerSegmentManifest(
+      chunkShape,
+      gridOrigin,
+      numLods,
+      lodScales,
+      vertexOffsets,
+      numChunksPerLod,
+      chunkPositionsList.toList,
+      chunkSizes.toList
+    )
   }
 }
 
@@ -150,9 +150,11 @@ case class WebknossosSegmentInfo(transform: Array[Array[Double]], meshFormat: St
 object WebknossosSegmentInfo {
   implicit val jsonFormat: OFormat[WebknossosSegmentInfo] = Json.format[WebknossosSegmentInfo]
 
-  def fromMeshInfosAndMetadata(chunkInfos: List[MeshSegmentInfo],
-                               encoding: String,
-                               transform: Array[Array[Double]]): Option[WebknossosSegmentInfo] =
+  def fromMeshInfosAndMetadata(
+      chunkInfos: List[MeshSegmentInfo],
+      encoding: String,
+      transform: Array[Array[Double]]
+  ): Option[WebknossosSegmentInfo] =
     chunkInfos.headOption.flatMap { firstChunkInfo =>
       tryo {
         WebknossosSegmentInfo(
@@ -170,7 +172,7 @@ object WebknossosSegmentInfo {
 
 }
 
-class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
+class MeshFileService @Inject() (config: DataStoreConfig)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
     with Hdf5HashedArrayUtils
@@ -181,9 +183,11 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
   private lazy val meshFileCache = new Hdf5FileCache(30)
 
-  def exploreMeshFiles(organizationId: String,
-                       datasetDirectoryName: String,
-                       dataLayerName: String): Fox[Set[MeshFileInfo]] = {
+  def exploreMeshFiles(
+      organizationId: String,
+      datasetDirectoryName: String,
+      dataLayerName: String
+  ): Fox[Set[MeshFileInfo]] = {
     val layerDir = dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName).resolve(dataLayerName)
     val meshFileNames = PathUtils
       .listFiles(layerDir.resolve(meshesDir), silent = true, PathUtils.fileExtensionFilter(hdf5FileExtension))
@@ -223,10 +227,12 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   }
 
   // Same as above but this variant constructs the meshFilePath itself and converts null to None
-  def mappingNameForMeshFile(organizationId: String,
-                             datasetDirectoryName: String,
-                             dataLayerName: String,
-                             meshFileName: String): Option[String] = {
+  def mappingNameForMeshFile(
+      organizationId: String,
+      datasetDirectoryName: String,
+      dataLayerName: String,
+      meshFileName: String
+  ): Option[String] = {
     val meshFilePath =
       dataBaseDir
         .resolve(organizationId)
@@ -257,7 +263,8 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       datasetDirectoryName: String,
       dataLayerName: String,
       meshFileName: String,
-      segmentIds: List[Long])(implicit m: MessagesProvider): Fox[WebknossosSegmentInfo] =
+      segmentIds: List[Long]
+  )(implicit m: MessagesProvider): Fox[WebknossosSegmentInfo] =
     for {
       _ <- Fox.successful(())
       meshFilePath: Path = dataBaseDir
@@ -267,19 +274,24 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .resolve(meshesDir)
         .resolve(s"$meshFileName.$hdf5FileExtension")
       (encoding, lodScaleMultiplier, transform) <- readMeshfileMetadata(meshFilePath).toFox
-      meshChunksForUnmappedSegments: List[MeshSegmentInfo] = listMeshChunksForSegments(meshFilePath,
-                                                                                       segmentIds,
-                                                                                       lodScaleMultiplier)
+      meshChunksForUnmappedSegments: List[MeshSegmentInfo] = listMeshChunksForSegments(
+        meshFilePath,
+        segmentIds,
+        lodScaleMultiplier
+      )
       _ <- bool2Fox(meshChunksForUnmappedSegments.nonEmpty) ?~> "zero chunks" ?~> Messages(
         "mesh.file.listChunks.failed",
         segmentIds.mkString(","),
-        meshFileName)
+        meshFileName
+      )
       wkChunkInfos <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(meshChunksForUnmappedSegments, encoding, transform)
     } yield wkChunkInfos
 
-  private def listMeshChunksForSegments(meshFilePath: Path,
-                                        segmentIds: List[Long],
-                                        lodScaleMultiplier: Double): List[MeshSegmentInfo] =
+  private def listMeshChunksForSegments(
+      meshFilePath: Path,
+      segmentIds: List[Long],
+      lodScaleMultiplier: Double
+  ): List[MeshSegmentInfo] =
     meshFileCache
       .withCachedHdf5(meshFilePath) { (cachedMeshFile: CachedHdf5File) =>
         segmentIds.flatMap(segmentId => listMeshChunksForSegment(cachedMeshFile, segmentId, lodScaleMultiplier))
@@ -295,9 +307,11 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       (encoding, lodScaleMultiplier, transform)
     }
 
-  private def listMeshChunksForSegment(cachedMeshFile: CachedHdf5File,
-                                       segmentId: Long,
-                                       lodScaleMultiplier: Double): Box[MeshSegmentInfo] =
+  private def listMeshChunksForSegment(
+      cachedMeshFile: CachedHdf5File,
+      segmentId: Long,
+      lodScaleMultiplier: Double
+  ): Box[MeshSegmentInfo] =
     tryo {
       val (neuroglancerSegmentManifestStart, neuroglancerSegmentManifestEnd) =
         getNeuroglancerSegmentManifestOffsets(segmentId, cachedMeshFile)
@@ -305,15 +319,18 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       val manifestBytes = cachedMeshFile.uint8Reader.readArrayBlockWithOffset(
         "/neuroglancer",
         (neuroglancerSegmentManifestEnd - neuroglancerSegmentManifestStart).toInt,
-        neuroglancerSegmentManifestStart)
+        neuroglancerSegmentManifestStart
+      )
       val segmentManifest = NeuroglancerSegmentManifest.fromBytes(manifestBytes)
       enrichSegmentInfo(segmentManifest, lodScaleMultiplier, neuroglancerSegmentManifestStart, segmentId)
     }
 
-  private def enrichSegmentInfo(segmentInfo: NeuroglancerSegmentManifest,
-                                lodScaleMultiplier: Double,
-                                neuroglancerOffsetStart: Long,
-                                segmentId: Long): MeshSegmentInfo = {
+  private def enrichSegmentInfo(
+      segmentInfo: NeuroglancerSegmentManifest,
+      lodScaleMultiplier: Double,
+      neuroglancerOffsetStart: Long,
+      segmentId: Long
+  ): MeshSegmentInfo = {
     val bytesPerLod = segmentInfo.chunkByteSizes.map(_.sum)
     val totalMeshSize = bytesPerLod.sum
     val meshByteStartOffset = neuroglancerOffsetStart - totalMeshSize
@@ -344,12 +361,14 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     val chunks = lods.map(lod => chunkCountsWithLod(lod).map(x => computeGlobalPositionAndOffset(x._1, x._2)).toList)
 
     val meshfileLods = lods
-      .map(
-        lod =>
-          MeshLodInfo(scale = segmentInfo.lodScales(lod).toInt,
-                      vertexOffset = segmentInfo.vertexOffsets(lod),
-                      chunkShape = segmentInfo.chunkShape,
-                      chunks = chunks(lod)))
+      .map(lod =>
+        MeshLodInfo(
+          scale = segmentInfo.lodScales(lod).toInt,
+          vertexOffset = segmentInfo.vertexOffsets(lod),
+          chunkShape = segmentInfo.chunkShape,
+          chunks = chunks(lod)
+        )
+      )
       .toList
     MeshSegmentInfo(chunkShape = segmentInfo.chunkShape, gridOrigin = segmentInfo.gridOrigin, lods = meshfileLods)
   }
@@ -362,11 +381,13 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
     if (bucketEnd - bucketStart == 0) throw new Exception(s"No entry for segment $segmentId")
 
-    val buckets = cachedMeshFile.uint64Reader.readMatrixBlockWithOffset("buckets",
-                                                                        (bucketEnd - bucketStart + 1).toInt,
-                                                                        3,
-                                                                        bucketStart,
-                                                                        0)
+    val buckets = cachedMeshFile.uint64Reader.readMatrixBlockWithOffset(
+      "buckets",
+      (bucketEnd - bucketStart + 1).toInt,
+      3,
+      bucketStart,
+      0
+    )
 
     val bucketLocalOffset = buckets.map(_(0)).indexOf(segmentId)
     if (bucketLocalOffset < 0) throw new Exception(s"SegmentId $segmentId not in bucket list")
@@ -376,10 +397,11 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     (neuroglancerStart, neuroglancerEnd)
   }
 
-  def readMeshChunk(organizationId: String,
-                    datasetDirectoryName: String,
-                    dataLayerName: String,
-                    meshChunkDataRequests: MeshChunkDataRequestList,
+  def readMeshChunk(
+      organizationId: String,
+      datasetDirectoryName: String,
+      dataLayerName: String,
+      meshChunkDataRequests: MeshChunkDataRequestList
   ): Box[(Array[Byte], String)] = {
     val meshFilePath = dataBaseDir
       .resolve(organizationId)
@@ -397,7 +419,8 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
   private def readMeshChunkFromCachedMeshfile(
       cachedMeshFile: CachedHdf5File,
-      meshChunkDataRequests: MeshChunkDataRequestList): Box[(Array[Byte], String)] = {
+      meshChunkDataRequests: MeshChunkDataRequestList
+  ): Box[(Array[Byte], String)] = {
     val meshFormat = cachedMeshFile.meshFormat
     // Sort the requests by byte offset to optimize for spinning disk access
     val requestsReordered =
@@ -405,14 +428,18 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     val data: List[(Array[Byte], String, Int)] = requestsReordered.map { requestAndIndex =>
       val meshChunkDataRequest = requestAndIndex._1
       val data =
-        cachedMeshFile.uint8Reader.readArrayBlockWithOffset("neuroglancer",
-                                                            meshChunkDataRequest.byteSize,
-                                                            meshChunkDataRequest.byteOffset)
+        cachedMeshFile.uint8Reader.readArrayBlockWithOffset(
+          "neuroglancer",
+          meshChunkDataRequest.byteSize,
+          meshChunkDataRequest.byteOffset
+        )
       (data, meshFormat, requestAndIndex._2)
     }
     val dataSorted = data.sortBy(d => d._3)
     for {
-      _ <- Box.fromBool(data.map(d => d._2).toSet.size == 1) ?~! "Different encodings for the same mesh chunk request found."
+      _ <- Box.fromBool(
+        data.map(d => d._2).toSet.size == 1
+      ) ?~! "Different encodings for the same mesh chunk request found."
       encoding <- data.map(d => d._2).headOption
       output = dataSorted.flatMap(d => d._1).toArray
     } yield (output, encoding)

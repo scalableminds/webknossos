@@ -40,7 +40,7 @@ trait TracingMigrationService[T <: GeneratedMessage] extends FoxImplicits {
   }
 }
 
-class SkeletonTracingMigrationService @Inject()()(implicit val ec: ExecutionContext)
+class SkeletonTracingMigrationService @Inject() ()(implicit val ec: ExecutionContext)
     extends TracingMigrationService[SkeletonTracing]
     with ColorGenerator {
   override protected val migrations: List[SkeletonTracing => Fox[SkeletonTracing]] = List(removeSingleUserBoundingBox)
@@ -54,7 +54,7 @@ class SkeletonTracingMigrationService @Inject()()(implicit val ec: ExecutionCont
   }
 }
 
-class VolumeTracingMigrationService @Inject()()(implicit val ec: ExecutionContext)
+class VolumeTracingMigrationService @Inject() ()(implicit val ec: ExecutionContext)
     extends TracingMigrationService[VolumeTracing]
     with ColorGenerator {
   override protected val migrations: List[VolumeTracing => Fox[VolumeTracing]] = List(removeSingleUserBoundingBox)

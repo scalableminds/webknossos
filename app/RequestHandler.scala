@@ -13,17 +13,19 @@ import utils.{ApiVersioning, WkConf}
 
 import scala.concurrent.ExecutionContext
 
-class RequestHandler @Inject()(webCommands: WebCommands,
-                               optionalDevContext: OptionalDevContext,
-                               router: Router,
-                               errorHandler: HttpErrorHandler,
-                               httpConfiguration: HttpConfiguration,
-                               aboutPageRedirectController: AboutPageRedirectController,
-                               filters: HttpFilters,
-                               val cspConfig: CSPConfig,
-                               conf: WkConf,
-                               assets: Assets,
-                               sitemapController: SitemapController)(implicit ec: ExecutionContext)
+class RequestHandler @Inject() (
+    webCommands: WebCommands,
+    optionalDevContext: OptionalDevContext,
+    router: Router,
+    errorHandler: HttpErrorHandler,
+    httpConfiguration: HttpConfiguration,
+    aboutPageRedirectController: AboutPageRedirectController,
+    filters: HttpFilters,
+    val cspConfig: CSPConfig,
+    conf: WkConf,
+    assets: Assets,
+    sitemapController: SitemapController
+)(implicit ec: ExecutionContext)
     extends DefaultHttpRequestHandler(
       webCommands,
       optionalDevContext,
@@ -52,9 +54,9 @@ class RequestHandler @Inject()(webCommands: WebCommands,
     } else if (request.uri.matches("""^/sitemap.xml$""") && conf.Features.isWkorgInstance) {
       Some(sitemapController.getSitemap(conf.Http.uri))
     } else if (request.uri.matches("^/sw\\.(.*)\\.js$") && conf.Features.isWkorgInstance) {
-      Some(Action { Ok("").as("text/javascript") })
+      Some(Action(Ok("").as("text/javascript")))
     } else if (request.uri == "/favicon.ico") {
-      Some(Action { NotFound })
+      Some(Action(NotFound))
     } else Some(aboutPageRedirectController.redirectToAboutPageOrSendMainView)
 
   private def assetWithCsp(requestHeader: RequestHeader) = Action.async { implicit request =>

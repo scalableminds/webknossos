@@ -90,9 +90,9 @@ object Vec3Int {
       case _ =>
         s match {
           case magLiteralRegex(x, y, z) =>
-            try {
+            try
               Some(Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)))
-            } catch {
+            catch {
               case _: NumberFormatException => None
             }
           case _ =>
@@ -102,9 +102,9 @@ object Vec3Int {
 
   def fromUriLiteral(s: String): Option[Vec3Int] = s match {
     case uriLiteralRegex(x, y, z) =>
-      try {
+      try
         Some(Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)))
-      } catch {
+      catch {
         case _: NumberFormatException => None
       }
     case _ => None

@@ -17,7 +17,6 @@ trait BoxImplicits {
     case JsError(e)          => Failure(s"Invalid json: $e")
   }
 
-
   implicit def combineErrors(boxes: List[Box[?]]): Option[List[String]] = {
     val failures = boxes.collect { case f: Failure => f }
     if (failures.isEmpty) None else Some(failures.map(_.msg))

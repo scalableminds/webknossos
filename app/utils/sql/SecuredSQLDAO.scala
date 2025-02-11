@@ -10,7 +10,7 @@ import security.{SharingTokenContainer, UserSharingTokenContainer}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+abstract class SecuredSQLDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
   protected def collectionName: String
   protected def existingCollectionName: SqlToken = SqlToken.raw(collectionName + "_")
@@ -25,11 +25,9 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
     else {
       for {
         userIdBox <- userIdFromCtx.futureBox
-      } yield {
-        userIdBox match {
-          case Full(userId) => readAccessFromUserOrToken(userId, sharingTokenFromCtx)(ctx)
-          case _            => anonymousReadAccessQ(sharingTokenFromCtx)
-        }
+      } yield userIdBox match {
+        case Full(userId) => readAccessFromUserOrToken(userId, sharingTokenFromCtx)(ctx)
+        case _            => anonymousReadAccessQ(sharingTokenFromCtx)
       }
     }
 
@@ -39,8 +37,8 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
       for {
         userId <- userIdFromCtx ?~> "FAILED: userIdFromCtx"
         resultList <- run(
-          q"SELECT _id FROM $existingCollectionName WHERE _id = $id AND (${updateAccessQ(userId)})"
-            .as[String]) ?~> "Failed to check write access. Does the object exist?"
+          q"SELECT _id FROM $existingCollectionName WHERE _id = $id AND (${updateAccessQ(userId)})".as[String]
+        ) ?~> "Failed to check write access. Does the object exist?"
         _ <- resultList.headOption.toFox ?~> "No update access."
       } yield ()
     }
@@ -51,8 +49,8 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
       for {
         userId <- userIdFromCtx
         resultList <- run(
-          q"SELECT _id FROM $existingCollectionName WHERE _id = $id AND (${deleteAccessQ(userId)})"
-            .as[String]) ?~> "Failed to check delete access. Does the object exist?"
+          q"SELECT _id FROM $existingCollectionName WHERE _id = $id AND (${deleteAccessQ(userId)})".as[String]
+        ) ?~> "Failed to check delete access. Does the object exist?"
         _ <- resultList.headOption.toFox ?~> "No delete access."
       } yield ()
     }
@@ -65,17 +63,16 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
       case _ => Fox.failure("Access denied.")
     }
 
-  protected def accessQueryFromAccessQWithPrefix(accessQ: (ObjectId, SqlToken) => SqlToken, prefix: SqlToken)(
-      implicit ctx: DBAccessContext): Fox[SqlToken] =
+  protected def accessQueryFromAccessQWithPrefix(accessQ: (ObjectId, SqlToken) => SqlToken, prefix: SqlToken)(implicit
+      ctx: DBAccessContext
+  ): Fox[SqlToken] =
     if (ctx.globalAccess) Fox.successful(q"TRUE")
     else {
       for {
         userIdBox <- userIdFromCtx.futureBox
-      } yield {
-        userIdBox match {
-          case Full(userId) => q"(${accessQ(userId, prefix)})"
-          case _            => q"FALSE"
-        }
+      } yield userIdBox match {
+        case Full(userId) => q"(${accessQ(userId, prefix)})"
+        case _            => q"FALSE"
       }
     }
 
@@ -84,11 +81,9 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
     else {
       for {
         userIdBox <- userIdFromCtx.futureBox
-      } yield {
-        userIdBox match {
-          case Full(userId) => q"(${accessQ(userId)})"
-          case _            => q"FALSE"
-        }
+      } yield userIdBox match {
+        case Full(userId) => q"(${accessQ(userId)})"
+        case _            => q"FALSE"
       }
     }
 
@@ -100,8 +95,9 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
       case _ => None
     }
 
-  private def readAccessFromUserOrToken(userId: ObjectId, tokenOption: Option[String])(
-      implicit ctx: DBAccessContext): SqlToken =
+  private def readAccessFromUserOrToken(userId: ObjectId, tokenOption: Option[String])(implicit
+      ctx: DBAccessContext
+  ): SqlToken =
     tokenOption match {
       case Some(_) => q"((${anonymousReadAccessQ(sharingTokenFromCtx)}) OR (${readAccessQ(userId)}))"
       case _       => q"(${readAccessQ(userId)})"

@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.{Color, JPEGWriter}
+import com.scalableminds.util.mvc.ControllerUtils
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -28,7 +29,7 @@ import java.io.ByteArrayOutputStream
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
 
-class BinaryDataController @Inject()(
+class BinaryDataController @Inject() (
     dataSourceRepository: DataSourceRepository,
     config: DataStoreConfig,
     accessTokenService: DataStoreAccessTokenService,
@@ -37,8 +38,10 @@ class BinaryDataController @Inject()(
     slackNotificationService: DSSlackNotificationService,
     adHocMeshServiceHolder: AdHocMeshServiceHolder,
     findDataService: FindDataService,
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller
+    extends AbstractController(cc)
+    with ControllerUtils
     with MissingBucketHeaders {
 
   override def allowRemoteOrigin: Boolean = true
@@ -54,13 +57,16 @@ class BinaryDataController @Inject()(
       dataLayerName: String
   ): Action[List[WebknossosDataRequest]] = Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))
+    ) {
       logTime(slackNotificationService.noticeSlowRequest) {
         val t = Instant.now
         for {
-          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                    datasetDirectoryName,
-                                                                                    dataLayerName) ~> NOT_FOUND
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(
+            organizationId,
+            datasetDirectoryName,
+            dataLayerName
+          ) ~> NOT_FOUND
           (data, indices) <- requestData(dataSource, dataLayer, request.body)
           duration = Instant.since(t)
           _ = if (duration > (10 seconds))
@@ -68,14 +74,14 @@ class BinaryDataController @Inject()(
               s"Complete data request for $organizationId/$datasetDirectoryName/$dataLayerName took ${formatDuration(duration)}."
                 + request.body.headOption
                   .map(firstReq => s" First of ${request.body.size} requests was $firstReq")
-                  .getOrElse(""))
+                  .getOrElse("")
+            )
         } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
       }
     }
   }
 
-  /**
-    * Handles requests for raw binary data via HTTP GET.
+  /** Handles requests for raw binary data via HTTP GET.
     */
   def requestRawCuboid(
       organizationId: String,
@@ -96,11 +102,14 @@ class BinaryDataController @Inject()(
       mappingName: Option[String]
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))
+    ) {
       for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName) ~> NOT_FOUND
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(
+          organizationId,
+          datasetDirectoryName,
+          dataLayerName
+        ) ~> NOT_FOUND
         magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> "malformedMag"
         request = DataRequest(
           VoxelPosition(x, y, z, magParsed),
@@ -120,33 +129,40 @@ class BinaryDataController @Inject()(
       dataLayerName: String
   ): Action[RawCuboidRequest] = Action.async(validateJson[RawCuboidRequest]) { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))
+    ) {
       for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName) ~> NOT_FOUND
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(
+          organizationId,
+          datasetDirectoryName,
+          dataLayerName
+        ) ~> NOT_FOUND
         (data, indices) <- requestData(dataSource, dataLayer, request.body)
       } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
     }
   }
 
-  /**
-    * Handles a request for raw binary data via a HTTP GET. Used by knossos.
+  /** Handles a request for raw binary data via a HTTP GET. Used by knossos.
     */
-  def requestViaKnossos(organizationId: String,
-                        datasetDirectoryName: String,
-                        dataLayerName: String,
-                        mag: Int,
-                        x: Int,
-                        y: Int,
-                        z: Int,
-                        cubeSize: Int): Action[AnyContent] = Action.async { implicit request =>
+  def requestViaKnossos(
+      organizationId: String,
+      datasetDirectoryName: String,
+      dataLayerName: String,
+      mag: Int,
+      x: Int,
+      y: Int,
+      z: Int,
+      cubeSize: Int
+  ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))
+    ) {
       for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName) ~> NOT_FOUND
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(
+          organizationId,
+          datasetDirectoryName,
+          dataLayerName
+        ) ~> NOT_FOUND
         request = DataRequest(
           VoxelPosition(x * cubeSize * mag, y * cubeSize * mag, z * cubeSize * mag, Vec3Int(mag, mag, mag)),
           cubeSize,
@@ -158,27 +174,31 @@ class BinaryDataController @Inject()(
     }
   }
 
-  def thumbnailJpeg(organizationId: String,
-                    datasetDirectoryName: String,
-                    dataLayerName: String,
-                    x: Int,
-                    y: Int,
-                    z: Int,
-                    width: Int,
-                    height: Int,
-                    mag: String,
-                    mappingName: Option[String],
-                    intensityMin: Option[Double],
-                    intensityMax: Option[Double],
-                    color: Option[String],
-                    invertColor: Option[Boolean]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
+  def thumbnailJpeg(
+      organizationId: String,
+      datasetDirectoryName: String,
+      dataLayerName: String,
+      x: Int,
+      y: Int,
+      z: Int,
+      width: Int,
+      height: Int,
+      mag: String,
+      mappingName: Option[String],
+      intensityMin: Option[Double],
+      intensityMax: Option[Double],
+      color: Option[String],
+      invertColor: Option[Boolean]
+  ): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))
+    ) {
       for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName) ?~> Messages(
-          "dataSource.notFound") ~> NOT_FOUND
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(
+          organizationId,
+          datasetDirectoryName,
+          dataLayerName
+        ) ?~> Messages("dataSource.notFound") ~> NOT_FOUND
         magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> "malformedMag"
         request = DataRequest(
           VoxelPosition(x, y, z, magParsed),
@@ -202,9 +222,10 @@ class BinaryDataController @Inject()(
           color = layerColor,
           invertColor = invertColor
         )
-        dataWithFallback = if (data.length == 0)
-          new Array[Byte](width * height * dataLayer.bytesPerElement)
-        else data
+        dataWithFallback =
+          if (data.length == 0)
+            new Array[Byte](width * height * dataLayer.bytesPerElement)
+          else data
         spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params) ?~> "image.create.failed"
         firstSheet <- spriteSheet.pages.headOption ?~> "image.page.failed"
         outputStream = new ByteArrayOutputStream()
@@ -220,11 +241,14 @@ class BinaryDataController @Inject()(
       mappingName: String
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))
+    ) {
       for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName) ~> NOT_FOUND
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(
+          organizationId,
+          datasetDirectoryName,
+          dataLayerName
+        ) ~> NOT_FOUND
         segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.notFound")
         mappingRequest = DataServiceMappingRequest(dataSource, segmentationLayer, mappingName)
         result <- mappingService.handleMappingRequest(mappingRequest)
@@ -232,19 +256,23 @@ class BinaryDataController @Inject()(
     }
   }
 
-  /**
-    * Handles ad-hoc mesh requests.
+  /** Handles ad-hoc mesh requests.
     */
-  def requestAdHocMesh(organizationId: String,
-                       datasetDirectoryName: String,
-                       dataLayerName: String): Action[WebknossosAdHocMeshRequest] =
+  def requestAdHocMesh(
+      organizationId: String,
+      datasetDirectoryName: String,
+      dataLayerName: String
+  ): Action[WebknossosAdHocMeshRequest] =
     Action.async(validateJson[WebknossosAdHocMeshRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))
+      ) {
         for {
-          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                    datasetDirectoryName,
-                                                                                    dataLayerName) ~> NOT_FOUND
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(
+            organizationId,
+            datasetDirectoryName,
+            dataLayerName
+          ) ~> NOT_FOUND
           segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
           adHocMeshRequest = AdHocMeshRequest(
             Some(dataSource),
@@ -279,11 +307,14 @@ class BinaryDataController @Inject()(
   def findData(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))
+      ) {
         for {
-          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                    datasetDirectoryName,
-                                                                                    dataLayerName) ~> NOT_FOUND
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(
+            organizationId,
+            datasetDirectoryName,
+            dataLayerName
+          ) ~> NOT_FOUND
           positionAndMagOpt <- findDataService.findPositionWithData(dataSource, dataLayer)
         } yield Ok(Json.obj("position" -> positionAndMagOpt.map(_._1), "mag" -> positionAndMagOpt.map(_._2)))
       }
@@ -292,14 +323,18 @@ class BinaryDataController @Inject()(
   def histogram(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))
+      ) {
         for {
-          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                    datasetDirectoryName,
-                                                                                    dataLayerName) ?~> Messages(
-            "dataSource.notFound") ~> NOT_FOUND ?~> Messages("histogram.layerMissing", dataLayerName)
-          listOfHistograms <- findDataService.createHistogram(dataSource, dataLayer) ?~> Messages("histogram.failed",
-                                                                                                  dataLayerName)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(
+            organizationId,
+            datasetDirectoryName,
+            dataLayerName
+          ) ?~> Messages("dataSource.notFound") ~> NOT_FOUND ?~> Messages("histogram.layerMissing", dataLayerName)
+          listOfHistograms <- findDataService.createHistogram(dataSource, dataLayer) ?~> Messages(
+            "histogram.failed",
+            dataLayerName
+          )
         } yield Ok(Json.toJson(listOfHistograms))
       }
     }

@@ -35,31 +35,30 @@ object PasswordHasherType extends ExtendedEnumeration {
   val SCrypt, Empty = Value
 }
 
-class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class MultiUserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[MultiUser, MultiusersRow, Multiusers](sqlClient) {
   protected val collection = Multiusers
 
   protected def idColumn(x: Multiusers): Rep[String] = x._Id
   protected def isDeletedColumn(x: Multiusers): Rep[Boolean] = x.isdeleted
+  protected def getResult = GetResultMultiusersRow
 
   protected def parse(r: MultiusersRow): Fox[MultiUser] =
     for {
       novelUserExperienceInfos <- JsonHelper.parseAndValidateJson[JsObject](r.noveluserexperienceinfos).toFox
       theme <- Theme.fromString(r.selectedtheme).toFox
-    } yield {
-      MultiUser(
-        ObjectId(r._Id),
-        r.email,
-        PasswordInfo(r.passwordinfoHasher, r.passwordinfoPassword),
-        r.issuperuser,
-        r._Lastloggedinidentity.map(ObjectId(_)),
-        novelUserExperienceInfos,
-        theme,
-        Instant.fromSql(r.created),
-        r.isemailverified,
-        r.isdeleted
-      )
-    }
+    } yield MultiUser(
+      ObjectId(r._Id),
+      r.email,
+      PasswordInfo(r.passwordinfoHasher, r.passwordinfoPassword),
+      r.issuperuser,
+      r._Lastloggedinidentity.map(ObjectId(_)),
+      novelUserExperienceInfos,
+      theme,
+      Instant.fromSql(r.created),
+      r.isemailverified,
+      r.isdeleted
+    )
 
   def insertOne(u: MultiUser): Fox[Unit] =
     for {
@@ -111,8 +110,9 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
                    WHERE _id = $multiUserId""".asUpdate)
     } yield ()
 
-  def updateNovelUserExperienceInfos(multiUserId: ObjectId, novelUserExperienceInfos: JsObject)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateNovelUserExperienceInfos(multiUserId: ObjectId, novelUserExperienceInfos: JsObject)(implicit
+      ctx: DBAccessContext
+  ): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(multiUserId)
       _ <- run(q"""UPDATE webknossos.multiusers

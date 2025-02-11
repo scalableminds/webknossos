@@ -21,8 +21,9 @@ class WKWBucketStreamSink(val layer: DataLayer, tracingHasFallbackLayer: Boolean
     with ReversionHelper
     with ByteUtils {
 
-  def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int])(
-      implicit ec: ExecutionContext): Iterator[NamedStream] = {
+  def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int])(implicit
+      ec: ExecutionContext
+  ): Iterator[NamedStream] = {
     val (voxelType, numChannels) = VoxelType.fromElementClass(layer.elementClass)
     val header = WKWHeader(1, DataLayer.bucketLength, ChunkType.LZ4, voxelType, numChannels)
     bucketStream.flatMap {
@@ -37,12 +38,15 @@ class WKWBucketStreamSink(val layer: DataLayer, tracingHasFallbackLayer: Boolean
             NamedFunctionStream(
               filePath,
               os => Future.successful(WKWFile.write(os, header, Array(data).iterator))
-            ))
+            )
+          )
         }
       case _ => None
     } ++ mags.map { mag =>
-      NamedFunctionStream(f"${mag.toMagLiteral(allowScalar = true)}/$FILENAME_HEADER_WKW",
-                          os => Future.successful(header.writeTo(new DataOutputStream(os), isHeaderFile = true)))
+      NamedFunctionStream(
+        f"${mag.toMagLiteral(allowScalar = true)}/$FILENAME_HEADER_WKW",
+        os => Future.successful(header.writeTo(new DataOutputStream(os), isHeaderFile = true))
+      )
     }
   }
 

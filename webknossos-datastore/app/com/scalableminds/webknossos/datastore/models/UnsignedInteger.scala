@@ -102,7 +102,7 @@ class UInt64(val signed: Long) extends UnsignedInteger {
 
 case class DataTypeFunctors[T, B](
     getTypedBufferFn: ByteBuffer => B,
-    copyDataFn: (B, Array[T]) => Unit,
+    copyDataFn: (B, Array[T]) => Unit
 )
 
 object UnsignedIntegerArray {
@@ -123,8 +123,10 @@ object UnsignedIntegerArray {
     }
   }
 
-  private def fromByteArrayImpl[B <: Buffer, T: ClassTag](byteBuffer: ByteBuffer,
-                                                          dataTypeFunctor: DataTypeFunctors[T, B]) = {
+  private def fromByteArrayImpl[B <: Buffer, T: ClassTag](
+      byteBuffer: ByteBuffer,
+      dataTypeFunctor: DataTypeFunctors[T, B]
+  ) = {
     val srcBuffer = dataTypeFunctor.getTypedBufferFn(byteBuffer)
     srcBuffer.rewind()
     val dstArray = Array.ofDim[T](srcBuffer.remaining())

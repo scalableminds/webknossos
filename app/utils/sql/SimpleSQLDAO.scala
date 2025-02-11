@@ -15,7 +15,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
-class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class SimpleSQLDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
     with SqlTypeImplicits
@@ -25,9 +25,11 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
 
   protected lazy val transactionSerializationError = "could not serialize access"
 
-  protected def run[R](query: DBIOAction[R, NoStream, Nothing],
-                       retryCount: Int = 0,
-                       retryIfErrorContains: List[String] = List()): Fox[R] = {
+  protected def run[R](
+      query: DBIOAction[R, NoStream, Nothing],
+      retryCount: Int = 0,
+      retryIfErrorContains: List[String] = List()
+  ): Fox[R] = {
     val stackMarker = new Throwable()
     val foxFuture = sqlClient.db.run(query.asTry).map { (result: Try[R]) =>
       result match {
@@ -69,8 +71,10 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     new String(os.toByteArray, StandardCharsets.UTF_8)
   }
 
-  def replaceSequentiallyAsTransaction(clearQuery: SqlAction[Int, NoStream, Effect],
-                                       insertQueries: Seq[SqlAction[Int, NoStream, Effect]]): Fox[Unit] = {
+  def replaceSequentiallyAsTransaction(
+      clearQuery: SqlAction[Int, NoStream, Effect],
+      insertQueries: Seq[SqlAction[Int, NoStream, Effect]]
+  ): Fox[Unit] = {
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
     for {
       _ <- run(

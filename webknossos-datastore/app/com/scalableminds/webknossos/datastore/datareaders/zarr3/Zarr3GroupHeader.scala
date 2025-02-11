@@ -6,7 +6,7 @@ import play.api.libs.json._
 case class Zarr3GroupHeader(
     zarr_format: Int, // must be 3
     node_type: String, // must be "group"
-    ngffMetadata: Option[NgffMetadataV0_5],
+    ngffMetadata: Option[NgffMetadataV0_5]
 )
 
 object Zarr3GroupHeader {
@@ -17,19 +17,18 @@ object Zarr3GroupHeader {
         node_type <- (json \ "node_type").validate[String]
         // Read the metadata from the correct json path.
         ngffMetadata <- (json \ "attributes" \ "ome").validateOpt[NgffMetadataV0_5]
-      } yield
-        Zarr3GroupHeader(
-          zarr_format,
-          node_type,
-          ngffMetadata,
-        )
+      } yield Zarr3GroupHeader(
+        zarr_format,
+        node_type,
+        ngffMetadata
+      )
 
     override def writes(zarrArrayGroup: Zarr3GroupHeader): JsValue =
       Json.obj(
         "zarr_format" -> zarrArrayGroup.zarr_format,
         "node_type" -> zarrArrayGroup.node_type,
         // Enforce correct path for ngffMetadata in the json.
-        "attributes" -> Json.obj("ome" -> zarrArrayGroup.ngffMetadata),
+        "attributes" -> Json.obj("ome" -> zarrArrayGroup.ngffMetadata)
       )
   }
 }

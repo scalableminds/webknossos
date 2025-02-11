@@ -24,13 +24,13 @@ object Color {
   }
 
   def fromHTML(htmlCode: String): Option[Color] =
-    tryo({
+    tryo {
       val code = if (!htmlCode.startsWith("#")) s"#$htmlCode" else htmlCode
       val r = Integer.valueOf(code.substring(1, 3), 16) / 255d
       val g = Integer.valueOf(code.substring(3, 5), 16) / 255d
       val b = Integer.valueOf(code.substring(5, 7), 16) / 255d
       Color(r, g, b, 0)
-    }).toOption
+    }.toOption
 
   implicit object ColorFormat extends Format[Color] {
 

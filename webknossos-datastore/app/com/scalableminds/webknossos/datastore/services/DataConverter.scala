@@ -18,14 +18,15 @@ trait DataConverter extends FoxImplicits {
   def uShortToLong(uShort: Short): Long = uShort & 0xffffL
   def uIntToLong(uInt: Int): Long = uInt & 0xffffffffL
 
-  def convertData(data: Array[Byte],
-                  elementClass: ElementClass.Value): Array[? >: Byte & Short & Int & Long & Float] =
+  def convertData(data: Array[Byte], elementClass: ElementClass.Value): Array[? >: Byte & Short & Int & Long & Float] =
     elementClass match {
       case ElementClass.uint8 | ElementClass.int8 =>
         convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
       case ElementClass.uint16 | ElementClass.int16 =>
-        convertDataImpl[Short, ShortBuffer](data,
-                                            DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort))
+        convertDataImpl[Short, ShortBuffer](
+          data,
+          DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort)
+        )
       case ElementClass.uint24 =>
         convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
       case ElementClass.uint32 | ElementClass.int32 =>
@@ -35,11 +36,14 @@ trait DataConverter extends FoxImplicits {
       case ElementClass.float =>
         convertDataImpl[Float, FloatBuffer](
           data,
-          DataTypeFunctors[Float, FloatBuffer](_.asFloatBuffer(), _.get(_), _.toFloat))
+          DataTypeFunctors[Float, FloatBuffer](_.asFloatBuffer(), _.get(_), _.toFloat)
+        )
     }
 
-  private def convertDataImpl[T: ClassTag, B <: Buffer](data: Array[Byte],
-                                                        dataTypeFunctor: DataTypeFunctors[T, B]): Array[T] = {
+  private def convertDataImpl[T: ClassTag, B <: Buffer](
+      data: Array[Byte],
+      dataTypeFunctor: DataTypeFunctors[T, B]
+  ): Array[T] = {
     val srcBuffer = dataTypeFunctor.getTypedBufferFn(ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN))
     srcBuffer.rewind()
     val dstArray = Array.ofDim[T](srcBuffer.remaining())
@@ -47,8 +51,9 @@ trait DataConverter extends FoxImplicits {
     dstArray
   }
 
-  def toUnsigned(data: Array[? >: Byte & Short & Int & Long & Float])
-    : Array[? >: UByte & UShort & UInt & ULong & Float] =
+  def toUnsigned(
+      data: Array[? >: Byte & Short & Int & Long & Float]
+  ): Array[? >: UByte & UShort & UInt & ULong & Float] =
     data match {
       case d: Array[Byte]  => d.map(UByte(_))
       case d: Array[Short] => d.map(UShort(_))
@@ -57,8 +62,10 @@ trait DataConverter extends FoxImplicits {
       case d: Array[Float] => d
     }
 
-  def filterZeroes(data: Array[? >: Byte & Short & Int & Long & Float],
-                   skip: Boolean = false): Array[? >: Byte & Short & Int & Long & Float] =
+  def filterZeroes(
+      data: Array[? >: Byte & Short & Int & Long & Float],
+      skip: Boolean = false
+  ): Array[? >: Byte & Short & Int & Long & Float] =
     if (skip) data
     else {
       val zeroByte = 0.toByte
@@ -74,8 +81,10 @@ trait DataConverter extends FoxImplicits {
       }
     }
 
-  def toBytesSpire(typed: Array[? >: UByte & UShort & UInt & ULong & Float],
-                   elementClass: ElementClass.Value): Array[Byte] = {
+  def toBytesSpire(
+      typed: Array[? >: UByte & UShort & UInt & ULong & Float],
+      elementClass: ElementClass.Value
+  ): Array[Byte] = {
     val numBytes = ElementClass.bytesPerElement(elementClass)
     val byteBuffer = ByteBuffer.allocate(numBytes * typed.length).order(ByteOrder.LITTLE_ENDIAN)
     typed match {
@@ -88,8 +97,7 @@ trait DataConverter extends FoxImplicits {
     byteBuffer.array()
   }
 
-  def toBytes(typed: Array[? >: Byte & Short & Int & Long & Float],
-              elementClass: ElementClass.Value): Array[Byte] = {
+  def toBytes(typed: Array[? >: Byte & Short & Int & Long & Float], elementClass: ElementClass.Value): Array[Byte] = {
     val numBytes = ElementClass.bytesPerElement(elementClass)
     val byteBuffer = ByteBuffer.allocate(numBytes * typed.length).order(ByteOrder.LITTLE_ENDIAN)
     typed match {

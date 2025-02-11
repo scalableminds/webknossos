@@ -9,7 +9,7 @@ import com.scalableminds.util.tools.{Empty, Failure, Full}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
-class CleanUpService @Inject()(system: ActorSystem)(implicit ec: ExecutionContext) extends LazyLogging {
+class CleanUpService @Inject() (system: ActorSystem)(implicit ec: ExecutionContext) extends LazyLogging {
 
   @volatile private var pekkoIsShuttingDown = false
 
@@ -18,7 +18,8 @@ class CleanUpService @Inject()(system: ActorSystem)(implicit ec: ExecutionContex
   }
 
   def register[T](description: String, interval: FiniteDuration, runOnShutdown: Boolean = false)(
-      job: => Fox[T]): Cancellable =
+      job: => Fox[T]
+  ): Cancellable =
     system.scheduler.scheduleWithFixedDelay(interval, interval)(() => runJob(description, job, runOnShutdown))
 
   private def runJob[T](description: String, job: => Fox[T], runOnShutdown: Boolean): Unit =
@@ -30,9 +31,8 @@ class CleanUpService @Inject()(system: ActorSystem)(implicit ec: ExecutionContex
           logger.warn(s"Failed to execute cleanup job: $description. " + f.msg)
         case Empty =>
           logger.info(s"Completed cleanup job: $description. But result is empty.")
-      }.recover {
-        case e: Exception =>
-          logger.error(s"Exception during execution of cleanup job: $description. ${e.getMessage}", e)
+      }.recover { case e: Exception =>
+        logger.error(s"Exception during execution of cleanup job: $description. ${e.getMessage}", e)
       }
     }
 }

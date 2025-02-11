@@ -17,7 +17,7 @@ import java.util.Base64
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: ExecutionContext)
+class OpenIdConnectClient @Inject() (rpc: RPC, conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 
@@ -29,7 +29,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
       conf.SingleSignOn.OpenIdConnect.clientId,
       if (conf.SingleSignOn.OpenIdConnect.clientSecret.nonEmpty) Some(conf.SingleSignOn.OpenIdConnect.clientSecret)
       else None,
-      conf.SingleSignOn.OpenIdConnect.scope,
+      conf.SingleSignOn.OpenIdConnect.scope
     )
 
   /*
@@ -44,7 +44,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
           "client_id" -> oidcConfig.clientId,
           "redirect_uri" -> callbackUrl,
           "scope" -> oidcConfig.scope,
-          "response_type" -> "code",
+          "response_type" -> "code"
         )
         serverInfos.authorization_endpoint + "?" +
           queryParams.map(v => v._1 + "=" + URLEncoder.encode(v._2, StandardCharsets.UTF_8.toString)).mkString("&")
@@ -71,9 +71,11 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
             "redirect_uri" -> redirectUrl,
             "code" -> code,
             "scope" -> oidcConfig.scope
-          ))
+          )
+        )
       _ = logDebug(
-        s"Fetched oidc token for scope '${oidcConfig.scope}', response scope: ${tokenResponse.scope}. Decoding...")
+        s"Fetched oidc token for scope '${oidcConfig.scope}', response scope: ${tokenResponse.scope}. Decoding..."
+      )
       (accessToken, idToken) <- validateOpenIdConnectTokenResponse(tokenResponse, serverInfos) ?~> "failed to parse JWT"
       _ = logDebug(s"Got id token $idToken and access token $accessToken.")
     } yield (accessToken, idToken)
@@ -91,12 +93,14 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
 
   private def validateOpenIdConnectTokenResponse(
       tokenResponse: OpenIdConnectTokenResponse,
-      serverInfos: OpenIdConnectProviderInfo): Fox[(JsObject, Option[JsObject])] =
+      serverInfos: OpenIdConnectProviderInfo
+  ): Fox[(JsObject, Option[JsObject])] =
     for {
       publicKey <- fetchServerPublicKey(serverInfos)
       decdoedAccessToken <- JwtJson.decodeJson(tokenResponse.access_token, publicKey).toFox
       decodedIdToken: Option[JsObject] <- Fox.runOptional(tokenResponse.id_token)(idToken =>
-        JwtJson.decodeJson(idToken, publicKey).toFox)
+        JwtJson.decodeJson(idToken, publicKey).toFox
+      )
     } yield (decdoedAccessToken, decodedIdToken)
 
   private def fetchServerPublicKey(serverInfos: OpenIdConnectProviderInfo): Fox[PublicKey] =
@@ -105,8 +109,9 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
         .silentIf(!conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled)
         .get
       jsonWebKeySet: JsonWebKeySet <- JsonHelper.validateJsValue[JsonWebKeySet](response.json).toFox
-      firstRsaKey: JsonWebKey <- Fox.option2Fox(jsonWebKeySet.keys.find(key =>
-        key.kty == keyTypeRsa && key.use == "sig")) ?~> "No server RSA Public Key found in server key set"
+      firstRsaKey: JsonWebKey <- Fox.option2Fox(
+        jsonWebKeySet.keys.find(key => key.kty == keyTypeRsa && key.use == "sig")
+      ) ?~> "No server RSA Public Key found in server key set"
       modulusString <- firstRsaKey.n
       modulus = new BigInteger(1, Base64.getUrlDecoder.decode(modulusString.getBytes))
       exponentString <- firstRsaKey.e

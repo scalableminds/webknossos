@@ -99,7 +99,8 @@ object ElementClass extends ExtendedEnumeration {
 
   def largestSegmentIdIsInRange(largestSegmentIdOpt: Option[Long], elementClass: ElementClass.Value): Boolean =
     segmentationElementClasses.contains(elementClass) && largestSegmentIdOpt.forall(largestSegmentId =>
-      largestSegmentId >= 0L && largestSegmentId <= maxSegmentIdValue(elementClass))
+      largestSegmentId >= 0L && largestSegmentId <= maxSegmentIdValue(elementClass)
+    )
 
   def toChannelAndZarrString(elementClass: ElementClass.Value): (Int, String) = elementClass match {
     case ElementClass.uint8  => (1, "|u1")
@@ -194,14 +195,16 @@ trait DataLayer extends DataLayerLike {
 
   def dataFormat: DataFormat.Value
 
-  /**
-    * Defines the length of the underlying cubes making up the layer. This is the maximal size that can be loaded from a single file.
+  /** Defines the length of the underlying cubes making up the layer. This is the maximal size that can be loaded from a
+    * single file.
     */
   def lengthOfUnderlyingCubes(mag: Vec3Int): Int
 
-  def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                     dataSourceId: DataSourceId,
-                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider
+  def bucketProvider(
+      remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+      dataSourceId: DataSourceId,
+      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]
+  ): BucketProvider
 
   def bucketProviderCacheKey: String = this.name
 
@@ -218,8 +221,7 @@ trait DataLayer extends DataLayerLike {
 
 object DataLayer {
 
-  /**
-    * Defines the length of a bucket per axis. This is the minimal size that can be loaded from a wkw file.
+  /** Defines the length of a bucket per axis. This is the minimal size that can be loaded from a wkw file.
     */
   val bucketLength: Int = 32
   val bucketSize: Vec3Int = Vec3Int(bucketLength, bucketLength, bucketLength)
@@ -243,9 +245,7 @@ object DataLayer {
           case (DataFormat.`zarr3`, _)                     => json.validate[Zarr3DataLayer]
           case _                                           => json.validate[WKWDataLayer]
         }
-      } yield {
-        layer
-      }
+      } yield layer
 
     override def writes(layer: DataLayer): JsValue =
       (layer match {
@@ -268,12 +268,13 @@ object DataLayer {
 
 trait DataLayerWithMagLocators extends DataLayer {
 
-  def mapped(boundingBoxMapping: BoundingBox => BoundingBox = b => b,
-             defaultViewConfigurationMapping: Option[LayerViewConfiguration] => Option[LayerViewConfiguration] = l => l,
-             magMapping: MagLocator => MagLocator = m => m,
-             name: String = this.name,
-             coordinateTransformations: Option[List[CoordinateTransformation]] = this.coordinateTransformations)
-    : DataLayerWithMagLocators =
+  def mapped(
+      boundingBoxMapping: BoundingBox => BoundingBox = b => b,
+      defaultViewConfigurationMapping: Option[LayerViewConfiguration] => Option[LayerViewConfiguration] = l => l,
+      magMapping: MagLocator => MagLocator = m => m,
+      name: String = this.name,
+      coordinateTransformations: Option[List[CoordinateTransformation]] = this.coordinateTransformations
+  ): DataLayerWithMagLocators =
     this match {
       case l: ZarrDataLayer =>
         l.copy(

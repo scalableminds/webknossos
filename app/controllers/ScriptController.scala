@@ -14,18 +14,20 @@ import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 
-class ScriptController @Inject()(scriptDAO: ScriptDAO,
-                                 taskDAO: TaskDAO,
-                                 scriptService: ScriptService,
-                                 userService: UserService,
-                                 sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+class ScriptController @Inject() (
+    scriptDAO: ScriptDAO,
+    taskDAO: TaskDAO,
+    scriptService: ScriptService,
+    userService: UserService,
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
 
   private val scriptPublicReads =
     ((__ \ "name").read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ "gist").read[String] and
-      (__ \ "owner").read[ObjectId])(Script.fromForm _)
+      (__ \ "owner").read[ObjectId])(Script.fromForm)
 
   def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { script =>
@@ -44,18 +46,14 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
     for {
       script <- scriptDAO.findOne(scriptId) ?~> "script.notFound" ~> NOT_FOUND
       js <- scriptService.publicWrites(script) ?~> "script.write.failed"
-    } yield {
-      Ok(js)
-    }
+    } yield Ok(js)
   }
 
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       scripts <- scriptDAO.findAll
       js <- Fox.serialCombined(scripts)(s => scriptService.publicWrites(s))
-    } yield {
-      Ok(Json.toJson(js))
-    }
+    } yield Ok(Json.toJson(js))
   }
 
   def update(scriptId: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
@@ -67,9 +65,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
         updatedScript = scriptFromForm.copy(_id = oldScript._id)
         _ <- scriptDAO.updateOne(updatedScript)
         js <- scriptService.publicWrites(updatedScript) ?~> "script.write.failed"
-      } yield {
-        Ok(js)
-      }
+      } yield Ok(js)
     }
   }
 
@@ -79,8 +75,6 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
       _ <- bool2Fox(oldScript._owner == request.identity._id) ?~> "script.notOwner" ~> FORBIDDEN
       _ <- scriptDAO.deleteOne(scriptId) ?~> "script.removalFailed"
       _ <- taskDAO.removeScriptFromAllTasks(scriptId) ?~> "script.removalFailed"
-    } yield {
-      Ok
-    }
+    } yield Ok
   }
 }

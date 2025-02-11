@@ -22,9 +22,11 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
   override def update(newAuthenticator: BearerTokenAuthenticator): Future[BearerTokenAuthenticator] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     (for {
-      oldAuthenticatorSQL <- tokenDAO.findOneByLoginInfo(newAuthenticator.loginInfo.providerID,
-                                                         newAuthenticator.loginInfo.providerKey,
-                                                         TokenType.Authentication)
+      oldAuthenticatorSQL <- tokenDAO.findOneByLoginInfo(
+        newAuthenticator.loginInfo.providerID,
+        newAuthenticator.loginInfo.providerKey,
+        TokenType.Authentication
+      )
       _ <- tokenDAO.updateValues(
         oldAuthenticatorSQL._id,
         newAuthenticator.id,
@@ -34,7 +36,8 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
       )
       updated <- findOneByValue(newAuthenticator.id)
     } yield updated).toFutureOrThrowException(
-      "Could not update Token. Throwing exception because update cannot return a box, as defined by Silhouette trait AuthenticatorDAO")
+      "Could not update Token. Throwing exception because update cannot return a box, as defined by Silhouette trait AuthenticatorDAO"
+    )
   }
 
   override def remove(value: String): Future[Unit] =
@@ -54,9 +57,11 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
       tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
     } yield tokenAuthenticator).toFutureOption
 
-  def add(authenticator: BearerTokenAuthenticator,
-          tokenType: TokenType,
-          deleteOld: Boolean = true): Future[BearerTokenAuthenticator] = {
+  def add(
+      authenticator: BearerTokenAuthenticator,
+      tokenType: TokenType,
+      deleteOld: Boolean = true
+  ): Future[BearerTokenAuthenticator] = {
     if (deleteOld) {
       removeByLoginInfoIfPresent(authenticator.loginInfo, tokenType)
     }

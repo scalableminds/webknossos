@@ -25,9 +25,9 @@ import security.{Token, TokenDAO, TokenType, WkEnv}
 
 import scala.concurrent.ExecutionContext
 
-class InitialDataController @Inject()(initialDataService: InitialDataService, sil: Silhouette[WkEnv])(
-    implicit ec: ExecutionContext)
-    extends Controller
+class InitialDataController @Inject() (initialDataService: InitialDataService, sil: Silhouette[WkEnv])(implicit
+    ec: ExecutionContext
+) extends Controller
     with FoxImplicits {
 
   def triggerInsert: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
@@ -37,24 +37,26 @@ class InitialDataController @Inject()(initialDataService: InitialDataService, si
   }
 }
 
-class InitialDataService @Inject()(userService: UserService,
-                                   userDAO: UserDAO,
-                                   multiUserDAO: MultiUserDAO,
-                                   userExperiencesDAO: UserExperiencesDAO,
-                                   taskTypeDAO: TaskTypeDAO,
-                                   dataStoreDAO: DataStoreDAO,
-                                   folderDAO: FolderDAO,
-                                   aiModelDAO: AiModelDAO,
-                                   folderService: FolderService,
-                                   tracingStoreDAO: TracingStoreDAO,
-                                   teamDAO: TeamDAO,
-                                   tokenDAO: TokenDAO,
-                                   projectDAO: ProjectDAO,
-                                   publicationDAO: PublicationDAO,
-                                   organizationDAO: OrganizationDAO,
-                                   storeModules: StoreModules,
-                                   organizationService: OrganizationService,
-                                   conf: WkConf)(implicit ec: ExecutionContext)
+class InitialDataService @Inject() (
+    userService: UserService,
+    userDAO: UserDAO,
+    multiUserDAO: MultiUserDAO,
+    userExperiencesDAO: UserExperiencesDAO,
+    taskTypeDAO: TaskTypeDAO,
+    dataStoreDAO: DataStoreDAO,
+    folderDAO: FolderDAO,
+    aiModelDAO: AiModelDAO,
+    folderService: FolderService,
+    tracingStoreDAO: TracingStoreDAO,
+    teamDAO: TeamDAO,
+    tokenDAO: TokenDAO,
+    projectDAO: ProjectDAO,
+    publicationDAO: PublicationDAO,
+    organizationDAO: OrganizationDAO,
+    storeModules: StoreModules,
+    organizationService: OrganizationService,
+    conf: WkConf
+)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
   implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
@@ -140,7 +142,8 @@ Samplecountry
     Some("https://static.webknossos.org/images/icon-only.svg"),
     Some("Dummy Title that is usually very long and contains highly scientific terms"),
     Some(
-      "This is a wonderful dummy publication, it has authors, it has a link, it has a doi number, those could go here.\nLorem [ipsum](https://github.com/scalableminds/webknossos) dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.")
+      "This is a wonderful dummy publication, it has authors, it has a link, it has a doi number, those could go here.\nLorem [ipsum](https://github.com/scalableminds/webknossos) dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua."
+    )
   )
   private val defaultDataStore =
     DataStore(conf.Datastore.name, conf.Http.uri, conf.Datastore.publicUri.getOrElse(conf.Http.uri), conf.Datastore.key)
@@ -189,10 +192,12 @@ Samplecountry
         folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, folderService.defaultRootName, JsArray.empty))
     }
 
-  private def insertDefaultUser(userEmail: String,
-                                multiUser: MultiUser,
-                                user: User,
-                                isTeamManager: Boolean): Fox[Unit] =
+  private def insertDefaultUser(
+      userEmail: String,
+      multiUser: MultiUser,
+      user: User,
+      isTeamManager: Boolean
+  ): Fox[Unit] =
     userService
       .userFromMultiUserEmail(userEmail)
       .futureBox
@@ -203,8 +208,10 @@ Samplecountry
             _ <- multiUserDAO.insertOne(multiUser)
             _ <- userDAO.insertOne(user)
             _ <- userExperiencesDAO.updateExperiencesForUser(user, Map("sampleExp" -> 10))
-            _ <- userDAO.insertTeamMembership(user._id,
-                                              TeamMembership(organizationTeam._id, isTeamManager = isTeamManager))
+            _ <- userDAO.insertTeamMembership(
+              user._id,
+              TeamMembership(organizationTeam._id, isTeamManager = isTeamManager)
+            )
             _ = logger.info("Inserted default user")
           } yield ()
       }
@@ -264,14 +271,16 @@ Samplecountry
     projectDAO.findAll.flatMap { projects =>
       if (projects.isEmpty) {
         userService.userFromMultiUserEmail(defaultUserEmail).flatMap { user =>
-          val project = Project(ObjectId.generate,
-                                organizationTeam._id,
-                                user._id,
-                                "sampleProject",
-                                100,
-                                paused = false,
-                                Some(5400000),
-                                isBlacklistedFromReport = false)
+          val project = Project(
+            ObjectId.generate,
+            organizationTeam._id,
+            user._id,
+            "sampleProject",
+            100,
+            paused = false,
+            Some(5400000),
+            isBlacklistedFromReport = false
+          )
           for { _ <- projectDAO.insertOne(project, defaultOrganization._id) } yield ()
         }
       } else Fox.successful(())
@@ -305,10 +314,13 @@ Samplecountry
         if (maybeStore.isEmpty) {
           logger.info("Inserting local tracingstore")
           tracingStoreDAO.insertOne(
-            TracingStore(conf.Tracingstore.name,
-                         conf.Http.uri,
-                         conf.Tracingstore.publicUri.getOrElse(conf.Http.uri),
-                         conf.Tracingstore.key))
+            TracingStore(
+              conf.Tracingstore.name,
+              conf.Http.uri,
+              conf.Tracingstore.publicUri.getOrElse(conf.Http.uri),
+              conf.Tracingstore.key
+            )
+          )
         } else Fox.successful(())
       }
     } else Fox.successful(())
@@ -329,7 +341,7 @@ Samplecountry
 
   private def updateLocalTracingStorePublicUri(): Fox[Unit] =
     if (storeModules.localTracingStoreEnabled) {
-      tracingStoreDAO.findOneByUrl(conf.Http.uri).futureBox.flatMap { ((storeOpt: Box[TracingStore])) =>
+      tracingStoreDAO.findOneByUrl(conf.Http.uri).futureBox.flatMap { (storeOpt: Box[TracingStore]) =>
         storeOpt match {
           case Full(store) =>
             val newPublicUri = conf.Tracingstore.publicUri.getOrElse(conf.Http.uri)
@@ -342,5 +354,8 @@ Samplecountry
     } else Fox.successful(())
 
   private def createOrganizationDirectory(): Fox[Unit] =
-    organizationService.createOrganizationDirectory(defaultOrganization._id, RpcTokenHolder.webknossosToken) ?~> "organization.directoryCreation.failed"
+    organizationService.createOrganizationDirectory(
+      defaultOrganization._id,
+      RpcTokenHolder.webknossosToken
+    ) ?~> "organization.directoryCreation.failed"
 }

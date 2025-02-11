@@ -17,10 +17,10 @@ import scala.jdk.CollectionConverters.EnumerationHasAsScala
 
 object ZipIO extends LazyLogging {
 
-  /**
-    * Representation of an opened zip file
+  /** Representation of an opened zip file
     *
-    * @param stream output stream to write to
+    * @param stream
+    *   output stream to write to
     */
   case class OpenZip(stream: ZipOutputStream) {
 
@@ -42,25 +42,26 @@ object ZipIO extends LazyLogging {
       stream.closeEntry()
     }
 
-    def addFileFromNamedStream(namedStream: NamedStream, suffix: String = "")(
-        implicit ec: ExecutionContext): Fox[Unit] = {
+    def addFileFromNamedStream(namedStream: NamedStream, suffix: String = "")(implicit
+        ec: ExecutionContext
+    ): Fox[Unit] = {
       stream.putNextEntry(new ZipEntry(namedStream.name + suffix))
       namedStream.writeTo(stream).map(_ => stream.closeEntry())
     }
 
-    /**
-      * Add a file to the zip
+    /** Add a file to the zip
       *
-      * @param f input
-      * @return future, completes when file is added
+      * @param f
+      *   input
+      * @return
+      *   future, completes when file is added
       */
     def withFile(name: String)(f: OutputStream => Fox[?]): Fox[Unit] = {
       stream.putNextEntry(new ZipEntry(name))
       f(stream).map(_ => stream.closeEntry())
     }
 
-    /**
-      * Close the zip file
+    /** Close the zip file
       */
     def close(): Unit =
       stream.close()
@@ -70,8 +71,9 @@ object ZipIO extends LazyLogging {
     `def`.setLevel(compressionLevel)
   }
 
-  def zip(sources: Iterator[NamedStream], out: OutputStream, level: Int = -1)(
-      implicit ec: ExecutionContext): Fox[Unit] = {
+  def zip(sources: Iterator[NamedStream], out: OutputStream, level: Int = -1)(implicit
+      ec: ExecutionContext
+  ): Fox[Unit] = {
     val zip = startZip(out)
     if (level != -1) {
       zip.stream.setLevel(level)
@@ -111,11 +113,13 @@ object ZipIO extends LazyLogging {
     try {
       val buffer = new Array[Byte](1024)
       var len = 0
-      while ({ {
-        len = source.read(buffer)
-        if (len > 0)
-          gout.write(buffer, 0, len)
-      } ; len > 0}) ()
+      while ({
+        {
+          len = source.read(buffer)
+          if (len > 0)
+            gout.write(buffer, 0, len)
+        }; len > 0
+      }) ()
     } finally {
       source.close()
       gout.close()
@@ -128,11 +132,13 @@ object ZipIO extends LazyLogging {
     try {
       val buffer = new Array[Byte](1024)
       var len = 0
-      while ({ {
-        len = is.read(buffer)
-        if (len > 0)
-          os.write(buffer, 0, len)
-      } ; len > 0}) ()
+      while ({
+        {
+          len = is.read(buffer)
+          if (len > 0)
+            os.write(buffer, 0, len)
+        }; len > 0
+      }) ()
       os.toByteArray
     } finally {
       is.close()
@@ -172,16 +178,18 @@ object ZipIO extends LazyLogging {
       resultList <- withUnzipedAsync(zip)((name, is) => f(name, is))
     } yield resultList
 
-  def withUnzipedAsync[A](zip: ZipFile,
-                          includeHiddenFiles: Boolean = false,
-                          hiddenFilesWhitelist: List[String] = List(),
-                          truncateCommonPrefix: Boolean = false,
-                          excludeFromPrefix: Option[List[String]] = None)(f: (Path, InputStream) => Fox[A])(
-      implicit ec: ExecutionContext): Fox[List[A]] = {
+  def withUnzipedAsync[A](
+      zip: ZipFile,
+      includeHiddenFiles: Boolean = false,
+      hiddenFilesWhitelist: List[String] = List(),
+      truncateCommonPrefix: Boolean = false,
+      excludeFromPrefix: Option[List[String]] = None
+  )(f: (Path, InputStream) => Fox[A])(implicit ec: ExecutionContext): Fox[List[A]] = {
 
     val zipEntries = zip.entries.asScala.filter { (e: ZipEntry) =>
       !e.isDirectory && (includeHiddenFiles || !isFileHidden(e) || hiddenFilesWhitelist.contains(
-        Paths.get(e.getName).getFileName.toString))
+        Paths.get(e.getName).getFileName.toString
+      ))
     }.toList
 
     val commonPrefix = if (truncateCommonPrefix) {
@@ -223,15 +231,18 @@ object ZipIO extends LazyLogging {
     } yield result
   }
 
-  def withUnziped[A](zip: ZipFile,
-                     includeHiddenFiles: Boolean = false,
-                     hiddenFilesWhitelist: List[String] = List(),
-                     truncateCommonPrefix: Boolean = false,
-                     excludeFromPrefix: Option[List[String]] = None)(f: (Path, InputStream) => Box[A]): Box[List[A]] = {
+  def withUnziped[A](
+      zip: ZipFile,
+      includeHiddenFiles: Boolean = false,
+      hiddenFilesWhitelist: List[String] = List(),
+      truncateCommonPrefix: Boolean = false,
+      excludeFromPrefix: Option[List[String]] = None
+  )(f: (Path, InputStream) => Box[A]): Box[List[A]] = {
 
     val zipEntries = zip.entries.asScala.filter { (e: ZipEntry) =>
       !e.isDirectory && (includeHiddenFiles || !isFileHidden(e) || hiddenFilesWhitelist.contains(
-        Paths.get(e.getName).getFileName.toString))
+        Paths.get(e.getName).getFileName.toString
+      ))
     }.toList
 
     val commonPrefix = if (truncateCommonPrefix) {
@@ -263,9 +274,7 @@ object ZipIO extends LazyLogging {
           } catch {
             case e: Exception =>
               Failure(e.getMessage)
-          } finally {
-            if (input != null) input.close()
-          }
+          } finally if (input != null) input.close()
         case e =>
           e
       }
@@ -275,21 +284,26 @@ object ZipIO extends LazyLogging {
     result
   }
 
-  def unzipToDirectory(file: File,
-                       targetDir: Path,
-                       includeHiddenFiles: Boolean,
-                       hiddenFilesWhitelist: List[String],
-                       truncateCommonPrefix: Boolean,
-                       excludeFromPrefix: Option[List[String]]): Box[List[Path]] =
+  def unzipToDirectory(
+      file: File,
+      targetDir: Path,
+      includeHiddenFiles: Boolean,
+      hiddenFilesWhitelist: List[String],
+      truncateCommonPrefix: Boolean,
+      excludeFromPrefix: Option[List[String]]
+  ): Box[List[Path]] =
     tryo(new java.util.zip.ZipFile(file)).flatMap(
-      unzipToDirectory(_, targetDir, includeHiddenFiles, hiddenFilesWhitelist, truncateCommonPrefix, excludeFromPrefix))
+      unzipToDirectory(_, targetDir, includeHiddenFiles, hiddenFilesWhitelist, truncateCommonPrefix, excludeFromPrefix)
+    )
 
-  def unzipToDirectory(zip: ZipFile,
-                       targetDir: Path,
-                       includeHiddenFiles: Boolean,
-                       hiddenFilesWhitelist: List[String],
-                       truncateCommonPrefix: Boolean,
-                       excludeFromPrefix: Option[List[String]]): Box[List[Path]] =
+  def unzipToDirectory(
+      zip: ZipFile,
+      targetDir: Path,
+      includeHiddenFiles: Boolean,
+      hiddenFilesWhitelist: List[String],
+      truncateCommonPrefix: Boolean,
+      excludeFromPrefix: Option[List[String]]
+  ): Box[List[Path]] =
     withUnziped(zip, includeHiddenFiles, hiddenFilesWhitelist, truncateCommonPrefix, excludeFromPrefix) { (name, in) =>
       val path = targetDir.resolve(name)
       if (path.getParent != null) {
@@ -303,8 +317,6 @@ object ZipIO extends LazyLogging {
       } catch {
         case e: Exception =>
           Failure(e.getMessage)
-      } finally {
-        if (out != null) out.close()
-      }
+      } finally if (out != null) out.close()
     }
 }

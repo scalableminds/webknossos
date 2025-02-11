@@ -48,16 +48,17 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
     } yield ()
   }
 
-  def addLabelSetFromBucketStream(bucketStream: Iterator[(BucketPosition, Array[Byte])],
-                                  allowedMags: Set[Vec3Int]): Unit = {
+  def addLabelSetFromBucketStream(
+      bucketStream: Iterator[(BucketPosition, Array[Byte])],
+      allowedMags: Set[Vec3Int]
+  ): Unit = {
     val labelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
-    bucketStream.foreach {
-      case (bucketPosition, data) =>
-        if (allowedMags.contains(bucketPosition.mag)) {
-          val dataTyped = UnsignedIntegerArray.fromByteArray(data, elementClass)
-          val nonZeroData: Array[UnsignedInteger] = UnsignedIntegerArray.filterNonZero(dataTyped)
-          labelSet ++= nonZeroData
-        }
+    bucketStream.foreach { case (bucketPosition, data) =>
+      if (allowedMags.contains(bucketPosition.mag)) {
+        val dataTyped = UnsignedIntegerArray.fromByteArray(data, elementClass)
+        val nonZeroData: Array[UnsignedInteger] = UnsignedIntegerArray.filterNonZero(dataTyped)
+        labelSet ++= nonZeroData
+      }
     }
     addLabelSet(labelSet)
   }
@@ -84,14 +85,15 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
       largestSegmentId = segmentId
     }
 
-  def addFromBucketStream(sourceVolumeIndex: Int,
-                          bucketStream: Iterator[(BucketPosition, Array[Byte])],
-                          allowedMags: Option[Set[Vec3Int]] = None): Unit =
-    bucketStream.foreach {
-      case (bucketPosition, bytes) =>
-        if (!isAllZero(bytes) && allowedMags.forall(_.contains(bucketPosition.mag))) {
-          add(sourceVolumeIndex, bucketPosition, bytes)
-        }
+  def addFromBucketStream(
+      sourceVolumeIndex: Int,
+      bucketStream: Iterator[(BucketPosition, Array[Byte])],
+      allowedMags: Option[Set[Vec3Int]] = None
+  ): Unit =
+    bucketStream.foreach { case (bucketPosition, bytes) =>
+      if (!isAllZero(bytes) && allowedMags.forall(_.contains(bucketPosition.mag))) {
+        add(sourceVolumeIndex, bucketPosition, bytes)
+      }
     }
 
   def addFromDataZip(sourceVolumeIndex: Int, zipFile: File)(implicit ec: ExecutionContext): Fox[Unit] =
@@ -104,14 +106,13 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
     prepareLabelMaps()
     if (mergedVolume.contains(bucketPosition)) {
       val mutableBucketData = mergedVolume(bucketPosition)
-      dataTyped.zipWithIndex.foreach {
-        case (valueTyped, index) =>
-          if (!valueTyped.isZero) {
-            val byteValueMapped =
-              if (labelMaps.isEmpty || (initialLargestSegmentId > 0 && sourceVolumeIndex == 0)) valueTyped
-              else labelMaps(sourceVolumeIndex)(valueTyped)
-            mutableBucketData(index) = byteValueMapped
-          }
+      dataTyped.zipWithIndex.foreach { case (valueTyped, index) =>
+        if (!valueTyped.isZero) {
+          val byteValueMapped =
+            if (labelMaps.isEmpty || (initialLargestSegmentId > 0 && sourceVolumeIndex == 0)) valueTyped
+            else labelMaps(sourceVolumeIndex)(valueTyped)
+          mutableBucketData(index) = byteValueMapped
+        }
       }
       mergedVolume += ((bucketPosition, mutableBucketData))
     } else {
@@ -137,8 +138,8 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
     } yield ()
 
   def presentMags: Set[Vec3Int] =
-    mergedVolume.map {
-      case (bucketPosition: BucketPosition, _) => bucketPosition.mag
+    mergedVolume.map { case (bucketPosition: BucketPosition, _) =>
+      bucketPosition.mag
     }.toSet
 
   def stats(createdSegmentIndex: Boolean): MergedVolumeStats =

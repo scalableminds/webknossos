@@ -18,11 +18,11 @@ inThisBuild(
 sbtJniCoreScope := Compile
 val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
-  "-explain",      // More detailed compiler output
+  "-explain", // More detailed compiler output
   // "-Xcheck-null",  // Additional null checks are no longer supported in Scala 3
   "-explain-types", // Explain type errors in detail
-  "-rewrite",
-  "-source:3.4-migration",
+  // "-rewrite",
+  // "-source:3.4-migration",
   "-release:11",
   "-feature",
   "-deprecation",

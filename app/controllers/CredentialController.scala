@@ -35,10 +35,10 @@ object GoogleServiceAccountCredentialParameters {
     Json.format[GoogleServiceAccountCredentialParameters]
 }
 
-class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouette[WkEnv])(
-    implicit ec: ExecutionContext,
-    val bodyParsers: PlayBodyParsers)
-    extends Controller
+class CredentialController @Inject() (credentialDAO: CredentialDAO, sil: Silhouette[WkEnv])(implicit
+    ec: ExecutionContext,
+    val bodyParsers: PlayBodyParsers
+) extends Controller
     with FoxImplicits {
 
   def createHttpBasicAuthCredential: Action[HttpBasicAuthCredentialParameters] =
@@ -48,11 +48,13 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
         _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
         _ <- credentialDAO.insertOne(
           _id,
-          HttpBasicAuthCredential(request.body.name,
-                                  request.body.username,
-                                  request.body.password,
-                                  request.identity._id.toString,
-                                  request.identity._organization.toString)
+          HttpBasicAuthCredential(
+            request.body.name,
+            request.body.username,
+            request.body.password,
+            request.identity._id.toString,
+            request.identity._organization.toString
+          )
         ) ?~> "create.failed"
       } yield Ok(Json.toJson(_id))
     }
@@ -64,11 +66,13 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
         _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
         _ <- credentialDAO.insertOne(
           _id,
-          S3AccessKeyCredential(request.body.name,
-                                request.body.accessKeyId,
-                                request.body.secretAccessKey,
-                                request.identity._id.toString,
-                                request.identity._organization.toString)
+          S3AccessKeyCredential(
+            request.body.name,
+            request.body.accessKeyId,
+            request.body.secretAccessKey,
+            request.identity._id.toString,
+            request.identity._organization.toString
+          )
         ) ?~> "create.failed"
       } yield Ok(Json.toJson(_id))
     }
@@ -80,10 +84,12 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
         _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
         _ <- credentialDAO.insertOne(
           _id,
-          GoogleServiceAccountCredential(request.body.name,
-                                         request.body.secretJson,
-                                         request.identity._id.toString,
-                                         request.identity._organization.toString)
+          GoogleServiceAccountCredential(
+            request.body.name,
+            request.body.secretJson,
+            request.identity._id.toString,
+            request.identity._organization.toString
+          )
         ) ?~> "create.failed"
       } yield Ok(Json.toJson(_id))
     }

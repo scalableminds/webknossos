@@ -17,13 +17,15 @@ import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
-class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
-                                         jobService: JobService,
-                                         workerDAO: WorkerDAO,
-                                         voxelyticsDAO: VoxelyticsDAO,
-                                         aiInferenceDAO: AiInferenceDAO,
-                                         datasetDAO: DatasetDAO,
-                                         wkConf: WkConf)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+class WKRemoteWorkerController @Inject() (
+    jobDAO: JobDAO,
+    jobService: JobService,
+    workerDAO: WorkerDAO,
+    voxelyticsDAO: VoxelyticsDAO,
+    aiInferenceDAO: AiInferenceDAO,
+    datasetDAO: DatasetDAO,
+    wkConf: WkConf
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   def requestJobs(key: String): Action[AnyContent] = Action.async { implicit request =>
@@ -35,9 +37,11 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
       jobsToCancel: List[Job] <- jobDAO.findAllCancellingByWorker(worker._id)
       // make sure that the jobs to run have not already just been cancelled
       assignedUnfinishedJobsFiltered = assignedUnfinishedJobs.filter(j =>
-        !jobsToCancel.map(_._id).toSet.contains(j._id))
+        !jobsToCancel.map(_._id).toSet.contains(j._id)
+      )
       assignedUnfinishedJs <- Fox.serialCombined(assignedUnfinishedJobsFiltered)(
-        jobService.parameterWrites(_)(GlobalAccessContext))
+        jobService.parameterWrites(_)(GlobalAccessContext)
+      )
       toCancelJs <- Fox.serialCombined(jobsToCancel)(jobService.parameterWrites(_)(GlobalAccessContext))
     } yield Ok(Json.obj("to_run" -> assignedUnfinishedJs, "to_cancel" -> toCancelJs))
   }
@@ -48,25 +52,32 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
       unfinishedLowPriorityCount <- jobDAO.countUnfinishedByWorker(worker._id, JobCommand.lowPriorityJobs)
       pendingHighPriorityCount <- jobDAO.countUnassignedPendingForDataStore(
         worker._dataStore,
-        JobCommand.highPriorityJobs.intersect(worker.supportedJobCommands))
+        JobCommand.highPriorityJobs.intersect(worker.supportedJobCommands)
+      )
       pendingLowPriorityCount <- jobDAO.countUnassignedPendingForDataStore(
         worker._dataStore,
-        JobCommand.lowPriorityJobs.intersect(worker.supportedJobCommands))
-      mayAssignHighPriorityJob = unfinishedHighPriorityCount < worker.maxParallelHighPriorityJobs && pendingHighPriorityCount > 0
-      mayAssignLowPriorityJob = unfinishedLowPriorityCount < worker.maxParallelLowPriorityJobs && pendingLowPriorityCount > 0
+        JobCommand.lowPriorityJobs.intersect(worker.supportedJobCommands)
+      )
+      mayAssignHighPriorityJob =
+        unfinishedHighPriorityCount < worker.maxParallelHighPriorityJobs && pendingHighPriorityCount > 0
+      mayAssignLowPriorityJob =
+        unfinishedLowPriorityCount < worker.maxParallelLowPriorityJobs && pendingLowPriorityCount > 0
       currentlyAssignableJobCommands = assignableJobCommands(mayAssignHighPriorityJob, mayAssignLowPriorityJob)
         .intersect(worker.supportedJobCommands)
-      _ <- if ((!mayAssignHighPriorityJob && !mayAssignLowPriorityJob) || pendingIterationCount == 0)
-        Fox.successful(())
-      else {
-        jobDAO.reserveNextJob(worker, currentlyAssignableJobCommands).flatMap { _ =>
-          reserveNextJobs(worker, pendingIterationCount - 1)
+      _ <-
+        if ((!mayAssignHighPriorityJob && !mayAssignLowPriorityJob) || pendingIterationCount == 0)
+          Fox.successful(())
+        else {
+          jobDAO.reserveNextJob(worker, currentlyAssignableJobCommands).flatMap { _ =>
+            reserveNextJobs(worker, pendingIterationCount - 1)
+          }
         }
-      }
     } yield ()
 
-  private def assignableJobCommands(mayAssignHighPriorityJob: Boolean,
-                                    mayAssignLowPriorityJob: Boolean): Set[JobCommand] = {
+  private def assignableJobCommands(
+      mayAssignHighPriorityJob: Boolean,
+      mayAssignLowPriorityJob: Boolean
+  ): Set[JobCommand] = {
     val lowPriorityOrEmpty = if (mayAssignLowPriorityJob) JobCommand.lowPriorityJobs else Set()
     val highPriorityOrEmpty = if (mayAssignHighPriorityJob) JobCommand.highPriorityJobs else Set()
     lowPriorityOrEmpty ++ highPriorityOrEmpty

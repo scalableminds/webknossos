@@ -6,8 +6,8 @@ import play.api.libs.json.{Format, JsError, JsPath, JsResult, JsString, JsSucces
 object LengthUnit extends ExtendedEnumeration {
   type LengthUnit = Value
   val yoctometer, zeptometer, attometer, femtometer, picometer, nanometer, micrometer, millimeter, centimeter,
-  decimeter, meter, hectometer, kilometer, megameter, gigameter, terameter, petameter, exameter, zettameter, yottameter,
-  angstrom, inch, foot, yard, mile, parsec = Value
+      decimeter, meter, hectometer, kilometer, megameter, gigameter, terameter, petameter, exameter, zettameter,
+      yottameter, angstrom, inch, foot, yard, mile, parsec = Value
 
   override def fromString(s: String): Option[Value] =
     s match {

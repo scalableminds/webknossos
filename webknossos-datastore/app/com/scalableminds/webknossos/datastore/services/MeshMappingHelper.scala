@@ -57,24 +57,27 @@ trait MeshMappingHelper {
         // use the mappingName (here the editable mapping’s base mapping) to look it up from file.
         for {
           tracingstoreUri <- dsRemoteWebknossosClient.getTracingstoreUri
-          segmentIdsResult <- dsRemoteTracingstoreClient.getEditableMappingSegmentIdsForAgglomerate(tracingstoreUri,
-                                                                                                    tracingId,
-                                                                                                    agglomerateId)
-          segmentIds <- if (segmentIdsResult.agglomerateIdIsPresent)
-            Fox.successful(segmentIdsResult.segmentIds)
-          else // the agglomerate id is not present in the editable mapping. Fetch its info from the base mapping.
-            for {
-              agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-              localSegmentIds <- agglomerateService.segmentIdsForAgglomerateId(
-                AgglomerateFileKey(
-                  organizationId,
-                  datasetDirectoryName,
-                  dataLayerName,
-                  mappingName
-                ),
-                agglomerateId
-              )
-            } yield localSegmentIds
+          segmentIdsResult <- dsRemoteTracingstoreClient.getEditableMappingSegmentIdsForAgglomerate(
+            tracingstoreUri,
+            tracingId,
+            agglomerateId
+          )
+          segmentIds <-
+            if (segmentIdsResult.agglomerateIdIsPresent)
+              Fox.successful(segmentIdsResult.segmentIds)
+            else // the agglomerate id is not present in the editable mapping. Fetch its info from the base mapping.
+              for {
+                agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
+                localSegmentIds <- agglomerateService.segmentIdsForAgglomerateId(
+                  AgglomerateFileKey(
+                    organizationId,
+                    datasetDirectoryName,
+                    dataLayerName,
+                    mappingName
+                  ),
+                  agglomerateId
+                )
+              } yield localSegmentIds
         } yield segmentIds
       case _ => Fox.failure("Cannot determine segment ids for editable mapping without base mapping")
     }

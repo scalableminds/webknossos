@@ -17,48 +17,49 @@ import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 object WKWArray extends WKWDataFormatHelper {
-  def open(path: VaultPath,
-           dataSourceId: DataSourceId,
-           layerName: String,
-           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[WKWArray] =
+  def open(
+      path: VaultPath,
+      dataSourceId: DataSourceId,
+      layerName: String,
+      sharedChunkContentsCache: AlfuCache[String, MultiArray]
+  )(implicit ec: ExecutionContext): Fox[WKWArray] =
     for {
       headerBytes <- (path / FILENAME_HEADER_WKW).readBytes() ?~> s"Could not read header at ${FILENAME_HEADER_WKW}"
       dataInputStream = new LittleEndianDataInputStream(new ByteArrayInputStream(headerBytes))
       header <- WKWHeader(dataInputStream, readJumpTable = false).toFox
-      array <- tryo(new WKWArray(path,
-                                 dataSourceId,
-                                 layerName,
-                                 header,
-                                 AxisOrder.cxyz,
-                                 None,
-                                 None,
-                                 sharedChunkContentsCache)) ?~> "Could not open wkw array"
+      array <- tryo(
+        new WKWArray(path, dataSourceId, layerName, header, AxisOrder.cxyz, None, None, sharedChunkContentsCache)
+      ) ?~> "Could not open wkw array"
     } yield array
 }
 
-class WKWArray(vaultPath: VaultPath,
-               dataSourceId: DataSourceId,
-               layerName: String,
-               header: WKWHeader,
-               axisOrder: AxisOrder,
-               channelIndex: Option[Int],
-               additionalAxes: Option[Seq[AdditionalAxis]],
-               sharedChunkContentsCache: AlfuCache[String, MultiArray])
-    extends DatasetArray(vaultPath,
-                         dataSourceId,
-                         layerName,
-                         header,
-                         axisOrder,
-                         channelIndex,
-                         additionalAxes,
-                         sharedChunkContentsCache)
+class WKWArray(
+    vaultPath: VaultPath,
+    dataSourceId: DataSourceId,
+    layerName: String,
+    header: WKWHeader,
+    axisOrder: AxisOrder,
+    channelIndex: Option[Int],
+    additionalAxes: Option[Seq[AdditionalAxis]],
+    sharedChunkContentsCache: AlfuCache[String, MultiArray]
+) extends DatasetArray(
+      vaultPath,
+      dataSourceId,
+      layerName,
+      header,
+      axisOrder,
+      channelIndex,
+      additionalAxes,
+      sharedChunkContentsCache
+    )
     with MortonEncoding
     with WKWDataFormatHelper {
 
   private val parsedShardIndexCache: AlfuCache[VaultPath, Array[Long]] = AlfuCache()
 
-  override protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
-      implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] =
+  override protected def getShardedChunkPathAndRange(
+      chunkIndex: Array[Int]
+  )(implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] =
     for {
       shardCoordinates <- Fox.option2Fox(chunkIndexToShardIndex(chunkIndex).headOption)
       shardFilename = getChunkFilename(shardCoordinates)
@@ -96,15 +97,18 @@ class WKWArray(vaultPath: VaultPath,
       _ <- Box.fromBool(x >= 0 && x < header.numChunksPerShardDimension) ?~! error(
         "X coordinate is out of range",
         s"[0, ${header.numChunksPerShardDimension})",
-        x)
+        x
+      )
       _ <- Box.fromBool(y >= 0 && y < header.numChunksPerShardDimension) ?~! error(
         "Y coordinate is out of range",
         s"[0, ${header.numChunksPerShardDimension})",
-        y)
+        y
+      )
       _ <- Box.fromBool(z >= 0 && z < header.numChunksPerShardDimension) ?~! error(
         "Z coordinate is out of range",
         s"[0, ${header.numChunksPerShardDimension})",
-        z)
+        z
+      )
     } yield mortonEncode(x, y, z)
 
   private def getChunkIndexInShardIndex(chunkIndex: Array[Int]): Box[Int] = {

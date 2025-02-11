@@ -40,10 +40,12 @@ object ComposeRequestLayer {
   implicit val composeLayerFormat: OFormat[ComposeRequestLayer] = Json.format[ComposeRequestLayer]
 }
 
-class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
-                               remoteWebknossosClient: DSRemoteWebknossosClient,
-                               dataSourceService: DataSourceService,
-                               datasetSymlinkService: DatasetSymlinkService)(implicit ec: ExecutionContext)
+class ComposeService @Inject() (
+    dataSourceRepository: DataSourceRepository,
+    remoteWebknossosClient: DSRemoteWebknossosClient,
+    dataSourceService: DataSourceService,
+    datasetSymlinkService: DatasetSymlinkService
+)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
   val dataBaseDir: Path = datasetSymlinkService.dataBaseDir
@@ -64,13 +66,17 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
         List(),
         Some(composeRequest.targetFolderId)
       )
-      reservedAdditionalInfo <- remoteWebknossosClient.reserveDataSourceUpload(reserveUploadInfo) ?~> "Failed to reserve upload."
+      reservedAdditionalInfo <- remoteWebknossosClient.reserveDataSourceUpload(
+        reserveUploadInfo
+      ) ?~> "Failed to reserve upload."
       directory = uploadDirectory(composeRequest.organizationId, reservedAdditionalInfo.directoryName)
       _ = PathUtils.ensureDirectory(directory)
-      dataSource <- createDatasource(composeRequest,
-                                     reservedAdditionalInfo.directoryName,
-                                     composeRequest.organizationId,
-                                     directory)
+      dataSource <- createDatasource(
+        composeRequest,
+        reservedAdditionalInfo.directoryName,
+        composeRequest.organizationId,
+        directory
+      )
       properties = Json.toJson(dataSource).toString().getBytes(StandardCharsets.UTF_8)
       _ = Files.write(directory.resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON), properties)
     } yield (dataSource, reservedAdditionalInfo.newDatasetId.toString)
@@ -84,31 +90,42 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
         cOpt match {
           case Some(c) => Some(c ++ composeLayer.transformations.toList)
           case None    => Some(composeLayer.transformations.toList)
-      }
-      linkedLayerIdentifier = LinkedLayerIdentifier(composeLayer.dataSourceId.organizationId,
-                                                    composeLayer.dataSourceId.directoryName,
-                                                    composeLayer.sourceName,
-                                                    Some(composeLayer.newName))
+        }
+      linkedLayerIdentifier = LinkedLayerIdentifier(
+        composeLayer.dataSourceId.organizationId,
+        composeLayer.dataSourceId.directoryName,
+        composeLayer.sourceName,
+        Some(composeLayer.newName)
+      )
       layerIsRemote = isLayerRemote(composeLayer.dataSourceId, composeLayer.sourceName)
       _ <- Fox.runIf(!layerIsRemote)(
-        datasetSymlinkService.addSymlinksToOtherDatasetLayers(uploadDir, List(linkedLayerIdentifier)))
+        datasetSymlinkService.addSymlinksToOtherDatasetLayers(uploadDir, List(linkedLayerIdentifier))
+      )
       editedLayer: DataLayer = layer match {
         case l: DataLayerWithMagLocators =>
-          l.mapped(name = composeLayer.newName,
-                   coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
+          l.mapped(
+            name = composeLayer.newName,
+            coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations)
+          )
         case l: WKWDataLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
+          l.copy(
+            name = composeLayer.newName,
+            coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations)
+          )
         case l: WKWSegmentationLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
+          l.copy(
+            name = composeLayer.newName,
+            coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations)
+          )
       }
     } yield editedLayer
 
-  private def createDatasource(composeRequest: ComposeRequest,
-                               datasetDirectoryName: String,
-                               organizationId: String,
-                               uploadDir: Path): Fox[DataSource] =
+  private def createDatasource(
+      composeRequest: ComposeRequest,
+      datasetDirectoryName: String,
+      organizationId: String,
+      uploadDir: Path
+  ): Fox[DataSource] =
     for {
       layers <- Fox.serialCombined(composeRequest.layers.toList)(getLayerFromComposeLayer(_, uploadDir))
       dataSource = GenericDataSource(

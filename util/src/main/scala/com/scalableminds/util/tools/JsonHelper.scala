@@ -42,21 +42,19 @@ object JsonHelper extends LazyLogging {
         Failure(s"An EOF exception occurred during json read. File: ${rootPath.relativize(path).toString}")
       case _: AccessDeniedException | _: FileNotFoundException =>
         logger.warn(
-          s"File access exception in JsonHelper while trying to extract json from file. File: ${rootPath.toString}")
+          s"File access exception in JsonHelper while trying to extract json from file. File: ${rootPath.toString}"
+        )
         Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}'. Access denied.")
       case e: Exception =>
         logger.warn(s"Json mapping issue in '${rootPath.toString}': $e")
         Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}': $e")
-    } finally {
-      if (buffer != null) buffer.close()
-    }
+    } finally if (buffer != null) buffer.close()
   }
 
   def jsError2HumanReadable(js: JsError)(implicit messages: Messages): String =
-    js.errors.map {
-      case (path, errors) =>
-        val errorStr = errors.map(m => Messages(m.message)).mkString(", ")
-        s"Error at json path '$path': $errorStr."
+    js.errors.map { case (path, errors) =>
+      val errorStr = errors.map(m => Messages(m.message)).mkString(", ")
+      s"Error at json path '$path': $errorStr."
     }.mkString("\n")
 
   implicit def boxFormat[T: Format]: Format[Box[T]] = new Format[Box[T]] {
@@ -101,8 +99,9 @@ object JsonHelper extends LazyLogging {
     parseAndValidateJson[T](new String(bytes, StandardCharsets.UTF_8))
 
   def parseAndValidateJson[T: Reads](s: String): Box[T] =
-    tryo(Json.parse(s))
-      .flatMap(parsed => validateJsValue[T](parsed)) ~> "Failed to parse or validate json against data schema"
+    tryo(Json.parse(s)).flatMap(parsed =>
+      validateJsValue[T](parsed)
+    ) ~> "Failed to parse or validate json against data schema"
 
   def validateJsValue[T: Reads](o: JsValue): Box[T] =
     o.validate[T] match {

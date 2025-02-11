@@ -12,7 +12,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 
 import scala.concurrent.ExecutionContext
 
-class DataSourceRepository @Inject()(
+class DataSourceRepository @Inject() (
     remoteWebknossosClient: DSRemoteWebknossosClient,
     @Named("webknossos-datastore") val system: ActorSystem
 )(implicit ec: ExecutionContext)
@@ -20,11 +20,13 @@ class DataSourceRepository @Inject()(
     with LazyLogging
     with FoxImplicits {
 
-  def getDataSourceAndDataLayer(organizationId: String, datasetDirectoryName: String, dataLayerName: String)(
-      implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] =
+  def getDataSourceAndDataLayer(organizationId: String, datasetDirectoryName: String, dataLayerName: String)(implicit
+      m: MessagesProvider
+  ): Fox[(DataSource, DataLayer)] =
     for {
       dataSource <- findUsable(DataSourceId(datasetDirectoryName, organizationId)).toFox ?~> Messages(
-        "dataSource.notFound")
+        "dataSource.notFound"
+      )
       dataLayer <- dataSource.getDataLayer(dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName)
     } yield (dataSource, dataLayer)
 

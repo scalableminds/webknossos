@@ -15,12 +15,13 @@ import security.{URLSharing, WkEnv}
 
 import scala.concurrent.ExecutionContext
 
-class ConfigurationController @Inject()(
+class ConfigurationController @Inject() (
     userService: UserService,
     datasetService: DatasetService,
     datasetDAO: DatasetDAO,
     datasetConfigurationService: DatasetConfigurationService,
-    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   def read: Action[AnyContent] = sil.UserAwareAction { implicit request =>
@@ -42,7 +43,9 @@ class ConfigurationController @Inject()(
         configuration <- request.identity.toFox
           .flatMap(user =>
             datasetConfigurationService.getDatasetViewConfigurationForUserAndDataset(request.body, user, datasetId)(
-              GlobalAccessContext))
+              GlobalAccessContext
+            )
+          )
           .orElse(
             datasetConfigurationService.getDatasetViewConfigurationForDataset(request.body, datasetId)(ctx)
           )

@@ -19,9 +19,9 @@ object EditableMappingSegmentListResult {
   implicit val jsonFormat: OFormat[EditableMappingSegmentListResult] = Json.format[EditableMappingSegmentListResult]
 }
 
-class DSRemoteTracingstoreClient @Inject()(
+class DSRemoteTracingstoreClient @Inject() (
     rpc: RPC,
-    val lifecycle: ApplicationLifecycle,
+    val lifecycle: ApplicationLifecycle
 ) extends LazyLogging
     with FoxImplicits {
 
@@ -32,15 +32,18 @@ class DSRemoteTracingstoreClient @Inject()(
     rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/$mag/.zarray").withTokenFromContext
       .getWithJsonResponse[ZarrHeader]
 
-  def getZarrJson(tracingId: String, mag: String, tracingStoreUri: String)(
-      implicit tc: TokenContext): Fox[Zarr3ArrayHeader] =
+  def getZarrJson(tracingId: String, mag: String, tracingStoreUri: String)(implicit
+      tc: TokenContext
+  ): Fox[Zarr3ArrayHeader] =
     rpc(s"$tracingStoreUri/tracings/volume/zarr3_experimental/$tracingId/$mag/zarr.json").withTokenFromContext
       .getWithJsonResponse[Zarr3ArrayHeader]
 
-  def getVolumeLayerAsZarrLayer(tracingId: String,
-                                tracingName: Option[String],
-                                tracingStoreUri: String,
-                                zarrVersion: Int)(implicit tc: TokenContext): Fox[ZarrSegmentationLayer] = {
+  def getVolumeLayerAsZarrLayer(
+      tracingId: String,
+      tracingName: Option[String],
+      tracingStoreUri: String,
+      zarrVersion: Int
+  )(implicit tc: TokenContext): Fox[ZarrSegmentationLayer] = {
     val zarrVersionDependantSubPath = getZarrVersionDependantSubPath(zarrVersion)
     rpc(s"$tracingStoreUri/tracings/volume/$zarrVersionDependantSubPath/$tracingId/zarrSource").withTokenFromContext
       .addQueryStringOptional("tracingName", tracingName)
@@ -51,30 +54,37 @@ class DSRemoteTracingstoreClient @Inject()(
     rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/.zattrs").withTokenFromContext
       .getWithJsonResponse[NgffMetadata]
 
-  def getZarrJsonGroupHeaderWithNgff(tracingId: String, tracingStoreUri: String)(
-      implicit tc: TokenContext): Fox[Zarr3GroupHeader] =
+  def getZarrJsonGroupHeaderWithNgff(tracingId: String, tracingStoreUri: String)(implicit
+      tc: TokenContext
+  ): Fox[Zarr3GroupHeader] =
     rpc(s"$tracingStoreUri/tracings/volume/zarr3_experimental/$tracingId/zarr.json").withTokenFromContext
       .getWithJsonResponse[Zarr3GroupHeader]
 
-  def getRawZarrCube(tracingId: String, mag: String, cxyz: String, tracingStoreUri: String)(
-      implicit tc: TokenContext): Fox[Array[Byte]] =
+  def getRawZarrCube(tracingId: String, mag: String, cxyz: String, tracingStoreUri: String)(implicit
+      tc: TokenContext
+  ): Fox[Array[Byte]] =
     rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/$mag/$cxyz").silent.withTokenFromContext.getWithBytesResponse
 
   def getDataLayerMagDirectoryContents(tracingId: String, mag: String, tracingStoreUri: String, zarrVersion: Int)(
-      implicit tc: TokenContext): Fox[List[String]] =
-    rpc(s"$tracingStoreUri/tracings/volume/${getZarrVersionDependantSubPath(zarrVersion)}/json/$tracingId/$mag").withTokenFromContext
-      .getWithJsonResponse[List[String]]
+      implicit tc: TokenContext
+  ): Fox[List[String]] =
+    rpc(
+      s"$tracingStoreUri/tracings/volume/${getZarrVersionDependantSubPath(zarrVersion)}/json/$tracingId/$mag"
+    ).withTokenFromContext.getWithJsonResponse[List[String]]
 
-  def getDataLayerDirectoryContents(tracingId: String, tracingStoreUri: String, zarrVersion: Int)(
-      implicit tc: TokenContext): Fox[List[String]] =
-    rpc(s"$tracingStoreUri/tracings/volume/${getZarrVersionDependantSubPath(zarrVersion)}/json/$tracingId").withTokenFromContext
-      .getWithJsonResponse[List[String]]
+  def getDataLayerDirectoryContents(tracingId: String, tracingStoreUri: String, zarrVersion: Int)(implicit
+      tc: TokenContext
+  ): Fox[List[String]] =
+    rpc(
+      s"$tracingStoreUri/tracings/volume/${getZarrVersionDependantSubPath(zarrVersion)}/json/$tracingId"
+    ).withTokenFromContext.getWithJsonResponse[List[String]]
 
   def getZGroup(tracingId: String, tracingStoreUri: String)(implicit tc: TokenContext): Fox[JsObject] =
     rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/.zgroup").withTokenFromContext.getWithJsonResponse[JsObject]
 
   def getEditableMappingSegmentIdsForAgglomerate(tracingStoreUri: String, tracingId: String, agglomerateId: Long)(
-      implicit tc: TokenContext): Fox[EditableMappingSegmentListResult] =
+      implicit tc: TokenContext
+  ): Fox[EditableMappingSegmentListResult] =
     rpc(s"$tracingStoreUri/tracings/mapping/$tracingId/segmentsForAgglomerate")
       .addQueryString("agglomerateId" -> agglomerateId.toString)
       .withTokenFromContext

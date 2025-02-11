@@ -39,7 +39,8 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
   private lazy val additionalAxesSorted = reorderAdditionalAxes(layer.additionalAxes.getOrElse(Seq.empty))
 
   def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int], voxelSize: Option[VoxelSize])(
-      implicit ec: ExecutionContext): Iterator[NamedStream] = {
+      implicit ec: ExecutionContext
+  ): Iterator[NamedStream] = {
 
     val header = Zarr3ArrayHeader.fromDataLayer(layer, mags.headOption.getOrElse(Vec3Int.ones))
     bucketStream.flatMap {
@@ -64,7 +65,8 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
       NamedFunctionStream.fromString(
         GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON,
         Json.prettyPrint(Json.toJson(createVolumeDataSource(voxelSize)))
-      ))
+      )
+    )
   }
 
   private def createVolumeDataSource(voxelSize: Option[VoxelSize]): GenericDataSource[DataLayer] = {
@@ -82,18 +84,25 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
           additionalAxes =
             if (additionalAxesSorted.isEmpty) None
             else Some(additionalAxesSorted)
-        )),
-      scale = voxelSize.getOrElse(VoxelSize.fromFactorWithDefaultUnit(Vec3Double.ones)) // Download should still be available if the dataset no longer exists. In that case, the voxel size is unknown
+        )
+      ),
+      scale = voxelSize.getOrElse(
+        VoxelSize.fromFactorWithDefaultUnit(Vec3Double.ones)
+      ) // Download should still be available if the dataset no longer exists. In that case, the voxel size is unknown
     )
   }
 
-  private def reorderAdditionalCoordinates(additionalCoordinates: Seq[AdditionalCoordinate],
-                                           additionalAxesSorted: Seq[AdditionalAxis]): Seq[AdditionalCoordinate] =
+  private def reorderAdditionalCoordinates(
+      additionalCoordinates: Seq[AdditionalCoordinate],
+      additionalAxesSorted: Seq[AdditionalAxis]
+  ): Seq[AdditionalCoordinate] =
     additionalCoordinates.sortBy(c => additionalAxesSorted.indexWhere(a => a.name == c.name))
 
-  private def zarrChunkFilePath(layerName: String,
-                                bucketPosition: BucketPosition,
-                                additionalAxesSorted: Seq[AdditionalAxis]): String = {
+  private def zarrChunkFilePath(
+      layerName: String,
+      bucketPosition: BucketPosition,
+      additionalAxesSorted: Seq[AdditionalAxis]
+  ): String = {
     // In volume annotations, store buckets/chunks as additionalCoordinates, then z,y,x
     val additionalCoordinatesPart =
       additionalCoordinatesFilePath(bucketPosition.additionalCoordinates, additionalAxesSorted)
@@ -101,8 +110,10 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
     s"$layerName/${bucketPosition.mag.toMagLiteral(allowScalar = true)}/c$dimensionSeparator$channelPart$dimensionSeparator$additionalCoordinatesPart${bucketPosition.bucketX}$dimensionSeparator${bucketPosition.bucketY}$dimensionSeparator${bucketPosition.bucketZ}"
   }
 
-  private def additionalCoordinatesFilePath(additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
-                                            additionalAxesSorted: Seq[AdditionalAxis]) =
+  private def additionalCoordinatesFilePath(
+      additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
+      additionalAxesSorted: Seq[AdditionalAxis]
+  ) =
     additionalCoordinatesOpt match {
       case Some(additionalCoordinates) if additionalCoordinates.nonEmpty =>
         reorderAdditionalCoordinates(additionalCoordinates, additionalAxesSorted)
@@ -122,6 +133,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
         BloscCompressor.keyShuffle -> IntCompressionSetting(BloscCompressor.defaultShuffle),
         BloscCompressor.keyBlocksize -> IntCompressionSetting(BloscCompressor.defaultBlocksize),
         BloscCompressor.keyTypesize -> IntCompressionSetting(BloscCompressor.defaultTypesize)
-      ))
+      )
+    )
 
 }

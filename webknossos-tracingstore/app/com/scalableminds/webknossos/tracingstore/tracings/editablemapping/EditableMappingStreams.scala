@@ -12,10 +12,11 @@ import com.scalableminds.util.tools.Full
 
 import scala.annotation.tailrec
 
-class VersionedAgglomerateToGraphIterator(prefix: String,
-                                          segmentToAgglomerateDataStore: FossilDBClient,
-                                          version: Option[Long] = None)
-    extends Iterator[(String, AgglomerateGraph, Long)]
+class VersionedAgglomerateToGraphIterator(
+    prefix: String,
+    segmentToAgglomerateDataStore: FossilDBClient,
+    version: Option[Long] = None
+) extends Iterator[(String, AgglomerateGraph, Long)]
     with ReversionHelper
     with KeyValueStoreImplicits {
   private val batchSize = 64
@@ -25,7 +26,9 @@ class VersionedAgglomerateToGraphIterator(prefix: String,
   private var nextGraph: Option[VersionedKeyValuePair[AgglomerateGraph]] = None
 
   private def fetchNext: Iterator[VersionedKeyValuePair[Array[Byte]]] =
-    segmentToAgglomerateDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize))(wrapInBox).iterator
+    segmentToAgglomerateDataStore
+      .getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize))(wrapInBox)
+      .iterator
 
   private def fetchNextAndSave = {
     currentBatchIterator = fetchNext
@@ -40,8 +43,8 @@ class VersionedAgglomerateToGraphIterator(prefix: String,
       val graphParsedBox = fromProtoBytes[AgglomerateGraph](chunk.value)
       graphParsedBox match {
         case _ if isRevertedElement(chunk.value) => getNextNonRevertedGraph
-        case Full(graphParsed)                   => Some(VersionedKeyValuePair(versionedKey = chunk.versionedKey, value = graphParsed))
-        case _                                   => getNextNonRevertedGraph
+        case Full(graphParsed) => Some(VersionedKeyValuePair(versionedKey = chunk.versionedKey, value = graphParsed))
+        case _                 => getNextNonRevertedGraph
       }
     } else {
       if (!fetchNextAndSave.hasNext) None
@@ -66,10 +69,11 @@ class VersionedAgglomerateToGraphIterator(prefix: String,
 
 }
 
-class VersionedSegmentToAgglomerateChunkIterator(prefix: String,
-                                                 segmentToAgglomerateDataStore: FossilDBClient,
-                                                 version: Option[Long] = None)
-    extends Iterator[(String, SegmentToAgglomerateChunkProto, Long)]
+class VersionedSegmentToAgglomerateChunkIterator(
+    prefix: String,
+    segmentToAgglomerateDataStore: FossilDBClient,
+    version: Option[Long] = None
+) extends Iterator[(String, SegmentToAgglomerateChunkProto, Long)]
     with ReversionHelper
     with KeyValueStoreImplicits {
   private val batchSize = 64
@@ -79,7 +83,9 @@ class VersionedSegmentToAgglomerateChunkIterator(prefix: String,
   private var nextChunk: Option[VersionedKeyValuePair[SegmentToAgglomerateChunkProto]] = None
 
   private def fetchNext: Iterator[VersionedKeyValuePair[Array[Byte]]] =
-    segmentToAgglomerateDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize))(wrapInBox).iterator
+    segmentToAgglomerateDataStore
+      .getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize))(wrapInBox)
+      .iterator
 
   private def fetchNextAndSave = {
     currentBatchIterator = fetchNext
@@ -94,8 +100,8 @@ class VersionedSegmentToAgglomerateChunkIterator(prefix: String,
       val chunkParsedBox = fromProtoBytes[SegmentToAgglomerateChunkProto](chunk.value)
       chunkParsedBox match {
         case _ if isRevertedElement(chunk.value) => getNextNonRevertedChunk
-        case Full(chunkParsed)                   => Some(VersionedKeyValuePair(versionedKey = chunk.versionedKey, value = chunkParsed))
-        case _                                   => getNextNonRevertedChunk
+        case Full(chunkParsed) => Some(VersionedKeyValuePair(versionedKey = chunk.versionedKey, value = chunkParsed))
+        case _                 => getNextNonRevertedChunk
       }
     } else {
       if (!fetchNextAndSave.hasNext) None

@@ -37,17 +37,17 @@ object UpdateAction {
       } else {
         (json \ "name").as[String] match {
           // Skeleton
-          case "createTree"                => deserialize[CreateTreeSkeletonAction](jsonValue)
-          case "deleteTree"                => deserialize[DeleteTreeSkeletonAction](jsonValue)
-          case "updateTree"                => deserialize[UpdateTreeSkeletonAction](jsonValue)
-          case "mergeTree"                 => deserialize[MergeTreeSkeletonAction](jsonValue)
-          case "moveTreeComponent"         => deserialize[MoveTreeComponentSkeletonAction](jsonValue)
-          case "createNode"                => deserialize[CreateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
-          case "deleteNode"                => deserialize[DeleteNodeSkeletonAction](jsonValue)
-          case "updateNode"                => deserialize[UpdateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
-          case "createEdge"                => deserialize[CreateEdgeSkeletonAction](jsonValue)
-          case "deleteEdge"                => deserialize[DeleteEdgeSkeletonAction](jsonValue)
-          case "updateTreeGroups"          => deserialize[UpdateTreeGroupsSkeletonAction](jsonValue)
+          case "createTree"        => deserialize[CreateTreeSkeletonAction](jsonValue)
+          case "deleteTree"        => deserialize[DeleteTreeSkeletonAction](jsonValue)
+          case "updateTree"        => deserialize[UpdateTreeSkeletonAction](jsonValue)
+          case "mergeTree"         => deserialize[MergeTreeSkeletonAction](jsonValue)
+          case "moveTreeComponent" => deserialize[MoveTreeComponentSkeletonAction](jsonValue)
+          case "createNode"        => deserialize[CreateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
+          case "deleteNode"        => deserialize[DeleteNodeSkeletonAction](jsonValue)
+          case "updateNode"        => deserialize[UpdateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
+          case "createEdge"        => deserialize[CreateEdgeSkeletonAction](jsonValue)
+          case "deleteEdge"        => deserialize[DeleteEdgeSkeletonAction](jsonValue)
+          case "updateTreeGroups"  => deserialize[UpdateTreeGroupsSkeletonAction](jsonValue)
           case "updateSkeletonTracing"     => deserialize[UpdateTracingSkeletonAction](jsonValue)
           case "updateTreeVisibility"      => deserialize[UpdateTreeVisibilitySkeletonAction](jsonValue)
           case "updateTreeGroupVisibility" => deserialize[UpdateTreeGroupVisibilitySkeletonAction](jsonValue)
@@ -92,8 +92,9 @@ object UpdateAction {
       }
     }
 
-    private def deserialize[T](json: JsValue, shouldTransformPositions: Boolean = false)(
-        implicit tjs: Reads[T]): JsResult[T] =
+    private def deserialize[T](json: JsValue, shouldTransformPositions: Boolean = false)(implicit
+        tjs: Reads[T]
+    ): JsResult[T] =
       if (shouldTransformPositions)
         json.transform(positionTransform).get.validate[T]
       else
@@ -129,20 +130,30 @@ object UpdateAction {
       case s: UpdateTracingSkeletonAction =>
         Json.obj("name" -> "updateSkeletonTracing", "value" -> Json.toJson(s)(UpdateTracingSkeletonAction.jsonFormat))
       case s: UpdateTreeVisibilitySkeletonAction =>
-        Json.obj("name" -> "updateTreeVisibility",
-                 "value" -> Json.toJson(s)(UpdateTreeVisibilitySkeletonAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateTreeVisibility",
+          "value" -> Json.toJson(s)(UpdateTreeVisibilitySkeletonAction.jsonFormat)
+        )
       case s: UpdateTreeGroupVisibilitySkeletonAction =>
-        Json.obj("name" -> "updateTreeGroupVisibility",
-                 "value" -> Json.toJson(s)(UpdateTreeGroupVisibilitySkeletonAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateTreeGroupVisibility",
+          "value" -> Json.toJson(s)(UpdateTreeGroupVisibilitySkeletonAction.jsonFormat)
+        )
       case s: UpdateTreeEdgesVisibilitySkeletonAction =>
-        Json.obj("name" -> "updateTreeEdgesVisibility",
-                 "value" -> Json.toJson(s)(UpdateTreeEdgesVisibilitySkeletonAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateTreeEdgesVisibility",
+          "value" -> Json.toJson(s)(UpdateTreeEdgesVisibilitySkeletonAction.jsonFormat)
+        )
       case s: UpdateUserBoundingBoxesSkeletonAction =>
-        Json.obj("name" -> "updateUserBoundingBoxesInSkeletonTracing",
-                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxesSkeletonAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateUserBoundingBoxesInSkeletonTracing",
+          "value" -> Json.toJson(s)(UpdateUserBoundingBoxesSkeletonAction.jsonFormat)
+        )
       case s: UpdateUserBoundingBoxVisibilitySkeletonAction =>
-        Json.obj("name" -> "updateUserBoundingBoxVisibilityInSkeletonTracing",
-                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibilitySkeletonAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateUserBoundingBoxVisibilityInSkeletonTracing",
+          "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibilitySkeletonAction.jsonFormat)
+        )
 
       // Volume
       case s: UpdateBucketVolumeAction =>
@@ -150,11 +161,15 @@ object UpdateAction {
       case s: UpdateTracingVolumeAction =>
         Json.obj("name" -> "updateVolumeTracing", "value" -> Json.toJson(s)(UpdateTracingVolumeAction.jsonFormat))
       case s: UpdateUserBoundingBoxesVolumeAction =>
-        Json.obj("name" -> "updateUserBoundingBoxesInVolumeTracing",
-                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxesVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateUserBoundingBoxesInVolumeTracing",
+          "value" -> Json.toJson(s)(UpdateUserBoundingBoxesVolumeAction.jsonFormat)
+        )
       case s: UpdateUserBoundingBoxVisibilityVolumeAction =>
-        Json.obj("name" -> "updateUserBoundingBoxVisibilityInVolumeTracing",
-                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibilityVolumeAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateUserBoundingBoxVisibilityInVolumeTracing",
+          "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibilityVolumeAction.jsonFormat)
+        )
       case s: RemoveFallbackLayerVolumeAction =>
         Json.obj("name" -> "removeFallbackLayer", "value" -> Json.toJson(s)(RemoveFallbackLayerVolumeAction.jsonFormat))
       case s: ImportVolumeDataVolumeAction =>
@@ -186,14 +201,20 @@ object UpdateAction {
       case s: AddLayerAnnotationAction =>
         Json.obj("name" -> "addLayerToAnnotation", "value" -> Json.toJson(s)(AddLayerAnnotationAction.jsonFormat))
       case s: DeleteLayerAnnotationAction =>
-        Json.obj("name" -> "deleteLayerFromAnnotation",
-                 "value" -> Json.toJson(s)(DeleteLayerAnnotationAction.jsonFormat))
+        Json.obj(
+          "name" -> "deleteLayerFromAnnotation",
+          "value" -> Json.toJson(s)(DeleteLayerAnnotationAction.jsonFormat)
+        )
       case s: UpdateLayerMetadataAnnotationAction =>
-        Json.obj("name" -> "updateLayerMetadata",
-                 "value" -> Json.toJson(s)(UpdateLayerMetadataAnnotationAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateLayerMetadata",
+          "value" -> Json.toJson(s)(UpdateLayerMetadataAnnotationAction.jsonFormat)
+        )
       case s: UpdateMetadataAnnotationAction =>
-        Json.obj("name" -> "updateMetadataOfAnnotation",
-                 "value" -> Json.toJson(s)(UpdateMetadataAnnotationAction.jsonFormat))
+        Json.obj(
+          "name" -> "updateMetadataOfAnnotation",
+          "value" -> Json.toJson(s)(UpdateMetadataAnnotationAction.jsonFormat)
+        )
       case s: RevertToVersionAnnotationAction =>
         Json.obj("name" -> "revertToVersion", "value" -> Json.toJson(s)(RevertToVersionAnnotationAction.jsonFormat))
       case s: ResetToBaseAnnotationAction =>
@@ -204,15 +225,17 @@ object UpdateAction {
   }
 }
 
-case class UpdateActionGroup(version: Long,
-                             timestamp: Long,
-                             authorId: Option[String],
-                             actions: List[UpdateAction],
-                             stats: Option[JsObject],
-                             info: Option[String],
-                             transactionId: String,
-                             transactionGroupCount: Int,
-                             transactionGroupIndex: Int) {
+case class UpdateActionGroup(
+    version: Long,
+    timestamp: Long,
+    authorId: Option[String],
+    actions: List[UpdateAction],
+    stats: Option[JsObject],
+    info: Option[String],
+    transactionId: String,
+    transactionGroupCount: Int,
+    transactionGroupIndex: Int
+) {
 
   def significantChangesCount: Int = actions.count(!_.isViewOnlyChange)
   def viewChangesCount: Int = actions.count(_.isViewOnlyChange)

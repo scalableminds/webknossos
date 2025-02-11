@@ -25,7 +25,7 @@ package object datasource {
       override def writes(datasetId: DataSourceId): JsValue =
         Json.obj(
           "name" -> datasetId.directoryName,
-          "team" -> datasetId.organizationId,
+          "team" -> datasetId.organizationId
         )
     }
   }
@@ -35,11 +35,12 @@ package object datasource {
     implicit val jsonFormat: Format[DatasetViewConfiguration] = Format.of[DatasetViewConfiguration]
   }
 
-  case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId,
-                                                    dataLayers: List[T],
-                                                    scale: VoxelSize,
-                                                    defaultViewConfiguration: Option[DatasetViewConfiguration] = None)
-      extends GenericInboxDataSource[T] {
+  case class GenericDataSource[+T <: DataLayerLike](
+      id: DataSourceId,
+      dataLayers: List[T],
+      scale: VoxelSize,
+      defaultViewConfiguration: Option[DatasetViewConfiguration] = None
+  ) extends GenericInboxDataSource[T] {
 
     val toUsable: Option[GenericDataSource[T]] = Some(this)
 

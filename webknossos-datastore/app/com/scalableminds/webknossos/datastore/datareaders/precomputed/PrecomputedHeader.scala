@@ -19,14 +19,16 @@ case class PrecomputedHeader(`type`: String, data_type: String, num_channels: In
   def describesSegmentationLayer: Boolean = `type` == "segmentation"
 }
 
-case class PrecomputedScale(key: String,
-                            size: Array[Int],
-                            resolution: Array[Double],
-                            chunk_sizes: Array[Array[Int]],
-                            encoding: String,
-                            voxel_offset: Option[Array[Int]],
-                            compressed_segmentation_block_size: Option[Vec3Int],
-                            sharding: Option[ShardingSpecification]) {
+case class PrecomputedScale(
+    key: String,
+    size: Array[Int],
+    resolution: Array[Double],
+    chunk_sizes: Array[Array[Int]],
+    encoding: String,
+    voxel_offset: Option[Array[Int]],
+    compressed_segmentation_block_size: Option[Vec3Int],
+    sharding: Option[ShardingSpecification]
+) {
 
   // From the neuroglancer specification (https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/volume.md#info-json-file-specification)
   // > "chunk_sizes": Array of 3-element [x, y, z] arrays of integers specifying the x, y, and z dimensions in voxels of each supported chunk size. Typically just a single chunk size will be specified as [[x, y, z]].
@@ -60,26 +62,28 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
   override def voxelOffset: Array[Int] = precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
 
   def chunkIndexToNDimensionalBoundingBox(chunkIndex: Array[Int]): Array[(Int, Int)] =
-    chunkIndex.zipWithIndex.map(chunkIndexWithDim => {
+    chunkIndex.zipWithIndex.map { chunkIndexWithDim =>
       val (chunkIndexAtDim, dim) = chunkIndexWithDim
       val beginOffset = voxelOffset(dim) + chunkIndexAtDim * precomputedScale.primaryChunkShape(dim)
       val endOffset = voxelOffset(dim) + ((chunkIndexAtDim + 1) * precomputedScale.primaryChunkShape(dim))
         .min(precomputedScale.size(dim))
       (beginOffset, endOffset)
-    })
+    }
 
   def gridSize: Array[Int] = chunkShape.zip(precomputedScale.size).map { case (c, s) => (s.toDouble / c).ceil.toInt }
 
   override def isSharded: Boolean = precomputedScale.sharding.isDefined
 }
 
-case class ShardingSpecification(`@type`: String,
-                                 preshift_bits: Long,
-                                 hash: String,
-                                 minishard_bits: Int,
-                                 shard_bits: Long,
-                                 minishard_index_encoding: String = "raw",
-                                 data_encoding: String = "raw") {
+case class ShardingSpecification(
+    `@type`: String,
+    preshift_bits: Long,
+    hash: String,
+    minishard_bits: Int,
+    shard_bits: Long,
+    minishard_index_encoding: String = "raw",
+    data_encoding: String = "raw"
+) {
 
   def hashFunction(input: Long): Long =
     if (hash == "identity") input

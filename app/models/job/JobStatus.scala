@@ -9,7 +9,7 @@ case class JobStatus(
     state: JobState,
     returnValue: Option[String],
     started: Option[Instant],
-    ended: Option[Instant],
+    ended: Option[Instant]
 )
 
 object JobStatus {

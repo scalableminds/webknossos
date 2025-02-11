@@ -23,12 +23,14 @@ case class AnnotationMutex(annotationId: ObjectId, userId: ObjectId, expiry: Ins
 
 case class MutexResult(canEdit: Boolean, blockedByUser: Option[ObjectId])
 
-class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
-                                       val system: ActorSystem,
-                                       wkConf: WkConf,
-                                       userDAO: UserDAO,
-                                       userService: UserService,
-                                       annotationMutexDAO: AnnotationMutexDAO)(implicit val ec: ExecutionContext)
+class AnnotationMutexService @Inject() (
+    val lifecycle: ApplicationLifecycle,
+    val system: ActorSystem,
+    wkConf: WkConf,
+    userDAO: UserDAO,
+    userService: UserService,
+    annotationMutexDAO: AnnotationMutexDAO
+)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with LazyLogging {
 
@@ -73,15 +75,14 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
     for {
       userOpt <- Fox.runOptional(mutexResult.blockedByUser)(user => userDAO.findOne(user)(GlobalAccessContext))
       userJsonOpt <- Fox.runOptional(userOpt)(user => userService.compactWrites(user))
-    } yield
-      Json.obj(
-        "canEdit" -> mutexResult.canEdit,
-        "blockedByUser" -> userJsonOpt
-      )
+    } yield Json.obj(
+      "canEdit" -> mutexResult.canEdit,
+      "blockedByUser" -> userJsonOpt
+    )
 
 }
 
-class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class AnnotationMutexDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   private def parse(r: AnnotationMutexesRow): AnnotationMutex =

@@ -13,19 +13,19 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class AnnotationStore @Inject()(
+class AnnotationStore @Inject() (
     annotationInformationHandlerSelector: AnnotationInformationHandlerSelector,
-    temporaryAnnotationStore: TemporaryStore[String, Annotation])(implicit ec: ExecutionContext)
+    temporaryAnnotationStore: TemporaryStore[String, Annotation]
+)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   private val cacheTimeout = 60 minutes
 
   def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
-    requestFromCache(id).getOrElse(requestFromHandler(id, user)).futureBox.recover {
-      case e =>
-        logger.error("AnnotationStore ERROR: " + e)
-        e.printStackTrace()
-        Failure("AnnotationStore ERROR: " + e)
+    requestFromCache(id).getOrElse(requestFromHandler(id, user)).futureBox.recover { case e =>
+      logger.error("AnnotationStore ERROR: " + e)
+      e.printStackTrace()
+      Failure("AnnotationStore ERROR: " + e)
     }
 
   private def requestFromCache(id: AnnotationIdentifier): Option[Fox[Annotation]] = {

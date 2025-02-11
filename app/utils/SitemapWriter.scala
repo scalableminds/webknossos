@@ -13,12 +13,14 @@ import org.apache.commons.io.output.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 import scala.concurrent.{ExecutionContext, Future}
 
-case class SitemapURL(url: String,
-                      lastMod: Option[String] = None,
-                      changeFreq: Option[String] = None,
-                      priority: Option[String] = None)
+case class SitemapURL(
+    url: String,
+    lastMod: Option[String] = None,
+    changeFreq: Option[String] = None,
+    priority: Option[String] = None
+)
 
-class SitemapWriter @Inject()(publicationDAO: PublicationDAO, wkConf: WkConf)(implicit ec: ExecutionContext)
+class SitemapWriter @Inject() (publicationDAO: PublicationDAO, wkConf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits {
   private val proxyURLs = wkConf.AboutPageRedirect.routes.filter(!_.contains("*")).map(SitemapURL(_))
   private lazy val outputFactory = XMLOutputFactory.newInstance()

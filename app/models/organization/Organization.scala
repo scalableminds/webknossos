@@ -33,36 +33,34 @@ case class Organization(
     isDeleted: Boolean = false
 )
 
-class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Organization, OrganizationsRow, Organizations](sqlClient) {
+
   protected val collection = Organizations
-
   protected def idColumn(x: Organizations): Rep[String] = x._Id
-
   protected def isDeletedColumn(x: Organizations): Rep[Boolean] = x.isdeleted
+  protected def getResult = GetResultOrganizationsRow
 
   protected def parse(r: OrganizationsRow): Fox[Organization] =
     for {
       pricingPlan <- PricingPlan.fromString(r.pricingplan).toFox
-    } yield {
-      Organization(
-        r._Id,
-        r.additionalinformation,
-        r.logourl,
-        r.name,
-        pricingPlan,
-        r.paiduntil.map(Instant.fromSql),
-        r.includedusers,
-        r.includedstorage,
-        ObjectId(r._Rootfolder),
-        r.newusermailinglist,
-        r.enableautoverify,
-        r.lasttermsofserviceacceptancetime.map(Instant.fromSql),
-        r.lasttermsofserviceacceptanceversion,
-        Instant.fromSql(r.created),
-        r.isdeleted
-      )
-    }
+    } yield Organization(
+      r._Id,
+      r.additionalinformation,
+      r.logourl,
+      r.name,
+      pricingPlan,
+      r.paiduntil.map(Instant.fromSql),
+      r.includedusers,
+      r.includedstorage,
+      ObjectId(r._Rootfolder),
+      r.newusermailinglist,
+      r.enableautoverify,
+      r.lasttermsofserviceacceptancetime.map(Instant.fromSql),
+      r.lasttermsofserviceacceptanceversion,
+      Instant.fromSql(r.created),
+      r.isdeleted
+    )
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""(_id IN (SELECT _organization FROM webknossos.users_ WHERE _multiUser = (SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId)))
@@ -95,7 +93,8 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       accessQuery <- readAccessQuery
       r <- run(
         q"SELECT $columns FROM $existingCollectionName WHERE _id = $organizationId AND $accessQuery"
-          .as[OrganizationsRow])
+          .as[OrganizationsRow]
+      )
       parsed <- parseFirst(r, organizationId)
     } yield parsed
 
@@ -144,8 +143,9 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       r <- rList.headOption.toFox
     } yield r
 
-  def updateFields(organizationId: String, name: String, newUserMailingList: String)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateFields(organizationId: String, name: String, newUserMailingList: String)(implicit
+      ctx: DBAccessContext
+  ): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(organizationId)
       _ <- run(q"""UPDATE webknossos.organizations
@@ -170,9 +170,11 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       _ <- run(q"UPDATE webknossos.organizations SET lastStorageScanTime = $time WHERE _id = $organizationId".asUpdate)
     } yield ()
 
-  def upsertUsedStorage(organizationId: String,
-                        dataStoreName: String,
-                        usedStorageEntries: List[DirectoryStorageReport]): Fox[Unit] = {
+  def upsertUsedStorage(
+      organizationId: String,
+      dataStoreName: String,
+      usedStorageEntries: List[DirectoryStorageReport]
+  ): Fox[Unit] = {
     val queries = usedStorageEntries.map(entry => q"""
                WITH ds AS (
                  SELECT _id
@@ -201,14 +203,16 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     for {
       rows <- run(
         q"SELECT SUM(usedStorageBytes) FROM webknossos.organization_usedStorage WHERE _organization = $organizationId"
-          .as[Long])
+          .as[Long]
+      )
       firstRow <- rows.headOption
     } yield firstRow
 
   def getUsedStorageForDataset(datasetId: ObjectId): Fox[Long] =
     for {
       rows <- run(
-        q"SELECT SUM(usedStorageBytes) FROM webknossos.organization_usedStorage WHERE _dataset = $datasetId".as[Long])
+        q"SELECT SUM(usedStorageBytes) FROM webknossos.organization_usedStorage WHERE _dataset = $datasetId".as[Long]
+      )
       firstRow <- rows.headOption
     } yield firstRow
 
@@ -224,8 +228,9 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       parsed <- parseAll(rows)
     } yield parsed
 
-  def acceptTermsOfService(organizationId: String, version: Int, timestamp: Instant)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def acceptTermsOfService(organizationId: String, version: Int, timestamp: Instant)(implicit
+      ctx: DBAccessContext
+  ): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(organizationId)
       _ <- run(q"""UPDATE webknossos.organizations

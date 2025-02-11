@@ -6,18 +6,20 @@ import controllers.LegacyTaskParameters
 import models.user.Experience
 import play.api.libs.json.{Format, Json}
 
-case class TaskParameters(taskTypeId: String,
-                          neededExperience: Experience,
-                          pendingInstances: Int,
-                          projectName: String,
-                          scriptId: Option[String],
-                          boundingBox: Option[BoundingBox],
-                          datasetId: ObjectId,
-                          editPosition: Vec3Int,
-                          editRotation: Vec3Double,
-                          creationInfo: Option[String],
-                          description: Option[String],
-                          baseAnnotation: Option[BaseAnnotation])
+case class TaskParameters(
+    taskTypeId: String,
+    neededExperience: Experience,
+    pendingInstances: Int,
+    projectName: String,
+    scriptId: Option[String],
+    boundingBox: Option[BoundingBox],
+    datasetId: ObjectId,
+    editPosition: Vec3Int,
+    editRotation: Vec3Double,
+    creationInfo: Option[String],
+    description: Option[String],
+    baseAnnotation: Option[BaseAnnotation]
+)
 
 object TaskParameters {
   implicit val taskParametersWithDatasetIdFormat: Format[TaskParameters] =
@@ -39,12 +41,14 @@ object TaskParameters {
   )
 }
 
-case class NmlTaskParameters(taskTypeId: String,
-                             neededExperience: Experience,
-                             pendingInstances: Int,
-                             projectName: String,
-                             scriptId: Option[String],
-                             boundingBox: Option[BoundingBox])
+case class NmlTaskParameters(
+    taskTypeId: String,
+    neededExperience: Experience,
+    pendingInstances: Int,
+    projectName: String,
+    scriptId: Option[String],
+    boundingBox: Option[BoundingBox]
+)
 
 object NmlTaskParameters {
   implicit val nmlTaskParametersFormat: Format[NmlTaskParameters] = Json.format[NmlTaskParameters]

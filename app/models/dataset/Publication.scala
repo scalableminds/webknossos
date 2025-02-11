@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.{AnnotationDAO, AnnotationService}
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Format.GenericFormat
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsArray, JsObject, Json}
 import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
@@ -15,18 +15,22 @@ import utils.sql.{SQLDAO, SqlClient}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class Publication(_id: ObjectId,
-                       publicationDate: Option[Instant],
-                       imageUrl: Option[String],
-                       title: Option[String],
-                       description: Option[String],
-                       created: Instant = Instant.now,
-                       isDeleted: Boolean = false)
+case class Publication(
+    _id: ObjectId,
+    publicationDate: Option[Instant],
+    imageUrl: Option[String],
+    title: Option[String],
+    description: Option[String],
+    created: Instant = Instant.now,
+    isDeleted: Boolean = false
+)
 
-class PublicationService @Inject()(datasetService: DatasetService,
-                                   datasetDAO: DatasetDAO,
-                                   annotationService: AnnotationService,
-                                   annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext) {
+class PublicationService @Inject() (
+    datasetService: DatasetService,
+    datasetDAO: DatasetDAO,
+    annotationService: AnnotationService,
+    annotationDAO: AnnotationDAO
+)(implicit ec: ExecutionContext) {
 
   def publicWrites(publication: Publication): Fox[JsObject] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
@@ -37,27 +41,26 @@ class PublicationService @Inject()(datasetService: DatasetService,
       annotationsJson <- Fox.serialCombined(annotations) { annotation =>
         annotationService.writesWithDataset(annotation)
       }
-    } yield
-      Json.obj(
-        "id" -> publication._id.id,
-        "publicationDate" -> publication.publicationDate,
-        "imageUrl" -> publication.imageUrl,
-        "title" -> publication.title,
-        "description" -> publication.description,
-        "created" -> publication.created,
-        "datasets" -> datasetsJson,
-        "annotations" -> annotationsJson
-      )
+    } yield Json.obj(
+      "id" -> publication._id.id,
+      "publicationDate" -> publication.publicationDate,
+      "imageUrl" -> publication.imageUrl,
+      "title" -> publication.title,
+      "description" -> publication.description,
+      "created" -> publication.created,
+      "datasets" -> JsArray(datasetsJson),
+      "annotations" -> JsArray(annotationsJson)
+    )
   }
 }
 
-class PublicationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class PublicationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Publication, PublicationsRow, Publications](sqlClient) {
   protected val collection = Publications
 
   protected def idColumn(x: Publications): Rep[String] = x._Id
-
   protected def isDeletedColumn(x: Publications): Rep[Boolean] = x.isdeleted
+  protected def getResult = GetResultPublicationsRow
 
   protected def parse(r: PublicationsRow): Fox[Publication] =
     Fox.successful(
@@ -88,6 +91,7 @@ class PublicationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     for {
       _ <- run(
         q"""INSERT INTO webknossos.publications(_id, publicationDate, imageUrl, title, description, created, isDeleted)
-            VALUES(${p._id}, ${p.publicationDate}, ${p.imageUrl}, ${p.title}, ${p.description}, ${p.created}, ${p.isDeleted})""".asUpdate)
+            VALUES(${p._id}, ${p.publicationDate}, ${p.imageUrl}, ${p.title}, ${p.description}, ${p.created}, ${p.isDeleted})""".asUpdate
+      )
     } yield ()
 }

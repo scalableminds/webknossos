@@ -7,7 +7,7 @@ import telemetry.SlackNotificationService
 
 import javax.inject.Inject
 
-class SqlClient @Inject()(configuration: Configuration, slackNotificationService: SlackNotificationService) {
+class SqlClient @Inject() (configuration: Configuration, slackNotificationService: SlackNotificationService) {
   lazy val db: PostgresProfile.backend.Database = Database.forConfig("slick.db", configuration.underlying)
   def getSlackNotificationService: SlackNotificationService = slackNotificationService
 }

@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables.{Aiinferences, AiinferencesRow}
+import com.scalableminds.webknossos.schema.Tables.{Aiinferences, AiinferencesRow, GetResultAiinferencesRow}
 import models.dataset.{DataStoreDAO, DataStoreService, DatasetDAO, DatasetService}
 import models.job.{JobDAO, JobService}
 import models.user.{User, UserDAO, UserService}
@@ -16,32 +16,38 @@ import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class AiInference(_id: ObjectId,
-                       _organization: String,
-                       _aiModel: ObjectId,
-                       _newDataset: Option[ObjectId],
-                       _annotation: Option[ObjectId],
-                       boundingBox: BoundingBox,
-                       _inferenceJob: ObjectId,
-                       newSegmentationLayerName: String,
-                       maskAnnotationLayerName: Option[String],
-                       created: Instant = Instant.now,
-                       modified: Instant = Instant.now,
-                       isDeleted: Boolean = false)
+case class AiInference(
+    _id: ObjectId,
+    _organization: String,
+    _aiModel: ObjectId,
+    _newDataset: Option[ObjectId],
+    _annotation: Option[ObjectId],
+    boundingBox: BoundingBox,
+    _inferenceJob: ObjectId,
+    newSegmentationLayerName: String,
+    maskAnnotationLayerName: Option[String],
+    created: Instant = Instant.now,
+    modified: Instant = Instant.now,
+    isDeleted: Boolean = false
+)
 
-class AiInferenceService @Inject()(dataStoreDAO: DataStoreDAO,
-                                   dataStoreService: DataStoreService,
-                                   aiModelService: AiModelService,
-                                   aiModelDAO: AiModelDAO,
-                                   datasetDAO: DatasetDAO,
-                                   userDAO: UserDAO,
-                                   userService: UserService,
-                                   datasetService: DatasetService,
-                                   jobDAO: JobDAO,
-                                   jobService: JobService) {
+class AiInferenceService @Inject() (
+    dataStoreDAO: DataStoreDAO,
+    dataStoreService: DataStoreService,
+    aiModelService: AiModelService,
+    aiModelDAO: AiModelDAO,
+    datasetDAO: DatasetDAO,
+    userDAO: UserDAO,
+    userService: UserService,
+    datasetService: DatasetService,
+    jobDAO: JobDAO,
+    jobService: JobService
+) {
 
-  def publicWrites(aiInference: AiInference, requestingUser: User)(implicit ctx: DBAccessContext,
-                                                                   ec: ExecutionContext): Fox[JsObject] =
+  def publicWrites(aiInference: AiInference, requestingUser: User)(implicit
+      ctx: DBAccessContext,
+      ec: ExecutionContext
+  ): Fox[JsObject] =
     for {
       inferenceJob <- jobDAO.findOne(aiInference._inferenceJob)
       inferenceJobJs <- jobService.publicWrites(inferenceJob)
@@ -51,24 +57,24 @@ class AiInferenceService @Inject()(dataStoreDAO: DataStoreDAO,
       aiModelJs <- aiModelService.publicWrites(aiModel)
       newDatasetOpt <- Fox.runOptional(aiInference._newDataset)(datasetDAO.findOne)
       newDatasetJsOpt <- Fox.runOptional(newDatasetOpt)(newDataset =>
-        datasetService.publicWrites(newDataset, Some(requestingUser)))
+        datasetService.publicWrites(newDataset, Some(requestingUser))
+      )
       user <- userDAO.findOne(inferenceJob._owner)
       userJs <- userService.compactWrites(user)
-    } yield
-      Json.obj(
-        "id" -> aiInference._id,
-        "dataStore" -> dataStoreJs,
-        "newSegmentationLayerName" -> aiInference.newSegmentationLayerName,
-        "maskAnnotationLayerName" -> aiInference.maskAnnotationLayerName,
-        "inferenceJob" -> inferenceJobJs,
-        "aiModel" -> aiModelJs,
-        "user" -> userJs,
-        "newDataset" -> newDatasetJsOpt,
-        "created" -> aiInference.created
-      )
+    } yield Json.obj(
+      "id" -> aiInference._id,
+      "dataStore" -> dataStoreJs,
+      "newSegmentationLayerName" -> aiInference.newSegmentationLayerName,
+      "maskAnnotationLayerName" -> aiInference.maskAnnotationLayerName,
+      "inferenceJob" -> inferenceJobJs,
+      "aiModel" -> aiModelJs,
+      "user" -> userJs,
+      "newDataset" -> newDatasetJsOpt,
+      "created" -> aiInference.created
+    )
 }
 
-class AiInferenceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class AiInferenceDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[AiInference, AiinferencesRow, Aiinferences](sqlClient) {
 
   protected val collection = Aiinferences
@@ -77,24 +83,25 @@ class AiInferenceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   protected def isDeletedColumn(x: Aiinferences): Rep[Boolean] = x.isdeleted
 
+  protected def getResult = GetResultAiinferencesRow
+
   protected def parse(r: AiinferencesRow): Fox[AiInference] =
     for {
       boundingBox <- BoundingBox.fromSQL(parseArrayLiteral(r.boundingbox).map(_.toInt)).toFox
-    } yield
-      AiInference(
-        ObjectId(r._Id),
-        r._Organization,
-        ObjectId(r._Aimodel),
-        r._Newdataset.map(ObjectId(_)),
-        r._Annotation.map(ObjectId(_)),
-        boundingBox,
-        ObjectId(r._Inferencejob),
-        r.newsegmentationlayername,
-        r.maskannotationlayername,
-        Instant.fromSql(r.created),
-        Instant.fromSql(r.modified),
-        r.isdeleted
-      )
+    } yield AiInference(
+      ObjectId(r._Id),
+      r._Organization,
+      ObjectId(r._Aimodel),
+      r._Newdataset.map(ObjectId(_)),
+      r._Annotation.map(ObjectId(_)),
+      boundingBox,
+      ObjectId(r._Inferencejob),
+      r.newsegmentationlayername,
+      r.maskannotationlayername,
+      Instant.fromSql(r.created),
+      Instant.fromSql(r.modified),
+      r.isdeleted
+    )
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"_organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId)"
@@ -108,11 +115,13 @@ class AiInferenceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   def insertOne(a: AiInference): Fox[Unit] =
     for {
-      _ <- run(q"""INSERT INTO webknossos.aiInferences(
+      _ <- run(
+        q"""INSERT INTO webknossos.aiInferences(
                     _id, _organization, _aiModel, _newDataset, _annotation, _inferenceJob, boundingBox,
                      newSegmentationLayerName, maskAnnotationLayerName, created, modified, isDeleted)
                  VALUES(${a._id}, ${a._organization}, ${a._aiModel}, ${a._newDataset}, ${a._annotation}, ${a._inferenceJob}, ${a.boundingBox},
-                        ${a.newSegmentationLayerName}, ${a.maskAnnotationLayerName}, ${a.created}, ${a.modified}, ${a.isDeleted})""".asUpdate)
+                        ${a.newSegmentationLayerName}, ${a.maskAnnotationLayerName}, ${a.created}, ${a.modified}, ${a.isDeleted})""".asUpdate
+      )
     } yield ()
 
   def countForModel(aiModelId: ObjectId): Fox[Long] =

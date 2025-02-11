@@ -18,8 +18,7 @@ trait FoxImplicits {
   implicit def box2Fox[T](b: Box[T])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(Future.successful(b))
 
-  /**
-    * Transform a Future[T] into a Fox[T] such that if the Future contains an exception, it is turned into a Fox.failure
+  /** Transform a Future[T] into a Fox[T] such that if the Future contains an exception, it is turned into a Fox.failure
     */
   implicit def future2Fox[T](f: Future[T])(implicit ec: ExecutionContext): Fox[T] =
     for {
@@ -63,12 +62,14 @@ object Fox extends FoxImplicits {
 
   def empty(implicit ec: ExecutionContext): Fox[Nothing] = new Fox(Future.successful(Empty))
 
-  def failure(message: String, ex: Box[Throwable] = Empty, chain: Box[Failure] = Empty)(
-      implicit ec: ExecutionContext): Fox[Nothing] =
+  def failure(message: String, ex: Box[Throwable] = Empty, chain: Box[Failure] = Empty)(implicit
+      ec: ExecutionContext
+  ): Fox[Nothing] =
     new Fox(Future.successful(Failure(message, ex, chain)))
 
-  def paramFailure[T](message: String, ex: Box[Throwable] = Empty, chain: Box[Failure] = Empty, param: T)(
-      implicit ec: ExecutionContext): Fox[Nothing] =
+  def paramFailure[T](message: String, ex: Box[Throwable] = Empty, chain: Box[Failure] = Empty, param: T)(implicit
+      ec: ExecutionContext
+  ): Fox[Nothing] =
     new Fox(Future.successful(ParamFailure(message, ex, chain, param)))
 
   // run serially, fail on the first failure
@@ -111,13 +112,16 @@ object Fox extends FoxImplicits {
         case Some(failure: Failure) => failure
         case _ =>
           Full(
-            results.map(_.openOrThrowException("An exception should never be thrown, all boxes must be full")).toList)
+            results.map(_.openOrThrowException("An exception should never be thrown, all boxes must be full")).toList
+          )
       }
     })
 
-  def combined[T](l: Array[Fox[T]])(implicit ec: ExecutionContext,
-                                    ev: Array[Future[Box[T]]] => Iterable[Future[Box[T]]],
-                                    ct: ClassTag[T]): Fox[Array[T]] = {
+  def combined[T](l: Array[Fox[T]])(implicit
+      ec: ExecutionContext,
+      ev: Array[Future[Box[T]]] => Iterable[Future[Box[T]]],
+      ct: ClassTag[T]
+  ): Fox[Array[T]] = {
     val x = Future.sequence(ev(l.map(_.futureBox)))
     val r: Future[Box[Array[T]]] = x.map { results =>
       results.find(_.isEmpty) match {
@@ -184,8 +188,9 @@ object Fox extends FoxImplicits {
   def filterNot[T](seq: List[T])(f: T => Fox[Boolean])(implicit ec: ExecutionContext): Fox[List[T]] =
     filter(seq, inverted = true)(f)
 
-  def filter[T](seq: List[T], inverted: Boolean = false)(f: T => Fox[Boolean])(
-      implicit ec: ExecutionContext): Fox[List[T]] =
+  def filter[T](seq: List[T], inverted: Boolean = false)(
+      f: T => Fox[Boolean]
+  )(implicit ec: ExecutionContext): Fox[List[T]] =
     for {
       results <- serialCombined(seq)(f)
       zipped = results.zip(seq)
@@ -252,8 +257,7 @@ object Fox extends FoxImplicits {
         case Nil =>
           Fox.successful(previousResult)
       }
-    t =>
-      runNext(functions, t)
+    t => runNext(functions, t)
   }
 
   def failureChainAsString(failure: Failure, includeStackTraces: Boolean = false): String = {
@@ -355,23 +359,18 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   def toFutureOrThrowException(justification: String): Future[A] =
     for {
       box: Box[A] <- this.futureBox
-    } yield {
-      box.openOrThrowException(justification)
-    }
+    } yield box.openOrThrowException(justification)
 
   def toFutureWithEmptyToFailure: Future[A] =
     (for {
       box: Box[A] <- this.futureBox
-    } yield {
-      box match {
-        case Full(a)            => Future.successful(a)
-        case Failure(msg, _, _) => Future.failed(new Exception(msg))
-        case Empty              => Future.failed(new Exception("Empty"))
-      }
+    } yield box match {
+      case Full(a)            => Future.successful(a)
+      case Failure(msg, _, _) => Future.failed(new Exception(msg))
+      case Empty              => Future.failed(new Exception("Empty"))
     }).flatMap(identity)
 
-  /**
-    *  Awaits the future and opens the box.
+  /** Awaits the future and opens the box.
     */
   @deprecated(message = "Do not use this in production code", since = "forever")
   def get(justification: String, awaitTimeout: FiniteDuration = 10 seconds): A = {
@@ -379,20 +378,17 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
     box.openOrThrowException(justification)
   }
 
-  /**
-    * Awaits the future and returns the box.
+  /** Awaits the future and returns the box.
     */
   @deprecated(message = "Do not use this in production code", since = "forever")
   def await(justification: String, awaitTimeout: FiniteDuration = 10 seconds): Box[A] =
     Await.result(futureBox, awaitTimeout)
 
-  /**
-    * Helper to force an implicit conversation
+  /** Helper to force an implicit conversation
     */
   def toFox: Fox[A] = this
 
-  /**
-    * If the box is Empty this will create a Full. If The box is Full it will get emptied. Failures are passed through.
+  /** If the box is Empty this will create a Full. If The box is Full it will get emptied. Failures are passed through.
     */
   def reverse: Fox[Unit] =
     new Fox(futureBox.map {
@@ -408,13 +404,11 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
       case f: Failure  => f
     })
 
-  /**
-    * Makes Fox play better with Scala 2.8 for comprehensions
+  /** Makes Fox play better with Scala 2.8 for comprehensions
     */
   def withFilter(p: A => Boolean): WithFilter = new WithFilter(p)
 
-  /**
-    * Play Nice with the Scala 2.8 for comprehension
+  /** Play Nice with the Scala 2.8 for comprehension
     */
   class WithFilter(p: A => Boolean) {
     def map[B](f: A => B): Fox[B] = self.filter(p).map(f)

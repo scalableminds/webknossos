@@ -52,9 +52,8 @@ case class ZarrHeader(
 object ZarrHeader extends JsonImplicits {
   val FILENAME_DOT_ZARRAY = ".zarray"
 
-  /***
-    * This function is used for exposing webknossos layers as zarr layers via the API.
-    * It therefore defaults to the necessary defaults for webknossos data layers.
+  /** * This function is used for exposing webknossos layers as zarr layers via the API. It therefore defaults to the
+    * necessary defaults for webknossos data layers.
     */
   def fromLayer(dataLayer: DataLayer, mag: Vec3Int): ZarrHeader = {
     val cubeLength = DataLayer.bucketLength
@@ -76,12 +75,14 @@ object ZarrHeader extends JsonImplicits {
 
     val chunks = Array(channels) ++ additionalAxesChunksEntries ++ Array(cubeLength, cubeLength, cubeLength)
 
-    ZarrHeader(zarr_format = 2,
-               shape = shape,
-               chunks = chunks,
-               compressor = compressor,
-               dtype = dtype,
-               order = ArrayOrder.F)
+    ZarrHeader(
+      zarr_format = 2,
+      shape = shape,
+      chunks = chunks,
+      compressor = compressor,
+      dtype = dtype,
+      order = ArrayOrder.F
+    )
   }
 
   implicit object ZarrHeaderFormat extends Format[ZarrHeader] {

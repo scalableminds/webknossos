@@ -21,16 +21,18 @@ import security.WkEnv
 
 import scala.concurrent.ExecutionContext
 
-class UserController @Inject()(userService: UserService,
-                               userDAO: UserDAO,
-                               multiUserDAO: MultiUserDAO,
-                               organizationService: OrganizationService,
-                               annotationDAO: AnnotationDAO,
-                               timeSpanService: TimeSpanService,
-                               teamMembershipService: TeamMembershipService,
-                               annotationService: AnnotationService,
-                               teamDAO: TeamDAO,
-                               sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+class UserController @Inject() (
+    userService: UserService,
+    userDAO: UserDAO,
+    multiUserDAO: MultiUserDAO,
+    organizationService: OrganizationService,
+    annotationDAO: AnnotationDAO,
+    timeSpanService: TimeSpanService,
+    teamMembershipService: TeamMembershipService,
+    annotationService: AnnotationService,
+    teamDAO: TeamDAO,
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -53,10 +55,12 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
-  def annotations(isFinished: Option[Boolean],
-                  limit: Option[Int],
-                  pageNumber: Option[Int] = None,
-                  includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
+  def annotations(
+      isFinished: Option[Boolean],
+      limit: Option[Int],
+      pageNumber: Option[Int] = None,
+      includeTotalCount: Option[Boolean] = None
+  ): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         annotations <- annotationDAO.findAllListableExplorationals(
@@ -67,7 +71,8 @@ class UserController @Inject()(userService: UserService,
           pageNumber.getOrElse(0)
         )
         annotationCount: Option[Int] <- Fox.runIf(includeTotalCount.getOrElse(false))(
-          annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Explorational))
+          annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Explorational)
+        )
         jsonList = annotations.map(annotationService.writeCompactInfo)
         _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
       } yield {
@@ -79,35 +84,41 @@ class UserController @Inject()(userService: UserService,
       }
     }
 
-  def tasks(isFinished: Option[Boolean],
-            limit: Option[Int],
-            pageNumber: Option[Int] = None,
-            includeTotalCount: Option[Boolean] = None): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
-      for {
-        annotations <- annotationDAO.findAllFor(request.identity._id,
-                                                isFinished,
-                                                AnnotationType.Task,
-                                                limit.getOrElse(annotationService.DefaultAnnotationListLimit),
-                                                pageNumber.getOrElse(0))
-        annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
-          annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Task))
-        jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
-        _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
-      } yield {
-        val result = Ok(Json.toJson(jsonList))
-        annotationCount match {
-          case Some(count) => result.withHeaders("X-Total-Count" -> count.toString)
-          case None        => result
-        }
+  def tasks(
+      isFinished: Option[Boolean],
+      limit: Option[Int],
+      pageNumber: Option[Int] = None,
+      includeTotalCount: Option[Boolean] = None
+  ): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      annotations <- annotationDAO.findAllFor(
+        request.identity._id,
+        isFinished,
+        AnnotationType.Task,
+        limit.getOrElse(annotationService.DefaultAnnotationListLimit),
+        pageNumber.getOrElse(0)
+      )
+      annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
+        annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Task)
+      )
+      jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
+      _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
+    } yield {
+      val result = Ok(Json.toJson(jsonList))
+      annotationCount match {
+        case Some(count) => result.withHeaders("X-Total-Count" -> count.toString)
+        case None        => result
       }
+    }
   }
 
-  def userAnnotations(userId: ObjectId,
-                      isFinished: Option[Boolean],
-                      limit: Option[Int],
-                      pageNumber: Option[Int] = None,
-                      includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
+  def userAnnotations(
+      userId: ObjectId,
+      isFinished: Option[Boolean],
+      limit: Option[Int],
+      pageNumber: Option[Int] = None,
+      includeTotalCount: Option[Boolean] = None
+  ): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         user <- userDAO.findOne(userId) ?~> "user.notFound" ~> NOT_FOUND
@@ -120,7 +131,8 @@ class UserController @Inject()(userService: UserService,
           pageNumber.getOrElse(0)
         )
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
-          annotationDAO.countAllFor(userId, isFinished, AnnotationType.Explorational))
+          annotationDAO.countAllFor(userId, isFinished, AnnotationType.Explorational)
+        )
         jsonList = annotations.map(annotationService.writeCompactInfo)
       } yield {
         val result = Ok(Json.toJson(jsonList))
@@ -131,22 +143,27 @@ class UserController @Inject()(userService: UserService,
       }
     }
 
-  def userTasks(userId: ObjectId,
-                isFinished: Option[Boolean],
-                limit: Option[Int],
-                pageNumber: Option[Int] = None,
-                includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
+  def userTasks(
+      userId: ObjectId,
+      isFinished: Option[Boolean],
+      limit: Option[Int],
+      pageNumber: Option[Int] = None,
+      includeTotalCount: Option[Boolean] = None
+  ): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         user <- userDAO.findOne(userId) ?~> "user.notFound" ~> NOT_FOUND
         _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-        annotations <- annotationDAO.findAllFor(userId,
-                                                isFinished,
-                                                AnnotationType.Task,
-                                                limit.getOrElse(annotationService.DefaultAnnotationListLimit),
-                                                pageNumber.getOrElse(0))
+        annotations <- annotationDAO.findAllFor(
+          userId,
+          isFinished,
+          AnnotationType.Task,
+          limit.getOrElse(annotationService.DefaultAnnotationListLimit),
+          pageNumber.getOrElse(0)
+        )
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
-          annotationDAO.countAllFor(userId, isFinished, AnnotationType.Task))
+          annotationDAO.countAllFor(userId, isFinished, AnnotationType.Task)
+        )
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
       } yield {
         val result = Ok(Json.toJson(jsonList))
@@ -184,25 +201,30 @@ class UserController @Inject()(userService: UserService,
       (__ \ "experiences").readNullable[Map[String, Int]] and
       (__ \ "lastTaskTypeId").readNullable[String]).tupled
 
-  private def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)])(
-      implicit m: MessagesProvider) =
+  private def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)])(implicit
+      m: MessagesProvider
+  ) =
     Fox.combined(teams.map {
       case (TeamMembership(_, true), team) =>
         for {
-          _ <- bool2Fox(team.couldBeAdministratedBy(user)) ?~> Messages("team.admin.notPossibleBy",
-                                                                        team.name,
-                                                                        user.name) ~> FORBIDDEN
+          _ <- bool2Fox(team.couldBeAdministratedBy(user)) ?~> Messages(
+            "team.admin.notPossibleBy",
+            team.name,
+            user.name
+          ) ~> FORBIDDEN
         } yield ()
       case (_, _) =>
         Fox.successful(())
     })
 
-  private def checkAdminOnlyUpdates(user: User,
-                                    isActive: Boolean,
-                                    isAdmin: Boolean,
-                                    isDatasetManager: Boolean,
-                                    oldEmail: String,
-                                    email: String)(issuingUser: User): Boolean =
+  private def checkAdminOnlyUpdates(
+      user: User,
+      isActive: Boolean,
+      isAdmin: Boolean,
+      isDatasetManager: Boolean,
+      oldEmail: String,
+      email: String
+  )(issuingUser: User): Boolean =
     if (isActive && user.isAdmin == isAdmin && oldEmail == email && isDatasetManager == user.isDatasetManager)
       true
     else issuingUser.isAdminOf(user)
@@ -213,8 +235,8 @@ class UserController @Inject()(userService: UserService,
   private def checkNoActivateBeyondLimit(user: User, isActive: Boolean): Fox[Unit] =
     for {
       _ <- Fox.runIf(user.isDeactivated && isActive)(
-        organizationService
-          .assertUsersCanBeAdded(user._organization)(GlobalAccessContext, ec)) ?~> "organization.users.userLimitReached"
+        organizationService.assertUsersCanBeAdded(user._organization)(GlobalAccessContext, ec)
+      ) ?~> "organization.users.userLimitReached"
     } yield ()
 
   private def checkNoDeactivateWithRemainingTask(user: User, isActive: Boolean): Fox[Unit] =
@@ -225,8 +247,9 @@ class UserController @Inject()(userService: UserService,
       } yield ()
     } else Fox.successful(())
 
-  private def checkSuperUserOnlyUpdates(user: User, oldEmail: String, email: String)(issuingUser: User)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  private def checkSuperUserOnlyUpdates(user: User, oldEmail: String, email: String)(
+      issuingUser: User
+  )(implicit ctx: DBAccessContext): Fox[Unit] =
     if (oldEmail == email) Fox.successful(())
     else
       for {
@@ -254,7 +277,8 @@ class UserController @Inject()(userService: UserService,
   def update(userId: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     val issuingUser = request.identity
     withJsonBodyUsing(userUpdateReader) {
-      case (firstNameOpt,
+      case (
+            firstNameOpt,
             lastNameOpt,
             emailOpt,
             isActiveOpt,
@@ -262,7 +286,8 @@ class UserController @Inject()(userService: UserService,
             isDatasetManagerOpt,
             assignedMembershipsOpt,
             experiencesOpt,
-            lastTaskTypeIdOpt) =>
+            lastTaskTypeIdOpt
+          ) =>
         for {
           user <- userDAO.findOne(userId) ?~> "user.notFound" ~> NOT_FOUND
           oldExperience <- userService.experiencesFor(user._id)
@@ -278,34 +303,43 @@ class UserController @Inject()(userService: UserService,
           experiences = experiencesOpt.getOrElse(oldExperience)
           lastTaskTypeId = if (lastTaskTypeIdOpt.isEmpty) user.lastTaskTypeId.map(_.id) else lastTaskTypeIdOpt
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-          _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager, oldEmail, email)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- bool2Fox(
+            checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager, oldEmail, email)(issuingUser)
+          ) ?~> "notAllowed" ~> FORBIDDEN
           _ <- bool2Fox(checkNoSelfDeactivate(user, isActive)(issuingUser)) ?~> "user.noSelfDeactivate" ~> FORBIDDEN
           _ <- checkNoDeactivateWithRemainingTask(user, isActive)
           _ <- checkNoActivateBeyondLimit(user, isActive)
           _ <- checkSuperUserOnlyUpdates(user, oldEmail, email)(issuingUser)
           _ <- preventZeroAdmins(user, isAdmin)
           _ <- preventZeroOwners(user, isActive)
-          teams <- Fox.combined(assignedMemberships.map(t =>
-            teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> "team.notFound" ~> NOT_FOUND))
+          teams <- Fox.combined(
+            assignedMemberships.map(t =>
+              teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> "team.notFound" ~> NOT_FOUND
+            )
+          )
           oldTeamMemberships <- userService.teamMembershipsFor(user._id)
           teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t =>
-            userService.isTeamManagerOrAdminOf(issuingUser, t.teamId))
+            userService.isTeamManagerOrAdminOf(issuingUser, t.teamId)
+          )
           assignedMembershipWTeams = assignedMemberships.zip(teams)
           teamsWithUpdate <- Fox.filter(assignedMembershipWTeams)(t =>
-            userService.isTeamManagerOrAdminOf(issuingUser, t._1.teamId))
+            userService.isTeamManagerOrAdminOf(issuingUser, t._1.teamId)
+          )
           _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
           trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
           updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
-          _ <- userService.update(user,
-                                  firstName.trim,
-                                  lastName.trim,
-                                  email,
-                                  isActive,
-                                  isAdmin,
-                                  isDatasetManager,
-                                  updatedTeams,
-                                  trimmedExperiences,
-                                  lastTaskTypeId)
+          _ <- userService.update(
+            user,
+            firstName.trim,
+            lastName.trim,
+            email,
+            isActive,
+            isAdmin,
+            isDatasetManager,
+            updatedTeams,
+            trimmedExperiences,
+            lastTaskTypeId
+          )
           updatedUser <- userDAO.findOne(userId)
           updatedJs <- userService.publicWrites(updatedUser, request.identity)
         } yield Ok(updatedJs)

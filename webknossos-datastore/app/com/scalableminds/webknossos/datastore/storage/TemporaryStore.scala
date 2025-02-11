@@ -7,7 +7,7 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
-class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
+class TemporaryStore[K, V] @Inject() (system: ActorSystem) {
 
   private val map: mutable.Map[K, V] = mutable.Map()
 

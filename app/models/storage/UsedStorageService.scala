@@ -18,13 +18,15 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class UsedStorageService @Inject()(val system: ActorSystem,
-                                   val lifecycle: ApplicationLifecycle,
-                                   organizationDAO: OrganizationDAO,
-                                   datasetService: DatasetService,
-                                   dataStoreDAO: DataStoreDAO,
-                                   rpc: RPC,
-                                   config: WkConf)(implicit val ec: ExecutionContext)
+class UsedStorageService @Inject() (
+    val system: ActorSystem,
+    val lifecycle: ApplicationLifecycle,
+    organizationDAO: OrganizationDAO,
+    datasetService: DatasetService,
+    dataStoreDAO: DataStoreDAO,
+    rpc: RPC,
+    config: WkConf
+)(implicit val ec: ExecutionContext)
     extends LazyLogging
     with IntervalScheduler {
 
@@ -52,13 +54,16 @@ class UsedStorageService @Inject()(val system: ActorSystem,
 
   private def tickAsync(): Fox[Unit] =
     for {
-      organizations <- organizationDAO.findNotRecentlyScanned(config.WebKnossos.FetchUsedStorage.rescanInterval,
-                                                              organizationCountToScanPerTick)
+      organizations <- organizationDAO.findNotRecentlyScanned(
+        config.WebKnossos.FetchUsedStorage.rescanInterval,
+        organizationCountToScanPerTick
+      )
       dataStores <- dataStoreDAO.findAllWithStorageReporting
       _ = logger.info(s"Scanning used storage for ${organizations.length} organizations (${organizations
-        .map(_._id)}) in ${dataStores.length} datastores (${dataStores.map(_.name)})...")
+          .map(_._id)}) in ${dataStores.length} datastores (${dataStores.map(_.name)})...")
       _ <- Fox.serialCombined(organizations)(organization =>
-        tryAndLog(organization._id, refreshStorageReports(organization, dataStores)))
+        tryAndLog(organization._id, refreshStorageReports(organization, dataStores))
+      )
     } yield ()
 
   private def tryAndLog(organizationId: String, result: Fox[Unit]): Fox[Unit] =
@@ -74,22 +79,31 @@ class UsedStorageService @Inject()(val system: ActorSystem,
   private def refreshStorageReports(organization: Organization, dataStores: List[DataStore]): Fox[Unit] =
     for {
       storageReportsByDataStore <- Fox.serialCombined(dataStores)(dataStore =>
-        refreshStorageReports(dataStore, organization)) ?~> "Failed to fetch used storage reports"
+        refreshStorageReports(dataStore, organization)
+      ) ?~> "Failed to fetch used storage reports"
       _ <- organizationDAO.deleteUsedStorage(organization._id) ?~> "Failed to delete outdated used storage entries"
       _ <- Fox.serialCombined(storageReportsByDataStore.zip(dataStores))(storageForDatastore =>
-        upsertUsedStorage(organization, storageForDatastore)) ?~> "Failed to upsert used storage reports into db"
-      _ <- organizationDAO.updateLastStorageScanTime(organization._id, Instant.now) ?~> "Failed to update last storage scan time in db"
+        upsertUsedStorage(organization, storageForDatastore)
+      ) ?~> "Failed to upsert used storage reports into db"
+      _ <- organizationDAO.updateLastStorageScanTime(
+        organization._id,
+        Instant.now
+      ) ?~> "Failed to update last storage scan time in db"
       _ = Thread.sleep(pauseAfterEachOrganization.toMillis)
     } yield ()
 
-  private def refreshStorageReports(dataStore: DataStore,
-                                    organization: Organization): Fox[List[DirectoryStorageReport]] = {
+  private def refreshStorageReports(
+      dataStore: DataStore,
+      organization: Organization
+  ): Fox[List[DirectoryStorageReport]] = {
     val dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
     dataStoreClient.fetchStorageReport(organization._id, datasetName = None)
   }
 
-  private def upsertUsedStorage(organization: Organization,
-                                storageReportsForDatastore: (List[DirectoryStorageReport], DataStore)): Fox[Unit] = {
+  private def upsertUsedStorage(
+      organization: Organization,
+      storageReportsForDatastore: (List[DirectoryStorageReport], DataStore)
+  ): Fox[Unit] = {
     val dataStore = storageReportsForDatastore._2
     val storageReports = storageReportsForDatastore._1
     organizationDAO.upsertUsedStorage(organization._id, dataStore.name, storageReports)

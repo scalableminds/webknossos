@@ -31,14 +31,16 @@ case class NmlParsedParameters(
     userBoundingBoxes: Seq[NamedBoundingBoxProto],
     treesSplit: Seq[Tree],
     activeNodeId: Option[Int],
-    treeGroupsAfterSplit: Seq[TreeGroup],
+    treeGroupsAfterSplit: Seq[TreeGroup]
 )
 
-case class NmlParseSuccessWithoutFile(skeletonTracing: Option[SkeletonTracing],
-                                      volumeLayers: List[UploadedVolumeLayer],
-                                      datasetId: ObjectId,
-                                      description: String,
-                                      wkUrl: Option[String])
+case class NmlParseSuccessWithoutFile(
+    skeletonTracing: Option[SkeletonTracing],
+    volumeLayers: List[UploadedVolumeLayer],
+    datasetId: ObjectId,
+    description: String,
+    wkUrl: Option[String]
+)
 
 object NmlResults extends LazyLogging {
 
@@ -62,13 +64,14 @@ object NmlResults extends LazyLogging {
     def withName(name: String): NmlParseResult = this
   }
 
-  case class NmlParseSuccess(fileName: String,
-                             skeletonTracingOpt: Option[SkeletonTracing],
-                             volumeLayers: List[UploadedVolumeLayer],
-                             datasetId: ObjectId,
-                             _description: String,
-                             _wkUrl: Option[String])
-      extends NmlParseResult {
+  case class NmlParseSuccess(
+      fileName: String,
+      skeletonTracingOpt: Option[SkeletonTracing],
+      volumeLayers: List[UploadedVolumeLayer],
+      datasetId: ObjectId,
+      _description: String,
+      _wkUrl: Option[String]
+  ) extends NmlParseResult {
     def succeeded = true
 
     override def description: Option[String] = Some(_description)
@@ -124,18 +127,22 @@ object NmlResults extends LazyLogging {
           case f: Failure => f
           case _          => Failure("")
         }
-        TracingBoxContainer(successBox.map(_.fileName),
-                            successBox.map(_.description),
-                            skeletonBox,
-                            volumeBox,
-                            successBox.map(_.datasetId))
+        TracingBoxContainer(
+          successBox.map(_.fileName),
+          successBox.map(_.description),
+          skeletonBox,
+          volumeBox,
+          successBox.map(_.datasetId)
+        )
       }
   }
 
-  case class TracingBoxContainer(fileName: Box[String],
-                                 description: Box[Option[String]],
-                                 skeleton: Box[SkeletonTracing],
-                                 volume: Box[(UploadedVolumeLayer, Option[File])],
-                                 datasetId: Box[ObjectId])
+  case class TracingBoxContainer(
+      fileName: Box[String],
+      description: Box[Option[String]],
+      skeleton: Box[SkeletonTracing],
+      volume: Box[(UploadedVolumeLayer, Option[File])],
+      datasetId: Box[ObjectId]
+  )
 
 }

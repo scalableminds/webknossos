@@ -21,12 +21,14 @@ import utils.WkConf
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticatorSettings,
-                                                repository: BearerTokenAuthenticatorRepository,
-                                                idGenerator: IDGenerator,
-                                                clock: Clock,
-                                                userService: UserService,
-                                                conf: WkConf)(implicit override val executionContext: ExecutionContext)
+class WebknossosBearerTokenAuthenticatorService(
+    settings: BearerTokenAuthenticatorSettings,
+    repository: BearerTokenAuthenticatorRepository,
+    idGenerator: IDGenerator,
+    clock: Clock,
+    userService: UserService,
+    conf: WkConf
+)(implicit override val executionContext: ExecutionContext)
     extends BearerTokenAuthenticatorService(settings, repository, idGenerator, clock)
     with FoxImplicits {
 
@@ -49,8 +51,8 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
         expirationDateTime = Instant.in(expiry).toZonedDateTime,
         idleTimeout = settings.authenticatorIdleTimeout
       )
-    }.recover {
-      case e => throw new AuthenticatorCreationException(CreateError.format(ID, loginInfo), Some(e))
+    }.recover { case e =>
+      throw new AuthenticatorCreationException(CreateError.format(ID, loginInfo), Some(e))
     }
   }
 
@@ -60,8 +62,8 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
       .map { a =>
         a.id
       }
-      .recover {
-        case e => throw new AuthenticatorInitializationException(InitError.format(ID, authenticator), Some(e))
+      .recover { case e =>
+        throw new AuthenticatorInitializationException(InitError.format(ID, authenticator), Some(e))
       }
 
   def createAndInitDataStoreTokenForUser(user: User): Fox[String] =

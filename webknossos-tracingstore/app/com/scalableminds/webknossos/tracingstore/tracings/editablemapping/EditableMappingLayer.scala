@@ -39,7 +39,8 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       editableMappingInfo <- layer.annotationService.findEditableMappingInfo(
         layer.annotationId,
         tracingId,
-        Some(layer.version))(ec, layer.tokenContext)
+        Some(layer.version)
+      )(ec, layer.tokenContext)
       dataRequest: WebknossosDataRequest = WebknossosDataRequest(
         position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
         mag = bucket.mag,
@@ -59,26 +60,30 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
         editableMappingInfo,
         layer.version,
         tracingId,
-        remoteFallbackLayer)(layer.tokenContext)
-      mappedData: Array[Byte] <- layer.editableMappingService.mapData(unmappedDataTyped,
-                                                                      relevantMapping,
-                                                                      layer.elementClass)
+        remoteFallbackLayer
+      )(layer.tokenContext)
+      mappedData: Array[Byte] <- layer.editableMappingService.mapData(
+        unmappedDataTyped,
+        relevantMapping,
+        layer.elementClass
+      )
     } yield mappedData
   }
 }
 
-case class EditableMappingLayer(name: String,
-                                boundingBox: BoundingBox,
-                                resolutions: List[Vec3Int],
-                                largestSegmentId: Option[Long],
-                                elementClass: ElementClass.Value,
-                                tokenContext: TokenContext,
-                                tracing: VolumeTracing,
-                                annotationId: String,
-                                tracingId: String,
-                                annotationService: TSAnnotationService,
-                                editableMappingService: EditableMappingService)
-    extends SegmentationLayer {
+case class EditableMappingLayer(
+    name: String,
+    boundingBox: BoundingBox,
+    resolutions: List[Vec3Int],
+    largestSegmentId: Option[Long],
+    elementClass: ElementClass.Value,
+    tokenContext: TokenContext,
+    tracing: VolumeTracing,
+    annotationId: String,
+    tracingId: String,
+    annotationService: TSAnnotationService,
+    editableMappingService: EditableMappingService
+) extends SegmentationLayer {
   override val mags: List[MagLocator] = List.empty // MagLocators do not apply for annotation layers
 
   override def dataFormat: DataFormat.Value = DataFormat.wkw
@@ -87,9 +92,11 @@ case class EditableMappingLayer(name: String,
 
   override def lengthOfUnderlyingCubes(mag: Vec3Int): Int = DataLayer.bucketLength
 
-  override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                              dataSourceId: DataSourceId,
-                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
+  override def bucketProvider(
+      remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+      dataSourceId: DataSourceId,
+      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]
+  ): BucketProvider =
     new EditableMappingBucketProvider(layer = this)
 
   override def bucketProviderCacheKey: String = s"$name-token=${tokenContext.userTokenOpt}"

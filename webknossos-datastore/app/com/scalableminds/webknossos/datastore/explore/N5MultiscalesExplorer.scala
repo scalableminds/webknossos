@@ -24,20 +24,24 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends RemoteLay
       layers <- Fox.serialCombined(n5Metadata.multiscales)(layerFromN5MultiscalesItem(_, remotePath, credentialId))
     } yield layers
 
-  private def layerFromN5MultiscalesItem(multiscalesItem: N5MultiscalesItem,
-                                         remotePath: VaultPath,
-                                         credentialId: Option[String]): Fox[(N5Layer, VoxelSize)] =
+  private def layerFromN5MultiscalesItem(
+      multiscalesItem: N5MultiscalesItem,
+      remotePath: VaultPath,
+      credentialId: Option[String]
+  ): Fox[(N5Layer, VoxelSize)] =
     for {
       voxelSizeNanometers <- extractVoxelSize(multiscalesItem.datasets.map(_.transform))
       magsWithAttributes <- Fox.serialCombined(multiscalesItem.datasets)(d =>
-        n5MagFromDataset(d, remotePath, voxelSizeNanometers, credentialId))
+        n5MagFromDataset(d, remotePath, voxelSizeNanometers, credentialId)
+      )
       _ <- bool2Fox(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
       elementClass <- elementClassFromMags(magsWithAttributes) ?~> "Could not extract element class from mags"
       boundingBox = boundingBoxFromMags(magsWithAttributes)
       name = guessNameFromPath(remotePath)
-      layer: N5Layer = if (looksLikeSegmentationLayer(name, elementClass)) {
-        N5SegmentationLayer(name, boundingBox, elementClass, magsWithAttributes.map(_.mag), largestSegmentId = None)
-      } else N5DataLayer(name, Category.color, boundingBox, elementClass, magsWithAttributes.map(_.mag))
+      layer: N5Layer =
+        if (looksLikeSegmentationLayer(name, elementClass)) {
+          N5SegmentationLayer(name, boundingBox, elementClass, magsWithAttributes.map(_.mag), largestSegmentId = None)
+        } else N5DataLayer(name, Category.color, boundingBox, elementClass, magsWithAttributes.map(_.mag))
     } yield (layer, VoxelSize.fromFactorWithDefaultUnit(voxelSizeNanometers))
 
   private def extractAxisOrder(axes: List[String]): Fox[AxisOrder] = {
@@ -88,31 +92,44 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends RemoteLay
 
   private def voxelSizeFromTransform(transform: N5Transform): Fox[Vec3Double] =
     for {
-      axisOrder <- extractAxisOrder(transform.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
-      axisUnitFactors <- extractAxisUnitFactors(transform.units, axisOrder) ?~> "Could not extract axis unit-to-nm factors"
-      voxelSizeInAxisUnits <- extractVoxelSizeInAxisUnits(transform.scale, axisOrder) ?~> "Could not extract voxel size from scale transforms"
+      axisOrder <- extractAxisOrder(
+        transform.axes
+      ) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
+      axisUnitFactors <- extractAxisUnitFactors(
+        transform.units,
+        axisOrder
+      ) ?~> "Could not extract axis unit-to-nm factors"
+      voxelSizeInAxisUnits <- extractVoxelSizeInAxisUnits(
+        transform.scale,
+        axisOrder
+      ) ?~> "Could not extract voxel size from scale transforms"
     } yield voxelSizeInAxisUnits * axisUnitFactors
 
   private def extractVoxelSizeInAxisUnits(scale: List[Double], axisOrder: AxisOrder): Fox[Vec3Double] =
     tryo(Vec3Double(scale(axisOrder.x), scale(axisOrder.y), scale(axisOrder.zWithFallback)))
 
-  private def n5MagFromDataset(n5Dataset: N5MultiscalesDataset,
-                               layerPath: VaultPath,
-                               voxelSize: Vec3Double,
-                               credentialId: Option[String]): Fox[MagWithAttributes] =
+  private def n5MagFromDataset(
+      n5Dataset: N5MultiscalesDataset,
+      layerPath: VaultPath,
+      voxelSize: Vec3Double,
+      credentialId: Option[String]
+  ): Fox[MagWithAttributes] =
     for {
-      axisOrder <- extractAxisOrder(n5Dataset.transform.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
+      axisOrder <- extractAxisOrder(
+        n5Dataset.transform.axes
+      ) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
       mag <- magFromTransform(voxelSize, n5Dataset.transform) ?~> "Could not extract mag from transforms"
       magPath = layerPath / n5Dataset.path
       headerPath = magPath / N5Header.FILENAME_ATTRIBUTES_JSON
       n5Header <- headerPath.parseAsJson[N5Header] ?~> s"failed to read n5 header at $headerPath"
       elementClass <- n5Header.elementClass ?~> s"failed to read element class from n5 header at $headerPath"
       boundingBox <- n5Header.boundingBox(axisOrder) ?~> s"failed to read bounding box from n5 header at $headerPath"
-    } yield
-      MagWithAttributes(MagLocator(mag, Some(magPath.toUri.toString), None, Some(axisOrder), None, credentialId),
-                        magPath,
-                        elementClass,
-                        boundingBox)
+    } yield MagWithAttributes(
+      MagLocator(mag, Some(magPath.toUri.toString), None, Some(axisOrder), None, credentialId),
+      magPath,
+      elementClass,
+      boundingBox
+    )
 
   private def magFromTransform(voxelSize: Vec3Double, transform: N5Transform): Fox[Vec3Int] = {
     def isPowerOfTwo(x: Int): Boolean =
@@ -121,7 +138,9 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends RemoteLay
     for {
       magVoxelSize <- voxelSizeFromTransform(transform)
       mag = (magVoxelSize / voxelSize).round.toVec3Int
-      _ <- bool2Fox(isPowerOfTwo(mag.x) && isPowerOfTwo(mag.x) && isPowerOfTwo(mag.x)) ?~> s"invalid mag: $mag. Must all be powers of two"
+      _ <- bool2Fox(
+        isPowerOfTwo(mag.x) && isPowerOfTwo(mag.x) && isPowerOfTwo(mag.x)
+      ) ?~> s"invalid mag: $mag. Must all be powers of two"
     } yield mag
   }
 

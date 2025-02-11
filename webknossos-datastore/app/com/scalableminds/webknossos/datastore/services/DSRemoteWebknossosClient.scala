@@ -40,7 +40,7 @@ trait RemoteWebknossosClient {
   def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer]
 }
 
-class DSRemoteWebknossosClient @Inject()(
+class DSRemoteWebknossosClient @Inject() (
     rpc: RPC,
     config: DataStoreConfig,
     val lifecycle: ApplicationLifecycle,
@@ -82,7 +82,8 @@ class DSRemoteWebknossosClient @Inject()(
     } yield unfinishedUploads
 
   def reportUpload(dataSourceId: DataSourceId, datasetSizeBytes: Long, needsConversion: Boolean, viaAddRoute: Boolean)(
-      implicit tc: TokenContext): Fox[String] =
+      implicit tc: TokenContext
+  ): Fox[String] =
     for {
       uploadedDatasetIdJson <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
         .addQueryString("key" -> dataStoreKey)
@@ -101,8 +102,9 @@ class DSRemoteWebknossosClient @Inject()(
       .silent
       .putJson(dataSources)
 
-  def reserveDataSourceUpload(info: ReserveUploadInformation)(
-      implicit tc: TokenContext): Fox[ReserveAdditionalInformation] =
+  def reserveDataSourceUpload(
+      info: ReserveUploadInformation
+  )(implicit tc: TokenContext): Fox[ReserveAdditionalInformation] =
     for {
       reserveUploadInfo <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveUpload")
         .addQueryString("key" -> dataStoreKey)

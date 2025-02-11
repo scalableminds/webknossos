@@ -15,10 +15,12 @@ import play.api.inject.ApplicationLifecycle
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
-                                val system: ActorSystem,
-                                multiUserDAO: MultiUserDAO,
-                                mailchimpClient: MailchimpClient)(implicit val ec: ExecutionContext)
+class MailchimpTicker @Inject() (
+    val lifecycle: ApplicationLifecycle,
+    val system: ActorSystem,
+    multiUserDAO: MultiUserDAO,
+    mailchimpClient: MailchimpClient
+)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with LazyLogging {
 
@@ -47,26 +49,29 @@ class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
   private def tagUserByActivity(multiUser: MultiUser): Fox[Unit] =
     for {
       isActivated <- multiUserDAO.hasAtLeastOneActiveUser(multiUser._id) ?~> "Could not determine isActivated"
-      lastActivity <- if (isActivated) multiUserDAO.lastActivity(multiUser._id) ?~> "Could not determine lastActivity"
-      else Fox.successful(Instant.zero)
+      lastActivity <-
+        if (isActivated) multiUserDAO.lastActivity(multiUser._id) ?~> "Could not determine lastActivity"
+        else Fox.successful(Instant.zero)
       registeredAtLeast21DaysAgo = (multiUser.created + (21 days)).isPast
       registeredAtMost22DaysAgo = !(multiUser.created + (22 days)).isPast
       shouldBeTaggedNow = isActivated && registeredAtLeast21DaysAgo && registeredAtMost22DaysAgo
-      _ <- if (shouldBeTaggedNow) {
-        for {
-          previousTags <- mailchimpClient.tagsForMultiUser(multiUser) ?~> "Could not fetch previous tags"
-          alreadyTagged = previousTags.contains(MailchimpTag.WasInactiveInWeeksTwoAndThree) || previousTags.contains(
-            MailchimpTag.WasActiveInWeeksTwoOrThree)
-        } yield
-          if (!alreadyTagged) {
-            if ((lastActivity + (14 days)).isPast) {
-              logger.info(s"Tagging multiuser ${multiUser._id} as ${MailchimpTag.WasInactiveInWeeksTwoAndThree}...")
-              mailchimpClient.tagMultiUser(multiUser, MailchimpTag.WasInactiveInWeeksTwoAndThree)
-            } else {
-              logger.info(s"Tagging multiuser ${multiUser._id} as ${MailchimpTag.WasActiveInWeeksTwoOrThree}...")
-              mailchimpClient.tagMultiUser(multiUser, MailchimpTag.WasActiveInWeeksTwoOrThree)
+      _ <-
+        if (shouldBeTaggedNow) {
+          for {
+            previousTags <- mailchimpClient.tagsForMultiUser(multiUser) ?~> "Could not fetch previous tags"
+            alreadyTagged = previousTags.contains(MailchimpTag.WasInactiveInWeeksTwoAndThree) || previousTags.contains(
+              MailchimpTag.WasActiveInWeeksTwoOrThree
+            )
+          } yield
+            if (!alreadyTagged) {
+              if ((lastActivity + (14 days)).isPast) {
+                logger.info(s"Tagging multiuser ${multiUser._id} as ${MailchimpTag.WasInactiveInWeeksTwoAndThree}...")
+                mailchimpClient.tagMultiUser(multiUser, MailchimpTag.WasInactiveInWeeksTwoAndThree)
+              } else {
+                logger.info(s"Tagging multiuser ${multiUser._id} as ${MailchimpTag.WasActiveInWeeksTwoOrThree}...")
+                mailchimpClient.tagMultiUser(multiUser, MailchimpTag.WasActiveInWeeksTwoOrThree)
+              }
             }
-          }
-      } else Fox.successful(())
+        } else Fox.successful(())
     } yield ()
 }

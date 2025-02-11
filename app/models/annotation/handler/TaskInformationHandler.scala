@@ -12,16 +12,19 @@ import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 
-class TaskInformationHandler @Inject()(taskDAO: TaskDAO,
-                                       annotationDAO: AnnotationDAO,
-                                       userService: UserService,
-                                       annotationMerger: AnnotationMerger,
-                                       projectDAO: ProjectDAO)(implicit val ec: ExecutionContext)
+class TaskInformationHandler @Inject() (
+    taskDAO: TaskDAO,
+    annotationDAO: AnnotationDAO,
+    userService: UserService,
+    annotationMerger: AnnotationMerger,
+    projectDAO: ProjectDAO
+)(implicit val ec: ExecutionContext)
     extends AnnotationInformationHandler
     with FoxImplicits {
 
-  override def provideAnnotation(taskId: ObjectId, userOpt: Option[User])(
-      implicit ctx: DBAccessContext): Fox[Annotation] =
+  override def provideAnnotation(taskId: ObjectId, userOpt: Option[User])(implicit
+      ctx: DBAccessContext
+  ): Fox[Annotation] =
     for {
       task <- taskDAO.findOne(taskId) ?~> "task.notFound"
       annotations <- annotationDAO.findAllByTaskIdAndType(task._id, AnnotationType.Task)
@@ -31,26 +34,26 @@ class TaskInformationHandler @Inject()(taskDAO: TaskDAO,
       user <- userOpt ?~> "user.notAuthorised"
       project <- projectDAO.findOne(task._project)
       datasetId <- finishedAnnotations.headOption.map(_._dataset).toFox
-      mergedAnnotation <- annotationMerger.mergeN(task._id,
-                                                  toTemporaryStore = true,
-                                                  user._id,
-                                                  datasetId,
-                                                  project._team,
-                                                  AnnotationType.CompoundTask,
-                                                  finishedAnnotations) ?~> "annotation.merge.failed.compound"
+      mergedAnnotation <- annotationMerger.mergeN(
+        task._id,
+        toTemporaryStore = true,
+        user._id,
+        datasetId,
+        project._team,
+        AnnotationType.CompoundTask,
+        finishedAnnotations
+      ) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 
   def restrictionsFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =
     for {
       task <- taskDAO.findOne(taskId) ?~> "task.notFound"
       project <- projectDAO.findOne(task._project)
-    } yield {
-      new AnnotationRestrictions {
-        override def allowAccess(userOption: Option[User]): Fox[Boolean] =
-          (for {
-            user <- userOption.toFox
-            allowed <- userService.isTeamManagerOrAdminOf(user, project._team)
-          } yield allowed).orElse(Fox.successful(false))
-      }
+    } yield new AnnotationRestrictions {
+      override def allowAccess(userOption: Option[User]): Fox[Boolean] =
+        (for {
+          user <- userOption.toFox
+          allowed <- userService.isTeamManagerOrAdminOf(user, project._team)
+        } yield allowed).orElse(Fox.successful(false))
     }
 }

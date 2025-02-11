@@ -21,11 +21,12 @@ import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
 
-class DatasetArrayBucketProvider(dataLayer: DataLayer,
-                                 dataSourceId: DataSourceId,
-                                 remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                                 sharedChunkContentsCacheOpt: Option[AlfuCache[String, MultiArray]])
-    extends BucketProvider
+class DatasetArrayBucketProvider(
+    dataLayer: DataLayer,
+    dataSourceId: DataSourceId,
+    remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+    sharedChunkContentsCacheOpt: Option[AlfuCache[String, MultiArray]]
+) extends BucketProvider
     with FoxImplicits
     with LazyLogging {
 
@@ -34,19 +35,24 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
 
   def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
-      datasetArray <- datasetArrayCache.getOrLoad(readInstruction.bucket.mag,
-                                                  _ => openDatasetArrayWithTimeLogging(readInstruction))
+      datasetArray <- datasetArrayCache.getOrLoad(
+        readInstruction.bucket.mag,
+        _ => openDatasetArrayWithTimeLogging(readInstruction)
+      )
       bucket = readInstruction.bucket
       shape = Vec3Int.full(bucket.bucketLength)
       offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
-      bucketData <- datasetArray.readBytesWithAdditionalCoordinates(shape,
-                                                                    offset,
-                                                                    bucket.additionalCoordinates,
-                                                                    dataLayer.elementClass == ElementClass.uint24)
+      bucketData <- datasetArray.readBytesWithAdditionalCoordinates(
+        shape,
+        offset,
+        bucket.additionalCoordinates,
+        dataLayer.elementClass == ElementClass.uint24
+      )
     } yield bucketData
 
-  private def openDatasetArrayWithTimeLogging(readInstruction: DataReadInstruction)(
-      implicit ec: ExecutionContext): Fox[DatasetArray] = {
+  private def openDatasetArrayWithTimeLogging(
+      readInstruction: DataReadInstruction
+  )(implicit ec: ExecutionContext): Fox[DatasetArray] = {
     val before = Instant.now
     for {
       result <- openDatasetArray(readInstruction).futureBox
@@ -59,8 +65,9 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
     } yield result
   }
 
-  private def openDatasetArray(readInstruction: DataReadInstruction)(
-      implicit ec: ExecutionContext): Fox[DatasetArray] = {
+  private def openDatasetArray(
+      readInstruction: DataReadInstruction
+  )(implicit ec: ExecutionContext): Fox[DatasetArray] = {
     val magLocatorOpt: Option[MagLocator] =
       dataLayer.mags.find(_.mag == readInstruction.bucket.mag)
 
@@ -70,46 +77,56 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
         remoteSourceDescriptorServiceOpt match {
           case Some(remoteSourceDescriptorService: RemoteSourceDescriptorService) =>
             for {
-              magPath: VaultPath <- remoteSourceDescriptorService.vaultPathFor(readInstruction.baseDir,
-                                                                               readInstruction.dataSource.id,
-                                                                               readInstruction.dataLayer.name,
-                                                                               magLocator)
+              magPath: VaultPath <- remoteSourceDescriptorService.vaultPathFor(
+                readInstruction.baseDir,
+                readInstruction.dataSource.id,
+                readInstruction.dataLayer.name,
+                magLocator
+              )
               chunkContentsCache <- sharedChunkContentsCacheOpt.toFox
               datasetArray <- dataLayer.dataFormat match {
                 case DataFormat.zarr =>
-                  ZarrArray.open(magPath,
-                                 dataSourceId,
-                                 dataLayer.name,
-                                 magLocator.axisOrder,
-                                 magLocator.channelIndex,
-                                 dataLayer.additionalAxes,
-                                 chunkContentsCache)
+                  ZarrArray.open(
+                    magPath,
+                    dataSourceId,
+                    dataLayer.name,
+                    magLocator.axisOrder,
+                    magLocator.channelIndex,
+                    dataLayer.additionalAxes,
+                    chunkContentsCache
+                  )
                 case DataFormat.wkw =>
                   WKWArray.open(magPath, dataSourceId, dataLayer.name, chunkContentsCache)
                 case DataFormat.n5 =>
-                  N5Array.open(magPath,
-                               dataSourceId,
-                               dataLayer.name,
-                               magLocator.axisOrder,
-                               magLocator.channelIndex,
-                               dataLayer.additionalAxes,
-                               chunkContentsCache)
+                  N5Array.open(
+                    magPath,
+                    dataSourceId,
+                    dataLayer.name,
+                    magLocator.axisOrder,
+                    magLocator.channelIndex,
+                    dataLayer.additionalAxes,
+                    chunkContentsCache
+                  )
                 case DataFormat.zarr3 =>
-                  Zarr3Array.open(magPath,
-                                  dataSourceId,
-                                  dataLayer.name,
-                                  magLocator.axisOrder,
-                                  magLocator.channelIndex,
-                                  dataLayer.additionalAxes,
-                                  chunkContentsCache)
+                  Zarr3Array.open(
+                    magPath,
+                    dataSourceId,
+                    dataLayer.name,
+                    magLocator.axisOrder,
+                    magLocator.channelIndex,
+                    dataLayer.additionalAxes,
+                    chunkContentsCache
+                  )
                 case DataFormat.neuroglancerPrecomputed =>
-                  PrecomputedArray.open(magPath,
-                                        dataSourceId,
-                                        dataLayer.name,
-                                        magLocator.axisOrder,
-                                        magLocator.channelIndex,
-                                        dataLayer.additionalAxes,
-                                        chunkContentsCache)
+                  PrecomputedArray.open(
+                    magPath,
+                    dataSourceId,
+                    dataLayer.name,
+                    magLocator.axisOrder,
+                    magLocator.channelIndex,
+                    dataLayer.additionalAxes,
+                    chunkContentsCache
+                  )
                 case _ => Fox.failure(s"Cannot open ${dataLayer.dataFormat} layer “${dataLayer.name}” as DatasetArray")
               }
             } yield datasetArray

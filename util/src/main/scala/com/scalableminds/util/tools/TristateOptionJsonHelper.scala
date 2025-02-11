@@ -18,8 +18,9 @@ trait TristateOptionJsonHelper {
   private object InvertedDefaultHandler extends OptionHandlers {
     def readHandler[T](jsPath: JsPath)(implicit r: Reads[T]): Reads[Option[T]] = jsPath.readNullable
 
-    override def readHandlerWithDefault[T](jsPath: JsPath, defaultValue: => Option[T])(
-        implicit r: Reads[T]): Reads[Option[T]] = Reads[Option[T]] { json =>
+    override def readHandlerWithDefault[T](jsPath: JsPath, defaultValue: => Option[T])(implicit
+        r: Reads[T]
+    ): Reads[Option[T]] = Reads[Option[T]] { json =>
       jsPath.asSingleJson(json) match {
         case JsDefined(JsNull) => JsSuccess(defaultValue)
         case JsDefined(value)  => r.reads(value).repath(jsPath).map(Some(_))

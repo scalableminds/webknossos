@@ -12,8 +12,8 @@ object JobCommand extends ExtendedEnumeration {
    */
 
   val compute_mesh_file, compute_segment_index_file, convert_to_wkw, export_tiff, find_largest_segment_id,
-  globalize_floodfills, infer_nuclei, infer_neurons, materialize_volume_annotation, render_animation,
-  infer_mitochondria, align_sections, train_model, infer_with_model = Value
+      globalize_floodfills, infer_nuclei, infer_neurons, materialize_volume_annotation, render_animation,
+      infer_mitochondria, align_sections, train_model, infer_with_model = Value
 
   val highPriorityJobs: Set[Value] = Set(convert_to_wkw, export_tiff)
   val lowPriorityJobs: Set[Value] = values.diff(highPriorityJobs)

@@ -21,43 +21,44 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-case class Worker(_id: ObjectId,
-                  _dataStore: String,
-                  name: String,
-                  key: String,
-                  maxParallelHighPriorityJobs: Int,
-                  maxParallelLowPriorityJobs: Int,
-                  supportedJobCommands: Set[JobCommand],
-                  lastHeartBeat: Instant = Instant.zero,
-                  created: Instant = Instant.now,
-                  isDeleted: Boolean = false)
+case class Worker(
+    _id: ObjectId,
+    _dataStore: String,
+    name: String,
+    key: String,
+    maxParallelHighPriorityJobs: Int,
+    maxParallelLowPriorityJobs: Int,
+    supportedJobCommands: Set[JobCommand],
+    lastHeartBeat: Instant = Instant.zero,
+    created: Instant = Instant.now,
+    isDeleted: Boolean = false
+)
 
-class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class WorkerDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Worker, WorkersRow, Workers](sqlClient) {
   protected val collection = Workers
 
   protected def idColumn(x: Workers): Rep[String] = x._Id
-
   protected def isDeletedColumn(x: Workers): Rep[Boolean] = x.isdeleted
+  protected def getResult = GetResultWorkersRow
 
   protected def parse(r: WorkersRow): Fox[Worker] =
     for {
       supportedJobCommands <- Fox.serialCombined(parseArrayLiteral(r.supportedjobcommands)) { s =>
         JobCommand.fromString(s).toFox ?~> f"$s is not a valid job command"
       }
-    } yield
-      Worker(
-        ObjectId(r._Id),
-        r._Datastore,
-        r.name,
-        r.key,
-        r.maxparallelhighpriorityjobs,
-        r.maxparallellowpriorityjobs,
-        supportedJobCommands.toSet,
-        Instant.fromSql(r.lastheartbeat),
-        Instant.fromSql(r.created),
-        r.isdeleted
-      )
+    } yield Worker(
+      ObjectId(r._Id),
+      r._Datastore,
+      r.name,
+      r.key,
+      r.maxparallelhighpriorityjobs,
+      r.maxparallellowpriorityjobs,
+      supportedJobCommands.toSet,
+      Instant.fromSql(r.lastheartbeat),
+      Instant.fromSql(r.created),
+      r.isdeleted
+    )
 
   def findOneByKey(key: String): Fox[Worker] =
     for {
@@ -68,7 +69,8 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findAllByDataStore(dataStoreName: String): Fox[List[Worker]] =
     for {
       r: Seq[WorkersRow] <- run(
-        q"SELECT $columns FROM $existingCollectionName WHERE _dataStore = $dataStoreName".as[WorkersRow])
+        q"SELECT $columns FROM $existingCollectionName WHERE _dataStore = $dataStoreName".as[WorkersRow]
+      )
       parsed <- parseAll(r)
     } yield parsed
 
@@ -79,7 +81,7 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   }
 }
 
-class WorkerService @Inject()(conf: WkConf) {
+class WorkerService @Inject() (conf: WkConf) {
 
   def lastHeartBeatIsRecent(worker: Worker): Boolean =
     Instant.since(worker.lastHeartBeat) < conf.Jobs.workerLivenessTimeout
@@ -98,11 +100,13 @@ class WorkerService @Inject()(conf: WkConf) {
 
 }
 
-class WorkerLivenessService @Inject()(workerService: WorkerService,
-                                      workerDAO: WorkerDAO,
-                                      slackNotificationService: SlackNotificationService,
-                                      val lifecycle: ApplicationLifecycle,
-                                      val system: ActorSystem)(implicit val ec: ExecutionContext)
+class WorkerLivenessService @Inject() (
+    workerService: WorkerService,
+    workerDAO: WorkerDAO,
+    slackNotificationService: SlackNotificationService,
+    val lifecycle: ApplicationLifecycle,
+    val system: ActorSystem
+)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with Formatter
     with LazyLogging {

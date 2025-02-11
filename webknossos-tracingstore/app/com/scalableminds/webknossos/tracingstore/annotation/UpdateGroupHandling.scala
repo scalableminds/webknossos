@@ -16,20 +16,24 @@ trait UpdateGroupHandling extends LazyLogging {
    * Compare unit test for UpdateGroupHandlingUnitTestSuite
    */
   def reorderAndRegroupByIsolationSensitiveActions(
-      updateActionGroupsWithVersions: List[(Long, List[UpdateAction])]): Box[List[(Long, List[UpdateAction])]] =
+      updateActionGroupsWithVersions: List[(Long, List[UpdateAction])]
+  ): Box[List[(Long, List[UpdateAction])]] =
     for {
       groupVersions <- Full(updateActionGroupsWithVersions.map(_._1))
-      _ <- Box.fromBool(groupVersions.sorted((Ordering[Long].reverse)) == groupVersions) ?~! "updateGroupVersions.notSortedDesc"
+      _ <- Box.fromBool(
+        groupVersions.sorted(Ordering[Long].reverse) == groupVersions
+      ) ?~! "updateGroupVersions.notSortedDesc"
       splitGroupLists: List[List[(Long, List[UpdateAction])]] = SequenceUtils.splitAndIsolate(
-        updateActionGroupsWithVersions.reverse)(actionGroup =>
-        actionGroup._2.exists(updateAction => isIsolationSensitiveAction(updateAction)))
+        updateActionGroupsWithVersions.reverse
+      )(actionGroup => actionGroup._2.exists(updateAction => isIsolationSensitiveAction(updateAction)))
       result = splitGroupLists.flatMap { (groupsToConcatenate: List[(Long, List[UpdateAction])]) =>
         concatenateUpdateActionGroups(groupsToConcatenate)
       }
     } yield result
 
   private def concatenateUpdateActionGroups(
-      groups: List[(Long, List[UpdateAction])]): Option[(Long, List[UpdateAction])] = {
+      groups: List[(Long, List[UpdateAction])]
+  ): Option[(Long, List[UpdateAction])] = {
     val updates = groups.flatMap(_._2)
     val targetVersionOpt: Option[Long] = groups.map(_._1).lastOption
     targetVersionOpt.map(targetVersion => (targetVersion, updates))

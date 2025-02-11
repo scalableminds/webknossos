@@ -32,18 +32,18 @@ object AdditionalAxis {
   def toProto(additionalAxesOpt: Option[Seq[AdditionalAxis]]): Seq[AdditionalAxisProto] =
     additionalAxesOpt match {
       case Some(additionalCoordinates) =>
-        additionalCoordinates.map(
-          additionalCoordinate =>
-            AdditionalAxisProto(additionalCoordinate.name,
-                                additionalCoordinate.index,
-                                Vec2IntProto(additionalCoordinate.lowerBound, additionalCoordinate.upperBound)))
+        additionalCoordinates.map(additionalCoordinate =>
+          AdditionalAxisProto(
+            additionalCoordinate.name,
+            additionalCoordinate.index,
+            Vec2IntProto(additionalCoordinate.lowerBound, additionalCoordinate.upperBound)
+          )
+        )
       case None => Seq()
     }
 
   def fromProtos(additionalAxisProtos: Seq[AdditionalAxisProto]): Seq[AdditionalAxis] =
-    additionalAxisProtos.map(
-      p => AdditionalAxis(p.name, Array(p.bounds.x, p.bounds.y), p.index)
-    )
+    additionalAxisProtos.map(p => AdditionalAxis(p.name, Array(p.bounds.x, p.bounds.y), p.index))
 
   def fromProtosAsOpt(additionalAxisProtos: Seq[AdditionalAxisProto]): Option[Seq[AdditionalAxis]] = {
     val axes = fromProtos(additionalAxisProtos)
@@ -66,9 +66,11 @@ object AdditionalAxis {
               but merging additional coordinates describing data on a remote server with different indices is not
               supported by this.
                */
-              (existingIndex,
-               math.min(existingLowerBound, additionalAxis.lowerBound),
-               math.max(existingUpperBound, additionalAxis.upperBound))
+              (
+                existingIndex,
+                math.min(existingLowerBound, additionalAxis.lowerBound),
+                math.max(existingUpperBound, additionalAxis.upperBound)
+              )
             case None =>
               (additionalAxis.index, additionalAxis.lowerBound, additionalAxis.upperBound)
           }
@@ -76,9 +78,8 @@ object AdditionalAxis {
         }
       case None =>
     }
-    val additionalAxes = additionalAxesMap.iterator.map {
-      case (name, (index, lowerBound, upperBound)) =>
-        AdditionalAxis(name, Array(lowerBound, upperBound), index)
+    val additionalAxes = additionalAxesMap.iterator.map { case (name, (index, lowerBound, upperBound)) =>
+      AdditionalAxis(name, Array(lowerBound, upperBound), index)
     }.toSeq
     if (additionalAxes.isEmpty) {
       None
@@ -88,7 +89,8 @@ object AdditionalAxis {
   }
 
   def mergeAndAssertSameAdditionalAxes(
-      additionalAxeses: Seq[Option[Seq[AdditionalAxis]]]): Box[Option[Seq[AdditionalAxis]]] = {
+      additionalAxeses: Seq[Option[Seq[AdditionalAxis]]]
+  ): Box[Option[Seq[AdditionalAxis]]] = {
     val merged = merge(additionalAxeses)
     val mergedCount = merged match {
       case Some(axes) => axes.size
@@ -119,9 +121,8 @@ object AdditionalAxis {
           } yield a :+ b
         }
         coordinateSpace.map { coordinates =>
-          coordinates.zipWithIndex.map {
-            case (coordinate, index) =>
-              AdditionalCoordinate(axes(index).name, coordinate)
+          coordinates.zipWithIndex.map { case (coordinate, index) =>
+            AdditionalCoordinate(axes(index).name, coordinate)
           }
         }
       case None => Seq.empty

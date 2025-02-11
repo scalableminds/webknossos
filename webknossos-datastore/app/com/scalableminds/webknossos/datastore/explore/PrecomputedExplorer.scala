@@ -27,23 +27,29 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
       layerAndVoxelSize <- layerFromPrecomputedHeader(precomputedHeader, remotePath, credentialId)
     } yield List(layerAndVoxelSize)
 
-  private def layerFromPrecomputedHeader(precomputedHeader: PrecomputedHeader,
-                                         remotePath: VaultPath,
-                                         credentialId: Option[String]): Fox[(PrecomputedLayer, VoxelSize)] =
+  private def layerFromPrecomputedHeader(
+      precomputedHeader: PrecomputedHeader,
+      remotePath: VaultPath,
+      credentialId: Option[String]
+  ): Fox[(PrecomputedLayer, VoxelSize)] =
     for {
       name <- Fox.successful(guessNameFromPath(remotePath))
       firstScale <- precomputedHeader.scales.headOption.toFox
       boundingBox <- BoundingBox
         .fromTopLeftAndSize(firstScale.voxel_offset.getOrElse(Array(0, 0, 0)), firstScale.size)
         .toFox
-      elementClass: ElementClass.Value <- elementClassFromPrecomputedDataType(precomputedHeader.data_type) ?~> s"Unknown data type ${precomputedHeader.data_type}"
+      elementClass: ElementClass.Value <- elementClassFromPrecomputedDataType(
+        precomputedHeader.data_type
+      ) ?~> s"Unknown data type ${precomputedHeader.data_type}"
       smallestResolution = firstScale.resolution
       voxelSize <- Vec3Double.fromArray(smallestResolution).toFox
       mags: List[MagLocator] <- Fox.serialCombined(precomputedHeader.scales)(
-        getMagFromScale(_, smallestResolution, remotePath, credentialId))
-      layer = if (precomputedHeader.describesSegmentationLayer) {
-        PrecomputedSegmentationLayer(name, boundingBox, elementClass, mags, None)
-      } else PrecomputedDataLayer(name, boundingBox, Category.color, elementClass, mags)
+        getMagFromScale(_, smallestResolution, remotePath, credentialId)
+      )
+      layer =
+        if (precomputedHeader.describesSegmentationLayer) {
+          PrecomputedSegmentationLayer(name, boundingBox, elementClass, mags, None)
+        } else PrecomputedDataLayer(name, boundingBox, Category.color, elementClass, mags)
     } yield (layer, VoxelSize.fromFactorWithDefaultUnit(voxelSize))
 
   private def elementClassFromPrecomputedDataType(precomputedDataType: String): Fox[ElementClass.Value] =
@@ -56,10 +62,12 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
       case _         => None
     }
 
-  private def getMagFromScale(scale: PrecomputedScale,
-                              minimalResolution: Array[Double],
-                              remotePath: VaultPath,
-                              credentialId: Option[String]): Fox[MagLocator] = {
+  private def getMagFromScale(
+      scale: PrecomputedScale,
+      minimalResolution: Array[Double],
+      remotePath: VaultPath,
+      credentialId: Option[String]
+  ): Fox[MagLocator] = {
     val normalizedResolution = scale.resolution.zip(minimalResolution).map { case (r, m) => (r / m).toInt }
     for {
       mag <- Vec3Int.fromList(normalizedResolution.toList)

@@ -14,10 +14,12 @@ import scala.concurrent.ExecutionContext
 // Note that this wk-side controller deals with user-uploaded meshes stored in postgres
 // Not to be confused with the DSMeshController that deals with on-disk meshfiles
 
-class MeshController @Inject()(meshDAO: MeshDAO,
-                               annotationDAO: AnnotationDAO,
-                               sil: Silhouette[WkEnv],
-                               meshService: MeshService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+class MeshController @Inject() (
+    meshDAO: MeshDAO,
+    annotationDAO: AnnotationDAO,
+    sil: Silhouette[WkEnv],
+    meshService: MeshService
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -35,8 +37,9 @@ class MeshController @Inject()(meshDAO: MeshDAO,
       val _id = ObjectId.generate
       for {
         _ <- annotationDAO.assertUpdateAccess(params.annotationId) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- meshDAO
-          .insertOne(MeshInfo(_id, params.annotationId, params.description, params.position)) ?~> "mesh.create.failed"
+        _ <- meshDAO.insertOne(
+          MeshInfo(_id, params.annotationId, params.description, params.position)
+        ) ?~> "mesh.create.failed"
         inserted <- meshDAO.findOne(_id) ?~> "mesh.notFound"
         js <- meshService.publicWrites(inserted) ?~> "mesh.write.failed"
       } yield Ok(js)

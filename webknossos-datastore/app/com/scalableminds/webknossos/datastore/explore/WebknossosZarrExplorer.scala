@@ -24,8 +24,10 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
 
   override def name: String = "WEBKNOSSOS-based Zarr"
 
-  override def explore(remotePath: VaultPath,
-                       credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+  override def explore(
+      remotePath: VaultPath,
+      credentialId: Option[String]
+  ): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       dataSourcePropertiesPath <- Fox.successful(remotePath / GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
       dataSource <- dataSourcePropertiesPath.parseAsJson[DataSource]
@@ -51,18 +53,23 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
       zarrLayersWithScale <- Fox.serialCombined(zarrLayers)(l => Fox.successful((l, dataSource.scale)))
     } yield zarrLayersWithScale
 
-  private def adaptMags(mags: List[MagLocator],
-                        remoteLayerPath: VaultPath,
-                        headerFilename: String,
-                        credentialId: Option[String]): Fox[List[MagLocator]] =
+  private def adaptMags(
+      mags: List[MagLocator],
+      remoteLayerPath: VaultPath,
+      headerFilename: String,
+      credentialId: Option[String]
+  ): Fox[List[MagLocator]] =
     Fox.serialCombined(mags)(m =>
       for {
         magPath <- fixRemoteMagPath(m, remoteLayerPath, headerFilename)
-      } yield m.copy(path = magPath, credentialId = credentialId))
+      } yield m.copy(path = magPath, credentialId = credentialId)
+    )
 
-  private def fixRemoteMagPath(mag: MagLocator,
-                               remoteLayerPath: VaultPath,
-                               headerFilename: String): Fox[Option[String]] =
+  private def fixRemoteMagPath(
+      mag: MagLocator,
+      remoteLayerPath: VaultPath,
+      headerFilename: String
+  ): Fox[Option[String]] =
     mag.path match {
       case Some(path) => Fox.successful(Some(path))
       case None       =>

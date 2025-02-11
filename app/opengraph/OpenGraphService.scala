@@ -11,8 +11,8 @@ import models.annotation.AnnotationDAO
 import models.dataset.{Dataset, DatasetDAO, DatasetLayerDAO}
 import models.organization.{Organization, OrganizationDAO}
 import models.shortlinks.ShortLinkDAO
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.Full
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.Full
 import security.URLSharing
 import utils.WkConf
 

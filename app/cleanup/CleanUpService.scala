@@ -4,7 +4,7 @@ import org.apache.pekko.actor.{ActorSystem, Cancellable}
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
-import net.liftweb.common.{Empty, Failure, Full}
+import com.scalableminds.util.tools.{Empty, Failure, Full}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration

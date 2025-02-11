@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Empty, Failure, Full}
+import com.scalableminds.util.tools.{Empty, Failure, Full}
 import play.api.inject.ApplicationLifecycle
 
 import javax.inject.Inject

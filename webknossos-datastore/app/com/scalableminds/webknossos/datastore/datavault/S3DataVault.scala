@@ -7,8 +7,8 @@ import com.scalableminds.webknossos.datastore.storage.{
   RemoteSourceDescriptor,
   S3AccessKeyCredential
 }
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Empty, Full, Failure => BoxFailure}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Empty, Full, Failure => BoxFailure}
 import org.apache.commons.lang3.builder.HashCodeBuilder
 import play.api.libs.ws.WSClient
 import software.amazon.awssdk.auth.credentials.{

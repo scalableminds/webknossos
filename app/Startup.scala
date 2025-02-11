@@ -8,7 +8,6 @@ import mail.{Mailer, MailerConfig}
 import models.annotation.AnnotationDAO
 import models.dataset.ThumbnailCachingService
 import models.user.InviteService
-import net.liftweb.common.{Failure, Full}
 import org.apache.http.client.utils.URIBuilder
 import play.api.inject.ApplicationLifecycle
 import security.WkSilhouetteEnvironment

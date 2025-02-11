@@ -12,7 +12,7 @@ import models.annotation._
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.{User, UserService}
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.{Box, Full}
 import org.apache.pekko.actor.{ActorSelection, ActorSystem}
 import utils.WkConf
 

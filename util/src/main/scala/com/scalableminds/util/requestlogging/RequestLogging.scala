@@ -11,7 +11,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait AbstractRequestLogging extends LazyLogging with Formatter {
 
-  def logRequestFormatted(request: Request[_],
+  def logRequestFormatted(request: Request[?],
                           result: Result,
                           notifier: Option[String => Unit],
                           requesterId: Option[String] = None): Unit =
@@ -30,8 +30,8 @@ trait AbstractRequestLogging extends LazyLogging with Formatter {
     }
 
   def logTime(notifier: String => Unit, durationThreshold: FiniteDuration = 30 seconds)(
-      block: => Future[Result])(implicit request: Request[_], ec: ExecutionContext): Future[Result] = {
-    def logTimeFormatted(executionTime: FiniteDuration, request: Request[_], result: Result): Unit = {
+      block: => Future[Result])(implicit request: Request[?], ec: ExecutionContext): Future[Result] = {
+    def logTimeFormatted(executionTime: FiniteDuration, request: Request[?], result: Result): Unit = {
       val debugString =
         s"Request ${request.method} ${request.uri} took ${formatDuration(executionTime)} and was${if (result.header.status != 200) " not "
         else " "}successful"
@@ -52,7 +52,7 @@ trait AbstractRequestLogging extends LazyLogging with Formatter {
 trait RequestLogging extends AbstractRequestLogging {
   // Hint: within webknossos itself, UserAwareRequestLogging is available, which additionally logs the requester user id
 
-  def log(notifier: Option[String => Unit] = None)(block: => Future[Result])(implicit request: Request[_],
+  def log(notifier: Option[String => Unit] = None)(block: => Future[Result])(implicit request: Request[?],
                                                                              ec: ExecutionContext): Future[Result] =
     for {
       result: Result <- block

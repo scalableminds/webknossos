@@ -27,7 +27,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   ElementClass,
   LayerViewConfiguration
 }
-import net.liftweb.common.Box
+import com.scalableminds.util.tools.Box
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, Json}
 
 import scala.concurrent.ExecutionContext

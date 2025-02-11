@@ -3,7 +3,7 @@ package com.scalableminds.util.time
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.{LazyLogging, Logger}
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import play.api.libs.json._
 
 import java.time.{ZoneId, ZonedDateTime}

@@ -9,8 +9,8 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
-import net.liftweb.common.Full
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Full
+import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Json, OFormat}
 

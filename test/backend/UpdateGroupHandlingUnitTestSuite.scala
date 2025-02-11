@@ -2,7 +2,7 @@ package backend
 
 import com.scalableminds.webknossos.tracingstore.annotation.{RevertToVersionAnnotationAction, UpdateGroupHandling}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.MergeTreeSkeletonAction
-import net.liftweb.common.Failure
+import com.scalableminds.util.tools.Failure
 import org.scalatestplus.play.PlaySpec
 
 class UpdateGroupHandlingUnitTestSuite extends PlaySpec with UpdateGroupHandling {

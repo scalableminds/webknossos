@@ -22,9 +22,9 @@ trait IntervalScheduler {
 
   protected def tick(): Unit
 
-  private var scheduled: Cancellable = _
+  private var scheduled: Cancellable = scala.compiletime.uninitialized
 
-  lifecycle.addStopHook(stop _)
+  lifecycle.addStopHook((() => stop()))
 
   if (enabled) {
     scheduled = system.scheduler.scheduleWithFixedDelay(tickerInitialDelay, tickerInterval)(() => tick())

@@ -2,8 +2,8 @@ package com.scalableminds.webknossos.datastore.datareaders
 
 import ArrayDataType.ArrayDataType
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box
+import com.scalableminds.util.tools.Box.tryo
 import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array => MultiArray, DataType => MADataType}
 
 import java.util
@@ -100,7 +100,7 @@ object MultiArrayUtils extends LazyLogging {
     while ({ sourceRangeIterator.hasNext }) setter.set(sourceRangeIterator, targetRangeIterator)
   }
 
-  private def createValueSetter(elementType: Class[_]): MultiArrayUtils.ValueSetter =
+  private def createValueSetter(elementType: Class[?]): MultiArrayUtils.ValueSetter =
     if (elementType eq classOf[Double])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
       targetIterator.setDoubleNext(sourceIterator.getDoubleNext)
     else if (elementType eq classOf[Float])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>

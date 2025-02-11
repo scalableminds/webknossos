@@ -18,8 +18,8 @@ import org.apache.commons.io.IOUtils
 
 import java.io._
 import java.nio.{ByteBuffer, ByteOrder}
-import net.liftweb.common.Box
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box
+import com.scalableminds.util.tools.Box.tryo
 
 object ChunkType extends Enumeration(1) {
   val Raw, LZ4, LZ4HC = Value
@@ -133,16 +133,16 @@ object WKWHeader extends BoxImplicits {
     val numBytesPerVoxel = dataStream.readUnsignedByte() // voxel-size
 
     for {
-      _ <- bool2Box(magicByteBuffer.sameElements(magicBytes)) ?~! error("Invalid magic bytes",
+      _ <- Box.fromBool(magicByteBuffer.sameElements(magicBytes)) ?~! error("Invalid magic bytes",
                                                                         magicBytes,
                                                                         magicByteBuffer)
-      _ <- bool2Box(version == currentVersion) ?~! error("Unknown version", currentVersion, version)
+      _ <- Box.fromBool(version == currentVersion) ?~! error("Unknown version", currentVersion, version)
       // We only support fileSideLengths < 1024, so that the total number of blocks per file fits in an Int.
-      _ <- bool2Box(numChunksPerShardDimension < 1024) ?~! error("Specified fileSideLength not supported",
+      _ <- Box.fromBool(numChunksPerShardDimension < 1024) ?~! error("Specified fileSideLength not supported",
                                                                  numChunksPerShardDimension,
                                                                  "[0, 1024)")
       // We only support blockSideLengths < 1024, so that the total number of voxels per block fits in an Int.
-      _ <- bool2Box(numChunksPerShardDimension < 1024) ?~! error("Specified blockSideLength not supported",
+      _ <- Box.fromBool(numChunksPerShardDimension < 1024) ?~! error("Specified blockSideLength not supported",
                                                                  numVoxelsPerChunkDimension,
                                                                  "[0, 1024)")
       blockType <- tryo(ChunkType(blockTypeId)) ?~! error("Specified blockType is not supported")

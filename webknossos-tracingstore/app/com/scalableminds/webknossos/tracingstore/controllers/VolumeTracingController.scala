@@ -34,7 +34,7 @@ import com.scalableminds.webknossos.tracingstore.{
   TracingStoreAccessTokenService,
   TracingStoreConfig
 }
-import net.liftweb.common.Empty
+import com.scalableminds.util.tools.Empty
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json

@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ApplyableVolumeUpdateAction
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Failure, Full}
+import com.scalableminds.util.tools.{Box, Failure, Full}
 
 import scala.concurrent.ExecutionContext
 

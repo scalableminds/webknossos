@@ -18,7 +18,7 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{AnyContent, _}
@@ -69,7 +69,7 @@ class BinaryDataController @Inject()(
                 + request.body.headOption
                   .map(firstReq => s" First of ${request.body.size} requests was $firstReq")
                   .getOrElse(""))
-        } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+        } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
       }
     }
   }
@@ -110,7 +110,7 @@ class BinaryDataController @Inject()(
           DataServiceRequestSettings(halfByte = halfByte, appliedAgglomerate = mappingName)
         )
         (data, indices) <- requestData(dataSource, dataLayer, request)
-      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
     }
   }
 
@@ -126,7 +126,7 @@ class BinaryDataController @Inject()(
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName) ~> NOT_FOUND
         (data, indices) <- requestData(dataSource, dataLayer, request.body)
-      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
     }
   }
 
@@ -154,7 +154,7 @@ class BinaryDataController @Inject()(
           cubeSize
         )
         (data, indices) <- requestData(dataSource, dataLayer, request)
-      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
     }
   }
 
@@ -265,7 +265,7 @@ class BinaryDataController @Inject()(
           // We need four bytes for each float
           val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
           responseBuffer.asFloatBuffer().put(vertices)
-          Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors): _*)
+          Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors)*)
         }
       }
     }

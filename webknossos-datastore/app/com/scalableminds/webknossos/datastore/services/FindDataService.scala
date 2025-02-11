@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{DataRequest, VoxelPosition}
-import net.liftweb.common.Full
+import com.scalableminds.util.tools.Full
 import play.api.libs.json.{Json, OFormat}
 import spire.math.{UByte, UInt, ULong, UShort}
 
@@ -139,7 +139,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
   def createHistogram(dataSource: DataSource, dataLayer: DataLayer): Fox[List[Histogram]] = {
 
-    def calculateHistogramValues(data: Array[_ >: UByte with UShort with UInt with ULong with Float],
+    def calculateHistogramValues(data: Array[? >: UByte & UShort & UInt & ULong & Float],
                                  bytesPerElement: Int,
                                  isUint24: Boolean) = {
       val counts = if (isUint24) Array.ofDim[Long](768) else Array.ofDim[Long](256)

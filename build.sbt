@@ -1,9 +1,10 @@
 import sbt._
 
 ThisBuild / version := "wk"
+scalaVersion := "3.4.3"
 ThisBuild / scalaVersion := "3.4.3"
 // ThisBuild / scalaVersion := "2.13.14"
-crossScalaVersions ++= Seq("2.13.11", "3.3.4")
+// crossScalaVersions ++= Seq("2.13.11", "3.3.4")
 // ThisBuild / scapegoatVersion := "2.1.6"
 ThisBuild / scalafixDependencies += "io.github.dedis" %% "scapegoat-scalafix" % "1.1.4"
 inThisBuild(
@@ -18,16 +19,18 @@ sbtJniCoreScope := Compile
 val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
   "-explain",      // More detailed compiler output
-  "-Xcheck-null",  // Additional null checks
+  // "-Xcheck-null",  // Additional null checks are no longer supported in Scala 3
   "-explain-types", // Explain type errors in detail
+  "-rewrite",
+  "-source:3.4-migration",
   "-release:11",
   "-feature",
   "-deprecation",
   "-language:implicitConversions",
   "-language:postfixOps",
-  s"-Wconf=src:target/.*:s",
-  s"-Wconf=src:webknossos-datastore/target/.*:s",
-  s"-Wconf=asrc:webknossos-tracingstore/target/.*:s"
+  "-Wconf:src=target/.*:s",
+  "-Wconf:src=webknossos-datastore/target/.*:s",
+  "-Wconf:src=webknossos-tracingstore/target/.*:s"
 ) ++ failOnWarning
 ThisBuild / javacOptions ++= Seq(
   "-Xlint:unchecked",

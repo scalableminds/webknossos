@@ -9,24 +9,25 @@ import com.typesafe.scalalogging.LazyLogging
 import io.grpc.health.v1._
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder
 import io.grpc.{Status, StatusRuntimeException}
-import net.liftweb.common.{Box, Empty, Full}
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.{Box, Empty, Full}
+import com.scalableminds.util.tools.Box.tryo
 import play.api.libs.json.{Json, Reads, Writes}
 import scalapb.grpc.Grpc
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
+import com.scalableminds.util.tools.JsonHelper
 
-trait KeyValueStoreImplicits extends BoxImplicits {
+trait KeyValueStoreImplicits /*extends BoxImplicits */{
 
-  implicit def stringToByteArray(s: String): Array[Byte] = s.toCharArray.map(_.toByte)
+  implicit def stringToByteArray(s: String): Array[Byte] = s.toCharArray.toIndexedSeq.map((c: Char) => c.toByte).toArray
 
   implicit def toBox[T](x: T): Box[T] = Full(x)
 
   implicit def toJsonBytes[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.getBytes("UTF-8")
 
-  implicit def fromJsonBytes[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] = jsResult2Box(Json.parse(a).validate)
+  implicit def fromJsonBytes[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] = JsonHelper.parseAndValidateJson[T](a)
 
   implicit def toProtoBytes[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
 
@@ -69,7 +70,7 @@ class FossilDBClient(collection: String,
       _ <- box match {
         case Full(()) => Fox.successful(())
         case Empty    => Fox.empty
-        case net.liftweb.common.Failure(msg, _, _) =>
+        case com.scalableminds.util.tools.Failure(msg, _, _) =>
           val errorText = s"Failed to connect to FossilDB at $authority: $msg"
           logger.error(errorText)
           Fox.failure(errorText)
@@ -84,7 +85,7 @@ class FossilDBClient(collection: String,
       case Failure(exception) =>
         val box = exception match {
           case e: StatusRuntimeException if e.getStatus == Status.UNAVAILABLE =>
-            new net.liftweb.common.Failure(s"FossilDB is unavailable", Full(e), Empty) ~> 500
+            new com.scalableminds.util.tools.Failure(s"FossilDB is unavailable", Full(e), Empty) ~> 500
           case e: Exception =>
             val messageWithCauses = new StringBuilder
             messageWithCauses.append(e.toString)
@@ -94,7 +95,7 @@ class FossilDBClient(collection: String,
               messageWithCauses.append(cause.toString)
               cause = cause.getCause
             }
-            new net.liftweb.common.Failure(s"Request to FossilDB failed: ${messageWithCauses}", Full(e), Empty)
+            new com.scalableminds.util.tools.Failure(s"Request to FossilDB failed: ${messageWithCauses}", Full(e), Empty)
         }
         Future.successful(box)
     }
@@ -182,7 +183,7 @@ class FossilDBClient(collection: String,
       _ <- box match {
         case Full(()) => Fox.successful(())
         case Empty    => Fox.empty
-        case net.liftweb.common.Failure(msg, _, _) =>
+        case com.scalableminds.util.tools.Failure(msg, _, _) =>
           slackNotificationService.reportFossilWriteError("put", msg)
           Fox.failure("could not save to FossilDB: " + msg)
       }

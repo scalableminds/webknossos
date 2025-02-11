@@ -5,7 +5,7 @@ import java.nio.file.Path
 import com.scalableminds.webknossos.datastore.models.datasource.SegmentationLayer
 import com.scalableminds.webknossos.datastore.models.requests.MappingReadInstruction
 import com.scalableminds.util.io.{FileIO, PathUtils}
-import net.liftweb.common.Box
+import com.scalableminds.util.tools.Box
 import org.apache.commons.io.FilenameUtils
 
 class MappingProvider(layer: SegmentationLayer) {

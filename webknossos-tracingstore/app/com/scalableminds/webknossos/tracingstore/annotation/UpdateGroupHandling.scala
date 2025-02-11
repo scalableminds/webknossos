@@ -1,9 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
 import collections.SequenceUtils
-import com.scalableminds.util.tools.JsonHelper.bool2Box
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.{Box, Full}
 
 trait UpdateGroupHandling extends LazyLogging {
 
@@ -20,7 +19,7 @@ trait UpdateGroupHandling extends LazyLogging {
       updateActionGroupsWithVersions: List[(Long, List[UpdateAction])]): Box[List[(Long, List[UpdateAction])]] =
     for {
       groupVersions <- Full(updateActionGroupsWithVersions.map(_._1))
-      _ <- bool2Box(groupVersions.sorted((Ordering[Long].reverse)) == groupVersions) ?~! "updateGroupVersions.notSortedDesc"
+      _ <- Box.fromBool(groupVersions.sorted((Ordering[Long].reverse)) == groupVersions) ?~! "updateGroupVersions.notSortedDesc"
       splitGroupLists: List[List[(Long, List[UpdateAction])]] = SequenceUtils.splitAndIsolate(
         updateActionGroupsWithVersions.reverse)(actionGroup =>
         actionGroup._2.exists(updateAction => isIsolationSensitiveAction(updateAction)))

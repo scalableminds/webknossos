@@ -18,11 +18,6 @@ object Dependencies {
     "commons-io" % "commons-io" % "2.16.1",
     // HashCodeBuilder. import org.apache.commons.lang3
     "org.apache.commons" % "commons-lang3" % "3.15.0",
-    // Box/Tryo. import net.liftweb
-    ("net.liftweb" %% "lift-common" % "3.5.0")
-      .cross(CrossVersion.for3Use2_13)
-      .exclude("org.scala-lang.modules", "scala-xml_2.13")
-      .exclude("org.scala-lang.modules", "scala-parser-combinators_2.13"),
     // ObjectIds. import reactivemongo.api.bson
     ("org.reactivemongo" %% "reactivemongo-bson-api" % "1.0.10")
       .exclude("org.scala-lang", "scala-reflect")

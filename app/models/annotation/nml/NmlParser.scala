@@ -6,7 +6,6 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.box2Fox
-import com.scalableminds.util.tools.JsonHelper.bool2Box
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
@@ -26,8 +25,8 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiCompone
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{SharedParsingParameters, UploadedVolumeLayer}
 import models.dataset.DatasetDAO
-import net.liftweb.common.Box._
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.Box._
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 
 import java.io.InputStream
@@ -134,7 +133,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
         trees <- parseTrees(nmlData \ "thing", buildBranchPointMap(branchPoints), buildCommentMap(comments))
         treeGroups <- extractTreeGroups(nmlData \ "groups")
         volumes = extractVolumes(nmlData \ "volume")
-        _ <- bool2Box(volumes.length == volumes.map(_.name).distinct.length) ?~ Messages(
+        _ <- Box.fromBool(volumes.length == volumes.map(_.name).distinct.length) ?~ Messages(
           "nml.duplicateVolumeLayerNames")
         treesAndGroupsAfterSplitting = MultiComponentTreeSplitter.splitMulticomponentTrees(trees, treeGroups)
         treesSplit = treesAndGroupsAfterSplitting._1

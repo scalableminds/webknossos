@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataFormat, Dat
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Empty
+import com.scalableminds.util.tools.Empty
 import scala.concurrent.duration._
 import ucar.ma2.{Array => MultiArray}
 

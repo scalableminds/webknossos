@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.io.FileUtils
 
 import scala.concurrent.ExecutionContext

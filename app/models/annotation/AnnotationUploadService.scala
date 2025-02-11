@@ -14,8 +14,8 @@ import files.TempFileService
 import javax.inject.Inject
 import models.annotation.nml.NmlResults._
 import models.annotation.nml.{NmlParseSuccessWithoutFile, NmlParser, NmlResults}
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.Box.tryo
 import play.api.i18n.MessagesProvider
 
 import scala.concurrent.ExecutionContext

@@ -62,12 +62,12 @@ class DSRemoteWebknossosClient @Inject()(
 
   def tick(): Unit = reportStatus()
 
-  private def reportStatus(): Fox[_] =
+  private def reportStatus(): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/status")
       .addQueryString("key" -> dataStoreKey)
       .patchJson(DataStoreStatus(ok = true, dataStoreUri, Some(reportUsedStorageEnabled)))
 
-  def reportDataSource(dataSource: InboxDataSourceLike): Fox[_] =
+  def reportDataSource(dataSource: InboxDataSourceLike): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasource")
       .addQueryString("key" -> dataStoreKey)
       .putJson(dataSource)
@@ -95,7 +95,7 @@ class DSRemoteWebknossosClient @Inject()(
       uploadedDatasetId <- (uploadedDatasetIdJson \ "id").validate[String].asOpt.toFox ?~> "uploadedDatasetId.invalid"
     } yield uploadedDatasetId
 
-  def reportDataSources(dataSources: List[InboxDataSourceLike]): Fox[_] =
+  def reportDataSources(dataSources: List[InboxDataSourceLike]): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources")
       .addQueryString("key" -> dataStoreKey)
       .silent
@@ -110,7 +110,7 @@ class DSRemoteWebknossosClient @Inject()(
         .postJsonWithJsonResponse[ReserveUploadInformation, ReserveAdditionalInformation](info)
     } yield reserveUploadInfo
 
-  def deleteDataSource(id: DataSourceId): Fox[_] =
+  def deleteDataSource(id: DataSourceId): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset")
       .addQueryString("key" -> dataStoreKey)
       .postJson(id)

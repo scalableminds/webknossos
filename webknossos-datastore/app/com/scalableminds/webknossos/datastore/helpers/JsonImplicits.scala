@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.helpers
 
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import play.api.libs.json.{Format, JsNumber, JsResult, JsValue, Json}
 
 trait JsonImplicits {

@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 }
 import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Failure, Full}
+import com.scalableminds.util.tools.{Box, Failure, Full}
 
 import scala.collection.mutable
 import scala.concurrent.duration._

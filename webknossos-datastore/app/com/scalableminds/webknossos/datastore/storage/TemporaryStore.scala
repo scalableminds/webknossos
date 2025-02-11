@@ -3,12 +3,13 @@ package com.scalableminds.webknossos.datastore.storage
 import org.apache.pekko.actor.ActorSystem
 
 import javax.inject.Inject
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
 class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
 
-  lazy val map: scala.collection.mutable.Map[K, V] = scala.collection.mutable.Map()
+  private val map: mutable.Map[K, V] = mutable.Map()
 
   def get(id: K): Option[V] =
     map.synchronized {
@@ -54,12 +55,12 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
     to.foreach(system.scheduler.scheduleOnce(_)(remove(id)))
   }
 
-  def insertAll(els: (K, V)*): map.type =
+  def insertAll(els: (K, V)*): mutable.Map[K, V] =
     map.synchronized {
       map ++= els
     }
 
-  def remove(id: K): map.type =
+  def remove(id: K): mutable.Map[K, V] =
     map.synchronized {
       map -= id
     }

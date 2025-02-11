@@ -1,6 +1,5 @@
 package com.scalableminds.util.tools
 
-import net.liftweb.common.{Box, Empty, Failure, Full, ParamFailure}
 import play.api.libs.json.{JsError, JsResult, JsSuccess}
 
 import scala.concurrent.duration._
@@ -347,7 +346,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   def filter(f: A => Boolean): Fox[A] =
     new Fox(futureBox.map(_.filter(f)))
 
-  def foreach(f: A => _): Unit =
+  def foreach(f: A => ?): Unit =
     futureBox.map(_.map(f))
 
   def toFutureOption: Future[Option[A]] =

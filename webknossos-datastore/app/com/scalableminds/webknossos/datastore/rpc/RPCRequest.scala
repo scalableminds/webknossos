@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.mvc.{Formatter, MimeTypes}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Failure, Full}
+import com.scalableminds.util.tools.{Failure, Full}
 import play.api.http.{HeaderNames, Status}
 import play.api.libs.json._
 import play.api.libs.ws._
@@ -26,7 +26,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
   private var slowRequestLoggingThreshold = 2 minutes
 
   def addQueryString(parameters: (String, String)*): RPCRequest = {
-    request = request.addQueryStringParameters(parameters: _*)
+    request = request.addQueryStringParameters(parameters*)
     this
   }
 
@@ -34,7 +34,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     addQueryStringOptional("token", tc.userTokenOpt)
 
   def addHttpHeaders(hdrs: (String, String)*): RPCRequest = {
-    request = request.addHttpHeaders(hdrs: _*)
+    request = request.addHttpHeaders(hdrs*)
     this
   }
 

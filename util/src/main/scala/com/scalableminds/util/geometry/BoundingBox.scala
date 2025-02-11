@@ -1,7 +1,7 @@
 package com.scalableminds.util.geometry
 
 import com.scalableminds.util.tools.Math.ceilDiv
-import net.liftweb.common.Full
+import com.scalableminds.util.tools.Full
 import play.api.libs.json.{JsObject, Json}
 
 case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
@@ -113,7 +113,7 @@ object BoundingBox {
   def union(bbs: List[BoundingBox]): BoundingBox =
     bbs match {
       case head :: tail =>
-        tail.foldLeft(head)(_ union _)
+        tail.foldLeft(head)(_ `union` _)
       case _ =>
         BoundingBox.empty
     }
@@ -122,7 +122,7 @@ object BoundingBox {
     bbs match {
       case head :: tail =>
         tail.foldLeft[Option[BoundingBox]](Some(head)) { (aOpt, b) =>
-          aOpt.flatMap(_ intersection b)
+          aOpt.flatMap(_ `intersection` b)
         }
       case _ =>
         None

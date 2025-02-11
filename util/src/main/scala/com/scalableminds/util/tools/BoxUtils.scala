@@ -1,6 +1,6 @@
 package com.scalableminds.util.tools
 
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import play.api.libs.json.{JsError, JsResult, JsSuccess}
 
 trait BoxImplicits {
@@ -17,9 +17,8 @@ trait BoxImplicits {
     case JsError(e)          => Failure(s"Invalid json: $e")
   }
 
-  def bool2Box(in: Boolean): Box[Unit] = if (in) Full(()) else Empty
 
-  implicit def combineErrors(boxes: List[Box[_]]): Option[List[String]] = {
+  implicit def combineErrors(boxes: List[Box[?]]): Option[List[String]] = {
     val failures = boxes.collect { case f: Failure => f }
     if (failures.isEmpty) None else Some(failures.map(_.msg))
   }

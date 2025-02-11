@@ -7,8 +7,8 @@ import java.nio.file.{Files, Path, Paths}
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
 import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.io.IOUtils
 import play.api.libs.Files.TemporaryFile
 
@@ -54,7 +54,7 @@ object ZipIO extends LazyLogging {
       * @param f input
       * @return future, completes when file is added
       */
-    def withFile(name: String)(f: OutputStream => Fox[_]): Fox[Unit] = {
+    def withFile(name: String)(f: OutputStream => Fox[?]): Fox[Unit] = {
       stream.putNextEntry(new ZipEntry(name))
       f(stream).map(_ => stream.closeEntry())
     }

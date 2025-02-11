@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.helpers
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Full
+import com.scalableminds.util.tools.Full
 
 import java.io.File
 import java.nio.file.{Files, Path}

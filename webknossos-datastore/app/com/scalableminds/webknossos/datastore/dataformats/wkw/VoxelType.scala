@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.dataformats.wkw
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
-import net.liftweb.common.{Box, Failure, Full}
+import com.scalableminds.util.tools.{Box, Failure, Full}
 
 object VoxelType extends Enumeration(1) {
   val UInt8, UInt16, UInt32, UInt64, Float, Double, Int8, Int16, Int32, Int64 = Value

@@ -8,14 +8,14 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 
 import java.nio.ByteOrder
 import java.nio.ByteBuffer
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
-import net.liftweb.common.Box
+import com.scalableminds.util.tools.Box
 import ucar.ma2.{Array => MultiArray}
 
 object PrecomputedArray extends LazyLogging {

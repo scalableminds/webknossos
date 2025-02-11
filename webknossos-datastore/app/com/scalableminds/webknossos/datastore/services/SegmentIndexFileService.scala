@@ -20,8 +20,8 @@ import com.scalableminds.webknossos.datastore.models.{
   datasource
 }
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, CachedHdf5File, Hdf5FileCache}
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Full}
 import play.api.i18n.MessagesProvider
 
 import java.nio.file.{Path, Paths}

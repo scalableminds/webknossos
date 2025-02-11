@@ -4,7 +4,7 @@ import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageException, StorageOptions}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{GoogleServiceAccountCredential, RemoteSourceDescriptor}
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.io.ByteArrayInputStream

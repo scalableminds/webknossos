@@ -32,8 +32,8 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 }
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.Box.tryo
 import org.jgrapht.alg.flow.PushRelabelMFImpl
 import org.jgrapht.graph.{DefaultWeightedEdge, SimpleWeightedGraph}
 import play.api.libs.json.{JsObject, Json, OFormat}
@@ -94,7 +94,6 @@ class EditableMappingService @Inject()(
     val remoteWebknossosClient: TSRemoteWebknossosClient
 )(implicit ec: ExecutionContext)
     extends KeyValueStoreImplicits
-    with FallbackDataHelper
     with FoxImplicits
     with ReversionHelper
     with EditableMappingElementKeys
@@ -343,7 +342,7 @@ class EditableMappingService @Inject()(
   def mapData(unmappedData: Array[UnsignedInteger],
               relevantMapping: Map[Long, Long],
               elementClass: ElementClassProto): Fox[Array[Byte]] = {
-    val mappedDataLongs = unmappedData.map(element => relevantMapping(element.toPositiveLong))
+    val mappedDataLongs: Array[Long] = unmappedData.toIndexedSeq.map((element: UnsignedInteger) => relevantMapping(element.toPositiveLong)).toArray
     for {
       bytes <- longsToBytes(mappedDataLongs, elementClass)
     } yield bytes
@@ -353,7 +352,7 @@ class EditableMappingService @Inject()(
     for {
       _ <- bool2Fox(!elementClass.isuint64)
       unsignedIntArray <- tryo(UnsignedIntegerArray.fromByteArray(bytes, elementClass)).toFox
-    } yield unsignedIntArray.map(_.toPositiveLong)
+    } yield unsignedIntArray.toIndexedSeq.map(_.toPositiveLong).toArray
 
   def bytesToUnsignedInt(bytes: Array[Byte], elementClass: ElementClassProto): Fox[Array[UnsignedInteger]] =
     for {
@@ -364,7 +363,7 @@ class EditableMappingService @Inject()(
   private def longsToBytes(longs: Array[Long], elementClass: ElementClassProto): Fox[Array[Byte]] =
     for {
       _ <- bool2Fox(!elementClass.isuint64)
-      unsignedIntArray: Array[UnsignedInteger] = longs.map(UnsignedInteger.fromLongWithElementClass(_, elementClass))
+      unsignedIntArray: Array[UnsignedInteger] = longs.toIndexedSeq.map(UnsignedInteger.fromLongWithElementClass(_, elementClass)).toArray
       bytes = UnsignedIntegerArray.toByteArray(unsignedIntArray, elementClass)
     } yield bytes
 

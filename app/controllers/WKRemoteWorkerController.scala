@@ -10,7 +10,7 @@ import models.job.JobCommand.JobCommand
 import javax.inject.Inject
 import models.job._
 import models.voxelytics.VoxelyticsDAO
-import net.liftweb.common.{Empty, Failure, Full}
+import com.scalableminds.util.tools.{Empty, Failure, Full}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.WkConf

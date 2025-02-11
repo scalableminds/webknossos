@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.Math._
-import net.liftweb.common.{Box, Failure}
+import com.scalableminds.util.tools.{Box, Failure}
 
 import scala.collection.immutable.Queue
 import scala.concurrent.ExecutionContext.Implicits._
@@ -174,7 +174,7 @@ object ExtendedTypes {
     def toBooleanOpt: Option[Boolean] = StringToBoolean.convert(s)
   }
 
-  import net.liftweb.common._
+  import com.scalableminds.util.tools._
 
   import scala.concurrent.Future
 

@@ -17,6 +17,7 @@ import SkeletontracingSagas from "oxalis/model/sagas/skeletontracing_saga";
 import watchTasksAsync, { warnAboutMagRestriction } from "oxalis/model/sagas/task_saga";
 import UndoSaga from "oxalis/model/sagas/undo_saga";
 import VolumetracingSagas from "oxalis/model/sagas/volumetracing_saga";
+import { race } from "redux-saga/effects";
 import { all, call, cancel, fork, put, take, takeEvery } from "typed-redux-saga";
 import type { EscalateErrorAction } from "../actions/actions";
 import { setIsWkReadyAction } from "../actions/ui_actions";
@@ -28,12 +29,25 @@ export default function* rootSaga(): Saga<void> {
     // todop: also stop sagas when controller is unmounted
 
     rootSagaCrashed = false;
+    console.log("fork");
     const task = yield* fork(restartableSaga);
-    yield* take("RESTART_SAGA");
+    const { restart, doCancel } = yield race({
+      restart: take("RESTART_SAGA"),
+      doCancel: take("CANCEL_SAGA"),
+    });
     yield* cancel(task);
-    yield* put(setIsWkReadyAction(false));
+    if (restart) {
+      console.log("restart");
+      yield* put(setIsWkReadyAction(false));
+    }
+    if (doCancel) {
+      console.log("doCancel");
+      // No restart, leave the while-true-loop
+      break;
+    }
   }
 }
+
 export function hasRootSagaCrashed() {
   return rootSagaCrashed;
 }

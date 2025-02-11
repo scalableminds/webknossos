@@ -36,6 +36,7 @@ export type Action =
   | ReturnType<typeof sceneControllerReadyAction>
   | ReturnType<typeof restartSagaAction>
   | ReturnType<typeof resetStoreAction>
+  | ReturnType<typeof cancelSagaAction>
   | EscalateErrorAction;
 
 export const wkReadyAction = () =>
@@ -56,6 +57,11 @@ export const sceneControllerReadyAction = () =>
 export const restartSagaAction = () =>
   ({
     type: "RESTART_SAGA",
+  }) as const;
+
+export const cancelSagaAction = () =>
+  ({
+    type: "CANCEL_SAGA",
   }) as const;
 
 export const escalateErrorAction = (error: unknown) =>

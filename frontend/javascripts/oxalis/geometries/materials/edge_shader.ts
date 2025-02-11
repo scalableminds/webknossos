@@ -18,6 +18,7 @@ class EdgeShader {
   uniforms: Uniforms = {};
   scaledTps: TPS3D | null = null;
   oldVertexShaderCode: string | null = null;
+  storePropertyUnsubscribers: Array<() => void> = [];
 
   constructor(treeColorTexture: THREE.DataTexture) {
     this.setupUniforms(treeColorTexture);
@@ -58,39 +59,41 @@ class EdgeShader {
       };
     });
 
-    listenToStoreProperty(
-      (storeState) => storeState.flycam.additionalCoordinates,
-      (additionalCoordinates) => {
-        _.each(additionalCoordinates, (coord, idx) => {
-          this.uniforms[`currentAdditionalCoord_${idx}`].value = coord.value;
-        });
-      },
-      true,
-    );
+    this.storePropertyUnsubscribers = [
+      listenToStoreProperty(
+        (storeState) => storeState.flycam.additionalCoordinates,
+        (additionalCoordinates) => {
+          _.each(additionalCoordinates, (coord, idx) => {
+            this.uniforms[`currentAdditionalCoord_${idx}`].value = coord.value;
+          });
+        },
+        true,
+      ),
 
-    listenToStoreProperty(
-      (storeState) =>
-        getTransformsForSkeletonLayer(
-          storeState.dataset,
-          storeState.datasetConfiguration.nativelyRenderedLayerName,
-        ),
-      (skeletonTransforms) => {
-        const transforms = skeletonTransforms;
-        const { affineMatrix } = transforms;
+      listenToStoreProperty(
+        (storeState) =>
+          getTransformsForSkeletonLayer(
+            storeState.dataset,
+            storeState.datasetConfiguration.nativelyRenderedLayerName,
+          ),
+        (skeletonTransforms) => {
+          const transforms = skeletonTransforms;
+          const { affineMatrix } = transforms;
 
-        const scaledTps = transforms.type === "thin_plate_spline" ? transforms.scaledTps : null;
+          const scaledTps = transforms.type === "thin_plate_spline" ? transforms.scaledTps : null;
 
-        if (scaledTps) {
-          this.scaledTps = scaledTps;
-        } else {
-          this.scaledTps = null;
-        }
+          if (scaledTps) {
+            this.scaledTps = scaledTps;
+          } else {
+            this.scaledTps = null;
+          }
 
-        this.uniforms["transform"].value = M4x4.transpose(affineMatrix);
+          this.uniforms["transform"].value = M4x4.transpose(affineMatrix);
 
-        this.recomputeVertexShader();
-      },
-    );
+          this.recomputeVertexShader();
+        },
+      ),
+    ];
   }
 
   getMaterial(): THREE.RawShaderMaterial {
@@ -199,6 +202,14 @@ void main()
 {
     fragColor = vec4(color, alpha);
 }`;
+  }
+
+  destroy() {
+    for (const fn of this.storePropertyUnsubscribers) {
+      fn();
+    }
+    this.storePropertyUnsubscribers = [];
+    this.uniforms.treeColors.value = null;
   }
 }
 

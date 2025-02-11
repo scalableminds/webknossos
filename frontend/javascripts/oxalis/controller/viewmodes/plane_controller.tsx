@@ -286,6 +286,7 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   componentWillUnmount() {
+    console.log("PlaneController.componentWillUnmount");
     this.stop();
   }
 

@@ -76,6 +76,7 @@ class SceneController {
   // Group for all meshes including a light.
   meshesRootGroup!: THREE.Object3D;
   segmentMeshController: SegmentMeshController;
+  storePropertyUnsubscribers: Array<() => void>;
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -89,6 +90,7 @@ class SceneController {
     };
     this.planeShift = [0, 0, 0];
     this.segmentMeshController = new SegmentMeshController();
+    this.storePropertyUnsubscribers = [];
   }
 
   initialize() {
@@ -267,6 +269,7 @@ class SceneController {
   }
 
   removeSkeleton(skeletonId: number) {
+    console.log("removeSkeleton");
     const skeleton = this.skeletons[skeletonId];
     const skeletonGroup = skeleton.getRootGroup();
     skeleton.destroy();
@@ -532,41 +535,81 @@ class SceneController {
     this.taskBoundingBox?.setVisibility(true);
   }
 
+  destroy() {
+    console.group("SceneController.destroy()");
+    // @ts-ignore
+    window.addBucketMesh = undefined;
+    // @ts-ignore
+    window.addVoxelMesh = undefined;
+    // @ts-ignore
+    window.addLine = undefined;
+    // @ts-ignore
+    window.removeLines = undefined;
+    // @ts-ignore
+    window.removeBucketMesh = undefined;
+
+    for (const skeletonId of Object.keys(this.skeletons)) {
+      this.removeSkeleton(Number.parseInt(skeletonId, 10));
+    }
+
+    for (const fn of this.storePropertyUnsubscribers) {
+      fn();
+    }
+    this.storePropertyUnsubscribers = [];
+
+    getRenderer().dispose();
+    this.renderer = null;
+
+    this.datasetBoundingBox.destroy();
+    this.userBoundingBoxes.forEach((cube) => cube.destroy());
+    Object.values(this.layerBoundingBoxes).forEach((cube) => cube.destroy());
+    this.taskBoundingBox?.destroy();
+
+    for (const plane of _.values(this.planes)) {
+      plane.destroy();
+    }
+    console.groupEnd();
+
+    this.rootNode = new THREE.Object3D();
+  }
+
   bindToEvents(): void {
-    listenToStoreProperty(
-      (storeState) => storeState.userConfiguration.clippingDistance,
-      (clippingDistance) => this.setClippingDistance(clippingDistance),
-    );
-    listenToStoreProperty(
-      (storeState) => storeState.userConfiguration.displayCrosshair,
-      (displayCrosshair) => this.setDisplayCrosshair(displayCrosshair),
-    );
-    listenToStoreProperty(
-      (storeState) => storeState.datasetConfiguration.interpolation,
-      (interpolation) => this.setInterpolation(interpolation),
-    );
-    listenToStoreProperty(
-      (storeState) => getSomeTracing(storeState.tracing).userBoundingBoxes,
-      (bboxes) => this.setUserBoundingBoxes(bboxes),
-    );
-    listenToStoreProperty(
-      (storeState) => getDataLayers(storeState.dataset),
-      () => this.updateLayerBoundingBoxes(),
-    );
-    listenToStoreProperty(
-      (storeState) => storeState.datasetConfiguration.nativelyRenderedLayerName,
-      () => this.updateLayerBoundingBoxes(),
-    );
-    listenToStoreProperty(
-      (storeState) => getSomeTracing(storeState.tracing).boundingBox,
-      (bb) => this.buildTaskingBoundingBox(bb),
-    );
-    listenToStoreProperty(
-      (storeState) =>
-        storeState.tracing.skeleton ? storeState.tracing.skeleton.showSkeletons : false,
-      (showSkeletons) => this.setSkeletonGroupVisibility(showSkeletons),
-      true,
-    );
+    this.storePropertyUnsubscribers = [
+      listenToStoreProperty(
+        (storeState) => storeState.userConfiguration.clippingDistance,
+        (clippingDistance) => this.setClippingDistance(clippingDistance),
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.userConfiguration.displayCrosshair,
+        (displayCrosshair) => this.setDisplayCrosshair(displayCrosshair),
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.datasetConfiguration.interpolation,
+        (interpolation) => this.setInterpolation(interpolation),
+      ),
+      listenToStoreProperty(
+        (storeState) => getSomeTracing(storeState.tracing).userBoundingBoxes,
+        (bboxes) => this.setUserBoundingBoxes(bboxes),
+      ),
+      listenToStoreProperty(
+        (storeState) => getDataLayers(storeState.dataset),
+        () => this.updateLayerBoundingBoxes(),
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.datasetConfiguration.nativelyRenderedLayerName,
+        () => this.updateLayerBoundingBoxes(),
+      ),
+      listenToStoreProperty(
+        (storeState) => getSomeTracing(storeState.tracing).boundingBox,
+        (bb) => this.buildTaskingBoundingBox(bb),
+      ),
+      listenToStoreProperty(
+        (storeState) =>
+          storeState.tracing.skeleton ? storeState.tracing.skeleton.showSkeletons : false,
+        (showSkeletons) => this.setSkeletonGroupVisibility(showSkeletons),
+        true,
+      ),
+    ];
   }
 }
 

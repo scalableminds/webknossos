@@ -8,6 +8,14 @@ export default function getSceneController(): SceneControllerType {
 
   return sceneController;
 }
+
 export function setSceneController(c: SceneControllerType): void {
   sceneController = c;
+}
+
+export function destroySceneController(): void {
+  if (sceneController != null) {
+    sceneController.destroy();
+  }
+  sceneController = null;
 }

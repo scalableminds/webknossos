@@ -12,6 +12,12 @@ export default {
     window.materials = window.materials || [];
     window.materials[identifier] = material;
   },
+
+  destroy() {
+    console.log("ShaderEditor.destroy");
+    window.materials = [];
+    window.managers = [];
+  },
 };
 
 window._setupShaderEditor = (identifier, _shaderType) => {

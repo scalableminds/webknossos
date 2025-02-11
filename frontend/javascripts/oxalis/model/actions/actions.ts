@@ -35,11 +35,17 @@ export type Action =
   | ReturnType<typeof wkReadyAction>
   | ReturnType<typeof sceneControllerReadyAction>
   | ReturnType<typeof restartSagaAction>
+  | ReturnType<typeof resetStoreAction>
   | EscalateErrorAction;
 
 export const wkReadyAction = () =>
   ({
     type: "WK_READY",
+  }) as const;
+
+export const resetStoreAction = () =>
+  ({
+    type: "RESET_STORE",
   }) as const;
 
 export const sceneControllerReadyAction = () =>

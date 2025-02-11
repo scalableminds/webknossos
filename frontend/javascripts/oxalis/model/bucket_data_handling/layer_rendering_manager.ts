@@ -40,9 +40,8 @@ const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
 const LOOKUP_CUCKOO_TEXTURE_WIDTH = 256;
 
 const asyncBucketPickRaw = createWorker(AsyncBucketPickerWorker);
-const asyncBucketPick: typeof asyncBucketPickRaw = memoizeOne(
-  asyncBucketPickRaw,
-  (oldArgs, newArgs) => _.isEqual(oldArgs, newArgs),
+const asyncBucketPick = memoizeOne(asyncBucketPickRaw, (oldArgs, newArgs) =>
+  _.isEqual(oldArgs, newArgs),
 );
 const dummyBuffer = new ArrayBuffer(0);
 export type EnqueueFunction = (arg0: Vector4, arg1: number) => void;
@@ -152,6 +151,7 @@ export default class LayerRenderingManager {
   }
 
   setupDataTextures(): void {
+    console.log("setupDataTextures");
     const { dataset } = Store.getState();
     const bytes = getByteCount(dataset, this.name);
     const elementClass = getElementClass(dataset, this.name);
@@ -284,6 +284,11 @@ export default class LayerRenderingManager {
 
   destroy() {
     this.storePropertyUnsubscribers.forEach((fn) => fn());
+    this.textureBucketManager.destroy();
+    getSharedLookUpCuckooTable.clear();
+    asyncBucketPick.clear();
+    shaderEditor.destroy();
+    this.cuckooTable = undefined;
   }
 
   /* Methods related to custom segment colors: */

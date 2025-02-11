@@ -1155,6 +1155,17 @@ class PlaneMaterialFactory {
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });
   }
+
+  destroy() {
+    if (this.unsubscribeColorSeedsFn) {
+      this.unsubscribeColorSeedsFn();
+      this.unsubscribeColorSeedsFn = null;
+    }
+    if (this.unsubscribeMappingSeedsFn) {
+      this.unsubscribeMappingSeedsFn();
+      this.unsubscribeMappingSeedsFn = null;
+    }
+  }
 }
 
 export default PlaneMaterialFactory;

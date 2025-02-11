@@ -1,4 +1,5 @@
 import { AnnotationToolEnum, AvailableToolsInViewMode, ControlModeEnum } from "oxalis/constants";
+import defaultState from "oxalis/default_state";
 import type { Action } from "oxalis/model/actions/actions";
 import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import {
@@ -11,6 +12,14 @@ import type { OxalisState } from "oxalis/store";
 
 function UiReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
+    case "RESET_STORE": {
+      return {
+        ...defaultState,
+        activeUser: state.activeUser,
+        activeOrganization: state.activeOrganization,
+      };
+    }
+
     case "SET_DROPZONE_MODAL_VISIBILITY": {
       return updateKey(state, "uiInformation", {
         showDropzoneModal: action.visible,

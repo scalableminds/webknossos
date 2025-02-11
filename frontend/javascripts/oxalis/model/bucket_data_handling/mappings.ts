@@ -61,6 +61,7 @@ class Mappings {
   cuckooTable: CuckooTableUint64 | CuckooTableUint32 | null = null;
   previousMapping: Mapping | null | undefined = null;
   currentKeyCount: number = 0;
+  storePropertyUnsubscribers: Array<() => void> = [];
 
   constructor(layerName: string) {
     this.layerName = layerName;
@@ -76,13 +77,15 @@ class Mappings {
       ? new CuckooTableUint64(MAPPING_TEXTURE_WIDTH)
       : new CuckooTableUint32(MAPPING_TEXTURE_WIDTH);
 
-    listenToStoreProperty(
-      (state) =>
-        getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, this.layerName).mapping,
-      (mapping) => {
-        this.updateMappingTextures(mapping);
-      },
-      true,
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, this.layerName).mapping,
+        (mapping) => {
+          this.updateMappingTextures(mapping);
+        },
+        true,
+      ),
     );
   }
 
@@ -150,6 +153,14 @@ class Mappings {
     }
 
     return this.cuckooTable;
+  }
+
+  destroy() {
+    console.group("Mappings.destroy");
+    // todop call this
+    this.storePropertyUnsubscribers.forEach((fn) => fn());
+    this.storePropertyUnsubscribers = [];
+    console.groupEnd();
   }
 }
 

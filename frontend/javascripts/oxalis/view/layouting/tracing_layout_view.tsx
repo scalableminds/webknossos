@@ -18,10 +18,12 @@ import type { OxalisState, Theme, TraceOrViewCommand } from "oxalis/store";
 import ActionBarView from "oxalis/view/action_bar_view";
 import WkContextMenu from "oxalis/view/context_menu";
 import DistanceMeasurementTooltip from "oxalis/view/distance_measurement_tooltip";
+import { Model } from "oxalis/singletons";
 import {
   initializeInputCatcherSizes,
   recalculateInputCatcherSizes,
 } from "oxalis/view/input_catcher";
+import { destroySceneController } from "oxalis/controller/scene_controller_provider";
 import {
   getLastActiveLayout,
   getLayoutConfig,
@@ -46,6 +48,7 @@ import TabTitle from "../components/tab_title_component";
 import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { FloatingMobileControls } from "./floating_mobile_controls";
+import { resetStoreAction, restartSagaAction } from "oxalis/model/actions/actions";
 
 const { Sider } = Layout;
 
@@ -110,12 +113,14 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
   componentWillUnmount() {
     console.log("TracingLayoutView.componentWillUnmount");
-    // Model.destroy();
-    // setTimeout(() => {
-    //   destroySceneController();
-    // }, 100);
-    // Store.dispatch(restartSagaAction());
-    // Store.dispatch(resetStoreAction());
+    Model.destroy();
+    // this is a workaround because otherwise inner components where
+    // componentWillUnmount will trigger later would crash otherwise.
+    setTimeout(() => {
+      destroySceneController();
+    }, 100);
+    Store.dispatch(restartSagaAction());
+    Store.dispatch(resetStoreAction());
 
     if (!FORCE_PAGE_RELOAD_WHEN_EXITING) {
       return;

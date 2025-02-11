@@ -17,6 +17,10 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
         ...defaultState,
         activeUser: state.activeUser,
         activeOrganization: state.activeOrganization,
+        uiInformation: {
+          ...defaultState.uiInformation,
+          storedLayouts: state.uiInformation.storedLayouts,
+        },
       };
     }
 

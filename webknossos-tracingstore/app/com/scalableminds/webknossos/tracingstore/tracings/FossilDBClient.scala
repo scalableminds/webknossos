@@ -23,7 +23,7 @@ trait KeyValueStoreImplicits /*extends BoxImplicits */{
 
   implicit def stringToByteArray(s: String): Array[Byte] = s.toCharArray.toIndexedSeq.map((c: Char) => c.toByte).toArray
 
-  implicit def toBox[T](x: T): Box[T] = Full(x)
+  def wrapInBox[T](x: T): Box[T] = Full(x)
 
   implicit def toJsonBytes[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.getBytes("UTF-8")
 

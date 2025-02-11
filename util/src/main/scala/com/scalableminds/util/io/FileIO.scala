@@ -44,11 +44,13 @@ case class NamedFileStream(name: String, file: File) extends NamedStream {
         val in = stream()
         val buffer = new Array[Byte](1024)
         var len = 0
-        while ({ {
+        while 
           len = in.read(buffer)
-          if (len > 0)
+          if (len > 0) {
             out.write(buffer, 0, len)
-        } ; len > 0}) ()
+          }
+          len > 0
+        do ()
         in.close()
       }
     }

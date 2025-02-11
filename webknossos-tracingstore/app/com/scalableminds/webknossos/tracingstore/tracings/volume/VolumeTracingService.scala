@@ -607,7 +607,7 @@ class VolumeTracingService @Inject()(
     } yield id
 
   def volumeBucketsAreEmpty(tracingId: String): Boolean =
-    volumeDataStore.getMultipleKeys(None, Some(tracingId), limit = Some(1))(toBox).isEmpty
+    volumeDataStore.getMultipleKeys(None, Some(tracingId), limit = Some(1))(wrapInBox).isEmpty
 
   def createAdHocMesh(tracingId: String, tracing: VolumeTracing, request: WebknossosAdHocMeshRequest)(
       implicit tc: TokenContext): Fox[(Array[Float], List[Int])] =
@@ -661,7 +661,7 @@ class VolumeTracingService @Inject()(
     for {
       tracingsWithIndex <- Full(tracings.zipWithIndex.map(Full(_)))
       tracingAndIndex <- tracingsWithIndex.reduceLeft(mergeTwoWithStats)
-      tracing <- tracingAndIndex._1
+      tracing = tracingAndIndex._1
     } yield
       tracing.copy(
         createdTimestamp = System.currentTimeMillis(),

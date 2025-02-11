@@ -29,7 +29,7 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
                        retryCount: Int = 0,
                        retryIfErrorContains: List[String] = List()): Fox[R] = {
     val stackMarker = new Throwable()
-    val foxFuture = sqlClient.db.run(query.asTry).map { ((result: Try[R])) =>
+    val foxFuture = sqlClient.db.run(query.asTry).map { (result: Try[R]) =>
       result match {
         case Success(res) =>
           Fox.successful(res)

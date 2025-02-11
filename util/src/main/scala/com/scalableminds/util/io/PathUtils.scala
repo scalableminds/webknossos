@@ -186,7 +186,7 @@ trait PathUtils extends LazyLogging {
     } else path.getParent
 
   def deleteDirectoryRecursively(path: Path): Box[Unit] = {
-    try {
+      try {
       if (Files.exists(path)) {
         FileUtils.deleteDirectory(path.toFile) // Using Apache Commons IO
       }

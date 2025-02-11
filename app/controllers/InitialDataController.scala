@@ -315,7 +315,7 @@ Samplecountry
 
   private def updateLocalDataStorePublicUri(): Fox[Unit] =
     if (storeModules.localDataStoreEnabled) {
-      dataStoreDAO.findOneByUrl(conf.Http.uri).futureBox.flatMap { ((storeOpt: Box[DataStore])) =>
+      dataStoreDAO.findOneByUrl(conf.Http.uri).futureBox.flatMap { (storeOpt: Box[DataStore]) =>
         storeOpt match {
           case Full(store) =>
             val newPublicUri = conf.Datastore.publicUri.getOrElse(conf.Http.uri)

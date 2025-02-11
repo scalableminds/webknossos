@@ -94,6 +94,7 @@ class EditableMappingService @Inject()(
     val remoteWebknossosClient: TSRemoteWebknossosClient
 )(implicit ec: ExecutionContext)
     extends KeyValueStoreImplicits
+    with FallbackDataHelper
     with FoxImplicits
     with ReversionHelper
     with EditableMappingElementKeys
@@ -247,7 +248,7 @@ class EditableMappingService @Inject()(
   def getSegmentToAgglomerateChunk(chunkKey: String, version: Option[Long]): Fox[Seq[(Long, Long)]] =
     for {
       keyValuePairBytes: VersionedKeyValuePair[Array[Byte]] <- tracingDataStore.editableMappingsSegmentToAgglomerate
-        .get(chunkKey, version, mayBeEmpty = Some(true))
+        .get(chunkKey, version, mayBeEmpty = Some(true))(wrapInBox)
       valueProto <- if (isRevertedElement(keyValuePairBytes.value)) Fox.empty
       else fromProtoBytes[SegmentToAgglomerateChunkProto](keyValuePairBytes.value).toFox
       asSequence = valueProto.segmentToAgglomerate.map(pair => pair.segmentId -> pair.agglomerateId)
@@ -389,7 +390,7 @@ class EditableMappingService @Inject()(
         _ =>
           for {
             graphBytes: VersionedKeyValuePair[Array[Byte]] <- tracingDataStore.editableMappingsAgglomerateToGraph
-              .get(agglomerateGraphKey(tracingId, agglomerateId), Some(version), mayBeEmpty = Some(true))
+              .get(agglomerateGraphKey(tracingId, agglomerateId), Some(version), mayBeEmpty = Some(true))(wrapInBox)
             graphParsed <- if (isRevertedElement(graphBytes.value)) Fox.empty
             else fromProtoBytes[AgglomerateGraph](graphBytes.value).toFox
           } yield graphParsed

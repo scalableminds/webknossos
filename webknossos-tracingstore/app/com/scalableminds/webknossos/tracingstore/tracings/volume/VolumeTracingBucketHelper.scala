@@ -184,7 +184,7 @@ trait VolumeTracingBucketHelper
       if (volumeTracingLayer.isTemporaryTracing)
         temporaryTracingService.getVolumeBucket(bucketKey).map(VersionedKeyValuePair(VersionedKey(bucketKey, 0), _))
       else
-        volumeDataStore.get(bucketKey, version, mayBeEmpty = Some(true))
+        volumeDataStore.get(bucketKey, version, mayBeEmpty = Some(true))(wrapInBox)
 
     val unpackedDataFox = dataFox.flatMap { versionedVolumeBucket =>
       if (isRevertedElement(versionedVolumeBucket)) Fox.empty
@@ -301,7 +301,7 @@ class VersionedBucketIterator(prefix: String,
   private var nextBucket: Option[VersionedKeyValuePair[Array[Byte]]] = None
 
   private def fetchNext =
-    volumeDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).iterator
+    volumeDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize))(wrapInBox).iterator
 
   private def fetchNextAndSave = {
     currentBatchIterator = fetchNext

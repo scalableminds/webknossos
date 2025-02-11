@@ -25,7 +25,7 @@ class VersionedAgglomerateToGraphIterator(prefix: String,
   private var nextGraph: Option[VersionedKeyValuePair[AgglomerateGraph]] = None
 
   private def fetchNext: Iterator[VersionedKeyValuePair[Array[Byte]]] =
-    segmentToAgglomerateDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).iterator
+    segmentToAgglomerateDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize))(wrapInBox).iterator
 
   private def fetchNextAndSave = {
     currentBatchIterator = fetchNext
@@ -79,7 +79,7 @@ class VersionedSegmentToAgglomerateChunkIterator(prefix: String,
   private var nextChunk: Option[VersionedKeyValuePair[SegmentToAgglomerateChunkProto]] = None
 
   private def fetchNext: Iterator[VersionedKeyValuePair[Array[Byte]]] =
-    segmentToAgglomerateDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).iterator
+    segmentToAgglomerateDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize))(wrapInBox).iterator
 
   private def fetchNextAndSave = {
     currentBatchIterator = fetchNext

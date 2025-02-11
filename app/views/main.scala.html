@@ -43,7 +43,6 @@ Option[String], openGraphImage: Option[String] )
       data-airbrake-project-key="@(conf.Airbrake.projectKey)"
       data-airbrake-environment-name="@(conf.Airbrake.environment)"
     ></script>
-    <script src="/assets/bundle/vendors~main.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
     <script src="/assets/bundle/main.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
     <!--<script type="text/javascript" src="https://app.olvy.co/script.js" defer="defer"></script>-->
   </head>

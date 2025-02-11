@@ -1,16 +1,17 @@
 module.exports = function (env = {}) {
   /* eslint import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
+  env.production = true;
   const webpack = require("webpack");
   const { EsbuildPlugin } = require("esbuild-loader");
   const path = require("path");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
   const browserslistToEsbuild = require("browserslist-to-esbuild");
   const CopyPlugin = require("copy-webpack-plugin");
-
   const srcPath = path.resolve(__dirname, "frontend/javascripts/");
   const nodePath = "node_modules";
   const protoPath = path.join(__dirname, "webknossos-datastore/proto/");
   const publicPath = "/assets/bundle/";
+  // const BundleAnalyzerPlugin = require("webpack-bundle-analyzer").BundleAnalyzerPlugin;
 
   const buildTarget = browserslistToEsbuild([
     "last 3 Chrome versions",
@@ -21,6 +22,7 @@ module.exports = function (env = {}) {
   ]);
 
   const plugins = [
+    // new BundleAnalyzerPlugin({ bundleDir: publicPath }),
     new webpack.DefinePlugin({
       "process.env.NODE_ENV": env.production ? '"production"' : '"development"',
       "process.env.BABEL_ENV": process.env.BABEL_ENV,
@@ -162,18 +164,6 @@ module.exports = function (env = {}) {
           target: buildTarget, // Syntax to transpile to (see options below for possible values)
         }),
       ],
-      splitChunks: {
-        chunks: "all",
-        // Use a consistent name for the vendors chunk
-        name: "vendors~main",
-        cacheGroups: {
-          html2canvas: {
-            test: /[\\/]node_modules[\\/](html2canvas)[\\/]/,
-            chunks: "all",
-            name: "vendors~html2canvas",
-          },
-        },
-      },
     },
     // See https://webpack.js.org/configuration/devtool/
     devtool: env.production ? "source-map" : "eval-source-map",
@@ -202,7 +192,11 @@ module.exports = function (env = {}) {
     stats: {
       preset: "minimal",
     },
-    // Ignore the lengthy warning considering STLExporter which is added to the exports dynamically
-    ignoreWarnings: [/export 'STLExporter'/],
+    // Ignore the lengthy warnings which are added to the exports dynamically
+    ignoreWarnings: [
+      /export 'STLExporter'/,
+      /export 'SRGBColorSpace'/,
+      /export 'LinearSRGBColorSpace'/,
+    ],
   };
 };

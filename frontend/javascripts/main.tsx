@@ -1,7 +1,7 @@
 import { message } from "antd";
 import window, { document } from "libs/window";
-import rootSaga from "oxalis/model/sagas/root_saga";
-import UnthrottledStore, { startSagas } from "oxalis/store";
+import { warnIfEmailIsUnverified } from "oxalis/model/sagas/user_saga";
+import UnthrottledStore, { startSaga } from "oxalis/store";
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
 
@@ -41,7 +41,7 @@ window.OlvyConfig = null;
 setModel(Model);
 setStore(UnthrottledStore);
 setupApi();
-startSagas(rootSaga);
+startSaga(warnIfEmailIsUnverified);
 
 const reactQueryClient = new QueryClient({
   defaultOptions: {

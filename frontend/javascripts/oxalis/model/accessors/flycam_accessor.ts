@@ -52,6 +52,7 @@ function estimateTotalBucketCountForZoomLevel(
   voxelSizeFactor: Array<Vector3>,
 ) {
   const voxelSizeSmallest = Math.min(...voxelSizeFactor);
+  console.log(viewportRects)
   const viewportSizeX = viewportRects["PLANE_XY"].width;
   const viewportSizeY = viewportRects["PLANE_XY"].height;
   const viewportSizeZ = viewportRects["PLANE_YZ"].width;
@@ -62,6 +63,11 @@ function estimateTotalBucketCountForZoomLevel(
     2 + (((zoomFactor * voxelSizeSmallest) / voxelSizeFactor[1]) * viewportSizeY) / mag[1] / 32;
   const numBucketsZ =
     2 + (((zoomFactor * voxelSizeSmallest) / voxelSizeFactor[2]) * viewportSizeZ) / mag[2] / 32;
+
+  if (mag[0] == 1) {
+    console.log("viewportSizes:", viewportSizeX, viewportSizeY, viewportSizeZ);
+    console.log("numBuckets:", numBucketsX, "*", numBucketsY, "*", numBucketsZ);
+  }
 
   const thickness = 3; // load a bucket slice behind and in front of the visible one for smooth transitions.
 
@@ -203,7 +209,7 @@ export function _getMaximumZoomForAllMags(
       viewportRects,
       voxelSizeFactor,
     );
-    /*
+
     const nextCapacity = calculateTotalBucketCountForZoomLevel(
       viewMode,
       loadingStrategy,
@@ -217,8 +223,10 @@ export function _getMaximumZoomForAllMags(
       // when exactly meeting the limit.
       maximumCapacity + 1,
     );
-    console.log("next capacity", nextCapacity, nextCapacityNew);
-    */
+    if (mags[currentMagIndex][0] == 1) {
+      console.log("Capacity for mag", mags[currentMagIndex], "zoomstep:", nextZoomValue, "calculated:", nextCapacity, "estimated:", nextCapacityNew, "limit:", maximumCapacity);
+    }
+
 
     if (nextCapacityNew > maximumCapacity) {
       maxZoomValueThresholds.push(currentMaxZoomValue);

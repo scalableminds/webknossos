@@ -1,21 +1,18 @@
-import { sendHelpEmail, updateNovelUserExperienceInfos } from "admin/admin_rest_api";
-import { Alert, Input, Modal, message } from "antd";
+import { updateNovelUserExperienceInfos } from "admin/admin_rest_api";
+import { Alert, Modal } from "antd";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import type { OxalisState } from "oxalis/store";
 import type React from "react";
-import { type CSSProperties, useState } from "react";
+import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 function HelpButton() {
   const [isModalOpen, setModalOpen] = useState(false);
-
   const dispatch = useDispatch();
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
 
   const discardButton = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-    // prevent the modal from also being shown
     e.stopPropagation();
-
     if (!activeUser) return;
 
     const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
@@ -24,8 +21,7 @@ function HelpButton() {
     dispatch(setActiveUserAction(newUserSync));
   };
 
-  if (!activeUser) return null;
-  if (activeUser.novelUserExperienceInfos.hasDiscardedHelpButton) return null;
+  if (!activeUser || activeUser.novelUserExperienceInfos.hasDiscardedHelpButton) return null;
 
   return (
     <>
@@ -47,61 +43,38 @@ function HelpButton() {
         onClose={discardButton}
         onClick={() => setModalOpen(true)}
       />
-      <HelpModal
-        isModalOpen={isModalOpen}
-        onCancel={() => setModalOpen(false)}
-        centeredLayout={false}
-      />
+      <HelpChatModal isModalOpen={isModalOpen} onCancel={() => setModalOpen(false)} />
     </>
   );
 }
 export default HelpButton;
 
-type HelpModalProps = {
+type HelpChatModalProps = {
   isModalOpen: boolean;
-  centeredLayout: boolean;
   onCancel: () => void;
 };
 
-export function HelpModal(props: HelpModalProps) {
-  const [helpText, setHelpText] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const positionStyle: CSSProperties = { right: 10, bottom: 40, top: "auto", position: "fixed" };
+export function HelpChatModal({ isModalOpen, onCancel }: HelpChatModalProps) {
 
-  const sendHelp = async () => {
-    if (helpText.length > 0) {
-      try {
-        setIsSending(true);
-        await sendHelpEmail(helpText);
-        setHelpText("");
-        message.success("Message has been sent. We'll reply via email shortly.");
-      } catch (err) {
-        message.error("Sorry, we could not send the help message. Please try again later.");
-        throw err;
-      } finally {
-        setIsSending(false);
-      }
-    }
-    props.onCancel();
-  };
 
   return (
     <Modal
-      title="Do you have any questions?"
-      style={!props.centeredLayout ? positionStyle : undefined}
-      open={props.isModalOpen}
-      onOk={sendHelp}
-      onCancel={props.onCancel}
-      confirmLoading={isSending}
-      mask={props.centeredLayout}
-      okText="Send"
-      width={300}
+      title="AI Help Chat"
+      open={isModalOpen}
+      onCancel={onCancel}
+      footer={null}
+      style={{ position: "fixed", bottom: 40, right: 40 }}
+      bodyStyle={{ padding: 0, margin: 0, height: "70vh" }} // Remove padding & force height
     >
-      <p>We are happy to help as soon as possible and will get back to you.</p>
-      <Input.TextArea
-        rows={6}
-        value={helpText}
-        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setHelpText(e.target.value)}
+      <iframe
+        src="https://docsbot.ai/iframe/rfzK8JdNB7qcmTsCndEH/NpvQFUvCqNIGvaxucpwU"
+        width="100%"
+        height="100%"
+        frameBorder="0"
+        allowTransparency="true"
+        scrolling="no"
+        style={{ display: "block", border: "none", padding: "0px", margin: "0px" }}
+        bodyStyle={{ padding: 0, margin: 0 }}
       />
     </Modal>
   );

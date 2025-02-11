@@ -58,7 +58,7 @@ import { setThemeAction } from "oxalis/model/actions/ui_actions";
 import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
-import { HelpModal } from "oxalis/view/help_modal";
+import { HelpChatModal } from "oxalis/view/help_modal";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import { getAntdTheme, getSystemColorTheme } from "theme";
@@ -207,34 +207,34 @@ function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
 
   const adminstrationSubMenuItems = isAdminOrTeamManager
     ? [
-        { key: "/users", label: <Link to="/users">Users</Link> },
-        { key: "/teams", label: <Link to="/teams">Teams</Link> },
-        {
-          key: "/projects",
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <Link to="/projects">Projects</Link>
-            </PricingEnforcedSpan>
-          ),
-        },
-        {
-          key: "/tasks",
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <Link to="/tasks">Tasks</Link>
-            </PricingEnforcedSpan>
-          ),
-        },
-        {
-          key: "/taskTypes",
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <Link to="/taskTypes">Task Types</Link>
-            </PricingEnforcedSpan>
-          ),
-        },
-        { key: "/scripts", label: <Link to="/scripts">Scripts</Link> },
-      ]
+      { key: "/users", label: <Link to="/users">Users</Link> },
+      { key: "/teams", label: <Link to="/teams">Teams</Link> },
+      {
+        key: "/projects",
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/projects">Projects</Link>
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "/tasks",
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/tasks">Tasks</Link>
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "/taskTypes",
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/taskTypes">Task Types</Link>
+          </PricingEnforcedSpan>
+        ),
+      },
+      { key: "/scripts", label: <Link to="/scripts">Scripts</Link> },
+    ]
     : [];
 
   if (features().jobsEnabled)
@@ -356,15 +356,15 @@ function getHelpSubMenu(
       ),
     },
     (!features().discussionBoardRequiresAdmin || isAdminOrManager) &&
-    features().discussionBoard !== false
+      features().discussionBoard !== false
       ? {
-          key: "discussion-board",
-          label: (
-            <a href={features().discussionBoard} target="_blank" rel="noreferrer noopener">
-              Community Support
-            </a>
-          ),
-        }
+        key: "discussion-board",
+        label: (
+          <a href={features().discussionBoard} target="_blank" rel="noreferrer noopener">
+            Community Support
+          </a>
+        ),
+      }
       : null,
     {
       key: "frontend-api",
@@ -604,17 +604,17 @@ function LoggedInAvatar({
   const maybeOrganizationFilterInput =
     switchableOrganizations.length > ORGANIZATION_COUNT_THRESHOLD_FOR_SEARCH_INPUT
       ? [
-          {
-            key: "input",
-            label: (
-              <OrganizationFilterInput
-                onChange={onChangeOrganizationFilter}
-                isVisible={openKeys.includes("switch-organization")}
-                onPressEnter={onEnterOrganization}
-              />
-            ),
-          },
-        ]
+        {
+          key: "input",
+          label: (
+            <OrganizationFilterInput
+              onChange={onChangeOrganizationFilter}
+              isVisible={openKeys.includes("switch-organization")}
+              onPressEnter={onEnterOrganization}
+            />
+          ),
+        },
+      ]
       : [];
 
   const isMultiMember = switchableOrganizations.length > 0;
@@ -650,26 +650,26 @@ function LoggedInAvatar({
             },
             activeOrganization && Utils.isUserAdmin(activeUser)
               ? {
-                  key: "manage-organization",
-                  label: (
-                    <Link to={`/organizations/${activeOrganization.id}`}>Manage Organization</Link>
-                  ),
-                }
+                key: "manage-organization",
+                label: (
+                  <Link to={`/organizations/${activeOrganization.id}`}>Manage Organization</Link>
+                ),
+              }
               : null,
             isMultiMember
               ? {
-                  key: "switch-organization",
-                  label: "Switch Organization",
-                  popupClassName: "organization-switch-menu",
-                  children: [
-                    ...maybeOrganizationFilterInput,
-                    ...filteredOrganizations.slice(0, MAX_RENDERED_ORGANIZATION).map((org) => ({
-                      key: org.id,
-                      onClick: () => switchTo(org),
-                      label: org.name || org.id,
-                    })),
-                  ],
-                }
+                key: "switch-organization",
+                label: "Switch Organization",
+                popupClassName: "organization-switch-menu",
+                children: [
+                  ...maybeOrganizationFilterInput,
+                  ...filteredOrganizations.slice(0, MAX_RENDERED_ORGANIZATION).map((org) => ({
+                    key: org.id,
+                    onClick: () => switchTo(org),
+                    label: org.name || org.id,
+                  })),
+                ],
+              }
               : null,
             {
               key: "resetpassword",
@@ -970,10 +970,9 @@ function Navbar({
       />
 
       {isInAnnotationView ? separator : null}
-      <HelpModal
+      <HelpChatModal
         isModalOpen={isHelpModalOpen}
         onCancel={() => setIsHelpModalOpen(false)}
-        centeredLayout
       />
       <PortalTarget
         portalId="navbarTracingSlot"

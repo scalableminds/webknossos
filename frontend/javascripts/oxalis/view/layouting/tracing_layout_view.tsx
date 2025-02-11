@@ -12,9 +12,11 @@ import type { ControllerStatus } from "oxalis/controller";
 import OxalisController from "oxalis/controller";
 import MergerModeController from "oxalis/controller/merger_mode_controller";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
+import { cancelSagaAction } from "oxalis/model/actions/actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import rootSaga from "oxalis/model/sagas/root_saga";
 import { Store } from "oxalis/singletons";
-import type { OxalisState, Theme, TraceOrViewCommand } from "oxalis/store";
+import { type OxalisState, type Theme, type TraceOrViewCommand, startSaga } from "oxalis/store";
 import ActionBarView from "oxalis/view/action_bar_view";
 import WkContextMenu from "oxalis/view/context_menu";
 import DistanceMeasurementTooltip from "oxalis/view/distance_measurement_tooltip";
@@ -106,7 +108,13 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     Toast.error(messages["react.rendering_error"]);
   }
 
+  componentDidMount() {
+    startSaga(rootSaga);
+  }
+
   componentWillUnmount() {
+    Store.dispatch(cancelSagaAction());
+
     // Replace entire document with loading message
     if (document.body != null) {
       const mainContainer = document.getElementById("main-container");

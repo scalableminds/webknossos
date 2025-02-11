@@ -86,24 +86,26 @@ const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeo
 );
 
 type OwnProps = {
-  layoutMenu: SubMenuType;
+  layoutMenu: SubMenuType | null;
 };
 type StateProps = {
-  annotationType: APIAnnotationType;
-  annotationId: string;
+  hasTracing: boolean;
+  busyBlockingInfo: BusyBlockingInfo;
+  annotationTags: string[];
+} & TracingLayoutViewProps;
+type Props = OwnProps & StateProps;
+export type TracingLayoutViewProps = {
+  isRenderAnimationModalOpen: boolean;
+  isShareModalOpen: boolean;
+  isDownloadModalOpen: boolean;
   restrictions: RestrictionsAndSettings;
   task: Task | null | undefined;
+  annotationType: APIAnnotationType;
+  annotationId: string;
   activeUser: APIUser | null | undefined;
-  hasTracing: boolean;
-  isDownloadModalOpen: boolean;
-  isShareModalOpen: boolean;
-  isRenderAnimationModalOpen: boolean;
-  busyBlockingInfo: BusyBlockingInfo;
-  annotationOwner: APIUserBase | null | undefined;
   isAnnotationLockedByUser: boolean;
-  annotationTags: string[];
+  annotationOwner: APIUserBase | null | undefined;
 };
-type Props = OwnProps & StateProps;
 type State = {
   isMergeModalOpen: boolean;
   isUserScriptsModalOpen: boolean;
@@ -263,7 +265,8 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
 }
 
 export const getModalsAndMenuItems = (
-  props: Props,
+  props: TracingLayoutViewProps,
+  layoutMenu: SubMenuType | null,
   isMergeModalOpen: boolean,
   setIsMergeModalOpen: (value: boolean) => void,
   isUserScriptsModalOpen: boolean,
@@ -360,7 +363,6 @@ export const getModalsAndMenuItems = (
     annotationType,
     annotationId,
     activeUser,
-    layoutMenu,
     isAnnotationLockedByUser,
     annotationOwner,
   } = props;
@@ -734,6 +736,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
     const { menuItems, modals } = getModalsAndMenuItems(
       this.props,
+      null, //TODO_c save the layout menu
       this.state.isMergeModalOpen,
       (newValue: boolean) => this.setState({ isMergeModalOpen: newValue }),
       this.state.isUserScriptsModalOpen,

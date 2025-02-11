@@ -443,7 +443,6 @@ class Migration:
             logger.info(f"Migrating segment index with large batch sizes for {tracing_id} failed with {e}, retrying with small batch sizes...")
             self.migrate_all_versions_and_keys_with_prefix("volumeSegmentIndex", tracing_id, layer_version_mapping, transform_key=None, put_buffer_size=10, get_keys_page_size=1, get_keys_version_batch_size=1000)
 
-
     def migrate_editable_mapping(self, tracing_id: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap) -> List[int]:
         if tracing_id not in mapping_id_map:
             return []
@@ -458,9 +457,9 @@ class Migration:
         materialized_versions = self.list_versions(collection, mapping_id)
         materialized_versions_unified = []
         for materialized_version in materialized_versions:
-            value_bytes = self.get_bytes(collection, mapping_id, materialized_version)
-            if materialized_version not in layer_version_mapping[tracing_id]:
+            if materialized_version not in layer_version_mapping[mapping_id]:
                 continue
+            value_bytes = self.get_bytes(collection, mapping_id, materialized_version)
             new_version = layer_version_mapping[mapping_id][materialized_version]
             materialized_versions_unified.append(new_version)
             self.save_bytes(collection, tracing_id, new_version, value_bytes)

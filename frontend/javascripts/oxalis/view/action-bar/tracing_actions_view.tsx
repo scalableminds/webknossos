@@ -633,8 +633,15 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const { hasTracing, restrictions, task, activeUser, busyBlockingInfo, annotationOwner } =
-      this.props;
+    const {
+      hasTracing,
+      restrictions,
+      task,
+      activeUser,
+      busyBlockingInfo,
+      annotationOwner,
+      layoutMenu,
+    } = this.props;
 
     const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
     const copyAnnotationText = isAnnotationOwner ? "Duplicate" : "Copy To My Account";
@@ -736,7 +743,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
     const { menuItems, modals } = getModalsAndMenuItems(
       this.props,
-      null, //TODO_c save the layout menu
+      layoutMenu,
       this.state.isMergeModalOpen,
       (newValue: boolean) => this.setState({ isMergeModalOpen: newValue }),
       this.state.isUserScriptsModalOpen,

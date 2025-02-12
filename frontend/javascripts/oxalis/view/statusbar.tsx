@@ -48,7 +48,7 @@ const moreIconStyle = {
 };
 const moreLinkStyle = {
   marginLeft: 10,
-  marginRight: "auto",
+  marginRight: 10,
 };
 
 function getPosString(

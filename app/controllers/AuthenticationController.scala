@@ -3,6 +3,10 @@ package controllers
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
+import com.yubico.webauthn._
+import com.yubico.webauthn.data._
+import com.yubico.webauthn.exception._
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
@@ -29,8 +33,15 @@ import utils.WkConf
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.util.UUID
 import javax.inject.Inject
+import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
+
+case class WebAuthnRegistration(name: String, key: String)
+object WebAuthnRegistration {
+  implicit val jsonFormat: OFormat[WebAuthnRegistration] = Json.format[WebAuthnRegistration]
+}
 
 class AuthenticationController @Inject()(
     actorSystem: ActorSystem,
@@ -52,6 +63,10 @@ class AuthenticationController @Inject()(
     openIdConnectClient: OpenIdConnectClient,
     initialDataService: InitialDataService,
     emailVerificationService: EmailVerificationService,
+    webAuthnCredentialRepository: WebAuthnCredentialRepository,
+    webAuthnCredentialDAO: WebAuthnCredentialDAO,
+    temporaryAssertionStore: TemporaryStore[String, AssertionRequest],
+    temporaryRegistrationStore: TemporaryStore[ObjectId, PublicKeyCredentialCreationOptions],
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with AuthForms
@@ -65,6 +80,18 @@ class AuthenticationController @Inject()(
 
   private lazy val ssoKey =
     conf.WebKnossos.User.ssoKey
+
+  private lazy val relyingParty = {
+    var identity = RelyingPartyIdentity
+      .builder()
+      .id("webknossos.local:9000") // TODO: Use Host
+      .name("WebKnossos")
+      .build();
+    RelyingParty.builder()
+      .identity(identity)
+      .credentialRepository(webAuthnCredentialRepository)
+      .build()
+  }
 
   private lazy val isOIDCEnabled = conf.Features.openIdConnectEnabled
 
@@ -405,6 +432,89 @@ class AuthenticationController @Inject()(
       case None => Fox.successful(Redirect("/auth/login?redirectPage=http://discuss.webknossos.org")) // not logged in
     }
   }
+
+  def webauthnAuthStart(): Action[AnyContent] = Action{ implicit request => {
+      val opts = StartAssertionOptions.builder().build();
+      val assertion = relyingParty.startAssertion(opts);
+      val sessionId = UUID.randomUUID().toString;
+      val cookie = Cookie("webauthn-session", sessionId, maxAge = Some(120), httpOnly = true, secure = true)
+      temporaryAssertionStore.insert(sessionId, assertion, Some(2 minutes));
+      Ok(Json.toJson(Json.parse(assertion.toJson))).withCookies(cookie)
+    }
+  }
+
+  def webauthnAuthFinalize(): Action[String] = Action.async(validateJson[String]) { implicit request => {
+      request.cookies.get("webauthn-session") match {
+        case Some(cookie) =>
+          val sessionId = cookie.value
+          val challengeData = temporaryAssertionStore.get(sessionId)
+          temporaryAssertionStore.remove(sessionId)
+          challengeData match {
+            case Some(data) =>
+              try {
+                val keyCredential = PublicKeyCredential.parseAssertionResponseJson(request.body);
+                val opts = FinishAssertionOptions.builder()
+                  .request(data)
+                  .response(keyCredential)
+                  .build();
+                val result = relyingParty.finishAssertion(opts);
+                val userId = WebAuthnCredentialRepository.byteArrayToObjectId(result.getCredential.getUserHandle)
+                val loginInfo = LoginInfo("credentials", userId.toString)
+                loginUser(loginInfo)(request.map(_ => AnyContent()))
+              } catch {
+                case e: AssertionFailedException => Future.successful(Unauthorized("challenge failed"))
+              }
+            case None =>
+              Future.successful(BadRequest("Challenge not found or expired"))
+          }
+      }
+    }
+  }
+
+  def webauthnRegisterStart(): Action[AnyContent] = sil.SecuredAction { implicit request => {
+    val userIdentity = UserIdentity.builder()
+      .name(request.identity.name)
+      .displayName(request.identity.name)
+      .id(WebAuthnCredentialRepository.objectIdToByteArray(request.identity._id))
+      .build();
+    val opts = StartRegistrationOptions.builder()
+      .user(userIdentity)
+      .timeout(120000)
+      .build()
+    val registration = relyingParty.startRegistration(opts);
+    temporaryRegistrationStore.insert(request.identity._multiUser, registration);
+    Ok(Json.toJson(Json.parse(registration.toJson)))
+  }}
+
+  def webauthnRegisterFinalize(): Action[WebAuthnRegistration] = sil.SecuredAction.async(validateJson[WebAuthnRegistration]) { implicit request => {
+    val creationOpts = temporaryRegistrationStore.get(request.identity._multiUser)
+    temporaryRegistrationStore.remove(request.identity._multiUser)
+    creationOpts match {
+      case Some(data) => {
+        val response = PublicKeyCredential.parseRegistrationResponseJson(request.body.key);
+        val opts = FinishRegistrationOptions.builder()
+          .request(data)
+          .response(response)
+          .build();
+        try {
+          val key = relyingParty.finishRegistration(opts)
+          val credential = WebAuthnCredential(
+            ObjectId.generate,
+            request.identity._multiUser,
+            request.body.name,
+            key.getPublicKeyCose.getBytes,
+            key.getSignatureCount.toInt,
+            isDeleted = false,
+          )
+          webAuthnCredentialDAO.insertOne(credential)
+            .map(_ => Ok(""))
+        } catch {
+          case e: RegistrationFailedException => Future.successful(BadRequest("Failed to register key"))
+        }
+      }
+      case None => Future.successful(BadRequest("Challenge not found or expired"))
+    }
+  }}
 
   private lazy val absoluteOpenIdConnectCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
 

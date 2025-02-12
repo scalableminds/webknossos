@@ -36,6 +36,14 @@ POST          /auth/resetPassword                                               
 GET           /auth/logout                                                                      controllers.AuthenticationController.logout()
 GET           /auth/sso                                                                         controllers.AuthenticationController.singleSignOn(sso: String, sig: String)
 GET           /auth/oidc/login                                                                  controllers.AuthenticationController.loginViaOpenIdConnect()
+
+# Routes for WebAuthn
+POST          /auth/webauthn/auth/start                                                         controllers.AuthenticationController.webauthnAuthStart()
+POST          /auth/webauthn/auth/finalize                                                      controllers.AuthenticationController.webauthnAuthFinalize()
+
+POST          /auth/webauthn/register/start                                                    controllers.AuthenticationController.webauthnAuthStart()
+POST          /auth/webauthn/register/finalize                                                 controllers.AuthenticationController.webauthnAuthFinalize()
+
 # /auth/oidc/callback route is used literally in code
 GET           /auth/oidc/callback                                                               controllers.AuthenticationController.openIdCallback()
 POST          /auth/createOrganizationWithAdmin                                                 controllers.AuthenticationController.createOrganizationWithAdmin()

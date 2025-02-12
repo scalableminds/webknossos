@@ -136,6 +136,14 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
                      (SELECT _id FROM webknossos.users WHERE _organization = $organizationId)""".asUpdate)
     } yield ()
 
+  def findOneById(id: ObjectId)(implicit ctx: DBAccessContext): Fox[MultiUser] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[MultiusersRow])
+      parsed <- parseFirst(r, id)
+    } yield parsed
+
+
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext): Fox[MultiUser] =
     for {
       accessQuery <- readAccessQuery

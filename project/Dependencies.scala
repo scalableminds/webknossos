@@ -104,7 +104,9 @@ object Dependencies {
     // SQL Queries class generation. Started with runner as slick.codegen.SourceCodeGenerator
     "com.typesafe.slick" %% "slick-codegen" % "3.5.1",
     // SQL Queries postgres specifics. not imported.
-    "org.postgresql" % "postgresql" % "42.7.3"
+    "org.postgresql" % "postgresql" % "42.7.3",
+    /// WebAuthn Dependencies
+    "com.yubico" % "webauthn-server-core" % "2.6.0",
   )
 
   val dependencyOverrides: Seq[ModuleID] = Seq(

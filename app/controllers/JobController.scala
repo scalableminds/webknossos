@@ -10,7 +10,7 @@ import models.organization.OrganizationDAO
 import models.user.MultiUserDAO
 import play.api.i18n.Messages
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, PlayBodyParsers}
 import security.{WkEnv, WkSilhouetteEnvironment}
 import telemetry.SlackNotificationService
 import utils.WkConf
@@ -64,9 +64,11 @@ class JobController @Inject() (
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     slackNotificationService: SlackNotificationService,
     organizationDAO: OrganizationDAO,
-    dataStoreDAO: DataStoreDAO
+    dataStoreDAO: DataStoreDAO,
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with Zarr3OutputHelper {
 
   def status: Action[AnyContent] = sil.SecuredAction.async { implicit request =>

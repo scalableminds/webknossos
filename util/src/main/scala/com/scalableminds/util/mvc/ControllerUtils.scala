@@ -2,7 +2,7 @@ package com.scalableminds.util.mvc
 
 import com.google.protobuf.CodedInputStream
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.requestlogging.RequestLogging
+import com.scalableminds.util.requestlogging.DSTSRequestLogging
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -262,4 +262,5 @@ trait ControllerUtils
     with ValidationHelpers
     with LazyLogging
     with RequestTokenHelper
-    with RequestLogging
+
+trait DSTSControllerUtils extends ControllerUtils with DSTSRequestLogging

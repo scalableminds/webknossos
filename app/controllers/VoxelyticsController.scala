@@ -24,9 +24,11 @@ class VoxelyticsController @Inject() (
     userService: UserService,
     lokiClient: LokiClient,
     wkConf: WkConf,
-    sil: Silhouette[WkEnv]
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with FoxImplicits {
 
   private val WORKFLOW_EVENT_INSERT_BATCH_SIZE = 500

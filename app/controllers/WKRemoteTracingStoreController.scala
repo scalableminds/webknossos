@@ -21,7 +21,7 @@ import models.user.UserDAO
 import models.user.time.TimeSpanService
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, PlayBodyParsers}
 import scalapb.GeneratedMessage
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import utils.WkConf
@@ -43,9 +43,11 @@ class WKRemoteTracingStoreController @Inject() (
     annotationDAO: AnnotationDAO,
     annotationLayerDAO: AnnotationLayerDAO,
     wkConf: WkConf,
-    tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore
+    tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore,
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with FoxImplicits {
 
   val bearerTokenService: WebknossosBearerTokenAuthenticatorService =

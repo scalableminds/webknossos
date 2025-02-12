@@ -9,7 +9,7 @@ import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService}
 import models.job.{JobCommand, JobService}
 import models.user.UserService
 import play.api.libs.json.{Json, OFormat}
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
@@ -90,9 +90,11 @@ class AiModelController @Inject() (
     datasetService: DatasetService,
     jobService: JobService,
     datasetDAO: DatasetDAO,
-    dataStoreDAO: DataStoreDAO
+    dataStoreDAO: DataStoreDAO,
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with FoxImplicits {
 
   def readAiModelInfo(aiModelId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

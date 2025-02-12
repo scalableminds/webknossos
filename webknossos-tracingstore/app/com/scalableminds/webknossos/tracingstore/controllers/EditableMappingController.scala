@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.util.mvc.ControllerUtils
+import com.scalableminds.util.mvc.DSTSControllerUtils
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
@@ -29,7 +29,7 @@ class EditableMappingController @Inject() (
     cc: ControllerComponents
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends AbstractController(cc)
-    with ControllerUtils {
+    with DSTSControllerUtils {
 
   def editableMappingInfo(tracingId: String, annotationId: String, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>

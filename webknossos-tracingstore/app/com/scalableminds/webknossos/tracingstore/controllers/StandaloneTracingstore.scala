@@ -1,12 +1,12 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
-import com.scalableminds.util.mvc.ControllerUtils
+import com.scalableminds.util.mvc.DSTSControllerUtils
 import play.api.libs.json.Json
 import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 
 import javax.inject.Inject
 
-class StandaloneTracingstore @Inject() (cc: ControllerComponents) extends AbstractController(cc) with ControllerUtils {
+class StandaloneTracingstore @Inject() (cc: ControllerComponents) extends AbstractController(cc) with DSTSControllerUtils {
 
   def buildInfo: Action[AnyContent] = Action {
     addNoCacheHeaderFallback(

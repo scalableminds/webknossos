@@ -52,9 +52,11 @@ class AuthenticationController @Inject() (
     openIdConnectClient: OpenIdConnectClient,
     initialDataService: InitialDataService,
     emailVerificationService: EmailVerificationService,
-    sil: Silhouette[WkEnv]
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with AuthForms
     with FoxImplicits {
 

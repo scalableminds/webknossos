@@ -24,7 +24,7 @@ import com.scalableminds.util.tools.{Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.{AccessibleBySwitchingService, URLSharing, WkEnv}
 import utils.{MetadataAssertions, WkConf}
@@ -90,9 +90,11 @@ class DatasetController @Inject() (
     analyticsService: AnalyticsService,
     mailchimpClient: MailchimpClient,
     wkExploreRemoteLayerService: WKExploreRemoteLayerService,
-    sil: Silhouette[WkEnv]
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with MetadataAssertions {
 
   private val datasetPublicReads =

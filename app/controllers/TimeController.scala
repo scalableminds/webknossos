@@ -11,7 +11,7 @@ import models.user._
 import models.user.time.{Month, TimeSpan, TimeSpanDAO, TimeSpanService}
 import com.scalableminds.util.tools.Box
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
 
@@ -23,9 +23,11 @@ class TimeController @Inject() (
     userDAO: UserDAO,
     timeSpanDAO: TimeSpanDAO,
     timeSpanService: TimeSpanService,
-    sil: Silhouette[WkEnv]
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with FoxImplicits {
 
   // Called by webknossos-libs client. Sums monthly. Includes exploratives

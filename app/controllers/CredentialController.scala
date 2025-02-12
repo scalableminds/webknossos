@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.storage.{
 }
 import models.dataset.credential.CredentialDAO
 import play.api.libs.json.{JsValue, Json, OFormat}
-import play.api.mvc.{Action, PlayBodyParsers}
+import play.api.mvc.{AbstractController, Action, ControllerComponents, PlayBodyParsers}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
 
@@ -37,8 +37,10 @@ object GoogleServiceAccountCredentialParameters {
 
 class CredentialController @Inject() (credentialDAO: CredentialDAO, sil: Silhouette[WkEnv])(implicit
     ec: ExecutionContext,
-    val bodyParsers: PlayBodyParsers
-) extends Controller
+    val bodyParsers: PlayBodyParsers,
+    cc: ControllerComponents
+) extends AbstractController(cc)
+    with WkControllerUtils
     with FoxImplicits {
 
   def createHttpBasicAuthCredential: Action[HttpBasicAuthCredentialParameters] =

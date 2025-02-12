@@ -8,7 +8,7 @@ import models.user.UserService
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
 
@@ -19,9 +19,11 @@ class ScriptController @Inject() (
     taskDAO: TaskDAO,
     scriptService: ScriptService,
     userService: UserService,
-    sil: Silhouette[WkEnv]
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with FoxImplicits {
 
   private val scriptPublicReads =

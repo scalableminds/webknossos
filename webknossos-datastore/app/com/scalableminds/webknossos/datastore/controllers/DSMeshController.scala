@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.util.mvc.ControllerUtils
+import com.scalableminds.util.mvc.DSTSControllerUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services._
@@ -20,7 +20,7 @@ class DSMeshController @Inject() (
     cc: ControllerComponents
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends AbstractController(cc)
-    with ControllerUtils
+    with DSTSControllerUtils
     with MeshMappingHelper
     with FoxImplicits {
 

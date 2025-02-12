@@ -9,7 +9,7 @@ import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.UserService
 import play.api.libs.json.{JsArray, Json}
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, PlayBodyParsers}
 import security.WkEnv
 import utils.MetadataAssertions
 
@@ -24,9 +24,11 @@ class FolderController @Inject() (
     teamService: TeamService,
     datasetDAO: DatasetDAO,
     organizationDAO: OrganizationDAO,
-    sil: Silhouette[WkEnv]
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with FoxImplicits
     with MetadataAssertions {
 

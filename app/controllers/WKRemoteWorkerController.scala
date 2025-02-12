@@ -12,7 +12,7 @@ import models.job._
 import models.voxelytics.VoxelyticsDAO
 import com.scalableminds.util.tools.{Empty, Failure, Full}
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, PlayBodyParsers}
 import utils.WkConf
 
 import scala.concurrent.ExecutionContext
@@ -24,9 +24,11 @@ class WKRemoteWorkerController @Inject() (
     voxelyticsDAO: VoxelyticsDAO,
     aiInferenceDAO: AiInferenceDAO,
     datasetDAO: DatasetDAO,
-    wkConf: WkConf
+    wkConf: WkConf,
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller {
+    extends AbstractController(cc)
+    with WkControllerUtils {
 
   def requestJobs(key: String): Action[AnyContent] = Action.async { implicit request =>
     for {

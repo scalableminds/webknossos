@@ -54,7 +54,7 @@ trait AbstractRequestLogging extends LazyLogging with Formatter {
 
 }
 
-trait RequestLogging extends AbstractRequestLogging {
+trait DSTSRequestLogging extends AbstractRequestLogging {
   // Hint: within webknossos itself, UserAwareRequestLogging is available, which additionally logs the requester user id
 
   def log(

@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.mvc.ControllerUtils
+import com.scalableminds.util.mvc.DSTSControllerUtils
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
@@ -40,7 +40,7 @@ class ZarrStreamingController @Inject() (
     cc: ControllerComponents
 )(implicit ec: ExecutionContext)
     extends AbstractController(cc)
-    with ControllerUtils
+    with DSTSControllerUtils
     with Zarr3OutputHelper {
 
   override def defaultErrorCode: Int = NOT_FOUND

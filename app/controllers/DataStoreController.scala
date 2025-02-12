@@ -10,7 +10,7 @@ import com.scalableminds.util.tools.Empty
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 import security.WkEnv
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -19,9 +19,11 @@ class DataStoreController @Inject() (
     dataStoreDAO: DataStoreDAO,
     dataStoreService: DataStoreService,
     sil: Silhouette[WkEnv],
-    multiUserDAO: MultiUserDAO
+    multiUserDAO: MultiUserDAO,
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with FoxImplicits {
 
   private val dataStoreReads: Reads[DataStore] =

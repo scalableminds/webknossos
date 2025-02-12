@@ -28,7 +28,7 @@ import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import com.scalableminds.util.tools.Full
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, PlayBodyParsers}
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import telemetry.SlackNotificationService
 import utils.WkConf
@@ -55,9 +55,11 @@ class WKRemoteDataStoreController @Inject() (
     mailchimpClient: MailchimpClient,
     slackNotificationService: SlackNotificationService,
     conf: WkConf,
-    wkSilhouetteEnvironment: WkSilhouetteEnvironment
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with LazyLogging {
 
   val bearerTokenService: WebknossosBearerTokenAuthenticatorService =

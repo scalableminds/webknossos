@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import java.nio.file.{Files, Path, Paths}
 import com.google.inject.Inject
-import com.scalableminds.util.mvc.ControllerUtils
+import com.scalableminds.util.mvc.DSTSControllerUtils
 import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.services.{
@@ -32,7 +32,7 @@ class ExportsController @Inject() (
     cc: ControllerComponents
 )(implicit ec: ExecutionContext)
     extends AbstractController(cc)
-    with ControllerUtils
+    with DSTSControllerUtils
     with FoxImplicits {
 
   private val dataBaseDir: Path = Paths.get(config.Datastore.baseDirectory)

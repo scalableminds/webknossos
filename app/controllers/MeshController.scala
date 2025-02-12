@@ -4,11 +4,11 @@ import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.FoxImplicits
 import models.annotation.AnnotationDAO
 import models.mesh.{MeshDAO, MeshInfo, MeshInfoParameters, MeshService}
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, PlayBodyParsers, RawBuffer}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
-import javax.inject.Inject
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 // Note that this wk-side controller deals with user-uploaded meshes stored in postgres
@@ -18,9 +18,11 @@ class MeshController @Inject() (
     meshDAO: MeshDAO,
     annotationDAO: AnnotationDAO,
     sil: Silhouette[WkEnv],
-    meshService: MeshService
+    meshService: MeshService,
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with FoxImplicits {
 
   def get(id: ObjectId): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>

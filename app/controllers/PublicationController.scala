@@ -3,10 +3,9 @@ package controllers
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-
 import models.dataset.{PublicationDAO, PublicationService}
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
 
@@ -16,9 +15,11 @@ import scala.concurrent.ExecutionContext
 class PublicationController @Inject() (
     publicationService: PublicationService,
     publicationDAO: PublicationDAO,
-    sil: Silhouette[WkEnv]
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with ProtoGeometryImplicits
     with FoxImplicits {
 

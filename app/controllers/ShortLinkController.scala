@@ -5,7 +5,7 @@ import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.FoxImplicits
 import models.shortlinks.{ShortLink, ShortLinkDAO}
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, PlayBodyParsers}
 import security.{RandomIDGenerator, WkEnv}
 import utils.WkConf
 
@@ -14,8 +14,10 @@ import scala.concurrent.ExecutionContext
 
 class ShortLinkController @Inject() (shortLinkDAO: ShortLinkDAO, sil: Silhouette[WkEnv], wkConf: WkConf)(implicit
     ec: ExecutionContext,
-    val bodyParsers: PlayBodyParsers
-) extends Controller
+    val bodyParsers: PlayBodyParsers,
+    cc: ControllerComponents
+) extends AbstractController(cc)
+    with WkControllerUtils
     with FoxImplicits {
 
   def create: Action[String] = sil.SecuredAction.async(validateJson[String]) { implicit request =>

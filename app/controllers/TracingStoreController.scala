@@ -5,8 +5,9 @@ import com.scalableminds.util.tools.FoxImplicits
 import models.annotation.{TracingStore, TracingStoreDAO, TracingStoreService}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+
 import javax.inject.Inject
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 import security.WkEnv
 
 import scala.concurrent.ExecutionContext
@@ -14,9 +15,11 @@ import scala.concurrent.ExecutionContext
 class TracingStoreController @Inject() (
     tracingStoreService: TracingStoreService,
     tracingStoreDAO: TracingStoreDAO,
-    sil: Silhouette[WkEnv]
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with FoxImplicits {
   private val tracingStorePublicReads: Reads[TracingStore] =
     ((__ \ "name").read[String] and

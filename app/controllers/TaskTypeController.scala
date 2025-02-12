@@ -12,8 +12,9 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 import com.scalableminds.util.objectid.ObjectId
+
 import javax.inject.Inject
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 import security.WkEnv
 
 import scala.concurrent.ExecutionContext
@@ -23,9 +24,11 @@ class TaskTypeController @Inject() (
     taskDAO: TaskDAO,
     taskTypeService: TaskTypeService,
     userService: UserService,
-    sil: Silhouette[WkEnv]
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with FoxImplicits {
 
   private val taskTypePublicReads =

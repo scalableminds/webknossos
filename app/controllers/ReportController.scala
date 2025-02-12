@@ -6,7 +6,7 @@ import models.annotation.{AnnotationDAO, AnnotationType}
 import models.team.TeamDAO
 import models.user.{User, UserDAO, UserService}
 import play.api.libs.json.{Json, OFormat}
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SimpleSQLDAO, SqlClient}
@@ -165,9 +165,11 @@ class ReportController @Inject() (
     teamDAO: TeamDAO,
     userDAO: UserDAO,
     userService: UserService,
-    sil: Silhouette[WkEnv]
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with FoxImplicits {
 
   def projectProgressReport(teamId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

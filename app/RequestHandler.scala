@@ -1,14 +1,12 @@
-import com.scalableminds.util.mvc.{CspHeaders, ExtendedController}
+import controllers.{AboutPageRedirectController, Application, SitemapController}
 import com.typesafe.scalalogging.LazyLogging
-import controllers.{Assets, SitemapController, AboutPageRedirectController}
 
 import javax.inject.Inject
 import play.api.OptionalDevContext
 import play.api.http.{DefaultHttpRequestHandler, HttpConfiguration, HttpErrorHandler, HttpFilters}
-import play.api.mvc.{Handler, InjectedController, RequestHeader}
+import play.api.mvc.{Handler, RequestHeader}
 import play.api.routing.Router
 import play.core.WebCommands
-import play.filters.csp.CSPConfig
 import utils.{ApiVersioning, WkConf}
 
 import scala.concurrent.ExecutionContext
@@ -21,10 +19,9 @@ class RequestHandler @Inject() (
     httpConfiguration: HttpConfiguration,
     aboutPageRedirectController: AboutPageRedirectController,
     filters: HttpFilters,
-    val cspConfig: CSPConfig,
     conf: WkConf,
-    assets: Assets,
-    sitemapController: SitemapController
+    sitemapController: SitemapController,
+    application: Application
 )(implicit ec: ExecutionContext)
     extends DefaultHttpRequestHandler(
       webCommands,
@@ -34,38 +31,24 @@ class RequestHandler @Inject() (
       httpConfiguration,
       filters
     )
-    with InjectedController
-    with ExtendedController
-    with CspHeaders
     with ApiVersioning
     with LazyLogging {
 
   override def routeRequest(request: RequestHeader): Option[Handler] =
     if (isInvalidApiVersion(request)) {
-      Some(Action {
-        JsonNotFound(invalidApiVersionMessage(request))
-      })
+      Some(application.invalidApiVersion)
     } else if (request.uri.matches("^(/api/|/data/|/tracings/|/\\.well-known/).*$")) {
       super.routeRequest(request)
     } else if (request.uri.matches("^(/assets/).*(worker.js).*$")) {
-      Some(assetWithCsp(request))
+      Some(application.assetWithCsp(request))
     } else if (request.uri.matches("^(/assets/).*$")) {
-      Some(asset(request))
+      Some(application.asset(request))
     } else if (request.uri.matches("""^/sitemap.xml$""") && conf.Features.isWkorgInstance) {
       Some(sitemapController.getSitemap(conf.Http.uri))
     } else if (request.uri.matches("^/sw\\.(.*)\\.js$") && conf.Features.isWkorgInstance) {
-      Some(Action(Ok("").as("text/javascript")))
+      Some(application.emptyStringOk)
     } else if (request.uri == "/favicon.ico") {
-      Some(Action(NotFound))
+      Some(application.notFound)
     } else Some(aboutPageRedirectController.redirectToAboutPageOrSendMainView)
-
-  private def assetWithCsp(requestHeader: RequestHeader) = Action.async { implicit request =>
-    addCspHeader(asset(requestHeader))
-  }
-
-  private def asset(requestHeader: RequestHeader) = {
-    val path = requestHeader.path.replaceFirst("^(/assets/)", "")
-    assets.at(path = "/public", file = path)
-  }
 
 }

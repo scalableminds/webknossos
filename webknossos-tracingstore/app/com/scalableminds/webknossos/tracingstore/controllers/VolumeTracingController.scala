@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 import collections.SequenceUtils
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.util.mvc.ControllerUtils
+import com.scalableminds.util.mvc.DSTSControllerUtils
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
@@ -61,7 +61,7 @@ class VolumeTracingController @Inject() (
     val rpc: RPC
 )(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends AbstractController(cc)
-    with ControllerUtils
+    with DSTSControllerUtils
     with ProtoGeometryImplicits
     with KeyValueStoreImplicits {
 

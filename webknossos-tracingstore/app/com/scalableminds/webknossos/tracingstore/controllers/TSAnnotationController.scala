@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 import collections.SequenceUtils
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.BoundingBox
-import com.scalableminds.util.mvc.ControllerUtils
+import com.scalableminds.util.mvc.DSTSControllerUtils
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationLayerProto,
@@ -42,7 +42,7 @@ class TSAnnotationController @Inject() (
     cc: ControllerComponents
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends AbstractController(cc)
-    with ControllerUtils
+    with DSTSControllerUtils
     with KeyValueStoreImplicits {
 
   def save(annotationId: String, toTemporaryStore: Boolean = false): Action[AnnotationProto] =

@@ -10,7 +10,7 @@ import models.configuration.DatasetConfigurationService
 import models.user.UserService
 import play.api.i18n.Messages
 import play.api.libs.json.{JsObject, JsValue, Json}
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, PlayBodyParsers}
 import security.{URLSharing, WkEnv}
 
 import scala.concurrent.ExecutionContext
@@ -20,9 +20,11 @@ class ConfigurationController @Inject() (
     datasetService: DatasetService,
     datasetDAO: DatasetDAO,
     datasetConfigurationService: DatasetConfigurationService,
-    sil: Silhouette[WkEnv]
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller {
+    extends AbstractController(cc)
+    with WkControllerUtils {
 
   def read: Action[AnyContent] = sil.UserAwareAction { implicit request =>
     val config = request.identity.map(_.userConfiguration).getOrElse(Json.obj())

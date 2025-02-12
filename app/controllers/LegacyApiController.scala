@@ -15,7 +15,7 @@ import models.user.{Experience, User}
 import com.scalableminds.util.tools.Box.tryo
 import play.api.http.HttpEntity
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, PlayBodyParsers, Result}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
 
@@ -59,9 +59,11 @@ class LegacyApiController @Inject() (
     organizationDAO: OrganizationDAO,
     datasetService: DatasetService,
     datasetDAO: DatasetDAO,
-    sil: Silhouette[WkEnv]
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller {
+    extends AbstractController(cc)
+    with WkControllerUtils {
 
   /* provide v8 */
 

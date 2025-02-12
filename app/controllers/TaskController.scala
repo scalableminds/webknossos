@@ -1,13 +1,13 @@
 package controllers
 
 import java.io.File
-
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+
 import javax.inject.Inject
 import models.annotation._
 import models.annotation.nml.NmlResults.TracingBoxContainer
@@ -17,7 +17,7 @@ import models.user._
 import com.scalableminds.util.tools.{Box, Full}
 import play.api.i18n.Messages
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, PlayBodyParsers}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
 
@@ -32,9 +32,11 @@ class TaskController @Inject() (
     taskDAO: TaskDAO,
     taskService: TaskService,
     nmlService: AnnotationUploadService,
-    sil: Silhouette[WkEnv]
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with ProtoGeometryImplicits
     with FoxImplicits {
 

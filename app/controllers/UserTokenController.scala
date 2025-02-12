@@ -19,7 +19,7 @@ import models.organization.OrganizationDAO
 import models.user.{User, UserService}
 import com.scalableminds.util.tools.{Box, Full}
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, PlayBodyParsers, Result}
 import play.silhouette.api.Silhouette
 import security.{RandomIDGenerator, URLSharing, WkEnv, WkSilhouetteEnvironment}
 import utils.WkConf
@@ -50,9 +50,11 @@ class UserTokenController @Inject() (
     jobDAO: JobDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     conf: WkConf,
-    sil: Silhouette[WkEnv]
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller {
+    extends AbstractController(cc)
+    with WkControllerUtils {
 
   private val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 

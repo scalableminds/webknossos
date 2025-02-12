@@ -13,7 +13,7 @@ import models.team.PricingPlan
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsNull, JsValue, Json, OFormat, __}
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, PlayBodyParsers}
 import utils.WkConf
 
 import scala.concurrent.duration._
@@ -32,9 +32,11 @@ class OrganizationController @Inject() (
     userService: UserService,
     defaultMails: DefaultMails,
     actorSystem: ActorSystem,
-    sil: Silhouette[WkEnv]
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with FoxImplicits {
 
   private val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService

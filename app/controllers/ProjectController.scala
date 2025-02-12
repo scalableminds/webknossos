@@ -11,7 +11,7 @@ import models.task._
 import models.user.UserService
 import play.api.i18n.Messages
 import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
 
@@ -26,9 +26,11 @@ class ProjectController @Inject() (
     taskTypeDAO: TaskTypeDAO,
     userService: UserService,
     taskService: TaskService,
-    sil: Silhouette[WkEnv]
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with FoxImplicits {
 
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>

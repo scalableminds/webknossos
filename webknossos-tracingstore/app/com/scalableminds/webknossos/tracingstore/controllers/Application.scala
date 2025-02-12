@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
-import com.scalableminds.util.mvc.{ControllerUtils, Formatter}
+import com.scalableminds.util.mvc.{DSTSControllerUtils, Formatter}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import com.scalableminds.webknossos.tracingstore.tracings.TracingDataStore
@@ -16,7 +16,7 @@ class Application @Inject() (
     cc: ControllerComponents
 )(implicit ec: ExecutionContext)
     extends AbstractController(cc)
-    with ControllerUtils
+    with DSTSControllerUtils
     with Formatter {
 
   override def allowRemoteOrigin: Boolean = true

@@ -2,21 +2,27 @@ package controllers
 
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.Fox
-
 import models.team._
 import models.user.UserDAO
 import play.api.i18n.Messages
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class TeamController @Inject() (teamDAO: TeamDAO, userDAO: UserDAO, teamService: TeamService, sil: Silhouette[WkEnv])(
-    implicit ec: ExecutionContext
-) extends Controller {
+class TeamController @Inject() (
+    teamDAO: TeamDAO,
+    userDAO: UserDAO,
+    teamService: TeamService,
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
+)(implicit
+    ec: ExecutionContext
+) extends AbstractController(cc)
+    with WkControllerUtils {
 
   private def teamNameReads: Reads[String] =
     (__ \ "name").read[String]

@@ -31,9 +31,11 @@ class UserController @Inject() (
     teamMembershipService: TeamMembershipService,
     annotationService: AnnotationService,
     teamDAO: TeamDAO,
-    sil: Silhouette[WkEnv]
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with FoxImplicits {
 
   def current: Action[AnyContent] = sil.SecuredAction.async { implicit request =>

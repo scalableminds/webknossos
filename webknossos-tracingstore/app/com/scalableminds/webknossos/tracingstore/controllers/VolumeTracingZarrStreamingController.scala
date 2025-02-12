@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.mvc.ControllerUtils
+import com.scalableminds.util.mvc.DSTSControllerUtils
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -56,7 +56,7 @@ class VolumeTracingZarrStreamingController @Inject() (
     cc: ControllerComponents
 )(implicit ec: ExecutionContext)
     extends AbstractController(cc)
-    with ControllerUtils
+    with DSTSControllerUtils
     with ProtoGeometryImplicits
     with FoxImplicits
     with Zarr3OutputHelper {

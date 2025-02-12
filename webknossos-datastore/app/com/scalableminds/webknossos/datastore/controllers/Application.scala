@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.controllers
 
-import com.scalableminds.util.mvc.ControllerUtils
+import com.scalableminds.util.mvc.DSTSControllerUtils
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.ApplicationHealthService
@@ -18,7 +18,7 @@ class Application @Inject() (
     cc: ControllerComponents
 )(implicit ec: ExecutionContext)
     extends AbstractController(cc)
-    with ControllerUtils {
+    with DSTSControllerUtils {
 
   override def allowRemoteOrigin: Boolean = true
 

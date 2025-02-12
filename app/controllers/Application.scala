@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.mvc.CspHeaders
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.ConfigRenderOptions
 import mail.{DefaultMails, Send}
@@ -7,7 +8,8 @@ import models.organization.OrganizationDAO
 import models.user.UserService
 import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, Result}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, RequestHeader, Result}
+import play.filters.csp.CSPConfig
 import play.silhouette.api.Silhouette
 import security.{CertificateValidationService, WkEnv}
 import utils.sql.{SimpleSQLDAO, SqlClient}
@@ -25,9 +27,14 @@ class Application @Inject() (
     defaultMails: DefaultMails,
     storeModules: StoreModules,
     sil: Silhouette[WkEnv],
-    certificateValidationService: CertificateValidationService
+    certificateValidationService: CertificateValidationService,
+    assets: Assets,
+    val cspConfig: CSPConfig,
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends Controller
+    extends AbstractController(cc)
+    with CspHeaders
+    with WkControllerUtils
     with ApiVersioning {
 
   private lazy val Mailer =
@@ -89,6 +96,24 @@ class Application @Inject() (
     } else {
       NotFound
     })
+  }
+
+  // To be used directly from request handler:
+  def notFound: Action[AnyContent] = Action(NotFound)
+
+  def invalidApiVersion: Action[AnyContent] = Action { implicit request =>
+    JsonNotFound(invalidApiVersionMessage(request))
+  }
+
+  def emptyStringOk: Action[AnyContent] = Action(Ok("").as("text/javascript"))
+
+  def assetWithCsp(requestHeader: RequestHeader): Action[AnyContent] = Action.async { implicit request =>
+    addCspHeader(asset(requestHeader))
+  }
+
+  def asset(requestHeader: RequestHeader): Action[AnyContent] = {
+    val path = requestHeader.path.replaceFirst("^(/assets/)", "")
+    assets.at(path = "/public", file = path)
   }
 
 }

@@ -5,7 +5,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.UserService
 import play.api.libs.json.{JsObject, Json, OFormat}
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, PlayBodyParsers}
 import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
@@ -20,9 +20,11 @@ class MaintenanceController @Inject() (
     sil: Silhouette[WkEnv],
     maintenanceDAO: MaintenanceDAO,
     maintenanceService: MaintenanceService,
-    userService: UserService
+    userService: UserService,
+    cc: ControllerComponents
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller
+    extends AbstractController(cc)
+    with WkControllerUtils
     with FoxImplicits {
 
   private val adHocMaintenanceDuration: FiniteDuration = 5 minutes

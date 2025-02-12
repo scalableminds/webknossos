@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.util.mvc.ControllerUtils
+import com.scalableminds.util.mvc.DSTSControllerUtils
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
@@ -27,7 +27,7 @@ class SkeletonTracingController @Inject() (
     cc: ControllerComponents
 )(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends AbstractController(cc)
-    with ControllerUtils {
+    with DSTSControllerUtils {
 
   implicit val tracingsCompanion: SkeletonTracings.type = SkeletonTracings
 

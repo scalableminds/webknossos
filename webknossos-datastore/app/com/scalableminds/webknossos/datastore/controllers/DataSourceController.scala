@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.mvc.ControllerUtils
+import com.scalableminds.util.mvc.DSTSControllerUtils
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
@@ -54,7 +54,7 @@ class DataSourceController @Inject() (
     cc: ControllerComponents
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends AbstractController(cc)
-    with ControllerUtils
+    with DSTSControllerUtils
     with MeshMappingHelper
     with FoxImplicits {
 

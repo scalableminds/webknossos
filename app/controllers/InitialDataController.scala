@@ -20,14 +20,19 @@ import utils.{StoreModules, WkConf}
 
 import javax.inject.Inject
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 import security.{Token, TokenDAO, TokenType, WkEnv}
 
 import scala.concurrent.ExecutionContext
 
-class InitialDataController @Inject() (initialDataService: InitialDataService, sil: Silhouette[WkEnv])(implicit
+class InitialDataController @Inject() (
+    initialDataService: InitialDataService,
+    sil: Silhouette[WkEnv],
+    cc: ControllerComponents
+)(implicit
     ec: ExecutionContext
-) extends Controller
+) extends AbstractController(cc)
+    with WkControllerUtils
     with FoxImplicits {
 
   def triggerInsert: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>

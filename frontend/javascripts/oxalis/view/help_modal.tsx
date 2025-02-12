@@ -71,10 +71,9 @@ export function HelpChatModal({ isModalOpen, onCancel }: HelpChatModalProps) {
         width="100%"
         height="100%"
         frameBorder="0"
-        allowTransparency="true"
+        allowTransparency={true}
         scrolling="no"
         style={{ display: "block", border: "none", padding: "0px", margin: "0px" }}
-        bodyStyle={{ padding: 0, margin: 0 }}
       />
     </Modal>
   );

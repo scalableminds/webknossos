@@ -276,8 +276,12 @@ export default class LayerRenderingManager {
               if (bucket.initiationSource == null) {
                 bucket.initiationSource = "picking";
                 bucket.initiatedLoadingTimestamp = Date.now();
-                bucket.neededAt = bucket.initiatedLoadingTimestamp;
               }
+            }
+          }
+          for (const bucket of buckets) {
+            if (bucket.neededAt == null) {
+              bucket.neededAt = Date.now();
             }
           }
 

@@ -1637,6 +1637,12 @@ class DataApi {
     let unnecessarilyPrefetched = 0;
     let loadedWithoutPrefetching = 0;
     let totalPrefetchToUsageDelay = 0;
+    let histogramDelay = {
+      below100: 0,
+      below1000: 0,
+      below5000: 0,
+      above5000: 0,
+    };
 
     Utils.values(this.model.dataLayers).map((dataLayer: DataLayer) => {
       for (const bucket of dataLayer.cube.buckets) {
@@ -1646,8 +1652,19 @@ class DataApi {
             unnecessarilyPrefetched++;
           } else {
             successfullyPrefetched++;
-            if (bucket.initiatedLoadingTimestamp) {
-              totalPrefetchToUsageDelay += bucket.neededAt - bucket.initiatedLoadingTimestamp;
+            if (bucket.initiatedLoadingTimestamp == null) {
+              throw new Error("should not happen");
+            }
+            const prefetchToUsageDelay = bucket.neededAt - bucket.initiatedLoadingTimestamp;
+            totalPrefetchToUsageDelay += prefetchToUsageDelay;
+            if (prefetchToUsageDelay <= 100) {
+              histogramDelay.below100++;
+            } else if (prefetchToUsageDelay <= 1000) {
+              histogramDelay.below1000++;
+            } else if (prefetchToUsageDelay <= 5000) {
+              histogramDelay.below5000++;
+            } else {
+              histogramDelay.above5000++;
             }
           }
         } else if (bucket.initiationSource === "picking") {
@@ -1663,7 +1680,7 @@ class DataApi {
     console.log("unnecessarilyPrefetched", unnecessarilyPrefetched);
     console.log("averageDelayForSuccessfullyPrefetched", averageDelayForSuccessfullyPrefetched);
     console.log("loadedWithoutPrefetching", loadedWithoutPrefetching);
-    console.log("totalPrefetchToUsageDelay", totalPrefetchToUsageDelay);
+    console.log("histogramDelay", histogramDelay);
     const state = Store.getState();
 
     const viewMode = state.temporaryConfiguration.viewMode;
@@ -1677,8 +1694,8 @@ class DataApi {
     const csv = `
     Please share this CSV:
 
-    totalBucketsLoaded,successfullyPrefetched,unnecessarilyPrefetched,loadedWithoutPrefetching,totalPrefetchToUsageDelay,averageDelayForSuccessfullyPrefetched,totalPrefetchToUsageDelay,viewMode,datasetName,scale,elementClasses
-    ${totalBucketsLoaded},${successfullyPrefetched},${unnecessarilyPrefetched},${loadedWithoutPrefetching},${totalPrefetchToUsageDelay},${averageDelayForSuccessfullyPrefetched},${totalPrefetchToUsageDelay},${viewMode},${datasetName},${scale},${elementClasses}
+    totalBucketsLoaded,successfullyPrefetched,unnecessarilyPrefetched,loadedWithoutPrefetching,averageDelayForSuccessfullyPrefetched,totalPrefetchToUsageDelay,histogramDelay<100,histogramDelay<1000,histogramDelay<5000,histogramDelay>5000,viewMode,datasetName,scale,elementClasses
+    ${totalBucketsLoaded},${successfullyPrefetched},${unnecessarilyPrefetched},${loadedWithoutPrefetching},${averageDelayForSuccessfullyPrefetched},${totalPrefetchToUsageDelay},${viewMode},${histogramDelay.below100},${histogramDelay.below1000},${histogramDelay.below5000},${histogramDelay.above5000},${datasetName},${scale},${elementClasses}
   `;
     api.utils.showToast("info", csv, 0);
   }

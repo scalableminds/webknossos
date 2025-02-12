@@ -1,8 +1,8 @@
 import sbt._
 
 ThisBuild / version := "wk"
-scalaVersion := "3.4.3"
-ThisBuild / scalaVersion := "3.4.3"
+scalaVersion := "3.6.3"
+ThisBuild / scalaVersion := "3.6.3"
 // ThisBuild / scalaVersion := "2.13.14"
 // crossScalaVersions ++= Seq("2.13.11", "3.3.4")
 // ThisBuild / scapegoatVersion := "2.1.6"

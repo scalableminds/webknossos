@@ -200,7 +200,7 @@ function getCollapsibleMenuTitle(
   );
 }
 
-function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
+export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
   const isAdmin = Utils.isUserAdmin(activeUser);
   const isAdminOrTeamManager = Utils.isUserAdminOrTeamManager(activeUser);
   const organization = activeUser.organization;

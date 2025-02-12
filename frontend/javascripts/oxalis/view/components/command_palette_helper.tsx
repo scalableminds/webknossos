@@ -1,11 +1,11 @@
 import type { MenuItemType } from "antd/lib/menu/interface";
 import { capitalize } from "libs/utils";
 import _ from "lodash";
-import { settings } from "messages";
+import { getAdministrationSubMenu } from "navbar";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { Store } from "oxalis/singletons";
 import type { OxalisState } from "oxalis/store";
-import { useState } from "react";
+import { act, useState } from "react";
 import type { Command } from "react-command-palette";
 import CommandPalette from "react-command-palette";
 import { useSelector } from "react-redux";
@@ -31,11 +31,14 @@ const getLabelForUserConfigType = (key: string) =>
     .map((word) => capitalize(word))
     .join(" ");
 
+const getLabelForPath = (key: string) => capitalize(key.split("/")[1]) || key;
+
 export const WkCommandPalette = () => {
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
   const [isUserScriptsModalOpen, setIsUserScriptsModalOpen] = useState(false);
   const [isZarrPrivateLinksModalOpen, setIsZarrPrivateLinksModalOpen] = useState(false); // TODO_c check the right default
   const userConfig = useSelector((state: OxalisState) => state.userConfiguration);
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
 
   const props: TracingLayoutViewProps = useSelector((state: OxalisState) => {
     return {
@@ -53,20 +56,50 @@ export const WkCommandPalette = () => {
   });
 
   const getTabsAndSettingsMenuItems = () => {
-    const menuItems = [];
+    const commands: Command[] = [];
 
-    Object.keys(userConfig).forEach((key) => {
+    Object.keys(userConfig).forEach((key, counter) => {
       if (typeof userConfig[key] === "boolean") {
-        menuItems.push({
-          id: key,
+        commands.push({
+          id: counter,
           name: `Toggle ${getLabelForUserConfigType(key)}`,
           command: () => Store.dispatch(updateUserSettingAction(key, !userConfig[key])),
           color: "#5660ff",
         });
       }
     });
+    return commands;
+  };
 
-    return menuItems;
+  const getNavigationEntries = () => {
+    if (activeUser == null) return [];
+    const commands: Command[] = [];
+    const basicNavigationEntries = [
+      { name: "Tasks", path: "/dashboard/tasks" },
+      { name: "Annotations", path: "/dashboard/annotations" },
+      { name: "Datasets", path: "/dashboard/datasets" },
+      { name: "Time Tracking", path: "/timetracking" },
+    ];
+
+    const adminEntries = getAdministrationSubMenu(false, activeUser);
+    const adminCommands = adminEntries?.children.map((entry: { key: string }) => {
+      return { name: getLabelForPath(entry.key), path: entry.key };
+    });
+
+    const navigationEntries = [...basicNavigationEntries, ...adminCommands];
+
+    navigationEntries.forEach((entry, counter) => {
+      commands.push({
+        id: counter,
+        name: `Navigate to ${entry.name}`,
+        command: () => {
+          window.location.href = entry.path;
+        },
+        color: "#5660ff",
+      });
+    });
+
+    return commands;
   };
 
   const { menuItems, modals } = getModalsAndMenuItems(
@@ -80,7 +113,11 @@ export const WkCommandPalette = () => {
     (newValue: boolean) => setIsZarrPrivateLinksModalOpen(newValue),
   );
 
-  const allCommands = [...mapMenuActionsToCommands(menuItems), ...getTabsAndSettingsMenuItems()];
+  const allCommands = [
+    ...mapMenuActionsToCommands(menuItems),
+    ...getTabsAndSettingsMenuItems(),
+    ...getNavigationEntries(),
+  ];
   return (
     <div style={{ marginRight: "10px" }}>
       {modals}

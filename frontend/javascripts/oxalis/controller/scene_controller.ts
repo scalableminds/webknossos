@@ -16,7 +16,7 @@ import constants, {
   OrthoViewValuesWithoutTDView,
   TDViewDisplayModeEnum,
 } from "oxalis/constants";
-import { getRenderer } from "oxalis/controller/renderer";
+import { destroyRenderer, getRenderer } from "oxalis/controller/renderer";
 import { setSceneController } from "oxalis/controller/scene_controller_provider";
 import type ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Cube from "oxalis/geometries/cube";
@@ -557,7 +557,7 @@ class SceneController {
     }
     this.storePropertyUnsubscribers = [];
 
-    getRenderer().dispose();
+    destroyRenderer();
     // @ts-ignore
     this.renderer = null;
 

@@ -28,7 +28,6 @@ export class OxalisModel {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'dataLayers' has no initializer and is no... Remove this comment to see the full error message
   dataLayers: Record<string, DataLayer>;
   maximumTextureCountForLayer: number = 0;
-  isDestroyed: boolean = false;
 
   async fetch(
     initialMaybeCompoundType: APICompoundType | null,
@@ -356,11 +355,12 @@ export class OxalisModel {
     }
   };
 
-  destroy() {
-    if (this.isDestroyed) {
-      return;
-    }
-    this.isDestroyed = true;
+  reset() {
+    /*
+     * Destroys all layers
+     */
+    console.log("Model::reset");
+
     if (this.dataLayers != null) {
       _.values(this.dataLayers).forEach((layer) => layer.destroy());
       this.dataLayers = {};

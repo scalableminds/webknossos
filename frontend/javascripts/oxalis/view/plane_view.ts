@@ -49,6 +49,7 @@ class PlaneView {
   unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
+    console.log("PlaneView::constructor");
     this.throttledPerformMeshHitTest = _.throttle(
       this.performMeshHitTest,
       MESH_HOVER_THROTTLING_DELAY,

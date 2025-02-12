@@ -26,10 +26,7 @@ import { warnIfEmailIsUnverified } from "./user_saga";
 let rootSagaCrashed = false;
 export default function* rootSaga(): Saga<void> {
   while (true) {
-    // todop: also stop sagas when controller is unmounted
-
     rootSagaCrashed = false;
-    console.log("fork");
     const task = yield* fork(restartableSaga);
     const { restart, doCancel } = yield race({
       restart: take("RESTART_SAGA"),

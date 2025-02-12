@@ -283,6 +283,7 @@ export default class LayerRenderingManager {
   }
 
   destroy() {
+    console.log("LayerRenderingManager::destroy");
     this.storePropertyUnsubscribers.forEach((fn) => fn());
     this.textureBucketManager.destroy();
     getSharedLookUpCuckooTable.clear();

@@ -274,6 +274,7 @@ class PlaneController extends React.PureComponent<Props> {
   isStarted: boolean = false;
 
   componentDidMount() {
+    console.log("PlaneController::componentDidMount");
     this.input = {
       // @ts-expect-error ts-migrate(2739) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
       mouseControllers: {},

@@ -675,6 +675,17 @@ function LoggedInAvatar({
               key: "resetpassword",
               label: <Link to="/auth/changePassword">Change Password</Link>,
             },
+            {
+              key: "manage-passkeys",
+              label: (
+                <Link
+                  to="/auth/passKey"
+                  title="Register and manage Passkeys and Login via Windows Hello"
+                >
+                  Register/Manage PassKeys
+                </Link>
+              ),
+            },
             { key: "token", label: <Link to="/auth/token">Auth Token</Link> },
             {
               key: "theme",

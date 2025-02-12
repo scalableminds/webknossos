@@ -156,6 +156,18 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
               >
                 Register Now
               </Link>
+              <Link
+                to="#"
+                style={{
+                  ...linkStyle,
+                  marginRight: 10,
+                  marginLeft: 10,
+                  flexGrow: 1,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Use PassKey
+              </Link>
               <Link to="/auth/resetPassword" style={{ ...linkStyle, whiteSpace: "nowrap" }}>
                 Forgot Password
               </Link>

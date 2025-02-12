@@ -1,4 +1,5 @@
 import type { MenuItemType } from "antd/lib/menu/interface";
+import { capitalize } from "libs/utils";
 import _ from "lodash";
 import { settings } from "messages";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -24,6 +25,12 @@ const mapMenuActionsToCommands = (menuActions: MenuItemType[]): Command[] => {
   });
 };
 
+const getLabelForUserConfigType = (key: string) =>
+  key
+    .split(/(?=[A-Z])/)
+    .map((word) => capitalize(word))
+    .join(" ");
+
 export const WkCommandPalette = () => {
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
   const [isUserScriptsModalOpen, setIsUserScriptsModalOpen] = useState(false);
@@ -46,15 +53,20 @@ export const WkCommandPalette = () => {
   });
 
   const getTabsAndSettingsMenuItems = () => {
-    return [
-      {
-        id: 1,
-        name: `Toggle ${settings.displayCrosshair}` || "Toggle Display Crosshair",
-        command: () =>
-          Store.dispatch(updateUserSettingAction("displayCrosshair", !userConfig.displayCrosshair)),
-        color: "#5660ff",
-      },
-    ];
+    const menuItems = [];
+
+    Object.keys(userConfig).forEach((key) => {
+      if (typeof userConfig[key] === "boolean") {
+        menuItems.push({
+          id: key,
+          name: `Toggle ${getLabelForUserConfigType(key)}`,
+          command: () => Store.dispatch(updateUserSettingAction(key, !userConfig[key])),
+          color: "#5660ff",
+        });
+      }
+    });
+
+    return menuItems;
   };
 
   const { menuItems, modals } = getModalsAndMenuItems(

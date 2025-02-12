@@ -1663,7 +1663,7 @@ class DataApi {
     console.log("unnecessarilyPrefetched", unnecessarilyPrefetched);
     console.log("averageDelayForSuccessfullyPrefetched", averageDelayForSuccessfullyPrefetched);
     console.log("loadedWithoutPrefetching", loadedWithoutPrefetching);
-
+    console.log("totalPrefetchToUsageDelay", totalPrefetchToUsageDelay);
     const state = Store.getState();
 
     const viewMode = state.temporaryConfiguration.viewMode;
@@ -1677,8 +1677,8 @@ class DataApi {
     const csv = `
     Please share this CSV:
 
-    totalBucketsLoaded,successfullyPrefetched,unnecessarilyPrefetched,loadedWithoutPrefetching,totalPrefetchToUsageDelay,averageDelayForSuccessfullyPrefetched,viewMode,datasetName,scale,elementClasses
-    ${totalBucketsLoaded},${successfullyPrefetched},${unnecessarilyPrefetched},${loadedWithoutPrefetching},${totalPrefetchToUsageDelay},${averageDelayForSuccessfullyPrefetched},${viewMode},${datasetName},${scale},${elementClasses}
+    totalBucketsLoaded,successfullyPrefetched,unnecessarilyPrefetched,loadedWithoutPrefetching,totalPrefetchToUsageDelay,averageDelayForSuccessfullyPrefetched,totalPrefetchToUsageDelay,viewMode,datasetName,scale,elementClasses
+    ${totalBucketsLoaded},${successfullyPrefetched},${unnecessarilyPrefetched},${loadedWithoutPrefetching},${totalPrefetchToUsageDelay},${averageDelayForSuccessfullyPrefetched},${totalPrefetchToUsageDelay},${viewMode},${datasetName},${scale},${elementClasses}
   `;
     api.utils.showToast("info", csv, 0);
   }

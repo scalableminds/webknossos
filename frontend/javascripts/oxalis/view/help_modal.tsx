@@ -55,8 +55,6 @@ type HelpChatModalProps = {
 };
 
 export function HelpChatModal({ isModalOpen, onCancel }: HelpChatModalProps) {
-
-
   return (
     <Modal
       title="AI Help Chat"

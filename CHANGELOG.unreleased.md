@@ -16,8 +16,10 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - When using the “Restore older Version” feature, there are no longer separate tabs for the different annotation layers. Only one linear annotation history is now used, and if you revert to an older version, all layers are reverted. If layers were added/deleted since then, that is also reverted. This also means that proofreading annotations can now be reverted to older versions as well. The description text of annotations is now versioned as well. [#7917](https://github.com/scalableminds/webknossos/pull/7917)
 - Added the possibility to use the "merger mode" even when the user has annotated volume data in the current layer (as long as no other mapping is active). [#8335](https://github.com/scalableminds/webknossos/pull/8335)
 - Measurement tools are now accessible when viewing datasets outside of an annotation. [#8334](https://github.com/scalableminds/webknossos/pull/8334)
+- Support reading Blosc-compressed datasets with the “autoshuffle” parameter. [#8387](https://github.com/scalableminds/webknossos/pull/8387)
 
 ### Changed
+- Improved the scrolling behaviour of sliders: Sliders must be focused to scroll them. Additionally, parent element scrolling is prevented when using the slider. [#8321](https://github.com/scalableminds/webknossos/pull/8321) [#8321](https://github.com/scalableminds/webknossos/pull/8321)
 
 ### Fixed
 - Fixed a bug that lead to trees being dropped when merging to trees together. [#8359](https://github.com/scalableminds/webknossos/pull/8359)

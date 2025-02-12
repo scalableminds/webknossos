@@ -22,6 +22,7 @@ import type { APICompoundType } from "types/api_flow_types";
 import { globalToLayerTransformedPosition } from "./model/accessors/dataset_layer_transformation_accessor";
 import { invertTransform, transformPointUnscaled } from "./model/helpers/transformation_helpers";
 import { initialize } from "./model_initialization";
+import { api } from "./singletons";
 
 // TODO: Non-reactive
 export class OxalisModel {
@@ -53,6 +54,10 @@ export class OxalisModel {
 
         this.dataLayers = dataLayers;
         this.maximumTextureCountForLayer = maximumTextureCountForLayer;
+
+        Utils.sleep(60_000).then(() => {
+          api.data.judgePrefetching();
+        });
       }
     } catch (error) {
       try {

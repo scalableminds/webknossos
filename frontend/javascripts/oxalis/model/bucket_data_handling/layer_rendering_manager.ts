@@ -270,6 +270,16 @@ export default class LayerRenderingManager {
               priority,
             }));
 
+          for (const bucketAddress of missingBuckets) {
+            const bucket = this.cube.getOrCreateBucket(bucketAddress.bucket);
+            if (bucket.type !== "null") {
+              if (bucket.initiationSource == null) {
+                bucket.initiationSource = "prefetching";
+                bucket.initiatedLoadingTimestamp = Date.now();
+              }
+            }
+          }
+
           this.pullQueue.addAll(missingBuckets);
           this.pullQueue.pull();
         },

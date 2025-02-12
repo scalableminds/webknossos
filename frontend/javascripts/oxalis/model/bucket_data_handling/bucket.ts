@@ -150,6 +150,10 @@ export class DataBucket {
   // can be stored in cachedValueSet.
   cachedValueSet: Set<number> | Set<bigint> | null = null;
 
+  initiatedLoadingTimestamp: number | undefined;
+  initiationSource: "prefetching" | "picking" | undefined;
+  neededAt: number | undefined;
+
   constructor(
     elementClass: ElementClass,
     zoomedAddress: BucketAddress,

@@ -143,11 +143,16 @@ export function* prefetchForPlaneMode(
           additionalCoordinates,
         );
 
-        if (WkDevFlags.bucketDebugging.visualizePrefetchedBuckets) {
-          for (const item of buckets) {
-            const bucket = layer.cube.getOrCreateBucket(item.bucket);
+        for (const item of buckets) {
+          const bucket = layer.cube.getOrCreateBucket(item.bucket);
+          if (bucket.type !== "null") {
+            if (bucket.initiationSource == null) {
+              bucket.initiationSource = "picking";
+              bucket.initiatedLoadingTimestamp = Date.now();
+              bucket.neededAt = bucket.initiatedLoadingTimestamp;
+            }
 
-            if (bucket.type !== "null") {
+            if (WkDevFlags.bucketDebugging.visualizePrefetchedBuckets) {
               bucket.visualize();
             }
           }

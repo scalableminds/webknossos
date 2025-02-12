@@ -318,45 +318,45 @@ class DataCube {
   }
 
   addBucketToGarbageCollection(bucket: DataBucket): void {
-    if (this.buckets.length >= this.BUCKET_COUNT_SOFT_LIMIT) {
-      let foundCollectibleBucket = false;
+    // if (this.buckets.length >= this.BUCKET_COUNT_SOFT_LIMIT) {
+    //   let foundCollectibleBucket = false;
 
-      for (let i = 0; i < this.buckets.length; i++) {
-        this.bucketIterator = (this.bucketIterator + 1) % this.buckets.length;
+    //   for (let i = 0; i < this.buckets.length; i++) {
+    //     this.bucketIterator = (this.bucketIterator + 1) % this.buckets.length;
 
-        if (this.buckets[this.bucketIterator].shouldCollect()) {
-          foundCollectibleBucket = true;
-          break;
-        }
-      }
+    //     if (this.buckets[this.bucketIterator].shouldCollect()) {
+    //       foundCollectibleBucket = true;
+    //       break;
+    //     }
+    //   }
 
-      if (foundCollectibleBucket) {
-        this.collectBucket(this.buckets[this.bucketIterator]);
-      } else {
-        const warnMessage = `More than ${this.buckets.length} buckets needed to be allocated.`;
+    //   if (foundCollectibleBucket) {
+    //     this.collectBucket(this.buckets[this.bucketIterator]);
+    //   } else {
+    //     const warnMessage = `More than ${this.buckets.length} buckets needed to be allocated.`;
 
-        if (this.buckets.length % 100 === 0) {
-          console.warn(warnMessage);
-          ErrorHandling.notify(
-            new Error(warnMessage),
-            {
-              elementClass: this.elementClass,
-              isSegmentation: this.isSegmentation,
-              magInfo: this.magInfo,
-            },
-            "warning",
-          );
-        }
+    //     if (this.buckets.length % 100 === 0) {
+    //       console.warn(warnMessage);
+    //       ErrorHandling.notify(
+    //         new Error(warnMessage),
+    //         {
+    //           elementClass: this.elementClass,
+    //           isSegmentation: this.isSegmentation,
+    //           magInfo: this.magInfo,
+    //         },
+    //         "warning",
+    //       );
+    //     }
 
-        if (this.buckets.length > 2 * this.BUCKET_COUNT_SOFT_LIMIT) {
-          warnAboutTooManyAllocations();
-        }
+    //     if (this.buckets.length > 2 * this.BUCKET_COUNT_SOFT_LIMIT) {
+    //       warnAboutTooManyAllocations();
+    //     }
 
-        // Effectively, push to `this.buckets` by setting the iterator to
-        // a new index.
-        this.bucketIterator = this.buckets.length;
-      }
-    }
+    //     // Effectively, push to `this.buckets` by setting the iterator to
+    //     // a new index.
+    //     this.bucketIterator = this.buckets.length;
+    //   }
+    // }
 
     this.buckets[this.bucketIterator] = bucket;
     // Note that bucketIterator is allowed to point to the next free

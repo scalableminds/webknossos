@@ -1631,6 +1631,58 @@ class DataApi {
     );
   }
 
+  async judgePrefetching(): Promise<void> {
+    let totalBucketsLoaded = 0;
+    let successfullyPrefetched = 0;
+    let unnecessarilyPrefetched = 0;
+    let loadedWithoutPrefetching = 0;
+    let totalPrefetchToUsageDelay = 0;
+
+    Utils.values(this.model.dataLayers).map((dataLayer: DataLayer) => {
+      for (const bucket of dataLayer.cube.buckets) {
+        totalBucketsLoaded++;
+        if (bucket.initiationSource === "prefetching") {
+          if (bucket.neededAt == null) {
+            unnecessarilyPrefetched++;
+          } else {
+            successfullyPrefetched++;
+            if (bucket.initiatedLoadingTimestamp) {
+              totalPrefetchToUsageDelay += bucket.neededAt - bucket.initiatedLoadingTimestamp;
+            }
+          }
+        } else if (bucket.initiationSource === "picking") {
+          loadedWithoutPrefetching++;
+        }
+      }
+    });
+
+    const averageDelayForSuccessfullyPrefetched =
+      totalPrefetchToUsageDelay / successfullyPrefetched;
+    console.log("totalBucketsLoaded", totalBucketsLoaded);
+    console.log("successfullyPrefetched", successfullyPrefetched);
+    console.log("unnecessarilyPrefetched", unnecessarilyPrefetched);
+    console.log("averageDelayForSuccessfullyPrefetched", averageDelayForSuccessfullyPrefetched);
+    console.log("loadedWithoutPrefetching", loadedWithoutPrefetching);
+
+    const state = Store.getState();
+
+    const viewMode = state.temporaryConfiguration.viewMode;
+    const dataset = state.dataset;
+    const datasetName = dataset.name;
+    const scale = `[${dataset.dataSource.scale.factor}]`;
+    const elementClasses = `[${Model.getAllLayers()
+      .map((layer) => layer.cube.elementClass)
+      .join(",")}]`;
+
+    const csv = `
+    Please share this CSV:
+
+    totalBucketsLoaded,successfullyPrefetched,unnecessarilyPrefetched,loadedWithoutPrefetching,totalPrefetchToUsageDelay,averageDelayForSuccessfullyPrefetched,viewMode,datasetName,scale,elementClasses
+    ${totalBucketsLoaded},${successfullyPrefetched},${unnecessarilyPrefetched},${loadedWithoutPrefetching},${totalPrefetchToUsageDelay},${averageDelayForSuccessfullyPrefetched},${viewMode},${datasetName},${scale},${elementClasses}
+  `;
+    api.utils.showToast("info", csv, 0);
+  }
+
   /**
    * Invalidates all downloaded buckets so that they are reloaded.
    */

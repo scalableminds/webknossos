@@ -22,6 +22,7 @@ import { TDViewDisplayModeEnum } from "oxalis/constants";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { api } from "oxalis/singletons";
 import type { OxalisState } from "oxalis/store";
+import { useEffect } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 type Props = {

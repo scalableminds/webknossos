@@ -22,7 +22,7 @@ module.exports = function (env = {}) {
   ]);
 
   const plugins = [
-    // new BundleAnalyzerPlugin({ bundleDir: publicPath }),
+    // new BundleAnalyzerPlugin({ bundleDir: `${__dirname}/public/bundle` }),
     new webpack.DefinePlugin({
       "process.env.NODE_ENV": env.production ? '"production"' : '"development"',
       "process.env.BABEL_ENV": process.env.BABEL_ENV,

@@ -7,16 +7,18 @@ import { document, location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
+import { setupApi } from "oxalis/api/internal_api";
 import Constants from "oxalis/constants";
 import type { ControllerStatus } from "oxalis/controller";
 import OxalisController from "oxalis/controller";
 import MergerModeController from "oxalis/controller/merger_mode_controller";
 import UrlManager from "oxalis/controller/url_manager";
+import Model from "oxalis/model";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import { cancelSagaAction } from "oxalis/model/actions/actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import rootSaga from "oxalis/model/sagas/root_saga";
-import { Store } from "oxalis/singletons";
+import { Store, setModel } from "oxalis/singletons";
 import { type OxalisState, type Theme, type TraceOrViewCommand, startSaga } from "oxalis/store";
 import ActionBarView from "oxalis/view/action_bar_view";
 import WkContextMenu from "oxalis/view/context_menu";
@@ -109,7 +111,14 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     Toast.error(messages["react.rendering_error"]);
   }
 
+  // This cannot be changed to componentDidMount, because Model is accessed in componentDidMount of the
+  // Controller child component
+  UNSAFE_componentWillMount() {
+    setModel(Model);
+  }
+
   componentDidMount() {
+    setupApi();
     startSaga(rootSaga);
   }
 

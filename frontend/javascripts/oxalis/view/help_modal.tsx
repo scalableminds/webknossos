@@ -78,7 +78,7 @@ export function HelpChatModal({ isModalOpen, onCancel }: HelpChatModalProps) {
           padding: "0px",
           margin: "0px",
           height: "100%",
-          minHeight: "100%"
+          minHeight: "100%",
         }}
       />
     </Modal>

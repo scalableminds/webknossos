@@ -49,7 +49,7 @@ function estimateTotalBucketCountForZoomLevel(
   mag: Vector3,
   zoomFactor: number,
   viewportRects: OrthoViewRects,
-  voxelSizeFactor: Array<Vector3>,
+  voxelSizeFactor: Vector3,
 ) {
   const voxelSizeSmallest = Math.min(...voxelSizeFactor);
   const viewportSizeX = viewportRects["PLANE_XY"].width;
@@ -197,30 +197,32 @@ export function _getMaximumZoomForAllMags(
 
   while (currentIterationCount < maximumIterationCount && currentMagIndex < mags.length) {
     const nextZoomValue = currentMaxZoomValue * ZOOM_STEP_INTERVAL;
-    const nextCapacityNew = estimateTotalBucketCountForZoomLevel(
-      mags[currentMagIndex],
-      nextZoomValue,
-      viewportRects,
-      voxelSizeFactor,
-    );
-    /*
-    const nextCapacity = calculateTotalBucketCountForZoomLevel(
-      viewMode,
-      loadingStrategy,
-      mags,
-      currentMagIndex,
-      nextZoomValue,
-      viewportRects,
-      unzoomedMatrix,
-      // The bucket picker will stop after reaching the maximum capacity.
-      // Increment the limit by one, so that rendering is still possible
-      // when exactly meeting the limit.
-      maximumCapacity + 1,
-    );
-    console.log("next capacity", nextCapacity, nextCapacityNew);
-    */
 
-    if (nextCapacityNew > maximumCapacity) {
+    let nextCapacity;
+    if (viewMode === "orthogonal") {
+      nextCapacity = estimateTotalBucketCountForZoomLevel(
+        mags[currentMagIndex],
+        nextZoomValue,
+        viewportRects,
+        voxelSizeFactor,
+      );
+    } else {
+      nextCapacity = calculateTotalBucketCountForZoomLevel(
+        viewMode,
+        loadingStrategy,
+        mags,
+        currentMagIndex,
+        nextZoomValue,
+        viewportRects,
+        unzoomedMatrix,
+        // The bucket picker will stop after reaching the maximum capacity.
+        // Increment the limit by one, so that rendering is still possible
+        // when exactly meeting the limit.
+        maximumCapacity + 1,
+      );
+    }
+
+    if (nextCapacity > maximumCapacity) {
       maxZoomValueThresholds.push(currentMaxZoomValue);
       currentMagIndex++;
     }
@@ -457,7 +459,6 @@ export function getMaxZoomValueForMag(
   layerName: string,
   targetMag: Vector3,
 ): number {
-  const before = window.performance.now();
   const targetMagIdentifier = Math.max(...targetMag);
   // Extract the max value from the range
   const maxZoom = getValidZoomRangeForMag(state, layerName, targetMagIdentifier)[1];

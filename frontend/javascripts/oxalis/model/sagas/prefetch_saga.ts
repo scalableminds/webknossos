@@ -149,7 +149,6 @@ export function* prefetchForPlaneMode(
             if (bucket.initiationSource == null) {
               bucket.initiationSource = "prefetching";
               bucket.initiatedLoadingTimestamp = Date.now();
-              bucket.neededAt = bucket.initiatedLoadingTimestamp;
             }
 
             if (WkDevFlags.bucketDebugging.visualizePrefetchedBuckets) {

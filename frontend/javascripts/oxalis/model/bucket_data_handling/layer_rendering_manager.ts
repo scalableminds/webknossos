@@ -274,7 +274,7 @@ export default class LayerRenderingManager {
             const bucket = this.cube.getOrCreateBucket(bucketAddress.bucket);
             if (bucket.type !== "null") {
               if (bucket.initiationSource == null) {
-                bucket.initiationSource = "prefetching";
+                bucket.initiationSource = "picking";
                 bucket.initiatedLoadingTimestamp = Date.now();
               }
             }

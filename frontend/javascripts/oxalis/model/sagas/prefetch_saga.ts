@@ -147,7 +147,7 @@ export function* prefetchForPlaneMode(
           const bucket = layer.cube.getOrCreateBucket(item.bucket);
           if (bucket.type !== "null") {
             if (bucket.initiationSource == null) {
-              bucket.initiationSource = "picking";
+              bucket.initiationSource = "prefetching";
               bucket.initiatedLoadingTimestamp = Date.now();
               bucket.neededAt = bucket.initiatedLoadingTimestamp;
             }

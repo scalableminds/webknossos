@@ -41,6 +41,20 @@ function TDViewControls({
   onChangeTdViewDisplayDatasetBorders,
   onChangeTdViewDisplayLayerBorders,
 }: Props) {
+    useEffect(
+    () => {
+      console.log(
+        "FIRST RENDER",
+        window.performance.timeOrigin +
+          window.performance.now() -
+          window.performance.timing.connectStart,
+      );
+    },
+    // array of variables that can trigger an update if they change. Pass an
+    // an empty array if you just want to run it once after component mounted.
+    [],
+  );
+
   const settingsMenu: MenuProps = {
     style: {
       width: 260,

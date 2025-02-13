@@ -35,6 +35,7 @@ import {
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { Button, Dropdown, Modal, Space, Tooltip } from "antd";
 import type { ItemType, SubMenuType } from "antd/es/menu/interface";
+import { MenuItemType } from "antd/lib/menu/interface";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
 import features from "features";
 import Toast from "libs/toast";
@@ -368,7 +369,7 @@ export const getModalsAndMenuItems = (
   } = props;
   const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
   const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
-  const menuItems: ItemType[] = [];
+  const menuItems = [];
   const modals = [];
 
   if (restrictions.allowFinish) {

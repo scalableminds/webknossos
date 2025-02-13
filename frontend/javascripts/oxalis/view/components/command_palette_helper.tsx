@@ -1,10 +1,10 @@
-import type { MenuItemType } from "antd/lib/menu/interface";
+import type { MenuItemType, SubMenuType } from "antd/lib/menu/interface";
 import { capitalize } from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { Store } from "oxalis/singletons";
-import type { OxalisState } from "oxalis/store";
+import type { OxalisState, UserConfiguration } from "oxalis/store";
 import { act, useState } from "react";
 import type { Command } from "react-command-palette";
 import CommandPalette from "react-command-palette";
@@ -14,15 +14,31 @@ import {
   getModalsAndMenuItems,
 } from "../action-bar/tracing_actions_view";
 
-const mapMenuActionsToCommands = (menuActions: MenuItemType[]): Command[] => {
-  return menuActions?.map((action, counter) => {
-    return {
-      name: action?.title || action?.label?.toString() || "",
-      command: action?.onClick || _.noop,
-      color: "#5660ff",
-      id: counter,
-    };
-  });
+const getLabelForAction = (action: MenuItemType | SubMenuType | null) => {
+  if (action == null) return null;
+  if ("title" in action && action.title != null) {
+    return action.title;
+  }
+  if ("label" in action && action.label != null) {
+    return action.label.toString();
+  }
+  return null;
+};
+
+const mapMenuActionsToCommands = (
+  menuActions: Array<MenuItemType | SubMenuType | null>,
+): Command[] => {
+  if (menuActions == null) return [];
+  return menuActions
+    .filter((action) => action != null && getLabelForAction(action) != null)
+    .map((action, counter) => {
+      return {
+        name: getLabelForAction(action) || "", //TODO_C fix typechecker here. getLabelForAction(action) is not null
+        command: action?.onClick || _.noop, //TODO_C fix typechecker here. action is not null
+        color: "#5660ff",
+        id: counter,
+      };
+    });
 };
 
 const getLabelForUserConfigType = (key: string) =>
@@ -58,7 +74,7 @@ export const WkCommandPalette = () => {
   const getTabsAndSettingsMenuItems = () => {
     const commands: Command[] = [];
 
-    Object.keys(userConfig).forEach((key, counter) => {
+    (Object.keys(userConfig) as [keyof UserConfiguration]).forEach((key, counter) => {
       if (typeof userConfig[key] === "boolean") {
         commands.push({
           id: counter,
@@ -82,8 +98,9 @@ export const WkCommandPalette = () => {
     ];
 
     const adminEntries = getAdministrationSubMenu(false, activeUser);
-    const adminCommands = adminEntries?.children.map((entry: { key: string }) => {
-      return { name: getLabelForPath(entry.key), path: entry.key };
+    const adminCommands: Array<{ name: string; path: string }> = [];
+    adminEntries?.children.map((entry: { key: string }) => {
+      adminCommands.push({ name: getLabelForPath(entry.key), path: entry.key });
     });
 
     const navigationEntries = [...basicNavigationEntries, ...adminCommands];

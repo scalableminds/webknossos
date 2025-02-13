@@ -21,7 +21,9 @@ import {
   SkeletonTool,
 } from "oxalis/controller/combinations/tool_controls";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
-import getSceneController from "oxalis/controller/scene_controller_provider";
+import getSceneController, {
+  getSceneControllerOrNull,
+} from "oxalis/controller/scene_controller_provider";
 import TDController from "oxalis/controller/td_controller";
 import {
   getActiveMagIndexForLayer,
@@ -588,7 +590,8 @@ class PlaneController extends React.PureComponent<Props> {
       this.destroyInput();
     }
 
-    getSceneController().stopPlaneMode();
+    getSceneControllerOrNull()?.stopPlaneMode();
+
     this.planeView.stop();
     this.isStarted = false;
   }

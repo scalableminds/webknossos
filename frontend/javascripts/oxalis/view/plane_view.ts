@@ -6,7 +6,9 @@ import window from "libs/window";
 import _ from "lodash";
 import type { OrthoViewMap, Vector3, Viewport } from "oxalis/constants";
 import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
-import getSceneController from "oxalis/controller/scene_controller_provider";
+import getSceneController, {
+  getSceneControllerOrNull,
+} from "oxalis/controller/scene_controller_provider";
 import type { MeshSceneNode, SceneGroupForMeshes } from "oxalis/controller/segment_mesh_controller";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
@@ -220,8 +222,11 @@ class PlaneView {
   stop(): void {
     this.running = false;
 
-    for (const plane of OrthoViewValues) {
-      getSceneController().scene.remove(this.cameras[plane]);
+    const sceneController = getSceneControllerOrNull();
+    if (sceneController != null) {
+      for (const plane of OrthoViewValues) {
+        sceneController.scene.remove(this.cameras[plane]);
+      }
     }
 
     window.removeEventListener("resize", this.resizeThrottled);

@@ -9,6 +9,10 @@ export default function getSceneController(): SceneControllerType {
   return sceneController;
 }
 
+export function getSceneControllerOrNull(): SceneControllerType | null {
+  return sceneController || null;
+}
+
 export function setSceneController(c: SceneControllerType): void {
   sceneController = c;
 }

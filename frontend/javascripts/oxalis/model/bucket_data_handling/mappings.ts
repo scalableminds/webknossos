@@ -157,7 +157,6 @@ class Mappings {
 
   destroy() {
     console.group("Mappings.destroy");
-    // todop call this
     this.storePropertyUnsubscribers.forEach((fn) => fn());
     this.storePropertyUnsubscribers = [];
     console.groupEnd();

@@ -294,20 +294,18 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
     logger.info(s"revokeExpiredCreditsTransaction for transaction ${transaction._id}")
     for {
       // Query: Sums up all spent credits since the transaction which are completed and subtracts refunded transactions.
-      spentCreditsSinceTransactionNegResult <- q"""
+      freeCreditsAvailableResult <- q"""
       SELECT COALESCE(SUM(credit_change), 0)
       FROM webknossos.organization_credit_transactions
       WHERE _organization = ${transaction._organization}
-        AND created_at > ${transaction.createdAt}
-        AND (credit_change < 0)
+        AND created_at >= ${transaction.createdAt}
+        AND (
+		      credit_change < 0
           OR (credit_change > 0 AND refunded_transaction_id IS NOT NULL) -- Counts also revoked transactions
           OR (credit_change > 0 AND expiration_date <= NOW()) -- Counts also expired transactions
-    """.as[BigDecimal]
-
-      // Extract values from query results
-      spentCreditsSinceTransactionNegative = spentCreditsSinceTransactionNegResult.headOption.getOrElse(BigDecimal(0))
-      spentCreditsSinceTransactionPositive = spentCreditsSinceTransactionNegative * -1
-      freeCreditsAvailable = transaction.creditChange - spentCreditsSinceTransactionPositive
+	      )
+		""".as[BigDecimal]
+      freeCreditsAvailable = freeCreditsAvailableResult.headOption.getOrElse(BigDecimal(0))
 
       _ <- if (freeCreditsAvailable <= 0) {
         // Fully spent, update state to 'Spent'

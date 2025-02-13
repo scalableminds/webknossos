@@ -15,14 +15,14 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
   roundTripTimeRangeEnd = Number.POSITIVE_INFINITY;
   name = "ARBITRARY";
   // @ts-expect-error ts-migrate(2702) FIXME: 'PolyhedronRasterizer' only refers to a type, but ... Remove this comment to see the full error message
-  // prefetchPolyhedron: PolyhedronRasterizer.Master = PolyhedronRasterizer.Master.squareFrustum(
-  //   7,
-  //   7,
-  //   -0.5,
-  //   10,
-  //   10,
-  //   20,
-  // );
+  prefetchPolyhedron: PolyhedronRasterizer.Master = PolyhedronRasterizer.Master.squareFrustum(
+    7,
+    7,
+    -0.5,
+    10,
+    10,
+    20,
+  );
 
   getExtentObject(
     poly0: BoundingBoxType,
@@ -61,45 +61,44 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
     magInfo: MagInfo,
     additionalCoordinates: AdditionalCoordinate[] | null,
   ): Array<PullQueueItem> {
-    return [];
-    // const pullQueue: PullQueueItem[] = [];
-    // const zoomStep = magInfo.getIndexOrClosestHigherIndex(activeZoomStep);
+    const pullQueue: PullQueueItem[] = [];
+    const zoomStep = magInfo.getIndexOrClosestHigherIndex(activeZoomStep);
 
-    // if (zoomStep == null) {
-    //   // The layer cannot be rendered at this zoom step, as necessary magnifications
-    //   // are missing. Don't prefetch anything.
-    //   return pullQueue;
-    // }
+    if (zoomStep == null) {
+      // The layer cannot be rendered at this zoom step, as necessary magnifications
+      // are missing. Don't prefetch anything.
+      return pullQueue;
+    }
 
-    // const matrix0 = M4x4.clone(matrix);
-    // this.modifyMatrixForPoly(matrix0, zoomStep);
-    // const polyhedron0 = this.prefetchPolyhedron.transformAffine(matrix0);
-    // const testAddresses = polyhedron0.collectPointsOnion(matrix0[12], matrix0[13], matrix0[14]);
-    // let i = 0;
+    const matrix0 = M4x4.clone(matrix);
+    this.modifyMatrixForPoly(matrix0, zoomStep);
+    const polyhedron0 = this.prefetchPolyhedron.transformAffine(matrix0);
+    const testAddresses = polyhedron0.collectPointsOnion(matrix0[12], matrix0[13], matrix0[14]);
+    let i = 0;
 
-    // while (i < testAddresses.length) {
-    //   const bucketX = testAddresses[i++];
-    //   const bucketY = testAddresses[i++];
-    //   const bucketZ = testAddresses[i++];
-    //   const positionBucketWithZoomStep = globalPositionToBucketPosition(
-    //     position,
-    //     mags,
-    //     zoomStep,
-    //     null,
-    //   );
-    //   const positionBucket: Vector3 = [
-    //     positionBucketWithZoomStep[0],
-    //     positionBucketWithZoomStep[1],
-    //     positionBucketWithZoomStep[2],
-    //   ];
-    //   const distanceToPosition = V3.length(V3.sub([bucketX, bucketY, bucketZ], positionBucket));
-    //   pullQueue.push({
-    //     bucket: [bucketX, bucketY, bucketZ, zoomStep, additionalCoordinates ?? []],
-    //     priority: 1 + distanceToPosition,
-    //   });
-    // }
+    while (i < testAddresses.length) {
+      const bucketX = testAddresses[i++];
+      const bucketY = testAddresses[i++];
+      const bucketZ = testAddresses[i++];
+      const positionBucketWithZoomStep = globalPositionToBucketPosition(
+        position,
+        mags,
+        zoomStep,
+        null,
+      );
+      const positionBucket: Vector3 = [
+        positionBucketWithZoomStep[0],
+        positionBucketWithZoomStep[1],
+        positionBucketWithZoomStep[2],
+      ];
+      const distanceToPosition = V3.length(V3.sub([bucketX, bucketY, bucketZ], positionBucket));
+      pullQueue.push({
+        bucket: [bucketX, bucketY, bucketZ, zoomStep, additionalCoordinates ?? []],
+        priority: 1 + distanceToPosition,
+      });
+    }
 
-    // return pullQueue;
+    return pullQueue;
   }
 }
 export default {};

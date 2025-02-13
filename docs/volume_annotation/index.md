@@ -9,4 +9,4 @@ WEBKNOSSOS supports volume/segmentation annotations. This annotation type lets y
 - How to use [pen tablets and iPads](pen_tablets.md) to annotate on WEBKNOSSOS
 
 Watch this tutorial to get started: 
-![youtube-video](https://www.youtube.com/embed/iw2C7XB6wP4?start=120)
+![youtube-video](https://www.youtube.com/embed/FfqNSFFeYms)

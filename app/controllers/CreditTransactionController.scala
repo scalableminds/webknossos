@@ -8,6 +8,7 @@ import models.organization.{
   CreditTransactionDAO,
   CreditTransactionService,
   CreditTransactionState,
+  FreeCreditTransactionService,
   OrganizationService
 }
 import models.user.UserService
@@ -21,6 +22,7 @@ import scala.concurrent.ExecutionContext
 
 class CreditTransactionController @Inject()(organizationService: OrganizationService,
                                             creditTransactionService: CreditTransactionService,
+                                            freeCreditTransactionService: FreeCreditTransactionService,
                                             creditTransactionDAO: CreditTransactionDAO,
                                             userService: UserService,
                                             sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
@@ -70,7 +72,7 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
   def revokeExpiredCredits(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can manually revoke expired credits"
-      _ <- creditTransactionService.revokeExpiredCredits()
+      _ <- freeCreditTransactionService.revokeExpiredCredits()
     } yield Ok
   }
 

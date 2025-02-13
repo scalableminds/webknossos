@@ -14,12 +14,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransactionDAO,
-                                         organizationService: OrganizationService,
-                                         val lifecycle: ApplicationLifecycle,
-                                         val system: ActorSystem)(implicit val ec: ExecutionContext)
+                                         organizationService: OrganizationService)(implicit val ec: ExecutionContext)
     extends FoxImplicits
-    with LazyLogging
-    with IntervalScheduler {
+    with LazyLogging {
 
   def hasEnoughCredits(organizationId: String, creditsToSpent: BigDecimal)(
       implicit ctx: DBAccessContext): Fox[Boolean] =
@@ -93,21 +90,4 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
         "isDeleted" -> transaction.isDeleted
       ))
 
-  def revokeExpiredCredits(): Fox[Unit] = creditTransactionDAO.runRevokeExpiredCredits()
-  def handOutMonthlyFreeCredits(): Fox[Unit] = creditTransactionDAO.handOutMonthlyFreeCredits()
-
-  override protected def tickerInterval: FiniteDuration = 1 minute
-
-  // TODO: make this class a singleton or put this somewhere else as this is executed for each instance of the service
-  override protected def tick(): Unit =
-    for {
-      _ <- Fox.successful(())
-      _ = logger.info("Starting revoking expired credits...")
-      _ <- revokeExpiredCredits()
-      _ = logger.info("Finished revoking expired credits.")
-      _ = logger.info("Staring handing out free monthly credits.")
-      _ <- handOutMonthlyFreeCredits()
-      _ = logger.info("Finished handing out free monthly credits.")
-    } yield ()
-  ()
 }

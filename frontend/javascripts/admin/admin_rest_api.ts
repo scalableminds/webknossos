@@ -1,3 +1,4 @@
+import { get, parseRequestOptionsFromJSON } from "@github/webauthn-json/browser-ponyfill";
 import dayjs from "dayjs";
 import { V3 } from "libs/mjs";
 import type { RequestOptions } from "libs/request";
@@ -145,6 +146,32 @@ export async function loginUser(formValues: {
   const organization = await getOrganization(activeUser.organization);
 
   return [activeUser, organization];
+}
+
+export async function doWebAuthnLogin(): Promise<ArbitraryObject> {
+  const webAuthnAuthAssertion = await Request.receiveJSON("/auth/webauthn/auth/start", {
+    method: "POST",
+  });
+  const options = parseRequestOptionsFromJSON(webAuthnAuthAssertion);
+  const response = await get(options);
+  return Request.sendJSONReceiveJSON("/auth/webauthn/auth/finalize", {
+    method: "POST",
+    data: { assertionResponse: response },
+  });
+}
+
+export async function startWebAuthnRegistration(): Promise<any> {
+  return Request.receiveJSON("/auth/webauthn/register/start", { method: "POST" });
+}
+
+export async function finalizeWebAuthnRegistration(
+  name: string,
+  key: string,
+): Promise<ArbitraryObject> {
+  return Request.sendJSONReceiveJSON("/auth/webauthn/register/start", {
+    data: { name, key },
+    method: "POST",
+  });
 }
 
 export async function getUsers(): Promise<Array<APIUser>> {

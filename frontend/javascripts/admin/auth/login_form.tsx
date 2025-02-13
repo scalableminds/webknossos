@@ -1,5 +1,5 @@
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
-import { loginUser, requestSingleSignOnLogin } from "admin/admin_rest_api";
+import { doWebAuthnLogin, loginUser, requestSingleSignOnLogin } from "admin/admin_rest_api";
 import { Alert, Button, Form, Input } from "antd";
 import features from "features";
 import { getIsInIframe } from "libs/utils";
@@ -164,6 +164,10 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
                   marginLeft: 10,
                   flexGrow: 1,
                   whiteSpace: "nowrap",
+                }}
+                onClick={async () => {
+                  const response = await doWebAuthnLogin();
+                  window.location.href = response.redirect_url;
                 }}
               >
                 Use PassKey

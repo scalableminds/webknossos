@@ -41,8 +41,8 @@ GET           /auth/oidc/login                                                  
 POST          /auth/webauthn/auth/start                                                         controllers.AuthenticationController.webauthnAuthStart()
 POST          /auth/webauthn/auth/finalize                                                      controllers.AuthenticationController.webauthnAuthFinalize()
 
-POST          /auth/webauthn/register/start                                                    controllers.AuthenticationController.webauthnAuthStart()
-POST          /auth/webauthn/register/finalize                                                 controllers.AuthenticationController.webauthnAuthFinalize()
+POST          /auth/webauthn/register/start                                                    controllers.AuthenticationController.webauthnRegisterStart()
+POST          /auth/webauthn/register/finalize                                                 controllers.AuthenticationController.webauthnRegisterFinalize()
 
 # /auth/oidc/callback route is used literally in code
 GET           /auth/oidc/callback                                                               controllers.AuthenticationController.openIdCallback()

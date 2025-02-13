@@ -2,7 +2,9 @@ import type { MenuItemType, SubMenuType } from "antd/lib/menu/interface";
 import { capitalize } from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
+import { AnnotationToolEnum } from "oxalis/constants";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { Store } from "oxalis/singletons";
 import type { OxalisState, UserConfiguration } from "oxalis/store";
 import { act, useState } from "react";
@@ -48,6 +50,13 @@ const getLabelForUserConfigType = (key: string) =>
     .join(" ");
 
 const getLabelForPath = (key: string) => capitalize(key.split("/")[1]) || key;
+
+const getLabelForTool = (tool: string) => {
+  return tool
+    .split("_")
+    .map((word) => capitalize(word.toLowerCase()))
+    .join(" ");
+};
 
 export const WkCommandPalette = () => {
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
@@ -119,6 +128,24 @@ export const WkCommandPalette = () => {
     return commands;
   };
 
+  const getToolEntries = () => {
+    const commands: Command[] = [];
+    const allTools = Object.keys(AnnotationToolEnum) as [keyof typeof AnnotationToolEnum];
+    allTools.forEach((tool, counter) => {
+      commands.push({
+        id: counter,
+        name: `Switch to ${getLabelForTool(tool)}`,
+        command: () => {
+          act(() => {
+            Store.dispatch(setToolAction(tool));
+          });
+        },
+        color: "#5660ff",
+      });
+    });
+    return commands;
+  };
+
   const { menuItems, modals } = getModalsAndMenuItems(
     props,
     null,
@@ -134,6 +161,7 @@ export const WkCommandPalette = () => {
     ...mapMenuActionsToCommands(menuItems),
     ...getTabsAndSettingsMenuItems(),
     ...getNavigationEntries(),
+    ...getToolEntries(),
   ];
   return (
     <div style={{ marginRight: "10px" }}>

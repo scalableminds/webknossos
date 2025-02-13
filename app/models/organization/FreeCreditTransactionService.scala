@@ -20,7 +20,7 @@ class FreeCreditTransactionService @Inject()(creditTransactionDAO: CreditTransac
     with IntervalScheduler {
 
   def revokeExpiredCredits(): Fox[Unit] = creditTransactionDAO.runRevokeExpiredCredits()
-  private def handOutMonthlyFreeCredits(): Fox[Unit] = creditTransactionDAO.handOutMonthlyFreeCredits()
+  def handOutMonthlyFreeCredits(): Fox[Unit] = creditTransactionDAO.handOutMonthlyFreeCredits()
 
   override protected def tickerInterval: FiniteDuration = 20 minute
 

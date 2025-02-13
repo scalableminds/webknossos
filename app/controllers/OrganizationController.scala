@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
-import models.organization.{OrganizationDAO, OrganizationService}
+import models.organization.{FreeCreditTransactionService, OrganizationDAO, OrganizationService}
 import models.user.{InviteDAO, MultiUserDAO, UserDAO, UserService}
 import models.team.PricingPlan
 import play.api.i18n.Messages
@@ -31,6 +31,7 @@ class OrganizationController @Inject()(
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     userService: UserService,
     defaultMails: DefaultMails,
+    freeCreditTransactionService: FreeCreditTransactionService,
     actorSystem: ActorSystem,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller
@@ -81,6 +82,7 @@ class OrganizationController @Inject()(
                                           autoActivate = true,
                                           isAdmin = true,
                                           isOrganizationOwner = true)
+        _ <- freeCreditTransactionService.handOutMonthlyFreeCredits()
       } yield Ok(org._id)
     }
 

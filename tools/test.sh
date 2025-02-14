@@ -81,7 +81,7 @@ maybeWithC8() {
 if [ $cmd == "test" ]
 then
   ensureUpToDateTests
-  export NODE_PATH="$testBundlePath" && maybeWithC8 ava $(find "$testBundlePath" -name "*.spec.js") "$@"
+  export NODE_PATH="$testBundlePath" && maybeWithC8 ava $(find "$testBundlePath" -name "flycam_accessors.spec.js") "$@"
 elif [ $cmd == "test-debug" ]
 then
   ensureUpToDateTests

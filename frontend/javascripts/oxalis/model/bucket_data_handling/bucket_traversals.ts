@@ -1,10 +1,12 @@
 import { V3 } from "libs/mjs";
-import { mod } from "libs/utils"; // Attention: Note that the implemented paper uses the term "voxel" for the unit
+import { mod } from "libs/utils";
 import type { Vector3 } from "oxalis/constants";
 import {
   getBucketExtent,
   globalPositionToBucketPosition,
 } from "oxalis/model/helpers/position_converter";
+
+// Attention: Note that the implemented paper uses the term "voxel" for the unit
 // we usually refer to as bucket. This is reflected in comments as well as variable naming.
 // This module implements the algorithm presented in this paper:
 // "A Fast Voxel Traversal Algorithm for Ray Tracing" (http://www.cse.yorku.ca/~amana/research/grid.pdf)

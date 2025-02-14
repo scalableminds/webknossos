@@ -57,10 +57,8 @@ function calculateTotalBucketCountForZoomLevel(
 ) {
   let counter = 0;
 
-  const addresses = [];
-  const enqueueFunction = (bucketAddress: Vector4) => {
+  const enqueueFunction = (_bucketAddress: Vector4) => {
     counter++;
-    addresses.push(bucketAddress);
   };
 
   // Define dummy values
@@ -164,6 +162,10 @@ export function _getMaximumZoomForAllMags(
     throw new Error("Internal error: Invalid maximum capacity provided.");
   }
 
+  let iterationWithoutIncrement = 0;
+  let iterationWithIncrement = 0;
+  let iterationLog = [];
+  console.time("_getMaximumZoomForAllMags");
   while (currentIterationCount < maximumIterationCount && currentMagIndex < mags.length) {
     const nextZoomValue = currentMaxZoomValue * ZOOM_STEP_INTERVAL;
     const nextCapacity = calculateTotalBucketCountForZoomLevel(
@@ -183,11 +185,19 @@ export function _getMaximumZoomForAllMags(
     if (nextCapacity > maximumCapacity) {
       maxZoomValueThresholds.push(currentMaxZoomValue);
       currentMagIndex++;
+      iterationWithIncrement++;
+      iterationLog.push(true);
+    } else {
+      iterationWithoutIncrement++;
+      iterationLog.push(false);
     }
 
     currentMaxZoomValue = nextZoomValue;
     currentIterationCount++;
   }
+  console.timeEnd("_getMaximumZoomForAllMags");
+  // console.log("iterationWithoutIncrement", iterationWithoutIncrement);
+  // console.log("iterationWithIncrement", iterationWithIncrement);
 
   return maxZoomValueThresholds;
 }

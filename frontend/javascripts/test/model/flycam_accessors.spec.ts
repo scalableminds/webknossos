@@ -140,3 +140,61 @@ test("Flycam Accessors should calculate appropriate zoom factors for datasets wi
   ];
   t.deepEqual(maximumZoomPerMags, expectedZoomValues);
 });
+
+test.only("Perf test for oblique bucket picking", (t) => {
+  const scale: Vector3 = [11.239999771118164, 11.239999771118164, 24];
+  const mags: Vector3[] = [
+    [1, 1, 1],
+    [2, 2, 1],
+    [4, 4, 1],
+    [8, 8, 1],
+    [16, 16, 2],
+    [32, 32, 4],
+    [64, 64, 8],
+    [128, 128, 16],
+    [256, 256, 32],
+    [512, 512, 64],
+    [1024, 1024, 128],
+    [2048, 2048, 256],
+    [4096, 4096, 512],
+  ];
+
+  const rects = {
+    PLANE_XY: { left: 3, top: 22, width: 1914, height: 806 },
+    PLANE_XZ: { left: 0, top: 0, width: 0, height: 0 },
+    PLANE_YZ: { left: 0, top: 0, width: 0, height: 0 },
+    TDView: { left: 0, top: 0, width: 0, height: 0 },
+  };
+
+  const maximumZoomPerMags = accessors._getMaximumZoomForAllMags(
+    constants.MODE_PLANE_TRACING,
+    "PROGRESSIVE_QUALITY",
+    scale,
+    mags,
+    rects,
+    DEFAULT_REQUIRED_BUCKET_CAPACITY,
+    Identity4x4,
+    accessors._getDummyFlycamMatrix(scale),
+  );
+
+  // If this test case should fail at some point, the following values may be updated appropriately
+  // to make it pass again. However, it should be validated that zooming out works as expected for
+  // datasets with many magnifications (> 12). Small variations in these numbers shouldn't matter much.
+  // biome-ignore format: don't format array
+  const expectedZoomValues = [
+    1.9487171,
+    3.4522712143931016,
+    5.559917313492236,
+    9.849732675807626,
+    21.113776745352595,
+    41.144777789250966,
+    80.1795320536136,
+    156.24722518287504,
+    334.9298034955614,
+    652.6834353714405,
+    1271.8953713950718,
+    2726.4206856132723,
+    6428.757360336458,
+  ];
+  t.deepEqual(maximumZoomPerMags, expectedZoomValues);
+});

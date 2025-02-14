@@ -3,15 +3,11 @@ package models.organization
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.pekko.actor.ActorSystem
-import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransactionDAO,
                                          organizationService: OrganizationService)(implicit val ec: ExecutionContext)
@@ -21,6 +17,9 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
   def hasEnoughCredits(organizationId: String, creditsToSpent: BigDecimal)(
       implicit ctx: DBAccessContext): Fox[Boolean] =
     creditTransactionDAO.getCreditBalance(organizationId).map(balance => balance >= creditsToSpent)
+
+  def getCreditBalance(organizationId: String)(implicit ctx: DBAccessContext): Fox[BigDecimal] =
+    creditTransactionDAO.getCreditBalance(organizationId)
 
   def reserveCredits(organizationId: String, creditsToSpent: BigDecimal, comment: String, paidJob: Option[ObjectId])(
       implicit ctx: DBAccessContext): Fox[CreditTransaction] =

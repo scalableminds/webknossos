@@ -35,7 +35,7 @@ const ModalInformationFooter = (
   </>
 );
 
-function extendPricingPlan(organization: APIOrganization) {
+export function extendPricingPlan(organization: APIOrganization) {
   const extendedDate = dayjs(organization.paidUntil).add(1, "year");
 
   Modal.confirm({
@@ -68,7 +68,7 @@ function extendPricingPlan(organization: APIOrganization) {
   });
 }
 
-function upgradeUserQuota() {
+export function upgradeUserQuota() {
   renderIndependently((destroyCallback) => <UpgradeUserQuotaModal destroy={destroyCallback} />);
 }
 
@@ -113,7 +113,7 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
   );
 }
 
-function upgradeStorageQuota() {
+export function upgradeStorageQuota() {
   renderIndependently((destroyCallback) => <UpgradeStorageQuotaModal destroy={destroyCallback} />);
 }
 function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
@@ -246,7 +246,7 @@ function upgradePricingPlan(
   });
 }
 
-function UpgradePricingPlanModal({
+export function UpgradePricingPlanModal({
   title,
   modalBody,
   destroy,
@@ -297,7 +297,7 @@ function UpgradePricingPlanModal({
   );
 }
 
-function orderWebknossosCredits() {
+export function orderWebknossosCredits() {
   renderIndependently((destroyCallback) => (
     <OrderWebknossosCreditsModal destroy={destroyCallback} />
   ));
@@ -328,11 +328,7 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
 
   return (
     <Modal
-      title={
-        <>
-          <UserAddOutlined style={{ color: "var(--ant-color-primary)" }} /> Upgrade User Quota
-        </>
-      }
+      title={<>Buy more WEBKNOSSOS Credits</>}
       okText={`Buy more WEBKNOSSOS Credits for ${costsAsString}`}
       onOk={handleOrderCredits}
       onCancel={destroy}

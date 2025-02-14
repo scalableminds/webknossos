@@ -529,8 +529,12 @@ class JobController @Inject()(
         boundingBox <- BoundingBox.fromLiteral(boundingBoxInMag).toFox
         jobCommand <- JobCommand.fromString(command).toFox
         jobCosts = jobService.calculateJobCosts(boundingBox, jobCommand)
+        organizationCreditBalance <- creditTransactionService.getCreditBalance(request.identity._organization)
+        hasEnoughCredits = jobCosts <= organizationCreditBalance
         js = Json.obj(
           "costsInCredits" -> jobCosts.toString(),
+          "hasEnoughCredits" -> hasEnoughCredits,
+          "organizationCredits" -> organizationCreditBalance.toString(),
         )
       } yield Ok(js)
     }

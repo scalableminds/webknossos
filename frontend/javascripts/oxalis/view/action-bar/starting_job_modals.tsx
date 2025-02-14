@@ -1,5 +1,6 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import {
+  type JobCostsInfo,
   getAiModels,
   getJobCosts,
   getOrganization,
@@ -11,6 +12,7 @@ import {
   startNucleiInferralJob,
 } from "admin/admin_rest_api";
 import { DatasetNameFormItem } from "admin/dataset/dataset_components";
+import { orderWebknossosCredits } from "admin/organization/upgrade_plan_modal";
 import {
   Alert,
   Button,
@@ -33,7 +35,7 @@ import {
 import { LayerSelectionFormItem } from "components/layer_selection";
 import { Slider } from "components/slider";
 import features from "features";
-import { formatVoxels } from "libs/format_utils";
+import { formatCreditsString, formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useFetch, useGuardedFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
@@ -52,15 +54,19 @@ import {
   getActiveSegmentationTracingLayer,
   getReadableNameOfVolumeLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
+import {
+  setActiveOrganizationAction,
+  setActiveOrganizationsCreditBalance,
+} from "oxalis/model/actions/organization_actions";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { MagInfo } from "oxalis/model/helpers/mag_info";
 import { Model, Store } from "oxalis/singletons";
 import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 import { type APIDataLayer, type APIJob, APIJobType } from "types/api_flow_types";
 import {
   CollapsibleWorkflowYamlEditor,
@@ -542,25 +548,28 @@ function ShouldUseTreesFormItem() {
 }
 
 function JobCostInformation({
-  jobCosts,
+  jobCostsInfo,
   jobCreditCostsPerGVx,
   isBoundingBoxConfigurable,
   boundingBoxForJob,
   isOrganizationOwner,
 }: {
-  jobCosts: string | undefined;
+  jobCostsInfo: JobCostsInfo | undefined;
   jobCreditCostsPerGVx: number;
   isBoundingBoxConfigurable: boolean;
   boundingBoxForJob: UserBoundingBox | undefined;
   isOrganizationOwner: boolean;
 }) {
-  const organizationCredits = useSelector(
+  const organizationCreditsFromStore = useSelector(
     (state: OxalisState) => state.activeOrganization?.creditBalance || 0,
   );
+  const organizationCredits =
+    jobCostsInfo?.organizationCredits || organizationCreditsFromStore.toString();
   const currentBoundingBoxVolume = boundingBoxForJob?.boundingBox
     ? new BoundingBox(boundingBoxForJob?.boundingBox).getVolume()
     : null;
-  const orgaHasEnoughCredits = jobCosts ? organizationCredits >= Number.parseFloat(jobCosts) : true;
+  const orgaHasEnoughCredits = jobCostsInfo?.hasEnoughCredits || false;
+  const jobCosts = jobCostsInfo?.costsInCredits;
   return (
     <>
       <Row style={{ display: "grid", marginBottom: 16 }}>
@@ -573,10 +582,12 @@ function JobCostInformation({
                 : "bounding box of the selected dataset."}
               <br />
               This job costs {jobCreditCostsPerGVx} WEBKNOSSOS credits per Gigavoxel. Your
-              organization currently has {roundTo(organizationCredits, 2)} WEBKNOSSOS credits.
+              organization currently has {formatCreditsString(organizationCredits)} WEBKNOSSOS
+              credits.
               <br />
-              {currentBoundingBoxVolume != null
-                ? `${isBoundingBoxConfigurable ? "The selected bounding box" : "This dataset"} has a volume of ${formatVoxels(currentBoundingBoxVolume)} resulting in costs of ${jobCosts} WEBKNOSSOS credits.`
+              {currentBoundingBoxVolume != null && jobCosts != null
+                ? `${isBoundingBoxConfigurable ? "The selected bounding box" : "This dataset"} has a volume of 
+                  ${formatVoxels(currentBoundingBoxVolume)} resulting in costs of ${formatCreditsString(jobCosts)} WEBKNOSSOS credits.`
                 : "You do not have a bounding box selected."}
             </>
           }
@@ -594,7 +605,7 @@ function JobCostInformation({
                 validator: (_rule, _checked) => {
                   if (jobCreditCostsPerGVx != null && currentBoundingBoxVolume == null) {
                     return Promise.reject(
-                      "This is a paid job which needs a selected bounding box .",
+                      "This is a paid job which needs a selected bounding box.",
                     );
                   } else if (jobCreditCostsPerGVx != null && !orgaHasEnoughCredits) {
                     return Promise.reject(
@@ -612,7 +623,17 @@ function JobCostInformation({
                   isOrganizationOwner ? (
                     <>
                       Your organization does not have enough credits to start this job. You can
-                      order more credits !here!{" "}
+                      order more credits{" "}
+                      <Link
+                        to=""
+                        onClick={(evt) => {
+                          evt.preventDefault();
+                          orderWebknossosCredits();
+                        }}
+                      >
+                        here
+                      </Link>
+                      .
                     </>
                   ) : (
                     "Your organization does not have enough credits to start this job. Please contact the organization owner to purchase more WEBKNOSSOS credits."
@@ -726,6 +747,9 @@ function StartJobForm(props: StartJobFormProps) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isActiveUserSuperUser = activeUser?.isSuperUser || false;
   const colorLayers = getColorLayers(dataset);
+  const organizationCredits = useSelector(
+    (state: OxalisState) => state.activeOrganization?.creditBalance || 0,
+  );
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : colorLayers;
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
   const defaultBBForLayers: UserBoundingBox[] = layers.map((layer, index) => {
@@ -740,14 +764,23 @@ function StartJobForm(props: StartJobFormProps) {
   const userBoundingBoxes = defaultBBForLayers.concat(rawUserBoundingBoxes);
   const selectedBoundingBoxId = Form.useWatch("boundingBoxId", form);
   const boundingBoxForJob = userBoundingBoxes.find((bbox) => bbox.id === selectedBoundingBoxId);
-  const jobCosts = useFetch(
+  const jobCostsInfo = useFetch<JobCostsInfo | undefined>(
     async () =>
       boundingBoxForJob
-        ? getJobCosts(jobName, computeArrayFromBoundingBox(boundingBoxForJob.boundingBox))
+        ? await getJobCosts(jobName, computeArrayFromBoundingBox(boundingBoxForJob.boundingBox))
         : undefined,
     undefined,
     [boundingBoxForJob, jobName],
   );
+
+  useEffect(() => {
+    const orgaCreditsAsNumber = jobCostsInfo
+      ? Number.parseFloat(jobCostsInfo.organizationCredits)
+      : undefined;
+    if (orgaCreditsAsNumber && organizationCredits !== orgaCreditsAsNumber) {
+      dispatch(setActiveOrganizationsCreditBalance(orgaCreditsAsNumber));
+    }
+  }, [jobCostsInfo, dispatch, organizationCredits]);
 
   const startJob = async ({
     layerName,
@@ -867,7 +900,7 @@ function StartJobForm(props: StartJobFormProps) {
         <JobCostInformation
           jobCreditCostsPerGVx={jobCreditCostsPerGVx}
           isBoundingBoxConfigurable={isBoundingBoxConfigurable}
-          jobCosts={jobCosts}
+          jobCostsInfo={jobCostsInfo}
           boundingBoxForJob={boundingBoxForJob}
           isOrganizationOwner={isActiveUserSuperUser}
         />
@@ -875,7 +908,9 @@ function StartJobForm(props: StartJobFormProps) {
       <div style={{ textAlign: "center" }}>
         <Button type="primary" size="large" htmlType="submit">
           {props.buttonLabel ? props.buttonLabel : title}
-          {jobCosts != null ? ` for ${jobCosts} credits` : ""}
+          {jobCostsInfo?.costsInCredits != null
+            ? ` for ${formatCreditsString(jobCostsInfo?.costsInCredits)} credits`
+            : ""}
         </Button>
       </div>
     </Form>

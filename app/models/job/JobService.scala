@@ -20,6 +20,7 @@ import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.math.BigDecimal.RoundingMode
 
 class JobService @Inject()(wkConf: WkConf,
                            actorSystem: ActorSystem,
@@ -236,8 +237,7 @@ class JobService @Inject()(wkConf: WkConf,
     val costsPerGVx = getJobCostsPerGVx(jobCommand)
     val volumeInGVx = boundingBoxInTargetMag.volume / math.pow(10, 9)
     val costs = BigDecimal(volumeInGVx) * costsPerGVx
-    // TODO: Make the decimal round up after 4 places behind comma.
-    if (costs < BigDecimal(0.001)) BigDecimal(0.001) else costs
+    if (costs < BigDecimal(0.001)) BigDecimal(0.001) else costs.setScale(4, RoundingMode.HALF_UP)
   }
 
   def parseBoundingBoxWithMagOpt(boundingBox: String, mag: Option[String]): Fox[BoundingBox] =

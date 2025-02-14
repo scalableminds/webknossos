@@ -1,9 +1,10 @@
 import { message } from "antd";
 import window, { document } from "libs/window";
-import rootSaga from "oxalis/model/sagas/root_saga";
-import UnthrottledStore, { startSagas } from "oxalis/store";
+import { warnIfEmailIsUnverified } from "oxalis/model/sagas/user_saga";
+import UnthrottledStore, { startSaga } from "oxalis/store";
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
+import * as THREE from "three";
 
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -29,6 +30,8 @@ import Router from "router";
 
 import "../stylesheets/main.less";
 import GlobalThemeProvider, { getThemeFromUser } from "theme";
+import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
+import { notifyAboutDisposedRenderer } from "libs/UpdatableTexture";
 
 // Suppress warning emitted by Olvy because it tries to eagerly initialize
 window.OlvyConfig = null;
@@ -36,7 +39,7 @@ window.OlvyConfig = null;
 setModel(Model);
 setStore(UnthrottledStore);
 setupApi();
-startSagas(rootSaga);
+startSaga(warnIfEmailIsUnverified);
 
 const reactQueryClient = new QueryClient({
   defaultOptions: {

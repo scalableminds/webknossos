@@ -40,6 +40,7 @@ import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import { StartAIJobModal, type StartAIJobModalState } from "./action-bar/starting_job_modals";
 import ButtonComponent from "./components/button_component";
 import { NumberSliderSetting } from "./components/setting_input_views";
+import { useHistory, withRouter } from "react-router-dom";
 
 const VersionRestoreWarning = (
   <Alert
@@ -139,6 +140,57 @@ function AdditionalCoordinatesInputView() {
   );
 }
 
+function CreateAnnotationButton() {
+  const history = useHistory();
+  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+
+  const onClick = async (dataset: APIDataset) => {
+    // If the dataset supports creating an annotation with a fallback segmentation,
+    // use it (as the fallback can always be removed later)
+    const maybeSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
+    const fallbackLayerName =
+      maybeSegmentationLayer && doesSupportVolumeWithFallback(dataset, maybeSegmentationLayer)
+        ? maybeSegmentationLayer.name
+        : null;
+
+    const mappingInfo = getMappingInfoForSupportedLayer(Store.getState());
+    let maybeMappingName = null;
+    if (
+      mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
+      mappingInfo.mappingType === "HDF5"
+    ) {
+      maybeMappingName = mappingInfo.mappingName;
+    }
+
+    const annotation = await createExplorational(
+      dataset.id,
+      "hybrid",
+      false,
+      fallbackLayerName,
+      maybeMappingName,
+    );
+    history.push(`/annotations/${annotation.id}${location.hash}`);
+  };
+
+  const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
+    AsyncButton,
+  );
+  return (
+    <ButtonWithAuthentication
+      activeUser={activeUser}
+      authenticationMessage="You have to register or login to create an annotation."
+      style={{
+        marginLeft: 12,
+      }}
+      type="primary"
+      onClick={() => onClick(dataset)}
+    >
+      Create Annotation
+    </ButtonWithAuthentication>
+  );
+}
+
 class ActionBarView extends React.PureComponent<Props, State> {
   state: State = {
     isNewLayoutModalOpen: false,
@@ -170,34 +222,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
     }
   };
 
-  createAnnotation = async (dataset: APIDataset) => {
-    // If the dataset supports creating an annotation with a fallback segmentation,
-    // use it (as the fallback can always be removed later)
-    const maybeSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
-    const fallbackLayerName =
-      maybeSegmentationLayer && doesSupportVolumeWithFallback(dataset, maybeSegmentationLayer)
-        ? maybeSegmentationLayer.name
-        : null;
-
-    const mappingInfo = getMappingInfoForSupportedLayer(Store.getState());
-    let maybeMappingName = null;
-    if (
-      mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
-      mappingInfo.mappingType === "HDF5"
-    ) {
-      maybeMappingName = mappingInfo.mappingName;
-    }
-
-    const annotation = await createExplorational(
-      dataset.id,
-      "hybrid",
-      false,
-      fallbackLayerName,
-      maybeMappingName,
-    );
-    location.href = `${location.origin}/annotations/${annotation.id}${location.hash}`;
-  };
-
   renderStartAIJobButton(disabled: boolean, tooltipTextIfDisabled: string): React.ReactNode {
     const tooltipText = disabled ? tooltipTextIfDisabled : "Start a processing job using AI";
     return (
@@ -215,22 +239,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
   }
 
   renderStartTracingButton(): React.ReactNode {
-    const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
-      AsyncButton,
-    );
-    return (
-      <ButtonWithAuthentication
-        activeUser={this.props.activeUser}
-        authenticationMessage="You have to register or login to create an annotation."
-        style={{
-          marginLeft: 12,
-        }}
-        type="primary"
-        onClick={() => this.createAnnotation(this.props.dataset)}
-      >
-        Create Annotation
-      </ButtonWithAuthentication>
-    );
+    return <CreateAnnotationButton />;
   }
 
   render() {

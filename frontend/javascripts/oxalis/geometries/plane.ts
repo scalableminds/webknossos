@@ -198,6 +198,12 @@ class Plane {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'setUseBilinearFiltering' does not exist ... Remove this comment to see the full error message
     this.plane.material.setUseBilinearFiltering(enabled);
   };
+
+  destroy() {
+    console.group("Plane.destroy()");
+    this.materialFactory.destroy();
+    console.groupEnd();
+  }
 }
 
 export default Plane;

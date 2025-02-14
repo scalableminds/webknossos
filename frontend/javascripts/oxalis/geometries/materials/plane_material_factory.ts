@@ -107,8 +107,7 @@ function getTextureLayerInfos(): Record<
 class PlaneMaterialFactory {
   planeID: OrthoView;
   isOrthogonal: boolean;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'material' has no initializer and is not ... Remove this comment to see the full error message
-  material: THREE.ShaderMaterial;
+  material: THREE.ShaderMaterial | undefined | null;
   uniforms: Uniforms = {};
   attributes: Record<string, any> = {};
   shaderId: number;
@@ -122,6 +121,7 @@ class PlaneMaterialFactory {
   scaledTpsInvPerLayer: Record<string, TPS3D> = {};
 
   constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
+    console.log("PlaneMaterialFactory::constructor");
     this.planeID = planeID;
     this.isOrthogonal = isOrthogonal;
     this.shaderId = shaderId;
@@ -973,6 +973,9 @@ class PlaneMaterialFactory {
   }
 
   getMaterial(): THREE.ShaderMaterial {
+    if (this.material == null) {
+      throw new Error("Tried to access material, but it is null.");
+    }
     return this.material;
   }
 
@@ -1154,6 +1157,21 @@ class PlaneMaterialFactory {
       isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });
+  }
+
+  destroy() {
+    console.log("PlaneMaterialFactory::destroy");
+    this.stopListening();
+    if (this.unsubscribeColorSeedsFn) {
+      this.unsubscribeColorSeedsFn();
+      this.unsubscribeColorSeedsFn = null;
+    }
+    if (this.unsubscribeMappingSeedsFn) {
+      this.unsubscribeMappingSeedsFn();
+      this.unsubscribeMappingSeedsFn = null;
+    }
+    this.material = null;
+    this.recomputeShaders.cancel();
   }
 }
 

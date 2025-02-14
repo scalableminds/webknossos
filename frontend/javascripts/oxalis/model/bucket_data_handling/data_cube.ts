@@ -86,6 +86,7 @@ class DataCube {
   layerName: string;
   emitter: Emitter;
   lastRequestForValueSet: number | null = null;
+  storePropertyUnsubscribers: Array<() => void> = [];
 
   // The cube stores the buckets in a separate array for each zoomStep. For each
   // zoomStep the cube-array contains the boundaries and an array holding the buckets.
@@ -130,14 +131,17 @@ class DataCube {
     // Satisfy TS. The actual initialization is done by listenToStoreProperty
     // (the second parameter ensures that the callback is called immediately).
     this.boundingBox = new BoundingBox(null);
-    listenToStoreProperty(
-      (state) => getSomeTracing(state.tracing).boundingBox,
-      (boundingBox) => {
-        this.boundingBox = new BoundingBox(
-          shouldBeRestrictedByTracingBoundingBox() ? boundingBox : null,
-        ).intersectedWith(layerBBox);
-      },
-      true,
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (state) => getSomeTracing(state.tracing).boundingBox,
+        (boundingBox) => {
+          this.boundingBox = new BoundingBox(
+            shouldBeRestrictedByTracingBoundingBox() ? boundingBox : null,
+          ).intersectedWith(layerBBox);
+        },
+        true,
+      ),
     );
   }
 
@@ -961,6 +965,13 @@ class DataCube {
     }
 
     return bucket;
+  }
+
+  destroy() {
+    this.cubes = {};
+    this.buckets = [];
+    this.storePropertyUnsubscribers.forEach((fn) => fn());
+    this.storePropertyUnsubscribers = [];
   }
 }
 

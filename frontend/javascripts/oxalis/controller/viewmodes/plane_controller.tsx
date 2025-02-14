@@ -21,7 +21,9 @@ import {
   SkeletonTool,
 } from "oxalis/controller/combinations/tool_controls";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
-import getSceneController from "oxalis/controller/scene_controller_provider";
+import getSceneController, {
+  getSceneControllerOrNull,
+} from "oxalis/controller/scene_controller_provider";
 import TDController from "oxalis/controller/td_controller";
 import {
   getActiveMagIndexForLayer,
@@ -274,6 +276,7 @@ class PlaneController extends React.PureComponent<Props> {
   isStarted: boolean = false;
 
   componentDidMount() {
+    console.log("PlaneController::componentDidMount");
     this.input = {
       // @ts-expect-error ts-migrate(2739) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
       mouseControllers: {},
@@ -286,6 +289,7 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   componentWillUnmount() {
+    console.log("PlaneController.componentWillUnmount");
     this.stop();
   }
 
@@ -586,7 +590,8 @@ class PlaneController extends React.PureComponent<Props> {
       this.destroyInput();
     }
 
-    getSceneController().stopPlaneMode();
+    getSceneControllerOrNull()?.stopPlaneMode();
+
     this.planeView.stop();
     this.isStarted = false;
   }

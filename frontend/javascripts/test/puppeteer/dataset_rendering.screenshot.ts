@@ -125,8 +125,9 @@ datasetNames.map(async (datasetName) => {
     await withRetry(
       3,
       async () => {
+        const page = await getNewPage(t.context.browser);
         const { screenshot, width, height } = await screenshotDataset(
-          await getNewPage(t.context.browser),
+          page,
           URL,
           datasetNameToId[datasetName],
           undefined,
@@ -142,6 +143,7 @@ datasetNames.map(async (datasetName) => {
           SCREENSHOTS_BASE_PATH,
           datasetName,
         );
+        await page.close();
         return isPixelEquivalent(changedPixels, width, height);
       },
       (condition) => {
@@ -166,8 +168,9 @@ annotationSpecs.map(async (annotationSpec) => {
       await withRetry(
         3,
         async () => {
+          const page = await getNewPage(t.context.browser);
           const { screenshot, width, height } = await screenshotAnnotation(
-            await getNewPage(t.context.browser),
+            page,
             URL,
             datasetNameToId[datasetName],
             fallbackLayerName,
@@ -183,6 +186,7 @@ annotationSpecs.map(async (annotationSpec) => {
             SCREENSHOTS_BASE_PATH,
             `annotation_${datasetName}_${fallbackLayerName}`,
           );
+          await page.close();
           return isPixelEquivalent(changedPixels, width, height);
         },
         (condition) => {
@@ -202,8 +206,9 @@ test.serial("it should render a dataset with mappings correctly", async (t) => {
   await withRetry(
     3,
     async () => {
+      const page = await getNewPage(t.context.browser);
       const { screenshot, width, height } = await screenshotDatasetWithMapping(
-        await getNewPage(t.context.browser),
+        page,
         URL,
         datasetNameToId[datasetName],
         mappingName,
@@ -215,6 +220,7 @@ test.serial("it should render a dataset with mappings correctly", async (t) => {
         SCREENSHOTS_BASE_PATH,
         `${datasetName}_with_mapping_${mappingName}`,
       );
+      await page.close();
       return isPixelEquivalent(changedPixels, width, height);
     },
     (condition) => {
@@ -233,8 +239,9 @@ test.serial(
     await withRetry(
       3,
       async () => {
+        const page = await getNewPage(t.context.browser);
         const { screenshot, width, height } = await screenshotDatasetWithMappingLink(
-          await getNewPage(t.context.browser),
+          page,
           URL,
           datasetNameToId[datasetName],
           viewOverride,
@@ -246,6 +253,7 @@ test.serial(
           SCREENSHOTS_BASE_PATH,
           `${datasetName}_with_mapping_link`,
         );
+        await page.close();
         return isPixelEquivalent(changedPixels, width, height);
       },
       (condition) => {
@@ -265,8 +273,9 @@ test.serial(
     await withRetry(
       3,
       async () => {
+        const page = await getNewPage(t.context.browser);
         const { screenshot, width, height } = await screenshotSandboxWithMappingLink(
-          await getNewPage(t.context.browser),
+          page,
           URL,
           datasetNameToId[datasetName],
           viewOverride,
@@ -278,6 +287,7 @@ test.serial(
           SCREENSHOTS_BASE_PATH, // Should look the same as an explorative tracing on the same dataset with the same mapping link
           `${datasetName}_with_mapping_link`,
         );
+        await page.close();
         return isPixelEquivalent(changedPixels, width, height);
       },
       (condition) => {
@@ -297,8 +307,9 @@ test.serial(
     await withRetry(
       3,
       async () => {
+        const page = await getNewPage(t.context.browser);
         const { screenshot, width, height } = await screenshotDataset(
-          await getNewPage(t.context.browser),
+          page,
           URL,
           datasetNameToId[datasetName],
           undefined,
@@ -313,6 +324,7 @@ test.serial(
           SCREENSHOTS_BASE_PATH,
           `${datasetName}_with_meshes_link`,
         );
+        await page.close();
         return isPixelEquivalent(changedPixels, width, height);
       },
       (condition) => {

@@ -49,8 +49,9 @@ test.serial(`it should render dataset ${demoDatasetName} correctly`, async (t) =
         `${URL}/api/datasets/disambiguate/${owningOrganization}/${demoDatasetName}/toId`,
       );
       const { id: datasetId } = await response.json();
+      const page = await getNewPage(t.context.browser);
       const { screenshot, width, height } = await screenshotDatasetView(
-        await getNewPage(t.context.browser),
+        page,
         URL,
         datasetId,
         viewOverrides[demoDatasetName],
@@ -62,6 +63,7 @@ test.serial(`it should render dataset ${demoDatasetName} correctly`, async (t) =
         SCREENSHOTS_BASE_PATH,
         demoDatasetName,
       );
+      await page.close();
       return isPixelEquivalent(changedPixels, width, height);
     },
     (condition) => {

@@ -18,15 +18,12 @@ import {
   setupBeforeEachAndAfterEach,
   withRetry,
   WK_AUTH_TOKEN,
-  checkBrowserstackCredentials,
   getDefaultRequestOptions,
 } from "./dataset_rendering_helpers";
 
 if (!WK_AUTH_TOKEN) {
   throw new Error("No WK_AUTH_TOKEN specified.");
 }
-
-checkBrowserstackCredentials();
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");

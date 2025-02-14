@@ -407,6 +407,8 @@ export function setupBeforeEachAndAfterEach(semaphore?: Semaphore) {
         executablePath: "/usr/bin/google-chrome", // this might need to be adapted to your local setup
       });
     } else {
+      checkBrowserstackCredentials();
+
       const caps = {
         browser: "chrome",
         browser_version: "latest",

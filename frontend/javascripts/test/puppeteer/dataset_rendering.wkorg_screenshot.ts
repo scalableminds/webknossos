@@ -7,11 +7,8 @@ import {
   screenshotDatasetView,
   setupBeforeEachAndAfterEach,
   withRetry,
-  checkBrowserstackCredentials,
 } from "./dataset_rendering_helpers";
 import { encodeUrlHash } from "oxalis/controller/url_manager";
-
-checkBrowserstackCredentials();
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");

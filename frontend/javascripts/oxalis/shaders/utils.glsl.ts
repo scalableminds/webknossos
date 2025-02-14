@@ -191,6 +191,13 @@ export const getElementOfPermutation: ShaderModule = {
     }
   `,
 };
+
+export function getPermutation(sequenceLength: number, primitiveRoot: number) {
+  return _.range(sequenceLength).map((idx) =>
+    jsGetElementOfPermutation(idx, sequenceLength, primitiveRoot),
+  );
+}
+
 // See the shader-side implementation of getElementOfPermutation in segmentation.glsl.js
 // for a detailed description.
 export function jsGetElementOfPermutation(

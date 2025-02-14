@@ -2,7 +2,9 @@ import type { Vector3, Vector4 } from "oxalis/constants";
 import {
   aaStep,
   colormapJet,
+  formatNumberAsGLSLFloat,
   getElementOfPermutation,
+  getPermutation,
   hsvToRgb,
   jsColormapJet,
   jsGetElementOfPermutation,
@@ -122,7 +124,14 @@ export const convertCellIdToRGB: ShaderModule = {
       float significantSegmentIndex = 256.0 * id.g + id.r;
 
       float colorCount = 19.;
-      float colorIndex = getElementOfPermutation(significantSegmentIndex, colorCount, 2.);
+
+      float[19] permutation = float[](
+        ${getPermutation(19, 2).map(formatNumberAsGLSLFloat).join(",")}
+      );
+      float colorIndex = permutation[uint(mod(significantSegmentIndex, 19.))];
+
+
+
       float colorValueDecimal = 1.0 / colorCount * colorIndex;
       float colorHue = rgb2hsv(colormapJet(colorValueDecimal)).x;
       float colorSaturation = 1.;

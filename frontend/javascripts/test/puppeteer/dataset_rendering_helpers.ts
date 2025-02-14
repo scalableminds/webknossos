@@ -325,13 +325,28 @@ export async function screenshotTracingView(
   ];
   const screenshots = [];
 
+  await page.evaluate(() => {
+    const element = document.getElementById("screenshot_target_inputcatcher_TDView");
+    if (element) {
+      element.style.opacity = "0";
+    }
+  });
+
   for (const planeId of PLANE_IDS) {
     const element = await page.$(planeId);
     if (element == null)
       throw new Error(`Element ${planeId} not present, although page is loaded.`);
+
     const screenshot = await element.screenshot();
     screenshots.push(screenshot);
   }
+
+  await page.evaluate(() => {
+    const element = document.getElementById("screenshot_target_inputcatcher_TDView");
+    if (element) {
+      element.style.opacity = "1";
+    }
+  });
 
   // Concatenate all screenshots
   const img = await mergeImg(screenshots);

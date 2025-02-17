@@ -135,7 +135,7 @@ class DatasetController @Inject()(userService: UserService,
   def getLinkedMags(datasetId: ObjectId, dataLayerName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
+        _ <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
         magsAndLinkedMags <- datasetService.getPathsForDatalayer(datasetId, dataLayerName)
         returnValues = magsAndLinkedMags.map {

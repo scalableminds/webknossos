@@ -39,6 +39,27 @@ export const renderAnimationMenuItem: MenuItemType = {
   },
 };
 
+export const getViewDatasetMenu = (layoutMenu: SubMenuType<MenuItemType> | null) => {
+  const items = [
+    {
+      key: "share-button",
+      onClick: () => Store.dispatch(setShareModalVisibilityAction(true)),
+      icon: <ShareAltOutlined />,
+      label: "Share",
+    },
+    screenshotMenuItem,
+    renderAnimationMenuItem,
+    {
+      key: "python-client-button",
+      onClick: () => Store.dispatch(setPythonClientModalVisibilityAction(true)),
+      icon: <DownloadOutlined />,
+      label: "Download",
+    },
+  ];
+  if (layoutMenu != null) items.push(layoutMenu);
+  return { items };
+};
+
 export default function ViewDatasetActionsView(props: Props) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isShareModalOpen = useSelector((state: OxalisState) => state.uiInformation.showShareModal);
@@ -63,25 +84,7 @@ export default function ViewDatasetActionsView(props: Props) {
       onClose={() => Store.dispatch(setPythonClientModalVisibilityAction(false))}
     />
   );
-  const overlayMenu: MenuProps = {
-    items: [
-      {
-        key: "share-button",
-        onClick: () => Store.dispatch(setShareModalVisibilityAction(true)),
-        icon: <ShareAltOutlined />,
-        label: "Share",
-      },
-      screenshotMenuItem,
-      renderAnimationMenuItem,
-      {
-        key: "python-client-button",
-        onClick: () => Store.dispatch(setPythonClientModalVisibilityAction(true)),
-        icon: <DownloadOutlined />,
-        label: "Download",
-      },
-      props.layoutMenu,
-    ],
-  };
+  const overlayMenu: MenuProps = getViewDatasetMenu(props.layoutMenu);
 
   const renderAnimationModal = (
     <CreateAnimationModal

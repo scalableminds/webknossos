@@ -2,7 +2,7 @@ import type { MenuItemType, SubMenuType } from "antd/lib/menu/interface";
 import { capitalize } from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
-import { AnnotationToolEnum } from "oxalis/constants";
+import { AnnotationToolEnum, AvailableToolsInViewMode } from "oxalis/constants";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { Store } from "oxalis/singletons";
@@ -15,6 +15,7 @@ import {
   type TracingLayoutViewProps,
   getModalsAndMenuItems,
 } from "../action-bar/tracing_actions_view";
+import { getViewDatasetMenu } from "../action-bar/view_dataset_actions_view";
 
 const getLabelForAction = (action: MenuItemType | SubMenuType | null) => {
   if (action == null) return null;
@@ -63,7 +64,7 @@ export const WkCommandPalette = () => {
   const [isUserScriptsModalOpen, setIsUserScriptsModalOpen] = useState(false);
   const [isZarrPrivateLinksModalOpen, setIsZarrPrivateLinksModalOpen] = useState(false); // TODO_c check the right default
   const userConfig = useSelector((state: OxalisState) => state.userConfiguration);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const isViewMode = useSelector((state: OxalisState) => state.temporaryConfiguration.controlMode === "VIEW");
 
   const props: TracingLayoutViewProps = useSelector((state: OxalisState) => {
     return {
@@ -79,6 +80,8 @@ export const WkCommandPalette = () => {
       isShareModalOpen: state.uiInformation.showShareModal,
     };
   });
+
+  const { activeUser } = props;
 
   const getTabsAndSettingsMenuItems = () => {
     const commands: Command[] = [];
@@ -130,11 +133,14 @@ export const WkCommandPalette = () => {
 
   const getToolEntries = () => {
     const commands: Command[] = [];
-    const allTools = Object.keys(AnnotationToolEnum) as [keyof typeof AnnotationToolEnum];
-    allTools.forEach((tool, counter) => {
+    let availableTools = Object.keys(AnnotationToolEnum) as [keyof typeof AnnotationToolEnum];
+    if (isViewMode) {
+      availableTools = AvailableToolsInViewMode as [keyof typeof AnnotationToolEnum];
+    }
+    availableTools.forEach((tool, counter) => {
       commands.push({
         id: counter,
-        name: `Switch to ${getLabelForTool(tool)}`,
+        name: `Switch to ${getLabelForTool(tool)} Tool`,
         command: () => {
           act(() => {
             Store.dispatch(setToolAction(tool));
@@ -157,8 +163,12 @@ export const WkCommandPalette = () => {
     (newValue: boolean) => setIsZarrPrivateLinksModalOpen(newValue),
   );
 
+  const datasetViewModeEntries = getViewDatasetMenu(null);
+
+  console.log("menuItems", menuItems);
+
   const allCommands = [
-    ...mapMenuActionsToCommands(menuItems),
+    ...mapMenuActionsToCommands(isViewMode ? datasetViewModeEntries : menuItems),
     ...getTabsAndSettingsMenuItems(),
     ...getNavigationEntries(),
     ...getToolEntries(),

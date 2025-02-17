@@ -90,10 +90,6 @@ import {
   setNodeRadiusAction,
   setShowSkeletonsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import {
-  invertTransform,
-  transformPointUnscaled,
-} from "oxalis/model/helpers/transformation_helpers";
 import { addLayerToAnnotation, deleteAnnotationLayer } from "oxalis/model/sagas/update_actions";
 import { Model } from "oxalis/singletons";
 import { api } from "oxalis/singletons";

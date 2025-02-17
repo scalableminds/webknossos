@@ -27,7 +27,7 @@ import {
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { select, take } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
 import { requestBucketModificationInVolumeTracing } from "oxalis/model/sagas/saga_helpers";
 import { Model } from "oxalis/singletons";
 import { call, put, takeEvery } from "typed-redux-saga";

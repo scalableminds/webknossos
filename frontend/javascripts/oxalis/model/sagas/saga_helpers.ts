@@ -1,4 +1,4 @@
-import type { ActionPattern, Predicate } from "@redux-saga/types";
+import type { ActionPattern } from "@redux-saga/types";
 import { Modal } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";

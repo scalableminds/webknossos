@@ -46,7 +46,7 @@ function getMaximumBoundingBoxForFloodFill(
   finestSegmentationLayerMag: Vector3,
 ): Vector3 {
   const maximumBoundingBoxMag1 = Constants.FLOOD_FILL_EXTENTS[fillMode];
-  // If the finest mag of the segmentation layer is restricted, the maximum bounding box can be larger
+  // If the finest mag of the segmentation layer is not Mag(1), the maximum bounding box needs to be scaled accordingly
   const maximumBoundingBoxInFinestMag = V3.scale3(
     maximumBoundingBoxMag1,
     finestSegmentationLayerMag,

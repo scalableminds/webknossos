@@ -41,7 +41,7 @@ export function* floodFill(): Saga<void> {
   yield* takeEvery("FLOOD_FILL", handleFloodFill);
 }
 
-function getMaximumBoundingBoxForFloodFill(
+function getMaximumBoundingBoxSizeForFloodfill(
   fillMode: FillMode,
   finestSegmentationLayerMag: Vector3,
 ): Vector3 {
@@ -69,12 +69,12 @@ function* getBoundingBoxForFloodFillWhenRestricted(
   }
   const smallestBbox = _.sortBy(bboxes, (bbox) => new BoundingBox(bbox.boundingBox).getVolume())[0];
 
-  const maxBbox = yield* call(
-    getMaximumBoundingBoxForFloodFill,
+  const maxBboxSize = yield* call(
+    getMaximumBoundingBoxSizeForFloodfill,
     fillMode,
     finestSegmentationLayerMag,
   );
-  const maxBboxVolume = Constants.FLOOD_FILL_MULTIPLIER_FOR_BBOX_RESTRICTION * V3.prod(maxBbox);
+  const maxBboxVolume = Constants.FLOOD_FILL_MULTIPLIER_FOR_BBOX_RESTRICTION * V3.prod(maxBboxSize);
   const bboxObj = new BoundingBox(smallestBbox.boundingBox);
 
   const bboxVolume =
@@ -98,12 +98,12 @@ function* getBoundingBoxForFloodFillWhenUnrestricted(
   finestSegmentationLayerMag: Vector3,
 ) {
   const fillMode = yield* select((state) => state.userConfiguration.fillMode);
-  const maxBoundingBox = yield* call(
-    getMaximumBoundingBoxForFloodFill,
+  const maxBoundingBoxSize = yield* call(
+    getMaximumBoundingBoxSizeForFloodfill,
     fillMode,
     finestSegmentationLayerMag,
   );
-  const halfBoundingBoxSize = V3.scale(maxBoundingBox, 0.5);
+  const halfBoundingBoxSize = V3.scale(maxBoundingBoxSize, 0.5);
   const currentViewportBounding = {
     min: V3.sub(position, halfBoundingBoxSize),
     max: V3.add(position, halfBoundingBoxSize),

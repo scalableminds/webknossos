@@ -1,4 +1,4 @@
-import { AnnotationToolEnum, AvailableToolsInViewMode, ControlModeEnum } from "oxalis/constants";
+import { AnnotationToolEnum, AvailableToolsInViewMode } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
 import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import {

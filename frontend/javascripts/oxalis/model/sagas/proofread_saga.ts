@@ -66,7 +66,7 @@ import {
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { select, take } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
 import {
   type UpdateActionWithoutIsolationRequirement,
   mergeAgglomerate,

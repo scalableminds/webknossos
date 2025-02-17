@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import java.io.{File, FileInputStream, InputStream}
 import java.nio.file.{Files, Path, StandardCopyOption}
 import com.scalableminds.util.io.ZipIO
+import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeGroup}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{SegmentGroup, VolumeTracing}
@@ -14,7 +15,7 @@ import files.TempFileService
 import javax.inject.Inject
 import models.annotation.nml.NmlResults._
 import models.annotation.nml.{NmlParseSuccessWithoutFile, NmlParser, NmlResults}
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.common.Box.tryo
 import play.api.i18n.MessagesProvider
 
@@ -30,19 +31,15 @@ case class SharedParsingParameters(useZipName: Boolean,
                                    userOrganizationId: String,
                                    isTaskUpload: Boolean = false)
 
-class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlParser: NmlParser) extends LazyLogging {
+class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlParser: NmlParser)
+    extends LazyLogging
+    with Formatter {
 
   private def extractFromNmlFile(file: File, name: String, sharedParsingParameters: SharedParsingParameters)(
       implicit m: MessagesProvider,
       ec: ExecutionContext,
       ctx: DBAccessContext): Fox[NmlParseResult] =
     extractFromNml(new FileInputStream(file), name, sharedParsingParameters)
-
-  private def formatChain(chain: Box[Failure]): String = chain match {
-    case Full(failure) =>
-      " <~ " + failure.msg + formatChain(failure.chain)
-    case _ => ""
-  }
 
   private def extractFromNml(inputStream: InputStream,
                              name: String,
@@ -60,8 +57,8 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
     parserOutput.futureBox.map {
       case Full(NmlParseSuccessWithoutFile(skeletonTracingOpt, uploadedVolumeLayers, datasetId, description, wkUrl)) =>
         NmlParseSuccess(name, skeletonTracingOpt, uploadedVolumeLayers, datasetId, description, wkUrl)
-      case Failure(msg, _, chain) => NmlParseFailure(name, msg + chain.map(_ => formatChain(chain)).getOrElse(""))
-      case Empty                  => NmlParseEmpty(name)
+      case f: Failure => NmlParseFailure(name, formatFailureChain(f, messagesProviderOpt = Some(m)))
+      case Empty      => NmlParseEmpty(name)
     }
   }
 

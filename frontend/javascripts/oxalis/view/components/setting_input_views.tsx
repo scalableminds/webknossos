@@ -194,6 +194,11 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     return Math.round(scaleValue);
   };
 
+  resetToDefaultValue = () => {
+    if (this.props.defaultValue == null) return;
+    this.onChangeInput(this.props.defaultValue);
+  };
+
   render() {
     const { label, roundTo, value, min, max, disabled, defaultValue } = this.props;
     return (
@@ -210,6 +215,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
             value={this.getSliderValue()}
             disabled={disabled}
             defaultValue={defaultValue}
+            onResetToDefault={this.resetToDefaultValue}
           />
         </Col>
         <Col span={this.props.spans[2]}>

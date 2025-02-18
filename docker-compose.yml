@@ -144,9 +144,9 @@ services:
       fossildb-dev:
         condition: service_healthy
     environment:
-      POSTGRES_URL: jdbc:postgresql://postgres/webknossos
-      POSTGRES_USER: webknossos_user
-      POSTGRES_PASSWORD: secret_password
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
+      - POSTGRES_USER=webknossos_user
+      - POSTGRES_PASSWORD=secret_password
     command:
       - bash
       - -c
@@ -188,9 +188,10 @@ services:
       fossildb:
         condition: service_healthy
     environment:
-      POSTGRES_URL: jdbc:postgresql://postgres/webknossos_testing
-      POSTGRES_USER: webknossos_user
-      POSTGRES_PASSWORD: secret_password
+      - CERTIFICATE
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
+      - POSTGRES_USER=webknossos_user
+      - POSTGRES_PASSWORD=secret_password
     command:
       - bash
       - -c

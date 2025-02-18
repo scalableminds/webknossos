@@ -19,7 +19,9 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     // Applying feature overwrites to the configuration.
     Configuration(
       ConfigFactory
-        .parseMap(featureOverrides.map { case (k, v) => s"features.$k" -> v }.asJava)
+        .parseMap(featureOverrides.map {
+          case (k, v) => s"features.$k" -> Boolean.box(v && configuration.underlying.getBoolean(s"features.$k"))
+        }.asJava)
         .withFallback(configuration.underlying))
   }
 

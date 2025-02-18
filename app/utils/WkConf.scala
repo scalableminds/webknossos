@@ -2,18 +2,26 @@ package utils
 
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.ConfigReader
+import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import play.api.Configuration
 import security.CertificateValidationService
 
 import javax.inject.Inject
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
 
 class WkConf @Inject()(configuration: Configuration, certificateValidationService: CertificateValidationService)
     extends ConfigReader
     with LazyLogging {
-  override def raw: Configuration = configuration
   lazy val featureOverrides: Map[String, Boolean] = certificateValidationService.getFeatureOverrides
+  override val raw: Configuration = {
+    // Applying feature overwrites to the configuration.
+    Configuration(
+      ConfigFactory
+        .parseMap(featureOverrides.map { case (k, v) => s"features.$k" -> v }.asJava)
+        .withFallback(configuration.underlying))
+  }
 
   object Http {
     val uri: String = get[String]("http.uri")

@@ -319,6 +319,14 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       datasetNeedsConversion = uploadInformation.needsConversion.getOrElse(false)
       uploadDir = uploadDirectory(dataSourceId.organizationId, uploadId)
       unpackToDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
+      totalFileSizeInBytesOpt <- runningUploadMetadataStore.find(redisKeyForTotalFileSizeInBytes(uploadId))
+      _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
+        tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).map(actualFileSize =>
+          if (actualFileSize > maxFileSize.toLong) {
+            cleanUpUploadedDataset(uploadDir, uploadId)
+            Fox.failure(s"Uploaded dataset exceeds the maximum allowed size of $maxFileSize bytes")
+          } else Fox.successful(()))
+      }
 
       _ = logger.info(
         s"Finishing dataset upload of ${dataSourceId.organizationId}/${dataSourceId.directoryName} with id $uploadId...")

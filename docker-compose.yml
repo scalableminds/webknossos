@@ -40,9 +40,10 @@ services:
     volumes:
       - ./binaryData:/webknossos/binaryData
     environment:
-      POSTGRES_URL: jdbc:postgresql://postgres/webknossos
-      POSTGRES_USER: webknossos_user
-      POSTGRES_PASSWORD: secret_password
+      - CERTIFICATE
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
+      - POSTGRES_USER=webknossos_user
+      - POSTGRES_PASSWORD=secret_password
     user: ${USER_UID:-1000}:${USER_GID:-1000}
 
   webknossos-datastore:
@@ -221,9 +222,9 @@ services:
   postgres:
     image: postgres:10-alpine
     environment:
-      POSTGRES_DB: webknossos
-      POSTGRES_USER: webknossos_user
-      POSTGRES_PASSWORD: secret_password
+      - POSTGRES_DB=webknossos
+      - POSTGRES_USER=webknossos_user
+      - POSTGRES_PASSWORD=secret_password
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d webknossos -U webknossos_user -h 127.0.0.1 -p 5432"]
       interval: 2s
@@ -255,7 +256,7 @@ services:
       postgres-persisted:
         condition: service_healthy
     environment:
-      PGPASSWORD: secret_password
+      - PGPASSWORD=secret_password
     volumes:
       - ./conf/evolutions/:/evolutions/
 
@@ -268,7 +269,7 @@ services:
       postgres-dev:
         condition: service_healthy
     environment:
-      PGPASSWORD: secret_password
+      - PGPASSWORD=secret_password
 
   # FossilDB
   fossildb:

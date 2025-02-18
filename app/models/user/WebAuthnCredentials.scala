@@ -12,7 +12,7 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 case class WebAuthnCredential(
-  _id: ObjectId,
+  _id: String,
   _multiUser: ObjectId,
   name: String,
   publicKeyCose: Array[Byte],
@@ -31,7 +31,7 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient) (implicit ec: Execut
     protected def parse(r: WebauthncredentialsRow): Fox[WebAuthnCredential] =
         Fox.successful(
           WebAuthnCredential(
-            ObjectId(r._Id),
+            r._Id,
             ObjectId(r._Multiuser),
             r.name,
             r.publickeycose,
@@ -47,15 +47,15 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient) (implicit ec: Execut
       parsed <- parseAll(r)
     } yield parsed
 
-  def findById(id: ObjectId)(implicit ct: DBAccessContext): Fox[WebAuthnCredential] =
+  def listById(id: String)(implicit ct: DBAccessContext): Fox[List[WebAuthnCredential]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM webknossos.webauthncredentials WHERE _id = $id AND $accessQuery".as[WebauthncredentialsRow])
-      parsed <- parseFirst(r, id)
+      parsed <- parseAll(r)
     } yield parsed
 
 
-  def findByIdAndUserId(id: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[WebAuthnCredential] =
+  def findByIdAndUserId(id: String, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[WebAuthnCredential] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM webknossos.webauthncredentials WHERE _id = $id AND _multiUser = $userId AND $accessQuery".as[WebauthncredentialsRow])

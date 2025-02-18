@@ -5,18 +5,20 @@ import com.yubico.webauthn._
 import com.yubico.webauthn.data._
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
+import com.typesafe.scalalogging.Logger
 import net.liftweb.common.{Box, Empty, Failure, Full}
+import org.slf4j.LoggerFactory
 
 import java.util.Optional
 import javax.inject.Inject
 import scala.jdk.CollectionConverters._
 
 object WebAuthnCredentialRepository {
-  def objectIdToByteArray(id: ObjectId): ByteArray =
-    new ByteArray(id.toString.getBytes())
+  def byteArrayToHex(arr: ByteArray): String = arr.getHex
+  def hexToByteArray(hex: String): ByteArray = ByteArray.fromHex(hex)
 
-  def byteArrayToObjectId(arr: ByteArray): ObjectId =
-    new ObjectId(new String(arr.getBytes))
+  def objectIdToByteArray(id: ObjectId): ByteArray = new ByteArray(id.toString.getBytes())
+  def byteArrayToObjectId(arr: ByteArray): ObjectId = new ObjectId(new String(arr.getBytes))
 }
 
 /*
@@ -30,7 +32,7 @@ class WebAuthnCredentialRepository @Inject()(multiUserDAO: MultiUserDAO, webAuth
     val keys = webAuthnCredentialDAO.findAllForUser(user._id)(GlobalAccessContext).get("Java interop");
     keys.map(key => {
       PublicKeyCredentialDescriptor.builder()
-        .id(WebAuthnCredentialRepository.objectIdToByteArray(key._id))
+        .id(WebAuthnCredentialRepository.hexToByteArray(key._id))
         .build()
     }).to(Set).asJava
   }
@@ -47,27 +49,36 @@ class WebAuthnCredentialRepository @Inject()(multiUserDAO: MultiUserDAO, webAuth
   }
 
   def lookup(credentialId: ByteArray, userHandle: ByteArray): Optional[RegisteredCredential] = {
-    val credId = WebAuthnCredentialRepository.byteArrayToObjectId(credentialId)
+    val credId = WebAuthnCredentialRepository.byteArrayToHex(credentialId)
     val userId = WebAuthnCredentialRepository.byteArrayToObjectId(userHandle)
-    val credential = webAuthnCredentialDAO.findByIdAndUserId(credId, userId)(GlobalAccessContext).get("Java interop");
+    val credential = webAuthnCredentialDAO.findByIdAndUserId(credId, userId)(GlobalAccessContext).await("Java interop") match {
+      case Full(credential) => credential;
+      case Empty => return Optional.empty();
+    }
     Optional.ofNullable(RegisteredCredential.builder()
-      .credentialId(WebAuthnCredentialRepository.objectIdToByteArray(credential._id))
+      .credentialId(WebAuthnCredentialRepository.hexToByteArray(credential._id))
       .userHandle(WebAuthnCredentialRepository.objectIdToByteArray(credential._multiUser))
       .publicKeyCose(new ByteArray(credential.publicKeyCose))
       .signatureCount(credential.signatureCount)
       .build())
   }
 
-  def lookupAll(credentialId: ByteArray): java.util.Set[RegisteredCredential] =
-    webAuthnCredentialDAO.findById(WebAuthnCredentialRepository.byteArrayToObjectId(credentialId))(GlobalAccessContext).await("Java interop") match {
-        case Full(credential: WebAuthnCredential) =>
-          Set(RegisteredCredential.builder()
-            .credentialId(WebAuthnCredentialRepository.objectIdToByteArray(credential._id))
-            .userHandle(WebAuthnCredentialRepository.objectIdToByteArray(credential._multiUser))
-            .publicKeyCose(new ByteArray(credential.publicKeyCose))
-            .signatureCount(credential.signatureCount)
-            .build()).asJava
+  def lookupAll(credentialId: ByteArray): java.util.Set[RegisteredCredential] = {
+    webAuthnCredentialDAO.listById(WebAuthnCredentialRepository.byteArrayToHex(credentialId))(GlobalAccessContext).await("Java interop") match {
+        case Full(credentials: List[WebAuthnCredential]) =>
+          credentials
+            .map(credential => {
+              RegisteredCredential.builder()
+                .credentialId(WebAuthnCredentialRepository.hexToByteArray(credential._id))
+                .userHandle(WebAuthnCredentialRepository.objectIdToByteArray(credential._multiUser))
+                .publicKeyCose(new ByteArray(credential.publicKeyCose))
+                .signatureCount(credential.signatureCount)
+                .build()
+            })
+            .toSet
+            .asJava
         case Empty => Set[RegisteredCredential]().asJava
       }
+  }
 
 }

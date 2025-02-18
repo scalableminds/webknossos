@@ -43,6 +43,11 @@ object WebAuthnRegistration {
   implicit val jsonFormat: OFormat[WebAuthnRegistration] = Json.format[WebAuthnRegistration]
 }
 
+case class WebAuthnAuthentication(key: String)
+object WebAuthnAuthentication {
+  implicit val jsonFormat: OFormat[WebAuthnAuthentication] = Json.format[WebAuthnAuthentication]
+}
+
 class AuthenticationController @Inject()(
     actorSystem: ActorSystem,
     credentialsProvider: CredentialsProvider,
@@ -441,13 +446,7 @@ class AuthenticationController @Inject()(
     }
   }
 
-  case class WebAuthnAuthResponse(assertionResponse: String)
-
-  object WebAuthnAuthResponse {
-    implicit val jsonFormat: OFormat[WebAuthnAuthResponse] = Json.format[WebAuthnAuthResponse]
-  }
-
-  def webauthnAuthFinalize(): Action[WebAuthnAuthResponse] = Action.async(validateJson[WebAuthnAuthResponse]) {
+  def webauthnAuthFinalize(): Action[WebAuthnAuthentication] = Action.async(validateJson[WebAuthnAuthentication]) {
     implicit request =>
       {
         request.cookies.get("webauthn-session") match {
@@ -458,17 +457,18 @@ class AuthenticationController @Inject()(
             challengeData match {
               case Some(data) =>
                 try {
-                  val keyCredential = PublicKeyCredential.parseAssertionResponseJson(request.body.assertionResponse);
+                  val keyCredential = PublicKeyCredential.parseAssertionResponseJson(request.body.key);
                   val opts = FinishAssertionOptions.builder().request(data).response(keyCredential).build();
                   val result = relyingParty.finishAssertion(opts);
                   val userId = WebAuthnCredentialRepository.byteArrayToObjectId(result.getCredential.getUserHandle)
+                  logger.info(s"webauthn authenticated ${userId}");
                   val loginInfo = LoginInfo("credentials", userId.toString)
                   loginUser(loginInfo)(request.map(_ => AnyContent()))
                 } catch {
-                  case e: AssertionFailedException => Future.successful(Unauthorized("challenge failed"))
+                  case e: AssertionFailedException => Future.successful(Unauthorized("Authentication failed."))
                 }
               case None =>
-                Future.successful(BadRequest("Challenge not found or expired"))
+                Future.successful(BadRequest("Authentication took too long, please try again."))
             }
         }
       }
@@ -484,7 +484,13 @@ class AuthenticationController @Inject()(
           .displayName(request.identity.name)
           .id(WebAuthnCredentialRepository.objectIdToByteArray(request.identity._multiUser))
           .build();
-        val opts = StartRegistrationOptions.builder().user(userIdentity).timeout(120000).build()
+        val opts = StartRegistrationOptions.builder()
+          .user(userIdentity)
+          .timeout(60000)
+          .authenticatorSelection(AuthenticatorSelectionCriteria.builder()
+            .residentKey(ResidentKeyRequirement.REQUIRED)
+            .build())
+          .build()
         val registration = relyingParty.startRegistration(opts);
         temporaryRegistrationStore.insert(request.identity._multiUser, registration);
         Fox.successful(Ok(Json.toJson(registration.toCredentialsCreateJson)))
@@ -503,14 +509,16 @@ class AuthenticationController @Inject()(
             val opts = FinishRegistrationOptions.builder().request(data).response(response).build();
             try {
               val key = relyingParty.finishRegistration(opts)
+              logger.info(s"discoverable ${key.isDiscoverable}");
               val credential = WebAuthnCredential(
-                ObjectId.generate,
+                WebAuthnCredentialRepository.byteArrayToHex(key.getKeyId.getId),
                 request.identity._multiUser,
                 request.body.name,
                 key.getPublicKeyCose.getBytes,
                 key.getSignatureCount.toInt,
                 isDeleted = false,
               )
+              logger.info(s"credential id ${credential._id}");
               webAuthnCredentialDAO.insertOne(credential).map(_ => Ok(""))
             } catch {
               case e: RegistrationFailedException => Future.successful(BadRequest("Failed to register key"))

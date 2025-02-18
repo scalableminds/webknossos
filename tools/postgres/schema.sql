@@ -419,12 +419,13 @@ CREATE TABLE webknossos.multiUsers(
 );
 
 CREATE TABLE webknossos.webauthnCredentials(
-  _id TEXT PRIMARY KEY,
+  _id TEXT NOT NULL,
   _multiUser CHAR(24) NOT NULL,
   name TEXT NOT NULL,
   publicKeyCose BYTEA NOT NULL,
   signatureCount INTEGER NOT NULL,
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  PRIMARY KEY (_id, _multiUser)
 );
 
 

@@ -158,10 +158,10 @@ export async function doWebAuthnLogin(): Promise<ArbitraryObject> {
     method: "POST",
   });
   const options = parseRequestOptionsFromJSON(webAuthnAuthAssertion);
-  const response = await get(options);
+  const response = JSON.stringify(await get(options));
   return Request.sendJSONReceiveJSON("/api/auth/webauthn/auth/finalize", {
     method: "POST",
-    data: { assertionResponse: response },
+    data: { key: response },
   });
 }
 

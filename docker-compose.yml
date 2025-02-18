@@ -100,6 +100,7 @@ services:
       - USER_UID
       - USER_GID
       - COVERALLS_REPO_TOKEN
+      - CERTIFICATE_PUBLIC_KEY
       - TZ=${TZ:-Europe/Berlin}
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
       - POSTGRES_USER=webknossos_user

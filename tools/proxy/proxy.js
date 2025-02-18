@@ -1,13 +1,18 @@
 const express = require("express");
+const fs = require("fs");
 const httpProxy = require("http-proxy");
 const { spawn, exec } = require("child_process");
 const path = require("path");
 const prefixLines = require("prefix-stream-lines");
+const https = require("https");
 
-const proxy = httpProxy.createProxyServer({
-  proxyTimeout: 5 * 60 * 1000, // 5 min
-  timeout: 5 * 60 * 1000, // 5 min
+const time5min = 5 * 60 * 1000;
+
+var proxy = httpProxy.createProxyServer({
+  proxyTimeout: time5min, // 5 min
+  timeout: time5min, // 5 min
 });
+
 const app = express();
 
 const ROOT = path.resolve(path.join(__dirname, "..", ".."));
@@ -125,7 +130,12 @@ function toBackend(req, res) {
 }
 
 function toWebpackDev(req, res) {
-  proxy.web(req, res, { target: `http://127.0.0.1:${PORT + 2}` });
+  proxy.web(req, res, {
+    headers: {
+      host: "localhost",
+    },
+    target: `http://127.0.0.1:${PORT + 2}`
+  });
 }
 
 function toSam(req, res) {
@@ -144,5 +154,13 @@ app.all("/dist/*", toSam);
 app.all("/assets/bundle/*", toWebpackDev);
 app.all("/*", toBackend);
 
-app.listen(PORT);
+if (process.argv.includes("--tls")) {
+  console.log(loggingPrefix, "Using TLS")
+  https.createServer({
+    key: fs.readFileSync("target/dev.key.pem"),
+    cert: fs.readFileSync("target/dev.cert.pem"),
+  }, app).listen(PORT)
+} else {
+  app.listen(PORT);
+}
 console.log(loggingPrefix, "Listening on port", PORT);

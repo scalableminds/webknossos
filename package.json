@@ -72,6 +72,8 @@
   },
   "scripts": {
     "start": "node tools/proxy/proxy.js",
+    "start-tls": "node tools/proxy/proxy.js --tls",
+    "dev-gen-tls": "./tools/gen-ssl-dev-certs.sh",
     "build": "node --max-old-space-size=4096 node_modules/.bin/webpack --env production",
     "@comment build-backend": "Only check for errors in the backend code like done by the CI. This command is not needed to run WEBKNOSSOS",
     "build-backend": "yarn build-wk-backend && yarn build-wk-datastore && yarn build-wk-tracingstore && rm webknossos-tracingstore/conf/messages webknossos-datastore/conf/messages",

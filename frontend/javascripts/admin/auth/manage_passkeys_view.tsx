@@ -1,9 +1,8 @@
 import { CopyOutlined, SwapOutlined } from "@ant-design/icons";
 import {
-  finalizeWebAuthnRegistration,
   getAuthToken,
   revokeAuthToken,
-  startWebAuthnRegistration,
+  doWebAuthnRegistration,
 } from "admin/admin_rest_api";
 import { Button, Col, Form, Input, Modal, Row, Space, Spin } from "antd";
 import Toast from "libs/toast";
@@ -11,7 +10,7 @@ import type { OxalisState } from "oxalis/store";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 
-import { create, parseCreationOptionsFromJSON } from "@github/webauthn-json/browser-ponyfill";
+import { } from "@github/webauthn-json/browser-ponyfill";
 
 const FormItem = Form.Item;
 
@@ -30,14 +29,12 @@ function ManagePassKeyView() {
   const registerNewPassKey = async () => {
     try {
       setIsPassKeyNameModalOpen(false);
-      const json = await startWebAuthnRegistration();
-      const options = parseCreationOptionsFromJSON(json);
-      const response = await create(options);
-      await finalizeWebAuthnRegistration(newPassKeyName, JSON.stringify(response));
+      const result = doWebAuthnRegistration(newPassKeyName);
+      console.debug(result);
       Toast.success("PassKey registered successfully");
       setNewPassKeyName("");
     } catch (e) {
-      Toast.success(`Registering new PassKey ${newPassKeyName} failed`);
+      Toast.error(`Registering new PassKey '${newPassKeyName}' failed`);
       console.error("Could not register new PassKey", e);
     }
   };

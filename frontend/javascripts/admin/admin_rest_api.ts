@@ -1,4 +1,9 @@
-import { get, parseRequestOptionsFromJSON } from "@github/webauthn-json/browser-ponyfill";
+import {
+  create,
+  get,
+  parseCreationOptionsFromJSON,
+  parseRequestOptionsFromJSON,
+} from "@github/webauthn-json/browser-ponyfill";
 import dayjs from "dayjs";
 import { V3 } from "libs/mjs";
 import type { RequestOptions } from "libs/request";
@@ -149,27 +154,25 @@ export async function loginUser(formValues: {
 }
 
 export async function doWebAuthnLogin(): Promise<ArbitraryObject> {
-  const webAuthnAuthAssertion = await Request.receiveJSON("/auth/webauthn/auth/start", {
+  const webAuthnAuthAssertion = await Request.receiveJSON("/api/auth/webauthn/auth/start", {
     method: "POST",
-  });
+  }).then(body => JSON.parse(body));
   const options = parseRequestOptionsFromJSON(webAuthnAuthAssertion);
   const response = await get(options);
-  return Request.sendJSONReceiveJSON("/auth/webauthn/auth/finalize", {
+  return Request.sendJSONReceiveJSON("/api/auth/webauthn/auth/finalize", {
     method: "POST",
     data: { assertionResponse: response },
   });
 }
 
-export async function startWebAuthnRegistration(): Promise<any> {
-  return Request.receiveJSON("/auth/webauthn/register/start", { method: "POST" });
-}
-
-export async function finalizeWebAuthnRegistration(
-  name: string,
-  key: string,
-): Promise<ArbitraryObject> {
-  return Request.sendJSONReceiveJSON("/auth/webauthn/register/start", {
-    data: { name, key },
+export async function doWebAuthnRegistration(name: string): Promise<any> {
+  const webAuthnRegistrationAssertion = await Request.receiveJSON("/api/auth/webauthn/register/start", {
+    method: "POST",
+  }).then(body => JSON.parse(body));
+  const options = parseCreationOptionsFromJSON(webAuthnRegistrationAssertion);
+  const response = JSON.stringify(await create(options));
+  return Request.sendJSONReceiveJSON("/api/auth/webauthn/register/finalize", {
+    data: { name, response },
     method: "POST",
   });
 }

@@ -474,19 +474,22 @@ class AuthenticationController @Inject()(
       }
   }
 
-  def webauthnRegisterStart(): Action[AnyContent] = sil.SecuredAction { implicit request =>
-    {
-      val userIdentity = UserIdentity
-        .builder()
-        .name(request.identity.name)
-        .displayName(request.identity.name)
-        .id(WebAuthnCredentialRepository.objectIdToByteArray(request.identity._id))
-        .build();
-      val opts = StartRegistrationOptions.builder().user(userIdentity).timeout(120000).build()
-      val registration = relyingParty.startRegistration(opts);
-      temporaryRegistrationStore.insert(request.identity._multiUser, registration);
-      Ok(Json.toJson(Json.parse(registration.toJson)))
-    }
+  def webauthnRegisterStart(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      email <- userService.emailFor(request.identity);
+      result <- {
+        val userIdentity = UserIdentity
+          .builder()
+          .name(email)
+          .displayName(request.identity.name)
+          .id(WebAuthnCredentialRepository.objectIdToByteArray(request.identity._multiUser))
+          .build();
+        val opts = StartRegistrationOptions.builder().user(userIdentity).timeout(120000).build()
+        val registration = relyingParty.startRegistration(opts);
+        temporaryRegistrationStore.insert(request.identity._multiUser, registration);
+        Fox.successful(Ok(Json.toJson(registration.toCredentialsCreateJson)))
+      }
+    } yield result;
   }
 
   def webauthnRegisterFinalize(): Action[WebAuthnRegistration] =

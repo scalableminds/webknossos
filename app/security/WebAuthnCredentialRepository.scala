@@ -1,15 +1,15 @@
 package security
 
-import models.user.{MultiUserDAO,WebAuthnCredentialDAO};
-
+import models.user.{MultiUserDAO, WebAuthnCredential, WebAuthnCredentialDAO}
 import com.yubico.webauthn._
 import com.yubico.webauthn.data._
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
+import net.liftweb.common.{Box, Empty, Failure, Full}
 
 import java.util.Optional
 import javax.inject.Inject
-import scala.collection.JavaConverters._;
+import scala.jdk.CollectionConverters._
 
 object WebAuthnCredentialRepository {
   def objectIdToByteArray(id: ObjectId): ByteArray =
@@ -58,14 +58,16 @@ class WebAuthnCredentialRepository @Inject()(multiUserDAO: MultiUserDAO, webAuth
       .build())
   }
 
-  def lookupAll(credentialId: ByteArray): java.util.Set[RegisteredCredential] = {
-    val credential = webAuthnCredentialDAO.findById(WebAuthnCredentialRepository.byteArrayToObjectId(credentialId))(GlobalAccessContext).get("Java interop");
-    Set(RegisteredCredential.builder()
-      .credentialId(WebAuthnCredentialRepository.objectIdToByteArray(credential._id))
-      .userHandle(WebAuthnCredentialRepository.objectIdToByteArray(credential._multiUser))
-      .publicKeyCose(new ByteArray(credential.publicKeyCose))
-      .signatureCount(credential.signatureCount)
-      .build()).asJava
-  }
+  def lookupAll(credentialId: ByteArray): java.util.Set[RegisteredCredential] =
+    webAuthnCredentialDAO.findById(WebAuthnCredentialRepository.byteArrayToObjectId(credentialId))(GlobalAccessContext).await("Java interop") match {
+        case Full(credential: WebAuthnCredential) =>
+          Set(RegisteredCredential.builder()
+            .credentialId(WebAuthnCredentialRepository.objectIdToByteArray(credential._id))
+            .userHandle(WebAuthnCredentialRepository.objectIdToByteArray(credential._multiUser))
+            .publicKeyCose(new ByteArray(credential.publicKeyCose))
+            .signatureCount(credential.signatureCount)
+            .build()).asJava
+        case Empty => Set[RegisteredCredential]().asJava
+      }
 
 }

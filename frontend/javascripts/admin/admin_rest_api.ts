@@ -172,7 +172,7 @@ export async function doWebAuthnRegistration(name: string): Promise<any> {
   const options = parseCreationOptionsFromJSON(webAuthnRegistrationAssertion);
   const response = JSON.stringify(await create(options));
   return Request.sendJSONReceiveJSON("/api/auth/webauthn/register/finalize", {
-    data: { name, response },
+    data: { name: name, key: response },
     method: "POST",
   });
 }

@@ -50,7 +50,7 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient) (implicit ec: Execut
   def findById(id: ObjectId)(implicit ct: DBAccessContext): Fox[WebAuthnCredential] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $collectionName WHERE _id = $id AND $accessQuery".as[WebauthncredentialsRow])
+      r <- run(q"SELECT $columns FROM webknossos.webauthncredentials WHERE _id = $id AND $accessQuery".as[WebauthncredentialsRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
@@ -58,20 +58,20 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient) (implicit ec: Execut
   def findByIdAndUserId(id: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[WebAuthnCredential] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $collectionName WHERE _id = $id AND _multiUser = $userId AND $accessQuery".as[WebauthncredentialsRow])
+      r <- run(q"SELECT $columns FROM webknossos.webauthncredentials WHERE _id = $id AND _multiUser = $userId AND $accessQuery".as[WebauthncredentialsRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
   def insertOne(c: WebAuthnCredential): Fox[Unit] =
     for {
-      _ <- run(q"""INSERT INTO $collectionName(_id, _multiUser, name, publicKeyCose, signatureCount)
+      _ <- run(q"""INSERT INTO webknossos.webauthncredentials(_id, _multiUser, name, publicKeyCose, signatureCount)
                        VALUES(${c._id}, ${c._multiUser}, ${c.name},
                               ${c.publicKeyCose}, ${c.signatureCount})""".asUpdate)
     } yield ()
 
   def removeById(id: ObjectId): Fox[Unit] =
     for {
-      _ <- run(q"""DELETE FROM $collectionName WHERE _id = ${id}""".asUpdate)
+      _ <- run(q"""DELETE FROM webknossos.webauthncredentials WHERE _id = ${id}""".asUpdate)
     } yield()
 
 }

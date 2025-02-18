@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.ConfigReader
 import play.api.Configuration
 
 class TracingStoreConfig @Inject()(configuration: Configuration) extends ConfigReader {
-  override def raw: Configuration = configuration
+  override val raw: Configuration = configuration
 
   object Http {
     val uri: String = get[String]("http.uri")

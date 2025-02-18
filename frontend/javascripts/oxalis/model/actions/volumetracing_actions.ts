@@ -381,14 +381,16 @@ export const dispatchFloodfillAsync = async (
   await readyDeferred.promise();
 };
 
-export const setHasEditableMappingAction = () =>
+export const setHasEditableMappingAction = (tracingId: string) =>
   ({
     type: "SET_HAS_EDITABLE_MAPPING",
+    tracingId,
   }) as const;
 
-export const setMappingIsLockedAction = () =>
+export const setMappingIsLockedAction = (tracingId: string) =>
   ({
     type: "SET_MAPPING_IS_LOCKED",
+    tracingId,
   }) as const;
 
 export const computeQuickSelectForRectAction = (

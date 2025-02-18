@@ -437,7 +437,7 @@ class AuthenticationController @Inject()(
       val sessionId = UUID.randomUUID().toString;
       val cookie = Cookie("webauthn-session", sessionId, maxAge = Some(120), httpOnly = true, secure = true)
       temporaryAssertionStore.insert(sessionId, assertion, Some(2 minutes));
-      Ok(Json.toJson(Json.parse(assertion.toJson))).withCookies(cookie)
+      Ok(Json.toJson(Json.parse(assertion.toCredentialsGetJson))).withCookies(cookie)
     }
   }
 

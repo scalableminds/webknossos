@@ -156,7 +156,7 @@ export async function loginUser(formValues: {
 export async function doWebAuthnLogin(): Promise<ArbitraryObject> {
   const webAuthnAuthAssertion = await Request.receiveJSON("/api/auth/webauthn/auth/start", {
     method: "POST",
-  }).then(body => JSON.parse(body));
+  });
   const options = parseRequestOptionsFromJSON(webAuthnAuthAssertion);
   const response = await get(options);
   return Request.sendJSONReceiveJSON("/api/auth/webauthn/auth/finalize", {

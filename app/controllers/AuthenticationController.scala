@@ -15,6 +15,7 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
@@ -172,6 +173,27 @@ class AuthenticationController @Inject()(
     }
   }
 
+  private def authenticateInner(loginInfo: LoginInfo)(implicit header: RequestHeader): Future[Result] = {
+    for {
+      result <- userService.retrieve(loginInfo).flatMap {
+        case Some(user) if !user.isDeactivated =>
+          for {
+            authenticator <- combinedAuthenticatorService.create(loginInfo)
+            value <- combinedAuthenticatorService.init(authenticator)
+            result <- combinedAuthenticatorService.embed(value, Ok)
+            _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(emailVerificationService
+              .assertEmailVerifiedOrResendVerificationMail(user)(GlobalAccessContext, ec))
+            _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
+            _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
+            _ = logger.info(f"User ${user._id} authenticated.")
+          } yield result
+        case None =>
+          Future.successful(BadRequest(Messages("error.noUser")))
+        case Some(_) => Future.successful(BadRequest(Messages("user.deactivated")))
+      }
+    } yield result
+  };
+
   def authenticate: Action[AnyContent] = Action.async { implicit request =>
     signInForm
       .bindFromRequest()
@@ -186,23 +208,7 @@ class AuthenticationController @Inject()(
             .map(id => Credentials(id, signInData.password))
             .flatMap(credentials => credentialsProvider.authenticate(credentials))
             .flatMap {
-              loginInfo =>
-                userService.retrieve(loginInfo).flatMap {
-                  case Some(user) if !user.isDeactivated =>
-                    for {
-                      authenticator <- combinedAuthenticatorService.create(loginInfo)
-                      value <- combinedAuthenticatorService.init(authenticator)
-                      result <- combinedAuthenticatorService.embed(value, Ok)
-                      _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(emailVerificationService
-                        .assertEmailVerifiedOrResendVerificationMail(user)(GlobalAccessContext, ec))
-                      _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
-                      _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
-                      _ = logger.info(f"User ${user._id} authenticated.")
-                    } yield result
-                  case None =>
-                    Future.successful(BadRequest(Messages("error.noUser")))
-                  case Some(_) => Future.successful(BadRequest(Messages("user.deactivated")))
-                }
+              loginInfo => authenticateInner(loginInfo)
             }
             .recover {
               case _: ProviderException => BadRequest(Messages("error.invalidCredentials"))
@@ -462,8 +468,16 @@ class AuthenticationController @Inject()(
                   val result = relyingParty.finishAssertion(opts);
                   val userId = WebAuthnCredentialRepository.byteArrayToObjectId(result.getCredential.getUserHandle)
                   logger.info(s"webauthn authenticated ${userId}");
-                  val loginInfo = LoginInfo("credentials", userId.toString)
-                  loginUser(loginInfo)(request.map(_ => AnyContent()))
+                  for {
+                    multiUser <- multiUserDAO.findOne(userId)(GlobalAccessContext);
+                    result <- multiUser._lastLoggedInIdentity match {
+                      case Some(userId) => {
+                        val loginInfo = LoginInfo("credentials", userId.toString);
+                        authenticateInner(loginInfo)
+                      }
+                      case None => Future.successful(InternalServerError("user never logged in"))
+                    }
+                  } yield result;
                 } catch {
                   case e: AssertionFailedException => Future.successful(Unauthorized("Authentication failed."))
                 }

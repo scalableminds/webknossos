@@ -166,8 +166,12 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
                   whiteSpace: "nowrap",
                 }}
                 onClick={async () => {
-                  const response = await doWebAuthnLogin();
-                  window.location.href = response.redirect_url;
+                  const [user, organization] = await doWebAuthnLogin();
+                  Store.dispatch(setActiveUserAction(user));
+                  Store.dispatch(setActiveOrganizationAction(organization));
+                  if (onLoggedIn) {
+                    onLoggedIn();
+                  }
                 }}
               >
                 Use PassKey

@@ -159,10 +159,14 @@ export async function doWebAuthnLogin(): Promise<ArbitraryObject> {
   });
   const options = parseRequestOptionsFromJSON(webAuthnAuthAssertion);
   const response = JSON.stringify(await get(options));
-  return Request.sendJSONReceiveJSON("/api/auth/webauthn/auth/finalize", {
+  await Request.sendJSONReceiveJSON("/api/auth/webauthn/auth/finalize", {
     method: "POST",
     data: { key: response },
   });
+
+  const activeUser = await getActiveUser();
+  const organization = await getOrganization(activeUser.organization);
+  return [activeUser, organization];
 }
 
 export async function doWebAuthnRegistration(name: string): Promise<any> {

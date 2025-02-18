@@ -3,8 +3,10 @@ import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
 import { ContourModeEnum } from "oxalis/constants";
 import {
+  getLayerByName,
   getMappingInfo,
   getMaximumSegmentIdForLayer,
+  getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getRequestedOrVisibleSegmentationLayer,
@@ -288,15 +290,19 @@ function retrieveVolumeTracing(state: OxalisState, action: VolumeTracingReducerA
   if ("tracingId" in action && action.tracingId != null) {
     return getVolumeTracingById(state.tracing, action.tracingId);
   }
-  const volumeLayer = getRequestedOrVisibleSegmentationLayer(
-    state,
-    "layerName" in action ? action.layerName : null,
-  );
+  const maybeVolumeLayer =
+    "layerName" in action && action.layerName != null
+      ? getLayerByName(state.dataset, action.layerName)
+      : getVisibleSegmentationLayer(state);
 
-  if (volumeLayer == null || volumeLayer.tracingId == null) {
+  if (
+    maybeVolumeLayer == null ||
+    !("tracingId" in maybeVolumeLayer) ||
+    maybeVolumeLayer.tracingId == null
+  ) {
     return null;
   }
-  return getVolumeTracingById(state.tracing, volumeLayer.tracingId);
+  return getVolumeTracingById(state.tracing, maybeVolumeLayer.tracingId);
 }
 
 function VolumeTracingReducer(state: OxalisState, action: VolumeTracingReducerAction): OxalisState {

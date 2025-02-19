@@ -71,7 +71,7 @@ class Migration:
                     newest_version = self.get_newest_version(tracing_id, update_collection)
                     versions += newest_version
                 if versions > 1:
-                    logger.info(f"{versions} versions for {annotation['_id']}{self.get_progress()}")
+                    logger.info(f"{versions} versions for {annotation['_id']}{self.get_progress(offset=1)}")
             else:
                 logger.debug(f"Migrating annotation {annotation['_id']} (dry={self.args.dry}) ...")
                 mapping_id_map = self.build_mapping_id_map(annotation)
@@ -86,7 +86,7 @@ class Migration:
                 logger.debug("writing annotationProtos...")
                 self.create_and_save_annotation_proto(annotation, materialized_versions, mapping_id_map)
                 if time.time() - before > 1 or self.args.verbose:
-                    log_since(before, f"Migrating annotation {annotation['_id']} ({len(materialized_versions)} materialized versions)", self.get_progress())
+                    log_since(before, f"Migrating annotation {annotation['_id']} ({len(materialized_versions)} materialized versions)", self.get_progress(offset=1))
                 checkpoint_logger.info(annotation['_id'])
         except Exception:
             logger.exception(f"Exception while migrating annotation {annotation['_id']}:")
@@ -105,7 +105,7 @@ class Migration:
                     mapping_id_map[tracing_id] = editable_mapping_id
         return mapping_id_map
 
-    def fetch_updates(self, tracing_or_mapping_id: str, layer_type: str, collection: str, json_encoder, json_decoder) -> Tuple[List[Tuple[int, int, bytes]], bool]:
+    def fetch_updates(self, tracing_id: str, tracing_or_mapping_id: str, layer_type: str, collection: str, json_encoder, json_decoder) -> Tuple[List[Tuple[int, int, bytes]], bool]:
         batch_size = 100
         newest_version = self.get_newest_version(tracing_or_mapping_id, collection)
         updates_for_layer = []
@@ -118,7 +118,7 @@ class Migration:
             for version, update_group in reversed(update_groups):
                 if version > next_version:
                     continue
-                update_group, timestamp, revert_source_version = self.process_update_group(tracing_or_mapping_id, layer_type, update_group, json_encoder, json_decoder)
+                update_group, timestamp, revert_source_version = self.process_update_group(tracing_id, layer_type, update_group, json_encoder, json_decoder)
                 if revert_source_version is not None:
                     next_version = revert_source_version
                     included_revert = True
@@ -135,7 +135,7 @@ class Migration:
         layers = list(annotation["layers"].items())
         for tracing_id, layer_type in layers:
             collection = self.update_collection_for_layer_type(layer_type)
-            _, layer_included_revert = self.fetch_updates(tracing_id, layer_type, collection, json_encoder=json_encoder, json_decoder=json_decoder)
+            _, layer_included_revert = self.fetch_updates(tracing_id, tracing_id, layer_type, collection, json_encoder=json_encoder, json_decoder=json_decoder)
             if layer_included_revert:
                 return True
         return False
@@ -148,12 +148,12 @@ class Migration:
         tracing_ids_and_mapping_ids = []
         for tracing_id, layer_type in layers:
             collection = self.update_collection_for_layer_type(layer_type)
-            layer_updates, _ = self.fetch_updates(tracing_id, layer_type, collection, json_encoder=json_encoder, json_decoder=json_decoder)
+            layer_updates, _ = self.fetch_updates(tracing_id, tracing_id, layer_type, collection, json_encoder=json_encoder, json_decoder=json_decoder)
             all_update_groups.append(layer_updates)
             tracing_ids_and_mapping_ids.append(tracing_id)
             if tracing_id in mapping_id_map:
                 mapping_id = mapping_id_map[tracing_id]
-                layer_updates, _ = self.fetch_updates(mapping_id, "editableMapping", "editableMappingUpdates", json_encoder=json_encoder, json_decoder=json_decoder)
+                layer_updates, _ = self.fetch_updates(tracing_id, mapping_id, "editableMapping", "editableMappingUpdates", json_encoder=json_encoder, json_decoder=json_decoder)
                 all_update_groups.append(layer_updates)
                 tracing_ids_and_mapping_ids.append(mapping_id)
 
@@ -239,7 +239,7 @@ class Migration:
 
             # add actionTracingId
             if not name == "updateTdCamera":
-                update["value"]["actionTracingId"] = tracing_id
+                update["value"]["actionTracingId"] = tracing_id # even for mappings, this is the tracing_id of their corresponding volume layer
 
             # identify compact update actions, and mark them
             if (name == "updateBucket" and "position" not in update_value) \
@@ -443,7 +443,6 @@ class Migration:
             logger.info(f"Migrating segment index with large batch sizes for {tracing_id} failed with {e}, retrying with small batch sizes...")
             self.migrate_all_versions_and_keys_with_prefix("volumeSegmentIndex", tracing_id, layer_version_mapping, transform_key=None, put_buffer_size=10, get_keys_page_size=1, get_keys_version_batch_size=1000)
 
-
     def migrate_editable_mapping(self, tracing_id: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap) -> List[int]:
         if tracing_id not in mapping_id_map:
             return []
@@ -458,9 +457,9 @@ class Migration:
         materialized_versions = self.list_versions(collection, mapping_id)
         materialized_versions_unified = []
         for materialized_version in materialized_versions:
-            value_bytes = self.get_bytes(collection, mapping_id, materialized_version)
-            if materialized_version not in layer_version_mapping[tracing_id]:
+            if materialized_version not in layer_version_mapping[mapping_id]:
                 continue
+            value_bytes = self.get_bytes(collection, mapping_id, materialized_version)
             new_version = layer_version_mapping[mapping_id][materialized_version]
             materialized_versions_unified.append(new_version)
             self.save_bytes(collection, tracing_id, new_version, value_bytes)
@@ -570,7 +569,7 @@ class Migration:
     def read_annotation_list(self):
         checkpoint_set = self.read_checkpoints()
         before = time.time()
-        start_time = str(datetime.datetime.now())
+        start_time = str(datetime.datetime.now(datetime.timezone.utc))
         if self.args.start is not None:
             start_time = self.args.start
         previous_start_label = ""
@@ -628,9 +627,12 @@ class Migration:
         slash_pos = key.find('/')
         return replacement_prefix + key[slash_pos:]
 
-    def get_progress(self) -> str:
+    # Current progress as formatted string.
+    # offset is added to done_count to account for incrementing done_count only *after* logging (in the finally block)
+    def get_progress(self, offset: int) -> str:
         with self.done_count_lock:
             done_count = self.done_count
+        done_count += offset
         percentage = 100.0 * done_count / self.total_count
         duration = time.time() - self.before
         if done_count > 0:

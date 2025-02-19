@@ -198,7 +198,7 @@ object BloscCompressor {
   val defaultShuffle: Int = BYTESHUFFLE
   val keyBlocksize = "blocksize"
   val defaultBlocksize = 0
-  val supportedShuffle: List[Int] = List(NOSHUFFLE, BYTESHUFFLE, BITSHUFFLE)
+  val supportedShuffle: List[Int] = List(AUTOSHUFFLE, NOSHUFFLE, BYTESHUFFLE, BITSHUFFLE)
   val supportedCnames: List[String] = List("zstd", "blosclz", defaultCname, "lz4hc", "zlib")
   val keyTypesize = "typesize"
   val defaultTypesize = 1
@@ -241,11 +241,11 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
 
   private def validateShuffle(shuffle: Int): Int = {
     val supportedShuffleNames =
-      List("0 (NOSHUFFLE)", "1 (BYTESHUFFLE)", "2 (BITSHUFFLE)")
+      List("-1 (AUTOSHUFFLE), 0 (NOSHUFFLE)", "1 (BYTESHUFFLE)", "2 (BITSHUFFLE)")
 
     if (!BloscCompressor.supportedShuffle.contains(shuffle))
       throw new IllegalArgumentException(
-        "blosc: shuffle type not supported: '" + shuffle + "'; expected one of " + supportedShuffleNames.mkString(","))
+        f"blosc: shuffle type '$shuffle' not supported. Expected one of ${supportedShuffleNames.mkString(",")}")
     shuffle
   }
 

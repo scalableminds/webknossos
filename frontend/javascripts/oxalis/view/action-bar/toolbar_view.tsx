@@ -847,17 +847,17 @@ const TOOL_NAMES = {
   AREA_MEASUREMENT: "Area Measurement Tool",
 };
 
-export default function ToolbarView() {
+export default function ToolbarView({ isReadOnly }: { isReadOnly: boolean }) {
   const dispatch = useDispatch();
-  const hasVolume = useSelector((state: OxalisState) => state.tracing.volumes.length > 0);
-  const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+  const hasVolume = useSelector((state: OxalisState) => state.tracing?.volumes.length > 0);
+  const hasSkeleton = useSelector((state: OxalisState) => state.tracing?.skeleton != null);
+
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
 
   const [lastForcefullyDisabledTool, setLastForcefullyDisabledTool] =
     useState<AnnotationTool | null>(null);
-  const isVolumeModificationAllowed = useSelector(
-    (state: OxalisState) => !hasEditableMapping(state),
-  );
+  const isVolumeModificationAllowed =
+    useSelector((state: OxalisState) => !hasEditableMapping(state)) && !isReadOnly;
   const useLegacyBindings = useSelector(
     (state: OxalisState) => state.userConfiguration.useLegacyBindings,
   );
@@ -942,7 +942,7 @@ export default function ToolbarView() {
           <i className="fas fa-arrows-alt" />
         </ToolRadioButton>
 
-        {hasSkeleton ? (
+        {hasSkeleton && !isReadOnly ? (
           <ToolRadioButton
             name={TOOL_NAMES.SKELETON}
             description={skeletonToolDescription}
@@ -1106,24 +1106,28 @@ export default function ToolbarView() {
             </ToolRadioButton>
           </React.Fragment>
         ) : null}
-        <ToolRadioButton
-          name={TOOL_NAMES.BOUNDING_BOX}
-          description="Create, resize and modify bounding boxes."
-          disabledExplanation={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].explanation}
-          disabled={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled}
-          value={AnnotationToolEnum.BOUNDING_BOX}
-        >
-          <img
-            src="/assets/images/bounding-box.svg"
-            alt="Bounding Box Icon"
-            style={{
-              opacity: disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled ? 0.5 : 1,
-              ...imgStyleForSpaceyIcons,
-            }}
-          />
-        </ToolRadioButton>
+        {!isReadOnly && (
+          <ToolRadioButton
+            name={TOOL_NAMES.BOUNDING_BOX}
+            description="Create, resize and modify bounding boxes."
+            disabledExplanation={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].explanation}
+            disabled={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled}
+            value={AnnotationToolEnum.BOUNDING_BOX}
+          >
+            <img
+              src="/assets/images/bounding-box.svg"
+              alt="Bounding Box Icon"
+              style={{
+                opacity: disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled
+                  ? 0.5
+                  : 1,
+                ...imgStyleForSpaceyIcons,
+              }}
+            />
+          </ToolRadioButton>
+        )}
 
-        {hasSkeleton && hasVolume ? (
+        {hasSkeleton && hasVolume && !isReadOnly ? (
           <ToolRadioButton
             name={TOOL_NAMES.PROOFREAD}
             description={

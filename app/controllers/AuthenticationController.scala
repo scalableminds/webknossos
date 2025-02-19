@@ -215,14 +215,13 @@ class AuthenticationController @Inject()(
       result <- combinedAuthenticatorService.embed(cookie, Redirect("/dashboard")) //to login the new user
     } yield result
 
-  def accessibleBySwitching(datasetId: Option[String],
+  def accessibleBySwitching(datasetId: Option[ObjectId],
                             annotationId: Option[String],
                             workflowHash: Option[String]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
-        datasetIdValidated <- Fox.runOptional(datasetId)(ObjectId.fromString(_))
         selectedOrganization <- authenticationService.getOrganizationToSwitchTo(request.identity,
-                                                                                datasetIdValidated,
+                                                                                datasetId,
                                                                                 annotationId,
                                                                                 workflowHash)
         selectedOrganizationJs <- organizationService.publicWrites(selectedOrganization)

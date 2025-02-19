@@ -36,23 +36,12 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
   override protected def tickerInterval: FiniteDuration = config.WebKnossos.FetchUsedStorage.tickerInterval
   override protected def tickerInitialDelay: FiniteDuration = 1 minute
 
-  private val isRunning = new java.util.concurrent.atomic.AtomicBoolean(false)
-
   private val pauseAfterEachOrganization = 5 seconds
   private val organizationCountToScanPerTick = config.WebKnossos.FetchUsedStorage.scansPerTick
 
   implicit private val ctx: DBAccessContext = GlobalAccessContext
 
-  override protected def tick(): Fox[Unit] = {
-    if (isRunning.compareAndSet(false, true)) {
-      tickAsync().futureBox.onComplete { _ =>
-        isRunning.set(false)
-      }
-    }
-    Fox.successful(())
-  }
-
-  private def tickAsync(): Fox[Unit] =
+  override protected def tick(): Fox[Unit] =
     for {
       organizations <- organizationDAO.findNotRecentlyScanned(config.WebKnossos.FetchUsedStorage.rescanInterval,
                                                               organizationCountToScanPerTick)

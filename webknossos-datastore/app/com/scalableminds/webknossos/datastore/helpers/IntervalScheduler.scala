@@ -1,8 +1,6 @@
 package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.tools.Fox
-import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Failure
 import org.apache.pekko.actor.{ActorSystem, Cancellable}
 import play.api.inject.ApplicationLifecycle
 
@@ -27,7 +25,7 @@ trait IntervalScheduler {
 
   protected def tick(): Fox[_]
 
-  private val innerTickerInterval: FiniteDuration = 100 millis
+  private val innerTickerInterval: FiniteDuration = 100 milliseconds
   private val lastCompletionTimeMillis = new AtomicLong(0)
   private val isRunning = new java.util.concurrent.atomic.AtomicBoolean(false)
 
@@ -47,14 +45,6 @@ trait IntervalScheduler {
   private def lastCompletionIsLongEnoughPast: Boolean =
     (Instant(lastCompletionTimeMillis.get()) + tickerInterval).isPast
 
-  private var scheduled: Option[Cancellable] = None
-
-  lifecycle.addStopHook(stop _)
-
-  if (tickerEnabled) {
-    scheduled = Some(actorSystem.scheduler.scheduleWithFixedDelay(tickerInitialDelay, innerTickerInterval)(innerTick))
-  }
-
   private def stop(): Future[Unit] = {
     if (scheduled.isDefined) {
       scheduled.foreach(_.cancel())
@@ -62,4 +52,17 @@ trait IntervalScheduler {
     }
     Future.successful(())
   }
+
+  private var scheduled: Option[Cancellable] = None
+
+  lifecycle.addStopHook(stop _)
+
+  if (tickerEnabled) {
+    if (tickerInterval < innerTickerInterval) {
+      throw new IllegalArgumentException(
+        s"IntervalScheduler was initialized with interval $tickerInterval. Only intervals >= $innerTickerInterval are supported.")
+    }
+    scheduled = Some(actorSystem.scheduler.scheduleWithFixedDelay(tickerInitialDelay, innerTickerInterval)(innerTick))
+  }
+
 }

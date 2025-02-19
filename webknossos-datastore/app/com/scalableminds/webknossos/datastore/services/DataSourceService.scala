@@ -18,11 +18,10 @@ import net.liftweb.common.Box.tryo
 import net.liftweb.common._
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
-import play.libs.Scala
 
 import java.io.{File, FileWriter}
 import java.nio.file.{Files, Path, Paths}
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.io.Source
 
@@ -51,14 +50,9 @@ class DataSourceService @Inject()(
 
   def tick(): Fox[Unit] =
     for {
-      /*_ <- checkInbox(verbose = inboxCheckVerboseCounter == 0)
+      _ <- checkInbox(verbose = inboxCheckVerboseCounter == 0)
       _ = inboxCheckVerboseCounter += 1
-      _ = if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0*/
-      _ <- Fox.successful()
-      i = scala.util.Random.nextInt()
-      _ = logger.info(s"Tick! $i in ${Thread.currentThread.getId} Sleeping 10s...")
-      _ = Thread.sleep(10000)
-      _ = logger.info(s"Sleeping done for $i in ${Thread.currentThread.getId}.")
+      _ = if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0
     } yield ()
 
   def assertDataDirWritable(organizationId: String): Fox[Unit] = {

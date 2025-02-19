@@ -37,7 +37,7 @@ class DataSourceService @Inject()(
     with FoxImplicits {
 
   override protected def tickerEnabled: Boolean = config.Datastore.WatchFileSystem.enabled
-  override protected def tickerInterval: FiniteDuration = 2 seconds
+  override protected def tickerInterval: FiniteDuration = config.Datastore.WatchFileSystem.interval
 
   override protected def tickerInitialDelay: FiniteDuration = config.Datastore.WatchFileSystem.initialDelay
 

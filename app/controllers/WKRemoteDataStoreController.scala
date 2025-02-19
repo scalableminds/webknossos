@@ -198,7 +198,7 @@ class WKRemoteDataStoreController @Inject()(
           existingIds <- datasetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext)
           _ <- datasetService.deactivateUnreportedDataSources(existingIds, dataStore)
           _ = if (Instant.since(before) > (30 seconds))
-            Instant.logSince(before, s"Updating datasources from datastore '${dataStore.name}'")
+            Instant.logSince(before, s"Updating datasources from datastore '${dataStore.name}'", logger)
         } yield Ok
       }
     }

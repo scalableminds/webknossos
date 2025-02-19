@@ -18,7 +18,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class UsedStorageService @Inject()(val system: ActorSystem,
+class UsedStorageService @Inject()(val actorSystem: ActorSystem,
                                    val lifecycle: ApplicationLifecycle,
                                    organizationDAO: OrganizationDAO,
                                    datasetService: DatasetService,
@@ -43,12 +43,14 @@ class UsedStorageService @Inject()(val system: ActorSystem,
 
   implicit private val ctx: DBAccessContext = GlobalAccessContext
 
-  override protected def tick(): Unit =
+  override protected def tick(): Fox[Unit] = {
     if (isRunning.compareAndSet(false, true)) {
       tickAsync().futureBox.onComplete { _ =>
         isRunning.set(false)
       }
     }
+    Fox.successful(())
+  }
 
   private def tickAsync(): Fox[Unit] =
     for {

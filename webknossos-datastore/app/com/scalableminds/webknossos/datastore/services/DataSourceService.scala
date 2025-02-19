@@ -18,10 +18,11 @@ import net.liftweb.common.Box.tryo
 import net.liftweb.common._
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
+import play.libs.Scala
 
 import java.io.{File, FileWriter}
 import java.nio.file.{Files, Path, Paths}
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.io.Source
 
@@ -30,14 +31,14 @@ class DataSourceService @Inject()(
     dataSourceRepository: DataSourceRepository,
     remoteSourceDescriptorService: RemoteSourceDescriptorService,
     val lifecycle: ApplicationLifecycle,
-    @Named("webknossos-datastore") val system: ActorSystem
+    @Named("webknossos-datastore") val actorSystem: ActorSystem
 )(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with LazyLogging
     with FoxImplicits {
 
-  override protected def enabled: Boolean = config.Datastore.WatchFileSystem.enabled
-  override protected def tickerInterval: FiniteDuration = config.Datastore.WatchFileSystem.interval
+  override protected def tickerEnabled: Boolean = config.Datastore.WatchFileSystem.enabled
+  override protected def tickerInterval: FiniteDuration = 2 seconds
 
   override protected def tickerInitialDelay: FiniteDuration = config.Datastore.WatchFileSystem.initialDelay
 
@@ -48,11 +49,17 @@ class DataSourceService @Inject()(
 
   private var inboxCheckVerboseCounter = 0
 
-  def tick(): Unit = {
-    checkInbox(verbose = inboxCheckVerboseCounter == 0)
-    inboxCheckVerboseCounter += 1
-    if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0
-  }
+  def tick(): Fox[Unit] =
+    for {
+      /*_ <- checkInbox(verbose = inboxCheckVerboseCounter == 0)
+      _ = inboxCheckVerboseCounter += 1
+      _ = if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0*/
+      _ <- Fox.successful()
+      i = scala.util.Random.nextInt()
+      _ = logger.info(s"Tick! $i in ${Thread.currentThread.getId} Sleeping 10s...")
+      _ = Thread.sleep(10000)
+      _ = logger.info(s"Sleeping done for $i in ${Thread.currentThread.getId}.")
+    } yield ()
 
   def assertDataDirWritable(organizationId: String): Fox[Unit] = {
     val orgaPath = dataBaseDir.resolve(organizationId)

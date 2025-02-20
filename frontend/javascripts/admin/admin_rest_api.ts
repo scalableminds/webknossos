@@ -171,7 +171,7 @@ export async function doWebAuthnRegistration(name: string): Promise<any> {
       method: "POST",
     },
   ).then((body) => JSON.parse(body));
-  const response = JSON.stringify(await webauthn.create(webAuthnRegistrationAssertion))
+  const response = JSON.stringify(await webauthn.create(webAuthnRegistrationAssertion));
   return Request.sendJSONReceiveJSON("/api/auth/webauthn/register/finalize", {
     data: { name: name, key: response },
     method: "POST",

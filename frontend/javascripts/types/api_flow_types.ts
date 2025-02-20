@@ -1213,4 +1213,4 @@ export type RenderAnimationOptions = {
 export type WebAuthnKeyDescriptor = {
   id: string;
   name: string;
-}
+};

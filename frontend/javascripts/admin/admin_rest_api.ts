@@ -171,9 +171,12 @@ export async function doWebAuthnLogin(): Promise<ArbitraryObject> {
 }
 
 export async function doWebAuthnRegistration(name: string): Promise<any> {
-  const webAuthnRegistrationAssertion = await Request.receiveJSON("/api/auth/webauthn/register/start", {
-    method: "POST",
-  }).then(body => JSON.parse(body));
+  const webAuthnRegistrationAssertion = await Request.receiveJSON(
+    "/api/auth/webauthn/register/start",
+    {
+      method: "POST",
+    },
+  ).then((body) => JSON.parse(body));
   const options = parseCreationOptionsFromJSON(webAuthnRegistrationAssertion);
   const response = JSON.stringify(await create(options));
   return Request.sendJSONReceiveJSON("/api/auth/webauthn/register/finalize", {

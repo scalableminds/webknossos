@@ -1,10 +1,10 @@
 import { CopyOutlined, SwapOutlined } from "@ant-design/icons";
 import {
-  getAuthToken,
-  revokeAuthToken,
   doWebAuthnRegistration,
+  getAuthToken,
   listWebAuthnKeys,
   removeWebAuthnKey,
+  revokeAuthToken,
 } from "admin/admin_rest_api";
 import { Button, Col, Form, Input, Modal, Row, Space, Spin } from "antd";
 import Toast from "libs/toast";
@@ -12,24 +12,22 @@ import type { OxalisState } from "oxalis/store";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 
-import { } from "@github/webauthn-json/browser-ponyfill";
-
-const FormItem = Form.Item;
+import {} from "@github/webauthn-json/browser-ponyfill";
 
 function ManagePassKeyView() {
   const [isPassKeyNameModalOpen, setIsPassKeyNameModalOpen] = useState(false);
   const [newPassKeyName, setNewPassKeyName] = useState("");
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [_isLoading, setIsLoading] = useState<boolean>(true);
   const [passkeys, setPasskeys] = useState([]);
   useEffect(() => {
     fetchData();
   }, []);
 
   async function fetchData(): Promise<void> {
-     setIsLoading(true);
-     const keys = await listWebAuthnKeys();
-     setPasskeys(keys);
-     setIsLoading(false);
+    setIsLoading(true);
+    const keys = await listWebAuthnKeys();
+    setPasskeys(keys);
+    setIsLoading(false);
   }
 
   const registerNewPassKey = async () => {
@@ -57,15 +55,19 @@ function ManagePassKeyView() {
       >
         <Col span={8}>
           <h3>Your PassKeys</h3>
-          {passkeys.map(passkey =>
+          {passkeys.map((passkey) => (
             <Row key={passkey.id}>
               {passkey.name}
-              <Button onClick={async () => {
-                await removeWebAuthnKey(passkey)
-                await fetchData();
-              }}>Delete</Button>
+              <Button
+                onClick={async () => {
+                  await removeWebAuthnKey(passkey);
+                  await fetchData();
+                }}
+              >
+                Delete
+              </Button>
             </Row>
-          )}
+          ))}
         </Col>
       </Row>
       <Row justify="center" align="middle">

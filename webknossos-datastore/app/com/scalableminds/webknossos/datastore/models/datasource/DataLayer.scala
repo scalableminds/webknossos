@@ -77,6 +77,21 @@ object ElementClass extends ExtendedEnumeration {
       case ElementClass.int64  => true
     }
 
+  def defaultIntensityRange(elementClass: ElementClass.Value): (Double, Double) = elementClass match {
+    case ElementClass.uint8  => (0.0, math.pow(2, 8) - 1)
+    case ElementClass.uint16 => (0.0, math.pow(2, 16) - 1)
+    case ElementClass.uint24 => (0.0, math.pow(2, 8) - 1) // Assume uint24 rgb color data
+    case ElementClass.uint32 => (0.0, math.pow(2, 32) - 1)
+    case ElementClass.uint64 => (0.0, math.pow(2, 64) - 1)
+    case ElementClass.float  => (1.40239846e-45, 3.40282347e+38)
+    case ElementClass.double => (1.40129846e-45, 1.7976931348623157e+308)
+    case ElementClass.int8   => (math.pow(2, -7), math.pow(2, 7) - 1)
+    case ElementClass.int16  => (math.pow(2, -15), math.pow(2, 15) - 1)
+    case ElementClass.int32  => (math.pow(2, -31), math.pow(2, 31) - 1)
+    case ElementClass.int64  => (math.pow(2, -63), math.pow(2, 63) - 1)
+    case _                   => (0.0, 255.0)
+  }
+
   def bytesPerElement(elementClass: ElementClass.Value): Int = elementClass match {
     case ElementClass.uint8  => 1
     case ElementClass.uint16 => 2

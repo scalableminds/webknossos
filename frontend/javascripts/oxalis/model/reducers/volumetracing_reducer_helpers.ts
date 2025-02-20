@@ -193,7 +193,7 @@ export function setMappingNameReducer(
       (listToSearchIn == null || listToSearchIn.indexOf(mappingName) === -1)
     ) {
       console.error(
-        `Cannot set mapping ${mappingName} of type ${mappingType} for volume tracing ${volumeTracing.tracingId} because it is not included in the agglomerate list of the data layer: ${agglomerates}.`,
+        `Cannot set mapping ${mappingName} of type ${mappingType} for volume tracing ${volumeTracing.tracingId} because it is not included in the mapping list of the data layer: ${listToSearchIn}.`,
       );
       return state;
     }

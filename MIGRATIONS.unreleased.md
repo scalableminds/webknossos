@@ -18,3 +18,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
     - Example command for the migration: `PG_PASSWORD=myPassword python main.py --src localhost:7500 --dst localhost:7155 --num_threads 20 --postgres webknossos@localhost:5430/webknossos`
 
 ### Postgres Evolutions:
+
+- [126-add-webauthn-credentials.sql](./conf/evolutions/126-add-webauthn-credentials.sql)

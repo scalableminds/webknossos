@@ -6,14 +6,12 @@ import {
   removeWebAuthnKey,
   revokeAuthToken,
 } from "admin/admin_rest_api";
-import {
-  WebAuthnKeyDescriptor
-} from "types/api_flow_types"
 import { Button, Col, Form, Input, Modal, Row, Space, Spin } from "antd";
 import Toast from "libs/toast";
 import type { OxalisState } from "oxalis/store";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+import type { WebAuthnKeyDescriptor } from "types/api_flow_types";
 
 import {} from "@github/webauthn-json/browser-ponyfill";
 

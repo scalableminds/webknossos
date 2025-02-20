@@ -6,6 +6,9 @@ import {
   removeWebAuthnKey,
   revokeAuthToken,
 } from "admin/admin_rest_api";
+import {
+  WebAuthnKeyDescriptor
+} from "types/api_flow_types"
 import { Button, Col, Form, Input, Modal, Row, Space, Spin } from "antd";
 import Toast from "libs/toast";
 import type { OxalisState } from "oxalis/store";
@@ -18,7 +21,7 @@ function ManagePassKeyView() {
   const [isPassKeyNameModalOpen, setIsPassKeyNameModalOpen] = useState(false);
   const [newPassKeyName, setNewPassKeyName] = useState("");
   const [_isLoading, setIsLoading] = useState<boolean>(true);
-  const [passkeys, setPasskeys] = useState([]);
+  const [passkeys, setPasskeys] = useState<WebAuthnKeyDescriptor[]>([]);
   useEffect(() => {
     fetchData();
   }, []);

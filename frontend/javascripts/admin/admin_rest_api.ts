@@ -149,7 +149,7 @@ export async function loginUser(formValues: {
   return [activeUser, organization];
 }
 
-export async function doWebAuthnLogin(): Promise<ArbitraryObject> {
+export async function doWebAuthnLogin(): Promise<[APIUser, APIOrganization]> {
   const webAuthnAuthAssertion = await Request.receiveJSON("/api/auth/webauthn/auth/start", {
     method: "POST",
   });

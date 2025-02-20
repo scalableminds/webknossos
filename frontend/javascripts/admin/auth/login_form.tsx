@@ -139,6 +139,20 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
             </FormItem>
           )}
         </div>
+        <div style={{ display: "flex", justifyContent: "space-around", gap: 12 }}>
+          <FormItem style={{ flexGrow: 1 }}>
+            <Button type="seconary" style={{ width: "100%" }} onClick={async() => {
+                const [user, organization] = await doWebAuthnLogin();
+                Store.dispatch(setActiveUserAction(user));
+                Store.dispatch(setActiveOrganizationAction(organization));
+                if (onLoggedIn) {
+                  onLoggedIn();
+                }
+            }}>
+              Log in with Passkey
+            </Button>
+          </FormItem>
+        </div>
         {hideFooter ? null : (
           <FormItem
             style={{
@@ -155,26 +169,6 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
                 style={{ ...linkStyle, marginRight: 10, flexGrow: 1, whiteSpace: "nowrap" }}
               >
                 Register Now
-              </Link>
-              <Link
-                to="#"
-                style={{
-                  ...linkStyle,
-                  marginRight: 10,
-                  marginLeft: 10,
-                  flexGrow: 1,
-                  whiteSpace: "nowrap",
-                }}
-                onClick={async () => {
-                  const [user, organization] = await doWebAuthnLogin();
-                  Store.dispatch(setActiveUserAction(user));
-                  Store.dispatch(setActiveOrganizationAction(organization));
-                  if (onLoggedIn) {
-                    onLoggedIn();
-                  }
-                }}
-              >
-                Use PassKey
               </Link>
               <Link to="/auth/resetPassword" style={{ ...linkStyle, whiteSpace: "nowrap" }}>
                 Forgot Password

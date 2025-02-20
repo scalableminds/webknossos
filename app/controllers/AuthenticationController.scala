@@ -178,7 +178,7 @@ class AuthenticationController @Inject()(
     }
   }
 
-  private def authenticateInner(loginInfo: LoginInfo)(implicit header: RequestHeader): Future[Result] = {
+  private def authenticateInner(loginInfo: LoginInfo)(implicit header: RequestHeader): Future[Result] =
     for {
       result <- userService.retrieve(loginInfo).flatMap {
         case Some(user) if !user.isDeactivated =>
@@ -186,8 +186,8 @@ class AuthenticationController @Inject()(
             authenticator <- combinedAuthenticatorService.create(loginInfo)
             value <- combinedAuthenticatorService.init(authenticator)
             result <- combinedAuthenticatorService.embed(value, Ok)
-            _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(emailVerificationService
-              .assertEmailVerifiedOrResendVerificationMail(user)(GlobalAccessContext, ec))
+            _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(
+              emailVerificationService.assertEmailVerifiedOrResendVerificationMail(user)(GlobalAccessContext, ec))
             _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
             _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
             _ = logger.info(f"User ${user._id} authenticated.")
@@ -196,8 +196,7 @@ class AuthenticationController @Inject()(
           Future.successful(BadRequest(Messages("error.noUser")))
         case Some(_) => Future.successful(BadRequest(Messages("user.deactivated")))
       }
-    } yield result
-  };
+    } yield result;
 
   def authenticate: Action[AnyContent] = Action.async { implicit request =>
     signInForm
@@ -212,8 +211,8 @@ class AuthenticationController @Inject()(
           idF
             .map(id => Credentials(id, signInData.password))
             .flatMap(credentials => credentialsProvider.authenticate(credentials))
-            .flatMap {
-              loginInfo => authenticateInner(loginInfo)
+            .flatMap { loginInfo =>
+              authenticateInner(loginInfo)
             }
             .recover {
               case _: ProviderException => BadRequest(Messages("error.invalidCredentials"))
@@ -446,15 +445,13 @@ class AuthenticationController @Inject()(
     }
   }
 
-  def webauthnAuthStart(): Action[AnyContent] = Action { implicit _ =>
-    {
-      val opts = StartAssertionOptions.builder().build();
-      val assertion = relyingParty.startAssertion(opts);
-      val sessionId = UUID.randomUUID().toString;
-      val cookie = Cookie("webauthn-session", sessionId, maxAge = Some(120), httpOnly = true, secure = true)
-      temporaryAssertionStore.insert(sessionId, assertion, Some(2 minutes));
-      Ok(Json.toJson(Json.parse(assertion.toCredentialsGetJson))).withCookies(cookie)
-    }
+  def webauthnAuthStart(): Action[AnyContent] = Action {
+    val opts = StartAssertionOptions.builder().build();
+    val assertion = relyingParty.startAssertion(opts);
+    val sessionId = UUID.randomUUID().toString;
+    val cookie = Cookie("webauthn-session", sessionId, maxAge = Some(120), httpOnly = true, secure = true)
+    temporaryAssertionStore.insert(sessionId, assertion, Some(2 minutes));
+    Ok(Json.toJson(Json.parse(assertion.toCredentialsGetJson))).withCookies(cookie)
   }
 
   def webauthnAuthFinalize(): Action[WebAuthnAuthentication] = Action.async(validateJson[WebAuthnAuthentication]) {
@@ -504,12 +501,12 @@ class AuthenticationController @Inject()(
           .displayName(request.identity.name)
           .id(WebAuthnCredentialRepository.objectIdToByteArray(request.identity._multiUser))
           .build();
-        val opts = StartRegistrationOptions.builder()
+        val opts = StartRegistrationOptions
+          .builder()
           .user(userIdentity)
           .timeout(60000)
-          .authenticatorSelection(AuthenticatorSelectionCriteria.builder()
-            .residentKey(ResidentKeyRequirement.REQUIRED)
-            .build())
+          .authenticatorSelection(
+            AuthenticatorSelectionCriteria.builder().residentKey(ResidentKeyRequirement.REQUIRED).build())
           .build()
         val registration = relyingParty.startRegistration(opts);
         temporaryRegistrationStore.insert(request.identity._multiUser, registration);
@@ -552,18 +549,23 @@ class AuthenticationController @Inject()(
       }
     }
 
-  def webauthnListKeys: Action[AnyContent] = sil.SecuredAction.async { implicit request => {
-    for {
-      keys <- webAuthnCredentialDAO.listKeys(request.identity._multiUser)
-      reducedKeys = keys.map(credential => WebAuthnKeyDescriptor(credential._id, credential.name))
-    } yield Ok(Json.toJson(reducedKeys))
-  }}
+  def webauthnListKeys: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    {
+      for {
+        keys <- webAuthnCredentialDAO.listKeys(request.identity._multiUser)
+        reducedKeys = keys.map(credential => WebAuthnKeyDescriptor(credential._id, credential.name))
+      } yield Ok(Json.toJson(reducedKeys))
+    }
+  }
 
-  def webauthnRemoveKey: Action[WebAuthnKeyDescriptor] = sil.SecuredAction.async(validateJson[WebAuthnKeyDescriptor]) { implicit request => {
-    for {
-      _ <- webAuthnCredentialDAO.removeById(request.body.id, request.identity._multiUser)
-    } yield Ok(Json.obj())
-  }}
+  def webauthnRemoveKey: Action[WebAuthnKeyDescriptor] = sil.SecuredAction.async(validateJson[WebAuthnKeyDescriptor]) {
+    implicit request =>
+      {
+        for {
+          _ <- webAuthnCredentialDAO.removeById(request.body.id, request.identity._multiUser)
+        } yield Ok(Json.obj())
+      }
+  }
 
   private lazy val absoluteOpenIdConnectCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
 

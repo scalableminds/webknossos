@@ -42,7 +42,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
   protected def idColumn(x: Multiusers): Rep[String] = x._Id
   protected def isDeletedColumn(x: Multiusers): Rep[Boolean] = x.isdeleted
 
-  protected def parse(r: MultiusersRow): Fox[MultiUser] = {
+  protected def parse(r: MultiusersRow): Fox[MultiUser] =
     for {
       novelUserExperienceInfos <- JsonHelper.parseAndValidateJson[JsObject](r.noveluserexperienceinfos).toFox
       theme <- Theme.fromString(r.selectedtheme).toFox
@@ -60,7 +60,6 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
         r.isdeleted
       )
     }
-  }
 
   def insertOne(u: MultiUser): Fox[Unit] =
     for {
@@ -143,7 +142,6 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[MultiusersRow])
       parsed <- parseFirst(r, id)
     } yield parsed
-
 
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext): Fox[MultiUser] =
     for {

@@ -27,20 +27,20 @@ object WebAuthnCredentialRepository {
  */
 
 @nowarn("cat=deprecation")
-class WebAuthnCredentialRepository @Inject()(multiUserDAO: MultiUserDAO, webAuthnCredentialDAO: WebAuthnCredentialDAO) extends CredentialRepository with LazyLogging {
+class WebAuthnCredentialRepository @Inject()(multiUserDAO: MultiUserDAO, webAuthnCredentialDAO: WebAuthnCredentialDAO)
+    extends CredentialRepository
+    with LazyLogging {
   def getCredentialIdsForUsername(email: String): java.util.Set[PublicKeyCredentialDescriptor] = {
     val result = for {
       user <- multiUserDAO.findOneByEmail(email)(GlobalAccessContext).await("Java interop")
       keys <- webAuthnCredentialDAO.findAllForUser(user._id)(GlobalAccessContext).await("Java interop")
       creds = keys.map(key => {
-        PublicKeyCredentialDescriptor.builder()
-          .id(WebAuthnCredentialRepository.bytesToByteArray(key.keyId))
-          .build()
+        PublicKeyCredentialDescriptor.builder().id(WebAuthnCredentialRepository.bytesToByteArray(key.keyId)).build()
       })
     } yield creds;
     result match {
       case Full(creds) => creds.toSet.asJava;
-      case Empty => Set[PublicKeyCredentialDescriptor]().asJava;
+      case Empty       => Set[PublicKeyCredentialDescriptor]().asJava;
       case Failure(msg, _, _) => {
         logger.error(msg);
         Set[PublicKeyCredentialDescriptor]().asJava
@@ -48,22 +48,21 @@ class WebAuthnCredentialRepository @Inject()(multiUserDAO: MultiUserDAO, webAuth
     }
   }
 
-  def getUserHandleForUsername(email: String): Optional[ByteArray] = {
+  def getUserHandleForUsername(email: String): Optional[ByteArray] =
     multiUserDAO.findOneByEmail(email)(GlobalAccessContext).await("Java interop") match {
       case Full(user) => Optional.ofNullable(WebAuthnCredentialRepository.objectIdToByteArray(user._id))
-      case Empty => Optional.empty()
+      case Empty      => Optional.empty()
       case Failure(msg, _, _) => {
         logger.error(msg);
         Optional.empty();
       }
     }
-  }
 
   def getUsernameForUserHandle(handle: ByteArray): Optional[String] = {
     val id = WebAuthnCredentialRepository.byteArrayToObjectId(handle)
     multiUserDAO.findOneById(id)(GlobalAccessContext).await("Java interop") match {
       case Full(user) => Optional.ofNullable(user.email)
-      case Empty => Optional.empty()
+      case Empty      => Optional.empty()
       case Failure(msg, _, _) => {
         logger.error(msg);
         Optional.empty();
@@ -75,8 +74,11 @@ class WebAuthnCredentialRepository @Inject()(multiUserDAO: MultiUserDAO, webAuth
     val credId = WebAuthnCredentialRepository.byteArrayToBytes(credentialId)
     val userId = WebAuthnCredentialRepository.byteArrayToObjectId(userHandle)
     val result = for {
-      credential <- webAuthnCredentialDAO.findByKeyIdAndUserId(credId, userId)(GlobalAccessContext).await("Java interop")
-      registered = RegisteredCredential.builder()
+      credential <- webAuthnCredentialDAO
+        .findByKeyIdAndUserId(credId, userId)(GlobalAccessContext)
+        .await("Java interop")
+      registered = RegisteredCredential
+        .builder()
         .credentialId(WebAuthnCredentialRepository.bytesToByteArray(credential.keyId))
         .userHandle(WebAuthnCredentialRepository.objectIdToByteArray(credential._multiUser))
         .publicKeyCose(new ByteArray((credential.publicKeyCose)))
@@ -85,7 +87,7 @@ class WebAuthnCredentialRepository @Inject()(multiUserDAO: MultiUserDAO, webAuth
     } yield registered;
     result match {
       case Full(credential) => Optional.ofNullable(credential);
-      case Empty => Optional.empty();
+      case Empty            => Optional.empty();
       case Failure(msg, _, _) => {
         logger.error(msg);
         Optional.empty()
@@ -93,26 +95,28 @@ class WebAuthnCredentialRepository @Inject()(multiUserDAO: MultiUserDAO, webAuth
     }
   }
 
-  def lookupAll(credentialId: ByteArray): java.util.Set[RegisteredCredential] = {
-    webAuthnCredentialDAO.listByKeyId(WebAuthnCredentialRepository.byteArrayToBytes(credentialId))(GlobalAccessContext).await("Java interop") match {
-        case Full(credentials: List[WebAuthnCredential]) =>
-          credentials
-            .map(credential => {
-              RegisteredCredential.builder()
-                .credentialId(WebAuthnCredentialRepository.bytesToByteArray(credential.keyId))
-                .userHandle(WebAuthnCredentialRepository.objectIdToByteArray(credential._multiUser))
-                .publicKeyCose(new ByteArray(credential.publicKeyCose))
-                .signatureCount(credential.signatureCount)
-                .build()
-            })
-            .toSet
-            .asJava
-        case Empty => Set[RegisteredCredential]().asJava
-        case Failure(msg, _, _) => {
-          logger.error(msg);
-          Set[RegisteredCredential]().asJava
-        }
+  def lookupAll(credentialId: ByteArray): java.util.Set[RegisteredCredential] =
+    webAuthnCredentialDAO
+      .listByKeyId(WebAuthnCredentialRepository.byteArrayToBytes(credentialId))(GlobalAccessContext)
+      .await("Java interop") match {
+      case Full(credentials: List[WebAuthnCredential]) =>
+        credentials
+          .map(credential => {
+            RegisteredCredential
+              .builder()
+              .credentialId(WebAuthnCredentialRepository.bytesToByteArray(credential.keyId))
+              .userHandle(WebAuthnCredentialRepository.objectIdToByteArray(credential._multiUser))
+              .publicKeyCose(new ByteArray(credential.publicKeyCose))
+              .signatureCount(credential.signatureCount)
+              .build()
+          })
+          .toSet
+          .asJava
+      case Empty => Set[RegisteredCredential]().asJava
+      case Failure(msg, _, _) => {
+        logger.error(msg);
+        Set[RegisteredCredential]().asJava
       }
-  }
+    }
 
 }

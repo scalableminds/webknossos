@@ -20,10 +20,7 @@ import type {
   SegmentMap,
   VolumeTracing,
 } from "oxalis/store";
-import {
-  getMaximumSegmentIdForLayer,
-  getSegmentationLayerByName,
-} from "../accessors/dataset_accessor";
+import { getMaximumSegmentIdForLayer } from "../accessors/dataset_accessor";
 import { mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
 
 export function updateVolumeTracing(
@@ -181,22 +178,6 @@ export function setMappingNameReducer(
   // not stored in the back-end for now.
   if (mappingType !== "HDF5" || !isMappingEnabled) {
     mappingName = null;
-  }
-  if (mappingName) {
-    const { agglomerates, mappings } = getSegmentationLayerByName(
-      state.dataset,
-      volumeTracing.tracingId,
-    );
-    const listToSearchIn = mappingType === "HDF5" ? agglomerates : mappings;
-    if (
-      mappingType === "HDF5" &&
-      (listToSearchIn == null || listToSearchIn.indexOf(mappingName) === -1)
-    ) {
-      console.error(
-        `Cannot set mapping ${mappingName} of type ${mappingType} for volume tracing ${volumeTracing.tracingId} because it is not included in the mapping list of the data layer: ${listToSearchIn}.`,
-      );
-      return state;
-    }
   }
 
   return updateVolumeTracing(state, volumeTracing.tracingId, {

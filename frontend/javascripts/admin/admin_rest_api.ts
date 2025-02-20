@@ -1,9 +1,4 @@
-import {
-  create,
-  get,
-  parseCreationOptionsFromJSON,
-  parseRequestOptionsFromJSON,
-} from "@github/webauthn-json/browser-ponyfill";
+import * as webauthn from "@github/webauthn-json";
 import dayjs from "dayjs";
 import { V3 } from "libs/mjs";
 import type { RequestOptions } from "libs/request";
@@ -158,8 +153,7 @@ export async function doWebAuthnLogin(): Promise<ArbitraryObject> {
   const webAuthnAuthAssertion = await Request.receiveJSON("/api/auth/webauthn/auth/start", {
     method: "POST",
   });
-  const options = parseRequestOptionsFromJSON(webAuthnAuthAssertion);
-  const response = JSON.stringify(await get(options));
+  const response = JSON.stringify(await webauthn.get(webAuthnAuthAssertion));
   await Request.sendJSONReceiveJSON("/api/auth/webauthn/auth/finalize", {
     method: "POST",
     data: { key: response },
@@ -177,8 +171,7 @@ export async function doWebAuthnRegistration(name: string): Promise<any> {
       method: "POST",
     },
   ).then((body) => JSON.parse(body));
-  const options = parseCreationOptionsFromJSON(webAuthnRegistrationAssertion);
-  const response = JSON.stringify(await create(options));
+  const response = JSON.stringify(await webauthn.create(webAuthnRegistrationAssertion))
   return Request.sendJSONReceiveJSON("/api/auth/webauthn/register/finalize", {
     data: { name: name, key: response },
     method: "POST",

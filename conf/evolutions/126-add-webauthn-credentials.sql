@@ -7,7 +7,7 @@ CREATE TABLE webknossos.webauthnCredentials(
   _multiUser CHAR(24) NOT NULL,
   keyId BYTEA NOT NULL,
   name TEXT NOT NULL,
-  publicKeyCode BYTEA NOT NULL,
+  publicKeyCose BYTEA NOT NULL,
   signatureCount INTEGER NOT NULL,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (_multiUser, keyId)

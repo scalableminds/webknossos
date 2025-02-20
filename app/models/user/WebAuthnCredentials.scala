@@ -2,15 +2,13 @@ package models.user
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{BoxImplicits, Fox}
-import com.scalableminds.webknossos.schema.Tables
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
-import net.liftweb.common.Box
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient}
 
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 case class WebAuthnCredential(
   _id: ObjectId,

@@ -5,9 +5,7 @@ import com.yubico.webauthn._
 import com.yubico.webauthn.data._
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
-import com.typesafe.scalalogging.Logger
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import org.slf4j.LoggerFactory
+import net.liftweb.common.{Empty, Full}
 
 import java.util.Optional
 import javax.inject.Inject

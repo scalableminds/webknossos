@@ -461,12 +461,15 @@ class AuthenticationController @Inject()(
     implicit request =>
       {
         request.cookies.get("webauthn-session") match {
+          case None =>
+            Future.successful(BadRequest("Authentication took too long, please try again."))
           case Some(cookie) =>
             val sessionId = cookie.value
             val challengeData = temporaryAssertionStore.get(sessionId)
             temporaryAssertionStore.remove(sessionId)
             challengeData match {
-              case Some(data) =>
+              case None => Future.successful(Unauthorized("Authentication timeout."))
+              case Some(data) => {
                 try {
                   val keyCredential = PublicKeyCredential.parseAssertionResponseJson(request.body.key);
                   val opts = FinishAssertionOptions.builder().request(data).response(keyCredential).build();
@@ -475,18 +478,17 @@ class AuthenticationController @Inject()(
                     userId = WebAuthnCredentialRepository.byteArrayToObjectId(result.getCredential.getUserHandle);
                     multiUser <- multiUserDAO.findOne(userId)(GlobalAccessContext);
                     result <- multiUser._lastLoggedInIdentity match {
+                      case None => Future.successful(InternalServerError("user never logged in"))
                       case Some(userId) => {
                         val loginInfo = LoginInfo("credentials", userId.toString);
                         authenticateInner(loginInfo)
                       }
-                      case None => Future.successful(InternalServerError("user never logged in"))
                     }
                   } yield result;
                 } catch {
                   case e: AssertionFailedException => Future.successful(Unauthorized("Authentication failed."))
                 }
-              case None =>
-                Future.successful(BadRequest("Authentication took too long, please try again."))
+              }
             }
         }
       }

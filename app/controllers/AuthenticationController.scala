@@ -100,6 +100,7 @@ class AuthenticationController @Inject()(
       .build();
     RelyingParty.builder().identity(identity).credentialRepository(webAuthnCredentialRepository).build()
   }
+  private val blockingContext: ExecutionContext = actorSystem.dispatchers.lookup("play.context.blocking")
 
   private lazy val isOIDCEnabled = conf.Features.openIdConnectEnabled
 
@@ -470,10 +471,9 @@ class AuthenticationController @Inject()(
                 try {
                   val keyCredential = PublicKeyCredential.parseAssertionResponseJson(request.body.key);
                   val opts = FinishAssertionOptions.builder().request(data).response(keyCredential).build();
-                  val result = relyingParty.finishAssertion(opts);
-                  val userId = WebAuthnCredentialRepository.byteArrayToObjectId(result.getCredential.getUserHandle)
-                  logger.info(s"webauthn authenticated ${userId}");
                   for {
+                    result <- Future { relyingParty.finishAssertion(opts) }(blockingContext); // NOTE: Prevent blocking on HTTP handler
+                    userId = WebAuthnCredentialRepository.byteArrayToObjectId(result.getCredential.getUserHandle);
                     multiUser <- multiUserDAO.findOne(userId)(GlobalAccessContext);
                     result <- multiUser._lastLoggedInIdentity match {
                       case Some(userId) => {
@@ -496,7 +496,7 @@ class AuthenticationController @Inject()(
   def webauthnRegisterStart(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       email <- userService.emailFor(request.identity);
-      result <- {
+      result <- Future {
         val userIdentity = UserIdentity
           .builder()
           .name(email)
@@ -512,8 +512,8 @@ class AuthenticationController @Inject()(
           .build()
         val registration = relyingParty.startRegistration(opts);
         temporaryRegistrationStore.insert(request.identity._multiUser, registration);
-        Fox.successful(Ok(Json.toJson(registration.toCredentialsCreateJson)))
-      }
+        Ok(Json.toJson(registration.toCredentialsCreateJson))
+      }(blockingContext)
     } yield result;
   }
 
@@ -527,19 +527,21 @@ class AuthenticationController @Inject()(
             val response = PublicKeyCredential.parseRegistrationResponseJson(request.body.key);
             val opts = FinishRegistrationOptions.builder().request(data).response(response).build();
             try {
-              val key = relyingParty.finishRegistration(opts)
-              logger.info(s"discoverable ${key.isDiscoverable}");
-              val credential = WebAuthnCredential(
-                ObjectId.generate,
-                request.identity._multiUser,
-                WebAuthnCredentialRepository.byteArrayToBytes(key.getKeyId.getId),
-                request.body.name,
-                key.getPublicKeyCose.getBytes,
-                key.getSignatureCount.toInt,
-                isDeleted = false,
-              )
-              logger.info(s"credential id ${credential._id}");
-              webAuthnCredentialDAO.insertOne(credential).map(_ => Ok(""))
+              for {
+                key <- Future { relyingParty.finishRegistration(opts) }(blockingContext);
+                result <- {
+                  val credential = WebAuthnCredential(
+                    ObjectId.generate,
+                    request.identity._multiUser,
+                    WebAuthnCredentialRepository.byteArrayToBytes(key.getKeyId.getId),
+                    request.body.name,
+                    key.getPublicKeyCose.getBytes,
+                    key.getSignatureCount.toInt,
+                    isDeleted = false,
+                  )
+                  webAuthnCredentialDAO.insertOne(credential).map(_ => Ok(""))
+                }
+              } yield result;
             } catch {
               case e: RegistrationFailedException => Future.successful(BadRequest("Failed to register key"))
             }

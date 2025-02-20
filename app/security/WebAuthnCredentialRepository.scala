@@ -38,14 +38,18 @@ class WebAuthnCredentialRepository @Inject()(multiUserDAO: MultiUserDAO, webAuth
   }
 
   def getUserHandleForUsername(email: String): Optional[ByteArray] = {
-    val user = multiUserDAO.findOneByEmail(email)(GlobalAccessContext).get("Java interop")
-    Optional.ofNullable(WebAuthnCredentialRepository.objectIdToByteArray(user._id))
+    multiUserDAO.findOneByEmail(email)(GlobalAccessContext).await("Java interop") match {
+      case Full(user) => Optional.ofNullable(WebAuthnCredentialRepository.objectIdToByteArray(user._id))
+      case Empty => Optional.empty()
+    }
   }
 
   def getUsernameForUserHandle(handle: ByteArray): Optional[String] = {
     val id = WebAuthnCredentialRepository.byteArrayToObjectId(handle)
-    val user = multiUserDAO.findOneById(id)(GlobalAccessContext).get("Java interop")
-    Optional.ofNullable(user.email)
+    multiUserDAO.findOneById(id)(GlobalAccessContext).await("Java interop") match {
+      case Full(user) => Optional.ofNullable(user.email)
+      case Empty => Optional.empty()
+    }
   }
 
   def lookup(credentialId: ByteArray, userHandle: ByteArray): Optional[RegisteredCredential] = {

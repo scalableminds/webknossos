@@ -2,9 +2,10 @@ package models.user
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{BoxImplicits, Fox}
 import com.scalableminds.webknossos.schema.Tables
 import com.scalableminds.webknossos.schema.Tables._
+import net.liftweb.common.Box
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient}
 
@@ -62,7 +63,9 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient) (implicit ec: Execut
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM webknossos.webauthncredentials WHERE keyId = $id AND _multiUser = $userId AND $accessQuery".as[WebauthncredentialsRow])
       parsed <- parseAll(r)
-    } yield parsed.head
+      first <- Fox.option2Fox(parsed.headOption)
+    } yield first
+
 
   def insertOne(c: WebAuthnCredential): Fox[Unit] =
     for {

@@ -3,13 +3,14 @@ START TRANSACTION;
 do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 126, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 CREATE TABLE webknossos.webauthnCredentials(
-  _id TEXT NOT NULL,
+  _id TEXT PRIMARY KEY,
   _multiUser CHAR(24) NOT NULL,
+  keyId BYTEA NOT NULL,
   name TEXT NOT NULL,
   publicKeyCode BYTEA NOT NULL,
   signatureCount INTEGER NOT NULL,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  PRIMARY KEY (_id, _multiUser)
+  UNIQUE (_multiUser, keyId)
 );
 
 ALTER TABLE webknossos.webauthnCredentials

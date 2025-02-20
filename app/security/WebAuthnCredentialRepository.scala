@@ -14,8 +14,8 @@ import javax.inject.Inject
 import scala.jdk.CollectionConverters._
 
 object WebAuthnCredentialRepository {
-  def byteArrayToHex(arr: ByteArray): String = arr.getHex
-  def hexToByteArray(hex: String): ByteArray = ByteArray.fromHex(hex)
+  def byteArrayToBytes(arr: ByteArray): Array[Byte] = arr.getBytes
+  def bytesToByteArray(bytes: Array[Byte]): ByteArray = new ByteArray(bytes)
 
   def objectIdToByteArray(id: ObjectId): ByteArray = new ByteArray(id.toString.getBytes())
   def byteArrayToObjectId(arr: ByteArray): ObjectId = new ObjectId(new String(arr.getBytes))
@@ -32,7 +32,7 @@ class WebAuthnCredentialRepository @Inject()(multiUserDAO: MultiUserDAO, webAuth
     val keys = webAuthnCredentialDAO.findAllForUser(user._id)(GlobalAccessContext).get("Java interop");
     keys.map(key => {
       PublicKeyCredentialDescriptor.builder()
-        .id(WebAuthnCredentialRepository.hexToByteArray(key._id))
+        .id(WebAuthnCredentialRepository.bytesToByteArray(key.keyId))
         .build()
     }).to(Set).asJava
   }
@@ -49,14 +49,14 @@ class WebAuthnCredentialRepository @Inject()(multiUserDAO: MultiUserDAO, webAuth
   }
 
   def lookup(credentialId: ByteArray, userHandle: ByteArray): Optional[RegisteredCredential] = {
-    val credId = WebAuthnCredentialRepository.byteArrayToHex(credentialId)
+    val credId = WebAuthnCredentialRepository.byteArrayToBytes(credentialId)
     val userId = WebAuthnCredentialRepository.byteArrayToObjectId(userHandle)
-    val credential = webAuthnCredentialDAO.findByIdAndUserId(credId, userId)(GlobalAccessContext).await("Java interop") match {
+    val credential = webAuthnCredentialDAO.findByKeyIdAndUserId(credId, userId)(GlobalAccessContext).await("Java interop") match {
       case Full(credential) => credential;
       case Empty => return Optional.empty();
     }
     Optional.ofNullable(RegisteredCredential.builder()
-      .credentialId(WebAuthnCredentialRepository.hexToByteArray(credential._id))
+      .credentialId(WebAuthnCredentialRepository.bytesToByteArray(credential.keyId))
       .userHandle(WebAuthnCredentialRepository.objectIdToByteArray(credential._multiUser))
       .publicKeyCose(new ByteArray(credential.publicKeyCose))
       .signatureCount(credential.signatureCount)
@@ -64,12 +64,12 @@ class WebAuthnCredentialRepository @Inject()(multiUserDAO: MultiUserDAO, webAuth
   }
 
   def lookupAll(credentialId: ByteArray): java.util.Set[RegisteredCredential] = {
-    webAuthnCredentialDAO.listById(WebAuthnCredentialRepository.byteArrayToHex(credentialId))(GlobalAccessContext).await("Java interop") match {
+    webAuthnCredentialDAO.listByKeyId(WebAuthnCredentialRepository.byteArrayToBytes(credentialId))(GlobalAccessContext).await("Java interop") match {
         case Full(credentials: List[WebAuthnCredential]) =>
           credentials
             .map(credential => {
               RegisteredCredential.builder()
-                .credentialId(WebAuthnCredentialRepository.hexToByteArray(credential._id))
+                .credentialId(WebAuthnCredentialRepository.bytesToByteArray(credential.keyId))
                 .userHandle(WebAuthnCredentialRepository.objectIdToByteArray(credential._multiUser))
                 .publicKeyCose(new ByteArray(credential.publicKeyCose))
                 .signatureCount(credential.signatureCount)

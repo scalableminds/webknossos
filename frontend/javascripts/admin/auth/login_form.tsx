@@ -141,7 +141,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
         </div>
         <div style={{ display: "flex", justifyContent: "space-around", gap: 12 }}>
           <FormItem style={{ flexGrow: 1 }}>
-            <Button type="seconary" style={{ width: "100%" }} onClick={async() => {
+            <Button style={{ width: "100%" }} onClick={async() => {
                 const [user, organization] = await doWebAuthnLogin();
                 Store.dispatch(setActiveUserAction(user));
                 Store.dispatch(setActiveOrganizationAction(organization));

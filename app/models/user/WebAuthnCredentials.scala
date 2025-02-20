@@ -12,8 +12,9 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 case class WebAuthnCredential(
-  _id: String,
+  _id: ObjectId,
   _multiUser: ObjectId,
+  keyId: Array[Byte],
   name: String,
   publicKeyCose: Array[Byte],
   signatureCount: Int,
@@ -31,8 +32,9 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient) (implicit ec: Execut
     protected def parse(r: WebauthncredentialsRow): Fox[WebAuthnCredential] =
         Fox.successful(
           WebAuthnCredential(
-            r._Id,
+            ObjectId(r._Id),
             ObjectId(r._Multiuser),
+            r.keyid,
             r.name,
             r.publickeycose,
             r.signaturecount,
@@ -47,25 +49,25 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient) (implicit ec: Execut
       parsed <- parseAll(r)
     } yield parsed
 
-  def listById(id: String)(implicit ct: DBAccessContext): Fox[List[WebAuthnCredential]] =
+  def listByKeyId(id: Array[Byte])(implicit ctx: DBAccessContext): Fox[List[WebAuthnCredential]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM webknossos.webauthncredentials WHERE _id = $id AND $accessQuery".as[WebauthncredentialsRow])
+      r <- run(q"SELECT $columns FROM webknossos.webauthncredentials WHERE keyId = $id AND $accessQuery".as[WebauthncredentialsRow])
       parsed <- parseAll(r)
     } yield parsed
 
 
-  def findByIdAndUserId(id: String, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[WebAuthnCredential] =
+  def findByKeyIdAndUserId(id: Array[Byte], userId: ObjectId)(implicit ctx: DBAccessContext): Fox[WebAuthnCredential] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM webknossos.webauthncredentials WHERE _id = $id AND _multiUser = $userId AND $accessQuery".as[WebauthncredentialsRow])
-      parsed <- parseFirst(r, id)
-    } yield parsed
+      r <- run(q"SELECT $columns FROM webknossos.webauthncredentials WHERE keyId = $id AND _multiUser = $userId AND $accessQuery".as[WebauthncredentialsRow])
+      parsed <- parseAll(r)
+    } yield parsed.head
 
   def insertOne(c: WebAuthnCredential): Fox[Unit] =
     for {
-      _ <- run(q"""INSERT INTO webknossos.webauthncredentials(_id, _multiUser, name, publicKeyCose, signatureCount)
-                       VALUES(${c._id}, ${c._multiUser}, ${c.name},
+      _ <- run(q"""INSERT INTO webknossos.webauthncredentials(_id, _multiUser, keyId, name, publicKeyCose, signatureCount)
+                       VALUES(${c._id}, ${c._multiUser}, ${c.keyId}, ${c.name},
                               ${c.publicKeyCose}, ${c.signatureCount})""".asUpdate)
     } yield ()
 

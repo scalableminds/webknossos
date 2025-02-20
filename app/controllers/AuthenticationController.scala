@@ -525,8 +525,9 @@ class AuthenticationController @Inject()(
               val key = relyingParty.finishRegistration(opts)
               logger.info(s"discoverable ${key.isDiscoverable}");
               val credential = WebAuthnCredential(
-                WebAuthnCredentialRepository.byteArrayToHex(key.getKeyId.getId),
+                ObjectId.generate,
                 request.identity._multiUser,
+                WebAuthnCredentialRepository.byteArrayToBytes(key.getKeyId.getId),
                 request.body.name,
                 key.getPublicKeyCose.getBytes,
                 key.getSignatureCount.toInt,

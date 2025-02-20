@@ -43,7 +43,7 @@ object Category extends ExtendedEnumeration {
 object ElementClass extends ExtendedEnumeration {
   val uint8, uint16, uint24, uint32, uint64, float, double, int8, int16, int32, int64 = Value
 
-  def segmentationElementClasses: Set[Value] = Set(uint8, uint16, uint32, uint64)
+  def segmentationElementClasses: Set[Value] = Set(uint8, uint16, uint32, uint64, int8, int16, int32, int64)
 
   def encodeAsByte(elementClass: ElementClass.Value): Byte = {
     val asInt = elementClass match {

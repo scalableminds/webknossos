@@ -1209,3 +1209,8 @@ export type RenderAnimationOptions = {
   movieResolution: MOVIE_RESOLUTIONS;
   cameraPosition: CAMERA_POSITIONS;
 };
+
+export type WebAuthnKeyDescriptor = {
+  id: string;
+  name: string;
+}

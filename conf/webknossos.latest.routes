@@ -40,9 +40,10 @@ GET           /auth/oidc/login                                                  
 # Routes for WebAuthn
 POST          /auth/webauthn/auth/start                                                         controllers.AuthenticationController.webauthnAuthStart()
 POST          /auth/webauthn/auth/finalize                                                      controllers.AuthenticationController.webauthnAuthFinalize()
-
-POST          /auth/webauthn/register/start                                                    controllers.AuthenticationController.webauthnRegisterStart()
-POST          /auth/webauthn/register/finalize                                                 controllers.AuthenticationController.webauthnRegisterFinalize()
+POST          /auth/webauthn/register/start                                                     controllers.AuthenticationController.webauthnRegisterStart()
+POST          /auth/webauthn/register/finalize                                                  controllers.AuthenticationController.webauthnRegisterFinalize()
+GET           /auth/webauthn/keys                                                               controllers.AuthenticationController.webauthnListKeys()
+DELETE        /auth/webauthn/keys                                                               controllers.AuthenticationController.webauthnRemoveKey()
 
 # /auth/oidc/callback route is used literally in code
 GET           /auth/oidc/callback                                                               controllers.AuthenticationController.openIdCallback()

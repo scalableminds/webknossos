@@ -3,6 +3,8 @@ import {
   getAuthToken,
   revokeAuthToken,
   doWebAuthnRegistration,
+  listWebAuthnKeys,
+  removeWebAuthnKey,
 } from "admin/admin_rest_api";
 import { Button, Col, Form, Input, Modal, Row, Space, Spin } from "antd";
 import Toast from "libs/toast";
@@ -18,12 +20,16 @@ function ManagePassKeyView() {
   const [isPassKeyNameModalOpen, setIsPassKeyNameModalOpen] = useState(false);
   const [newPassKeyName, setNewPassKeyName] = useState("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [passkeys, setPasskeys] = useState([]);
   useEffect(() => {
     fetchData();
   }, []);
 
   async function fetchData(): Promise<void> {
-    // TODO: fetch list of registered passkeys
+     setIsLoading(true);
+     const keys = await listWebAuthnKeys();
+     setPasskeys(keys);
+     setIsLoading(false);
   }
 
   const registerNewPassKey = async () => {
@@ -33,6 +39,7 @@ function ManagePassKeyView() {
       console.debug(result);
       Toast.success("PassKey registered successfully");
       setNewPassKeyName("");
+      await fetchData();
     } catch (e) {
       Toast.error(`Registering new PassKey '${newPassKeyName}' failed`);
       console.error("Could not register new PassKey", e);
@@ -50,7 +57,15 @@ function ManagePassKeyView() {
       >
         <Col span={8}>
           <h3>Your PassKeys</h3>
-          TODO implement pass key list with delete functionality.
+          {passkeys.map(passkey =>
+            <Row key={passkey.id}>
+              {passkey.name}
+              <Button onClick={async () => {
+                await removeWebAuthnKey(passkey)
+                await fetchData();
+              }}>Delete</Button>
+            </Row>
+          )}
         </Col>
       </Row>
       <Row justify="center" align="middle">

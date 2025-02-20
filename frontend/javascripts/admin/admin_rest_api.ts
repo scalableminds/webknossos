@@ -96,6 +96,7 @@ import {
   type VoxelyticsLogLine,
   type VoxelyticsWorkflowListing,
   type VoxelyticsWorkflowReport,
+  type WebAuthnKeyDescriptor,
   type ZarrPrivateLink,
 } from "types/api_flow_types";
 import type { ArbitraryObject } from "types/globals";
@@ -178,6 +179,17 @@ export async function doWebAuthnRegistration(name: string): Promise<any> {
   return Request.sendJSONReceiveJSON("/api/auth/webauthn/register/finalize", {
     data: { name: name, key: response },
     method: "POST",
+  });
+}
+
+export async function listWebAuthnKeys(): Promise<Array<WebAuthnKeyDescriptor>> {
+  return await Request.receiveJSON("/api/auth/webauthn/keys");
+}
+
+export async function removeWebAuthnKey(key: WebAuthnKeyDescriptor): Promise<any> {
+  return await Request.sendJSONReceiveArraybuffer("/api/auth/webauthn/keys", {
+    method: "DELETE",
+    data: key,
   });
 }
 

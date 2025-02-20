@@ -74,9 +74,16 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient) (implicit ec: Execut
                               ${c.publicKeyCose}, ${c.signatureCount})""".asUpdate)
     } yield ()
 
-  def removeById(id: ObjectId): Fox[Unit] =
+  def listKeys(multiUser: ObjectId)(implicit ctx: DBAccessContext): Fox[List[WebAuthnCredential]] =
     for {
-      _ <- run(q"""DELETE FROM webknossos.webauthncredentials WHERE _id = ${id}""".asUpdate)
+      accessQuery <- readAccessQuery
+      r <- run(q"""SELECT $columns FROM webknossos.webauthncredentials WHERE _multiUser = $multiUser AND $accessQuery""".as[WebauthncredentialsRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
+  def removeById(id: ObjectId, multiUser: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(q"""DELETE FROM webknossos.webauthncredentials WHERE _id = ${id} AND _multiUser=${multiUser}""".asUpdate)
     } yield()
 
 }

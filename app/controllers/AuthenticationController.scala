@@ -49,6 +49,11 @@ object WebAuthnAuthentication {
   implicit val jsonFormat: OFormat[WebAuthnAuthentication] = Json.format[WebAuthnAuthentication]
 }
 
+case class WebAuthnKeyDescriptor(id: ObjectId, name: String)
+object WebAuthnKeyDescriptor {
+  implicit val jsonFormat: OFormat[WebAuthnKeyDescriptor] = Json.format[WebAuthnKeyDescriptor]
+}
+
 class AuthenticationController @Inject()(
     actorSystem: ActorSystem,
     credentialsProvider: CredentialsProvider,
@@ -543,6 +548,19 @@ class AuthenticationController @Inject()(
         }
       }
     }
+
+  def webauthnListKeys: Action[AnyContent] = sil.SecuredAction.async { implicit request => {
+    for {
+      keys <- webAuthnCredentialDAO.listKeys(request.identity._multiUser)
+      reducedKeys = keys.map(credential => WebAuthnKeyDescriptor(credential._id, credential.name))
+    } yield Ok(Json.toJson(reducedKeys))
+  }}
+
+  def webauthnRemoveKey: Action[WebAuthnKeyDescriptor] = sil.SecuredAction.async(validateJson[WebAuthnKeyDescriptor]) { implicit request => {
+    for {
+      _ <- webAuthnCredentialDAO.removeById(request.body.id, request.identity._multiUser)
+    } yield Ok(Json.obj())
+  }}
 
   private lazy val absoluteOpenIdConnectCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
 

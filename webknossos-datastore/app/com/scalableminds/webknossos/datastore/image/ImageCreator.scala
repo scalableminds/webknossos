@@ -246,7 +246,7 @@ object ImageCreator extends LazyLogging {
                                       byte6: Byte,
                                       byte7: Byte): Int = {
     val graySignedLong = ((byte7 & 0xFFL) << 56) | ((byte6 & 0xFFL) << 48) | ((byte5 & 0xFFL) << 40) | ((byte4 & 0xFFL) << 32) | ((byte3 & 0xFFL) << 24) | ((byte2 & 0xFFL) << 16) | ((byte1 & 0xFFL) << 8) | (byte0 & 0xFFL)
-    normalizeIntensityImpl(graySignedLong, intensityRange)
+    normalizeIntensityImpl(graySignedLong.toDouble, intensityRange)
   }
 
   private def normalizeIntensityFloat(intensityRange: (Double, Double),

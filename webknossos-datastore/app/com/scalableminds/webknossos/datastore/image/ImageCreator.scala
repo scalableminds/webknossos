@@ -113,7 +113,6 @@ object ImageCreator extends LazyLogging {
     val colored = new Array[Int](b.length / bytesPerElement)
     var idx = 0
     val l = b.length
-    val grayValues = Array.fill[Int](b.length / bytesPerElement)(0)
     val intensityRange = intensityRangeOpt.getOrElse(ElementClass.defaultIntensityRange(elementClass))
     while (idx + bytesPerElement <= l) {
       colored(idx / bytesPerElement) = {
@@ -163,7 +162,6 @@ object ImageCreator extends LazyLogging {
             case _ =>
               throw new Exception(s"Unsupported ElementClass for color layer thumbnail: $elementClass")
           }
-          grayValues(idx / bytesPerElement) = grayNormalized
           elementClass match {
             case ElementClass.uint24 => // assume uint24 rgb color data
               (0xFF << 24) | ((b(idx) & 0xFF) << 16) | ((b(idx + 1) & 0xFF) << 8) | ((b(idx + 2) & 0xFF) << 0)
@@ -175,15 +173,6 @@ object ImageCreator extends LazyLogging {
       }
       idx += bytesPerElement
     }
-    println("------------------------ Intensity Range --------------------------")
-    println(intensityRange)
-    println("------------------------ Thumbnail Input --------------------------")
-    println(b.mkString(","))
-    println("------------------------ Thumbnail Gray Values --------------------------")
-    println(grayValues.mkString(","))
-    println("------------------------ Thumbnail Colored Values --------------------------")
-    println(colored.mkString(","))
-    println("------------------------ End --------------------------")
     colored
   }
 

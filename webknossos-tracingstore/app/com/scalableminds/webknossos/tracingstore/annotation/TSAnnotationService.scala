@@ -464,7 +464,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       currentMaterializedVersion: Long,
       targetVersion: Long)(implicit tc: TokenContext, ec: ExecutionContext): Fox[EditableMappingUpdater] =
     for {
-      remoteFallbackLayer <- remoteFallbackLayerFromVolumeTracing(volumeTracing, tracingId)
+      remoteFallbackLayer <- remoteFallbackLayerFromVolumeTracing(volumeTracing, annotationId)
     } yield
       editableMappingUpdaterFor(annotationId,
                                 tracingId,
@@ -600,7 +600,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   def editableMappingLayer(annotationId: String, tracingId: String, tracing: VolumeTracing)(
       implicit tc: TokenContext): EditableMappingLayer =
     EditableMappingLayer(
-      tracingId,
+      name = tracingId,
       tracing.boundingBox,
       resolutions = tracing.mags.map(vec3IntFromProto).toList,
       largestSegmentId = Some(0L),
@@ -608,7 +608,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       tc,
       tracing = tracing,
       annotationId = annotationId,
-      tracingId = tracingId,
       annotationService = this,
       editableMappingService = editableMappingService
     )

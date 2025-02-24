@@ -35,14 +35,14 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
   def mergeEditableMappings(annotationIds: List[String],
                             newAnnotationId: String,
                             newVolumeTracingId: String,
-                            tracingsWithIds: List[(VolumeTracing, String)],
+                            tracingsWithIds: List[(VolumeTracing, String)], // TODO needs to include annotation ids?
                             toTemporaryStore: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     if (tracingsWithIds.nonEmpty && tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
       for {
         before <- Instant.nowFox
         _ <- bool2Fox(!toTemporaryStore) ?~> "Cannot merge editable mappings to temporary store (trying to merge compound annotations?)"
         remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds)(tracingWithId =>
-          remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
+          remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2)) // TODO pass annotation ids rather than tracing ids
         remoteFallbackLayer <- SequenceUtils.findUniqueElement(remoteFallbackLayers) ?~> "Cannot merge editable mappings based on different dataset layers"
         editableMappingInfos <- Fox.serialCombined(tracingsWithIds) { tracingWithId =>
           tracingDataStore.editableMappingsInfo.get(tracingWithId._2)(fromProtoBytes[EditableMappingInfo])

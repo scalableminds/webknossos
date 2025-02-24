@@ -107,13 +107,14 @@ class VolumeTracingService @Inject()(
                                                editableMappingTracingId) ?~> "volumeSegmentIndex.update.failed"
 
   def applyBucketMutatingActions(tracingId: String,
+                                 annotationId: String,
                                  tracing: VolumeTracing,
                                  updateActions: List[BucketMutatingVolumeUpdateAction],
                                  newVersion: Long)(implicit tc: TokenContext): Fox[Unit] =
     for {
       // warning, may be called multiple times with the same version number (due to transaction management).
       // frontend ensures that each bucket is only updated once per transaction
-      fallbackLayerOpt <- getFallbackLayer(tracingId, tracing)
+      fallbackLayerOpt <- getFallbackLayer(annotationId, tracing)
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(
         tracingId,
         volumeSegmentIndexClient,
@@ -128,18 +129,19 @@ class VolumeTracingService @Inject()(
           if (tracing.getHasEditableMapping) {
             Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
           } else
-            updateBucket(tracingId, tracing, a, segmentIndexBuffer, newVersion) ?~> "Failed to save volume data."
+            updateBucket(tracingId, annotationId, tracing, a, segmentIndexBuffer, newVersion) ?~> "Failed to save volume data."
         case a: DeleteSegmentDataVolumeAction =>
           if (!tracing.getHasSegmentIndex) {
             Fox.failure("Cannot delete segment data for annotations without segment index.")
           } else
-            deleteSegmentData(tracingId, tracing, a, segmentIndexBuffer, newVersion) ?~> "Failed to delete segment data."
+            deleteSegmentData(tracingId, annotationId, tracing, a, segmentIndexBuffer, newVersion) ?~> "Failed to delete segment data."
         case _ => Fox.failure("Unknown bucket-mutating action.")
       }
       _ <- segmentIndexBuffer.flush()
     } yield ()
 
   private def updateBucket(tracingId: String,
+                           annotationId: String,
                            volumeTracing: VolumeTracing,
                            action: UpdateBucketVolumeAction,
                            segmentIndexBuffer: VolumeSegmentIndexBuffer,
@@ -152,7 +154,7 @@ class VolumeTracingService @Inject()(
                                       action.mag,
                                       action.additionalCoordinates)
       _ <- bool2Fox(!bucketPosition.hasNegativeComponent) ?~> s"Received a bucket at negative position ($bucketPosition), must be positive"
-      dataLayer = volumeTracingLayer(tracingId, volumeTracing)
+      dataLayer = volumeTracingLayer(tracingId, annotationId, volumeTracing)
       actionBucketData <- action.base64Data.map(Base64.getDecoder.decode).toFox
       _ <- saveBucket(dataLayer, bucketPosition, actionBucketData, updateGroupVersion) ?~> "failed to save bucket"
       mappingName <- getMappingNameUnlessEditable(volumeTracing)
@@ -181,14 +183,15 @@ class VolumeTracingService @Inject()(
     else Fox.successful(tracing.mappingName)
 
   private def deleteSegmentData(tracingId: String,
+                                annotationId: String,
                                 volumeTracing: VolumeTracing,
                                 a: DeleteSegmentDataVolumeAction,
                                 segmentIndexBuffer: VolumeSegmentIndexBuffer,
                                 version: Long)(implicit tc: TokenContext): Fox[VolumeTracing] =
     for {
       _ <- Fox.successful(())
-      dataLayer = volumeTracingLayer(tracingId, volumeTracing)
-      fallbackLayer <- getFallbackLayer(tracingId, volumeTracing)
+      dataLayer = volumeTracingLayer(tracingId, annotationId, volumeTracing)
+      fallbackLayer <- getFallbackLayer(annotationId, volumeTracing)
       possibleAdditionalCoordinates = AdditionalAxis.coordinateSpace(dataLayer.additionalAxes).map(Some(_))
       additionalCoordinateList = if (possibleAdditionalCoordinates.isEmpty) {
         List(None)
@@ -249,18 +252,19 @@ class VolumeTracingService @Inject()(
     }
 
   def revertVolumeData(tracingId: String,
+                       annotationId: String,
                        sourceVersion: Long,
                        sourceTracing: VolumeTracing,
                        newVersion: Long,
                        tracingBeforeRevert: VolumeTracing)(implicit tc: TokenContext): Fox[Unit] = {
     val before = Instant.now
 
-    val dataLayer = volumeTracingLayer(tracingId, tracingBeforeRevert)
+    val dataLayer = volumeTracingLayer(tracingId, annotationId, tracingBeforeRevert)
     val bucketStreamBeforeRevert =
       dataLayer.volumeBucketProvider.bucketStreamWithVersion(version = Some(tracingBeforeRevert.version))
 
     for {
-      fallbackLayer <- getFallbackLayer(tracingId, tracingBeforeRevert)
+      fallbackLayer <- getFallbackLayer(annotationId, tracingBeforeRevert)
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
                                                         volumeSegmentIndexClient,
                                                         newVersion,
@@ -877,16 +881,16 @@ class VolumeTracingService @Inject()(
       }
     }
 
-  def getFallbackLayer(tracingId: String, tracing: VolumeTracing)(
+  def getFallbackLayer(annotationId: String, tracing: VolumeTracing)(
       implicit tc: TokenContext): Fox[Option[RemoteFallbackLayer]] =
-    fallbackLayerCache.getOrLoad((tracingId, tracing.fallbackLayer, tc.userTokenOpt),
+    fallbackLayerCache.getOrLoad((annotationId, tracing.fallbackLayer, tc.userTokenOpt),
                                  t => getFallbackLayerFromWebknossos(t._1, t._2))
 
-  private def getFallbackLayerFromWebknossos(tracingId: String, fallbackLayerName: Option[String])(
+  private def getFallbackLayerFromWebknossos(annotationId: String, fallbackLayerName: Option[String])(
       implicit tc: TokenContext) =
     Fox[Option[RemoteFallbackLayer]] {
       for {
-        dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId)
+        dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId)
         dataSourceId = dataSource.id
         fallbackLayer = dataSource.dataLayers
           .find(_.name == fallbackLayerName.getOrElse(""))

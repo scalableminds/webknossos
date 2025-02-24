@@ -34,7 +34,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       tracingId <- Fox.successful(layer.name)
       _ <- bool2Fox(layer.doesContainBucket(bucket))
       remoteFallbackLayer <- layer.editableMappingService
-        .remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.tracingId)
+        .remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.annotationId)
       // called here to ensure updates are applied
       editableMappingInfo <- layer.annotationService.findEditableMappingInfo(
         layer.annotationId,
@@ -67,7 +67,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
   }
 }
 
-case class EditableMappingLayer(name: String,
+case class EditableMappingLayer(name: String, // set to tracing id
                                 boundingBox: BoundingBox,
                                 resolutions: List[Vec3Int],
                                 largestSegmentId: Option[Long],
@@ -75,7 +75,6 @@ case class EditableMappingLayer(name: String,
                                 tokenContext: TokenContext,
                                 tracing: VolumeTracing,
                                 annotationId: String,
-                                tracingId: String,
                                 annotationService: TSAnnotationService,
                                 editableMappingService: EditableMappingService)
     extends SegmentationLayer {

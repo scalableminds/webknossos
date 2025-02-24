@@ -20,7 +20,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.math.Ordering.Implicits.infixOrderingOps
 
-class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(implicit ec: ExecutionContext)
+class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends LazyLogging
     with MimeTypes {
 
@@ -43,7 +43,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
   private def pollUntilServerStartedUp(until: Instant): Fox[Unit] = {
     def waitAndRecurse(until: Instant): Fox[Unit] =
       for {
-        _ <- after(POLLING_INTERVAL, using = system.scheduler)(Future.successful(()))
+        _ <- after(POLLING_INTERVAL, using = actorSystem.scheduler)(Future.successful(()))
         _ <- bool2Fox(!until.isPast) ?~> s"Loki did not become ready within ${conf.startupTimeout}."
         _ <- pollUntilServerStartedUp(until)
       } yield ()

@@ -12,10 +12,10 @@ import org.apache.pekko.actor.ActorSystem
 
 class TracingStoreModule extends AbstractModule {
 
-  private val system: ActorSystem = ActorSystem("webknossos-tracingstore")
+  private val actorSystem: ActorSystem = ActorSystem("webknossos-tracingstore")
 
   override def configure(): Unit = {
-    bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-tracingstore")).toInstance(system)
+    bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-tracingstore")).toInstance(actorSystem)
     bind(classOf[TracingDataStore]).asEagerSingleton()
     bind(classOf[VolumeTracingService]).asEagerSingleton()
     bind(classOf[TracingStoreAccessTokenService]).asEagerSingleton()

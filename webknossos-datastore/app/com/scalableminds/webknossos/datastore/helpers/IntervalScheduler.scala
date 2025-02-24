@@ -4,7 +4,7 @@ import com.scalableminds.util.tools.Fox
 import org.apache.pekko.actor.{ActorSystem, Cancellable}
 import play.api.inject.ApplicationLifecycle
 
-import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import com.scalableminds.util.time.Instant
@@ -27,7 +27,7 @@ trait IntervalScheduler {
 
   private val innerTickerInterval: FiniteDuration = 100 milliseconds
   private val lastCompletionTimeMillis = new AtomicLong(0)
-  private val isRunning = new java.util.concurrent.atomic.AtomicBoolean(false)
+  private val isRunning = new AtomicBoolean(false)
 
   private def innerTick: Runnable = () => {
     if (lastCompletionIsLongEnoughPast) {
@@ -60,7 +60,7 @@ trait IntervalScheduler {
   if (tickerEnabled) {
     if (tickerInterval < innerTickerInterval) {
       throw new IllegalArgumentException(
-        s"IntervalScheduler was initialized with interval $tickerInterval. Only intervals >= $innerTickerInterval are supported.")
+        s"IntervalScheduler was initialized with interval $tickerInterval. Only intervals larger than the inner ticker interval $innerTickerInterval are supported.")
     }
     scheduled = Some(actorSystem.scheduler.scheduleWithFixedDelay(tickerInitialDelay, innerTickerInterval)(innerTick))
   }

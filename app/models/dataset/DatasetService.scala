@@ -363,10 +363,13 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     for {
       magInfos <- datasetMagsDAO.findPathsForDatasetAndDatalayer(datasetId, layerName)
       magInfosAndLinkedMags <- Fox.serialCombined(magInfos)(magInfo =>
-        for {
-          pathInfos <- datasetMagsDAO.findAllByRealPath(magInfo.realPath)
-        } yield (magInfo, pathInfos.filter(!_.equals(magInfo))))
-
+        magInfo.realPath match {
+          case Some(realPath) =>
+            for {
+              pathInfos <- datasetMagsDAO.findAllByRealPath(realPath)
+            } yield (magInfo, pathInfos.filter(!_.equals(magInfo)))
+          case None => Fox.successful((magInfo, List()))
+      })
     } yield magInfosAndLinkedMags
 
   def publicWrites(dataset: Dataset,

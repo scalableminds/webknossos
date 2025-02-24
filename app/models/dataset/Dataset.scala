@@ -712,30 +712,31 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 case class DatasetMagInfo(datasetId: ObjectId,
                           dataLayerName: String,
                           mag: Vec3Int,
-                          path: String,
-                          realPath: String,
+                          path: Option[String],
+                          realPath: Option[String],
                           hasLocalData: Boolean)
+
+case class MagWithPaths(layerName: String,
+                       mag: Vec3Int,
+                       path: Option[String],
+                       realPath: Option[String],
+                       hasLocalData: Boolean)
 
 object DatasetMagInfo {
   implicit val jsonFormat: Format[DatasetMagInfo] = Json.format[DatasetMagInfo]
 }
 class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
-    extends SQLDAO[MagPathInfo, DatasetMagsRow, DatasetMags](sqlClient) {
+    extends SQLDAO[MagWithPaths, DatasetMagsRow, DatasetMags](sqlClient) {
   protected val collection = DatasetMags
 
   protected def idColumn(x: DatasetMags): Rep[String] = x._Dataset
 
   protected def isDeletedColumn(x: DatasetMags): Rep[Boolean] = false
 
-  protected def parse(row: DatasetMagsRow): Fox[MagPathInfo] =
+  protected def parse(row: DatasetMagsRow): Fox[MagWithPaths] =
     for {
       mag <- Vec3Int.fromList(parseArrayLiteral(row.mag).map(_.toInt)) ?~> "could not parse mag"
-    } yield
-      MagPathInfo(row.datalayername,
-                  mag,
-                  row.path.getOrElse("uninitialized"),
-                  row.realpath.getOrElse("uninitialized"),
-                  hasLocalData = row.haslocaldata)
+    } yield MagWithPaths(row.datalayername, mag, row.path, row.realpath, hasLocalData = row.haslocaldata)
 
   private def parseMag(magArrayLiteral: String): Fox[Vec3Int] =
     for {
@@ -800,12 +801,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       mags <- Fox.serialCombined(rows.toList)(r => parseMag(r.mag))
       magInfos = rows.toList.zip(mags).map {
         case (row, mag) =>
-          DatasetMagInfo(ObjectId(row._Dataset),
-                         row.datalayername,
-                         mag,
-                         row.path.getOrElse("uninitialized"),
-                         row.realpath.getOrElse("uninitialized"),
-                         row.haslocaldata)
+          DatasetMagInfo(ObjectId(row._Dataset), row.datalayername, mag, row.path, row.realpath, row.haslocaldata)
       }
     } yield magInfos
 

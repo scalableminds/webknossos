@@ -9,3 +9,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/25.02.0...HEAD)
 
 ### Postgres Evolutions:
+- [126-job-resumed-by-super-user.sql](conf/evolutions/126-job-resumed-by-super-user.sql)

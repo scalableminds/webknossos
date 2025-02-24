@@ -1,5 +1,11 @@
 do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 125, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
+-- Replaces all columns with types CHAR or VARCHAR with TEXT
+-- Since doing this for all columns in one transactions takes a significant time,
+-- we do this in multiple transactions. Each transaction is for a single table.
+-- Since both the previous types and TEXT are handled as variable-length strings
+-- in the backend, a partial completion of this script will not cause any issues.
+
 START TRANSACTION;
 DROP VIEW webknossos.annotations_;
 ALTER TABLE webknossos.annotations ALTER COLUMN _id SET DATA TYPE TEXT;

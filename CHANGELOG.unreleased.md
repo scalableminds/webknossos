@@ -8,28 +8,14 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/25.01.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/25.02.0...HEAD)
 
 ### Added
-- It is now possible to start a split-merger evaluation when starting a neuron inference. [#8221](https://github.com/scalableminds/webknossos/pull/8221)
-- Added the possibility to configure a rotation for a dataset, which can be toggled off and on when viewing and annotating data. [#8159](https://github.com/scalableminds/webknossos/pull/8159)
-- When using the “Restore older Version” feature, there are no longer separate tabs for the different annotation layers. Only one linear annotation history is now used, and if you revert to an older version, all layers are reverted. If layers were added/deleted since then, that is also reverted. This also means that proofreading annotations can now be reverted to older versions as well. The description text of annotations is now versioned as well. [#7917](https://github.com/scalableminds/webknossos/pull/7917)
-- Added the possibility to use the "merger mode" even when the user has annotated volume data in the current layer (as long as no other mapping is active). [#8335](https://github.com/scalableminds/webknossos/pull/8335)
-- Added a note explaining that imported data is private by default to the dataset upload view. [#8354](https://github.com/scalableminds/webknossos/pull/8354)
-- Measurement tools are now accessible when viewing datasets outside of an annotation. [#8334](https://github.com/scalableminds/webknossos/pull/8334)
-- Support reading Blosc-compressed datasets with the “autoshuffle” parameter. [#8387](https://github.com/scalableminds/webknossos/pull/8387)
 
 ### Changed
-- Improved the scrolling behaviour of sliders: Sliders must be focused to scroll them. Additionally, parent element scrolling is prevented when using the slider. [#8321](https://github.com/scalableminds/webknossos/pull/8321) [#8321](https://github.com/scalableminds/webknossos/pull/8321)
-- Increase the flood fill maximum bounding box size limits for segmentation layers restricted to coarser mags. [#8382](https://github.com/scalableminds/webknossos/pull/8382)
 
 ### Fixed
-- Fixed a bug that lead to trees being dropped when merging to trees together. [#8359](https://github.com/scalableminds/webknossos/pull/8359)
-- Fixed that the onboarding screen incorrectly appeared when a certain request failed. [#8356](https://github.com/scalableminds/webknossos/pull/8356)
-- Fixed the segment registering in coarser mags for non-mag-aligned bounding boxes. [#8364](https://github.com/scalableminds/webknossos/pull/8364)
-- Fixed using the flood fill tool in 2D mode for mags other than the finest one. [#8382](https://github.com/scalableminds/webknossos/pull/8382)
 
 ### Removed
- - Removed the feature to downsample existing volume annotations. All new volume annotations had a whole mag stack since [#4755](https://github.com/scalableminds/webknossos/pull/4755) (four years ago). [#7917](https://github.com/scalableminds/webknossos/pull/7917)
 
 ### Breaking Changes

@@ -61,6 +61,7 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit v
 
 case class VolumeTracingLayer(
     name: String,
+    annotationId: String,
     volumeTracingService: VolumeTracingService,
     temporaryTracingService: TemporaryTracingService,
     isTemporaryTracing: Boolean = false,
@@ -83,6 +84,8 @@ case class VolumeTracingLayer(
   override val mags: List[MagLocator] = List.empty // MagLocators do not apply for annotation layers
 
   private lazy val volumeMags: List[Vec3Int] = tracing.mags.map(vec3IntFromProto).toList
+
+  lazy val tracingId: String = name
 
   override def bucketProviderCacheKey: String = s"$name-withFallbackData=$includeFallbackDataIfAvailable"
 
@@ -109,4 +112,5 @@ case class VolumeTracingLayer(
   override def containsMag(mag: Vec3Int) =
     true // allow requesting buckets of all mags. database takes care of missing.
 
+  def bucketStream: Iterator[(BucketPosition, Array[Byte])] = bucketProvider.bucketStream(Some(tracing.version))
 }

@@ -170,7 +170,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
               volumeShowFallbackLayer = false,
               magRestrictions = magRestrictions
             )
-            .flatMap(tracingStoreClient.saveVolumeTracing(_, magRestrictions = magRestrictions)))
+            .flatMap(tracingStoreClient.saveVolumeTracing(ObjectId.generate, _, magRestrictions = magRestrictions))) // TODO pass annotation id
     } yield newVolumeTracingId
 
   // Used in create (without files). If base annotations were used, this does nothing.
@@ -421,7 +421,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         }
         // Note that volume tracings are saved sequentially to reduce server load
         volumeTracingIds: List[Box[Option[String]]] <- Fox.serialSequenceBox(requestedTasks) { requestedTask =>
-          saveVolumeTracingIfPresent(requestedTask, tracingStoreClient)
+          saveVolumeTracingIfPresent(ObjectId.generate, requestedTask, tracingStoreClient) // TODO pass annotation id
         }
         skeletonTracingsIdsMerged = mergeTracingIds(requestedTasks.map(_.map(_._1)).lazyZip(skeletonTracingIds).toList,
                                                     isSkeletonId = true)
@@ -485,6 +485,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     }
 
   private def saveVolumeTracingIfPresent(
+      annotationId: ObjectId,
       requestedTaskBox: Box[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])],
       tracingStoreClient: WKRemoteTracingStoreClient)(implicit ctx: DBAccessContext): Fox[Option[String]] =
     requestedTaskBox.map { tuple =>
@@ -495,7 +496,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
           taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"
           taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
           saveResult <- tracingStoreClient
-            .saveVolumeTracing(tracing, initialFile, magRestrictions = taskType.settings.magRestrictions)
+            .saveVolumeTracing(annotationId, tracing, initialFile, magRestrictions = taskType.settings.magRestrictions)
             .map(Some(_))
         } yield saveResult
       case f: Failure => box2Fox(f)

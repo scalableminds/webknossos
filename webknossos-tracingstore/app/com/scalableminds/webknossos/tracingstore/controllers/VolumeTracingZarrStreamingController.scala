@@ -228,7 +228,7 @@ class VolumeTracingZarrStreamingController @Inject()(
         annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
         tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
         existingMags = tracing.mags.map(vec3IntFromProto)
-        dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId) ~> NOT_FOUND
+        dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId) ~> NOT_FOUND
         omeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(tracingId,
                                                               dataSourceVoxelSize = dataSource.scale,
                                                               mags = existingMags.toList)
@@ -244,7 +244,7 @@ class VolumeTracingZarrStreamingController @Inject()(
         annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
         tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
         sortedExistingMags = tracing.mags.map(vec3IntFromProto).toList.sortBy(_.maxDim)
-        dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId) ~> NOT_FOUND
+        dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId) ~> NOT_FOUND
         omeNgffHeader = NgffMetadataV0_5.fromNameVoxelSizeAndMags(tracingId,
                                                                   dataSourceVoxelSize = dataSource.scale,
                                                                   mags = sortedExistingMags,
@@ -303,7 +303,7 @@ class VolumeTracingZarrStreamingController @Inject()(
             (data, missingBucketIndices) <- if (tracing.getHasEditableMapping) {
               val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
               editableMappingService.volumeData(mappingLayer, List(wkRequest))
-            } else tracingService.data(tracingId, tracing, List(wkRequest))
+            } else tracingService.data(annotationId, tracingId, tracing, List(wkRequest))
             dataWithFallback <- getFallbackLayerDataIfEmpty(tracing,
                                                             annotationId,
                                                             data,

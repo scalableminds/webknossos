@@ -263,7 +263,7 @@ class AnnotationService @Inject()(
             AnnotationLayer.defaultNameForType(annotationLayerParameters.typ))
           tracingId <- tracing match {
             case Left(skeleton) => tracingStoreClient.saveSkeletonTracing(skeleton)
-            case Right(volume)  => tracingStoreClient.saveVolumeTracing(volume)
+            case Right(volume)  => tracingStoreClient.saveVolumeTracing(annotationId, volume)
           }
         } yield
           AnnotationLayer(tracingId,

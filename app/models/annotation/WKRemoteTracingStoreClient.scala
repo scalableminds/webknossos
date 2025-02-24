@@ -155,7 +155,8 @@ class WKRemoteTracingStoreClient(
       .postProtoWithJsonResponse[SkeletonTracings, String](tracings)
   }
 
-  def mergeVolumeTracingsByContents(tracings: VolumeTracings,
+  def mergeVolumeTracingsByContents(newAnnotationId: ObjectId,
+                                    tracings: VolumeTracings,
                                     dataSource: DataSourceLike,
                                     initialData: List[Option[File]]): Fox[String] = {
     logger.debug("Called to merge VolumeTracings by contents." + baseInfo)
@@ -164,9 +165,10 @@ class WKRemoteTracingStoreClient(
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .postProtoWithJsonResponse[VolumeTracings, String](tracings)
       packedVolumeDataZips = packVolumeDataZips(initialData.flatten)
-      _ = tracingDataSourceTemporaryStore.store(tracingId, dataSource)
+      _ = tracingDataSourceTemporaryStore.store(newAnnotationId, dataSource)
       _ <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/initialDataMultiple").withLongTimeout
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .addQueryString("annotationId" -> newAnnotationId.toString)
         .postFile(packedVolumeDataZips)
     } yield tracingId
   }
@@ -174,7 +176,8 @@ class WKRemoteTracingStoreClient(
   private def packVolumeDataZips(files: List[File]): File =
     ZipIO.zipToTempFile(files)
 
-  def saveVolumeTracing(tracing: VolumeTracing,
+  def saveVolumeTracing(annotationId: ObjectId,
+                        tracing: VolumeTracing,
                         initialData: Option[File] = None,
                         magRestrictions: MagRestrictions = MagRestrictions.empty,
                         dataSource: Option[DataSourceLike] = None,
@@ -185,11 +188,12 @@ class WKRemoteTracingStoreClient(
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .addQueryStringOptional("newTracingId", newTracingId)
         .postProtoWithJsonResponse[VolumeTracing, String](tracing)
-      _ = dataSource.foreach(d => tracingDataSourceTemporaryStore.store(tracingId, d))
+      _ = dataSource.foreach(d => tracingDataSourceTemporaryStore.store(annotationId, d))
       _ <- initialData match {
         case Some(file) =>
           rpc(s"${tracingStore.url}/tracings/volume/$tracingId/initialData").withLongTimeout
             .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+            .addQueryString("annotationId" -> annotationId.toString)
             .addQueryStringOptional("minMag", magRestrictions.minStr)
             .addQueryStringOptional("maxMag", magRestrictions.maxStr)
             .postFile(file)

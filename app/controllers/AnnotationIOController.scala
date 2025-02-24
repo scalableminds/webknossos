@@ -129,7 +129,9 @@ class AnnotationIOController @Inject()(
           usableDataSource <- dataSource.toUsable.toFox ?~> Messages("dataset.notImported", dataset.name)
           volumeLayersGrouped <- adaptVolumeTracingsToFallbackLayer(volumeLayersGroupedRaw, dataset, usableDataSource)
           tracingStoreClient <- tracingStoreService.clientFor(dataset)
-          mergedVolumeLayers <- mergeAndSaveVolumeLayers(volumeLayersGrouped,
+          newAnnotationId = ObjectId.generate
+          mergedVolumeLayers <- mergeAndSaveVolumeLayers(newAnnotationId,
+                                                         volumeLayersGrouped,
                                                          tracingStoreClient,
                                                          parsedFiles.otherFiles,
                                                          usableDataSource)
@@ -158,7 +160,8 @@ class AnnotationIOController @Inject()(
       }
   }
 
-  private def mergeAndSaveVolumeLayers(volumeLayersGrouped: Seq[List[UploadedVolumeLayer]],
+  private def mergeAndSaveVolumeLayers(newAnnotationId: ObjectId,
+                                       volumeLayersGrouped: Seq[List[UploadedVolumeLayer]],
                                        client: WKRemoteTracingStoreClient,
                                        otherFiles: Map[String, File],
                                        dataSource: DataSourceLike): Fox[List[AnnotationLayer]] =
@@ -171,7 +174,8 @@ class AnnotationIOController @Inject()(
         val uploadedVolumeLayer = volumeLayerWithIndex._1
         val idx = volumeLayerWithIndex._2
         for {
-          savedTracingId <- client.saveVolumeTracing(uploadedVolumeLayer.tracing,
+          savedTracingId <- client.saveVolumeTracing(newAnnotationId,
+                                                     uploadedVolumeLayer.tracing,
                                                      uploadedVolumeLayer.getDataZipFrom(otherFiles),
                                                      dataSource = Some(dataSource))
         } yield
@@ -186,6 +190,7 @@ class AnnotationIOController @Inject()(
       val uploadedVolumeLayersFlat = volumeLayersGrouped.toList.flatten
       for {
         mergedTracingId <- client.mergeVolumeTracingsByContents(
+          newAnnotationId,
           VolumeTracings(uploadedVolumeLayersFlat.map(v => VolumeTracingOpt(Some(v.tracing)))),
           dataSource,
           uploadedVolumeLayersFlat.map(v => v.getDataZipFrom(otherFiles))

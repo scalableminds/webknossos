@@ -16,8 +16,8 @@ POST        /annotation/mergedFromIds                                           
 
 # Volume tracings
 POST        /volume/save                                                            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.save(newTracingId: Option[String])
-POST        /volume/:tracingId/initialData                                          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialData(tracingId: String, minMag: Option[Int], maxMag: Option[Int])
-POST        /volume/:tracingId/initialDataMultiple                                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialDataMultiple(tracingId: String)
+POST        /volume/:tracingId/initialData                                          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialData(annotationId: String, tracingId: String, minMag: Option[Int], maxMag: Option[Int])
+POST        /volume/:tracingId/initialDataMultiple                                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialDataMultiple(annotationId: String, tracingId: String)
 GET         /volume/:tracingId                                                      @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.get(tracingId: String, annotationId: String, version: Option[Long])
 GET         /volume/:tracingId/allDataZip                                           @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.allDataZip(tracingId: String, annotationId: Option[String], version: Option[Long], volumeDataZipFormat: String, voxelSize: Option[String], voxelSizeUnit: Option[String])
 POST        /volume/:tracingId/data                                                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.data(tracingId: String, annotationId: String)

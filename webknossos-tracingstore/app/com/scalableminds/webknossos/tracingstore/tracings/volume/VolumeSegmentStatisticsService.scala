@@ -119,7 +119,8 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       (data, _) <- if (tracing.getHasEditableMapping) {
         val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
         editableMappingService.volumeData(mappingLayer, dataRequests)
-      } else volumeTracingService.data(tracingId, tracing, dataRequests, includeFallbackDataIfAvailable = true)
+      } else
+        volumeTracingService.data(annotationId, tracingId, tracing, dataRequests, includeFallbackDataIfAvailable = true)
     } yield data
   }
 

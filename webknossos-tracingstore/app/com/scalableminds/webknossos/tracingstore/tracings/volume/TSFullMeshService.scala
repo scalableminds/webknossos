@@ -76,9 +76,9 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
         getAllAdHocChunksWithSegmentIndex(annotationId, tracingId, tracing, mag, voxelSize, fullMeshRequest)
       else
         getAllAdHocChunksWithNeighborLogic(
-          tracing,
           annotationId,
           tracingId,
+          tracing,
           mag,
           voxelSize,
           fullMeshRequest,
@@ -130,14 +130,14 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
             fullMeshRequest.additionalCoordinates,
             findNeighbors = false
           )
-          loadMeshChunkFromAdHoc(tracing, adHocMeshRequest, annotationId, tracingId)
+          loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest)
       }
       allVertices = vertexChunksWithNeighbors.map(_._1)
     } yield allVertices
 
-  private def getAllAdHocChunksWithNeighborLogic(tracing: VolumeTracing,
-                                                 annotationId: String,
+  private def getAllAdHocChunksWithNeighborLogic(annotationId: String,
                                                  tracingId: String,
+                                                 tracing: VolumeTracing,
                                                  mag: Vec3Int,
                                                  voxelSize: VoxelSize,
                                                  fullMeshRequest: FullMeshRequest,
@@ -160,13 +160,13 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
         fullMeshRequest.additionalCoordinates
       )
       _ = visited += topLeft
-      (vertices: Array[Float], neighbors) <- loadMeshChunkFromAdHoc(tracing, adHocMeshRequest, annotationId, tracingId)
+      (vertices: Array[Float], neighbors) <- loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest)
       nextPositions: List[VoxelPosition] = generateNextTopLeftsFromNeighbors(topLeft, neighbors, chunkSize, visited)
       _ = visited ++= nextPositions
       neighborVerticesNested <- Fox.serialCombined(nextPositions) { position: VoxelPosition =>
-        getAllAdHocChunksWithNeighborLogic(tracing,
-                                           annotationId,
+        getAllAdHocChunksWithNeighborLogic(annotationId,
                                            tracingId,
+                                           tracing,
                                            mag,
                                            voxelSize,
                                            fullMeshRequest,
@@ -177,12 +177,13 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       allVertices: List[Array[Float]] = vertices +: neighborVerticesNested.flatten
     } yield allVertices
 
-  private def loadMeshChunkFromAdHoc(tracing: VolumeTracing,
-                                     adHocMeshRequest: WebknossosAdHocMeshRequest,
-                                     annotationId: String,
-                                     tracingId: String)(implicit tc: TokenContext): Fox[(Array[Float], List[Int])] =
+  private def loadMeshChunkFromAdHoc(
+      annotationId: String,
+      tracingId: String,
+      tracing: VolumeTracing,
+      adHocMeshRequest: WebknossosAdHocMeshRequest)(implicit tc: TokenContext): Fox[(Array[Float], List[Int])] =
     if (tracing.getHasEditableMapping) {
       val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
       editableMappingService.createAdHocMesh(mappingLayer, adHocMeshRequest)
-    } else volumeTracingService.createAdHocMesh(tracingId, tracing, adHocMeshRequest)
+    } else volumeTracingService.createAdHocMesh(annotationId, tracingId, tracing, adHocMeshRequest)
 }

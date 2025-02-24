@@ -708,8 +708,15 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                        currentAnnotation.version)
 
       // Duplicate v0
-      v0NewLayers <- Fox.serialCombined(v0Annotation.annotationLayers)(layer =>
-        duplicateLayer(annotationId, layer, tracingIdMap, v0Annotation.version, isFromTask, datasetBoundingBox))
+      v0NewLayers <- Fox.serialCombined(v0Annotation.annotationLayers)(
+        layer =>
+          duplicateLayer(annotationId,
+                         newAnnotationId,
+                         layer,
+                         tracingIdMap,
+                         v0Annotation.version,
+                         isFromTask,
+                         datasetBoundingBox))
       v0DuplicatedAnnotation = v0Annotation.copy(annotationLayers = v0NewLayers,
                                                  earliestAccessibleVersion = v0Annotation.version)
 
@@ -721,6 +728,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           newLayers <- Fox.serialCombined(currentAnnotation.annotationLayers)(
             layer =>
               duplicateLayer(annotationId,
+                             newAnnotationId,
                              layer,
                              tracingIdMap,
                              currentAnnotation.version,
@@ -780,6 +788,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   }
 
   private def duplicateLayer(annotationId: String,
+                             newAnnotationId: String,
                              layer: AnnotationLayerProto,
                              tracingIdMap: Map[String, String],
                              version: Long,
@@ -793,6 +802,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           duplicateVolumeTracing(annotationId,
                                  layer.tracingId,
                                  version,
+                                 newAnnotationId,
                                  newTracingId,
                                  version,
                                  isFromTask,
@@ -819,6 +829,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       sourceAnnotationId: String,
       sourceTracingId: String,
       sourceVersion: Long,
+      newAnnotationId: String,
       newTracingId: String,
       newVersion: Long,
       isFromTask: Boolean,
@@ -841,7 +852,12 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                                                  newVersion)
       _ <- tracingDataStore.volumes.put(newTracingId, newVersion, newTracing)
       _ <- Fox.runIf(!newTracing.getHasEditableMapping)(
-        volumeTracingService.duplicateVolumeData(sourceTracingId, sourceTracing, newTracingId, newTracing))
+        volumeTracingService.duplicateVolumeData(sourceAnnotationId,
+                                                 sourceTracingId,
+                                                 sourceTracing,
+                                                 newAnnotationId,
+                                                 newTracingId,
+                                                 newTracing))
       _ <- Fox.runIf(newTracing.getHasEditableMapping)(
         duplicateEditableMapping(sourceAnnotationId, sourceTracingId, newTracingId, sourceVersion, newVersion))
     } yield newTracingId

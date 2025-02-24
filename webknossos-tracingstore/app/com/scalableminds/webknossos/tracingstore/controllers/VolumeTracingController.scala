@@ -127,7 +127,10 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def initialData(tracingId: String, minMag: Option[Int], maxMag: Option[Int]): Action[AnyContent] =
+  def initialData(annotationId: String,
+                  tracingId: String,
+                  minMag: Option[Int],
+                  maxMag: Option[Int]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
@@ -138,7 +141,7 @@ class VolumeTracingController @Inject()(
               tracing <- annotationService.findVolumeRaw(tracingId) ?~> Messages("tracing.notFound")
               magRestrictions = MagRestrictions(minMag, maxMag)
               mags <- volumeTracingService
-                .initializeWithData(tracingId, tracing.value, initialData, magRestrictions)
+                .initializeWithData(annotationId, tracingId, tracing.value, initialData, magRestrictions)
                 .toFox
               _ <- volumeTracingService.updateMagList(tracingId, tracing.value, mags)
             } yield Ok(Json.toJson(tracingId))
@@ -168,7 +171,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def initialDataMultiple(tracingId: String): Action[AnyContent] =
+  def initialDataMultiple(annotationId: String, tracingId: String): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
@@ -177,7 +180,9 @@ class VolumeTracingController @Inject()(
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               // The annotation object may not yet exist here. Caller is responsible to save that too.
               tracing <- annotationService.findVolumeRaw(tracingId) ?~> Messages("tracing.notFound")
-              mags <- volumeTracingService.initializeWithDataMultiple(tracingId, tracing.value, initialData).toFox
+              mags <- volumeTracingService
+                .initializeWithDataMultiple(annotationId, tracingId, tracing.value, initialData)
+                .toFox
               _ <- volumeTracingService.updateMagList(tracingId, tracing.value, mags)
             } yield Ok(Json.toJson(tracingId))
           }
@@ -207,6 +212,7 @@ class VolumeTracingController @Inject()(
             voxelSize = voxelSizeFactorParsedOpt.map(voxelSizeParsed =>
               VoxelSize.fromFactorAndUnitWithDefault(voxelSizeParsed, voxelSizeUnitParsedOpt))
             data <- volumeTracingService.allDataZip(
+              annotationIdFilled,
               tracingId,
               tracing,
               volumeDataZipFormatParsed,
@@ -230,7 +236,7 @@ class VolumeTracingController @Inject()(
             (data, indices) <- if (tracing.getHasEditableMapping) {
               val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
               editableMappingService.volumeData(mappingLayer, request.body)
-            } else volumeTracingService.data(tracingId, tracing, request.body)
+            } else volumeTracingService.data(annotationId, tracingId, tracing, request.body)
           } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
         }
       }
@@ -251,7 +257,11 @@ class VolumeTracingController @Inject()(
             tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
             currentVersion <- request.body.dataParts("currentVersion").headOption.flatMap(_.toIntOpt).toFox
             zipFile <- request.body.files.headOption.map(f => new File(f.ref.path.toString)).toFox
-            largestSegmentId <- volumeTracingService.importVolumeData(tracingId, tracing, zipFile, currentVersion)
+            largestSegmentId <- volumeTracingService.importVolumeData(annotationId,
+                                                                      tracingId,
+                                                                      tracing,
+                                                                      zipFile,
+                                                                      currentVersion)
             _ <- annotationTransactionService.handleSingleUpdateAction(
               annotationId,
               tracing.version,
@@ -273,7 +283,7 @@ class VolumeTracingController @Inject()(
           (vertices: Array[Float], neighbors: List[Int]) <- if (tracing.getHasEditableMapping) {
             val editableMappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
             editableMappingService.createAdHocMesh(editableMappingLayer, request.body)
-          } else volumeTracingService.createAdHocMesh(tracingId, tracing, request.body)
+          } else volumeTracingService.createAdHocMesh(annotationId, tracingId, tracing, request.body)
         } yield {
           // We need four bytes for each float
           val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
@@ -304,7 +314,7 @@ class VolumeTracingController @Inject()(
       for {
         annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
         tracing <- annotationService.findVolume(annotationId, tracingId)
-        positionOpt <- volumeTracingService.findData(tracingId, tracing)
+        positionOpt <- volumeTracingService.findData(annotationId, tracingId, tracing)
       } yield {
         Ok(Json.obj("position" -> positionOpt, "mag" -> positionOpt.map(_ => Vec3Int.ones)))
       }

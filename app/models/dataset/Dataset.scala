@@ -717,10 +717,10 @@ case class DatasetMagInfo(datasetId: ObjectId,
                           hasLocalData: Boolean)
 
 case class MagWithPaths(layerName: String,
-                       mag: Vec3Int,
-                       path: Option[String],
-                       realPath: Option[String],
-                       hasLocalData: Boolean)
+                        mag: Vec3Int,
+                        path: Option[String],
+                        realPath: Option[String],
+                        hasLocalData: Boolean)
 
 object DatasetMagInfo {
   implicit val jsonFormat: Format[DatasetMagInfo] = Json.format[DatasetMagInfo]

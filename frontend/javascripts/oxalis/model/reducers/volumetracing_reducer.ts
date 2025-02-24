@@ -286,7 +286,7 @@ type VolumeTracingReducerAction =
   | SetMappingEnabledAction
   | SetMappingNameAction;
 
-function retrieveVolumeTracing(state: OxalisState, action: VolumeTracingReducerAction) {
+function getVolumeTracingFromAction(state: OxalisState, action: VolumeTracingReducerAction) {
   if ("tracingId" in action && action.tracingId != null) {
     return getVolumeTracingById(state.tracing, action.tracingId);
   }
@@ -414,7 +414,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingReducerAc
     return state;
   }
 
-  const volumeTracing = retrieveVolumeTracing(state, action);
+  const volumeTracing = getVolumeTracingFromAction(state, action);
   if (volumeTracing == null) {
     return state;
   }

@@ -212,11 +212,9 @@ export function jsGetElementOfPermutation(
   // intermediate results can suffer from precision loss. The following
   // code mimics this behavior to get a consistent coloring in GLSL and
   // JS.
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'x' implicitly has an 'any' type.
-  const imprecise = (x) => new Float32Array([x])[0];
+  const imprecise = (x: number) => new Float32Array([x])[0];
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'x' implicitly has an 'any' type.
-  function glslPow(x, y) {
+  function glslPow(x: number, y: number) {
     return Math.floor(imprecise(2 ** (y * imprecise(Math.log2(x)))));
   }
 

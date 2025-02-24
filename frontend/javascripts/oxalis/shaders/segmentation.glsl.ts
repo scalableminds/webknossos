@@ -24,6 +24,8 @@ function buildPermutation(sequenceLength: number, primitiveRoot: number) {
 const permutations = {
   color: buildPermutation(19, 2),
   frequency: buildPermutation(3, 2),
+  angle: buildPermutation(17, 3),
+  useGrid: buildPermutation(13, 2),
 };
 
 export const convertCellIdToRGB: ShaderModule = {
@@ -110,6 +112,26 @@ export const convertCellIdToRGB: ShaderModule = {
       return vec3(customColor) / 255.;
     }
 
+    float colorCount = ${formatNumberAsGLSLFloat(permutations.color.count)};
+    float[${permutations.color.count}] colorPermutation = float[](
+      ${permutations.color.permutation.map(formatNumberAsGLSLFloat).join(", ")}
+    );
+
+    float frequencyCount = ${formatNumberAsGLSLFloat(permutations.frequency.count)};
+    float[${permutations.frequency.count}] frequencyPermutation = float[](
+      ${permutations.frequency.permutation.map(formatNumberAsGLSLFloat).join(", ")}
+    );
+
+    float angleCount = ${formatNumberAsGLSLFloat(permutations.angle.count)};
+    float[${permutations.angle.count}] anglePermutation = float[](
+      ${permutations.angle.permutation.map(formatNumberAsGLSLFloat).join(", ")}
+    );
+
+    float useGridCount = ${formatNumberAsGLSLFloat(permutations.useGrid.count)};
+    float[${permutations.useGrid.count}] useGridPermutation = float[](
+      ${permutations.useGrid.permutation.map(formatNumberAsGLSLFloat).join(", ")}
+    );
+
     vec3 convertCellIdToRGB(uint idHigh_uint, uint idLow_uint) {
       /*
       This function maps from a segment id to a color with a pattern.
@@ -135,12 +157,8 @@ export const convertCellIdToRGB: ShaderModule = {
       vec4 id = abs(idHigh) + abs(idLow);
       float significantSegmentIndex = 256.0 * id.g + id.r;
 
-      float colorCount = ${formatNumberAsGLSLFloat(permutations.color.count)};
-      float[${permutations.color.count}] colorPermutation = float[](
-        ${permutations.color.permutation.map(formatNumberAsGLSLFloat).join(",")}
-      );
-      float colorIndex = colorPermutation[uint(mod(significantSegmentIndex, colorCount))];
 
+      float colorIndex = colorPermutation[uint(mod(significantSegmentIndex, colorCount))];
       float colorValueDecimal = 1.0 / colorCount * colorIndex;
       float colorHue = rgb2hsv(colormapJet(colorValueDecimal)).x;
       float colorSaturation = 1.;
@@ -168,11 +186,6 @@ export const convertCellIdToRGB: ShaderModule = {
       //
       // By default, scale everything with fineTunedScale as this seemed a good value during testing.
       float fineTunedScale = 0.15;
-
-      float frequencyCount = ${formatNumberAsGLSLFloat(permutations.frequency.count)};
-      float[${permutations.frequency.count}] frequencyPermutation = float[](
-        ${permutations.frequency.permutation.map(formatNumberAsGLSLFloat).join(",")}
-      );
       float frequencyIndex = frequencyPermutation[uint(mod(significantSegmentIndex, frequencyCount))];
 
       // Additionally, apply another scale factor (between 0.5 and 1.5) depending on the segment id.
@@ -188,8 +201,8 @@ export const convertCellIdToRGB: ShaderModule = {
       worldCoordUVW.x = worldCoordUVW.x * anisotropyFactorUVW.x;
       worldCoordUVW.y = worldCoordUVW.y * anisotropyFactorUVW.y;
 
-      float angleCount = 17.;
-      float angle = 1.0 / angleCount * getElementOfPermutation(significantSegmentIndex, angleCount, 3.0);
+      float angleIndex = anglePermutation[uint(mod(significantSegmentIndex, angleCount))];
+      float angle = 1.0 / angleCount * angleIndex;
 
       // To produce a stripe or grid pattern, we use the current fragment coordinates
       // and an angle.
@@ -212,8 +225,8 @@ export const convertCellIdToRGB: ShaderModule = {
 
       // useGrid is binary, but we generate a pseudo-random sequence of 13 elements which we map
       // to ones and zeros. This has the benefit that the periodicity has a prime length.
-      float useGridSequenceLength = 13.;
-      float useGrid = step(mod(getElementOfPermutation(significantSegmentIndex, useGridSequenceLength, 2.0), 2.0), 0.5);
+      float useGridIndex = useGridPermutation[uint(mod(significantSegmentIndex, useGridCount))];
+      float useGrid = step(mod(useGridIndex, 2.0), 0.5);
       // Cast the continuous stripe values to 0 and 1 + a bit of anti-aliasing.
       float aaStripeValueA = aaStep(stripeValueA);
       float aaStripeValueB = aaStep(stripeValueB);

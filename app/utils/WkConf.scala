@@ -134,12 +134,9 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")
     val exportTiffMaxVolumeMVx: Long = get[Long]("features.exportTiffMaxVolumeMVx")
     val exportTiffMaxEdgeLengthVx: Long = get[Long]("features.exportTiffMaxEdgeLengthVx")
-    val openIdConnectEnabled: Boolean =
-      featureOverrides.getOrElse("openIdConnectEnabled", get[Boolean]("features.openIdConnectEnabled"))
-    val editableMappingsEnabled: Boolean =
-      featureOverrides.getOrElse("editableMappingsEnabled", get[Boolean]("features.editableMappingsEnabled"))
-    val segmentAnythingEnabled: Boolean =
-      featureOverrides.getOrElse("segmentAnythingEnabled", get[Boolean]("features.segmentAnythingEnabled"))
+    val openIdConnectEnabled: Boolean = get[Boolean]("features.openIdConnectEnabled")
+    val editableMappingsEnabled: Boolean = get[Boolean]("features.editableMappingsEnabled")
+    val segmentAnythingEnabled: Boolean = get[Boolean]("features.segmentAnythingEnabled")
   }
 
   object Datastore {

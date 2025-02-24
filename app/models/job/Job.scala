@@ -258,7 +258,10 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def resumeOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(q"""UPDATE webknossos.jobs SET state = 'PENDING', resumedBySuperUser = True WHERE _id = $id""".asUpdate)
+      _ <- run(q"""UPDATE webknossos.jobs
+             SET state = 'PENDING', resumedBySuperUser = true
+             WHERE _id = $id
+             AND state = 'FAILURE'""".asUpdate)
     } yield ()
 
   def updateStatus(jobId: ObjectId, s: JobStatus): Fox[Unit] =

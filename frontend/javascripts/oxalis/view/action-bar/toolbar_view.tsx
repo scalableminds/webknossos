@@ -26,7 +26,6 @@ import { document } from "libs/window";
 import {
   type AnnotationTool,
   AnnotationToolEnum,
-  ControlModeEnum,
   FillModeEnum,
   type InterpolationMode,
   InterpolationModeEnum,

@@ -747,7 +747,7 @@ class DataSourceController @Inject()(
               reportMutable += "Error when exploring as layer set: Resulted in zero layers."
               None
             case f: Failure =>
-              reportMutable += s"Error when exploring as layer set: ${Fox.failureChainAsString(f)}"
+              reportMutable += s"Error when exploring as layer set: ${formatFailureChain(f, includeStackTraces = true, messagesProviderOpt = Some(request.messages))}"
               None
             case Empty =>
               reportMutable += "Error when exploring as layer set: Empty"

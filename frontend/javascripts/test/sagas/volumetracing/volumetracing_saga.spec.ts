@@ -456,7 +456,11 @@ test("ensureMaybeActiveMappingIsLocked should lock an existing mapping to the an
 test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case no mapping is active.", (t) => {
   const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
   saga.next();
-  expectValueDeepEqual(t, saga.next({}), put(VolumeTracingActions.setMappingIsLockedAction()));
+  expectValueDeepEqual(
+    t,
+    saga.next({}),
+    put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
+  );
   t.true(saga.next().done);
 });
 
@@ -467,7 +471,7 @@ test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case a mappin
   expectValueDeepEqual(
     t,
     saga.next({ [volumeTracing.tracingId]: jsonDummyMapping }),
-    put(VolumeTracingActions.setMappingIsLockedAction()),
+    put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
   );
   t.true(saga.next().done);
 });
@@ -479,7 +483,7 @@ test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case a JSON m
   expectValueDeepEqual(
     t,
     saga.next({ [volumeTracing.tracingId]: jsonDummyMapping }),
-    put(VolumeTracingActions.setMappingIsLockedAction()),
+    put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
   );
   t.true(saga.next().done);
 });

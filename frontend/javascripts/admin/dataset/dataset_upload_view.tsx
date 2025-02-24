@@ -18,6 +18,7 @@ import {
   Progress,
   Row,
   Select,
+  Space,
   Spin,
   Tooltip,
 } from "antd";
@@ -179,6 +180,20 @@ type UploadFormFieldTypes = {
   continuingOldUpload: boolean;
   datastoreUrl: string;
 };
+
+export const dataPrivacyInfo = (
+  <Space direction="horizontal" size={4}>
+    Per default, imported data is private and only visible within your organization.
+    <a
+      style={{ color: "var(--ant-color-primary)" }}
+      href="https://docs.webknossos.org/webknossos/datasets/settings.html#sharing-permissions-tab"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      Read more
+    </a>
+  </Space>
+);
 
 class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   state: State = {
@@ -712,7 +727,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           padding: 5,
         }}
       >
-        <CardContainer withoutCard={withoutCard} title="Upload Dataset">
+        <CardContainer withoutCard={withoutCard} title="Upload Dataset" subtitle={dataPrivacyInfo}>
           {hasPricingPlanExceededStorage(this.props.organization) ? (
             <Alert
               type="error"

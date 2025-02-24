@@ -261,7 +261,7 @@ class ZarrStreamingController @Inject()(
       dataLayerName: String,
       mag: String,
       coordinates: String,
-  )(implicit m: MessagesProvider): Fox[Result] =
+  )(implicit m: MessagesProvider, tc: TokenContext): Fox[Result] =
     for {
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                 datasetDirectoryName,

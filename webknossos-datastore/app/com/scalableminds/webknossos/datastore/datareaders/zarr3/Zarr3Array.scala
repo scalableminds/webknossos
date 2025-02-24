@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.util.tools.{Fox, JsonHelper}
@@ -21,7 +22,8 @@ object Zarr3Array extends LazyLogging {
            axisOrderOpt: Option[AxisOrder],
            channelIndex: Option[Int],
            additionalAxes: Option[Seq[AdditionalAxis]],
-           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[Zarr3Array] =
+           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext,
+                                                                    tc: TokenContext): Fox[Zarr3Array] =
     for {
       headerBytes <- (path / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
         .readBytes() ?~> s"Could not read header at ${Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
@@ -116,7 +118,8 @@ class Zarr3Array(vaultPath: VaultPath,
       .sum
   }
 
-  private def readAndParseShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext): Fox[Array[(Long, Long)]] =
+  private def readAndParseShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext,
+                                                           tc: TokenContext): Fox[Array[(Long, Long)]] =
     for {
       shardIndexRaw <- readShardIndex(shardPath)
       parsed = parseShardIndex(shardIndexRaw)
@@ -131,7 +134,7 @@ class Zarr3Array(vaultPath: VaultPath,
     }
   private def getShardIndexSize = shardIndexEntryLength * chunksPerShard + shardIndexChecksumLength
 
-  private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext) =
+  private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext) =
     shardingCodec match {
       case Some(codec) if codec.index_location == IndexLocationSetting.start =>
         shardPath.readBytes(Some(Range.Long(0, getShardIndexSize.toLong, 1)))
@@ -166,8 +169,8 @@ class Zarr3Array(vaultPath: VaultPath,
       chunkIndex.zip(header.chunkShape).map { case (i, s) => i * s }
     )
 
-  override protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
-      implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] =
+  override protected def getShardedChunkPathAndRange(
+      chunkIndex: Array[Int])(implicit ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, NumericRange[Long])] =
     for {
       shardCoordinates <- Fox.option2Fox(chunkIndexToShardIndex(chunkIndex).headOption)
       shardFilename = getChunkFilename(shardCoordinates)

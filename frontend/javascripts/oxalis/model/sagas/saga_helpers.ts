@@ -64,7 +64,7 @@ export function askUserForLockingActiveMapping(
         // See https://github.com/scalableminds/webknossos/issues/5431 for more information.
         const activeMapping = activeMappingByLayer[volumeTracing.tracingId];
         if (activeMapping.mappingName) {
-          Store.dispatch(setMappingIsLockedAction());
+          Store.dispatch(setMappingIsLockedAction(volumeTracing.tracingId));
           const message = messages["tracing.locked_mapping_confirmed"](activeMapping.mappingName);
           Toast.info(message, { timeout: 10000 });
           console.log(message);
@@ -111,7 +111,7 @@ export function* ensureMaybeActiveMappingIsLocked(
       return error as EnsureMappingIsLockedReturnType;
     }
   } else {
-    yield* put(setMappingIsLockedAction());
+    yield* put(setMappingIsLockedAction(volumeTracing.tracingId));
     return { isMappingLockedIfNeeded: true, reason: "Locked that no mapping is active." };
   }
 }

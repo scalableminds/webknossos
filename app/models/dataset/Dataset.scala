@@ -762,15 +762,15 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
 
-  def updateMagPathsForDataset(datasetId: ObjectId, magPaths: List[MagPathInfo]): Fox[Unit] =
+  def updateMagPathsForDataset(datasetId: ObjectId, magPathInfos: List[MagPathInfo]): Fox[Unit] =
     for {
       _ <- Fox.successful(())
-      updateQueries = magPaths.map(pathInfo => {
-        val magLiteral = s"(${pathInfo.mag.x}, ${pathInfo.mag.y}, ${pathInfo.mag.z})"
+      updateQueries = magPathInfos.map(magPathInfo => {
+        val magLiteral = s"(${magPathInfo.mag.x}, ${magPathInfo.mag.y}, ${magPathInfo.mag.z})"
         q"""UPDATE webknossos.dataset_mags
-                 SET path = ${pathInfo.path}, realPath = ${pathInfo.realPath}, haslocaldata = ${pathInfo.hasLocalData}
+                 SET path = ${magPathInfo.path}, realPath = ${magPathInfo.realPath}, hasLocalData = ${magPathInfo.hasLocalData}
                  WHERE _dataset = $datasetId
-                  AND datalayername = ${pathInfo.layerName}
+                  AND dataLayerName = ${magPathInfo.layerName}
                   AND mag = CAST($magLiteral AS webknossos.vector3)""".asUpdate
       })
       composedQuery = DBIO.sequence(updateQueries)
@@ -786,7 +786,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       rows <- run(q"""SELECT $columns
             FROM webknossos.dataset_mags
             WHERE _dataset = $datasetId
-            AND datalayername = $dataLayerName""".as[DatasetMagsRow])
+            AND dataLayerName = $dataLayerName""".as[DatasetMagsRow])
       magInfos <- Fox.combined(rows.toList.map(parse))
       datasetMagInfos = magInfos.map(magInfo =>
         DatasetMagInfo(datasetId, magInfo.layerName, magInfo.mag, magInfo.path, magInfo.realPath, magInfo.hasLocalData))

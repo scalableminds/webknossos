@@ -5,6 +5,7 @@ import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
+import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -30,12 +31,14 @@ class DataSourceService @Inject()(
     config: DataStoreConfig,
     dataSourceRepository: DataSourceRepository,
     remoteSourceDescriptorService: RemoteSourceDescriptorService,
+    remoteWebknossosClient: DSRemoteWebknossosClient,
     val lifecycle: ApplicationLifecycle,
     @Named("webknossos-datastore") val system: ActorSystem
 )(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with LazyLogging
-    with FoxImplicits {
+    with FoxImplicits
+    with Formatter {
 
   override protected def enabled: Boolean = config.Datastore.WatchFileSystem.enabled
   override protected def tickerInterval: FiniteDuration = config.Datastore.WatchFileSystem.interval
@@ -78,7 +81,7 @@ class DataSourceService @Inject()(
             foundInboxSources = organizationDirs.flatMap(teamAwareInboxSources)
             _ = logFoundDatasources(foundInboxSources, verbose)
             _ <- dataSourceRepository.updateDataSources(foundInboxSources)
-            _ <- sendRealPaths(foundInboxSources)
+            _ <- reportRealPaths(foundInboxSources)
           } yield ()
         case e =>
           val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir': $e"
@@ -88,27 +91,27 @@ class DataSourceService @Inject()(
     } yield ()
   }
 
-  private def sendRealPaths(dataSources: List[InboxDataSource]) =
+  private def reportRealPaths(dataSources: List[InboxDataSource]) =
     for {
       _ <- Fox.successful(())
       magPathBoxes = dataSources.map(ds => (ds, determineMagRealPathsForDataSource(ds)))
       pathInfos = magPathBoxes.map {
         case (ds, Full(magPaths)) => DataSourcePathInfo(ds.id, magPaths)
-        case (ds, Failure(msg, _, _)) =>
-          logger.error(s"Failed to determine real paths for mags of $ds: $msg")
+        case (ds, failure: Failure) =>
+          logger.error(formatFailureChain(failure))
           DataSourcePathInfo(ds.id, List())
         case (ds, Empty) =>
           logger.error(s"Failed to determine real paths for mags of $ds")
           DataSourcePathInfo(ds.id, List())
       }
-      _ <- dataSourceRepository.publishRealPaths(pathInfos)
+      _ <- remoteWebknossosClient.reportRealPaths(pathInfos)
     } yield ()
 
   private def determineMagRealPathsForDataSource(dataSource: InboxDataSource) = tryo {
     val organizationPath = dataBaseDir.resolve(dataSource.id.organizationId)
     val datasetPath = organizationPath.resolve(dataSource.id.directoryName)
     dataSource.toUsable match {
-      case Some(usableDataSource) => {
+      case Some(usableDataSource) =>
         usableDataSource.dataLayers.flatMap { dataLayer =>
           val rawLayerPath = datasetPath.resolve(dataLayer.name)
           val absoluteLayerPath = if (Files.isSymbolicLink(rawLayerPath)) {
@@ -117,26 +120,33 @@ class DataSourceService @Inject()(
             rawLayerPath.toAbsolutePath
           }
           dataLayer.mags.map { mag =>
-            val (magURI, isRemote) = getMagURI(datasetPath, absoluteLayerPath, mag)
-            if (isRemote) {
-              MagPathInfo(dataLayer.name, mag.mag, magURI.toString, magURI.toString, hasLocalData = false)
-            } else {
-              val magPath = Paths.get(magURI)
-              val realPath = magPath.toRealPath()
-              // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
-              val isLocal = realPath.startsWith(datasetPath.toAbsolutePath)
-              val unresolvedPath =
-                rawLayerPath.toAbsolutePath.resolve(absoluteLayerPath.relativize(magPath)).normalize()
-              MagPathInfo(dataLayer.name,
-                          mag.mag,
-                          unresolvedPath.toUri.toString,
-                          realPath.toUri.toString,
-                          hasLocalData = isLocal)
-            }
+            getMagPathInfo(datasetPath, absoluteLayerPath, rawLayerPath, dataLayer, mag)
           }
         }
-      }
       case None => List()
+    }
+  }
+
+  private def getMagPathInfo(datasetPath: Path,
+                             absoluteLayerPath: Path,
+                             rawLayerPath: Path,
+                             dataLayer: DataLayer,
+                             mag: MagLocator) = {
+    val (magURI, isRemote) = getMagURI(datasetPath, absoluteLayerPath, mag)
+    if (isRemote) {
+      MagPathInfo(dataLayer.name, mag.mag, magURI.toString, magURI.toString, hasLocalData = false)
+    } else {
+      val magPath = Paths.get(magURI)
+      val realPath = magPath.toRealPath()
+      // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
+      val isLocal = realPath.startsWith(datasetPath.toAbsolutePath)
+      val unresolvedPath =
+        rawLayerPath.toAbsolutePath.resolve(absoluteLayerPath.relativize(magPath)).normalize()
+      MagPathInfo(dataLayer.name,
+                  mag.mag,
+                  unresolvedPath.toUri.toString,
+                  realPath.toUri.toString,
+                  hasLocalData = isLocal)
     }
   }
 

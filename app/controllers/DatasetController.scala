@@ -137,7 +137,7 @@ class DatasetController @Inject()(userService: UserService,
       for {
         _ <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
-        magsAndLinkedMags <- datasetService.getPathsForDatalayer(datasetId, dataLayerName)
+        magsAndLinkedMags <- datasetService.getPathsForDataLayer(datasetId, dataLayerName)
         returnValues = magsAndLinkedMags.map {
           case (mag, linkedMags) => MagLinkInfo(mag, linkedMags)
         }

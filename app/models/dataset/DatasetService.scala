@@ -359,7 +359,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.serialCombined(pathInfos)(updateRealPath)
     } yield ()
 
-  def getPathsForDatalayer(datasetId: ObjectId, layerName: String): Fox[List[(DatasetMagInfo, List[DatasetMagInfo])]] =
+  def getPathsForDataLayer(datasetId: ObjectId, layerName: String): Fox[List[(DatasetMagInfo, List[DatasetMagInfo])]] =
     for {
       magInfos <- datasetMagsDAO.findPathsForDatasetAndDatalayer(datasetId, layerName)
       magInfosAndLinkedMags <- Fox.serialCombined(magInfos)(magInfo =>

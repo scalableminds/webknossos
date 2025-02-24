@@ -10,7 +10,6 @@ import {
   getNodeAndTree,
   getSkeletonTracing,
   getTree,
-  getTreesWithType,
   isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Action } from "oxalis/model/actions/actions";

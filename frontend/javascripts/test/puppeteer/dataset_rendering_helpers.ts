@@ -325,20 +325,13 @@ export async function screenshotTracingView(
   ];
   const screenshots = [];
 
-  await page.evaluate(() => {
-    const element = document.getElementById("screenshot_target_inputcatcher_TDView");
-    if (element) {
-      element.style.opacity = "0";
-    }
-  });
-
   async function setOpacity(value: number) {
-    await page.evaluate(() => {
+    await page.evaluate((value: number) => {
       const element = document.getElementById("TDViewControls");
       if (element) {
         element.style.opacity = `${value}`;
       }
-    });
+    }, value);
   }
   let revertOpacityIfNecessary = async () => {};
   if (!ignore3DViewport) {

@@ -14,6 +14,18 @@ import { hashCombine } from "./hashing.glsl";
 import { attemptMappingLookUp } from "./mappings.glsl";
 import type { ShaderModule } from "./shader_module_system";
 
+function buildPermutation(sequenceLength: number, primitiveRoot: number) {
+  return {
+    permutation: getPermutation(sequenceLength, primitiveRoot),
+    count: sequenceLength,
+  };
+}
+
+const permutations = {
+  color: buildPermutation(19, 2),
+  frequency: buildPermutation(3, 2),
+};
+
 export const convertCellIdToRGB: ShaderModule = {
   requirements: [hsvToRgb, getElementOfPermutation, aaStep, colormapJet, hashCombine],
   code: `
@@ -123,14 +135,11 @@ export const convertCellIdToRGB: ShaderModule = {
       vec4 id = abs(idHigh) + abs(idLow);
       float significantSegmentIndex = 256.0 * id.g + id.r;
 
-      float colorCount = 19.;
-
-      float[19] permutation = float[](
-        ${getPermutation(19, 2).map(formatNumberAsGLSLFloat).join(",")}
+      float colorCount = ${formatNumberAsGLSLFloat(permutations.color.count)};
+      float[${permutations.color.count}] colorPermutation = float[](
+        ${permutations.color.permutation.map(formatNumberAsGLSLFloat).join(",")}
       );
-      float colorIndex = permutation[uint(mod(significantSegmentIndex, 19.))];
-
-
+      float colorIndex = colorPermutation[uint(mod(significantSegmentIndex, colorCount))];
 
       float colorValueDecimal = 1.0 / colorCount * colorIndex;
       float colorHue = rgb2hsv(colormapJet(colorValueDecimal)).x;
@@ -159,9 +168,15 @@ export const convertCellIdToRGB: ShaderModule = {
       //
       // By default, scale everything with fineTunedScale as this seemed a good value during testing.
       float fineTunedScale = 0.15;
+
+      float frequencyCount = ${formatNumberAsGLSLFloat(permutations.frequency.count)};
+      float[${permutations.frequency.count}] frequencyPermutation = float[](
+        ${permutations.frequency.permutation.map(formatNumberAsGLSLFloat).join(",")}
+      );
+      float frequencyIndex = frequencyPermutation[uint(mod(significantSegmentIndex, frequencyCount))];
+
       // Additionally, apply another scale factor (between 0.5 and 1.5) depending on the segment id.
-      float frequencySequenceLength = 3.;
-      float frequencyModulator = mix(0.5, 1.5, getElementOfPermutation(significantSegmentIndex, frequencySequenceLength, 2.) / frequencySequenceLength);
+      float frequencyModulator = mix(0.5, 1.5, frequencyIndex / frequencyCount);
       float coordScaling = fineTunedScale * frequencyModulator;
       // Round the zoomValue so that the pattern frequency only changes at distinct steps. Otherwise, zooming out
       // wouldn't change the pattern at all, which would feel weird.

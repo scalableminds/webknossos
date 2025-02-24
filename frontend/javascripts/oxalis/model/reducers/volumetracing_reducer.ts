@@ -3,8 +3,10 @@ import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
 import { ContourModeEnum } from "oxalis/constants";
 import {
+  getLayerByName,
   getMappingInfo,
   getMaximumSegmentIdForLayer,
+  getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getRequestedOrVisibleSegmentationLayer,
@@ -277,15 +279,33 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
   return volumeTracing;
 }
 
-function VolumeTracingReducer(
-  state: OxalisState,
-  action:
-    | VolumeTracingAction
-    | SetMappingAction
-    | FinishMappingInitializationAction
-    | SetMappingEnabledAction
-    | SetMappingNameAction,
-): OxalisState {
+type VolumeTracingReducerAction =
+  | VolumeTracingAction
+  | SetMappingAction
+  | FinishMappingInitializationAction
+  | SetMappingEnabledAction
+  | SetMappingNameAction;
+
+function getVolumeTracingFromAction(state: OxalisState, action: VolumeTracingReducerAction) {
+  if ("tracingId" in action && action.tracingId != null) {
+    return getVolumeTracingById(state.tracing, action.tracingId);
+  }
+  const maybeVolumeLayer =
+    "layerName" in action && action.layerName != null
+      ? getLayerByName(state.dataset, action.layerName)
+      : getVisibleSegmentationLayer(state);
+
+  if (
+    maybeVolumeLayer == null ||
+    !("tracingId" in maybeVolumeLayer) ||
+    maybeVolumeLayer.tracingId == null
+  ) {
+    return null;
+  }
+  return getVolumeTracingById(state.tracing, maybeVolumeLayer.tracingId);
+}
+
+function VolumeTracingReducer(state: OxalisState, action: VolumeTracingReducerAction): OxalisState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
       const volumeTracing = serverVolumeToClientVolumeTracing(action.tracing);
@@ -394,13 +414,10 @@ function VolumeTracingReducer(
     return state;
   }
 
-  const volumeLayer = getRequestedOrVisibleSegmentationLayer(state, null);
-
-  if (volumeLayer == null || volumeLayer.tracingId == null) {
+  const volumeTracing = getVolumeTracingFromAction(state, action);
+  if (volumeTracing == null) {
     return state;
   }
-
-  const volumeTracing = getVolumeTracingById(state.tracing, volumeLayer.tracingId);
 
   switch (action.type) {
     case "SET_ACTIVE_CELL": {

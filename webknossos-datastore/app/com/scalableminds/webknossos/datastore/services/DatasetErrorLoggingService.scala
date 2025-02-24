@@ -18,7 +18,7 @@ import scala.concurrent.duration._
 class DatasetErrorLoggingService @Inject()(
     val lifecycle: ApplicationLifecycle,
     val applicationHealthService: ApplicationHealthService,
-    @Named("webknossos-datastore") val system: ActorSystem)(implicit val ec: ExecutionContext)
+    @Named("webknossos-datastore") val actorSystem: ActorSystem)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with Formatter
     with LazyLogging {
@@ -47,7 +47,7 @@ class DatasetErrorLoggingService @Inject()(
   def clearForDataset(organizationId: String, datasetName: String): Unit =
     recentErrors.remove((organizationId, datasetName))
 
-  override protected def tick(): Unit = recentErrors.clear()
+  override protected def tick(): Fox[Unit] = Fox.successful(recentErrors.clear())
 
   def withErrorLogging(dataSourceId: DataSourceId, label: String, resultFox: Fox[Array[Byte]]): Fox[Array[Byte]] =
     resultFox.futureBox.flatMap {

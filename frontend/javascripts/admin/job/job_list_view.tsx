@@ -297,7 +297,7 @@ function JobListView() {
               cancelJob(job.id).then(() => fetchData());
             }
           }}
-          icon={<CloseCircleOutlined key="cancel" className="icon-margin-right" />}
+          icon={<CloseCircleOutlined className="icon-margin-right" />}
         >
           Cancel
         </AsyncLink>
@@ -309,7 +309,7 @@ function JobListView() {
           onClick={async () => {
             resumeJob(job.id).then(() => fetchData());
           }}
-          icon={<PlayCircleOutlined key="resume" className="icon-margin-right" />}
+          icon={<PlayCircleOutlined className="icon-margin-right" />}
         >
           Resume
         </AsyncLink>

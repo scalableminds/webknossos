@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(125);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(126);
 COMMIT TRANSACTION;
 
 
@@ -472,6 +472,7 @@ CREATE TABLE webknossos.jobs(
   _voxelytics_workflowHash VARCHAR(512),
   latestRunId VARCHAR(1024),
   returnValue Text,
+  resumedBySuperUser BOOLEAN NOT NULL DEFAULT false,
   started TIMESTAMPTZ,
   ended TIMESTAMPTZ,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),

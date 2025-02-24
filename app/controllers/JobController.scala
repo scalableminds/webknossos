@@ -117,7 +117,7 @@ class JobController @Inject()(jobDAO: JobDAO,
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
       _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
       job <- jobDAO.findOne(id)
-      _ <- jobDAO.updateManualState(id, JobState.PENDING)
+      _ <- jobDAO.resumeOne(id)
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }

@@ -102,7 +102,7 @@ class WorkerLivenessService @Inject()(workerService: WorkerService,
                                       workerDAO: WorkerDAO,
                                       slackNotificationService: SlackNotificationService,
                                       val lifecycle: ApplicationLifecycle,
-                                      val system: ActorSystem)(implicit val ec: ExecutionContext)
+                                      val actorSystem: ActorSystem)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with Formatter
     with LazyLogging {
@@ -111,13 +111,11 @@ class WorkerLivenessService @Inject()(workerService: WorkerService,
 
   override protected def tickerInterval: FiniteDuration = 1 minute
 
-  override protected def tick(): Unit = {
+  override protected def tick(): Fox[Unit] =
     for {
       workers <- workerDAO.findAll(GlobalAccessContext)
       _ = workers.foreach(reportIfLivenessChanged)
     } yield ()
-    ()
-  }
 
   private val reportedAsDead: scala.collection.mutable.Set[ObjectId] = scala.collection.mutable.Set()
 

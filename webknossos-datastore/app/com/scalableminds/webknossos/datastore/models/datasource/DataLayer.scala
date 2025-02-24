@@ -82,14 +82,18 @@ object ElementClass extends ExtendedEnumeration {
     case ElementClass.uint16 => (0.0, math.pow(2, 16) - 1)
     case ElementClass.uint24 => (0.0, math.pow(2, 8) - 1) // Assume uint24 rgb color data
     case ElementClass.uint32 => (0.0, math.pow(2, 32) - 1)
-    case ElementClass.uint64 => (0.0, math.pow(2, 64) - 1)
     case ElementClass.float  => (-3.40282347e+38, 3.40282347e+38)
     case ElementClass.double => (-1.7976931348623157e+308, 1.7976931348623157e+308)
     case ElementClass.int8   => (-math.pow(2, 7), math.pow(2, 7) - 1)
     case ElementClass.int16  => (-math.pow(2, 15), math.pow(2, 15) - 1)
     case ElementClass.int32  => (-math.pow(2, 31), math.pow(2, 31) - 1)
-    case ElementClass.int64  => (-math.pow(2, 63), math.pow(2, 63) - 1)
-    case _                   => (0.0, 255.0)
+
+    // Int64 types are only supported for segmentations (which don't need to call this
+    // function as there will be no histogram / color data). Still, for the record:
+    // The frontend only supports number in range of 2 ** 53 - 1 which is currently
+    // the maximum supported "64-bit" segment id due to JS Number limitations (frontend).
+    case ElementClass.uint64 | ElementClass.int64 => (0.0, math.pow(2, 8) - 1)
+    case _                                        => (0.0, 255.0)
   }
 
   def bytesPerElement(elementClass: ElementClass.Value): Int = elementClass match {

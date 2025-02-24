@@ -177,8 +177,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
               .insert(redisKeyForCurrentUploadedTotalFileSizeInBytes(reserveUploadInfo.uploadId), "0")
           ))
       }
-      _ <- runningUploadMetadataStore.insert(redisKeyForCurrentUploadedTotalFileSizeInBytes(reserveUploadInfo.uploadId),
-                                             "0")
       _ <- runningUploadMetadataStore.insert(
         redisKeyForDataSourceId(reserveUploadInfo.uploadId),
         Json.stringify(

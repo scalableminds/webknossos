@@ -114,6 +114,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
   private def buildRequest(uri: URI)(implicit tc: TokenContext): WSRequest = {
     val request = ws.url(uri.toString).withRequestTimeout(readTimeout)
     tc.userTokenOpt match {
+      // If a user token is present, and this request is targeted at the data store, use the user token to authenticate at the datastore
       case Some(token) if uri.getAuthority == dataStoreAuthority =>
         request.withHttpHeaders("X-Auth-Token" -> token)
       case _ =>
@@ -147,6 +148,14 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
 }
 
 object HttpsDataVault {
+
+  /**
+    * Factory method to create a new HttpsDataVault instance.
+    * @param remoteSourceDescriptor
+    * @param ws
+    * @param dataStoreHost The host of the local data store that this vault is accessing. This is used to determine if a user token should be applied in requests.
+    * @return
+    */
   def create(remoteSourceDescriptor: RemoteSourceDescriptor, ws: WSClient, dataStoreHost: String): HttpsDataVault =
     new HttpsDataVault(remoteSourceDescriptor.credential, ws, dataStoreHost)
 }

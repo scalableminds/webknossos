@@ -95,7 +95,7 @@ class BinaryDataController @Inject()(
       // If true, use lossy compression by sending only half-bytes of the data
       halfByte: Boolean,
       mappingName: Option[String]
-  ): Action[AnyContent] = Action.async { implicit r =>
+  ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
@@ -103,14 +103,14 @@ class BinaryDataController @Inject()(
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName) ~> NOT_FOUND
         magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> "malformedMag"
-        request = DataRequest(
+        dataRequest = DataRequest(
           VoxelPosition(x, y, z, magParsed),
           width,
           height,
           depth,
           DataServiceRequestSettings(halfByte = halfByte, appliedAgglomerate = mappingName)
         )
-        (data, indices) <- requestData(dataSource, dataLayer, request)
+        (data, indices) <- requestData(dataSource, dataLayer, dataRequest)
       } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
     }
   }
@@ -141,20 +141,20 @@ class BinaryDataController @Inject()(
                         x: Int,
                         y: Int,
                         z: Int,
-                        cubeSize: Int): Action[AnyContent] = Action.async { implicit r =>
+                        cubeSize: Int): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName) ~> NOT_FOUND
-        request = DataRequest(
+        dataRequest = DataRequest(
           VoxelPosition(x * cubeSize * mag, y * cubeSize * mag, z * cubeSize * mag, Vec3Int(mag, mag, mag)),
           cubeSize,
           cubeSize,
           cubeSize
         )
-        (data, indices) <- requestData(dataSource, dataLayer, request)
+        (data, indices) <- requestData(dataSource, dataLayer, dataRequest)
       } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
     }
   }
@@ -172,7 +172,7 @@ class BinaryDataController @Inject()(
                     intensityMin: Option[Double],
                     intensityMax: Option[Double],
                     color: Option[String],
-                    invertColor: Option[Boolean]): Action[RawBuffer] = Action.async(parse.raw) { implicit r =>
+                    invertColor: Option[Boolean]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
@@ -181,14 +181,14 @@ class BinaryDataController @Inject()(
                                                                                   dataLayerName) ?~> Messages(
           "dataSource.notFound") ~> NOT_FOUND
         magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> "malformedMag"
-        request = DataRequest(
+        dataRequest = DataRequest(
           VoxelPosition(x, y, z, magParsed),
           width,
           height,
           depth = 1,
           DataServiceRequestSettings(appliedAgglomerate = mappingName)
         )
-        (data, _) <- requestData(dataSource, dataLayer, request)
+        (data, _) <- requestData(dataSource, dataLayer, dataRequest)
         intensityRange: Option[(Double, Double)] = intensityMin.flatMap(min => intensityMax.map(max => (min, max)))
         layerColor = color.flatMap(Color.fromHTML)
         params = ImageCreatorParameters(

@@ -198,6 +198,7 @@ class DatasetArray(vaultPath: VaultPath,
   private def getSourceChunkDataWithCache(chunkIndex: Array[Int], useSkipTypingShortcut: Boolean = false)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[MultiArray] =
+    // Note: we omit the tokenContext from the cacheKey because (a) Failures aren’t cached anyway and (b) the dataset access is checked again in the controllers. Omitting it here prevents wasteful data duplicates in the cache.
     sharedChunkContentsCache.getOrLoad(chunkContentsCacheKey(chunkIndex),
                                        _ => readSourceChunkData(chunkIndex, useSkipTypingShortcut))
 

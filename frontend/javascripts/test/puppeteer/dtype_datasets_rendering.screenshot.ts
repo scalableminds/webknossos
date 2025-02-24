@@ -317,6 +317,6 @@ datasetNames.map(async (datasetName) => {
         },
       );
     }
-    page.close();
+    await page.close();
   });
 });

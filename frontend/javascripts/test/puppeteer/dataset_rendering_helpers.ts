@@ -332,6 +332,22 @@ export async function screenshotTracingView(
     }
   });
 
+  async function setOpacity(value: number) {
+    await page.evaluate(() => {
+      const element = document.getElementById("TDViewControls");
+      if (element) {
+        element.style.opacity = `${value}`;
+      }
+    });
+  }
+  let revertOpacityIfNecessary = async () => {};
+  if (!ignore3DViewport) {
+    await setOpacity(0);
+    revertOpacityIfNecessary = async () => {
+      await setOpacity(1);
+    };
+  }
+
   for (const planeId of PLANE_IDS) {
     const element = await page.$(planeId);
     if (element == null)
@@ -341,13 +357,7 @@ export async function screenshotTracingView(
     screenshots.push(screenshot);
   }
 
-  await page.evaluate(() => {
-    const element = document.getElementById("screenshot_target_inputcatcher_TDView");
-    if (element) {
-      element.style.opacity = "1";
-    }
-  });
-
+  await revertOpacityIfNecessary();
   // Concatenate all screenshots
   const img = await mergeImg(screenshots);
   return new Promise((resolve) => {

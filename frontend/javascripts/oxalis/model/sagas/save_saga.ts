@@ -297,6 +297,21 @@ export function* sendSaveRequestToServer(): Saga<number> {
   }
 }
 
+function guarded(fn) {
+  function* guardedFn(...args) {
+    try {
+      yield* fn(...args);
+    } catch (ex) {
+      console.log("ex", ex);
+      throw ex;
+    } finally {
+      console.log("finally");
+    }
+  }
+
+  return guardedFn;
+}
+
 function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
   for (const saveEntry of saveQueue) {
     for (const updateAction of saveEntry.actions) {

@@ -627,7 +627,12 @@ export type OxalisState = {
     }
   >;
 };
-const sagaMiddleware = createSagaMiddleware();
+const sagaMiddleware = createSagaMiddleware({
+  onError(error, errorInfo) {
+    console.log("error", error);
+    console.log("errorInfo", errorInfo);
+  },
+});
 export type Reducer = (state: OxalisState, action: Action) => OxalisState;
 const combinedReducers = reduceReducers(
   SettingsReducer,

@@ -54,6 +54,7 @@ import type {
 } from "oxalis/store";
 import { call, delay, fork, put, race, take } from "typed-redux-saga";
 import { takeEveryWithBatchActionSupport } from "./saga_helpers";
+import memoizeOne from "memoize-one";
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
 
@@ -280,12 +281,16 @@ export function* sendSaveRequestToServer(): Saga<number> {
 }
 
 function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
+  const getLayerAndMagInfoForTracingId = memoizeOne((tracingId: string) => {
+    const segmentationLayer = Model.getSegmentationTracingLayer(tracingId);
+    const segmentationMagInfo = getMagInfo(segmentationLayer.mags);
+    return [segmentationLayer, segmentationMagInfo] as const;
+  });
   for (const saveEntry of saveQueue) {
     for (const updateAction of saveEntry.actions) {
       if (updateAction.name === "updateBucket") {
         const { actionTracingId: tracingId } = updateAction.value;
-        const segmentationLayer = Model.getSegmentationTracingLayer(tracingId);
-        const segmentationMagInfo = yield* call(getMagInfo, segmentationLayer.mags);
+        const [segmentationLayer, segmentationMagInfo] = getLayerAndMagInfoForTracingId(tracingId);
 
         const { position, mag, additionalCoordinates } = updateAction.value;
         const magIndex = segmentationMagInfo.getIndexByMag(mag);

@@ -62,14 +62,14 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
                                                                                     dataset)
         skeletonBaseOpts: List[Option[SkeletonTracing]] <- taskCreationService.createTaskSkeletonTracingBases(
           taskParametersFull,
-          request.identity._organization)
+          dataset)
         volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- taskCreationService.createTaskVolumeTracingBases(
           taskParametersFull,
-          request.identity._organization)
+          taskType)
         paramsWithTracings = taskParametersFull.lazyZip(skeletonBaseOpts).lazyZip(volumeBaseOpts).map {
           case (params, skeletonOpt, volumeOpt) => Full((params, skeletonOpt, volumeOpt))
         }
-        result <- taskCreationService.createTasks(paramsWithTracings, request.identity)
+        result <- taskCreationService.createTasks(paramsWithTracings, taskType, request.identity)
       } yield Ok(Json.toJson(result))
     }
 
@@ -94,9 +94,9 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> "format.json.missing"
       params <- JsonHelper.parseAndValidateJson[NmlTaskParameters](jsonString) ?~> "task.create.failed"
       userOrganizationId = request.identity._organization
-      _ <- taskCreationService.assertBatchLimit(inputFiles.length, List(params.taskTypeId))
       taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
+      _ <- taskCreationService.assertBatchLimit(inputFiles.length, taskType)
       project <- projectDAO
         .findOneByNameAndOrganization(params.projectName, request.identity._organization) ?~> "project.notFound" ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
@@ -117,8 +117,20 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       )
 
       fullParamsWithTracings = taskCreationService.combineParamsWithTracings(fullParams, skeletonBases, volumeBases)
-      result <- taskCreationService.createTasks(fullParamsWithTracings, request.identity)
-    } yield Ok(Json.toJson(result))
+      flattenedParamsWithTracings = fullParamsWithTracings.flatten
+      taskCreationResult <- if (flattenedParamsWithTracings.isEmpty) {
+        // if there is no nonempty task, we directly return all of the errors
+        Fox.successful(
+          TaskCreationResult.fromBoxResults(fullParamsWithTracings.map(_.map(_ => Json.obj())), List.empty[String]))
+      } else {
+        for {
+          datasetId <- SequenceUtils
+            .findUniqueElement(flattenedParamsWithTracings.map(_._1.datasetId)) ?~> "task.create.notOnSameDataset"
+          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
+          result <- taskCreationService.createTasks(fullParamsWithTracings, taskType, dataset, request.identity)
+        } yield result
+      }
+    } yield Ok(Json.toJson(taskCreationResult))
   }
 
   def update(taskId: ObjectId): Action[TaskParameters] =

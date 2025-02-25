@@ -256,13 +256,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def dataSourceFor(dataset: Dataset, organization: Option[Organization] = None): Fox[InboxDataSource] =
+  def dataSourceFor(dataset: Dataset): Fox[InboxDataSource] =
     (for {
-      organization <- Fox.fillOption(organization) {
-        organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      }
       dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
-      dataSourceId = DataSourceId(dataset.directoryName, organization._id)
+      dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
     } yield {
       if (dataset.isUsable)
         for {
@@ -359,7 +356,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       isEditable <- isEditableBy(dataset, requestingUserOpt, requestingUserTeamManagerMemberships) ?~> "dataset.list.isEditableCheckFailed"
       lastUsedByUser <- lastUsedTimeFor(dataset._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
-      dataSource <- dataSourceFor(dataset, Some(organization)) ?~> "dataset.list.fetchDataSourceFailed"
+      dataSource <- dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
       usedStorageBytes <- Fox.runIf(requestingUserOpt.exists(u => u._organization == dataset._organization))(
         organizationDAO.getUsedStorageForDataset(dataset._id))
     } yield {

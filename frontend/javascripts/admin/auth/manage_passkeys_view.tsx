@@ -34,7 +34,7 @@ function ManagePassKeyView() {
   const registerNewPassKey = async () => {
     try {
       setIsPassKeyNameModalOpen(false);
-      const result = doWebAuthnRegistration(newPassKeyName);
+      const result = await doWebAuthnRegistration(newPassKeyName);
       console.debug(result);
       Toast.success("PassKey registered successfully");
       setNewPassKeyName("");
@@ -55,7 +55,7 @@ function ManagePassKeyView() {
         align="middle"
       >
         <Col span={8}>
-          <h3>Your PassKeys</h3>
+          <h3>Your Passkeys</h3>
           {passkeys.map((passkey) => (
             <Row key={passkey.id}>
               {passkey.name}
@@ -74,13 +74,13 @@ function ManagePassKeyView() {
       <Row justify="center" align="middle">
         <Col span={8}>
           <p>
-            PassKeys are a new web authentication method that allows you to log in without a
+            Passkeys are a new web authentication method that allows you to log in without a
             password in a secured way. Microsoft Hello and Apple FaceID are examples of technologies
             that can be used as passkeys to log in in WEBKNOSSOS. If you want to add a new passkey
             to your account use the button below.
           </p>
           <Button onClick={() => setIsPassKeyNameModalOpen(true)} type="primary">
-            Register new PassKey
+            Register new Passkey
           </Button>
         </Col>
       </Row>

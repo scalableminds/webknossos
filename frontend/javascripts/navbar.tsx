@@ -682,7 +682,7 @@ function LoggedInAvatar({
                   to="/auth/passKey"
                   title="Register and manage Passkeys and Login via Windows Hello"
                 >
-                  Register/Manage PassKeys
+                  Manage Passkeys
                 </Link>
               ),
             },

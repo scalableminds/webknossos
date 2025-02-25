@@ -176,11 +176,12 @@ class TSAnnotationController @Inject()(
               case Empty               => Fox.successful((None, 0L))
               case f: Failure          => f.toFox
             }
-            mergedVolumeStats <- volumeTracingService.mergeVolumeData(volumeLayers.map(_.tracingId),
-                                                                      volumeTracings,
-                                                                      newVolumeId,
-                                                                      newVersion = newTargetVersion,
-                                                                      toTemporaryStore)
+            mergedVolumeStats <- volumeTracingService.mergeVolumeData(
+              volumeLayers.map(_.tracingId), // TODO construct volumeTracingLayers
+              volumeTracings,
+              newVolumeId,
+              newVersion = newTargetVersion,
+              toTemporaryStore)
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
               volumeTracingService
                 .merge(volumeTracings, mergedVolumeStats, newMappingName, newVersion = newTargetVersion))

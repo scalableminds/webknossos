@@ -79,7 +79,7 @@ class WKRemoteTracingStoreClient(
       .postProto[SkeletonTracing](tracing)
   }
 
-  def saveSkeletonTracings(tracings: SkeletonTracings): Fox[List[Box[Boolean]]] = {
+  def saveSkeletonTracings(tracings: SkeletonTracings): Fox[List[Box[Boolean]]] = { // TODO adapt tracingstore side to return Full(true) or Empty
     logger.debug("Called to save SkeletonTracings." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/saveMultiple").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)

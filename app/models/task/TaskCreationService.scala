@@ -398,7 +398,6 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   // and on to create task and annotation objects
   // Both createFromFiles and create use this method
   def createTasks(
-      // TODO pass boxes in again, not just full! Needed for partial error reporting
       requestedTasks: List[Box[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])]],
       taskType: TaskType,
       requestingUser: User)(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[TaskCreationResult] = {
@@ -426,12 +425,9 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
           .lazyZip(skeletonSaveResults)
           .lazyZip(volumeSaveResults)
           .toList
-        taskObjects: List[Fox[Task]] = requestedTasksWithTracingIds.map(r =>
+        taskObjects: List[Fox[Task]] = requestedTasksWithTracingSaveResults.map(r =>
           createTaskWithoutAnnotationBase(r._1.map(_._1), r._2, r._3, taskType, requestingUser))
-        zipped = requestedTasks
-          .lazyZip(skeletonTracingsIdsMerged.zip(volumeTracingsIdsMerged))
-          .lazyZip(taskObjects)
-          .toList
+        zipped = requestedTasks.lazyZip(taskObjects).toList
         createAnnotationBaseResults: List[Fox[Unit]] = zipped.map(
           tuple =>
             annotationService.createAndSaveAnnotationBase(
@@ -471,7 +467,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   private def saveVolumeTracingIfPresent(
       requestedTaskBox: Box[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])],
       tracingStoreClient: WKRemoteTracingStoreClient,
-      taskType: TaskType): Fox[Option[String]] =
+      taskType: TaskType): Fox[Boolean] =
     requestedTaskBox.map { tuple =>
       (tuple._1, tuple._3)
     } match {
@@ -483,10 +479,10 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                tracing,
                                initialFile,
                                magRestrictions = taskType.settings.magRestrictions)
-            .map(Some(_))
+            .map(_ => true)
         } yield saveResult
       case f: Failure => box2Fox(f)
-      case _          => Fox.successful(None)
+      case Empty      => Fox.empty
     }
 
   private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataset: Dataset, requestingUser: User)(

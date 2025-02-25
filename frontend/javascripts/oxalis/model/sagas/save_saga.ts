@@ -86,7 +86,6 @@ export function* pushSaveQueueAsync(): Saga<never> {
       timeout: delay(PUSH_THROTTLE_TIME),
       forcePush: take("SAVE_NOW"),
     });
-    // this is reached
     yield* put(setSaveBusyAction(true));
 
     // Send (parts of) the save queue to the server.
@@ -188,7 +187,7 @@ export function* sendSaveRequestToServer(): Saga<number> {
         {
           method: "POST",
           data: compactedSaveQueue,
-          compress: true, // process.env.NODE_ENV === "production",
+          compress: process.env.NODE_ENV === "production",
           // Suppressing error toast, as the doWithToken retry with personal token functionality should not show an error.
           // Instead the error is logged and toggleErrorHighlighting should take care of showing an error to the user.
           showErrorToast: false,

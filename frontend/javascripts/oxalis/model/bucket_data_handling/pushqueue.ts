@@ -154,7 +154,6 @@ class PushQueue {
       const items = await this.fifoResolver.orderedWaitFor(
         createCompressedUpdateBucketActions(batch),
       );
-      console.log("push", items.length, "items into transaction");
       Store.dispatch(pushSaveQueueTransaction(items));
 
       this.compressingBucketCount -= batch.length;

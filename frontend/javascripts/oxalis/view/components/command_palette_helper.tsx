@@ -64,7 +64,9 @@ export const WkCommandPalette = () => {
   const [isUserScriptsModalOpen, setIsUserScriptsModalOpen] = useState(false);
   const [isZarrPrivateLinksModalOpen, setIsZarrPrivateLinksModalOpen] = useState(false); // TODO_c check the right default
   const userConfig = useSelector((state: OxalisState) => state.userConfiguration);
-  const isViewMode = useSelector((state: OxalisState) => state.temporaryConfiguration.controlMode === "VIEW");
+  const isViewMode = useSelector(
+    (state: OxalisState) => state.temporaryConfiguration.controlMode === "VIEW",
+  );
 
   const props: TracingLayoutViewProps = useSelector((state: OxalisState) => {
     return {
@@ -82,6 +84,24 @@ export const WkCommandPalette = () => {
   });
 
   const { activeUser } = props;
+
+  const getMenuActions = (isViewMode: boolean) => {
+    if (isViewMode) {
+      const { items } = getViewDatasetMenu(null);
+      return items;
+    }
+    const { menuItems, modals } = getModalsAndMenuItems(
+      props,
+      null,
+      isMergeModalOpen,
+      (newValue: boolean) => setIsMergeModalOpen(newValue),
+      isUserScriptsModalOpen,
+      (newValue: boolean) => setIsUserScriptsModalOpen(newValue),
+      isZarrPrivateLinksModalOpen,
+      (newValue: boolean) => setIsZarrPrivateLinksModalOpen(newValue),
+    );
+    return menuItems;
+  };
 
   const getTabsAndSettingsMenuItems = () => {
     const commands: Command[] = [];
@@ -152,30 +172,16 @@ export const WkCommandPalette = () => {
     return commands;
   };
 
-  const { menuItems, modals } = getModalsAndMenuItems(
-    props,
-    null,
-    isMergeModalOpen,
-    (newValue: boolean) => setIsMergeModalOpen(newValue),
-    isUserScriptsModalOpen,
-    (newValue: boolean) => setIsUserScriptsModalOpen(newValue),
-    isZarrPrivateLinksModalOpen,
-    (newValue: boolean) => setIsZarrPrivateLinksModalOpen(newValue),
-  );
-
-  const datasetViewModeEntries = getViewDatasetMenu(null);
-
-  console.log("menuItems", menuItems);
+  const menuActions = getMenuActions(isViewMode);
 
   const allCommands = [
-    ...mapMenuActionsToCommands(isViewMode ? datasetViewModeEntries : menuItems),
+    ...mapMenuActionsToCommands(menuActions),
     ...getTabsAndSettingsMenuItems(),
     ...getNavigationEntries(),
     ...getToolEntries(),
   ];
   return (
     <div style={{ marginRight: "10px" }}>
-      {modals}
       <CommandPalette
         commands={allCommands.map((command, counter) => {
           return {

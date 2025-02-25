@@ -159,7 +159,7 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
     if (isSandboxMode) {
       Toast.warning(
         "For sandboxes, changes are neither saved nor shared. If you want to share the changes in this sandbox" +
-        " use the 'Copy To My Account' functionality and share the resulting annotation.",
+          " use the 'Copy To My Account' functionality and share the resulting annotation.",
       );
     }
   };
@@ -189,7 +189,6 @@ function _ShareModalView(props: Props) {
 
   const { othersMayEdit } = tracing;
   const [newOthersMayEdit, setNewOthersMayEdit] = useState(othersMayEdit);
-  // TODO_c annotationId is ""
 
   const hasUpdatePermissions = useSelector(mayEditAnnotationProperties);
   useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);

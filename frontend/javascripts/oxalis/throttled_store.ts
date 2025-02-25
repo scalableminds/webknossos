@@ -18,7 +18,7 @@ Store.subscribe(() => {
   }
 });
 
-async function go() {
+async function go(): Promise<never> {
   while (true) {
     await waitForUpdate.promise();
     waitForUpdate = new Deferred();

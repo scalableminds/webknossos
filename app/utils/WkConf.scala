@@ -119,10 +119,10 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val isWkorgInstance: Boolean = get[Boolean]("features.isWkorgInstance")
     val jobsEnabled: Boolean = get[Boolean]("features.jobsEnabled")
     val voxelyticsEnabled: Boolean = get[Boolean]("features.voxelyticsEnabled")
-    val neuronInferralCostsPerGVx: BigDecimal = BigDecimal(get[String]("features.neuronInferralCostsPerGVx"))
-    val mitochondriaInferralCostsPerGVx: BigDecimal = BigDecimal(
-      get[String]("features.mitochondriaInferralCostsPerGVx"))
-    val alignmentCostsPerGVx: BigDecimal = BigDecimal(get[String]("features.alignmentCostsPerGVx"))
+    val neuronInferralCostsPerGVx: BigDecimal = get[BigDecimal]("features.neuronInferralCostsPerGVx")
+    val mitochondriaInferralCostsPerGVx: BigDecimal =
+      get[BigDecimal]("features.mitochondriaInferralCostsPerGVx")
+    val alignmentCostsPerGVx: BigDecimal = get[BigDecimal]("features.alignmentCostsPerGVx")
     val taskReopenAllowed: FiniteDuration = get[Int]("features.taskReopenAllowedInSeconds") seconds
     val allowDeleteDatasets: Boolean = get[Boolean]("features.allowDeleteDatasets")
     val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")

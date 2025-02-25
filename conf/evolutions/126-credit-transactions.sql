@@ -3,42 +3,44 @@ START TRANSACTION;
 do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 125, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 
--- Create the enum type for transaction states
-CREATE TYPE webknossos.credit_transaction_state AS ENUM ('Pending', 'Completed', 'Refunded', 'Revoked', 'PartiallyRevoked', 'Spent');
+-- Create the enum types for transaction states and credit states
+CREATE TYPE webknossos.credit_transaction_state AS ENUM ('Pending', 'Complete');
+CREATE TYPE webknossos.credit_state AS ENUM ('Pending', 'Spent', 'Refunded', 'Revoked', 'PartiallyRevoked', 'Refunding', 'Revoking', 'ChargedUp');
 
--- Create the transactions table
-CREATE TABLE webknossos.organization_credit_transactions (
+CREATE TABLE webknossos.credit_transactions (
     _id CHAR(24) PRIMARY KEY,
     _organization VARCHAR(256) NOT NULL,
+    _related_transaction CHAR(24) DEFAULT NULL,
+    _paid_job CHAR(24) DEFAULT NULL,
     credit_change DECIMAL(14, 4) NOT NULL,
-    refundable_credit_change DECIMAL(14, 4) NOT NULL CHECK (refundable_credit_change >= 0), -- Ensure non-negative values
-    refunded_transaction_id CHAR(24) DEFAULT NULL,
-    spent_money DECIMAL(14, 4),
     comment TEXT NOT NULL,
-    _paid_job CHAR(24),
-    state webknossos.credit_transaction_state NOT NULL,
-    expiration_date DATE,
+    -- The state of the transaction.
+    transaction_state webknossos.credit_transaction_state NOT NULL,
+    -- The state of the credits of this transaction.
+    credit_state webknossos.credit_transaction_state NOT NULL,
+    expiration_date TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 --- Create view
-CREATE VIEW webknossos.organization_credit_transactions_ as SELECT * FROM webknossos.organization_credit_transactions WHERE NOT is_deleted;
+CREATE VIEW webknossos.credit_transactions_ as SELECT * FROM webknossos.credit_transactions WHERE NOT is_deleted;
 
 --- Create index (useful for stored procedures)
-CREATE INDEX ON webknossos.organization_credit_transactions(state);
+CREATE INDEX ON webknossos.credit_transactions(credit_state);
 
 --- Add foreign key constraints
-ALTER TABLE webknossos.organization_credit_transactions
+ALTER TABLE webknossos.credit_transactions
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE,
-  ADD CONSTRAINT paid_job_ref FOREIGN KEY(_paid_job) REFERENCES webknossos.jobs(_id) DEFERRABLE;
+  ADD CONSTRAINT paid_job_ref FOREIGN KEY(_paid_job) REFERENCES webknossos.jobs(_id) DEFERRABLE,
+  ADD CONSTRAINT related_transaction_ref FOREIGN KEY(_related_transaction) REFERENCES webknossos.credit_transactions(_id) DEFERRABLE;
 
 CREATE FUNCTION webknossos.enforce_non_negative_balance() RETURNS TRIGGER AS $$
   BEGIN
     -- Assert that the new balance is non-negative
     ASSERT (SELECT COALESCE(SUM(credit_change), 0) + COALESCE(NEW.credit_change, 0)
-            FROM webknossos.organization_credit_transactions
+            FROM webknossos.credit_transactions
             WHERE _organization = NEW._organization AND _id != NEW._id) >= 0, 'Transaction would result in a negative credit balance for organization %', NEW._organization;
     -- Allow the transaction
     RETURN NEW;
@@ -47,7 +49,7 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE TRIGGER enforce_non_negative_balance_trigger
-BEFORE INSERT OR UPDATE ON webknossos.organization_credit_transactions
+BEFORE INSERT OR UPDATE ON webknossos.credit_transactions
 FOR EACH ROW EXECUTE PROCEDURE webknossos.enforce_non_negative_balance();
 
 -- ObjectId generation function taken and modified from https://thinhdanggroup.github.io/mongo-id-in-postgresql/
@@ -79,7 +81,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE FUNCTION webknossos.hand_out_monthly_free_credits(free_credits_amount DECIMAL) RETURNS VOID AS $$
 DECLARE
-    org_id VARCHAR(256);
+    organization_id VARCHAR(256);
     next_month_first_day DATE;
     existing_transaction_count INT;
 BEGIN
@@ -87,21 +89,20 @@ BEGIN
     next_month_first_day := DATE_TRUNC('MONTH', NOW()) + INTERVAL '1 MONTH';
 
     -- Loop through all organizations
-    FOR org_id IN (SELECT _id FROM webknossos.organizations) LOOP
+    FOR organization_id IN (SELECT _id FROM webknossos.organizations) LOOP
         -- Check if there is already a free credit transaction for this organization in the current month
         SELECT COUNT(*) INTO existing_transaction_count
-        FROM webknossos.organization_credit_transactions
-        WHERE _organization = org_id
+        FROM webknossos.credit_transactions
+        WHERE _organization = organization_id
           AND DATE_TRUNC('MONTH', expiration_date) = next_month_first_day;
 
         -- Insert free credits only if no record exists for this month
         IF existing_transaction_count = 0 THEN
-            INSERT INTO webknossos.organization_credit_transactions
-                (_id, _organization, credit_change, refundable_credit_change, refunded_transaction_id, spent_money,
-                comment, _paid_job, state, expiration_date)
+            INSERT INTO webknossos.credit_transactions
+                (_id, _organization, credit_change, comment, transaction_state, credit_state, expiration_date)
             VALUES
-                (webknossos.generate_object_id(), org_id, free_credits_amount, 0, NULL, 0,
-                 'Free credits for this month', NULL, 'Completed', next_month_first_day);
+                (webknossos.generate_object_id(), organization_id, free_credits_amount,
+                 'Free credits for this month', 'Complete', 'Pending', next_month_first_day);
         END IF;
     END LOOP;
 END;

@@ -86,11 +86,11 @@ class OrganizationController @Inject()(
       } yield Ok(org._id)
     }
 
-  def getDefault: Action[AnyContent] = Action.async { implicit request =>
+  def getDefault: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
       allOrgs <- organizationDAO.findAll(GlobalAccessContext) ?~> "organization.list.failed"
       org <- allOrgs.headOption.toFox ?~> "organization.list.failed"
-      js <- organizationService.publicWrites(org)(GlobalAccessContext)
+      js <- organizationService.publicWrites(org, request.identity)
     } yield {
       if (allOrgs.length > 1) // Cannot list organizations publicly if there are multiple ones, due to privacy reasons
         Ok(JsNull)

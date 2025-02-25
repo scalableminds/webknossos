@@ -649,7 +649,7 @@ export type APIOrganization = APIOrganizationCompact & {
   readonly includedStorageBytes: number;
   readonly usedStorageBytes: number;
   readonly ownerName?: string;
-  readonly creditBalance: number;
+  readonly creditBalance: number | null | undefined;
 };
 export type APIPricingPlanStatus = {
   readonly pricingPlan: PricingPlanEnum;

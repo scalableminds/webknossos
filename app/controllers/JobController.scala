@@ -2,12 +2,12 @@ package controllers
 
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
 import models.job.{JobCommand, _}
-import models.organization.{CreditTransactionService, OrganizationDAO, OrganizationService}
-import models.user.{MultiUserDAO, User}
+import models.organization.{CreditTransactionDAO, CreditTransactionService, OrganizationDAO, OrganizationService}
+import models.user.MultiUserDAO
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -24,9 +24,7 @@ import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, FullAxisOrder, NDBoundingBox}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import models.job.JobCommand.JobCommand
 import models.team.PricingPlan
-import net.liftweb.common.Full
 
 object MovieResolutionSetting extends ExtendedEnumeration {
   val SD, HD = Value
@@ -68,6 +66,7 @@ class JobController @Inject()(
     organizationDAO: OrganizationDAO,
     organizationService: OrganizationService,
     creditTransactionService: CreditTransactionService,
+    creditTransactionDAO: CreditTransactionDAO,
     dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with Zarr3OutputHelper {
@@ -259,13 +258,13 @@ class JobController @Inject()(
             "eval_sparse_tube_threshold_nm" -> evalSparseTubeThresholdNm,
             "eval_min_merger_path_length_nm" -> evalMinMergerPathLengthNm,
           )
-          creditTransactionComment = s"Run for AI neuron segmentation for dataset ${dataset.name}"
-          jobAsJs <- runPaidJob(command,
-                                commandArgs,
-                                parsedBoundingBox,
-                                creditTransactionComment,
-                                request.identity,
-                                dataset._dataStore)
+          creditTransactionComment = s"AI neuron segmentation for dataset ${dataset.name}"
+          jobAsJs <- jobService.submitPaidJob(command,
+                                              commandArgs,
+                                              parsedBoundingBox,
+                                              creditTransactionComment,
+                                              request.identity,
+                                              dataset._dataStore)
         } yield Ok(jobAsJs)
       }
     }
@@ -299,12 +298,12 @@ class JobController @Inject()(
             "bbox" -> bbox,
           )
           creditTransactionComment = s"Run for AI mitochondria segmentation for dataset ${dataset.name}"
-          jobAsJs <- runPaidJob(command,
-                                commandArgs,
-                                parsedBoundingBox,
-                                creditTransactionComment,
-                                request.identity,
-                                dataset._dataStore)
+          jobAsJs <- jobService.submitPaidJob(command,
+                                              commandArgs,
+                                              parsedBoundingBox,
+                                              creditTransactionComment,
+                                              request.identity,
+                                              dataset._dataStore)
         } yield Ok(jobAsJs)
       }
     }
@@ -336,13 +335,13 @@ class JobController @Inject()(
             "layer_name" -> layerName,
             "annotation_id" -> annotationId
           )
-          creditTransactionComment = s"Run AI neuron segmentation for dataset ${dataset.name}"
-          jobAsJs <- runPaidJob(command,
-                                commandArgs,
-                                datasetBoundingBox,
-                                creditTransactionComment,
-                                request.identity,
-                                dataset._dataStore)
+          creditTransactionComment = s"Align dataset ${dataset.name}"
+          jobAsJs <- jobService.submitPaidJob(command,
+                                              commandArgs,
+                                              datasetBoundingBox,
+                                              creditTransactionComment,
+                                              request.identity,
+                                              dataset._dataStore)
         } yield Ok(jobAsJs)
       }
     }
@@ -481,10 +480,10 @@ class JobController @Inject()(
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.renderAnimation.notAllowed.organization" ~> FORBIDDEN
           userOrganization <- organizationDAO.findOne(request.identity._organization)
           animationJobOptions = request.body
-          _ <- Fox.runIf(PricingPlan.isPaidPlan(userOrganization.pricingPlan)) {
+          _ <- Fox.runIf(!PricingPlan.isPaidPlan(userOrganization.pricingPlan)) {
             bool2Fox(animationJobOptions.includeWatermark) ?~> "job.renderAnimation.mustIncludeWatermark"
           }
-          _ <- Fox.runIf(PricingPlan.isPaidPlan(userOrganization.pricingPlan)) {
+          _ <- Fox.runIf(!PricingPlan.isPaidPlan(userOrganization.pricingPlan)) {
             bool2Fox(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> "job.renderAnimation.resolutionMustBeSD"
           }
           layerName = animationJobOptions.layerName
@@ -529,7 +528,7 @@ class JobController @Inject()(
         boundingBox <- BoundingBox.fromLiteral(boundingBoxInMag).toFox
         jobCommand <- JobCommand.fromString(command).toFox
         jobCosts = jobService.calculateJobCosts(boundingBox, jobCommand)
-        organizationCreditBalance <- creditTransactionService.getCreditBalance(request.identity._organization)
+        organizationCreditBalance <- creditTransactionDAO.getCreditBalance(request.identity._organization)
         hasEnoughCredits = jobCosts <= organizationCreditBalance
         js = Json.obj(
           "costsInCredits" -> jobCosts.toString(),
@@ -538,35 +537,5 @@ class JobController @Inject()(
         )
       } yield Ok(js)
     }
-
-  private def runPaidJob(command: JobCommand,
-                         commandArgs: JsObject,
-                         jobBoundingBox: BoundingBox,
-                         creditTransactionComment: String,
-                         user: User,
-                         datastoreName: String)(implicit ctx: DBAccessContext): Fox[JsObject] = {
-    val costsInCredits = jobService.calculateJobCosts(jobBoundingBox, command)
-    for {
-      _ <- organizationService.ensureOrganizationHasPaidPlan(user._organization) ?~> "job.paidJob.notAllowed.noPaidPlan"
-      _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costsInCredits)) ?~> "job.notEnoughCredits"
-      creditTransaction <- creditTransactionService.reserveCredits(user._organization,
-                                                                   costsInCredits,
-                                                                   creditTransactionComment,
-                                                                   None)
-      job <- jobService
-        .submitJob(command, commandArgs, user, datastoreName)
-        .futureBox
-        .flatMap {
-          case Full(job) => Fox.successful(job)
-          case _ =>
-            creditTransactionService.refundTransactionWhenStartingJobFailed(creditTransaction)
-            Fox.failure("job.couldNotRunAlignSections")
-
-        }
-        .toFox
-      _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
-      js <- jobService.publicWrites(job)
-    } yield js
-  }
 
 }

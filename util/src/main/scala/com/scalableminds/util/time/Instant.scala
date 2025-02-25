@@ -57,8 +57,6 @@ object Instant extends FoxImplicits with LazyLogging with Formatter {
 
   def fromSql(sqlTime: java.sql.Timestamp): Instant = Instant(sqlTime.getTime)
 
-  def fromDate(sqlDate: java.sql.Date): Instant = Instant(sqlDate.getTime)
-
   def fromLocalTimeString(localTimeLiteral: String)(implicit ec: ExecutionContext): Fox[Instant] =
     tryo(new java.text.SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss.SSS").parse(localTimeLiteral))
       .map(date => Instant(date.getTime))

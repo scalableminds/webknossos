@@ -51,7 +51,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
       ownerBox <- userDAO.findOwnerByOrg(organization._id).futureBox
-      creditBalance <- creditTransactionDAO.getCreditBalance(organization._id)
+
+      creditBalanceOpt <- Fox.runIf(requestingUser.exists(_._organization == organization._id))(
+        creditTransactionDAO.getCreditBalance(organization._id))
       ownerNameOpt = ownerBox.toOption.map(o => s"${o.firstName} ${o.lastName}")
     } yield
       Json.obj(
@@ -66,7 +68,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "includedStorageBytes" -> organization.includedStorageBytes,
         "usedStorageBytes" -> usedStorageBytes,
         "ownerName" -> ownerNameOpt,
-        "creditBalance" -> creditBalance
+        "creditBalance" -> creditBalanceOpt
       ) ++ adminOnlyInfo
   }
 
@@ -180,7 +182,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
     } yield ()
 
-  def ensureOrganizationHasPaidPlan(organizationId: String): Fox[Unit] =
+  def assertOrganizationHasPaidPlan(organizationId: String): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext)
       _ <- bool2Fox(PricingPlan.isPaidPlan(organization.pricingPlan)) ?~> "creditTransaction.notPaidPlan"

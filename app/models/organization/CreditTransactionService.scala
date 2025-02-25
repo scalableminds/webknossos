@@ -14,41 +14,36 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
     extends FoxImplicits
     with LazyLogging {
 
-  def hasEnoughCredits(organizationId: String, creditsToSpent: BigDecimal)(
+  def hasEnoughCredits(organizationId: String, creditsToSpend: BigDecimal)(
       implicit ctx: DBAccessContext): Fox[Boolean] =
-    creditTransactionDAO.getCreditBalance(organizationId).map(balance => balance >= creditsToSpent)
+    creditTransactionDAO.getCreditBalance(organizationId).map(balance => balance >= creditsToSpend)
 
-  def getCreditBalance(organizationId: String)(implicit ctx: DBAccessContext): Fox[BigDecimal] =
-    creditTransactionDAO.getCreditBalance(organizationId)
-
-  def reserveCredits(organizationId: String, creditsToSpent: BigDecimal, comment: String, paidJob: Option[ObjectId])(
+  def reserveCredits(organizationId: String, creditsToSpent: BigDecimal, comment: String)(
       implicit ctx: DBAccessContext): Fox[CreditTransaction] =
     for {
-      _ <- organizationService.ensureOrganizationHasPaidPlan(organizationId)
+      _ <- organizationService.assertOrganizationHasPaidPlan(organizationId)
       pendingCreditTransaction = CreditTransaction(ObjectId.generate,
                                                    organizationId,
+                                                   None,
+                                                   None,
                                                    -creditsToSpent,
-                                                   creditsToSpent,
-                                                   None,
-                                                   None,
                                                    comment,
-                                                   paidJob,
                                                    CreditTransactionState.Pending,
-                                                   None)
+                                                   CreditState.Pending)
       _ <- creditTransactionDAO.insertNewPendingTransaction(pendingCreditTransaction)
       insertedTransaction <- creditTransactionDAO.findOne(pendingCreditTransaction._id)
     } yield insertedTransaction
 
-  def doCreditTransaction(creditTransaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertCreditTransaction(creditTransaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- organizationService.ensureOrganizationHasPaidPlan(creditTransaction._organization)
+      _ <- organizationService.assertOrganizationHasPaidPlan(creditTransaction._organization)
       _ <- creditTransactionDAO.insertTransaction(creditTransaction)
     } yield ()
 
   def completeTransactionOfJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       transaction <- creditTransactionDAO.findTransactionForJob(jobId)
-      _ <- organizationService.ensureOrganizationHasPaidPlan(transaction._organization)
+      _ <- organizationService.assertOrganizationHasPaidPlan(transaction._organization)
       _ <- creditTransactionDAO.commitTransaction(transaction._id)
     } yield ()
 
@@ -60,7 +55,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
 
   private def refundTransaction(creditTransaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- organizationService.ensureOrganizationHasPaidPlan(creditTransaction._organization)
+      _ <- organizationService.assertOrganizationHasPaidPlan(creditTransaction._organization)
       _ <- creditTransactionDAO.refundTransaction(creditTransaction._id)
     } yield ()
 
@@ -78,11 +73,12 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
       Json.obj(
         "id" -> transaction._id,
         "organization_id" -> transaction._organization,
-        "creditChange" -> transaction.creditChange,
-        "spentMoney" -> transaction.spentMoney,
-        "comment" -> transaction.comment,
+        "relatedTransaction" -> transaction._relatedTransaction,
         "paidJobId" -> transaction._paidJob,
-        "state" -> transaction.state,
+        "creditChange" -> transaction.creditChange,
+        "comment" -> transaction.comment,
+        "transactionState" -> transaction.transactionState,
+        "creditState" -> transaction.creditState,
         "expirationDate" -> transaction.expirationDate,
         "createdAt" -> transaction.createdAt,
         "updatedAt" -> transaction.updatedAt,

@@ -156,7 +156,7 @@ class DefaultMails @Inject()(conf: WkConf) {
   def orderCreditsMail(user: User, userEmail: String, requestedCredits: Int): Mail =
     Mail(
       from = defaultSender,
-      subject = "Request to order WEBKNOSSOS credits",
+      subject = "Request to buy WEBKNOSSOS credits",
       bodyHtml = html.mail.orderCredits(user.name, requestedCredits, additionalFooter).body,
       recipients = List(userEmail)
     )

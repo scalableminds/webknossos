@@ -22,7 +22,7 @@ class FreeCreditTransactionService @Inject()(creditTransactionDAO: CreditTransac
   def revokeExpiredCredits(): Fox[Unit] = creditTransactionDAO.runRevokeExpiredCredits()
   def handOutMonthlyFreeCredits(): Fox[Unit] = creditTransactionDAO.handOutMonthlyFreeCredits()
 
-  override protected def tickerInterval: FiniteDuration = 20 minute
+  override protected def tickerInterval: FiniteDuration = 20 minutes
 
   override protected def tick(): Unit =
     for {

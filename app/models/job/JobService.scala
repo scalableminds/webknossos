@@ -10,8 +10,9 @@ import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
 import models.dataset.DatasetDAO
 import models.job.JobCommand.JobCommand
-import models.organization.OrganizationDAO
+import models.organization.{CreditTransactionService, OrganizationDAO, OrganizationService}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
+import net.liftweb.common.Full
 import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json.{JsObject, Json}
 import security.WkSilhouetteEnvironment
@@ -34,6 +35,8 @@ class JobService @Inject()(wkConf: WkConf,
                            defaultMails: DefaultMails,
                            analyticsService: AnalyticsService,
                            userService: UserService,
+                           organizationService: OrganizationService,
+                           creditTransactionService: CreditTransactionService,
                            wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                            slackNotificationService: SlackNotificationService)(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -206,6 +209,31 @@ class JobService @Inject()(wkConf: WkConf,
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
+
+  def submitPaidJob(command: JobCommand,
+                    commandArgs: JsObject,
+                    jobBoundingBox: BoundingBox,
+                    creditTransactionComment: String,
+                    user: User,
+                    datastoreName: String)(implicit ctx: DBAccessContext): Fox[JsObject] = {
+    val costsInCredits = calculateJobCosts(jobBoundingBox, command)
+    for {
+      _ <- organizationService.assertOrganizationHasPaidPlan(user._organization) ?~> "job.paidJob.notAllowed.noPaidPlan"
+      _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costsInCredits)) ?~> "job.notEnoughCredits"
+      creditTransaction <- creditTransactionService.reserveCredits(user._organization,
+                                                                   costsInCredits,
+                                                                   creditTransactionComment)
+      job <- submitJob(command, commandArgs, user, datastoreName).futureBox.flatMap {
+        case Full(job) => Fox.successful(job)
+        case _ =>
+          creditTransactionService
+            .refundTransactionWhenStartingJobFailed(creditTransaction)
+            .flatMap(_ => Fox.failure("job.couldNotRunAlignSections"))
+      }.toFox
+      _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
+      js <- publicWrites(job)
+    } yield js
+  }
 
   def jobsSupportedByAvailableWorkers(dataStoreName: String): Fox[Set[JobCommand]] =
     for {

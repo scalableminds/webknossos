@@ -38,6 +38,7 @@ import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 case class WebAuthnRegistration(name: String, key: String)
 object WebAuthnRegistration {
@@ -466,24 +467,25 @@ class AuthenticationController @Inject()(
             challengeData match {
               case None => Future.successful(Unauthorized("Authentication timeout."))
               case Some(data) => {
-                try {
-                  val keyCredential = PublicKeyCredential.parseAssertionResponseJson(request.body.key);
-                  val opts = FinishAssertionOptions.builder().request(data).response(keyCredential).build();
-                  for {
-                    result <- Future { relyingParty.finishAssertion(opts) }(blockingContext); // NOTE: Prevent blocking on HTTP handler
-                    userId = WebAuthnCredentialRepository.byteArrayToObjectId(result.getCredential.getUserHandle);
-                    multiUser <- multiUserDAO.findOne(userId)(GlobalAccessContext);
-                    result <- multiUser._lastLoggedInIdentity match {
-                      case None => Future.successful(InternalServerError("user never logged in"))
-                      case Some(userId) => {
-                        val loginInfo = LoginInfo("credentials", userId.toString);
-                        authenticateInner(loginInfo)
-                      }
+                val keyCredential = PublicKeyCredential.parseAssertionResponseJson(request.body.key);
+                val opts = FinishAssertionOptions.builder().request(data).response(keyCredential).build();
+                for {
+                  result <- Fox
+                    .future2Fox(Future { Try(relyingParty.finishAssertion(opts)) })(blockingContext); // NOTE: Prevent blocking on HTTP handler
+                  assertion <- result match {
+                    case scala.util.Success(assertion) => Fox.successful(assertion);
+                    case scala.util.Failure(e)         => Fox.failure("Authentication failed.", Full(e));
+                  };
+                  userId = WebAuthnCredentialRepository.byteArrayToObjectId(assertion.getCredential.getUserHandle);
+                  multiUser <- multiUserDAO.findOne(userId)(GlobalAccessContext);
+                  result <- multiUser._lastLoggedInIdentity match {
+                    case None => Future.successful(InternalServerError("user never logged in"))
+                    case Some(userId) => {
+                      val loginInfo = LoginInfo("credentials", userId.toString);
+                      authenticateInner(loginInfo)
                     }
-                  } yield result;
-                } catch {
-                  case e: AssertionFailedException => Future.successful(Unauthorized("Authentication failed."))
-                }
+                  }
+                } yield result;
               }
             }
         }
@@ -525,7 +527,11 @@ class AuthenticationController @Inject()(
             val opts = FinishRegistrationOptions.builder().request(data).response(response).build();
             try {
               for {
-                key <- Future { relyingParty.finishRegistration(opts) }(blockingContext);
+                preKey <- Fox.future2Fox(Future { Try(relyingParty.finishRegistration(opts)) })(blockingContext);
+                key <- preKey match {
+                  case scala.util.Success(key) => Fox.successful(key)
+                  case scala.util.Failure(e)   => Fox.failure("Registration failed", Full(e))
+                };
                 result <- {
                   val credential = WebAuthnCredential(
                     ObjectId.generate,

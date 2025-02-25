@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
@@ -64,10 +65,11 @@ class DatasetArray(vaultPath: VaultPath,
       chunkShape // irregular shaped chunk indexes are currently not supported for 2d datasets
     }
 
-  def readBytesWithAdditionalCoordinates(shapeXYZ: Vec3Int,
-                                         offsetXYZ: Vec3Int,
-                                         additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
-                                         shouldReadUint24: Boolean)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  def readBytesWithAdditionalCoordinates(
+      shapeXYZ: Vec3Int,
+      offsetXYZ: Vec3Int,
+      additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
+      shouldReadUint24: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       (shapeArray, offsetArray) <- tryo(constructShapeAndOffsetArrays(
         shapeXYZ,
@@ -114,7 +116,8 @@ class DatasetArray(vaultPath: VaultPath,
   }
 
   // returns byte array in fortran-order with little-endian values
-  private def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  private def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext,
+                                                               tc: TokenContext): Fox[Array[Byte]] =
     for {
       typedMultiArray <- readAsFortranOrder(shape, offset)
       asBytes <- BytesConverter.toByteArray(typedMultiArray, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN)
@@ -147,8 +150,8 @@ class DatasetArray(vaultPath: VaultPath,
   // The local variables like chunkIndices are also in this order unless explicitly named.
   // Loading data adapts to the array's axis order so that …CXYZ data in fortran-order is
   // returned, regardless of the array’s internal storage.
-  private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(
-      implicit ec: ExecutionContext): Fox[MultiArray] = {
+  private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext,
+                                                                        tc: TokenContext): Fox[MultiArray] = {
     val totalOffset: Array[Int] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
     val chunkIndices = ChunkUtils.computeChunkIndices(datasetShape.map(fullAxisOrder.permuteIndicesArrayToWk),
                                                       fullAxisOrder.permuteIndicesArrayToWk(chunkShape),
@@ -185,19 +188,23 @@ class DatasetArray(vaultPath: VaultPath,
     s"Copying data from dataset chunk failed. Chunk shape (F): ${printAsOuterF(sourceChunk.getShape)}, target shape (F): ${printAsOuterF(
       target.getShape)}, offsetInChunk: ${printAsOuterF(offsetInChunk)}. Axis order (C): $fullAxisOrder (outer: ${fullAxisOrder.toStringWk})"
 
-  protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
-      implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] = ??? // Defined in subclass
+  protected def getShardedChunkPathAndRange(
+      chunkIndex: Array[Int])(implicit ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, NumericRange[Long])] =
+    ??? // Defined in subclass
 
   private def chunkContentsCacheKey(chunkIndex: Array[Int]): String =
     s"${dataSourceId}__${layerName}__${vaultPath}__chunk_${chunkIndex.mkString(",")}"
 
   private def getSourceChunkDataWithCache(chunkIndex: Array[Int], useSkipTypingShortcut: Boolean = false)(
-      implicit ec: ExecutionContext): Fox[MultiArray] =
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[MultiArray] =
+    // Note: we omit the tokenContext from the cacheKey because (a) Failures aren’t cached anyway and (b) the dataset access is checked again in the controllers. Omitting it here prevents wasteful data duplicates in the cache.
     sharedChunkContentsCache.getOrLoad(chunkContentsCacheKey(chunkIndex),
                                        _ => readSourceChunkData(chunkIndex, useSkipTypingShortcut))
 
   private def readSourceChunkData(chunkIndex: Array[Int], useSkipTypingShortcut: Boolean)(
-      implicit ec: ExecutionContext): Fox[MultiArray] =
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[MultiArray] =
     if (header.isSharded) {
       for {
         (shardPath, chunkRange) <- getShardedChunkPathAndRange(chunkIndex) ?~> "chunk.getShardedPathAndRange.failed"

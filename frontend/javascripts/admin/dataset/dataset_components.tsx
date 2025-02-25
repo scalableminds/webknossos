@@ -12,10 +12,12 @@ export function CardContainer({
   children,
   withoutCard,
   title,
+  subtitle,
 }: {
   children: React.ReactNode;
   withoutCard?: boolean;
   title: string;
+  subtitle?: React.ReactNode;
 }) {
   if (withoutCard) {
     return <>{children}</>;
@@ -28,7 +30,16 @@ export function CardContainer({
           marginRight: "auto",
         }}
         bordered={false}
-        title={<h3>{title}</h3>}
+        title={
+          <>
+            <h3 style={{ lineHeight: "10px", marginTop: subtitle != null ? "22px" : "12px" }}>
+              {title}
+            </h3>
+            <span style={{ fontSize: 12, marginTop: 0, marginLeft: 1, color: "grey" }}>
+              {subtitle}
+            </span>
+          </>
+        }
       >
         {children}
       </Card>

@@ -15,8 +15,6 @@ import scala.concurrent.ExecutionContext
 
 trait Controller extends InjectedController with ExtendedController with UserAwareRequestLogging with LazyLogging {
 
-  final val badRequestLabel = "Operation could not be performed. See JSON body for more information."
-
   private def jsonErrorWrites(errors: JsError)(implicit m: MessagesProvider): JsObject =
     Json.obj(
       "errors" -> errors.errors.map(error =>

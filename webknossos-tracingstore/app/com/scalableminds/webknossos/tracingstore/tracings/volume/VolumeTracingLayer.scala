@@ -30,7 +30,8 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: Ex
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
   val temporaryTracingService: TemporaryTracingService = layer.temporaryTracingService
 
-  override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
+                                                          tc: TokenContext): Fox[Array[Byte]] =
     loadBucket(layer, readInstruction.bucket, readInstruction.version)
 
   override def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
@@ -46,7 +47,8 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit v
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
   val temporaryTracingService: TemporaryTracingService = layer.temporaryTracingService
 
-  override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
+                                                          tc: TokenContext): Fox[Array[Byte]] =
     for {
       _ <- temporaryTracingService.assertTracingStillPresent(layer.name)
       data <- loadBucket(layer, readInstruction.bucket, readInstruction.version)

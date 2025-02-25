@@ -117,20 +117,8 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       )
 
       fullParamsWithTracings = taskCreationService.combineParamsWithTracings(fullParams, skeletonBases, volumeBases)
-      flattenedParamsWithTracings = fullParamsWithTracings.flatten
-      taskCreationResult <- if (flattenedParamsWithTracings.isEmpty) {
-        // if there is no nonempty task, we directly return all of the errors
-        Fox.successful(
-          TaskCreationResult.fromBoxResults(fullParamsWithTracings.map(_.map(_ => Json.obj())), List.empty[String]))
-      } else {
-        for {
-          datasetId <- SequenceUtils
-            .findUniqueElement(flattenedParamsWithTracings.map(_._1.datasetId)) ?~> "task.create.notOnSameDataset"
-          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
-          result <- taskCreationService.createTasks(fullParamsWithTracings, taskType, dataset, request.identity)
-        } yield result
-      }
-    } yield Ok(Json.toJson(taskCreationResult))
+      result <- taskCreationService.createTasks(fullParamsWithTracings, taskType, request.identity)
+    } yield Ok(Json.toJson(result))
   }
 
   def update(taskId: ObjectId): Action[TaskParameters] =

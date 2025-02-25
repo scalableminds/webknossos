@@ -285,6 +285,9 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         params._4,
         fileName,
         description.toOption.flatten,
+        None,
+        None,
+        None,
         None
       )
     }
@@ -390,7 +393,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   // and on to create task and annotation objects
   // Both createFromFiles and create use this method
   def createTasks(
-      requestedTasks: List[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])],
+      // TODO pass boxes in again, not just full! Needed for partial error reporting
+      requestedTasks: List[Box[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])]],
       taskType: TaskType,
       dataset: Dataset,
       requestingUser: User)(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[TaskCreationResult] =

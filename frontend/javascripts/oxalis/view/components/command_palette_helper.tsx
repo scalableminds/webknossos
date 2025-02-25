@@ -1,4 +1,4 @@
-import type { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/interface";
+import type { ItemType } from "antd/lib/menu/interface";
 import { capitalize } from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
@@ -9,7 +9,7 @@ import { Store } from "oxalis/singletons";
 import type { OxalisState, UserConfiguration } from "oxalis/store";
 import { act, useState } from "react";
 import type { Command } from "react-command-palette";
-import CommandPalette from "react-command-palette";
+import ReactCommandPalette from "react-command-palette";
 import { useSelector } from "react-redux";
 import {
   type TracingLayoutViewProps,
@@ -62,7 +62,7 @@ const getLabelForTool = (tool: string) => {
     .join(" ");
 };
 
-export const WkCommandPalette = () => {
+export const CommandPalette = ({ label }: { label: string | null }) => {
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
   const [isUserScriptsModalOpen, setIsUserScriptsModalOpen] = useState(false);
   const [isZarrPrivateLinksModalOpen, setIsZarrPrivateLinksModalOpen] = useState(false);
@@ -70,6 +70,10 @@ export const WkCommandPalette = () => {
   const isViewMode = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.controlMode === "VIEW",
   );
+  const isInTracingView = useSelector(
+    (state: OxalisState) => state.uiInformation.isInAnnotationView,
+  );
+  console.log("isInTracingView", isInTracingView);
 
   const props: TracingLayoutViewProps = useSelector((state: OxalisState) => {
     return {
@@ -89,6 +93,7 @@ export const WkCommandPalette = () => {
   const { activeUser } = props;
 
   const getMenuActions = (isViewMode: boolean) => {
+    if (!isInTracingView) return [];
     if (isViewMode) {
       const { items } = getViewDatasetMenu(null);
       return items;
@@ -155,6 +160,7 @@ export const WkCommandPalette = () => {
   };
 
   const getToolEntries = () => {
+    if (!isInTracingView) return [];
     const commands: Command[] = [];
     let availableTools = Object.keys(AnnotationToolEnum) as [keyof typeof AnnotationToolEnum];
     if (isViewMode) {
@@ -185,7 +191,7 @@ export const WkCommandPalette = () => {
   ];
   return (
     <div style={{ marginRight: "10px" }}>
-      <CommandPalette
+      <ReactCommandPalette
         commands={allCommands.map((command, counter) => {
           return {
             ...command,
@@ -193,7 +199,7 @@ export const WkCommandPalette = () => {
           };
         })}
         hotKeys={["ctrl+k", "command+k"]}
-        trigger="[Ctrl+K] Commands"
+        trigger={label} //"[Ctrl+K] Commands"
         closeOnSelect
         resetInputOnOpen
       />

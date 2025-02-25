@@ -15,6 +15,7 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import org.apache.pekko.actor.ActorSystem
+import play.api.Configuration
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
@@ -54,6 +55,7 @@ object WebAuthnKeyDescriptor {
 }
 
 class AuthenticationController @Inject()(
+    configuration: Configuration,
     actorSystem: ActorSystem,
     credentialsProvider: CredentialsProvider,
     passwordHasher: PasswordHasher,
@@ -92,9 +94,10 @@ class AuthenticationController @Inject()(
     conf.WebKnossos.User.ssoKey
 
   private lazy val relyingParty = {
+    val origin = configuration.get[String]("http.uri").split("/")(2);
     val identity = RelyingPartyIdentity
       .builder()
-      .id("webknossos.local:9000") // TODO: Use Host
+      .id(origin)
       .name("WebKnossos")
       .build();
     RelyingParty.builder().identity(identity).credentialRepository(webAuthnCredentialRepository).build()

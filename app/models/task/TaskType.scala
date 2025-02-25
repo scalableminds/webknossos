@@ -56,16 +56,6 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO, taskTypeDAO: TaskTypeDAO)(impl
         "tracingType" -> taskType.tracingType
       )
 
-  def containsVolumeOrHybridTaskType(taskTypeIds: List[String])(implicit ctx: DBAccessContext): Fox[Boolean] =
-    Fox
-      .serialCombined(taskTypeIds) { taskTypeId =>
-        for {
-          taskTypeIdValidated <- ObjectId.fromString(taskTypeId) ?~> "taskType.id.invalid"
-          taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-        } yield taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid
-      }
-      .map(_.exists(_ == true))
-
 }
 
 class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

@@ -6,11 +6,11 @@ import controllers.LegacyTaskParameters
 import models.user.Experience
 import play.api.libs.json.{Format, Json}
 
-case class TaskParameters(taskTypeId: String,
+case class TaskParameters(taskTypeId: ObjectId,
                           neededExperience: Experience,
                           pendingInstances: Int,
                           projectName: String,
-                          scriptId: Option[String],
+                          scriptId: Option[ObjectId],
                           boundingBox: Option[BoundingBox],
                           datasetId: ObjectId,
                           editPosition: Vec3Int,
@@ -20,7 +20,7 @@ case class TaskParameters(taskTypeId: String,
                           baseAnnotation: Option[BaseAnnotation],
                           newSkeletonTracingId: Option[String],
                           newVolumeTracingId: Option[String],
-                          newAnnotationId: Option[String])
+                          newAnnotationId: Option[ObjectId])
 
 object TaskParameters {
   implicit val taskParametersWithDatasetIdFormat: Format[TaskParameters] =

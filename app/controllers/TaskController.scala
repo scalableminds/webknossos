@@ -1,13 +1,15 @@
 package controllers
 
-import java.io.File
+import collections.SequenceUtils
 
+import java.io.File
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+
 import javax.inject.Inject
 import models.annotation._
 import models.annotation.nml.NmlResults.TracingBoxContainer
@@ -20,6 +22,7 @@ import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
+import models.dataset.DatasetDAO
 
 import scala.concurrent.ExecutionContext
 
@@ -29,6 +32,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
                                taskTypeDAO: TaskTypeDAO,
                                userService: UserService,
                                taskDAO: TaskDAO,
+                               datasetDAO: DatasetDAO,
                                taskService: TaskService,
                                nmlService: AnnotationUploadService,
                                sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -46,17 +50,23 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
   def create: Action[List[TaskParameters]] =
     sil.SecuredAction.async(validateJson[List[TaskParameters]]) { implicit request =>
       for {
-        _ <- taskCreationService.assertBatchLimit(request.body.length, request.body.map(_.taskTypeId))
-        taskParametersWithIds <- taskCreationService.addIdsToTaskParameters()
-        taskParameters <- taskCreationService.createTracingsFromBaseAnnotations(request.body,
-                                                                                request.identity._organization)
+        taskTypeId <- SequenceUtils.findUniqueElement(request.body.map(_.taskTypeId)) ?~> "task.create.notOnSameTaskType"
+        taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound"
+        datasetId <- SequenceUtils.findUniqueElement(request.body.map(_.datasetId)) ?~> "task.create.notOnSameDataset"
+        dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
+        _ <- bool2Fox(dataset._organization == request.identity._organization) ?~> "task.create.datasetOfOtherOrga"
+        _ <- taskCreationService.assertBatchLimit(request.body.length, taskType)
+        taskParametersWithIds = taskCreationService.addNewIdsToTaskParameters(request.body, taskType)
+        taskParametersFull <- taskCreationService.createTracingsFromBaseAnnotations(taskParametersWithIds,
+                                                                                    taskType,
+                                                                                    dataset)
         skeletonBaseOpts: List[Option[SkeletonTracing]] <- taskCreationService.createTaskSkeletonTracingBases(
-          taskParameters,
+          taskParametersFull,
           request.identity._organization)
         volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- taskCreationService.createTaskVolumeTracingBases(
-          taskParameters,
+          taskParametersFull,
           request.identity._organization)
-        paramsWithTracings = taskParameters.lazyZip(skeletonBaseOpts).lazyZip(volumeBaseOpts).map {
+        paramsWithTracings = taskParametersFull.lazyZip(skeletonBaseOpts).lazyZip(volumeBaseOpts).map {
           case (params, skeletonOpt, volumeOpt) => Full((params, skeletonOpt, volumeOpt))
         }
         result <- taskCreationService.createTasks(paramsWithTracings, request.identity)

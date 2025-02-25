@@ -9,7 +9,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.tracingstore.tracings.TracingType
+import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 
 import javax.inject.Inject
@@ -51,36 +51,34 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     extends FoxImplicits
     with ProtoGeometryImplicits {
 
-  def assertBatchLimit(batchSize: Int, taskTypeIds: List[String])(implicit ctx: DBAccessContext,
-                                                                  m: MessagesProvider): Fox[Unit] =
-    for {
-      isVolumeOrHybrid <- taskTypeService.containsVolumeOrHybridTaskType(taskTypeIds.toSet.toList)
-      batchLimit = if (isVolumeOrHybrid) 100 else 1000
-      _ <- bool2Fox(batchSize <= batchLimit) ?~> Messages("task.create.limitExceeded", batchLimit)
-    } yield ()
+  def assertBatchLimit(batchSize: Int, taskType: TaskType)(implicit m: MessagesProvider): Fox[Unit] = {
+    val batchLimit =
+      if (taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid)
+        100
+      else
+        1000
+    bool2Fox(batchSize <= batchLimit) ?~> Messages("task.create.limitExceeded", batchLimit)
+  }
 
   // Used in create (without files) in case of base annotation
   // Note that the requested task’s tracingType is always fulfilled here,
   // either by duplicating the base annotation’s tracings or creating new tracings
-  def createTracingsFromBaseAnnotations(taskParametersList: List[TaskParameters], organizationId: String)(
+  def createTracingsFromBaseAnnotations(taskParametersList: List[TaskParameters], taskType: TaskType, dataset: Dataset)(
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[List[TaskParameters]] =
     Fox.serialCombined(taskParametersList)(
       params =>
         Fox
-          .runOptional(params.baseAnnotation)(createTracingsFromBaseAnnotation(_, params, organizationId))
+          .runOptional(params.baseAnnotation)(createTracingsFromBaseAnnotation(_, params, taskType, dataset))
           .map(baseAnnotation => params.copy(baseAnnotation = baseAnnotation)))
 
   // Used in create (without files) in case of base annotation
   private def createTracingsFromBaseAnnotation(
       baseAnnotation: BaseAnnotation,
       taskParameters: TaskParameters,
-      organizationId: String)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[BaseAnnotation] =
+      taskType: TaskType,
+      dataset: Dataset)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[BaseAnnotation] =
     for {
-      taskTypeIdValidated <- ObjectId.fromString(taskParameters.taskTypeId) ?~> "taskType.id.invalid"
-      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-      dataset <- datasetDAO.findOne(taskParameters.datasetId)
-      _ <- bool2Fox(dataset._organization == organizationId) ?~> "dataset"
       baseAnnotationIdValidated <- ObjectId.fromString(baseAnnotation.baseId)
       annotation <- resolveBaseAnnotationId(baseAnnotationIdValidated)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
@@ -117,7 +115,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
           nonCancelledTaskAnnotations.nonEmpty &&
           nonCancelledTaskAnnotations.head.state == AnnotationState.Finished)
         Fox.successful(nonCancelledTaskAnnotations.head)
-      else Fox.failure("task.notOneAnnotation")
+      else Fox.failure("task.create.notOneAnnotation")
     }).flatten
 
   // Used in create (without files) in case of base annotation
@@ -127,13 +125,19 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       tracingStoreClient: WKRemoteTracingStoreClient)(implicit ctx: DBAccessContext): Fox[String] =
     for {
       baseSkeletonTracingIdOpt <- baseAnnotation.skeletonTracingId
+      newAnnotationId <- params.newAnnotationId
+      newSkeletonId <- params.newSkeletonTracingId
       newTracingId <- baseSkeletonTracingIdOpt
         .map(
           id =>
-            tracingStoreClient.duplicateSkeletonTracing(id,
-                                                        editPosition = Some(params.editPosition),
-                                                        editRotation = Some(params.editRotation),
-                                                        boundingBox = params.boundingBox))
+            tracingStoreClient.duplicateSkeletonTracing(
+              id,
+              newAnnotationId,
+              newSkeletonId,
+              editPosition = Some(params.editPosition),
+              editRotation = Some(params.editRotation),
+              boundingBox = params.boundingBox
+          ))
         .getOrElse(
           annotationService
             .createSkeletonTracingBase(
@@ -142,7 +146,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
               params.editPosition,
               params.editRotation
             )
-            .flatMap(tracingStoreClient.saveSkeletonTracing))
+            .flatMap(skeleton => tracingStoreClient.saveSkeletonTracing(skeleton, newTracingId)))
     } yield newTracingId
 
   // Used in create (without files) in case of base annotation
@@ -579,4 +583,21 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       js <- taskService.publicWrites(task)
     } yield js
 
+  def addNewIdsToTaskParameters(taskParameters: List[TaskParameters], taskType: TaskType): List[TaskParameters] =
+    taskParameters.map(addIdsToSingleTaskParameters(_, taskType))
+
+  private def addIdsToSingleTaskParameters(taskParameters: TaskParameters, taskType: TaskType): TaskParameters = {
+    val skeletonIdOpt = taskType.tracingType match {
+      case TracingType.skeleton | TracingType.hybrid => Some(TracingId.generate)
+      case _                                         => None
+    }
+    val volumeIdOpt = taskType.tracingType match {
+      case TracingType.volume | TracingType.hybrid => Some(TracingId.generate)
+      case _                                       => None
+    }
+    val annotationId = ObjectId.generate
+    taskParameters.copy(newAnnotationId = Some(annotationId),
+                        newSkeletonTracingId = skeletonIdOpt,
+                        newVolumeTracingId = volumeIdOpt)
+  }
 }

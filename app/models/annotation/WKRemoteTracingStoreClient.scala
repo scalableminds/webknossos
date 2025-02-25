@@ -71,11 +71,12 @@ class WKRemoteTracingStoreClient(
         id.map(TracingSelector(_))))(VolumeTracings)
   }
 
-  def saveSkeletonTracing(tracing: SkeletonTracing): Fox[String] = {
+  def saveSkeletonTracing(tracing: SkeletonTracing, newSkeletonTracingId: String): Fox[Unit] = {
     logger.debug("Called to save SkeletonTracing." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/save").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .postProtoWithJsonResponse[SkeletonTracing, String](tracing)
+      .addQueryString("newSkeletonTracingId" -> newSkeletonTracingId)
+      .postProto[SkeletonTracing](tracing)
   }
 
   def saveSkeletonTracings(tracings: SkeletonTracings): Fox[List[Box[Option[String]]]] = {
@@ -112,11 +113,15 @@ class WKRemoteTracingStoreClient(
 
   // Used in task creation. History is dropped, new version will be zero.
   def duplicateSkeletonTracing(skeletonTracingId: String,
+                               newAnnotationId: ObjectId,
+                               newSkeletonTracingId: String,
                                editPosition: Option[Vec3Int] = None,
                                editRotation: Option[Vec3Double] = None,
                                boundingBox: Option[BoundingBox] = None): Fox[String] =
     rpc(s"${tracingStore.url}/tracings/skeleton/$skeletonTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryString("newAnnotationId" -> newAnnotationId.toString)
+      .addQueryString("newSkeletonTracingId" -> newSkeletonTracingId)
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))

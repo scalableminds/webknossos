@@ -95,11 +95,7 @@ class AuthenticationController @Inject()(
 
   private lazy val relyingParty = {
     val origin = configuration.get[String]("http.uri").split("/")(2);
-    val identity = RelyingPartyIdentity
-      .builder()
-      .id(origin)
-      .name("WebKnossos")
-      .build();
+    val identity = RelyingPartyIdentity.builder().id(origin).name("WebKnossos").build();
     RelyingParty.builder().identity(identity).credentialRepository(webAuthnCredentialRepository).build()
   }
   private val blockingContext: ExecutionContext = actorSystem.dispatchers.lookup("play.context.blocking")

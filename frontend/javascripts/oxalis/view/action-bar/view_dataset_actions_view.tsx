@@ -6,7 +6,7 @@ import {
   VideoCameraOutlined,
 } from "@ant-design/icons";
 import { Dropdown, type MenuProps } from "antd";
-import type { MenuItemType, SubMenuType } from "antd/es/menu/interface";
+import type { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/interface";
 import {
   setPythonClientModalVisibilityAction,
   setRenderAnimationModalVisibilityAction,
@@ -40,7 +40,7 @@ export const renderAnimationMenuItem: MenuItemType = {
 };
 
 export const getViewDatasetMenu = (layoutMenu: SubMenuType<MenuItemType> | null) => {
-  const items = [
+  const items: Array<ItemType> = [
     {
       key: "share-button",
       onClick: () => Store.dispatch(setShareModalVisibilityAction(true)),

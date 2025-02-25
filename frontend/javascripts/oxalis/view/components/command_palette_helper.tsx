@@ -1,4 +1,4 @@
-import type { MenuItemType, SubMenuType } from "antd/lib/menu/interface";
+import type { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/interface";
 import { capitalize } from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
@@ -17,27 +17,30 @@ import {
 } from "../action-bar/tracing_actions_view";
 import { getViewDatasetMenu } from "../action-bar/view_dataset_actions_view";
 
-const getLabelForAction = (action: MenuItemType | SubMenuType | null) => {
-  if (action == null) return null;
+const getLabelForAction = (action: ItemType) => {
+  if (action == null) return "";
   if ("title" in action && action.title != null) {
     return action.title;
   }
   if ("label" in action && action.label != null) {
     return action.label.toString();
   }
-  return null;
+  return "";
 };
 
-const mapMenuActionsToCommands = (
-  menuActions: Array<MenuItemType | SubMenuType | null>,
-): Command[] => {
+const mapMenuActionsToCommands = (menuActions: Array<ItemType>): Command[] => {
   if (menuActions == null) return [];
   return menuActions
     .filter((action) => action != null && getLabelForAction(action) != null)
     .map((action, counter) => {
+      // the typechecker is not able to infer that action is not null here, probably because of the type ItemType
+      const onClickAction =
+        action != null && "onClick" in action && action["onClick"] != null
+          ? action["onClick"]
+          : _.noop;
       return {
-        name: getLabelForAction(action) || "", //TODO_C fix typechecker here. getLabelForAction(action) is not null
-        command: action?.onClick || _.noop, //TODO_C fix typechecker here. action is not null
+        name: getLabelForAction(action),
+        command: onClickAction,
         color: "#5660ff",
         id: counter,
       };
@@ -62,7 +65,7 @@ const getLabelForTool = (tool: string) => {
 export const WkCommandPalette = () => {
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
   const [isUserScriptsModalOpen, setIsUserScriptsModalOpen] = useState(false);
-  const [isZarrPrivateLinksModalOpen, setIsZarrPrivateLinksModalOpen] = useState(false); // TODO_c check the right default
+  const [isZarrPrivateLinksModalOpen, setIsZarrPrivateLinksModalOpen] = useState(false);
   const userConfig = useSelector((state: OxalisState) => state.userConfiguration);
   const isViewMode = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.controlMode === "VIEW",
@@ -90,7 +93,7 @@ export const WkCommandPalette = () => {
       const { items } = getViewDatasetMenu(null);
       return items;
     }
-    const { menuItems, modals } = getModalsAndMenuItems(
+    const { menuItems } = getModalsAndMenuItems(
       props,
       null,
       isMergeModalOpen,

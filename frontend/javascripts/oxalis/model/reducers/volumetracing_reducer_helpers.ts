@@ -179,6 +179,7 @@ export function setMappingNameReducer(
   if (mappingType !== "HDF5" || !isMappingEnabled) {
     mappingName = null;
   }
+
   return updateVolumeTracing(state, volumeTracing.tracingId, {
     mappingName,
   });

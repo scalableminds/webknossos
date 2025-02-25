@@ -303,6 +303,9 @@ export function orderWebknossosCredits() {
   ));
 }
 
+const CREDIT_COST_EUR = 5;
+const CREDIT_COST_USD = 5.75;
+
 function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
   const userInputRef = useRef<HTMLInputElement | null>(null);
   const [costsAsString, setCostsAsString] = useState<string>("5€/5.75$");
@@ -311,8 +314,8 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
     if (newCosts == null) {
       return;
     }
-    const totalCostInEuro = newCosts * 5;
-    const totalCostInDollar = newCosts * 5.75;
+    const totalCostInEuro = newCosts * CREDIT_COST_EUR;
+    const totalCostInDollar = newCosts * CREDIT_COST_USD;
     setCostsAsString(`${totalCostInEuro}€/${totalCostInDollar}$`);
   };
 

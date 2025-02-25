@@ -114,21 +114,11 @@ export function* pushSaveQueueAsync(): Saga<never> {
       saveQueue = yield* select((state) => state.save.queue);
 
       if (saveQueue.length > 0) {
-        console.log("before sendSaveRequestToServer");
-        // this must have been entered
-
-        if (savedItemCount > 0) {
-          console.log("##################################### repeated save");
-        }
-
         savedItemCount += yield* call(sendSaveRequestToServer);
-        console.log("after sendSaveRequestToServer");
       } else {
-        console.log("break");
         break;
       }
     }
-    // this is not reached
     yield* put(setSaveBusyAction(false));
   }
 }
@@ -191,10 +181,8 @@ export function* sendSaveRequestToServer(): Saga<number> {
 
     try {
       const startTime = Date.now();
-      console.log("before sendRequestWithToken");
       yield* call(
         sendRequestWithToken,
-
         `${tracingStoreUrl}/tracings/annotation/${annotationId}/update?token=`,
         {
           method: "POST",
@@ -205,7 +193,6 @@ export function* sendSaveRequestToServer(): Saga<number> {
           showErrorToast: false,
         },
       );
-      console.log("after sendRequestWithToken");
       const endTime = Date.now();
 
       if (endTime - startTime > PUSH_THROTTLE_TIME) {
@@ -221,7 +208,6 @@ export function* sendSaveRequestToServer(): Saga<number> {
       yield* put(setLastSaveTimestampAction());
       yield* put(shiftSaveQueueAction(saveQueue.length));
 
-      console.log("before markBucketsAsNotDirty");
       try {
         yield* call(markBucketsAsNotDirty, compactedSaveQueue);
       } catch (error) {
@@ -230,13 +216,10 @@ export function* sendSaveRequestToServer(): Saga<number> {
         exceptionDuringMarkBucketsAsNotDirty = true;
         throw error;
       }
-      console.log("after markBucketsAsNotDirty");
 
       yield* call(toggleErrorHighlighting, false);
-      console.log("before return saveQueue.length", saveQueue.length);
       return saveQueue.length;
     } catch (error) {
-      console.log("catch error:", error);
       if (exceptionDuringMarkBucketsAsNotDirty) {
         throw error;
       }
@@ -287,7 +270,6 @@ export function* sendSaveRequestToServer(): Saga<number> {
         throw new Error("Saving failed due to conflict.");
       }
 
-      console.log("before retry race");
       yield* race({
         timeout: delay(getRetryWaitTime(retryCount)),
         forcePush: take("SAVE_NOW"),
@@ -295,21 +277,6 @@ export function* sendSaveRequestToServer(): Saga<number> {
       retryCount++;
     }
   }
-}
-
-function guarded(fn) {
-  function* guardedFn(...args) {
-    try {
-      yield* fn(...args);
-    } catch (ex) {
-      console.log("ex", ex);
-      throw ex;
-    } finally {
-      console.log("finally");
-    }
-  }
-
-  return guardedFn;
 }
 
 function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {

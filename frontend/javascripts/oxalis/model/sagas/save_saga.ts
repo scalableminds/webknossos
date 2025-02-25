@@ -57,7 +57,7 @@ import { takeEveryWithBatchActionSupport } from "./saga_helpers";
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
 
-export function* pushSaveQueueAsync(): Saga<void> {
+export function* pushSaveQueueAsync(): Saga<never> {
   yield* call(ensureWkReady);
 
   yield* put(setLastSaveTimestampAction());
@@ -85,9 +85,10 @@ export function* pushSaveQueueAsync(): Saga<void> {
       timeout: delay(PUSH_THROTTLE_TIME),
       forcePush: take("SAVE_NOW"),
     });
+    // this is reached
     yield* put(setSaveBusyAction(true));
 
-    // Send (parts) of the save queue to the server.
+    // Send (parts of) the save queue to the server.
     // There are two main cases:
     // 1) forcePush is true
     //    The user explicitly requested to save an annotation.
@@ -100,7 +101,7 @@ export function* pushSaveQueueAsync(): Saga<void> {
     //    The auto-save interval was reached at time T. The following code
     //    will determine how many items are in the save queue at this time T.
     //    Exactly that many items will be sent to the server.
-    //    New items that might be added to the save queue during saving, will
+    //    New items that might be added to the save queue during saving, will be
     //    ignored (they will be picked up in the next iteration of this loop).
     //    Otherwise, the risk of a high number of save-requests (see case 1)
     //    would be present here, too (note the risk would be greater, because the
@@ -113,12 +114,21 @@ export function* pushSaveQueueAsync(): Saga<void> {
       saveQueue = yield* select((state) => state.save.queue);
 
       if (saveQueue.length > 0) {
+        console.log("before sendSaveRequestToServer");
+        // this must have been entered
+
+        if (savedItemCount > 0) {
+          console.log("##################################### repeated save");
+        }
+
         savedItemCount += yield* call(sendSaveRequestToServer);
+        console.log("after sendSaveRequestToServer");
       } else {
+        console.log("break");
         break;
       }
     }
-
+    // this is not reached
     yield* put(setSaveBusyAction(false));
   }
 }
@@ -181,6 +191,7 @@ export function* sendSaveRequestToServer(): Saga<number> {
 
     try {
       const startTime = Date.now();
+      console.log("before sendRequestWithToken");
       yield* call(
         sendRequestWithToken,
 
@@ -188,12 +199,13 @@ export function* sendSaveRequestToServer(): Saga<number> {
         {
           method: "POST",
           data: compactedSaveQueue,
-          compress: process.env.NODE_ENV === "production",
+          compress: true, // process.env.NODE_ENV === "production",
           // Suppressing error toast, as the doWithToken retry with personal token functionality should not show an error.
           // Instead the error is logged and toggleErrorHighlighting should take care of showing an error to the user.
           showErrorToast: false,
         },
       );
+      console.log("after sendRequestWithToken");
       const endTime = Date.now();
 
       if (endTime - startTime > PUSH_THROTTLE_TIME) {
@@ -209,6 +221,7 @@ export function* sendSaveRequestToServer(): Saga<number> {
       yield* put(setLastSaveTimestampAction());
       yield* put(shiftSaveQueueAction(saveQueue.length));
 
+      console.log("before markBucketsAsNotDirty");
       try {
         yield* call(markBucketsAsNotDirty, compactedSaveQueue);
       } catch (error) {
@@ -217,10 +230,13 @@ export function* sendSaveRequestToServer(): Saga<number> {
         exceptionDuringMarkBucketsAsNotDirty = true;
         throw error;
       }
+      console.log("after markBucketsAsNotDirty");
 
       yield* call(toggleErrorHighlighting, false);
+      console.log("before return saveQueue.length", saveQueue.length);
       return saveQueue.length;
     } catch (error) {
+      console.log("catch error:", error);
       if (exceptionDuringMarkBucketsAsNotDirty) {
         throw error;
       }
@@ -271,6 +287,7 @@ export function* sendSaveRequestToServer(): Saga<number> {
         throw new Error("Saving failed due to conflict.");
       }
 
+      console.log("before retry race");
       yield* race({
         timeout: delay(getRetryWaitTime(retryCount)),
         forcePush: take("SAVE_NOW"),
@@ -377,7 +394,7 @@ export function* saveTracingAsync(): Saga<void> {
 
 export function* setupSavingForTracingType(
   initializeAction: InitializeSkeletonTracingAction | InitializeVolumeTracingAction,
-): Saga<void> {
+): Saga<never> {
   /*
     Listen to changes to the annotation and derive UpdateActions from the
     old and new state.
@@ -450,7 +467,7 @@ const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
 const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
 
-function* watchForSaveConflicts() {
+function* watchForSaveConflicts(): Saga<never> {
   function* checkForNewVersion() {
     const allowSave = yield* select(
       (state) => state.tracing.restrictions.allowSave && state.tracing.restrictions.allowUpdate,

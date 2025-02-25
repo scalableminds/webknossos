@@ -3,7 +3,15 @@ package controllers
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.organization.{CreditState, CreditTransaction, CreditTransactionDAO, CreditTransactionService, CreditTransactionState, FreeCreditTransactionService, OrganizationService}
+import models.organization.{
+  CreditState,
+  CreditTransaction,
+  CreditTransactionDAO,
+  CreditTransactionService,
+  CreditTransactionState,
+  FreeCreditTransactionService,
+  OrganizationService
+}
 import models.user.UserService
 import net.liftweb.common.Box.tryo
 import play.api.mvc.{Action, AnyContent}

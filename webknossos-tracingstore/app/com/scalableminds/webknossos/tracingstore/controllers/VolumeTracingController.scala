@@ -391,6 +391,7 @@ class VolumeTracingController @Inject()(
 
   // Used in task creation. History is dropped. Caller is responsible to create and save a matching AnnotationProto object
   def duplicate(tracingId: String,
+                newAnnotationId: String,
                 minMag: Option[Int],
                 maxMag: Option[Int],
                 editPosition: Option[String],
@@ -411,6 +412,7 @@ class VolumeTracingController @Inject()(
                 annotationId,
                 sourceTracingId = tracingId,
                 sourceVersion = newestSourceVersion,
+                newAnnotationId = newAnnotationId,
                 newTracingId = TracingId.generate,
                 newVersion = 0,
                 editPosition = editPositionParsed,

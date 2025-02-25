@@ -124,12 +124,14 @@ class WKRemoteTracingStoreClient(
 
   // Used in task creation. History is dropped, new version will be zero.
   def duplicateVolumeTracing(volumeTracingId: String,
+                             newAnnotationId: String,
                              magRestrictions: MagRestrictions = MagRestrictions.empty,
                              editPosition: Option[Vec3Int] = None,
                              editRotation: Option[Vec3Double] = None,
                              boundingBox: Option[BoundingBox] = None): Fox[String] =
     rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryString("newAnnotationId" -> newAnnotationId)
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))

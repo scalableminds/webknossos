@@ -47,6 +47,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     sil.SecuredAction.async(validateJson[List[TaskParameters]]) { implicit request =>
       for {
         _ <- taskCreationService.assertBatchLimit(request.body.length, request.body.map(_.taskTypeId))
+        taskParametersWithIds <- taskCreationService.addIdsToTaskParameters()
         taskParameters <- taskCreationService.createTracingsFromBaseAnnotations(request.body,
                                                                                 request.identity._organization)
         skeletonBaseOpts: List[Option[SkeletonTracing]] <- taskCreationService.createTaskSkeletonTracingBases(

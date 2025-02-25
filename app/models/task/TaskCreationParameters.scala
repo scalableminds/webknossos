@@ -17,7 +17,10 @@ case class TaskParameters(taskTypeId: String,
                           editRotation: Vec3Double,
                           creationInfo: Option[String],
                           description: Option[String],
-                          baseAnnotation: Option[BaseAnnotation])
+                          baseAnnotation: Option[BaseAnnotation],
+                          newSkeletonTracingId: Option[String],
+                          newVolumeTracingId: Option[String],
+                          newAnnotationId: Option[String])
 
 object TaskParameters {
   implicit val taskParametersWithDatasetIdFormat: Format[TaskParameters] =
@@ -35,7 +38,10 @@ object TaskParameters {
     t.editRotation,
     t.creationInfo,
     t.description,
-    t.baseAnnotation
+    t.baseAnnotation,
+    None,
+    None,
+    None
   )
 }
 

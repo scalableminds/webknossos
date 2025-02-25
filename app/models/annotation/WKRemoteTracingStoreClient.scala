@@ -129,20 +129,22 @@ class WKRemoteTracingStoreClient(
 
   // Used in task creation. History is dropped, new version will be zero.
   def duplicateVolumeTracing(volumeTracingId: String,
-                             newAnnotationId: String,
+                             newAnnotationId: ObjectId,
+                             newVolumeTracingId: String,
                              magRestrictions: MagRestrictions = MagRestrictions.empty,
                              editPosition: Option[Vec3Int] = None,
                              editRotation: Option[Vec3Double] = None,
-                             boundingBox: Option[BoundingBox] = None): Fox[String] =
+                             boundingBox: Option[BoundingBox] = None): Fox[Unit] =
     rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("newAnnotationId" -> newAnnotationId)
+      .addQueryString("newVolumeTracingId" -> newVolumeTracingId)
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
       .addQueryStringOptional("minMag", magRestrictions.minStr)
       .addQueryStringOptional("maxMag", magRestrictions.maxStr)
-      .postEmptyWithJsonResponse[String]()
+      .postEmpty()
 
   def mergeAnnotationsByIds(annotationIds: List[String],
                             newAnnotationId: ObjectId,

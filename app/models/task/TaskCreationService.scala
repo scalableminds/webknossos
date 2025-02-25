@@ -27,6 +27,7 @@ import com.scalableminds.util.objectid.ObjectId
 import models.organization.OrganizationDAO
 import play.api.http.Status.FORBIDDEN
 import spire.std.map
+import views.html.helper.script
 
 import scala.concurrent.ExecutionContext
 
@@ -159,10 +160,14 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       magRestrictions: MagRestrictions)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
     for {
       volumeTracingOpt <- baseAnnotation.volumeTracingId
+      newVolumeTracingId <- params.newVolumeTracingId.toFox
+      newAnnotationId <- params.newAnnotationId.toFox
       newVolumeTracingId <- volumeTracingOpt
         .map(
           id =>
             tracingStoreClient.duplicateVolumeTracing(id,
+                                                      newAnnotationId,
+                                                      newVolumeTracingId,
                                                       editPosition = Some(params.editPosition),
                                                       editRotation = Some(params.editRotation),
                                                       magRestrictions = magRestrictions))
@@ -414,19 +419,15 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         skeletonSaveResults: List[Box[Boolean]] <- tracingStoreClient.saveSkeletonTracings(
           SkeletonTracings(requestedTasks.map(taskTuple => SkeletonTracingOpt(taskTuple._2))))
         // Note that volume tracings are saved sequentially to reduce server load
-        volumeTracingIds: List[Box[Option[String]]] <- Fox.serialSequenceBox(requestedTasks) { requestedTask =>
+        volumeSaveResults: List[Box[Boolean]] <- Fox.serialSequenceBox(requestedTasks) { requestedTask =>
           saveVolumeTracingIfPresent(requestedTask, tracingStoreClient, taskType)
         }
-        skeletonTracingsIdsMerged = mergeTracingIds(requestedTasks.map(_.map(_._1)).lazyZip(skeletonTracingIds).toList,
-                                                    isSkeletonId = true)
-        volumeTracingsIdsMerged = mergeTracingIds(requestedTasks.map(_.map(_._1)).lazyZip(volumeTracingIds).toList,
-                                                  isSkeletonId = false)
-        requestedTasksWithTracingIds = requestedTasks
-          .lazyZip(skeletonTracingsIdsMerged)
-          .lazyZip(volumeTracingsIdsMerged)
+        requestedTasksWithTracingSaveResults = requestedTasks
+          .lazyZip(skeletonSaveResults)
+          .lazyZip(volumeSaveResults)
           .toList
         taskObjects: List[Fox[Task]] = requestedTasksWithTracingIds.map(r =>
-          createTaskWithoutAnnotationBase(r._1.map(_._1), r._2, r._3, requestingUser))
+          createTaskWithoutAnnotationBase(r._1.map(_._1), r._2, r._3, taskType, requestingUser))
         zipped = requestedTasks
           .lazyZip(skeletonTracingsIdsMerged.zip(volumeTracingsIdsMerged))
           .lazyZip(taskObjects)
@@ -442,7 +443,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
               description = tuple._1.map(_._1.description).openOr(None),
               tracingStoreClient
           ))
-        warnings <- warnIfTeamHasNoAccess(fullTasks.map(_._1), dataset, requestingUser)
+        warnings <- warnIfTeamHasNoAccess(flattenedRequestedTasks.map(_._1), dataset, requestingUser)
         zippedTasksAndAnnotations = taskObjects zip createAnnotationBaseResults
         taskJsons = zippedTasksAndAnnotations.map(tuple => taskToJsonWithOtherFox(tuple._1, tuple._2))
         result <- TaskCreationResult.fromTaskJsFoxes(taskJsons, warnings)
@@ -512,34 +513,24 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       } yield if (memberDifference.isEmpty) None else Some(subteamId)
     }
 
-  private def validateScript(scriptIdOpt: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] =
-    scriptIdOpt match {
-      case Some(scriptId) =>
-        for {
-          scriptIdValidated <- ObjectId.fromString(scriptId)
-          _ <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound"
-        } yield ()
-      case _ => Fox.successful(())
-    }
-
   private def createTaskWithoutAnnotationBase(paramBox: Box[TaskParameters],
                                               skeletonTracingIdBox: Box[Option[String]],
                                               volumeTracingIdBox: Box[Option[String]],
+                                              taskType: TaskType,
                                               requestingUser: User)(implicit ctx: DBAccessContext): Fox[Task] =
     for {
       params <- paramBox.toFox
       skeletonIdOpt <- skeletonTracingIdBox.toFox
       volumeIdOpt <- volumeTracingIdBox.toFox
       _ <- bool2Fox(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> "task.create.needsEitherSkeletonOrVolume"
-      taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId)
       project <- projectDAO.findOneByNameAndOrganization(params.projectName, requestingUser._organization) ?~> "project.notFound"
-      _ <- validateScript(params.scriptId) ?~> "script.invalid"
+      _ <- Fox.runOptional(params.scriptId)(scriptDAO.findOne) ?~> "script.notFound"
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, project._team))
       task = Task(
         ObjectId.generate,
         project._id,
-        params.scriptId.map(ObjectId(_)),
-        taskTypeIdValidated,
+        params.scriptId,
+        taskType._id,
         params.neededExperience.trim,
         params.pendingInstances, //all instances are open at this time
         params.pendingInstances,

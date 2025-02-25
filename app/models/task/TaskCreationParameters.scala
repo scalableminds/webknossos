@@ -45,11 +45,11 @@ object TaskParameters {
   )
 }
 
-case class NmlTaskParameters(taskTypeId: String,
+case class NmlTaskParameters(taskTypeId: ObjectId,
                              neededExperience: Experience,
                              pendingInstances: Int,
                              projectName: String,
-                             scriptId: Option[String],
+                             scriptId: Option[ObjectId],
                              boundingBox: Option[BoundingBox])
 
 object NmlTaskParameters {

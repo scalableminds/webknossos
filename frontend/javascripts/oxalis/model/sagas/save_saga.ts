@@ -7,6 +7,7 @@ import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import window, { alert, document, location } from "libs/window";
 import _ from "lodash";
+import memoizeOne from "memoize-one";
 import messages from "messages";
 import { ControlModeEnum } from "oxalis/constants";
 import { getMagInfo } from "oxalis/model/accessors/dataset_accessor";
@@ -54,7 +55,6 @@ import type {
 } from "oxalis/store";
 import { call, delay, fork, put, race, take } from "typed-redux-saga";
 import { takeEveryWithBatchActionSupport } from "./saga_helpers";
-import memoizeOne from "memoize-one";
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
 

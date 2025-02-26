@@ -165,8 +165,12 @@ class TSAnnotationController @Inject()(
                 Some(TracingSelector(l.tracingId))
               })
               .map(_.flatten)
+            firstVolumeAnnotationIndex = tryo(
+              annotations.indexWhere(_.annotationLayers.exists(_.typ == AnnotationLayerTypeProto.Volume))).toOption
+            firstVolumeAnnotationId = firstVolumeAnnotationIndex.map(request.body(_))
             mergeEditableMappingsResultBox <- editableMappingMergeService
               .mergeEditableMappings(request.body,
+                                     firstVolumeAnnotationId,
                                      newAnnotationId,
                                      newVolumeId,
                                      volumeTracings.zip(volumeLayers.map(_.tracingId)),
@@ -177,9 +181,6 @@ class TSAnnotationController @Inject()(
               case Empty               => Fox.successful((None, 0L))
               case f: Failure          => f.toFox
             }
-            firstVolumeAnnotationIndex = tryo(
-              annotations.indexWhere(_.annotationLayers.exists(_.typ == AnnotationLayerTypeProto.Volume))).toOption
-            firstVolumeAnnotationId = firstVolumeAnnotationIndex.map(request.body(_))
             mergedVolumeStats <- volumeTracingService.mergeVolumeData(firstVolumeAnnotationId,
                                                                       volumeLayers.map(_.tracingId),
                                                                       volumeTracings,

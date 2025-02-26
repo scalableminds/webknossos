@@ -144,11 +144,16 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
             <Button
               style={{ width: "100%" }}
               onClick={async () => {
-                const [user, organization] = await doWebAuthnLogin();
-                Store.dispatch(setActiveUserAction(user));
-                Store.dispatch(setActiveOrganizationAction(organization));
-                if (onLoggedIn) {
-                  onLoggedIn();
+                try {
+                  const [user, organization] = await doWebAuthnLogin();
+                  Store.dispatch(setActiveUserAction(user));
+                  Store.dispatch(setActiveOrganizationAction(organization));
+                  if (onLoggedIn) {
+                    onLoggedIn();
+                  }
+                } catch (error) {
+                  console.error("WebAuthn login failed", error);
+                  Toast.errror("Login with Passkey failed");
                 }
               }}
             >

@@ -328,6 +328,7 @@ job.disabled = Long-running jobs are not enabled for this WEBKNOSSOS instance.
 job.worker.notFound = Could not find this worker in the database.
 job.export.fileNotFound = Exported file not found. The link may be expired.
 job.invalidBoundingBox = The selected bounding box could not be parsed, must be x,y,z,width,height,depth
+job.invalidBoundingBoxOrMag = Either the selected bounding box could not be parsed (must be x,y,z,width,height,depth or the mag is wrong or does not exist.
 job.invalidMag = The selected mag could not be parsed, must be x-y-z
 job.volumeExceeded = The volume of the selected bounding box is too large.
 job.edgeLengthExceeded = An edge length of the selected bounding box is too large.

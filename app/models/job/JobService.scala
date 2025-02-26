@@ -248,7 +248,7 @@ class JobService @Inject()(wkConf: WkConf,
 
   def assertBoundingBoxLimits(boundingBox: String, mag: Option[String]): Fox[Unit] =
     for {
-      boundingBoxInMag <- parseBoundingBoxWithMagOpt(boundingBox, mag)
+      boundingBoxInMag <- BoundingBox.fromLiteralWithMagOpt(boundingBox, mag) ?~> "job.invalidBoundingBoxOrMag"
       _ <- bool2Fox(boundingBoxInMag.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.volumeExceeded"
       _ <- bool2Fox(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.edgeLengthExceeded"
     } yield ()
@@ -267,11 +267,5 @@ class JobService @Inject()(wkConf: WkConf,
     val costs = BigDecimal(volumeInGVx) * costsPerGVx
     if (costs < BigDecimal(0.001)) BigDecimal(0.001) else costs.setScale(4, RoundingMode.HALF_UP)
   }
-
-  def parseBoundingBoxWithMagOpt(boundingBox: String, mag: Option[String]): Fox[BoundingBox] =
-    for {
-      parsedBoundingBox <- BoundingBox.fromLiteral(boundingBox).toFox ?~> "job.invalidBoundingBox"
-      parsedMag <- Vec3Int.fromMagLiteral(mag.getOrElse("1-1-1"), allowScalar = true) ?~> "job.invalidMag"
-    } yield parsedBoundingBox / parsedMag
 
 }

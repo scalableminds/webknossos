@@ -63,7 +63,6 @@ import {
   getDatasetIdFromNameAndOrganization,
   getOrganizationForDataset,
 } from "admin/api/disambiguate_legacy_routes";
-import ManagePassKeyView from "admin/auth/manage_passkeys_view";
 import VerifyEmailView from "admin/auth/verify_email_view";
 import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
@@ -617,11 +616,6 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/auth/token"
                 component={AuthTokenView}
-              />
-              <SecuredRouteWithErrorBoundary
-                isAuthenticated={isAuthenticated}
-                path="/auth/passKey"
-                component={ManagePassKeyView}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}

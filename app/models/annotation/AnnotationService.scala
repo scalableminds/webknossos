@@ -265,8 +265,7 @@ class AnnotationService @Inject()(
           newTracingId = TracingId.generate
           _ <- tracing match {
             case Left(skeleton) => tracingStoreClient.saveSkeletonTracing(skeleton, newTracingId)
-            case Right(volume) =>
-              tracingStoreClient.saveVolumeTracing(annotationId, volume, newTracingId = Some(newTracingId))
+            case Right(volume)  => tracingStoreClient.saveVolumeTracing(annotationId, newTracingId, volume)
           }
         } yield
           AnnotationLayer(newTracingId,
@@ -377,10 +376,10 @@ class AnnotationService @Inject()(
       _ <- annotationDAO.updateInitialized(newAnnotation)
     } yield newAnnotation
 
-  def createSkeletonTracingBase(datasetId: ObjectId,
+  def createSkeletonTracingBase(dataset: Dataset,
                                 boundingBox: Option[BoundingBox],
                                 startPosition: Vec3Int,
-                                startRotation: Vec3Double)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
+                                startRotation: Vec3Double): SkeletonTracing = {
     val initialNode = NodeDefaults.createInstance.withId(1).withPosition(startPosition).withRotation(startRotation)
     val initialTree = Tree(
       1,
@@ -392,19 +391,16 @@ class AnnotationService @Inject()(
       "",
       System.currentTimeMillis()
     )
-    for {
-      dataset <- datasetDAO.findOne(datasetId)
-    } yield
-      SkeletonTracingDefaults.createInstance.copy(
-        datasetName = dataset.name,
-        boundingBox = boundingBox.flatMap { box =>
-          if (box.isEmpty) None else Some(box)
-        },
-        editPosition = startPosition,
-        editRotation = startRotation,
-        activeNodeId = Some(1),
-        trees = Seq(initialTree)
-      )
+    SkeletonTracingDefaults.createInstance.copy(
+      datasetName = dataset.name,
+      boundingBox = boundingBox.flatMap { box =>
+        if (box.isEmpty) None else Some(box)
+      },
+      editPosition = startPosition,
+      editRotation = startRotation,
+      activeNodeId = Some(1),
+      trees = Seq(initialTree)
+    )
   }
 
   def createVolumeTracingBase(

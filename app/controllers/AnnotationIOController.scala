@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
 }
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.tracingstore.tracings.TracingType
+import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeDataZipFormat,
@@ -28,7 +28,6 @@ import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
 import net.liftweb.common.Empty
-
 import models.analytics.{AnalyticsService, DownloadAnnotationEvent, UploadAnnotationEvent}
 import models.annotation.AnnotationState._
 import models.annotation._
@@ -173,14 +172,16 @@ class AnnotationIOController @Inject()(
       Fox.serialCombined(volumeLayersGrouped.toList.flatten.zipWithIndex) { volumeLayerWithIndex =>
         val uploadedVolumeLayer = volumeLayerWithIndex._1
         val idx = volumeLayerWithIndex._2
+        val newTracingId = TracingId.generate
         for {
-          savedTracingId <- client.saveVolumeTracing(newAnnotationId,
-                                                     uploadedVolumeLayer.tracing,
-                                                     uploadedVolumeLayer.getDataZipFrom(otherFiles),
-                                                     dataSource = Some(dataSource))
+          _ <- client.saveVolumeTracing(newAnnotationId,
+                                        newTracingId,
+                                        uploadedVolumeLayer.tracing,
+                                        uploadedVolumeLayer.getDataZipFrom(otherFiles),
+                                        dataSource = Some(dataSource))
         } yield
           AnnotationLayer(
-            savedTracingId,
+            newTracingId,
             AnnotationLayerType.Volume,
             uploadedVolumeLayer.name.getOrElse(AnnotationLayer.defaultVolumeLayerName + idx.toString),
             AnnotationLayerStatistics.unknown

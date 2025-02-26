@@ -60,7 +60,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         taskParametersFull <- taskCreationService.createTracingsFromBaseAnnotations(taskParametersWithIds,
                                                                                     taskType,
                                                                                     dataset)
-        skeletonBaseOpts: List[Option[SkeletonTracing]] <- taskCreationService.createTaskSkeletonTracingBases(
+        skeletonBaseOpts: List[Option[SkeletonTracing]] = taskCreationService.createTaskSkeletonTracingBases(
           taskParametersFull,
           dataset)
         volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- taskCreationService.createTaskVolumeTracingBases(
@@ -69,7 +69,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         paramsWithTracings = taskParametersFull.lazyZip(skeletonBaseOpts).lazyZip(volumeBaseOpts).map {
           case (params, skeletonOpt, volumeOpt) => Full((params, skeletonOpt, volumeOpt))
         }
-        result <- taskCreationService.createTasks(paramsWithTracings, taskType, request.identity)
+        result <- taskCreationService.createTasks(paramsWithTracings, taskType, dataset, request.identity)
       } yield Ok(Json.toJson(result))
     }
 
@@ -107,16 +107,19 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         extractedTracingBoxesRaw)
       fullParams: List[Box[TaskParameters]] = taskCreationService.buildFullParamsFromFiles(params,
                                                                                            extractedTracingBoxes)
+      datasetId <- SequenceUtils
+        .findUniqueElement(fullParams.flatten.map(_.datasetId)) ?~> "task.create.notOnSameDataset"
+      dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
       (skeletonBases, volumeBases) <- taskCreationService.fillInMissingTracings(
         extractedTracingBoxes.map(_.skeleton),
         extractedTracingBoxes.map(_.volume),
         fullParams,
-        taskType,
-        request.identity._organization
+        dataset,
+        taskType
       )
 
       fullParamsWithTracings = taskCreationService.combineParamsWithTracings(fullParams, skeletonBases, volumeBases)
-      result <- taskCreationService.createTasks(fullParamsWithTracings, taskType, request.identity)
+      result <- taskCreationService.createTasks(fullParamsWithTracings, taskType, dataset, request.identity)
     } yield Ok(Json.toJson(result))
   }
 

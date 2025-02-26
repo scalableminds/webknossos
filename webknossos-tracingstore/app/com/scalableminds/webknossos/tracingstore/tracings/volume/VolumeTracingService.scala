@@ -492,7 +492,8 @@ class VolumeTracingService @Inject()(
       data <- binaryDataService.handleDataRequests(requests)
     } yield data
 
-  def adaptVolumeForDuplicate(sourceTracingId: String,
+  def adaptVolumeForDuplicate(sourceAnnotationId: String,
+                              sourceTracingId: String,
                               newTracingId: String,
                               sourceTracing: VolumeTracing,
                               isFromTask: Boolean,
@@ -505,7 +506,7 @@ class VolumeTracingService @Inject()(
     val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, isFromTask, datasetBoundingBox)
     val tracingWithMagRestrictions = VolumeTracingMags.restrictMagList(tracingWithBB, magRestrictions)
     for {
-      fallbackLayer <- getFallbackLayer(sourceTracingId, tracingWithMagRestrictions)
+      fallbackLayer <- getFallbackLayer(sourceAnnotationId, tracingWithMagRestrictions)
       hasSegmentIndex <- VolumeSegmentIndexService.canHaveSegmentIndex(remoteDatastoreClient, fallbackLayer)
       newTracing = tracingWithMagRestrictions.copy(
         createdTimestamp = System.currentTimeMillis(),

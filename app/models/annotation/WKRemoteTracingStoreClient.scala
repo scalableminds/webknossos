@@ -162,32 +162,32 @@ class WKRemoteTracingStoreClient(
       .postJsonWithProtoResponse[List[String], AnnotationProto](annotationIds)(AnnotationProto)
   }
 
-  def mergeSkeletonTracingsByContents(newTracingId: String, tracings: SkeletonTracings): Fox[String] = {
+  def mergeSkeletonTracingsByContents(newTracingId: String, tracings: SkeletonTracings): Fox[Unit] = {
     logger.debug("Called to merge SkeletonTracings by contents." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/mergedFromContents").withLongTimeout
       .addQueryString("newTracingId" -> newTracingId)
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .postProtoWithJsonResponse[SkeletonTracings, String](tracings)
+      .postProto[SkeletonTracings](tracings)
   }
 
   def mergeVolumeTracingsByContents(newAnnotationId: ObjectId,
                                     newTracingId: String,
                                     tracings: VolumeTracings,
                                     dataSource: DataSourceLike,
-                                    initialData: List[Option[File]]): Fox[String] = {
+                                    initialData: List[Option[File]]): Fox[Unit] = {
     logger.debug("Called to merge VolumeTracings by contents." + baseInfo)
     for {
-      tracingId <- rpc(s"${tracingStore.url}/tracings/volume/mergedFromContents")
+      _ <- rpc(s"${tracingStore.url}/tracings/volume/mergedFromContents")
         .addQueryString("newTracingId" -> newTracingId)
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-        .postProtoWithJsonResponse[VolumeTracings, String](tracings)
+        .postProto[VolumeTracings](tracings)
       packedVolumeDataZips = packVolumeDataZips(initialData.flatten)
       _ = tracingDataSourceTemporaryStore.store(newAnnotationId, dataSource)
-      _ <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/initialDataMultiple").withLongTimeout
+      _ <- rpc(s"${tracingStore.url}/tracings/volume/$newTracingId/initialDataMultiple").withLongTimeout
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .addQueryString("annotationId" -> newAnnotationId.toString)
         .postFile(packedVolumeDataZips)
-    } yield tracingId
+    } yield ()
   }
 
   private def packVolumeDataZips(files: List[File]): File =

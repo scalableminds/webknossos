@@ -840,16 +840,19 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       editRotation: Option[Vec3Double])(implicit ec: ExecutionContext, tc: TokenContext): Fox[String] =
     for {
       sourceTracing <- findVolume(sourceAnnotationId, sourceTracingId, Some(sourceVersion))
-      newTracing <- volumeTracingService.adaptVolumeForDuplicate(sourceTracingId,
-                                                                 newTracingId,
-                                                                 sourceTracing,
-                                                                 isFromTask,
-                                                                 boundingBox,
-                                                                 datasetBoundingBox,
-                                                                 magRestrictions,
-                                                                 editPosition,
-                                                                 editRotation,
-                                                                 newVersion)
+      newTracing <- volumeTracingService.adaptVolumeForDuplicate(
+        sourceAnnotationId,
+        sourceTracingId,
+        newTracingId,
+        sourceTracing,
+        isFromTask,
+        boundingBox,
+        datasetBoundingBox,
+        magRestrictions,
+        editPosition,
+        editRotation,
+        newVersion
+      )
       _ <- tracingDataStore.volumes.put(newTracingId, newVersion, newTracing)
       _ <- Fox.runIf(!newTracing.getHasEditableMapping)(
         volumeTracingService.duplicateVolumeData(sourceAnnotationId,

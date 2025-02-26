@@ -270,6 +270,7 @@ mesh.file.open.failed=Failed to open mesh file for reading
 mesh.file.readData.failed=Failed to read data from mesh file
 mesh.file.readEncoding.failed=Failed to read encoding from mesh file
 
+task.create.noTasks=Zero tasks were requested
 task.create.failed=Failed to create Task
 task.create.limitExceeded=Cannot create more than 1000 tasks in one request.
 task.create.needsEitherSkeletonOrVolume=Each task needs to either be skeleton or volume.

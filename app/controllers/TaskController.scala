@@ -50,6 +50,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
   def create: Action[List[TaskParameters]] =
     sil.SecuredAction.async(validateJson[List[TaskParameters]]) { implicit request =>
       for {
+        _ <- bool2Box(request.body.nonEmpty) ?~> "task.create.noTasks"
         taskTypeId <- SequenceUtils.findUniqueElement(request.body.map(_.taskTypeId)) ?~> "task.create.notOnSameTaskType"
         taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound"
         datasetId <- SequenceUtils.findUniqueElement(request.body.map(_.datasetId)) ?~> "task.create.notOnSameDataset"
@@ -61,15 +62,14 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
                                                                                     taskType,
                                                                                     dataset)
         skeletonBaseOpts: List[Option[SkeletonTracing]] = taskCreationService.createTaskSkeletonTracingBases(
-          taskParametersFull,
-          dataset)
+          taskParametersFull)
         volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- taskCreationService.createTaskVolumeTracingBases(
           taskParametersFull,
           taskType)
         paramsWithTracings = taskParametersFull.lazyZip(skeletonBaseOpts).lazyZip(volumeBaseOpts).map {
           case (params, skeletonOpt, volumeOpt) => Full((params, skeletonOpt, volumeOpt))
         }
-        result <- taskCreationService.createTasks(paramsWithTracings, taskType, dataset, request.identity)
+        result <- taskCreationService.createTasks(paramsWithTracings, taskType, request.identity)
       } yield Ok(Json.toJson(result))
     }
 
@@ -107,19 +107,15 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         extractedTracingBoxesRaw)
       fullParams: List[Box[TaskParameters]] = taskCreationService.buildFullParamsFromFiles(params,
                                                                                            extractedTracingBoxes)
-      datasetId <- SequenceUtils
-        .findUniqueElement(fullParams.flatten.map(_.datasetId)) ?~> "task.create.notOnSameDataset"
-      dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
       (skeletonBases, volumeBases) <- taskCreationService.fillInMissingTracings(
         extractedTracingBoxes.map(_.skeleton),
         extractedTracingBoxes.map(_.volume),
         fullParams,
-        dataset,
         taskType
       )
 
       fullParamsWithTracings = taskCreationService.combineParamsWithTracings(fullParams, skeletonBases, volumeBases)
-      result <- taskCreationService.createTasks(fullParamsWithTracings, taskType, dataset, request.identity)
+      result <- taskCreationService.createTasks(fullParamsWithTracings, taskType, request.identity)
     } yield Ok(Json.toJson(result))
   }
 

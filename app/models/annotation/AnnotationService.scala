@@ -376,8 +376,7 @@ class AnnotationService @Inject()(
       _ <- annotationDAO.updateInitialized(newAnnotation)
     } yield newAnnotation
 
-  def createSkeletonTracingBase(dataset: Dataset,
-                                boundingBox: Option[BoundingBox],
+  def createSkeletonTracingBase(boundingBox: Option[BoundingBox],
                                 startPosition: Vec3Int,
                                 startRotation: Vec3Double): SkeletonTracing = {
     val initialNode = NodeDefaults.createInstance.withId(1).withPosition(startPosition).withRotation(startRotation)
@@ -392,7 +391,7 @@ class AnnotationService @Inject()(
       System.currentTimeMillis()
     )
     SkeletonTracingDefaults.createInstance.copy(
-      datasetName = dataset.name,
+      datasetName = "unused",
       boundingBox = boundingBox.flatMap { box =>
         if (box.isEmpty) None else Some(box)
       },

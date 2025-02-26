@@ -29,7 +29,7 @@ case class TaskType(
     isDeleted: Boolean = false
 )
 
-class TaskTypeService @Inject()(teamDAO: TeamDAO, taskTypeDAO: TaskTypeDAO)(implicit ec: ExecutionContext) {
+class TaskTypeService @Inject()(teamDAO: TeamDAO) {
 
   def fromForm(
       summary: String,

@@ -743,11 +743,15 @@ class VolumeTracingService @Inject()(
     }
 
   def mergeVolumeData(
-      volumeTracingLayers: Seq[VolumeTracingLayer],
-      newId: String,
+      volumeTracingIds: Seq[String],
+      volumeTracings: List[VolumeTracing],
+      newVolumeTracingId: String,
       newVersion: Long,
       toTemporaryStore: Boolean)(implicit mp: MessagesProvider, tc: TokenContext): Fox[MergedVolumeStats] = {
     val before = Instant.now
+    val volumeTracingLayers = volumeTracingIds.zip(volumeTracings).map {
+      case (tracingId, tracing) => volumeTracingLayer("annotationIdUnusedInThisContext", tracingId, tracing)
+    }
     val elementClass =
       volumeTracingLayers.headOption.map(_.tracing.elementClass).getOrElse(elementClassToProto(ElementClass.uint8))
 
@@ -796,7 +800,7 @@ class VolumeTracingService @Inject()(
         firstTracingId <- volumeTracingLayers.headOption.map(_.tracingId) ?~> "merge.noTracings"
         firstTracing <- volumeTracingLayers.headOption.map(_.tracing) ?~> "merge.noTracings"
         fallbackLayer <- getFallbackLayer(firstTracingId, firstTracing)
-        segmentIndexBuffer = new VolumeSegmentIndexBuffer(newId,
+        segmentIndexBuffer = new VolumeSegmentIndexBuffer(newVolumeTracingId,
                                                           volumeSegmentIndexClient,
                                                           newVersion,
                                                           remoteDatastoreClient,
@@ -805,7 +809,7 @@ class VolumeTracingService @Inject()(
                                                           tc)
         _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
           for {
-            _ <- saveBucket(newId,
+            _ <- saveBucket(newVolumeTracingId,
                             elementClass,
                             bucketPosition,
                             bucketBytes,
@@ -825,7 +829,8 @@ class VolumeTracingService @Inject()(
         _ <- segmentIndexBuffer.flush()
         _ = Instant.logSince(
           before,
-          s"Merging buckets from ${volumeTracingLayers.length} volume tracings into new $newId, with createSegmentIndex = $shouldCreateSegmentIndex")
+          s"Merging buckets from ${volumeTracingLayers.length} volume tracings into new $newVolumeTracingId, with createSegmentIndex = $shouldCreateSegmentIndex"
+        )
       } yield mergedVolume.stats(shouldCreateSegmentIndex)
     }
   }

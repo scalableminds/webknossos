@@ -32,7 +32,7 @@ class WKRemoteTracingStoreClient(
     tracingStore: TracingStore,
     dataset: Dataset,
     rpc: RPC,
-    tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore)(implicit ec: ExecutionContext)
+    tracingDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   private def baseInfo = s" Dataset: ${dataset.name} Tracingstore: ${tracingStore.url}"
@@ -137,7 +137,7 @@ class WKRemoteTracingStoreClient(
                              boundingBox: Option[BoundingBox] = None): Fox[Unit] =
     rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryString("newAnnotationId" -> newAnnotationId)
+      .addQueryString("newAnnotationId" -> newAnnotationId.toString)
       .addQueryString("newVolumeTracingId" -> newVolumeTracingId)
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
@@ -185,7 +185,7 @@ class WKRemoteTracingStoreClient(
   private def packVolumeDataZips(files: List[File]): File =
     ZipIO.zipToTempFile(files)
 
-  def saveVolumeTracing(annotationId: ObjectId,
+  def saveVolumeTracing(annotationId: ObjectId, // TODO reorder params
                         tracing: VolumeTracing,
                         initialData: Option[File] = None,
                         magRestrictions: MagRestrictions = MagRestrictions.empty,

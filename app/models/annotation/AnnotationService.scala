@@ -21,6 +21,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
+import com.scalableminds.webknossos.tracingstore.tracings.TracingId
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   MagRestrictions,
@@ -261,12 +262,14 @@ class AnnotationService @Inject()(
                                                    previousVersion = None)
           layerName = annotationLayerParameters.name.getOrElse(
             AnnotationLayer.defaultNameForType(annotationLayerParameters.typ))
-          tracingId <- tracing match {
-            case Left(skeleton) => tracingStoreClient.saveSkeletonTracing(skeleton)
-            case Right(volume)  => tracingStoreClient.saveVolumeTracing(annotationId, volume)
+          newTracingId = TracingId.generate
+          _ <- tracing match {
+            case Left(skeleton) => tracingStoreClient.saveSkeletonTracing(skeleton, newTracingId)
+            case Right(volume) =>
+              tracingStoreClient.saveVolumeTracing(annotationId, volume, newTracingId = Some(newTracingId))
           }
         } yield
-          AnnotationLayer(tracingId,
+          AnnotationLayer(newTracingId,
                           annotationLayerParameters.typ,
                           layerName,
                           AnnotationLayerStatistics.zeroedForType(annotationLayerParameters.typ))

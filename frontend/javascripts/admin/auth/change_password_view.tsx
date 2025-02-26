@@ -15,6 +15,7 @@ import {
   revokeAuthToken,
 } from "admin/admin_rest_api";
 import { useEffect, useState } from "react";
+import type { WebAuthnKeyDescriptor } from "types/api_flow_types";
 
 type Props = {
   history: RouteComponentProps["history"];
@@ -216,7 +217,7 @@ function ChangePasswordView({ history }: Props) {
               <Button
                 onClick={async () => {
                   await removeWebAuthnKey(passkey);
-                  await fetchData();
+                  await fetchPasskeys();
                 }}
               >
                 Delete

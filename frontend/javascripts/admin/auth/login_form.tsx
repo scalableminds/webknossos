@@ -2,6 +2,7 @@ import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { doWebAuthnLogin, loginUser, requestSingleSignOnLogin } from "admin/admin_rest_api";
 import { Alert, Button, Form, Input } from "antd";
 import features from "features";
+import Toast from "libs/toast";
 import { getIsInIframe } from "libs/utils";
 import messages from "messages";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
@@ -153,7 +154,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
                   }
                 } catch (error) {
                   console.error("WebAuthn login failed", error);
-                  Toast.errror("Login with Passkey failed");
+                  Toast.error("Login with Passkey failed");
                 }
               }}
             >

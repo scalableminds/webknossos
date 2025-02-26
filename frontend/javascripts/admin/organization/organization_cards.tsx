@@ -304,7 +304,11 @@ export function PlanDashboardCard({
         <Col span={12}>
           <Card actions={buyMoreCreditsAction}>
             <Row justify="center" align="middle" style={{ minHeight: 160 }}>
-              <h3>{roundTo(organization.creditBalance, 4)}</h3>
+              <h3>
+                {organization.creditBalance
+                  ? roundTo(organization.creditBalance, 4)
+                  : "No information access"}
+              </h3>
             </Row>
             <Row justify="center">WEBKNOSSOS Credits</Row>
           </Card>

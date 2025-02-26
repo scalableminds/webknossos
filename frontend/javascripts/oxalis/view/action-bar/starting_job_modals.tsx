@@ -1,8 +1,8 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import {
-  type JobCostsInfo,
+  type JobCostInfo,
   getAiModels,
-  getJobCosts,
+  getJobCost,
   getOrganization,
   runInferenceJob,
   startAlignSectionsJob,
@@ -122,7 +122,7 @@ type StartJobFormProps = Props & {
   buttonLabel?: string | null;
   isSkeletonSelectable?: boolean;
   showWorkflowYaml?: boolean;
-  jobCreditCostsPerGVx?: number;
+  jobCreditCostPerGVx?: number;
 };
 
 type BoundingBoxSelectionProps = {
@@ -548,14 +548,14 @@ function ShouldUseTreesFormItem() {
 }
 
 function JobCostInformation({
-  jobCostsInfo,
-  jobCreditCostsPerGVx,
+  jobCostInfo,
+  jobCreditCostPerGVx: jobCreditCostPerGVx,
   isBoundingBoxConfigurable,
   boundingBoxForJob,
   isOrganizationOwner,
 }: {
-  jobCostsInfo: JobCostsInfo | undefined;
-  jobCreditCostsPerGVx: number;
+  jobCostInfo: JobCostInfo | undefined;
+  jobCreditCostPerGVx: number;
   isBoundingBoxConfigurable: boolean;
   boundingBoxForJob: UserBoundingBox | undefined;
   isOrganizationOwner: boolean;
@@ -564,12 +564,12 @@ function JobCostInformation({
     (state: OxalisState) => state.activeOrganization?.creditBalance || 0,
   );
   const organizationCredits =
-    jobCostsInfo?.organizationCredits || organizationCreditsFromStore.toString();
+    jobCostInfo?.organizationCredits || organizationCreditsFromStore.toString();
   const currentBoundingBoxVolume = boundingBoxForJob?.boundingBox
     ? new BoundingBox(boundingBoxForJob?.boundingBox).getVolume()
     : null;
-  const orgaHasEnoughCredits = jobCostsInfo?.hasEnoughCredits || false;
-  const jobCosts = jobCostsInfo?.costsInCredits;
+  const orgaHasEnoughCredits = jobCostInfo?.hasEnoughCredits || false;
+  const jobCost = jobCostInfo?.costInCredits;
   return (
     <>
       <Row style={{ display: "grid", marginBottom: 16 }}>
@@ -581,13 +581,13 @@ function JobCostInformation({
                 ? "selected bounding box."
                 : "bounding box of the selected dataset."}
               <br />
-              This job costs {jobCreditCostsPerGVx} WEBKNOSSOS credits per Gigavoxel. Your
+              This job costs {jobCreditCostPerGVx} WEBKNOSSOS credits per Gigavoxel. Your
               organization currently has {formatCreditsString(organizationCredits)} WEBKNOSSOS
               credits.
               <br />
-              {currentBoundingBoxVolume != null && jobCosts != null
-                ? `${isBoundingBoxConfigurable ? "The selected bounding box" : "This dataset"} has a volume of 
-                  ${formatVoxels(currentBoundingBoxVolume)} resulting in costs of ${formatCreditsString(jobCosts)} WEBKNOSSOS credits.`
+              {currentBoundingBoxVolume != null && jobCost != null
+                ? `${isBoundingBoxConfigurable ? "The selected bounding box" : "This dataset"} has a volume of
+                  ${formatVoxels(currentBoundingBoxVolume)} resulting in costs of ${formatCreditsString(jobCost)} WEBKNOSSOS credits.`
                 : "You do not have a bounding box selected."}
             </>
           }
@@ -595,7 +595,7 @@ function JobCostInformation({
           showIcon
         />
       </Row>
-      {jobCosts != null && !orgaHasEnoughCredits ? (
+      {jobCost != null && !orgaHasEnoughCredits ? (
         <div style={{ marginBottom: 42 }}>
           <Form.Item
             name="requireBoundingBoxForPaidJobs"
@@ -603,11 +603,11 @@ function JobCostInformation({
             rules={[
               {
                 validator: (_rule, _checked) => {
-                  if (jobCreditCostsPerGVx != null && currentBoundingBoxVolume == null) {
+                  if (jobCreditCostPerGVx != null && currentBoundingBoxVolume == null) {
                     return Promise.reject(
                       "This is a paid job which needs a selected bounding box.",
                     );
-                  } else if (jobCreditCostsPerGVx != null && !orgaHasEnoughCredits) {
+                  } else if (jobCreditCostPerGVx != null && !orgaHasEnoughCredits) {
                     return Promise.reject(
                       "Your organization does not have enough credits to start this job.",
                     );
@@ -733,7 +733,7 @@ function StartJobForm(props: StartJobFormProps) {
     fixedSelectedLayer,
     title,
     description,
-    jobCreditCostsPerGVx,
+    jobCreditCostPerGVx,
     jobSpecificInputFields,
   } = props;
   const [form] = Form.useForm();
@@ -764,23 +764,23 @@ function StartJobForm(props: StartJobFormProps) {
   const userBoundingBoxes = defaultBBForLayers.concat(rawUserBoundingBoxes);
   const selectedBoundingBoxId = Form.useWatch("boundingBoxId", form);
   const boundingBoxForJob = userBoundingBoxes.find((bbox) => bbox.id === selectedBoundingBoxId);
-  const jobCostsInfo = useFetch<JobCostsInfo | undefined>(
+  const jobCostInfo = useFetch<JobCostInfo | undefined>(
     async () =>
       boundingBoxForJob
-        ? await getJobCosts(jobName, computeArrayFromBoundingBox(boundingBoxForJob.boundingBox))
+        ? await getJobCost(jobName, computeArrayFromBoundingBox(boundingBoxForJob.boundingBox))
         : undefined,
     undefined,
     [boundingBoxForJob, jobName],
   );
 
   useEffect(() => {
-    const orgaCreditsAsNumber = jobCostsInfo
-      ? Number.parseFloat(jobCostsInfo.organizationCredits)
+    const orgaCreditsAsNumber = jobCostInfo
+      ? Number.parseFloat(jobCostInfo.organizationCredits)
       : undefined;
     if (orgaCreditsAsNumber && organizationCredits !== orgaCreditsAsNumber) {
       dispatch(setActiveOrganizationsCreditBalance(orgaCreditsAsNumber));
     }
-  }, [jobCostsInfo, dispatch, organizationCredits]);
+  }, [jobCostInfo, dispatch, organizationCredits]);
 
   const startJob = async ({
     layerName,
@@ -824,7 +824,7 @@ function StartJobForm(props: StartJobFormProps) {
       if (!apiJob) {
         return;
       }
-      if (jobCreditCostsPerGVx != null && activeUser?.organization) {
+      if (jobCreditCostPerGVx != null && activeUser?.organization) {
         // As the job did cost credits, refetch the organization to have a correct credit balance.
         const updatedOrganization = await getOrganization(activeUser?.organization);
         dispatch(setActiveOrganizationAction(updatedOrganization));
@@ -886,7 +886,7 @@ function StartJobForm(props: StartJobFormProps) {
         isSuperUser={isActiveUserSuperUser}
         onChangeSelectedBoundingBox={(bBoxId) => form.setFieldsValue({ boundingBoxId: bBoxId })}
         value={form.getFieldValue("boundingBoxId")}
-        showVolume={jobCreditCostsPerGVx != null}
+        showVolume={jobCreditCostPerGVx != null}
       />
       {jobSpecificInputFields}
       {isSkeletonSelectable && <ShouldUseTreesFormItem />}
@@ -896,11 +896,11 @@ function StartJobForm(props: StartJobFormProps) {
           setActive={setUseCustomWorkflow}
         />
       ) : null}
-      {jobCreditCostsPerGVx != null ? (
+      {jobCreditCostPerGVx != null ? (
         <JobCostInformation
-          jobCreditCostsPerGVx={jobCreditCostsPerGVx}
+          jobCreditCostPerGVx={jobCreditCostPerGVx}
           isBoundingBoxConfigurable={isBoundingBoxConfigurable}
-          jobCostsInfo={jobCostsInfo}
+          jobCostInfo={jobCostInfo}
           boundingBoxForJob={boundingBoxForJob}
           isOrganizationOwner={isActiveUserSuperUser}
         />
@@ -908,8 +908,8 @@ function StartJobForm(props: StartJobFormProps) {
       <div style={{ textAlign: "center" }}>
         <Button type="primary" size="large" htmlType="submit">
           {props.buttonLabel ? props.buttonLabel : title}
-          {jobCostsInfo?.costsInCredits != null
-            ? ` for ${formatCreditsString(jobCostsInfo?.costsInCredits)} credits`
+          {jobCostInfo?.costInCredits != null
+            ? ` for ${formatCreditsString(jobCostInfo?.costInCredits)} credits`
             : ""}
         </Button>
       </div>
@@ -952,7 +952,7 @@ export function NucleiDetectionForm() {
 }
 export function NeuronSegmentationForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const { neuronInferralCostsPerGVx } = features();
+  const { neuronInferralCostPerGVx } = features();
   const hasSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const dispatch = useDispatch();
   const [doSplitMergerEvaluation, setDoSplitMergerEvaluation] = React.useState(false);
@@ -964,7 +964,7 @@ export function NeuronSegmentationForm() {
       title="AI Neuron Segmentation"
       suggestedDatasetSuffix="with_reconstructed_neurons"
       isBoundingBoxConfigurable
-      jobCreditCostsPerGVx={neuronInferralCostsPerGVx}
+      jobCreditCostPerGVx={neuronInferralCostPerGVx}
       jobApiCall={async (
         { newDatasetName, selectedLayer: colorLayer, selectedBoundingBox, annotationId },
         form: FormInstance<any>,
@@ -1029,7 +1029,7 @@ export function NeuronSegmentationForm() {
 
 export function MitochondriaSegmentationForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const { mitochondriaInferralCostsPerGVx } = features();
+  const { mitochondriaInferralCostPerGVx } = features();
   const dispatch = useDispatch();
   return (
     <StartJobForm
@@ -1039,7 +1039,7 @@ export function MitochondriaSegmentationForm() {
       title="AI Mitochondria Segmentation"
       suggestedDatasetSuffix="with_mitochondria_detected"
       isBoundingBoxConfigurable
-      jobCreditCostsPerGVx={mitochondriaInferralCostsPerGVx}
+      jobCreditCostPerGVx={mitochondriaInferralCostPerGVx}
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, selectedBoundingBox }) => {
         if (!selectedBoundingBox) {
           return;
@@ -1144,7 +1144,7 @@ function CustomAiModelInferenceForm() {
 export function AlignSectionsForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const dispatch = useDispatch();
-  const { alignmentCostsPerGVx } = features();
+  const { alignmentCostPerGVx } = features();
   return (
     <StartJobForm
       handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
@@ -1157,7 +1157,7 @@ export function AlignSectionsForm() {
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, annotationId }) =>
         startAlignSectionsJob(dataset.id, colorLayer.name, newDatasetName, annotationId)
       }
-      jobCreditCostsPerGVx={alignmentCostsPerGVx}
+      jobCreditCostPerGVx={alignmentCostPerGVx}
       description={
         <Space direction="vertical" size="middle">
           <Row>

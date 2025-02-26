@@ -255,9 +255,9 @@ class JobService @Inject()(wkConf: WkConf,
 
   private def getJobCostsPerGVx(jobCommand: JobCommand): BigDecimal =
     jobCommand match {
-      case JobCommand.infer_neurons      => wkConf.Features.neuronInferralCostsPerGVx
-      case JobCommand.infer_mitochondria => wkConf.Features.mitochondriaInferralCostsPerGVx
-      case JobCommand.align_sections     => wkConf.Features.alignmentCostsPerGVx
+      case JobCommand.infer_neurons      => wkConf.Features.neuronInferralCostPerGVx
+      case JobCommand.infer_mitochondria => wkConf.Features.mitochondriaInferralCostPerGVx
+      case JobCommand.align_sections     => wkConf.Features.alignmentCostPerGVx
       case _                             => throw new IllegalArgumentException(s"Unsupported job command $jobCommand")
     }
 

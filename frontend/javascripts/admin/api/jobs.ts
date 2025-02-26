@@ -74,16 +74,13 @@ export async function cancelJob(jobId: string): Promise<APIJob> {
   });
 }
 
-export type JobCostsInfo = {
-  costsInCredits: string;
+export type JobCostInfo = {
+  costInCredits: string;
   hasEnoughCredits: boolean;
   organizationCredits: string;
 };
 
-export async function getJobCosts(
-  command: string,
-  boundingBoxInMag: Vector6,
-): Promise<JobCostsInfo> {
+export async function getJobCost(command: string, boundingBoxInMag: Vector6): Promise<JobCostInfo> {
   const params = new URLSearchParams({
     command,
     boundingBoxInMag: boundingBoxInMag.join(","),

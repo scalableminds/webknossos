@@ -242,8 +242,6 @@ class JobController @Inject()(
           annotationIdParsed <- Fox.runIf(doSplitMergerEvaluation)(annotationId.toFox) ?~> "job.inferNeurons.annotationIdEvalParamsMissing"
           command = JobCommand.infer_neurons
           parsedBoundingBox <- BoundingBox.fromLiteral(bbox).toFox
-          // TODO: Disable this check. Credits should be enough to guard this.
-          _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
@@ -286,8 +284,6 @@ class JobController @Inject()(
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           command = JobCommand.infer_mitochondria
           parsedBoundingBox <- BoundingBox.fromLiteral(bbox).toFox
-          // TODO: Disable this check. Credits should be enough to guard this.
-          _ <- bool2Fox(multiUser.isSuperUser) ?~> "job.inferMitochondria.notAllowed.onlySuperUsers"
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           commandArgs = Json.obj(
             "organization_id" -> dataset._organization,

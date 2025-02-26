@@ -1,7 +1,6 @@
 import {
   CheckCircleOutlined,
   CheckOutlined,
-  CodeOutlined,
   CodeSandboxOutlined,
   CopyOutlined,
   DeleteOutlined,
@@ -34,8 +33,7 @@ import {
 } from "admin/admin_rest_api";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { Button, Dropdown, Modal, Space, Tooltip } from "antd";
-import type { ItemType, SubMenuType } from "antd/es/menu/interface";
-import { MenuItemType } from "antd/lib/menu/interface";
+import type { SubMenuType } from "antd/es/menu/interface";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
 import features from "features";
 import Toast from "libs/toast";

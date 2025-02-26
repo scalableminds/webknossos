@@ -1,5 +1,5 @@
 import type { ItemType } from "antd/lib/menu/interface";
-import { capitalize } from "libs/utils";
+import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
 import { AnnotationToolEnum, AvailableToolsInViewMode } from "oxalis/constants";
@@ -47,13 +47,8 @@ const mapMenuActionsToCommands = (menuActions: Array<ItemType>): Command[] => {
     });
 };
 
-const getLabelForUserConfigType = (key: string) =>
-  key
-    .split(/(?=[A-Z])/)
-    .map((word) => capitalize(word))
-    .join(" ");
-
-const getLabelForPath = (key: string) => capitalize(key.split("/")[1]) || key;
+const getLabelForPath = (key: string) =>
+  getPhraseFromCamelCaseString(capitalize(key.split("/")[1])) || key;
 
 const getLabelForTool = (tool: string) => {
   return tool
@@ -73,7 +68,7 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
   const isInTracingView = useSelector(
     (state: OxalisState) => state.uiInformation.isInAnnotationView,
   );
-  console.log("isInTracingView", isInTracingView);
+  console.log(userConfig);
 
   const props: TracingLayoutViewProps = useSelector((state: OxalisState) => {
     return {
@@ -118,7 +113,7 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
       if (typeof userConfig[key] === "boolean") {
         commands.push({
           id: counter,
-          name: `Toggle ${getLabelForUserConfigType(key)}`,
+          name: `Toggle ${getPhraseFromCamelCaseString(key)}`,
           command: () => Store.dispatch(updateUserSettingAction(key, !userConfig[key])),
           color: "#5660ff",
         });
@@ -131,19 +126,30 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
     if (activeUser == null) return [];
     const commands: Command[] = [];
     const basicNavigationEntries = [
-      { name: "Tasks", path: "/dashboard/tasks" },
+      { name: "Tasks (Dashboard)", path: "/dashboard/tasks" },
       { name: "Annotations", path: "/dashboard/annotations" },
       { name: "Datasets", path: "/dashboard/datasets" },
       { name: "Time Tracking", path: "/timetracking" },
     ];
 
-    const adminEntries = getAdministrationSubMenu(false, activeUser);
+    const adminMenu = getAdministrationSubMenu(false, activeUser);
     const adminCommands: Array<{ name: string; path: string }> = [];
-    adminEntries?.children.map((entry: { key: string }) => {
+    adminMenu?.children.map((entry: { key: string }) => {
       adminCommands.push({ name: getLabelForPath(entry.key), path: entry.key });
     });
 
-    const navigationEntries = [...basicNavigationEntries, ...adminCommands];
+    const statisticsCommands = [
+      {
+        path: "/reports/projectProgress",
+        name: "Project Progress",
+      },
+      {
+        path: "/reports/availableTasks",
+        name: "Available Tasks",
+      },
+    ];
+
+    const navigationEntries = [...basicNavigationEntries, ...adminCommands, ...statisticsCommands];
 
     navigationEntries.forEach((entry, counter) => {
       commands.push({
@@ -199,9 +205,10 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
           };
         })}
         hotKeys={["ctrl+k", "command+k"]}
-        trigger={label} //"[Ctrl+K] Commands"
+        trigger={label}
         closeOnSelect
         resetInputOnOpen
+        maxDisplayed={100}
       />
     </div>
   );

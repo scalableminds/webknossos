@@ -245,7 +245,7 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
 
   if (isAdmin) {
     adminstrationSubMenuItems.push({
-      key: "/organization",
+      key: `/organizations/${organization}`,
       label: <Link to={`/organizations/${organization}`}>Organization</Link>,
     });
   }

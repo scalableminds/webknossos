@@ -5,7 +5,6 @@ import type { OxalisState } from "oxalis/store";
 import type React from "react";
 import { type CSSProperties, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { CommandPalette } from "./components/command_palette_helper";
 
 function HelpButton() {
   const [isModalOpen, setModalOpen] = useState(false);
@@ -43,11 +42,7 @@ function HelpButton() {
           padding: 8,
         }}
         type="info"
-        message={
-          <>
-            <CommandPalette label={null} /> Help
-          </>
-        }
+        message="Help"
         closable
         onClose={discardButton}
         onClick={() => setModalOpen(true)}

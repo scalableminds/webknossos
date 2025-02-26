@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.datavault
 
 import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageException, StorageOptions}
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{GoogleServiceAccountCredential, RemoteSourceDescriptor}
 import net.liftweb.common.Box.tryo
@@ -33,7 +34,8 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
   private lazy val bucket: String = uri.getAuthority
 
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] = {
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] = {
 
     val objName = path.toUri.getPath.tail
     val blobId = BlobId.of(bucket, objName)

@@ -8,4 +8,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ## Unreleased
 [Commits](https://github.com/scalableminds/webknossos/compare/25.02.1...HEAD)
 
+
 ### Postgres Evolutions:

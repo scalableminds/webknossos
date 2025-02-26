@@ -43,9 +43,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Removed
  - Removed the feature to downsample existing volume annotations. All new volume annotations had a whole mag stack since [#4755](https://github.com/scalableminds/webknossos/pull/4755) (four years ago). [#7917](https://github.com/scalableminds/webknossos/pull/7917)
 
-### Breaking Changes
-
-
 ## [25.01.0](https://github.com/scalableminds/webknossos/releases/tag/25.01.0) - 2025-01-22
 [Commits](https://github.com/scalableminds/webknossos/compare/24.12.0...25.01.0)
 

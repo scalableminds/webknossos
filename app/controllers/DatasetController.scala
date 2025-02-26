@@ -71,6 +71,12 @@ object SegmentAnythingMaskParameters {
   implicit val jsonFormat: Format[SegmentAnythingMaskParameters] = Json.format[SegmentAnythingMaskParameters]
 }
 
+case class MagLinkInfo(mag: DatasetMagInfo, linkedMags: Seq[DatasetMagInfo])
+
+object MagLinkInfo {
+  implicit val jsonFormat: Format[MagLinkInfo] = Json.format[MagLinkInfo]
+}
+
 class DatasetController @Inject()(userService: UserService,
                                   userDAO: UserDAO,
                                   datasetService: DatasetService,
@@ -124,6 +130,18 @@ class DatasetController @Inject()(userService: UserService,
       } yield {
         addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")
       }
+    }
+
+  def getLinkedMags(datasetId: ObjectId, dataLayerName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        _ <- Fox.bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
+        magsAndLinkedMags <- datasetService.getPathsForDataLayer(datasetId, dataLayerName)
+        returnValues = magsAndLinkedMags.map {
+          case (mag, linkedMags) => MagLinkInfo(mag, linkedMags)
+        }
+      } yield Ok(Json.toJson(returnValues))
     }
 
   def exploreRemoteDataset(): Action[List[WKExploreRemoteLayerParameters]] =

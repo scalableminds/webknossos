@@ -537,6 +537,10 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
   def addNewIdsToTaskParameters(taskParameters: List[TaskParameters], taskType: TaskType): List[TaskParameters] =
     taskParameters.map(addIdsToSingleTaskParameters(_, taskType))
 
+  def addNewIdsToTaskParametersBoxed(taskParameters: List[Box[TaskParameters]],
+                                     taskType: TaskType): List[Box[TaskParameters]] =
+    taskParameters.map(_.map(addIdsToSingleTaskParameters(_, taskType)))
+
   private def addIdsToSingleTaskParameters(taskParameters: TaskParameters, taskType: TaskType): TaskParameters = {
     val skeletonIdOpt = taskType.tracingType match {
       case TracingType.skeleton | TracingType.hybrid => Some(TracingId.generate)

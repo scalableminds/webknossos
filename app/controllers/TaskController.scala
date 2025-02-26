@@ -107,14 +107,17 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         extractedTracingBoxesRaw)
       fullParams: List[Box[TaskParameters]] = taskCreationService.buildFullParamsFromFiles(params,
                                                                                            extractedTracingBoxes)
+      fullParamsWithIds = taskCreationService.addNewIdsToTaskParametersBoxed(fullParams, taskType)
       (skeletonBases, volumeBases) <- taskCreationService.fillInMissingTracings(
         extractedTracingBoxes.map(_.skeleton),
         extractedTracingBoxes.map(_.volume),
-        fullParams,
+        fullParamsWithIds,
         taskType
       )
 
-      fullParamsWithTracings = taskCreationService.combineParamsWithTracings(fullParams, skeletonBases, volumeBases)
+      fullParamsWithTracings = taskCreationService.combineParamsWithTracings(fullParamsWithIds,
+                                                                             skeletonBases,
+                                                                             volumeBases)
       result <- taskCreationService.createTasks(fullParamsWithTracings, taskType, request.identity)
     } yield Ok(Json.toJson(result))
   }

@@ -199,13 +199,13 @@ class WKRemoteTracingStoreClient(
                         initialData: Option[File] = None,
                         magRestrictions: MagRestrictions = MagRestrictions.empty,
                         dataSource: Option[DataSourceLike] = None): Fox[Unit] = {
-    logger.debug("Called to save VolumeTracing." + baseInfo)
+    logger.debug(s"Called to save VolumeTracing at $newTracingId for annotation $annotationId." + baseInfo)
     dataSource.foreach(d => tracingDataSourceTemporaryStore.store(annotationId, d))
     for {
       _ <- rpc(s"${tracingStore.url}/tracings/volume/save")
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .addQueryString("newTracingId" -> newTracingId)
-        .postProtoWithJsonResponse[VolumeTracing, String](tracing)
+        .postProto[VolumeTracing](tracing)
       _ <- Fox.runOptional(initialData) { initialDataFile =>
         rpc(s"${tracingStore.url}/tracings/volume/$newTracingId/initialData").withLongTimeout
           .addQueryString("token" -> RpcTokenHolder.webknossosToken)

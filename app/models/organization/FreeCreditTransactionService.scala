@@ -19,12 +19,14 @@ class FreeCreditTransactionService @Inject()(creditTransactionDAO: CreditTransac
     with LazyLogging
     with IntervalScheduler {
 
+  override protected def actorSystem: ActorSystem = system
+
   def revokeExpiredCredits(): Fox[Unit] = creditTransactionDAO.runRevokeExpiredCredits()
   def handOutMonthlyFreeCredits(): Fox[Unit] = creditTransactionDAO.handOutMonthlyFreeCredits()
 
   override protected def tickerInterval: FiniteDuration = 20 minutes
 
-  override protected def tick(): Unit =
+  override protected def tick(): Fox[Unit] =
     for {
       _ <- Fox.successful(())
       _ = logger.info("Starting revoking expired credits...")
@@ -34,4 +36,5 @@ class FreeCreditTransactionService @Inject()(creditTransactionDAO: CreditTransac
       _ <- handOutMonthlyFreeCredits()
       _ = logger.info("Finished handing out free monthly credits.")
     } yield ()
+
 }

@@ -351,7 +351,7 @@ CREATE TABLE webknossos.organization_usedStorage(
 
 -- Create the enum types for transaction states and credit states
 CREATE TYPE webknossos.credit_transaction_state AS ENUM ('Pending', 'Complete');
-CREATE TYPE webknossos.credit_state AS ENUM ('Pending', 'Spent', 'Refunded', 'Revoked', 'PartiallyRevoked', 'Refunding', 'Revoking', 'ChargedUp');
+CREATE TYPE webknossos.credit_state AS ENUM ('Pending', 'Spent', 'Refunded', 'Revoked', 'PartiallyRevoked', 'Refunding', 'Revoking', 'ChargeUp');
 
 CREATE TABLE webknossos.credit_transactions (
     _id CHAR(24) PRIMARY KEY,
@@ -363,7 +363,7 @@ CREATE TABLE webknossos.credit_transactions (
     -- The state of the transaction.
     transaction_state webknossos.credit_transaction_state NOT NULL,
     -- The state of the credits of this transaction.
-    credit_state webknossos.credit_transaction_state NOT NULL,
+    credit_state webknossos.credit_state NOT NULL,
     expiration_date TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

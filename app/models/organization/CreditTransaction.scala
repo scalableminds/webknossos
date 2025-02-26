@@ -166,7 +166,7 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
     for {
       _ <- readAccessQuery
       _ <- run(q"""INSERT INTO webknossos.credit_transactions
-          (_id, _organization, credit_change, _refunded_transaction_id, comment, _paid_job,
+          (_id, _organization, credit_change, _related_transaction, comment, _paid_job,
           transaction_state, credit_state, expiration_date, created_at, updated_at, is_deleted)
           VALUES
           (${transaction._id}, ${transaction._organization}, ${transaction.creditChange.toString()}::DECIMAL,

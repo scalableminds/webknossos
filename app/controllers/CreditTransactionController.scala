@@ -44,6 +44,8 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
       commentNoOptional = comment.getOrElse(s"Charge up for $creditAmount credits for $moneySpentInDecimal $currency.")
       _ <- organizationService.assertOrganizationHasPaidPlan(organizationId)
       expirationDateOpt <- Fox.runOptional(expiresAt)(Instant.fromString)
+      _ <- Fox
+        .runOptional(expirationDateOpt)(expirationDate => bool2Fox(Instant.now < expirationDate)) ?~> "Expiration date must be in the future"
       chargeUpTransaction = CreditTransaction(
         ObjectId.generate,
         organizationId,
@@ -52,7 +54,7 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
         BigDecimal(creditAmount),
         commentNoOptional,
         CreditTransactionState.Complete,
-        CreditState.ChargedUp,
+        CreditState.ChargeUp,
         expirationDateOpt
       )
       _ <- creditTransactionService.insertCreditTransaction(chargeUpTransaction)

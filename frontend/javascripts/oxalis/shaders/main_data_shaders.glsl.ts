@@ -325,6 +325,8 @@ void main() {
         <% } else { %>
           <% if (elementClass == "uint24") { %>
             color_value *= 255.;
+          <% } else { %>
+            color_value = vec3(color_value.x);
           <% } %>
 
           // Keep the color in bounds of min and max

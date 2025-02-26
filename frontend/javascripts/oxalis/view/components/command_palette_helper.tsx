@@ -1,5 +1,6 @@
 import type { ItemType } from "antd/lib/menu/interface";
 import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
+import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
 import { AnnotationToolEnum, AvailableToolsInViewMode } from "oxalis/constants";
@@ -97,6 +98,7 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
   };
 
   const getTabsAndSettingsMenuItems = () => {
+    if (!isInTracingView) return [];
     const commands: Command[] = [];
 
     (Object.keys(userConfig) as [keyof UserConfiguration]).forEach((key, counter) => {
@@ -128,16 +130,18 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
       adminCommands.push({ name: getLabelForPath(entry.key), path: entry.key });
     });
 
-    const statisticsCommands = [
-      {
-        path: "/reports/projectProgress",
-        name: "Project Progress",
-      },
-      {
-        path: "/reports/availableTasks",
-        name: "Available Tasks",
-      },
-    ];
+    const statisticsCommands = Utils.isUserAdminOrManager(activeUser)
+      ? [
+          {
+            path: "/reports/projectProgress",
+            name: "Project Progress",
+          },
+          {
+            path: "/reports/availableTasks",
+            name: "Available Tasks",
+          },
+        ]
+      : [];
 
     const navigationEntries = [...basicNavigationEntries, ...adminCommands, ...statisticsCommands];
 

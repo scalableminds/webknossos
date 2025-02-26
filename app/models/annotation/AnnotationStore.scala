@@ -1,6 +1,7 @@
 package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
@@ -54,8 +55,8 @@ class AnnotationStore @Inject()(
   private def getFromCache(annotationId: AnnotationIdentifier): Option[Fox[Annotation]] =
     temporaryAnnotationStore.get(annotationId.toUniqueString).map(Fox.successful(_))
 
-  def findInCache(annotationId: String): Box[Annotation] =
-    temporaryAnnotationStore.getAll.find(a => a._id.toString == annotationId)
+  def findInCache(annotationId: ObjectId): Box[Annotation] =
+    temporaryAnnotationStore.getAll.find(a => a._id == annotationId)
 
   def findCachedByTracingId(tracingId: String): Box[Annotation] = {
     val annotationOpt = temporaryAnnotationStore.getAll.find(a => a.annotationLayers.exists(_.tracingId == tracingId))

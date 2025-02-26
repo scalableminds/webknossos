@@ -13,7 +13,7 @@ import { select } from "oxalis/model/sagas/effect-generators";
 import { call, put, take } from "typed-redux-saga";
 import { ensureWkReady } from "./ready_sagas";
 
-export function* watchToolDeselection(): Saga<void> {
+export function* watchToolDeselection(): Saga<never> {
   yield* call(ensureWkReady);
   let previousTool = yield* select((state) => state.uiInformation.activeTool);
 
@@ -38,7 +38,7 @@ export function* watchToolDeselection(): Saga<void> {
   }
 }
 
-export function* watchToolReset(): Saga<void> {
+export function* watchToolReset(): Saga<never> {
   while (true) {
     yield* take("ESCAPE");
     const activeTool = yield* select((state) => state.uiInformation.activeTool);

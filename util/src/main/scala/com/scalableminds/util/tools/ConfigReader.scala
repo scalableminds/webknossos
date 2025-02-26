@@ -5,7 +5,7 @@ import com.typesafe.config.Config
 import play.api.{ConfigLoader, Configuration}
 
 trait ConfigReader {
-  def raw: Configuration
+  val raw: Configuration
 
   implicit val instantConfigLoader: ConfigLoader[Instant] = (rootConfig: Config, path: String) => {
     val literal = rootConfig.getString(path)

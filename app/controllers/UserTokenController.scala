@@ -188,6 +188,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
       Fox.successful(UserAccessAnswer(granted = true))
     } else {
       for {
+        annotationId <- ObjectId.fromString(annotationId)
         annotationBox <- annotationInformationProvider
           .provideAnnotation(annotationId, userBox)(GlobalAccessContext)
           .futureBox

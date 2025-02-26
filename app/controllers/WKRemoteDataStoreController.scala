@@ -2,6 +2,7 @@ package controllers
 
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
@@ -32,6 +33,7 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import telemetry.SlackNotificationService
 import utils.WkConf
+import scala.concurrent.duration.DurationInt
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -184,26 +186,22 @@ class WKRemoteDataStoreController @Inject()(
     }
   }
 
-  def updateAll(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    dataStoreService.validateAccess(name, key) { dataStore =>
-      request.body.validate[List[InboxDataSource]] match {
-        case JsSuccess(dataSources, _) =>
-          for {
-            _ <- Fox.successful(
-              logger.info(s"Received dataset list from datastore '${dataStore.name}': " +
-                s"${dataSources.count(_.isUsable)} active, ${dataSources.count(!_.isUsable)} inactive datasets"))
-            existingIds <- datasetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext)
-            _ <- datasetService.deactivateUnreportedDataSources(existingIds, dataStore)
-          } yield {
-            JsonOk
-          }
-
-        case e: JsError =>
-          logger.warn("Data store reported invalid json for data sources.")
-          Fox.successful(JsonBadRequest(JsError.toJson(e)))
+  def updateAll(name: String, key: String): Action[List[InboxDataSource]] =
+    Action.async(validateJson[List[InboxDataSource]]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
+        val dataSources = request.body
+        for {
+          before <- Instant.nowFox
+          _ = logger.info(
+            s"Received dataset list from datastore '${dataStore.name}': " +
+              s"${dataSources.count(_.isUsable)} active, ${dataSources.count(!_.isUsable)} inactive")
+          existingIds <- datasetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext)
+          _ <- datasetService.deactivateUnreportedDataSources(existingIds, dataStore)
+          _ = if (Instant.since(before) > (30 seconds))
+            Instant.logSince(before, s"Updating datasources from datastore '${dataStore.name}'", logger)
+        } yield Ok
       }
     }
-  }
 
   def updateOne(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
     dataStoreService.validateAccess(name, key) { dataStore =>
@@ -242,27 +240,25 @@ class WKRemoteDataStoreController @Inject()(
     }
   }
 
-  def jobExportProperties(name: String, key: String, jobId: String): Action[AnyContent] = Action.async {
+  def jobExportProperties(name: String, key: String, jobId: ObjectId): Action[AnyContent] = Action.async {
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          jobIdValidated <- ObjectId.fromString(jobId)
-          job <- jobDAO.findOne(jobIdValidated)(GlobalAccessContext)
+          job <- jobDAO.findOne(jobId)(GlobalAccessContext)
           jobOwner <- userDAO.findOne(job._owner)(GlobalAccessContext)
           organization <- organizationDAO.findOne(jobOwner._organization)(GlobalAccessContext)
           latestRunId <- job.latestRunId.toFox ?~> "job.notRun"
           exportFileName <- job.exportFileName.toFox ?~> "job.noExportFileName"
-          jobExportProperties = JobExportProperties(jobId, latestRunId, organization._id, exportFileName)
+          jobExportProperties = JobExportProperties(jobId.toString, latestRunId, organization._id, exportFileName)
         } yield Ok(Json.toJson(jobExportProperties))
       }
   }
 
-  def findCredential(name: String, key: String, credentialId: String): Action[AnyContent] = Action.async {
+  def findCredential(name: String, key: String, credentialId: ObjectId): Action[AnyContent] = Action.async {
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          credentialIdValidated <- ObjectId.fromString(credentialId)
-          credential <- credentialDAO.findOne(credentialIdValidated)
+          credential <- credentialDAO.findOne(credentialId)
         } yield Ok(Json.toJson(credential))
       }
   }

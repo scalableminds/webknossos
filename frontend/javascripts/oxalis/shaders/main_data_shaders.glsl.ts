@@ -288,10 +288,11 @@ void main() {
         // color_value is usually between 0 and 1.
         color_value = maybe_filtered_color.color.rgb;
 
-        <% if (textureLayerInfos[name].packingDegree === 1.0) { %>
+        <% const elementClass = textureLayerInfos[name].elementClass %>
+        <% if (elementClass.endsWith("int32")) { %>
           // Handle 32-bit color layers
 
-          <% if (textureLayerInfos[name].elementClass === "int32") { %>
+          <% if (elementClass === "int32") { %>
             ivec4 four_bytes = ivec4(255. * maybe_filtered_color.color);
             // Combine bytes into an Int32 (assuming little-endian order)
             highp int hpv = four_bytes.r | (four_bytes.g << 8) | (four_bytes.b << 16) | (four_bytes.a << 24);
@@ -322,11 +323,15 @@ void main() {
           <% } %>
 
         <% } else { %>
+          <% if (elementClass == "uint24") { %>
+            color_value *= 255.;
+          <% } %>
+
           // Keep the color in bounds of min and max
           color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
           // Scale the color value according to the histogram settings.
           color_value = vec3(
-            scaleFloatToFloat(color_value.x, <%= name %>_min, <%= name %>_max)
+            scaleFloatToFloat(color_value, <%= name %>_min, <%= name %>_max)
           );
         <% } %>
 

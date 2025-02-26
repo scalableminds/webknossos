@@ -189,9 +189,11 @@ class AnnotationIOController @Inject()(
       }
     } else { // Multiple annotations with volume layers (but at most one each) was uploaded merge those volume layers into one
       val uploadedVolumeLayersFlat = volumeLayersGrouped.toList.flatten
+      val newTracingId = TracingId.generate
       for {
-        mergedTracingId <- client.mergeVolumeTracingsByContents(
+        _ <- client.mergeVolumeTracingsByContents(
           newAnnotationId,
+          newTracingId,
           VolumeTracings(uploadedVolumeLayersFlat.map(v => VolumeTracingOpt(Some(v.tracing)))),
           dataSource,
           uploadedVolumeLayersFlat.map(v => v.getDataZipFrom(otherFiles))
@@ -199,7 +201,7 @@ class AnnotationIOController @Inject()(
       } yield
         List(
           AnnotationLayer(
-            mergedTracingId,
+            newTracingId,
             AnnotationLayerType.Volume,
             AnnotationLayer.defaultVolumeLayerName,
             AnnotationLayerStatistics.unknown
@@ -211,12 +213,14 @@ class AnnotationIOController @Inject()(
     if (skeletonTracings.isEmpty)
       Fox.successful(List())
     else {
+      val newTracingId = TracingId.generate
       for {
-        mergedTracingId <- tracingStoreClient.mergeSkeletonTracingsByContents(
+        _ <- tracingStoreClient.mergeSkeletonTracingsByContents(
+          newTracingId,
           SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))))
       } yield
         List(
-          AnnotationLayer(mergedTracingId,
+          AnnotationLayer(newTracingId,
                           AnnotationLayerType.Skeleton,
                           AnnotationLayer.defaultSkeletonLayerName,
                           AnnotationLayerStatistics.unknown))

@@ -4,7 +4,13 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{
+  SkeletonTracing,
+  SkeletonTracingOpt,
+  SkeletonTracings,
+  SkeletonTracingsWithIds,
+  StringOpt
+}
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
@@ -12,6 +18,7 @@ import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotifi
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingSelector}
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
+import net.liftweb.common.Box
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -38,33 +45,36 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
   implicit def unpackMultiple(tracings: SkeletonTracings): List[Option[SkeletonTracing]] =
     tracings.tracings.toList.map(_.tracing)
 
-  def save(): Action[SkeletonTracing] = Action.async(validateProto[SkeletonTracing]) { implicit request =>
-    log() {
-      logTime(slackNotificationService.noticeSlowRequest) {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-          val tracing = request.body
-          skeletonTracingService.saveSkeleton(tracing, None, 0).map { newId =>
-            Ok(Json.toJson(newId))
+  def save(newTracingId: String): Action[SkeletonTracing] = Action.async(validateProto[SkeletonTracing]) {
+    implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+            val tracing = request.body
+            skeletonTracingService.saveSkeleton(tracing, newTracingId, 0).map { _ =>
+              Ok
+            }
           }
         }
       }
-    }
   }
 
-  def saveMultiple(): Action[SkeletonTracings] = Action.async(validateProto[SkeletonTracings]) { implicit request =>
-    log() {
-      logTime(slackNotificationService.noticeSlowRequest) {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-          val savedIds = Fox.sequence(request.body.map { tracingOpt: Option[SkeletonTracing] =>
-            tracingOpt match {
-              case Some(tracing) => skeletonTracingService.saveSkeleton(tracing, None, 0).map(Some(_))
-              case _             => Fox.successful(None)
-            }
-          })
-          savedIds.map(id => Ok(Json.toJson(id)))
+  def saveMultiple(): Action[SkeletonTracingsWithIds] = Action.async(validateProto[SkeletonTracingsWithIds]) {
+    implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+            val zipped: List[(SkeletonTracingOpt, StringOpt)] = request.body.tracings.zip(request.body.tracingId).toList
+            for {
+              resultBoxes: List[Box[Boolean]] <- Fox.sequence(zipped.map {
+                case (SkeletonTracingOpt(Some(tracing), _), StringOpt(Some(tracingId), _)) =>
+                  skeletonTracingService.saveSkeleton(tracing, tracingId, 0).map(_ => true)
+                case _ => Fox.empty
+              })
+            } yield Ok(Json.toJson(resultBoxes))
+          }
         }
       }
-    }
   }
 
   def get(tracingId: String, annotationId: String, version: Option[Long]): Action[AnyContent] =
@@ -91,7 +101,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
       }
     }
 
-  def mergedFromContents: Action[SkeletonTracings] =
+  def mergedFromContents(newTracingId: String): Action[SkeletonTracings] =
     Action.async(validateProto[SkeletonTracings]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -99,14 +109,15 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
           for {
             mergedTracing <- Fox.box2Fox(skeletonTracingService.merge(tracings.flatten, newVersion = 0L))
             processedTracing = skeletonTracingService.remapTooLargeTreeIds(mergedTracing)
-            newId <- skeletonTracingService.saveSkeleton(processedTracing, None, processedTracing.version)
-          } yield Ok(Json.toJson(newId))
+            _ <- skeletonTracingService.saveSkeleton(processedTracing, newTracingId, processedTracing.version)
+          } yield Ok
         }
       }
     }
 
   // Used in task creation. History is dropped. Caller is responsible to create and save a matching AnnotationProto object
   def duplicate(tracingId: String,
+                newTracingId: String,
                 editPosition: Option[String],
                 editRotation: Option[String],
                 boundingBox: Option[String]): Action[AnyContent] =
@@ -120,18 +131,18 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
               editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
               boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
               newestSourceVersion <- annotationService.currentMaterializableVersion(annotationId)
-              newTracingId <- annotationService.duplicateSkeletonTracing(
+              _ <- annotationService.duplicateSkeletonTracing(
                 annotationId,
                 sourceTracingId = tracingId,
                 sourceVersion = newestSourceVersion,
-                newTracingId = TracingId.generate,
+                newTracingId = newTracingId,
                 newVersion = 0,
                 editPosition = editPositionParsed,
                 editRotation = editRotationParsed,
                 boundingBox = boundingBoxParsed,
                 isFromTask = false
               )
-            } yield Ok(Json.toJson(newTracingId))
+            } yield Ok
           }
         }
       }

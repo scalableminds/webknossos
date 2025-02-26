@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
+import com.scalableminds.util.tools.JsonHelper.optionFormat
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
@@ -27,7 +27,7 @@ import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransacti
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume._
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingId, TracingSelector}
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingSelector}
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
   TSRemoteWebknossosClient,
@@ -73,34 +73,17 @@ class VolumeTracingController @Inject()(
   implicit def unpackMultiple(tracings: VolumeTracings): List[Option[VolumeTracing]] =
     tracings.tracings.toList.map(_.tracing)
 
-  def save(newTracingId: Option[String]): Action[VolumeTracing] = Action.async(validateProto[VolumeTracing]) {
+  def save(newTracingId: String): Action[VolumeTracing] = Action.async(validateProto[VolumeTracing]) {
     implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-            val tracing = request.body
-            volumeTracingService.saveVolume(tracing, newTracingId, 0).map { newId =>
-              Ok(Json.toJson(newId))
-            }
+            for {
+              _ <- volumeTracingService.saveVolume(request.body, newTracingId, 0)
+            } yield Ok
           }
         }
       }
-  }
-
-  def saveMultiple(): Action[VolumeTracings] = Action.async(validateProto[VolumeTracings]) { implicit request =>
-    log() {
-      logTime(slackNotificationService.noticeSlowRequest) {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-          val savedIds = Fox.sequence(request.body.map { tracingOpt: Option[VolumeTracing] =>
-            tracingOpt match {
-              case Some(tracing) => volumeTracingService.saveVolume(tracing, None, 0).map(Some(_))
-              case _             => Fox.successful(None)
-            }
-          })
-          savedIds.map(id => Ok(Json.toJson(id)))
-        }
-      }
-    }
   }
 
   def get(tracingId: String, annotationId: String, version: Option[Long]): Action[AnyContent] =
@@ -150,23 +133,20 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def mergedFromContents: Action[VolumeTracings] =
+  def mergedFromContents(newTracingId: String): Action[VolumeTracings] =
     Action.async(validateProto[VolumeTracings]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+          val tracingsFlat = request.body.flatten
+          val shouldCreateSegmentIndex = volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(tracingsFlat)
           for {
-            _ <- Fox.successful(())
-            tracings = request.body
-            shouldCreateSegmentIndex = volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(tracings.flatten)
-            mt <- volumeTracingService
-              .merge(tracings.flatten, MergedVolumeStats.empty(shouldCreateSegmentIndex), Empty, newVersion = 0L)
+            mergedTracingRaw <- volumeTracingService
+              .merge(tracingsFlat, MergedVolumeStats.empty(shouldCreateSegmentIndex), Empty, newVersion = 0L)
               .toFox
-
             // segment lists for multi-volume uploads are not supported yet, compare https://github.com/scalableminds/webknossos/issues/6887
-            mergedTracing = mt.copy(segments = List.empty)
-
-            newId <- volumeTracingService.saveVolume(mergedTracing, None, mergedTracing.version)
-          } yield Ok(Json.toJson(newId))
+            mergedTracing = mergedTracingRaw.copy(segments = List.empty)
+            _ <- volumeTracingService.saveVolume(mergedTracing, newTracingId, mergedTracing.version)
+          } yield Ok
         }
       }
     }
@@ -392,6 +372,7 @@ class VolumeTracingController @Inject()(
   // Used in task creation. History is dropped. Caller is responsible to create and save a matching AnnotationProto object
   def duplicate(tracingId: String,
                 newAnnotationId: String,
+                newTracingId: String,
                 minMag: Option[Int],
                 maxMag: Option[Int],
                 editPosition: Option[String],
@@ -408,12 +389,12 @@ class VolumeTracingController @Inject()(
               boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
               magRestrictions = MagRestrictions(minMag, maxMag)
               newestSourceVersion <- annotationService.currentMaterializableVersion(annotationId)
-              newTracingId <- annotationService.duplicateVolumeTracing(
+              _ <- annotationService.duplicateVolumeTracing(
                 annotationId,
                 sourceTracingId = tracingId,
                 sourceVersion = newestSourceVersion,
                 newAnnotationId = newAnnotationId,
-                newTracingId = TracingId.generate,
+                newTracingId = newTracingId,
                 newVersion = 0,
                 editPosition = editPositionParsed,
                 editRotation = editRotationParsed,
@@ -422,7 +403,7 @@ class VolumeTracingController @Inject()(
                 isFromTask = false,
                 magRestrictions = magRestrictions
               )
-            } yield Ok(Json.toJson(newTracingId))
+            } yield Ok
           }
         }
       }

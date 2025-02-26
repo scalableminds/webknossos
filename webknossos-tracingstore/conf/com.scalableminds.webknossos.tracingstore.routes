@@ -15,7 +15,7 @@ POST        /annotation/:annotationId/resetToBase                               
 POST        /annotation/mergedFromIds                                               @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.mergedFromIds(toTemporaryStore: Boolean, newAnnotationId: String)
 
 # Volume tracings
-POST        /volume/save                                                            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.save(newTracingId: Option[String])
+POST        /volume/save                                                            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.save(newTracingId: String)
 POST        /volume/:tracingId/initialData                                          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialData(annotationId: String, tracingId: String, minMag: Option[Int], maxMag: Option[Int])
 POST        /volume/:tracingId/initialDataMultiple                                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialDataMultiple(annotationId: String, tracingId: String)
 GET         /volume/:tracingId                                                      @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.get(tracingId: String, annotationId: String, version: Option[Long])
@@ -23,14 +23,14 @@ GET         /volume/:tracingId/allDataZip                                       
 POST        /volume/:tracingId/data                                                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.data(tracingId: String, annotationId: String)
 POST        /volume/:tracingId/adHocMesh                                            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.requestAdHocMesh(tracingId: String)
 POST        /volume/:tracingId/fullMesh.stl                                         @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.loadFullMeshStl(tracingId: String)
-POST        /volume/:tracingId/duplicate                                            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.duplicate(tracingId: String, newAnnotationId: String, minMag: Option[Int], maxMag: Option[Int], editPosition: Option[String], editRotation: Option[String], boundingBox: Option[String])
+POST        /volume/:tracingId/duplicate                                            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.duplicate(tracingId: String, newAnnotationId: String, newTracingId: String, minMag: Option[Int], maxMag: Option[Int], editPosition: Option[String], editRotation: Option[String], boundingBox: Option[String])
 POST        /volume/:tracingId/segmentIndex/:segmentId                              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentIndex(tracingId: String, segmentId: Long)
 POST        /volume/:tracingId/importVolumeData                                     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.importVolumeData(tracingId: String)
 GET         /volume/:tracingId/findData                                             @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.findData(tracingId: String)
 POST        /volume/:tracingId/segmentStatistics/volume                             @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentVolume(tracingId: String)
 POST        /volume/:tracingId/segmentStatistics/boundingBox                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentBoundingBox(tracingId: String)
 POST        /volume/getMultiple                                                     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getMultiple
-POST        /volume/mergedFromContents                                              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.mergedFromContents
+POST        /volume/mergedFromContents                                              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.mergedFromContents(newTracingId: String)
 
 # Editable Mappings
 GET         /mapping/:tracingId/info                                                @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.editableMappingInfo(tracingId: String, annotationId: String, version: Option[Long])
@@ -67,9 +67,9 @@ GET         /volume/zarr3_experimental/:tracingId/:mag/zarr.json                
 GET         /volume/zarr3_experimental/:tracingId/:mag/:coordinates                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.rawZarrCube(tracingId: String, mag: String, coordinates: String)
 
 # Skeleton tracings
-POST        /skeleton/save                                                          @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.save()
+POST        /skeleton/save                                                          @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.save(newTracingId: String)
 POST        /skeleton/saveMultiple                                                  @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.saveMultiple()
-POST        /skeleton/mergedFromContents                                            @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.mergedFromContents
+POST        /skeleton/mergedFromContents                                            @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.mergedFromContents(newTracingId: String)
 GET         /skeleton/:tracingId                                                    @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.get(tracingId: String, annotationId: String, version: Option[Long])
-POST        /skeleton/:tracingId/duplicate                                          @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.duplicate(tracingId: String, editPosition: Option[String], editRotation: Option[String], boundingBox: Option[String])
+POST        /skeleton/:tracingId/duplicate                                          @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.duplicate(tracingId: String, newTracingId: String, editPosition: Option[String], editRotation: Option[String], boundingBox: Option[String])
 POST        /skeleton/getMultiple                                                   @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.getMultiple

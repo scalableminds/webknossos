@@ -886,7 +886,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       isFromTask: Boolean,
       editPosition: Option[Vec3Int],
       editRotation: Option[Vec3Double],
-      boundingBox: Option[BoundingBox])(implicit ec: ExecutionContext, tc: TokenContext): Fox[String] =
+      boundingBox: Option[BoundingBox])(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
     for {
       skeleton <- findSkeleton(sourceAnnotationId, sourceTracingId, Some(sourceVersion))
       adaptedSkeleton = skeletonTracingService.adaptSkeletonForDuplicate(skeleton,
@@ -896,6 +896,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                                                          boundingBox,
                                                                          newVersion)
       _ <- tracingDataStore.skeletons.put(newTracingId, newVersion, adaptedSkeleton)
-    } yield newTracingId
+    } yield ()
 
 }

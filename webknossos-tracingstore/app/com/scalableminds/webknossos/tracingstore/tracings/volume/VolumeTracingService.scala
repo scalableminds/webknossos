@@ -79,16 +79,13 @@ class VolumeTracingService @Inject()(
     AlfuCache(maxCapacity = 100)
 
   def saveVolume(tracing: VolumeTracing,
-                 tracingId: Option[String],
+                 tracingId: String,
                  version: Long,
-                 toTemporaryStore: Boolean = false): Fox[String] = {
-    val id = tracingId.getOrElse(TracingId.generate)
-    if (toTemporaryStore) {
-      temporaryTracingService.saveVolume(id, tracing).map(_ => id)
-    } else {
-      tracingDataStore.volumes.put(id, version, tracing).map(_ => id)
-    }
-  }
+                 toTemporaryStore: Boolean = false): Fox[Unit] =
+    if (toTemporaryStore)
+      temporaryTracingService.saveVolume(tracingId, tracing)
+    else
+      tracingDataStore.volumes.put(tracingId, version, tracing)
 
   private def updateSegmentIndex(
       segmentIndexBuffer: VolumeSegmentIndexBuffer,
@@ -613,14 +610,12 @@ class VolumeTracingService @Inject()(
       additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes)
     )
 
-  def updateMagList(tracingId: String, tracing: VolumeTracing, mags: Set[Vec3Int]): Fox[String] =
+  def updateMagList(tracingId: String, tracing: VolumeTracing, mags: Set[Vec3Int]): Fox[Unit] =
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
       _ <- bool2Fox(mags.nonEmpty) ?~> "Initializing without any mags. No data or mag restrictions too tight?"
-      id <- saveVolume(tracing.copy(mags = mags.toList.sortBy(_.maxDim).map(vec3IntToProto)),
-                       Some(tracingId),
-                       tracing.version)
-    } yield id
+      _ <- saveVolume(tracing.copy(mags = mags.toList.sortBy(_.maxDim).map(vec3IntToProto)), tracingId, tracing.version)
+    } yield ()
 
   def volumeBucketsAreEmpty(tracingId: String): Boolean =
     volumeDataStore.getMultipleKeys(None, Some(tracingId), limit = Some(1))(toBox).isEmpty

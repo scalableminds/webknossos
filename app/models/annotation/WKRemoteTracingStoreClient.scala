@@ -75,16 +75,16 @@ class WKRemoteTracingStoreClient(
         id.map(TracingSelector(_))))(VolumeTracings)
   }
 
-  def saveSkeletonTracing(tracing: SkeletonTracing, newSkeletonTracingId: String): Fox[Unit] = { // TODO adapt tracingstore side to return Full(true) or Empty
+  def saveSkeletonTracing(tracing: SkeletonTracing, newTracingId: String): Fox[Unit] = {
     logger.debug("Called to save SkeletonTracing." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/save").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryString("newSkeletonTracingId" -> newSkeletonTracingId)
+      .addQueryString("newTracingId" -> newTracingId)
       .postProto[SkeletonTracing](tracing)
   }
 
   // Uses Box[Boolean] because Box[Unit] cannot be json-serialized. The boolean value should be ignored.
-  def saveSkeletonTracings(tracings: SkeletonTracingsWithIds): Fox[List[Box[Boolean]]] = { // TODO adapt tracingstore side to return Full(true) or Empty
+  def saveSkeletonTracings(tracings: SkeletonTracingsWithIds): Fox[List[Box[Boolean]]] = {
     logger.debug("Called to save SkeletonTracings." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/saveMultiple").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
@@ -119,14 +119,14 @@ class WKRemoteTracingStoreClient(
   // Used in task creation. History is dropped, new version will be zero.
   def duplicateSkeletonTracing(skeletonTracingId: String,
                                newAnnotationId: ObjectId,
-                               newSkeletonTracingId: String,
+                               newTracingId: String,
                                editPosition: Option[Vec3Int] = None,
                                editRotation: Option[Vec3Double] = None,
                                boundingBox: Option[BoundingBox] = None): Fox[Unit] =
     rpc(s"${tracingStore.url}/tracings/skeleton/$skeletonTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("newAnnotationId" -> newAnnotationId.toString)
-      .addQueryString("newSkeletonTracingId" -> newSkeletonTracingId)
+      .addQueryString("newTracingId" -> newTracingId)
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
@@ -135,7 +135,7 @@ class WKRemoteTracingStoreClient(
   // Used in task creation. History is dropped, new version will be zero.
   def duplicateVolumeTracing(volumeTracingId: String,
                              newAnnotationId: ObjectId,
-                             newVolumeTracingId: String,
+                             newTracingId: String,
                              magRestrictions: MagRestrictions = MagRestrictions.empty,
                              editPosition: Option[Vec3Int] = None,
                              editRotation: Option[Vec3Double] = None,
@@ -143,7 +143,7 @@ class WKRemoteTracingStoreClient(
     rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("newAnnotationId" -> newAnnotationId.toString)
-      .addQueryString("newVolumeTracingId" -> newVolumeTracingId)
+      .addQueryString("newTracingId" -> newTracingId)
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
@@ -162,20 +162,23 @@ class WKRemoteTracingStoreClient(
       .postJsonWithProtoResponse[List[String], AnnotationProto](annotationIds)(AnnotationProto)
   }
 
-  def mergeSkeletonTracingsByContents(tracings: SkeletonTracings): Fox[String] = {
+  def mergeSkeletonTracingsByContents(newTracingId: String, tracings: SkeletonTracings): Fox[String] = {
     logger.debug("Called to merge SkeletonTracings by contents." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/mergedFromContents").withLongTimeout
+      .addQueryString("newTracingId" -> newTracingId)
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .postProtoWithJsonResponse[SkeletonTracings, String](tracings)
   }
 
   def mergeVolumeTracingsByContents(newAnnotationId: ObjectId,
+                                    newTracingId: String,
                                     tracings: VolumeTracings,
                                     dataSource: DataSourceLike,
                                     initialData: List[Option[File]]): Fox[String] = {
     logger.debug("Called to merge VolumeTracings by contents." + baseInfo)
     for {
       tracingId <- rpc(s"${tracingStore.url}/tracings/volume/mergedFromContents")
+        .addQueryString("newTracingId" -> newTracingId)
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .postProtoWithJsonResponse[VolumeTracings, String](tracings)
       packedVolumeDataZips = packVolumeDataZips(initialData.flatten)

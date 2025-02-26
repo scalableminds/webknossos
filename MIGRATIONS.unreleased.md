@@ -10,3 +10,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 
 ### Postgres Evolutions:
+
+- [126-add-webauthn-credentials.sql](./conf/evolutions/126-add-webauthn-credentials.sql)

@@ -1,7 +1,8 @@
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
-import { loginUser, requestSingleSignOnLogin } from "admin/admin_rest_api";
+import { doWebAuthnLogin, loginUser, requestSingleSignOnLogin } from "admin/admin_rest_api";
 import { Alert, Button, Form, Input } from "antd";
 import features from "features";
+import Toast from "libs/toast";
 import { getIsInIframe } from "libs/utils";
 import messages from "messages";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
@@ -138,6 +139,28 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
               </Button>
             </FormItem>
           )}
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-around", gap: 12 }}>
+          <FormItem style={{ flexGrow: 1 }}>
+            <Button
+              style={{ width: "100%" }}
+              onClick={async () => {
+                try {
+                  const [user, organization] = await doWebAuthnLogin();
+                  Store.dispatch(setActiveUserAction(user));
+                  Store.dispatch(setActiveOrganizationAction(organization));
+                  if (onLoggedIn) {
+                    onLoggedIn();
+                  }
+                } catch (error) {
+                  console.error("WebAuthn login failed", error);
+                  Toast.error("Login with Passkey failed");
+                }
+              }}
+            >
+              Log in with Passkey
+            </Button>
+          </FormItem>
         </div>
         {hideFooter ? null : (
           <FormItem

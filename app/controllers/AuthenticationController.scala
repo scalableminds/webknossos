@@ -3,6 +3,10 @@ package controllers
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
+import com.yubico.webauthn._
+import com.yubico.webauthn.data._
+import com.yubico.webauthn.exception._
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
@@ -11,6 +15,7 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import org.apache.pekko.actor.ActorSystem
+import play.api.Configuration
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
@@ -29,10 +34,29 @@ import utils.WkConf
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.util.UUID
 import javax.inject.Inject
+import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
+
+case class WebAuthnRegistration(name: String, key: String)
+object WebAuthnRegistration {
+  implicit val jsonFormat: OFormat[WebAuthnRegistration] = Json.format[WebAuthnRegistration]
+}
+
+case class WebAuthnAuthentication(key: String)
+object WebAuthnAuthentication {
+  implicit val jsonFormat: OFormat[WebAuthnAuthentication] = Json.format[WebAuthnAuthentication]
+}
+
+case class WebAuthnKeyDescriptor(id: ObjectId, name: String)
+object WebAuthnKeyDescriptor {
+  implicit val jsonFormat: OFormat[WebAuthnKeyDescriptor] = Json.format[WebAuthnKeyDescriptor]
+}
 
 class AuthenticationController @Inject()(
+    configuration: Configuration,
     actorSystem: ActorSystem,
     credentialsProvider: CredentialsProvider,
     passwordHasher: PasswordHasher,
@@ -52,6 +76,10 @@ class AuthenticationController @Inject()(
     openIdConnectClient: OpenIdConnectClient,
     initialDataService: InitialDataService,
     emailVerificationService: EmailVerificationService,
+    webAuthnCredentialRepository: WebAuthnCredentialRepository,
+    webAuthnCredentialDAO: WebAuthnCredentialDAO,
+    temporaryAssertionStore: TemporaryStore[String, AssertionRequest],
+    temporaryRegistrationStore: TemporaryStore[ObjectId, PublicKeyCredentialCreationOptions],
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with AuthForms
@@ -65,6 +93,13 @@ class AuthenticationController @Inject()(
 
   private lazy val ssoKey =
     conf.WebKnossos.User.ssoKey
+
+  private lazy val relyingParty = {
+    val origin = configuration.get[String]("http.uri").split("/")(2);
+    val identity = RelyingPartyIdentity.builder().id(origin).name("WebKnossos").build();
+    RelyingParty.builder().identity(identity).credentialRepository(webAuthnCredentialRepository).build()
+  }
+  private val blockingContext: ExecutionContext = actorSystem.dispatchers.lookup("play.context.blocking")
 
   private lazy val isOIDCEnabled = conf.Features.openIdConnectEnabled
 
@@ -143,6 +178,26 @@ class AuthenticationController @Inject()(
     }
   }
 
+  private def authenticateInner(loginInfo: LoginInfo)(implicit header: RequestHeader): Future[Result] =
+    for {
+      result <- userService.retrieve(loginInfo).flatMap {
+        case Some(user) if !user.isDeactivated =>
+          for {
+            authenticator <- combinedAuthenticatorService.create(loginInfo)
+            value <- combinedAuthenticatorService.init(authenticator)
+            result <- combinedAuthenticatorService.embed(value, Ok)
+            _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(
+              emailVerificationService.assertEmailVerifiedOrResendVerificationMail(user)(GlobalAccessContext, ec))
+            _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
+            _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
+            _ = logger.info(f"User ${user._id} authenticated.")
+          } yield result
+        case None =>
+          Future.successful(BadRequest(Messages("error.noUser")))
+        case Some(_) => Future.successful(BadRequest(Messages("user.deactivated")))
+      }
+    } yield result;
+
   def authenticate: Action[AnyContent] = Action.async { implicit request =>
     signInForm
       .bindFromRequest()
@@ -156,24 +211,8 @@ class AuthenticationController @Inject()(
           idF
             .map(id => Credentials(id, signInData.password))
             .flatMap(credentials => credentialsProvider.authenticate(credentials))
-            .flatMap {
-              loginInfo =>
-                userService.retrieve(loginInfo).flatMap {
-                  case Some(user) if !user.isDeactivated =>
-                    for {
-                      authenticator <- combinedAuthenticatorService.create(loginInfo)
-                      value <- combinedAuthenticatorService.init(authenticator)
-                      result <- combinedAuthenticatorService.embed(value, Ok)
-                      _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(emailVerificationService
-                        .assertEmailVerifiedOrResendVerificationMail(user)(GlobalAccessContext, ec))
-                      _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
-                      _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
-                      _ = logger.info(f"User ${user._id} authenticated.")
-                    } yield result
-                  case None =>
-                    Future.successful(BadRequest(Messages("error.noUser")))
-                  case Some(_) => Future.successful(BadRequest(Messages("user.deactivated")))
-                }
+            .flatMap { loginInfo =>
+              authenticateInner(loginInfo)
             }
             .recover {
               case _: ProviderException => BadRequest(Messages("error.invalidCredentials"))
@@ -404,6 +443,133 @@ class AuthenticationController @Inject()(
         }
       case None => Fox.successful(Redirect("/auth/login?redirectPage=http://discuss.webknossos.org")) // not logged in
     }
+  }
+
+  def webauthnAuthStart(): Action[AnyContent] = Action {
+    val opts = StartAssertionOptions.builder().build();
+    val assertion = relyingParty.startAssertion(opts);
+    val sessionId = UUID.randomUUID().toString;
+    val cookie = Cookie("webauthn-session", sessionId, maxAge = Some(120), httpOnly = true, secure = true)
+    temporaryAssertionStore.insert(sessionId, assertion, Some(2 minutes));
+    Ok(Json.toJson(Json.parse(assertion.toCredentialsGetJson))).withCookies(cookie)
+  }
+
+  def webauthnAuthFinalize(): Action[WebAuthnAuthentication] = Action.async(validateJson[WebAuthnAuthentication]) {
+    implicit request =>
+      {
+        request.cookies.get("webauthn-session") match {
+          case None =>
+            Future.successful(BadRequest("Authentication took too long, please try again."))
+          case Some(cookie) =>
+            val sessionId = cookie.value
+            val challengeData = temporaryAssertionStore.get(sessionId)
+            temporaryAssertionStore.remove(sessionId)
+            challengeData match {
+              case None => Future.successful(Unauthorized("Authentication timeout."))
+              case Some(data) => {
+                val keyCredential = PublicKeyCredential.parseAssertionResponseJson(request.body.key);
+                val opts = FinishAssertionOptions.builder().request(data).response(keyCredential).build();
+                for {
+                  result <- Fox
+                    .future2Fox(Future { Try(relyingParty.finishAssertion(opts)) })(blockingContext); // NOTE: Prevent blocking on HTTP handler
+                  assertion <- result match {
+                    case scala.util.Success(assertion) => Fox.successful(assertion);
+                    case scala.util.Failure(e)         => Fox.failure("Authentication failed.", Full(e));
+                  };
+                  userId = WebAuthnCredentialRepository.byteArrayToObjectId(assertion.getCredential.getUserHandle);
+                  multiUser <- multiUserDAO.findOne(userId)(GlobalAccessContext);
+                  result <- multiUser._lastLoggedInIdentity match {
+                    case None => Future.successful(InternalServerError("user never logged in"))
+                    case Some(userId) => {
+                      val loginInfo = LoginInfo("credentials", userId.toString);
+                      authenticateInner(loginInfo)
+                    }
+                  }
+                } yield result;
+              }
+            }
+        }
+      }
+  }
+
+  def webauthnRegisterStart(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      email <- userService.emailFor(request.identity);
+      result <- Future {
+        val userIdentity = UserIdentity
+          .builder()
+          .name(email)
+          .displayName(request.identity.name)
+          .id(WebAuthnCredentialRepository.objectIdToByteArray(request.identity._multiUser))
+          .build();
+        val opts = StartRegistrationOptions
+          .builder()
+          .user(userIdentity)
+          .timeout(60000)
+          .authenticatorSelection(
+            AuthenticatorSelectionCriteria.builder().residentKey(ResidentKeyRequirement.REQUIRED).build())
+          .build()
+        val registration = relyingParty.startRegistration(opts);
+        temporaryRegistrationStore.insert(request.identity._multiUser, registration);
+        Ok(Json.toJson(registration.toCredentialsCreateJson))
+      }(blockingContext)
+    } yield result;
+  }
+
+  def webauthnRegisterFinalize(): Action[WebAuthnRegistration] =
+    sil.SecuredAction.async(validateJson[WebAuthnRegistration]) { implicit request =>
+      {
+        val creationOpts = temporaryRegistrationStore.get(request.identity._multiUser)
+        temporaryRegistrationStore.remove(request.identity._multiUser)
+        creationOpts match {
+          case Some(data) => {
+            val response = PublicKeyCredential.parseRegistrationResponseJson(request.body.key);
+            val opts = FinishRegistrationOptions.builder().request(data).response(response).build();
+            try {
+              for {
+                preKey <- Fox.future2Fox(Future { Try(relyingParty.finishRegistration(opts)) })(blockingContext);
+                key <- preKey match {
+                  case scala.util.Success(key) => Fox.successful(key)
+                  case scala.util.Failure(e)   => Fox.failure("Registration failed", Full(e))
+                };
+                result <- {
+                  val credential = WebAuthnCredential(
+                    ObjectId.generate,
+                    request.identity._multiUser,
+                    WebAuthnCredentialRepository.byteArrayToBytes(key.getKeyId.getId),
+                    request.body.name,
+                    key.getPublicKeyCose.getBytes,
+                    key.getSignatureCount.toInt,
+                    isDeleted = false,
+                  )
+                  webAuthnCredentialDAO.insertOne(credential).map(_ => Ok(""))
+                }
+              } yield result;
+            } catch {
+              case e: RegistrationFailedException => Future.successful(BadRequest("Failed to register key"))
+            }
+          }
+          case None => Future.successful(BadRequest("Challenge not found or expired"))
+        }
+      }
+    }
+
+  def webauthnListKeys: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    {
+      for {
+        keys <- webAuthnCredentialDAO.listKeys(request.identity._multiUser)
+        reducedKeys = keys.map(credential => WebAuthnKeyDescriptor(credential._id, credential.name))
+      } yield Ok(Json.toJson(reducedKeys))
+    }
+  }
+
+  def webauthnRemoveKey: Action[WebAuthnKeyDescriptor] = sil.SecuredAction.async(validateJson[WebAuthnKeyDescriptor]) {
+    implicit request =>
+      {
+        for {
+          _ <- webAuthnCredentialDAO.removeById(request.body.id, request.identity._multiUser)
+        } yield Ok(Json.obj())
+      }
   }
 
   private lazy val absoluteOpenIdConnectCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"

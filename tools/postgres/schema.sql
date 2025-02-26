@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(125);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(126);
 COMMIT TRANSACTION;
 
 
@@ -416,6 +416,17 @@ CREATE TABLE webknossos.multiUsers(
   isEmailVerified BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object')
+);
+
+CREATE TABLE webknossos.webauthnCredentials(
+  _id TEXT PRIMARY KEY,
+  _multiUser CHAR(24) NOT NULL,
+  keyId BYTEA NOT NULL,
+  name TEXT NOT NULL,
+  publicKeyCose BYTEA NOT NULL,
+  signatureCount INTEGER NOT NULL,
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  UNIQUE (_multiUser, keyId)
 );
 
 
@@ -871,6 +882,8 @@ ALTER TABLE webknossos.aiInferences
 ALTER TABLE webknossos.aiModel_trainingAnnotations
   ADD FOREIGN KEY (_aiModel) REFERENCES webknossos.aiModels(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
   ADD FOREIGN KEY (_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.webauthnCredentials
+  ADD FOREIGN KEY (_multiUser) REFERENCES webknossos.multiUsers(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 
 
 CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$
@@ -943,4 +956,3 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER onDeleteAnnotationTrigger
 AFTER DELETE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();
-

@@ -1,3 +1,4 @@
+import * as webauthn from "@github/webauthn-json";
 import dayjs from "dayjs";
 import { V3 } from "libs/mjs";
 import type { RequestOptions } from "libs/request";
@@ -90,6 +91,7 @@ import {
   type VoxelyticsLogLine,
   type VoxelyticsWorkflowListing,
   type VoxelyticsWorkflowReport,
+  type WebAuthnKeyDescriptor,
   type ZarrPrivateLink,
 } from "types/api_flow_types";
 import type { ArbitraryObject } from "types/globals";
@@ -145,6 +147,46 @@ export async function loginUser(formValues: {
   const organization = await getOrganization(activeUser.organization);
 
   return [activeUser, organization];
+}
+
+export async function doWebAuthnLogin(): Promise<[APIUser, APIOrganization]> {
+  const webAuthnAuthAssertion = await Request.receiveJSON("/api/auth/webauthn/auth/start", {
+    method: "POST",
+  });
+  const response = JSON.stringify(await webauthn.get(webAuthnAuthAssertion));
+  await Request.sendJSONReceiveJSON("/api/auth/webauthn/auth/finalize", {
+    method: "POST",
+    data: { key: response },
+  });
+
+  const activeUser = await getActiveUser();
+  const organization = await getOrganization(activeUser.organization);
+  return [activeUser, organization];
+}
+
+export async function doWebAuthnRegistration(name: string): Promise<any> {
+  const webAuthnRegistrationAssertion = await Request.receiveJSON(
+    "/api/auth/webauthn/register/start",
+    {
+      method: "POST",
+    },
+  ).then((body) => JSON.parse(body));
+  const response = JSON.stringify(await webauthn.create(webAuthnRegistrationAssertion));
+  return Request.sendJSONReceiveJSON("/api/auth/webauthn/register/finalize", {
+    data: { name: name, key: response },
+    method: "POST",
+  });
+}
+
+export async function listWebAuthnKeys(): Promise<Array<WebAuthnKeyDescriptor>> {
+  return await Request.receiveJSON("/api/auth/webauthn/keys");
+}
+
+export async function removeWebAuthnKey(key: WebAuthnKeyDescriptor): Promise<any> {
+  return await Request.sendJSONReceiveArraybuffer("/api/auth/webauthn/keys", {
+    method: "DELETE",
+    data: key,
+  });
 }
 
 export async function getUsers(): Promise<Array<APIUser>> {

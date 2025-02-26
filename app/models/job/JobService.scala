@@ -1,7 +1,7 @@
 package models.job
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -42,6 +42,8 @@ class JobService @Inject()(wkConf: WkConf,
     extends FoxImplicits
     with LazyLogging
     with Formatter {
+
+  private val MINIMUM_COST_PER_JOB = BigDecimal(0.001)
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
@@ -215,9 +217,9 @@ class JobService @Inject()(wkConf: WkConf,
                     jobBoundingBox: BoundingBox,
                     creditTransactionComment: String,
                     user: User,
-                    datastoreName: String)(implicit ctx: DBAccessContext): Fox[JsObject] = {
-    val costsInCredits = calculateJobCosts(jobBoundingBox, command)
+                    datastoreName: String)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
+      costsInCredits <- calculateJobCosts(jobBoundingBox, command)
       _ <- organizationService.assertOrganizationHasPaidPlan(user._organization) ?~> "job.paidJob.notAllowed.noPaidPlan"
       _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costsInCredits)) ?~> "job.notEnoughCredits"
       creditTransaction <- creditTransactionService.reserveCredits(user._organization,
@@ -233,7 +235,6 @@ class JobService @Inject()(wkConf: WkConf,
       _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
       js <- publicWrites(job)
     } yield js
-  }
 
   def jobsSupportedByAvailableWorkers(dataStoreName: String): Fox[Set[JobCommand]] =
     for {
@@ -253,19 +254,19 @@ class JobService @Inject()(wkConf: WkConf,
       _ <- bool2Fox(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.edgeLengthExceeded"
     } yield ()
 
-  private def getJobCostsPerGVx(jobCommand: JobCommand): BigDecimal =
+  private def getJobCostsPerGVx(jobCommand: JobCommand): Fox[BigDecimal] =
     jobCommand match {
-      case JobCommand.infer_neurons      => wkConf.Features.neuronInferralCostPerGVx
-      case JobCommand.infer_mitochondria => wkConf.Features.mitochondriaInferralCostPerGVx
-      case JobCommand.align_sections     => wkConf.Features.alignmentCostPerGVx
-      case _                             => throw new IllegalArgumentException(s"Unsupported job command $jobCommand")
+      case JobCommand.infer_neurons      => Fox.successful(wkConf.Features.neuronInferralCostPerGVx)
+      case JobCommand.infer_mitochondria => Fox.successful(wkConf.Features.mitochondriaInferralCostPerGVx)
+      case JobCommand.align_sections     => Fox.successful(wkConf.Features.alignmentCostPerGVx)
+      case _                             => Fox.failure(s"Unsupported job command $jobCommand")
     }
 
-  def calculateJobCosts(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): BigDecimal = {
-    val costsPerGVx = getJobCostsPerGVx(jobCommand)
-    val volumeInGVx = boundingBoxInTargetMag.volume / math.pow(10, 9)
-    val costs = BigDecimal(volumeInGVx) * costsPerGVx
-    if (costs < BigDecimal(0.001)) BigDecimal(0.001) else costs.setScale(4, RoundingMode.HALF_UP)
-  }
+  def calculateJobCosts(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): Fox[BigDecimal] =
+    getJobCostsPerGVx(jobCommand).map(costsPerGVx => {
+      val volumeInGVx = BigDecimal(boundingBoxInTargetMag.volume) / BigDecimal(math.pow(10, 9))
+      val costs = volumeInGVx * costsPerGVx
+      if (costs < MINIMUM_COST_PER_JOB) MINIMUM_COST_PER_JOB else costs.setScale(4, RoundingMode.HALF_UP)
+    })
 
 }

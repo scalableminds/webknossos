@@ -241,7 +241,7 @@ class JobController @Inject()(
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           annotationIdParsed <- Fox.runIf(doSplitMergerEvaluation)(annotationId.toFox) ?~> "job.inferNeurons.annotationIdEvalParamsMissing"
           command = JobCommand.infer_neurons
-          parsedBoundingBox <- jobService.parseBoundingBoxWithMagOpt(bbox, None)
+          parsedBoundingBox <- BoundingBox.fromLiteral(bbox).toFox
           // TODO: Disable this check. Credits should be enough to guard this.
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           commandArgs = Json.obj(
@@ -285,7 +285,7 @@ class JobController @Inject()(
           _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           command = JobCommand.infer_mitochondria
-          parsedBoundingBox <- jobService.parseBoundingBoxWithMagOpt(bbox, None)
+          parsedBoundingBox <- BoundingBox.fromLiteral(bbox).toFox
           // TODO: Disable this check. Credits should be enough to guard this.
           _ <- bool2Fox(multiUser.isSuperUser) ?~> "job.inferMitochondria.notAllowed.onlySuperUsers"
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
@@ -527,7 +527,7 @@ class JobController @Inject()(
       for {
         boundingBox <- BoundingBox.fromLiteral(boundingBoxInMag).toFox
         jobCommand <- JobCommand.fromString(command).toFox
-        jobCosts = jobService.calculateJobCosts(boundingBox, jobCommand)
+        jobCosts <- jobService.calculateJobCosts(boundingBox, jobCommand)
         organizationCreditBalance <- creditTransactionDAO.getCreditBalance(request.identity._organization)
         hasEnoughCredits = jobCosts <= organizationCreditBalance
         js = Json.obj(

@@ -427,18 +427,18 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
           .toList
         taskObjects: List[Fox[Task]] = requestedTasksWithTracingSaveResults.map(r =>
           createTaskWithoutAnnotationBase(r._1.map(_._1), r._2, r._3, taskType, requestingUser))
-        zipped = requestedTasks.lazyZip(taskObjects).toList
-        createAnnotationBaseResults: List[Fox[Unit]] = zipped.map(
-          tuple =>
+        createAnnotationBaseResults: List[Fox[Unit]] = requestedTasks.lazyZip(taskObjects).toList.map {
+          case (requestedTaskBox, taskFox) =>
             annotationService.createAndSaveAnnotationBase(
-              taskFox = tuple._3,
+              taskFox = taskFox,
               requestingUser._id,
-              skeletonTracingIdBox = tuple._2._1,
-              volumeTracingIdBox = tuple._2._2,
+              skeletonTracingIdBox = requestedTaskBox.map(_._1.newSkeletonTracingId),
+              volumeTracingIdBox = requestedTaskBox.map(_._1.newVolumeTracingId),
               dataset._id,
-              description = tuple._1.map(_._1.description).openOr(None),
+              description = requestedTaskBox.map(_._1.description).openOr(None),
               tracingStoreClient
-          ))
+            )
+        }
         warnings <- warnIfTeamHasNoAccess(flattenedRequestedTasks.map(_._1), dataset, requestingUser)
         zippedTasksAndAnnotations = taskObjects zip createAnnotationBaseResults
         taskJsons = zippedTasksAndAnnotations.map(tuple => taskToJsonWithOtherFox(tuple._1, tuple._2))
@@ -510,15 +510,15 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     }
 
   private def createTaskWithoutAnnotationBase(paramBox: Box[TaskParameters],
-                                              skeletonTracingIdBox: Box[Option[String]],
-                                              volumeTracingIdBox: Box[Option[String]],
+                                              skeletonSaveResult: Box[Boolean],
+                                              volumeSaveResult: Box[Boolean],
                                               taskType: TaskType,
                                               requestingUser: User)(implicit ctx: DBAccessContext): Fox[Task] =
     for {
       params <- paramBox.toFox
-      skeletonIdOpt <- skeletonTracingIdBox.toFox
-      volumeIdOpt <- volumeTracingIdBox.toFox
-      _ <- bool2Fox(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> "task.create.needsEitherSkeletonOrVolume"
+      _ <- bool2Fox(params.newSkeletonTracingId.isDefined || params.newVolumeTracingId.isDefined) ?~> "task.create.needsEitherSkeletonOrVolume"
+      _ <- Fox.runOptional(params.newSkeletonTracingId)(_ => skeletonSaveResult.toFox)
+      _ <- Fox.runOptional(params.newVolumeTracingId)(_ => volumeSaveResult.toFox)
       project <- projectDAO.findOneByNameAndOrganization(params.projectName, requestingUser._organization) ?~> "project.notFound"
       _ <- Fox.runOptional(params.scriptId)(scriptDAO.findOne) ?~> "script.notFound"
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, project._team))

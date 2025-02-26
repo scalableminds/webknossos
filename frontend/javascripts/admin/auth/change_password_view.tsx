@@ -8,13 +8,13 @@ import Store from "oxalis/store";
 import { type RouteComponentProps, withRouter } from "react-router-dom";
 const FormItem = Form.Item;
 const { Password } = Input;
-import { useEffect, useState } from "react";
 import {
   doWebAuthnRegistration,
   listWebAuthnKeys,
   removeWebAuthnKey,
   revokeAuthToken,
 } from "admin/admin_rest_api";
+import { useEffect, useState } from "react";
 
 type Props = {
   history: RouteComponentProps["history"];
@@ -30,7 +30,7 @@ function ChangePasswordView({ history }: Props) {
   const [isPasskeyNameModalOpen, setIsPasskeyNameModalOpen] = useState(false);
   const [newPasskeyName, setNewPasskeyName] = useState("");
   const [passkeys, setPasskeys] = useState<WebAuthnKeyDescriptor[]>([]);
-  const [_isLoadingPasskeys, setIsLoadingPasskeys] =  useState(false);
+  const [_isLoadingPasskeys, setIsLoadingPasskeys] = useState(false);
 
   useEffect(() => {
     fetchPasskeys();
@@ -72,7 +72,7 @@ function ChangePasswordView({ history }: Props) {
   const registerNewPasskey = async () => {
     try {
       setIsPasskeyNameModalOpen(false);
-      const result = await doWebAuthnRegistration(newPasskeyName);
+      await doWebAuthnRegistration(newPasskeyName);
       Toast.success("Passkey registered successfully");
       setNewPasskeyName("");
       await fetchPasskeys();
@@ -223,7 +223,7 @@ function ChangePasswordView({ history }: Props) {
               </Button>
             </Row>
           ))}
-          <div style={{paddingTop: 10}}>
+          <div style={{ paddingTop: 10 }}>
             <Button onClick={() => setIsPasskeyNameModalOpen(true)} type="primary">
               Register new Passkey
             </Button>

@@ -23,7 +23,7 @@ import { setIsWkReadyAction } from "../actions/ui_actions";
 import { warnIfEmailIsUnverified } from "./user_saga";
 
 let rootSagaCrashed = false;
-export default function* rootSaga(): Saga<void> {
+export default function* rootSaga(): Saga<never> {
   while (true) {
     rootSagaCrashed = false;
     const task = yield* fork(restartableSaga);

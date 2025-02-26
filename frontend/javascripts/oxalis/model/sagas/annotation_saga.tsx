@@ -150,7 +150,7 @@ function shouldDisplaySegmentationData(): boolean {
   return !onlyViewing3dViewport;
 }
 
-export function* warnAboutSegmentationZoom(): Saga<void> {
+export function* warnAboutSegmentationZoom(): Saga<never> {
   function* warnMaybe(): Saga<void> {
     const segmentationLayer = Model.getVisibleSegmentationLayer();
 

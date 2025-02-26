@@ -44,6 +44,7 @@ trait AnnotationReversion {
             shouldRevertElements = tracingBeforeRevert.version > sourceVersion
             _ <- Fox.runIf(shouldRevertElements && !sourceTracing.getHasEditableMapping)(
               volumeTracingService.revertVolumeData(tracingId,
+                                                    annotationId,
                                                     sourceVersion,
                                                     sourceTracing,
                                                     newVersion: Long,

@@ -29,11 +29,11 @@ object LegacyCreateExplorationalParameters {
     Json.format[LegacyCreateExplorationalParameters]
 }
 
-case class LegacyTaskParameters(taskTypeId: String,
+case class LegacyTaskParameters(taskTypeId: ObjectId,
                                 neededExperience: Experience,
                                 pendingInstances: Int,
                                 projectName: String,
-                                scriptId: Option[String],
+                                scriptId: Option[ObjectId],
                                 boundingBox: Option[BoundingBox],
                                 dataSet: String,
                                 datasetId: Option[ObjectId],

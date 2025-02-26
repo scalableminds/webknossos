@@ -228,6 +228,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
         for {
           tracing <- annotationService.findVolume(annotationId, volumeTracingId)
           _ <- volumeTracingService.applyBucketMutatingActions(volumeTracingId,
+                                                               annotationId,
                                                                tracing,
                                                                actionsGrouped(volumeTracingId),
                                                                updateActionGroup.version)

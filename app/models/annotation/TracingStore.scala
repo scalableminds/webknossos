@@ -32,7 +32,7 @@ object TracingStore {
 class TracingStoreService @Inject()(
     tracingStoreDAO: TracingStoreDAO,
     rpc: RPC,
-    tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore)(implicit ec: ExecutionContext)
+    tracingDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
     with Results {

@@ -218,7 +218,8 @@ trait VolumeTracingBucketHelper
       additionalCoordinates = None
     )
     for {
-      remoteFallbackLayer <- layer.volumeTracingService.remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.name)
+      remoteFallbackLayer <- layer.volumeTracingService
+        .remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.annotationId)
       (unmappedData, indices) <- layer.volumeTracingService
         .getFallbackDataFromDatastore(remoteFallbackLayer, List(dataRequest))(ec, layer.tokenContext)
       unmappedDataOrEmpty <- if (indices.isEmpty) Fox.successful(unmappedData) else Fox.empty

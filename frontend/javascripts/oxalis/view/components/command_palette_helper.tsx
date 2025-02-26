@@ -7,7 +7,7 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { Store } from "oxalis/singletons";
 import type { OxalisState, UserConfiguration } from "oxalis/store";
-import { act, useState } from "react";
+import { act } from "react";
 import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
 import { useSelector } from "react-redux";
@@ -58,9 +58,6 @@ const getLabelForTool = (tool: string) => {
 };
 
 export const CommandPalette = ({ label }: { label: string | null }) => {
-  const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
-  const [isUserScriptsModalOpen, setIsUserScriptsModalOpen] = useState(false);
-  const [isZarrPrivateLinksModalOpen, setIsZarrPrivateLinksModalOpen] = useState(false);
   const userConfig = useSelector((state: OxalisState) => state.userConfiguration);
   const isViewMode = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.controlMode === "VIEW",
@@ -68,7 +65,6 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
   const isInTracingView = useSelector(
     (state: OxalisState) => state.uiInformation.isInAnnotationView,
   );
-  console.log(userConfig);
 
   const props: TracingLayoutViewProps = useSelector((state: OxalisState) => {
     return {
@@ -82,6 +78,9 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
       isDownloadModalOpen: state.uiInformation.showDownloadModal,
       isRenderAnimationModalOpen: state.uiInformation.showRenderAnimationModal,
       isShareModalOpen: state.uiInformation.showShareModal,
+      isMergeModalOpen: state.uiInformation.showMergeAnnotationModal,
+      isZarrPrivateLinksModalOpen: state.uiInformation.showZarrPrivateLinksModal,
+      isUserScriptsModalOpen: state.uiInformation.showAddScriptModal,
     };
   });
 
@@ -93,16 +92,7 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
       const { items } = getViewDatasetMenu(null);
       return items;
     }
-    const { menuItems } = getModalsAndMenuItems(
-      props,
-      null,
-      isMergeModalOpen,
-      (newValue: boolean) => setIsMergeModalOpen(newValue),
-      isUserScriptsModalOpen,
-      (newValue: boolean) => setIsUserScriptsModalOpen(newValue),
-      isZarrPrivateLinksModalOpen,
-      (newValue: boolean) => setIsZarrPrivateLinksModalOpen(newValue),
-    );
+    const { menuItems } = getModalsAndMenuItems(props, null);
     return menuItems;
   };
 
@@ -190,10 +180,10 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
   const menuActions = getMenuActions(isViewMode);
 
   const allCommands = [
-    ...mapMenuActionsToCommands(menuActions),
-    ...getTabsAndSettingsMenuItems(),
     ...getNavigationEntries(),
     ...getToolEntries(),
+    ...mapMenuActionsToCommands(menuActions),
+    ...getTabsAndSettingsMenuItems(),
   ];
   return (
     <div style={{ marginRight: "10px" }}>

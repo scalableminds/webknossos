@@ -53,9 +53,12 @@ import {
 import { setTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import {
   setDownloadModalVisibilityAction,
+  setMergeModalVisibilityAction,
   setRenderAnimationModalVisibilityAction,
   setShareModalVisibilityAction,
+  setUserScriptsModalVisibilityAction,
   setVersionRestoreVisibilityAction,
+  setZarrLinksModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
 import { Model } from "oxalis/singletons";
 import { api } from "oxalis/singletons";
@@ -104,11 +107,11 @@ export type TracingLayoutViewProps = {
   activeUser: APIUser | null | undefined;
   isAnnotationLockedByUser: boolean;
   annotationOwner: APIUserBase | null | undefined;
-};
-type State = {
   isMergeModalOpen: boolean;
   isUserScriptsModalOpen: boolean;
   isZarrPrivateLinksModalOpen: boolean;
+};
+type State = {
   isReopenAllowed: boolean;
 };
 
@@ -266,12 +269,6 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
 export const getModalsAndMenuItems = (
   props: TracingLayoutViewProps,
   layoutMenu: SubMenuType | null,
-  isMergeModalOpen: boolean,
-  setIsMergeModalOpen: (value: boolean) => void,
-  isUserScriptsModalOpen: boolean,
-  setIsUserScriptsModalOpen: (value: boolean) => void,
-  isZarrPrivateLinksModalOpen: boolean,
-  setIsZarrPrivateLinksModalOpen: (value: boolean) => void,
 ) => {
   const handleRestore = async () => {
     await Model.ensureSavedState();
@@ -323,16 +320,27 @@ export const getModalsAndMenuItems = (
   };
 
   const handleMergeOpen = () => {
-    setIsMergeModalOpen(true);
+    Store.dispatch(setMergeModalVisibilityAction(true));
+  };
+
+  const handleMergeClose = () => {
+    Store.dispatch(setMergeModalVisibilityAction(false));
   };
 
   const handleUserScriptsOpen = () => {
-    setIsUserScriptsModalOpen(true);
+    Store.dispatch(setUserScriptsModalVisibilityAction(true));
   };
 
-  const handleModalClose = () => {
-    setIsMergeModalOpen(false);
-    setIsUserScriptsModalOpen(false);
+  const handleUserScriptsClose = () => {
+    Store.dispatch(setUserScriptsModalVisibilityAction(false));
+  };
+
+  const handleZarrLinksOpen = () => {
+    Store.dispatch(setZarrLinksModalVisibilityAction(true));
+  };
+
+  const handleZarrLinksClose = () => {
+    Store.dispatch(setZarrLinksModalVisibilityAction(false));
   };
 
   const handleChangeLockedStateOfAnnotation = async (isLocked: boolean) => {
@@ -364,6 +372,9 @@ export const getModalsAndMenuItems = (
     activeUser,
     isAnnotationLockedByUser,
     annotationOwner,
+    isZarrPrivateLinksModalOpen,
+    isUserScriptsModalOpen,
+    isMergeModalOpen,
   } = props;
   const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
   const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
@@ -404,8 +415,7 @@ export const getModalsAndMenuItems = (
   });
   menuItems.push({
     key: "zarr-links-button",
-    onClick: () => setIsZarrPrivateLinksModalOpen(true),
-
+    onClick: handleZarrLinksOpen,
     icon: <LinkOutlined />,
     label: "Zarr Links",
   });
@@ -423,7 +433,7 @@ export const getModalsAndMenuItems = (
     <PrivateLinksModal
       key="private-links-modal"
       isOpen={isZarrPrivateLinksModalOpen}
-      onOk={() => setIsZarrPrivateLinksModalOpen(false)}
+      onOk={handleZarrLinksClose}
       annotationId={annotationId}
     />,
   );
@@ -457,7 +467,7 @@ export const getModalsAndMenuItems = (
     <UserScriptsModalView
       key="user-scripts-modal"
       isOpen={isUserScriptsModalOpen}
-      onOK={handleModalClose}
+      onOK={handleUserScriptsClose}
     />,
   );
 
@@ -469,7 +479,7 @@ export const getModalsAndMenuItems = (
       label: "Merge Annotation",
     });
     modals.push(
-      <MergeModalView key="merge-modal" isOpen={isMergeModalOpen} onOk={handleModalClose} />,
+      <MergeModalView key="merge-modal" isOpen={isMergeModalOpen} onOk={handleMergeClose} />,
     );
   }
   if (controlMode !== ControlModeEnum.SANDBOX) {
@@ -506,13 +516,8 @@ export const getModalsAndMenuItems = (
   };
 };
 
-//-------------------------------------------------------------------------------------------------------------------------------------------//
-
 class TracingActionsView extends React.PureComponent<Props, State> {
   state: State = {
-    isMergeModalOpen: false,
-    isZarrPrivateLinksModalOpen: false,
-    isUserScriptsModalOpen: false,
     isReopenAllowed: false,
   };
 
@@ -740,16 +745,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       </ButtonComponent>
     ) : null;
 
-    const { menuItems, modals } = getModalsAndMenuItems(
-      this.props,
-      layoutMenu,
-      this.state.isMergeModalOpen,
-      (newValue: boolean) => this.setState({ isMergeModalOpen: newValue }),
-      this.state.isUserScriptsModalOpen,
-      (newValue: boolean) => this.setState({ isUserScriptsModalOpen: newValue }),
-      this.state.isZarrPrivateLinksModalOpen,
-      (newValue: boolean) => this.setState({ isZarrPrivateLinksModalOpen: newValue }),
-    );
+    const { menuItems, modals } = getModalsAndMenuItems(this.props, layoutMenu);
     return (
       <>
         <Space.Compact>
@@ -786,6 +782,9 @@ function mapStateToProps(state: OxalisState): StateProps {
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
     isAnnotationLockedByUser: state.tracing.isLockedByOwner,
     annotationTags: state.tracing.tags,
+    isMergeModalOpen: state.uiInformation.showMergeAnnotationModal,
+    isUserScriptsModalOpen: state.uiInformation.showAddScriptModal,
+    isZarrPrivateLinksModalOpen: state.uiInformation.showZarrPrivateLinksModal,
   };
 }
 

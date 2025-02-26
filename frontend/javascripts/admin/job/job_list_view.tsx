@@ -7,10 +7,11 @@ import {
   EyeOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
+  PlayCircleOutlined,
   QuestionCircleTwoTone,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { cancelJob, getJobs } from "admin/admin_rest_api";
+import { cancelJob, getJobs, resumeJob } from "admin/admin_rest_api";
 import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
@@ -21,8 +22,10 @@ import { useInterval } from "libs/react_helpers";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
+import type { OxalisState } from "oxalis/store";
 import type * as React from "react";
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { type APIJob, APIJobType, type APIUserBase } from "types/api_flow_types";
 
@@ -133,6 +136,7 @@ function JobListView() {
   const [isLoading, setIsLoading] = useState(true);
   const [jobs, setJobs] = useState<APIJob[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const isCurrentUserSuperUser = useSelector((state: OxalisState) => state.activeUser?.isSuperUser);
 
   useEffect(() => {
     fetchData();
@@ -293,9 +297,21 @@ function JobListView() {
               cancelJob(job.id).then(() => fetchData());
             }
           }}
-          icon={<CloseCircleOutlined key="cancel" className="icon-margin-right" />}
+          icon={<CloseCircleOutlined className="icon-margin-right" />}
         >
           Cancel
+        </AsyncLink>
+      );
+    } else if (job.state === "FAILURE" && isCurrentUserSuperUser) {
+      return (
+        <AsyncLink
+          href="#"
+          onClick={async () => {
+            resumeJob(job.id).then(() => fetchData());
+          }}
+          icon={<PlayCircleOutlined className="icon-margin-right" />}
+        >
+          Resume
         </AsyncLink>
       );
     } else if (

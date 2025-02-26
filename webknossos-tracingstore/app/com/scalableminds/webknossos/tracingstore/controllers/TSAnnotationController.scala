@@ -24,6 +24,7 @@ import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingMergeService
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
+import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Empty, Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
@@ -176,12 +177,15 @@ class TSAnnotationController @Inject()(
               case Empty               => Fox.successful((None, 0L))
               case f: Failure          => f.toFox
             }
-            mergedVolumeStats <- volumeTracingService.mergeVolumeData(
-              volumeLayers.map(_.tracingId),
-              volumeTracings,
-              newVolumeId,
-              newVersion = newTargetVersion,
-              toTemporaryStore) // TODO find matching annotation ids
+            firstVolumeAnnotationIndex = tryo(
+              annotations.indexWhere(_.annotationLayers.exists(_.typ == AnnotationLayerTypeProto.Volume))).toOption
+            firstVolumeAnnotationId = firstVolumeAnnotationIndex.map(request.body(_))
+            mergedVolumeStats <- volumeTracingService.mergeVolumeData(firstVolumeAnnotationId,
+                                                                      volumeLayers.map(_.tracingId),
+                                                                      volumeTracings,
+                                                                      newVolumeId,
+                                                                      newVersion = newTargetVersion,
+                                                                      toTemporaryStore)
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
               volumeTracingService
                 .merge(volumeTracings, mergedVolumeStats, newMappingName, newVersion = newTargetVersion))

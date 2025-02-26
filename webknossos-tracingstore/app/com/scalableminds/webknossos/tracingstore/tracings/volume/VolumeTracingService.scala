@@ -738,6 +738,7 @@ class VolumeTracingService @Inject()(
     }
 
   def mergeVolumeData(
+      firstVolumeAnnotationIdOpt: Option[String],
       volumeTracingIds: Seq[String],
       volumeTracings: List[VolumeTracing],
       newVolumeTracingId: String,
@@ -792,9 +793,9 @@ class VolumeTracingService @Inject()(
           elementClass)
         mergedAdditionalAxes <- Fox.box2Fox(AdditionalAxis.mergeAndAssertSameAdditionalAxes(volumeTracingLayers.map(l =>
           AdditionalAxis.fromProtosAsOpt(l.tracing.additionalAxes))))
-        firstTracingId <- volumeTracingLayers.headOption.map(_.tracingId) ?~> "merge.noTracings"
         firstTracing <- volumeTracingLayers.headOption.map(_.tracing) ?~> "merge.noTracings"
-        fallbackLayer <- getFallbackLayer(firstTracingId, firstTracing)
+        firstVolumeAnnotationId <- firstVolumeAnnotationIdOpt.toFox
+        fallbackLayer <- getFallbackLayer(firstVolumeAnnotationId, firstTracing)
         segmentIndexBuffer = new VolumeSegmentIndexBuffer(newVolumeTracingId,
                                                           volumeSegmentIndexClient,
                                                           newVersion,

@@ -337,6 +337,7 @@ job.inferNuclei.notAllowed.organization = Currently nuclei inferral is only allo
 job.inferNeurons.notAllowed.organization = Currently neuron inferral is only allowed for datasets of your own organization.
 job.inferNeurons.annotationIdEvalParamsMissing=A evaluation of the neuron inferral jobs was requested but no annotation was supplied.
 job.meshFile.notAllowed.organization = Calculating mesh files is only allowed for datasets of your own organization.
+job.exportTiff.notAllowed.organization=Exporting tiff files is only allowed for datasets of your own organization.
 job.segmentIndexFile.notAllowed.organization = Calculating segment index files is only allowed for datasets of your own organization.
 job.globalizeFloodfill.notAllowed.organization = Globalizing floodfills is only allowed for datasets of your own organization.
 job.materializeVolumeAnnotation.notAllowed.organization = Materializing volume annotations is only allowed for datasets of your own organization.

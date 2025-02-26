@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.{Color, JPEGWriter}
 import com.scalableminds.util.time.Instant
@@ -102,14 +103,14 @@ class BinaryDataController @Inject()(
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName) ~> NOT_FOUND
         magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> "malformedMag"
-        request = DataRequest(
+        dataRequest = DataRequest(
           VoxelPosition(x, y, z, magParsed),
           width,
           height,
           depth,
           DataServiceRequestSettings(halfByte = halfByte, appliedAgglomerate = mappingName)
         )
-        (data, indices) <- requestData(dataSource, dataLayer, request)
+        (data, indices) <- requestData(dataSource, dataLayer, dataRequest)
       } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
     }
   }
@@ -147,13 +148,13 @@ class BinaryDataController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName) ~> NOT_FOUND
-        request = DataRequest(
+        dataRequest = DataRequest(
           VoxelPosition(x * cubeSize * mag, y * cubeSize * mag, z * cubeSize * mag, Vec3Int(mag, mag, mag)),
           cubeSize,
           cubeSize,
           cubeSize
         )
-        (data, indices) <- requestData(dataSource, dataLayer, request)
+        (data, indices) <- requestData(dataSource, dataLayer, dataRequest)
       } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
     }
   }
@@ -180,14 +181,14 @@ class BinaryDataController @Inject()(
                                                                                   dataLayerName) ?~> Messages(
           "dataSource.notFound") ~> NOT_FOUND
         magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> "malformedMag"
-        request = DataRequest(
+        dataRequest = DataRequest(
           VoxelPosition(x, y, z, magParsed),
           width,
           height,
           depth = 1,
           DataServiceRequestSettings(appliedAgglomerate = mappingName)
         )
-        (data, _) <- requestData(dataSource, dataLayer, request)
+        (data, _) <- requestData(dataSource, dataLayer, dataRequest)
         intensityRange: Option[(Double, Double)] = intensityMin.flatMap(min => intensityMax.map(max => (min, max)))
         layerColor = color.flatMap(Color.fromHTML)
         params = ImageCreatorParameters(
@@ -252,10 +253,11 @@ class BinaryDataController @Inject()(
             request.body.cuboid(dataLayer),
             request.body.segmentId,
             request.body.voxelSizeFactorInUnit,
+            tokenContextForRequest(request),
             request.body.mapping,
             request.body.mappingType,
             request.body.additionalCoordinates,
-            request.body.findNeighbors
+            request.body.findNeighbors,
           )
           // The client expects the ad-hoc mesh as a flat float-array. Three consecutive floats form a 3D point, three
           // consecutive 3D points (i.e., nine floats) form a triangle.
@@ -308,7 +310,7 @@ class BinaryDataController @Inject()(
       dataSource: DataSource,
       dataLayer: DataLayer,
       dataRequests: DataRequestCollection
-  ): Fox[(Array[Byte], List[Int])] = {
+  )(implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
     val requests =
       dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, r.cuboid(dataLayer), r.settings))
     binaryDataService.handleDataRequests(requests)

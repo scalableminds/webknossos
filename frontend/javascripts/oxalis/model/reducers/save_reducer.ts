@@ -157,7 +157,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_LAST_SAVE_TIMESTAMP": {
-      return updateKey2(state, "save", "lastSaveTimestamp", action.timestamp);
+      return updateKey(state, "save", { lastSaveTimestamp: action.timestamp });
     }
 
     case "SET_VERSION_NUMBER": {

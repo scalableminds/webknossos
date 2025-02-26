@@ -38,7 +38,7 @@ export type SaveAction =
 
 // The action creators pushSaveQueueTransaction and pushSaveQueueTransactionIsolated
 // are typed so that update actions that need isolation are isolated in a group each.
-// From this point on, we can assume that the groups fulfil the isolation requirement.
+// From this point on, we can assume that the groups fulfill the isolation requirement.
 export const pushSaveQueueTransaction = (
   items: Array<UpdateActionWithoutIsolationRequirement>,
 ): PushSaveQueueTransaction =>

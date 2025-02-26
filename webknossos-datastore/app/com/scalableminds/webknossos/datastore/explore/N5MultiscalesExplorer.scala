@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.explore
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -17,16 +18,18 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends RemoteLay
 
   override def name: String = "N5 Multiscales"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(N5Layer, VoxelSize)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String])(
+      implicit tc: TokenContext): Fox[List[(N5Layer, VoxelSize)]] =
     for {
       metadataPath <- Fox.successful(remotePath / N5Metadata.FILENAME_ATTRIBUTES_JSON)
       n5Metadata <- metadataPath.parseAsJson[N5Metadata] ?~> s"Failed to read N5 header at $metadataPath"
       layers <- Fox.serialCombined(n5Metadata.multiscales)(layerFromN5MultiscalesItem(_, remotePath, credentialId))
     } yield layers
 
-  private def layerFromN5MultiscalesItem(multiscalesItem: N5MultiscalesItem,
-                                         remotePath: VaultPath,
-                                         credentialId: Option[String]): Fox[(N5Layer, VoxelSize)] =
+  private def layerFromN5MultiscalesItem(
+      multiscalesItem: N5MultiscalesItem,
+      remotePath: VaultPath,
+      credentialId: Option[String])(implicit tc: TokenContext): Fox[(N5Layer, VoxelSize)] =
     for {
       voxelSizeNanometers <- extractVoxelSize(multiscalesItem.datasets.map(_.transform))
       magsWithAttributes <- Fox.serialCombined(multiscalesItem.datasets)(d =>
@@ -99,7 +102,7 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends RemoteLay
   private def n5MagFromDataset(n5Dataset: N5MultiscalesDataset,
                                layerPath: VaultPath,
                                voxelSize: Vec3Double,
-                               credentialId: Option[String]): Fox[MagWithAttributes] =
+                               credentialId: Option[String])(implicit tc: TokenContext): Fox[MagWithAttributes] =
     for {
       axisOrder <- extractAxisOrder(n5Dataset.transform.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
       mag <- magFromTransform(voxelSize, n5Dataset.transform) ?~> "Could not extract mag from transforms"

@@ -357,7 +357,7 @@ class JobController @Inject()(
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             dataset._organization)
-          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.meshFile.notAllowed.organization" ~> FORBIDDEN
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.exportTiff.notAllowed.organization" ~> FORBIDDEN
           _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerNameLax)
           _ <- Fox.runOptional(annotationLayerName)(datasetService.assertValidLayerNameLax)
           _ <- jobService.assertBoundingBoxLimits(bbox, mag)

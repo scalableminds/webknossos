@@ -696,22 +696,27 @@ class DataCube {
               currentGlobalBucketPosition,
               V3.scale3(adjustedNeighbourVoxelXyz, currentMag),
             );
+            // When flood filling in a coarser mag, a voxel in the coarse mag is more than one voxel in mag 1
+            const voxelBoundingBoxInMag1 = new BoundingBox({
+              min: currentGlobalPosition,
+              max: V3.add(currentGlobalPosition, currentMag),
+            });
 
             if (bucketData[neighbourVoxelIndex] === sourceSegmentId) {
-              if (floodfillBoundingBox.containsPoint(currentGlobalPosition)) {
+              if (floodfillBoundingBox.intersectedWith(voxelBoundingBoxInMag1).getVolume() > 0) {
                 bucketData[neighbourVoxelIndex] = segmentId;
                 markUvwInSliceAsLabeled(neighbourVoxelUvw);
                 neighbourVoxelStackUvw.pushVoxel(neighbourVoxelUvw);
                 labeledVoxelCount++;
 
-                coveredBBoxMin[0] = Math.min(coveredBBoxMin[0], currentGlobalPosition[0]);
-                coveredBBoxMin[1] = Math.min(coveredBBoxMin[1], currentGlobalPosition[1]);
-                coveredBBoxMin[2] = Math.min(coveredBBoxMin[2], currentGlobalPosition[2]);
+                coveredBBoxMin[0] = Math.min(coveredBBoxMin[0], voxelBoundingBoxInMag1.min[0]);
+                coveredBBoxMin[1] = Math.min(coveredBBoxMin[1], voxelBoundingBoxInMag1.min[1]);
+                coveredBBoxMin[2] = Math.min(coveredBBoxMin[2], voxelBoundingBoxInMag1.min[2]);
 
                 // The maximum is exclusive which is why we add 1 to the position
-                coveredBBoxMax[0] = Math.max(coveredBBoxMax[0], currentGlobalPosition[0] + 1);
-                coveredBBoxMax[1] = Math.max(coveredBBoxMax[1], currentGlobalPosition[1] + 1);
-                coveredBBoxMax[2] = Math.max(coveredBBoxMax[2], currentGlobalPosition[2] + 1);
+                coveredBBoxMax[0] = Math.max(coveredBBoxMax[0], voxelBoundingBoxInMag1.max[0] + 1);
+                coveredBBoxMax[1] = Math.max(coveredBBoxMax[1], voxelBoundingBoxInMag1.max[1] + 1);
+                coveredBBoxMax[2] = Math.max(coveredBBoxMax[2], voxelBoundingBoxInMag1.max[2] + 1);
 
                 if (labeledVoxelCount % 1000000 === 0) {
                   console.log(`Labeled ${labeledVoxelCount} Vx. Continuing...`);

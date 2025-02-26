@@ -597,15 +597,13 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       }
     } yield targetVersion
 
-  def editableMappingLayer(annotationId: String, tracingId: String, tracing: VolumeTracing)(
-      implicit tc: TokenContext): EditableMappingLayer =
+  def editableMappingLayer(annotationId: String, tracingId: String, tracing: VolumeTracing): EditableMappingLayer =
     EditableMappingLayer(
       tracingId,
       tracing.boundingBox,
       resolutions = tracing.mags.map(vec3IntFromProto).toList,
       largestSegmentId = Some(0L),
       elementClass = tracing.elementClass,
-      tc,
       tracing = tracing,
       annotationId = annotationId,
       tracingId = tracingId,

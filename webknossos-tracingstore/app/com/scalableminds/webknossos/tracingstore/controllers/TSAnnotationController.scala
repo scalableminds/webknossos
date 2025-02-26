@@ -24,7 +24,6 @@ import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingMergeService
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
-import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Empty, Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
@@ -165,9 +164,10 @@ class TSAnnotationController @Inject()(
                 Some(TracingSelector(l.tracingId))
               })
               .map(_.flatten)
-            firstVolumeAnnotationIndex = tryo(
-              annotations.indexWhere(_.annotationLayers.exists(_.typ == AnnotationLayerTypeProto.Volume))).toOption
-            firstVolumeAnnotationId = firstVolumeAnnotationIndex.map(request.body(_))
+            firstVolumeAnnotationIndex = annotations.indexWhere(
+              _.annotationLayers.exists(_.typ == AnnotationLayerTypeProto.Volume))
+            firstVolumeAnnotationId = if (firstVolumeAnnotationIndex < 0) None
+            else Some(request.body(firstVolumeAnnotationIndex))
             mergeEditableMappingsResultBox <- editableMappingMergeService
               .mergeEditableMappings(request.body,
                                      firstVolumeAnnotationId,

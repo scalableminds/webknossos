@@ -44,7 +44,6 @@ import {
   computeArrayFromBoundingBox,
   computeBoundingBoxFromBoundingBoxObject,
   rgbToHex,
-  roundTo,
 } from "libs/utils";
 import _ from "lodash";
 import { ControlModeEnum, Unicode, type Vector3 } from "oxalis/constants";
@@ -64,7 +63,7 @@ import type { MagInfo } from "oxalis/model/helpers/mag_info";
 import { Model, Store } from "oxalis/singletons";
 import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { type APIDataLayer, type APIJob, APIJobType } from "types/api_flow_types";
@@ -549,7 +548,7 @@ function ShouldUseTreesFormItem() {
 
 function JobCostInformation({
   jobCostInfo,
-  jobCreditCostPerGVx: jobCreditCostPerGVx,
+  jobCreditCostPerGVx,
   isBoundingBoxConfigurable,
   boundingBoxForJob,
   isOrganizationOwner,
@@ -722,6 +721,36 @@ function CollapsibleSplitMergerEvaluationSettings({
   );
 }
 
+function getBoundingBoxesForLayers(layers: APIDataLayer[]): UserBoundingBox[] {
+  return layers.map((layer, index) => {
+    return {
+      id: -1 * index,
+      name: `Full ${layer.name} layer`,
+      boundingBox: computeBoundingBoxFromBoundingBoxObject(layer.boundingBox),
+      color: [255, 255, 255],
+      isVisible: true,
+    };
+  });
+}
+
+function useCurrentlySelectedBoundingBox(
+  userBoundingBoxes: UserBoundingBox[],
+  defaultBBForLayers: UserBoundingBox[],
+  layers: APIDataLayer[],
+  form: FormInstance,
+  isBoundingBoxConfigurable: boolean,
+): UserBoundingBox | undefined {
+  const selectedBoundingBoxId = Form.useWatch("boundingBoxId", form);
+  const currentlySelectedLayerName = Form.useWatch("layerName", form);
+  const currentSelectedLayer = layers.find((layer) => layer.name === currentlySelectedLayerName);
+  const indexOfLayer = currentSelectedLayer ? layers.indexOf(currentSelectedLayer) : -1;
+  return isBoundingBoxConfigurable
+    ? userBoundingBoxes.find((bbox) => bbox.id === selectedBoundingBoxId)
+    : indexOfLayer >= 0
+      ? defaultBBForLayers[indexOfLayer]
+      : undefined;
+}
+
 function StartJobForm(props: StartJobFormProps) {
   const isBoundingBoxConfigurable = props.isBoundingBoxConfigurable || false;
   const isSkeletonSelectable = props.isSkeletonSelectable || false;
@@ -752,18 +781,15 @@ function StartJobForm(props: StartJobFormProps) {
   );
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : colorLayers;
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
-  const defaultBBForLayers: UserBoundingBox[] = layers.map((layer, index) => {
-    return {
-      id: -1 * index,
-      name: `Full ${layer.name} layer`,
-      boundingBox: computeBoundingBoxFromBoundingBoxObject(layer.boundingBox),
-      color: [255, 255, 255],
-      isVisible: true,
-    };
-  });
+  const defaultBBForLayers = useMemo(() => getBoundingBoxesForLayers(layers), [layers]);
   const userBoundingBoxes = defaultBBForLayers.concat(rawUserBoundingBoxes);
-  const selectedBoundingBoxId = Form.useWatch("boundingBoxId", form);
-  const boundingBoxForJob = userBoundingBoxes.find((bbox) => bbox.id === selectedBoundingBoxId);
+  const boundingBoxForJob = useCurrentlySelectedBoundingBox(
+    userBoundingBoxes,
+    defaultBBForLayers,
+    layers,
+    form,
+    isBoundingBoxConfigurable,
+  );
   const jobCostInfo = useFetch<JobCostInfo | undefined>(
     async () =>
       boundingBoxForJob

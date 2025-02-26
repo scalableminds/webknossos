@@ -527,7 +527,7 @@ class JobController @Inject()(
         organizationCreditBalance <- creditTransactionDAO.getCreditBalance(request.identity._organization)
         hasEnoughCredits = jobCosts <= organizationCreditBalance
         js = Json.obj(
-          "costsInCredits" -> jobCosts.toString(),
+          "costInCredits" -> jobCosts.toString(),
           "hasEnoughCredits" -> hasEnoughCredits,
           "organizationCredits" -> organizationCreditBalance.toString(),
         )

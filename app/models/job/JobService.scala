@@ -43,7 +43,8 @@ class JobService @Inject()(wkConf: WkConf,
     with LazyLogging
     with Formatter {
 
-  private val MINIMUM_COST_PER_JOB = BigDecimal(0.001)
+  private val MINIMUM_COST_PER_JOB = BigDecimal(0.0001)
+  private val ONE_GIGAVOXEL = BigDecimal(math.pow(2, 30))
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
@@ -264,7 +265,7 @@ class JobService @Inject()(wkConf: WkConf,
 
   def calculateJobCosts(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): Fox[BigDecimal] =
     getJobCostsPerGVx(jobCommand).map(costsPerGVx => {
-      val volumeInGVx = BigDecimal(boundingBoxInTargetMag.volume) / BigDecimal(math.pow(10, 9))
+      val volumeInGVx = BigDecimal(boundingBoxInTargetMag.volume) / ONE_GIGAVOXEL
       val costs = volumeInGVx * costsPerGVx
       if (costs < MINIMUM_COST_PER_JOB) MINIMUM_COST_PER_JOB else costs.setScale(4, RoundingMode.HALF_UP)
     })

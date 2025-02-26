@@ -207,14 +207,10 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
     for {
       _ <- assertUpdateAccess(transactionId)
       transactionToRefund <- findOne(transactionId)
+      _ <- bool2Fox(transactionToRefund.transactionState == CreditTransactionState.Pending) ?~> "Can only refund pending transactions."
       refundComment = transactionToRefund._paidJob
         .map(jobId => s"Refund for failed job $jobId.")
         .getOrElse(s"Refund for transaction $transactionId.")
-      setToRefunded = q"""UPDATE webknossos.credit_transactions
-          SET transaction_state = ${CreditTransactionState.Complete}, credit_state = ${CreditState.Refunded}, updated_at = NOW()
-          WHERE _id = $transactionId AND state = ${CreditTransactionState.Pending}
-          AND credit_change < 0
-          """.asUpdate
       insertRefundTransaction = q"""
         INSERT INTO webknossos.credit_transactions
           (_id, _organization, _related_transaction, credit_change, comment, transaction_state, credit_state)
@@ -226,7 +222,8 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
             SELECT credit_change * -1
             FROM webknossos.credit_transactions
             WHERE _id = $transactionId
-              AND transaction_state = ${CreditTransactionState.Complete}
+              AND transaction_state = ${CreditTransactionState.Pending}
+              AND credit_state = ${CreditState.Pending}
               AND credit_change < 0
           ),
           0::DECIMAL,
@@ -235,7 +232,12 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
           ${CreditState.Refunding}
         )
       """.asUpdate
-      updatedRows <- run(DBIO.sequence(List(setToRefunded, insertRefundTransaction)).transactionally)
+      setToRefunded = q"""UPDATE webknossos.credit_transactions
+          SET transaction_state = ${CreditTransactionState.Complete}, credit_state = ${CreditState.Refunded}, updated_at = NOW()
+          WHERE _id = $transactionId AND state = ${CreditTransactionState.Pending}
+          AND credit_change < 0
+          """.asUpdate
+      updatedRows <- run(DBIO.sequence(List(insertRefundTransaction, setToRefunded)).transactionally)
       _ <- bool2Fox(updatedRows.forall(_ == 1)) ?~> s"Failed to refund transaction ${transactionToRefund._id} properly."
     } yield ()
 

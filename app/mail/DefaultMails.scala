@@ -153,6 +153,23 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List("hello@webknossos.org")
     )
 
+  def orderCreditsMail(user: User, userEmail: String, requestedCredits: Int): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "Request to buy WEBKNOSSOS credits",
+      bodyHtml = html.mail.orderCredits(user.name, requestedCredits, additionalFooter).body,
+      recipients = List(userEmail)
+    )
+
+  def orderCreditsRequestMail(user: User, userEmail: String, organizationName: String, messageBody: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "Request to buy WEBKNOSSOS credits",
+      bodyHtml =
+        html.mail.orderCreditsRequest(user.name, userEmail, organizationName, messageBody, additionalFooter).body,
+      recipients = List("hello@webknossos.org")
+    )
+
   def jobSuccessfulGenericMail(user: User,
                                userEmail: String,
                                datasetName: String,

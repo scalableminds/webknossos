@@ -74,6 +74,20 @@ export async function cancelJob(jobId: string): Promise<APIJob> {
   });
 }
 
+export type JobCostInfo = {
+  costInCredits: string;
+  hasEnoughCredits: boolean;
+  organizationCredits: string;
+};
+
+export async function getJobCost(command: string, boundingBoxInMag: Vector6): Promise<JobCostInfo> {
+  const params = new URLSearchParams({
+    command,
+    boundingBoxInMag: boundingBoxInMag.join(","),
+  });
+  return await Request.receiveJSON(`/api/jobs/getCosts?${params}`);
+}
+
 export async function startConvertToWkwJob(
   datasetId: string,
   scale: Vector3,

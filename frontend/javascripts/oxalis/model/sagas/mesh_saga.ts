@@ -1212,6 +1212,8 @@ export function* handleAdditionalCoordinateUpdate(): Saga<never> {
     const action = (yield* take(["SET_ADDITIONAL_COORDINATES"]) as any) as FlycamAction;
     // Satisfy TS
     if (action.type !== "SET_ADDITIONAL_COORDINATES") {
+      // Don't throw as this would interfere with the never return type
+      console.error("Unexpected action.type. Ignoring SET_ADDITIONAL_COORDINATES action...");
       continue;
     }
     const meshRecords = segmentMeshController.meshesGroupsPerSegmentId;

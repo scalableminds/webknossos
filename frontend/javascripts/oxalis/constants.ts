@@ -350,13 +350,13 @@ const Constants = {
 export default Constants;
 
 export type TypedArray =
-  | Int8Array
   | Uint8Array
   | Uint8ClampedArray
-  | Int16Array
+  | Int8Array
   | Uint16Array
-  | Int32Array
+  | Int16Array
   | Uint32Array
+  | Int32Array
   | Float32Array
   | Float64Array
   | BigUint64Array

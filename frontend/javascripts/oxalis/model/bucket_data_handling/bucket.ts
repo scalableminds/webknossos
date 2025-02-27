@@ -28,10 +28,10 @@ export type BucketStateEnumType = keyof typeof BucketStateEnum;
 // This type needs to be adapted when a new dtype should/element class needs
 // to be supported.
 export type BucketDataArray =
-  | Int8Array
   | Uint8Array
-  | Int16Array
+  | Int8Array
   | Uint16Array
+  | Int16Array
   | Uint32Array
   | Int32Array
   | Float32Array
@@ -93,32 +93,32 @@ export const getConstructorForElementClass = (
   switch (type) {
     // This function needs to be adapted when a new dtype should/element class needs
     // to be supported.
-    case "int8":
-      return [Int8Array, 1];
     case "uint8":
       return [Uint8Array, 1];
+    case "int8":
+      return [Int8Array, 1];
 
-    case "int16":
-      return [Int16Array, 1];
     case "uint16":
       return [Uint16Array, 1];
+    case "int16":
+      return [Int16Array, 1];
 
     case "uint24":
       // There is no Uint24Array and uint24 is treated in a special way (rgb) anyways
       return [Uint8Array, 3];
 
-    case "int32":
-      return [Int32Array, 1];
     case "uint32":
       return [Uint32Array, 1];
+    case "int32":
+      return [Int32Array, 1];
 
     case "float":
       return [Float32Array, 1];
 
-    case "int64":
-      return [BigInt64Array, 1];
     case "uint64":
       return [BigUint64Array, 1];
+    case "int64":
+      return [BigInt64Array, 1];
 
     default:
       throw new Error(`This type is not supported by the DataBucket class: ${type}`);

@@ -267,7 +267,10 @@ class ReactRouter extends React.Component<Props> {
         <Layout>
           <DisableGenericDnd />
           <CheckCertificateModal />
-          {isAuthenticated && this.props.isAdminView && <CommandPalette label={null} />}
+          {
+            /* within tracing view, the command palette is rendered in the status bar. */
+            isAuthenticated && this.props.isAdminView && <CommandPalette label={null} />
+          }
           <CheckTermsOfServices />
           <Navbar isAuthenticated={isAuthenticated} />
           <HelpButton />

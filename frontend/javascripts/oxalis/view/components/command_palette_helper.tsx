@@ -79,7 +79,7 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
     };
   });
 
-  const { activeUser } = props;
+  const { activeUser, restrictions } = props;
 
   const getMenuActions = (isViewMode: boolean) => {
     if (!isInTracingView) return [];
@@ -157,7 +157,7 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
     if (!isInTracingView) return [];
     const commands: Command[] = [];
     let availableTools = Object.keys(AnnotationToolEnum) as [keyof typeof AnnotationToolEnum];
-    if (isViewMode) {
+    if (isViewMode || !restrictions.allowUpdate) {
       availableTools = AvailableToolsInViewMode as [keyof typeof AnnotationToolEnum];
     }
     availableTools.forEach((tool, counter) => {

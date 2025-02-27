@@ -3,6 +3,7 @@ import {
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
+import { capitalize } from "libs/utils";
 import memoizeOne from "memoize-one";
 import { type AnnotationTool, IdentityTransform } from "oxalis/constants";
 import { AnnotationToolEnum } from "oxalis/constants";
@@ -409,3 +410,10 @@ export function adaptActiveToolToShortcuts(
 
   return activeTool;
 }
+
+export const getLabelForTool = (tool: AnnotationTool) => {
+  return tool
+    .split("_")
+    .map((word) => capitalize(word.toLowerCase()))
+    .join(" ");
+};

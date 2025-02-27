@@ -4,6 +4,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
 import { AnnotationToolEnum, AvailableToolsInViewMode } from "oxalis/constants";
+import { getLabelForTool } from "oxalis/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { Store } from "oxalis/singletons";
@@ -50,13 +51,6 @@ const mapMenuActionsToCommands = (menuActions: Array<ItemType>): Command[] => {
 
 const getLabelForPath = (key: string) =>
   getPhraseFromCamelCaseString(capitalize(key.split("/")[1])) || key;
-
-const getLabelForTool = (tool: string) => {
-  return tool
-    .split("_")
-    .map((word) => capitalize(word.toLowerCase()))
-    .join(" ");
-};
 
 export const CommandPalette = ({ label }: { label: string | null }) => {
   const userConfig = useSelector((state: OxalisState) => state.userConfiguration);

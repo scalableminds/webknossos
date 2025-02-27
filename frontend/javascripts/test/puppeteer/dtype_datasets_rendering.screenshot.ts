@@ -1,10 +1,8 @@
 import type { DatasetLayerConfiguration, PartialDatasetConfiguration } from "oxalis/store";
 import "test/mocks/lz4";
-import urljoin from "url-join";
 import {
   assertDatasetIds,
   createAnnotationForDatasetScreenshot,
-  getDefaultRequestOptions,
   getNewPage,
   screenshotDataset,
   screenshotTracingView,
@@ -32,8 +30,6 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import type { Action } from "oxalis/model/actions/actions";
-import { ExecutionContext } from "ava";
-import { Browser } from "puppeteer-core";
 
 const semaphore = new Semaphore(1);
 const testColor = true;

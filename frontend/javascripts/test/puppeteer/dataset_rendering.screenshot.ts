@@ -1,4 +1,3 @@
-import urljoin from "url-join";
 import "test/mocks/lz4";
 import type { PartialDatasetConfiguration } from "oxalis/store";
 import {
@@ -18,7 +17,6 @@ import {
   setupBeforeEachAndAfterEach,
   withRetry,
   WK_AUTH_TOKEN,
-  getDefaultRequestOptions,
   writeDatasetNameToIdMapping,
   assertDatasetIds,
 } from "./dataset_rendering_helpers";

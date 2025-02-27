@@ -4,7 +4,7 @@ import urljoin from "url-join";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import type { Browser, Page } from "puppeteer-core";
 import puppeteer from "puppeteer-core";
-import anyTest, { ExecutionContext, type TestFn } from "ava";
+import anyTest, { type ExecutionContext, type TestFn } from "ava";
 import type { PartialDatasetConfiguration } from "oxalis/store";
 import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";

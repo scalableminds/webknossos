@@ -267,7 +267,7 @@ class ReactRouter extends React.Component<Props> {
         <Layout>
           <DisableGenericDnd />
           <CheckCertificateModal />
-          {this.props.isAdminView && <CommandPalette label={null} />}
+          {isAuthenticated && this.props.isAdminView && <CommandPalette label={null} />}
           <CheckTermsOfServices />
           <Navbar isAuthenticated={isAuthenticated} />
           <HelpButton />

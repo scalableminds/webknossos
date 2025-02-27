@@ -4,6 +4,7 @@ import { V3 } from "libs/mjs";
 import type TPS3D from "libs/thin_plate_spline";
 import * as Utils from "libs/utils";
 import _ from "lodash";
+import { WkDevFlags } from "oxalis/api/wk_dev";
 import { BLEND_MODES, Identity4x4, type OrthoView, type Vector3 } from "oxalis/constants";
 import {
   AnnotationToolEnum,
@@ -72,10 +73,9 @@ export type Uniforms = Record<
 >;
 
 const DEFAULT_COLOR = new THREE.Vector3(255, 255, 255);
-const DISABLE_SANITIZING_FOR_DEBUGGING = false;
 
 function sanitizeName(name: string | null | undefined): string {
-  if (DISABLE_SANITIZING_FOR_DEBUGGING) {
+  if (WkDevFlags.bucketDebugging.disableLayerNameSanitization) {
     return name || "unknown name";
   }
   if (name == null) {

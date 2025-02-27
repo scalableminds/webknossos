@@ -1,4 +1,4 @@
-import { EditOutlined, InfoCircleOutlined, SettingOutlined } from "@ant-design/icons";
+import { CopyOutlined, EditOutlined, InfoCircleOutlined, SettingOutlined } from "@ant-design/icons";
 import { Tag, Typography } from "antd";
 import { formatNumberToVolume, formatScale, formatVoxels } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
@@ -38,6 +38,7 @@ import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 import type { EmptyObject } from "types/globals";
 import { MarkdownModal } from "../components/markdown_modal";
+import Toast from "libs/toast";
 
 type StateProps = {
   annotation: Tracing;
@@ -340,6 +341,12 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     ) : null;
   }
 
+  copyDatasetIDToClipboard = (evt: React.MouseEvent<HTMLAnchorElement>) => {
+    evt.preventDefault();
+    navigator.clipboard.writeText(this.props.dataset.id);
+    Toast.success("Dataset ID copied to clipboard");
+  };
+
   getDatasetName() {
     const { name: datasetName, description: datasetDescription } = this.props.dataset;
     const { activeUser } = this.props;
@@ -395,7 +402,12 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
           }}
         >
           {datasetName}
-        </Link>
+        </Link>{" "}
+        <FastTooltip title="Copy Dataset ID to clipboard">
+          <Link onClick={this.copyDatasetIDToClipboard} to="#">
+            <CopyOutlined />
+          </Link>
+        </FastTooltip>
       </div>
     );
   }

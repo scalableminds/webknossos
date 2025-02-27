@@ -94,9 +94,9 @@ type StateProps = {
   hasTracing: boolean;
   busyBlockingInfo: BusyBlockingInfo;
   annotationTags: string[];
-} & TracingLayoutViewProps;
+} & TracingViewMenuProps;
 type Props = OwnProps & StateProps;
-export type TracingLayoutViewProps = {
+export type TracingViewMenuProps = {
   isRenderAnimationModalOpen: boolean;
   isShareModalOpen: boolean;
   isDownloadModalOpen: boolean;
@@ -266,8 +266,8 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
   };
 }
 
-export const getModalsAndMenuItems = (
-  props: TracingLayoutViewProps,
+export const getTracingViewModalsAndMenuItems = (
+  props: TracingViewMenuProps,
   layoutMenu: SubMenuType | null,
 ) => {
   const handleRestore = async () => {
@@ -745,7 +745,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       </ButtonComponent>
     ) : null;
 
-    const { menuItems, modals } = getModalsAndMenuItems(this.props, layoutMenu);
+    const { menuItems, modals } = getTracingViewModalsAndMenuItems(this.props, layoutMenu);
     return (
       <>
         <Space.Compact>

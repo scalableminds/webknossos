@@ -14,8 +14,8 @@ import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
 import { useSelector } from "react-redux";
 import {
-  type TracingLayoutViewProps,
-  getModalsAndMenuItems,
+  type TracingViewMenuProps,
+  getTracingViewModalsAndMenuItems,
 } from "../action-bar/tracing_actions_view";
 import { getViewDatasetMenu } from "../action-bar/view_dataset_actions_view";
 
@@ -61,7 +61,7 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
     (state: OxalisState) => state.uiInformation.isInAnnotationView,
   );
 
-  const props: TracingLayoutViewProps = useSelector((state: OxalisState) => {
+  const props: TracingViewMenuProps = useSelector((state: OxalisState) => {
     return {
       restrictions: state.tracing.restrictions,
       task: state.task,
@@ -87,7 +87,7 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
       const { items } = getViewDatasetMenu(null);
       return items;
     }
-    const { menuItems } = getModalsAndMenuItems(props, null);
+    const { menuItems } = getTracingViewModalsAndMenuItems(props, null);
     return menuItems;
   };
 

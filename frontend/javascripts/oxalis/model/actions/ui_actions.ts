@@ -34,6 +34,9 @@ type SetGlobalProgressAction = ReturnType<typeof setGlobalProgressAction>;
 type SetRenderAnimationModalVisibilityAction = ReturnType<
   typeof setRenderAnimationModalVisibilityAction
 >;
+type SetUserScriptsModalVisibilityAction = ReturnType<typeof setUserScriptsModalVisibilityAction>;
+type SetZarrLinksModalVisibilityAction = ReturnType<typeof setZarrLinksModalVisibilityAction>;
+type SetMergeModalVisibilityAction = ReturnType<typeof setMergeModalVisibilityAction>;
 
 export type UiAction =
   | SetDropzoneModalVisibilityAction
@@ -51,6 +54,9 @@ export type UiAction =
   | SetShareModalVisibilityAction
   | SetAIJobModalStateAction
   | SetRenderAnimationModalVisibilityAction
+  | SetMergeModalVisibilityAction
+  | SetUserScriptsModalVisibilityAction
+  | SetZarrLinksModalVisibilityAction
   | SetBusyBlockingInfoAction
   | SetIsWkReadyAction
   | EnterAction
@@ -134,6 +140,21 @@ export const setAIJobModalStateAction = (state: StartAIJobModalState) =>
 export const setRenderAnimationModalVisibilityAction = (visible: boolean) =>
   ({
     type: "SET_CREATE_ANIMATION_MODAL_VISIBILITY",
+    visible,
+  }) as const;
+export const setMergeModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_MERGE_MODAL_VISIBILITY",
+    visible,
+  }) as const;
+export const setUserScriptsModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_USER_SCRIPTS_MODAL_VISIBILITY",
+    visible,
+  }) as const;
+export const setZarrLinksModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_ZARR_LINKS_MODAL_VISIBILITY",
     visible,
   }) as const;
 export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>

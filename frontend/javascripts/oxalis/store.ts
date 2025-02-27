@@ -538,6 +538,9 @@ type UiInformation = {
   readonly showDownloadModal: boolean;
   readonly showPythonClientModal: boolean;
   readonly showShareModal: boolean;
+  readonly showMergeAnnotationModal: boolean;
+  readonly showZarrPrivateLinksModal: boolean;
+  readonly showAddScriptModal: boolean;
   readonly aIJobModalState: StartAIJobModalState;
   readonly showRenderAnimationModal: boolean;
   readonly activeTool: AnnotationTool;

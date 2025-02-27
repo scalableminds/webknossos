@@ -221,6 +221,9 @@ void main() {
     uint <%= segmentationName %>_unmapped_id_high = 0u;
     float <%= segmentationName %>_effective_alpha = <%= segmentationName %>_alpha * (1. - <%= segmentationName %>_unrenderable);
 
+    // If the opacity is > 0, the segment id for the current voxel is read.
+    // Since a segmentation might be mapped, the unmapped and (potentially mapped) id
+    // is read.
     if (<%= segmentationName %>_effective_alpha > 0.) {
       vec4[2] unmapped_segment_id;
       vec4[2] segment_id;
@@ -233,26 +236,17 @@ void main() {
             : textureLayerInfos[segmentationName].isSigned ? "int32ToUint64" : "uint32ToUint64"
       %>
 
-      {
-        highp uint hpv_low;
-        highp uint hpv_high;
+      // Temporary vars to which vec4ToSomeIntFn will write
+      highp uint hpv_low;
+      highp uint hpv_high;
 
-        <%= vec4ToSomeIntFn %>(unmapped_segment_id[1], unmapped_segment_id[0], hpv_low, hpv_high);
+      <%= vec4ToSomeIntFn %>(unmapped_segment_id[1], unmapped_segment_id[0], hpv_low, hpv_high);
+      <%= segmentationName %>_unmapped_id_low = uint(hpv_low);
+      <%= segmentationName %>_unmapped_id_high = uint(hpv_high);
 
-        <%= segmentationName %>_unmapped_id_low = uint(hpv_low);
-        <%= segmentationName %>_unmapped_id_high = uint(hpv_high);
-      }
-
-      {
-        highp uint hpv_low;
-        highp uint hpv_high;
-
-        <%= vec4ToSomeIntFn %>(segment_id[1], segment_id[0], hpv_low, hpv_high);
-
-        <%= segmentationName %>_id_low = uint(hpv_low);
-        <%= segmentationName %>_id_high = uint(hpv_high);
-      }
-
+      <%= vec4ToSomeIntFn %>(segment_id[1], segment_id[0], hpv_low, hpv_high);
+      <%= segmentationName %>_id_low = uint(hpv_low);
+      <%= segmentationName %>_id_high = uint(hpv_high);
     }
 
   <% }) %>

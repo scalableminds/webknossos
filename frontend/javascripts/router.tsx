@@ -73,7 +73,7 @@ import { CheckTermsOfServices } from "components/terms_of_services_check";
 import loadable from "libs/lazy_loader";
 import { getDatasetIdOrNameFromReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 import { Store } from "oxalis/singletons";
-import { CommandPalette } from "oxalis/view/components/command_palette_helper";
+import { CommandPalette } from "oxalis/view/components/command_palette";
 import type { EmptyObject } from "types/globals";
 
 const { Content } = Layout;

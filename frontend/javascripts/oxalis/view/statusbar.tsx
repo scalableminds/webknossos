@@ -39,7 +39,7 @@ import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_
 import React, { useCallback, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AdditionalCoordinate } from "types/api_flow_types";
-import { CommandPalette } from "./components/command_palette_helper";
+import { CommandPalette } from "./components/command_palette";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {

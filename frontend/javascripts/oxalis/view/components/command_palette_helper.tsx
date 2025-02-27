@@ -9,7 +9,6 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { Store } from "oxalis/singletons";
 import type { OxalisState, UserConfiguration } from "oxalis/store";
-import { act } from "react";
 import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
 import { useSelector } from "react-redux";
@@ -164,11 +163,7 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
       commands.push({
         id: counter,
         name: `Switch to ${getLabelForTool(tool)} Tool`,
-        command: () => {
-          act(() => {
-            Store.dispatch(setToolAction(tool));
-          });
-        },
+        command: () => Store.dispatch(setToolAction(tool)),
         color: "#5660ff",
       });
     });

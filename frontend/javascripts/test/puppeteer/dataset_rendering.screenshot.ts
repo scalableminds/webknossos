@@ -41,7 +41,6 @@ const datasetNames = [
   "2017-05-31_mSEM_aniso-test",
   "dsA_2",
   "2017-05-31_mSEM_scMS109_bk_100um_v01-aniso",
-  "ROI2017_wkw_fallback",
   "float_test_dataset",
   "Multi-Channel-Test",
   "connectome_file_test_dataset",
@@ -51,13 +50,13 @@ const datasetNames = [
 type DatasetName = string;
 type FallbackLayerName = string | null;
 const annotationSpecs: Array<[DatasetName, FallbackLayerName]> = [
-  ["ROI2017_wkw_fallback", "segmentation"],
-  ["ROI2017_wkw_fallback", null],
+  ["ROI2017_wkw", "segmentation"],
+  ["ROI2017_wkw", null],
 ];
 
 const viewOverrides: Record<string, string> = {
   "2017-05-31_mSEM_scMS109_bk_100um_v01-aniso": "4608,4543,386,0,4.00",
-  ROI2017_wkw_fallback: "535,536,600,0,1.18",
+  ROI2017_wkw: "535,536,600,0,1.18",
   dsA_2: "1024,1024,64,0,0.424",
   "Multi-Channel-Test": "1201,1072,7,0,0.683",
   "test-agglomerate-file":
@@ -69,7 +68,7 @@ const viewOverrides: Record<string, string> = {
   kiwi: "1191,1112,21,0,8.746",
 };
 const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
-  ROI2017_wkw_fallback: {
+  ROI2017_wkw: {
     layers: {
       color: {
         alpha: 100,

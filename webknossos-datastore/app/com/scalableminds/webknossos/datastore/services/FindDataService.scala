@@ -204,7 +204,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       for {
         dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, mag) ?~> "dataset.noData"
         isUint24 = dataLayer.elementClass == ElementClass.uint24
-        convertedData = toMaybeUnsigned(
+        convertedData = toUnsignedIfNeeded(
           filterZeroes(convertData(dataConcatenated, dataLayer.elementClass), skip = isUint24),
           ElementClass.isSigned(dataLayer.elementClass)
         )

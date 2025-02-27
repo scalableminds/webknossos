@@ -377,9 +377,11 @@ export const scaleToFloat: ShaderModule = {
       }
 
       if (b - a < pow(2., 126.)) {
+        // "Small" intervals can be used for scaling without
+        // any special care.
         return (x - a) / (b - a);
       } else {
-        // For large intervals, floating point precision can collaps
+        // For large intervals, floating point precision can collapse
         // to 0. Therefore, we make all values a bit smaller before
         // doing further arithmetics.
         float mul = 0.25;

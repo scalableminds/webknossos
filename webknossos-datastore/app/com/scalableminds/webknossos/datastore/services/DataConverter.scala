@@ -47,7 +47,7 @@ trait DataConverter extends FoxImplicits {
     dstArray
   }
 
-  def toMaybeUnsigned(
+  def toUnsignedIfNeeded(
       data: Array[_ >: Byte with Short with Int with Long with Float],
       isSigned: Boolean
   ): Array[_ >: UByte with Byte with UShort with Short with UInt with Int with ULong with Long with Float] =

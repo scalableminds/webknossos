@@ -592,7 +592,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     return (
       <Histogram
-        supportFractionals={elementClass === "float" || elementClass === "double"}
+        supportFractions={elementClass === "float" || elementClass === "double"}
         data={histograms}
         intensityRangeMin={intensityRange[0]}
         intensityRangeMax={intensityRange[1]}

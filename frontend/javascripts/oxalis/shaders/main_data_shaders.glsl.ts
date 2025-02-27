@@ -297,12 +297,12 @@ void main() {
             // Combine bytes into an Int32 (assuming little-endian order)
             highp int hpv = four_bytes.r | (four_bytes.g << 8) | (four_bytes.b << 16) | (four_bytes.a << 24);
 
-            int typed_min = <%= name %>_min;
-            int typed_max = <%= name %>_max;
-            hpv = clamp(hpv, typed_min, typed_max);
+            int min = <%= name %>_min;
+            int max = <%= name %>_max;
+            hpv = clamp(hpv, min, max);
 
             color_value = vec3(
-                scaleIntToFloat(hpv, typed_min, typed_max)
+                scaleIntToFloat(hpv, min, max)
             );
           <% } else { %>
             // Scale from [0,1] to [0,255] so that we can convert to an uint
@@ -314,11 +314,11 @@ void main() {
               + uint(four_bytes.g) * 256u
               + uint(four_bytes.r);
 
-            uint typed_min = <%= name %>_min;
-            uint typed_max = <%= name %>_max;
-            hpv = clamp(hpv, typed_min, typed_max);
+            uint min = <%= name %>_min;
+            uint max = <%= name %>_max;
+            hpv = clamp(hpv, min, max);
             color_value = vec3(
-              float(hpv - typed_min) / (float(typed_max - typed_min) + is_max_and_min_equal)
+              float(hpv - min) / (float(max - min) + is_max_and_min_equal)
             );
           <% } %>
 

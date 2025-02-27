@@ -20,7 +20,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class AiModel(_id: ObjectId,
-                   _organization: String,
+                   _organizations: List[String],
                    _dataStore: String,
                    _user: ObjectId,
                    _trainingJob: Option[ObjectId],
@@ -70,10 +70,11 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: AimodelsRow): Fox[AiModel] =
     for {
       trainingAnnotationIds <- findTrainingAnnotationIdsFor(ObjectId(r._Id))
+      organizations <- findOrganizationsFor(ObjectId(r._Id))
     } yield
       AiModel(
         ObjectId(r._Id),
-        r._Organization,
+        organizations,
         r._Datastore.trim,
         ObjectId(r._User),
         r._Trainingjob.map(ObjectId(_)),
@@ -87,7 +88,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       )
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
-    q"_organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId)"
+    q"_id IN (SELECT a._aiModel FROM webknossos.aiModel_organizations as a INNER JOIN webknossos.organizations as o ON a._organization = o._id WHERE o._id = $requestingUserId)"
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[AiModel]] =
     for {
@@ -107,16 +108,20 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def insertOne(a: AiModel): Fox[Unit] = {
     val insertModelQuery =
       q"""INSERT INTO webknossos.aiModels(
-                      _id, _organization, _dataStore, _user, _trainingJob, name,
+                      _id, _dataStore, _user, _trainingJob, name,
                        comment, category, created, modified, isDeleted
                     ) VALUES(
-                      ${a._id}, ${a._organization}, ${a._dataStore}, ${a._user}, ${a._trainingJob}, ${a.name},
+                      ${a._id}, ${a._dataStore}, ${a._user}, ${a._trainingJob}, ${a.name},
                       ${a.comment}, ${a.category}, ${a.created}, ${a.modified}, ${a.isDeleted}
                     )
            """.asUpdate
     val insertTrainingAnnotationQueries = insertTrainingAnnotationIdQueries(a._id, a._trainingAnnotations)
+    val insertOrganizationQueries = insertOrganizationQuery(a._id, a._organizations)
     for {
-      _ <- run(DBIO.sequence(insertModelQuery +: insertTrainingAnnotationQueries).transactionally)
+      _ <- run(
+        DBIO
+          .sequence(insertModelQuery +: (insertTrainingAnnotationQueries ++ insertOrganizationQueries))
+          .transactionally)
     } yield ()
   }
 
@@ -138,6 +143,23 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           .as[ObjectId])
     } yield rows.toList
 
+  private def insertOrganizationQuery(aiModelId: ObjectId,
+                                      organizationIds: List[String]): List[SqlAction[Int, NoStream, Effect]] =
+    organizationIds.map { organizationId =>
+      insertOrganizationQuery(aiModelId, organizationId)
+    }
+
+  private def insertOrganizationQuery(aiModelId: ObjectId, organizationId: String): SqlAction[Int, NoStream, Effect] =
+    q"""INSERT INTO webknossos.aiModel_organizations(_aiModel, _organization)
+            VALUES($aiModelId, $organizationId)""".asUpdate
+
+  private def findOrganizationsFor(aiModelId: ObjectId): Fox[List[String]] =
+    for {
+      rows <- run(
+        q"SELECT _organization FROM webknossos.aiModel_organizations WHERE _aiModel = $aiModelId ORDER BY _organization"
+          .as[String])
+    } yield rows.toList
+
   def updateOne(a: AiModel): Fox[Unit] =
     for {
       _ <- run(
@@ -150,5 +172,12 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE name = $name AND $accessQuery".as[AimodelsRow])
       parsed <- parseFirst(r, name)
     } yield parsed
+
+  def shareWithOrganization(aiModelId: ObjectId, organizationId: String): Fox[Unit] =
+    for {
+      _ <- run(
+        q"INSERT INTO webknossos.aiModel_organizations(_aiModel, _organization) VALUES($aiModelId, $organizationId)"
+          .asUpdate)
+    } yield ()
 
 }

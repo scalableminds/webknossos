@@ -19,6 +19,8 @@ import {
   withRetry,
   WK_AUTH_TOKEN,
   getDefaultRequestOptions,
+  writeDatasetNameToIdMapping,
+  assertDatasetIds,
 } from "./dataset_rendering_helpers";
 
 if (!WK_AUTH_TOKEN) {
@@ -98,26 +100,15 @@ const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
 
 const datasetNameToId: Record<string, string> = {};
 test.before("Retrieve dataset ids", async () => {
-  for (const datasetName of datasetNames.concat(["test-agglomerate-file"])) {
-    await withRetry(
-      3,
-      async () => {
-        const options = getDefaultRequestOptions(URL);
-        const path = `/api/datasets/disambiguate/sample_organization/${datasetName}/toId`;
-        const url = urljoin(URL, path);
-        const response = await fetch(url, options);
-        const { id } = await response.json();
-        datasetNameToId[datasetName] = id;
-        return true;
-      },
-      () => {},
-    );
-  }
+  await writeDatasetNameToIdMapping(
+    URL,
+    datasetNames.concat(["test-agglomerate-file"]),
+    datasetNameToId,
+  );
 });
+
 test.serial("Dataset IDs were retrieved successfully", (t) => {
-  for (const datasetName of datasetNames) {
-    t.truthy(datasetNameToId[datasetName], `Dataset ID not found for "${datasetName}"`);
-  }
+  assertDatasetIds(t, datasetNames, datasetNameToId);
 });
 
 datasetNames.map(async (datasetName) => {

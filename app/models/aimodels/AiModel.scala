@@ -7,19 +7,23 @@ import com.scalableminds.webknossos.schema.Tables.{Aimodels, AimodelsRow}
 import models.aimodels.AiModelCategory.AiModelCategory
 import models.dataset.{DataStoreDAO, DataStoreService}
 import models.job.{JobDAO, JobService}
-import models.user.{UserDAO, UserService}
+import models.user.{User, UserDAO, UserService}
 import play.api.libs.json.{JsObject, Json}
 import slick.dbio.{DBIO, Effect, NoStream}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.tools.Fox.{bool2Fox, futureBox2Fox}
+import net.liftweb.common.Full
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
+import scala.:+
 import scala.concurrent.ExecutionContext
 
 case class AiModel(_id: ObjectId,
+                   _owningOrganization: String,
                    _organizations: List[String],
                    _dataStore: String,
                    _user: ObjectId,
@@ -38,23 +42,34 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                userService: UserService,
                                jobDAO: JobDAO,
                                jobService: JobService) {
-  def publicWrites(aiModel: AiModel)(implicit ec: ExecutionContext, ctx: DBAccessContext): Fox[JsObject] =
+  def publicWrites(aiModel: AiModel, requestingUser: User)(implicit ec: ExecutionContext,
+                                                           ctx: DBAccessContext): Fox[JsObject] =
     for {
       dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
-      user <- userDAO.findOne(aiModel._user)
-      userJs <- userService.compactWrites(user)
+      user <- userDAO.findOne(aiModel._user).futureBox.flatMap {
+        case Full(user) => Fox.successful(Some(user))
+        case _ => Fox.successful(None)
+      }.toFox
+      userJs <- Fox.runOptional(user)(userService.compactWrites)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
-      trainingJobOpt <- Fox.runOptional(aiModel._trainingJob)(jobDAO.findOne)
-      trainingJobJsOpt <- Fox.runOptional(trainingJobOpt)(jobService.publicWrites)
+      trainingJobOpt <- Fox.runOptional(aiModel._trainingJob)(jobDAO.findOne(_).futureBox.flatMap {
+        case Full(job) => Fox.successful(Some(job))
+        case _ => Fox.successful(None)
+      }.toFox)
+      trainingJobJsOpt <- Fox.runOptional(trainingJobOpt.flatten)(jobService.publicWrites)
+      isOwnedByUsersOrganization = aiModel._owningOrganization == requestingUser._organization
+      sharedOrganizationIds = if (isOwnedByUsersOrganization) Some(aiModel._organizations) else None
     } yield
       Json.obj(
         "id" -> aiModel._id,
         "name" -> aiModel.name,
+        "isOwnedByUsersOrganization" -> isOwnedByUsersOrganization,
         "dataStore" -> dataStoreJs,
         "user" -> userJs,
         "comment" -> aiModel.comment,
         "trainingJob" -> trainingJobJsOpt,
-        "created" -> aiModel.created
+        "created" -> aiModel.created,
+        "sharedOrganizationIds" -> sharedOrganizationIds
       )
 }
 
@@ -74,6 +89,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield
       AiModel(
         ObjectId(r._Id),
+        r._Owningorganization,
         organizations,
         r._Datastore.trim,
         ObjectId(r._User),
@@ -88,7 +104,32 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       )
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
-    q"_id IN (SELECT a._aiModel FROM webknossos.aiModel_organizations as a INNER JOIN webknossos.organizations as o ON a._organization = o._id WHERE o._id = $requestingUserId)"
+    q"""_id IN (
+          SELECT a._aiModel
+          FROM webknossos.aiModel_organizations AS a
+          INNER JOIN webknossos.organizations AS o
+            ON a._organization = o._id
+          WHERE
+              (o._id IN (
+                  SELECT _organization
+                  FROM webknossos.users_
+                  WHERE _multiUser = (
+                      SELECT _multiUser
+                      FROM webknossos.users_
+                      WHERE _id = $requestingUserId
+                  )
+              ))
+              OR TRUE IN (
+                  SELECT isSuperUser
+                  FROM webknossos.multiUsers_
+                  WHERE _id IN (
+                      SELECT _multiUser
+                      FROM webknossos.users_
+                      WHERE _id = $requestingUserId
+                  )
+              )
+          )
+     """
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[AiModel]] =
     for {
@@ -108,10 +149,10 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def insertOne(a: AiModel): Fox[Unit] = {
     val insertModelQuery =
       q"""INSERT INTO webknossos.aiModels(
-                      _id, _dataStore, _user, _trainingJob, name,
+                      _id, _owningOrganization, _dataStore, _user, _trainingJob, name,
                        comment, category, created, modified, isDeleted
                     ) VALUES(
-                      ${a._id}, ${a._dataStore}, ${a._user}, ${a._trainingJob}, ${a.name},
+                      ${a._id}, ${a._owningOrganization}, ${a._dataStore}, ${a._user}, ${a._trainingJob}, ${a.name},
                       ${a.comment}, ${a.category}, ${a.created}, ${a.modified}, ${a.isDeleted}
                     )
            """.asUpdate
@@ -144,10 +185,14 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield rows.toList
 
   private def insertOrganizationQuery(aiModelId: ObjectId,
-                                      organizationIds: List[String]): List[SqlAction[Int, NoStream, Effect]] =
+                                      organizationIds: List[String]): List[SqlAction[Int, NoStream, Effect]] = {
+    println("--------------------------------------------------------------------------------")
+    println(s"insertOrganizationQuery($aiModelId, ${organizationIds.mkString(",")})")
+    println("--------------------------------------------------------------------------------")
     organizationIds.map { organizationId =>
       insertOrganizationQuery(aiModelId, organizationId)
     }
+  }
 
   private def insertOrganizationQuery(aiModelId: ObjectId, organizationId: String): SqlAction[Int, NoStream, Effect] =
     q"""INSERT INTO webknossos.aiModel_organizations(_aiModel, _organization)
@@ -173,11 +218,12 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(r, name)
     } yield parsed
 
-  def shareWithOrganization(aiModelId: ObjectId, organizationId: String): Fox[Unit] =
-    for {
-      _ <- run(
-        q"INSERT INTO webknossos.aiModel_organizations(_aiModel, _organization) VALUES($aiModelId, $organizationId)"
-          .asUpdate)
-    } yield ()
+  def updateSharedOrganizations(aiModelId: ObjectId, sharedOrganizations: List[String]): Fox[Unit] = {
+    val deleteQuery =
+      q"DELETE FROM webknossos.aiModel_organizations WHERE _aiModel = $aiModelId".asUpdate
+    val insertQueries = sharedOrganizations.map(organizationId =>
+      q"INSERT INTO webknossos.aiModel_organizations(_aiModel, _organization) VALUES($aiModelId, $organizationId)".asUpdate)
+    run(DBIO.sequence(deleteQuery +: insertQueries).transactionally).map(_ => ())
+  }
 
 }

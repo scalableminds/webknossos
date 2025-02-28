@@ -167,7 +167,6 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
               byteData.foreach(el => counts(el.toInt) += 1)
           case byteData: Array[Byte] => {
             byteData.foreach(el => counts(el.toInt + 128) += 1)
-            extrema = (-128, 128)
           }
           case shortData: Array[UShort] => {
             shortData.foreach(el => counts((el / UShort(256)).toInt) += 1)

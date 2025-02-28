@@ -20,7 +20,6 @@ export const { WK_AUTH_TOKEN } = process.env;
 const PAGE_WIDTH = 1920;
 const PAGE_HEIGHT = 1080;
 
-// todop: change to false before merging
 const USE_LOCAL_CHROME = false;
 // Only relevant when USE_LOCAL_CHROME. Set to false to actually see the browser open.
 const HEADLESS = true;

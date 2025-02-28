@@ -23,6 +23,7 @@ def main():
     parser.add_argument("--count_versions", help="Instead of migrating, only count materialized versions of the annotation", action="store_true")
     parser.add_argument("--previous_checkpoints", help="Supply checkpoints file of a previous run to resume", type=str)
     parser.add_argument("--verbose", "-v", help="Print for every annotation", action="store_true")
+    parser.add_argument("--small_batch_sizes", help="If supplied, smaller batch sizes for getting and putting values will be used. Use if standard batch sizes cause too-large-request errors", action="store_true")
     args = parser.parse_args()
     if args.dst is None and not args.dry:
         parser.error("At least one of --dry or --dst is required")

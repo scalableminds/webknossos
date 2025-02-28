@@ -1450,7 +1450,7 @@ function ContextMenuInner() {
   // Thus the segment id is always unambiguous / clearly defined.
   const clickedSegmentOrMeshId =
     maybeClickedMeshId != null ? maybeClickedMeshId : segmentIdAtPosition;
-  const wasSegmentOrMeshClicked = clickedSegmentOrMeshId > 0;
+  const wasSegmentOrMeshClicked = clickedSegmentOrMeshId !== 0;
 
   const dataset = useSelector((state: OxalisState) => state.dataset);
   useEffect(() => {

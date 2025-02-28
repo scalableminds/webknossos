@@ -14,11 +14,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Process and Log Branch Name
+        run: |
+          echo "BRANCH_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
+          SUBDOMAIN=$(echo "${{ github.ref_name }}" | tr -dc '[:alpha:]' | tr '[:upper:]' '[:lower:]')
+          TAG_NAME=$(echo "${{ github.ref_name }}" | sed 's/[\/-]/_/g')
+
+          echo "SUBDOMAIN=$SUBDOMAIN" >> $GITHUB_ENV
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+
+          echo "Sanitized branch name: $SUBDOMAIN"
+          echo "Tag name: $TAG_NAME"
+
       - name: Remove dev-deployment
         run: |
           curl -X POST \
             -H "X-Auth-Token: ${{ secrets.RELEASE_API_TOKEN }}" \
-            https://kubernetix.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
+            https://kubernetix.scm.io/hooks/remove/webknossos/dev/${{ env.TAG_NAME }}?user=CI+%28nightly%29
 
       - name: Wait 3 minutes
         run: sleep 180
@@ -27,32 +39,32 @@ jobs:
         run: |
           curl -X POST \
             -H "X-Auth-Token: ${{ secrets.RELEASE_API_TOKEN }}" \
-            https://kubernetix.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
+            https://kubernetix.scm.io/hooks/install/webknossos/dev/${{ env.TAG_NAME }}?user=CI+%28nightly%29
 
       - uses: actions/setup-node@v4
         with:
-            node-version: 18
+          node-version: 18
 
       - name: Install dependencies and wait
         run: |
-            corepack enable && yarn install --immutable & 
-            sleep 180 &
-            wait
+          corepack enable && yarn install --immutable &
+          sleep 180 &
+          wait
 
       - name: Refresh datasets
         run: |
-          curl -X POST --fail https://master.webknossos.xyz/data/triggers/checkInboxBlocking?token=${{ secrets.WK_AUTH_TOKEN }}
+          curl -X POST --fail https://${{ env.SUBDOMAIN }}.webknossos.xyz/data/triggers/checkInboxBlocking?token=${{ secrets.WK_AUTH_TOKEN }}
 
       - name: Run screenshot tests
         run: |
-          URL=https://master.webknossos.xyz/ \
+          URL=https://${{ env.SUBDOMAIN }}.webknossos.xyz/ \
           timeout 3000 \
           yarn test-screenshot
         env:
-          URL: https://master.webknossos.xyz/
+          URL: https://${{ env.SUBDOMAIN }}.webknossos.xyz/
           WK_AUTH_TOKEN: ${{ secrets.WK_AUTH_TOKEN }}
           BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
-          BROWSERSTACK_ACCESS_KEY : ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
 
       - name: Upload screenshots as artifact
         uses: actions/upload-artifact@v4

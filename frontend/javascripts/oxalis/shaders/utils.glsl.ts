@@ -1,6 +1,8 @@
 import _ from "lodash";
 import type { Vector3, Vector4 } from "oxalis/constants";
+import type { ElementClass } from "types/api_flow_types";
 import type { ShaderModule } from "./shader_module_system";
+
 export const hsvToRgb: ShaderModule = {
   requirements: [],
   code: `
@@ -189,6 +191,13 @@ export const getElementOfPermutation: ShaderModule = {
     }
   `,
 };
+
+export function getPermutation(sequenceLength: number, primitiveRoot: number) {
+  return _.range(sequenceLength).map((idx) =>
+    jsGetElementOfPermutation(idx, sequenceLength, primitiveRoot),
+  );
+}
+
 // See the shader-side implementation of getElementOfPermutation in segmentation.glsl.js
 // for a detailed description.
 export function jsGetElementOfPermutation(
@@ -203,11 +212,9 @@ export function jsGetElementOfPermutation(
   // intermediate results can suffer from precision loss. The following
   // code mimics this behavior to get a consistent coloring in GLSL and
   // JS.
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'x' implicitly has an 'any' type.
-  const imprecise = (x) => new Float32Array([x])[0];
+  const imprecise = (x: number) => new Float32Array([x])[0];
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'x' implicitly has an 'any' type.
-  function glslPow(x, y) {
+  function glslPow(x: number, y: number) {
     return Math.floor(imprecise(2 ** (y * imprecise(Math.log2(x)))));
   }
 
@@ -286,15 +293,6 @@ export const isNan: ShaderModule = {
     }
   `,
 };
-export const vec4ToFloat: ShaderModule = {
-  code: `
-    // Be careful! Floats higher than 2**24 cannot be expressed precisely.
-    float vec4ToFloat(vec4 v) {
-      v *= 255.0;
-      return v.r + v.g * pow(2.0, 8.0) + v.b * pow(2.0, 16.0) + v.a * pow(2.0, 24.0);
-    }
-  `,
-};
 export const transDim: ShaderModule = {
   code: `
     // Similar to the transDim function in dimensions.js, this function transposes dimensions for the current plane.
@@ -353,6 +351,48 @@ export const almostEq: ShaderModule = {
   `,
 };
 
+export const scaleToFloat: ShaderModule = {
+  code: `
+    float scaleIntToFloat(int x, int a, int b) {
+      // Convert to uint for safer calculations
+      uint ux = uint(x);
+      uint ua = uint(a);
+      uint ub = uint(b);
+
+      // Calculate the range and offset
+      uint range = ub - ua;
+      uint offset = ux - ua;
+
+      if (range == 0u) {
+        return 0.0;
+      }
+
+      // Normalize to [0, 1] as a float
+      return float(offset) / float(range);
+    }
+
+    vec3 scaleFloatToFloat(vec3 x, float a, float b) {
+      if (a == b) {
+        return vec3(0.0);
+      }
+
+      if (b - a < pow(2., 126.)) {
+        // "Small" intervals can be used for scaling without
+        // any special care.
+        return (x - a) / (b - a);
+      } else {
+        // For large intervals, floating point precision can collapse
+        // to 0. Therefore, we make all values a bit smaller before
+        // doing further arithmetics.
+        float mul = 0.25;
+        vec3 nom = mul * x - mul * a;
+        float denom = mul * b - mul * a;
+        return nom / denom;
+      }
+    }
+  `,
+};
+
 export function formatNumberAsGLSLFloat(aNumber: number): string {
   if (aNumber % 1 === 0) {
     // Append ".0" via toFixed
@@ -361,4 +401,13 @@ export function formatNumberAsGLSLFloat(aNumber: number): string {
     // It is already a floating point number, so we can use toString.
     return aNumber.toString();
   }
+}
+
+export function glslTypeForElementClass(elementClass: ElementClass) {
+  if (elementClass === "uint32" || elementClass === "uint64") {
+    return "uint";
+  } else if (elementClass === "int32" || elementClass === "int64") {
+    return "int";
+  }
+  return "float";
 }

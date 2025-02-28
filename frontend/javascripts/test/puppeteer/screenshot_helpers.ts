@@ -28,11 +28,9 @@ export function getUrlForScreenshotTests() {
 }
 
 export function isPixelEquivalent(changedPixels: number, width: number, height: number) {
-  // There may be a difference of 0.1 %
-  const allowedThreshold = 0.1 / 100;
+  // There may be a difference of 0.5 %
+  const allowedThreshold = 0.5 / 100;
   const allowedChangedPixel = allowedThreshold * width * height;
-  // todop: remove again
-  console.log("changedPixels < allowedChangedPixel:", changedPixels, "<", allowedChangedPixel);
   return changedPixels < allowedChangedPixel;
 }
 

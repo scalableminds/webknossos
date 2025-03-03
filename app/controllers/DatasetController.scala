@@ -132,18 +132,6 @@ class DatasetController @Inject()(userService: UserService,
       }
     }
 
-  def getLinkedMags(datasetId: ObjectId, dataLayerName: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      for {
-        _ <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- Fox.bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
-        magsAndLinkedMags <- datasetService.getPathsForDataLayer(datasetId, dataLayerName)
-        returnValues = magsAndLinkedMags.map {
-          case (mag, linkedMags) => MagLinkInfo(mag, linkedMags)
-        }
-      } yield Ok(Json.toJson(returnValues))
-    }
-
   def exploreRemoteDataset(): Action[List[WKExploreRemoteLayerParameters]] =
     sil.SecuredAction.async(validateJson[List[WKExploreRemoteLayerParameters]]) { implicit request =>
       for {

@@ -501,8 +501,10 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
     for {
       params <- paramBox.toFox
       _ <- bool2Fox(params.newSkeletonTracingId.isDefined || params.newVolumeTracingId.isDefined) ?~> "task.create.needsEitherSkeletonOrVolume"
-      _ <- Fox.runOptional(params.newSkeletonTracingId)(_ => skeletonSaveResult.toFox)
-      _ <- Fox.runOptional(params.newVolumeTracingId)(_ => volumeSaveResult.toFox)
+      _ <- Fox.runIf(params.newSkeletonTracingId.isDefined && !params.baseAnnotation.exists(_.skeletonId.isDefined))(
+        skeletonSaveResult.toFox) ?~> "task.create.saveSkeleton.failed"
+      _ <- Fox.runIf(params.newVolumeTracingId.isDefined && !params.baseAnnotation.exists(_.volumeId.isDefined))(
+        volumeSaveResult.toFox) ?~> "task.create.saveVolume.failed"
       project <- projectDAO.findOneByNameAndOrganization(params.projectName, requestingUser._organization) ?~> "project.notFound"
       _ <- Fox.runOptional(params.scriptId)(scriptDAO.findOne) ?~> "script.notFound"
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, project._team))

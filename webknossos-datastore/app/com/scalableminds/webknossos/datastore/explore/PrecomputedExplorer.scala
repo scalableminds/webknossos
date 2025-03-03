@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.explore
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -19,7 +20,8 @@ import scala.concurrent.ExecutionContext
 class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer {
   override def name: String = "Neuroglancer Precomputed"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(PrecomputedLayer, VoxelSize)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String])(
+      implicit tc: TokenContext): Fox[List[(PrecomputedLayer, VoxelSize)]] =
     for {
       infoPath <- Fox.successful(remotePath / PrecomputedHeader.FILENAME_INFO)
       precomputedHeader <- infoPath

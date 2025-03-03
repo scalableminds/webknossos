@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datavault
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
@@ -16,7 +17,8 @@ import scala.jdk.CollectionConverters._
 class FileSystemDataVault extends DataVault {
 
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] =
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] =
     for {
       localPath <- vaultPathToLocalPath(path)
       bytes <- readBytesLocal(localPath, range)

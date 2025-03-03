@@ -28,7 +28,8 @@ import scala.concurrent.ExecutionContext
 
 class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketProvider with ProtoGeometryImplicits {
 
-  override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
+                                                          tc: TokenContext): Fox[Array[Byte]] = {
     val bucket: BucketPosition = readInstruction.bucket
     for {
       tracingId <- Fox.successful(layer.name)
@@ -36,10 +37,9 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       remoteFallbackLayer <- layer.editableMappingService
         .remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.annotationId)
       // called here to ensure updates are applied
-      editableMappingInfo <- layer.annotationService.findEditableMappingInfo(
-        layer.annotationId,
-        tracingId,
-        Some(layer.version))(ec, layer.tokenContext)
+      editableMappingInfo <- layer.annotationService.findEditableMappingInfo(layer.annotationId,
+                                                                             tracingId,
+                                                                             Some(layer.version))(ec, tc)
       dataRequest: WebknossosDataRequest = WebknossosDataRequest(
         position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
         mag = bucket.mag,
@@ -49,17 +49,16 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
         version = None,
         additionalCoordinates = readInstruction.bucket.additionalCoordinates
       )
-      (unmappedData, indices) <- layer.editableMappingService
-        .getFallbackDataFromDatastore(remoteFallbackLayer, List(dataRequest))(ec, layer.tokenContext)
+      (unmappedData, indices) <- layer.editableMappingService.getFallbackDataFromDatastore(remoteFallbackLayer,
+                                                                                           List(dataRequest))(ec, tc)
       _ <- bool2Fox(indices.isEmpty)
       unmappedDataTyped <- layer.editableMappingService.bytesToUnsignedInt(unmappedData, layer.tracing.elementClass)
       segmentIds = layer.editableMappingService.collectSegmentIds(unmappedDataTyped)
-      relevantMapping <- layer.editableMappingService.generateCombinedMappingForSegmentIds(
-        segmentIds,
-        editableMappingInfo,
-        layer.version,
-        tracingId,
-        remoteFallbackLayer)(layer.tokenContext)
+      relevantMapping <- layer.editableMappingService.generateCombinedMappingForSegmentIds(segmentIds,
+                                                                                           editableMappingInfo,
+                                                                                           layer.version,
+                                                                                           tracingId,
+                                                                                           remoteFallbackLayer)(tc)
       mappedData: Array[Byte] <- layer.editableMappingService.mapData(unmappedDataTyped,
                                                                       relevantMapping,
                                                                       layer.elementClass)
@@ -72,7 +71,6 @@ case class EditableMappingLayer(name: String, // set to tracing id
                                 resolutions: List[Vec3Int],
                                 largestSegmentId: Option[Long],
                                 elementClass: ElementClass.Value,
-                                tokenContext: TokenContext,
                                 tracing: VolumeTracing,
                                 annotationId: String,
                                 annotationService: TSAnnotationService,
@@ -90,8 +88,6 @@ case class EditableMappingLayer(name: String, // set to tracing id
                               dataSourceId: DataSourceId,
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     new EditableMappingBucketProvider(layer = this)
-
-  override def bucketProviderCacheKey: String = s"$name-token=${tokenContext.userTokenOpt}"
 
   override def mappings: Option[Set[String]] = None
 

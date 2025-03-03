@@ -1380,6 +1380,7 @@ function FloodFillSettings() {
         style={{
           opacity: isRestrictedToBoundingBox ? 1 : 0.5,
           marginLeft: 12,
+          display: "inline-block",
         }}
         type={isRestrictedToBoundingBox ? "primary" : "default"}
         onClick={toggleRestrictFloodfillToBoundingBox}

@@ -11,6 +11,7 @@ import { getOrganization } from "admin/admin_rest_api";
 import { Result, Spin, Tag, Tooltip } from "antd";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
+import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
 import type { OxalisState } from "oxalis/store";
@@ -26,7 +27,6 @@ import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dat
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
 import MetadataTable from "./metadata_table";
-import Toast from "libs/toast";
 
 export function DetailsSidebar({
   selectedDatasets,

@@ -77,7 +77,7 @@ message SkeletonTracing {
   optional string organizationId = 13; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
   repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
   repeated AdditionalAxisProto additionalAxes = 22; // Additional axes for which this tracing is defined
-  repeated int32 treeIds = 23;
+  // TODO repeated int32 treeIds = 23;
 }
 
 message SkeletonTracingOpt {

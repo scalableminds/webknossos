@@ -559,6 +559,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       _ <- Fox.serialCombined(annotationWithTracings.getSkeletons) {
         case (skeletonTracingId, skeletonTracing)
             if allMayHaveUpdates || tracingIdsWithUpdates.contains(skeletonTracingId) =>
+          logger.info(s"FLUSH skeleton $skeletonTracingId v${skeletonTracing.version}")
           tracingDataStore.skeletons.put(skeletonTracingId, skeletonTracing.version, skeletonTracing)
         case _ => Fox.successful(())
       }

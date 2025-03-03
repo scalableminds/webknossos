@@ -257,9 +257,15 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
         runningUploadMetadataStore
           .find(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId))
-          .flatMap(alreadyUploadedAmountOfBytes =>
-            bool2Fox(alreadyUploadedAmountOfBytes.getOrElse("0").toLong + chunkSize <= maxFileSize.toLong))
-      } ?~> "dataset.upload.moreBytesThanReserved"
+          .flatMap(alreadyUploadedAmountOfBytes => {
+            if (alreadyUploadedAmountOfBytes.getOrElse("0").toLong + chunkSize > maxFileSize.toLong) {
+              cleanUpUploadedDataset(uploadDir, uploadId).flatMap(_ =>
+                Fox.failure("dataset.upload.moreBytesThanReserved"))
+            } else {
+              Fox.successful(())
+            }
+          })
+      }
       _ <- Fox.runIf(!isFileKnown) {
         runningUploadMetadataStore
           .insertIntoSet(redisKeyForFileNameSet(uploadId), filePath)

@@ -1,4 +1,4 @@
-import { DeleteOutlined } from "@ant-design/icons";
+import { CopyOutlined, DeleteOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useStartAndPollJob } from "admin/job/job_hooks";
@@ -158,6 +158,14 @@ export default function DatasetSettingsDataTab({
   );
 }
 
+function copyDatasetIDToClipboard(datasetId: string | null | undefined) {
+  if (!datasetId) {
+    return;
+  }
+  navigator.clipboard.writeText(datasetId);
+  Toast.success("Dataset ID copied to clipboard");
+}
+
 function SimpleDatasetForm({
   dataSource,
   form,
@@ -216,6 +224,29 @@ function SimpleDatasetForm({
                     }}
                   />
                 </FormItemWithInfo>
+                <Space size="large" />
+                <Row>
+                  <span style={{ padding: "0 2px" }}>Dataset ID</span>
+                  <Tooltip title="The id used to identify the dataset. Needed for e.g. Task bulk creation.">
+                    <InfoCircleOutlined style={{ color: "gray", marginTop: -1.75 }} />
+                  </Tooltip>
+                </Row>
+                <Row>
+                  <Input
+                    value={dataset?.id}
+                    disabled
+                    style={{
+                      width: 408,
+                    }}
+                  />
+                  <span style={{ marginLeft: 16 }}>
+                    <Tooltip title="Copy dataset ID">
+                      <Button onClick={() => copyDatasetIDToClipboard(dataset?.id)}>
+                        <CopyOutlined />
+                      </Button>
+                    </Tooltip>
+                  </span>
+                </Row>
               </Col>
               <Col span={24} xl={12}>
                 <FormItemWithInfo

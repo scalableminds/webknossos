@@ -6,6 +6,12 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [25.02.1](https://github.com/scalableminds/webknossos/releases/tag/25.02.1) - 2025-02-26
+[Commits](https://github.com/scalableminds/webknossos/compare/25.02.0...25.02.1)
+
+### Postgres Evolutions:
+
+
 ## [25.02.0](https://github.com/scalableminds/webknossos/releases/tag/25.02.0) - 2025-02-17
 [Commits](https://github.com/scalableminds/webknossos/compare/25.01.0...25.02.0)
 - config options `proxy.prefix` and `proxy.routes` were renamed to `aboutPageRedirect.prefix` and `aboutPageRedirect.routes` (as we no longer proxy, but redirect). [#8344](https://github.com/scalableminds/webknossos/pull/8344)

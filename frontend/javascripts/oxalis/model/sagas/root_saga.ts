@@ -20,6 +20,7 @@ import VolumetracingSagas from "oxalis/model/sagas/volumetracing_saga";
 import { all, call, cancel, fork, put, take, takeEvery } from "typed-redux-saga";
 import type { EscalateErrorAction } from "../actions/actions";
 import { setIsWkReadyAction } from "../actions/ui_actions";
+import bentSurfaceSaga from "./bent_surface_saga";
 import { warnIfEmailIsUnverified } from "./user_saga";
 
 let rootSagaCrashed = false;
@@ -69,6 +70,7 @@ function* restartableSaga(): Saga<void> {
       call(listenToErrorEscalation),
       call(handleAdditionalCoordinateUpdate),
       ...DatasetSagas.map((saga) => call(saga)),
+      call(bentSurfaceSaga),
     ]);
   } catch (err) {
     rootSagaCrashed = true;

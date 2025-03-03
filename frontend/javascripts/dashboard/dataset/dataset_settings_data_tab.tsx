@@ -158,12 +158,12 @@ export default function DatasetSettingsDataTab({
   );
 }
 
-function copyDatasetIDToClipboard(datasetId: string | null | undefined) {
+function copyDatasetID(datasetId: string | null | undefined) {
   if (!datasetId) {
     return;
   }
   navigator.clipboard.writeText(datasetId);
-  Toast.success("Dataset ID copied to clipboard");
+  Toast.success("Dataset ID copied.");
 }
 
 function SimpleDatasetForm({
@@ -241,7 +241,7 @@ function SimpleDatasetForm({
                   />
                   <span style={{ marginLeft: 16 }}>
                     <Tooltip title="Copy dataset ID">
-                      <Button onClick={() => copyDatasetIDToClipboard(dataset?.id)}>
+                      <Button onClick={() => copyDatasetID(dataset?.id)}>
                         <CopyOutlined />
                       </Button>
                     </Tooltip>

@@ -55,6 +55,7 @@ trait AnnotationReversion {
                                           sourceVersion,
                                           newVersion,
                                           tracingId)) ?~> "revert.editableMappingData.failed"
+            // TODO trees
           } yield ()
       }
     } yield ()

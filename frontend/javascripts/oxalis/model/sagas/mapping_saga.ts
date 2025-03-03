@@ -225,7 +225,7 @@ function createBucketRetrievalSourceChannel(layerName: string) {
   }, buffers.sliding<BucketRetrievalSource>(1));
 }
 
-function* watchChangedBucketsForLayer(layerName: string): Saga<void> {
+function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
   const dataCube = yield* call([Model, Model.getCubeByLayerName], layerName);
   const bucketChannel = yield* call(createBucketDataChangedChannel, dataCube);
 

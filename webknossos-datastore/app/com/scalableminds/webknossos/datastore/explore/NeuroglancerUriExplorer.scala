@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.explore
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
@@ -18,8 +19,8 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
     with ExploreLayerUtils {
   override def name: String = "Neuroglancer URI Explorer"
 
-  override def explore(remotePath: VaultPath,
-                       credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String])(
+      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       _ <- Fox.successful(())
       uriFragment <- tryo(remotePath.toUri.getFragment.drop(1)) ?~> "URI has no matching fragment part"
@@ -32,7 +33,8 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
       renamedLayers = makeLayerNamesUnique(layers.map(_._1))
     } yield renamedLayers.zip(layers.map(_._2))
 
-  private def exploreNeuroglancerLayer(layerSpec: JsValue): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+  private def exploreNeuroglancerLayer(layerSpec: JsValue)(
+      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       _ <- Fox.successful(())
       obj <- layerSpec.validate[JsObject].toFox
@@ -47,9 +49,8 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
       layerWithViewConfiguration <- assignViewConfiguration(layer, viewConfiguration)
     } yield layerWithViewConfiguration
 
-  private def exploreLayer(layerType: String,
-                           remotePath: VaultPath,
-                           name: String): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+  private def exploreLayer(layerType: String, remotePath: VaultPath, name: String)(
+      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     layerType match {
       case "n5" =>
         Fox.firstSuccess(

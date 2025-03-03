@@ -57,7 +57,7 @@ class DSRemoteWebknossosClient @Inject()(
     rpc: RPC,
     config: DataStoreConfig,
     val lifecycle: ApplicationLifecycle,
-    @Named("webknossos-datastore") val system: ActorSystem
+    @Named("webknossos-datastore") val actorSystem: ActorSystem
 )(implicit val ec: ExecutionContext)
     extends RemoteWebknossosClient
     with IntervalScheduler
@@ -73,7 +73,7 @@ class DSRemoteWebknossosClient @Inject()(
 
   protected lazy val tickerInterval: FiniteDuration = config.Datastore.WebKnossos.pingInterval
 
-  def tick(): Unit = reportStatus()
+  def tick(): Fox[Unit] = reportStatus().map(_ => ())
 
   private def reportStatus(): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/status")

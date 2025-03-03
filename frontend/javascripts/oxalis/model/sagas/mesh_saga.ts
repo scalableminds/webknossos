@@ -1199,7 +1199,7 @@ function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<v
   segmentMeshController.setMeshVisibility(id, visibility, layerName, additionalCoordinates);
 }
 
-export function* handleAdditionalCoordinateUpdate(): Saga<void> {
+export function* handleAdditionalCoordinateUpdate(): Saga<never> {
   // We want to prevent iterating through all additional coordinates to adjust the mesh visibility, so we store the
   // previous additional coordinates in this method. Thus we have to catch SET_ADDITIONAL_COORDINATES actions in a
   // while-true loop and register this saga in the root saga instead of calling from the mesh saga.
@@ -1212,11 +1212,13 @@ export function* handleAdditionalCoordinateUpdate(): Saga<void> {
     const action = (yield* take(["SET_ADDITIONAL_COORDINATES"]) as any) as FlycamAction;
     // Satisfy TS
     if (action.type !== "SET_ADDITIONAL_COORDINATES") {
-      throw new Error("Unexpected action type");
+      // Don't throw as this would interfere with the never return type
+      console.error("Unexpected action.type. Ignoring SET_ADDITIONAL_COORDINATES action...");
+      continue;
     }
     const meshRecords = segmentMeshController.meshesGroupsPerSegmentId;
 
-    if (action.values == null || action.values.length === 0) break;
+    if (action.values == null || action.values.length === 0) continue;
     const newAdditionalCoordKey = getAdditionalCoordinatesAsString(action.values);
 
     for (const additionalCoordinates of [action.values, previousAdditionalCoordinates]) {

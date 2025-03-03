@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datavault
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{box2Fox, future2Fox}
@@ -12,22 +13,27 @@ import com.scalableminds.webknossos.datastore.storage.{
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.lang3.builder.HashCodeBuilder
 import play.api.http.Status
-import play.api.libs.ws.{WSAuthScheme, WSClient, WSResponse}
+import play.api.libs.ws.{WSAuthScheme, WSClient, WSRequest, WSResponse}
 
 import java.net.URI
 import scala.concurrent.duration.DurationInt
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
-class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) extends DataVault with LazyLogging {
+class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, dataStoreHost: String)
+    extends DataVault
+    with LazyLogging {
 
   private val readTimeout = 10 minutes
 
   // This will be set after the first completed range request by looking at the response headers of a HEAD request and the response headers of a GET request
   private var supportsRangeRequests: Option[Boolean] = None
 
+  private lazy val dataStoreAuthority = new URI(dataStoreHost).getAuthority
+
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] = {
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] = {
     val uri = path.toUri
     for {
       response <- range match {
@@ -61,21 +67,23 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) exte
       }
     )
 
-  private def getWithRange(uri: URI, range: NumericRange[Long])(implicit ec: ExecutionContext): Fox[WSResponse] =
+  private def getWithRange(uri: URI, range: NumericRange[Long])(implicit ec: ExecutionContext,
+                                                                tc: TokenContext): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
       response <- buildRequest(uri).withHttpHeaders("Range" -> s"bytes=${range.start}-${range.end - 1}").get().toFox
       _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 
-  private def getWithSuffixRange(uri: URI, length: Long)(implicit ec: ExecutionContext): Fox[WSResponse] =
+  private def getWithSuffixRange(uri: URI, length: Long)(implicit ec: ExecutionContext,
+                                                         tc: TokenContext): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
       response <- buildRequest(uri).withHttpHeaders("Range" -> s"bytes=-$length").get().toFox
       _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 
-  private def getComplete(uri: URI)(implicit ec: ExecutionContext): Fox[WSResponse] =
+  private def getComplete(uri: URI)(implicit ec: ExecutionContext, tc: TokenContext): Fox[WSResponse] =
     buildRequest(uri).get().toFox
 
   private def ensureRangeRequestsSupported(uri: URI)(implicit ec: ExecutionContext): Fox[Unit] =
@@ -103,13 +111,20 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) exte
       supportsRangeRequests = Some(response.header("Content-Range").isDefined)
     }
 
-  private def buildRequest(uri: URI) = {
+  private def buildRequest(uri: URI)(implicit tc: TokenContext): WSRequest = {
     val request = ws.url(uri.toString).withRequestTimeout(readTimeout)
-    getBasicAuthCredential match {
-      case Some(credential) =>
-        request.withAuth(credential.username, credential.password, WSAuthScheme.BASIC)
-      case None => request
+    tc.userTokenOpt match {
+      // If a user token is present, and this request is targeted at the data store, use the user token to authenticate at the datastore
+      case Some(token) if uri.getAuthority == dataStoreAuthority =>
+        request.withHttpHeaders("X-Auth-Token" -> token)
+      case _ =>
+        getBasicAuthCredential match {
+          case Some(credential) =>
+            request.withAuth(credential.username, credential.password, WSAuthScheme.BASIC)
+          case None => request
+        }
     }
+
   }
 
   private def getBasicAuthCredential: Option[HttpBasicAuthCredential] =
@@ -133,6 +148,14 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) exte
 }
 
 object HttpsDataVault {
-  def create(remoteSourceDescriptor: RemoteSourceDescriptor, ws: WSClient): HttpsDataVault =
-    new HttpsDataVault(remoteSourceDescriptor.credential, ws)
+
+  /**
+    * Factory method to create a new HttpsDataVault instance.
+    * @param remoteSourceDescriptor
+    * @param ws
+    * @param dataStoreHost The host of the local data store that this vault is accessing. This is used to determine if a user token should be applied in requests.
+    * @return
+    */
+  def create(remoteSourceDescriptor: RemoteSourceDescriptor, ws: WSClient, dataStoreHost: String): HttpsDataVault =
+    new HttpsDataVault(remoteSourceDescriptor.credential, ws, dataStoreHost)
 }

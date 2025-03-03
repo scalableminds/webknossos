@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datavault
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{box2Fox, future2Fox}
 import com.scalableminds.webknossos.datastore.storage.{
@@ -102,7 +103,8 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
     }
 
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] =
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] =
     for {
       objectKey <- Fox.box2Fox(S3DataVault.objectKeyFromUri(path.toUri))
       request = range match {

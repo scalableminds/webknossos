@@ -33,14 +33,14 @@ class DataSourceService @Inject()(
     remoteSourceDescriptorService: RemoteSourceDescriptorService,
     remoteWebknossosClient: DSRemoteWebknossosClient,
     val lifecycle: ApplicationLifecycle,
-    @Named("webknossos-datastore") val system: ActorSystem
+    @Named("webknossos-datastore") val actorSystem: ActorSystem
 )(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with LazyLogging
     with FoxImplicits
     with Formatter {
 
-  override protected def enabled: Boolean = config.Datastore.WatchFileSystem.enabled
+  override protected def tickerEnabled: Boolean = config.Datastore.WatchFileSystem.enabled
   override protected def tickerInterval: FiniteDuration = config.Datastore.WatchFileSystem.interval
 
   override protected def tickerInitialDelay: FiniteDuration = config.Datastore.WatchFileSystem.initialDelay
@@ -52,11 +52,12 @@ class DataSourceService @Inject()(
 
   private var inboxCheckVerboseCounter = 0
 
-  def tick(): Unit = {
-    checkInbox(verbose = inboxCheckVerboseCounter == 0)
-    inboxCheckVerboseCounter += 1
-    if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0
-  }
+  def tick(): Fox[Unit] =
+    for {
+      _ <- checkInbox(verbose = inboxCheckVerboseCounter == 0)
+      _ = inboxCheckVerboseCounter += 1
+      _ = if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0
+    } yield ()
 
   def assertDataDirWritable(organizationId: String): Fox[Unit] = {
     val orgaPath = dataBaseDir.resolve(organizationId)

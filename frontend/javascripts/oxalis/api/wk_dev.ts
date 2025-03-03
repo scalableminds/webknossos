@@ -22,6 +22,9 @@ export const WkDevFlags = {
     // For enforcing fallback rendering. enforcedZoomDiff == 2, means
     // that buckets of currentZoomStep + 2 are rendered.
     enforcedZoomDiff: undefined,
+    // This variable is only respected during shader compilation. Therefore,
+    // it needs to be set to true before the rendering is initialized.
+    disableLayerNameSanitization: false,
   },
   meshing: {
     marchingCubeSizeInTargetMag: [64, 64, 64] as Vector3,

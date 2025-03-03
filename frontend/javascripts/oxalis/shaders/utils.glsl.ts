@@ -293,15 +293,6 @@ export const isNan: ShaderModule = {
     }
   `,
 };
-export const vec4ToFloat: ShaderModule = {
-  code: `
-    // Be careful! Floats higher than 2**24 cannot be expressed precisely.
-    float vec4ToFloat(vec4 v) {
-      v *= 255.0;
-      return v.r + v.g * pow(2.0, 8.0) + v.b * pow(2.0, 16.0) + v.a * pow(2.0, 24.0);
-    }
-  `,
-};
 export const transDim: ShaderModule = {
   code: `
     // Similar to the transDim function in dimensions.js, this function transposes dimensions for the current plane.
@@ -380,19 +371,21 @@ export const scaleToFloat: ShaderModule = {
       return float(offset) / float(range);
     }
 
-    float scaleFloatToFloat(float x, float a, float b) {
+    vec3 scaleFloatToFloat(vec3 x, float a, float b) {
       if (a == b) {
-        return 0.0;
+        return vec3(0.0);
       }
 
       if (b - a < pow(2., 126.)) {
+        // "Small" intervals can be used for scaling without
+        // any special care.
         return (x - a) / (b - a);
       } else {
-        // For large intervals, floating point precision can collaps
+        // For large intervals, floating point precision can collapse
         // to 0. Therefore, we make all values a bit smaller before
         // doing further arithmetics.
         float mul = 0.25;
-        float nom = mul * x - mul * a;
+        vec3 nom = mul * x - mul * a;
         float denom = mul * b - mul * a;
         return nom / denom;
       }

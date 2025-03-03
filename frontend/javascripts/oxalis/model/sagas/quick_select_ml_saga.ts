@@ -130,7 +130,10 @@ function* getMask(
   ];
 }
 
-function* showApproximatelyProgress(amount: number, expectedDurationPerItemMs: number) {
+function* showApproximatelyProgress(
+  amount: number,
+  expectedDurationPerItemMs: number,
+): Saga<never> {
   // The progress bar is split into amount + 1 chunks. The first amount
   // chunks are filled after expectedDurationPerItemMs passed.
   // Afterwards, only one chunk is missing. With each additional iteration,

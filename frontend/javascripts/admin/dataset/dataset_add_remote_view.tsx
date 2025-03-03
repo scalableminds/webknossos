@@ -40,6 +40,7 @@ import { useHistory } from "react-router-dom";
 import type { APIDataStore, APIUser } from "types/api_flow_types";
 import type { ArbitraryObject } from "types/globals";
 import type { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
+import { dataPrivacyInfo } from "./dataset_upload_view";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
@@ -312,7 +313,10 @@ function DatasetAddRemoteView(props: Props) {
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
       {showLoadingOverlay ? <BrainSpinner /> : null}
-      <CardContainer title="Add Remote Zarr / Neuroglancer Precomputed / N5 Dataset">
+      <CardContainer
+        title="Add Remote Zarr / Neuroglancer Precomputed / N5 Dataset"
+        subtitle={dataPrivacyInfo}
+      >
         <Form form={form} layout="vertical">
           <DatastoreFormItem datastores={uploadableDatastores} hidden={hasOnlyOneDatastoreOrNone} />
           <Modal

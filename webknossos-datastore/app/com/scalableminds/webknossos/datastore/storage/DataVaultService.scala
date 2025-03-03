@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.storage
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.datavault.{
   DataVault,
   FileSystemDataVault,
@@ -28,7 +29,7 @@ object DataVaultService {
     List(schemeS3, schemeHttps, schemeHttp, schemeGS).contains(uriScheme)
 }
 
-class DataVaultService @Inject()(ws: WSClient) extends LazyLogging {
+class DataVaultService @Inject()(ws: WSClient, config: DataStoreConfig) extends LazyLogging {
 
   private val vaultCache: AlfuCache[RemoteSourceDescriptor, DataVault] =
     AlfuCache(maxCapacity = 100)
@@ -49,7 +50,7 @@ class DataVaultService @Inject()(ws: WSClient) extends LazyLogging {
       } else if (scheme == DataVaultService.schemeS3) {
         S3DataVault.create(remoteSource, ws)
       } else if (scheme == DataVaultService.schemeHttps || scheme == DataVaultService.schemeHttp) {
-        HttpsDataVault.create(remoteSource, ws)
+        HttpsDataVault.create(remoteSource, ws, config.Http.uri)
       } else if (scheme == DataVaultService.schemeFile) {
         FileSystemDataVault.create
       } else {

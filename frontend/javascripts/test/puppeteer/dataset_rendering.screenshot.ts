@@ -1,4 +1,3 @@
-import urljoin from "url-join";
 import "test/mocks/lz4";
 import type { PartialDatasetConfiguration } from "oxalis/store";
 import {
@@ -18,7 +17,8 @@ import {
   setupBeforeEachAndAfterEach,
   withRetry,
   WK_AUTH_TOKEN,
-  getDefaultRequestOptions,
+  writeDatasetNameToIdMapping,
+  assertDatasetIds,
 } from "./dataset_rendering_helpers";
 
 if (!WK_AUTH_TOKEN) {
@@ -41,7 +41,6 @@ const datasetNames = [
   "2017-05-31_mSEM_aniso-test",
   "dsA_2",
   "2017-05-31_mSEM_scMS109_bk_100um_v01-aniso",
-  "ROI2017_wkw_fallback",
   "float_test_dataset",
   "Multi-Channel-Test",
   "connectome_file_test_dataset",
@@ -51,13 +50,13 @@ const datasetNames = [
 type DatasetName = string;
 type FallbackLayerName = string | null;
 const annotationSpecs: Array<[DatasetName, FallbackLayerName]> = [
-  ["ROI2017_wkw_fallback", "segmentation"],
-  ["ROI2017_wkw_fallback", null],
+  ["ROI2017_wkw", "segmentation"],
+  ["ROI2017_wkw", null],
 ];
 
 const viewOverrides: Record<string, string> = {
   "2017-05-31_mSEM_scMS109_bk_100um_v01-aniso": "4608,4543,386,0,4.00",
-  ROI2017_wkw_fallback: "535,536,600,0,1.18",
+  ROI2017_wkw: "535,536,600,0,1.18",
   dsA_2: "1024,1024,64,0,0.424",
   "Multi-Channel-Test": "1201,1072,7,0,0.683",
   "test-agglomerate-file":
@@ -69,7 +68,7 @@ const viewOverrides: Record<string, string> = {
   kiwi: "1191,1112,21,0,8.746",
 };
 const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
-  ROI2017_wkw_fallback: {
+  ROI2017_wkw: {
     layers: {
       color: {
         alpha: 100,
@@ -98,26 +97,15 @@ const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
 
 const datasetNameToId: Record<string, string> = {};
 test.before("Retrieve dataset ids", async () => {
-  for (const datasetName of datasetNames.concat(["test-agglomerate-file"])) {
-    await withRetry(
-      3,
-      async () => {
-        const options = getDefaultRequestOptions(URL);
-        const path = `/api/datasets/disambiguate/sample_organization/${datasetName}/toId`;
-        const url = urljoin(URL, path);
-        const response = await fetch(url, options);
-        const { id } = await response.json();
-        datasetNameToId[datasetName] = id;
-        return true;
-      },
-      () => {},
-    );
-  }
+  await writeDatasetNameToIdMapping(
+    URL,
+    datasetNames.concat(["test-agglomerate-file"]),
+    datasetNameToId,
+  );
 });
+
 test.serial("Dataset IDs were retrieved successfully", (t) => {
-  for (const datasetName of datasetNames) {
-    t.truthy(datasetNameToId[datasetName], `Dataset ID not found for "${datasetName}"`);
-  }
+  assertDatasetIds(t, datasetNames, datasetNameToId);
 });
 
 datasetNames.map(async (datasetName) => {

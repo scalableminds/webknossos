@@ -4,7 +4,7 @@ import urljoin from "url-join";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import type { Browser, Page } from "puppeteer-core";
 import puppeteer from "puppeteer-core";
-import anyTest, { type TestFn } from "ava";
+import anyTest, { type ExecutionContext, type TestFn } from "ava";
 import type { PartialDatasetConfiguration } from "oxalis/store";
 import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
@@ -20,7 +20,6 @@ export const { WK_AUTH_TOKEN } = process.env;
 const PAGE_WIDTH = 1920;
 const PAGE_HEIGHT = 1080;
 
-// todop: change to false before merging
 const USE_LOCAL_CHROME = false;
 // Only relevant when USE_LOCAL_CHROME. Set to false to actually see the browser open.
 const HEADLESS = true;
@@ -42,6 +41,38 @@ export function getDefaultRequestOptions(baseUrl: string): RequestOptions {
       "X-Auth-Token": WK_AUTH_TOKEN,
     },
   };
+}
+
+export async function writeDatasetNameToIdMapping(
+  baseUrl: string,
+  datasetNames: string[],
+  datasetNameToId: Record<string, string>,
+) {
+  for (const datasetName of datasetNames) {
+    await withRetry(
+      3,
+      async () => {
+        const options = getDefaultRequestOptions(baseUrl);
+        const path = `/api/datasets/disambiguate/sample_organization/${datasetName}/toId`;
+        const url = urljoin(baseUrl, path);
+        const response = await fetch(url, options);
+        const { id } = await response.json();
+        datasetNameToId[datasetName] = id;
+        return true;
+      },
+      () => {},
+    );
+  }
+}
+
+export function assertDatasetIds(
+  t: ExecutionContext<{ browser: Browser; release?: () => void }>,
+  datasetNames: string[],
+  datasetNameToId: Record<string, string>,
+) {
+  for (const datasetName of datasetNames) {
+    t.truthy(datasetNameToId[datasetName], `Dataset ID not found for "${datasetName}"`);
+  }
 }
 
 export async function createAnnotationForDatasetScreenshot(baseUrl: string, datasetId: string) {

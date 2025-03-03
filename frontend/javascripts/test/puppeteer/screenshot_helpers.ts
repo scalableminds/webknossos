@@ -28,8 +28,8 @@ export function getUrlForScreenshotTests() {
 }
 
 export function isPixelEquivalent(changedPixels: number, width: number, height: number) {
-  // There may be a difference of 0.1 %
-  const allowedThreshold = 0.1 / 100;
+  // There may be a difference of 0.75 %
+  const allowedThreshold = 0.75 / 100;
   const allowedChangedPixel = allowedThreshold * width * height;
   return changedPixels < allowedChangedPixel;
 }

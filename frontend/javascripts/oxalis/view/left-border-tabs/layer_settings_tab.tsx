@@ -130,6 +130,7 @@ import {
   defaultDatasetViewConfigurationWithoutNull,
   getDefaultLayerViewConfiguration,
 } from "types/schemas/dataset_view_configuration.schema";
+import { getSpecificDefaultsForLayer } from "types/schemas/dataset_view_configuration_defaults";
 import { userSettings } from "types/schemas/user_settings.schema";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
 import Histogram, { isHistogramSupported } from "./histogram_view";
@@ -591,7 +592,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     return (
       <Histogram
-        supportFractionals={elementClass === "float" || elementClass === "double"}
+        supportFractions={elementClass === "float" || elementClass === "double"}
         data={histograms}
         intensityRangeMin={intensityRange[0]}
         intensityRangeMax={intensityRange[1]}
@@ -1012,8 +1013,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         "Opacity"
       );
 
-    const defaultLayerViewConfig = getDefaultLayerViewConfiguration();
     const isHistogramAvailable = isHistogramSupported(elementClass) && isColorLayer;
+    const layerSpecificDefaults = getSpecificDefaultsForLayer(
+      this.props.dataset,
+      layerName,
+      isColorLayer,
+    );
 
     return (
       <div key={layerName} style={style} ref={setNodeRef}>
@@ -1040,7 +1045,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               max={100}
               value={layerConfiguration.alpha}
               onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
-              defaultValue={defaultLayerViewConfig.alpha}
+              defaultValue={layerSpecificDefaults.alpha}
             />
             {isColorLayer
               ? this.getColorLayerSpecificSettings(layerConfiguration, layerName)

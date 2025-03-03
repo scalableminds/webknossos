@@ -221,6 +221,9 @@ void main() {
     uint <%= segmentationName %>_unmapped_id_high = 0u;
     float <%= segmentationName %>_effective_alpha = <%= segmentationName %>_alpha * (1. - <%= segmentationName %>_unrenderable);
 
+    // If the opacity is > 0, the segment id for the current voxel is read.
+    // Since a segmentation might be mapped, the unmapped and (potentially mapped) id
+    // is read.
     if (<%= segmentationName %>_effective_alpha > 0.) {
       vec4[2] unmapped_segment_id;
       vec4[2] segment_id;
@@ -233,26 +236,17 @@ void main() {
             : textureLayerInfos[segmentationName].isSigned ? "int32ToUint64" : "uint32ToUint64"
       %>
 
-      {
-        highp uint hpv_low;
-        highp uint hpv_high;
+      // Temporary vars to which vec4ToSomeIntFn will write
+      highp uint hpv_low;
+      highp uint hpv_high;
 
-        <%= vec4ToSomeIntFn %>(unmapped_segment_id[1], unmapped_segment_id[0], hpv_low, hpv_high);
+      <%= vec4ToSomeIntFn %>(unmapped_segment_id[1], unmapped_segment_id[0], hpv_low, hpv_high);
+      <%= segmentationName %>_unmapped_id_low = uint(hpv_low);
+      <%= segmentationName %>_unmapped_id_high = uint(hpv_high);
 
-        <%= segmentationName %>_unmapped_id_low = uint(hpv_low);
-        <%= segmentationName %>_unmapped_id_high = uint(hpv_high);
-      }
-
-      {
-        highp uint hpv_low;
-        highp uint hpv_high;
-
-        <%= vec4ToSomeIntFn %>(segment_id[1], segment_id[0], hpv_low, hpv_high);
-
-        <%= segmentationName %>_id_low = uint(hpv_low);
-        <%= segmentationName %>_id_high = uint(hpv_high);
-      }
-
+      <%= vec4ToSomeIntFn %>(segment_id[1], segment_id[0], hpv_low, hpv_high);
+      <%= segmentationName %>_id_low = uint(hpv_low);
+      <%= segmentationName %>_id_high = uint(hpv_high);
     }
 
   <% }) %>
@@ -288,20 +282,21 @@ void main() {
         // color_value is usually between 0 and 1.
         color_value = maybe_filtered_color.color.rgb;
 
-        <% if (textureLayerInfos[name].packingDegree === 1.0) { %>
+        <% const elementClass = textureLayerInfos[name].elementClass %>
+        <% if (elementClass.endsWith("int32")) { %>
           // Handle 32-bit color layers
 
-          <% if (textureLayerInfos[name].elementClass === "int32") { %>
+          <% if (elementClass === "int32") { %>
             ivec4 four_bytes = ivec4(255. * maybe_filtered_color.color);
             // Combine bytes into an Int32 (assuming little-endian order)
             highp int hpv = four_bytes.r | (four_bytes.g << 8) | (four_bytes.b << 16) | (four_bytes.a << 24);
 
-            int typed_min = <%= name %>_min;
-            int typed_max = <%= name %>_max;
-            hpv = clamp(hpv, typed_min, typed_max);
+            int min = <%= name %>_min;
+            int max = <%= name %>_max;
+            hpv = clamp(hpv, min, max);
 
             color_value = vec3(
-                scaleIntToFloat(hpv, typed_min, typed_max)
+                scaleIntToFloat(hpv, min, max)
             );
           <% } else { %>
             // Scale from [0,1] to [0,255] so that we can convert to an uint
@@ -313,20 +308,26 @@ void main() {
               + uint(four_bytes.g) * 256u
               + uint(four_bytes.r);
 
-            uint typed_min = <%= name %>_min;
-            uint typed_max = <%= name %>_max;
-            hpv = clamp(hpv, typed_min, typed_max);
+            uint min = <%= name %>_min;
+            uint max = <%= name %>_max;
+            hpv = clamp(hpv, min, max);
             color_value = vec3(
-              float(hpv - typed_min) / (float(typed_max - typed_min) + is_max_and_min_equal)
+              float(hpv - min) / (float(max - min) + is_max_and_min_equal)
             );
           <% } %>
 
         <% } else { %>
+          <% if (elementClass == "uint24") { %>
+            color_value *= 255.;
+          <% } else { %>
+            color_value = vec3(color_value.x);
+          <% } %>
+
           // Keep the color in bounds of min and max
           color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
           // Scale the color value according to the histogram settings.
           color_value = vec3(
-            scaleFloatToFloat(color_value.x, <%= name %>_min, <%= name %>_max)
+            scaleFloatToFloat(color_value, <%= name %>_min, <%= name %>_max)
           );
         <% } %>
 

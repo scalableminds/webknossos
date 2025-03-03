@@ -21,7 +21,7 @@ type OwnProps = {
   max?: number;
   isInEditMode: boolean;
   defaultMinMax: Vector2;
-  supportFractionals: boolean;
+  supportFractions: boolean;
   reloadHistogram: () => void;
 };
 type HistogramProps = OwnProps & {
@@ -275,7 +275,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     const minMaxInputStyle = {
       width: "100%",
     };
-    const maybeCeilFn = this.props.supportFractionals ? (val: number) => val : Math.ceil;
+    const maybeCeilFn = this.props.supportFractions ? (val: number) => val : Math.ceil;
     return (
       <Spin spinning={data === undefined}>
         <canvas ref={this.onCanvasRefChange} width={canvasWidth} height={canvasHeight} />

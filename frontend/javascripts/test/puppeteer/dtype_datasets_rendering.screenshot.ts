@@ -1,15 +1,15 @@
 import type { DatasetLayerConfiguration, PartialDatasetConfiguration } from "oxalis/store";
 import "test/mocks/lz4";
-import urljoin from "url-join";
 import {
+  assertDatasetIds,
   createAnnotationForDatasetScreenshot,
-  getDefaultRequestOptions,
   getNewPage,
   screenshotDataset,
   screenshotTracingView,
   setupBeforeEachAndAfterEach,
   test,
   withRetry,
+  writeDatasetNameToIdMapping,
 } from "./dataset_rendering_helpers";
 import {
   compareScreenshot,
@@ -188,26 +188,10 @@ const datasetNames = _.uniq(specs.map((spec) => spec.datasetName));
 
 const datasetNameToId: Record<string, string> = {};
 test.before("Retrieve dataset ids", async () => {
-  for (const datasetName of datasetNames) {
-    await withRetry(
-      1,
-      async () => {
-        const options = getDefaultRequestOptions(URL);
-        const path = `/api/datasets/disambiguate/sample_organization/${datasetName}/toId`;
-        const url = urljoin(URL, path);
-        const response = await fetch(url, options);
-        const { id } = await response.json();
-        datasetNameToId[datasetName] = id;
-        return true;
-      },
-      () => {},
-    );
-  }
+  await writeDatasetNameToIdMapping(URL, datasetNames, datasetNameToId);
 });
 test.serial("Dataset IDs were retrieved successfully", (t) => {
-  for (const datasetName of datasetNames) {
-    t.truthy(datasetNameToId[datasetName], `Dataset ID not found for "${datasetName}"`);
-  }
+  assertDatasetIds(t, datasetNames, datasetNameToId);
 });
 
 datasetNames.map(async (datasetName) => {

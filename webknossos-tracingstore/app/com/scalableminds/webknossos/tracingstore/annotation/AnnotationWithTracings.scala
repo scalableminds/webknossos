@@ -45,7 +45,7 @@ case class AnnotationWithTracings(
       case _                                           => None
     }.toList
 
-  def getUpatedTreeIdsForSkeleton(tracingId: String): Box[Set[Int]] =
+  def getUpatedTreeBodyIdsForSkeleton(tracingId: String): Box[Set[Int]] =
     for {
       tracingEither <- tracingsById.get(tracingId)
       updatedTreeIds <- tracingEither match {
@@ -153,7 +153,7 @@ case class AnnotationWithTracings(
   def applySkeletonAction(a: SkeletonUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
       skeletonTracing <- getSkeleton(a.actionTracingId)
-      previousUpdatedTreeids <- getUpatedTreeIdsForSkeleton(a.actionTracingId)
+      previousUpdatedTreeids <- getUpatedTreeBodyIdsForSkeleton(a.actionTracingId)
       updated = a.applyOn(skeletonTracing)
       newUpdatedTreeIds = previousUpdatedTreeids.concat(a.updatedTreeBodyIds)
     } yield this.copy(tracingsById = tracingsById.updated(a.actionTracingId, Left((updated, newUpdatedTreeIds))))

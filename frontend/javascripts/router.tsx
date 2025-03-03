@@ -10,7 +10,6 @@ import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
 import LoginView from "admin/auth/login_view";
 import RegistrationView from "admin/auth/registration_view";
 import StartResetPasswordView from "admin/auth/start_reset_password_view";
-import DatasetAddView from "admin/dataset/dataset_add_view";
 import JobListView from "admin/job/job_list_view";
 import Onboarding from "admin/onboarding";
 import OrganizationEditView from "admin/organization/organization_edit_view";
@@ -33,7 +32,6 @@ import DisableGenericDnd from "components/disable_generic_dnd";
 import { Imprint, Privacy } from "components/legal";
 import AsyncRedirect from "components/redirect";
 import SecuredRoute from "components/secured_route";
-import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
 import PublicationDetailView from "dashboard/publication_details_view";
 import features from "features";
@@ -46,7 +44,6 @@ import Navbar from "navbar";
 import { ControlModeEnum } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 import HelpButton from "oxalis/view/help_modal";
-import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import React from "react";
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
@@ -81,6 +78,15 @@ const AsyncWorkflowView = loadable<EmptyObject>(() => import("admin/voxelytics/w
 const AsyncWorkflowListView = loadable<EmptyObject>(
   () => import("admin/voxelytics/workflow_list_view"),
 );
+const TracingLayoutView = loadable<any>(() => import("oxalis/view/layouting/tracing_layout_view"));
+const urlTokenToTabKeyMap = {
+  publications: "publications",
+  datasets: "datasets",
+  tasks: "tasks",
+  annotations: "explorativeAnnotations",
+};
+const DashboardView = loadable<any>(() => import("dashboard/dashboard_view"));
+const DatasetAddView = loadable<any>(() => import("admin/dataset/dataset_add_view"));
 
 type StateProps = {
   activeUser: APIUser | null | undefined;

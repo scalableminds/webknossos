@@ -1,14 +1,9 @@
 import logging
 from utils import setup_logging, log_since
 import argparse
-from connections import connect_to_fossildb, connect_to_postgres, assert_grpc_success
-import psycopg2
-import psycopg2.extras
+from connections import connect_to_fossildb, assert_grpc_success
 import time
 import fossildbapi_pb2 as proto
-import VolumeTracing_pb2 as Volume
-from typing import Optional
-import msgspec
 
 logger = logging.getLogger(__name__)
 

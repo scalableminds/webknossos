@@ -306,12 +306,13 @@ function JobListView() {
       return (
         <AsyncLink
           href="#"
+          title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful."
           onClick={async () => {
             resumeJob(job.id).then(() => fetchData());
           }}
           icon={<PlayCircleOutlined className="icon-margin-right" />}
         >
-          Resume
+          Retry
         </AsyncLink>
       );
     } else if (

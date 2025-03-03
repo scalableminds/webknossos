@@ -8,7 +8,12 @@ import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
-import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, KeyValueStoreImplicits, RemoteFallbackLayer}
+import com.scalableminds.webknossos.tracingstore.tracings.{
+  FossilDBClient,
+  KeyValueStoreImplicits,
+  RemoteFallbackLayer,
+  TemporaryTracingService
+}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable
@@ -34,7 +39,9 @@ class VolumeSegmentIndexBuffer(tracingId: String,
                                remoteDatastoreClient: TSRemoteDatastoreClient,
                                fallbackLayer: Option[RemoteFallbackLayer],
                                additionalAxes: Option[Seq[AdditionalAxis]],
-                               tc: TokenContext)
+                               temporaryTracingService: TemporaryTracingService,
+                               tc: TokenContext,
+                               toTemporaryStore: Boolean = false)
     extends KeyValueStoreImplicits
     with SegmentIndexKeyHelper
     with ProtoGeometryImplicits
@@ -68,11 +75,15 @@ class VolumeSegmentIndexBuffer(tracingId: String,
   }
 
   def flush()(implicit ec: ExecutionContext): Fox[Unit] =
-    for {
-      _ <- Fox.serialCombined(segmentIndexBuffer.keys.toList) { key =>
-        volumeSegmentIndexClient.put(key, version, segmentIndexBuffer(key))
-      }
-    } yield ()
+    if (toTemporaryStore) {
+      temporaryTracingService.saveVolumeSegmentIndexBuffer(tracingId, segmentIndexBuffer.toMap)
+    } else {
+      for {
+        _ <- Fox.serialCombined(segmentIndexBuffer.keys.toList) { key =>
+          volumeSegmentIndexClient.put(key, version, segmentIndexBuffer(key))
+        }
+      } yield ()
+    }
 
   private def getFallback(segmentId: Long,
                           mag: Vec3Int,
@@ -144,28 +155,27 @@ class VolumeSegmentIndexBuffer(tracingId: String,
     (hits, misses)
   }
 
-  // Get a map from segment to bucket position (e.g. an index) from all sources (buffer, fossilDB, file)
-  def getSegmentToBucketIndexMap(segmentIds: List[Long],
-                                 mag: Vec3Int,
-                                 mappingName: Option[String],
-                                 editableMappingTracingId: Option[String],
-                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
+  private def getSegmentToBucketIndexMapFromPermanentStorage(segmentIds: List[Long],
+                                                             mag: Vec3Int,
+                                                             mappingName: Option[String],
+                                                             editableMappingTracingId: Option[String],
+                                                             additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
       implicit ec: ExecutionContext): Fox[List[(Long, Seq[Vec3Int])]] =
     for {
-      _ <- Fox.successful(())
-
-      (bufferHits, bufferMisses) = getSegmentsFromBufferNoteMisses(segmentIds, mag, additionalCoordinates)
       (mutableIndexHits, mutableIndexMisses) <- getSegmentsFromFossilDBNoteMisses(tracingId,
                                                                                   mag,
                                                                                   additionalCoordinates,
                                                                                   additionalAxes,
-                                                                                  bufferMisses)
-      missesSoFar = bufferMisses ++ mutableIndexMisses
+                                                                                  segmentIds)
       fileBucketPositions <- fallbackLayer match {
         case Some(layer) =>
           for {
-            fileBucketPositionsOpt <- Fox.runIf(missesSoFar.nonEmpty)(remoteDatastoreClient
-              .querySegmentIndexForMultipleSegments(layer, missesSoFar, mag, mappingName, editableMappingTracingId)(tc))
+            fileBucketPositionsOpt <- Fox.runIf(mutableIndexMisses.nonEmpty)(
+              remoteDatastoreClient.querySegmentIndexForMultipleSegments(layer,
+                                                                         mutableIndexMisses,
+                                                                         mag,
+                                                                         mappingName,
+                                                                         editableMappingTracingId)(tc))
             fileBucketPositions = fileBucketPositionsOpt.getOrElse(Seq())
             _ = fileBucketPositions.map {
               case (segmentId, positions) =>
@@ -177,7 +187,43 @@ class VolumeSegmentIndexBuffer(tracingId: String,
           } yield fileBucketPositions
         case _ => Fox.successful(List[(Long, Seq[Vec3Int])]())
       }
-      allHits = mutableIndexHits ++ fileBucketPositions ++ bufferHits
+    } yield mutableIndexHits ++ fileBucketPositions
+
+  private def getSegmentToBucketIndexMapFromTemporaryStorage(segmentIds: List[Long],
+                                                             mag: Vec3Int,
+                                                             additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
+      implicit ec: ExecutionContext): Fox[List[(Long, Seq[Vec3Int])]] =
+    Fox.successful(
+      segmentIds
+        .map(segmentId => {
+          val key = segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)
+          temporaryTracingService.getVolumeSegmentIndexBufferForKey(key) match {
+            case Some(positions) => Some(segmentId, positions.values.map(vec3IntFromProto))
+            case None            => None
+          }
+        })
+        .collect { case Some(x) => x })
+
+  // Get a map from segment to bucket position (e.g. an index) from all sources (buffer, temporary storage, fossilDB, file)
+  def getSegmentToBucketIndexMap(segmentIds: List[Long],
+                                 mag: Vec3Int,
+                                 mappingName: Option[String],
+                                 editableMappingTracingId: Option[String],
+                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
+      implicit ec: ExecutionContext): Fox[List[(Long, Seq[Vec3Int])]] =
+    for {
+      _ <- Fox.successful(())
+      (bufferHits, bufferMisses) = getSegmentsFromBufferNoteMisses(segmentIds, mag, additionalCoordinates)
+      remainingHits <- if (toTemporaryStore) {
+        getSegmentToBucketIndexMapFromTemporaryStorage(bufferMisses, mag, additionalCoordinates)
+      } else {
+        getSegmentToBucketIndexMapFromPermanentStorage(bufferMisses,
+                                                       mag,
+                                                       mappingName,
+                                                       editableMappingTracingId,
+                                                       additionalCoordinates)
+      }
+      allHits = remainingHits ++ bufferHits
       allHitsFilled = segmentIds.map { segmentId =>
         allHits.find(_._1 == segmentId) match {
           case Some((_, positions)) => (segmentId, positions)

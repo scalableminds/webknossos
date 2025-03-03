@@ -48,7 +48,7 @@ class AiInferenceService @Inject()(dataStoreDAO: DataStoreDAO,
       dataStore <- dataStoreDAO.findOneByName(inferenceJob._dataStore)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       aiModel <- aiModelDAO.findOne(aiInference._aiModel)
-      aiModelJs <- aiModelService.publicWrites(aiModel)
+      aiModelJs <- aiModelService.publicWrites(aiModel, requestingUser)
       newDatasetOpt <- Fox.runOptional(aiInference._newDataset)(datasetDAO.findOne)
       newDatasetJsOpt <- Fox.runOptional(newDatasetOpt)(newDataset =>
         datasetService.publicWrites(newDataset, Some(requestingUser)))

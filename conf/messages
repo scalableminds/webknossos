@@ -381,5 +381,8 @@ aiModel.delete.referencedByInferences=Cannot delete AI models that are reference
 aiModel.notFound=Could not find requested AI model.
 aiModel.training.zeroAnnotations=Need at least one training annotation for model training.
 aiModel.nameInUse=The AI model name is already in use. Please choose a different name.
+aiModel.notOwned=The AI model is not owned by your organization.
+aiModel.updatingFailed=Updating the AI model's comment and name failed.
+aiModel.updatingSharedFailed=Updating the organizations having access to the AI model failed.
 
 aiInference.notFound=Could not find requested AI inference.

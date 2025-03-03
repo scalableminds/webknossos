@@ -33,7 +33,7 @@ import {
 } from "admin/admin_rest_api";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { Button, Dropdown, Modal, Space, Tooltip } from "antd";
-import type { ItemType, SubMenuType } from "antd/es/menu/interface";
+import type { SubMenuType } from "antd/es/menu/interface";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
 import features from "features";
 import Toast from "libs/toast";
@@ -53,9 +53,12 @@ import {
 import { setTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import {
   setDownloadModalVisibilityAction,
+  setMergeModalVisibilityAction,
   setRenderAnimationModalVisibilityAction,
   setShareModalVisibilityAction,
+  setUserScriptsModalVisibilityAction,
   setVersionRestoreVisibilityAction,
+  setZarrLinksModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
 import { Model } from "oxalis/singletons";
 import { api } from "oxalis/singletons";
@@ -85,28 +88,30 @@ const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeo
 );
 
 type OwnProps = {
-  layoutMenu: SubMenuType;
+  layoutMenu: SubMenuType | null;
 };
 type StateProps = {
-  annotationType: APIAnnotationType;
-  annotationId: string;
+  hasTracing: boolean;
+  busyBlockingInfo: BusyBlockingInfo;
+  annotationTags: string[];
+} & TracingViewMenuProps;
+type Props = OwnProps & StateProps;
+export type TracingViewMenuProps = {
+  isRenderAnimationModalOpen: boolean;
+  isShareModalOpen: boolean;
+  isDownloadModalOpen: boolean;
   restrictions: RestrictionsAndSettings;
   task: Task | null | undefined;
+  annotationType: APIAnnotationType;
+  annotationId: string;
   activeUser: APIUser | null | undefined;
-  hasTracing: boolean;
-  isDownloadModalOpen: boolean;
-  isShareModalOpen: boolean;
-  isRenderAnimationModalOpen: boolean;
-  busyBlockingInfo: BusyBlockingInfo;
-  annotationOwner: APIUserBase | null | undefined;
   isAnnotationLockedByUser: boolean;
-  annotationTags: string[];
-};
-type Props = OwnProps & StateProps;
-type State = {
+  annotationOwner: APIUserBase | null | undefined;
   isMergeModalOpen: boolean;
   isUserScriptsModalOpen: boolean;
   isZarrPrivateLinksModalOpen: boolean;
+};
+type State = {
   isReopenAllowed: boolean;
 };
 
@@ -261,11 +266,258 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
   };
 }
 
+export const getTracingViewModalsAndMenuItems = (
+  props: TracingViewMenuProps,
+  layoutMenu: SubMenuType | null,
+) => {
+  const handleRestore = async () => {
+    await Model.ensureSavedState();
+    Store.dispatch(setVersionRestoreVisibilityAction(true));
+  };
+
+  const handleDuplicate = async () => {
+    await Model.ensureSavedState();
+    const newAnnotation = await duplicateAnnotation(props.annotationId, props.annotationType);
+    window.open(`/annotations/${newAnnotation.id}`, "_blank", "noopener,noreferrer");
+  };
+
+  const handleFinish = async () => {
+    await Model.ensureSavedState();
+    Modal.confirm({
+      title: messages["annotation.finish"],
+      onOk: async () => {
+        await finishAnnotation(props.annotationId, props.annotationType);
+        // Force page refresh
+        location.href = "/dashboard";
+      },
+    });
+  };
+
+  const handleDisableSaving = () => {
+    Modal.confirm({
+      title: messages["annotation.disable_saving"],
+      content: messages["annotation.disable_saving.content"],
+      onOk: () => {
+        Store.dispatch(disableSavingAction());
+      },
+    });
+  };
+
+  const handleShareOpen = () => {
+    Store.dispatch(setShareModalVisibilityAction(true));
+  };
+
+  const handleShareClose = () => {
+    Store.dispatch(setShareModalVisibilityAction(false));
+  };
+
+  const handleDownloadOpen = () => {
+    Store.dispatch(setDownloadModalVisibilityAction(true));
+  };
+
+  const handleDownloadClose = () => {
+    Store.dispatch(setDownloadModalVisibilityAction(false));
+  };
+
+  const handleMergeOpen = () => {
+    Store.dispatch(setMergeModalVisibilityAction(true));
+  };
+
+  const handleMergeClose = () => {
+    Store.dispatch(setMergeModalVisibilityAction(false));
+  };
+
+  const handleUserScriptsOpen = () => {
+    Store.dispatch(setUserScriptsModalVisibilityAction(true));
+  };
+
+  const handleUserScriptsClose = () => {
+    Store.dispatch(setUserScriptsModalVisibilityAction(false));
+  };
+
+  const handleZarrLinksOpen = () => {
+    Store.dispatch(setZarrLinksModalVisibilityAction(true));
+  };
+
+  const handleZarrLinksClose = () => {
+    Store.dispatch(setZarrLinksModalVisibilityAction(false));
+  };
+
+  const handleChangeLockedStateOfAnnotation = async (isLocked: boolean) => {
+    try {
+      const { annotationId, annotationType } = props;
+      // Ensure saved state, before (un)locking the annotation and then reloading.
+      await Model.ensureSavedState();
+      await editLockedState(annotationId, annotationType, isLocked);
+      Toast.success(
+        isLocked ? messages["annotation.lock.success"] : messages["annotation.unlock.success"],
+      );
+      // Give some time to show the toast before reloading the page.
+      await Utils.sleep(250);
+      location.reload();
+    } catch (error: any) {
+      const verb = isLocked ? "lock" : "unlock";
+      Toast.error(`Could not ${verb} the annotation. ` + error?.message);
+      console.error(`Could not ${verb} the annotation. `, error);
+    }
+  };
+
+  const { viewMode, controlMode } = Store.getState().temporaryConfiguration;
+  const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
+  const {
+    restrictions,
+    task,
+    annotationType,
+    annotationId,
+    activeUser,
+    isAnnotationLockedByUser,
+    annotationOwner,
+    isZarrPrivateLinksModalOpen,
+    isUserScriptsModalOpen,
+    isMergeModalOpen,
+  } = props;
+  const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
+  const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
+  const menuItems = [];
+  const modals = [];
+
+  if (restrictions.allowFinish) {
+    menuItems.push({
+      key: "finish-button",
+      onClick: handleFinish,
+      icon: <CheckCircleOutlined />,
+      label: archiveButtonText,
+    });
+  }
+
+  if (restrictions.allowDownload) {
+    menuItems.push({
+      key: "download-button",
+      onClick: handleDownloadOpen,
+      icon: <DownloadOutlined />,
+      label: "Download",
+    });
+    modals.push(
+      <DownloadModalView
+        key="download-modal"
+        isAnnotation
+        isOpen={props.isDownloadModalOpen}
+        onClose={handleDownloadClose}
+      />,
+    );
+  }
+
+  menuItems.push({
+    key: "share-button",
+    onClick: handleShareOpen,
+    icon: <ShareAltOutlined />,
+    label: "Share",
+  });
+  menuItems.push({
+    key: "zarr-links-button",
+    onClick: handleZarrLinksOpen,
+    icon: <LinkOutlined />,
+    label: "Zarr Links",
+  });
+
+  modals.push(
+    <ShareModalView
+      key="share-modal"
+      isOpen={props.isShareModalOpen}
+      onOk={handleShareClose}
+      annotationType={annotationType}
+      annotationId={annotationId}
+    />,
+  );
+  modals.push(
+    <PrivateLinksModal
+      key="private-links-modal"
+      isOpen={isZarrPrivateLinksModalOpen}
+      onOk={handleZarrLinksClose}
+      annotationId={annotationId}
+    />,
+  );
+  if (activeUser != null) {
+    menuItems.push({
+      key: "duplicate-button",
+      onClick: handleDuplicate,
+      icon: <CopyOutlined />,
+      label: "Duplicate",
+    });
+  }
+
+  menuItems.push(screenshotMenuItem);
+
+  menuItems.push(renderAnimationMenuItem);
+  modals.push(
+    <CreateAnimationModal
+      key="render-animation-modal"
+      isOpen={props.isRenderAnimationModalOpen}
+      onClose={() => Store.dispatch(setRenderAnimationModalVisibilityAction(false))}
+    />,
+  );
+
+  menuItems.push({
+    key: "user-scripts-button",
+    onClick: handleUserScriptsOpen,
+    icon: <SettingOutlined />,
+    label: "Add Script",
+  });
+  modals.push(
+    <UserScriptsModalView
+      key="user-scripts-modal"
+      isOpen={isUserScriptsModalOpen}
+      onOK={handleUserScriptsClose}
+    />,
+  );
+
+  if (restrictions.allowSave && isSkeletonMode && activeUser != null) {
+    menuItems.push({
+      key: "merge-button",
+      onClick: handleMergeOpen,
+      icon: <FolderOpenOutlined />,
+      label: "Merge Annotation",
+    });
+    modals.push(
+      <MergeModalView key="merge-modal" isOpen={isMergeModalOpen} onOk={handleMergeClose} />,
+    );
+  }
+  if (controlMode !== ControlModeEnum.SANDBOX) {
+    menuItems.push({
+      key: "restore-button",
+      onClick: handleRestore,
+      icon: <HistoryOutlined />,
+      label: "Restore Older Version",
+    });
+  }
+
+  menuItems.push(layoutMenu);
+
+  if (restrictions.allowSave && !task) {
+    menuItems.push({
+      key: "disable-saving",
+      onClick: handleDisableSaving,
+      icon: <StopOutlined />,
+      label: "Disable saving",
+    });
+  }
+  if (isAnnotationOwner) {
+    menuItems.push({
+      key: "lock-unlock-button",
+      onClick: () => handleChangeLockedStateOfAnnotation(!isAnnotationLockedByUser),
+      icon: isAnnotationLockedByUser ? <UnlockOutlined /> : <LockOutlined />,
+      label: `${isAnnotationLockedByUser ? "Unlock" : "Lock"} Annotation`,
+    });
+  }
+
+  return {
+    modals,
+    menuItems,
+  };
+};
+
 class TracingActionsView extends React.PureComponent<Props, State> {
   state: State = {
-    isMergeModalOpen: false,
-    isZarrPrivateLinksModalOpen: false,
-    isUserScriptsModalOpen: false,
     isReopenAllowed: false,
   };
 
@@ -317,10 +569,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
   handleUndo = () => dispatchUndoAsync(Store.dispatch);
   handleRedo = () => dispatchRedoAsync(Store.dispatch);
-  handleRestore = async () => {
-    await Model.ensureSavedState();
-    Store.dispatch(setVersionRestoreVisibilityAction(true));
-  };
 
   handleCopyToAccount = async () => {
     // duplicates the annotation in the current user account
@@ -329,15 +577,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       this.props.annotationType,
     );
     location.href = `/annotations/${newAnnotation.id}`;
-  };
-
-  handleDuplicate = async () => {
-    await Model.ensureSavedState();
-    const newAnnotation = await duplicateAnnotation(
-      this.props.annotationId,
-      this.props.annotationType,
-    );
-    window.open(`/annotations/${newAnnotation.id}`, "_blank", "noopener,noreferrer");
   };
 
   handleCopySandboxToAccount = async () => {
@@ -373,44 +612,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     location.reload();
   };
 
-  handleFinish = async () => {
-    await Model.ensureSavedState();
-    Modal.confirm({
-      title: messages["annotation.finish"],
-      onOk: async () => {
-        await finishAnnotation(this.props.annotationId, this.props.annotationType);
-        // Force page refresh
-        location.href = "/dashboard";
-      },
-    });
-  };
-
-  handleDisableSaving = () => {
-    Modal.confirm({
-      title: messages["annotation.disable_saving"],
-      content: messages["annotation.disable_saving.content"],
-      onOk: () => {
-        Store.dispatch(disableSavingAction());
-      },
-    });
-  };
-
-  handleShareOpen = () => {
-    Store.dispatch(setShareModalVisibilityAction(true));
-  };
-
-  handleShareClose = () => {
-    Store.dispatch(setShareModalVisibilityAction(false));
-  };
-
-  handleDownloadOpen = () => {
-    Store.dispatch(setDownloadModalVisibilityAction(true));
-  };
-
-  handleDownloadClose = () => {
-    Store.dispatch(setDownloadModalVisibilityAction(false));
-  };
-
   handleFinishAndGetNextTask = async () => {
     api.tracing.finishAndGetNextTask();
   };
@@ -435,62 +636,20 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     }
   };
 
-  handleMergeOpen = () => {
-    this.setState({
-      isMergeModalOpen: true,
-    });
-  };
-
-  handleUserScriptsOpen = () => {
-    this.setState({
-      isUserScriptsModalOpen: true,
-    });
-  };
-
-  handleModalClose = () => {
-    this.setState({
-      isMergeModalOpen: false,
-      isUserScriptsModalOpen: false,
-    });
-  };
-
-  handleChangeLockedStateOfAnnotation = async (isLocked: boolean) => {
-    try {
-      const { annotationId, annotationType } = this.props;
-      // Ensure saved state, before (un)locking the annotation and then reloading.
-      await Model.ensureSavedState();
-      await editLockedState(annotationId, annotationType, isLocked);
-      Toast.success(
-        isLocked ? messages["annotation.lock.success"] : messages["annotation.unlock.success"],
-      );
-      // Give some time to show the toast before reloading the page.
-      await Utils.sleep(250);
-      location.reload();
-    } catch (error: any) {
-      const verb = isLocked ? "lock" : "unlock";
-      Toast.error(`Could not ${verb} the annotation. ` + error?.message);
-      console.error(`Could not ${verb} the annotation. `, error);
-    }
-  };
-
   render() {
-    const { viewMode, controlMode } = Store.getState().temporaryConfiguration;
-    const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
     const {
       hasTracing,
       restrictions,
       task,
-      annotationType,
-      annotationId,
       activeUser,
-      layoutMenu,
       busyBlockingInfo,
-      isAnnotationLockedByUser,
       annotationOwner,
+      layoutMenu,
     } = this.props;
+
     const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
     const copyAnnotationText = isAnnotationOwner ? "Duplicate" : "Copy To My Account";
-    const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
+
     const saveButton = restrictions.allowUpdate
       ? [
           hasTracing
@@ -585,143 +744,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         Undo Finish
       </ButtonComponent>
     ) : null;
-    const menuItems: ItemType[] = [];
-    const modals = [];
 
-    if (restrictions.allowFinish) {
-      menuItems.push({
-        key: "finish-button",
-        onClick: this.handleFinish,
-        icon: <CheckCircleOutlined />,
-        label: archiveButtonText,
-      });
-    }
-
-    if (restrictions.allowDownload) {
-      menuItems.push({
-        key: "download-button",
-        onClick: this.handleDownloadOpen,
-        icon: <DownloadOutlined />,
-        label: "Download",
-      });
-      modals.push(
-        <DownloadModalView
-          key="download-modal"
-          isAnnotation
-          isOpen={this.props.isDownloadModalOpen}
-          onClose={this.handleDownloadClose}
-        />,
-      );
-    }
-
-    menuItems.push({
-      key: "share-button",
-      onClick: this.handleShareOpen,
-      icon: <ShareAltOutlined />,
-      label: "Share",
-    });
-    menuItems.push({
-      key: "zarr-links-button",
-      onClick: () => this.setState({ isZarrPrivateLinksModalOpen: true }),
-
-      icon: <LinkOutlined />,
-      label: "Zarr Links",
-    });
-
-    modals.push(
-      <ShareModalView
-        key="share-modal"
-        isOpen={this.props.isShareModalOpen}
-        onOk={this.handleShareClose}
-        annotationType={annotationType}
-        annotationId={annotationId}
-      />,
-    );
-    modals.push(
-      <PrivateLinksModal
-        key="private-links-modal"
-        isOpen={this.state.isZarrPrivateLinksModalOpen}
-        onOk={() => this.setState({ isZarrPrivateLinksModalOpen: false })}
-        annotationId={annotationId}
-      />,
-    );
-    if (activeUser != null) {
-      menuItems.push({
-        key: "duplicate-button",
-        onClick: this.handleDuplicate,
-        icon: <CopyOutlined />,
-        label: "Duplicate",
-      });
-    }
-
-    menuItems.push(screenshotMenuItem);
-
-    menuItems.push(renderAnimationMenuItem);
-    modals.push(
-      <CreateAnimationModal
-        key="render-animation-modal"
-        isOpen={this.props.isRenderAnimationModalOpen}
-        onClose={() => Store.dispatch(setRenderAnimationModalVisibilityAction(false))}
-      />,
-    );
-
-    menuItems.push({
-      key: "user-scripts-button",
-      onClick: this.handleUserScriptsOpen,
-      icon: <SettingOutlined />,
-      label: "Add Script",
-    });
-    modals.push(
-      <UserScriptsModalView
-        key="user-scripts-modal"
-        isOpen={this.state.isUserScriptsModalOpen}
-        onOK={this.handleModalClose}
-      />,
-    );
-
-    if (restrictions.allowSave && isSkeletonMode && activeUser != null) {
-      menuItems.push({
-        key: "merge-button",
-        onClick: this.handleMergeOpen,
-        icon: <FolderOpenOutlined />,
-        label: "Merge Annotation",
-      });
-      modals.push(
-        <MergeModalView
-          key="merge-modal"
-          isOpen={this.state.isMergeModalOpen}
-          onOk={this.handleModalClose}
-        />,
-      );
-    }
-    if (controlMode !== ControlModeEnum.SANDBOX) {
-      menuItems.push({
-        key: "restore-button",
-        onClick: this.handleRestore,
-        icon: <HistoryOutlined />,
-        label: "Restore Older Version",
-      });
-    }
-
-    menuItems.push(layoutMenu);
-
-    if (restrictions.allowSave && !task) {
-      menuItems.push({
-        key: "disable-saving",
-        onClick: this.handleDisableSaving,
-        icon: <StopOutlined />,
-        label: "Disable saving",
-      });
-    }
-    if (isAnnotationOwner) {
-      menuItems.push({
-        key: "lock-unlock-button",
-        onClick: () => this.handleChangeLockedStateOfAnnotation(!isAnnotationLockedByUser),
-        icon: isAnnotationLockedByUser ? <UnlockOutlined /> : <LockOutlined />,
-        label: `${isAnnotationLockedByUser ? "Unlock" : "Lock"} Annotation`,
-      });
-    }
-
+    const { menuItems, modals } = getTracingViewModalsAndMenuItems(this.props, layoutMenu);
     return (
       <>
         <Space.Compact>
@@ -758,6 +782,9 @@ function mapStateToProps(state: OxalisState): StateProps {
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
     isAnnotationLockedByUser: state.tracing.isLockedByOwner,
     annotationTags: state.tracing.tags,
+    isMergeModalOpen: state.uiInformation.showMergeAnnotationModal,
+    isUserScriptsModalOpen: state.uiInformation.showAddScriptModal,
+    isZarrPrivateLinksModalOpen: state.uiInformation.showZarrPrivateLinksModal,
   };
 }
 

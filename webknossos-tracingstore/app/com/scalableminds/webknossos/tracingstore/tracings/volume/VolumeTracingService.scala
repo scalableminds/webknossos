@@ -651,10 +651,7 @@ class VolumeTracingService @Inject()(
     for {
       _ <- Fox.successful(())
       isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
-      volumeLayer = volumeTracingLayer(annotationId: String,
-                                       tracingId,
-                                       tracing,
-                                       isTemporaryTracing = isTemporaryTracing)
+      volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing, isTemporaryTracing = isTemporaryTracing)
       bucketStream = volumeLayer.bucketStream
       bucketPosOpt = if (bucketStream.hasNext) {
         val bucket = bucketStream.next()

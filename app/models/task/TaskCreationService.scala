@@ -156,16 +156,15 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       volumeTracingOpt <- baseAnnotation.volumeTracingId
       newVolumeTracingId <- params.newVolumeTracingId.toFox
       newAnnotationId <- params.newAnnotationId.toFox
-      newVolumeTracingId <- volumeTracingOpt
-        .map(
-          id =>
-            tracingStoreClient.duplicateVolumeTracing(id,
-                                                      newAnnotationId,
-                                                      newVolumeTracingId,
-                                                      editPosition = Some(params.editPosition),
-                                                      editRotation = Some(params.editRotation),
-                                                      magRestrictions = magRestrictions))
-        .getOrElse(
+      newVolumeTracingId <- volumeTracingOpt match {
+        case Some(id) =>
+          tracingStoreClient.duplicateVolumeTracing(id,
+                                                    newAnnotationId,
+                                                    newVolumeTracingId,
+                                                    editPosition = Some(params.editPosition),
+                                                    editRotation = Some(params.editRotation),
+                                                    magRestrictions = magRestrictions)
+        case None =>
           annotationService
             .createVolumeTracingBase(
               params.datasetId,
@@ -175,8 +174,10 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
               volumeShowFallbackLayer = false,
               magRestrictions = magRestrictions
             )
-            .flatMap(tracingStoreClient
-              .saveVolumeTracing(newAnnotationId, newVolumeTracingId, _, magRestrictions = magRestrictions)))
+            .flatMap(
+              tracingStoreClient
+                .saveVolumeTracing(newAnnotationId, newVolumeTracingId, _, magRestrictions = magRestrictions))
+      }
     } yield newVolumeTracingId
 
   // Used in create (without files). If base annotations were used, this does nothing.

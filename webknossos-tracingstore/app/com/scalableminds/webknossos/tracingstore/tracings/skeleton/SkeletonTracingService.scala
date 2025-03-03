@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeBody}
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
@@ -105,4 +105,11 @@ class SkeletonTracingService @Inject()(
 
   def dummyTracing: SkeletonTracing = SkeletonTracingDefaults.createInstance
 
+  def extractTreeBody(tracing: SkeletonTracing, treeId: Int): Box[TreeBody] =
+    for {
+      tree <- tracing.trees.find(_.treeId == treeId)
+    } yield TreeBody(nodes = tree.nodes, edges = tree.edges)
+
+  def stripTreeBodies(tracing: SkeletonTracing): SkeletonTracing =
+    tracing.copy(trees = tracing.trees.map(_.copy(nodes = Seq(), edges = Seq(), hasExternalTreeBody = Some(true))))
 }

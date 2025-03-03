@@ -22,6 +22,8 @@ class TracingDataStore @Inject()(config: TracingStoreConfig,
 
   lazy val skeletons = new FossilDBClient("skeletons", config, slackNotificationService)
 
+  lazy val skeletonTreeBodies = new FossilDBClient("skeletonTreeBodies", config, slackNotificationService)
+
   lazy val volumes = new FossilDBClient("volumes", config, slackNotificationService)
 
   lazy val volumeData = new FossilDBClient("volumeData", config, slackNotificationService)

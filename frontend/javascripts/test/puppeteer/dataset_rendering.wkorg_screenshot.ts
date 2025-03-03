@@ -7,16 +7,16 @@ import {
   screenshotDatasetView,
   setupBeforeEachAndAfterEach,
   withRetry,
-  checkBrowserstackCredentials,
 } from "./dataset_rendering_helpers";
 import { encodeUrlHash } from "oxalis/controller/url_manager";
-
-checkBrowserstackCredentials();
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
 });
-const BASE_PATH = path.join(__dirname, "../../../../frontend/javascripts/test/screenshots-wkorg");
+const SCREENSHOTS_BASE_PATH = path.join(
+  __dirname,
+  "../../../../frontend/javascripts/test/screenshots-wkorg",
+);
 const URL = "https://webknossos.org";
 
 console.log(`[Info] Executing tests on URL ${URL}.`);
@@ -49,8 +49,9 @@ test.serial(`it should render dataset ${demoDatasetName} correctly`, async (t) =
         `${URL}/api/datasets/disambiguate/${owningOrganization}/${demoDatasetName}/toId`,
       );
       const { id: datasetId } = await response.json();
+      const page = await getNewPage(t.context.browser);
       const { screenshot, width, height } = await screenshotDatasetView(
-        await getNewPage(t.context.browser),
+        page,
         URL,
         datasetId,
         viewOverrides[demoDatasetName],
@@ -59,9 +60,10 @@ test.serial(`it should render dataset ${demoDatasetName} correctly`, async (t) =
         screenshot,
         width,
         height,
-        BASE_PATH,
+        SCREENSHOTS_BASE_PATH,
         demoDatasetName,
       );
+      await page.close();
       return isPixelEquivalent(changedPixels, width, height);
     },
     (condition) => {

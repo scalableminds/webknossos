@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(125);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(126);
 COMMIT TRANSACTION;
 
 
@@ -178,6 +178,9 @@ CREATE TABLE webknossos.dataset_mags(
   _dataset CHAR(24) NOT NULL,
   dataLayerName VARCHAR(256),
   mag webknossos.VECTOR3 NOT NULL,
+  path TEXT,
+  realPath TEXT,
+  hasLocalData BOOLEAN NOT NULL DEFAULT false,
   PRIMARY KEY (_dataset, dataLayerName, mag)
 );
 

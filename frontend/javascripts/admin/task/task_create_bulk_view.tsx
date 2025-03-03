@@ -273,7 +273,7 @@ function TaskCreateBulkView() {
             Specify each new task on a separate line as comma separated values (CSV) in the
             following format:
             <br />
-            <a href="/dashboard">datasetName, datasetId</a>, <a href="/taskTypes">taskTypeId</a>,
+            <a href="/dashboard">datasetId</a>, <a href="/taskTypes">taskTypeId</a>,
             experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ,
             width, height, depth, <a href="/projects">project</a>, <a href="/scripts">scriptId</a>{" "}
             (optional), baseAnnotationId (optional)

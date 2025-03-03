@@ -46,6 +46,12 @@ class DataSourceRepository @Inject()(
       _ <- remoteWebknossosClient.reportDataSources(dataSources)
     } yield ()
 
+  def publishRealPaths(infos: List[DataSourcePathInfo]): Fox[Unit] =
+    for {
+      _ <- Fox.successful(())
+      _ <- remoteWebknossosClient.reportRealPaths(infos)
+    } yield ()
+
   def cleanUpDataSource(dataSourceId: DataSourceId): Fox[Unit] =
     for {
       _ <- Fox.successful(remove(dataSourceId))

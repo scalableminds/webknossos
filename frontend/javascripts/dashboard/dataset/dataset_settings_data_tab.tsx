@@ -556,7 +556,7 @@ function SimpleLayerForm({
                       validator: (_rule, value) =>
                         value == null ||
                         value === "" ||
-                        (value >= valueRange && value <= valueRange[1] && value != 0)
+                        (value >= valueRange && value <= valueRange[1] && value !== 0)
                           ? Promise.resolve()
                           : Promise.reject(
                               new Error(

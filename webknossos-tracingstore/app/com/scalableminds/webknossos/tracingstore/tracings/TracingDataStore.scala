@@ -45,6 +45,7 @@ class TracingDataStore @Inject()(config: TracingStoreConfig,
   private def shutdown(): Unit = {
     healthClient.shutdown()
     skeletons.shutdown()
+    skeletonTreeBodies.shutdown()
     annotationUpdates.shutdown()
     annotations.shutdown()
     volumes.shutdown()
